@@ -1,31 +1,255 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-style="split" data-screen="conversation">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Task composer — quick filing</title>
-<meta name="description" content="The Improve composer with the page it was filed from as a chip, and one line to say what to change." />
-<meta name="mocks" content="exhibit:task-draft/composer" />
+<title>Selection quick actions</title>
+<meta name="description" content="Selecting agent text in a transcript pops a toolbar: Quote into the prompt, or use a configurable quick answer (Go, Explain) as a split chip: label fills the prompt to edit, ➤ sends right away." />
+<meta name="prototype-option" content="style: split | compact" />
+<meta name="prototype-option" content="screen: conversation | settings" />
+
 <style>
+  :root {
+    --bg: #fbfbfa; --panel: #ffffff; --ink: #1d1d1b; --muted: #75736e; --line: #e7e5e0;
+    --accent: #5b5bd6; --accent-ink: #fff; --quote: #eeeef9; --chip: #f2f1ee;
+    --bar: #1f1f22; --bar-ink: #f4f4f5; --bar-muted: #a1a1aa; --bar-hover: #34343a;
+    --sel: rgba(91, 91, 214, .22);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161618; --panel: #1d1d20; --ink: #ececee; --muted: #9a9aa3; --line: #2c2c31;
+      --accent: #8b8bf0; --accent-ink: #111; --quote: #26263a; --chip: #26262b;
+      --bar: #f4f4f5; --bar-ink: #18181b; --bar-muted: #71717a; --bar-hover: #e4e4e7;
+      --sel: rgba(139, 139, 240, .3);
+    }
+  }
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; }
-  body { font-family: system-ui, sans-serif; background: #1c1d21; color: #e8e8ea; display: grid; place-items: center; }
-  .composer { width: min(480px, 100% - 32px); background: #26272c; border: 1px solid #34363c; border-radius: 12px; padding: 14px; }
-  .chip { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #33354a; color: #b9bdf5; }
-  .prompt { margin: 12px 0; min-height: 64px; font-size: 14px; color: #9a9ca3; }
-  .row { display: flex; justify-content: space-between; align-items: center; }
-  .pill { font-size: 12px; color: #9a9ca3; }
-  button { font: inherit; font-size: 13px; border: 0; border-radius: 8px; padding: 6px 12px; background: #7c5cff; color: white; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body { font: 14px/1.55 system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--ink); }
+  ::selection { background: var(--sel); }
+  #root { height: 100%; display: flex; flex-direction: column; }
+
+  /* ---------- conversation ---------- */
+  .convo { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  header.top { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--line); font-weight: 600; }
+  header.top .dot { width: 8px; height: 8px; border-radius: 50%; background: #3fb46b; }
+  header.top small { color: var(--muted); font-weight: 400; }
+  .transcript { flex: 1; overflow: auto; padding: 24px 16px 40px; }
+  .col { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+  .msg.user { align-self: flex-end; background: var(--chip); padding: 8px 12px; border-radius: 12px; max-width: 80%; }
+  .msg.agent p { margin: 0 0 10px; }
+  .msg.agent code { font: 12.5px ui-monospace, Menlo, monospace; background: var(--chip); padding: 1px 5px; border-radius: 4px; }
+  .msg.agent ul { margin: 0 0 10px; padding-left: 20px; }
+  .meta { color: var(--muted); font-size: 12px; margin-bottom: 4px; }
+
+  /* ---------- prompt ---------- */
+  .prompt-wrap { padding: 12px 16px 16px; }
+  .prompt { max-width: 760px; margin: 0 auto; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px 8px; box-shadow: 0 1px 2px rgba(0,0,0,.04); transition: box-shadow .2s, border-color .2s; }
+  .prompt.flash { border-color: var(--accent); box-shadow: 0 0 0 3px var(--sel); }
+  .quotes { display: flex; flex-direction: column; gap: 6px; }
+  .quotes:not(:empty) { margin-bottom: 6px; }
+  .q { position: relative; border-left: 3px solid var(--accent); background: var(--quote); border-radius: 0 8px 8px 0; padding: 6px 28px 6px 10px; color: var(--ink); font-size: 13px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .q button { position: absolute; top: 4px; right: 4px; border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 13px; line-height: 1; padding: 2px 4px; border-radius: 4px; }
+  .q button:hover { background: var(--line); }
+  .input { min-height: 22px; outline: none; color: var(--ink); }
+  .input:empty::before { content: attr(data-ph); color: var(--muted); }
+  .prompt-foot { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+  .tpl { border: 1px solid var(--line); background: none; color: var(--ink); border-radius: 999px; padding: 2px 10px; font-size: 12px; cursor: pointer; }
+  .spacer { flex: 1; }
+  .send { width: 28px; height: 28px; border-radius: 50%; border: 0; background: var(--accent); color: var(--accent-ink); cursor: pointer; display: grid; place-items: center; }
+
+  /* ---------- selection toolbar ---------- */
+  .selbar { position: fixed; z-index: 10; display: none; transform: translate(-50%, calc(-100% - 8px)); background: var(--bar); color: var(--bar-ink); border-radius: 10px; padding: 3px; box-shadow: 0 6px 20px rgba(0,0,0,.22), 0 1px 3px rgba(0,0,0,.2); align-items: center; gap: 2px; white-space: nowrap; animation: pop .12s ease-out; }
+  .selbar.show { display: flex; }
+  .selbar::after { content: ""; position: absolute; left: 50%; bottom: -4px; width: 10px; height: 10px; background: var(--bar); transform: translateX(-50%) rotate(45deg); border-radius: 2px; }
+  @keyframes pop { from { opacity: 0; transform: translate(-50%, calc(-100% - 4px)) scale(.97); } }
+  .selbar button { border: 0; background: none; color: inherit; font: 500 12.5px system-ui, sans-serif; padding: 5px 9px; border-radius: 7px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; position: relative; z-index: 1; }
+  .selbar button:hover { background: var(--bar-hover); }
+  .selbar svg { width: 14px; height: 14px; flex: none; }
+  .chip { display: inline-flex; align-items: stretch; border: 1px solid color-mix(in srgb, var(--bar-muted) 45%, transparent); border-radius: 7px; margin: 0 1px; overflow: hidden; }
+  .selbar .chip button { border-radius: 0; padding: 3px 8px; }
+  .selbar .chip .go { padding: 3px 6px; color: var(--bar-muted); border-left: 1px solid color-mix(in srgb, var(--bar-muted) 45%, transparent); }
+  .selbar .chip .go:hover { color: var(--bar-ink); }
+  .selbar .chip svg { width: 12px; height: 12px; }
+  :root[data-style="compact"] .selbar .chip .ed svg { display: none; }
+  .selbar .sep { width: 1px; align-self: stretch; margin: 4px 2px; background: var(--bar-muted); opacity: .4; }
+  .selbar .gear { color: var(--bar-muted); padding: 5px 6px; }
+  :root[data-style="compact"] .selbar .quote-label,
+  :root[data-style="compact"] .selbar .gear { display: none; }
+  :root[data-style="compact"] .selbar button { padding: 5px 7px; }
+
+  .pending .typing { color: var(--muted); font-style: italic; }
+
+  /* ---------- settings screen ---------- */
+  .settings { display: none; padding: 32px 16px; overflow: auto; }
+  :root[data-screen="settings"] .settings { display: block; }
+  :root[data-screen="settings"] .convo { display: none; }
+  .settings .wrap { max-width: 640px; margin: 0 auto; }
+  .settings h1 { font-size: 20px; margin: 0 0 4px; }
+  .settings .sub { color: var(--muted); margin: 0 0 24px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+  .row { display: grid; grid-template-columns: 18px minmax(80px, 120px) 1fr 28px; gap: 10px; align-items: start; padding: 12px 14px; border-top: 1px solid var(--line); }
+  .row:first-child { border-top: 0; }
+  .grip { color: var(--muted); cursor: grab; padding-top: 6px; }
+  .row input, .row textarea { width: 100%; font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 7px; padding: 5px 8px; }
+  .row textarea { resize: vertical; min-height: 54px; font-size: 13px; }
+  .row .del { border: 0; background: none; color: var(--muted); cursor: pointer; padding-top: 6px; }
+  .card-foot { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-top: 1px solid var(--line); flex-wrap: wrap; }
+  .add { border: 1px dashed var(--line); background: none; color: var(--ink); border-radius: 8px; padding: 5px 10px; cursor: pointer; }
+  .note { color: var(--muted); font-size: 12.5px; margin-top: 14px; }
+  .preview { margin-top: 24px; }
+  .preview h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 8px; }
+  .preview .box { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+  .preview .q { -webkit-line-clamp: unset; }
 </style>
 </head>
 <body>
-<div class="composer">
-  <span class="chip">/agents/c/conv-demo-practice-timer</span>
-  <div class="prompt">What should change on this page?</div>
-  <div class="row">
-    <span class="pill">Model · Sonnet</span>
-    <button type="button">File task</button>
-  </div>
+<div id="root">
+  <section class="convo">
+    <header class="top"><span class="dot"></span> Fix flaky tab-bar drag test <small>· waiting for you</small></header>
+    <div class="transcript" id="transcript">
+      <div class="col" id="col">
+        <div class="msg user">Why does the drag test fail on CI but not locally?</div>
+        <div class="msg agent">
+          <div class="meta">Agent · 6m ago</div>
+          <div class="agent-text">
+            <p>I traced it to a timing issue. The test dispatches <code>pointerdown</code> and immediately reads the tab order, but <code>useRankSortableItem</code> only commits the new rank after the drop animation settles — about 150 ms on CI, where the runner is slower.</p>
+            <p>There are two ways to fix this:</p>
+            <ul>
+              <li>Wait for the <code>reorder.committed</code> event in the test instead of reading the DOM right away.</li>
+              <li>Commit the rank optimistically on drop and let the animation play over the already-reordered list.</li>
+            </ul>
+            <p id="pre">The second option is cleaner: it removes the window entirely, so no other caller can observe the stale order either. It touches the shared reorder primitive though, so every sortable list in the app would pick it up.</p>
+            <p>Want me to go with the optimistic commit?</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="prompt-wrap">
+      <div class="prompt" id="prompt">
+        <div class="quotes" id="quotes"></div>
+        <div class="input" id="input" contenteditable="true" data-ph="Reply to the agent…"></div>
+        <div class="prompt-foot">
+          <button class="tpl">Go</button><button class="tpl">Explain</button><button class="tpl">Plan</button>
+          <span class="spacer"></span>
+          <button class="send" aria-label="Send"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="settings">
+    <div class="wrap">
+      <h1>Selection quick answers</h1>
+      <p class="sub">Shown when you select text in an agent's reply. Each one quotes the selection: click its name to put the quote and prompt in the prompt field to edit, or ➤ to send them right away.</p>
+      <div class="card">
+        <div class="row"><span class="grip">⋮⋮</span><input value="Go" /><textarea>Go ahead with this.</textarea><button class="del">✕</button></div>
+        <div class="row"><span class="grip">⋮⋮</span><input value="Explain" /><textarea>Explain this in more detail — what it means, and why.</textarea><button class="del">✕</button></div>
+        <div class="card-foot"><button class="add">+ Add quick answer</button></div>
+      </div>
+            <div class="preview">
+        <h2>Sent as</h2>
+        <div class="box">
+          <div class="q">The second option is cleaner: it removes the window entirely, so no other caller can observe the stale order either.</div>
+          <div style="margin-top:8px">Explain this in more detail — what it means, and why.</div>
+        </div>
+      </div>
+    </div>
+  </section>
 </div>
+
+<div class="selbar" id="selbar" role="toolbar" aria-label="Selection actions">
+  <button data-act="quote" title="Quote in prompt">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7.2 17c-1.9 0-3.2-1.5-3.2-3.6C4 9.9 6.4 7.2 9.6 6l.7 1.3C8.3 8.2 7.1 9.6 6.9 11.1c.2-.1.5-.1.8-.1 1.6 0 2.9 1.2 2.9 2.9 0 1.8-1.4 3.1-3.4 3.1zm9.3 0c-1.9 0-3.2-1.5-3.2-3.6 0-3.5 2.4-6.2 5.6-7.4l.7 1.3c-2 .9-3.2 2.3-3.4 3.8.2-.1.5-.1.8-.1 1.6 0 2.9 1.2 2.9 2.9 0 1.8-1.4 3.1-3.4 3.1z"/></svg>
+    <span class="quote-label">Quote</span>
+  </button>
+  <span class="sep"></span>
+  <span id="answers" style="display:contents"></span>
+    <button class="gear" title="Edit quick answers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+</div>
+
+<script>
+  const opts = document.documentElement.dataset;
+  const ANSWERS = [
+    { label: "Go", prompt: "Go ahead with this." },
+    { label: "Explain", prompt: "Explain this in more detail — what it means, and why." },
+  ];
+  const $ = (id) => document.getElementById(id);
+  const bar = $("selbar"), quotesEl = $("quotes"), input = $("input");
+
+  const EDIT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
+  const SEND = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.4 20.4 21 12 3.4 3.6 3.4 10l12.6 2-12.6 2z"/></svg>';
+  for (const a of ANSWERS) {
+    const chip = document.createElement("span");
+    chip.className = "chip";
+    chip.innerHTML = `<button class="ed" title="Quote and edit: ${a.prompt}">${EDIT}<span></span></button><button class="go" title="Quote and send: ${a.prompt}">${SEND}</button>`;
+    chip.querySelector(".ed span").textContent = a.label;
+    chip.querySelector(".ed").onclick = () => answer(a, false);
+    chip.querySelector(".go").onclick = () => answer(a, true);
+    $("answers").appendChild(chip);
+  }
+  // Keep the selection alive while clicking the toolbar.
+  bar.addEventListener("mousedown", (e) => e.preventDefault());
+  bar.querySelector('[data-act="quote"]').onclick = () => { addQuote(currentText()); clearSel(); input.focus(); flash(); };
+
+  function currentSelection() {
+    const s = window.getSelection();
+    if (!s || s.isCollapsed || !s.rangeCount) return null;
+    const r = s.getRangeAt(0);
+    const n = r.commonAncestorContainer;
+    const host = n.nodeType === 1 ? n : n.parentElement;
+    return host.closest(".agent-text") ? r : null;
+  }
+  function currentText() { return window.getSelection().toString().trim(); }
+  function place() {
+    const r = currentSelection();
+    if (!r) { bar.classList.remove("show"); return; }
+    const first = r.getClientRects()[0] || r.getBoundingClientRect();
+    const box = r.getBoundingClientRect();
+    bar.style.left = Math.max(130, Math.min(window.innerWidth - 130, (box.left + box.right) / 2)) + "px";
+    bar.style.top = first.top + "px";
+    bar.classList.add("show");
+  }
+  function clearSel() { window.getSelection().removeAllRanges(); bar.classList.remove("show"); }
+  document.addEventListener("selectionchange", () => requestAnimationFrame(place));
+  $("transcript").addEventListener("scroll", place);
+  window.addEventListener("resize", place);
+
+  function addQuote(text) {
+    const q = document.createElement("div");
+    q.className = "q";
+    q.textContent = text;
+    const x = document.createElement("button");
+    x.textContent = "✕"; x.title = "Remove quote"; x.onclick = () => q.remove();
+    q.appendChild(x);
+    quotesEl.appendChild(q);
+  }
+  function flash() { const p = $("prompt"); p.classList.add("flash"); setTimeout(() => p.classList.remove("flash"), 600); }
+  function answer(a, sendMode) {
+    const text = currentText();
+    clearSel();
+    if (!sendMode) { addQuote(text); input.textContent = a.prompt; input.focus(); flash(); return; }
+    const m = document.createElement("div");
+    m.className = "msg user";
+    m.innerHTML = '<div class="q" style="margin-bottom:6px;-webkit-line-clamp:2"></div><div></div>';
+    m.children[0].textContent = text; m.children[1].textContent = a.prompt;
+    $("col").appendChild(m);
+    const p = document.createElement("div");
+    p.className = "msg agent pending";
+    p.innerHTML = '<div class="meta">Agent</div><div class="typing">Working…</div>';
+    $("col").appendChild(p);
+    $("transcript").scrollTop = 1e6;
+  }
+
+  // Start with a selection so the toolbar shows on load and in the thumbnail.
+  if (opts.screen === "conversation") {
+    const t = $("pre").firstChild;
+    const r = document.createRange();
+    r.setStart(t, 0);
+    r.setEnd(t, t.textContent.indexOf("entirely") + "entirely".length);
+    window.getSelection().addRange(r);
+    requestAnimationFrame(place);
+  }
+</script>
 </body>
 </html>

@@ -8,21 +8,20 @@
  * In `/demo` it:
  *
  *  1. opens Prototypes through the embed's launcher: the gallery lists the
- *     three seeded prototypes, each card's real thumbnail loaded;
- *  2. opens the Recipe box's canvas: frame A's document is served under the
- *     frames scope, its computed style comes from its own `styles.css`, and the
- *     SVG its CSS `url()` names loads relative to it; the user's seeded pick
- *     (accent teal) is painted;
+ *     six seeded prototypes, each card's real thumbnail loaded;
+ *  2. opens Family Recipes' canvas: frame A's document is served under the
+ *     frames scope and runs its app — the recipe cards render, each photo
+ *     loaded from the `photos.js` beside it; the user's seeded pick (accent
+ *     terracotta) is painted;
  *  3. picks another accent: the frame repaints, no reload;
  *  4. steps frame A back to `v0`: the frame loads a `/versions/<sha>/`
- *     document (square cards — `v1` rounded them);
+ *     document (no week bar — `v1` added it);
  *  5. makes `v0` the latest (restore): a new version is recorded, the live
  *     frame shows it, and back in the gallery its card's thumbnail still loads
  *     (the restored folder has `v0`'s fingerprint: a cache hit);
- *  6. opens the route-mocking prototype: its counterpart answers
- *     `unresolved` (the app needs serving by URL), so the canvas offers no
- *     Real app frame; the exhibit-mocking one's Real app frame renders the
- *     exhibit in-process;
+ *  6. opens the route-mocking prototype (Miller pane motion): its counterpart
+ *     answers `unresolved` (the app needs serving by URL), so the canvas
+ *     offers no Real app frame;
  *  7. a frame URL the Service Worker does not answer is a 404 at the gateway,
  *     never the app's shell.
  *
@@ -46,11 +45,9 @@ import {
   type Settled,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import {
-  addSource,
   card,
   dismiss,
   frameColor,
-  listFrames,
   openOptions,
   pickValue,
   screen,
@@ -78,15 +75,20 @@ const SANCTIONED: readonly RegExp[] = [
 ];
 
 /** The seeded prototypes (`website/demos/workspace`'s `data/prototypes/`). */
-const RECIPE_BOX = { id: "proto-1792900000-demo01", title: "Recipe box: home" };
-const COMPOSER = "Task composer — quick filing";
-const QUEUE = {
-  id: "proto-1792900120-demo03",
-  title: "Agent queue — focus view",
-};
+const RECIPES = { id: "proto-1792900000-demo01", title: "Family Recipes" };
+/** The one that mocks a route of the real app. */
+const MILLER = { title: "Miller pane motion" };
+const TITLES = [
+  RECIPES.title,
+  "Selection quick actions",
+  MILLER.title,
+  "Bridge Trainer",
+  "Casino Footwork",
+  "Map pins",
+];
 /** The seeded pick, and the value the flow picks instead. */
-const SEEDED_ACCENT = "#14b8a6";
-const PICKED_ACCENT = { label: "Amber", color: "#f59e0b" };
+const SEEDED_ACCENT = "#c8553d";
+const PICKED_ACCENT = { label: "Ocean", color: "#2f6f8f" };
 /** A frame src the host's Service Worker serves: `/artifacts/<host>/frames/<server>/api/…`. */
 const FRAME_SRC_RE = /^\/artifacts\/[^/]+\/frames\/[^/]+\/api\/prototypes\//;
 const RENDER_TIMEOUT_MS = 20_000;
@@ -112,30 +114,29 @@ async function frameSrc(page: Page, letter: string): Promise<string> {
   return `${url.pathname}${url.search}`;
 }
 
-/** What a frame's document shows: its styles, and whether its CSS's SVG loads. */
+/** What Family Recipes' document shows: its cards, their photos, the week bar. */
 async function frameLooks(frame: Frame): Promise<{
   title: string;
-  boardDisplay: string;
-  bodyBackground: string;
-  cardRadius: string;
-  svgLoads: boolean;
+  gridDisplay: string;
+  cards: number;
+  photosLoaded: number;
+  weekBar: boolean;
 }> {
-  return frame.evaluate(async () => {
-    const card = document.querySelector(".card");
-    const svgLoads = await new Promise<boolean>((resolve) => {
-      const img = new Image();
-      img.onload = () => resolve(img.naturalWidth > 0);
-      img.onerror = () => resolve(false);
-      img.src = "leaf.svg";
-    });
+  return frame.evaluate(() => {
+    const photos = [
+      ...document.querySelectorAll<HTMLImageElement>(".card img"),
+    ];
     return {
       title: document.title,
-      boardDisplay: getComputedStyle(
-        document.querySelector(".board") ?? document.body,
+      gridDisplay: getComputedStyle(
+        document.querySelector(".grid") ?? document.body,
       ).display,
-      bodyBackground: getComputedStyle(document.body).backgroundImage,
-      cardRadius: card ? getComputedStyle(card).borderTopLeftRadius : "",
-      svgLoads,
+      cards: document.querySelectorAll(".card").length,
+      photosLoaded: photos.filter(
+        (img) =>
+          img.complete && img.naturalWidth > 0 && img.src.startsWith("data:"),
+      ).length,
+      weekBar: document.querySelector(".pill") !== null,
     };
   });
 }
@@ -213,7 +214,7 @@ await withBrowser(async (h) => {
     () => embedRoot(page).getAttribute("data-app-embed"),
     (id) => id === "prototypes",
   );
-  for (const title of [RECIPE_BOX.title, COMPOSER, QUEUE.title])
+  for (const title of TITLES)
     await renders(
       `the gallery shows "${title}" with its real thumbnail`,
       () => thumbnailLoaded(page, title),
@@ -221,8 +222,8 @@ await withBrowser(async (h) => {
     );
   await snap(page, OUT, "1-gallery");
 
-  // ── 2. the Recipe box's canvas ─────────────────────────────────────────
-  await galleryCard(page, RECIPE_BOX.title).click();
+  // ── 2. Family Recipes' canvas ──────────────────────────────────────────
+  await galleryCard(page, RECIPES.title).click();
   await renders(
     "the canvas opens on frame A",
     () =>
@@ -234,20 +235,21 @@ await withBrowser(async (h) => {
   await renders(
     "frame A's document is served under the host's frames scope",
     () => frameSrc(page, "A"),
-    (src) => FRAME_SRC_RE.test(src) && src.includes(RECIPE_BOX.id),
+    (src) => FRAME_SRC_RE.test(src) && src.includes(RECIPES.id),
   );
   const looks = await renders(
-    "frame A's computed style comes from its styles.css, and the CSS url() SVG loads",
+    "frame A runs its app: the recipe cards, each photo loaded from its photos.js",
     async () => {
       const frame = await frameOf(page, "A");
       return frame ? frameLooks(frame) : null;
     },
     (l) =>
       l !== null &&
-      l.title === RECIPE_BOX.title &&
-      l.boardDisplay === "grid" &&
-      l.bodyBackground.includes("leaf.svg") &&
-      l.svgLoads,
+      l.title === RECIPES.title &&
+      l.gridDisplay === "grid" &&
+      l.cards > 0 &&
+      l.photosLoaded === l.cards &&
+      l.weekBar,
   );
   r.note(`frame A: ${JSON.stringify(looks.value)}`);
   await renders(
@@ -283,14 +285,14 @@ await withBrowser(async (h) => {
   );
   await prev.click();
   const v0 = await renders(
-    "‹ again: v0's document (square cards — v1 rounded them)",
+    "‹ again: v0's document (cards, no week bar — v1 added it)",
     async () => {
       const frame = await frameOf(page, "A");
-      return frame ? (await frameLooks(frame)).cardRadius : null;
+      return frame ? frameLooks(frame) : null;
     },
-    (radius) => radius === "0px",
+    (l) => l !== null && l.cards > 0 && !l.weekBar,
   );
-  r.note(`v0 card radius: ${String(v0.value)}`);
+  r.note(`v0: ${JSON.stringify(v0.value)}`);
   await noteFrames();
   await snap(page, OUT, "4-v0");
 
@@ -308,11 +310,9 @@ await withBrowser(async (h) => {
     async () => {
       const src = await frameSrc(page, "A");
       const frame = await frameOf(page, "A");
-      return frame && !src.includes("/versions/")
-        ? (await frameLooks(frame)).cardRadius
-        : null;
+      return frame && !src.includes("/versions/") ? frameLooks(frame) : null;
     },
-    (radius) => radius === "0px",
+    (l) => l !== null && l.cards > 0 && !l.weekBar,
   );
   await noteFrames();
   await snap(page, OUT, "5-restored");
@@ -321,21 +321,21 @@ await withBrowser(async (h) => {
   await pickFromLauncher(embedRoot(page), /Prototypes/);
   await renders(
     "the restored prototype's thumbnail is a cache hit",
-    () => thumbnailLoaded(page, RECIPE_BOX.title),
+    () => thumbnailLoaded(page, RECIPES.title),
     (loaded) => loaded,
   );
   r.eq(
     "…not the unavailable marker",
-    await galleryCard(page, RECIPE_BOX.title)
+    await galleryCard(page, RECIPES.title)
       .getByText("Preview unavailable")
       .count(),
     0,
   );
 
-  // ── 6. compare: route unresolved, exhibit in-process ────────────────────
-  await galleryCard(page, QUEUE.title).click();
+  // ── 6. compare: a route counterpart is unresolved here ──────────────────
+  await galleryCard(page, MILLER.title).click();
   await renders(
-    "the queue prototype's canvas opens",
+    "the route-mocking prototype's canvas opens",
     () =>
       page
         .locator(canvasFrameSelector({ letter: "A", status: "found" }))
@@ -347,7 +347,7 @@ await withBrowser(async (h) => {
     exact: true,
   });
   // The rail offers a source only once it resolves; give it the time a
-  // resolving one takes (the composer's, below, shows within it).
+  // resolving one takes.
   await page.waitForTimeout(3_000);
   r.eq(
     "its route: counterpart answers unresolved here (the app needs serving by URL), so the rail offers no Real app frame",
@@ -361,18 +361,6 @@ await withBrowser(async (h) => {
   );
   await noteFrames();
   await snap(page, OUT, "6-compare-route");
-
-  await pickFromLauncher(embedRoot(page), /Prototypes/);
-  await galleryCard(page, COMPOSER).click();
-  await addSource(page, REAL_APP_LABEL);
-  await renders(
-    "the exhibit-mocking prototype's Real app frame renders the exhibit in-process",
-    async () =>
-      (await listFrames(page)).map((f) => `${f.letter}:${f.kind}:${f.status}`),
-    (frames) => frames.some((f) => f === "B:real-app:found"),
-  );
-  await noteFrames();
-  await snap(page, OUT, "6-compare-exhibit");
 
   // ── 7. a frame URL nothing serves is a 404, not the app ─────────────────
   const [anySrc] = [...frameSrcs];

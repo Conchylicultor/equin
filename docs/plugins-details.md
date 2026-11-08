@@ -6729,6 +6729,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PrototypeVersionActions` ← `apps.prototypes.canvas`
             - Contributes:
               - `Pane.Register` "prototypes-detail"
+              - `ExternalHosts.Declare` "unpkg.com, fonts.googleapis.com, fonts.gstatic.com"
               - `Hints.Hint` "prototypes.variants"
               - `ThemeEngine.SubTheme` "Prototype frame chips"
               - `ThemeEngine.SubTheme` "Prototype option rows"
@@ -6737,7 +6738,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PrototypeFrameActions` "close" → `CloseFrameAction`
               - `PrototypeVersionActions` "compare" → `CompareVersionAction`
               - `PrototypeVersionActions` "open-conversation" → `OpenVersionConversation`
-            - Uses: 92 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md)
+            - Uses: 93 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md)
               - `primitives/css/ui-kit` ×9
               - `primitives/data-view` ×6
               - `infra/endpoints` ×5
@@ -6757,6 +6758,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/slot-render` ×2
               - `apps-core/tabs.useAppLinkProps`
               - `apps/prototypes/state.usePrototypeState`
+              - `framework/browser-server.ExternalHosts`
               - `network/live.useLive`
               - `primitives/adaptive-bar.AdaptiveBar`
               - `primitives/css/badge.Badge`
@@ -27435,6 +27437,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ExternalHosts.Declare`
         - Slot contributors:
           - `HostInputs.Supply` ← `integrations.google-maps`
+          - `ExternalHosts.Declare` ← `apps.prototypes.canvas`
           - `ExternalHosts.Declare` ← `apps.sonata.audio.piano`
           - `ExternalHosts.Declare` ← `apps.sonata.audio.soundfont`
           - `ExternalHosts.Declare` ← `map.google`
@@ -27453,6 +27456,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HostInputs`
       - Cross-plugin:
         - Imported by:
+          - `apps/prototypes/canvas`
           - `apps/sonata/audio/piano`
           - `apps/sonata/audio/soundfont`
           - `framework/browser-server/demo/scope`

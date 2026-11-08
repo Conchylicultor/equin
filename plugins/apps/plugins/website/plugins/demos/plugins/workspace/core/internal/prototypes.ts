@@ -12,17 +12,27 @@ import type {
 
 /** The demo's prototype tags, in gallery order, and which prototype carries which. */
 export const DEMO_PROTOTYPE_TAGS: readonly PrototypeFixtureTag[] = [
+  // A prototype can be a whole app, clickable end to end…
   {
     id: "prtag-1792900000-demo01",
-    name: "My apps",
+    name: "Apps",
     color: "purple",
-    carriers: ["proto-1792900000-demo01"],
+    carriers: [
+      "proto-1792900000-demo01",
+      "proto-1792900180-demo04",
+      "proto-1792900240-demo05",
+    ],
   },
+  // …or one effect or interaction, studied in its variants.
   {
     id: "prtag-1792900000-demo02",
-    name: "Agent manager",
+    name: "UI/UX",
     color: "blue",
-    carriers: ["proto-1792900060-demo02", "proto-1792900120-demo03"],
+    carriers: [
+      "proto-1792900060-demo02",
+      "proto-1792900120-demo03",
+      "proto-1792900300-demo06",
+    ],
   },
 ];
 

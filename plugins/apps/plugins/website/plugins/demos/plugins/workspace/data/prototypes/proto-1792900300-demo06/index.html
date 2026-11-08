@@ -1,0 +1,580 @@
+<!doctype html>
+<html lang="en" data-pin="drop" data-basemap="google">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Map pins</title>
+<meta name="description" content="Directions for the page map block's pins: category-coloured, Mapstr-like markers that stay readable over Google's own POI layer, with collision-aware labels." />
+<meta name="prototype-option" content="pin: drop | bubble | pill | dot | stamp" />
+<meta name="prototype-option" content="basemap: google | muted | dark" />
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,1,0" />
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  :root {
+    --page: #f4f3f0;
+    --ink: #1d1d1f;
+    --ink-2: #5e5e66;
+    --card: #ffffff;
+    --line: rgba(0,0,0,.08);
+    --halo: #ffffff;
+    --label-ink: #202124;
+    --shadow: 0 1px 2px rgba(0,0,0,.18), 0 3px 8px rgba(0,0,0,.14);
+    --ring: #ffffff;
+    /* The app's categorical token group, light defaults. Place pins paint with
+       the SAME slot as the /place card's avatar tile: family → slot. */
+    --categorical-1: oklch(0.68 0.14 230);  /* sky     — lodging   */
+    --categorical-2: oklch(0.70 0.15 160);  /* emerald — nature    */
+    --categorical-3: oklch(0.75 0.15 70);   /* amber */
+    --categorical-4: oklch(0.65 0.20 15);   /* rose    — culture   */
+    --categorical-5: oklch(0.60 0.20 295);  /* violet  — shopping  */
+    --categorical-6: oklch(0.55 0.20 270);  /* indigo  — transport */
+    --categorical-7: oklch(0.70 0.12 190);  /* teal    — services  */
+    --categorical-8: oklch(0.68 0.20 350);  /* pink */
+    --categorical-9: oklch(0.70 0.17 50);   /* orange  — food      */
+    --categorical-10: oklch(0.55 0.03 250); /* slate   — none      */
+    --categorical-foreground: oklch(1 0 0);
+  }
+  :root[data-basemap="dark"] {
+    --categorical-1: oklch(0.78 0.13 230);
+    --categorical-2: oklch(0.80 0.14 160);
+    --categorical-3: oklch(0.83 0.14 70);
+    --categorical-4: oklch(0.75 0.17 15);
+    --categorical-5: oklch(0.72 0.17 295);
+    --categorical-6: oklch(0.70 0.16 270);
+    --categorical-7: oklch(0.80 0.11 190);
+    --categorical-8: oklch(0.78 0.17 350);
+    --categorical-9: oklch(0.80 0.15 50);
+    --categorical-10: oklch(0.70 0.03 250);
+    --page: #16171a;
+    --ink: #ececf0;
+    --ink-2: #9a9aa3;
+    --card: #26272c;
+    --line: rgba(255,255,255,.08);
+    --halo: #1f2125;
+    --label-ink: #f1f1f3;
+    --shadow: 0 1px 2px rgba(0,0,0,.5), 0 4px 10px rgba(0,0,0,.45);
+    --ring: #ffffff;
+  }
+  body {
+    font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--page);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+  #root { min-height: 100%; padding: 20px 16px 40px; }
+  .wrap { max-width: 1240px; margin: 0 auto; display: grid; gap: 18px; }
+
+  header h1 { font-size: 15px; font-weight: 650; margin: 0 0 4px; letter-spacing: -.01em; }
+  header p { margin: 0; font-size: 13px; color: var(--ink-2); line-height: 1.5; max-width: 72ch; }
+
+  /* ---------- map ---------- */
+  .map {
+    position: relative;
+    height: clamp(380px, 62vh, 660px);
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    background: #f8f7f4;
+    user-select: none;
+  }
+  .map svg.base { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .pins { position: absolute; inset: 0; }
+
+  /* ---------- pin shell ---------- */
+  .pin {
+    position: absolute;
+    width: 0; height: 0;               /* the anchor point; children hang off it */
+    cursor: pointer;
+    --c: #e2466f;
+  }
+  .pin .body {
+    position: absolute;
+    transform-origin: 50% 100%;
+    transition: transform .16s cubic-bezier(.3,.7,.4,1.4);
+  }
+  .pin:hover { z-index: 50; }
+  .pin:hover .body { transform: translateY(-2px) scale(1.07); }
+  .pin.selected { z-index: 60; }
+  .pin.selected .body { transform: scale(1.18); }
+  .pin.selected:hover .body { transform: translateY(-2px) scale(1.22); }
+  .glyph {
+    font-family: "Material Symbols Outlined"; font-variation-settings: "FILL" 1, "wght" 400, "opsz" 20;
+    font-size: 14px; line-height: 1; width: 1em; height: 1em; display: block; overflow: hidden;
+    color: var(--categorical-foreground); font-style: normal; -webkit-font-feature-settings: "liga"; font-feature-settings: "liga";
+  }
+  .pin { --c-ink: color-mix(in oklch, var(--c) 78%, black); }
+  :root[data-basemap="dark"] .pin { --c-ink: var(--c); }
+
+  .ground {
+    position: absolute; left: -7px; top: -3px; width: 14px; height: 6px; border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(0,0,0,.32), rgba(0,0,0,0));
+  }
+
+  /* halo text label — Google-native feel, readable on any tile */
+  .label {
+    position: absolute;
+    white-space: nowrap;
+    font-size: 12.5px;
+    font-weight: 650;
+    letter-spacing: -.005em;
+    color: var(--label-ink);
+    text-shadow:
+      0 0 2px var(--halo), 0 0 2px var(--halo), 0 0 3px var(--halo),
+      1px 1px 0 var(--halo), -1px -1px 0 var(--halo), 1px -1px 0 var(--halo), -1px 1px 0 var(--halo);
+    pointer-events: auto;
+    transition: opacity .15s;
+  }
+  .label .sub { display: block; font-size: 11px; font-weight: 550; color: var(--c-ink, var(--c)); }
+  .label.hidden { opacity: 0; pointer-events: none; }
+
+  /* ===== 1. DROP — Mapstr-like teardrop, glyph inside, halo label beside ===== */
+  [data-pin="drop"] .pin .body { left: -15px; top: -36px; width: 30px; height: 36px; }
+  [data-pin="drop"] .pin .head {
+    position: absolute; left: 0; top: 0; width: 30px; height: 30px;
+    background: var(--c);
+    border: 2px solid var(--ring);
+    border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg);
+    box-shadow: var(--shadow);
+  }
+  [data-pin="drop"] .pin .head + .glyph { position: absolute; left: 8px; top: 8px; }
+  /* labels hang off the head's circle centre: 21px above the anchor (×1.18 when selected) */
+  [data-pin="drop"] .label { top: -21px; transform: translateY(-50%); transition: transform .16s cubic-bezier(.3,.7,.4,1.4), opacity .15s; }
+  [data-pin="drop"] .label.at-right { left: 20px; }
+  [data-pin="drop"] .label.at-left  { right: 20px; text-align: right; }
+  [data-pin="drop"] .pin:hover .label { transform: translateY(calc(-50% - 3.5px)); }
+  [data-pin="drop"] .pin.selected .label { top: -25px; left: 23px; }
+  [data-pin="drop"] .pin.selected .label.at-left { left: auto; right: 23px; }
+
+  /* ===== 2. BUBBLE — round badge on a short stem, label tucked into a white card ===== */
+  [data-pin="bubble"] .pin .body { left: -15px; top: -38px; width: 30px; height: 38px; }
+  [data-pin="bubble"] .pin .head {
+    position: absolute; left: 0; top: 0; width: 30px; height: 30px; border-radius: 50%;
+    background: var(--c); border: 2.5px solid var(--ring); box-shadow: var(--shadow);
+    display: grid; place-items: center; z-index: 2;
+  }
+  [data-pin="bubble"] .pin .stem {
+    position: absolute; left: 13px; top: 27px; width: 4px; height: 10px; border-radius: 0 0 2px 2px;
+    background: var(--ring); box-shadow: 0 1px 2px rgba(0,0,0,.25);
+  }
+  [data-pin="bubble"] .label {
+    text-shadow: none; background: var(--card); color: var(--label-ink);
+    border-radius: 999px; box-shadow: var(--shadow); height: 24px; line-height: 24px; font-size: 12px;
+  }
+  [data-pin="bubble"] .label { top: -23px; transform: translateY(-50%); }
+  [data-pin="bubble"] .label.at-right { left: 8px; padding: 0 10px 0 13px; }
+  [data-pin="bubble"] .label.at-left  { right: 8px; padding: 0 13px 0 10px; }
+  [data-pin="bubble"] .pin.selected .label { background: var(--c); color: var(--categorical-foreground); top: -27px; }
+
+  /* ===== 3. PILL — the current pill, redone: light, coloured glyph disc, pointer ===== */
+  [data-pin="pill"] .pin .body { left: 0; top: 0; }
+  [data-pin="pill"] .pin .chip {
+    position: absolute; left: 0; bottom: 7px; transform: translateX(-15px);
+    display: flex; align-items: center; gap: 6px;
+    height: 30px; padding: 3px; border-radius: 999px;
+    background: var(--card); box-shadow: var(--shadow);
+    white-space: nowrap; transition: transform .16s;
+  }
+  [data-pin="pill"] .pin .chip::after {      /* pointer */
+    content: ""; position: absolute; left: 10px; bottom: -6px;
+    border: 5px solid transparent; border-top-color: var(--card); border-bottom: 0;
+  }
+  [data-pin="pill"] .pin .disc { width: 24px; height: 24px; border-radius: 50%; background: var(--c); display: grid; place-items: center; flex: none; }
+  [data-pin="pill"] .pin .disc .glyph { font-size: 12px; }
+  [data-pin="pill"] .pin .name { font-size: 12.5px; font-weight: 620; color: var(--label-ink); padding-right: 8px; }
+  [data-pin="pill"] .pin.collapsed .name { display: none; }
+  [data-pin="pill"] .pin.collapsed .chip { padding: 3px; }
+  [data-pin="pill"] .pin.selected .chip { background: var(--c); }
+  [data-pin="pill"] .pin.selected .chip::after { border-top-color: var(--c); }
+  [data-pin="pill"] .pin.selected .disc { background: rgba(255,255,255,.22); }
+  [data-pin="pill"] .pin.selected .name { color: var(--categorical-foreground); }
+
+  /* ===== 4. DOT — quiet ringed dot + halo label; selected blooms ===== */
+  [data-pin="dot"] .pin .body { left: -9px; top: -9px; width: 18px; height: 18px; transform-origin: 50% 50%; }
+  [data-pin="dot"] .pin .head {
+    position: absolute; inset: 2px; border-radius: 50%; background: var(--c);
+    border: 2.5px solid var(--ring); box-shadow: 0 1px 3px rgba(0,0,0,.35);
+  }
+  [data-pin="dot"] .pin .glyph { display: none; }
+  [data-pin="dot"] .ground { display: none; }
+  [data-pin="dot"] .pin.selected .body { transform: scale(1.5); }
+  [data-pin="dot"] .pin.selected .body::before {
+    content: ""; position: absolute; inset: -6px; border-radius: 50%;
+    background: var(--c); opacity: .22; animation: pulse 1.8s ease-out infinite;
+  }
+  @keyframes pulse { from { transform: scale(.6); opacity: .35; } to { transform: scale(1.5); opacity: 0; } }
+  [data-pin="dot"] .label { color: var(--c-ink, var(--c)); font-size: 12px; }
+  [data-pin="dot"] .label { top: 0; transform: translateY(-50%); }
+  [data-pin="dot"] .label.at-right { left: 11px; }
+  [data-pin="dot"] .label.at-left { right: 11px; text-align: right; }
+  [data-pin="dot"] .pin.selected .label { font-size: 13px; color: var(--label-ink); left: 16px; }
+
+  /* ===== 5. STAMP — monogram tile, for places that are a brand more than a category ===== */
+  [data-pin="stamp"] .pin .body { left: -16px; top: -40px; width: 32px; height: 40px; }
+  [data-pin="stamp"] .pin .head {
+    position: absolute; left: 0; top: 0; width: 32px; height: 32px; border-radius: 10px;
+    background: var(--c); border: 2px solid var(--ring); box-shadow: var(--shadow);
+    display: grid; place-items: center;
+    font-size: 12px; font-weight: 800; color: var(--categorical-foreground); letter-spacing: .02em;
+  }
+  [data-pin="stamp"] .pin .head::after {
+    content: ""; position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%);
+    border: 5px solid transparent; border-top: 6px solid var(--ring); border-bottom: 0;
+  }
+  [data-pin="stamp"] .pin .tag {   /* category glyph, as a little corner badge */
+    position: absolute; right: -6px; top: -6px; width: 16px; height: 16px; border-radius: 50%;
+    background: var(--ring); display: grid; place-items: center; box-shadow: 0 1px 2px rgba(0,0,0,.25);
+  }
+  [data-pin="stamp"] .pin .tag .glyph { font-size: 11px; color: var(--c); }
+  [data-pin="stamp"] .label.at-below { left: 0; top: 4px; transform: translateX(-50%); text-align: center; }
+  [data-pin="stamp"] .label.at-right { left: 22px; top: -24px; transform: translateY(-50%); }
+  [data-pin="stamp"] .pin.selected .label.at-below { top: 6px; }
+
+  /* ---------- legend + spec ---------- */
+  .row { display: grid; grid-template-columns: 1.1fr 1fr; gap: 18px; }
+  @media (max-width: 860px) { .row { grid-template-columns: 1fr; } }
+  .panel {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px;
+  }
+  .panel h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-2); margin: 0 0 12px; font-weight: 600; }
+  .panel p { font-size: 13px; line-height: 1.55; margin: 0 0 8px; color: var(--ink); }
+  .panel p.muted { color: var(--ink-2); }
+  .panel ul { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.6; color: var(--ink); }
+
+  .spec { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 10px; }
+  .cell {
+    position: relative; height: 104px; border-radius: 10px;
+    background: #f1efe9; border: 1px solid var(--line);
+  }
+  :root[data-basemap="dark"] .cell { background: #22252b; }
+  .cell .cap { position: absolute; left: 0; right: 0; bottom: 6px; text-align: center; font-size: 11px; color: var(--ink-2); }
+  .cell .pin { left: 50%; top: 58%; }
+  [data-pin="dot"] .cell .pin { top: 46%; }
+  [data-pin="pill"] .cell .pin { top: 62%; }
+  .cell .pin .label { max-width: none; }
+  .cell.force-hover .pin .body { transform: translateY(-2px) scale(1.07); }
+  [data-pin="dot"] .cell .pin, [data-pin="drop"] .cell .pin, [data-pin="bubble"] .cell .pin { margin-left: -24px; }
+</style>
+</head>
+<body>
+<div id="root">
+  <div class="wrap">
+    <header>
+      <h1 id="title"></h1>
+      <p id="pitch"></p>
+    </header>
+
+    <div class="map" id="map">
+      <svg class="base" id="base" viewBox="0 0 1240 640" preserveAspectRatio="xMidYMid slice" aria-hidden="true"></svg>
+      <div class="pins" id="pins"></div>
+    </div>
+
+    <div class="row">
+      <div class="panel">
+        <h2>States &amp; categories</h2>
+        <div class="spec" id="spec"></div>
+      </div>
+      <div class="panel" id="notes"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ------------------------------------------------------------------ data */
+// Mirrors page/place: core/kinds.ts (kind → family, family → avatar colour) and
+// web/internal/kind-glyphs.ts (kind → Material Symbol). The family picks the colour.
+const KINDS = {
+  clothing:   { family: "shopping", glyph: "apparel" },
+  shop:       { family: "shopping", glyph: "storefront" },
+  cafe:       { family: "food",     glyph: "local_cafe" },
+  bakery:     { family: "food",     glyph: "bakery_dining" },
+  restaurant: { family: "food",     glyph: "restaurant" },
+  bar:        { family: "food",     glyph: "local_bar" },
+  hotel:      { family: "lodging",  glyph: "hotel" },
+  park:       { family: "nature",   glyph: "park" },
+  museum:     { family: "culture",  glyph: "museum" },
+  transit:    { family: "transport",glyph: "train" },
+  address:    { family: "none",     glyph: "location_on" },
+};
+const AVATAR_SLOT = { sky: 1, emerald: 2, amber: 3, rose: 4, violet: 5, indigo: 6, teal: 7, pink: 8, orange: 9, slate: 10 };
+const FAMILY_COLOR = { shopping: "violet", food: "orange", lodging: "sky", nature: "emerald", culture: "rose", transport: "indigo", services: "teal", none: "slate" };
+const FAMILY_LABEL = { shopping: "Shopping", food: "Food", lodging: "Lodging", nature: "Nature", culture: "Culture", transport: "Transport", services: "Services", none: "Address" };
+const kindColor = (k) => `var(--categorical-${AVATAR_SLOT[FAMILY_COLOR[KINDS[k].family]]})`;
+// x,y in the 1240×640 basemap frame — the user's Paris shops, plus a few of other kinds.
+const PLACES = [
+  { name: "Levi's® Rivoli",       cat: "clothing", x: 600, y: 248 },
+  { name: "Bonne Gueule",         cat: "clothing", x: 836, y: 186 },
+  { name: "A.P.C.",               cat: "clothing", x: 812, y: 208 },
+  { name: "Merci",                cat: "clothing", x: 868, y: 210 },
+  { name: "Loom",                 cat: "clothing", x: 790, y: 252 },
+  { name: "Bonnegueule",          cat: "clothing", x: 405, y: 372, sel: true },
+  { name: "A.P.C.",               cat: "clothing", x: 432, y: 414 },
+  { name: "Du Pain et des Idées", cat: "bakery",     x: 790, y: 92 },
+  { name: "Café Kitsuné",         cat: "cafe",       x: 545, y: 205 },
+  { name: "Le Mary Celeste",      cat: "bar",        x: 885, y: 252 },
+  { name: "Musée Picasso",        cat: "museum",     x: 905, y: 226 },
+  { name: "Clamato",              cat: "restaurant", x: 1015, y: 335 },
+  { name: "Ten Belles",           cat: "cafe",       x: 905, y: 128 },
+  { name: "Hôtel Grand Amour",    cat: "hotel",      x: 845, y: 60 },
+  { name: "Square du Temple",     cat: "park",       x: 860, y: 150 },
+];
+const DIRECTIONS = {
+  drop: {
+    title: "Drop — the Mapstr pin, refined",
+    pitch: "A teardrop in the place card's family colour with a white ring and the category glyph, tip exactly on the place. The name sits beside it in Google's own label language (bold text on a halo, no box), so the pin owns the colour and the map owns the typography.",
+    notes: [
+      "Same circle, colour and glyph as the /place card's avatar — a teardrop is that disc with a tip.",
+      "No label box → no black slabs stacking on each other in dense areas.",
+      "Labels try right, then left, then hide — the pin itself never disappears.",
+    ],
+    cands: ["right", "left"],
+  },
+  bubble: {
+    title: "Bubble — badge on a stem, name on a card",
+    pitch: "A round category badge raised on a short white stem, its name tucked into a soft white card behind it. The friendliest of the five; the card keeps names legible even on the busiest tiles. Selected fills the card with the category colour.",
+    notes: [
+      "Closest to Mapstr's “pushpin” silhouette, but lighter.",
+      "Cards cost more room than halo labels, so more names hide in dense spots.",
+      "Good when the map is small (embedded in a page block).",
+    ],
+    cands: ["right", "left"],
+  },
+  pill: {
+    title: "Pill — today's pill, redone",
+    pitch: "Keeps the current concept (name in a pill) but flips it light: white pill, coloured glyph disc, a pointer that marks the exact spot. When pills would collide they collapse to just the disc instead of overlapping.",
+    notes: [
+      "Smallest change from today — same information, same shape.",
+      "Light chips sit on a light map; the coloured disc carries category.",
+      "Collapse-on-collision fixes the stacked-slab mess in the Marais.",
+    ],
+    cands: ["center"],
+  },
+  dot: {
+    title: "Dot — quiet, for many places",
+    pitch: "A small ringed dot in the category colour and a halo label tinted to match — basically a first-class Google POI. Scales to hundreds of saved places without turning the map into confetti. The selected place blooms with a soft pulse.",
+    notes: [
+      "Best density; weakest “this is mine” signal on a busy Google basemap.",
+      "Pairs well with the muted basemap (Google POIs hidden via a Map ID style).",
+      "Could be the far-zoom form of Drop: dots when zoomed out, drops when in.",
+    ],
+    cands: ["right", "left"],
+  },
+  stamp: {
+    title: "Stamp — monogram tile",
+    pitch: "A rounded tile showing the place's initials, with its category as a small corner badge. For lists that are mostly brands (shops, restaurants) the monogram is faster to recognise than a generic hanger. Later the tile could hold the place's photo or logo, like Mapstr.",
+    notes: [
+      "Distinguishes two places of the same category at a glance (A.P.C. vs Loom).",
+      "Natural slot for a photo/logo once places carry one.",
+      "Label below by default, beside if below collides.",
+    ],
+    cands: ["below", "right"],
+  },
+};
+
+const root = document.documentElement;
+const dir = root.dataset.pin;
+const basemap = root.dataset.basemap;
+const D = DIRECTIONS[dir];
+
+/* ------------------------------------------------------------------ basemap */
+function rng(seed) { return () => (seed = (seed * 16807) % 2147483647) / 2147483647; }
+function drawBase() {
+  const P = {
+    google: { bg: "#f8f7f4", block: "#efece6", park: "#cfe9c6", water: "#a9d3f5", major: "#ffffff", majorCase: "#e2dfd8", minor: "#ffffff", poi: "#8a49c9", poiText: "#7f3fbf", parkText: "#3d8a4f", city: "#2b2b2f" },
+    muted:  { bg: "#f6f5f3", block: "#efeeeb", park: "#e1ece0", water: "#cfe1ef", major: "#ffffff", majorCase: "#e6e4e0", minor: "#fbfaf8", poi: null, parkText: "#8da491", city: "#8a8a90" },
+    dark:   { bg: "#1f2125", block: "#24272c", park: "#21322a", water: "#1b2c3e", major: "#363a42", majorCase: "#2b2e34", minor: "#2c3036", poi: "#9b7ad6", poiText: "#a98be0", parkText: "#5e9471", city: "#d6d6dc" },
+  }[basemap];
+  const r = rng(7);
+  let s = `<rect width="1240" height="640" fill="${P.bg}"/>`;
+  // city blocks
+  for (let i = 0; i < 160; i++) {
+    const x = r() * 1240, y = r() * 640, w = 30 + r() * 70, h = 20 + r() * 50;
+    s += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="${P.block}" transform="rotate(${(r()-.5)*40} ${x} ${y})"/>`;
+  }
+  // parks
+  s += `<path d="M330 130 l140 -10 l20 70 l-150 20 z" fill="${P.park}"/>`;
+  s += `<path d="M420 430 q60 -20 120 0 l10 80 q-70 20 -140 0 z" fill="${P.park}"/>`;
+  s += `<path d="M960 0 h120 v70 q-60 20 -120 0 z" fill="${P.park}"/>`;
+  s += `<path d="M700 470 l120 -20 l30 90 l-130 10 z" fill="${P.park}"/>`;
+  // minor streets
+  for (let i = 0; i < 110; i++) {
+    const x = r() * 1240, y = r() * 640, a = r() * Math.PI, l = 60 + r() * 160;
+    s += `<line x1="${x}" y1="${y}" x2="${x + Math.cos(a) * l}" y2="${y + Math.sin(a) * l}" stroke="${P.minor}" stroke-width="3" stroke-linecap="round"/>`;
+  }
+  // the Seine
+  s += `<path d="M-20 205 C 120 190, 200 260, 330 250 S 520 300, 620 320 S 760 360, 830 420 S 980 520, 1260 560" fill="none" stroke="${P.water}" stroke-width="22" stroke-linecap="round"/>`;
+  // boulevards
+  const majors = [
+    "M0 330 C 300 300, 500 290, 760 300 S 1100 300, 1240 280",
+    "M600 0 C 610 200, 600 400, 560 640",
+    "M180 640 C 300 450, 420 330, 600 250 S 900 120, 1100 0",
+    "M760 640 C 800 500, 900 380, 1240 330",
+    "M80 0 C 200 150, 260 300, 330 640",
+    "M900 640 C 880 400, 860 200, 880 0",
+  ];
+  for (const d of majors) {
+    s += `<path d="${d}" fill="none" stroke="${P.majorCase}" stroke-width="10" stroke-linecap="round"/>`;
+    s += `<path d="${d}" fill="none" stroke="${P.major}" stroke-width="7" stroke-linecap="round"/>`;
+  }
+  // Google's own labels and POIs — the competition our pins have to beat
+  const txt = (x, y, t, fill, size = 15, w = 500, anchor = "start") =>
+    `<text x="${x}" y="${y}" fill="${fill}" font-size="${size}" font-weight="${w}" text-anchor="${anchor}" font-family="Roboto, system-ui, sans-serif" stroke="${P.bg}" stroke-width="3" paint-order="stroke" stroke-linejoin="round">${t}</text>`;
+  s += txt(620, 312, "Paris", P.city, 30, 700, "middle");
+  s += txt(850, 300, "11TH ARR.", P.city, 13, 600);
+  s += txt(560, 600, "5TH ARR.", P.city, 13, 600);
+  s += txt(450, 495, "Jardin du", P.parkText, 14, 500, "middle");
+  s += txt(450, 513, "Luxembourg", P.parkText, 14, 500, "middle");
+  if (P.poi) {
+    const pois = [
+      [200, 122, "Grand Palais"], [300, 130, "Place de la Concorde"], [500, 216, "Musée du Louvre"],
+      [250, 312, "Musée Rodin"], [610, 470, "Panthéon"], [875, 350, "Place de la Bastille"],
+      [560, 20, "Musée Grévin"], [290, 528, "Musée Bourdelle"],
+    ];
+    for (const [x, y, t] of pois) {
+      s += `<circle cx="${x}" cy="${y}" r="12" fill="${P.poi}" stroke="${P.bg}" stroke-width="2.5"/>`;
+      s += `<rect x="${x-5}" y="${y-4}" width="10" height="8" rx="1" fill="none" stroke="#fff" stroke-width="1.6"/>`;
+      s += txt(x + 18, y + 5, t, P.poiText, 15, 500);
+    }
+    s += `<circle cx="880" cy="148" r="12" fill="#e8710a" stroke="${P.bg}" stroke-width="2.5"/>`;
+    s += txt(865, 154, "Ober Mamma", "#c55c06", 15, 500, "end");
+  }
+  document.getElementById("base").innerHTML = s;
+}
+
+/* ------------------------------------------------------------------ pins */
+const svg = (kind) => `<i class="glyph" aria-hidden="true">${KINDS[kind].glyph}</i>`;
+const initials = (n) => {
+  const w = n.replace(/[®.']/g, "").split(/\s+/).filter(Boolean);
+  if (n.includes(".")) return n.replace(/[^A-Z]/g, "").slice(0, 3);          // A.P.C. → APC
+  return (w.length > 1 ? w[0][0] + w[1][0] : w[0].slice(0, 2)).toUpperCase();
+};
+
+function pinHTML(p) {
+  const style = `--c:${kindColor(p.cat)}`;
+  const label = `<div class="label">${p.name}</div>`;
+  switch (dir) {
+    case "drop":
+      return `<div class="pin" style="${style}"><div class="ground"></div><div class="body"><div class="head"></div>${svg(p.cat)}</div>${label}</div>`;
+    case "bubble":
+      return `<div class="pin" style="${style}"><div class="ground"></div>${label}<div class="body"><div class="stem"></div><div class="head">${svg(p.cat)}</div></div></div>`;
+    case "pill":
+      return `<div class="pin" style="${style}"><div class="ground"></div><div class="body"><div class="chip"><div class="disc">${svg(p.cat)}</div><span class="name">${p.name}</span></div></div></div>`;
+    case "dot":
+      return `<div class="pin" style="${style}"><div class="body"><div class="head"></div></div>${label}</div>`;
+    case "stamp":
+      return `<div class="pin" style="${style}"><div class="ground"></div><div class="body"><div class="head">${initials(p.name)}</div><div class="tag">${svg(p.cat)}</div></div>${label}</div>`;
+  }
+}
+
+const map = document.getElementById("map");
+const pinsEl = document.getElementById("pins");
+let nodes = [];
+
+function renderPins() {
+  pinsEl.innerHTML = PLACES.map(pinHTML).join("");
+  nodes = [...pinsEl.children].map((el, i) => {
+    const p = PLACES[i];
+    if (p.sel) el.classList.add("selected");
+    el.addEventListener("click", () => {
+      const was = el.classList.contains("selected");
+      nodes.forEach((n) => { n.el.classList.remove("selected"); n.p.sel = false; });
+      if (!was) { el.classList.add("selected"); p.sel = true; }
+      layout();
+    });
+    return { el, p };
+  });
+}
+
+/* Project the basemap frame (slice-fit) onto the box, then place labels by priority:
+   selected first, then list order; each label tries its direction's candidate sides
+   and hides (or, for pills, collapses) when every side collides. Pins never hide. */
+function layout() {
+  const W = map.clientWidth, H = map.clientHeight;
+  const s = Math.max(W / 1240, H / 640), ox = (W - 1240 * s) / 2, oy = (H - 640 * s) / 2;
+  for (const { el, p } of nodes) {
+    el.style.left = ox + p.x * s + "px";
+    el.style.top = oy + p.y * s + "px";
+    el.style.zIndex = String(Math.round(p.y));
+    el.classList.remove("collapsed");
+  }
+  const box = map.getBoundingClientRect();
+  const rel = (r, pad = 2) => ({ l: r.left - box.left - pad, t: r.top - box.top - pad, r: r.right - box.left + pad, b: r.bottom - box.top + pad });
+  const hit = (a, b) => a.l < b.r && b.l < a.r && a.t < b.b && b.t < a.b;
+  const markOf = (el) => rel((el.querySelector(".head, .disc") || el.querySelector(".body")).getBoundingClientRect(), 1);
+  const marks = nodes.map((n) => markOf(n.el));
+  const taken = [];
+  const order = [...nodes.keys()].sort((a, b) => (nodes[b].p.sel ? 1 : 0) - (nodes[a].p.sel ? 1 : 0));
+  for (const i of order) {
+    const { el } = nodes[i];
+    const others = marks.filter((_, j) => j !== i);
+    if (dir === "pill") {
+      const full = rel(el.querySelector(".chip").getBoundingClientRect());
+      const free = full.l > 0 && full.r < W && !others.some((m) => hit(full, m)) && !taken.some((t) => hit(full, t));
+      if (free || nodes[i].p.sel) taken.push(full); else { el.classList.add("collapsed"); taken.push(markOf(el)); }
+      continue;
+    }
+    const lab = el.querySelector(".label");
+    lab.classList.remove("hidden");
+    let placed = false;
+    for (const side of D.cands) {
+      lab.className = "label at-" + side;
+      const r = rel(lab.getBoundingClientRect());
+      if (r.l > 0 && r.r < W && r.t > 0 && r.b < H && !others.some((m) => hit(r, m)) && !taken.some((t) => hit(r, t))) {
+        taken.push(r); placed = true; break;
+      }
+    }
+    if (!placed) { lab.className = "label at-" + D.cands[0] + " hidden"; }
+  }
+}
+
+/* ------------------------------------------------------------------ spec + notes */
+function renderSpec() {
+  const cells = [];
+  const sample = (cat, name, cls = "", cap = "") => {
+    const html = pinHTML({ name, cat });
+    cells.push(`<div class="cell ${cls}">${html}<div class="cap">${cap}</div></div>`);
+  };
+  sample("clothing", "Loom", "", "Default");
+  sample("clothing", "Loom", "force-hover", "Hover");
+  sample("clothing", "Loom", "is-selected", "Selected");
+  if (dir === "pill") sample("clothing", "Loom", "is-collapsed", "Crowded");
+  else sample("clothing", "Loom", "is-crowded", "Crowded");
+  for (const [k, n] of [["restaurant", "Clamato"], ["museum", "Picasso"], ["park", "Temple"], ["hotel", "Grand Amour"]]) sample(k, n, "", FAMILY_LABEL[KINDS[k].family]);
+  const spec = document.getElementById("spec");
+  spec.innerHTML = cells.join("");
+  spec.querySelectorAll(".cell").forEach((c) => {
+    const pin = c.querySelector(".pin"), lab = c.querySelector(".label");
+    if (lab) lab.className = "label at-" + D.cands[0];
+    if (c.classList.contains("is-selected")) pin.classList.add("selected");
+    if (c.classList.contains("is-collapsed")) pin.classList.add("collapsed");
+    if (c.classList.contains("is-crowded") && lab) lab.classList.add("hidden");
+    pin.style.cursor = "default";
+  });
+}
+
+function renderNotes() {
+  document.getElementById("title").textContent = D.title;
+  document.getElementById("pitch").textContent = D.pitch;
+  const base = {
+    google: "Default Google basemap, POIs on — the honest test: our pins must beat Google's own purple museum icons.",
+    muted: "Google with a Map ID style that hides POI icons and desaturates — one Cloud style change, makes every direction calmer.",
+    dark: "Dark basemap — every pin keeps its white ring so it separates from dark tiles.",
+  }[basemap];
+  document.getElementById("notes").innerHTML =
+    `<h2>Why this one</h2><ul>${D.notes.map((n) => `<li>${n}</li>`).join("")}</ul>` +
+    `<p class="muted" style="margin-top:12px">Colours are the place card's: kind → family → categorical slot (shopping violet, food orange, culture rose, nature emerald, lodging sky). Watch-out: shopping's violet is close to Google's purple POI icons on the default basemap — the muted basemap removes the clash.</p>` +
+    `<p class="muted">${base}</p>` +
+    `<p class="muted">Click a pin to select it. Labels are collision-aware: try a narrow window to see them give way.</p>`;
+}
+
+drawBase();
+renderPins();
+renderSpec();
+renderNotes();
+requestAnimationFrame(layout);
+new ResizeObserver(layout).observe(map);
+</script>
+</body>
+</html>

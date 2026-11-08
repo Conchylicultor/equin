@@ -2,6 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
 import { Hints } from "@plugins/hints/web";
+import { ExternalHosts } from "@plugins/framework/plugins/browser-server/web";
 import { variantsHint } from "../core";
 import { prototypeDetailPane } from "./panes";
 import {
@@ -82,6 +83,15 @@ export default {
     "The prototype detail pane as a canvas of frames: the prototype (frame A reads and writes the shared option picks, every other frame holds its own), each with its own options chip and version stepper in its header, beside frames from contributed sources (FrameSource — the real app, from compare); one canvas-wide size & zoom chip (Responsive / device presets / custom, Fit or 10–200%, Whole page), a Width slider that resizes every frame and snaps to the presets, side-by-side or swipe, keep-only with Undo, link and spread across frames; the whole canvas is remembered per pane for the browser tab's session, so a reload reopens it as it was left while a new pane starts fresh.",
   contributions: [
     Pane.Register({ pane: prototypeDetailPane }),
+    // A frame runs the prototype as written, and the blank template
+    // (`prototypes/_template`) loads React, ReactDOM and Babel from unpkg and
+    // its fonts from Google Fonts — so a prototype's frame reaches them, in a
+    // browser host as on the desktop.
+    ExternalHosts.Declare({
+      hosts: ["unpkg.com", "fonts.googleapis.com", "fonts.gstatic.com"],
+      reason:
+        "A prototype's frame: the template's React, ReactDOM and Babel (unpkg) and its web fonts (Google Fonts).",
+    }),
     Hints.Hint({ hint: variantsHint }),
     ThemeEngine.SubTheme(frameChipsTheme),
     ThemeEngine.SubTheme(optionRowsTheme),

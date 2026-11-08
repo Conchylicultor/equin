@@ -1066,11 +1066,14 @@ export const externalHosts: readonly {
   readonly plugin: string;
   readonly reason: string;
 }[] = [
+  { host: "fonts.googleapis.com", plugin: "apps.prototypes.canvas", reason: "A prototype's frame: the template's React, ReactDOM and Babel (unpkg) and its web fonts (Google Fonts)." },
   { host: "fonts.googleapis.com", plugin: "map.google", reason: "Google's Maps JavaScript API: its script, tiles, fonts and map styles." },
+  { host: "fonts.gstatic.com", plugin: "apps.prototypes.canvas", reason: "A prototype's frame: the template's React, ReactDOM and Babel (unpkg) and its web fonts (Google Fonts)." },
   { host: "fonts.gstatic.com", plugin: "map.google", reason: "Google's Maps JavaScript API: its script, tiles, fonts and map styles." },
   { host: "gleitz.github.io", plugin: "apps.sonata.audio.soundfont", reason: "The General MIDI instruments' samples (the gm-soundfont asset mirror's remote)." },
   { host: "maps.googleapis.com", plugin: "map.google", reason: "Google's Maps JavaScript API: its script, tiles, fonts and map styles." },
   { host: "maps.gstatic.com", plugin: "map.google", reason: "Google's Maps JavaScript API: its script, tiles, fonts and map styles." },
   { host: "mapsresources-pa.googleapis.com", plugin: "map.google", reason: "Google's Maps JavaScript API: its script, tiles, fonts and map styles." },
   { host: "smpldsnds.github.io", plugin: "apps.sonata.audio.piano", reason: "The grand piano's samples (the splendid-grand-piano asset mirror's remote)." },
+  { host: "unpkg.com", plugin: "apps.prototypes.canvas", reason: "A prototype's frame: the template's React, ReactDOM and Babel (unpkg) and its web fonts (Google Fonts)." },
 ];

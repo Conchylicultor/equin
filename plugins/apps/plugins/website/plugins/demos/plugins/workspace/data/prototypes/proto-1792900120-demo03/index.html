@@ -1,37 +1,387 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-motion="slide" data-speed="smooth" data-cascade="off">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Agent queue — focus view</title>
-<meta name="description" content="The agent manager's queue as one column: the agent that needs you first, the rest folded below." />
+<title>Miller pane motion</title>
+<meta name="description" content="How a Miller column enters, leaves and swaps: slide, cover, grow, fade or none, at three speeds, with an optional content cascade. Click through tasks → conversation → file." />
 <meta name="mocks" content="route:/agents" />
+<meta name="prototype-option" content="motion: slide | cover | grow | fade | none" />
+<meta name="prototype-option" content="speed: smooth | snappy | slow" />
+<meta name="prototype-option" content="cascade: off | on" />
+
 <style>
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; }
-  body { font-family: system-ui, sans-serif; background: #fafafa; color: #18181b; }
-  main { max-width: 640px; margin: 0 auto; padding: 32px 20px; }
-  h1 { font-size: 18px; margin: 0 0 16px; }
-  .first { background: white; border: 1px solid #e4e4e7; border-radius: 12px; padding: 18px; margin-bottom: 16px; }
-  .first strong { display: block; margin-bottom: 6px; }
-  .first p { margin: 0; color: #52525b; font-size: 14px; }
-  ul { list-style: none; margin: 0; padding: 0; }
-  li { display: flex; justify-content: space-between; padding: 10px 4px; border-bottom: 1px solid #f0f0f2; font-size: 14px; }
-  li span { color: #a1a1aa; font-size: 12px; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  :root {
+    --bg: #fafaf9; --panel: #ffffff; --border: #e7e5e4; --fg: #1c1917; --muted: #78716c;
+    --hover: #f5f5f4; --active: #eef2ff; --active-fg: #3730a3; --accent: #6366f1;
+    --ease-out: cubic-bezier(.33, 1, .68, 1); --ease-in: cubic-bezier(.5, 0, .75, 0);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141414; --panel: #1b1b1b; --border: #2a2a2a; --fg: #e7e5e4; --muted: #8a8580;
+      --hover: #232323; --active: #262a45; --active-fg: #c7d2fe;
+    }
+  }
+  body { font: 13px/1.45 system-ui, -apple-system, sans-serif; color: var(--fg); background: var(--bg); }
+  #app { display: flex; height: var(--prototype-screen-height, 100vh); }
+
+  .rail { width: 44px; flex: none; border-right: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px 0; background: var(--bg); }
+  .rail i { width: 26px; height: 26px; border-radius: 7px; background: var(--border); display: block; }
+  .rail i.on { background: var(--accent); }
+
+  .cols { position: relative; flex: 1; min-width: 0; display: flex; overflow-x: auto; overflow-y: hidden; }
+  .col { position: relative; flex: none; height: 100%; overflow: hidden; border-right: 1px solid var(--border); background: var(--panel); }
+  .col:last-child, .col.leaf { border-right: 0; }
+  .cols.anim-width .col { transition: width var(--dur) var(--ease-out); }
+  .col.exiting { position: absolute; top: 0; bottom: 0; z-index: 2; pointer-events: none; }
+  .col.entering { z-index: 3; }
+  .inner { position: absolute; inset: 0 auto 0 0; width: 100%; display: flex; flex-direction: column; background: var(--panel); }
+  .inner.swap-out { z-index: 1; pointer-events: none; }
+  .col.cover-edge .inner { box-shadow: -14px 0 28px -16px rgba(0,0,0,.35); }
+
+  header { height: 44px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 8px 0 14px; border-bottom: 1px solid var(--border); }
+  header h2 { margin: 0; font-size: 13px; font-weight: 600; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  header .x { width: 26px; height: 26px; border: 0; border-radius: 6px; background: none; color: var(--muted); cursor: pointer; font-size: 16px; line-height: 1; }
+  header .x:hover { background: var(--hover); color: var(--fg); }
+  .body { flex: 1; overflow-y: auto; padding: 8px; }
+
+  .row { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 7px; cursor: pointer; white-space: nowrap; }
+  .row:hover { background: var(--hover); }
+  .row.active { background: var(--active); color: var(--active-fg); }
+  .row .t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .row .m { color: var(--muted); font-size: 12px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .s-running { background: #3b82f6; } .s-done { background: #22c55e; } .s-action { background: #f59e0b; } .s-todo { background: transparent; border: 1.5px solid var(--muted); }
+  .group { padding: 10px 8px 4px; font-size: 11px; font-weight: 600; letter-spacing: .02em; text-transform: uppercase; color: var(--muted); }
+
+  .sec { padding: 6px 8px 12px; }
+  .sec h3 { margin: 0 0 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .02em; color: var(--muted); }
+  .title { font-size: 17px; font-weight: 600; margin: 6px 8px 4px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); font-size: 12px; color: var(--muted); margin: 0 8px 8px; }
+  .desc { padding: 10px 12px; border: 1px solid var(--border); border-radius: 9px; color: var(--fg); }
+
+  .msg { margin: 6px 4px 14px; }
+  .msg .who { font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 3px; }
+  .msg.user .text { background: var(--hover); border-radius: 10px; padding: 8px 11px; display: inline-block; }
+  .ref { display: inline-flex; align-items: center; gap: 4px; padding: 0 6px; border-radius: 5px; background: var(--hover); font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; cursor: pointer; border: 1px solid transparent; }
+  .ref:hover { border-color: var(--border); }
+  .ref.active { background: var(--active); color: var(--active-fg); }
+  .tool { font: 12px ui-monospace, Menlo, monospace; color: var(--muted); padding: 5px 9px; border-left: 2px solid var(--border); margin: 4px 0; }
+
+  pre { margin: 0; font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .ln { display: flex; gap: 14px; padding: 0 8px; white-space: pre; }
+  .ln b { width: 22px; flex: none; text-align: right; color: var(--muted); font-weight: 400; opacity: .6; }
+  .k { color: #a21caf; } .str { color: #15803d; } .cm { color: var(--muted); }
+  @media (prefers-color-scheme: dark) { .k { color: #e879f9; } .str { color: #86efac; } }
 </style>
 </head>
 <body>
-<main>
-  <h1>Needs you</h1>
-  <div class="first">
-    <strong>Practice timer in Sonata</strong>
-    <p>The agent built it and tested it. Its preview is ready for your review.</p>
-  </div>
-  <ul>
-    <li>A recipes app for my family <span>working</span></li>
-    <li>Weekly review: what shipped last week <span>working</span></li>
-    <li>Calendar: my tasks on a month view <span>waiting</span></li>
-  </ul>
-</main>
+<div id="app">
+  <nav class="rail"><i class="on"></i><i></i><i></i><i></i></nav>
+  <div class="cols" id="cols"></div>
+</div>
+
+<script>
+/* ---------- data ---------- */
+const TASKS = [
+  { id: "t1", title: "Animate miller pane entrance", status: "running", desc: "When a pane opens on the right, it should arrive rather than pop. Keep the layout honest: no reflow jank, no motion on resize.", convs: ["c1", "c2"], subs: ["t3"] },
+  { id: "t2", title: "Fix flaky push check", status: "done", desc: "plugins-doc-in-sync sometimes fails on a fresh worktree because the doc generator races the registry codegen.", convs: ["c3"], subs: [] },
+  { id: "t3", title: "Tasks panel badge count", status: "action", desc: "The Tasks button shows 'Need action' but not how many. Add the count and keep it live.", convs: ["c4"], subs: [] },
+  { id: "t4", title: "Theme gallery search", status: "todo", desc: "Search across saved, curated and community themes in one box.", convs: [], subs: [] },
+  { id: "t5", title: "Backup retention policy", status: "running", desc: "Keep 7 daily, 4 weekly and 12 monthly archives; prune the rest after a successful run.", convs: ["c5"], subs: ["t7"] },
+  { id: "t6", title: "Keyboard Party sounds", status: "done", desc: "Every key answers with its own sound; letters say their word.", convs: ["c6"], subs: [] },
+  { id: "t7", title: "Mail thread grouping", status: "todo", desc: "Group messages by thread id, fall back to subject + participants.", convs: [], subs: [] },
+];
+const CONVS = {
+  c1: { task: "t1", model: "Opus", status: "running", files: ["miller-columns.tsx", "column.tsx"] },
+  c2: { task: "t1", model: "Sonnet", status: "done", files: ["use-column-widths.ts"] },
+  c3: { task: "t2", model: "Sonnet", status: "done", files: ["plugins-doc-in-sync.ts"] },
+  c4: { task: "t3", model: "Opus", status: "action", files: ["tasks-button.tsx"] },
+  c5: { task: "t5", model: "Opus", status: "running", files: ["retention.ts", "schedule.ts"] },
+  c6: { task: "t6", model: "Sonnet", status: "done", files: ["party.tsx"] },
+};
+const FILES = {
+  "miller-columns.tsx": `import { Column } from "./column";\n\n// Maps the pane chain to a row of columns.\nexport function MillerColumns({ match }) {\n  const panes = match.panes;\n  return (\n    <Row>\n      {panes.map((entry, i) => (\n        <Column\n          key={entry.key}\n          entry={entry}\n          isLast={i === panes.length - 1}\n        />\n      ))}\n    </Row>\n  );\n}`,
+  "column.tsx": `export function Column({ entry, isLast }) {\n  const [width] = useColumnWidth(entry.pane.width ?? 400);\n  // The leaf flex-grows; the rest keep their width.\n  const style = isLast ? undefined : { width };\n  return (\n    <section style={style} className="column">\n      <Header title={entry.title} />\n      <entry.pane.component {...entry.params} />\n    </section>\n  );\n}`,
+  "use-column-widths.ts": `const store = defineStore("miller.widths");\n\nexport function useColumnWidth(fallback: number) {\n  const tab = useSurfaceTabId();\n  const [w, setW] = useState(() => store.get(tab) ?? fallback);\n  return [w, (next: number) => {\n    store.set(tab, next);\n    setW(next);\n  }] as const;\n}`,
+  "plugins-doc-in-sync.ts": `// Fails when a plugin's CLAUDE.md autogen block drifts.\nexport const check: Check = {\n  id: "plugins-doc-in-sync",\n  async run() {\n    await registry.ready;   // the race lived here\n    const drift = await diffDocs();\n    return drift.length ? fail(drift) : ok();\n  },\n};`,
+  "tasks-button.tsx": `export function TasksButton() {\n  const tasks = useLive(needActionTasks);\n  if (tasks.state !== "ready") return <Pending />;\n  return (\n    <Button icon="checklist">\n      Tasks <Badge>{tasks.rows.length}</Badge>\n    </Button>\n  );\n}`,
+  "retention.ts": `// 7 daily, 4 weekly, 12 monthly.\nexport function keep(runs: Run[]): Set<string> {\n  const keepIds = new Set<string>();\n  for (const bucket of ["day", "week", "month"]) {\n    for (const r of newestPer(runs, bucket)) keepIds.add(r.id);\n  }\n  return keepIds;\n}`,
+  "schedule.ts": `export const backupJob = defineJob({\n  id: "backup.nightly",\n  schedule: "0 3 * * *",\n  async run() {\n    const run = await backup();\n    if (run.ok) await prune(keep(await listRuns()));\n  },\n});`,
+  "party.tsx": `export function Party() {\n  const play = useSounds();\n  useKey((key) => {\n    play(key);\n    burst(key);\n  });\n  return <Stage />;\n}`,
+};
+const task = (id) => TASKS.find((t) => t.id === id);
+const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const statusLabel = { running: "Running", done: "Done", action: "Needs action", todo: "To do" };
+
+/* ---------- panes ---------- */
+const PANES = {
+  tasks: {
+    width: 290,
+    title: () => "Tasks",
+    render() {
+      const groups = [["Needs action", ["action"]], ["In progress", ["running"]], ["To do", ["todo"]], ["Done", ["done"]]];
+      return groups.map(([label, st]) => {
+        const rows = TASKS.filter((t) => st.includes(t.status));
+        if (!rows.length) return "";
+        return `<div class="c group">${label}</div>` + rows.map((t) =>
+          `<div class="c row" data-open="task:${t.id}"><span class="dot s-${t.status}"></span><span class="t">${esc(t.title)}</span></div>`).join("");
+      }).join("");
+    },
+  },
+  task: {
+    width: 380,
+    title: (id) => task(id).title,
+    render(id) {
+      const t = task(id);
+      return `
+        <div class="c title">${esc(t.title)}</div>
+        <div class="c"><span class="chip"><span class="dot s-${t.status}"></span>${statusLabel[t.status]}</span></div>
+        <div class="c sec"><h3>Prompt</h3><div class="desc">${esc(t.desc)}</div></div>
+        <div class="c sec"><h3>Conversations</h3>${t.convs.length ? t.convs.map((c) =>
+          `<div class="row" data-open="conv:${c}"><span class="dot s-${CONVS[c].status}"></span><span class="t">${CONVS[c].model} · attempt ${c.slice(1)}</span><span class="m">${statusLabel[CONVS[c].status]}</span></div>`).join("")
+          : `<div class="m" style="padding:6px 8px;color:var(--muted)">Not launched yet</div>`}</div>
+        ${t.subs.length ? `<div class="c sec"><h3>Subtasks</h3>${t.subs.map((s) =>
+          `<div class="row" data-open="task:${s}"><span class="dot s-${task(s).status}"></span><span class="t">${esc(task(s).title)}</span></div>`).join("")}</div>` : ""}`;
+    },
+  },
+  conv: {
+    width: 500,
+    title: (id) => `${CONVS[id].model} · ${task(CONVS[id].task).title}`,
+    render(id) {
+      const c = CONVS[id], t = task(c.task);
+      const fileRefs = c.files.map((f) => `<span class="ref" data-open="file:${f}">${f}</span>`);
+      return `
+        <div class="c msg user"><div class="who">You</div><div class="text">${esc(t.desc)}</div></div>
+        <div class="c msg"><div class="who">${c.model}</div>Let me look at where this lives first.
+          <div class="tool">Read ${c.files[0]}</div>${c.files[1] ? `<div class="tool">Read ${c.files[1]}</div>` : ""}</div>
+        <div class="c msg"><div class="who">${c.model}</div>The behaviour is decided in ${fileRefs.join(" and ")}. I'll keep the change inside that boundary and leave the callers untouched.</div>
+        <div class="c msg"><div class="who">${c.model}</div>Related: <span class="ref" data-open="task:${t.subs[0] || t.id}">${esc(task(t.subs[0] || t.id).title)}</span> touches the same code path, so I checked it still behaves.</div>
+        <div class="c msg"><div class="who">${c.model}</div>${c.status === "running" ? "Building now — I'll report once the deploy is up." : "Done. Built and deployed; ready for review."}</div>`;
+    },
+  },
+  file: {
+    width: 440,
+    title: (path) => path,
+    render(path) {
+      const hl = (l) => esc(l)
+        .replace(/(\/\/.*)$/, '<span class="cm">$1</span>')
+        .replace(/("[^"]*"|`[^`]*`)/g, '<span class="str">$1</span>')
+        .replace(/\b(import|from|export|function|const|return|async|await|if|for|of|new)\b/g, '<span class="k">$1</span>');
+      return `<pre>${FILES[path].split("\n").map((l, i) => `<div class="c ln"><b>${i + 1}</b><span>${hl(l)}</span></div>`).join("")}</pre>`;
+    },
+  },
+};
+
+/* ---------- motion settings (read once; a pick reloads the frame) ---------- */
+const ds = document.documentElement.dataset;
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const MOTION = reduced && ds.motion !== "none" ? "fade" : ds.motion;
+const DUR = { snappy: 170, smooth: 280, slow: 480 }[ds.speed] ?? 280;
+const CASCADE = ds.cascade === "on";
+const EASE_OUT = "cubic-bezier(.33, 1, .68, 1)";
+const colsEl = document.getElementById("cols");
+colsEl.style.setProperty("--dur", DUR + "ms");
+
+/* ---------- chain + columns ---------- */
+let chain = []; // [{ kind, id, key, el, inner }]
+const keyOf = (s) => `${s.kind}:${s.id ?? ""}`;
+
+function buildInner(spec, index) {
+  const p = PANES[spec.kind];
+  const inner = document.createElement("div");
+  inner.className = "inner";
+  inner.innerHTML = `<header><h2>${esc(p.title(spec.id))}</h2>${index > 0 ? `<button class="x" title="Close (Esc)" data-close>×</button>` : ""}</header><div class="body">${p.render(spec.id)}</div>`;
+  return inner;
+}
+
+function targetWidths(entries) {
+  const W = colsEl.clientWidth;
+  const ws = entries.map((e) => PANES[e.kind].width);
+  const rest = ws.slice(0, -1).reduce((a, b) => a + b, 0);
+  if (ws.length) ws[ws.length - 1] = Math.max(ws[ws.length - 1], W - rest);
+  return ws;
+}
+
+function cascade(inner, delay = 0) {
+  if (!CASCADE || MOTION === "none") return;
+  [...inner.querySelectorAll(".c")].slice(0, 14).forEach((n, i) => {
+    n.animate([{ opacity: 0, transform: "translateY(6px)" }, { opacity: 1, transform: "none" }],
+      { duration: DUR * 1.1, delay: delay + i * 22, easing: EASE_OUT, fill: "backwards" });
+  });
+}
+
+function animateEnter(entry, width, delay) {
+  const { el, inner } = entry;
+  el.classList.add("entering");
+  const done = () => el.classList.remove("entering", "cover-edge");
+  const opts = { duration: DUR, delay, easing: EASE_OUT, fill: "backwards" };
+  if (MOTION === "none") return done();
+  if (MOTION === "grow") {
+    // Width opens from 0 while the content stays laid out at its final width.
+    inner.style.width = width + "px";
+    el.style.width = "0px";
+    el.getBoundingClientRect();
+    el.style.width = width + "px";
+    inner.animate([{ opacity: 0 }, { opacity: 1 }], { ...opts, duration: DUR * .8, delay: delay + DUR * .2 });
+    setTimeout(() => { inner.style.width = ""; done(); }, DUR + delay);
+  } else if (MOTION === "slide") {
+    inner.animate([{ opacity: 0, transform: "translateX(36px)" }, { opacity: 1, transform: "none" }], opts).finished.then(done);
+  } else if (MOTION === "cover") {
+    el.classList.add("cover-edge");
+    inner.animate([{ transform: "translateX(100%)" }, { transform: "none" }], { ...opts, duration: DUR * 1.15 }).finished.then(done);
+  } else if (MOTION === "fade") {
+    inner.animate([{ opacity: 0, transform: "scale(.985)", transformOrigin: "left center" }, { opacity: 1, transform: "none" }], opts).finished.then(done);
+  }
+  cascade(inner, delay + DUR * .15);
+}
+
+// The row's scroll offset once the leaving columns are gone: as far right as
+// the remaining columns reach, no further.
+function settledLeft() {
+  const content = chain.reduce((sum, e) => sum + e.el.offsetWidth, 0);
+  return Math.max(0, content - colsEl.clientWidth);
+}
+
+// A leaving column keeps the row's scroll area open while it animates; taking
+// it out while the row is still scrolled past where the remaining columns
+// reach would snap the scroll. So it waits, invisible, for the scroll-back.
+function removeWhenSettled(el) {
+  if (colsEl.scrollLeft <= settledLeft() + 1) return el.remove();
+  el.style.visibility = "hidden";
+  const onScroll = () => {
+    if (colsEl.scrollLeft > settledLeft() + 1) return;
+    colsEl.removeEventListener("scroll", onScroll);
+    el.remove();
+  };
+  colsEl.addEventListener("scroll", onScroll);
+}
+
+function animateExit(entry) {
+  const { el, inner } = entry;
+  const remove = () => removeWhenSettled(el);
+  if (MOTION === "none") return remove();
+  if (MOTION === "grow") {
+    // Stays in flow; width closes to 0 while the neighbour grows into it.
+    inner.style.width = el.offsetWidth + "px";
+    el.classList.add("exiting-flow");
+    el.style.width = "0px";
+    setTimeout(remove, DUR);
+    return;
+  }
+  // Lift out of flow at its current rect so the layout settles underneath it.
+  el.style.left = el.offsetLeft + "px";
+  el.style.width = el.offsetWidth + "px";
+  el.classList.add("exiting");
+  // The opening animation played back the way it came: same frames reversed,
+  // same duration and curve, so the pane visibly leaves from the first frame.
+  const exit = {
+    slide: [[{ opacity: 1, transform: "none" }, { opacity: 0, transform: "translateX(36px)" }], DUR],
+    cover: [[{ transform: "none" }, { transform: "translateX(100%)" }], DUR * 1.15],
+    fade: [[{ opacity: 1, transform: "none", transformOrigin: "left center" }, { opacity: 0, transform: "scale(.985)", transformOrigin: "left center" }], DUR],
+  }[MOTION];
+  if (MOTION === "cover") el.classList.add("cover-edge");
+  inner.animate(exit[0], { duration: exit[1], easing: EASE_OUT, fill: "forwards" }).finished.then(remove);
+}
+
+function swapContent(entry, spec, index) {
+  const old = entry.inner;
+  const next = buildInner(spec, index);
+  entry.el.appendChild(next);
+  Object.assign(entry, { kind: spec.kind, id: spec.id, key: keyOf(spec), inner: next });
+  if (MOTION === "none") return old.remove();
+  // Old content fades quickly on top; new content settles in underneath.
+  old.classList.add("swap-out");
+  old.animate([{ opacity: 1 }, { opacity: 0 }], { duration: DUR * .45, easing: "linear", fill: "forwards" }).finished.then(() => old.remove());
+  next.animate([{ opacity: 0, transform: "translateY(4px)" }, { opacity: 1, transform: "none" }],
+    { duration: DUR, delay: DUR * .15, easing: EASE_OUT, fill: "backwards" });
+  cascade(next, DUR * .15);
+}
+
+function setChain(specs, { instant = false } = {}) {
+  let p = 0;
+  while (p < chain.length && p < specs.length && chain[p].key === keyOf(specs[p])) p++;
+  const removed = chain.slice(p);
+  const added = specs.slice(p);
+  const kept = chain.slice(0, p);
+
+  if (!instant && removed.length && added.length && removed[0].kind === added[0].kind) {
+    const entry = removed.shift();
+    swapContent(entry, added.shift(), p);
+    kept.push(entry);
+  }
+
+  const created = added.map((spec, j) => {
+    const el = document.createElement("section");
+    el.className = "col";
+    const inner = buildInner(spec, kept.length + j);
+    el.appendChild(inner);
+    colsEl.appendChild(el);
+    return { kind: spec.kind, id: spec.id, key: keyOf(spec), el, inner };
+  });
+
+  removed.forEach((e) => (instant ? e.el.remove() : animateExit(e)));
+  chain = kept.concat(created);
+
+  // Width transitions only exist in "grow"; other motions commit layout at once.
+  colsEl.classList.toggle("anim-width", MOTION === "grow" && !instant);
+  const ws = targetWidths(chain);
+  chain.forEach((e, i) => {
+    e.el.dataset.index = i;
+    e.el.classList.toggle("leaf", i === chain.length - 1);
+    if (!created.includes(e)) e.el.style.width = ws[i] + "px";
+  });
+  const enterDelay = removed.length && !instant ? DUR * .25 : 0;
+  created.forEach((e) => {
+    const w = ws[chain.indexOf(e)];
+    e.el.style.width = w + "px";
+    if (!instant) animateEnter(e, w, enterDelay);
+  });
+
+  markActive();
+  const behavior = instant || MOTION === "none" ? "auto" : "smooth";
+  if (colsEl.scrollWidth > colsEl.clientWidth + 1 && created.length) {
+    colsEl.scrollTo({ left: colsEl.scrollWidth, behavior });
+  } else if (removed.length && colsEl.scrollLeft > settledLeft() + 1) {
+    // The reverse of revealing a new column: glide back as it leaves.
+    colsEl.scrollTo({ left: settledLeft(), behavior });
+  }
+}
+
+function markActive() {
+  chain.forEach((e, i) => {
+    const nextKey = chain[i + 1]?.key;
+    e.inner.querySelectorAll("[data-open]").forEach((n) => n.classList.toggle("active", n.dataset.open === nextKey));
+  });
+}
+
+const specsUpTo = (i) => chain.slice(0, i + 1).map(({ kind, id }) => ({ kind, id }));
+
+colsEl.addEventListener("click", (ev) => {
+  const col = ev.target.closest(".col");
+  if (!col || col.classList.contains("exiting")) return;
+  const i = +col.dataset.index;
+  if (ev.target.closest("[data-close]")) return setChain(specsUpTo(i - 1));
+  const open = ev.target.closest("[data-open]");
+  if (!open) return;
+  const [kind, id] = open.dataset.open.split(":");
+  if (chain[i + 1]?.key === open.dataset.open) return;
+  setChain([...specsUpTo(i), { kind, id }]);
+});
+
+addEventListener("keydown", (ev) => {
+  if (ev.key === "Escape" && chain.length > 1) setChain(specsUpTo(chain.length - 2));
+});
+
+new ResizeObserver(() => {
+  colsEl.classList.remove("anim-width");
+  const ws = targetWidths(chain);
+  chain.forEach((e, i) => (e.el.style.width = ws[i] + "px"));
+}).observe(colsEl);
+
+setChain([{ kind: "tasks" }, { kind: "task", id: "t1" }], { instant: true });
+</script>
 </body>
 </html>

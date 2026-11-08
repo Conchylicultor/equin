@@ -949,6 +949,10 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
 
   // ── Prototypes: the tree a memory data-files root, seeded ──────────────────
   const prototypeSeed = parsePrototypeTree(diskDemoPrototypes().tree);
+  /** A seeded prototype split over several scripts of its own (Casino Footwork). */
+  const MULTI_FILE_PROTOTYPE = "proto-1792900240-demo05";
+  /** The seeded prototype that mocks a route of the real app (Miller pane motion). */
+  const ROUTE_MOCKING_PROTOTYPE = "proto-1792900120-demo03";
   const request = (method: string, path: string, body?: unknown) =>
     host.request(
       new Request(`http://demo.invalid${path}`, {
@@ -972,36 +976,35 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
     );
     for (const meta of list) expect(meta.problems).toEqual([]);
     const pinned = list.find((m) => m.name === DEMO_PINNED_PROTOTYPE)!;
-    expect(pinned.options.map((o) => o.name)).toEqual(["density", "accent"]);
-    // One mocks nothing, one an exhibit, one a route (compare's `unresolved` arm here).
+    expect(pinned.options.map((o) => o.name)).toEqual(["accent"]);
+    // One mocks a route of the real app (compare's `unresolved` arm here); the
+    // others stand on their own.
     expect(
-      [...list]
-        .sort((a, b) => (a.name < b.name ? -1 : 1))
-        .map((m) => m.mocks.kind),
-    ).toEqual(["none", "declared", "declared"]);
+      list.filter((m) => m.mocks.kind !== "none").map((m) => m.name),
+    ).toEqual([ROUTE_MOCKING_PROTOTYPE]);
   });
 
   test("a prototype's sibling files are served with their own types", async () => {
-    const css = await request(
+    const photos = await request(
       "GET",
-      `/api/prototypes/${DEMO_PINNED_PROTOTYPE}/styles.css`,
+      `/api/prototypes/${DEMO_PINNED_PROTOTYPE}/photos.js`,
     );
-    expect(css.status).toBe(200);
-    expect(css.headers.get("content-type")).toContain("text/css");
-    expect(await css.text()).toContain('url("leaf.svg")');
-    const svg = await request(
+    expect(photos.status).toBe(200);
+    expect(photos.headers.get("content-type")).toContain("javascript");
+    expect(await photos.text()).toStartWith("window.PHOTOS = {");
+    const script = await request(
       "GET",
-      `/api/prototypes/${DEMO_PINNED_PROTOTYPE}/leaf.svg`,
+      `/api/prototypes/${MULTI_FILE_PROTOTYPE}/engine.js`,
     );
-    expect(svg.status).toBe(200);
-    expect(svg.headers.get("content-type")).toContain("image/svg+xml");
+    expect(script.status).toBe(200);
+    expect(script.headers.get("content-type")).toContain("javascript");
     // The document carries the user's pick, stamped onto its <html>.
     const doc = await request(
       "GET",
-      `/api/prototypes/${DEMO_PINNED_PROTOTYPE}/index.html?accent=%2314b8a6`,
+      `/api/prototypes/${DEMO_PINNED_PROTOTYPE}/index.html?accent=%232f6f8f`,
     );
     expect(doc.status).toBe(200);
-    expect(await doc.text()).toContain("--accent: #14b8a6");
+    expect(await doc.text()).toContain("--accent: #2f6f8f");
   });
 
   test("each seeded history holds its steps, and a version's files are served", async () => {
@@ -1113,12 +1116,12 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
         "sub-ack prototypes.picks",
       );
       expect(await loadResourceByKey("prototypes.picks", params)).toEqual({
-        accent: "#14b8a6",
+        accent: "#c8553d",
       });
       const res = await request(
         "PUT",
         `/api/prototypes/${DEMO_PINNED_PROTOTYPE}/picks`,
-        { kind: "set", option: "density", value: "compact" },
+        { kind: "set", option: "accent", value: "#2f6f8f" },
       );
       expect(res.status).toBeLessThan(300);
       const heard = await until(
@@ -1127,14 +1130,13 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
             (f) =>
               isFor(f, "prototypes.picks", params) &&
               (f.kind === "delta" || f.kind === "update") &&
-              JSON.stringify(f).includes("compact"),
+              JSON.stringify(f).includes("#2f6f8f"),
           ),
         "the pick's frame",
       );
       expect(heard).toBeDefined();
       expect(await loadResourceByKey("prototypes.picks", params)).toEqual({
-        accent: "#14b8a6",
-        density: "compact",
+        accent: "#2f6f8f",
       });
     } finally {
       ws.close(socket, 1000, "test");

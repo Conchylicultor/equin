@@ -229,7 +229,7 @@ async function clickButton(page: Page, name: string): Promise<void> {
 }
 
 /** A seeded prototype (`website/demos/workspace`'s `data/prototypes/`) and where its frames are served from. */
-const PROTOTYPE_TITLE = "Recipe box: home";
+const PROTOTYPE_TITLE = "Family Recipes";
 /** The seeded page deleted and brought back through its toast's Undo. */
 const TRASHED_PAGE = "Ideas";
 const FRAMES_RE = /^\/artifacts\/[^/]+\/frames\/[^/]+\/api\/prototypes\//;

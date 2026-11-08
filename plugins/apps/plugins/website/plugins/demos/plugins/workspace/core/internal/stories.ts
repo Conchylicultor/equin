@@ -111,13 +111,13 @@ export const STORIES: readonly Story[] = [
   },
   {
     key: "recipes",
-    shortTitle: "Recipe box",
+    shortTitle: "Family recipes",
     phase: "design",
     category: WISHES_CATEGORY_ID,
     task: "A recipes app for my family",
     prompt:
       "I want a small app for our family recipes: a card per recipe, with photos, and a shopping list made from the ones we pick for the week.",
-    title: "Prototype a recipe box app",
+    title: "Prototype a family recipes app",
     status: "waiting",
     model: OPUS,
     startedAgo: 70 * MIN,

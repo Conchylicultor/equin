@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Casino Footwork</title>
+<meta name="description" content="Seven Cuban casino figures from above, count by count: feet, weight, hands and connection, danced to a campana, clave and conga beat. Every figure is checked: weight alternates, 4 and 8 are pauses, and it ends in the position it claims." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+:root{
+  --bg:#ECF0F2; --surface:#FFFFFF; --floor:#F6F8F9; --grid:#D5DDE2;
+  --ink:#152029; --muted:#5A6873; --line:#C9D3D9;
+  --lead:#1E5AA8; --lead-soft:#D6E3F4;
+  --follow:#B8336A; --follow-soft:#F4D9E4;
+  --beat:#0E7C6B; --beat-soft:#D2EDE8;
+  --bad:#B42318; --bad-soft:#FDE7E4;
+  --display:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
+  --body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F151A; --surface:#172028; --floor:#131B21; --grid:#26323B;
+  --ink:#E4EBF0; --muted:#93A2AD; --line:#2C3943;
+  --lead:#72A7EE; --lead-soft:#1C3350;
+  --follow:#EE7BA7; --follow-soft:#46202F;
+  --beat:#4CC3AE; --beat-soft:#15392F;
+  --bad:#F97066; --bad-soft:#3F1B18; color-scheme:dark}}
+
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--body);padding:20px 16px 48px}
+svg text{font-family:var(--body)}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+header h1{font:800 clamp(34px,6vw,54px)/.95 var(--display);letter-spacing:.01em;margin:0;text-transform:uppercase;text-wrap:balance}
+header p{margin:6px 0 0;color:var(--muted);max-width:74ch}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--muted);margin-top:8px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.dot{width:12px;height:12px;border-radius:50%;display:inline-block}
+.ring{width:14px;height:14px;border-radius:50%;border:2px solid var(--ink);display:inline-block}
+
+.tabs{display:flex;flex-wrap:wrap;gap:6px}
+.tab{position:relative;font:700 17px/1 var(--display);letter-spacing:.04em;text-transform:uppercase;padding:9px 14px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);border-radius:6px;cursor:pointer;text-align:left}
+.tab small{display:block;font:500 11px/1.2 var(--body);letter-spacing:0;text-transform:none;color:var(--muted);margin-top:3px}
+.tab[aria-selected="true"]{border-color:var(--lead);background:var(--lead-soft)}
+.tab .bad{position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--bad);color:#fff;font:700 12px/18px var(--body);text-align:center;font-style:normal}
+button:focus-visible,input:focus-visible{outline:2.5px solid var(--beat);outline-offset:2px}
+
+.main{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:900px){.main{grid-template-columns:1fr}}
+.stagebox{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:10px;min-width:0;position:relative}
+svg#stage{width:100%;aspect-ratio:1;display:block;border-radius:6px;touch-action:manipulation}
+.wrapnote{position:absolute;top:22px;left:22px;font:600 12px var(--body);color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px 10px}
+
+.counts{display:grid;grid-template-columns:repeat(8,1fr);gap:4px}
+.cnt{position:relative;overflow:hidden;padding:8px 0 6px;text-align:center;border-radius:5px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px}
+.cnt .num{font:800 24px/1 var(--display);font-variant-numeric:tabular-nums}
+.cnt small{font:500 9px/1.2 var(--body);color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.cnt.pause .num{color:var(--muted)}
+.cnt .clave{display:flex;gap:6px;height:7px;align-items:center}
+.cnt .clave i{width:6px;height:6px;border-radius:50%;border:1px solid var(--line)}
+.cnt .clave i.hit{background:var(--ink);border-color:var(--ink)}
+.cnt .bar{position:absolute;left:0;bottom:0;height:3px;width:calc(var(--p,0)*100%);background:var(--beat)}
+.cnt.on{background:var(--beat-soft);border-color:var(--beat)}
+.cnt.on .num{color:var(--beat)}
+.stripnote{font-size:12px;color:var(--muted);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+
+.transport{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px}
+.btn{font:600 14px var(--body);padding:8px 14px;border-radius:6px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.btn.primary{background:var(--ink);color:var(--surface);border-color:var(--ink);min-width:84px}
+.tempo{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.tempo input{width:120px;accent-color:var(--beat)}
+.tempo output{font:500 13px var(--mono);color:var(--ink);min-width:58px}
+.chk{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);cursor:pointer}
+.chk input{accent-color:var(--beat)}
+.inst{display:flex;gap:4px;align-items:center;font-size:13px;color:var(--muted)}
+.inst button{font:600 12px var(--body);padding:5px 10px;border-radius:999px;border:1.5px solid var(--line);background:var(--surface);color:var(--muted);cursor:pointer}
+.inst button[aria-pressed="true"]{background:var(--beat);border-color:var(--beat);color:var(--surface)}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px 18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.figname{font:800 34px/1 var(--display);text-transform:uppercase;margin:0}
+.note{font-size:13px;color:var(--muted);max-width:80ch}
+.meta{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13.5px;margin:0}
+.meta dt{color:var(--muted);font-weight:600;text-transform:uppercase;font-size:11px;letter-spacing:.08em;padding-top:2px}
+.meta dd{margin:0}
+.checks{font-size:13px;border-radius:8px;padding:8px 12px}
+.checks b{margin-right:6px}
+.checks.ok{background:var(--beat-soft);color:var(--ink)} .checks.ok b{color:var(--beat)}
+.checks.fail{background:var(--bad-soft)} .checks.fail b{color:var(--bad)}
+.checks .warn{color:var(--muted);margin-top:4px}
+.now{border-left:4px solid var(--beat);background:var(--beat-soft);padding:10px 14px;border-radius:0 8px 8px 0;min-height:118px}
+.now .n{font:800 15px var(--display);letter-spacing:.08em;text-transform:uppercase;color:var(--beat)}
+.now .you{font-weight:600;font-size:16px;margin-top:2px}
+.now .her,.now .hands{font-size:13.5px;color:var(--muted);margin-top:4px}
+.tblwrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed;min-width:480px}
+col.c{width:28px} col.her{width:26%} col.hands{width:28%}
+th{text-align:left;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;padding:4px 6px;border-bottom:1px solid var(--line)}
+td{padding:7px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+td.c{font:800 18px/1 var(--display);color:var(--muted);padding-top:8px}
+tr.pause td.c{opacity:.6}
+td.her,td.hands{color:var(--muted)}
+td.hands .same{opacity:.6}
+tr{cursor:pointer}
+tr.on td{background:var(--beat-soft)}
+tr.on td.c{color:var(--beat)}
+h3{font:800 18px/1 var(--display);text-transform:uppercase;letter-spacing:.05em;margin:0 0 6px}
+ul.focus{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+.basics{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.basics div{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:14px}
+.basics b{display:block;font:800 16px var(--display);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Casino · Leader Footwork</h1>
+  <p>Seven Cuban casino figures seen from above. You are the blue dancer. Press play (or space) to dance them to the beat, slow the tempo, or tap a count to freeze on it. Each foot lands on its count; it travels on the “and” just before.</p>
+  <div class="legend">
+    <span><i class="dot" style="background:var(--lead)"></i>You (leader)</span>
+    <span><i class="dot" style="background:var(--follow)"></i>Her (follower)</span>
+    <span>Filled foot = weight on it</span>
+    <span><i class="ring"></i>Joined hands (bigger = higher, ↑ = overhead)</span>
+    <span>Dashed circle = hand above that head</span>
+  </div>
+</header>
+
+<nav class="tabs" id="tabs" role="tablist"></nav>
+
+<div class="main">
+  <section class="stagebox">
+    <svg id="stage" viewBox="-1 -1 2 2" aria-label="Top view of both dancers"></svg>
+    <span class="wrapnote" id="wrapnote" hidden>↺ back to the start for the next loop</span>
+    <div class="counts" id="counts"></div>
+    <div class="stripnote"><span>One bar = 8 counts. Steps on 1 2 3 · 5 6 7, pauses on 4 and 8.</span><span>● son clave 2-3 (on the count / on the “and”)</span></div>
+    <div class="transport">
+      <button class="btn primary" id="play">Play</button>
+      <button class="btn" id="prev" aria-label="Previous count">◀ Count</button>
+      <button class="btn" id="next" aria-label="Next count">Count ▶</button>
+      <label class="tempo">Tempo <input type="range" id="bpm" min="40" max="200" step="5" value="90"><output id="bpmv">90 bpm</output></label>
+      <span class="inst">Beat
+        <button data-inst="campana" title="Cowbell on every count, accented on 1 and 5">Campana</button>
+        <button data-inst="clave" title="Son clave 2-3: 2, 3 | 5, 6&, 8">Clave</button>
+        <button data-inst="conga" title="Tumbao: slaps on 2 and 6, open tones on 4 and 8">Conga</button>
+      </span>
+      <label class="chk"><input type="checkbox" id="prints" checked>Footprints</label>
+      <label class="chk"><input type="checkbox" id="loop" checked>Loop</label>
+    </div>
+  </section>
+
+  <section class="card">
+    <div>
+      <h2 class="figname" id="fname"></h2>
+      <div class="note" id="fsub"></div>
+    </div>
+    <dl class="meta">
+      <dt>Starts</dt><dd id="fstart"></dd>
+      <dt>Ends</dt><dd id="fend"></dd>
+      <dt>Before 1</dt><dd id="fprep"></dd>
+    </dl>
+    <div id="checks" class="checks"></div>
+    <div class="now" aria-live="polite">
+      <div class="n" id="nowc"></div>
+      <div class="you" id="nowyou"></div>
+      <div class="her" id="nowher"></div>
+      <div class="hands" id="nowhands"></div>
+    </div>
+    <div class="tblwrap"><table>
+      <colgroup><col class="c"><col><col class="her"><col class="hands"></colgroup>
+      <thead><tr><th></th><th>You (leader)</th><th>She does</th><th>Hands</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table></div>
+    <div>
+      <h3>What to focus on</h3>
+      <ul class="focus" id="focus"></ul>
+    </div>
+  </section>
+</div>
+
+<section class="basics">
+  <div><b>Timing</b>A bar is 8 counts. Steps land on 1-2-3 and 5-6-7; 4 and 8 are pauses (optional tap). You start with the left foot on 1 and the right on 5. The position before count 1 is simply where count 8 of the previous figure left you.</div>
+  <div><b>Step size</b>Cuban steps are small, about half a foot length. Weight on the balls of the feet, knees soft. The hip motion comes from bending and straightening the knees.</div>
+  <div><b>Connection</b>Elbow bent, hands around belt height. Your hand moves because your body moves. Hooked fingers, never a grip, so her hand can swivel in turns.</div>
+  <div><b>The beat</b>The campana marks every count (1 and 5 louder). The clave is the 2-3 son clave over the bar. The conga's open tones on 4 and 8 sit on the pauses: the moment to prepare.</div>
+</section>
+
+<p class="note">Cuban school versions; names and details vary between teachers and between Cuba and Miami rueda. Distances are to scale on a 50 cm grid but a little looser than real life, so the feet stay readable. If your teacher's version differs, trust the teacher.</p>
+</div>
+
+<script src="engine.js"></script>
+<script src="figures.js"></script>
+<script src="audio.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

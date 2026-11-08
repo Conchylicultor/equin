@@ -1,0 +1,1037 @@
+<!doctype html>
+<html lang="en" data-style="club" data-cards="classic" data-coach="notebook" style="--felt: #1f5e45">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Bridge Trainer</title>
+<meta name="description" content="Learn bridge at an immersive card table against AI opponents with an AI partner: conventions (Stayman, transfers, doubles) are announced and explained, won tricks pile up in front of each side, and a safety net asks before a sub-optimal bid or card." />
+<meta name="prototype-option" content="style: club | parlor | noir | riviera" />
+<meta name="prototype-option" content="felt: color green=#1f5e45 | navy=#1d3a5f | burgundy=#5a2230 | slate=#3a4148" />
+<meta name="prototype-option" content="cards: classic | four-color" />
+<meta name="prototype-option" content="coach: notebook | whisper | hidden" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Marcellus&family=Space+Grotesk:wght@400;500;700&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap" rel="stylesheet" />
+
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+
+  /* ═══ Style tokens ═══ default: club — a walnut card room under a warm lamp */
+  :root {
+    --display: "Cormorant Garamond", Georgia, serif;
+    --ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --room: radial-gradient(ellipse 65% 55% at 45% 42%, rgba(255, 196, 120, .22), transparent 70%),
+            repeating-linear-gradient(90deg, rgba(0,0,0,.16) 0 2px, transparent 2px 120px),
+            linear-gradient(180deg, #3b2516, #170d07);
+    --room-ink: #f1e4c8; --room-muted: #b9a582;
+    --rail: linear-gradient(150deg, #7a4826, #3c2111 45%, #6a3c1e 75%, #3a200f);
+    --rail-glow: inset 0 2px 0 rgba(255,220,170,.25), inset 0 -3px 6px rgba(0,0,0,.5);
+    --surface: var(--felt);
+    --table-ink: #f4ecd8;
+    --accent: #e3b450; --accent-ink: #3b2a05;
+    --back: repeating-linear-gradient(45deg, #7d1f27 0 4px, #962a33 4px 8px);
+    --back-edge: #f3e7cc;
+    --face: #fffaf0;
+    --hud-bg: rgba(24, 14, 7, .62); --hud-ink: #f1e4c8; --hud-line: rgba(227,180,80,.35);
+    --note-bg: #f5ecd6; --note-ink: #2c2116; --note-muted: #7d6a4f; --note-line: #e1d2b0; --note-rule: rgba(120, 90, 50, .12);
+    --note-font: "Cormorant Garamond", Georgia, serif;
+    --pad-bg: #fbf6e6; --pad-ink: #2c2116; --pad-red: #b8312f;
+    --red: #c4262e; --black: #1d1c1a;
+    --spade: var(--black); --heart: var(--red); --diamond: var(--red); --club: var(--black);
+    --cw: 64px; --ch: 92px; --overlap: 30px;
+  }
+  /* parlor — an Art Deco salon: teal scallop wallpaper, black lacquer, gold inlay */
+  :root[data-style="parlor"] {
+    --display: "Marcellus", Georgia, serif; --note-font: "Marcellus", Georgia, serif;
+    --room: radial-gradient(ellipse 70% 60% at 50% 45%, transparent 30%, rgba(0,0,0,.6) 100%),
+            radial-gradient(circle at 50% 100%, transparent 44%, rgba(214,178,94,.22) 45% 48%, transparent 49% 61%, rgba(214,178,94,.12) 62% 64%, transparent 65%) 0 0 / 56px 28px,
+            #0e2d2a;
+    --room-ink: #ead9a8; --room-muted: #a99a6e;
+    --rail: linear-gradient(150deg, #262626, #050505 50%, #1c1c1c);
+    --rail-glow: inset 0 0 0 3px #0b0b0b, inset 0 0 0 5px #c9a24e, inset 0 0 0 6px #0b0b0b;
+    --accent: #d6b25e;
+    --back: conic-gradient(from 45deg, #13294b 0 25%, #1c3a66 0 50%, #13294b 0 75%, #1c3a66 0) 0 0 / 12px 12px;
+    --back-edge: #d6b25e;
+    --hud-bg: rgba(5,5,5,.7); --hud-ink: #ead9a8; --hud-line: rgba(214,178,94,.5);
+    --note-bg: #f2e8d2; --note-ink: #1d1a14; --note-muted: #806f4a; --note-line: #d6b25e; --note-rule: transparent;
+    --pad-bg: #f6eedb;
+  }
+  /* noir — a single spotlight in a dark room */
+  :root[data-style="noir"] {
+    --display: "Space Grotesk", var(--ui); --note-font: "Space Grotesk", var(--ui);
+    --room: radial-gradient(ellipse 55% 50% at 45% 45%, #2b2b31 0%, #121215 55%, #050506 100%);
+    --room-ink: #ecebef; --room-muted: #8a8994;
+    --rail: linear-gradient(150deg, #24242a, #0d0d10);
+    --rail-glow: inset 0 1px 0 rgba(255,255,255,.12), 0 0 0 1px rgba(255,255,255,.05);
+    --surface: color-mix(in oklab, var(--felt), black 55%);
+    --accent: #f2c94c;
+    --back: repeating-linear-gradient(135deg, #111 0 6px, #1b1b22 6px 7px);
+    --back-edge: #3a3a44;
+    --face: #f3f1ec;
+    --hud-bg: rgba(255,255,255,.06); --hud-ink: #ecebef; --hud-line: rgba(255,255,255,.14);
+    --note-bg: rgba(22,22,27,.88); --note-ink: #e9e8ee; --note-muted: #8f8e99; --note-line: rgba(255,255,255,.1); --note-rule: transparent;
+    --pad-bg: #1a1a1f; --pad-ink: #e9e8ee; --pad-red: #f2c94c;
+  }
+  /* riviera — a sunlit terrace: linen, light oak, leaf shadows */
+  :root[data-style="riviera"] {
+    --display: "Fraunces", Georgia, serif; --note-font: "Fraunces", Georgia, serif;
+    --room: radial-gradient(ellipse 160px 60px at 88% 12%, rgba(60,80,40,.16), transparent 70%),
+            radial-gradient(ellipse 120px 50px at 8% 85%, rgba(60,80,40,.14), transparent 70%),
+            radial-gradient(ellipse at 15% 0%, rgba(255,247,215,.95), transparent 55%),
+            linear-gradient(135deg, #f1e6d2, #ddc8a6);
+    --room-ink: #3b2f22; --room-muted: #8a775c;
+    --rail: linear-gradient(150deg, #e2c398, #b98a57 55%, #d4af7f);
+    --rail-glow: inset 0 2px 0 rgba(255,255,255,.45), inset 0 -3px 6px rgba(90,60,20,.25);
+    --surface: color-mix(in oklab, var(--felt), white 28%);
+    --accent: #f4c35a;
+    --back: repeating-linear-gradient(90deg, #3d7fb8 0 5px, #f6f1e4 5px 10px);
+    --back-edge: #ffffff;
+    --hud-bg: rgba(255,252,244,.75); --hud-ink: #3b2f22; --hud-line: rgba(120,90,50,.25);
+    --note-bg: #fffaf0; --note-ink: #33291d; --note-muted: #8a775c; --note-line: #e8dcc4; --note-rule: rgba(61,127,184,.12);
+    --pad-bg: #fffdf6;
+  }
+  :root[data-cards="four-color"] { --club: #1f7a3a; --diamond: #d9690b; }
+
+  body { font-family: var(--ui); background: #170d07; color: var(--room-ink); }
+
+  /* ═══ Room ═══ */
+  .room {
+    background: var(--room); color: var(--room-ink);
+    height: var(--prototype-screen-height, 100vh); min-height: 680px;
+    display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 12px; padding: 14px 20px 20px;
+  }
+  .topbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .brand { font-family: var(--display); font-size: 24px; font-weight: 700; letter-spacing: .01em; display: flex; align-items: center; gap: 10px; }
+  .brand .suits { font-size: 15px; letter-spacing: 2px; color: var(--accent); }
+  .brand small { font-family: var(--ui); font-size: 12px; font-weight: 500; color: var(--room-muted); letter-spacing: .04em; }
+  .spacer { flex: 1; }
+  .hud-btn {
+    font: inherit; font-size: 13px; font-weight: 600; color: var(--hud-ink); background: var(--hud-bg);
+    border: 1px solid var(--hud-line); padding: 7px 13px; border-radius: 99px; cursor: pointer;
+    backdrop-filter: blur(6px); display: inline-flex; align-items: center; gap: 8px;
+  }
+  .hud-btn:disabled { opacity: .4; cursor: default; }
+  .hud-btn:hover:not(:disabled) { border-color: var(--accent); }
+  .switch { width: 28px; height: 16px; border-radius: 99px; background: rgba(128,128,128,.45); position: relative; transition: background .15s; }
+  .switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: #fff; transition: left .15s; }
+  .on .switch { background: var(--accent); } .on .switch::after { left: 14px; }
+
+  .stage { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; min-height: 0; }
+  :root[data-coach="whisper"] .stage, :root[data-coach="hidden"] .stage { grid-template-columns: minmax(0, 1fr) 210px; }
+
+  /* ═══ Table ═══ */
+  .rail { background: var(--rail); box-shadow: var(--rail-glow), 0 30px 60px -20px rgba(0,0,0,.6); border-radius: 56px; padding: 16px; min-height: 0; display: flex; }
+  .felt {
+    position: relative; flex: 1; border-radius: 42px; padding: 16px; overflow: hidden;
+    background:
+      radial-gradient(ellipse 70% 60% at 50% 46%, color-mix(in oklab, var(--surface), white 10%), var(--surface) 60%, color-mix(in oklab, var(--surface), black 30%)),
+      var(--surface);
+    box-shadow: inset 0 0 40px rgba(0,0,0,.45), inset 0 0 0 1px rgba(0,0,0,.3);
+    display: grid; gap: 8px;
+    grid-template-columns: minmax(120px, 1fr) minmax(300px, 2.3fr) minmax(120px, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas: ". n ." "w c e" ". s .";
+    color: var(--table-ink);
+  }
+  .felt::before { /* fine nap of the cloth */
+    content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .18; mix-blend-mode: overlay;
+    background: repeating-linear-gradient(0deg, rgba(255,255,255,.25) 0 1px, transparent 1px 3px), repeating-linear-gradient(90deg, rgba(0,0,0,.25) 0 1px, transparent 1px 4px);
+  }
+  .seat { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 0; z-index: 1; }
+  .seat.n { grid-area: n; } .seat.s { grid-area: s; } .seat.w { grid-area: w; justify-content: center; } .seat.e { grid-area: e; justify-content: center; }
+  .label { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; font-size: 13px; }
+  .label .name { font-family: var(--display); font-weight: 700; font-size: 17px; letter-spacing: .03em; }
+  .tag { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; padding: 2px 7px; border-radius: 99px; background: rgba(0,0,0,.25); color: rgba(255,255,255,.82); }
+  .tag.decl { background: var(--accent); color: var(--accent-ink); }
+  .tag.you { background: rgba(255,255,255,.92); color: #1d1c1a; }
+  .seat.turn .name::before { content: ""; display: inline-block; vertical-align: middle; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); margin: -2px 7px 0 0; animation: pulse 1.2s infinite; }
+  @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent), transparent 70%); } 50% { box-shadow: 0 0 0 8px transparent; } }
+
+  .fan { display: flex; padding-top: 12px; max-width: 100%; }
+  .fan .card + .card { margin-left: calc(var(--overlap) * -1); }
+  .card {
+    font: inherit; position: relative; width: var(--cw); height: var(--ch); flex: none; border-radius: 7px; padding: 0;
+    background: var(--face); border: 1px solid rgba(0,0,0,.2); box-shadow: 0 2px 5px rgba(0,0,0,.3);
+    color: var(--black); cursor: default; transition: transform .14s ease, box-shadow .14s ease, filter .14s;
+  }
+  .card .ci { position: absolute; top: 4px; left: 5px; display: flex; flex-direction: column; align-items: center; line-height: 1; }
+  .card .ci b { font-family: Georgia, "Times New Roman", serif; font-size: 18px; font-weight: 700; letter-spacing: -0.04em; }
+  .card .ci i { font-style: normal; font-size: 14px; margin-top: 1px; }
+  .card .cc { position: absolute; right: 6px; bottom: 4px; font-size: 28px; line-height: 1; }
+  .s-S { color: var(--spade); } .s-H { color: var(--heart); } .s-D { color: var(--diamond); } .s-C { color: var(--club); }
+  .fan .card.playable { cursor: pointer; }
+  .fan .card.playable:hover { transform: translateY(-14px); box-shadow: 0 10px 18px rgba(0,0,0,.35); z-index: 2; }
+  .fan.active .card:not(.playable) { filter: brightness(.68) saturate(.6); }
+  .card.hinted { transform: translateY(-16px); box-shadow: 0 0 0 3px var(--accent), 0 10px 18px rgba(0,0,0,.35); z-index: 3; }
+  .fan.small { --cw: 48px; --ch: 69px; --overlap: 24px; }
+  .fan.small .card .ci b { font-size: 14px; } .fan.small .card .ci i { font-size: 12px; } .fan.small .card .cc { font-size: 20px; }
+
+  .back { background: var(--back); border: 2px solid var(--back-edge); border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,.35); }
+  .backs { position: relative; width: 78px; height: 94px; }
+  .backs span { position: absolute; width: 58px; height: 84px; }
+  .backs span:nth-child(1) { left: 0; top: 6px; transform: rotate(-7deg); }
+  .backs span:nth-child(2) { left: 8px; top: 3px; transform: rotate(-1deg); }
+  .backs span:nth-child(3) { left: 16px; top: 0; transform: rotate(6deg); }
+  .backs em { position: absolute; right: -4px; bottom: -6px; font-style: normal; font-size: 11px; font-weight: 700; background: rgba(0,0,0,.55); color: #fff; padding: 2px 7px; border-radius: 99px; }
+
+  .rows { background: var(--face); color: var(--black); border-radius: 10px; padding: 8px 11px; min-width: 116px; box-shadow: 0 3px 8px rgba(0,0,0,.3); font-size: 14px; }
+  .rows div { display: flex; gap: 7px; align-items: baseline; padding: 1px 0; white-space: nowrap; }
+  .rows .sym { width: 14px; text-align: center; font-size: 15px; }
+  .rows .rk { font-family: Georgia, serif; font-weight: 700; letter-spacing: .03em; }
+  .rows .void { color: #8a8478; }
+
+  /* ═══ Centre ═══ */
+  .center { grid-area: c; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; min-width: 0; min-height: 0; z-index: 1; }
+  .plate { background: rgba(0,0,0,.24); border: 1px solid rgba(255,255,255,.1); border-radius: 14px; padding: 10px 12px; }
+  .auction { width: 100%; max-width: 330px; }
+  .auction table { width: 100%; border-collapse: collapse; font-size: 14px; table-layout: fixed; }
+  .auction th { font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: rgba(255,255,255,.62); font-weight: 600; padding-bottom: 5px; }
+  .auction th.you { color: #fff; }
+  .auction td { text-align: center; padding: 2px 0; }
+  .call { font: inherit; font-weight: 700; font-size: 13.5px; background: var(--face); color: var(--black); border: 0; border-radius: 5px; padding: 2px 7px; cursor: pointer; position: relative; }
+  .call.pass { background: transparent; color: rgba(255,255,255,.62); font-weight: 500; }
+  .call.dbl { background: #c4262e; color: #fff; } .call.rdbl { background: #2f5fa8; color: #fff; }
+  .call.alerted::after { content: "!"; position: absolute; top: -6px; right: -6px; width: 14px; height: 14px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-size: 10px; line-height: 14px; font-weight: 800; }
+  .call.focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .call:hover { filter: brightness(1.08); }
+  .auction td.q { color: var(--accent); font-weight: 700; }
+
+  .slip { width: 100%; max-width: 330px; background: #fbf3dc; color: #2c2116; border-radius: 6px 12px 12px 6px; border-left: 5px solid var(--accent); padding: 9px 12px; box-shadow: 0 6px 16px rgba(0,0,0,.3); font-size: 13px; line-height: 1.45; animation: slip .25s ease-out; }
+  @keyframes slip { from { opacity: 0; transform: translateY(-6px) rotate(-1deg); } }
+  .slip .head { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
+  .slip .stamp { font-size: 9.5px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: #a3311f; border: 1.5px solid #a3311f; border-radius: 3px; padding: 0 4px; transform: rotate(-3deg); }
+  .slip .stamp.plain { color: #6c5d45; border-color: #6c5d45; }
+  .slip b.conv { font-family: var(--display); font-size: 16px; }
+  .slip .learn { display: block; color: #6c5d45; font-size: 12px; margin-top: 3px; font-style: italic; }
+
+  .bidbox { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; width: 100%; max-width: 330px; padding: 8px; background: rgba(0,0,0,.22); border-radius: 12px; }
+  .bidbox button { font: inherit; font-weight: 700; font-size: 13px; border: 0; border-radius: 5px; padding: 4px 0; background: var(--face); color: var(--black); cursor: pointer; box-shadow: 0 1px 0 rgba(0,0,0,.3); }
+  .bidbox button:disabled { opacity: .16; cursor: default; }
+  .bidbox button:hover:not(:disabled) { outline: 2px solid var(--accent); }
+  .bidbox button.hinted { outline: 3px solid var(--accent); outline-offset: 1px; }
+  .bidbox .passbtn { grid-column: span 3; background: #3f8f5e; color: #fff; padding: 7px 0; }
+  .bidbox .xbtn { background: #c4262e; color: #fff; } .bidbox .xxbtn { background: #2f5fa8; color: #fff; }
+
+  .trick { position: relative; width: 236px; height: 226px; flex: none; }
+  .trick .slot { position: absolute; }
+  .trick .slot.n { top: 0; left: 50%; transform: translateX(-50%); }
+  .trick .slot.s { bottom: 0; left: 50%; transform: translateX(-50%); }
+  .trick .slot.w { left: 0; top: 50%; transform: translateY(-50%) rotate(-5deg); }
+  .trick .slot.e { right: 0; top: 50%; transform: translateY(-50%) rotate(5deg); }
+  .trick .slot .card.fresh { animation: drop .24s ease-out; }
+  .trick .slot.win .card { box-shadow: 0 0 0 3px var(--accent), 0 4px 10px rgba(0,0,0,.35); }
+  @keyframes drop { from { opacity: 0; transform: translateY(14px) scale(.9); } }
+  .trick.fly-0 { animation: flyNS .45s ease-in forwards; } .trick.fly-1 { animation: flyEW .45s ease-in forwards; }
+  @keyframes flyNS { to { transform: translate(min(32vw, 330px), 210px) scale(.25) rotate(20deg); opacity: 0; } }
+  @keyframes flyEW { to { transform: translate(max(-32vw, -330px), -210px) scale(.25) rotate(-20deg); opacity: 0; } }
+  .trick .mid { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; }
+  .contract { text-align: center; }
+  .contract b { display: inline-block; font-size: 24px; font-family: Georgia, serif; background: var(--face); color: var(--black); border-radius: 7px; padding: 0 9px; margin-bottom: 4px; box-shadow: 0 2px 6px rgba(0,0,0,.3); }
+  .contract small { display: block; color: rgba(255,255,255,.7); font-size: 11.5px; }
+
+  .result { text-align: center; max-width: 330px; width: 100%; }
+  .result h2 { margin: 0 0 2px; font-family: var(--display); font-size: 30px; }
+  .result h2 .c { font-family: Georgia, serif; background: var(--face); color: var(--black); border-radius: 6px; padding: 0 8px; font-size: 22px; vertical-align: 3px; }
+  .result p { margin: 0 0 10px; color: rgba(255,255,255,.75); font-size: 13.5px; }
+  .result .pts { font-family: var(--display); font-size: 40px; font-weight: 700; color: var(--accent); line-height: 1.1; }
+  .result .acts { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .tbtn { font: inherit; font-size: 13px; font-weight: 600; border-radius: 99px; padding: 7px 14px; cursor: pointer; border: 1px solid rgba(255,255,255,.35); background: rgba(0,0,0,.2); color: #fff; }
+  .tbtn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+
+  /* ═══ Won tricks — packets stacked like at a real table ═══ */
+  .pile { position: absolute; z-index: 1; display: flex; flex-direction: column; gap: 6px; pointer-events: none; }
+  .pile.p0 { right: 26px; bottom: 22px; align-items: flex-end; }
+  .pile.p1 { left: 26px; top: 22px; align-items: flex-start; }
+  .packets { position: relative; height: 62px; }
+  .packet { position: absolute; top: 4px; width: 38px; height: 54px; border-radius: 4px;
+    box-shadow: 1px 1px 0 var(--back-edge), 2px 2px 0 rgba(0,0,0,.25), 3px 3px 0 var(--back-edge), 4px 4px 5px rgba(0,0,0,.35); }
+  .packet:nth-child(odd) { transform: rotate(-3deg); } .packet:nth-child(even) { transform: rotate(4deg) translateY(2px); }
+  .packet.fresh { animation: land .35s ease-out; }
+  @keyframes land { from { opacity: 0; transform: translateY(-20px) scale(1.3) rotate(25deg); } }
+  .packets .empty { position: absolute; top: 4px; width: 38px; height: 54px; border-radius: 4px; border: 1.5px dashed rgba(255,255,255,.3); }
+  .pile .cap { font-size: 12px; color: rgba(255,255,255,.85); display: flex; align-items: baseline; gap: 6px; }
+  .pile .cap b { font-family: var(--display); font-size: 16px; }
+  .pile .cap .n { font-variant-numeric: tabular-nums; font-weight: 700; }
+  .pips { display: flex; gap: 3px; }
+  .pips i { width: 7px; height: 7px; border-radius: 50%; border: 1px solid rgba(255,255,255,.55); }
+  .pips i.on { background: var(--accent); border-color: var(--accent); }
+
+  /* ═══ Whisper coach ═══ */
+  .whisper { position: absolute; left: 24px; bottom: 24px; max-width: 290px; z-index: 2; background: var(--note-bg); color: var(--note-ink); border: 1px solid var(--note-line);
+    border-radius: 14px 14px 14px 4px; padding: 10px 12px; font-size: 13px; line-height: 1.45; box-shadow: 0 10px 24px rgba(0,0,0,.35); animation: slip .25s ease-out; }
+  .whisper .k { display: block; font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--note-muted); margin-bottom: 2px; }
+  :root:not([data-coach="whisper"]) .whisper { display: none; }
+
+  /* ═══ Safety-net confirmation ═══ */
+  .veil { position: absolute; inset: 0; z-index: 5; background: rgba(0,0,0,.42); display: grid; place-items: center; padding: 16px; animation: fade .18s; }
+  @keyframes fade { from { opacity: 0; } }
+  .confirm { width: min(380px, 100%); background: var(--note-bg); color: var(--note-ink); border: 1px solid var(--note-line); border-radius: 16px; padding: 18px; box-shadow: 0 24px 50px rgba(0,0,0,.5); animation: slip .22s ease-out; }
+  .confirm h3 { margin: 0 0 6px; font-family: var(--display); font-size: 24px; }
+  .confirm p { margin: 0 0 10px; font-size: 14px; line-height: 1.45; }
+  .confirm .advice { background: color-mix(in oklab, var(--accent), transparent 82%); border-left: 4px solid var(--accent); border-radius: 4px 10px 10px 4px; padding: 9px 11px; font-size: 13.5px; line-height: 1.45; margin-bottom: 14px; }
+  .confirm .advice .k { display: block; font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--note-muted); margin-bottom: 2px; }
+  .confirm .acts { display: flex; flex-wrap: wrap; gap: 8px; }
+  .cbtn { font: inherit; font-size: 13.5px; font-weight: 600; border-radius: 99px; padding: 8px 14px; cursor: pointer; border: 1px solid var(--note-line); background: transparent; color: var(--note-ink); }
+  .cbtn.primary { background: var(--note-ink); color: var(--note-bg); border-color: var(--note-ink); }
+  .confirm .off { margin-top: 12px; font: inherit; font-size: 12px; background: none; border: 0; color: var(--note-muted); text-decoration: underline; cursor: pointer; padding: 0; }
+  .cardname { font-family: Georgia, serif; font-weight: 700; background: var(--face); color: var(--black); border-radius: 4px; padding: 0 5px; border: 1px solid rgba(0,0,0,.12); white-space: nowrap; }
+
+  /* ═══ Side: scorepad + coach notebook ═══ */
+  aside { display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+  .pad { background: var(--pad-bg); color: var(--pad-ink); border-radius: 4px; padding: 12px 14px 10px; box-shadow: 0 10px 22px rgba(0,0,0,.35); transform: rotate(-.6deg); font-size: 13px; }
+  .pad h4 { margin: 0 0 6px; font-family: var(--display); font-size: 17px; display: flex; justify-content: space-between; align-items: baseline; }
+  .pad h4 small { font-family: var(--ui); font-size: 11px; font-weight: 500; opacity: .65; }
+  .pad table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  .pad th { font-size: 10.5px; letter-spacing: .12em; padding: 2px 0 4px; border-bottom: 2px solid var(--pad-red); }
+  .pad td { padding: 3px 0; text-align: center; border-bottom: 1px solid color-mix(in oklab, var(--pad-ink), transparent 88%); }
+  .pad td.lbl { text-align: left; font-size: 11.5px; opacity: .75; white-space: nowrap; }
+  .pad th:nth-child(2), .pad td:nth-child(2) { border-right: 2px solid var(--pad-red); }
+  .pad tfoot td { font-weight: 800; border-bottom: 0; border-top: 2px solid var(--pad-red); }
+  .pad .blank td { height: 20px; }
+
+  .notebook { flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--note-bg); color: var(--note-ink); border: 1px solid var(--note-line); border-radius: 12px;
+    box-shadow: 0 14px 30px rgba(0,0,0,.35); overflow: hidden;
+    background-image: repeating-linear-gradient(180deg, transparent 0 25px, var(--note-rule) 25px 26px); }
+  :root:not([data-coach="notebook"]) .notebook { display: none; }
+  .nb-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px 10px; border-bottom: 1px solid var(--note-line); }
+  .avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--note-ink); color: var(--note-bg); display: grid; place-items: center; font-family: var(--display); font-size: 18px; font-weight: 700; }
+  .nb-head b { font-family: var(--note-font); font-size: 18px; display: block; line-height: 1.1; }
+  .nb-head small { font-size: 11.5px; color: var(--note-muted); }
+  .nb-hand { display: flex; gap: 14px; padding: 9px 14px; border-bottom: 1px solid var(--note-line); font-size: 12px; color: var(--note-muted); }
+  .nb-hand b { display: block; font-size: 17px; color: var(--note-ink); font-variant-numeric: tabular-nums; font-family: var(--note-font); }
+  .nb-feed { list-style: none; margin: 0; padding: 10px 14px; overflow: auto; flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 9px; }
+  .nb-feed li { font-size: 13px; line-height: 1.45; }
+  .nb-feed li .who { font-weight: 700; margin-right: 4px; }
+  .nb-feed li .k { display: block; font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 1px; }
+  .nb-feed li.good .k { color: #2f7d4f; } .nb-feed li.tip .k { color: #b7791f; } .nb-feed li.alert .k { color: #a3311f; }
+  :root[data-style="noir"] .nb-feed li.good .k { color: #6fd39a; } :root[data-style="noir"] .nb-feed li.tip .k { color: #f2c94c; } :root[data-style="noir"] .nb-feed li.alert .k { color: #ff8a7a; }
+  .nb-feed li.alert { border-left: 3px solid var(--accent); padding-left: 9px; }
+  .nb-feed li.alert i { display: block; color: var(--note-muted); font-size: 12px; }
+  .nb-feed li.sys { color: var(--note-muted); font-style: italic; }
+  .cheat { border-top: 1px solid var(--note-line); padding: 9px 14px; }
+  .cheat summary { cursor: pointer; font-size: 13px; font-weight: 600; }
+  .cheat ul { margin: 6px 0 2px; padding-left: 18px; font-size: 12px; line-height: 1.55; color: var(--note-muted); }
+  .cheat b { color: var(--note-ink); }
+
+  /* ═══ Responsive ═══ */
+  @media (max-width: 1100px) {
+    .room { height: auto; }
+    .stage, :root[data-coach] .stage { grid-template-columns: minmax(0, 1fr); }
+    .felt { min-height: 640px; }
+    aside { flex-direction: row; flex-wrap: wrap; align-items: flex-start; }
+    .pad { flex: 1 1 220px; } .notebook { flex: 2 1 320px; max-height: 360px; }
+  }
+  @media (max-width: 640px) {
+    .room { padding: 10px 10px 16px; }
+    .brand { font-size: 20px; } .brand small { display: none; }
+    :root { --cw: 42px; --ch: 62px; --overlap: 19px; }
+    .fan.small { --cw: 34px; --ch: 50px; --overlap: 15px; }
+    .card .ci b { font-size: 14px; } .card .ci i { font-size: 11px; } .card .cc { font-size: 17px; }
+    .rail { border-radius: 30px; padding: 8px; } .felt { border-radius: 24px; padding: 10px 6px; grid-template-columns: 60px minmax(0, 1fr) 60px; min-height: 600px; }
+    .backs { transform: scale(.7); }
+    .rows { min-width: 0; font-size: 11px; padding: 5px; } .rows div { white-space: normal; }
+    .trick { width: 180px; height: 176px; }
+    .pile { transform: scale(.7); } .pile.p0 { transform-origin: right bottom; right: 10px; bottom: 10px; } .pile.p1 { transform-origin: left top; left: 10px; top: 10px; }
+    .whisper { left: 8px; right: 8px; max-width: none; bottom: 8px; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+/* ═══════════════ Model ═══════════════ */
+const SEATS = ["n", "e", "s", "w"];
+const NAMES = ["North", "East", "South", "West"];
+const SUITS = ["S", "H", "D", "C"];
+const DISPLAY = ["S", "H", "C", "D"];
+const SYM = { S: "♠", H: "♥", D: "♦", C: "♣", NT: "NT" };
+const SUIT_NAME = { S: "spades", H: "hearts", D: "diamonds", C: "clubs", NT: "notrump" };
+const STRAINS = ["C", "D", "H", "S", "NT"];
+const YOU = 2;
+const RANK = r => ({ 11: "J", 12: "Q", 13: "K", 14: "A" })[r] || String(r);
+const key = c => c.s + c.r;
+const side = i => i % 2;
+const partnerOf = i => (i + 2) % 4;
+const isMajor = s => s === "H" || s === "S";
+
+const ALERTS = {
+  stayman:   { id: "stayman", name: "Stayman", text: "Asks the 1NT opener: “do you hold a 4-card major?” Shows 8+ points and at least one 4-card major. Says nothing about clubs.", learn: "A 4-4 major fit usually plays a trick better than notrump." },
+  "stay-no": { id: "stay-no", name: "Stayman reply", text: "2♦ = no 4-card major. An artificial reply — nothing to do with diamonds." },
+  "stay-H":  { id: "stay-H", name: "Stayman reply", text: "2♥ = four hearts (may also hold four spades)." },
+  "stay-S":  { id: "stay-S", name: "Stayman reply", text: "2♠ = four spades, not four hearts." },
+  "transfer-H": { id: "transfer-H", name: "Jacoby transfer", text: "2♦ shows 5+ hearts, any strength. Partner must bid 2♥.", learn: "The strong 1NT hand becomes declarer, so its high cards stay hidden from the opening lead." },
+  "transfer-S": { id: "transfer-S", name: "Jacoby transfer", text: "2♥ shows 5+ spades, any strength. Partner must bid 2♠.", learn: "The strong 1NT hand becomes declarer, so its high cards stay hidden from the opening lead." },
+  accept:    { id: "accept", name: "Transfer accepted", text: "Completes the transfer. Says nothing about this suit — it simply obeys partner." },
+  takeout:   { id: "takeout", name: "Take-out double", text: "Opening values, short in their suit, support for the other suits. Not for penalty: partner must bid.", learn: "It lets you compete without guessing which suit to name." },
+  penalty:   { id: "penalty", name: "Penalty double", text: "“You won't make it.” Undertricks now score 100 / 200 / 200 / 300 each — and so do overtricks if they make it." },
+  redouble:  { id: "redouble", name: "Redouble", text: "“We'll make it anyway.” Multiplies the score again." },
+};
+
+function rng(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function shuffleDeal(seed) {
+  const deck = []; for (const s of SUITS) for (let r = 2; r <= 14; r++) deck.push({ s, r });
+  const rand = rng(seed);
+  for (let i = deck.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [deck[i], deck[j]] = [deck[j], deck[i]]; }
+  return [0, 1, 2, 3].map(i => sortHand(deck.slice(i * 13, i * 13 + 13)));
+}
+const sortHand = h => h.slice().sort((a, b) => DISPLAY.indexOf(a.s) - DISPLAY.indexOf(b.s) || b.r - a.r);
+const hcp = h => h.reduce((n, c) => n + Math.max(0, c.r - 10), 0);
+const lengths = h => { const L = { S: 0, H: 0, D: 0, C: 0 }; h.forEach(c => L[c.s]++); return L; };
+const balanced = h => { const v = Object.values(lengths(h)); return !v.some(x => x < 2) && v.filter(x => x === 2).length <= 1; };
+const bidIdx = (l, s) => (l - 1) * 5 + STRAINS.indexOf(s);
+const strainHTML = s => `<span class="s-${s}">${SYM[s]}</span>`;
+const callText = c => c.type === "pass" ? "Pass" : c.type === "double" ? "X" : c.type === "redouble" ? "XX" : `${c.level}${strainHTML(c.strain)}`;
+const callName = c => c.type === "pass" ? "Pass" : c.type === "double" ? "Double" : c.type === "redouble" ? "Redouble" : `${c.level}${strainHTML(c.strain)}`;
+const sameCall = (a, b) => a.type === b.type && (a.type !== "bid" || (a.level === b.level && a.strain === b.strain));
+const cardName = c => `<span class="cardname">${RANK(c.r)}<span class="s-${c.s}">${SYM[c.s]}</span></span>`;
+const contractText = () => `${G.contract.level}${strainHTML(G.contract.strain)}${["", "X", "XX"][G.doubled]}`;
+
+/* ═══════════════ State ═══════════════ */
+let G, timer = null, history = [];
+let safety = true;
+try { safety = localStorage.getItem("bridge-safety") !== "off"; } catch (e) { if (!(e instanceof DOMException)) throw e; }
+function setSafety(on) { safety = on; try { localStorage.setItem("bridge-safety", on ? "on" : "off"); } catch (e) { if (!(e instanceof DOMException)) throw e; } }
+
+function newDeal(dealNo) {
+  clearTimeout(timer); timer = null;
+  let hands, k = 0;
+  do { hands = shuffleDeal(dealNo * 7919 + k++); } while (dealNo === 1 && (hcp(hands[YOU]) < 12 || hcp(hands[YOU]) > 17));
+  const dealer = (dealNo + 1) % 4;
+  G = {
+    dealNo, dealer, hands, original: hands.map(h => h.slice()),
+    phase: "bidding", auction: [], turn: dealer, focus: -1,
+    contract: null, doubled: 0, declarer: null, dummy: null, dummyShown: false,
+    trick: [], tricks: [0, 0], played: new Set(), trickCount: 0, flying: -1, freshPacket: -1,
+    feed: [], hint: null, result: null, confirm: null,
+  };
+  say("sys", `Deal ${dealNo} — ${NAMES[dealer]} deals. You sit South; North is your AI partner.`);
+  if (dealNo === 1) say("info", `<span class="who">Coach</span>Count your points: A = 4, K = 3, Q = 2, J = 1. You have <b>${hcp(hands[YOU])}</b> — with 12 or more you open. Conventional bids are <b>announced</b>: tap any call in the auction to see what it means.`);
+  render(); tick();
+}
+function say(kind, html) { G.feed.unshift({ kind, html }); if (G.feed.length > 50) G.feed.pop(); }
+
+/* ═══════════════ Auction helpers ═══════════════ */
+const lastBid = () => [...G.auction].reverse().find(e => e.call.type === "bid");
+const lastAct = () => [...G.auction].reverse().find(e => e.call.type !== "pass");
+const legal = (l, s) => { const lb = lastBid(); return l <= 7 && (!lb || bidIdx(l, s) > bidIdx(lb.call.level, lb.call.strain)); };
+const cheapest = s => { for (let l = 1; l <= 7; l++) if (legal(l, s)) return l; return 8; };
+const bidsBy = seat => G.auction.filter(e => e.seat === seat && e.call.type === "bid");
+const actsBy = seat => G.auction.filter(e => e.seat === seat && e.call.type !== "pass");
+const canDouble = seat => { const a = lastAct(); return !!a && a.call.type === "bid" && side(a.seat) !== side(seat); };
+const canRedouble = seat => { const a = lastAct(); return !!a && a.call.type === "double" && side(a.seat) !== side(seat); };
+const isLegalCall = (seat, c) => c.type === "pass" || (c.type === "bid" ? legal(c.level, c.strain) : c.type === "double" ? canDouble(seat) : canRedouble(seat));
+
+/** Which convention (if any) this call is, read from the auction so far — the same for AI and you. */
+function detectAlert(seat, call) {
+  const acts = G.auction.filter(e => e.call.type !== "pass");
+  if (call.type === "double") {
+    const b = acts.at(-1).call;
+    const ourBids = acts.some(e => side(e.seat) === side(seat) && e.call.type === "bid");
+    return b.strain !== "NT" && b.level <= 2 && !ourBids ? ALERTS.takeout : ALERTS.penalty;
+  }
+  if (call.type === "redouble") return ALERTS.redouble;
+  if (call.type !== "bid" || !acts.length) return null;
+  const first = acts[0];
+  if (!(first.call.type === "bid" && first.call.level === 1 && first.call.strain === "NT")) return null;
+  if (acts.some(e => side(e.seat) !== side(first.seat))) return null; // system off after interference
+  if (first.seat === partnerOf(seat) && acts.length === 1 && call.level === 2) {
+    return { C: ALERTS.stayman, D: ALERTS["transfer-H"], H: ALERTS["transfer-S"] }[call.strain] || null;
+  }
+  if (first.seat === seat && acts.length === 2 && call.level === 2) {
+    const r = acts[1].alert?.id;
+    if (r === "stayman") return { D: ALERTS["stay-no"], H: ALERTS["stay-H"], S: ALERTS["stay-S"] }[call.strain] || null;
+    if ((r === "transfer-H" && call.strain === "H") || (r === "transfer-S" && call.strain === "S")) return ALERTS.accept;
+  }
+  return null;
+}
+
+/* ═══════════════ Bidding AI ═══════════════ */
+function aiBid(seat) {
+  const h = G.hands[seat], p = hcp(h), L = lengths(h), bal = balanced(h);
+  const mine = bidsBy(seat), partner = bidsBy(partnerOf(seat));
+  const acts = actsBy(seat), pacts = actsBy(partnerOf(seat));
+  const first = G.auction.find(e => e.call.type === "bid");
+  const pass = why => ({ call: { type: "pass" }, why });
+  const noRoom = pass("No room left to bid it.");
+  const bid = (level, strain, why) => legal(level, strain) ? { call: { type: "bid", level, strain }, why } : null;
+
+  const nt = ntSystem(seat, h, p, L, bid, pass, noRoom);
+  if (nt) return nt;
+  if (acts.length >= 2) return pass("Has already described the hand.");
+
+  // Opening
+  if (!first) {
+    if (bal && p >= 20 && p <= 21) return bid(2, "NT", "20–21 HCP and a balanced hand.");
+    if (bal && p >= 15 && p <= 17) return bid(1, "NT", "15–17 HCP and a balanced hand.");
+    if (p >= 12) {
+      if (L.S >= 5 || L.H >= 5) { const s = L.S >= L.H ? "S" : "H"; return bid(1, s, `${p} HCP with ${L[s]} ${SUIT_NAME[s]} — open a 5-card major.`); }
+      const s = L.D > L.C ? "D" : L.C > L.D ? "C" : (L.D >= 4 ? "D" : "C");
+      return bid(1, s, `${p} HCP, no 5-card major — open the longer minor.`);
+    }
+    return pass(`${p} HCP — fewer than the 12 needed to open.`);
+  }
+
+  // Our side opened
+  if (side(first.seat) === side(seat)) {
+    if (first.seat !== seat && acts.length === 0) {
+      const pb = partner[0].call;
+      if (pb.strain === "NT" && pb.level === 1) {
+        if (p >= 10) return bid(3, "NT", `${p} + partner's 15–17 makes 25+ — bid game.`) || noRoom;
+        if (p >= 8) return bid(2, "NT", `${p} HCP — invite; partner bids 3NT with a maximum.`) || noRoom;
+        return pass(`${p} HCP — game is out of reach opposite 15–17.`);
+      }
+      if (isMajor(pb.strain) && L[pb.strain] >= 3) {
+        if (p >= 13) return bid(4, pb.strain, `${L[pb.strain]}-card support and opening values — bid game.`) || noRoom;
+        if (p >= 10) return bid(3, pb.strain, `${L[pb.strain]}-card support, 10–12 points — a limit raise.`) || noRoom;
+        if (p >= 6) return bid(2, pb.strain, `${L[pb.strain]}-card support, 6–9 points — a simple raise.`) || noRoom;
+      }
+      if (p >= 6) {
+        const s = ["S", "H", "D", "C"].filter(s => L[s] >= 4 && s !== pb.strain && legal(1, s)).sort((a, b) => L[b] - L[a])[0];
+        if (s) return bid(1, s, `6+ points with ${L[s]} ${SUIT_NAME[s]} — a new suit is forcing.`);
+        if (p >= 13) return bid(3, "NT", `${p} HCP, no fit — bid game in notrump.`) || noRoom;
+        if (p >= 10) return bid(2, "NT", `10–12 HCP, no fit — invite game.`) || noRoom;
+        return bid(1, "NT", `6–9 HCP, nothing else to say — 1NT.`) || pass(`${p} HCP — too weak to bid at the 2 level.`);
+      }
+      return pass(`${p} HCP — under the 6 needed to respond.`);
+    }
+    if (first.seat === seat && mine.length === 1 && partner.length) {
+      const my = mine[0].call, pb = partner.at(-1).call;
+      if (my.strain === "NT") {
+        if (pb.strain === "NT" && pb.level === 2) return p >= 16 ? (bid(3, "NT", "Maximum 1NT — accept the invitation.") || noRoom) : pass("Minimum 1NT — decline the invitation.");
+        return pass("Partner has placed the contract.");
+      }
+      if (pb.strain === my.strain) {
+        if (pb.level === 2 && p >= 17 && isMajor(my.strain)) return bid(4, my.strain, `${p} HCP opposite a raise — enough for game.`) || noRoom;
+        if (pb.level === 3 && p >= 14 && isMajor(my.strain)) return bid(4, my.strain, `Accept the limit raise with ${p} HCP.`) || noRoom;
+        return pass("Partner's raise limits the hand — no game.");
+      }
+      if (pb.strain === "NT") {
+        if (pb.level === 2 && p >= 14) return bid(3, "NT", "Accept partner's invitation.") || noRoom;
+        if (pb.level === 1 && L[my.strain] >= 6) return bid(2, my.strain, "Rebid a 6-card suit.") || noRoom;
+        return pass("Partner described a balanced hand — settle here.");
+      }
+      if (L[pb.strain] >= 4) {
+        const lvl = cheapest(pb.strain) + (p >= 18 && isMajor(pb.strain) ? 2 : p >= 16 ? 1 : 0);
+        return bid(Math.min(lvl, 4), pb.strain, `${L[pb.strain]}-card support for partner's ${SUIT_NAME[pb.strain]}.`) || noRoom;
+      }
+      if (L[my.strain] >= 6) return bid(cheapest(my.strain), my.strain, "Rebid a 6-card suit.") || noRoom;
+      if (bal) {
+        if (p >= 18) return bid(3, "NT", `${p} HCP balanced — jump to game.`) || noRoom;
+        return bid(cheapest("NT"), "NT", "Minimum balanced hand — rebid notrump.") || noRoom;
+      }
+      const s2 = ["S", "H", "D", "C"].filter(s => s !== my.strain && L[s] >= 4).sort((a, b) => L[b] - L[a])[0];
+      if (s2 && cheapest(s2) <= 2) return bid(cheapest(s2), s2, `Show a second suit (${L[s2]} ${SUIT_NAME[s2]}).`);
+      return pass("Nothing more to show.");
+    }
+    return pass("The contract is placed.");
+  }
+
+  // Opponents opened
+  if (acts.length === 0 && pacts.length === 0) {
+    if (bal && p >= 15 && p <= 18 && legal(1, "NT")) return bid(1, "NT", "15–18 balanced with their suit stopped — 1NT overcall.");
+    const lb = lastBid(), their = lb.call.strain;
+    const shapely = SUITS.filter(s => s !== their).every(s => L[s] >= 3);
+    if (their !== "NT" && canDouble(seat) && lb.call.level <= 2 && ((p >= 12 && L[their] <= 2 && shapely) || p >= 17)) {
+      return { call: { type: "double" }, why: p >= 17 ? `${p} HCP — too strong for a simple overcall; double first.` : `${p} HCP, short in ${SUIT_NAME[their]}, support for every other suit — double for take-out.` };
+    }
+    const s = ["S", "H", "D", "C"].filter(s => L[s] >= 5).sort((a, b) => L[b] - L[a])[0];
+    if (s && p >= 9 && p <= 16 && cheapest(s) <= 2) return bid(cheapest(s), s, `${p} HCP and ${L[s]} ${SUIT_NAME[s]} — overcall.`);
+    return pass(`${p} HCP and no good suit — stay quiet over their opening.`);
+  }
+  if (acts.length === 0 && pacts.length) {
+    const pa = pacts[0];
+    if (pa.alert?.id === "takeout") {
+      const rhoBid = G.auction.at(-1)?.call.type !== "pass";
+      if (rhoBid && p < 6) return pass("The opponent bid over partner's double — no need to answer with a weak hand.");
+      const oppSuits = new Set(G.auction.filter(e => side(e.seat) !== side(seat) && e.call.type === "bid").map(e => e.call.strain));
+      const their = [...oppSuits][0];
+      const freeMajor = ["H", "S"].some(M => L[M] >= 4 && !oppSuits.has(M));
+      if (p >= 6 && p <= 10 && bal && their !== "NT" && L[their] >= 3 && !freeMajor && cheapest("NT") <= 2) return bid(cheapest("NT"), "NT", "6–10 balanced with their suit stopped — answer in notrump.") || noRoom;
+      const s = ["S", "H", "D", "C"].filter(s => !oppSuits.has(s)).sort((a, b) => L[b] - L[a] || isMajor(b) - isMajor(a))[0];
+      const lvl = Math.min(cheapest(s) + (p >= 9 ? 1 : 0), 4);
+      return bid(lvl, s, p >= 9 ? `Jump in your best suit (${L[s]} ${SUIT_NAME[s]}) — shows 9–11 points.` : `Partner's take-out double asks you to bid: name your longest unbid suit (${L[s]} ${SUIT_NAME[s]}), even with few points.`) || noRoom;
+    }
+    if (pa.call.type === "bid" && pa.call.strain !== "NT" && L[pa.call.strain] >= 3 && p >= 8 && cheapest(pa.call.strain) <= 3) return bid(cheapest(pa.call.strain), pa.call.strain, "Support partner's overcall.");
+  }
+  return pass("Nothing to add.");
+}
+
+/** Stayman and Jacoby transfers after an uncontested 1NT opening. null = not a system auction. */
+function ntSystem(seat, h, p, L, bid, pass, noRoom) {
+  const acts = G.auction.filter(e => e.call.type !== "pass");
+  const first = acts[0];
+  if (!first || first.call.type !== "bid" || first.call.level !== 1 || first.call.strain !== "NT") return null;
+  if (acts.some(e => side(e.seat) !== side(first.seat))) return null;
+  const mine = actsBy(seat), theirs = actsBy(partnerOf(seat));
+  if (first.seat === partnerOf(seat)) {
+    if (mine.length === 0) {
+      if (L.H >= 5 || L.S >= 5) { const M = L.S >= L.H ? "S" : "H"; return bid(2, M === "H" ? "D" : "H", `${L[M]} ${SUIT_NAME[M]} — transfer, so partner's strong hand becomes declarer.`); }
+      if (p >= 8 && (L.H === 4 || L.S === 4)) return bid(2, "C", `${p} HCP with a 4-card major — ask with Stayman.`);
+      return null;
+    }
+    if (mine.length === 1) {
+      const conv = mine[0].alert?.id, reply = theirs.at(-1)?.alert?.id;
+      if (conv?.startsWith("transfer") && reply === "accept") {
+        const M = conv === "transfer-H" ? "H" : "S";
+        if (p >= 10) return L[M] >= 6 ? (bid(4, M, `6+ ${SUIT_NAME[M]} and game values — bid game.`) || noRoom) : (bid(3, "NT", `Game values with exactly 5 ${SUIT_NAME[M]} — partner chooses 3NT or 4${SYM[M]}.`) || noRoom);
+        if (p >= 8) return L[M] >= 6 ? (bid(3, M, `Invite with six ${SUIT_NAME[M]}.`) || noRoom) : (bid(2, "NT", `Invite: five ${SUIT_NAME[M]}, 8–9 points.`) || noRoom);
+        return pass("A weak hand — the transfer already reached the right spot.");
+      }
+      if (conv === "stayman" && reply?.startsWith("stay-")) {
+        const fit = reply === "stay-H" && L.H >= 4 ? "H" : reply === "stay-S" && L.S >= 4 ? "S" : null;
+        if (fit) return p >= 10 ? (bid(4, fit, "Major fit found — bid game.") || noRoom) : (bid(3, fit, "Major fit found — invite game.") || noRoom);
+        return p >= 10 ? (bid(3, "NT", "No major fit — game in notrump.") || noRoom) : (bid(2, "NT", "No fit — invite with 2NT.") || noRoom);
+      }
+    }
+    return null;
+  }
+  if (first.seat === seat) {
+    const pl = theirs.at(-1);
+    if (!pl) return null;
+    if (mine.length === 1) {
+      if (pl.alert?.id === "transfer-H") return bid(2, "H", "Complete the transfer — partner holds 5+ hearts.") || noRoom;
+      if (pl.alert?.id === "transfer-S") return bid(2, "S", "Complete the transfer — partner holds 5+ spades.") || noRoom;
+      if (pl.alert?.id === "stayman") {
+        if (L.H >= 4) return bid(2, "H", "Stayman reply: four hearts (hearts first).") || noRoom;
+        if (L.S >= 4) return bid(2, "S", "Stayman reply: four spades.") || noRoom;
+        return bid(2, "D", "Stayman reply: no 4-card major.") || noRoom;
+      }
+      return null;
+    }
+    if (mine.length === 2) {
+      const conv = theirs[0].alert?.id, c = pl.call, max = p >= 16;
+      if (conv?.startsWith("transfer")) {
+        const M = conv === "transfer-H" ? "H" : "S", sup = L[M] >= 3;
+        if (c.strain === "NT" && c.level === 2) return max ? (sup ? bid(4, M, "Maximum with 3-card support — game in the major.") : bid(3, "NT", "Maximum, only a doubleton — 3NT.")) || noRoom : (sup ? bid(3, M, "Minimum with support — stop in three.") : pass("Minimum, no fit — pass 2NT.")) || noRoom;
+        if (c.strain === "NT" && c.level === 3) return sup ? (bid(4, M, "3-card support — the major game beats 3NT.") || noRoom) : pass(`Only two ${SUIT_NAME[M]} — stay in 3NT.`);
+        if (c.strain === M && c.level === 3) return max ? (bid(4, M, "Maximum — accept the invitation.") || noRoom) : pass("Minimum — decline.");
+        return pass("Partner has placed the contract.");
+      }
+      if (conv === "stayman") {
+        if (c.strain === "NT" && c.level === 2) return max ? (bid(3, "NT", "Maximum — accept the invitation.") || noRoom) : pass("Minimum — decline.");
+        if (c.strain === "NT" && c.level === 3) return mine[1].alert?.id === "stay-H" && L.S >= 4 ? (bid(4, "S", "Partner used Stayman without hearts, so must hold four spades — we have a fit.") || noRoom) : pass("Partner chose game.");
+        if (c.level === 3 && isMajor(c.strain)) return max ? (bid(4, c.strain, "Maximum — accept the invitation.") || noRoom) : pass("Minimum — decline.");
+        return pass("Partner has placed the contract.");
+      }
+    }
+  }
+  return null;
+}
+
+function makeCall(seat, call, why) {
+  const alert = detectAlert(seat, call);
+  G.auction.push({ seat, call, why, alert });
+  if (alert) {
+    G.focus = G.auction.length - 1;
+    say("alert", `<span class="k">Announced · ${alert.name}</span><span class="who">${NAMES[seat]}</span>${callText(call)} — ${alert.text}${alert.learn ? `<i>${alert.learn}</i>` : ""}`);
+  } else if (seat !== YOU) say("info", `<span class="who">${NAMES[seat]}</span>${callText(call)} — ${why}`);
+  const bids = G.auction.filter(e => e.call.type === "bid");
+  if (!bids.length && G.auction.length === 4) {
+    say("sys", "All four players passed — the cards are redealt.");
+    G.turn = -1; render(); timer = setTimeout(() => newDeal(G.dealNo + 1), 1600); return;
+  }
+  // three passes after the last bid / double end the auction
+  if (bids.length && G.auction.indexOf(lastAct()) <= G.auction.length - 4) return startPlay();
+  G.turn = (seat + 1) % 4; G.hint = null;
+  render(); tick();
+}
+
+/* ═══════════════ Play ═══════════════ */
+function startPlay() {
+  const lb = lastBid(), decSide = side(lb.seat);
+  const after = G.auction.slice(G.auction.indexOf(lb) + 1);
+  const doubled = after.some(e => e.call.type === "redouble") ? 2 : after.some(e => e.call.type === "double") ? 1 : 0;
+  const declarer = G.auction.find(e => e.call.type === "bid" && side(e.seat) === decSide && e.call.strain === lb.call.strain).seat;
+  Object.assign(G, { phase: "play", contract: lb.call, doubled, declarer, dummy: partnerOf(declarer), turn: (declarer + 1) % 4, hint: null, focus: -1 });
+  const need = lb.call.level + 6, ours = decSide === 0;
+  say("sys", `Final contract ${contractText()} by ${NAMES[declarer]}.`);
+  say("info", ours
+    ? `<span class="who">Coach</span>You declare: you play both South and North and need <b>${need}</b> tricks. Before the first card, count your sure winners.`
+    : `<span class="who">Coach</span>You defend with North and need <b>${14 - need}</b> tricks to set it. Dummy goes face up after the opening lead.`);
+  render(); tick();
+}
+
+const controls = seat => G.phase === "play" && (seat === YOU || (side(G.declarer) === 0 && seat === 0));
+const trump = () => G.contract && G.contract.strain !== "NT" ? G.contract.strain : null;
+const target = sd => !G.contract ? 0 : sd === side(G.declarer) ? G.contract.level + 6 : 7 - G.contract.level;
+function legalCards(seat) {
+  const h = G.hands[seat];
+  if (!G.trick.length) return h;
+  const led = G.trick[0].card.s, f = h.filter(c => c.s === led);
+  return f.length ? f : h;
+}
+function beats(a, b, tr) { if (a.s === b.s) return a.r > b.r; return !!tr && a.s === tr; }
+function winnerOf(trick) { let w = trick[0]; for (const t of trick.slice(1)) if (beats(t.card, w.card, trump())) w = t; return w; }
+function isMaster(c, viewer) {
+  for (let r = c.r + 1; r <= 14; r++) { const k = c.s + r; if (!G.played.has(k) && !G.hands[viewer].some(x => key(x) === k)) return false; }
+  return true;
+}
+const low = cs => cs.slice().sort((a, b) => a.r - b.r)[0];
+const high = cs => cs.slice().sort((a, b) => b.r - a.r)[0];
+/** Two cards that do the same job: same suit, and nothing that matters lies between them. */
+function equivalent(a, b, seat) {
+  if (key(a) === key(b)) return true;
+  if (a.s !== b.s) return false;
+  const [lo, hi] = a.r < b.r ? [a.r, b.r] : [b.r, a.r];
+  let touching = true;
+  for (let r = lo + 1; r < hi; r++) { const k = a.s + r; if (!G.played.has(k) && !G.hands[seat].some(x => key(x) === k)) touching = false; }
+  if (touching) return true;
+  if (a.r >= 10 || b.r >= 10) return false;
+  if (!G.trick.length) return true;
+  const w = winnerOf(G.trick).card;
+  return !beats(a, w, trump()) && !beats(b, w, trump());
+}
+
+function aiCard(seat) {
+  const h = G.hands[seat], cs = legalCards(seat), tr = trump(), pos = G.trick.length;
+  if (pos === 0) return aiLead(seat);
+  const led = G.trick[0].card.s, cur = winnerOf(G.trick);
+  const partnerWins = side(cur.seat) === side(seat);
+  const follow = h.some(c => c.s === led);
+  const wins = cs.filter(c => beats(c, cur.card, tr)).sort((a, b) => a.r - b.r);
+  if (follow) {
+    if (partnerWins && (pos === 3 || isMaster(cur.card, seat))) return { card: low(cs), why: "Partner is already winning the trick — play low." };
+    if (pos === 1) {
+      const top = G.trick[0].card;
+      if (top.r >= 11 && wins.length && cur.card === top) return { card: wins[0], why: "Cover an honor with an honor." };
+      return { card: low(cs), why: "Second hand low — keep your high cards for later." };
+    }
+    if (wins.length) {
+      if (pos === 3) return { card: wins[0], why: "Last to play — win as cheaply as possible." };
+      return { card: wins[0], why: "Third hand high — but no higher than needed." };
+    }
+    return { card: low(cs), why: "You can't win this trick — play your lowest." };
+  }
+  if (!partnerWins && tr) {
+    const ruff = wins.filter(c => c.s === tr);
+    if (ruff.length) return { card: ruff[0], why: `Out of ${SUIT_NAME[led]} — ruff with a low trump.` };
+  }
+  const nonTr = cs.filter(c => c.s !== tr);
+  const pool = nonTr.length ? nonTr : cs;
+  const L = lengths(pool);
+  const s = Object.keys(L).filter(s => L[s]).sort((a, b) => L[b] - L[a])[0];
+  return { card: low(pool.filter(c => c.s === s)), why: partnerWins ? "Partner is winning — discard a low card from your longest suit." : "Can't follow or win — discard from your longest suit." };
+}
+
+function aiLead(seat) {
+  const h = G.hands[seat], tr = trump(), declSide = side(seat) === side(G.declarer);
+  if (declSide) {
+    if (tr) {
+      const ours = h.concat(G.hands[partnerOf(seat)]).filter(c => c.s === tr).length;
+      const gone = [...G.played].filter(k => k[0] === tr).length;
+      const m = h.filter(c => c.s === tr).find(c => isMaster(c, seat));
+      if (ours + gone < 13 && m) return { card: m, why: "The opponents still hold trumps — draw them first." };
+    }
+    const masters = h.filter(c => isMaster(c, seat) && c.s !== tr);
+    if (masters.length) return { card: high(masters), why: "Cash a sure winner." };
+    const L = lengths(h);
+    const s = Object.keys(L).filter(s => L[s] && s !== tr).sort((a, b) => L[b] - L[a])[0] || tr;
+    return { card: low(h.filter(c => c.s === s)), why: "No sure winners — lead low from your longest suit to set up tricks." };
+  }
+  const nonTr = h.filter(c => c.s !== tr);
+  const pool = nonTr.length ? nonTr : h;
+  if (G.trickCount === 0) {
+    const pSuit = bidsBy(partnerOf(seat)).map(e => e.call.strain).find(s => s !== "NT" && pool.some(c => c.s === s));
+    if (pSuit) { const cs = pool.filter(c => c.s === pSuit); return { card: cs.length <= 2 ? high(cs) : low(cs), why: `Lead partner's suit (${SUIT_NAME[pSuit]}).` }; }
+  } else {
+    const masters = pool.filter(c => isMaster(c, seat));
+    if (masters.length) return { card: high(masters), why: "Cash your winner while you can." };
+  }
+  const L = lengths(pool);
+  const s = Object.keys(L).filter(s => L[s]).sort((a, b) => L[b] - L[a] || hcp(pool.filter(c => c.s === b)) - hcp(pool.filter(c => c.s === a)))[0];
+  const cs = pool.filter(c => c.s === s).sort((a, b) => b.r - a.r);
+  if (cs.length >= 2 && cs[0].r >= 12 && cs[1].r === cs[0].r - 1) return { card: cs[0], why: `Top of a sequence (${RANK(cs[0].r)}-${RANK(cs[1].r)}) — safe, and it builds tricks.` };
+  const pick = cs.length >= 4 ? cs[3] : cs[cs.length - 1];
+  return { card: pick, why: cs.length >= 4 ? "Fourth from your longest and strongest suit." : "Lead low from your longest suit." };
+}
+
+function playCard(seat, card, coachRec) {
+  if (coachRec) {
+    if (equivalent(card, coachRec.card, seat)) say("good", `<span class="k">Well played</span>${NAMES[seat]} ${cardName(card)} — ${coachRec.why}`);
+    else say("tip", `<span class="k">Coach</span>You played ${cardName(card)}; I'd have played ${cardName(coachRec.card)}: ${coachRec.why}`);
+  }
+  G.hands[seat] = G.hands[seat].filter(c => key(c) !== key(card));
+  G.trick.push({ seat, card }); G.played.add(key(card)); G.hint = null; G.dummyShown = true; G.freshPacket = -1;
+  if (G.trick.length === 4) {
+    const w = winnerOf(G.trick);
+    G.turn = -1; render();
+    timer = setTimeout(() => {
+      G.flying = side(w.seat); render();
+      timer = setTimeout(() => {
+        timer = null;
+        G.tricks[side(w.seat)]++; G.trickCount++; G.flying = -1; G.freshPacket = side(w.seat);
+        say("sys", `Trick ${G.trickCount}: ${NAMES[w.seat]} wins with ${cardName(w.card)}.`);
+        G.trick = []; G.turn = w.seat;
+        if (G.trickCount === 13) return finish();
+        render(); tick();
+      }, 450);
+    }, 950);
+    return;
+  }
+  G.turn = (seat + 1) % 4; render(); tick();
+}
+
+function score(c, made, dbl) {
+  const need = c.level + 6, mult = [1, 2, 4][dbl];
+  if (made < need) {
+    const u = need - made;
+    if (!dbl) return -50 * u;
+    let s = 0; for (let i = 1; i <= u; i++) s += i === 1 ? 100 : i <= 3 ? 200 : 300;
+    return -s * (dbl === 2 ? 2 : 1);
+  }
+  const per = c.strain === "C" || c.strain === "D" ? 20 : 30;
+  const below = (c.strain === "NT" ? 40 + 30 * (c.level - 1) : per * c.level) * mult;
+  const overEach = dbl ? 100 * dbl : (c.strain === "NT" ? 30 : per);
+  return below + (made - need) * overEach + (below >= 100 ? 300 : 50) + (c.level === 6 ? 500 : c.level === 7 ? 1000 : 0) + 50 * dbl;
+}
+function finish() {
+  const ds = side(G.declarer), made = G.tricks[ds], need = G.contract.level + 6;
+  const pts = score(G.contract, made, G.doubled) * (ds === 0 ? 1 : -1);
+  G.phase = "done"; G.turn = -1; G.result = { made, need, pts };
+  const diff = made - need;
+  history.push({ label: `${contractText()} ${NAMES[G.declarer][0]} ${diff === 0 ? "=" : diff > 0 ? "+" + diff : diff}`, we: pts > 0 ? pts : 0, they: pts < 0 ? -pts : 0 });
+  say(pts >= 0 ? "good" : "tip", `<span class="k">Hand over</span>${contractText()} ${diff >= 0 ? (diff === 0 ? "made exactly" : `made with ${diff} overtrick${diff > 1 ? "s" : ""}`) : `went down ${-diff}`}. All four hands are face up — compare them with the auction.`);
+  render();
+}
+
+/* ═══════════════ Your actions (with the safety net) ═══════════════ */
+function userCall(call) {
+  const rec = aiBid(YOU);
+  if (!sameCall(rec.call, call) && safety) { G.confirm = { kind: "bid", call, rec }; G.hint = rec.call.type === "pass" ? "pass" : rec.call.type === "bid" ? bidIdx(rec.call.level, rec.call.strain) : rec.call.type; render(); return; }
+  commitCall(call, rec);
+}
+function commitCall(call, rec) {
+  G.confirm = null;
+  const same = sameCall(rec.call, call);
+  say(same ? "good" : "tip", same ? `<span class="k">Good call</span>${callName(call)} — ${rec.why}` : `<span class="k">Coach</span>You chose ${callName(call)}. I'd suggest ${callName(rec.call)}: ${rec.why}`);
+  makeCall(YOU, call, same ? rec.why : "Your own judgement.");
+}
+function userCard(seat, card) {
+  const rec = aiCard(seat);
+  if (!equivalent(card, rec.card, seat) && safety) { G.confirm = { kind: "card", seat, card, rec }; G.hint = key(rec.card); render(); return; }
+  G.confirm = null; playCard(seat, card, rec);
+}
+
+/* ═══════════════ Driver ═══════════════ */
+function tick() {
+  if (timer) return;
+  if (G.phase === "bidding" && G.turn >= 0 && G.turn !== YOU) {
+    timer = setTimeout(() => { timer = null; const r = aiBid(G.turn); makeCall(G.turn, r.call, r.why); }, 800);
+  } else if (G.phase === "play" && G.turn >= 0 && !controls(G.turn)) {
+    timer = setTimeout(() => { timer = null; const r = aiCard(G.turn); playCard(G.turn, r.card); }, 700);
+  }
+}
+function hint() {
+  if (G.phase === "bidding" && G.turn === YOU) {
+    const r = aiBid(YOU); G.hint = r.call.type === "pass" ? "pass" : r.call.type === "bid" ? bidIdx(r.call.level, r.call.strain) : r.call.type;
+    say("tip", `<span class="k">Hint</span>${callName(r.call)} — ${r.why}`);
+  } else if (G.phase === "play" && controls(G.turn)) {
+    const r = aiCard(G.turn); G.hint = key(r.card);
+    say("tip", `<span class="k">Hint</span>${NAMES[G.turn]}: ${cardName(r.card)} — ${r.why}`);
+  }
+  render();
+}
+
+/* ═══════════════ Render ═══════════════ */
+function cardHTML(c, cls = "") {
+  return `<button class="card s-${c.s} ${cls}" data-card="${key(c)}"><span class="ci"><b>${RANK(c.r)}</b><i>${SYM[c.s]}</i></span><span class="cc">${SYM[c.s]}</span></button>`;
+}
+function rowsHTML(h) {
+  return `<div class="rows">${DISPLAY.map(s => {
+    const cs = h.filter(c => c.s === s);
+    return `<div><span class="sym s-${s}">${SYM[s]}</span>${cs.length ? `<span class="rk">${cs.map(c => RANK(c.r)).join(" ")}</span>` : `<span class="void">—</span>`}</div>`;
+  }).join("")}</div>`;
+}
+function seatHTML(i) {
+  const pos = SEATS[i], h = G.phase === "done" ? G.original[i] : G.hands[i];
+  const tags = [];
+  if (i === YOU) tags.push(`<span class="tag you">You</span>`);
+  else if (i === 0) tags.push(`<span class="tag">Partner</span>`);
+  if (G.phase === "bidding" && i === G.dealer) tags.push(`<span class="tag">Dealer</span>`);
+  if (G.contract && i === G.declarer) tags.push(`<span class="tag decl">Declarer</span>`);
+  if (G.contract && i === G.dummy) tags.push(`<span class="tag">Dummy</span>`);
+  const visible = i === YOU || G.phase === "done" || controls(i) || (G.phase === "play" && G.dummyShown && i === G.dummy);
+  let body;
+  if (!visible) body = `<div class="backs"><span class="back"></span><span class="back"></span><span class="back"></span><em>${h.length}</em></div>`;
+  else if (pos === "e" || pos === "w" || G.phase === "done") body = rowsHTML(h);
+  else {
+    const myTurn = G.phase === "play" && G.turn === i && controls(i) && !G.confirm;
+    const ok = myTurn ? new Set(legalCards(i).map(key)) : new Set();
+    body = `<div class="fan ${i !== YOU ? "small" : ""} ${myTurn ? "active" : ""}" data-seat="${i}">${h.map(c => cardHTML(c, `${ok.has(key(c)) ? "playable" : ""} ${G.hint === key(c) ? "hinted" : ""}`)).join("")}</div>`;
+  }
+  const turn = G.turn === i && G.phase !== "done";
+  const label = `<div class="label"><span class="name">${NAMES[i]}</span>${tags.join("")}</div>`;
+  return `<div class="seat ${pos} ${turn ? "turn" : ""}">${pos === "s" ? body + label : label + body}</div>`;
+}
+function auctionHTML() {
+  const cols = [3, 0, 1, 2]; // W N E S
+  const cells = [];
+  for (let k = 0; k < cols.indexOf(G.dealer); k++) cells.push(`<td></td>`);
+  G.auction.forEach((e, i) => {
+    const cls = e.call.type === "pass" ? "pass" : e.call.type === "double" ? "dbl" : e.call.type === "redouble" ? "rdbl" : "";
+    cells.push(`<td><button class="call ${cls} ${e.alert ? "alerted" : ""} ${G.focus === i ? "focus" : ""}" data-call="${i}">${callText(e.call)}</button></td>`);
+  });
+  if (G.phase === "bidding" && G.turn >= 0) cells.push(`<td class="q">?</td>`);
+  while (cells.length % 4) cells.push(`<td></td>`);
+  const rows = []; for (let k = 0; k < cells.length; k += 4) rows.push(`<tr>${cells.slice(k, k + 4).join("")}</tr>`);
+  return `<div class="plate auction"><table><thead><tr>${cols.map(c => `<th class="${c === YOU ? "you" : ""}">${NAMES[c]}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody></table></div>`;
+}
+function slipHTML() {
+  const e = G.auction[G.focus];
+  if (!e) return "";
+  const a = e.alert;
+  return `<div class="slip"><div class="head"><span class="stamp ${a ? "" : "plain"}">${a ? "Alert" : "Meaning"}</span><b class="conv">${a ? a.name : callName(e.call)}</b><span style="margin-left:auto;opacity:.7">${NAMES[e.seat]} · ${callText(e.call)}</span></div>
+    ${a ? a.text : e.why}${a && a.learn ? `<span class="learn">${a.learn}</span>` : ""}</div>`;
+}
+function bidboxHTML() {
+  const mine = G.turn === YOU && !G.confirm; let html = "";
+  for (let l = 1; l <= 7; l++) for (const s of STRAINS) {
+    const ok = mine && legal(l, s);
+    html += `<button data-bid="${l}${s}" ${ok ? "" : "disabled"} class="${G.hint === bidIdx(l, s) ? "hinted" : ""}">${l}${strainHTML(s)}</button>`;
+  }
+  html += `<button class="passbtn ${G.hint === "pass" ? "hinted" : ""}" data-bid="pass" ${mine ? "" : "disabled"}>Pass</button>`;
+  html += `<button class="xbtn ${G.hint === "double" ? "hinted" : ""}" data-bid="double" ${mine && canDouble(YOU) ? "" : "disabled"}>X</button>`;
+  html += `<button class="xxbtn ${G.hint === "redouble" ? "hinted" : ""}" data-bid="redouble" ${mine && canRedouble(YOU) ? "" : "disabled"}>XX</button>`;
+  return `<div class="bidbox">${html}</div>`;
+}
+function centerHTML() {
+  if (G.phase === "bidding") return slipHTML() + auctionHTML() + bidboxHTML();
+  if (G.phase === "done") {
+    const r = G.result, ok = r.made >= r.need;
+    return `<div class="plate result"><h2><span class="c">${contractText()}</span> ${ok ? "made" : `down ${r.need - r.made}`}</h2>
+      <p>${NAMES[G.declarer]} took ${r.made} of 13 tricks (needed ${r.need}).</p>
+      <div class="pts">${r.pts >= 0 ? "+" : "−"}${Math.abs(r.pts)}</div><p>${r.pts >= 0 ? "to us" : "to them"}</p>
+      <div class="acts"><button class="tbtn" data-act="replay">Replay this deal</button><button class="tbtn primary" data-act="next">Next deal</button></div></div>` + slipHTML() + auctionHTML();
+  }
+  const w = G.trick.length === 4 ? winnerOf(G.trick).seat : -1;
+  return `<div class="trick ${G.flying >= 0 ? `fly-${G.flying}` : ""}">${G.trick.map((t, i) => `<div class="slot ${SEATS[t.seat]} ${t.seat === w ? "win" : ""}">${cardHTML(t.card, i === G.trick.length - 1 && G.flying < 0 && w < 0 ? "fresh" : "")}</div>`).join("")}
+    ${G.trick.length ? "" : `<div class="mid"><div class="contract"><b>${contractText()}</b><small>by ${NAMES[G.declarer]} · trick ${Math.min(G.trickCount + 1, 13)} of 13</small></div></div>`}</div>`;
+}
+function pileHTML(sd) {
+  const n = G.tricks[sd], need = target(sd);
+  const packets = n ? Array.from({ length: n }, (_, i) => `<span class="packet back ${i === n - 1 && G.freshPacket === sd ? "fresh" : ""}" style="${sd ? "left" : "right"}:${i * 11}px"></span>`).join("") : `<span class="empty" style="${sd ? "left" : "right"}:0"></span>`;
+  const width = 44 + Math.max(0, n - 1) * 11;
+  return `<div class="pile p${sd}"><div class="packets" style="width:${width}px">${packets}</div>
+    <div class="cap"><b>${sd ? "They" : "We"}</b><span class="n">${n}</span>${need ? `<span>of ${need} ${sd === side(G.declarer) ? "to make" : "to set"}</span>` : ""}</div>
+    ${need ? `<div class="pips">${Array.from({ length: need }, (_, i) => `<i class="${i < n ? "on" : ""}"></i>`).join("")}</div>` : ""}</div>`;
+}
+function confirmHTML() {
+  const c = G.confirm; if (!c) return "";
+  const mine = c.kind === "bid" ? callName(c.call) : cardName(c.card);
+  const theirs = c.kind === "bid" ? callName(c.rec.call) : cardName(c.rec.card);
+  const verb = c.kind === "bid" ? (c.rec.call.type === "bid" ? "Bid " : "") : "Play ";
+  return `<div class="veil"><div class="confirm">
+    <h3>Are you sure?</h3>
+    <p>You're about to ${c.kind === "bid" ? "call" : "play"} ${mine}. ${c.kind === "card" ? "The coach's card is lifted in your hand." : "The coach's call is outlined in the bid box."}</p>
+    <div class="advice"><span class="k">Coach's hint</span>${theirs} — ${c.rec.why}</div>
+    <div class="acts"><button class="cbtn primary" data-act="take">${verb}${theirs}</button><button class="cbtn" data-act="keep">Keep ${mine}</button><button class="cbtn" data-act="rethink">Let me rethink</button></div>
+    <button class="off" data-act="keep-off">Keep mine and stop asking</button>
+  </div></div>`;
+}
+function whisperHTML() {
+  const f = G.feed.find(f => f.kind !== "sys");
+  return f ? `<div class="whisper"><span class="k">Coach</span>${f.html.replace(/<span class="k">.*?<\/span>/, "")}</div>` : "";
+}
+function padHTML() {
+  const rows = history.slice(-6);
+  const we = history.reduce((n, r) => n + r.we, 0), they = history.reduce((n, r) => n + r.they, 0);
+  const blanks = Math.max(0, 3 - rows.length);
+  return `<div class="pad"><h4>Score <small>deal ${G.dealNo} · ${NAMES[G.dealer]} deals</small></h4><table>
+    <thead><tr><th></th><th>WE</th><th>THEY</th></tr></thead>
+    <tbody>${rows.map(r => `<tr><td class="lbl">${r.label}</td><td>${r.we || ""}</td><td>${r.they || ""}</td></tr>`).join("")}${'<tr class="blank"><td></td><td></td><td></td></tr>'.repeat(blanks)}</tbody>
+    <tfoot><tr><td class="lbl">Total</td><td>${we}</td><td>${they}</td></tr></tfoot></table></div>`;
+}
+function notebookHTML() {
+  const h = G.original[YOU], p = hcp(h), L = lengths(h);
+  const phase = G.phase === "bidding" ? "The auction" : G.phase === "play" ? `Playing ${contractText()}` : "Reviewing the deal";
+  return `<div class="notebook">
+    <div class="nb-head"><span class="avatar">C</span><div><b>Your coach</b><small>${phase}</small></div></div>
+    <div class="nb-hand"><div>Points<b>${p}</b></div><div>Shape ♠♥♦♣<b>${L.S}-${L.H}-${L.D}-${L.C}</b></div><div>${G.phase === "bidding" ? "Balanced" : "Tricks"}<b>${G.phase === "bidding" ? (balanced(h) ? "Yes" : "No") : `${G.tricks[0]} – ${G.tricks[1]}`}</b></div></div>
+    <ol class="nb-feed">${G.feed.map(f => `<li class="${f.kind}">${f.html}</li>`).join("")}</ol>
+    <details class="cheat"><summary>Cheat sheet</summary><ul>
+      <li>Open with <b>12+</b>; 1NT = <b>15–17</b> balanced; 1♥/1♠ need <b>5</b> cards.</li>
+      <li><b>Stayman</b> 1NT–2♣: “any 4-card major?” → 2♦ none, 2♥, 2♠.</li>
+      <li><b>Transfers</b> 1NT–2♦ = hearts, 1NT–2♥ = spades; opener bids the next suit.</li>
+      <li><b>Take-out double</b>: 12+, short in their suit — partner must bid.</li>
+      <li><b>25</b> points ≈ game. Second hand low, third hand high.</li>
+    </ul></details></div>`;
+}
+function render() {
+  const canHint = !G.confirm && ((G.phase === "bidding" && G.turn === YOU) || (G.phase === "play" && G.turn >= 0 && controls(G.turn)));
+  document.getElementById("root").innerHTML = `
+  <div class="room">
+    <div class="topbar">
+      <div class="brand">Bridge Trainer <span class="suits">♠♥♦♣</span><small>you · partner · two opponents</small></div>
+      <div class="spacer"></div>
+      <button class="hud-btn ${safety ? "on" : ""}" data-act="safety" title="Ask before a bid or card the coach disagrees with">Safety net <span class="switch"></span></button>
+      <button class="hud-btn" data-act="hint" ${canHint ? "" : "disabled"}>💡 Hint</button>
+      <button class="hud-btn" data-act="next">New deal</button>
+    </div>
+    <div class="stage">
+      <div class="rail"><section class="felt">
+        ${[0, 3, 1, 2].map(seatHTML).join("")}
+        <div class="center">${centerHTML()}</div>
+        ${G.phase !== "bidding" ? pileHTML(0) + pileHTML(1) : ""}
+        ${whisperHTML()}
+        ${confirmHTML()}
+      </section></div>
+      <aside>${padHTML()}${notebookHTML()}</aside>
+    </div>
+  </div>`;
+}
+
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-act],[data-bid],[data-call],.card.playable");
+  if (!t || t.disabled) return;
+  const act = t.dataset.act;
+  if (act === "safety") { setSafety(!safety); return render(); }
+  if (act === "hint") return hint();
+  if (act === "next") return newDeal(G.dealNo + 1);
+  if (act === "replay") { history.pop(); return newDeal(G.dealNo); }
+  if (G.confirm && act) {
+    const c = G.confirm; G.confirm = null; G.hint = null;
+    if (act === "rethink") return render();
+    if (act === "keep-off") setSafety(false);
+    if (c.kind === "bid") return commitCall(act === "take" ? c.rec.call : c.call, c.rec);
+    return playCard(c.seat, act === "take" ? c.rec.card : c.card, c.rec);
+  }
+  if (t.dataset.call) { const i = +t.dataset.call; G.focus = G.focus === i ? -1 : i; return render(); }
+  if (G.confirm) return;
+  if (t.dataset.bid && G.phase === "bidding" && G.turn === YOU) {
+    const b = t.dataset.bid;
+    const call = b === "pass" || b === "double" || b === "redouble" ? { type: b } : { type: "bid", level: +b[0], strain: b.slice(1) };
+    if (isLegalCall(YOU, call)) userCall(call);
+    return;
+  }
+  if (t.classList.contains("card")) {
+    const seat = +t.closest(".fan").dataset.seat;
+    if (G.phase !== "play" || G.turn !== seat || !controls(seat)) return;
+    userCard(seat, G.hands[seat].find(c => key(c) === t.dataset.card));
+  }
+});
+
+newDeal(1);
+
+/* Dev aid for screenshots: #autoplay=N plays (as the coach) up to trick N; ",confirm" then tries a card the coach dislikes. */
+const auto = /#autoplay=(\d+)(,confirm)?/.exec(location.hash);
+if (auto) {
+  const real = window.setTimeout, q = [];
+  window.setTimeout = f => { q.push(f); return 0; };
+  for (let i = 0; i < 5000; i++) {
+    if (G.phase === "play" && G.trickCount >= +auto[1] && G.turn >= 0 && controls(G.turn)) break;
+    if (q.length) { q.shift()(); continue; }
+    if (G.phase === "bidding" && G.turn === YOU) { const r = aiBid(YOU); commitCall(r.call, r); continue; }
+    if (G.phase === "play" && controls(G.turn)) { const r = aiCard(G.turn); playCard(G.turn, r.card, r); continue; }
+    break;
+  }
+  window.setTimeout = real; timer = null; G.freshPacket = -1;
+  if (auto[2] && G.phase === "play") {
+    const rec = aiCard(G.turn), other = legalCards(G.turn).find(c => !equivalent(c, rec.card, G.turn));
+    if (other) userCard(G.turn, other);
+  }
+  render(); tick();
+}
+</script>
+</body>
+</html>

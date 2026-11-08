@@ -449,6 +449,7 @@ navigation, so it starts from nothing remembered.
     - `PrototypeVersionActions` ← `apps.prototypes.canvas`
   - Contributes:
     - `Pane.Register` "prototypes-detail"
+    - `ExternalHosts.Declare` "unpkg.com, fonts.googleapis.com, fonts.gstatic.com"
     - `Hints.Hint` "prototypes.variants"
     - `ThemeEngine.SubTheme` "Prototype frame chips"
     - `ThemeEngine.SubTheme` "Prototype option rows"
@@ -457,7 +458,7 @@ navigation, so it starts from nothing remembered.
     - `PrototypeFrameActions` "close" → `CloseFrameAction`
     - `PrototypeVersionActions` "compare" → `CompareVersionAction`
     - `PrototypeVersionActions` "open-conversation" → `OpenVersionConversation`
-  - Uses: 92 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 93 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×9
     - `primitives/data-view` ×6
     - `infra/endpoints` ×5
@@ -477,6 +478,7 @@ navigation, so it starts from nothing remembered.
     - `primitives/slot-render` ×2
     - `apps-core/tabs.useAppLinkProps`
     - `apps/prototypes/state.usePrototypeState`
+    - `framework/browser-server.ExternalHosts`
     - `network/live.useLive`
     - `primitives/adaptive-bar.AdaptiveBar`
     - `primitives/css/badge.Badge`

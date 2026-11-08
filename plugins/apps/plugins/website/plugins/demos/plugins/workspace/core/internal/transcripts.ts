@@ -569,6 +569,9 @@ function practiceTimer(story: Story, s: PageSession): Turn[] {
   ];
 }
 
+/** The recipes prototype's inlined photos: fetched by the agent, never written by hand. */
+const PHOTOS_FILE = "photos.js";
+
 /**
  * A new app starts as a prototype: the agent mints one, writes its files, and
  * hands it over; Demo asks for changes, each one of the prototype's committed
@@ -590,20 +593,28 @@ function recipes(story: Story, _s: PageSession, ctx: SessionContext): Turn[] {
       `[demo] prototype ${id} needs a first version and at least one step`,
     );
   const answers = [
-    `Done: the cards have rounded corners and a soft shadow (${id}, v1).`,
-    `v2 is ready (${id}): this week's shopping list is the first card, made from the recipes picked for the week.\n\nNext would be the real app. That's a new app in your equin, so I'm asking first: build it from this prototype?`,
+    `Done (${id}, v1): the recipes you pick for the week sit in a bar at the bottom, with their photos and one tap to the shopping list.`,
+    `v2 is ready (${id}): the accent option now has plum and ocean beside terracotta and olive.\n\nNext would be the real app. That's a new app in your equin, so I'm asking first: build it from this prototype?`,
   ];
   if (answers.length !== steps.length)
     throw new Error(
       `[demo] prototype ${id} has ${steps.length} steps; the recipes session answers ${answers.length}`,
     );
+  // The photos are inlined into a script the page loads, so the prototype
+  // needs no photo host; the agent fetches them rather than writing them.
+  const { [PHOTOS_FILE]: photos, ...written } = first.files;
+  if (photos === undefined)
+    throw new Error(`[demo] prototype ${id} has no ${PHOTOS_FILE}`);
+  const photoIds = [...photos.matchAll(/^ {2}"(photo-[^"]+)":/gm)].map(
+    (m) => m[1]!,
+  );
   return [
     user(promptOf(story)),
     say(
-      "A new app starts as a prototype, so you can see it before anything is built. I'll start with the home screen: a card per recipe.",
+      "A new app starts as a prototype, so you can see it before anything is built. I'll do the whole loop in one page: the recipes as photo cards, a recipe's detail with servings you can scale, and the shopping list built from the week's picks — merged, scaled and grouped by aisle.",
     ),
     bash(
-      './equin prototype new "Recipe box: home"',
+      './equin prototype new "Family Recipes"',
       "Create the prototype",
       [
         id,
@@ -611,8 +622,17 @@ function recipes(story: Story, _s: PageSession, ctx: SessionContext): Turn[] {
         `  url:    ${previewUrl(story, `/prototypes/proto/${id}`)}`,
       ].join("\n"),
     ),
-    // The page first, then what it loads.
-    ...Object.entries(first.files)
+    bash(
+      [
+        `cd ${dir} && for p in ${photoIds.join(" ")}; do`,
+        `  curl -s "https://images.unsplash.com/$p?w=480&h=360&fit=crop&q=50" | base64 | sed "s|.*|  \\"$p\\": \\"data:image/jpeg;base64,&\\",|"`,
+        `done | (echo 'window.PHOTOS = {'; cat; echo '};') > ${PHOTOS_FILE} && wc -c ${PHOTOS_FILE}`,
+      ].join("\n"),
+      "Fetch the recipe photos and inline them",
+      `  ${photos.length} ${PHOTOS_FILE}`,
+    ),
+    // The page first, then anything else it loads.
+    ...Object.entries(written)
       .sort(
         ([a], [b]) => Number(b === "index.html") - Number(a === "index.html"),
       )
@@ -620,10 +640,12 @@ function recipes(story: Story, _s: PageSession, ctx: SessionContext): Turn[] {
     end(
       `Your prototype is ready: ${id}.`,
       "",
-      "- One card per recipe, with a coloured edge in the accent colour.",
-      "- Two options to flip at the top: **density** (cozy or compact) and **accent** (violet, teal or amber).",
+      "- **Recipes**: a photo card per recipe, filtered by who it's from or by this week; + puts one on this week.",
+      "- **A recipe**: its story, ingredients scaled to the servings you set, the method, and photos you can add.",
+      "- **Shopping list**: the week's ingredients merged and grouped by aisle; tick them off, add extras, copy it.",
+      "- One option at the top: the **accent** colour (terracotta or olive).",
       "",
-      "Photos and the weekly shopping list come once the look is right. What would you change?",
+      "Everything you do stays in this browser. What would you change?",
     ),
     ...steps.flatMap((version, i) => {
       const before = (i === 0 ? first : steps[i - 1]!).files;

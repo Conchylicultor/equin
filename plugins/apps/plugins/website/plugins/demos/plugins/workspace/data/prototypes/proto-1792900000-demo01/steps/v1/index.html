@@ -1,0 +1,573 @@
+<!doctype html>
+<html lang="en" style="--accent: #c8553d">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Family Recipes</title>
+<meta name="description" content="The family's recipes as photo cards. Pick a few for the week and the shopping list writes itself — merged, scaled to servings, grouped by aisle." />
+<meta name="prototype-option-group" content="Colors" />
+<meta name="prototype-option" content="accent: color terracotta=#c8553d | olive=#6b7b3a" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  :root {
+    --bg: #faf6f0; --surface: #fff; --ink: #2b2420; --muted: #8a7d72; --line: #ece4d9;
+    --soft: color-mix(in srgb, var(--accent) 12%, #fff);
+    --serif: "Fraunces", Georgia, serif;
+  }
+  body { font-family: "Inter", system-ui, sans-serif; background: var(--bg); color: var(--ink); font-size: 14px; -webkit-font-smoothing: antialiased; }
+  #root { min-height: 100%; }
+  button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
+  input, textarea { font: inherit; color: inherit; }
+
+  /* header */
+  .top { position: sticky; top: 0; z-index: 5; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+  .top-in { max-width: 1180px; margin: 0 auto; padding: 14px 24px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .brand { font-family: var(--serif); font-size: 22px; font-weight: 600; display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+  .brand-mark { width: 30px; height: 30px; border-radius: 9px; background: var(--accent); color: #fff; display: grid; place-items: center; font-size: 16px; }
+  .tabs { display: flex; background: #f1eadf; border-radius: 999px; padding: 3px; }
+  .tab { padding: 7px 14px; border-radius: 999px; color: var(--muted); font-weight: 500; display: flex; gap: 6px; align-items: center; white-space: nowrap; }
+  .tab.on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(60,40,20,.12); }
+  .count { background: var(--accent); color: #fff; border-radius: 999px; font-size: 11px; padding: 1px 7px; font-weight: 600; }
+  .spacer { flex: 1; }
+  .search { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; min-width: 0; flex: 0 1 260px; }
+  .search input { border: 0; outline: 0; background: none; min-width: 0; width: 100%; }
+  .btn { padding: 8px 14px; border-radius: 999px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; transition: background .15s, transform .1s; }
+  .btn:active { transform: scale(.97); }
+  .btn.primary { background: var(--accent); color: #fff; }
+  .btn.primary:hover { background: color-mix(in srgb, var(--accent) 88%, #000); }
+  .btn.ghost { border: 1px solid var(--line); background: var(--surface); }
+  .btn.ghost:hover { background: #f6f0e7; }
+
+  .page { max-width: 1180px; margin: 0 auto; padding: 22px 24px 120px; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+  .chip { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); font-weight: 500; }
+  .chip.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+  /* cards */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 22px; }
+  .card { background: var(--surface); border-radius: 16px; overflow: hidden; box-shadow: 0 1px 2px rgba(60,40,20,.06), 0 0 0 1px var(--line); cursor: pointer; transition: transform .2s, box-shadow .2s; text-align: left; display: flex; flex-direction: column; }
+  .card:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(60,40,20,.12), 0 0 0 1px var(--line); }
+  .card.picked { box-shadow: 0 0 0 2px var(--accent), 0 10px 24px rgba(60,40,20,.10); }
+  .photo { position: relative; aspect-ratio: 4/3; background: linear-gradient(135deg, #f3d9b1, #e8a87c); overflow: hidden; }
+  .photo img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .4s; }
+  .card:hover .photo img { transform: scale(1.04); }
+  .photo .fallback { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--serif); font-size: 48px; color: rgba(255,255,255,.85); }
+  .pick { position: absolute; top: 10px; right: 10px; width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,.92); display: grid; place-items: center; font-size: 18px; box-shadow: 0 2px 8px rgba(0,0,0,.15); transition: background .15s, color .15s, transform .15s; }
+  .pick:hover { transform: scale(1.08); }
+  .pick.on { background: var(--accent); color: #fff; }
+  .nphotos { position: absolute; left: 10px; bottom: 10px; background: rgba(0,0,0,.55); color: #fff; font-size: 11px; padding: 3px 8px; border-radius: 999px; font-weight: 500; }
+  .card-body { padding: 14px 16px 16px; }
+  .card h3 { font-family: var(--serif); font-weight: 600; font-size: 18px; margin: 0 0 6px; line-height: 1.2; }
+  .meta { color: var(--muted); font-size: 13px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .from { color: var(--accent); font-weight: 500; }
+
+  /* floating week pill */
+  .pill { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--ink); color: #fff; border-radius: 999px; padding: 8px 8px 8px 10px; display: flex; align-items: center; gap: 12px; box-shadow: 0 12px 30px rgba(0,0,0,.25); animation: rise .3s ease; z-index: 6; white-space: nowrap; }
+  @keyframes rise { from { transform: translate(-50%, 20px); opacity: 0; } }
+  .stack { display: flex; }
+  .stack img, .stack span { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--ink); object-fit: cover; margin-left: -10px; background: #e8a87c; }
+  .stack :first-child { margin-left: 0; }
+
+  /* modal */
+  .scrim { position: fixed; inset: 0; background: rgba(30,20,10,.45); z-index: 10; display: grid; place-items: center; padding: 24px; animation: fade .2s; }
+  @keyframes fade { from { opacity: 0; } }
+  .sheet { background: var(--surface); border-radius: 20px; width: 100%; max-width: 980px; max-height: calc(var(--prototype-screen-height, 100vh) - 48px); overflow: auto; display: grid; grid-template-columns: 1.05fr 1fr; animation: pop .25s ease; position: relative; }
+  @keyframes pop { from { transform: translateY(12px) scale(.98); opacity: 0; } }
+  .close { position: absolute; top: 14px; right: 14px; width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,.92); font-size: 18px; z-index: 2; box-shadow: 0 1px 4px rgba(0,0,0,.15); }
+  .gallery { padding: 16px; display: flex; flex-direction: column; gap: 10px; background: #f8f3ec; }
+  .hero { border-radius: 14px; aspect-ratio: 4/3; }
+  .thumbs { display: flex; gap: 8px; flex-wrap: wrap; }
+  .thumb { width: 64px; height: 64px; border-radius: 10px; overflow: hidden; padding: 0; opacity: .7; transition: opacity .15s; }
+  .thumb.on { opacity: 1; box-shadow: 0 0 0 2px var(--accent); }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .addph { width: 64px; height: 64px; border-radius: 10px; border: 1.5px dashed #cdbfae; color: var(--muted); display: grid; place-items: center; font-size: 22px; cursor: pointer; }
+  .addph:hover { border-color: var(--accent); color: var(--accent); }
+  .detail { padding: 28px 30px 32px; }
+  .detail h2 { font-family: var(--serif); font-size: 30px; font-weight: 600; margin: 4px 0 8px; line-height: 1.1; }
+  .story { font-family: var(--serif); font-style: italic; color: #6d5f54; margin: 0 0 18px; line-height: 1.5; font-size: 15px; }
+  .row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 22px; }
+  .stepper { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 999px; }
+  .stepper button { width: 32px; height: 32px; font-size: 16px; color: var(--muted); }
+  .stepper button:hover { color: var(--ink); }
+  .stepper span { min-width: 74px; text-align: center; font-weight: 500; }
+  .stepper.sm button { width: 24px; height: 24px; font-size: 14px; }
+  .stepper.sm span { min-width: 22px; font-size: 13px; }
+  h4 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 10px; font-weight: 600; }
+  .ings { list-style: none; padding: 0; margin: 0 0 24px; }
+  .ings li { padding: 7px 0; border-bottom: 1px dashed var(--line); display: flex; gap: 10px; }
+  .ings b { min-width: 70px; font-weight: 600; }
+  .steps { padding: 0; margin: 0; list-style: none; counter-reset: s; }
+  .steps li { counter-increment: s; display: flex; gap: 12px; margin-bottom: 14px; line-height: 1.55; }
+  .steps li::before { content: counter(s); flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--soft); color: var(--accent); font-weight: 600; font-size: 12px; display: grid; place-items: center; margin-top: 1px; }
+
+  /* editor */
+  .editor { grid-template-columns: 1fr; max-width: 640px; padding: 28px 30px; gap: 14px; }
+  .editor h2 { font-family: var(--serif); margin: 0; font-size: 26px; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 12px; color: var(--muted); font-weight: 500; }
+  .field input, .field textarea { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; outline: 0; background: #fffdfa; resize: vertical; }
+  .field input:focus, .field textarea:focus { border-color: var(--accent); }
+  .cols { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; }
+  .drop { border: 1.5px dashed #cdbfae; border-radius: 14px; min-height: 120px; display: flex; gap: 8px; padding: 10px; align-items: center; justify-content: center; color: var(--muted); cursor: pointer; flex-wrap: wrap; }
+  .drop img { width: 90px; height: 90px; border-radius: 10px; object-fit: cover; }
+  .actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+  /* shopping list */
+  .list-head { display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+  .list-head h1 { font-family: var(--serif); font-size: 32px; margin: 0; font-weight: 600; }
+  .sub { color: var(--muted); margin-top: 4px; }
+  .week { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 24px; }
+  .wk { display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 6px 8px 6px 6px; }
+  .wk img, .wk .ph { width: 40px; height: 40px; border-radius: 10px; object-fit: cover; background: #e8a87c; }
+  .wk-name { font-weight: 500; cursor: pointer; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .wk-x { color: var(--muted); width: 22px; height: 22px; border-radius: 50%; }
+  .wk-x:hover { background: #f3ece2; color: var(--ink); }
+  .list-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; align-items: start; }
+  .aisle { background: var(--surface); border-radius: 16px; box-shadow: 0 0 0 1px var(--line); padding: 16px 18px 8px; }
+  .aisle h4 { display: flex; justify-content: space-between; }
+  .item { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-top: 1px solid #f4eee6; cursor: pointer; user-select: none; }
+  .aisle h4 + .item { border-top: 0; }
+  .box { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid #cdbfae; flex: none; display: grid; place-items: center; color: #fff; font-size: 12px; transition: background .15s, border-color .15s; }
+  .item.done .box { background: var(--accent); border-color: var(--accent); }
+  .item.done .what { color: var(--muted); text-decoration: line-through; }
+  .what { flex: 1; min-width: 0; }
+  .what b { font-weight: 600; margin-right: 6px; }
+  .srcs { display: flex; gap: 2px; }
+  .srcs img, .srcs span { width: 18px; height: 18px; border-radius: 50%; object-fit: cover; background: #e8a87c; }
+  .add-item { display: flex; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 4px 4px 4px 14px; flex: 1 1 260px; max-width: 420px; }
+  .add-item input { border: 0; outline: 0; flex: 1; background: none; min-width: 0; }
+  .empty { text-align: center; padding: 80px 20px; color: var(--muted); }
+  .empty .big { font-family: var(--serif); font-size: 26px; color: var(--ink); margin-bottom: 8px; }
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 10px 18px; border-radius: 999px; z-index: 20; animation: rise .25s; }
+
+  @media (max-width: 760px) {
+    .sheet { grid-template-columns: 1fr; }
+    .detail { padding: 22px; }
+    .top-in, .page { padding-left: 16px; padding-right: 16px; }
+    .search { flex: 1 1 100%; order: 5; }
+    .cols { grid-template-columns: 1fr 1fr; }
+    .cols .field:first-child { grid-column: 1 / -1; }
+    .scrim { padding: 0; align-items: end; }
+    .sheet { border-radius: 20px 20px 0 0; max-height: calc(var(--prototype-screen-height, 100vh) - 30px); }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script src="photos.js"></script>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useMemo, useRef } = React;
+
+const AISLES = ["Produce", "Meat & fish", "Dairy & eggs", "Bakery", "Pantry", "Spices & oils", "Other"];
+const u = (id) => window.PHOTOS[id];
+const i = (q, unit, name, aisle) => ({ q, unit, name, aisle });
+
+const SEED = [
+  { id: "lasagna", title: "Sunday lasagna", from: "Grandma Rose", minutes: 120, serves: 6,
+    story: "Rose made this every Sunday after mass. The secret is letting the sauce go for a full hour.",
+    photos: [u("photo-1574894709920-11b28e7367e3"), u("photo-1619895092538-128341789043")],
+    ings: [i(500, "g", "minced beef", "Meat & fish"), i(1, "", "onion", "Produce"), i(2, "cloves", "garlic", "Produce"), i(800, "g", "crushed tomatoes", "Pantry"), i(250, "g", "lasagna sheets", "Pantry"), i(250, "g", "ricotta", "Dairy & eggs"), i(200, "g", "mozzarella", "Dairy & eggs"), i(50, "g", "parmesan", "Dairy & eggs"), i(2, "tbsp", "olive oil", "Spices & oils")],
+    steps: ["Soften the onion and garlic in olive oil, then brown the beef.", "Add the tomatoes and simmer gently for an hour.", "Layer sauce, sheets, ricotta and mozzarella — three layers.", "Finish with parmesan and bake 45 min at 180°C. Rest 15 min before cutting."] },
+  { id: "pancakes", title: "Saturday pancakes", from: "Dad", minutes: 25, serves: 4,
+    story: "Stack them high. The first one is always for the cook.",
+    photos: [u("photo-1567620905732-2d1ec7ab7445")],
+    ings: [i(200, "g", "flour", "Pantry"), i(2, "", "eggs", "Dairy & eggs"), i(300, "ml", "milk", "Dairy & eggs"), i(30, "g", "butter", "Dairy & eggs"), i(1, "tbsp", "sugar", "Pantry"), i(2, "tsp", "baking powder", "Pantry"), i(null, "", "maple syrup", "Pantry")],
+    steps: ["Whisk the flour, sugar and baking powder.", "Beat in the eggs and milk, then the melted butter.", "Cook ladlefuls in a hot pan until bubbles appear, flip once."] },
+  { id: "chicken", title: "Lemon chicken traybake", from: "Mum", minutes: 60, serves: 4,
+    story: "One tray, no fuss — the weeknight hero.",
+    photos: [u("photo-1598103442097-8b74394b95c6"), u("photo-1532550907401-a500c9a57435")],
+    ings: [i(8, "", "chicken thighs", "Meat & fish"), i(600, "g", "potatoes", "Produce"), i(2, "", "lemons", "Produce"), i(1, "", "onion", "Produce"), i(6, "cloves", "garlic", "Produce"), i(3, "tbsp", "olive oil", "Spices & oils"), i(null, "", "fresh thyme", "Produce")],
+    steps: ["Cut potatoes into chunks, quarter the onion and lemons.", "Toss everything with oil, garlic and thyme on a big tray.", "Roast 50 min at 200°C, chicken skin side up, until golden."] },
+  { id: "minestrone", title: "Winter minestrone", from: "Grandma Rose", minutes: 50, serves: 6,
+    story: "Whatever is in the vegetable drawer, plus beans. Better the next day.",
+    photos: [u("photo-1547592166-23ac45744acd")],
+    ings: [i(1, "", "onion", "Produce"), i(2, "", "carrots", "Produce"), i(2, "", "celery sticks", "Produce"), i(2, "cloves", "garlic", "Produce"), i(400, "g", "crushed tomatoes", "Pantry"), i(400, "g", "cannellini beans", "Pantry"), i(100, "g", "small pasta", "Pantry"), i(1, "l", "vegetable stock", "Pantry"), i(30, "g", "parmesan", "Dairy & eggs")],
+    steps: ["Dice the onion, carrots and celery; sweat in oil with garlic.", "Add tomatoes, beans and stock, simmer 25 min.", "Add the pasta for the last 10 min. Serve with parmesan."] },
+  { id: "cake", title: "Birthday chocolate cake", from: "Aunt Léa", minutes: 75, serves: 10,
+    story: "Requested every birthday since 1998. Candles mandatory.",
+    photos: [u("photo-1578985545062-69928b1d9587")],
+    ings: [i(200, "g", "dark chocolate", "Pantry"), i(200, "g", "butter", "Dairy & eggs"), i(4, "", "eggs", "Dairy & eggs"), i(180, "g", "sugar", "Pantry"), i(120, "g", "flour", "Pantry"), i(200, "ml", "double cream", "Dairy & eggs")],
+    steps: ["Melt chocolate and butter together.", "Whisk eggs and sugar until pale, fold in chocolate, then flour.", "Bake 30 min at 170°C. Cool, then cover with a ganache of cream and chocolate."] },
+  { id: "salad", title: "Greek salad", from: "Mum", minutes: 15, serves: 4,
+    story: "Summer on a plate. Use the best tomatoes you can find.",
+    photos: [u("photo-1540189549336-e6e99c3679fe")],
+    ings: [i(4, "", "tomatoes", "Produce"), i(1, "", "cucumber", "Produce"), i(1, "", "red onion", "Produce"), i(200, "g", "feta", "Dairy & eggs"), i(100, "g", "kalamata olives", "Pantry"), i(3, "tbsp", "olive oil", "Spices & oils"), i(1, "tsp", "dried oregano", "Spices & oils")],
+    steps: ["Cut tomatoes and cucumber into chunks, slice the onion thinly.", "Top with a slab of feta and the olives.", "Dress with oil and oregano just before serving."] },
+  { id: "dal", title: "Comfort dal", from: "Dad", minutes: 40, serves: 4,
+    story: "Picked up on a trip in 2009 and never left the rotation.",
+    photos: [u("photo-1546833999-b9f581a1996d")],
+    ings: [i(250, "g", "red lentils", "Pantry"), i(1, "", "onion", "Produce"), i(3, "cloves", "garlic", "Produce"), i(1, "", "thumb of ginger", "Produce"), i(400, "ml", "coconut milk", "Pantry"), i(2, "tsp", "cumin seeds", "Spices & oils"), i(1, "tsp", "turmeric", "Spices & oils"), i(null, "", "fresh coriander", "Produce")],
+    steps: ["Fry the cumin seeds, then onion, garlic and ginger.", "Add lentils, turmeric and 750 ml water; simmer 20 min.", "Stir in the coconut milk and finish with coriander."] },
+  { id: "pizza", title: "Friday pizza night", from: "Tom", minutes: 90, serves: 4,
+    story: "Everyone builds their own. Tom insists on pineapple.",
+    photos: [u("photo-1565299624946-b28f40a0ae38")],
+    ings: [i(500, "g", "flour", "Pantry"), i(7, "g", "dried yeast", "Pantry"), i(400, "g", "crushed tomatoes", "Pantry"), i(250, "g", "mozzarella", "Dairy & eggs"), i(2, "tbsp", "olive oil", "Spices & oils"), i(null, "", "toppings of choice", "Other")],
+    steps: ["Mix flour, yeast, a pinch of salt and 320 ml warm water; knead 10 min.", "Let rise 1 hour, then split into four balls.", "Stretch, top, and bake as hot as the oven goes, 8–10 min."] },
+];
+
+// ---------- quantities ----------
+const FR = [[0.25, "¼"], [0.333, "⅓"], [0.5, "½"], [0.667, "⅔"], [0.75, "¾"]];
+function fmtQty(q, unit) {
+  if (q == null) return "";
+  if (unit === "g" && q >= 1000) return `${round(q / 1000, 2)} kg`;
+  if (unit === "ml" && q >= 1000) return `${round(q / 1000, 2)} l`;
+  if (unit === "g" || unit === "ml") return `${q > 50 ? Math.round(q / 5) * 5 : Math.round(q)} ${unit}`;
+  const whole = Math.floor(q), frac = q - whole;
+  let fs = "";
+  if (frac > 0.1) {
+    const best = FR.reduce((a, b) => (Math.abs(b[0] - frac) < Math.abs(a[0] - frac) ? b : a));
+    if (frac > 0.875) return withUnit(whole + 1, unit);
+    fs = best[1];
+  }
+  return withUnit(`${whole || ""}${fs}` || "¼", unit);
+}
+const round = (n, d) => +n.toFixed(d);
+const withUnit = (n, unit) => (unit ? `${n} ${unit}` : `${n}`);
+
+// ---------- parsing a typed ingredient line ----------
+const AISLE_WORDS = [
+  ["Produce", /onion|garlic|tomato(?!es crushed)|carrot|celery|lemon|lime|potato|cucumber|ginger|herb|coriander|parsley|basil|thyme|apple|banana|pepper|lettuce|spinach|mushroom|courgette|zucchini/],
+  ["Meat & fish", /beef|chicken|pork|lamb|bacon|sausage|fish|salmon|tuna|prawn|mince/],
+  ["Dairy & eggs", /milk|butter|cream|cheese|feta|mozzarella|parmesan|ricotta|yog|egg/],
+  ["Bakery", /bread|bun|baguette|tortilla|wrap/],
+  ["Spices & oils", /oil|salt|pepper|cumin|turmeric|paprika|oregano|cinnamon|vinegar|spice/],
+  ["Pantry", /flour|sugar|rice|pasta|lentil|bean|stock|tin|can|chocolate|yeast|honey|syrup|oats|crushed/],
+];
+function guessAisle(name) {
+  const n = name.toLowerCase();
+  for (const [a, re] of AISLE_WORDS) if (re.test(n)) return a;
+  return "Other";
+}
+const UNIT_RE = /^(kg|g|ml|l|tbsp|tsp|cups?|cloves?|cans?|tins?)\b\.?\s*/i;
+function parseLine(line) {
+  let s = line.trim().replace(/^[-•*]\s*/, "");
+  if (!s) return null;
+  let q = null, unit = "";
+  const m = s.match(/^(\d+(?:[.,]\d+)?|\d+\/\d+|[½¼¾⅓⅔])\s*/);
+  if (m) {
+    const t = m[1];
+    q = { "½": 0.5, "¼": 0.25, "¾": 0.75, "⅓": 1 / 3, "⅔": 2 / 3 }[t] ?? (t.includes("/") ? eval(t) : parseFloat(t.replace(",", ".")));
+    s = s.slice(m[0].length);
+    const um = s.match(UNIT_RE);
+    if (um) {
+      unit = um[1].toLowerCase();
+      if (unit === "kg") { q *= 1000; unit = "g"; }
+      if (unit === "l") { q *= 1000; unit = "ml"; }
+      if (unit === "clove") unit = "cloves";
+      s = s.slice(um[0].length);
+    }
+  }
+  s = s.replace(/^of\s+/i, "");
+  return i(q, unit, s, guessAisle(s));
+}
+
+// ---------- persistence ----------
+const KEY = "family-recipes-v1";
+function load() {
+  const raw = localStorage.getItem(KEY);
+  if (!raw) return { recipes: SEED, week: { chicken: 4, minestrone: 6, pancakes: 4 }, ticked: [], extras: [] };
+  return JSON.parse(raw);
+}
+
+function Photo({ src, title, className }) {
+  const [broken, setBroken] = useState(false);
+  return (
+    <div className={"photo " + (className || "")}>
+      {src && !broken ? <img src={src} alt="" onError={() => setBroken(true)} /> : <div className="fallback">{title[0]}</div>}
+    </div>
+  );
+}
+const Thumb = ({ r, className }) => r.photos[0] ? <img className={className} src={r.photos[0]} alt="" /> : <span className={className || "ph"} />;
+
+function readFiles(files) {
+  return Promise.all([...files].map((f) => new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(f); })));
+}
+
+// ---------- recipe detail ----------
+function Detail({ r, servings, picked, onServings, onToggle, onAddPhotos, onClose }) {
+  const [active, setActive] = useState(0);
+  const [local, setLocal] = useState(servings || r.serves);
+  const s = picked ? servings : local;
+  const setS = (n) => { n = Math.max(1, n); picked ? onServings(n) : setLocal(n); };
+  const k = s / r.serves;
+  const file = useRef();
+  return (
+    <div className="scrim" onClick={onClose}>
+      <div className="sheet" onClick={(e) => e.stopPropagation()}>
+        <button className="close" onClick={onClose}>×</button>
+        <div className="gallery">
+          <Photo src={r.photos[active]} title={r.title} className="hero" />
+          <div className="thumbs">
+            {r.photos.map((p, n) => (
+              <button key={n} className={"thumb" + (n === active ? " on" : "")} onClick={() => setActive(n)}><img src={p} alt="" /></button>
+            ))}
+            <label className="addph" title="Add photos">
+              +
+              <input ref={file} type="file" accept="image/*" multiple hidden onChange={async (e) => { const urls = await readFiles(e.target.files); onAddPhotos(urls); setActive(r.photos.length); }} />
+            </label>
+          </div>
+        </div>
+        <div className="detail">
+          <div className="from">{r.from}'s</div>
+          <h2>{r.title}</h2>
+          {r.story && <p className="story">“{r.story}”</p>}
+          <div className="row">
+            <span className="meta">⏱ {r.minutes} min</span>
+            <div className="stepper">
+              <button onClick={() => setS(s - 1)}>−</button>
+              <span>serves {s}</span>
+              <button onClick={() => setS(s + 1)}>+</button>
+            </div>
+            <span className="spacer" />
+            <button className={"btn " + (picked ? "ghost" : "primary")} onClick={() => onToggle(s)}>
+              {picked ? "✓ On this week" : "+ Add to this week"}
+            </button>
+          </div>
+          <h4>Ingredients</h4>
+          <ul className="ings">
+            {r.ings.map((g, n) => <li key={n}><b>{fmtQty(g.q == null ? null : g.q * k, g.unit)}</b><span>{g.name}</span></li>)}
+          </ul>
+          <h4>Method</h4>
+          <ol className="steps">{r.steps.map((t, n) => <li key={n}>{t}</li>)}</ol>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------- new recipe ----------
+function Editor({ onSave, onClose }) {
+  const [f, setF] = useState({ title: "", from: "", minutes: 30, serves: 4, ings: "", steps: "", story: "", photos: [] });
+  const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+  const ok = f.title.trim() && f.ings.trim();
+  const save = () => onSave({
+    id: "r" + Date.now(), title: f.title.trim(), from: f.from.trim() || "Me", minutes: +f.minutes || 0, serves: +f.serves || 1,
+    story: f.story.trim(), photos: f.photos,
+    ings: f.ings.split("\n").map(parseLine).filter(Boolean),
+    steps: f.steps.split("\n").map((s) => s.trim().replace(/^\d+[.)]\s*/, "")).filter(Boolean),
+  });
+  return (
+    <div className="scrim" onClick={onClose}>
+      <div className="sheet editor" onClick={(e) => e.stopPropagation()}>
+        <h2>New recipe</h2>
+        <label className="drop">
+          {f.photos.length ? f.photos.map((p, n) => <img key={n} src={p} alt="" />) : <span>📷 Add photos</span>}
+          <input type="file" accept="image/*" multiple hidden onChange={async (e) => { const urls = await readFiles(e.target.files); setF((x) => ({ ...x, photos: [...x.photos, ...urls] })); }} />
+        </label>
+        <div className="cols">
+          <div className="field"><label>Name</label><input autoFocus value={f.title} onChange={set("title")} placeholder="Granny's apple crumble" /></div>
+          <div className="field"><label>Minutes</label><input type="number" value={f.minutes} onChange={set("minutes")} /></div>
+          <div className="field"><label>Serves</label><input type="number" value={f.serves} onChange={set("serves")} /></div>
+        </div>
+        <div className="field"><label>Whose recipe</label><input value={f.from} onChange={set("from")} placeholder="Grandma Rose" /></div>
+        <div className="field"><label>The story behind it</label><input value={f.story} onChange={set("story")} /></div>
+        <div className="field"><label>Ingredients — one per line</label><textarea rows={6} value={f.ings} onChange={set("ings")} placeholder={"6 apples\n150 g flour\n100 g butter\n2 tbsp sugar"} /></div>
+        <div className="field"><label>Method — one step per line</label><textarea rows={4} value={f.steps} onChange={set("steps")} /></div>
+        <div className="actions">
+          <button className="btn ghost" onClick={onClose}>Cancel</button>
+          <button className="btn primary" disabled={!ok} style={{ opacity: ok ? 1 : 0.5 }} onClick={save}>Save recipe</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------- shopping list ----------
+function buildList(recipes, week, extras) {
+  const map = new Map();
+  for (const [id, servings] of Object.entries(week)) {
+    const r = recipes.find((x) => x.id === id);
+    if (!r) continue;
+    const k = servings / r.serves;
+    for (const g of r.ings) {
+      const key = g.name.toLowerCase().replace(/s$/, "") + "|" + g.unit;
+      const e = map.get(key) || { key, name: g.name, unit: g.unit, aisle: g.aisle, q: null, from: [] };
+      if (g.q != null) e.q = (e.q || 0) + g.q * k;
+      if (!e.from.includes(r)) e.from.push(r);
+      map.set(key, e);
+    }
+  }
+  for (const x of extras) map.set("x|" + x, { key: "x|" + x, name: x, unit: "", aisle: guessAisle(x), q: null, from: [] });
+  return [...map.values()];
+}
+
+function Shopping({ recipes, week, ticked, extras, setState, open, goRecipes, toast }) {
+  const items = useMemo(() => buildList(recipes, week, extras), [recipes, week, extras]);
+  const [draft, setDraft] = useState("");
+  const picked = Object.keys(week).map((id) => recipes.find((r) => r.id === id)).filter(Boolean);
+  const left = items.filter((x) => !ticked.includes(x.key)).length;
+  const toggle = (key) => setState((s) => ({ ...s, ticked: s.ticked.includes(key) ? s.ticked.filter((k) => k !== key) : [...s.ticked, key] }));
+  const copy = () => {
+    const text = AISLES.map((a) => {
+      const xs = items.filter((x) => x.aisle === a && !ticked.includes(x.key));
+      return xs.length ? `${a}\n` + xs.map((x) => `- ${[fmtQty(x.q, x.unit), x.name].filter(Boolean).join(" ")}`).join("\n") : "";
+    }).filter(Boolean).join("\n\n");
+    navigator.clipboard.writeText(text).then(() => toast("List copied"), () => toast("Couldn't copy"));
+  };
+
+  if (!picked.length && !extras.length) return (
+    <div className="empty">
+      <div className="big">Nothing planned yet</div>
+      <p>Pick a few recipes for the week and the list fills itself in.</p>
+      <button className="btn primary" onClick={goRecipes}>Browse recipes</button>
+    </div>
+  );
+
+  return (
+    <>
+      <div className="list-head">
+        <div>
+          <h1>Shopping list</h1>
+          <div className="sub">{picked.length} meal{picked.length === 1 ? "" : "s"} this week · {left} to buy</div>
+        </div>
+        <span className="spacer" />
+        <form className="add-item" onSubmit={(e) => { e.preventDefault(); if (draft.trim()) { setState((s) => ({ ...s, extras: [...s.extras, draft.trim()] })); setDraft(""); } }}>
+          <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Add something else…" />
+          <button className="btn ghost" type="submit">Add</button>
+        </form>
+        <button className="btn ghost" onClick={copy}>Copy</button>
+        <button className="btn ghost" onClick={() => setState((s) => ({ ...s, week: {}, ticked: [], extras: [] }))}>New week</button>
+      </div>
+
+      <div className="week">
+        {picked.map((r) => (
+          <div className="wk" key={r.id}>
+            <Thumb r={r} />
+            <span className="wk-name" onClick={() => open(r.id)}>{r.title}</span>
+            <div className="stepper sm" title="Servings">
+              <button onClick={() => setState((s) => ({ ...s, week: { ...s.week, [r.id]: Math.max(1, s.week[r.id] - 1) } }))}>−</button>
+              <span>{week[r.id]}</span>
+              <button onClick={() => setState((s) => ({ ...s, week: { ...s.week, [r.id]: s.week[r.id] + 1 } }))}>+</button>
+            </div>
+            <button className="wk-x" title="Remove" onClick={() => setState((s) => { const w = { ...s.week }; delete w[r.id]; return { ...s, week: w }; })}>×</button>
+          </div>
+        ))}
+      </div>
+
+      <div className="list-grid">
+        {AISLES.map((a) => {
+          const xs = items.filter((x) => x.aisle === a).sort((p, q) => ticked.includes(p.key) - ticked.includes(q.key));
+          if (!xs.length) return null;
+          const n = xs.filter((x) => !ticked.includes(x.key)).length;
+          return (
+            <div className="aisle" key={a}>
+              <h4><span>{a}</span><span>{n || "✓"}</span></h4>
+              {xs.map((x) => (
+                <div key={x.key} className={"item" + (ticked.includes(x.key) ? " done" : "")} onClick={() => toggle(x.key)}>
+                  <span className="box">{ticked.includes(x.key) ? "✓" : ""}</span>
+                  <span className="what">{x.q != null && <b>{fmtQty(x.q, x.unit)}</b>}{x.name}</span>
+                  <span className="srcs" title={x.from.map((r) => r.title).join(", ")}>{x.from.map((r) => <Thumb key={r.id} r={r} />)}</span>
+                </div>
+              ))}
+            </div>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
+// ---------- app ----------
+function App() {
+  const [state, setState] = useState(load);
+  const [tab, setTab] = useState("recipes");
+  const [openId, setOpenId] = useState(null);
+  const [editing, setEditing] = useState(false);
+  const [who, setWho] = useState("All");
+  const [q, setQ] = useState("");
+  const [msg, setMsg] = useState(null);
+  useEffect(() => {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); }
+    catch (e) { if (e.name === "QuotaExceededError") setMsg("Photos too large to keep after reload"); else throw e; }
+  }, [state]);
+  useEffect(() => { if (msg) { const t = setTimeout(() => setMsg(null), 1800); return () => clearTimeout(t); } }, [msg]);
+
+  const { recipes, week } = state;
+  const people = ["All", "This week", ...new Set(recipes.map((r) => r.from))];
+  const shown = recipes.filter((r) =>
+    (who === "All" || (who === "This week" ? week[r.id] : r.from === who)) &&
+    (!q || (r.title + " " + r.from + " " + r.ings.map((g) => g.name).join(" ")).toLowerCase().includes(q.toLowerCase())));
+  const toBuy = useMemo(() => buildList(recipes, week, state.extras).filter((x) => !state.ticked.includes(x.key)).length, [state]);
+  const toggleWeek = (r, servings) => setState((s) => {
+    const w = { ...s.week };
+    if (w[r.id]) delete w[r.id]; else w[r.id] = servings || r.serves;
+    return { ...s, week: w };
+  });
+  const openR = recipes.find((r) => r.id === openId);
+  const pickedList = recipes.filter((r) => week[r.id]);
+
+  return (
+    <>
+      <header className="top">
+        <div className="top-in">
+          <div className="brand"><span className="brand-mark">❦</span>Family Recipes</div>
+          <nav className="tabs">
+            <button className={"tab" + (tab === "recipes" ? " on" : "")} onClick={() => setTab("recipes")}>Recipes</button>
+            <button className={"tab" + (tab === "list" ? " on" : "")} onClick={() => setTab("list")}>Shopping list {toBuy > 0 && <span className="count">{toBuy}</span>}</button>
+          </nav>
+          <span className="spacer" />
+          {tab === "recipes" && <>
+            <div className="search">🔍<input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search recipes or ingredients" /></div>
+            <button className="btn primary" onClick={() => setEditing(true)}>+ New recipe</button>
+          </>}
+        </div>
+      </header>
+
+      <main className="page">
+        {tab === "recipes" ? <>
+          <div className="chips">
+            {people.map((p) => <button key={p} className={"chip" + (who === p ? " on" : "")} onClick={() => setWho(p)}>{p}</button>)}
+          </div>
+          <div className="grid">
+            {shown.map((r) => (
+              <div key={r.id} className={"card" + (week[r.id] ? " picked" : "")} onClick={() => setOpenId(r.id)}>
+                <div style={{ position: "relative" }}>
+                  <Photo src={r.photos[0]} title={r.title} />
+                  <button className={"pick" + (week[r.id] ? " on" : "")} title={week[r.id] ? "Remove from this week" : "Add to this week"}
+                    onClick={(e) => { e.stopPropagation(); toggleWeek(r); }}>{week[r.id] ? "✓" : "+"}</button>
+                  {r.photos.length > 1 && <span className="nphotos">{r.photos.length} photos</span>}
+                </div>
+                <div className="card-body">
+                  <h3>{r.title}</h3>
+                  <div className="meta"><span className="from">{r.from}</span>·<span>{r.minutes} min</span>·<span>serves {week[r.id] || r.serves}</span></div>
+                </div>
+              </div>
+            ))}
+          </div>
+          {!shown.length && <div className="empty"><div className="big">No recipe matches</div></div>}
+          {pickedList.length > 0 && (
+            <button className="pill" onClick={() => setTab("list")}>
+              <span className="stack">{pickedList.slice(0, 4).map((r) => <Thumb key={r.id} r={r} />)}</span>
+              <span>{pickedList.length} for this week</span>
+              <span className="btn primary">Shopping list →</span>
+            </button>
+          )}
+        </> : (
+          <Shopping {...state} setState={setState} open={setOpenId} goRecipes={() => setTab("recipes")} toast={setMsg} />
+        )}
+      </main>
+
+      {openR && <Detail r={openR} picked={!!week[openR.id]} servings={week[openR.id]}
+        onServings={(n) => setState((s) => ({ ...s, week: { ...s.week, [openR.id]: n } }))}
+        onToggle={(sv) => toggleWeek(openR, sv)}
+        onAddPhotos={(urls) => setState((s) => ({ ...s, recipes: s.recipes.map((r) => r.id === openR.id ? { ...r, photos: [...r.photos, ...urls] } : r) }))}
+        onClose={() => setOpenId(null)} />}
+      {editing && <Editor onClose={() => setEditing(false)} onSave={(r) => { setState((s) => ({ ...s, recipes: [r, ...s.recipes] })); setEditing(false); setOpenId(r.id); }} />}
+      {msg && <div className="toast">{msg}</div>}
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

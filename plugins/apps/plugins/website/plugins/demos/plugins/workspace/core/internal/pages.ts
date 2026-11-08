@@ -66,7 +66,7 @@ export const DEMO_PAGES: PageTreeFixture = [
         "## Things to try",
         "- [ ] Open the **Agent Manager**: an agent added a practice timer to Sonata and is waiting for review. Read what it did, step by step.",
         "- [ ] In **Sonata**, play the ii–V–I warm-up the agent tested its timer on.",
-        "- [ ] In **Prototypes**, open the Recipe box and switch its accent colour.",
+        "- [ ] In **Prototypes**, open Family Recipes and switch its accent colour; the **UI/UX** ones are small studies of one effect.",
         `- [ ] Here in Pages, open ${pageLinkToken(DEMO_PAGE_IDS.practice)}: the prompt that started that agent is on it, with the agent's answer beside it.`,
         "- [ ] Type `/` on an empty line below to add a block.",
         "## Demo's pages",
