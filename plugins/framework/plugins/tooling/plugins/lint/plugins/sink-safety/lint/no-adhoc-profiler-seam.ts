@@ -19,6 +19,7 @@ const SEAM_NAMES = new Set([
   "onSlowSpan",
   "captureFlightWindow",
   "readGateGauges",
+  "resolveGateGauges",
 ]);
 
 export default createRule({
@@ -28,7 +29,7 @@ export default createRule({
     docs: {
       description:
         "Disallow importing the runtime-profiler observation seams (onSlowSpan / " +
-        "captureFlightWindow / readGateGauges) outside their sanctioned owners.",
+        "captureFlightWindow / readGateGauges / resolveGateGauges) outside their sanctioned owners.",
     },
     schema: [],
     messages: {

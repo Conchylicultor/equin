@@ -37,7 +37,7 @@ import {
   type EntryContext,
   type SpanKind,
   type SpanMeasure,
-  type GateGauge,
+  type GateReading,
   type LeafSpanOptions,
 } from "../../core";
 import {
@@ -183,7 +183,7 @@ setProfilerHooks({
   gateWaitHooks,
   runInRootContext,
   registerGateGauge: (layer: string, read: () => unknown): void =>
-    registerGateGauge(layer, read as () => GateGauge),
+    registerGateGauge(layer, read as () => GateReading),
   getRuntimeProfile: () => {
     const p = getRuntimeProfile();
     return { aggregates: { loader: p.aggregates.loader }, sinceMs: p.sinceMs };

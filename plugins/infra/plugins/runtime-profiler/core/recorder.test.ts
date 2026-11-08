@@ -32,6 +32,7 @@ import {
   onSlowSpan,
   onSlowWait,
   readGateGauges,
+  resolveGateGauges,
   recordEntrySpan,
   recordReadTables,
   recordSpan,
@@ -1514,6 +1515,31 @@ describe("flight recorder — gate gauges", () => {
     expect(() =>
       registerGateGauge("test-gate", () => ({ active: 0, queued: 0, max: 0 })),
     ).toThrow("duplicate layer");
+  });
+
+  test("a cross-process gate's active is a probe: read in memory, resolved apart", async () => {
+    let probes = 0;
+    registerGateGauge("host-gate", () => ({
+      active: {
+        probe: async () => {
+          probes++;
+          return 3;
+        },
+      },
+      queued: 1,
+      max: 4,
+    }));
+    registerGateGauge("local-gate", () => ({ active: 2, queued: 0, max: 2 }));
+
+    // The synchronous read never runs the probe.
+    const readings = readGateGauges();
+    expect(probes).toBe(0);
+    expect(readings["local-gate"]).toEqual({ active: 2, queued: 0, max: 2 });
+
+    const gauges = await resolveGateGauges(readings);
+    expect(probes).toBe(1);
+    expect(gauges["host-gate"]).toEqual({ active: 3, queued: 1, max: 4 });
+    expect(gauges["local-gate"]).toEqual({ active: 2, queued: 0, max: 2 });
   });
 
   test("resetRuntimeProfile clears the flight ring but keeps registered gauges", async () => {

@@ -60,7 +60,7 @@ durable production sink).
 ### `no-adhoc-profiler-seam`
 
 Bans importing the runtime-profiler observation seams —
-`onSlowSpan` / `captureFlightWindow` / `readGateGauges` — from
+`onSlowSpan` / `captureFlightWindow` / `readGateGauges` / `resolveGateGauges` — from
 `@plugins/infra/plugins/runtime-profiler/core` outside their owners. A second
 `onSlowSpan` subscriber is precisely how flight-recorder's near-identical twin
 installer grew alongside slow-ops. To add a perf signal, contribute a

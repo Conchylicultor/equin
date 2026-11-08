@@ -145,6 +145,13 @@ this process's local held count. The ported pools deleted their hand-rolled
 `heldByThisProcess` counter and the false "host-wide occupancy is not cheaply
 readable" comment along with it.
 
+That occupancy is other processes' flocks, so it is never read on the gauge's
+synchronous path: the reading carries `active: { probe }` (runtime-profiler's
+`GateReading`), and `resolveGateGauges` runs the probe (async opens, serial, the
+same probe `hostOccupancy()` uses) off the hot path — the trace `gates` class's
+enrich and the stuck-span watchdog. A slow wait being filed reads the gauge's
+in-memory fields only.
+
 **The pool meters its own waits, under that same layer.** Every `run` /
 `acquireShare` wires runtime-profiler's `gateWaitHooks("<id>-acquire")` into the
 semaphore's hooks: a caller that takes the slow path is shown waiting on the
@@ -362,7 +369,6 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
   - Exempts itself from:
     - `host-pools-declared` — `server` (sanctioned)
     - `boundaries/no-platform-api` — `core/internal/budget.ts`, `server/internal/pool.ts` (debt)
-    - `blocking-fs/no-sync-fs` — `server/internal/pool.ts` (debt)
 - Core:
   - Exports (types):
     - `CpuBudget`

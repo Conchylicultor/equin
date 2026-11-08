@@ -36,7 +36,8 @@ A class contributes one snapshot section under `snapshot.events[id]`:
   Must be cheap: no IO, no heavy allocation, and it should not throw (the engine
   guards it, but a throw wastes the coherent instant). Return `undefined` to
   skip. This is the ONLY place to read live in-memory state that changes
-  instant-to-instant (`captureFlightWindow`, `readGateGauges`).
+  instant-to-instant (`captureFlightWindow`, `readGateGauges` — whose cross-process
+  parts the `gates` class then probes in its enrich, `resolveGateGauges`).
 - **`enrich?(ctx, atTrip, ringSlice)`** — **phase 2, async**, run under
   `runWithoutProfiling`. Receives the phase-1 output and this class's ring slice
   (events overlapping `[windowStartMs, atMs]`). Use it for out-of-band reads that

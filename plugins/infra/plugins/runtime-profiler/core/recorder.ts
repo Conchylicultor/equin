@@ -1461,25 +1461,68 @@ export interface GateGauge {
   holders?: GateHolder[];
 }
 
-const gateGauges = new Map<string, () => GateGauge>();
+/**
+ * One gate's reading, taken synchronously from memory — a gauge reader never
+ * does I/O, because it is read inside the profiler's hot paths (a trace's trip
+ * instant, a slow wait being filed, a profile snapshot).
+ *
+ * `active` is a number when the gate's owner knows it in memory (every
+ * in-process gate). A gate shared ACROSS processes (a host pool: its holders
+ * are other backends' flocks) cannot know it without reading the host, so it
+ * hands back a `probe` instead, which `resolveGateGauges` awaits off the hot
+ * path. The union is the point: a sync reader has no number to mistake for a
+ * host-wide count, and nothing reads `active` without resolving it.
+ */
+export interface GateReading extends Omit<GateGauge, "active"> {
+  active: number | { probe: () => Promise<number> };
+}
+
+const gateGauges = new Map<string, () => GateReading>();
 
 /**
  * Register a live occupancy reader for a concurrency gate. `layer` uses the
  * SAME vocabulary as `chargeWait` layer names, so a snapshot's gate occupancy
  * joins directly to span `waits`. Gate OWNERS self-register (the recorder
  * never names a gate); a duplicate layer is a wiring bug — fail loudly.
+ * `read` must be synchronous and in-memory; occupancy that lives in other
+ * processes is a `probe` (`GateReading.active`).
  */
-export function registerGateGauge(layer: string, read: () => GateGauge): void {
+export function registerGateGauge(
+  layer: string,
+  read: () => GateReading,
+): void {
   if (gateGauges.has(layer)) {
     throw new Error(`registerGateGauge: duplicate layer ${layer}`);
   }
   gateGauges.set(layer, read);
 }
 
-/** Invoke every registered gate gauge, keyed by its `chargeWait` layer name. */
-export function readGateGauges(): Record<string, GateGauge> {
-  const out: Record<string, GateGauge> = {};
+/**
+ * Every registered gate's in-memory reading at this instant, keyed by its
+ * `chargeWait` layer name. Synchronous and I/O-free, so a trace's coherent
+ * instant can take it; `resolveGateGauges` completes it.
+ */
+export function readGateGauges(): Record<string, GateReading> {
+  const out: Record<string, GateReading> = {};
   for (const [layer, read] of gateGauges) out[layer] = read();
+  return out;
+}
+
+/**
+ * Complete a `readGateGauges()` reading: every gate whose `active` is a probe
+ * is probed — one gate at a time, as a host pool's own probe is serial (a
+ * probe of a free slot holds it for an instant; probing pools in parallel would
+ * widen that window across pools). The in-memory fields stay as they were read.
+ */
+export async function resolveGateGauges(
+  readings: Record<string, GateReading>,
+): Promise<Record<string, GateGauge>> {
+  const out: Record<string, GateGauge> = {};
+  for (const [layer, r] of Object.entries(readings)) {
+    const active =
+      typeof r.active === "number" ? r.active : await r.active.probe();
+    out[layer] = { ...r, active };
+  }
   return out;
 }
 

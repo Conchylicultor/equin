@@ -441,9 +441,18 @@ can be rebuilt in a single read (see
   `waitBands` in the slot, so it carries the same per-layer breakdown an open one does. The
   per-query **leaf** path (`recordSpan`) writes scalars only and stays allocation-free.
 - **Gate-gauge registry** — `registerGateGauge(layer, read)` (throws on a duplicate layer)
-  + `readGateGauges()`. Layer names use the SAME vocabulary as the `chargeWait` layers
+  + `readGateGauges()` + `resolveGateGauges(readings)`. Layer names use the SAME vocabulary as the `chargeWait` layers
   above, so a snapshot's gate occupancy joins directly to span `waits`; gate *owners*
-  self-register — the recorder never names a gate.
+  self-register — the recorder never names a gate. A reader is **synchronous and
+  in-memory** — it is read at a trace's trip instant, as a slow wait is filed (`holders`)
+  and in `getRuntimeProfile()` — so it never does I/O. A gate shared across processes
+  (host-admission's pools: the holders are other backends' flocks) cannot know its
+  `active` without opening every slot file, so its reading carries
+  `active: { probe }` (`GateReading`) instead of a number; `resolveGateGauges` awaits the
+  probes, one gate at a time, off the hot path (the trace `gates` class's enrich, the
+  stuck-span watchdog). The union keeps a sync reader from mistaking a missing host
+  count for one. Before this, the host pools' gauge opened every slot file
+  synchronously on each read — on the thread that was filing the slow wait.
 
 ### Per-instance identity (`id` / `parentId`)
 
@@ -515,6 +524,7 @@ remaining allocations are one flat band array per completed entry span, and what
     - `GateGauge`
     - `GateHolder`
     - `GateMeter`
+    - `GateReading`
     - `InProgressWait`
     - `LeafSpanOptions`
     - `LoopStall`
@@ -564,6 +574,7 @@ remaining allocations are one flat band array per completed entry span, and what
     - `recordSpan`
     - `registerGateGauge`
     - `resetRuntimeProfile`
+    - `resolveGateGauges`
     - `runInBackgroundLane`
     - `runInRootContext`
     - `runTracked`

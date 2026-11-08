@@ -39,12 +39,16 @@ function fakeProcess() {
         label: s.label,
         ageMs: now - s.t0,
       })),
-    onStuck: (findings) => {
-      handed.push([...findings]);
-    },
   });
   return {
-    watcher,
+    watcher: {
+      ...watcher,
+      tick() {
+        const fresh = watcher.tick();
+        if (fresh.length > 0) handed.push([...fresh]);
+        return fresh;
+      },
+    },
     handed,
     open(s: Omit<FakeSpan, "t0">) {
       open.set(s.id, { ...s, t0: now });
@@ -55,7 +59,7 @@ function fakeProcess() {
     advance(ms: number) {
       now += ms;
     },
-    /** Every span id handed to onStuck, in order. */
+    /** Every span id a tick handed over, in order. */
     reportedIds(): number[] {
       return handed.flat().map((f) => f.id);
     },
@@ -106,7 +110,7 @@ describe("createStuckSpanWatcher", () => {
     expect(p.handed).toHaveLength(1);
   });
 
-  test("does not call onStuck on a tick with nothing new", () => {
+  test("hands nothing over on a tick with nothing new", () => {
     const p = fakeProcess();
     p.open({ id: 1, parentId: null, kind: "flush", label: "flushNotifies" });
     p.advance(FLUSH - SEC);
@@ -417,7 +421,6 @@ describe("a span queued on a gate is not stuck in its own work", () => {
     let span: OpenSpan = queuedSub(5, "host-fs.peek", SUB);
     const watcher = createStuckSpanWatcher({
       readOpen: () => [span],
-      onStuck: () => {},
     });
     expect(watcher.tick().map((f) => f.cause)).toEqual(["queued"]);
     expect(watcher.tick()).toEqual([]);

@@ -1,6 +1,8 @@
 import {
   captureFlightWindow,
   readGateGauges,
+  resolveGateGauges,
+  type GateReading,
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import { defineTimer } from "@plugins/infra/plugins/background/plugins/timer/server";
 import { captureTrace } from "@plugins/debug/plugins/trace/plugins/engine/server";
@@ -71,7 +73,6 @@ const watcher = createStuckSpanWatcher({
       maxOpen: Number.POSITIVE_INFINITY,
       maxCompleted: 0,
     }).open,
-  onStuck: fileStuckSpans,
 });
 
 // A throw in a tick is recorded by the timer and rethrown as an unhandled
@@ -81,8 +82,9 @@ export const stuckSpanTimer = defineTimer({
   description:
     "Looks every 15 seconds for a request or background step that has been running far too long, and files a report with a trace while it is still stuck.",
   everyMs: TICK_MS,
-  run: () => {
-    watcher.tick();
+  run: async () => {
+    const fresh = watcher.tick();
+    if (fresh.length > 0) await fileStuckSpans(fresh);
   },
 });
 
@@ -106,7 +108,9 @@ export function stopStuckSpanWatchdog(): void {
 // picture. It is `critical` so neither the global per-minute cap nor duress
 // shedding can drop the evidence for a hang; that is safe because it fires only
 // on a tick that found a span never reported before.
-function fileStuckSpans(findings: readonly StuckSpanFinding[]): void {
+async function fileStuckSpans(
+  findings: readonly StuckSpanFinding[],
+): Promise<void> {
   const lead = findings[0]!;
   const trace = captureTrace({
     kind: SPAN_STUCK_KIND,
@@ -141,8 +145,26 @@ function fileStuckSpans(findings: readonly StuckSpanFinding[]): void {
 
   if (queued.length === 0) return;
   // Read once for the tick, as the waiters stand: who holds each gate now.
-  const gauges = readGateGauges();
-  for (const { lead: f, runs, waiters } of groupByGate(queued)) {
+  // In memory, synchronously; the occupancy that lives in other processes (a
+  // host pool's) is probed off the thread before the gate reports are filed.
+  await fileGateFindings(queued, traceId, readGateGauges());
+}
+
+async function fileGateFindings(
+  queued: readonly QueuedFinding[],
+  traceId: string | null,
+  readings: Record<string, GateReading>,
+): Promise<void> {
+  const groups = groupByGate(queued);
+  // Only the gates waited on are probed: a probe is file I/O, and a tick that
+  // found waiters on one gate has no business opening every pool's slots.
+  const waitedOn = new Set(groups.map((g) => g.lead.layer));
+  const gauges = await resolveGateGauges(
+    Object.fromEntries(
+      Object.entries(readings).filter(([layer]) => waitedOn.has(layer)),
+    ),
+  );
+  for (const { lead: f, runs, waiters } of groups) {
     const gauge = gauges[f.layer];
     file({
       ...basePayload(f, traceId),

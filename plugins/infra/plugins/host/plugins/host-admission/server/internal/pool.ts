@@ -2,7 +2,6 @@ import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/c
 import { dlopen } from "bun:ffi";
 import {
   openOwnedFd,
-  openOwnedFdSync,
   type OwnedFd,
 } from "@plugins/packages/plugins/owned-fd/core";
 import {
@@ -46,20 +45,6 @@ async function slotHeld(slotPath: AppPath): Promise<boolean> {
   return probeFd(fd);
 }
 
-// The synchronous twin, for the one caller that cannot await: the gate gauge
-// (`registerGateGauge`'s reader is a plain `() => GateGauge`, owned by
-// runtime-profiler). Blocks the thread for every slot file's open.
-function slotHeldSync(slotPath: AppPath): boolean {
-  let fd: OwnedFd;
-  try {
-    fd = openOwnedFdSync(slotPath, "a");
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return false; // no file ⇒ never held
-    throw err;
-  }
-  return probeFd(fd);
-}
-
 function probeFd(fd: OwnedFd): boolean {
   try {
     return ffi.flock(fd.fd, LOCK_EX | LOCK_NB) !== 0;
@@ -78,14 +63,6 @@ async function probeOccupancy(slots: DataDir, size: number): Promise<number> {
   let held = 0;
   for (let i = 0; i < size; i++) {
     if (await slotHeld(slots.file(`slot-${i}.lock`))) held++;
-  }
-  return held;
-}
-
-function probeOccupancySync(slots: DataDir, size: number): number {
-  let held = 0;
-  for (let i = 0; i < size; i++) {
-    if (slotHeldSync(slots.file(`slot-${i}.lock`))) held++;
   }
   return held;
 }
@@ -238,11 +215,21 @@ export function defineHostPool<H extends PoolHolder>(
   // process's semaphore adopts the live one when another checkout already has the
   // pool open at a different size. Probing the declared set would then miss the
   // holders on the slots this process is actually sweeping.
-  registerGateGauge(`${spec.id}-acquire`, () => ({
-    active: probeOccupancySync(slots, sem.liveSize()),
-    queued: sem.depth(),
-    max: sem.liveSize(),
-  }));
+  //
+  // The reading itself is in-memory: host-wide occupancy is other processes'
+  // flocks, readable only by opening every slot file, so the gauge hands back
+  // a `probe` that `resolveGateGauges` awaits off the hot path (a trace's
+  // async enrich, the stuck-span watchdog's tick) — never a synchronous open on
+  // the thread that is filing a slow wait. The probe sweeps the size read with
+  // `max`, so the two describe one slot set.
+  registerGateGauge(`${spec.id}-acquire`, () => {
+    const size = sem.liveSize();
+    return {
+      active: { probe: () => probeOccupancy(slots, size) },
+      queued: sem.depth(),
+      max: size,
+    };
+  });
 
   // Every acquire's wait is the pool's own to meter, under the gauge's layer
   // (`meterAcquire`): no caller wires the profiler, so none can forget to.

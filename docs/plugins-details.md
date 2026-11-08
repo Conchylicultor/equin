@@ -33017,7 +33017,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from:
               - `host-pools-declared` — `server` (sanctioned)
               - `boundaries/no-platform-api` — `core/internal/budget.ts`, `server/internal/pool.ts` (debt)
-              - `blocking-fs/no-sync-fs` — `server/internal/pool.ts` (debt)
           - Core:
             - Exports (types):
               - `CpuBudget`
@@ -33369,7 +33368,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/asset-mirror/bundle` (0 debt)
               - `infra/file-sink` (0 debt)
               - `infra/git/tree-lock` (0 debt)
-              - `infra/host/host-admission` (1 debt)
               - `infra/launcher` (0 debt)
               - `infra/paths` (2 debt)
               - `infra/worktree` (0 debt)
@@ -34997,6 +34995,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `GateGauge`
           - `GateHolder`
           - `GateMeter`
+          - `GateReading`
           - `InProgressWait`
           - `LeafSpanOptions`
           - `LoopStall`
@@ -35046,6 +35045,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `recordSpan`
           - `registerGateGauge`
           - `resetRuntimeProfile`
+          - `resolveGateGauges`
           - `runInBackgroundLane`
           - `runInRootContext`
           - `runTracked`

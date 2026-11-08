@@ -159,17 +159,15 @@ function ancestorsOf(
 export interface StuckSpanWatcherDeps {
   /** The currently open entry spans — the WHOLE set, since pruning reads it too. */
   readOpen: () => readonly OpenSpan[];
-  /**
-   * Called at most once per tick, only with findings never handed over before
-   * (oldest first). Each span run is handed over at most once per cause for
-   * its lifetime.
-   */
-  onStuck: (findings: readonly StuckSpanFinding[]) => void;
   policy?: StuckSpanPolicyTable;
 }
 
 export interface StuckSpanWatcher {
-  /** One sample. Returns the findings it handed to `onStuck` (empty when none). */
+  /**
+   * One sample: the findings never handed over before (oldest first), empty
+   * when none. Each span run is handed over at most once per cause for its
+   * lifetime; the caller files them.
+   */
   tick(): readonly StuckSpanFinding[];
   /** Forget every span handed over so far (a restarted watchdog). */
   reset(): void;
@@ -212,7 +210,6 @@ export function createStuckSpanWatcher(
       }
       remembered = next;
 
-      if (fresh.length > 0) deps.onStuck(fresh);
       return fresh;
     },
     reset() {

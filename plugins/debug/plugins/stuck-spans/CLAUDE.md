@@ -56,11 +56,15 @@ work — the runs of one operation found on one tick are one finding, `runs` of
 them, described by the oldest — and one per **gate** whose waiters were found
 queued (`groupByGate`): every waiter of a gate waits for the same holders, so
 the report is about the gate, naming its holders and occupancy as its gauge
-reads them that tick (`readGateGauges`), and the waiting operations counted.
+reads them that tick (`readGateGauges`, its cross-process occupancy — a host
+pool's — probed off the thread by `resolveGateGauges` before the gate reports
+are filed), and the waiting operations counted.
 All linked to that trace.
 
-The detector takes its open-span source and its sink as arguments, so the tests
-(`detect.test.ts`) drive it with a fake flight window and a fake clock.
+The detector takes its open-span source as an argument and returns each tick's
+new findings, so the tests (`detect.test.ts`) drive it with a fake flight window
+and a fake clock; the watchdog's tick awaits their filing (the gate probe
+included), so a failing one is the tick's failure.
 
 ## Thresholds
 
