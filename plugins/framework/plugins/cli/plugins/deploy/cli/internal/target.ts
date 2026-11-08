@@ -64,14 +64,26 @@ export const UPLOAD_MS = 30 * 60_000;
 /**
  * The activate script, INCLUDING the health gate below — so this must exceed
  * `READY_ATTEMPTS × READY_INTERVAL_SEC` (a bundle's first run extracts ~200MB
- * and initdb's a Postgres cluster) or the ssh deadline would kill the script
- * mid-gate, i.e. after the flip and before the revert.
+ * and initdb's a Postgres cluster) plus `SETTLE_DEADLINE_SEC`, or the ssh
+ * deadline would kill the script mid-gate, i.e. after the flip and before the
+ * revert.
  */
 export const ACTIVATE_MS = 20 * 60_000;
 
 /** Health-gate bound: attempts × interval is the whole "not up yet" window. */
 export const READY_ATTEMPTS = 150;
 export const READY_INTERVAL_SEC = 4;
+
+/**
+ * Settle-gate bound: how long after ready the shipped process has to report
+ * its boot settled (a healthy backend settles 4–20 s after ready — boot
+ * journal, 2026-11-08; the local build's bound is 60–180 s). Only decides what
+ * to say when the event has not come — see `SETTLE_GATE_SH`.
+ */
+export const SETTLE_DEADLINE_SEC = 180;
+export const SETTLE_INTERVAL_SEC = 1;
+/** How long the shipped process may go unanswered before the gate calls it gone. */
+export const SETTLE_SILENCE_SEC = 30;
 
 /**
  * A named refusal: the user's problem, stated once, with no stack trace. Every

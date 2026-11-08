@@ -19,15 +19,24 @@ cli/internal/target.ts          `(composition, --server)` → everything both ve
 cli/internal/closure-guards.ts  converge's pre-mutation refusals
 cli/internal/converge-script.ts the generated host state (+ its test)
 cli/internal/secret-env.ts      the approved deploy secrets, fetched and rendered for stdin
-cli/internal/activate-script.ts the generated activation + health gate
+cli/internal/activate-script.ts the generated activation + health gate (+ its test)
 ```
 
 `target.ts` is what the two verbs share, and it is not a grab-bag: both must
 resolve a target the SAME way, because every refusal in it is one a half-done
 deploy would otherwise discover on the host. The budgets live there together —
 each bounds a different external wait, and `ACTIVATE_MS` has to exceed the
-health gate's own `READY_ATTEMPTS × READY_INTERVAL_SEC`, which is only checkable
-by eye if both are in one place.
+health gate's own `READY_ATTEMPTS × READY_INTERVAL_SEC` plus `SETTLE_DEADLINE_SEC`,
+which is only checkable by eye if all are in one place.
+
+**A release is live once the process that took over reports its boot settled**
+(`SETTLE_GATE_SH`), not on its first ready answer — the same definition as a
+local build (`build/cli/internal/stay-up.ts`). Readiness is the barrier BEFORE
+the post-ready boot phases, so a release that crashes in `onReady` answers once
+and is respawned: another `startedAt` answering, or no answer for the last
+`SETTLE_SILENCE_SEC` when the deadline passes,
+fails the gate and reverts; the same process still unsettled at the deadline
+passes with a `[warn] staying up is unproven` line.
 
 **Deploy secrets travel only on stdin.** Converge asks this checkout's backend for
 the deployment's approved env (refusing, before any host mutation, while a secret is
