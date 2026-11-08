@@ -1,3 +1,7 @@
+import {
+  runInBackgroundLane,
+  runWithoutProfiling,
+} from "@plugins/infra/plugins/runtime-profiler/core";
 import type { LogLine, LogSink } from "./persistence";
 
 export type LogStream = "stdout" | "stderr";
@@ -44,9 +48,12 @@ export interface LogChannel {
    * Publish MANY lines as ONE durable write — the batch form of `publish`, and
    * the reason a caller holding an array (the browser ingress, whose POST carries
    * up to `MAX_EMIT_LINES`) never has to loop. Per-line WS delivery is unchanged:
-   * one listener callback per line, in array order.
+   * one listener callback per line, in array order. Resolves once the batch is
+   * stored (at once for an ephemeral channel) — the ring and the listeners have
+   * it already; only a caller that answers for durability (the browser ingress,
+   * whose client re-sends a refused batch) awaits it.
    */
-  publishAll(items: readonly PublishLine[]): void;
+  publishAll(items: readonly PublishLine[]): Promise<void>;
 }
 
 const registry = new Map<string, InternalChannel>();
@@ -54,8 +61,8 @@ const registry = new Map<string, InternalChannel>();
 export const MAX_HISTORY = 10_000;
 
 function makeChannel(internal: InternalChannel): LogChannel {
-  const publishAll = (items: readonly PublishLine[]): void => {
-    if (items.length === 0) return;
+  const publishAll = (items: readonly PublishLine[]): Promise<void> => {
+    if (items.length === 0) return Promise.resolve();
 
     // Build the whole batch first, so the ring, the sink and the listeners all
     // see exactly the same entries. The sink gets them as lines; how a line is
@@ -74,9 +81,13 @@ function makeChannel(internal: InternalChannel): LogChannel {
       lines.push({ t, stream, line: item.line });
     }
 
-    // ORDER: ring → sink → listeners. "Durable before broadcast" then holds per
-    // batch — strictly stronger than the old per-line interleave, where it held
-    // nowhere.
+    // ORDER: ring → sink → listeners. The batch is handed to the sink before any
+    // listener hears of it, so the file holds batches in publish order; the write
+    // itself is queued, never waited on here — a publish (a health-monitor tick,
+    // a request's log line) must not freeze its thread on a slow disk (3.2 s on
+    // main with the old synchronous append). `publishAll` hands back the write;
+    // `publish` voids it, so a failed write rejects unhandled: loud, as the
+    // synchronous throw was.
     //
     // Push one at a time rather than `entries.push(...built)`: `publishAll` is
     // public and takes a caller-supplied array, and spreading a large one blows
@@ -92,11 +103,19 @@ function makeChannel(internal: InternalChannel): LogChannel {
     // import-safe — see InternalChannel.makeSink). One write for the batch.
     if (!internal.sink && internal.makeSink)
       internal.sink = internal.makeSink();
-    if (internal.sink) internal.sink.appendAll(lines);
+    // The log's own write is observability: never profiled (the profiler must
+    // not measure itself), and on the background lane whatever published it.
+    const sink = internal.sink;
+    const stored = sink
+      ? runWithoutProfiling(() =>
+          runInBackgroundLane(() => sink.appendAll(lines)),
+        )
+      : Promise.resolve();
 
     for (const entry of built) {
       for (const fn of internal.listeners) fn(entry);
     }
+    return stored;
   };
 
   return {
@@ -105,7 +124,7 @@ function makeChannel(internal: InternalChannel): LogChannel {
     // `append`/`appendAll`: two copies is exactly how the envelope format, the
     // ring trim and the ring→sink→listeners order would silently diverge.
     publish: (line, stream, timestamp) =>
-      publishAll([{ line, stream, timestamp }]),
+      void runWithoutProfiling(() => publishAll([{ line, stream, timestamp }])),
     publishAll,
   };
 }

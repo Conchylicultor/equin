@@ -14,7 +14,8 @@
 export {
   HARD_KILL_EXIT_CODE,
   isRunAlive,
-  observeRunSync,
+  observeRun,
+  readRunTerminal,
   readRunTerminalSync,
   RunMarkerError,
   writeRunTerminalSync,

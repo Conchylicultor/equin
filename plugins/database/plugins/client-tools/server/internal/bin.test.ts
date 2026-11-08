@@ -12,7 +12,7 @@ function ctx(over: Partial<ResolveContext>, present: string[] = []) {
     platform: "darwin",
     arch: "arm64",
     pluginRoot: "/repo/plugins/database/plugins/client-tools",
-    exists: (p: string) => present.includes(p),
+    exists: (p: string) => Promise.resolve(present.includes(p)),
     ...over,
   } satisfies ResolveContext;
 }
@@ -21,26 +21,26 @@ const PKG_BIN =
   "/repo/plugins/database/plugins/client-tools/node_modules/@equin/pg-client-darwin-arm64/native/bin";
 
 describe("resolvePgClientBin", () => {
-  it("resolves the platform package's binary", () => {
-    expect(resolvePgClientBin("pg_dump", ctx({}, [`${PKG_BIN}/pg_dump`]))).toBe(
-      `${PKG_BIN}/pg_dump`,
-    );
+  it("resolves the platform package's binary", async () => {
+    expect(
+      await resolvePgClientBin("pg_dump", ctx({}, [`${PKG_BIN}/pg_dump`])),
+    ).toBe(`${PKG_BIN}/pg_dump`);
   });
 
-  it("maps linux/x64 to its own package", () => {
+  it("maps linux/x64 to its own package", async () => {
     const bin =
       "/repo/plugins/database/plugins/client-tools/node_modules/@equin/pg-client-linux-x64/native/bin/pg_restore";
     expect(
-      resolvePgClientBin(
+      await resolvePgClientBin(
         "pg_restore",
         ctx({ platform: "linux", arch: "x64" }, [bin]),
       ),
     ).toBe(bin);
   });
 
-  it("prefers the release override over the package", () => {
+  it("prefers the release override over the package", async () => {
     expect(
-      resolvePgClientBin(
+      await resolvePgClientBin(
         "pg_restore",
         ctx(
           { env: envEntries({ PG_CLIENT_BIN_DIR: "/bundle/pg-client/bin" }) },
@@ -51,7 +51,7 @@ describe("resolvePgClientBin", () => {
   });
 
   it("throws when the override names a missing file, rather than falling back", () => {
-    expect(() =>
+    expect(
       resolvePgClientBin(
         "pg_dump",
         ctx(
@@ -59,18 +59,18 @@ describe("resolvePgClientBin", () => {
           [`${PKG_BIN}/pg_dump`],
         ),
       ),
-    ).toThrow(PgClientToolMissingError);
+    ).rejects.toThrow(PgClientToolMissingError);
   });
 
   it("throws naming `bun install` when the package is not installed", () => {
-    expect(() => resolvePgClientBin("pg_dump", ctx({}))).toThrow(
+    expect(resolvePgClientBin("pg_dump", ctx({}))).rejects.toThrow(
       /run `bun install`/,
     );
   });
 
   it("throws on an unsupported platform", () => {
-    expect(() =>
+    expect(
       resolvePgClientBin("pg_dump", ctx({ platform: "win32", arch: "x64" })),
-    ).toThrow(/unsupported platform win32\/x64/);
+    ).rejects.toThrow(/unsupported platform win32\/x64/);
   });
 });

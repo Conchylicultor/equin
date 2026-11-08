@@ -3,7 +3,10 @@ import {
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { createHash } from "crypto";
-import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
+import {
+  readFile,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { fileURLToPath } from "url";
 import type { IconifyJSON } from "@iconify/types";
 
@@ -79,6 +82,15 @@ export function symbolNamesInputsHash(versions: readonly string[]): string {
 /** The inputs hash a generated file was stamped with, or undefined when it has none. */
 export function readInputsHash(generated: string): string | undefined {
   return HASH_RE.exec(generated)?.[1];
+}
+
+/** `readIconSetSync`'s async twin: one installed set, read off the thread. */
+export async function readIconSet(
+  pkg: (typeof ICON_SET_PACKAGES)[number],
+): Promise<IconifyJSON> {
+  return JSON.parse(
+    await readFile(`${packageDir(pkg)}icons.json`, "utf8"),
+  ) as IconifyJSON;
 }
 
 export function readIconSetSync(

@@ -13,7 +13,7 @@
     - `infra/host-fs/user-path.joinAppPath`
     - `infra/namespace.MAIN_COMPOSITION_ID`
     - `infra/paths.SERVER_CORE_RELATIVE`
-    - `packages/timed-fs.readdirSync`
+    - `packages/timed-fs.readdir`
     - `plugin-meta/composition.assertCompositionName`
   - Exports (values):
     - `collectedDirNamedCompositionRegistryPath`
@@ -23,7 +23,7 @@
     - `compositionRegistryFileName`
     - `compositionRegistryPath`
     - `compositionRegistryRedirects`
-    - `listNamedCompositionRegistriesSync`
+    - `listNamedCompositionRegistries`
     - `parseNamedCompositionRegistryFileName`
 - Cross-plugin:
   - Imported by:

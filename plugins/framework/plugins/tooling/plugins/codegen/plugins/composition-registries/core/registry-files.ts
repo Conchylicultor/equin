@@ -1,4 +1,4 @@
-import { readdirSync } from "@plugins/packages/plugins/timed-fs/core";
+import { readdir } from "@plugins/packages/plugins/timed-fs/core";
 import {
   joinAppPath,
   type AppPath,
@@ -47,7 +47,7 @@ export function collectedDirRegistryPath(def: DiscoveredCollectedDir): AppPath {
 //
 // `prewarm` is in this ONE set (rather than a released-only sibling set)
 // because release is its only consumer and release is now per-name too — which
-// also means `listNamedCompositionRegistriesSync` lists prewarm files, so
+// also means `listNamedCompositionRegistries` lists prewarm files, so
 // a future reclaim sweep would list prewarm files like any other. (Nothing
 // sweeps today — the compose-serve deactivation stage that used to was deleted
 // with the serve fan-out; Phase 5 owns the replacement.)
@@ -167,7 +167,7 @@ export function parseNamedCompositionRegistryFileName(
  * registries themselves are GITIGNORED, so no file set holds them: reading the
  * (at most five) owning `core/` directories is the only way to see them.
  */
-export async function listNamedCompositionRegistriesSync(
+export async function listNamedCompositionRegistries(
   repo: RepoFiles,
 ): Promise<Array<{ dir: string; name: string; file: string }>> {
   const root = repo.root;
@@ -178,7 +178,7 @@ export async function listNamedCompositionRegistriesSync(
     const coreDir = joinAppPath(def.ownerDir, "core");
     let entries;
     try {
-      entries = readdirSync(coreDir, { withFileTypes: true });
+      entries = await readdir(coreDir, { withFileTypes: true });
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
       continue;
@@ -196,7 +196,7 @@ export async function listNamedCompositionRegistriesSync(
   const binDir = joinAppPath(root, SERVER_CORE_RELATIVE, "bin");
   let binEntries;
   try {
-    binEntries = readdirSync(binDir, { withFileTypes: true });
+    binEntries = await readdir(binDir, { withFileTypes: true });
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
     return out;

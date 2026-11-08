@@ -57,10 +57,14 @@ async function forkDescriptor(
 // (config/<hier>/@app/<id>/<name>.jsonc in the repo). Such a scope must survive
 // un-forking — removal drops only the user's runtime override and falls back
 // to the committed scope, not to base.
-function gitBacksScope(storePath: string, scopeId: string): boolean {
+async function gitBacksScope(
+  storePath: string,
+  scopeId: string,
+): Promise<boolean> {
   const appId = scopeAppId(scopeId);
   if (!appId) return false;
-  return ConfigGitLayer.get().document(storePath)?.scopes[appId] !== undefined;
+  const doc = await ConfigGitLayer.get().document(storePath);
+  return doc?.scopes[appId] !== undefined;
 }
 
 // Un-fork ONE descriptor: drop the user's runtime scoped override. For a scope
@@ -81,8 +85,10 @@ async function removeDescriptor(
   };
   const files = documentFiles(doc);
   const store = ConfigStore.get();
-  const gitBacked = gitBacksScope(doc.storePath, scopeId);
+  // The lock is taken first (in call order), then the committed layer read
+  // inside it: a write queued behind this removal must still find it ahead.
   await withDocument(doc.storePath, scopeId, async () => {
+    const gitBacked = await gitBacksScope(doc.storePath, scopeId);
     await store.edit(doc, writer, "remove-descriptor-scope", async () => {
       await store.remove(files.override);
       if (gitBacked) return;

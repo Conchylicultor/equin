@@ -39,7 +39,7 @@ without making any failure detectable. See
 A `FileSink`'s `bound` (`{ kind: "rotate", maxBytes, keep }`) is not a *claim* to be
 checked — it is the sink's own behavior. `append()` gates on an **in-memory
 per-file byte counter** (not a `statSync` per line — that would double the syscall
-cost on this synchronous hot path) and, when the next line would cross `maxBytes`,
+cost on the hot append path) and, when the next line would cross `maxBytes`,
 rotates `path` → `path.1`, `path.1` → `path.2`, …, drops `path.keep`, then writes
 the line into a fresh live file. So a sink that *exists* is a sink whose file is
 bounded; there is no "declared but unbounded" state. `appendAll` shares that one
@@ -54,20 +54,43 @@ filter naturally excludes the rotations.
 
 ## API
 
-- **`sink.append(line)` / `sink.appendAll(lines)`** — one line, or a whole batch as
-  ONE `appendFileSync`. Both are the *same* function (`appendLinesSync`) with one size
-  gate, so `appendAll(lines)` is byte-for-byte `for (const l of lines) append(l)`.
-  Keep it that way: two gates is how "a line is never split across a rotation"
-  would drift apart between the two forms.
+- **`sink.append(line)` / `sink.appendAll(lines)`** — asynchronous: one line, or
+  a whole batch, queued on the live path's writer (a keyed coalescer, one per
+  path in the process — `openDynamicSink`'s fresh sink objects for one file
+  share it). At most one write runs per path; lines appended meanwhile fold into
+  the next write, in call order, so appends never interleave or reorder and two
+  writes can never both decide to rotate. The promise resolves once the lines
+  are on disk and rejects when the write fails — `void` it and that is an
+  unhandled rejection, loud. **The only form a backend uses**
+  (`blocking-fs/no-sync-fs`): a synchronous append froze main's event loop for
+  3.2 s on a busy disk (a health-monitor tick's log line, 2026-11-08).
+  `settleFileSinkWrites()` resolves once everything queued so far has landed —
+  `log-channels#machine` awaits it in `onShutdown`. A line stays in the queue
+  until the write carrying it is issued, and `flushQueuedAppendsSync()` writes
+  every such line synchronously, in order: the server half arms it as the
+  `exit` listener of every backend (a `process.exit`, a fatal report, an
+  uncaught exception), and a CLI root calls it from its own (fs-wait's). Only a
+  write already issued, or a SIGKILL, can lose a line.
+- **`sink.appendSync(line)` / `sink.appendAllSync(lines)`** — the same append,
+  blocking until it is on disk: for a process that may block — a CLI op's event
+  that must survive the process dying on its next statement, an `exit` handler.
+  It bypasses the queue, so a process writes a sink one way, except an `exit`
+  handler writing its last line.
+- Both writers walk ONE plan (`planAppend`: the size gate turns lines into
+  `write` / `rotate` steps), so `appendAll(lines)` is byte-for-byte
+  `for (const l of lines) append(l)`, sync or async. Keep it that way: two gates
+  is how "a line is never split across a rotation" would drift apart.
   - The gate runs **per rotation group**, not per batch (a batch has no length or
     byte cap — the browser supplies it) and not per line. Lines accumulate until
     the next one would cross `maxBytes`; that group goes out as one write, *then*
     the file rotates. So a batch bigger than `maxBytes` rotates several times
     inside the one call and `keep` stays a hard cap.
-  - **`appendAll` is for SINGLE-WRITER files only.** One batched write is not
-    covered by the `O_APPEND` whole-line atomicity that a host-global file
-    (`op-log`, `build-progress`, `check-progress`) relies on to interleave lines
-    from concurrent processes — those must keep using `append`, one line per call.
+  - **`appendAllSync` is for SINGLE-WRITER files only.** One large batched write
+    is not covered by the `O_APPEND` whole-line atomicity that a host-global
+    file (`op-log`, `build-progress`, `check-progress`) relies on to interleave
+    lines from concurrent processes — a CLI writing one keeps `appendSync`, one
+    line per call. The async queue folds only the lines queued during one write
+    (a backend's few op-log terminals), still one small append.
   - An empty batch writes nothing and creates neither the file nor its directory.
   - The parent dir is created **on the write's `ENOENT`**, not before every write
     (for flag `"a"`, `ENOENT` means only "a path component is missing"). Same
@@ -197,6 +220,7 @@ as the only escape. Being importable from every runtime *is* the feature.
     - `infra/host-fs/user-path.appPathParent`
     - `infra/host-fs/user-path.asAppPath`
     - `infra/host-fs/user-path.joinAppPath`
+    - `packages/coalesce.createKeyedCoalescer`
     - `packages/owned-fd.openOwnedFdSync`
     - `packages/owned-fd.OwnedFd`
     - `packages/timed-fs.stat`
@@ -213,6 +237,7 @@ as the only escape. Being importable from every runtime *is* the feature.
     - `TailResult`
   - Exports (values):
     - `defineFileSink`
+    - `flushQueuedAppendsSync`
     - `getFileSinks`
     - `historyCutAt`
     - `isHistoryPosition`
@@ -223,6 +248,7 @@ as the only escape. Being importable from every runtime *is* the feature.
     - `readTailAsync`
     - `readTailSync`
     - `sanitizeChannel`
+    - `settleFileSinkWrites`
     - `statHistory`
 - Cross-plugin:
   - Imported by:
@@ -239,5 +265,8 @@ as the only escape. Being importable from every runtime *is* the feature.
   - Exempts itself from:
     - `sink-safety/no-adhoc-file-sink` — `.` (sanctioned)
     - `boundaries/no-platform-api` — `core/internal/file-sink.ts`, `core/internal/history.ts`, `core/internal/read.ts` (debt)
+    - `blocking-fs/no-sync-fs` — `server/internal/exit-flush.ts` (sanctioned)
+- Server:
+  - Register: `file-sink-exit-flush`
 
 <!-- AUTOGENERATED:END -->

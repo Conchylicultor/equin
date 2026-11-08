@@ -15,6 +15,8 @@ import { join } from "node:path";
 import {
   pruneBuildArtifactsInDirSync,
   pruneCheckArtifactsInDirSync,
+  pruneRunArtifactsInDir,
+  pruneRunArtifactsInDirSync,
 } from "./prune-artifacts";
 
 const dirs: AppPath[] = [];
@@ -218,5 +220,46 @@ describe("pruneCheckArtifactsInDir", () => {
         5,
       ),
     ).not.toThrow();
+  });
+});
+
+describe("pruneRunArtifactsInDir", () => {
+  function seedRuns(): AppPath {
+    const files: Array<{ name: string; ageMs: number }> = [];
+    for (let i = 0; i < 4; i++) {
+      const ageMs = (4 - i) * 60_000; // i=0 oldest
+      files.push({ name: `build-r${i}.log`, ageMs });
+      files.push({ name: `build-r${i}.exit-code`, ageMs });
+    }
+    files.push({ name: "deploy-old.log", ageMs: 10_000_000 });
+    files.push({ name: "build-r9.exit-code.tmp.123", ageMs: 1_000 });
+    return seed(files);
+  }
+  const kept = [
+    "build-r2.exit-code",
+    "build-r2.log",
+    "build-r3.exit-code",
+    "build-r3.log",
+    "deploy-old.log",
+  ];
+
+  test("keeps one kind's newest N sets, sweeps its temps, spares other kinds", async () => {
+    const dir = seedRuns();
+    await pruneRunArtifactsInDir(dir, "build", 2);
+    expect(readdirSync(dir).sort()).toEqual(kept);
+  });
+
+  test("decides exactly as the sync form", () => {
+    const dir = seedRuns();
+    pruneRunArtifactsInDirSync(dir, "build", 2);
+    expect(readdirSync(dir).sort()).toEqual(kept);
+  });
+
+  test("no-ops on a missing dir", async () => {
+    await pruneRunArtifactsInDir(
+      asAppPath(join(tmpdir(), "nope-runs-xyz-789")),
+      "build",
+      5,
+    );
   });
 });

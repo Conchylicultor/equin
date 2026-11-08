@@ -40,7 +40,7 @@ export async function produceTimeline(
   // `at` for the web scan — so one question always reads one fork set, however
   // often its scan restarts.
   const dbNames = await listLiveForkDatabases(toMs);
-  const logWorktrees = listWorktreeLogDirs();
+  const logWorktrees = await listWorktreeLogDirs();
   // Planned chunk count: every (DB × DB-source) cell, one boot chunk per
   // worktree log dir, plus the single host-global duress chunk. Health frames
   // are series, not chunks, and don't count.

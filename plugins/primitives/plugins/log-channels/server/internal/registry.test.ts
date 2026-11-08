@@ -25,6 +25,7 @@ function makeSinkStub(): SinkStub {
     batches: [],
     appendAll: (lines) => {
       stub.batches.push([...lines]);
+      return Promise.resolve();
     },
   };
   return stub;
@@ -50,7 +51,7 @@ describe("publishAll", () => {
     // The regression guard for the whole change: the ingress path used to fire
     // ~4 blocking syscalls per line on the event loop.
     const { channel, sink, madeCount } = durableChannel("t-one-write");
-    channel.publishAll(batch(500));
+    void channel.publishAll(batch(500));
 
     expect(madeCount()).toBe(1); // sink resolved lazily, exactly once
     expect(sink.batches.length).toBe(1);
@@ -67,7 +68,7 @@ describe("publishAll", () => {
     const seen: LogEntry[] = [];
     const { unsubscribe } = subscribe("t-per-line", (e) => seen.push(e));
 
-    channel.publishAll(batch(500));
+    void channel.publishAll(batch(500));
     unsubscribe();
 
     expect(seen.length).toBe(500);
@@ -83,7 +84,7 @@ describe("publishAll", () => {
     const { channel } = durableChannel("t-ring-trim");
     const total = MAX_HISTORY + 1_500;
     for (let i = 0; i < total; i += 500) {
-      channel.publishAll(
+      void channel.publishAll(
         Array.from({ length: 500 }, (_, k) => ({ line: `line-${i + k}` })),
       );
     }
@@ -101,7 +102,7 @@ describe("publishAll", () => {
 
   test("an empty batch touches nothing (no sink is even resolved)", () => {
     const { channel, sink, madeCount } = durableChannel("t-empty");
-    channel.publishAll([]);
+    void channel.publishAll([]);
     expect(madeCount()).toBe(0);
     expect(sink.batches).toEqual([]);
   });
@@ -132,7 +133,7 @@ describe("ephemeral channels", () => {
     const { unsubscribe } = subscribe("t-ephemeral", (e) => seen.push(e));
 
     channel.publish("a");
-    channel.publishAll(batch(3));
+    void channel.publishAll(batch(3));
     unsubscribe();
 
     expect(seen.map((e) => e.line)).toEqual([
@@ -147,8 +148,8 @@ describe("ephemeral channels", () => {
     const sink = makeSinkStub();
     const first = getOrCreateChannel("t-idempotent", () => sink);
     const second = getOrCreateChannel("t-idempotent", () => sink);
-    first.publishAll(batch(2));
-    second.publishAll(batch(2, "more"));
+    void first.publishAll(batch(2));
+    void second.publishAll(batch(2, "more"));
 
     // Two batches, one sink: the factory is stored on first sight, not re-run.
     expect(sink.batches.length).toBe(2);

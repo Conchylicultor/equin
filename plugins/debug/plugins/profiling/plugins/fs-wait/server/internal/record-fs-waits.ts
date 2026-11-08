@@ -1,5 +1,6 @@
 import {
   defineFileSink,
+  flushQueuedAppendsSync,
   type FileSink,
 } from "@plugins/infra/plugins/file-sink/core";
 import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
@@ -8,6 +9,7 @@ import {
   currentCallerKind,
   currentEntryLabel,
   runTracked,
+  runWithoutProfiling,
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import {
   logEnvelope,
@@ -27,8 +29,11 @@ import { FS_WAIT_CHANNEL, type FsWaitLine } from "../../core";
 // whether the stalls were one cause or several.
 //
 // Overlapping slow calls are one episode (see `FsWaitLineSchema`): its first
-// call is written synchronously as it returns — a process killed mid-stall
-// still left it — and its summary when it closes. Measured on the first build
+// call is written as it returns, and its summary when it closes. The writes are
+// queued (file-sink's async append), never awaited: a slow call is recorded
+// exactly when the disk is slow, and a synchronous append then froze the
+// backend's thread a second time for the same stall. The one synchronous write
+// is the episode summary from the `exit` handler, which cannot wait. Measured on the first build
 // that recorded per call: one `./equin check` wrote 17,089 lines, every one a
 // readFile queued behind the same pass's thousands of others.
 // timed-fs never dispatches the sink's own file calls back here.
@@ -74,14 +79,18 @@ export function recordFsWaits(opts: {
 
   let sink: FileSink | null = null;
   const held: string[] = [];
-  const write = (line: FsWaitLine): void => {
-    const entry = logEnvelope({
+  const envelope = (line: FsWaitLine): string =>
+    logEnvelope({
       t: Date.now(),
       stream: "stdout",
       line: JSON.stringify(line),
     });
-    if (sink === null) held.push(entry);
-    else sink.appendSync(entry);
+  const write = (line: FsWaitLine): void => {
+    const entry = envelope(line);
+    const target = sink;
+    if (target === null) held.push(entry);
+    // fs-wait's own write: the profiler never measures observability itself.
+    else void runWithoutProfiling(() => target.append(entry));
   };
   const open = (namespace: Namespace): void => {
     sink = defineFileSink({
@@ -91,7 +100,9 @@ export function recordFsWaits(opts: {
       path: () =>
         joinAppPath(logsDirFor(namespace), `${FS_WAIT_CHANNEL}.jsonl`),
     });
-    if (held.length > 0) sink.appendAllSync(held.splice(0));
+    const opened = sink;
+    if (held.length > 0)
+      void runWithoutProfiling(() => opened.appendAll(held.splice(0)));
   };
   const namespace = opts.namespace;
   if (namespace instanceof Promise) {
@@ -100,12 +111,24 @@ export function recordFsWaits(opts: {
   } else open(namespace);
 
   let episode: Episode | null = null;
+  const summary = (): FsWaitLine | null =>
+    episode !== null && episode.calls > 1
+      ? { kind: "episode", ...common, ...episode }
+      : null;
   const close = (): void => {
-    if (episode !== null && episode.calls > 1)
-      write({ kind: "episode", ...common, ...episode });
+    const line = summary();
+    if (line !== null) write(line);
     episode = null;
   };
-  process.once("exit", close);
+  // An `exit` handler cannot wait for a queued write, so the open episode's
+  // summary goes out synchronously — the process is ending, nothing is frozen.
+  // The lines still queued go first (every sink of this process — a CLI has no
+  // backend's exit flush), so the summary stays last.
+  process.once("exit", () => {
+    flushQueuedAppendsSync();
+    const line = summary();
+    if (line !== null && sink !== null) sink.appendSync(envelope(line));
+  });
 
   onSlowFsCall((call: SlowFsCall) => {
     const kind = currentCallerKind();

@@ -170,7 +170,7 @@ export async function forkDatabase(
         try {
           const dump = await spawnCaptured(
             [
-              pgClientBin("pg_dump"),
+              await pgClientBin("pg_dump"),
               "-Fc",
               "-f",
               archive,
@@ -183,7 +183,7 @@ export async function forkDatabase(
             failure = `pg_dump exited ${dump.exitCode ?? dump.signalCode}: ${dump.stderr}`;
           } else {
             const restore = await spawnCaptured(
-              [pgClientBin("pg_restore"), "-d", temp, archive],
+              [await pgClientBin("pg_restore"), "-d", temp, archive],
               opts,
             );
             if (restore.exitCode !== 0) {

@@ -255,15 +255,15 @@ async function runLead<V, R>(
 /** A lock held on one of our own fds. */
 function fdHold(lock: OwnedFd): HeldFlock {
   let released = false;
-  const releaseSync = (): void => {
+  const releaseNow = (): void => {
     if (released) return;
     released = true;
     lock.close();
   };
   return {
-    releaseSync,
+    releaseNow,
     release: () => {
-      releaseSync();
+      releaseNow();
       return Promise.resolve();
     },
   };

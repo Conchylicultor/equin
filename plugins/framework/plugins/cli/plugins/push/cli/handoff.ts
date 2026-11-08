@@ -9,7 +9,7 @@ import {
 } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
-import type { OpProfiler } from "@plugins/debug/plugins/profiling/plugins/op-log/server";
+import type { OpProfiler } from "@plugins/debug/plugins/profiling/plugins/op-log/cli";
 import type { Grant } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { spawnPassthrough } from "@plugins/infra/plugins/spawn/core";
 

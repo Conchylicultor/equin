@@ -65,6 +65,7 @@ every move proven before it lands.
     - `infra/deps/updates.holdProblems`
     - `infra/host-fs/user-path.asAppPath`
     - `infra/paths.HOME_DIR`
+    - `packages/timed-fs.access`
     - `packages/timed-fs.existsSync`
   - Exports (types):
     - `ToolSmoke`
@@ -72,6 +73,7 @@ every move proven before it lands.
   - Exports (values):
     - `addLockedTool`
     - `compareVersions`
+    - `findMiseBin`
     - `findMiseBinSync`
     - `HOLDS`
     - `HOLDS_FILE`

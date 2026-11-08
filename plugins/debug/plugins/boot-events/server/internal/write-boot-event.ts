@@ -108,13 +108,14 @@ export function writeBootReadyEvent(): void {
  * the boot read as open forever (see `schema.ts`). Appended to that
  * worktree's own `boot.jsonl` through the same bounded file sink a channel
  * file is written with (`openDynamicSink`: a per-worktree path, not this
- * process's), so the boot's whole history stays in one file.
+ * process's), so the boot's whole history stays in one file. Asynchronous:
+ * the watchdog runs on main's live backend.
  */
 export function writeBootDeadEvent(
   worktree: string,
   processStartedAt: number,
   deadBy: number,
-): void {
+): Promise<void> {
   const line: BootLine = {
     sampledAt: Date.now(),
     worktree,
@@ -122,7 +123,7 @@ export function writeBootDeadEvent(
     deadBy,
     phase: "dead",
   };
-  openDynamicSink(logsDirFor(worktree), BOOT_CHANNEL.id).appendSync(
+  return openDynamicSink(logsDirFor(worktree), BOOT_CHANNEL.id).append(
     logEnvelope({
       t: line.sampledAt,
       stream: "stdout",

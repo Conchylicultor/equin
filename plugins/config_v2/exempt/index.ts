@@ -17,12 +17,4 @@ export default [
     reason:
       "A backend loads this module, and its blocking functions do not carry the *Sync name yet: a method bound by an interface others implement, an async function that does sync work inside, or a cascade (data-root resolution) left for the redesign.",
   },
-  {
-    rule: "blocking-fs/no-sync-fs",
-    paths: ["machine/internal/repo-layer.ts"],
-    kind: "debt",
-    task: "task-1793991088-yd3u37",
-    reason:
-      "The checkout's committed layer reads its files through committedFilesIn with node's sync fs (existsSync / readFileSync / readdirSync): ConfigGitLayer.document is synchronous, so the read has no async twin yet.",
-  },
 ] satisfies Exemptions;

@@ -106,14 +106,18 @@ function writeEpisodeLine(
   kind: DuressEpisodeEvent["kind"],
   reason: string,
   episodeSetAt: number,
-): void {
+): Promise<void> {
   const event: DuressEpisodeEvent = {
     atMs: Date.now(),
     kind,
     reason,
     episodeSetAt,
   };
-  episodesFile.appendSync(
+  // The async append: the worker's thread must never block on the disk it is
+  // watching (a busy disk is exactly when an episode line gets written). Its
+  // caller awaits it before announcing the transition, so a frame saying an
+  // episode tripped or cleared is never ahead of its line.
+  return episodesFile.append(
     logEnvelope({
       t: Date.now(),
       stream: "stdout",
@@ -128,7 +132,7 @@ async function endEpisode(forced: boolean, wall: number): Promise<void> {
   // enriched clear frame (the duress-episode report's payload) read from it.
   const ended = episode;
   if (ended) {
-    writeEpisodeLine(
+    await writeEpisodeLine(
       "clear",
       forced ? `max-episode-hold: ${ended.reason}` : ended.reason,
       ended.setAt,
@@ -272,7 +276,7 @@ async function applyDetector(
     // never disagree.
     const { setAt } = await setDuress(reason);
     episode = { setAt, reason, elevated: event.elevated };
-    writeEpisodeLine("trip", reason, setAt);
+    await writeEpisodeLine("trip", reason, setAt);
     emit({
       type: "trip",
       runUpMs: event.runUpMs,
@@ -353,7 +357,11 @@ async function handleInit(
     );
   } else if (latch) {
     await clearDuress();
-    writeEpisodeLine("clear", `lease-lapsed: ${latch.reason}`, latch.setAt);
+    await writeEpisodeLine(
+      "clear",
+      `lease-lapsed: ${latch.reason}`,
+      latch.setAt,
+    );
     log(
       `closed a lapsed duress latch (setAt=${String(latch.setAt)}, reason=${latch.reason})`,
     );

@@ -20,7 +20,7 @@ import {
 } from "../../core";
 import { classifyNeverReady, isSettledVerdict } from "./classify-wedge";
 import { readFleet } from "./read-fleet";
-import { listWorktreeDirsSync } from "@plugins/infra/plugins/paths/server";
+import { listWorktreeDirsAsync } from "@plugins/infra/plugins/paths/server";
 import type { BootEvent } from "@plugins/debug/plugins/boot-events/server";
 
 // Main-only wedged-boot watchdog. Runs every minute in the MAIN backend only —
@@ -81,7 +81,7 @@ export const bootWatchdogMonitorJob = defineJob({
     // dir was deleted) one full sweep marks every worktree with an open boot.
     let marks = await readBootUnsettled();
     if (!marks.indexed) {
-      for (const wt of listWorktreeDirsSync()) {
+      for (const wt of await listWorktreeDirsAsync()) {
         if (hasUnsettledBoot(await readBootEvents(wt, cfg.lookbackMs)))
           await markBootUnsettled(wt);
       }
@@ -163,7 +163,7 @@ export const bootWatchdogMonitorJob = defineJob({
         // have just marked the worktree (an open boot with no mark), and a
         // mark is cleared only by a settling newer than it.
         if (isSettledVerdict(verdict))
-          writeBootDeadEvent(
+          await writeBootDeadEvent(
             wt,
             ev.processStartedAt,
             verdict.supersededAtMs ?? Date.now(),

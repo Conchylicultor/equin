@@ -1,7 +1,7 @@
 import { rm } from "node:fs/promises";
 import { readdir, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
-import { backupsDirSync } from "@plugins/infra/plugins/paths/server";
+import { backupsDir } from "@plugins/infra/plugins/paths/server";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { hasLiveBackup } from "./run-state";
 
@@ -48,7 +48,7 @@ async function exists(path: string): Promise<boolean> {
 export async function reconcileBackups(): Promise<void> {
   let entries: string[];
   try {
-    entries = await readdir(backupsDirSync());
+    entries = await readdir(await backupsDir());
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
     entries = [];
@@ -69,7 +69,7 @@ export async function reconcileBackups(): Promise<void> {
   for (const entry of entries) {
     if (!TIMESTAMP_RE.test(entry)) continue;
 
-    const runDir = join(backupsDirSync(), entry);
+    const runDir = join(await backupsDir(), entry);
     const archivePath = join(runDir, "archive.tar.gz");
     const stagingDir = join(runDir, "staging");
     const partialPath = `${archivePath}.partial`;

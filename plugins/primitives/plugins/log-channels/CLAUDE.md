@@ -50,8 +50,11 @@ channel either declares a durable file sink or it doesn't.
   delegates to it with a one-element array, so the two can never drift. One
   `publishAll` is one ring trim and **one** `appendAll` file write, whatever the
   batch size; per-line WS delivery is unchanged (one listener callback per line, in
-  order). The order inside it is ring → sink → listeners, so "durable before
-  broadcast" holds per batch.
+  order). The order inside it is ring → sink → listeners: the batch is queued
+  on the file before any listener hears of it, so the file keeps publish order,
+  but the write itself is asynchronous (file-sink's queued `appendAll`) — a
+  publish never freezes its thread on the disk (3.2 s on main with the old
+  synchronous append). `log-channels#machine` settles the queue on shutdown.
 
 - **Ephemeral (server):** `Log.channel(id).publish(...)` — in-memory ring buffer
   only, no disk.
@@ -249,9 +252,7 @@ count accumulates across drops.
     - `upstream`
   - Endpoint callers: `log-files`
 - Exemptions:
-  - Exempts itself from:
-    - `networking/no-page-transport` — `web/client-log.ts` (sanctioned)
-    - `blocking-fs/no-sync-fs` — `machine/internal/file-persistence.ts` (debt)
+  - Exempts itself from: `networking/no-page-transport` — `web/client-log.ts` (sanctioned)
 - Machine:
   - Register: `log-file-sinks`
 - Sub-plugins:

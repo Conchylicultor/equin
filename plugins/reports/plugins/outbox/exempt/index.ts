@@ -11,9 +11,8 @@ export default [
   {
     rule: "blocking-fs/no-sync-fs",
     paths: ["server/internal/writer.ts"],
-    kind: "debt",
-    task: "task-1793991088-yd3u37",
+    kind: "sanctioned",
     reason:
-      "Calls a *Sync helper (or a sync child process) that has no async twin yet; blocks the backend's thread for as long as the disk or the child takes.",
+      "outboxFatalWriter, the reportOutboxFatalSink handler, writes its entry synchronously (fileReportFromProcessSync) because its caller may exit on its next statement. Only the reports engine emits that sink, from two dying or non-serving paths: its serverFatalSink handler (server-core's exitWithFatalReport, which exits next and returns never) for a process that cannot write reports, and its process-crash handler's outbox-sync lane, taken only when the process does not serve (an exec child, a CLI, a serving backend before markServerReady). A serving backend that lives on never reaches it: its crashes and reports take the crash buffer or recordReport. The async outboxWriter in the same file stays async.",
   },
 ] satisfies Exemptions;

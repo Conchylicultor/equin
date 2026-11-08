@@ -2,7 +2,7 @@ import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { readFile, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
 import {
-  readRunTerminalSync,
+  readRunTerminal,
   type RunTerminal,
 } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
 import { BUILD_RUN_KIND_ID } from "@plugins/build/plugins/run-ledger/core";
@@ -108,7 +108,7 @@ export async function readBuildRunLog(
   // The marker first: a run that ends between the two reads then reads as
   // still running over its complete transcript, never as ended over a partial
   // one.
-  const terminal = readRunTerminalSync(BUILD_RUN_KIND_ID, buildId);
+  const terminal = await readRunTerminal(BUILD_RUN_KIND_ID, buildId);
   const text = await readIfPresent(
     worktreeArtifacts.runTranscript(
       runtimeNamespace(),

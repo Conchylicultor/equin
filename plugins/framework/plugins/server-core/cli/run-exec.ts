@@ -149,13 +149,13 @@ export async function runExec(
       await import("../bin/active-runtime");
     ordered = await bootPluginGraph({
       mode: "exec",
-      afterLoad: treeRead.releaseSync,
+      afterLoad: treeRead.releaseNow,
       // The same graph a serving desktop backend boots: both halves.
       entries: [...serverEntries, ...machineEntries],
     });
     await body();
   } catch (err) {
-    treeRead.releaseSync(); // a boot that failed mid-load never reached afterLoad
+    treeRead.releaseNow(); // a boot that failed mid-load never reached afterLoad
     console.error("[exec] failed", err);
     if (ordered) await runShutdownHooks(ordered);
     process.exit(opts.exitCodeFor?.(err) ?? 1);

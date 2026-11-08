@@ -42,8 +42,8 @@ const GIT_TIMEOUT_MS = 60_000;
 
 /** Log persistence for the dry-run: nothing past each channel's own ring. */
 const RING_ONLY_LOGS: LogPersistenceImpl = {
-  sinkFor: () => ({ appendAll() {} }),
-  clientSinkFor: () => ({ appendAll() {} }),
+  sinkFor: () => ({ appendAll: () => Promise.resolve() }),
+  clientSinkFor: () => ({ appendAll: () => Promise.resolve() }),
   clientIngressPaused: () => false,
 };
 

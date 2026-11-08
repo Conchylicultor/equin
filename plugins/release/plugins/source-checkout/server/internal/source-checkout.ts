@@ -17,7 +17,7 @@ import {
   addCheckout,
   withWorktreeMutateSlot,
 } from "@plugins/infra/plugins/worktree/server";
-import { findMiseBinSync } from "@plugins/toolchain/core";
+import { findMiseBin } from "@plugins/toolchain/core";
 import { releaseCheckoutsDir } from "../../data-dirs";
 import {
   type AppPath,
@@ -302,13 +302,13 @@ async function assertCheckoutAt(root: AppPath, sha: string): Promise<void> {
  * runs from inside it do not refuse an untrusted config. The machine-global
  * `trusted_config_paths` covers only `.claude/worktrees`.
  *
- * Best-effort: mise may not be installed at all (`findMiseBinSync` returns
+ * Best-effort: mise may not be installed at all (`findMiseBin` returns
  * `null`), and on a machine where it is not needed the inner build still
  * works. A trust that RAN and failed is printed, never swallowed — if the
  * build then fails on an untrusted config, the reason is on screen.
  */
 async function trustMiseConfig(root: AppPath): Promise<void> {
-  const bin = findMiseBinSync();
+  const bin = await findMiseBin();
   if (bin === null) return;
   const r = await spawnCaptured([bin, "trust", join(root, "mise.toml")], {
     timeoutMs: MISE_TRUST_TIMEOUT_MS,

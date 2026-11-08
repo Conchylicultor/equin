@@ -25,8 +25,8 @@ import {
 } from "@plugins/infra/plugins/namespace/core";
 import { GIT } from "@plugins/infra/plugins/paths/server";
 import {
-  readCheckoutMinterSync,
-  stampCheckoutMinterSync,
+  readCheckoutMinter,
+  stampCheckoutMinter,
 } from "@plugins/infra/plugins/paths/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { attemptBranchName, attemptBranchRef } from "../../core";
@@ -1312,7 +1312,7 @@ export async function convergeExistingCheckout(
  *
  * @param minter the namespace whose backend makes this checkout — the one
  * whose database holds its attempt row (`runtimeNamespace()` of the caller).
- * REQUIRED: it is stamped beside the checkout (`stampCheckoutMinterSync`) so main's
+ * REQUIRED: it is stamped beside the checkout (`stampCheckoutMinter`) so main's
  * reaper can tell a checkout a worktree build minted — whose row it cannot
  * read — from an abandoned one. First mint wins: a retry or reuse never
  * re-attributes it.
@@ -1363,7 +1363,7 @@ export async function setupWorktree(
       { frozen: false },
       signal,
     );
-    stampMinter(id, minter);
+    await stampMinter(id, minter);
     return { source, depStore };
   }
 
@@ -1404,16 +1404,16 @@ export async function setupWorktree(
     { frozen: true },
     signal,
   );
-  stampMinter(id, minter);
+  await stampMinter(id, minter);
   return { source, depStore };
 }
 
 // Once the checkout exists, never before: a stamp-only `<ns>/` dir with no
 // checkout beside it reads as a registry orphan, and the sweep removes it.
-function stampMinter(id: string, minter: Namespace): void {
+async function stampMinter(id: string, minter: Namespace): Promise<void> {
   const checkout = asNamespace(id);
-  if (readCheckoutMinterSync(checkout).kind === "absent")
-    stampCheckoutMinterSync(checkout, minter);
+  if ((await readCheckoutMinter(checkout)).kind === "absent")
+    await stampCheckoutMinter(checkout, minter);
 }
 
 /**

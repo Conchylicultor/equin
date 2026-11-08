@@ -33,7 +33,7 @@ import {
   createOpProfiler,
   readOpStates,
   type OpProfiler,
-} from "@plugins/debug/plugins/profiling/plugins/op-log/server";
+} from "@plugins/debug/plugins/profiling/plugins/op-log/cli";
 import type { OutcomeByKind } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
 import { checkBroadcasts } from "./broadcasts";
 import { reportInterruptedPredecessorSync } from "./build-receipt";

@@ -18,9 +18,8 @@ export default [
   {
     rule: "blocking-fs/no-sync-fs",
     paths: ["server/internal/write-boot-event.ts"],
-    kind: "debt",
-    task: "task-1793991088-yd3u37",
+    kind: "sanctioned",
     reason:
-      "Calls a *Sync helper (or a sync child process) that has no async twin yet; blocks the backend's thread for as long as the disk or the child takes.",
+      "Only this process's own boot lines append synchronously: `start` from the serving entry point before any plugin import and before the backend listens (a boot killed mid-import must still leave it), and `exited` from the process `exit` listener, which cannot wait. The watchdog's `dead` line, written on a live backend, is asynchronous.",
   },
 ] satisfies Exemptions;

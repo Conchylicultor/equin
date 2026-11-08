@@ -36,7 +36,7 @@ export interface ReconcileDeps {
   /** Is this op's process still running? */
   isLive: (op: ReconcileCandidate) => Promise<boolean>;
   /** Append one event to the op log (main only). */
-  append: (event: OpEvent) => void;
+  append: (event: OpEvent) => Promise<void>;
   now?: () => number;
   /**
    * The machine's sleep clock, stamped on each closing event so the op's last
@@ -90,7 +90,7 @@ export async function reconcileOps(
   for (const candidate of orphanedOps(rows.map(opRowToFoldState))) {
     if (await deps.isLive(candidate)) continue;
     if (deps.main) {
-      deps.append(reconcilerCompletedEvent(candidate, now(), sleepNow()));
+      await deps.append(reconcilerCompletedEvent(candidate, now(), sleepNow()));
       appended++;
       continue;
     }

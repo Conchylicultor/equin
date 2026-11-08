@@ -39,12 +39,4 @@ export default [
     reason:
       "The op marker's writer, called only by the op's own CLI process (./equin build / push / a direct op, and the op-status synthetic script) — never by a backend — and its release() runs in that process's process.on(\"exit\") handler, which cannot await. The readers a backend calls (worktree-op.ts) are async.",
   },
-  {
-    rule: "blocking-fs/no-sync-fs",
-    paths: ["server/internal/worktree.ts"],
-    kind: "debt",
-    task: "task-1793991088-yd3u37",
-    reason:
-      "Calls a *Sync helper (or a sync child process) that has no async twin yet; blocks the backend's thread for as long as the disk or the child takes.",
-  },
 ] satisfies Exemptions;

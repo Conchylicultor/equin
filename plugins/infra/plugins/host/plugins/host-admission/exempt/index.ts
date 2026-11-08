@@ -19,8 +19,8 @@ export default [
     rule: "blocking-fs/no-sync-fs",
     paths: ["server/internal/pool.ts"],
     kind: "debt",
-    task: "task-1793991088-yd3u37",
+    task: "task-1794166603-5gddnj",
     reason:
-      "Calls a *Sync helper (or a sync child process) that has no async twin yet; blocks the backend's thread for as long as the disk or the child takes.",
+      "The gate gauge's host-wide occupancy probe (probeOccupancySync) opens every slot file synchronously: registerGateGauge's reader is a sync () => GateGauge (runtime-profiler), read on every gauge snapshot and slow-wait notification. Every other probe (hostOccupancy) is async; this one goes once the gauge reader may be async.",
   },
 ] satisfies Exemptions;

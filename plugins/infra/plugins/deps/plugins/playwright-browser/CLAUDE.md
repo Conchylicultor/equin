@@ -44,7 +44,9 @@ const headed = await launchChromium(ready, { headless: false });  // headed bina
   error. `headless` (default `true`) picks the recorded headless shell;
   `false` the headed binary.
 - `core/` holds the record (`BROWSER_EXECUTABLES_FILE`, its schema) and its
-  reader `readBrowserExecutablesSync(envDir)`, so host code that cannot reach the
+  reader — `readBrowserExecutables(envDir)` (async: the kind's `isIntact` and
+  launchers, on a backend's thread) and `readBrowserExecutablesSync(envDir)`
+  (host tools) over one parse — so host code that cannot reach the
   `deps/` barrel (the layout-geometry suite under `web/`) reads an install the
   same way the kind does, after `./equin deps install chromium --json`.
 - No updater: a new `playwright` pin is a new identity, installed beside the
@@ -60,7 +62,9 @@ const headed = await launchChromium(ready, { headless: false });  // headed bina
     - `infra/host-fs/user-path.AppPath`
     - `infra/host-fs/user-path.asAppPath`
     - `infra/host-fs/user-path.joinAppPath`
+    - `packages/timed-fs.exists`
     - `packages/timed-fs.existsSync`
+    - `packages/timed-fs.readFile`
     - `packages/timed-fs.readFileSync`
   - Exports (types):
     - `BrowserExecutables`
@@ -68,6 +72,7 @@ const headed = await launchChromium(ready, { headless: false });  // headed bina
   - Exports (values):
     - `BROWSER_EXECUTABLES_FILE`
     - `BrowserExecutablesSchema`
+    - `readBrowserExecutables`
     - `readBrowserExecutablesSync`
 - Cross-plugin:
   - Imported by:
@@ -79,7 +84,6 @@ const headed = await launchChromium(ready, { headless: false });  // headed bina
   - Exempts itself from:
     - `boundaries/no-platform-api` — `core/internal/executables.ts` (debt)
     - `user-path/no-unproven-claim` — `core/internal/executables.ts` (sanctioned)
-    - `blocking-fs/no-sync-fs` — `deps/internal/playwright-browser.ts` (debt)
 - Deps:
   - Exports (types):
     - `ChromiumLaunchOptions`

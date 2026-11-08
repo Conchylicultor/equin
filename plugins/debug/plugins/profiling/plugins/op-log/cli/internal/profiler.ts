@@ -21,7 +21,7 @@ import {
   type WaitKind,
   type WaitResult,
 } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
-import { appendOpLog } from "./jsonl";
+import { appendOpLogSync } from "./jsonl";
 
 // The writer. Emits the v2 change-only event stream (see
 // research/2026-09-29-global-unified-op-status.md): one line per state CHANGE —
@@ -155,7 +155,7 @@ export function createOpProfiler<K extends OpKind>(
   opts: OpProfilerOptions,
 ): OpProfiler<K> {
   const conversationId = readEnv("CONVERSATION_ID") ?? null;
-  const sink = opts.sink ?? ((event: OpEvent) => appendOpLog(event));
+  const sink = opts.sink ?? ((event: OpEvent) => appendOpLogSync(event));
   const readSleep = opts.readSleep ?? readSleepClock;
 
   const requestedAt = new Date();

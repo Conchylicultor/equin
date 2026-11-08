@@ -12,7 +12,7 @@ import { namespaceUrl } from "@plugins/infra/plugins/namespace/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { scratchWorkspacesDir } from "../../data-dirs";
-import { assertDirTrustedSync } from "../../core";
+import { assertDirTrusted } from "../../core";
 import { scratchLaunchFragment } from "./launch-fragment";
 
 // A plain directory, `<data>/state/workspaces/<attemptId>`, holding only what
@@ -21,7 +21,7 @@ import { scratchLaunchFragment } from "./launch-fragment";
 // `assertTrusted` is injected so a test can run `prepare` on a temp dir; the
 // real one reads Claude Code's user config.
 export function createScratchWorkspace(deps: {
-  assertTrusted: (dir: string) => void;
+  assertTrusted: (dir: string) => Promise<void>;
   /** The checkout the agent's guards run from (see `scratchLaunchFragment`). */
   guardsRoot: string;
   /** Throws unless the guard scripts under `guardsRoot` are on disk: a launch must not install hooks that cannot run. */
@@ -45,7 +45,7 @@ export function createScratchWorkspace(deps: {
       // A session in an untrusted dir stops at Claude Code's trust dialog and
       // sits there, `starting`, with nothing reporting why — so refuse here,
       // loudly (the boot step `trustScratchRoot` trusts the scratch root).
-      deps.assertTrusted(path);
+      await deps.assertTrusted(path);
       await deps.assertGuards();
       const profile = ScratchProfile.get(spec.profile);
       await mkdir(path, { recursive: true });
@@ -107,7 +107,7 @@ async function assertCheckoutGuards(): Promise<void> {
 }
 
 export const scratchWorkspace = createScratchWorkspace({
-  assertTrusted: (dir) => assertDirTrustedSync(dir),
+  assertTrusted: (dir) => assertDirTrusted(dir),
   guardsRoot: REPO_ROOT,
   assertGuards: assertCheckoutGuards,
 });

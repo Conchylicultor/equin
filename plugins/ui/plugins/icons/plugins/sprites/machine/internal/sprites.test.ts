@@ -7,7 +7,7 @@ import { manifestSymbolBody } from "./sprites";
 describe("manifestSymbolBody", () => {
   it("is the default style's drawing at rest, the one symbolBody reads from the sets", async () => {
     for (const name of ["home", ICON_MANIFEST.symbols[0]!] as SymbolName[]) {
-      expect(await manifestSymbolBody(name)).toEqual(symbolBody(name));
+      expect(await manifestSymbolBody(name)).toEqual(await symbolBody(name));
     }
   });
 

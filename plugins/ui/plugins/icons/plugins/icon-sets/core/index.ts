@@ -3,6 +3,7 @@ export {
   SYMBOL_NAMES_REL_PATH,
   SYMBOL_NAME_LIST_REL_PATH,
   installedSetVersionsSync,
+  readIconSet,
   readIconSetSync,
   readInputsHash,
   readListInputsHash,

@@ -7,9 +7,11 @@
 export type { FileSink, FileSinkSpec, RotateBound } from "./internal/types";
 export {
   defineFileSink,
+  flushQueuedAppendsSync,
   getFileSinks,
   openDynamicSink,
   sanitizeChannel,
+  settleFileSinkWrites,
 } from "./internal/file-sink";
 export {
   readTailSync,

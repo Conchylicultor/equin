@@ -196,14 +196,17 @@ export const configValuesServed = serveValue(configValues, {
 // descriptor the repo commits nothing for resolves to its code defaults (what a
 // fresh propagation leaves it at); a committed document that fails its schema
 // is a broken commit — thrown, never papered over with defaults.
-function resolveGitDocument(path: string, scopeId?: string): ConfigV2Values {
+async function resolveGitDocument(
+  path: string,
+  scopeId?: string,
+): Promise<ConfigV2Values> {
   const descriptor = descriptorByPath.get(path);
   if (!descriptor) {
     throw new Error(
       `[config-v2] no descriptor registered for git-values path "${path}"`,
     );
   }
-  const doc = ConfigGitLayer.get().document(path);
+  const doc = await ConfigGitLayer.get().document(path);
   if (!doc) return redactSecrets(descriptor, { ...descriptor.defaults });
   const appId = scopeAppId(scopeId);
   const content =

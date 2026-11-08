@@ -314,8 +314,8 @@ reaped namespaces' gateway logs were each found by accident, months in.
 
 - Description: Canonical machine paths, plus the boot-time publication of this namespace's declared data-dir set so an audit running in another checkout can tell one of this branch's directories from an orphan.
 - Core:
-  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `packages/timed-fs` ×10
+  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `packages/timed-fs` ×11
     - `infra/namespace` ×8
     - `infra/launcher/env-names` ×4
     - `infra/host-fs/user-path` ×3
@@ -347,6 +347,7 @@ reaped namespaces' gateway logs were each found by accident, months in.
   - Exports (values):
     - `actAsCheckoutNamespace`
     - `backendEntryFor`
+    - `backupsDir`
     - `backupsDirs`
     - `backupsDirSync`
     - `CHECK_ARTIFACTS_RETENTION`
@@ -373,6 +374,7 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `isHostSingleton`
     - `isRelease`
     - `LEGACY_LAYOUT`
+    - `listWorktreeDirsAsync`
     - `listWorktreeDirsSync`
     - `LOG_FILE_RE`
     - `logPatternMatches`
@@ -383,7 +385,9 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `pruneWorktreeCheckArtifactsSync`
     - `pruneWorktreeTestArtifactsSync`
     - `publishedLogClaim`
+    - `readCheckoutMinter`
     - `readCheckoutMinterSync`
+    - `readCheckoutOwner`
     - `readCheckoutOwnerSync`
     - `readHomeDataRootLayoutSync`
     - `relativeToDataRoot`
@@ -393,6 +397,7 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `RUN_TERMINAL_SUFFIX`
     - `SERVER_CORE_RELATIVE`
     - `setReleaseIdentity`
+    - `stampCheckoutMinter`
     - `stampCheckoutMinterSync`
     - `toolchainPin`
     - `WORKTREE_SPEC_FILE`
@@ -432,7 +437,6 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `boundaries/no-platform-api` — `core/internal/checkout-deploys.ts`, `core/internal/checkout-minter.ts`, `core/internal/checkout-owner.ts`, `core/internal/checkout-ref.ts`, `core/internal/data-dir.ts`, `core/internal/data-root-layout.ts`, `core/internal/data-dirs-manifest.ts`, `core/internal/paths.ts`, `core/internal/prune-artifacts.ts`, `core/internal/toolchain-pin.ts`, `core/internal/worktree-dirs.ts` (debt)
     - `user-path/no-unproven-claim` — `core/internal/paths.ts`, `core/internal/data-root-layout.ts` (sanctioned)
     - `user-path/no-unproven-claim` — `core/internal/checkout-deploys.ts` (sanctioned)
-    - `blocking-fs/no-sync-fs` — `server/internal/publish-data-dirs.ts` (debt)
     - `blocking-fs/sync-named` — `core/internal/checkout-ref.ts`, `core/internal/data-dir.ts`, `core/internal/paths.ts` (debt)
 - Server:
   - Exports (types):
@@ -448,6 +452,7 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `ReleaseIdentity`
   - Exports (values):
     - `actAsCheckoutNamespace`
+    - `backupsDir`
     - `backupsDirSync`
     - `BUILD_ARTIFACTS_RETENTION`
     - `CHECK_ARTIFACTS_RETENTION`
@@ -475,6 +480,7 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `PLUGINS_DIR`
     - `pruneWorktreeBuildArtifactsSync`
     - `pruneWorktreeCheckArtifactsSync`
+    - `pruneWorktreeRunArtifacts`
     - `pruneWorktreeRunArtifactsSync`
     - `PS`
     - `publishDataDirsManifest`

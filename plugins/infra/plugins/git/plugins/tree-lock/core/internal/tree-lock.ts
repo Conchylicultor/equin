@@ -52,7 +52,7 @@ function ensureLockFile(path: AppPath): void {
 }
 
 const NOT_A_CHECKOUT: HeldFlock = {
-  releaseSync: () => {},
+  releaseNow: () => {},
   release: async () => {},
 };
 
@@ -73,10 +73,10 @@ export async function holdTreeRead(root: AppPath): Promise<HeldFlock> {
   ensureLockFile(path);
   const fd = openOwnedFdSync(path, "a");
   if (flockTryShared(fd.fd)) {
-    const releaseSync = (): void => {
+    const releaseNow = (): void => {
       if (!fd.closed) fd.close(); // closing the description drops the lock
     };
-    return { releaseSync, release: async () => releaseSync() };
+    return { releaseNow, release: async () => releaseNow() };
   }
   fd.close();
   return waitForFlock(path, { shared: true });

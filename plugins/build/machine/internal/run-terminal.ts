@@ -6,7 +6,7 @@ import {
   RUN_TERMINAL_SUFFIX,
   worktreeArtifacts,
 } from "@plugins/infra/plugins/paths/server";
-import { readRunTerminalSync } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
+import { readRunTerminal } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
 import {
   BUILD_RUN_KIND_ID,
   buildRunIdKind,
@@ -37,7 +37,7 @@ import {
 //
 // A run that ended before this process started is never announced — there is
 // no edge left to report. A reader decides it from the marker itself
-// (`readRunTerminalSync(BUILD_RUN_KIND_ID, runId)`): present ⇒ its artifacts are
+// (`readRunTerminal(BUILD_RUN_KIND_ID, runId)`): present ⇒ its artifacts are
 // final.
 
 /**
@@ -118,17 +118,25 @@ const hub = createRunTerminalHub(async () => {
   // subscription over a flat, pruned directory, filtered to markers.
   await buildRunTerminalWatcher.start({
     dirs: [dir],
-    onChange: (events) => {
-      const ended = new Set<BuildRunId>();
+    onChange: async (events) => {
+      const candidates = new Set<BuildRunId>();
       for (const event of events) {
         if (event.type === "delete") continue; // the artifact prune
         const runId = buildRunIdOfMarker(basename(event.path));
-        // Re-read the marker rather than trust the event: it is the authority,
-        // and a malformed one throws (RunMarkerError) — a writer defect.
-        if (runId !== null && readRunTerminalSync(BUILD_RUN_KIND_ID, runId))
-          ended.add(runId);
+        if (runId !== null) candidates.add(runId);
       }
-      for (const runId of ended) hub.announce(runId);
+      // Re-read the marker rather than trust the event: it is the authority,
+      // and a malformed one throws (RunMarkerError) — a writer defect. Every
+      // read lands before any announcement, so one bad marker announces none
+      // of the batch, exactly as the read-then-announce loop did.
+      const ended = await Promise.all(
+        [...candidates].map(async (runId) =>
+          (await readRunTerminal(BUILD_RUN_KIND_ID, runId)) === null
+            ? null
+            : runId,
+        ),
+      );
+      for (const runId of ended) if (runId !== null) hub.announce(runId);
     },
   });
 });

@@ -16,6 +16,6 @@ export default {
   // Before any scratch spawn can run: an untrusted root would hold every
   // scratch session at Claude Code's trust dialog (`prepare` asserts it).
   onReady: async () => {
-    trustScratchRoot();
+    await trustScratchRoot();
   },
 } satisfies ServerPluginDefinition;

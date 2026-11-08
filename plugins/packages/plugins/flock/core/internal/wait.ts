@@ -14,8 +14,8 @@ export interface HeldFlock {
    * Exists for callers that cannot await (an `AbortSignal` listener).
    * Idempotent.
    */
-  releaseSync(): void;
-  /** `releaseSync()`, then reap the holding child if there is one. Idempotent. */
+  releaseNow(): void;
+  /** `releaseNow()`, then reap the holding child if there is one. Idempotent. */
   release(): Promise<void>;
 }
 
@@ -142,7 +142,7 @@ export async function waitForFlock(
 /** The `HeldFlock` for a lock a granted `flock-wait` child holds. */
 function childHold(child: WaitChild): HeldFlock {
   let released = false;
-  const releaseSync = (): void => {
+  const releaseNow = (): void => {
     if (released) return;
     released = true;
     // SIGTERM: the child's handler exits, closing its fd, which releases the
@@ -151,9 +151,9 @@ function childHold(child: WaitChild): HeldFlock {
     child.kill();
   };
   return {
-    releaseSync,
+    releaseNow,
     release: async () => {
-      releaseSync();
+      releaseNow();
       // Awaiting a settled `exited` is a no-op, so a second call stays idempotent.
       await child.exited;
     },

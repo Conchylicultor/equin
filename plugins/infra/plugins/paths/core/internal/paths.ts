@@ -31,6 +31,7 @@ import {
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import {
+  readHomeDataRootLayout,
   readHomeDataRootLayoutSync,
   type DataRootLayout,
 } from "./data-root-layout";
@@ -272,6 +273,17 @@ export function dataRootLayoutSync(): DataRootLayout {
 let homeLayout: DataRootLayout | undefined;
 
 /**
+ * {@link dataRootLayoutSync} for a backend: the same per-process answer, read
+ * with the async fs calls when this process has not decided it yet.
+ */
+export async function dataRootLayout(): Promise<DataRootLayout> {
+  const dir = readEnvPath("DIR");
+  if (dir !== undefined) return { kind: "custom", root: dir };
+  homeLayout ??= await readHomeDataRootLayout(HOME_DIR);
+  return homeLayout;
+}
+
+/**
  * The local backups' dir — OUTSIDE the data root on purpose (`~/.backups/…`),
  * which is why it is spelled here rather than declared with `defineDataDir`: a
  * backup that lived inside the tree it backs up would be reclaimed by the same
@@ -285,6 +297,14 @@ let homeLayout: DataRootLayout | undefined;
 export function backupsDirSync(): AppPath {
   const dirs = backupsDirs();
   return dataRootLayoutSync().kind === "legacy" ? dirs.legacy : dirs.current;
+}
+
+/** {@link backupsDirSync} for a backend: reads the root's layout without blocking. */
+export async function backupsDir(): Promise<AppPath> {
+  const dirs = backupsDirs();
+  return (await dataRootLayout()).kind === "legacy"
+    ? dirs.legacy
+    : dirs.current;
 }
 
 /** Both home-relative backups dirs, current first. */
@@ -625,7 +645,7 @@ export const worktreeArtifacts = {
   /**
    * Which backend minted this agent checkout — `{ minter }`, the namespace whose
    * database holds its attempt row. Written by `setupWorktree` (infra/worktree) once
-   * the checkout exists (`stampCheckoutMinterSync`); read by the reaper, for a
+   * the checkout exists (`stampCheckoutMinter`); read by the reaper, for a
    * checkout main's attempts table does not name.
    */
   checkoutMinter: (name: Namespace): AppPath =>

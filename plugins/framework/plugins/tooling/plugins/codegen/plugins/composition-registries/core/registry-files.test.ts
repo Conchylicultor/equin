@@ -18,7 +18,7 @@ import {
   collectedDirNamedCompositionRegistryPath,
   compositionRegistryFileName,
   compositionRegistryPath,
-  listNamedCompositionRegistriesSync,
+  listNamedCompositionRegistries,
   parseNamedCompositionRegistryFileName,
 } from "./registry-files";
 
@@ -157,7 +157,7 @@ test("listNamedCompositionRegistries finds per-name files, skipping singletons",
   });
 
   const listed = (
-    await listNamedCompositionRegistriesSync(await loadRepoFiles(namedRoot))
+    await listNamedCompositionRegistries(await loadRepoFiles(namedRoot))
   )
     .map((e) => `${e.dir}:${e.name}`)
     .sort();

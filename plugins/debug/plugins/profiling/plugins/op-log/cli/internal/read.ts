@@ -8,8 +8,10 @@ import {
   type OpenWait,
   type OpRecord,
 } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
-import { opLogSink } from "./jsonl";
-import { readSleepNow } from "./sleep-now";
+import {
+  opLogSink,
+  readSleepNow,
+} from "@plugins/debug/plugins/profiling/plugins/op-log/server";
 
 /**
  * Read the live op log through its own sink's bounded reader.

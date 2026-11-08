@@ -1,6 +1,7 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { dlopen } from "bun:ffi";
 import {
+  openOwnedFd,
   openOwnedFdSync,
   type OwnedFd,
 } from "@plugins/packages/plugins/owned-fd/core";
@@ -32,8 +33,23 @@ const LOCK_NB = 4;
 // open file DESCRIPTION, not the process, so this detects a holder even on a
 // separate fd in the SAME process (the worktree-op marker test pins that). Open in append mode so a probe never
 // truncates a lock file a holder may be using; a non-zero flock return means
-// EWOULDBLOCK ⇒ someone else holds it.
-function slotHeld(slotPath: AppPath): boolean {
+// EWOULDBLOCK ⇒ someone else holds it. The open is awaited (off the thread);
+// only the flock decision on the open fd is synchronous.
+async function slotHeld(slotPath: AppPath): Promise<boolean> {
+  let fd: OwnedFd;
+  try {
+    fd = await openOwnedFd(slotPath, "a");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return false; // no file ⇒ never held
+    throw err;
+  }
+  return probeFd(fd);
+}
+
+// The synchronous twin, for the one caller that cannot await: the gate gauge
+// (`registerGateGauge`'s reader is a plain `() => GateGauge`, owned by
+// runtime-profiler). Blocks the thread for every slot file's open.
+function slotHeldSync(slotPath: AppPath): boolean {
   let fd: OwnedFd;
   try {
     fd = openOwnedFdSync(slotPath, "a");
@@ -41,6 +57,10 @@ function slotHeld(slotPath: AppPath): boolean {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return false; // no file ⇒ never held
     throw err;
   }
+  return probeFd(fd);
+}
+
+function probeFd(fd: OwnedFd): boolean {
   try {
     return ffi.flock(fd.fd, LOCK_EX | LOCK_NB) !== 0;
   } finally {
@@ -52,11 +72,20 @@ function slotHeld(slotPath: AppPath): boolean {
 // matters: probing a *free* slot momentarily holds it, so a parallel probe of a
 // whole pool could make a concurrent acquirer's `sweepKeep` see zero free slots
 // and needlessly fan out. One slot at a time bounds that transient hold to a
-// single slot.
-function probeOccupancy(slots: DataDir, size: number): number {
+// single slot (each probe's lock is taken and dropped in one synchronous step,
+// after its open has landed).
+async function probeOccupancy(slots: DataDir, size: number): Promise<number> {
   let held = 0;
   for (let i = 0; i < size; i++) {
-    if (slotHeld(slots.file(`slot-${i}.lock`))) held++;
+    if (await slotHeld(slots.file(`slot-${i}.lock`))) held++;
+  }
+  return held;
+}
+
+function probeOccupancySync(slots: DataDir, size: number): number {
+  let held = 0;
+  for (let i = 0; i < size; i++) {
+    if (slotHeldSync(slots.file(`slot-${i}.lock`))) held++;
   }
   return held;
 }
@@ -210,7 +239,7 @@ export function defineHostPool<H extends PoolHolder>(
   // pool open at a different size. Probing the declared set would then miss the
   // holders on the slots this process is actually sweeping.
   registerGateGauge(`${spec.id}-acquire`, () => ({
-    active: probeOccupancy(slots, sem.liveSize()),
+    active: probeOccupancySync(slots, sem.liveSize()),
     queued: sem.depth(),
     max: sem.liveSize(),
   }));
@@ -254,8 +283,11 @@ export async function hostOccupancy(): Promise<PoolOccupancy[]> {
   const out: PoolOccupancy[] = [];
   for (const pool of registry.values()) {
     const size = pool.liveSize();
-    out.push({ id: pool.id, held: probeOccupancy(pool.slots, size), size });
-    await Promise.resolve(); // yield between pools so a long registry never hogs the loop
+    out.push({
+      id: pool.id,
+      held: await probeOccupancy(pool.slots, size),
+      size,
+    });
   }
   return out;
 }

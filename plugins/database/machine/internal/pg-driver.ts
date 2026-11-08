@@ -19,7 +19,8 @@ import {
   registerGateGauge,
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import {
-  readDatabaseConfigSync,
+  loadDatabaseConfig,
+  loadedDatabaseConfig,
   buildConnectionString,
 } from "@plugins/database/core";
 import {
@@ -61,10 +62,13 @@ import {
 // one. It is still loud and never silently defaulted — a real query in a process
 // that declared no namespace throws here.
 
-// The connection config is read on first use too (`readDatabaseConfigSync` is
-// memoized), never at module load: a module must not read a file or the
-// environment as it loads (barrel-import's load guard).
-const config = () => readDatabaseConfigSync();
+// The connection config is loaded once, asynchronously, by `ready()` — the
+// boot barrier's first step, before anything queries — and read from memory
+// after (`loadedDatabaseConfig` throws when nothing loaded it: a boot-order
+// bug, never a silent default). Never at module load: a module must not read a
+// file or the environment as it loads (barrel-import's load guard). A headless
+// test process loads it in the `bun test` preload, its stand-in for a boot.
+const config = () => loadedDatabaseConfig();
 // The cluster's own socket. A session-bound LISTEN (`listen` below) must use it:
 // pgbouncer's transaction pooling breaks LISTEN.
 const direct = () => ({
@@ -940,6 +944,7 @@ const generationLocks = createSchemaGenerationLocks({
 export const pgDriver: DatabaseDriverImpl = {
   db: realDb,
   async ready({ warm }) {
+    await loadDatabaseConfig();
     await awaitDbReady();
     // `warm` is true exactly in a serving backend (an exec child passes false).
     // The background lane's own PgBouncer pool needs its role in Postgres and

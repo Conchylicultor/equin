@@ -84,7 +84,12 @@ describe("backupDatabase with ExcludeFromBackup", () => {
     expect(plan.unmatched).toEqual([]);
 
     const restore = await spawnCaptured(
-      [pgClientBin("pg_restore"), "-d", restored.connectionString, archive],
+      [
+        await pgClientBin("pg_restore"),
+        "-d",
+        restored.connectionString,
+        archive,
+      ],
       { timeoutMs: 120_000 },
     );
     expect(restore.stderr).toBe("");

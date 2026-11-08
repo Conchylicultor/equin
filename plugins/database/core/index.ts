@@ -1,5 +1,7 @@
 export {
   readDatabaseConfigSync,
+  loadDatabaseConfig,
+  loadedDatabaseConfig,
   libpqEnvSync,
   buildConnectionString,
   DATABASE_CONFIG_PATH,

@@ -15,7 +15,7 @@
  *
  * Driven through the real `reconcileSupervisedRuns` with a fake ledger and real
  * child processes, because the bug is in how the loop COMPOSES: the per-row
- * decision (`observeRunSync`: `readRunTerminalSync` + `isRunAlive`) was already right and is already
+ * decision (`observeRun`: `isRunAlive` + `readRunTerminal`) was already right and is already
  * covered in `core/internal/terminal.test.ts`. What broke was a second loop that
  * bypassed it.
  *

@@ -16,12 +16,4 @@ export default [
     reason:
       "Per-file synchronous work on the shared check thread (a blocking fs/process call made per item, or a direct maskSource / createSourceFile) that predates the rule; move it onto ctx.repo() / fs/promises and checks/core's maskedSource / parsedTsSource.",
   },
-  {
-    rule: "blocking-fs/no-sync-fs",
-    paths: ["machine/internal/resolve-icon.ts"],
-    kind: "debt",
-    task: "task-1793991088-yd3u37",
-    reason:
-      "Calls a *Sync helper (or a sync child process) that has no async twin yet; blocks the backend's thread for as long as the disk or the child takes.",
-  },
 ] satisfies Exemptions;

@@ -55,7 +55,7 @@ let files: CommittedFiles | undefined;
 export const bundledConfigLayer: ConfigGitLayerImpl = {
   document(storePath) {
     files ??= committedFilesFromMap(bundledConfigFiles());
-    return committedDocument(storePath, files);
+    return Promise.resolve(committedDocument(storePath, files));
   },
   // Inlined at build time: a bundle's committed layer cannot change under it.
   watch: () => Promise.resolve(() => {}),

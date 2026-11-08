@@ -6,6 +6,7 @@ export {
   webDistDir,
   HOME_DIR,
   backupsDirSync,
+  backupsDir,
   dataRootLayoutSync,
   worktreesDir,
   worktreeDataDir,
@@ -77,6 +78,7 @@ export {
 export {
   pruneWorktreeBuildArtifactsSync,
   pruneWorktreeCheckArtifactsSync,
+  pruneWorktreeRunArtifacts,
   pruneWorktreeRunArtifactsSync,
   BUILD_ARTIFACTS_RETENTION,
   CHECK_ARTIFACTS_RETENTION,

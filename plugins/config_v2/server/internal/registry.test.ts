@@ -82,15 +82,16 @@ const committedScopes = new Set<string>();
 const providers = [
   ConfigStore.provide(store),
   ConfigGitLayer.provide({
-    document: (storePath) => ({
-      base: {},
-      scopes: Object.fromEntries(
-        [...committedScopes]
-          .map((pair) => pair.split("|"))
-          .filter(([sp]) => sp === storePath)
-          .map(([, appId]) => [appId!, {}]),
-      ),
-    }),
+    document: (storePath) =>
+      Promise.resolve({
+        base: {},
+        scopes: Object.fromEntries(
+          [...committedScopes]
+            .map((pair) => pair.split("|"))
+            .filter(([sp]) => sp === storePath)
+            .map(([, appId]) => [appId!, {}]),
+        ),
+      }),
     watch: () => Promise.resolve(() => {}),
   }),
 ];

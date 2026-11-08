@@ -3,7 +3,7 @@ import { emitLogs } from "../../core";
 import { emitClientLogs } from "./client-ingress";
 import { LogPersistence } from "./persistence";
 
-export const handleEmit = implement(emitLogs, ({ body }) => {
+export const handleEmit = implement(emitLogs, async ({ body }) => {
   // Backpressure. This is the ONE observability channel whose volume driver is
   // EXTERNAL — a browser that keeps POSTing regardless of host state — so while
   // the box is in trouble the cheapest thing to do is not do the work at all.
@@ -22,6 +22,6 @@ export const handleEmit = implement(emitLogs, ({ body }) => {
   // web/client-log.ts).
   if (LogPersistence.get().clientIngressPaused())
     return { status: "paused", reason: "duress" };
-  emitClientLogs(body);
+  await emitClientLogs(body);
   return { status: "accepted" };
 });

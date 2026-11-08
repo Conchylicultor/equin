@@ -38,7 +38,7 @@ the cross-process record.
 - Exemptions:
   - Exempts itself from:
     - `boundaries/no-platform-api` — `server/internal/record-fs-waits.ts` (debt)
-    - `blocking-fs/no-sync-fs` — `server/internal/record-fs-waits.ts` (debt)
+    - `blocking-fs/no-sync-fs` — `server/internal/record-fs-waits.ts` (sanctioned)
 - Core:
   - Exports (types): `FsWaitLine`
   - Exports (values):

@@ -50,8 +50,8 @@ describe("read / write exclusion", () => {
     });
     await Bun.sleep(300);
     order.push("readers-release");
-    a.releaseSync();
-    b.releaseSync();
+    a.releaseNow();
+    b.releaseNow();
     await writing;
     expect(order).toEqual(["readers-release", "write"]);
   });

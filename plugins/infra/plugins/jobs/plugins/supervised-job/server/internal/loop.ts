@@ -1,5 +1,5 @@
 import type { JobCtx } from "@plugins/infra/plugins/jobs/server";
-import { observeRunSync, type RunTerminal } from "../../core";
+import { observeRun, type RunTerminal } from "../../core";
 import { assertRegistered, type SupervisedRunKind } from "./run/registry";
 import { runEnded, type RunEndedPayload } from "./tables-run-ended";
 
@@ -82,7 +82,7 @@ export async function awaitSupervisedRun(
   // the call site, exactly as `startSupervisedRun` is.
   assertRegistered(opts.kind);
   for (let iteration = 0; ; iteration++) {
-    const observation = observeRunSync(
+    const observation = await observeRun(
       opts.kind.id,
       opts.runId,
       opts.pid,

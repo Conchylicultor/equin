@@ -102,7 +102,11 @@ export interface ConfigStoreImpl {
  * propagate the committed layer into itself.
  */
 export interface ConfigGitLayerImpl {
-  document(storePath: string): GitLayerDocument | undefined;
+  /**
+   * Async because the desktop's answer is the disk (the checkout's `config/`),
+   * read off the backend's thread; a bundled layer answers at once.
+   */
+  document(storePath: string): Promise<GitLayerDocument | undefined>;
   /**
    * Call `onChange` whenever `storePath`'s committed files may have changed,
    * until the returned stop is called. The checkout's `config/` is edited in

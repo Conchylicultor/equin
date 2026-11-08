@@ -1,7 +1,9 @@
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import {
-  statSync,
+  readFile,
   readFileSync,
+  stat,
+  statSync,
 } from "@plugins/packages/plugins/timed-fs/core";
 import { renameSync, writeFileSync } from "node:fs";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/core";
@@ -183,7 +185,7 @@ function signalProbe(target: number): boolean {
  * alive for the moment before it reaps.
  *
  * `null` means one of two things, and they are deliberately not distinguished
- * here — {@link observeRunSync} composes this with {@link isRunAlive}, and the pair
+ * here — {@link observeRun} composes this with {@link isRunAlive}, and the pair
  * says which:
  *
  * - the run is still going (no marker yet, group alive), or
@@ -198,15 +200,42 @@ function signalProbe(target: number): boolean {
  * have written, and answering `null` would file that under "hard-killed" and
  * hide a real defect behind a plausible-looking `-1`. Any other read error is a
  * genuine fault and rethrows.
+ *
+ * The backend's form (`node:fs/promises` through timed-fs): the reconciler, the
+ * job workflow and every live read of a run's files await it, so a slow disk
+ * never holds a backend's thread. {@link readRunTerminalSync} is the same read
+ * for a CLI or check process that has no event loop to keep free.
+ */
+export async function readRunTerminal(
+  kindId: string,
+  runId: string,
+  namespace: Namespace = runtimeNamespace(),
+): Promise<RunTerminal | null> {
+  const path = markerPath(kindId, runId, namespace);
+  let raw: string;
+  let mtime: Date;
+  try {
+    // stat BEFORE read — see `readRunTerminalSync` for why the order holds.
+    mtime = (await stat(path)).mtime;
+    raw = await readFile(path, "utf-8");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+    return null;
+  }
+  return parseMarker(path, raw, mtime);
+}
+
+/**
+ * {@link readRunTerminal}, blocking — for a process with no event loop to keep
+ * free (the CLI's `runAttached`, the build ledger's claim-time settle, tests).
+ * Never on a backend (`blocking-fs/no-sync-fs`).
  */
 export function readRunTerminalSync(
   kindId: string,
   runId: string,
   namespace: Namespace = runtimeNamespace(),
 ): RunTerminal | null {
-  assertRunKindId(kindId);
-  assertRunId(kindId, runId);
-  const path = worktreeArtifacts.runTerminal(namespace, kindId, runId);
+  const path = markerPath(kindId, runId, namespace);
   let raw: string;
   let mtime: Date;
   try {
@@ -220,6 +249,22 @@ export function readRunTerminalSync(
     if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
     return null;
   }
+  return parseMarker(path, raw, mtime);
+}
+
+/** The marker's path, after validating both ids (no traversal through either). */
+function markerPath(
+  kindId: string,
+  runId: string,
+  namespace: Namespace,
+): AppPath {
+  assertRunKindId(kindId);
+  assertRunId(kindId, runId);
+  return worktreeArtifacts.runTerminal(namespace, kindId, runId);
+}
+
+/** One marker's bytes and mtime as its record; a malformed body throws. */
+function parseMarker(path: string, raw: string, mtime: Date): RunTerminal {
   const match = MARKER_BODY.exec(raw.trim());
   if (match === null) throw new RunMarkerError(path, raw);
   const [, code, signal] = match;
@@ -307,15 +352,24 @@ export type RunObservation =
  * `now` is the instant stamped on that last arm only; a marker always carries
  * its own mtime.
  */
-export function observeRunSync(
+export async function observeRun(
   kindId: string,
   runId: string,
   pid: number | null,
   now: Date,
-): RunObservation {
-  const terminal = readRunTerminalSync(kindId, runId);
+): Promise<RunObservation> {
+  // The process table FIRST, then the marker — the order is what makes the
+  // hard-kill arm sound. The shim writes the marker BEFORE its group empties,
+  // so a group seen empty and THEN no marker means no marker will ever come.
+  // Read the other way round, a run ending inside the read's await (marker
+  // landing, then the group exiting) would be recorded as a `-1` hard kill
+  // with its real status on disk. This way a run that ends between the two
+  // looks reads as "running" (the group was alive) and the next wake — the
+  // marker's own watch event — settles it with its real terminal.
+  const alive = isRunAlive(pid);
+  const terminal = await readRunTerminal(kindId, runId);
   if (terminal !== null) return { state: "ended", terminal };
-  if (isRunAlive(pid)) return { state: "running" };
+  if (alive) return { state: "running" };
   return {
     state: "ended",
     terminal: {

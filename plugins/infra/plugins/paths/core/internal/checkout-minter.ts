@@ -1,5 +1,9 @@
 import { mkdirSync, writeFileSync } from "node:fs";
-import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
+import { mkdir, writeFile } from "node:fs/promises";
+import {
+  readFile,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { dirname } from "node:path";
 import {
   asNamespace,
@@ -31,6 +35,16 @@ export function stampCheckoutMinterSync(
   writeFileSync(path, `${JSON.stringify({ minter })}\n`);
 }
 
+/** {@link stampCheckoutMinterSync} without blocking the event loop. */
+export async function stampCheckoutMinter(
+  checkout: Namespace,
+  minter: Namespace,
+): Promise<void> {
+  const path = worktreeArtifacts.checkoutMinter(checkout);
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(path, `${JSON.stringify({ minter })}\n`);
+}
+
 export type CheckoutMinterRead =
   | { kind: "absent" }
   | { kind: "malformed"; reason: string }
@@ -49,10 +63,32 @@ export function readCheckoutMinterSync(
   try {
     text = readFileSync(path, "utf8");
   } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
-    if (code === "ENOENT" || code === "ENOTDIR") return { kind: "absent" };
-    return { kind: "malformed", reason: `unreadable (${String(code ?? err)})` };
+    return minterReadFailure(err);
   }
+  return parseCheckoutMinter(text);
+}
+
+/** {@link readCheckoutMinterSync} without blocking the event loop. */
+export async function readCheckoutMinter(
+  checkout: Namespace,
+): Promise<CheckoutMinterRead> {
+  const path = worktreeArtifacts.checkoutMinter(checkout);
+  let text: string;
+  try {
+    text = await readFile(path, "utf8");
+  } catch (err) {
+    return minterReadFailure(err);
+  }
+  return parseCheckoutMinter(text);
+}
+
+function minterReadFailure(err: unknown): CheckoutMinterRead {
+  const code = (err as NodeJS.ErrnoException).code;
+  if (code === "ENOENT" || code === "ENOTDIR") return { kind: "absent" };
+  return { kind: "malformed", reason: `unreadable (${String(code ?? err)})` };
+}
+
+function parseCheckoutMinter(text: string): CheckoutMinterRead {
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);

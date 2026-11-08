@@ -25,11 +25,11 @@ import {
   listWorktreeOps,
   type WorktreeOpInfo,
 } from "@plugins/infra/plugins/worktree/server";
+import { OP_LOG_FILE } from "@plugins/debug/plugins/profiling/plugins/op-log/server";
 import {
-  OP_LOG_FILE,
   readOpRecords,
   readOpenWaitInLine,
-} from "@plugins/debug/plugins/profiling/plugins/op-log/server";
+} from "@plugins/debug/plugins/profiling/plugins/op-log/cli";
 import { watchForCommand } from "@plugins/infra/plugins/file-watcher/cli";
 import {
   checkoutNamespace,

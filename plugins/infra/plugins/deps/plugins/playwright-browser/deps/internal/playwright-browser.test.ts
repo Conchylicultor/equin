@@ -137,13 +137,13 @@ describe("playwrightBrowser", () => {
   test("an install missing either executable is not intact, so reads absent", async () => {
     const ready = await ensureDep(chromium, exec, { store, root });
     rmSync(join(ready.dir, "chromium-headless-shell"));
-    expect(chromium.source.isIntact?.(ready.dir)).toBe(false);
+    expect(await chromium.source.isIntact?.(ready.dir)).toBe(false);
     expect((await readyNow(chromium, { store, root })).kind).toBe("absent");
 
     // Reinstalled, and the headed one going missing counts the same.
     const again = await ensureDep(chromium, exec, { store, root });
     rmSync(join(again.dir, "chromium"));
-    expect(chromium.source.isIntact?.(again.dir)).toBe(false);
+    expect(await chromium.source.isIntact?.(again.dir)).toBe(false);
   });
 
   test("launchChromium takes a Ready, never a bare dependency", () => {

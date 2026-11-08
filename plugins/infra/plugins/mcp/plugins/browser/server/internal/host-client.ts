@@ -23,7 +23,7 @@ import {
   type AgentBrowserStatus,
 } from "../../core";
 import { agentBrowserDir } from "../../data-dirs";
-import { hostCodeIdSync } from "../../shared/code-id";
+import { hostCodeId } from "../../shared/code-id";
 import {
   HOST_FILES,
   HOST_ORIGIN,
@@ -77,10 +77,19 @@ export const agentBrowserStatusWatcher = defineFileWatcher({
   extensions: [".json"],
 });
 
-let codeIdMemo: string | null = null;
-/** Which host code this checkout would run. */
-function ownCodeId(): string {
-  return (codeIdMemo ??= hostCodeIdSync(PLUGIN_DIR));
+let codeIdMemo: Promise<string> | null = null;
+/**
+ * Which host code this checkout would run: hashed once per process, on the
+ * first host lookup (the checkout's source does not change under a running
+ * backend — a rebuild restarts it).
+ */
+function ownCodeId(): Promise<string> {
+  // A failed hash (a file vanishing mid-read) is not kept: the next lookup
+  // hashes again rather than failing until the backend restarts.
+  return (codeIdMemo ??= hostCodeId(PLUGIN_DIR).catch((err: unknown) => {
+    codeIdMemo = null;
+    throw err;
+  }));
 }
 
 function alive(pid: number): boolean {
@@ -241,7 +250,10 @@ async function ensureOnce(): Promise<void> {
   const status = await readAgentBrowserStatus();
   if (status.kind === "running") {
     const { host } = status;
-    if (host.protocol === HOST_PROTOCOL && host.codeId === ownCodeId()) {
+    if (
+      host.protocol === HOST_PROTOCOL &&
+      host.codeId === (await ownCodeId())
+    ) {
       followHost();
       return;
     }
@@ -322,7 +334,7 @@ async function launchHost(): Promise<void> {
     env: process.env,
     pidFile: agentBrowserDir.file(HOST_FILES.pid),
   });
-  const codeId = ownCodeId();
+  const codeId = await ownCodeId();
   await waitForStatus(
     // Our host, or one a concurrent launcher (another backend) won the lock with.
     (s) =>

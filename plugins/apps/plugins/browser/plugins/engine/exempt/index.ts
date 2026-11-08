@@ -22,12 +22,4 @@ export default [
     reason:
       "Injected into the engine's remote pages, not the app: it can import no app module, so it cannot reach focusElement. Its one focus (a <select> the press opened) passes preventScroll itself.",
   },
-  {
-    rule: "blocking-fs/no-sync-fs",
-    paths: ["machine/internal/host-client.ts"],
-    kind: "debt",
-    task: "task-1793991088-yd3u37",
-    reason:
-      "Calls a *Sync helper (or a sync child process) that has no async twin yet; blocks the backend's thread for as long as the disk or the child takes.",
-  },
 ] satisfies Exemptions;

@@ -190,6 +190,8 @@ queues behind the mutex it was holding.
 - Description: `./equin push` — the one path work reaches main: commit, rebase onto main, re-normalize generated artifacts, run the tree-scoped checks, fast-forward and push, all under the host-wide push mutex.
 - Cli:
   - Uses:
+    - `debug/profiling/op-log.createOpProfiler`
+    - `debug/profiling/op-log.OpProfiler`
     - `framework/cli/git-artifacts.normalizeGeneratedArtifacts`
     - `framework/cli/op-runtime.checkBroadcasts`
     - `framework/cli/op-runtime.installFatalSignalExit`

@@ -3,10 +3,7 @@ import {
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { createHash } from "node:crypto";
-import {
-  readdirSync,
-  readFileSync,
-} from "@plugins/packages/plugins/timed-fs/core";
+import { readdir, readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { relative } from "node:path";
 
 /** The folders whose source the host process runs (the rest is the backend's). */
@@ -22,18 +19,18 @@ const HOST_SOURCE_DIRS = ["bin", "shared", "core"] as const;
  * Imports into other plugins are not hashed; a change there that alters the
  * wire bumps `HOST_PROTOCOL` instead.
  */
-export function hostCodeIdSync(pluginDir: AppPath): string {
+export async function hostCodeId(pluginDir: AppPath): Promise<string> {
   const hash = createHash("sha256");
   for (const dir of HOST_SOURCE_DIRS) {
     const root = joinAppPath(pluginDir, dir);
-    const files = readdirSync(root, { recursive: true, encoding: "utf8" })
+    const files = (await readdir(root, { recursive: true, encoding: "utf8" }))
       .filter((name) => /\.tsx?$/.test(name))
       .map((name) => joinAppPath(root, name))
       .sort();
     for (const file of files) {
       hash.update(relative(pluginDir, file));
       hash.update("\0");
-      hash.update(readFileSync(file));
+      hash.update(await readFile(file));
       hash.update("\0");
     }
   }

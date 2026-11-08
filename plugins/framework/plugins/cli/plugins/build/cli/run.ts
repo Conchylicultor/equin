@@ -107,7 +107,7 @@ import {
   formatSignalOrigin,
   type SignalOrigin,
 } from "@plugins/packages/plugins/signal-origin/core";
-import { createOpProfiler } from "@plugins/debug/plugins/profiling/plugins/op-log/server";
+import { createOpProfiler } from "@plugins/debug/plugins/profiling/plugins/op-log/cli";
 import {
   markWorktreeOpStart,
   writeWorktreeSpec,

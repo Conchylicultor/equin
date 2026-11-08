@@ -3,7 +3,13 @@ import {
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { unlinkSync } from "node:fs";
-import { readdirSync, statSync } from "@plugins/packages/plugins/timed-fs/core";
+import { unlink } from "node:fs/promises";
+import {
+  readdir,
+  readdirSync,
+  stat,
+  statSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import {
   RUN_TERMINAL_SUFFIX,
@@ -193,6 +199,46 @@ function unlinkQuietSync(dir: AppPath, entry: string): void {
   }
 }
 
+/** {@link unlinkQuietSync}, awaited — for a backend's prune. */
+async function unlinkQuiet(dir: AppPath, entry: string): Promise<void> {
+  try {
+    await unlink(joinAppPath(dir, entry));
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+  }
+}
+
+/** One run id's files and the newest mtime among them. */
+interface ArtifactGroup {
+  files: string[];
+  mtimeMs: number;
+}
+
+/** Add one id-keyed file to its run's group. */
+function addToGroup(
+  groups: Map<string, ArtifactGroup>,
+  id: string,
+  entry: string,
+  mtimeMs: number,
+): void {
+  const group = groups.get(id) ?? { files: [], mtimeMs: 0 };
+  group.files.push(entry);
+  group.mtimeMs = Math.max(group.mtimeMs, mtimeMs);
+  groups.set(id, group);
+}
+
+/** Every file of the groups past the newest `keep` — what a prune deletes. */
+function staleFiles(
+  groups: ReadonlyMap<string, ArtifactGroup>,
+  keep: number,
+): string[] {
+  if (groups.size <= keep) return [];
+  return [...groups.values()]
+    .sort((a, b) => b.mtimeMs - a.mtimeMs)
+    .slice(keep)
+    .flatMap((group) => group.files);
+}
+
 /**
  * Cap one artifact family in a directory to the newest `keep` run ids, deleting the
  * older sets, and sweep any crashed-write `.tmp.<pid>` leftovers for that family.
@@ -221,7 +267,7 @@ function pruneArtifactsInDirSync(
 
   // Group id-keyed files by run id; a group's recency is the newest mtime among
   // its files (a build's profile/logs/log can be written microseconds apart).
-  const groups = new Map<string, { files: string[]; mtimeMs: number }>();
+  const groups = new Map<string, ArtifactGroup>();
   for (const entry of entries) {
     if (isCrashedWriteTemp(entry, family.tmpPrefixes)) {
       unlinkQuietSync(dir, entry);
@@ -236,19 +282,49 @@ function pruneArtifactsInDirSync(
       if ((err as NodeJS.ErrnoException).code === "ENOENT") continue;
       throw err;
     }
-    const group = groups.get(id) ?? { files: [], mtimeMs: 0 };
-    group.files.push(entry);
-    group.mtimeMs = Math.max(group.mtimeMs, mtimeMs);
-    groups.set(id, group);
+    addToGroup(groups, id, entry, mtimeMs);
   }
 
-  if (groups.size <= keep) return;
-  const stale = [...groups.values()]
-    .sort((a, b) => b.mtimeMs - a.mtimeMs)
-    .slice(keep);
-  for (const group of stale) {
-    for (const entry of group.files) unlinkQuietSync(dir, entry);
+  for (const entry of staleFiles(groups, keep)) unlinkQuietSync(dir, entry);
+}
+
+/**
+ * {@link pruneArtifactsInDirSync}, awaited — the same listing, grouping and
+ * window, through `node:fs/promises`, for a prune a backend runs (a
+ * supervised run's start). The races it tolerates are the sync one's.
+ */
+async function pruneArtifactsInDir(
+  dir: AppPath,
+  family: ArtifactFamily,
+  keep: number,
+): Promise<void> {
+  let entries: string[];
+  try {
+    entries = await readdir(dir);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return;
+    throw err;
   }
+
+  const groups = new Map<string, ArtifactGroup>();
+  for (const entry of entries) {
+    if (isCrashedWriteTemp(entry, family.tmpPrefixes)) {
+      await unlinkQuiet(dir, entry);
+      continue;
+    }
+    const id = runIdOf(entry, family.patterns);
+    if (!id) continue;
+    let mtimeMs: number;
+    try {
+      mtimeMs = (await stat(joinAppPath(dir, entry))).mtimeMs;
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === "ENOENT") continue;
+      throw err;
+    }
+    addToGroup(groups, id, entry, mtimeMs);
+  }
+
+  for (const entry of staleFiles(groups, keep)) await unlinkQuiet(dir, entry);
 }
 
 /** Directory-scoped build prune, split out so it is testable against a throwaway dir. */
@@ -298,6 +374,28 @@ export function pruneWorktreeRunArtifactsSync(
   keep: number = RUN_ARTIFACTS_RETENTION,
 ): void {
   pruneRunArtifactsInDirSync(worktreeArtifacts.runsDir(name), kindId, keep);
+}
+
+/** Directory-scoped supervised-run prune, awaited — {@link pruneRunArtifactsInDirSync} for a backend. */
+export async function pruneRunArtifactsInDir(
+  dir: AppPath,
+  kindId: string,
+  keep: number,
+): Promise<void> {
+  await pruneArtifactsInDir(dir, runFamily(kindId), keep);
+}
+
+/**
+ * {@link pruneWorktreeRunArtifactsSync}, awaited — what `startSupervisedRun`
+ * calls on a backend, so trimming `runs/` never holds its thread. The sync
+ * form stays for the CLI's `runAttached`.
+ */
+export async function pruneWorktreeRunArtifacts(
+  name: Namespace,
+  kindId: string,
+  keep: number = RUN_ARTIFACTS_RETENTION,
+): Promise<void> {
+  await pruneRunArtifactsInDir(worktreeArtifacts.runsDir(name), kindId, keep);
 }
 
 /** Cap the per-build artifacts in one worktree's data dir to the newest `keep` build ids. */

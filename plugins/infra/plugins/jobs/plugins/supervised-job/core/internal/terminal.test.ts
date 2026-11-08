@@ -5,7 +5,7 @@
  * through the module-level `db` singleton, so — exactly like the
  * `run-build.test.ts` suite this mirrors, and the page/editor `parent-liveness`
  * one before it — it cannot be pointed at a fixture DB. But its per-row close
- * DECISION is `observeRunSync`, which is fully determined by two pure, db-free
+ * DECISION is `observeRun`, which is fully determined by two pure, db-free
  * functions:
  *
  *   close?  =  !(readRunTerminal(kind, id) == null && isRunAlive(pid))
@@ -14,7 +14,7 @@
  * So covering `readRunTerminalSync` (against real marker files at the real resolved
  * path) and `isRunAlive` (against real processes and real process groups)
  * exercises the whole rule, and the composition block at the bottom drives the
- * real `observeRunSync` so the three scenarios are asserted end-to-end without a
+ * real `observeRun` so the three scenarios are asserted end-to-end without a
  * fixture DB (`observe.test.ts` covers it against live children too):
  *
  *   - marker present, pid alive ⇒ terminal != null ⇒ CLOSE at the recorded code
@@ -36,7 +36,8 @@ import {
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/core";
 import {
   isRunAlive,
-  observeRunSync,
+  observeRun,
+  readRunTerminal,
   readRunTerminalSync,
   RunMarkerError,
 } from "./terminal";
@@ -174,6 +175,37 @@ describe("readRunTerminal", () => {
   });
 });
 
+describe("readRunTerminal (the backend's awaited read)", () => {
+  test("reads the same record as the sync form, mtime included", async () => {
+    const runId = uniqueRunId("asyncread");
+    const mtime = new Date("2026-01-02T03:04:05.000Z");
+    writeMarker(runId, "143 TERM\n", mtime);
+    const terminal = await readRunTerminal(KIND, runId);
+    expect(terminal).toEqual({
+      exitCode: 143,
+      signalCode: "TERM",
+      finishedAt: mtime,
+    });
+    expect(terminal).toEqual(readRunTerminalSync(KIND, runId));
+  });
+
+  test("no marker (ENOENT) ⇒ null", async () => {
+    expect(await readRunTerminal(KIND, uniqueRunId("asyncabsent"))).toBeNull();
+  });
+
+  test("a malformed marker rejects with RunMarkerError", () => {
+    const runId = uniqueRunId("asyncbad");
+    writeMarker(runId, "garbage\n");
+    expect(readRunTerminal(KIND, runId)).rejects.toThrow(RunMarkerError);
+  });
+
+  test("an invalid run id rejects rather than resolving a path", () => {
+    expect(readRunTerminal(KIND, "../../etc/passwd")).rejects.toThrow(
+      /invalid run id/,
+    );
+  });
+});
+
 /**
  * A detached `sh` whose own child outlives it — the shape of a supervised run
  * (shim + worker in one fresh process group, pgid == the shim's pid).
@@ -277,27 +309,29 @@ describe("close condition (composition)", () => {
   // The real per-row rule `settleRun` and `awaitSupervisedRun` both call.
   const now = new Date();
 
-  test("marker present but pid still alive ⇒ closes from the marker", () => {
+  test("marker present but pid still alive ⇒ closes from the marker", async () => {
     // The shim writes the marker BEFORE it exits, so this shape is the normal
     // one for the few milliseconds before the pid reaps — not an anomaly.
     const runId = uniqueRunId("closealive");
     writeMarker(runId, "0 -\n");
-    expect(observeRunSync(KIND, runId, process.pid, now)).toMatchObject({
+    expect(await observeRun(KIND, runId, process.pid, now)).toMatchObject({
       state: "ended",
       terminal: { exitCode: 0 },
     });
   });
 
-  test("no marker + pid dead ⇒ closes with the -1/now sentinel", () => {
-    expect(observeRunSync(KIND, uniqueRunId("closedead"), null, now)).toEqual({
-      state: "ended",
-      terminal: { exitCode: -1, signalCode: null, finishedAt: now },
-    });
+  test("no marker + pid dead ⇒ closes with the -1/now sentinel", async () => {
+    expect(await observeRun(KIND, uniqueRunId("closedead"), null, now)).toEqual(
+      {
+        state: "ended",
+        terminal: { exitCode: -1, signalCode: null, finishedAt: now },
+      },
+    );
   });
 
-  test("running run (no marker, pid alive) ⇒ left open", () => {
+  test("running run (no marker, pid alive) ⇒ left open", async () => {
     expect(
-      observeRunSync(KIND, uniqueRunId("running"), process.pid, now),
+      await observeRun(KIND, uniqueRunId("running"), process.pid, now),
     ).toEqual({
       state: "running",
     });

@@ -5,7 +5,7 @@ import type {
 
 // A durable channel's lines go nowhere past the channel's own ring buffer,
 // which the live tail already reads: this host has no disk to keep them on.
-const ringOnly: LogSink = { appendAll() {} };
+const ringOnly: LogSink = { appendAll: () => Promise.resolve() };
 
 export const memoryPersistence: LogPersistenceImpl = {
   sinkFor: () => ringOnly,

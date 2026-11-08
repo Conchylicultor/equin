@@ -12,7 +12,7 @@ import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { afterEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/core";
-import { HARD_KILL_EXIT_CODE, observeRunSync } from "./terminal";
+import { HARD_KILL_EXIT_CODE, observeRun } from "./terminal";
 
 const worktree = runtimeNamespace();
 /** Lowercase alphanumeric with no separator, per `assertRunKindId`. */
@@ -89,7 +89,7 @@ describe("observeRun", () => {
     const proc = spawnLiveChild();
     writeMarker(runId, "0 -\n");
 
-    const observation = observeRunSync(KIND_ID, runId, proc.pid, new Date());
+    const observation = await observeRun(KIND_ID, runId, proc.pid, new Date());
 
     expect(observation.state).toBe("ended");
     if (observation.state !== "ended") return;
@@ -97,11 +97,11 @@ describe("observeRun", () => {
     expect(observation.terminal.signalCode).toBeNull();
   });
 
-  test("a killed run reports the signal it OBSERVED, not one derived from 143", () => {
+  test("a killed run reports the signal it OBSERVED, not one derived from 143", async () => {
     const runId = uniqueRunId("killed");
     writeMarker(runId, "143 TERM\n");
 
-    const observation = observeRunSync(KIND_ID, runId, null, new Date());
+    const observation = await observeRun(KIND_ID, runId, null, new Date());
 
     expect(observation).toEqual({
       state: "ended",
@@ -109,11 +109,11 @@ describe("observeRun", () => {
     });
   });
 
-  test("a deliberate exit(143) is NOT reported as a kill", () => {
+  test("a deliberate exit(143) is NOT reported as a kill", async () => {
     const runId = uniqueRunId("exit143");
     writeMarker(runId, "143 -\n");
 
-    const observation = observeRunSync(KIND_ID, runId, null, new Date());
+    const observation = await observeRun(KIND_ID, runId, null, new Date());
 
     expect(observation).toEqual({
       state: "ended",
@@ -121,11 +121,11 @@ describe("observeRun", () => {
     });
   });
 
-  test("no marker and a live pid is the only running shape", () => {
+  test("no marker and a live pid is the only running shape", async () => {
     const runId = uniqueRunId("running");
     const proc = spawnLiveChild();
 
-    expect(observeRunSync(KIND_ID, runId, proc.pid, new Date())).toEqual({
+    expect(await observeRun(KIND_ID, runId, proc.pid, new Date())).toEqual({
       state: "running",
     });
   });
@@ -136,7 +136,7 @@ describe("observeRun", () => {
     proc.kill("SIGKILL");
     await proc.exited;
 
-    const observation = observeRunSync(KIND_ID, runId, proc.pid, new Date());
+    const observation = await observeRun(KIND_ID, runId, proc.pid, new Date());
 
     expect(observation.state).toBe("ended");
     if (observation.state !== "ended") return;
@@ -159,13 +159,18 @@ describe("observeRun", () => {
       await shim.exited;
 
       // No marker, shim reaped, worker alive in the group ⇒ still running.
-      expect(observeRunSync(KIND_ID, runId, shim.pid, new Date())).toEqual({
+      expect(await observeRun(KIND_ID, runId, shim.pid, new Date())).toEqual({
         state: "running",
       });
 
       // The worker finishes on its own; nobody is left to write a marker.
       await waitFor(() => groupGone(shim.pid));
-      const observation = observeRunSync(KIND_ID, runId, shim.pid, new Date());
+      const observation = await observeRun(
+        KIND_ID,
+        runId,
+        shim.pid,
+        new Date(),
+      );
       expect(observation.state).toBe("ended");
       if (observation.state !== "ended") return;
       expect(observation.terminal.exitCode).toBe(HARD_KILL_EXIT_CODE);

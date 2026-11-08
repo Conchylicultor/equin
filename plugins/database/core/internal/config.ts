@@ -1,4 +1,7 @@
-import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
+import {
+  readFile,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 
 import { dbConfigDir } from "../../data-dirs";
 
@@ -61,15 +64,66 @@ let cached: DatabaseConfig | null = null;
  */
 export function readDatabaseConfigSync(): DatabaseConfig {
   if (cached) return cached;
+  let raw: string | null;
   try {
-    const raw = readFileSync(CONFIG_PATH, "utf-8");
-    cached = JSON.parse(raw) as DatabaseConfig;
-    return cached;
+    raw = readFileSync(CONFIG_PATH, "utf-8");
   } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
-    if (code !== "ENOENT" && !(err instanceof SyntaxError)) throw err;
-    cached = systemPgDefaults();
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+    raw = null;
+  }
+  cached = parseDatabaseConfig(raw);
+  return cached;
+}
+
+let loading: Promise<DatabaseConfig> | null = null;
+
+/**
+ * `readDatabaseConfigSync`'s async twin, for a backend: the same file, the
+ * same tolerant semantics and the same process-wide memo, read without
+ * holding the JS thread. A backend loads it once at boot (the database
+ * driver's `ready()`), then reads it from memory (`loadedDatabaseConfig`).
+ */
+export function loadDatabaseConfig(): Promise<DatabaseConfig> {
+  if (cached) return Promise.resolve(cached);
+  loading ??= (async () => {
+    let raw: string | null;
+    try {
+      raw = await readFile(CONFIG_PATH, "utf-8");
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+      raw = null;
+    }
+    cached ??= parseDatabaseConfig(raw);
     return cached;
+  })().catch((err: unknown) => {
+    // Not kept: a failed read is retried by the next caller, never cached.
+    loading = null;
+    throw err;
+  });
+  return loading;
+}
+
+/**
+ * The config this process already read (`loadDatabaseConfig` or
+ * `readDatabaseConfigSync`), from memory. Throws when neither ran: a backend
+ * reads it only after its boot loaded it, so asking before is a boot-order bug.
+ */
+export function loadedDatabaseConfig(): DatabaseConfig {
+  if (cached) return cached;
+  throw new Error(
+    `[database] the database config (${CONFIG_PATH}) was asked for before this process loaded it: ` +
+      "await loadDatabaseConfig() first (the database driver does in ready()).",
+  );
+}
+
+/** The file's text (null: there is none) as a config — the one tolerance rule. */
+function parseDatabaseConfig(raw: string | null): DatabaseConfig {
+  if (raw === null) return systemPgDefaults();
+  try {
+    return JSON.parse(raw) as DatabaseConfig;
+  } catch (err) {
+    if (!(err instanceof SyntaxError)) throw err;
+    return systemPgDefaults();
   }
 }
 

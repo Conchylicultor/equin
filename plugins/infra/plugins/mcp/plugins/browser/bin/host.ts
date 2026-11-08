@@ -25,7 +25,7 @@ import { resolve } from "node:path";
 import { flockTry } from "@plugins/packages/plugins/flock/core";
 import type { AgentBrowserHostStatus } from "../core";
 import { agentBrowserDir } from "../data-dirs";
-import { hostCodeIdSync } from "../shared/code-id";
+import { hostCodeId } from "../shared/code-id";
 import {
   HOST_FILES,
   HOST_PROTOCOL,
@@ -46,7 +46,7 @@ import { runTool } from "./host-tools";
 
 const dir = agentBrowserDir.ensure();
 const file = (name: string) => agentBrowserDir.file(name);
-const codeId = hostCodeIdSync(asAppPath(resolve(import.meta.dir, "..")));
+const codeId = await hostCodeId(asAppPath(resolve(import.meta.dir, "..")));
 const startedAt = new Date().toISOString();
 
 // The singleton: whoever holds the lock is THE host. The kernel drops it when

@@ -1502,7 +1502,7 @@ async function wrapTauri(opts: {
   // to tauri.conf.json). Always regenerate so a clean checkout (icons/ gitignored
   // + absent) builds end-to-end, and the macOS dmg step's icon.icns is populated.
   const iconKey = await resolveCompositionIconKey({ root, composition });
-  const svg = appIconToSvg(symbolBody(iconKey));
+  const svg = appIconToSvg(await symbolBody(iconKey));
   const pngPath = join(tmpdir(), `${composition}-appicon-512.png`);
   writeFileSync(pngPath, renderPng(svg, 512));
   console.log("\n[tauri] Generating icon set from app icon...");

@@ -1,18 +1,12 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 
-export { OP_LOG_FILE, appendOpLog } from "./internal/jsonl";
-export { createOpProfiler } from "./internal/profiler";
-export type { OpProfiler, OpProfilerOptions } from "./internal/profiler";
-export {
-  readOpenWait,
-  readOpenWaitInLine,
-  readOpRecords,
-  readOpStates,
-} from "./internal/read";
+export { OP_LOG_FILE, appendOpLog, opLogSink } from "./internal/jsonl";
 export { readSleepNow } from "./internal/sleep-now";
 // The pure types + fold live in `../core` (both runtimes share them); consumers
-// import them from there. Only the fs/process-touching writer and reader live
-// here; the orphan reconciler is the `op-store` child's (it reads the DB rows).
+// import them from there. Only the fs-touching sink and the backend's writer
+// live here; the CLI's writer (the op profiler) and its direct file reader are
+// the `cli` barrel's, and the orphan reconciler is the `op-store` child's (it
+// reads the DB rows).
 
 export default {
   description:

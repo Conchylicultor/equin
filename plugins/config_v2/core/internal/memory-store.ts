@@ -39,7 +39,9 @@ export interface MemoryConfigDoc {
  * once, and `edit` keeps no ledger.
  */
 export function createMemoryConfigStore(opts?: {
-  propagatedFrom?: (storePath: string) => GitLayerDocument | undefined;
+  propagatedFrom?: (
+    storePath: string,
+  ) => Promise<GitLayerDocument | undefined> | GitLayerDocument | undefined;
   persist?: () => HostStore<MemoryConfigDoc>;
 }): ConfigStoreImpl {
   let loaded: Map<string, MemoryConfigDoc> | null = null;
@@ -69,7 +71,8 @@ export function createMemoryConfigStore(opts?: {
       if (docsMap().delete(key)) persisted()?.delete(key);
     },
   };
-  const seeded = new Set<string>();
+  // storePath → its propagation, run once (concurrent first touches share it).
+  const seeded = new Map<string, Promise<void>>();
   const scopeOf = (ref: ConfigDocRef) => ref.scopeId ?? "";
   const keyOf = (ref: ConfigFileRef) =>
     `${ref.storePath}\0${scopeOf(ref)}\0${ref.file}`;
@@ -86,56 +89,65 @@ export function createMemoryConfigStore(opts?: {
       exists: () => docs.has(key),
     };
   };
-  const seed = (storePath: string) => {
-    if (opts?.propagatedFrom === undefined || seeded.has(storePath)) return;
-    seeded.add(storePath);
-    const doc = opts.propagatedFrom(storePath);
-    if (doc !== undefined) propagateGitLayerDocument(storePath, doc, rawProxy);
+  const seed = (storePath: string): Promise<void> => {
+    const propagatedFrom = opts?.propagatedFrom;
+    if (propagatedFrom === undefined) return Promise.resolve();
+    let seeding = seeded.get(storePath);
+    if (seeding === undefined) {
+      seeding = (async () => {
+        const doc = await propagatedFrom(storePath);
+        if (doc !== undefined)
+          propagateGitLayerDocument(storePath, doc, rawProxy);
+      })().catch((err: unknown) => {
+        // A failed propagation is not kept: the next touch of the path tries
+        // again rather than failing until the store is rebuilt.
+        seeded.delete(storePath);
+        throw err;
+      });
+      seeded.set(storePath, seeding);
+    }
+    return seeding;
   };
-  // Every method is async only because the interface is (a file store's are
-  // the disk): the layer itself is memory, answered at once.
+  // The layer itself is memory; a method waits only for its storePath's
+  // first propagation (the committed layer may be read off a disk).
   return {
-    read(ref) {
-      seed(ref.storePath);
-      return Promise.resolve(rawProxy(ref).read());
+    async read(ref) {
+      await seed(ref.storePath);
+      return rawProxy(ref).read();
     },
-    write(ref, content, hash) {
-      seed(ref.storePath);
+    async write(ref, content, hash) {
+      await seed(ref.storePath);
       rawProxy(ref).write(content, hash);
-      return Promise.resolve();
     },
-    remove(ref) {
-      seed(ref.storePath);
+    async remove(ref) {
+      await seed(ref.storePath);
       docs.delete(keyOf(ref));
-      return Promise.resolve();
     },
-    stamp(ref) {
-      seed(ref.storePath);
+    async stamp(ref) {
+      await seed(ref.storePath);
       const doc = docs.get(keyOf(ref));
-      return Promise.resolve(doc ? `w${doc.version}` : "-");
+      return doc ? `w${doc.version}` : "-";
     },
-    scopes(storePath) {
-      seed(storePath);
+    async scopes(storePath) {
+      await seed(storePath);
       const { hier } = storePathParts(storePath);
       const ids = new Set<string>();
       for (const key of docs.keys()) {
         const [path, scopeId] = key.split("\0");
         if (scopeId && storePathParts(path!).hier === hier) ids.add(scopeId);
       }
-      return Promise.resolve([...ids].sort());
+      return [...ids].sort();
     },
-    dropScope(storePath) {
-      seed(storePath);
+    async dropScope(storePath) {
+      await seed(storePath);
       // A scope here is its documents: once they are removed it is gone.
-      return Promise.resolve();
     },
-    watch(ref) {
-      seed(ref.storePath);
-      return { dispose: () => {} };
-    },
+    // Never calls back (every writer is in-process), so it needs no seeding:
+    // every read that follows propagates first.
+    watch: () => ({ dispose: () => {} }),
     armed: () => Promise.resolve(),
-    edit: (doc, _writer, _operation, mutate) => {
-      seed(doc.storePath);
+    edit: async (doc, _writer, _operation, mutate) => {
+      await seed(doc.storePath);
       return mutate();
     },
   };

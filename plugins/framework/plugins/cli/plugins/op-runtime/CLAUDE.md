@@ -183,6 +183,9 @@ the shared Playwright harness.
     - `writeBuildReceiptSync`
 - Cli:
   - Uses:
+    - `debug/profiling/op-log.createOpProfiler`
+    - `debug/profiling/op-log.OpProfiler`
+    - `debug/profiling/op-log.readOpStates`
     - `infra/jobs/supervised-job.cliExecContext`
     - `tasks/task-track.checkoutTrack`
   - Exports (types):

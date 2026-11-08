@@ -1,8 +1,5 @@
-import { renameSync, writeFileSync } from "node:fs";
-import {
-  readFileSync,
-  statSync,
-} from "@plugins/packages/plugins/timed-fs/core";
+import { rename, rm, writeFile } from "node:fs/promises";
+import { readFile, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { dirname } from "node:path";
 import { CLAUDE_USER_CONFIG } from "@plugins/infra/plugins/paths/core";
 import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
@@ -70,37 +67,46 @@ export function withDirTrusted(
 
 /**
  * Trust `dir` in Claude Code's user config. Idempotent (no write when already
- * trusted). Claude Code processes write this file too, so the write is atomic
- * (a temp file beside it, renamed over it, keeping its mode) and the file is
- * re-read immediately before it, so a concurrent write since the first read is
- * not undone. Throws on an unparseable file.
+ * trusted). Claude Code processes write this file too, and nothing locks it
+ * between us, so the write is a compare-and-swap: the new text is written to a
+ * temp file beside it (keeping its mode), the file is read again, and the temp
+ * file is renamed over it only if that text is still the one the change was
+ * computed from — otherwise the change is recomputed on the newer text. A file
+ * that keeps changing under every attempt throws, rather than being written
+ * over a write we never saw. Throws on an unparseable file.
  */
-export function ensureDirTrustedSync(
+export async function ensureDirTrusted(
   dir: string,
   path = CLAUDE_USER_CONFIG,
-): void {
-  if (
-    withDirTrusted(readFileSync(path, "utf8"), dir, path).kind === "unchanged"
-  ) {
-    return;
-  }
-  // Re-read right before writing: the transform applies to the newest text.
-  const fresh = withDirTrusted(readFileSync(path, "utf8"), dir, path);
-  if (fresh.kind === "unchanged") return;
+): Promise<void> {
   const tmp = `${path}.${PRODUCT_NAME}-${process.pid}.tmp`;
-  writeFileSync(tmp, fresh.text, { mode: statSync(path).mode });
-  renameSync(tmp, path);
+  for (let attempt = 0; attempt < TRUST_WRITE_ATTEMPTS; attempt++) {
+    const base = await readFile(path, "utf8");
+    const next = withDirTrusted(base, dir, path);
+    if (next.kind === "unchanged") return;
+    await writeFile(tmp, next.text, { mode: (await stat(path)).mode });
+    if ((await readFile(path, "utf8")) === base) {
+      await rename(tmp, path);
+      return;
+    }
+    await rm(tmp, { force: true });
+  }
+  throw new Error(
+    `[scratch trust] ${path} changed under each of ${TRUST_WRITE_ATTEMPTS} attempts to trust ${dir}; not writing over a change it never saw`,
+  );
 }
+
+const TRUST_WRITE_ATTEMPTS = 5;
 
 /**
  * Throws unless `dir` is trusted — a session started there would otherwise
  * sit at Claude Code's trust dialog forever, with nothing reporting it.
  */
-export function assertDirTrustedSync(
+export async function assertDirTrusted(
   dir: string,
   path = CLAUDE_USER_CONFIG,
-): void {
-  if (!isDirTrusted(readFileSync(path, "utf8"), dir, path)) {
+): Promise<void> {
+  if (!isDirTrusted(await readFile(path, "utf8"), dir, path)) {
     throw new Error(
       `${dir} is not trusted in ${path}, so a Claude Code session there stops at its trust dialog. ` +
         `The conversations/workspace/scratch plugin trusts the scratch root when a backend boots: restart the backend, and see its boot log if this persists.`,

@@ -1,7 +1,7 @@
 import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import {
-  openOwnedFdSync,
+  openOwnedFd,
   type OwnedFd,
 } from "@plugins/packages/plugins/owned-fd/core";
 import {
@@ -74,6 +74,12 @@ import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 // high slots fill before the shared low slots and a saturated background lane can
 // never starve interactive work.
 
+// Every slot, guard and demand file is OPENED off the thread (`openOwnedFd`, on
+// libuv's pool): an open is a disk round trip, and on a busy disk one has held a
+// backend's event loop for seconds. Only the lock DECISIONS — `flock(LOCK_NB)` on
+// fds already open — stay synchronous, and a sweep makes all of its decisions in
+// one pass, after every open has landed (`openAll`).
+//
 // Every wait below — the ticket ahead, the size guard, each fan-out slot — is ONE
 // `waitForFlock` (`packages/flock`): a `flock-wait` child that blocks off our event
 // loop on one lock file and then HOLDS it until released, or until we die. The
@@ -351,6 +357,29 @@ function slotAccess(slots: DataDir | RepoLockDir): {
 }
 
 /**
+ * Open every path (for writing — a lock file is created on first use), all at
+ * once and off the thread. All or nothing: when any open fails, every one that
+ * succeeded is closed before the first failure is thrown, so a caller never
+ * holds part of a set it did not get.
+ */
+async function openAll(paths: AppPath[]): Promise<OwnedFd[]> {
+  const opened = await Promise.allSettled(
+    paths.map((path) => openOwnedFd(path, "w")),
+  );
+  const fds: OwnedFd[] = [];
+  let failure: { reason: unknown } | undefined;
+  for (const o of opened) {
+    if (o.status === "fulfilled") fds.push(o.value);
+    else failure ??= { reason: o.reason };
+  }
+  if (failure) {
+    for (const fd of fds) fd.close();
+    throw failure.reason;
+  }
+  return fds;
+}
+
+/**
  * Cross-process bounded-concurrency gate: at most `size` `run` bodies execute at
  * once across every process sharing the same slot directory.
  *
@@ -550,7 +579,7 @@ export function createHostSemaphore(opts: {
     // invariant, so we WAIT for the guard via one `flock-wait` child rather than crash. A blocking in-process flock is banned (freezes the
     // loop) and polling is banned; the child does the blocking wait off our loop.
     const guard = guardFile();
-    const guardFd = openOwnedFdSync(guard, "w");
+    const guardFd = await openOwnedFd(guard, "w");
     let guardHeld: HeldFlock | undefined;
     if (!flockTry(guardFd.fd)) {
       guardFd.close();
@@ -578,57 +607,66 @@ export function createHostSemaphore(opts: {
         // Mismatch on EITHER axis against what this process was built for. Claiming
         // the declared pair is safe ONLY if the pool is idle: LOCK_NB-sweep every slot
         // across both sizes. If any is held, an out-of-identity process is live.
+        //
+        // Every probe file is opened first, concurrently, and only then locked —
+        // in one synchronous pass — so no probe holds a slot while another open
+        // is still on the disk. Every probe closes in the `finally`, whichever
+        // branch (or throw) ends the reconcile.
         const hi = Math.max(sentinel.size, declaredSize);
-        const probeFds: OwnedFd[] = [];
-        let allFree = true;
-        for (let i = 0; i < hi; i++) {
-          const probe = openOwnedFdSync(slotFile(i), "w");
-          probeFds.push(probe);
-          if (!flockTry(probe.fd)) {
-            allFree = false;
-            break;
+        const probeFds = await openAll(
+          Array.from({ length: hi }, (_, i) => slotFile(i)),
+        );
+        try {
+          let allFree = true;
+          for (const probe of probeFds) {
+            if (!flockTry(probe.fd)) {
+              allFree = false;
+              break;
+            }
           }
-        }
-        if (!allFree) {
-          for (const probe of probeFds) probe.close();
-          // Live pool, different pair → ADOPT the live one for this instance.
-          //
-          // The pool's identity is host state, not a per-process belief, and this
-          // process is not entitled to overrule it. Every holder is sweeping the
-          // sentinel's slot set, so joining them is the one choice under which the
-          // bound holds and the reserved floor sits where everyone else thinks it does;
-          // imposing the declared pair here is exactly the silent overcommit / floor
-          // break the sentinel exists to prevent.
-          //
-          // This is NOT a fault to fail on. The host runs many checkouts at once and a
-          // pool's size is derived from code, so any commit that moves the budget makes
-          // every OTHER checkout's live pool "wrong" — a normal, transient, and
-          // self-resolving condition. It used to throw here, which turned one such
-          // commit into a host-wide outage: every build on the box died at its first
-          // host grant, in both directions, until the pool happened to be idle at the
-          // right instant. The declared pair still takes effect — the next acquire that
-          // finds the pool idle writes it (the branch below) — it just no longer costs
-          // an outage to get there.
-          if (
-            size !== sentinel.size ||
-            backgroundLimit !== sentinel.backgroundLimit
-          ) {
-            console.warn(
-              `createHostSemaphore(${name}): pool is live at ` +
-                `${sentinel.size}:${sentinel.backgroundLimit} but this process was built for ` +
-                `${declaredSize}:${declaredBackgroundLimit} — adopting the live identity ` +
-                `(the declared one applies once the pool is idle).`,
-            );
+          if (!allFree) {
+            // Live pool, different pair → ADOPT the live one for this instance.
+            //
+            // The pool's identity is host state, not a per-process belief, and this
+            // process is not entitled to overrule it. Every holder is sweeping the
+            // sentinel's slot set, so joining them is the one choice under which the
+            // bound holds and the reserved floor sits where everyone else thinks it does;
+            // imposing the declared pair here is exactly the silent overcommit / floor
+            // break the sentinel exists to prevent.
+            //
+            // This is NOT a fault to fail on. The host runs many checkouts at once and a
+            // pool's size is derived from code, so any commit that moves the budget makes
+            // every OTHER checkout's live pool "wrong" — a normal, transient, and
+            // self-resolving condition. It used to throw here, which turned one such
+            // commit into a host-wide outage: every build on the box died at its first
+            // host grant, in both directions, until the pool happened to be idle at the
+            // right instant. The declared pair still takes effect — the next acquire that
+            // finds the pool idle writes it (the branch below) — it just no longer costs
+            // an outage to get there.
+            if (
+              size !== sentinel.size ||
+              backgroundLimit !== sentinel.backgroundLimit
+            ) {
+              console.warn(
+                `createHostSemaphore(${name}): pool is live at ` +
+                  `${sentinel.size}:${sentinel.backgroundLimit} but this process was built for ` +
+                  `${declaredSize}:${declaredBackgroundLimit} — adopting the live identity ` +
+                  `(the declared one applies once the pool is idle).`,
+              );
+            }
+            size = sentinel.size;
+            backgroundLimit = sentinel.backgroundLimit;
+          } else {
+            // Pool idle → claim the declared pair, drop the now-extra slot files (only
+            // when shrinking `size`), release every probe fd.
+            await writeSentinelAtomic();
+            for (let i = declaredSize; i < sentinel.size; i++) {
+              await rm(slotFile(i), { force: true });
+            }
           }
-          size = sentinel.size;
-          backgroundLimit = sentinel.backgroundLimit;
-        } else {
-          // Pool idle → claim the declared pair, drop the now-extra slot files (only
-          // when shrinking `size`), release every probe fd.
-          await writeSentinelAtomic();
-          for (let i = declaredSize; i < sentinel.size; i++) {
-            await rm(slotFile(i), { force: true });
-          }
+        } finally {
+          // Closing an fd that never locked is harmless; closing one that did
+          // hands its slot back.
           for (const probe of probeFds) probe.close();
         }
       } else {
@@ -642,20 +680,27 @@ export function createHostSemaphore(opts: {
     }
   }
 
-  // Non-blocking sweep over the lane's `order` window: open each slot fd in order,
-  // `flock(LOCK_NB)` it, and KEEP the first `limit` fds that lock (the caller owns and
-  // must close them to release). Every other fd — past the limit, or one that failed
-  // to lock — is closed immediately. All in-process microsecond syscalls; never
-  // freezes the loop the way LOCK_EX would. Slots OUTSIDE `order` (e.g. the reserved
-  // floor for a background caller) are never opened, so they are structurally
-  // unreachable. `limit === 0` locks nothing and returns [].
+  // Non-blocking sweep over the lane's `order` window: open every slot fd of the
+  // window (concurrently, off the thread), then — in ONE synchronous pass, in
+  // `order` — `flock(LOCK_NB)` each and KEEP the first `limit` fds that lock (the
+  // caller owns and must close them to release). Every other fd — past the limit, or
+  // one that failed to lock — is closed immediately. The lock attempts are
+  // microsecond syscalls that never freeze the loop the way LOCK_EX would. Slots
+  // OUTSIDE `order` (e.g. the reserved floor for a background caller) are never
+  // opened, so they are structurally unreachable. `limit === 0` locks nothing and
+  // returns [] without opening anything.
   //
-  // Synchronous, so one sweep is never interleaved with another of this process:
-  // the slot directory is ensured once per acquire, ahead of it (`acquireShare`).
-  function sweepKeep(limit: number, order: number[]): OwnedFd[] {
+  // Two sweeps of this process MAY now interleave (each awaits its opens), and
+  // that is safe: flock attaches to the open file DESCRIPTION, so two in-process
+  // sweeps contend for a slot exactly as two processes do — one wins, the other
+  // moves on. What the single decision pass buys is that no sweep holds a slot
+  // across an await of its own. The slot directory is ensured once per acquire,
+  // ahead of it (`acquireShare`).
+  async function sweepKeep(limit: number, order: number[]): Promise<OwnedFd[]> {
+    if (limit === 0) return [];
+    const opened = await openAll(order.map(slotFile));
     const kept: OwnedFd[] = [];
-    for (const i of order) {
-      const slot = openOwnedFdSync(slotFile(i), "w");
+    for (const slot of opened) {
       if (kept.length < limit && flockTry(slot.fd)) {
         kept.push(slot);
       } else {
@@ -741,7 +786,7 @@ export function createHostSemaphore(opts: {
     signal: AbortSignal | undefined,
   ): Promise<() => Promise<void>> {
     await slots.ensure();
-    const demand = openOwnedFdSync(demandFile(), "w");
+    const demand = await openOwnedFd(demandFile(), "w");
     if (flockTryShared(demand.fd)) {
       return () => {
         demand.close();
@@ -756,8 +801,8 @@ export function createHostSemaphore(opts: {
   // Is any `normal` acquire of this pool waiting right now? A non-blocking
   // exclusive try that releases immediately. The slot directory is ensured once
   // per acquire, ahead of it (`acquireShare`).
-  function demandPresent(): boolean {
-    const probe = openOwnedFdSync(demandFile(), "w");
+  async function demandPresent(): Promise<boolean> {
+    const probe = await openOwnedFd(demandFile(), "w");
     try {
       return !flockTry(probe.fd);
     } finally {
@@ -778,15 +823,15 @@ export function createHostSemaphore(opts: {
   }
 
   // Hand back everything `taken` holds, synchronously (see `HostShare.releaseSlots`).
-  function releaseTakenSync(taken: Taken): void {
+  function releaseTakenNow(taken: Taken): void {
     for (const slot of taken.fds) slot.close();
     // Signals the child holding the winner's slot; it exits, its fd closes and
     // the flock releases. The async release below reaps it.
-    taken.winner?.releaseSync();
+    taken.winner?.releaseNow();
   }
 
   async function releaseTaken(taken: Taken): Promise<void> {
-    releaseTakenSync(taken);
+    releaseTakenNow(taken);
     if (taken.winner) await taken.winner.release();
   }
 
@@ -823,23 +868,34 @@ export function createHostSemaphore(opts: {
       if (priority === "normal") releaseDemand = await holdDemand(signal);
       ticket = await line.join({ signal });
       for (;;) {
-        if (priority === "low" && demandPresent()) await awaitNoDemand(signal);
-        const fds = sweepKeep(effectiveMax, order);
+        if (priority === "low" && (await demandPresent()))
+          await awaitNoDemand(signal);
+        const fds = await sweepKeep(effectiveMax, order);
         const taken: Taken =
           fds.length > 0
             ? { fds, winner: undefined }
             : { fds: [], winner: await fanOut(order, signal) };
-        // A `normal` acquire started waiting meanwhile — most often while we
-        // were fanned out for this very slot. Hand it straight back: the
-        // `normal` waiter's fan-out takes it.
-        if (priority === "low" && demandPresent()) {
+        // From here we HOLD slots, and every step below awaits: one that throws
+        // (a failed open) must hand them back, never strand them in a share
+        // nobody will release.
+        let yielded: boolean;
+        try {
+          // A `normal` acquire started waiting meanwhile — most often while we
+          // were fanned out for this very slot. Hand it straight back: the
+          // `normal` waiter's fan-out takes it.
+          yielded = priority === "low" && (await demandPresent());
+          if (!yielded) {
+            ticket.leave();
+            if (taken.winner)
+              taken.fds = await sweepKeep(effectiveMax - 1, order);
+          }
+        } catch (err) {
           await releaseTaken(taken);
-          signal?.throwIfAborted();
-          continue;
+          throw err;
         }
-        ticket.leave();
-        if (taken.winner) taken.fds = sweepKeep(effectiveMax - 1, order);
-        return taken;
+        if (!yielded) return taken;
+        await releaseTaken(taken);
+        signal?.throwIfAborted();
       }
     } finally {
       // Decremented FIRST, synchronously: a throwing release below must never
@@ -871,7 +927,7 @@ export function createHostSemaphore(opts: {
     const t0 = performance.now();
     await ensureSizeIdentity();
     // The slot directory every sweep and demand probe below opens files in —
-    // ensured here, once, so those stay synchronous.
+    // ensured here, once, rather than ahead of every open.
     await slots.ensure();
     // The reconcile itself is deliberately not cancellable (see its docblock) —
     // it holds nothing host-wide. Re-check on the way out so an abort that landed
@@ -899,14 +955,28 @@ export function createHostSemaphore(opts: {
     // acquire never barges past its own line. A `low` acquire also never starts
     // while a `normal` one waits, and hands back what it took if one appeared
     // meanwhile.
+    //
+    // "Nobody queued" is read at the instant of the check; the sweep's opens
+    // await after it, so a waiter of this process may join the line in between
+    // — the same window a waiter in ANOTHER process has always had, since no two
+    // processes share a tick. The line's order is what the head position
+    // follows; a fast-path win in that window costs the newcomer one more wait,
+    // never the bound.
     const line = lineFor(lane, priority);
     let taken: Taken | undefined;
-    if (line.isEmpty() && (priority === "normal" || !demandPresent())) {
-      const fds = sweepKeep(effectiveMax, order);
-      if (fds.length > 0) taken = { fds, winner: undefined };
-      if (taken && priority === "low" && demandPresent()) {
-        await releaseTaken(taken);
-        taken = undefined;
+    if (line.isEmpty() && (priority === "normal" || !(await demandPresent()))) {
+      const fds = await sweepKeep(effectiveMax, order);
+      if (fds.length > 0) {
+        const swept: Taken = { fds, winner: undefined };
+        let yielded: boolean;
+        try {
+          yielded = priority === "low" && (await demandPresent());
+        } catch (err) {
+          await releaseTaken(swept);
+          throw err;
+        }
+        if (yielded) await releaseTaken(swept);
+        else taken = swept;
       }
     }
     taken ??= await waitInLine(
@@ -931,7 +1001,7 @@ export function createHostSemaphore(opts: {
       // where it already released. Guard so the second call is a no-op.
       if (released) return;
       released = true;
-      releaseTakenSync(held);
+      releaseTakenNow(held);
     };
     const release = async (): Promise<void> => {
       releaseSlots();

@@ -12,9 +12,8 @@ export default [
   {
     rule: "blocking-fs/no-sync-fs",
     paths: ["server/internal/record-fs-waits.ts"],
-    kind: "debt",
-    task: "task-1793991088-yd3u37",
+    kind: "sanctioned",
     reason:
-      "Calls a *Sync helper (or a sync child process) that has no async twin yet; blocks the backend's thread for as long as the disk or the child takes.",
+      "Only the process `exit` handler writes synchronously (the lines still queued, then the open episode's summary): an exit handler cannot wait for a queued write, and the process is ending. Every other line goes through the async append.",
   },
 ] satisfies Exemptions;

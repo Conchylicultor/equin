@@ -1,5 +1,6 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { mkdirSync, renameSync, writeFileSync } from "node:fs";
+import { mkdir, rename, writeFile } from "node:fs/promises";
 import {
   readFileSync,
   readdirSync,
@@ -111,17 +112,38 @@ export function writeDataDirsManifestSync(
   sets: DeclaredSets,
 ): string {
   const path = worktreeArtifacts.dataDirs(namespace);
-  const manifest: DataDirsManifest = {
-    version: MANIFEST_VERSION,
-    namespace,
-    writtenAt: new Date().toISOString(),
-    ...sets,
-  };
+  const manifest = buildManifest(namespace, sets);
   mkdirSync(dirname(path), { recursive: true });
   const tmp = `${path}.tmp.${process.pid}`;
   writeFileSync(tmp, `${JSON.stringify(manifest, null, 2)}\n`);
   renameSync(tmp, path);
   return path;
+}
+
+/** {@link writeDataDirsManifestSync} without blocking the event loop — same atomic tmp + rename. */
+export async function writeDataDirsManifest(
+  namespace: Namespace,
+  sets: DeclaredSets,
+): Promise<string> {
+  const path = worktreeArtifacts.dataDirs(namespace);
+  const manifest = buildManifest(namespace, sets);
+  await mkdir(dirname(path), { recursive: true });
+  const tmp = `${path}.tmp.${process.pid}`;
+  await writeFile(tmp, `${JSON.stringify(manifest, null, 2)}\n`);
+  await rename(tmp, path);
+  return path;
+}
+
+function buildManifest(
+  namespace: Namespace,
+  sets: DeclaredSets,
+): DataDirsManifest {
+  return {
+    version: MANIFEST_VERSION,
+    namespace,
+    writtenAt: new Date().toISOString(),
+    ...sets,
+  };
 }
 
 /** A manifest that could not be read, and why — never silently skipped. */

@@ -143,7 +143,7 @@ boots from before the marks.
   - Exempts itself from:
     - `server-core/no-process-crash-listener` — `machine/internal/boot-crash.ts` (sanctioned)
     - `blocking-fs/no-sync-fs` — `machine/internal/own-boot-mark.ts` (sanctioned)
-    - `blocking-fs/no-sync-fs` — `server/internal/write-boot-event.ts` (debt)
+    - `blocking-fs/no-sync-fs` — `server/internal/write-boot-event.ts` (sanctioned)
 - Machine:
   - Exports (values):
     - `clearBootUnsettled`

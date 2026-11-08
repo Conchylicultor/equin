@@ -59,8 +59,11 @@ graph reads the database without one fails at boot
 the same capture, as a persisted value's floor. A suite that builds its own
 runtime takes the real capture from `@plugins/database/server/testing`.
 
-`database/core`'s `readDatabaseConfigSync` (`readFileSync`) stays in `core/` (debt):
-CLIs, checks and e2e scripts read it there.
+`database/core`'s config reader has two forms over one memo: `readDatabaseConfigSync`
+(`readFileSync`) for CLIs, checks and e2e scripts, and `loadDatabaseConfig` (async)
+for a backend — the desktop driver awaits it first thing in `ready()` and then reads
+`loadedDatabaseConfig()` from memory (it throws when nothing loaded it). The `bun test`
+preload loads it too, since suites use `db` without booting.
 
 ## Runtime query profiling
 
@@ -505,7 +508,9 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
 - Machine:
   - Uses: `database/pgbouncer.convergePgbouncerConfig`
 - Core:
-  - Uses: `packages/timed-fs.readFileSync`
+  - Uses:
+    - `packages/timed-fs.readFile`
+    - `packages/timed-fs.readFileSync`
   - Exports (types):
     - `DatabaseConfig`
     - `DatabaseProvider`
@@ -513,6 +518,8 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
     - `buildConnectionString`
     - `DATABASE_CONFIG_PATH`
     - `libpqEnvSync`
+    - `loadDatabaseConfig`
+    - `loadedDatabaseConfig`
     - `readDatabaseConfigSync`
 - Cross-plugin:
   - Imported by: 152 plugins — full list in [REFERENCE.md](./REFERENCE.md)
@@ -546,7 +553,6 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
 - Exemptions:
   - Exempts itself from:
     - `boundaries/no-platform-api` — `core/internal/config.ts` (debt)
-    - `blocking-fs/no-sync-fs` — `machine/internal/pg-driver.ts` (debt)
     - `sql-writes:fit:dynamic` — `plugins/pglite/server/internal/pglite-driver.ts` (sanctioned)
 - Test helpers:
   - Server: `@plugins/database/server/testing`

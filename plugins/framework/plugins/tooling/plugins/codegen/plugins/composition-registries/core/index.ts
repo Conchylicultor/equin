@@ -6,6 +6,6 @@ export {
   compositionRegistryFileName,
   compositionRegistryPath,
   compositionRegistryRedirects,
-  listNamedCompositionRegistriesSync,
+  listNamedCompositionRegistries,
   parseNamedCompositionRegistryFileName,
 } from "./registry-files";

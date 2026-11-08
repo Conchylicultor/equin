@@ -1,6 +1,6 @@
 export {
-  assertDirTrustedSync,
-  ensureDirTrustedSync,
+  assertDirTrusted,
+  ensureDirTrusted,
   isDirTrusted,
   withDirTrusted,
 } from "./claude-trust";

@@ -67,7 +67,7 @@ export async function backupDatabase(
   // dump compresses.
   const result = await spawnCaptured(
     [
-      pgClientBin("pg_dump"),
+      await pgClientBin("pg_dump"),
       "-Fc",
       "-f",
       outFile,

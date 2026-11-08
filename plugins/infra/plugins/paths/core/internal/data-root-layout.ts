@@ -1,5 +1,7 @@
 import {
+  lstat,
   lstatSync,
+  realpath,
   realpathSync,
 } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
@@ -164,4 +166,46 @@ export function readHomeDataRootLayoutSync(home: string): DataRootLayout {
     current: readRootEntrySync(roots.current),
     legacy: readRootEntrySync(roots.legacy),
   });
+}
+
+/**
+ * {@link readRootEntrySync} without blocking the event loop: the same
+ * decision input, read with the async fs calls.
+ */
+export async function readRootEntry(path: AppPath): Promise<RootEntry> {
+  let isLink: boolean;
+  try {
+    isLink = (await lstat(path)).isSymbolicLink();
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+      return { kind: "absent" };
+    }
+    throw err;
+  }
+  let resolved: string | null;
+  try {
+    resolved = await realpath(path);
+  } catch (err) {
+    if (isLink && (err as NodeJS.ErrnoException).code === "ENOENT") {
+      resolved = null;
+    } else {
+      throw err;
+    }
+  }
+  if (isLink) return { kind: "link", resolved };
+  if (resolved === null)
+    throw new Error(`unreachable: ${path} has no realpath`);
+  return { kind: "present", resolved };
+}
+
+/** {@link readHomeDataRootLayoutSync}, without blocking the event loop. */
+export async function readHomeDataRootLayout(
+  home: string,
+): Promise<DataRootLayout> {
+  const roots = homeDataRoots(home);
+  const [current, legacy] = await Promise.all([
+    readRootEntry(roots.current),
+    readRootEntry(roots.legacy),
+  ]);
+  return decideDataRootLayout(roots, { current, legacy });
 }

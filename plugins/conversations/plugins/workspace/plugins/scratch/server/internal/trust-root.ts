@@ -1,4 +1,4 @@
-import { ensureDirTrustedSync } from "../../core";
+import { ensureDirTrusted } from "../../core";
 import { scratchWorkspacesDir } from "../../data-dirs";
 
 /**
@@ -9,6 +9,6 @@ import { scratchWorkspacesDir } from "../../data-dirs";
  * install-time provision step because only runtime code may read the data-dir
  * declaration (the `provision` folder's boundary row is `provision`, `core`).
  */
-export function trustScratchRoot(): void {
-  ensureDirTrustedSync(scratchWorkspacesDir.path);
+export async function trustScratchRoot(): Promise<void> {
+  await ensureDirTrusted(scratchWorkspacesDir.path);
 }

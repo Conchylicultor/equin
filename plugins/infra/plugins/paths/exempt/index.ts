@@ -55,14 +55,6 @@ export default [
       "A namespace's spec.json (written by `./equin build`) names the checkout that published it: a checkout of this repo, which the app runs from.",
   },
   {
-    rule: "blocking-fs/no-sync-fs",
-    paths: ["server/internal/publish-data-dirs.ts"],
-    kind: "debt",
-    task: "task-1793991088-yd3u37",
-    reason:
-      "Calls a *Sync helper (or a sync child process) that has no async twin yet; blocks the backend's thread for as long as the disk or the child takes.",
-  },
-  {
     rule: "blocking-fs/sync-named",
     paths: [
       "core/internal/checkout-ref.ts",

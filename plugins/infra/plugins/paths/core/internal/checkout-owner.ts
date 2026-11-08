@@ -1,6 +1,8 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import {
+  readFile,
   readFileSync,
+  stat,
   statSync,
 } from "@plugins/packages/plugins/timed-fs/core";
 import { dirname, resolve } from "node:path";
@@ -32,22 +34,17 @@ export type CheckoutOwnerRead =
   | { kind: "malformed"; reason: string }
   | { kind: "stamped"; root: string; lastUsedMs: number };
 
-/**
- * The stamp for `ns`. `malformed` is its own arm: a stamp that exists and cannot
- * be read must not read as "no owner recorded", and never as "owner gone".
- */
-export function readCheckoutOwnerSync(ns: Namespace): CheckoutOwnerRead {
-  const path = worktreeArtifacts.checkoutOwner(ns);
-  let text: string;
-  let lastUsedMs: number;
-  try {
-    text = readFileSync(path, "utf8");
-    lastUsedMs = statSync(path).mtimeMs;
-  } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
-    if (code === "ENOENT" || code === "ENOTDIR") return { kind: "absent" };
-    return { kind: "malformed", reason: `unreadable (${String(code ?? err)})` };
-  }
+/** The verdict for a stamp that could not be read. */
+function ownerReadFailure(err: unknown): CheckoutOwnerRead {
+  const code = (err as NodeJS.ErrnoException).code;
+  if (code === "ENOENT" || code === "ENOTDIR") return { kind: "absent" };
+  return { kind: "malformed", reason: `unreadable (${String(code ?? err)})` };
+}
+
+function parseCheckoutOwner(
+  text: string,
+  lastUsedMs: number,
+): CheckoutOwnerRead {
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
@@ -61,4 +58,37 @@ export function readCheckoutOwnerSync(ns: Namespace): CheckoutOwnerRead {
   if (typeof root !== "string" || root === "")
     return { kind: "malformed", reason: '"root" is not a path' };
   return { kind: "stamped", root, lastUsedMs };
+}
+
+/**
+ * The stamp for `ns`. `malformed` is its own arm: a stamp that exists and cannot
+ * be read must not read as "no owner recorded", and never as "owner gone".
+ */
+export function readCheckoutOwnerSync(ns: Namespace): CheckoutOwnerRead {
+  const path = worktreeArtifacts.checkoutOwner(ns);
+  let text: string;
+  let lastUsedMs: number;
+  try {
+    text = readFileSync(path, "utf8");
+    lastUsedMs = statSync(path).mtimeMs;
+  } catch (err) {
+    return ownerReadFailure(err);
+  }
+  return parseCheckoutOwner(text, lastUsedMs);
+}
+
+/** {@link readCheckoutOwnerSync} without blocking the event loop. */
+export async function readCheckoutOwner(
+  ns: Namespace,
+): Promise<CheckoutOwnerRead> {
+  const path = worktreeArtifacts.checkoutOwner(ns);
+  let text: string;
+  let lastUsedMs: number;
+  try {
+    text = await readFile(path, "utf8");
+    lastUsedMs = (await stat(path)).mtimeMs;
+  } catch (err) {
+    return ownerReadFailure(err);
+  }
+  return parseCheckoutOwner(text, lastUsedMs);
 }

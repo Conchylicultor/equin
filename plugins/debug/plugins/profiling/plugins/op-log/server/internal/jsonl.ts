@@ -10,6 +10,11 @@ export const OP_LOG_FILE = opLogDir.file("op-log.jsonl");
 // growing without bound (the durable-sink invariant — see infra/file-sink).
 // `append` IS the rotation, and the sink creates the containing directory and
 // appends the trailing newline itself.
+//
+// Two writers: CLI ops write their events synchronously (this plugin's `cli`
+// barrel — a line must be on disk before the process can die), and the one
+// backend writer — main's op-store reconciler closing a dead op — through
+// `appendOpLog`, which never blocks its thread.
 export const opLogSink = defineFileSink({
   id: "op-log",
   description:
@@ -17,7 +22,7 @@ export const opLogSink = defineFileSink({
   path: OP_LOG_FILE,
 });
 
-/** Append one record to the op log through its bounded sink. */
-export function appendOpLog(record: unknown): void {
-  opLogSink.appendSync(JSON.stringify(record));
+/** Append one record to the op log through its bounded sink, off the thread. */
+export function appendOpLog(record: unknown): Promise<void> {
+  return opLogSink.append(JSON.stringify(record));
 }

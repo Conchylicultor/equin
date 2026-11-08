@@ -20,7 +20,7 @@
  *
  *   run-asleep --slug <ns> --op-id <id> --dir <dir> [--asleep-ms <n>]
  *     An op that SLEPT, without sleeping the machine: its events are written
- *     raw (through the real `appendOpLog`), backdated, and carry sleep stamps
+ *     raw (through the real `appendOpLogSync`), backdated, and carry sleep stamps
  *     from a fake boot whose clock jumps by `n` ms (default 2 h) between the
  *     grant and the next event, with the wake instant inside that gap — so the
  *     fold places the nap exactly. The fake boot never matches the machine's
@@ -45,12 +45,12 @@ import {
   readFileSync,
 } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
+import { readSleepNow } from "@plugins/debug/plugins/profiling/plugins/op-log/server";
 import {
-  appendOpLog,
+  appendOpLogSync,
   createOpProfiler,
   readOpStates,
-  readSleepNow,
-} from "@plugins/debug/plugins/profiling/plugins/op-log/server";
+} from "@plugins/debug/plugins/profiling/plugins/op-log/cli";
 import {
   applyOpEvent,
   orphanedOps,
@@ -103,7 +103,7 @@ async function close(): Promise<void> {
     console.log(`synthetic-op close: ${opId} is already closed`);
     return;
   }
-  appendOpLog(reconcilerCompletedEvent(orphan, Date.now(), readSleepNow()));
+  appendOpLogSync(reconcilerCompletedEvent(orphan, Date.now(), readSleepNow()));
   console.log(
     `synthetic-op close: appended the reconciler terminal for ${opId}`,
   );
@@ -247,7 +247,7 @@ function runAsleep(): void {
       ...body,
     } as OpEvent;
     state = applyOpEvent(state, event);
-    appendOpLog(event);
+    appendOpLogSync(event);
     return event;
   };
   const awake: SleepStamp = { boot: FAKE_BOOT, asleepMs: baseAsleep };

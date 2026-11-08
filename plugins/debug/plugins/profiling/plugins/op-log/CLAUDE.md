@@ -62,7 +62,7 @@ away is *headless* and renders nothing until its self-contained terminal.
 Ops Gantt and detail, the stats/pushes charts — reads the DB fold the
 [`op-store`](plugins/op-store/CLAUDE.md) child keeps (`opsInFlight` /
 `opsHistory`, `op_log_ops`). `readOpRecords()` / `readOpenWait()` (this
-plugin's `server` barrel, a direct fold of the file) remain for the CLI only —
+plugin's `cli` barrel, a direct fold of the file) remain for the CLI only —
 `./equin await` — which must never depend on the DB.
 
 **Legacy lines** (a pre-v2 CLI's `phase: requested | granted | completed`
@@ -157,6 +157,18 @@ does not re-export `OpKind`; import it from worktree's `core`. `OutcomeByKind`
 is keyed on it, so a kind added there without an outcome vocabulary here is a
 type error.
 
+## Two writers, one sink
+
+`opLogSink` (the `server` barrel) is the one declared sink. An op process
+writes through the `cli` barrel — `createOpProfiler` appends each event with
+`appendOpLogSync`, so a line is on disk before the process can die. The one
+backend writer, main's op-store reconciler, appends through the server
+barrel's `appendOpLog`, which is asynchronous: a backend never blocks its
+thread on the disk (`blocking-fs/no-sync-fs`). Both append whole
+`\n`-terminated lines with `O_APPEND` — the async one folds the few lines
+queued during a write into its next, still one small append — so a line never
+interleaves with another process's.
+
 ## Storage
 
 `~/.equin/logs/op-log/op-log.jsonl`, append-only. Append (never rewrite) is load-bearing
@@ -235,21 +247,23 @@ through `foldOpLines`. The before/after ruler of
     - `framework/cli/build`
     - `framework/cli/op-runtime`
     - `framework/cli/push`
-- Exemptions:
-  - Exempts itself from: `blocking-fs/no-sync-fs` — `server/internal/jsonl.ts`, `server/internal/read.ts` (debt)
 - Server:
+  - Exports (values):
+    - `appendOpLog`
+    - `OP_LOG_FILE`
+    - `opLogSink`
+    - `readSleepNow`
+- Cli:
   - Exports (types):
     - `OpProfiler`
     - `OpProfilerOptions`
   - Exports (values):
-    - `appendOpLog`
+    - `appendOpLogSync`
     - `createOpProfiler`
-    - `OP_LOG_FILE`
     - `readOpenWait`
     - `readOpenWaitInLine`
     - `readOpRecords`
     - `readOpStates`
-    - `readSleepNow`
 - Sub-plugins:
   - **`op-store`** — Op-store web presence: eagerly registers the boot-critical op-store.in-flight.all live collection so boot-snapshot can hydrate it before first paint. Op-log read model: every serving backend ingests…
 

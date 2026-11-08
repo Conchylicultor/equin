@@ -26,7 +26,8 @@ function diskConfigFiles(): Map<string, string> {
 export function diskConfigGitLayer(): ServerContribution {
   const committedFiles = committedFilesFromMap(diskConfigFiles());
   return ConfigGitLayer.provide({
-    document: (storePath) => committedDocument(storePath, committedFiles),
+    document: (storePath) =>
+      Promise.resolve(committedDocument(storePath, committedFiles)),
     watch: () => Promise.resolve(() => {}),
   });
 }

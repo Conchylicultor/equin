@@ -12,7 +12,9 @@ import { createScratchWorkspace } from "./scratch-workspace";
 
 const trusted: string[] = [];
 const scratchWorkspace = createScratchWorkspace({
-  assertTrusted: (dir) => trusted.push(dir),
+  assertTrusted: async (dir) => {
+    trusted.push(dir);
+  },
   guardsRoot: "/repo",
   assertGuards: async () => {},
 });

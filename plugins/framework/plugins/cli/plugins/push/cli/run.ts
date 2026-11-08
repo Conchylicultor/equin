@@ -19,7 +19,7 @@ import { normalizeGeneratedArtifacts } from "@plugins/framework/plugins/cli/plug
 import {
   createOpProfiler,
   type OpProfiler,
-} from "@plugins/debug/plugins/profiling/plugins/op-log/server";
+} from "@plugins/debug/plugins/profiling/plugins/op-log/cli";
 import {
   pushPool,
   repoPushLock,

@@ -25,7 +25,7 @@ import { withForegroundPriority } from "@plugins/packages/plugins/spawn-priority
 import { browserDir } from "@plugins/apps/plugins/browser/data-dirs";
 import { ENGINE_PROTOCOL, ENGINE_WS_PATH } from "../core";
 import { browserEngineDir, browserEngineUploadsDir } from "../data-dirs";
-import { hostCodeIdSync } from "../shared/code-id";
+import { hostCodeId } from "../shared/code-id";
 import {
   HOST_FILES,
   HostShutdownBodySchema,
@@ -53,7 +53,7 @@ function argValue(name: string): string {
 const launchedBy = argValue("--launched-by");
 const dir = browserEngineDir.ensure();
 const file = (name: string) => browserEngineDir.file(name);
-const codeId = hostCodeIdSync(asAppPath(resolve(import.meta.dir, "..")));
+const codeId = await hostCodeId(asAppPath(resolve(import.meta.dir, "..")));
 const startedAt = new Date().toISOString();
 
 // The singleton: whoever holds the lock is THE host. The kernel drops it when

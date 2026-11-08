@@ -767,7 +767,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `no-raw-websocket` — `machine/internal/relay.ts` (sanctioned)
               - `boundaries/no-platform-api` — `shared/code-id.ts` (sanctioned)
               - `scroll-safety/no-scrolling-focus` — `bin/page-script.ts` (sanctioned)
-              - `blocking-fs/no-sync-fs` — `machine/internal/host-client.ts` (debt)
           - Core:
             - Exports (types):
               - `ClientMessage`
@@ -13044,7 +13043,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `infra/entities.defaultNow`
       - `infra/entities.defineEntity`
       - `infra/jobs/supervised-job.defineSupervisedJob`
-      - `infra/paths.backupsDirSync`
+      - `infra/paths.backupsDir`
       - `primitives/log-channels.Log`
       - `reports.ReportKind`
       - `reports/engine.recordReport`
@@ -13116,7 +13115,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Exempts itself from:
       - `ids:pk-declared` — `server/internal/tables.ts` (debt)
       - `boundaries/no-platform-api` — `server/internal/assemble-archive.ts`, `server/internal/reconcile-backups.ts` (debt)
-      - `blocking-fs/no-sync-fs` — `server/internal/assemble-archive.ts`, `server/internal/reconcile-backups.ts` (debt)
   - Shared:
     - Exports (values): `runBackup`
   - Plugins:
@@ -13361,11 +13359,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `backup.BackupTarget`
               - `config_v2.ConfigV2`
               - `config_v2.getConfig`
-              - `infra/paths.backupsDirSync`
+              - `infra/paths.backupsDir`
           - Exemptions:
-            - Exempts itself from:
-              - `boundaries/no-platform-api` — `server/internal/run-local-target.ts` (debt)
-              - `blocking-fs/no-sync-fs` — `server/internal/run-local-target.ts` (debt)
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/run-local-target.ts` (debt)
 
 - **`build`** — Trigger `./equin build` from the toolbar. Build, portable half: the build-run id kind, the build config, the Build task category and the build.history collection over build_runs — what a host without the computer serves too. Running builds (the jobs, the routes, the auto-build reconcile) is build/machine.
   - Web:
@@ -13506,8 +13502,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `debug/reports`
       - `menu-bar`
     - Endpoint callers: `restart-skip`
-  - Exemptions:
-    - Exempts itself from: `blocking-fs/no-sync-fs` — `machine/internal/run-terminal.ts` (debt)
   - Shared:
     - Exports (types): `BuildRun`
     - Exports (values):
@@ -13626,8 +13620,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --spacing`
         - Imported by: `build/build-fix`
-      - Exemptions:
-        - Exempts itself from: `blocking-fs/no-sync-fs` — `machine/internal/run-log.ts` (debt)
     - **`build-profiling`** — Per-run build profiling Gantt section in the build detail pane.
       - Web:
         - Contributes: `BuildDetailSlots.Section` "Profiling" → `BuildProfilingSection`
@@ -14435,7 +14427,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Exempts itself from:
       - `check-thread-safety/no-blocking-check-work` — `check/config-registrations.ts`, `check/overrides-authored.ts` (debt)
       - `blocking-fs/sync-named` — `core/internal/git-layer.ts` (debt)
-      - `blocking-fs/no-sync-fs` — `machine/internal/repo-layer.ts` (debt)
   - Test helpers:
     - Server: `@plugins/config_v2/server/testing`
       - `diskConfigGitLayer` — The committed config layer a browser host bundles (`config_v2/bundled-layer`, which reads it through vite's `import.meta.glob` — absent under `bun test`), provided from the same files read off disk: for a suite booting a portable graph without the computer.
@@ -21143,17 +21134,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `framework/product-name.PRODUCT_NAME`
               - `infra/paths.CLAUDE_USER_CONFIG`
-              - `packages/timed-fs.readFileSync`
-              - `packages/timed-fs.statSync`
+              - `packages/timed-fs.readFile`
+              - `packages/timed-fs.stat`
             - Exports (values):
-              - `assertDirTrustedSync`
-              - `ensureDirTrustedSync`
+              - `assertDirTrusted`
+              - `ensureDirTrusted`
               - `isDirTrusted`
               - `withDirTrusted`
           - Exemptions:
-            - Exempts itself from:
-              - `boundaries/no-platform-api` — `core/claude-trust.ts`, `server/internal/reap-job.ts`, `server/internal/scratch-workspace.ts` (debt)
-              - `blocking-fs/no-sync-fs` — `server/internal/scratch-workspace.ts`, `server/internal/trust-root.ts` (debt)
+            - Exempts itself from: `boundaries/no-platform-api` — `core/claude-trust.ts`, `server/internal/reap-job.ts`, `server/internal/scratch-workspace.ts` (debt)
         - **`worktree`** — The worktree workspace: a conversation runs in its attempt's git checkout of this repo (`.claude/worktrees/<id>`), with a forked DB and config dir — checked out by the supervised worktree.prepare job (a detached child a restart does not kill) that the spawn job requests and waits on, resumable while the checkout exists.
           - Server:
             - Uses:
@@ -21222,7 +21211,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Machine:
     - Uses: `database/pgbouncer.convergePgbouncerConfig`
   - Core:
-    - Uses: `packages/timed-fs.readFileSync`
+    - Uses:
+      - `packages/timed-fs.readFile`
+      - `packages/timed-fs.readFileSync`
     - Exports (types):
       - `DatabaseConfig`
       - `DatabaseProvider`
@@ -21230,6 +21221,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `buildConnectionString`
       - `DATABASE_CONFIG_PATH`
       - `libpqEnvSync`
+      - `loadDatabaseConfig`
+      - `loadedDatabaseConfig`
       - `readDatabaseConfigSync`
   - Cross-plugin:
     - Imported by: 152 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
@@ -21263,7 +21256,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Exemptions:
     - Exempts itself from:
       - `boundaries/no-platform-api` — `core/internal/config.ts` (debt)
-      - `blocking-fs/no-sync-fs` — `machine/internal/pg-driver.ts` (debt)
       - `sql-writes:fit:dynamic` — `plugins/pglite/server/internal/pglite-driver.ts` (sanctioned)
   - Test helpers:
     - Server: `@plugins/database/server/testing`
@@ -21340,9 +21332,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by: `database/admin`
       - Exemptions:
-        - Exempts itself from:
-          - `boundaries/no-platform-api` — `server/internal/bin.ts` (debt)
-          - `blocking-fs/no-sync-fs` — `server/internal/bin.ts` (debt)
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/bin.ts` (debt)
       - Server:
         - Exports (types): `PgClientTool`
         - Exports (values):
@@ -22339,7 +22329,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `server-core/no-process-crash-listener` — `machine/internal/boot-crash.ts` (sanctioned)
           - `blocking-fs/no-sync-fs` — `machine/internal/own-boot-mark.ts` (sanctioned)
-          - `blocking-fs/no-sync-fs` — `server/internal/write-boot-event.ts` (debt)
+          - `blocking-fs/no-sync-fs` — `server/internal/write-boot-event.ts` (sanctioned)
       - Machine:
         - Exports (values):
           - `clearBootUnsettled`
@@ -22520,8 +22510,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `humanMs`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/color-palette --muted-foreground`
-      - Exemptions:
-        - Exempts itself from: `blocking-fs/no-sync-fs` — `machine/internal/monitor-job.ts` (debt)
     - **`broadcasts`** — View and edit the CLI's broadcasts.json (plugins/framework/plugins/cli/broadcasts.json in the main checkout): the broadcast messages printed on stale worktrees. View and edit the CLI's broadcasts.json from the UI: the broadcasts.entries live value (watched through the dir hub) and its PUT.
       - Web:
         - Slots:
@@ -23596,7 +23584,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Exemptions:
             - Exempts itself from:
               - `boundaries/no-platform-api` — `server/internal/record-fs-waits.ts` (debt)
-              - `blocking-fs/no-sync-fs` — `server/internal/record-fs-waits.ts` (debt)
+              - `blocking-fs/no-sync-fs` — `server/internal/record-fs-waits.ts` (sanctioned)
           - Core:
             - Exports (types): `FsWaitLine`
             - Exports (values):
@@ -23660,21 +23648,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/build`
               - `framework/cli/op-runtime`
               - `framework/cli/push`
-          - Exemptions:
-            - Exempts itself from: `blocking-fs/no-sync-fs` — `server/internal/jsonl.ts`, `server/internal/read.ts` (debt)
           - Server:
+            - Exports (values):
+              - `appendOpLog`
+              - `OP_LOG_FILE`
+              - `opLogSink`
+              - `readSleepNow`
+          - Cli:
             - Exports (types):
               - `OpProfiler`
               - `OpProfilerOptions`
             - Exports (values):
-              - `appendOpLog`
+              - `appendOpLogSync`
               - `createOpProfiler`
-              - `OP_LOG_FILE`
               - `readOpenWait`
               - `readOpenWaitInLine`
               - `readOpRecords`
               - `readOpStates`
-              - `readSleepNow`
           - Plugins:
             - **`op-store`** — Op-store web presence: eagerly registers the boot-critical op-store.in-flight.all live collection so boot-snapshot can hydrate it before first paint. Op-log read model: every serving backend ingests the host-global op-log.jsonl (and its rotations) into its own op_log_ops table behind a durable (inode, offset) cursor committed with the rows, reconciles in-flight ops whose process is gone (main appends a reconciler terminal to the log; a worktree closes locally only after an ingest gap), with a 30-day retention sweep. The machine half serves the rows as the opsInFlight and opsHistory live collections.
               - Server:
@@ -24479,7 +24469,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `detached-work-safety/no-raw-set-interval` — `server/internal/worker/entry.ts` (sanctioned)
           - `boundaries/no-platform-api` — `server/internal/status-resource.ts`, `server/internal/worker-host.ts`, `server/internal/worker/pg.ts`, `server/internal/worker/sample.ts` (debt)
           - `user-path/no-unproven-claim` — `server/internal/worker/sample.ts` (sanctioned)
-          - `blocking-fs/no-sync-fs` — `server/internal/worker/entry.ts`, `server/internal/worker/sample.ts` (debt)
       - Plugins:
         - **`machine-usage`** — The Machine watcher card's "Where it goes" block (MachineUsageBreakdown): the machine's CPU and memory as two bars split into your Chrome, agent ops, the agent browser, the agents, the backends, Postgres and other, then one line per bucket — read from the sentinel.machine-usage value, sampled when the card opens.
           - Server:
@@ -24957,7 +24946,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/sentinel.readDuressEpisodes`
           - `debug/slow-ops/cluster.listLiveForkDatabases`
           - `infra/mcp.Mcp`
-          - `infra/paths.listWorktreeDirsSync`
+          - `infra/paths.listWorktreeDirsAsync`
           - `network/live.serveValue`
           - `primitives/log-channels/log-files.readChannelJson`
         - Register: `mcpTool('get_timeline')`
@@ -25007,7 +24996,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `no-db-backed-notify` — `server/internal/scan-served.ts` (sanctioned)
           - `boundaries/no-platform-api` — `server/internal/mcp-tool.ts`, `server/internal/sources/health.ts` (debt)
-          - `blocking-fs/no-sync-fs` — `server/internal/log-dirs.ts` (debt)
     - **`trace`** — Umbrella for the durable slow-event trace engine: the generic perf-event trace registry + storage (engine) and the built-in event classes (spans, gates, contention).
       - Plugins:
         - **`boot`** — Boot trace lane: a self-contained phase-grouped Gantt card of the server-boot profile (gateway readiness wait, per-phase spans, memory checkpoints) on the boot section's own clock axis. Built-in trace event class 'boot': the server-boot profile (phase spans + memory checkpoints + optional gateway readiness wait) pre-aggregated by debug/boot-monitor and passed in via the boot trigger's detail.
@@ -25469,7 +25457,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `no-db-backed-notify` — `server/internal/scan-served.ts` (sanctioned)
           - `endpoints:no-raw-json-handlers` — `server/internal/handle-delete.ts` (sanctioned)
           - `boundaries/no-platform-api` — `server/internal/dirs.ts`, `server/internal/hygiene-witness.ts`, `server/internal/reap-policy.ts`, `server/internal/reap.ts` (debt)
-          - `blocking-fs/no-sync-fs` — `server/internal/reap-policy.ts` (debt)
       - Shared:
         - Exports (types): `BulkDeleteWorktreesBody`
         - Exports (values):
@@ -27910,7 +27897,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`await`** — `./equin await` — block until this checkout's running op writes its verdict, and print it. Starts nothing; the wake-up becomes a tool result instead of a notification that may never arrive.
           - Cli:
-            - Uses: `infra/file-watcher.watchForCommand`
+            - Uses:
+              - `debug/profiling/op-log.readOpenWaitInLine`
+              - `debug/profiling/op-log.readOpRecords`
+              - `infra/file-watcher.watchForCommand`
           - Cross-plugin:
             - Imported by: `framework/cli/foreground-handoff`
           - Core:
@@ -27957,12 +27947,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `takeReexecBudget`
         - **`build`** — `./equin build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.
           - Cli:
-            - Uses: 51 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
+            - Uses: 53 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
               - `framework/cli/op-runtime` ×31
               - `framework/cli/bootstrap` ×4
               - `framework/tooling/web-artifacts` ×4
               - `framework/cli/migrations` ×3
               - `plugin-meta/plugin-records` ×3
+              - `debug/profiling/op-log` ×2
               - `build/run-ledger.createBuildRunRecorder`
               - `framework/cli/doctor.assertPrerequisites`
               - `framework/cli/git-artifacts.registerMergeDrivers`
@@ -28130,6 +28121,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `writeBuildReceiptSync`
           - Cli:
             - Uses:
+              - `debug/profiling/op-log.createOpProfiler`
+              - `debug/profiling/op-log.OpProfiler`
+              - `debug/profiling/op-log.readOpStates`
               - `infra/jobs/supervised-job.cliExecContext`
               - `tasks/task-track.checkoutTrack`
             - Exports (types):
@@ -28206,6 +28200,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`push`** — `./equin push` — the one path work reaches main: commit, rebase onto main, re-normalize generated artifacts, run the tree-scoped checks, fast-forward and push, all under the host-wide push mutex.
           - Cli:
             - Uses:
+              - `debug/profiling/op-log.createOpProfiler`
+              - `debug/profiling/op-log.OpProfiler`
               - `framework/cli/git-artifacts.normalizeGeneratedArtifacts`
               - `framework/cli/op-runtime.checkBroadcasts`
               - `framework/cli/op-runtime.installFatalSignalExit`
@@ -29460,7 +29456,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `infra/host-fs/user-path.joinAppPath`
                   - `infra/namespace.MAIN_COMPOSITION_ID`
                   - `infra/paths.SERVER_CORE_RELATIVE`
-                  - `packages/timed-fs.readdirSync`
+                  - `packages/timed-fs.readdir`
                   - `plugin-meta/composition.assertCompositionName`
                 - Exports (values):
                   - `collectedDirNamedCompositionRegistryPath`
@@ -29470,7 +29466,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `compositionRegistryFileName`
                   - `compositionRegistryPath`
                   - `compositionRegistryRedirects`
-                  - `listNamedCompositionRegistriesSync`
+                  - `listNamedCompositionRegistries`
                   - `parseNamedCompositionRegistryFileName`
               - Cross-plugin:
                 - Imported by:
@@ -31819,7 +31815,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/host-fs/user-path.AppPath`
               - `infra/host-fs/user-path.asAppPath`
               - `infra/host-fs/user-path.joinAppPath`
+              - `packages/timed-fs.exists`
               - `packages/timed-fs.existsSync`
+              - `packages/timed-fs.readFile`
               - `packages/timed-fs.readFileSync`
             - Exports (types):
               - `BrowserExecutables`
@@ -31827,6 +31825,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `BROWSER_EXECUTABLES_FILE`
               - `BrowserExecutablesSchema`
+              - `readBrowserExecutables`
               - `readBrowserExecutablesSync`
           - Cross-plugin:
             - Imported by:
@@ -31838,7 +31837,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from:
               - `boundaries/no-platform-api` — `core/internal/executables.ts` (debt)
               - `user-path/no-unproven-claim` — `core/internal/executables.ts` (sanctioned)
-              - `blocking-fs/no-sync-fs` — `deps/internal/playwright-browser.ts` (debt)
           - Deps:
             - Exports (types):
               - `ChromiumLaunchOptions`
@@ -32526,6 +32524,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/host-fs/user-path.appPathParent`
           - `infra/host-fs/user-path.asAppPath`
           - `infra/host-fs/user-path.joinAppPath`
+          - `packages/coalesce.createKeyedCoalescer`
           - `packages/owned-fd.openOwnedFdSync`
           - `packages/owned-fd.OwnedFd`
           - `packages/timed-fs.stat`
@@ -32542,6 +32541,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TailResult`
         - Exports (values):
           - `defineFileSink`
+          - `flushQueuedAppendsSync`
           - `getFileSinks`
           - `historyCutAt`
           - `isHistoryPosition`
@@ -32552,6 +32552,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readTailAsync`
           - `readTailSync`
           - `sanitizeChannel`
+          - `settleFileSinkWrites`
           - `statHistory`
       - Cross-plugin:
         - Imported by:
@@ -32568,6 +32569,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `sink-safety/no-adhoc-file-sink` — `.` (sanctioned)
           - `boundaries/no-platform-api` — `core/internal/file-sink.ts`, `core/internal/history.ts`, `core/internal/read.ts` (debt)
+          - `blocking-fs/no-sync-fs` — `server/internal/exit-flush.ts` (sanctioned)
+      - Server:
+        - Register: `file-sink-exit-flush`
     - **`file-watcher`** — defineFileWatcher: the one declared in-process file watcher — a named, described declaration (static policy: extensions, ignore, debounce, ceiling, writesWhileOpen, depth, mainOnly) whose start({dirs, label, onChange, onLost}) — start({files, …}) for a writesWhileOpen one, which follows writes to the named files only (kqueue on darwin, one descriptor per file; every follow of a directory shares one subscription) — opens instances over one @parcel/watcher engine (debounce + ceiling flush; no timer — a dropped event is reported to onLost, the one backstop). Records per declaration its open instances, last change batch and a ring of handler runs for the Background activity catalog (onWatcherActivity / listFileWatchers / fileWatcherRecentRuns). The cli barrel's watchForCommand is the same engine for a foreground command, with no registry. acquireDirWatch({dir, scope, onChange}) is the shared directory-watch hub: one native watch per folder tree, refcounted, a dir under a watched root riding its watch, with subtree or children (depth-1 listing) scope — a children request with no root above it opening only a single-directory watch (depth children, fs.watch), never a recursive one.
       - Cross-plugin:
         - Imported by: 39 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
@@ -33336,29 +33340,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`blocking-fs`** — No synchronous fs call or child process on a backend's JS thread: the type-aware blocking-fs/no-sync-fs lint refuses node:fs / node:child_process *Sync calls (timed-fs's twins included), Bun.resolveSync / spawnSync, sync glob scans and core/shared/data-dirs *Sync helpers in server/, machine/, central/ and deps/ code; blocking-fs/sync-named makes every helper there that blocks carry the *Sync name, and the blocking-fs:sync-named-reach check holds a helper excused as tool-only to no backend loading it. A file that blocks no backend (its own child process, pre-listen boot, a sync exit handler) declares a sanctioned exemption.
           - Exemptions:
             - Exempted by:
-              - `apps/browser/engine` (1 debt)
-              - `backup` (2 debt)
-              - `backup/targets/local` (1 debt)
-              - `build` (1 debt)
-              - `build/build-logs` (1 debt)
               - `build/run-ledger` (1 debt)
               - `build/server-build-id` (0 debt)
-              - `config_v2` (2 debt)
+              - `config_v2` (1 debt)
               - `config_v2/disk-read` (1 debt)
               - `config_v2/ledger` (0 debt)
-              - `conversations/workspace/scratch` (2 debt)
-              - `database` (1 debt)
-              - `database/client-tools` (1 debt)
               - `database/migrations` (0 debt)
-              - `debug/boot-events` (1 debt)
-              - `debug/boot-watchdog` (1 debt)
+              - `debug/boot-events` (0 debt)
               - `debug/browser-recordings/writer` (1 debt)
               - `debug/paging-probe` (0 debt)
-              - `debug/profiling/fs-wait` (1 debt)
-              - `debug/profiling/op-log` (2 debt)
-              - `debug/sentinel` (2 debt)
-              - `debug/timeline` (1 debt)
-              - `debug/worktree-cleanup` (1 debt)
+              - `debug/profiling/fs-wait` (0 debt)
               - `framework/cli` (0 debt)
               - `framework/cli/release` (0 debt)
               - `framework/cli/test` (0 debt)
@@ -33373,16 +33364,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/web-artifacts` (0 debt)
               - `infra/asset-mirror/bundle` (0 debt)
               - `infra/deps/mise` (2 debt)
-              - `infra/deps/playwright-browser` (1 debt)
+              - `infra/file-sink` (0 debt)
               - `infra/git/tree-lock` (0 debt)
               - `infra/host/host-admission` (1 debt)
-              - `infra/jobs/supervised-job` (2 debt)
               - `infra/launcher` (0 debt)
-              - `infra/mcp/browser` (1 debt)
-              - `infra/paths` (4 debt)
-              - `infra/worktree` (1 debt)
-              - `infra/worktree/reclaim` (1 debt)
-              - `packages/host-semaphore` (1 debt)
+              - `infra/paths` (3 debt)
+              - `infra/worktree` (0 debt)
               - `packages/signal-origin` (0 debt)
               - `packages/signal-origin/sink` (1 debt)
               - `packages/single-flight` (0 debt)
@@ -33393,11 +33380,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/relocate` (0 debt)
               - `plugin-meta/token-usage` (0 debt)
               - `primitives/icon-picker` (0 debt)
-              - `primitives/log-channels` (1 debt)
-              - `release/source-checkout` (1 debt)
               - `reports/engine` (0 debt)
-              - `reports/outbox` (1 debt)
-              - `ui/icons` (1 debt)
+              - `reports/outbox` (0 debt)
         - **`image`** — Images on the host filesystem: the daily host-fs-image.sweep keeps the resized-copy cache (machine/'s GET resized) within 30 days unused and 1 GB.
           - Server:
             - Contributes: `resource.declare` "host-fs.image-sizes"
@@ -33928,7 +33912,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/host-fs/user-path.asAppPath`
               - `infra/paths.worktreeArtifacts`
               - `infra/runtime-identity.runtimeNamespace`
+              - `packages/timed-fs.readFile`
               - `packages/timed-fs.readFileSync`
+              - `packages/timed-fs.stat`
               - `packages/timed-fs.statSync`
             - Exports (types):
               - `ExecContext`
@@ -33941,7 +33927,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `HARD_KILL_EXIT_CODE`
               - `isRunAlive`
               - `isRunId`
-              - `observeRunSync`
+              - `observeRun`
+              - `readRunTerminal`
               - `readRunTerminalSync`
               - `RUN_TERMINAL_ENV`
               - `RunMarkerError`
@@ -33976,7 +33963,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ids:pk-declared` — `server/internal/tables.ts` (debt)
               - `ids:pk-declared` — `server/internal/tables-run-ended.ts` (debt)
               - `boundaries/no-platform-api` — `core/internal/terminal.ts`, `server/internal/run/supervisor.ts`, `server/internal/run/tail.ts` (debt)
-              - `blocking-fs/no-sync-fs` — `server/internal/loop.ts`, `server/internal/run/supervisor.ts` (debt)
           - Test helpers:
             - Core: `@plugins/infra/plugins/jobs/plugins/supervised-job/core/testing`
               - `execContextForTests` — An `ExecContext` for tests: origin `cli`, admission that admits at once.
@@ -34400,7 +34386,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from:
               - `boundaries/no-platform-api` — `server/internal/host-client.ts`, `shared/code-id.ts` (debt)
               - `endpoints/no-raw-web-fetch` — `shared/revert.ts` (sanctioned)
-              - `blocking-fs/no-sync-fs` — `server/internal/host-client.ts` (debt)
         - **`health`** — The health report's MCP server row: critical while the latest MCP request failed (agents launched from here have no equin tools), attention while a per-connection contribution (a tool's gate or live description, an instructions section) keeps throwing, read from the mcp.health push value — with an Investigate remedy launching an agent briefed with what failed.
           - Web:
             - Contributes: `HealthReport.Row` "MCP server"
@@ -34485,8 +34470,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `ndjsonResponse`
     - **`paths`** — Canonical machine paths, plus the boot-time publication of this namespace's declared data-dir set so an audit running in another checkout can tell one of this branch's directories from an orphan.
       - Core:
-        - Uses: 32 symbols — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
-          - `packages/timed-fs` ×10
+        - Uses: 33 symbols — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+          - `packages/timed-fs` ×11
           - `infra/namespace` ×8
           - `infra/launcher/env-names` ×4
           - `infra/host-fs/user-path` ×3
@@ -34518,6 +34503,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `actAsCheckoutNamespace`
           - `backendEntryFor`
+          - `backupsDir`
           - `backupsDirs`
           - `backupsDirSync`
           - `CHECK_ARTIFACTS_RETENTION`
@@ -34544,6 +34530,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isHostSingleton`
           - `isRelease`
           - `LEGACY_LAYOUT`
+          - `listWorktreeDirsAsync`
           - `listWorktreeDirsSync`
           - `LOG_FILE_RE`
           - `logPatternMatches`
@@ -34554,7 +34541,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `pruneWorktreeCheckArtifactsSync`
           - `pruneWorktreeTestArtifactsSync`
           - `publishedLogClaim`
+          - `readCheckoutMinter`
           - `readCheckoutMinterSync`
+          - `readCheckoutOwner`
           - `readCheckoutOwnerSync`
           - `readHomeDataRootLayoutSync`
           - `relativeToDataRoot`
@@ -34564,6 +34553,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RUN_TERMINAL_SUFFIX`
           - `SERVER_CORE_RELATIVE`
           - `setReleaseIdentity`
+          - `stampCheckoutMinter`
           - `stampCheckoutMinterSync`
           - `toolchainPin`
           - `WORKTREE_SPEC_FILE`
@@ -34603,7 +34593,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `boundaries/no-platform-api` — `core/internal/checkout-deploys.ts`, `core/internal/checkout-minter.ts`, `core/internal/checkout-owner.ts`, `core/internal/checkout-ref.ts`, `core/internal/data-dir.ts`, `core/internal/data-root-layout.ts`, `core/internal/data-dirs-manifest.ts`, `core/internal/paths.ts`, `core/internal/prune-artifacts.ts`, `core/internal/toolchain-pin.ts`, `core/internal/worktree-dirs.ts` (debt)
           - `user-path/no-unproven-claim` — `core/internal/paths.ts`, `core/internal/data-root-layout.ts` (sanctioned)
           - `user-path/no-unproven-claim` — `core/internal/checkout-deploys.ts` (sanctioned)
-          - `blocking-fs/no-sync-fs` — `server/internal/publish-data-dirs.ts` (debt)
           - `blocking-fs/sync-named` — `core/internal/checkout-ref.ts`, `core/internal/data-dir.ts`, `core/internal/paths.ts` (debt)
       - Server:
         - Exports (types):
@@ -34619,6 +34608,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ReleaseIdentity`
         - Exports (values):
           - `actAsCheckoutNamespace`
+          - `backupsDir`
           - `backupsDirSync`
           - `BUILD_ARTIFACTS_RETENTION`
           - `CHECK_ARTIFACTS_RETENTION`
@@ -34646,6 +34636,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PLUGINS_DIR`
           - `pruneWorktreeBuildArtifactsSync`
           - `pruneWorktreeCheckArtifactsSync`
+          - `pruneWorktreeRunArtifacts`
           - `pruneWorktreeRunArtifactsSync`
           - `PS`
           - `publishDataDirsManifest`
@@ -35046,7 +35037,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SPAN_MEASURES`
           - `waitSplit`
       - Cross-plugin:
-        - Imported by: 68 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
+        - Imported by: 69 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
           - `infra` ×22
           - `debug` ×20
           - `conversations` ×6
@@ -35061,6 +35052,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `integrations/google-maps`
           - `network/live/change-feed`
           - `plugin-meta/plugin-tree`
+          - `primitives/log-channels`
       - Exemptions:
         - Exempts itself from:
           - `boundaries/no-platform-api` — `server/internal/install.ts` (debt)
@@ -35603,7 +35595,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `boundaries/no-platform-api` — `server/internal/composition-namespace.ts`, `server/internal/dep-store-pool.ts`, `server/internal/install-checkout.ts`, `server/internal/spare-name.ts`, `server/internal/spare.ts`, `server/internal/spec.ts`, `server/internal/worktree-op.ts`, `server/internal/worktree-op-marker.ts`, `server/internal/worktree.ts` (debt)
           - `user-path/no-unproven-claim` — `server/internal/worktree.ts` (sanctioned)
           - `blocking-fs/no-sync-fs` — `server/internal/worktree-op-marker.ts` (sanctioned)
-          - `blocking-fs/no-sync-fs` — `server/internal/worktree.ts` (debt)
         - Exempted by: `infra/worktree` (0 debt)
       - Core:
         - Exports (types):
@@ -35645,7 +35636,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from:
               - `boundaries/no-platform-api` — `server/internal/owned-namespaces.ts`, `server/internal/reclaim-namespace.ts` (debt)
               - `repo-walk-safety/no-adhoc-repo-listing` — `server/internal/reclaim-namespace.ts` (sanctioned)
-              - `blocking-fs/no-sync-fs` — `server/internal/reclaim-namespace.ts` (debt)
         - **`spare-pool`** — Spare worktree pool: the worktree.spare-refill job (enqueued after every launch's checkout, at main's boot, and daily) keeps one locked, detached checkout of main ready under .claude/worktrees/spare-*, so setupWorktree claims it with a rename and a branch switch instead of a cold git worktree add.
           - Server:
             - Uses:
@@ -38028,8 +38018,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Plugins:
     - **`coalesce`** — Trigger coalescer: createCoalescer / createKeyedCoalescer run a reaction at most once at a time per key and fold every trigger that lands mid-run into ONE trailing run (its items merged), so however many triggers arrive the work is bounded to one running plus one pending per key — and a trigger never joins a run that started before it.
       - Cross-plugin:
-        - Imported by: 21 plugins — full list in [`plugins/packages/plugins/coalesce/REFERENCE.md`](../plugins/packages/plugins/coalesce/REFERENCE.md)
-          - `infra` ×9
+        - Imported by: 22 plugins — full list in [`plugins/packages/plugins/coalesce/REFERENCE.md`](../plugins/packages/plugins/coalesce/REFERENCE.md)
+          - `infra` ×10
           - `conversations` ×3
           - `apps` ×2
           - `debug` ×2
@@ -38137,9 +38127,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by: `infra/host/host-admission`
       - Exemptions:
-        - Exempts itself from:
-          - `boundaries/no-platform-api` — `server/internal/host-semaphore.ts` (debt)
-          - `blocking-fs/no-sync-fs` — `server/internal/host-semaphore.ts` (debt)
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/host-semaphore.ts` (debt)
     - **`image-size`** — An image's pixel size read from its header bytes, in plain JS on every host: readImageSize(bytes) for PNG, GIF, JPEG, WebP and BMP — a known-format answer from the first bytes (JPEG: up to its frame header), so a caller can reserve an image's box before the image loads.
       - Cross-plugin:
         - Imported by:
@@ -48537,9 +48525,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `upstream`
         - Endpoint callers: `log-files`
       - Exemptions:
-        - Exempts itself from:
-          - `networking/no-page-transport` — `web/client-log.ts` (sanctioned)
-          - `blocking-fs/no-sync-fs` — `machine/internal/file-persistence.ts` (debt)
+        - Exempts itself from: `networking/no-page-transport` — `web/client-log.ts` (sanctioned)
       - Machine:
         - Register: `log-file-sinks`
       - Plugins:
@@ -52052,9 +52038,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by: `framework/cli/release`
       - Exemptions:
-        - Exempts itself from:
-          - `boundaries/no-platform-api` — `server/internal/source-checkout.ts` (debt)
-          - `blocking-fs/no-sync-fs` — `server/internal/source-checkout.ts` (debt)
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/source-checkout.ts` (debt)
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. Applies each slot's committed layout (order, hidden items, spacers, dividers, groups) everywhere slots render; a layout is edited in its config file or the Config pane's reorder-tree field. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
@@ -52891,7 +52875,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempts itself from:
           - `boundaries/no-platform-api` — `core/internal/file-report.ts`, `server/internal/drain.ts` (debt)
-          - `blocking-fs/no-sync-fs` — `server/internal/writer.ts` (debt)
+          - `blocking-fs/no-sync-fs` — `server/internal/writer.ts` (sanctioned)
     - **`page-doc-rank-drift`** — Page doc-rank drift report kind: files the page editor's docRankDriftSink — a boot reconcile that had to re-mint `page_blocks.doc_rank` the structural-write chokepoint should already have kept in document order (a writer bypassed the doc-order marks, or an old backend wrote during a hot-swap) — deduped on the kind alone, with an investigation task naming the bypass to find.
       - Server:
         - Contributes: `report-kind` "page-doc-rank-drift"
@@ -57462,6 +57446,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `infra/deps/updates.holdProblems`
       - `infra/host-fs/user-path.asAppPath`
       - `infra/paths.HOME_DIR`
+      - `packages/timed-fs.access`
       - `packages/timed-fs.existsSync`
     - Exports (types):
       - `ToolSmoke`
@@ -57469,6 +57454,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Exports (values):
       - `addLockedTool`
       - `compareVersions`
+      - `findMiseBin`
       - `findMiseBinSync`
       - `HOLDS`
       - `HOLDS_FILE`
@@ -57642,7 +57628,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `icons/reserved-nav-icon` — `core/nav-icons.ts` (sanctioned)
           - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
-          - `blocking-fs/no-sync-fs` — `machine/internal/resolve-icon.ts` (debt)
         - Exempted by: `ui/icons` (0 debt)
       - Server:
         - Exports (values):
@@ -57793,11 +57778,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `infra/host-fs/user-path.AppPath`
               - `infra/host-fs/user-path.asAppPath`
+              - `packages/timed-fs.readFile`
               - `packages/timed-fs.readFileSync`
             - Exports (types): `SymbolNameList`
             - Exports (values):
               - `ICON_SET_PACKAGES`
               - `installedSetVersionsSync`
+              - `readIconSet`
               - `readIconSetSync`
               - `readInputsHash`
               - `readListInputsHash`

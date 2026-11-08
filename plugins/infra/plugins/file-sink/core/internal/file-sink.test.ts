@@ -383,3 +383,92 @@ describe("openDynamicSink", () => {
     expect(getFileSinks().size).toBe(before);
   });
 });
+
+describe("append (async, queued per path)", () => {
+  function snapshot(base: string): Record<string, string> {
+    const out: Record<string, string> = {};
+    for (const n of readdirSync(dir)
+      .filter((n) => n.startsWith(base))
+      .sort())
+      out[n.slice(base.length)] = readFileSync(joinAppPath(dir, n), "utf8");
+    return out;
+  }
+
+  test("concurrent appends land whole, in call order", async () => {
+    const path = joinAppPath(dir, "q.jsonl");
+    const sink = defineFileSink({ id: uniqueId(), description: "t", path });
+    const lines = Array.from({ length: 200 }, (_, i) => `line-${i}`);
+    await Promise.all(lines.map((l) => sink.append(l)));
+    expect(readFileSync(path, "utf8")).toBe(lines.join("\n") + "\n");
+  });
+
+  test("rotates exactly as the sync writer does for the same lines", async () => {
+    const lines = Array.from(
+      { length: 40 },
+      (_, i) => `L${i}-${"x".repeat(i % 7)}`,
+    );
+    const syncSink = defineFileSink({
+      id: uniqueId(),
+      description: "t",
+      path: joinAppPath(dir, "s.jsonl"),
+      maxBytes: 37,
+      keep: 2,
+    });
+    const asyncSink = defineFileSink({
+      id: uniqueId(),
+      description: "t",
+      path: joinAppPath(dir, "a.jsonl"),
+      maxBytes: 37,
+      keep: 2,
+    });
+    for (const l of lines) syncSink.appendSync(l);
+    // Half one by one (folding into queued drains), half as one batch.
+    await Promise.all([
+      ...lines.slice(0, 20).map((l) => asyncSink.append(l)),
+      asyncSink.appendAll(lines.slice(20)),
+    ]);
+    expect(snapshot("a.jsonl")).toEqual(snapshot("s.jsonl"));
+  });
+
+  test("an empty batch creates neither the file nor its directory", async () => {
+    const path = joinAppPath(dir, "nested", "e.jsonl");
+    const sink = defineFileSink({ id: uniqueId(), description: "t", path });
+    await sink.appendAll([]);
+    expect(existsSync(joinAppPath(dir, "nested"))).toBe(false);
+  });
+
+  test("two sinks over one path share its queue", async () => {
+    const lines = Array.from({ length: 50 }, (_, i) => `d${i}`);
+    await Promise.all(lines.map((l) => openDynamicSink(dir, "dyn").append(l)));
+    expect(readFileSync(joinAppPath(dir, "dyn.jsonl"), "utf8")).toBe(
+      lines.join("\n") + "\n",
+    );
+  });
+
+  test("recreates the parent dir if it disappeared under a live sink", async () => {
+    const sub = joinAppPath(dir, "gone");
+    const path = joinAppPath(sub, "g.jsonl");
+    const sink = defineFileSink({ id: uniqueId(), description: "t", path });
+    await sink.append("one");
+    rmSync(sub, { recursive: true, force: true });
+    await sink.append("two");
+    expect(readFileSync(path, "utf8")).toBe("two\n");
+  });
+});
+
+describe("append: lines still queued when the process exits", () => {
+  test("are written synchronously by flushQueuedAppendsSync, in order", () => {
+    const path = joinAppPath(dir, "exit.jsonl");
+    const script = `
+      import { defineFileSink, flushQueuedAppendsSync } from ${JSON.stringify(join(import.meta.dir, "file-sink.ts"))};
+      process.once("exit", flushQueuedAppendsSync); // what file-sink's server half arms
+      const sink = defineFileSink({ id: "exit-test", description: "t", path: ${JSON.stringify(path)} });
+      for (let i = 0; i < 100; i++) void sink.append("line-" + i);
+      process.exit(0);
+    `;
+    const res = Bun.spawnSync(["bun", "-e", script]);
+    expect(res.exitCode).toBe(0);
+    const lines = readFileSync(path, "utf8").trim().split("\n");
+    expect(lines).toEqual(Array.from({ length: 100 }, (_, i) => `line-${i}`));
+  });
+});

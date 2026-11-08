@@ -408,8 +408,6 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
     - `debug/reports`
     - `menu-bar`
   - Endpoint callers: `restart-skip`
-- Exemptions:
-  - Exempts itself from: `blocking-fs/no-sync-fs` — `machine/internal/run-terminal.ts` (debt)
 - Shared:
   - Exports (types): `BuildRun`
   - Exports (values):
@@ -419,7 +417,7 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
   - **`build-commits`** — Commits included since the previous build, shown in the build detail pane.
   - **`build-fix`** — Launch-agent button in the build detail pane for failed builds, and the same launch as a Build failed notification's Fix (the fix-build notification action).
   - **`build-info`** — Status, trigger, commit hash, and timing section in the build detail pane.
-  - **`build-logs`** [exempt] — Logs section in the build detail pane: the run's transcript as its steps and lines (build.run-logs, newest first, paged by viewport).
+  - **`build-logs`** — Logs section in the build detail pane: the run's transcript as its steps and lines (build.run-logs, newest first, paged by viewport).
   - **`build-profiling`** — Per-run build profiling Gantt section in the build detail pane.
   - **`build-status`** — Single source of truth for build-run status display metadata — label, badge variant, and dot color per BuildStatus.
   - **`build-termination`** — Per-run termination record, desktop-only: the build.run-termination live value — what the host-global signal-origin sink recorded about the death of one build run (which signal, and who sent it)…

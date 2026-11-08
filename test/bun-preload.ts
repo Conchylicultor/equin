@@ -67,4 +67,9 @@ if (process.env.BOOTS_OWN_PLUGIN_GRAPH !== "1") {
     providers.push(...(mod.default.contributions ?? []));
   }
   provideHostServicesUnbooted(providers);
+  // What the desktop's database driver loads at boot (its `ready()`) before
+  // anything queries: suites use `db` without booting, so the stand-in boot
+  // loads it here.
+  const { loadDatabaseConfig } = await import("@plugins/database/core");
+  await loadDatabaseConfig();
 }

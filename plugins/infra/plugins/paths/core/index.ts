@@ -5,6 +5,7 @@ export {
   backendEntryFor,
   HOME_DIR,
   backupsDirSync,
+  backupsDir,
   backupsDirs,
   dataRootLayoutSync,
   worktreesDir,
@@ -46,18 +47,26 @@ export { toolchainPin } from "./internal/toolchain-pin";
 // may import no `server` barrel at all — resolves the deploy it is about to
 // drive. The `server` barrel re-exports `listWorktreeDirsSync` and `checkoutRef`, so
 // their existing server-side callers are unchanged.
-export { listWorktreeDirsSync } from "./internal/worktree-dirs";
+export {
+  listWorktreeDirsSync,
+  listWorktreeDirsAsync,
+} from "./internal/worktree-dirs";
 export {
   actAsCheckoutNamespace,
   checkoutRef,
   checkoutNamespace,
 } from "./internal/checkout-ref";
 // Who acts as a namespace: stamped by the CLI, read by the reaper.
-export { readCheckoutOwnerSync } from "./internal/checkout-owner";
+export {
+  readCheckoutOwner,
+  readCheckoutOwnerSync,
+} from "./internal/checkout-owner";
 export type { CheckoutOwnerRead } from "./internal/checkout-owner";
 // Which backend minted an agent checkout: stamped by worktree.prepare, read by the reaper.
 export {
+  readCheckoutMinter,
   readCheckoutMinterSync,
+  stampCheckoutMinter,
   stampCheckoutMinterSync,
 } from "./internal/checkout-minter";
 export type { CheckoutMinterRead } from "./internal/checkout-minter";

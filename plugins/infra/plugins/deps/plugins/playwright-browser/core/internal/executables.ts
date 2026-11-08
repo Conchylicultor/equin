@@ -1,5 +1,7 @@
 import {
+  exists,
   existsSync,
+  readFile,
   readFileSync,
 } from "@plugins/packages/plugins/timed-fs/core";
 import {
@@ -40,9 +42,10 @@ export type ReadBrowserExecutables =
 
 /**
  * Read the record from an install's `env/`, and check that both executables
- * it names still exist. Synchronous and cheap (one small read, two stats): it
- * is the kind's `isIntact`, which runs on every `ensureDep` fast path and
- * every state read.
+ * it names still exist. Cheap (one small read, two stats), but on the calling
+ * thread: for host code with no event loop to keep (a check, an e2e script).
+ * A backend — the kind's `isIntact`, which runs on every `ensureDep` fast path
+ * and every state read, and its launchers — reads `readBrowserExecutables`.
  */
 export function readBrowserExecutablesSync(
   envDir: AppPath,
@@ -57,6 +60,37 @@ export function readBrowserExecutablesSync(
     }
     throw err;
   }
+  const record = parseRecord(file, raw);
+  if (!record.ok) return record;
+  for (const [role, path] of executablesOf(record.executables)) {
+    if (!existsSync(path)) return gone(role, path, file);
+  }
+  return record;
+}
+
+/** `readBrowserExecutablesSync`'s async twin: the same read, off the thread. */
+export async function readBrowserExecutables(
+  envDir: AppPath,
+): Promise<ReadBrowserExecutables> {
+  const file = joinAppPath(envDir, BROWSER_EXECUTABLES_FILE);
+  let raw: string;
+  try {
+    raw = await readFile(file, "utf8");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+      return { ok: false, reason: `${file} does not exist` };
+    }
+    throw err;
+  }
+  const record = parseRecord(file, raw);
+  if (!record.ok) return record;
+  for (const [role, path] of executablesOf(record.executables)) {
+    if (!(await exists(path))) return gone(role, path, file);
+  }
+  return record;
+}
+
+function parseRecord(file: string, raw: string): ReadBrowserExecutables {
   let json: unknown;
   try {
     json = JSON.parse(raw);
@@ -73,16 +107,23 @@ export function readBrowserExecutablesSync(
       reason: `${file} is not a browser-executables record: ${parsed.error.message}`,
     };
   }
-  for (const [role, path] of [
-    ["headed", parsed.data.headed],
-    ["headless-shell", parsed.data.headlessShell],
-  ] as const) {
-    if (!existsSync(path)) {
-      return {
-        ok: false,
-        reason: `the ${role} executable ${path} recorded in ${file} is gone`,
-      };
-    }
-  }
   return { ok: true, executables: parsed.data };
+}
+
+function executablesOf(e: BrowserExecutables) {
+  return [
+    ["headed", e.headed],
+    ["headless-shell", e.headlessShell],
+  ] as const;
+}
+
+function gone(
+  role: string,
+  path: string,
+  file: string,
+): ReadBrowserExecutables {
+  return {
+    ok: false,
+    reason: `the ${role} executable ${path} recorded in ${file} is gone`,
+  };
 }

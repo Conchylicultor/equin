@@ -9,7 +9,7 @@ import { stat } from "@plugins/packages/plugins/timed-fs/core";
 import { cpus, loadavg } from "node:os";
 import {
   HOME_DIR,
-  listWorktreeDirsSync,
+  listWorktreeDirsAsync,
   worktreesDir,
 } from "@plugins/infra/plugins/paths/core";
 import type { DiskReading } from "@plugins/debug/plugins/sentinel/plugins/status-file/core";
@@ -106,7 +106,7 @@ async function countBuilds(log: Logger): Promise<number | null> {
 // fresh mtime so stopped backends drop out of the rollup.
 export async function readBackendP99Rollup(): Promise<Record<string, number>> {
   const rollup: Record<string, number> = {};
-  const names = listWorktreeDirsSync();
+  const names = await listWorktreeDirsAsync();
   const now = Date.now();
   for (const name of names) {
     const file = joinAppPath(worktreesDir(), name, "logs", "health.jsonl");

@@ -2,7 +2,7 @@ import {
   envName,
   readEnv,
 } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
-import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
+import { exists } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 
 /**
@@ -34,7 +34,7 @@ export interface ResolveContext {
   arch: string;
   /** This plugin's folder, whose `node_modules` holds the platform package. */
   pluginRoot: string;
-  exists: (path: string) => boolean;
+  exists: (path: string) => Promise<boolean>;
 }
 
 /**
@@ -44,15 +44,15 @@ export interface ResolveContext {
  * the client drift from the server (an 18.6 client against the 18.3 cluster);
  * the vendored build comes from the same Postgres release as the server.
  */
-export function resolvePgClientBin(
+export async function resolvePgClientBin(
   tool: PgClientTool,
   ctx: ResolveContext,
-): string {
+): Promise<string> {
   // Set by the release launcher to the bundle's vendored `pg-client/bin`.
   const override = readEnv("PG_CLIENT_BIN_DIR", ctx.env);
   if (override) {
     const bin = join(override, tool);
-    if (!ctx.exists(bin)) {
+    if (!(await ctx.exists(bin))) {
       throw new PgClientToolMissingError(
         tool,
         bin,
@@ -75,16 +75,16 @@ export function resolvePgClientBin(
     "bin",
     tool,
   );
-  if (!ctx.exists(bin)) {
+  if (!(await ctx.exists(bin))) {
     throw new PgClientToolMissingError(tool, bin, "run `bun install`");
   }
   return bin;
 }
 
-const resolved = new Map<PgClientTool, string>();
+const resolved = new Map<PgClientTool, Promise<string>>();
 
-/** Absolute path of the vendored `tool` for this process. */
-export function pgClientBin(tool: PgClientTool): string {
+/** Absolute path of the vendored `tool` for this process (resolved once). */
+export function pgClientBin(tool: PgClientTool): Promise<string> {
   let bin = resolved.get(tool);
   if (bin === undefined) {
     bin = resolvePgClientBin(tool, {
@@ -92,7 +92,11 @@ export function pgClientBin(tool: PgClientTool): string {
       platform: process.platform,
       arch: process.arch,
       pluginRoot: join(import.meta.dir, "..", ".."),
-      exists: existsSync,
+      exists,
+    }).catch((err: unknown) => {
+      // Not memoized: the next ask probes again (a `bun install` since).
+      resolved.delete(tool);
+      throw err;
     });
     resolved.set(tool, bin);
   }

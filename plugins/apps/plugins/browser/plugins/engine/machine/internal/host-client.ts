@@ -20,7 +20,7 @@ import {
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { ENGINE_PROTOCOL } from "../../core";
 import { browserEngineDir } from "../../data-dirs";
-import { hostCodeIdSync } from "../../shared/code-id";
+import { hostCodeId } from "../../shared/code-id";
 import {
   EngineHostStatusSchema,
   HOST_FILES,
@@ -67,10 +67,19 @@ export const engineStatusWatcher = defineFileWatcher({
   extensions: [".json"],
 });
 
-let codeIdMemo: string | null = null;
-/** Which host code this checkout would run. */
-function ownCodeId(): string {
-  return (codeIdMemo ??= hostCodeIdSync(PLUGIN_DIR));
+let codeIdMemo: Promise<string> | null = null;
+/**
+ * Which host code this checkout would run: hashed once per process, on the
+ * first host lookup (the checkout's source does not change under a running
+ * backend — a rebuild restarts it).
+ */
+function ownCodeId(): Promise<string> {
+  // A failed hash (a file vanishing mid-read) is not kept: the next lookup
+  // hashes again rather than failing until the backend restarts.
+  return (codeIdMemo ??= hostCodeId(PLUGIN_DIR).catch((err: unknown) => {
+    codeIdMemo = null;
+    throw err;
+  }));
 }
 
 function alive(pid: number): boolean {
@@ -233,7 +242,7 @@ async function ensureOnce(): Promise<void> {
   if (status.kind === "running") {
     const { host } = status;
     const current =
-      host.protocol === ENGINE_PROTOCOL && host.codeId === ownCodeId();
+      host.protocol === ENGINE_PROTOCOL && host.codeId === (await ownCodeId());
     if (current || (!mayReplace(host) && host.protocol === ENGINE_PROTOCOL)) {
       followHost();
       return;
@@ -311,7 +320,7 @@ async function launchHost(): Promise<void> {
     env: process.env,
     pidFile: browserEngineDir.file(HOST_FILES.pid),
   });
-  const codeId = ownCodeId();
+  const codeId = await ownCodeId();
   await waitForStatus(
     // Our host, or one a concurrent launcher (another backend) won the lock with.
     (s) =>

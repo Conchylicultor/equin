@@ -54,6 +54,22 @@ export interface FileSink {
   readonly path: AppPath;
   description: string;
   bound: RotateBound;
+  /**
+   * Append one line. Asynchronous and queued per live path: appends from this
+   * process land in call order, never interleaved, and every line queued while a
+   * write is in flight goes out with the next one. Resolves once the line is on
+   * disk; rejects (loudly — `void` it and it is an unhandled rejection) when the
+   * write fails. The one form a backend uses (`blocking-fs/no-sync-fs`).
+   */
+  append(line: string): Promise<void>;
+  /** `append` for many lines: the same queue, the same gate as `appendAllSync`. */
+  appendAll(lines: readonly string[]): Promise<void>;
+  /**
+   * `append`, blocking until the line is on disk — for a process that may block
+   * (a CLI about to exit, an `exit` handler). It bypasses the async queue: a
+   * process writes one sink either way, never both at once, except a synchronous
+   * exit handler writing its last line after the queue's.
+   */
   appendSync(line: string): void;
   /**
    * Append MANY lines as ONE write — the batch form of `append`, and the reason a

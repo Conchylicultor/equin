@@ -19,4 +19,11 @@ export default [
     task: "task-1792338443-riwqev",
     reason: "not yet split into server/ + machine/",
   },
+  {
+    rule: "blocking-fs/no-sync-fs",
+    paths: ["server/internal/exit-flush.ts"],
+    kind: "sanctioned",
+    reason:
+      "The process `exit` listener writes the append queue's lines no write carried yet (flushQueuedAppendsSync): an exit listener cannot wait, and the process is ending.",
+  },
 ] satisfies Exemptions;

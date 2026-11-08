@@ -13,9 +13,9 @@ import {
   type Namespace,
 } from "@plugins/infra/plugins/namespace/core";
 import {
-  listWorktreeDirsSync,
-  readCheckoutMinterSync,
-  readCheckoutOwnerSync,
+  listWorktreeDirsAsync,
+  readCheckoutMinter,
+  readCheckoutOwner,
   type CheckoutMinterRead,
   type CheckoutOwnerRead,
 } from "@plugins/infra/plugins/paths/core";
@@ -531,7 +531,7 @@ export async function collectReapable(now: number): Promise<ReapScan> {
         targets.set(name, { id: name, worktreePath: path });
         continue;
       }
-      const minter = readCheckoutMinterSync(asNamespace(name));
+      const minter = await readCheckoutMinter(asNamespace(name));
       // Unstamped is every checkout older than the stamp — the floor's case.
       // A minter that is no checkout has no dir to confirm gone: the
       // classifier refuses it, so skip resolving a path for it.
@@ -615,12 +615,12 @@ export async function collectReapable(now: number): Promise<ReapScan> {
   // namespace is a checkout's OWN namespace, exactly what that function reaps;
   // there is no git worktree of ours to remove.
   if (canClassifyOrphans()) {
-    for (const name of listWorktreeDirsSync()) {
+    for (const name of await listWorktreeDirsAsync()) {
       if (!isNamespace(name) || isCanonicalWorktreeName(name)) continue;
       if (targets.has(name) || seenAttemptIds.has(name)) continue;
       const ns = asNamespace(name);
       if (await hasCompositionMarker(ns)) continue;
-      const owner = readCheckoutOwnerSync(ns);
+      const owner = await readCheckoutOwner(ns);
       if (owner.kind !== "stamped") continue;
       const decision = classifyStampedNamespace(ns, owner, {
         // Evaluated only when the verdict can depend on it; a real stat, per the

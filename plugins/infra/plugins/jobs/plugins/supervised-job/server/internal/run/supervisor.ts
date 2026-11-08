@@ -9,7 +9,7 @@ import {
   type FileWatcher,
 } from "@plugins/infra/plugins/file-watcher/server";
 import {
-  pruneWorktreeRunArtifactsSync,
+  pruneWorktreeRunArtifacts,
   RUN_TERMINAL_SUFFIX,
   RUN_TRANSCRIPT_SUFFIX,
   worktreeArtifacts,
@@ -18,10 +18,11 @@ import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { defineTimer } from "@plugins/infra/plugins/background/plugins/timer/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { createCoalescer } from "@plugins/packages/plugins/coalesce/core";
+import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 import {
   assertRunId,
-  observeRunSync,
-  readRunTerminalSync,
+  observeRun,
+  readRunTerminal,
   supervisedArgv,
 } from "../../../core";
 import {
@@ -100,8 +101,13 @@ interface LiveRun {
 const live = new Map<string, LiveRun>();
 /** The open follow, and the files it names (sorted, joined) — null while no run is live. */
 let watcher: { files: string; handle: FileWatcher } | null = null;
-/** A sync of {@link watcher} is between its first and last statement. */
-let watcherSyncing = false;
+/**
+ * Excludes the two things that touch `runs/` as a listing: a follow (re-)open
+ * and an artifact prune — see {@link pruneOutsideWatcherStart}. One key: there
+ * is one runs dir per process.
+ */
+const runsDirExclusion = createKeyedMutex();
+const RUNS_DIR_KEY = "runs-dir";
 
 /**
  * The live-set key. `:` separates the halves unambiguously because a kind id is
@@ -165,7 +171,12 @@ function track(
       // not. Two files with two tailers would keep the split and destroy the
       // order, which is the worse trade for a transcript people read top to
       // bottom.
-      kind.spec.channel.publishAll(lines.map((line) => ({ line })));
+      //
+      // Fire-and-forget: the tail's pump is synchronous, and the channel keeps
+      // the batch order itself. Tracked, so the store's cost has its own span.
+      void runTracked("supervised-run:publish", () =>
+        kind.spec.channel.publishAll(lines.map((line) => ({ line }))),
+      );
       // A reader of the run's files (its persisted log) hears the same pump.
       announceRunChange(kind.id, runId);
     },
@@ -194,7 +205,7 @@ async function untrack(run: LiveRun): Promise<void> {
 /**
  * Apply the close rule to one run, and close it when it has reached a terminal.
  *
- * The rule itself is {@link observeRunSync} in this plugin's `core/` — the one
+ * The rule itself is {@link observeRun} in this plugin's `core/` — the one
  * statement of it, shared with the job workflow's `awaitSupervisedRun`, so the
  * reconciler and a waiting workflow cannot disagree about whether a run ended:
  *
@@ -222,7 +233,7 @@ async function settleRun(
   pid: number | null,
   now: Date,
 ): Promise<boolean> {
-  const observation = observeRunSync(kind.id, runId, pid, now);
+  const observation = await observeRun(kind.id, runId, pid, now);
   if (observation.state === "running") return false;
   const run = live.get(liveKey(kind.id, runId));
   // Drain BEFORE the row closes: a UI that stops following a finished run must
@@ -351,7 +362,7 @@ async function settleFromMarker(
   kind: SupervisedRunKind,
   runId: string,
 ): Promise<void> {
-  if (readRunTerminalSync(kind.id, runId) === null) return;
+  if ((await readRunTerminal(kind.id, runId)) === null) return;
   await settleRun(kind, runId, null, new Date());
   await syncWatcher();
 }
@@ -373,14 +384,7 @@ function syncWatcher(): Promise<void> {
 }
 
 const watcherSync = createCoalescer({
-  run: async () => {
-    watcherSyncing = true;
-    try {
-      await applyWatcher();
-    } finally {
-      watcherSyncing = false;
-    }
-  },
+  run: () => runsDirExclusion.run(RUNS_DIR_KEY, applyWatcher),
 });
 
 async function applyWatcher(): Promise<void> {
@@ -458,12 +462,13 @@ function reportWatchFailure(err: unknown): void {
  * 03:00). The prune never deletes a followed file (a live run's files are the
  * newest of its kind), so the follow itself loses nothing to it.
  *
- * `prune` is synchronous, and no `await` separates the loop's exit from it, so
- * no sync can start in between.
+ * The prune is awaited (it lists, stats and unlinks through `node:fs/promises`,
+ * so it never holds the backend's thread), so the exclusion is a mutex both
+ * sides take — a sync waits out a prune in progress, and a prune a sync —
+ * rather than a flag the prune checks once before running synchronously.
  */
-async function pruneOutsideWatcherStart(prune: () => void): Promise<void> {
-  while (watcherSyncing) await watcherSync.idle();
-  prune();
+function pruneOutsideWatcherStart(prune: () => Promise<void>): Promise<void> {
+  return runsDirExclusion.run(RUNS_DIR_KEY, prune);
 }
 
 async function onArtifactEvents(
@@ -670,7 +675,7 @@ export async function startSupervisedRun(
     // "writing a new set trims the old ones" rule the build and release prunes
     // follow, so there is no sweeper to schedule and nothing to forget.
     await pruneOutsideWatcherStart(() =>
-      pruneWorktreeRunArtifactsSync(worktree, kind.id),
+      pruneWorktreeRunArtifacts(worktree, kind.id),
     );
 
     await kind.spec.setPid(opts.runId, pid);

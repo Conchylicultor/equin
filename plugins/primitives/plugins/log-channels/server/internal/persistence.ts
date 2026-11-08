@@ -11,10 +11,12 @@ export interface LogLine {
  * Where one channel's lines go to last: one append per batch, in order. The
  * sink gets the lines, not a wire format: how a line is stored (the desktop's
  * `{t,stream,line}` JSONL envelope) is the store's, as is the read path that
- * parses it back.
+ * parses it back. Asynchronous: a publish never waits on the disk — the batch is
+ * queued in publish order and the promise settles once it is stored (rejecting,
+ * loudly, when it cannot be).
  */
 export interface LogSink {
-  appendAll(lines: readonly LogLine[]): void;
+  appendAll(lines: readonly LogLine[]): Promise<void>;
 }
 
 /** A durable channel as `defineLogSink` declared it. */

@@ -396,6 +396,7 @@ describe("reconcileOps", () => {
       append: (ev) => {
         appended.push(ev);
         appendFileSync(path, line(ev));
+        return Promise.resolve();
       },
       now: () => T0 + 5_000,
       sleepNow: () => ({ boot: "boot-A", asleepMs: 7, wakeAtMs: null }),

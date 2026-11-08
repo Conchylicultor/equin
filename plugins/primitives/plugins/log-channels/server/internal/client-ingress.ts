@@ -20,12 +20,14 @@ import { LogPersistence } from "./persistence";
  * The `map` below is the layer boundary where the wire's `t` becomes the
  * registry's `timestamp` — one name per concept, renamed in exactly one place.
  */
-export function emitClientLogs(body: EmitLogsBody): void {
+export function emitClientLogs(body: EmitLogsBody): Promise<void> {
   const { channel: channelId } = body;
   const channel = getOrCreateChannel(channelId, () =>
     LogPersistence.get().clientSinkFor(channelId),
   );
-  channel.publishAll(
+  // Awaited by the route: "accepted" means stored — a failed write answers the
+  // POST with an error, and the browser re-sends the batch.
+  return channel.publishAll(
     body.lines.map((l) => ({ line: l.line, stream: l.stream, timestamp: l.t })),
   );
 }

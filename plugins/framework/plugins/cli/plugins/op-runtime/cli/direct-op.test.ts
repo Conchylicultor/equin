@@ -11,7 +11,7 @@ import type {
   OpEvent,
   OpSummary,
 } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
-import { createOpProfiler } from "@plugins/debug/plugins/profiling/plugins/op-log/server";
+import { createOpProfiler } from "@plugins/debug/plugins/profiling/plugins/op-log/cli";
 import type { FlightLeader } from "@plugins/packages/plugins/single-flight/core";
 import { withDirectOp, type DirectOpDeps } from "./direct-op";
 import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
