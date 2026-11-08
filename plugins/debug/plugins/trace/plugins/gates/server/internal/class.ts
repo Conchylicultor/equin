@@ -11,7 +11,7 @@ import { cappedList } from "@plugins/packages/plugins/list-bound/core";
 const HOLDERS_MAX = 8;
 
 // Zod mirror of a point-in-time gate gauge, pinned to the profiler's GateGauge
-// by the assertion below. `readGateGauges()` keys by the chargeWait layer name,
+// by the assertion below. `readGateGauges()` keys by the profiler's wait layer name,
 // so this section joins directly to each span's `waits`.
 const GateGaugeSchema = z.object({
   active: z.number(),

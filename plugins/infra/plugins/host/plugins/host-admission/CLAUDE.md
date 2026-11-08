@@ -139,11 +139,22 @@ building a second semaphore or double-registering the gauge. A mismatching spec
 throws.
 
 On first definition it **auto-registers** the pool's `<id>-acquire` gate gauge
-(same vocabulary as the `chargeWait` layer names) whose `active` is **true
+(the same layer the pool meters its waits under) whose `active` is **true
 host-wide occupancy** — probed from the flock files across every backend, not
 this process's local held count. The ported pools deleted their hand-rolled
 `heldByThisProcess` counter and the false "host-wide occupancy is not cheaply
 readable" comment along with it.
+
+**The pool meters its own waits, under that same layer.** Every `run` /
+`acquireShare` wires runtime-profiler's `gateWaitHooks("<id>-acquire")` into the
+semaphore's hooks: a caller that takes the slow path is shown waiting on the
+pool from that instant (the stuck-span watchdog files it against the pool and
+its holders, not as its own stuck work), and its wait is charged at
+acquisition; a cancelled acquire stops showing it as it unwinds. A caller's own
+`onWaitStart` / `onAcquired` still fire (the CLI's op log uses them), but no
+caller wires the profiler — so no pool's wait can go uncharged or charged
+without having been shown. Inside `runWithoutProfiling` (boot-bench's load
+generator) nothing is metered.
 
 ### A scarce slot's holder runs in the foreground
 

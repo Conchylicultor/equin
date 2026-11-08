@@ -1,6 +1,6 @@
 import {
   recordEntrySpan,
-  chargeWait,
+  beginWait,
   gateWaitHooks,
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
@@ -165,7 +165,7 @@ export function endpointHandler<
               : runHandler;
             return dedupe
               ? dedupe.run(dedupeKey(req), gated, {
-                  onWait: (ms) => chargeWait("endpoint-dedupe", ms, "join"),
+                  onJoin: () => beginWait("endpoint-dedupe", "join"),
                 })
               : gated();
           },

@@ -27,8 +27,8 @@ import {
   recordEntrySpan,
   runTracked,
   recordSpan,
-  chargeWait,
   beginWait,
+  gateWaitHooks,
   runInRootContext,
   getRuntimeProfile,
   registerGateGauge,
@@ -38,6 +38,9 @@ import {
   type GateGauge,
   type LeafSpanOptions,
 } from "../../core";
+// The bare after-the-fact charge, module-internal (the barrel exports none:
+// every other wait is a `beginWait` handle) — see the fs subscriber below.
+import { chargeWait } from "../../core/recorder";
 import {
   installLeaseContextRuntime,
   whileWaiting,
@@ -54,6 +57,11 @@ const als = new AsyncLocalStorage<EntryContext>();
 // `fs-glob`), so the enclosing entries name it and slow-ops files it as
 // `wait fs-<op>` instead of folding it into the caller's own time. Called as the
 // call returns, still inside the caller's ambient context.
+//
+// The one wait charged after the fact, never announced as it starts: timed-fs
+// hands over only calls past its floor, once they return. So a file call
+// stuck in progress (a hung mount) still reads as its caller's own time until
+// it returns — a known limit (debug/stuck-spans' CLAUDE.md).
 onSlowFsCall((call) => chargeWait(call.layer, call.ms, "io"));
 
 installSpanContextRuntime({
@@ -173,8 +181,8 @@ setProfilerHooks({
           }
         : (opts as LeafSpanOptions | undefined),
     ),
-  chargeWait,
   beginWait,
+  gateWaitHooks,
   runInRootContext,
   registerGateGauge: (layer: string, read: () => unknown): void =>
     registerGateGauge(layer, read as () => GateGauge),

@@ -2,7 +2,6 @@ import { defineHostPool } from "@plugins/infra/plugins/host/plugins/host-admissi
 import { HOST_POOLS } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import {
-  chargeWait,
   gateWaitHooks,
   registerGateGauge,
 } from "@plugins/infra/plugins/runtime-profiler/core";
@@ -33,7 +32,7 @@ const pool = defineHostPool({
 // The host-gate occupancy gauge (`browser-fetch-acquire`) is auto-registered by
 // `defineHostPool` with TRUE host-wide occupancy. Only the LOCAL per-worktree
 // semaphore's gauge is ours to register — its layer name joins to the same-named
-// `chargeWait` layer below.
+// wait layer below.
 registerGateGauge("browser-fetch-local", () => perWorktreeGate.stats());
 
 // NOTE: there is deliberately **no `AsyncLocalStorage` reentrancy guard** here,
@@ -52,16 +51,13 @@ registerGateGauge("browser-fetch-local", () => perWorktreeGate.stats());
  * what costs the host — but NOT across URL validation, which happens before
  * admission so a refusal never queues behind someone else's render.
  *
- * Each tier charges its wait distinctly to the enclosing entry, so a slow render
- * reads as queue-vs-work rather than one opaque number.
+ * Each tier charges its wait distinctly to the enclosing entry — the local one
+ * here, the host-wide `browser-fetch-acquire` by the pool itself — so a slow
+ * render reads as queue-vs-work rather than one opaque number.
  */
 export function withBrowserSlot<T>(fn: () => Promise<T>): Promise<T> {
   return perWorktreeGate.run(
-    () =>
-      pool.run(fn, {
-        onAcquired: (waitMs) =>
-          chargeWait("browser-fetch-acquire", waitMs, "queue"),
-      }),
+    () => pool.run(fn),
     gateWaitHooks("browser-fetch-local"),
   );
 }

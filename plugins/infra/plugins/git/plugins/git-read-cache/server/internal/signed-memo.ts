@@ -96,8 +96,8 @@ export interface SignedMemo<T, I = void> {
  * the input, so an entry computed from other facts is never a hit.
  *
  * Everything else — the `Map<key, {signature, value}>` cache, the embedded
- * per-key `createInflight` single-flight, the `chargeWait` hit/miss/coalesce
- * markers, the same-signature-only join of a mid-flight caller — is
+ * per-key `createInflight` single-flight, the `markWait` hit/miss markers and
+ * the `beginWait` coalesce wait, the same-signature-only join of a mid-flight caller — is
  * `createGitStateMemo`'s, unchanged: this is a thin binding wrapper over exactly
  * one cache implementation.
  *

@@ -31,8 +31,8 @@ Every entry span decomposes its wall-clock into **`waitMs`** (time covered by na
 gate/pool waits at any depth of its subtree), **`childMs`** (time covered by direct-child
 entry executions), and **`selfMs`** (the remainder: its own orchestration/CPU — on a
 composite span a *conservative upper bound* of own work, since untracked awaits land here).
-A concurrency gate calls `chargeWait(layer, ms, kind)` from its `onWait` callback; the interval
-`[now − ms, now]` propagates to **every open ancestor entry** (innermost included) up the
+A wait is charged as it ends (a `beginWait` handle's end, a gate's `onWait` —
+see *Waits in progress* below); the interval `[now − ms, now]` propagates to **every open ancestor entry** (innermost included) up the
 live `EntryContext.parent` chain, so a composite span like a `flush` draining many loaders
 names the gates its subtree waited on rather than showing huge wall-clock with empty `waits`.
 
@@ -55,20 +55,40 @@ idempotent under re-covering, which is what makes each level's `waits` self-cont
 Closed ancestors are never mutated (a detached child finishing late cannot corrupt a
 recorded span).
 
-### Waits in progress (`beginWait`, `gateWaitHooks`)
+### Waits in progress — the only spelling of a wait (`beginWait`, `gateWaitHooks`, `markWait`)
 
 A charge lands at the wait's END, so an entry queued on a gate for minutes
-reads, until it is admitted, as minutes of its own work. `beginWait(layer,
-kind)` announces a wait as it STARTS — registered on the innermost open entry
-(its owner) and every open ancestor, removed by the returned `end()` — and
-charges nothing (the end's `chargeWait` still does). `captureFlightWindow`
-gives each open span `pendingWaitMs` (what its subtree's in-progress waits
-add to its wait union, through a copy of the track — exact unless an ended
-wait overlaps them, then under) and `waiting` (the waits it owns, oldest
-first). `gateWaitHooks(layer, kind?)` is the pair a `packages/semaphore` gate
-takes — `{ onQueued, onWait }` in one call, so a gate cannot show a wait it
-never charges. Consumer: `debug/stuck-spans`, which files a span queued past
-its threshold against the gate and its holders instead of as stuck itself.
+would read, until it is admitted, as minutes of its own work. So a wait is
+**announced as it starts**, and the barrel offers no way to meter one that
+was not:
+
+- **`beginWait(layer, kind)` → `WaitEnd`** — THE wait primitive. It
+  registers the wait on the innermost open entry (its owner) and every open
+  ancestor at once; the returned `end()` (idempotent) removes it and charges
+  `[start, end]` into the context the wait STARTED in. A join is this shape
+  (`inflight`'s `onJoin`: `() => beginWait(layer, "join")`), and so is the pg
+  pool's `db-acquire` and a watched memo's `memo-opening`.
+- **`gateWaitHooks(layer, kind?)` → `{ onQueued, onWait }`** — the same split
+  along a gate's two moments, for `packages/semaphore`'s `SlotOptions` and
+  host-admission's pools (`defineHostPool` wires it on every acquire under
+  `<id>-acquire`, so no caller can forget): `onQueued` announces a caller that
+  has to queue, `onWait` charges at admission, queued or not (≈0 with room),
+  so an admission with room pays no announcement. One call, so a gate cannot
+  charge a wait it never shows.
+- **`markWait(layer)`** — a 0 ms `join` marker (a memo hit / miss): it says
+  THAT a layer was consulted, never a duration, so nothing is in progress.
+- **The bare charge (`chargeWait`) is module-internal.** Its one caller
+  outside the module is this plugin's own server install, for `io`: timed-fs
+  hands over a file call past its floor only once it returns, so a file call
+  stuck in progress still reads as its caller's time until then — the one
+  known limit (`debug/stuck-spans`).
+
+`captureFlightWindow` gives each open span `pendingWaitMs` (what its
+subtree's in-progress waits add to its wait union, through a copy of the
+track — exact unless an ended wait overlaps them, then under) and `waiting`
+(the waits it owns, oldest first). Consumer: `debug/stuck-spans`, which files
+a span queued past its threshold against the gate and its holders instead of
+as stuck itself.
 
 ### Event-loop stalls (`event-loop`, `noteLoopTurn`, `noteLoopObserved`)
 
@@ -151,7 +171,7 @@ recompute) and the 0 ms markers `git-memo-hit:<name>` / `git-memo-miss:<name>`
 in-flight first pass, `packages/watched-memo`); `fs-stat` / `fs-readdir` / `fs-read` / `fs-glob`
 (kind `io`: a file call past `packages/timed-fs`'s floor, charged by
 `server/internal/install.ts`'s `onSlowFsCall` subscriber — a disk stall is the
-disk's time, filed like a `queue` wait as `wait fs-<op>`); `event-loop` (below). A `chargeWait` with no active entry (context-less jobs/pollers)
+disk's time, filed like a `queue` wait as `wait fs-<op>`); `event-loop` (below). A wait with no active entry (context-less jobs/pollers)
 falls back to a standalone `db [layer]` span so the wait is never lost — recorded
 as ALL wait (`waits: { [layer]: ms }`, own time 0) and, for a `queue`/`io` wait,
 handed to `onSlowWait` with that span as its caller: a wait is never booked as a
@@ -161,7 +181,7 @@ handed to `onSlowWait` with that span as its caller: a wait is never booked as a
 
 An op is judged on its own time (`selfTotalMs`: wall minus waits, declared holds
 and child executions), so the time it waited must be judged somewhere else, once:
-`chargeWait` meters every `queue` / `io` wait per layer (`GateMeter`: `count`,
+a wait's charge meters every `queue` / `io` wait per layer (`GateMeter`: `count`,
 `totalMs`), ONCE per wait where it happens — never per ancestor and never per
 label. A `join` is not metered (it is the joined run's time, which that run's
 own span counts). Cumulative like the aggregates, cleared by a reset.
@@ -258,7 +278,8 @@ imports `server/`, so on the client every entry point is a transparent passthrou
   attributes to the current ambient context automatically. A leaf has no decomposition:
   `waitMs`/`childMs` default to 0, `selfMs` to the full duration — unless `opts.waits`
   names waits inside it; `opts.latency` makes it a latency leaf (see Claims).
-- `chargeWait(layer, ms, kind)` — see the decomposition section above. `kind`
+- `beginWait(layer, kind)` / `gateWaitHooks(layer, kind?)` / `markWait(layer)`
+  — see *Waits in progress* above. `kind`
   (`WaitKind`, required) says what the caller waited FOR: `queue` means
   capacity on a shared gate or pool, so the time is the gate's; `join` means an
   identical run already in flight (a coalesce or dedupe), or a 0 ms hit/miss
@@ -267,7 +288,7 @@ imports `server/`, so on the client every entry point is a transparent passthrou
   is charged to. `io` means the filesystem (`packages/timed-fs`): the time
   is the disk's, and it is filed like `queue`.
 - `onSlowWait(handler, { thresholdMs })` — the push seam for a slow `queue`
-  wait: called once per wait, from `chargeWait` (an ancestor's union would
+  wait: called once per wait, from its charge (an ancestor's union would
   count it once per level), with the layer, the ms and the innermost open
   entry that waited — and from a latency leaf's `queue` (see Lanes), flagged
   `latency: true`. Context-less waits already become a `db [layer]` span and
@@ -505,13 +526,13 @@ remaining allocations are one flat band array per completed entry span, and what
     - `Track`
     - `WaitBand`
     - `WaitBreakdown`
+    - `WaitEnd`
     - `WaitKind`
   - Exports (values):
     - `__contribute`
     - `__pushBand`
     - `beginWait`
     - `captureFlightWindow`
-    - `chargeWait`
     - `currentCallerKind`
     - `currentEntryLabel`
     - `currentOriginClass`
@@ -524,6 +545,7 @@ remaining allocations are one flat band array per completed entry span, and what
     - `installProfilingSuppressionRuntime`
     - `installRootContextRuntime`
     - `installSpanContextRuntime`
+    - `markWait`
     - `noteLoopObserved`
     - `noteLoopTurn`
     - `onSlowSpan`
@@ -544,13 +566,13 @@ remaining allocations are one flat band array per completed entry span, and what
     - `SPAN_MEASURES`
     - `waitSplit`
 - Cross-plugin:
-  - Imported by: 70 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra` ×23
+  - Imported by: 68 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra` ×22
     - `debug` ×20
     - `conversations` ×6
     - `apps` ×5
-    - `database` ×3
     - `tasks` ×3
+    - `database` ×2
     - `packages` ×2
     - `reports` ×2
     - `auth`

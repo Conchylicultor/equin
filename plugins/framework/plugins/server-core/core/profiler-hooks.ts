@@ -94,9 +94,10 @@ export interface ProfilerHooks {
     detail?: ProfilerSpanDetail,
     opts?: ProfilerLeafOptions,
   ): void;
-  chargeWait(layer: string, ms: number, kind: "queue" | "join"): void;
-  /** A wait that just started, shown until the returned end is called (the profiler's `beginWait`). */
+  /** A wait that just started: shown until the returned end, which charges it (the profiler's `beginWait`). */
   beginWait(layer: string, kind: "queue" | "join"): () => void;
+  /** A semaphore gate's announce/charge pair for one layer (the profiler's `gateWaitHooks`). */
+  gateWaitHooks(layer: string): GateWaitHooks;
   getRuntimeProfile(): RuntimeProfileView;
   registerGateGauge(layer: string, read: () => unknown): void;
   /** Run `fn` outside every entry, lane and suppression scope (the profiler's `runInRootContext`). */
@@ -149,29 +150,40 @@ export function recordSpan(
   hooks?.recordSpan(kind, label, durationMs, detail, opts);
 }
 
-/**
- * Charge a wait to the enclosing spans. `kind`: `queue` — for capacity on a
- * shared gate (the gate's time); `join` — for an identical run already in
- * flight, or a 0 ms marker (that run's time). See runtime-profiler's `WaitKind`.
- */
-export function chargeWait(
-  layer: string,
-  ms: number,
-  kind: "queue" | "join",
-): void {
-  hooks?.chargeWait(layer, ms, kind);
-}
-
 const NO_WAIT_END = (): void => {};
 
 /**
- * Show a wait while it is still in progress; call the returned function when
- * it ends (it charges nothing — `chargeWait` at the end still does). See
- * runtime-profiler's `beginWait`: a wait charged only at its end makes the
- * waiter look busy with its own work until then.
+ * A wait that has just STARTED: shown on the enclosing spans while it lasts,
+ * and charged to them when the returned function is called — once. `kind`:
+ * `queue` — for capacity on a shared gate (the gate's time); `join` — for an
+ * identical run already in flight (that run's time). See runtime-profiler's
+ * `beginWait`: there is no bare after-the-fact charge, so a wait the profiler
+ * meters is always shown while it is in progress.
  */
 export function beginWait(layer: string, kind: "queue" | "join"): () => void {
   return hooks ? hooks.beginWait(layer, kind) : NO_WAIT_END;
+}
+
+/**
+ * A concurrency gate's two observers for one `queue` layer — what a
+ * `packages/semaphore` gate's `SlotOptions` take: `onQueued` shows a caller
+ * that has to queue, `onWait` charges the wait at admission. One value, so a
+ * gate cannot charge a wait it never shows. See runtime-profiler's
+ * `gateWaitHooks`.
+ */
+export interface GateWaitHooks {
+  onQueued: () => () => void;
+  onWait: (ms: number) => void;
+}
+
+export function gateWaitHooks(layer: string): GateWaitHooks {
+  // Resolved per call, never captured: a gate built at module eval (the read
+  // gate's, in resources.ts) exists before the profiler is installed.
+  return {
+    onQueued: () =>
+      hooks ? hooks.gateWaitHooks(layer).onQueued() : NO_WAIT_END,
+    onWait: (ms) => hooks?.gateWaitHooks(layer).onWait(ms),
+  };
 }
 
 export function getRuntimeProfile(): RuntimeProfileView {

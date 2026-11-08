@@ -1,5 +1,8 @@
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
-import { chargeWait } from "@plugins/infra/plugins/runtime-profiler/core";
+import {
+  beginWait,
+  markWait,
+} from "@plugins/infra/plugins/runtime-profiler/core";
 
 /** Per-call options for `GitStateMemo.get` / `SignedMemo.get`. */
 export interface MemoGetOptions {
@@ -77,7 +80,7 @@ export function createGitStateMemo<T>(opts: { name: string }): GitStateMemo<T> {
       const hit = cache.get(worktreePath);
       if (hit && hit.signature === sig) {
         // 0ms marker: hit-rate signal only — never pollutes wait timing.
-        chargeWait(`git-memo-hit:${opts.name}`, 0, "join");
+        markWait(`git-memo-hit:${opts.name}`);
         return hit.value; // short-circuit BEFORE any heavy slot
       }
       // Join only a compute probed at THIS signature (the inflight is keyed by
@@ -89,7 +92,7 @@ export function createGitStateMemo<T>(opts: { name: string }): GitStateMemo<T> {
       return inflight.run(
         `${worktreePath}\0${sig}`,
         async () => {
-          chargeWait(`git-memo-miss:${opts.name}`, 0, "join");
+          markWait(`git-memo-miss:${opts.name}`);
           const value = await computeFn(); // computeFn owns withHeavyReadSlot
           // Cache only when the signature, re-probed after the compute, is
           // still `sig`. The compute may have read a later state than `sig`
@@ -111,15 +114,16 @@ export function createGitStateMemo<T>(opts: { name: string }): GitStateMemo<T> {
           }
           return value;
         },
-        // Joiners charge the time spent awaiting the shared compute to their
-        // OWN enclosing entry — the starter's compute is real work, not wait.
+        // Joiners show, then charge, the time spent awaiting the shared
+        // compute on their OWN enclosing entry — the starter's compute is real
+        // work, not wait.
         // `notBefore` only when the caller asks: a caller that knows an input
         // moved at an instant passes it, and a compute started before then is
         // superseded rather than joined. (A superseded compute settling late
         // caches under its own signature, re-probed — a mismatch, never a
         // torn hit.)
         {
-          onWait: (ms) => chargeWait(`git-coalesce:${opts.name}`, ms, "join"),
+          onJoin: () => beginWait(`git-coalesce:${opts.name}`, "join"),
           notBefore: getOpts?.notBefore,
         },
       );

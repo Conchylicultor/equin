@@ -50,7 +50,8 @@ User: `conversations/conversation-view/code` (`edited-files`).
 - Description: Watch-authoritative result memo: createWatchedMemo({ name, facts, signatureOf, compute, changes }) keeps one value per key fresh from its change source while anyone watches it — every change runs one coalesced pass (facts, then compute over them), a get while watched is the held value with no probe — and falls back, unwatched or after a failed pass, to a signature probe whose miss single-flights compute over the probe's own facts.
 - Core:
   - Uses:
-    - `infra/runtime-profiler.chargeWait`
+    - `infra/runtime-profiler.beginWait`
+    - `infra/runtime-profiler.markWait`
     - `infra/runtime-profiler.runTracked`
     - `packages/coalesce.createKeyedCoalescer`
     - `packages/inflight.createInflight`

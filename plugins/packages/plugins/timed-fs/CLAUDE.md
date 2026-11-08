@@ -28,8 +28,11 @@ own time, and each needed a manual investigation to blame the filesystem.
   few fs threads, rather than on one slow disk answer. The first recorded
   check showed this, with 17,089 readFiles of one pass, each about 2 s.
   - runtime-profiler's server install charges each one with
-    `chargeWait(layer, ms, "io")`. The enclosing spans then name it, and
-    slow-ops files it as `wait fs-<op>`, not as the caller's own time.
+    an `io` wait on `layer`. The enclosing spans then name it, and
+    slow-ops files it as `wait fs-<op>`, not as the caller's own time. It is
+    the profiler's one wait charged after the fact: a call is handed over
+    only once it returns, so one stuck in progress is not shown as a wait
+    until then.
   - `debug/profiling/fs-wait` writes each one to the namespace's `fs-wait`
     log channel. A backend, an exec child and every CLI run (build, check,
     test) all write there.

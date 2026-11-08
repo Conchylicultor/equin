@@ -13,6 +13,7 @@ import { registerGateGauge } from "@plugins/infra/plugins/runtime-profiler/core"
 import type { DataDir } from "@plugins/infra/plugins/paths/core";
 import { poolLockDir } from "../../data-dirs";
 import { slotFor, type PoolHolder, type Slot } from "./slot";
+import { meterAcquire } from "./meter-acquire";
 
 // The one place a host pool comes into existence. `createHostSemaphore` is
 // imported HERE ONLY — the `host-pools-declared` check makes that the structural
@@ -199,7 +200,7 @@ export function defineHostPool<H extends PoolHolder>(
   });
 
   // Auto-register the host-gate occupancy gauge under `<id>-acquire` (the same
-  // vocabulary `chargeWait` uses, so a snapshot's gate occupancy joins to span
+  // layer the pool meters its waits under, below, so a snapshot's gate occupancy joins to span
   // waits). `active` is TRUE host-wide occupancy — every backend's held slots,
   // read by probing the flock files — not this process's local held count. This
   // retires the "host-wide occupancy is not cheaply readable" claim the ported
@@ -214,6 +215,10 @@ export function defineHostPool<H extends PoolHolder>(
     max: sem.liveSize(),
   }));
 
+  // Every acquire's wait is the pool's own to meter, under the gauge's layer
+  // (`meterAcquire`): no caller wires the profiler, so none can forget to.
+  const layer = `${spec.id}-acquire`;
+
   const slot = slotFor(spec.holder);
   const pool: HostPool<H> = {
     id: spec.id,
@@ -221,8 +226,10 @@ export function defineHostPool<H extends PoolHolder>(
     size: spec.size,
     liveSize: () => sem.liveSize(),
     slots,
-    run: (fn, hooks) => sem.run(() => fn(slot), hooks),
-    acquireShare: (max, hooks) => sem.acquireShare(max, hooks),
+    run: (fn, hooks) =>
+      meterAcquire(layer, hooks, (h) => sem.run(() => fn(slot), h)),
+    acquireShare: (max, hooks) =>
+      meterAcquire(layer, hooks, (h) => sem.acquireShare(max, h)),
     depth: () => sem.depth(),
   };
   registry.set(spec.id, pool);

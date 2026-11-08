@@ -2232,6 +2232,30 @@ describe("waits in progress (beginWait)", () => {
     expect(sub.ageMs - sub.waitMs - sub.pendingWaitMs!).toBe(0);
   });
 
+  test("the handle's end charges the wait, once, into the context it began in", async () => {
+    let mid!: FlightWindow;
+    let after!: FlightWindow;
+    await recordEntrySpan("sub", "s", async () => {
+      fakeNow = 10;
+      const end = beginWait("read-coalesce", "join"); // from 10
+      fakeNow = 40;
+      mid = captureFlightWindow({ windowStartMs: 0 });
+      end(); // [10, 40]
+      fakeNow = 60;
+      end(); // a second end charges nothing more
+      after = captureFlightWindow({ windowStartMs: 0 });
+    });
+    const subMid = mid.open.find((x) => x.label === "s")!;
+    expect(subMid.waitMs).toBe(0);
+    expect(subMid.waiting).toEqual([
+      { layer: "read-coalesce", kind: "join", waitedMs: 30 },
+    ]);
+    const subAfter = after.open.find((x) => x.label === "s")!;
+    expect(subAfter.waitMs).toBe(30);
+    expect(subAfter.waits).toEqual({ "read-coalesce": 30 });
+    expect(subAfter.waiting).toBeUndefined();
+  });
+
   test("context-less, or ended twice, is a no-op", () => {
     const end = beginWait("read-admit", "queue");
     end();

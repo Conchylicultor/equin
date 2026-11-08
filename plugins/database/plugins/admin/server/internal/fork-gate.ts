@@ -1,6 +1,5 @@
 import { defineHostPool } from "@plugins/infra/plugins/host/plugins/host-admission/server";
 import { HOST_POOLS } from "@plugins/infra/plugins/host/plugins/host-admission/core";
-import { chargeWait } from "@plugins/infra/plugins/runtime-profiler/core";
 
 // A DEDICATED host-wide gate for the DB fork's `pg_dump | pg_restore` pipeline —
 // until this gate, the fork was the ONLY heavy launch step with zero admission
@@ -13,9 +12,10 @@ import { chargeWait } from "@plugins/infra/plugins/runtime-profiler/core";
 // work at ~`size` cores. Size 2 keeps a single/double launch flowing while a
 // launch storm queues (attributed, see below) instead of stacking restores.
 //
-// The acquire-wait is charged to the enclosing profiler entry (the
-// `database.fork` job span) as the named `db-fork-acquire` layer, and the gate
-// registers a gauge — mirroring worktree-mutate + host-read-pool — so added
+// The acquire-wait is shown and charged on the enclosing profiler entry (the
+// `database.fork` job span) as the named `db-fork-acquire` layer — by the pool
+// itself (`defineHostPool` meters every acquire) — and the gate registers a
+// gauge — mirroring worktree-mutate + host-read-pool — so added
 // queueing shows up attributed in get_runtime_profile / slow-ops / the flight
 // recorder, never as anonymous slowness.
 // See research/2026-07-07-global-background-work-priority-isolation.md.
@@ -47,8 +47,5 @@ export function withDbForkSlot<T>(
   fn: () => Promise<T>,
   signal?: AbortSignal,
 ): Promise<T> {
-  return gate.run(() => fn(), {
-    signal,
-    onAcquired: (waitMs) => chargeWait("db-fork-acquire", waitMs, "queue"),
-  });
+  return gate.run(() => fn(), { signal });
 }

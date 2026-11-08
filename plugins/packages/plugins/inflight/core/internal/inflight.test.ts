@@ -116,28 +116,31 @@ describe("createInflight — freshness floor (notBefore)", () => {
     expect(await Promise.all([a, b])).toEqual([1, 1]); // same body, same result
   });
 
-  test("a floor NEWER than the live flight supersedes it: two bodies, onSupersede once, and the superseder never reports onWait", async () => {
+  test("a floor NEWER than the live flight supersedes it: two bodies, onSupersede once, and the superseder never joins", async () => {
     const inflight = createInflight();
     const p = parked();
-    const waits: number[] = [];
+    const joins: number[] = [];
     const supersedes: number[] = [];
     const a = inflight.run("k", p.fn);
     await tick();
     const floor = performance.now(); // strictly after the first flight started
     const b = inflight.run("k", p.fn, {
       notBefore: floor,
-      onWait: (ms) => waits.push(ms),
+      onJoin: () => {
+        joins.push(1);
+        return () => {};
+      },
       onSupersede: () => supersedes.push(1),
     });
 
     expect(p.calls).toBe(2); // refused the old flight and started its own
     expect(supersedes).toHaveLength(1); // announced exactly once
-    // A superseder is a STARTER: it waits for nothing, so `onWait` — which times
-    // the await of somebody else's flight — must stay silent. Reporting it would
-    // charge the caller a coalesce-wait it never paid.
+    // A superseder is a STARTER: it waits for nothing, so `onJoin` — which
+    // marks the await of somebody else's flight — must stay silent. Reporting
+    // it would charge the caller a coalesce-wait it never paid.
     p.release();
     expect(await Promise.all([a, b])).toEqual([1, 2]); // distinct bodies, distinct results
-    expect(waits).toEqual([]);
+    expect(joins).toEqual([]);
   });
 
   test("a caller arriving after a supersession joins the FRESH flight, not the superseded one", async () => {
@@ -250,23 +253,49 @@ describe("createInflight — freshness floor (notBefore)", () => {
     await Promise.all([a, b]);
   });
 
-  test("onWait still fires for an ordinary joiner that passes a satisfied floor", async () => {
+  test("onJoin still fires for an ordinary joiner that passes a satisfied floor", async () => {
     // The floor and the wait metric are orthogonal: refusing changes who reports,
     // not whether joiners report at all.
     const inflight = createInflight();
     const p = parked();
-    const waits: number[] = [];
+    const events: string[] = [];
     const before = performance.now();
     const a = inflight.run("k", p.fn);
     await tick();
     const b = inflight.run("k", p.fn, {
       notBefore: before,
-      onWait: (ms) => waits.push(ms),
+      onJoin: () => {
+        events.push("join");
+        return () => events.push("end");
+      },
     });
+    // Announced at the join, synchronously — ended only once the flight settles.
+    expect(events).toEqual(["join"]);
     p.release();
     await Promise.all([a, b]);
-    expect(waits).toHaveLength(1);
-    expect(waits[0]).toBeGreaterThanOrEqual(0);
+    expect(events).toEqual(["join", "end"]);
+  });
+
+  test("a joiner's wait ends when the shared flight rejects", async () => {
+    const inflight = createInflight();
+    let open!: () => void;
+    const gate = new Promise<void>((r) => (open = r));
+    const fn = async () => {
+      await gate;
+      throw new Error("boom");
+    };
+    const events: string[] = [];
+    const a = inflight.run("k", fn);
+    const b = inflight.run("k", fn, {
+      onJoin: () => () => events.push("end"),
+    });
+    expect(events).toEqual([]);
+    open();
+    const messages = await Promise.all(
+      [a, b].map((p) => p.catch((err: unknown) => (err as Error).message)),
+    );
+    expect(messages).toEqual(["boom", "boom"]);
+    expect(events).toEqual(["end"]);
   });
 
   test("a detached flight takes no new joiner; its own joiners still share it", async () => {

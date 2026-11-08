@@ -41,7 +41,10 @@ describe("version short-circuit — same-boot epoch + matching version", () => {
   test("epoch+version match → up-to-date (with epoch), zero loader runs, zero gate slots", async () => {
     const onReadGateWait = mock((_ms: number) => {});
     const onSubShortCircuit = mock((_key: string) => {});
-    const h = createHarness({ onReadGateWait, onSubShortCircuit });
+    const h = createHarness({
+      readGateWait: { onQueued: () => () => {}, onWait: onReadGateWait },
+      onSubShortCircuit,
+    });
     let loads = 0;
     const r = h.runtime.defineExternalResource({
       key: "r",

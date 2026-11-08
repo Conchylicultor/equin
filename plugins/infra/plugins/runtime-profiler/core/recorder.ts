@@ -2334,8 +2334,18 @@ function capDetail(detail: SpanDetail | undefined): SpanDetail | undefined {
 export function chargeWait(layer: string, ms: number, kind: WaitKind): void {
   if (profilingDisabled()) return;
   if (suppressionRuntime.suppressed()) return;
+  chargeWaitIn(contextRuntime.current(), layer, ms, kind);
+}
+
+// `chargeWait` against a context read earlier — a `beginWait` handle charges
+// the context its wait STARTED in, whatever context its end runs in.
+function chargeWaitIn(
+  cur: EntryContext | undefined,
+  layer: string,
+  ms: number,
+  kind: WaitKind,
+): void {
   if (kind !== "join") meterGateWait(layer, ms, kind);
-  const cur = contextRuntime.current();
   // A context-less join is nobody's wait: the time is the joined run's, which
   // its own span counts, and there is no waiter to take it off — a fallback
   // span would only inflate `db` call counts.
@@ -2418,25 +2428,67 @@ export function chargeWait(layer: string, ms: number, kind: WaitKind): void {
 const NO_WAIT_END = (): void => {};
 
 /**
- * Announce a wait that has just STARTED, so it shows while still in progress
- * (`FlightSpan.waiting` / `pendingWaitMs`); call the returned function when it
- * ends. It charges nothing — the gate's `chargeWait` at the end still does —
- * so a gate wires both, and `gateWaitHooks` is the one way to.
- *
- * Why: a wait is charged at its END (slot acquisition), so until then an open
- * entry queued on a gate is indistinguishable from one busy with its own work
- * — a stuck-span watchdog reading the open set would name every waiter as
- * stuck, and never the gate (debug/stuck-spans).
- *
- * Registered on the innermost open entry (its owner) and every open ancestor,
- * like a charge. No entry, suppression or the kill-switch: nothing to show.
+ * A wait in progress, as `beginWait` hands it out: call it when the wait ends.
+ * Idempotent — a second call does nothing.
  */
-export function beginWait(layer: string, kind: WaitKind): () => void {
+export type WaitEnd = () => void;
+
+/**
+ * THE way a wait is metered: announce it as it STARTS, charge it as it ENDS.
+ * From the call on, the wait shows on every open entry it runs under
+ * (`FlightSpan.waiting` / `pendingWaitMs`); the returned `end()` stops showing
+ * it and charges `[start, end]` as a `layer` wait of `kind` (`chargeWait`'s
+ * accounting), into the context the wait started in.
+ *
+ * Why one handle: a wait charged only at its END reads, while it lasts, as
+ * the waiter's own work — a stuck-span watchdog reading the open set names
+ * every waiter as stuck, and never the gate (debug/stuck-spans). With the
+ * announcement and the charge one object, a metered wait that was never
+ * announced has no spelling: the barrel exports no bare charge (`chargeWait`
+ * stays module-internal; `markWait` is the 0 ms marker, `gateWaitHooks` the
+ * semaphore pair). The one wait still charged after the fact is the
+ * filesystem's (`io`, timed-fs past its floor — this plugin's install).
+ *
+ * Kill-switch or suppression at the start: nothing is announced or charged.
+ * No open entry: nothing to show, and the end charges the context-less
+ * fallback span as `chargeWait` would.
+ */
+export function beginWait(layer: string, kind: WaitKind): WaitEnd {
   if (profilingDisabled()) return NO_WAIT_END;
   if (suppressionRuntime.suppressed()) return NO_WAIT_END;
-  const owner = nearestOpen(contextRuntime.current());
+  const cur = contextRuntime.current();
+  const startMs = now();
+  const unannounce = announceWait(cur, layer, kind, startMs);
+  let ended = false;
+  return () => {
+    if (ended) return;
+    ended = true;
+    unannounce();
+    chargeWaitIn(cur, layer, now() - startMs, kind);
+  };
+}
+
+/**
+ * A 0 ms `join` marker: says THAT a layer was consulted (a memo hit or miss),
+ * never how long anything waited — it adds the layer key with 0 and charges
+ * no time, so there is nothing in progress to announce.
+ */
+export function markWait(layer: string): void {
+  chargeWait(layer, 0, "join");
+}
+
+// Show a wait in progress on the innermost open entry (its owner) and every
+// open ancestor, like a charge; the returned function removes it. Charges
+// nothing.
+function announceWait(
+  cur: EntryContext | undefined,
+  layer: string,
+  kind: WaitKind,
+  startMs: number,
+): () => void {
+  const owner = nearestOpen(cur);
   if (!owner) return NO_WAIT_END;
-  const wait: PendingWait = { layer, kind, startMs: now(), owner };
+  const wait: PendingWait = { layer, kind, startMs, owner };
   const held: EntryContext[] = [];
   for (let a: EntryContext | undefined = owner; a; a = a.parent) {
     if (a.closed) continue;
@@ -2452,17 +2504,24 @@ export function beginWait(layer: string, kind: WaitKind): () => void {
 }
 
 /**
- * The two observers a concurrency gate (`packages/semaphore`'s `SlotOptions`)
- * takes for one layer: `onQueued` shows the wait while it lasts
- * (`beginWait`), `onWait` charges it when it ends (`chargeWait`). One call, so
- * a gate cannot show a wait it never charges or charge one it never showed.
+ * The two observers a concurrency gate (`packages/semaphore`'s `SlotOptions`,
+ * host-admission's pools) takes for one layer — `beginWait` split along the
+ * gate's own two moments: `onQueued` announces a caller that has to QUEUE
+ * (returning the end of the announcement, called at admission), `onWait`
+ * charges the wait at admission, queued or not (≈0 when there was room). One
+ * call, so a gate cannot charge a wait it never showed or show one it never
+ * charges; the split keeps an admission with room free of the announcement.
  */
 export function gateWaitHooks(
   layer: string,
   kind: WaitKind = "queue",
 ): { onQueued: () => () => void; onWait: (ms: number) => void } {
   return {
-    onQueued: () => beginWait(layer, kind),
+    onQueued: () => {
+      if (profilingDisabled()) return NO_WAIT_END;
+      if (suppressionRuntime.suppressed()) return NO_WAIT_END;
+      return announceWait(contextRuntime.current(), layer, kind, now());
+    },
     onWait: (ms) => chargeWait(layer, ms, kind),
   };
 }

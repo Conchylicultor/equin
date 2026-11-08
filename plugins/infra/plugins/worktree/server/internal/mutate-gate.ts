@@ -1,6 +1,5 @@
 import { defineHostPool } from "@plugins/infra/plugins/host/plugins/host-admission/server";
 import { HOST_POOLS } from "@plugins/infra/plugins/host/plugins/host-admission/core";
-import { chargeWait } from "@plugins/infra/plugins/runtime-profiler/core";
 
 // A DEDICATED host-wide gate for heavy `git worktree add`/`remove` — deliberately
 // SEPARATE from `heavy-read` (infra/host/host-read-pool), not a reuse of it:
@@ -38,10 +37,12 @@ const gate = defineHostPool({
   holder: "inherit",
 });
 
-// Wrap the heavy `git worktree add`/`remove` subprocess. The acquire-wait is charged
-// to the enclosing profiler entry (job/http) so a saturated gate stays attributable
-// in get_runtime_profile / slow-ops, mirroring host-read-pool. Context-less callers
-// (graphile jobs) fall back to a standalone span inside chargeWait.
+// Wrap the heavy `git worktree add`/`remove` subprocess. The acquire-wait is shown
+// and charged on the enclosing profiler entry (job/http) as
+// `worktree-mutate-acquire` — by the pool itself (`defineHostPool` meters every
+// acquire) — so a saturated gate stays attributable in get_runtime_profile /
+// slow-ops / the stuck-span watchdog. Context-less callers (graphile jobs) fall
+// back to a standalone span.
 //
 // `signal` is optional and ambient — a job handler passes its `ctx.signal`. THIS IS
 // THE GATE WHERE CANCELLATION MATTERS MOST, and 2026-08-17 is the reason: a handler
@@ -57,9 +58,5 @@ export function withWorktreeMutateSlot<T>(
   fn: () => Promise<T>,
   signal?: AbortSignal,
 ): Promise<T> {
-  return gate.run(() => fn(), {
-    signal,
-    onAcquired: (waitMs) =>
-      chargeWait("worktree-mutate-acquire", waitMs, "queue"),
-  });
+  return gate.run(() => fn(), { signal });
 }

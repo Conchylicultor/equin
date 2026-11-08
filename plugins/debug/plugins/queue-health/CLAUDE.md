@@ -238,7 +238,7 @@ the two came from different snapshots. Reports fire only when a threshold trips:
   is hold and knows nothing about what the handler is doing inside it. The
   wait/work split exists only in the runtime profiler's in-memory `job` spans
   (`recordEntrySpan("job", jobName, …)` around `job.run()`), whose `waitTotalMs`
-  and per-layer `waits` are exactly `chargeWait`'s admission-gate charges. So
+  and per-layer `waits` are exactly the admission gates' wait charges. So
   `checkSlotBlocked` diffs the profiler's cumulative per-label counters against a
   module-level baseline — the same pull-and-diff `debug/op-rate` does on the same
   profile — and trips when the average run waited ≥ `slotBlockedWaitSeconds` AND

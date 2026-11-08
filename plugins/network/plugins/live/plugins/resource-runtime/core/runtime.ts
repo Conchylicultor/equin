@@ -2062,32 +2062,30 @@ export interface ResourceRuntimeOptions {
    *  this is the extra hook. server: reportServerError(errorReport(ctx, err)); central: omit. */
   reportError?: (context: string, err: unknown) => void;
   /**
-   * Report queue-wait at the read-admission gate (see `READ_LOAD_CONCURRENCY`).
-   * Fired once per gated read-path load/revalidate at slot acquisition with the
-   * ms spent queueing (≈0 when a slot was free), mirroring the DB loader gate's
-   * `onWait`. server: `chargeWait("read-admit", ms)` — attributes the wait to the
-   * enclosing `sub` entry so a saturated gate is visible in the profiler;
-   * central / before-injection: omitted (no-op). */
-  onReadGateWait?: (waitMs: number) => void;
+   * The read-admission gate's wait observers (see `READ_LOAD_CONCURRENCY`),
+   * passed to its `packages/semaphore` slots: `onQueued` announces a read that
+   * has to QUEUE the moment it starts waiting (the returned function is called
+   * at admission), `onWait` reports the ms spent queueing at slot acquisition
+   * (≈0 when a slot was free). One value, so the gate cannot report a wait it
+   * never showed. server: `gateWaitHooks("read-admit")` — the wait is charged
+   * to the enclosing `sub` entry, and shown while it lasts, so the stuck-span
+   * watchdog files a read queued past its threshold against the gate and its
+   * holders, not as the reader stuck itself; central / before-injection:
+   * omitted (no-op). */
+  readGateWait?: {
+    onQueued: () => () => void;
+    onWait: (waitMs: number) => void;
+  };
   /**
-   * Announce a read that has to QUEUE at the read-admission gate, the moment
-   * it starts waiting; the returned function is called when it is admitted
-   * (`packages/semaphore`'s `onQueued`). `onReadGateWait` reports a wait only
-   * once it is over, so until then a queued read looks busy with its own work.
-   * server: `beginWait("read-admit")` — the stuck-span watchdog then files a
-   * read queued past its threshold against the gate and its holders, not as
-   * the reader stuck itself; central / before-injection: omitted (no-op). */
-  onReadGateQueued?: () => () => void;
-  /**
-   * Report queue-wait at the read-path single-flight coalescer (see
-   * `getResourceValue`). Fired once per JOINING full load — a caller that found
-   * an existing in-flight loader promise for the same (key, params) — with the
-   * ms spent awaiting the shared flight (the starter never reports), mirroring
-   * the read-admission gate's `onReadGateWait`. server:
-   * `chargeWait("read-coalesce", ms)` — attributes the wait to the enclosing
-   * entry so time spent coalesced behind another caller's slow loader is
-   * visible in the profiler; central / before-injection: omitted (no-op). */
-  onCoalesceWait?: (waitMs: number) => void;
+   * A JOINING full load at the read-path single-flight coalescer (see
+   * `getResourceValue`) — a caller that found an existing in-flight loader
+   * promise for the same (key, params) — announced as it joins; the returned
+   * function is called when the shared flight settles (the starter never
+   * joins). server: `beginWait("read-coalesce", "join")` — shown while it
+   * lasts, then charged to the joiner's own entry, so time spent coalesced
+   * behind another caller's slow loader reads as a join, not as the joiner's
+   * own work; central / before-injection: omitted (no-op). */
+  onCoalesceJoin?: () => () => void;
   /**
    * Fired once per version short-circuit — a `sub` whose echoed (epoch, version)
    * matched the server's current boot epoch + per-pk version counter and was
@@ -3029,14 +3027,13 @@ export function createResourceRuntime(
   function versionOf(entry: RegistryEntry, pk: string): number {
     return entry.versions.get(pk) ?? versionClock;
   }
-  // Per-runtime read-admission gate (see READ_LOAD_CONCURRENCY). Its `onWait`
-  // charges queue-wait to the enclosing entry via the injected hook (server:
-  // chargeWait), so a saturated gate is observable rather than hidden.
+  // Per-runtime read-admission gate (see READ_LOAD_CONCURRENCY). Its waits are
+  // announced and charged to the enclosing entry via the injected
+  // `readGateWait` (server: `gateWaitHooks("read-admit")`), so a saturated gate
+  // is observable rather than hidden.
   const readLoadGate = createSemaphore(READ_LOAD_CONCURRENCY, {
     perClass: READ_KEY_SHARE,
   });
-  const chargeReadGateWait = (waitMs: number): void =>
-    opts.onReadGateWait?.(waitMs);
   // Identity of THIS server boot, stamped on every sub-ack / up-to-date frame.
   // `entry.versions` is per-boot in-memory state (created empty at registration,
   // bumped only in the flush paths — nothing restores it across restarts), so a
@@ -4204,10 +4201,10 @@ export function createResourceRuntime(
     // not N (the "joiners burn read-admit slots" convoy of
     // research/perfs/2026-07-11-compressor-thrash-subscription-replay-storm.md
     // Finding 3). Joiners ride the EXISTING `read-coalesce` wait
-    // (`onCoalesceWait`), which now subsumes the flight's gate wait: a coalesced
+    // (`onCoalesceJoin`), which now subsumes the flight's gate wait: a coalesced
     // caller's reported wait includes the starter's time queueing for a slot,
     // charged as coalesce-wait in the joiner's own context — never gate-wait
-    // (only the starter runs `chargeReadGateWait`, in its own context, because
+    // (only the starter reports `readGateWait`, in its own context, because
     // inflight runs the starter's factory synchronously in its call frame).
     // Push-path callers (`gated` undefined) start UNGATED flights exactly as before;
     // a gated read joining one rides the coalesce wait with no slot either way.
@@ -4281,7 +4278,7 @@ export function createResourceRuntime(
           }
         : load,
       {
-        onWait: opts.onCoalesceWait,
+        onJoin: opts.onCoalesceJoin,
         // Undefined for every read caller ⇒ join any live flight, exactly as
         // before. Set only by the FULL drains, which cannot serve a value older
         // than the notify they are minting a version for.
@@ -4335,8 +4332,8 @@ export function createResourceRuntime(
         return body();
       },
       {
-        onWait: chargeReadGateWait,
-        onQueued: opts.onReadGateQueued,
+        onWait: opts.readGateWait?.onWait,
+        onQueued: opts.readGateWait?.onQueued,
         yieldable: true,
         label,
         class: key,

@@ -8,7 +8,7 @@ import * as fsp from "node:fs/promises";
 // type, so moving an import onto this module changes nothing but the timing —
 // and every call past `FS_WAIT_FLOOR_MS` is handed to `onSlowFsCall`
 // subscribers under a named wait layer, which the backend charges as a wait
-// (runtime-profiler's `chargeWait`) and every process writes down
+// (runtime-profiler's server install) and every process writes down
 // (`debug/profiling/fs-wait`).
 //
 // A LEAF: node builtins only. Every process imports it (the CLI bootstrap,

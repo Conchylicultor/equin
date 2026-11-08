@@ -3,16 +3,20 @@ import { whileWaiting } from "@plugins/packages/plugins/semaphore/core";
 /** Per-call options for `Inflight.run`. */
 export interface InflightOptions {
   /**
-   * Called once with the milliseconds spent awaiting an EXISTING in-flight
-   * promise — only JOINERS report. Neither the starter (whose time is `fn`'s own
-   * execution, not queue-wait) nor a caller that SUPERSEDED a too-old flight
-   * (also a starter — it waits for nothing) ever calls it. It fires when the
-   * shared flight settles (`finally`-based, so a rejecting flight still
-   * reports), in the joiner's own async context so callers can make the
-   * coalescing observable — e.g. charge a profiler wait — without coupling this
-   * primitive to a profiler. Mirrors the semaphore's `onWait` shape.
+   * Called once, synchronously and in the JOINER's own async context, the
+   * moment a caller joins an EXISTING in-flight promise; the function it
+   * returns is called when that shared flight settles (`finally`-based, so a
+   * rejecting flight still ends it). Only JOINERS call it: neither the starter
+   * (whose time is `fn`'s own execution, not a wait) nor a caller that
+   * SUPERSEDED a too-old flight (also a starter — it waits for nothing).
+   *
+   * One callback for both moments, so a caller cannot report a join's wait
+   * without having shown it while it lasted — runtime-profiler's
+   * `beginWait(layer, "join")` is exactly this shape (it shows the wait on the
+   * joiner's open spans, and its end charges the time). This primitive stays
+   * profiler-free.
    */
-  onWait?: (waitMs: number) => void;
+  onJoin?: () => () => void;
   /**
    * Freshness floor on the `performance.now()` clock: refuse to join a flight
    * that STARTED before this instant. The caller is saying "I already know about
@@ -122,24 +126,24 @@ export function createInflight(): Inflight {
         // joiners would otherwise stall every caller that depends on nothing
         // here. Without such a slot in its context it is the shared promise.
         const shared = whileWaiting(existing.promise as Promise<T>);
-        const onWait = opts?.onWait;
-        if (!onWait) return shared;
-        // Joiner path: time the await of the shared flight in a wrapper async
-        // fn, so `onWait` runs in the JOINER's own async context (ambient
-        // AsyncLocalStorage attribution lands on the joiner, not the starter).
-        // `finally`-based so a rejecting flight still reports the wait.
+        const onJoin = opts?.onJoin;
+        if (!onJoin) return shared;
+        // Joiner path: announced here, synchronously, in the JOINER's own
+        // async context (ambient AsyncLocalStorage attribution lands on the
+        // joiner, not the starter), and ended as the shared flight settles —
+        // `finally`-based so a rejecting flight still ends it.
+        const end = onJoin();
         return (async () => {
-          const t0 = performance.now();
           try {
             return await shared;
           } finally {
-            onWait(performance.now() - t0);
+            end();
           }
         })();
       }
       // Either no flight, or one too old to serve this caller. Both are STARTER
-      // paths — a superseding caller waits for nothing, so it never reports
-      // `onWait`; it only announces the supersession.
+      // paths — a superseding caller waits for nothing, so it never calls
+      // `onJoin`; it only announces the supersession.
       if (existing) opts?.onSupersede?.();
       // Stamped BEFORE `fn` is invoked, so `startedAt` is a lower bound on when
       // the body could have read anything (see `InflightOptions.notBefore`).

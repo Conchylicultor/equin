@@ -13,14 +13,15 @@ It is a thin composition over two existing pieces:
   (`@plugins/infra/plugins/host/plugins/host-admission/server`) — the registry that owns the
   cross-process `createHostSemaphore` flock slot-broker and auto-registers the
   `heavy-read-acquire` occupancy gauge (with true host-wide occupancy);
-- the `runtime-profiler` — each acquire **charges** its lock-wait to the
-  enclosing entry (loader/http) via `chargeWait("heavy-read-acquire", ms)`, so a
+- the `runtime-profiler` — each acquire **shows, then charges** its lock-wait
+  on the enclosing entry (loader/http) as `heavy-read-acquire` — metered by
+  the host pool itself (`defineHostPool`) — so a
   heavy git/fs loader's span reads as wait-vs-work directly (e.g. edited-files
   4032ms = lock 3500 / git diff 532) and a saturated gate stays attributed to the
   resource that waited in `get_runtime_profile` / the durable slow-ops store,
   rather than hiding queue-wait in a label-shared bucket. Context-less callers
-  (no active entry) fall back to a standalone `db [heavy-read-acquire]` span
-  inside `chargeWait`. See
+  (no active entry) fall back to a standalone `db [heavy-read-acquire]` span.
+  See
   research/2026-06-19-global-wait-attribution-instrumentation.md.
 
 The pool *instance* (fixed name `heavy-read` + size) lives here rather than in
@@ -72,7 +73,7 @@ The reentrant fast path checks the signal too, so a nested acquire cannot be the
 one place a cancelled read still runs.
 
 **Occupancy gauges.** Both tiers surface a `registerGateGauge` under their
-`chargeWait` layer names (`heavy-read-local`, `heavy-read-acquire`) so the flight
+wait layer names (`heavy-read-local`, `heavy-read-acquire`) so the flight
 recorder's gate snapshot joins occupancy to span waits. The local tier registers
 its own gauge here; the host-wide `heavy-read-acquire` gauge is auto-registered by
 `defineHostPool` and reports **true host-wide occupancy** — every backend's held

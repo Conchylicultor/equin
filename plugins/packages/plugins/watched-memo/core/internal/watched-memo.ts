@@ -3,7 +3,8 @@ import { createInflight } from "@plugins/packages/plugins/inflight/core";
 import { createRefcountHub } from "@plugins/packages/plugins/refcount-hub/core";
 import { whileWaiting } from "@plugins/packages/plugins/semaphore/core";
 import {
-  chargeWait,
+  beginWait,
+  markWait,
   runTracked,
 } from "@plugins/infra/plugins/runtime-profiler/core";
 
@@ -200,7 +201,7 @@ export function createWatchedMemo<T, F>(
     let stop: () => void;
     try {
       stop = await opts.changes(key, (resync) => {
-        if (resync === true) chargeWait(`memo-resync:${name}`, 0, "join");
+        if (resync === true) markWait(`memo-resync:${name}`);
         if (entry.live && !entry.closed) passes.trigger(entry);
       });
     } catch (err) {
@@ -222,7 +223,7 @@ export function createWatchedMemo<T, F>(
     const signature = await opts.signatureOf(key, facts);
     const hit = cache.get(key);
     if (hit?.signature === signature) {
-      chargeWait(`memo-hit:${name}`, 0, "join");
+      markWait(`memo-hit:${name}`);
       return hit.value;
     }
     // Join only a compute probed at THIS signature: one probed at an earlier
@@ -230,7 +231,7 @@ export function createWatchedMemo<T, F>(
     return inflight.run(
       `${key}\0${signature}`,
       async () => {
-        chargeWait(`memo-miss:${name}`, 0, "join");
+        markWait(`memo-miss:${name}`);
         const value = await opts.compute(key, facts);
         // Cache only when a re-probe still reads `signature`: the compute may
         // have read a later state that has since been undone, and caching it
@@ -246,7 +247,7 @@ export function createWatchedMemo<T, F>(
         }
         return value;
       },
-      { onWait: (ms) => chargeWait(`memo-coalesce:${name}`, ms, "join") },
+      { onJoin: () => beginWait(`memo-coalesce:${name}`, "join") },
     );
   }
 
@@ -254,7 +255,7 @@ export function createWatchedMemo<T, F>(
     async get(key) {
       const entry = entries.get(key);
       if (entry?.state.kind === "watched") {
-        chargeWait(`memo-watched-hit:${name}`, 0, "join");
+        markWait(`memo-watched-hit:${name}`);
         return entry.state.value;
       }
       if (entry?.state.kind === "opening") {
@@ -265,9 +266,8 @@ export function createWatchedMemo<T, F>(
         // read-admission slot for the whole first git pass, and every
         // unrelated read queued behind them (2026-11-06: `wait read-admit`
         // 2–17 s behind edited-files).
-        const t0 = performance.now();
-        const outcome = await whileWaiting(entry.state.first);
-        chargeWait(`memo-opening:${name}`, performance.now() - t0, "join");
+        const end = beginWait(`memo-opening:${name}`, "join");
+        const outcome = await whileWaiting(entry.state.first).finally(end);
         if (outcome.ok) return outcome.value;
       }
       return probe(key);

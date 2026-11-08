@@ -550,9 +550,10 @@ async function checkSlotHogs(
 // runtime profiler's in-memory `job` spans, and only there. Two consequences,
 // both accepted rather than worked around:
 //
-//   - This is necessarily POST-HOC. Gates charge their wait through
-//     `chargeWait(layer, elapsed)` when the wait ENDS, so a job blocked right
-//     now carries no wait yet; there is nothing to sample about a currently
+//   - This is necessarily POST-HOC. A gate's wait lands in a span's `waits`
+//     only when it ENDS (while it lasts it is only announced, for the
+//     stuck-span watchdog), so a job blocked right now carries no wait yet in
+//     the totals this diffs; there is nothing to sample about a currently
 //     blocked job. Reading completed runs is the only exact answer, so this
 //     detector reads completed runs.
 //   - The profiler is per-process in-memory state, so this sees the runs THIS

@@ -526,7 +526,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `infra/request-origin.originOf`
     - `infra/request-origin.UNREVERTED_WRITE_HEADER`
     - `infra/runtime-identity.isMain`
-    - `infra/runtime-profiler.chargeWait`
+    - `infra/runtime-profiler.beginWait`
     - `infra/runtime-profiler.gateWaitHooks`
     - `infra/runtime-profiler.recordEntrySpan`
     - `packages/inflight.createInflight`

@@ -10,7 +10,7 @@ import {
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import {
   recordSpan,
-  chargeWait,
+  beginWait,
   gateWaitHooks,
   currentCallerKind,
   currentEntryLabel,
@@ -252,7 +252,7 @@ function describeAcquirer(site: string): string {
 }
 
 // Occupancy gauges for the flight recorder's gate snapshot: layer names join to
-// the corresponding `chargeWait` layers in span `waits`. `background-acquire` is
+// the corresponding wait layers in span `waits`. `background-acquire` is
 // the background query gate and `background-tx-acquire` the background
 // transaction gate; `db-pool` / `db-pool-background` are the gauges for the
 // `db-acquire` wait layer — occupancy of each lane's raw pg pool (held
@@ -343,7 +343,7 @@ export function installQueryWrapper(pool: Pool, background: Pool): void {
   // Background-origin queries additionally route through `backgroundQueryGate`, so
   // background query load caps at BACKGROUND_QUERY_MAX concurrent connections and
   // interactive work keeps reserved capacity. The gate wait is CHARGED to the
-  // enclosing entry (via chargeWait) under the "background-acquire" layer, so the
+  // enclosing entry (via gateWaitHooks) under the "background-acquire" layer, so the
   // wait lands on the waiting resource's own span (work = total − Σwaits,
   // lock-vs-work readable directly) instead of in a label-shared
   // `db [background-acquire]` bucket. The origin class is read synchronously,
@@ -363,23 +363,32 @@ export function installQueryWrapper(pool: Pool, background: Pool): void {
 
     const runOnce = async () => {
       const acq0 = performance.now();
-      // The lane's raw connect, so this checkout takes no transaction lease and
-      // applies no read-set patch. A client still carrying one from an earlier
-      // transaction checkout records its tables twice here; a read-set is a
-      // Set, so the repeat costs nothing.
-      const client = await laneConnect();
-      const acqMs = performance.now() - acq0;
-      // The leaf "[acquire]" span keeps rate visibility; the chargeWait ALSO
-      // lands the same duration in the enclosing entry's waits ("db-acquire"
+      // The connect wait is shown on the enclosing entry while it lasts — a
+      // statement queued minutes for a pool connection reads as queued on
+      // `db-acquire`, not as busy with its own work (debug/stuck-spans) — and
+      // its end lands the same wait in the entry's waits ("db-acquire"
       // layer), so the caller's wall-clock decomposition sums instead of the
-      // connect-wait hiding inside a label-shared leaf bucket. The leaf is a
-      // wait, not work: recorded as all `db-acquire` (own time 0), so no
-      // own-time judge (slow-ops, op-time) counts the pool's queue as a `db`
-      // op — the wait is reported once, against the gate.
+      // connect-wait hiding inside a label-shared leaf bucket. Ended on a
+      // failed connect too: the wait is over either way.
+      const acquiring = beginWait("db-acquire", "queue");
+      let client: PoolClient;
+      try {
+        // The lane's raw connect, so this checkout takes no transaction lease
+        // and applies no read-set patch. A client still carrying one from an
+        // earlier transaction checkout records its tables twice here; a
+        // read-set is a Set, so the repeat costs nothing.
+        client = await laneConnect();
+      } finally {
+        acquiring();
+      }
+      const acqMs = performance.now() - acq0;
+      // The leaf "[acquire]" span keeps rate visibility. The leaf is a wait,
+      // not work: recorded as all `db-acquire` (own time 0), so no own-time
+      // judge (slow-ops, op-time) counts the pool's queue as a `db` op — the
+      // wait is reported once, against the gate.
       recordSpan("db", "[acquire]", acqMs, undefined, {
         waits: { "db-acquire": acqMs },
       });
-      chargeWait("db-acquire", acqMs, "queue");
       try {
         const exec0 = performance.now();
         // The statement's deadline is the client's own (armed at this call).

@@ -145,7 +145,7 @@ blocked the victim*:
    up as one color across every co-queued row.
 2. **The `gates` strip shows saturation at the same instant** — `active 4/4,
    queued 11` on that layer confirms the gate was the bottleneck. Gate names use
-   the `chargeWait` layer vocabulary, so `trigger.detail.waits`, each span's
+   the profiler's wait-layer vocabulary, so `trigger.detail.waits`, each span's
    `waits`, and the `gates` keys all join directly.
 3. **The `spans` tree names the holder — read it, don't guess it.** The co-queuers
    are the rows whose `waits` include the saturated layer; the **holder** is the one

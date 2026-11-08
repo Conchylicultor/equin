@@ -30,8 +30,8 @@ and hands them to the detector (`server/internal/detect.ts`):
      threshold and is still in progress (`FlightSpan.waiting`).
 
    A gate charges a wait only when it ENDS, so before the profiler showed
-   in-progress waits (`beginWait`, announced by `packages/semaphore`'s
-   `onQueued`) a span queued 90 s looked like a span busy 90 s: on main
+   in-progress waits (`beginWait`, and a semaphore gate's `onQueued`) a span
+   queued 90 s looked like a span busy 90 s: on main
    (2026-11-04) `sub reports.list:rows` was filed 387 times and
    `sub host-fs.peek` 314, each run as stuck itself, while the read gate
    they waited on — and what held it — went unnamed.
@@ -148,15 +148,19 @@ run no `onReady`, so no watchdog.
 
 ## Known limits
 
-- **Only gates that announce their waits are told apart.** A wait shows while
-  in progress only when its gate calls `beginWait` — every
-  `packages/semaphore` gate wired through `gateWaitHooks` (read-admit,
-  background-acquire / -tx-acquire, heavy-read-local, browser-fetch-local,
-  endpoint-concurrency). A wait on a host-wide flock pool
-  (`heavy-read-acquire`, …), the pg pool's own `db-acquire`, or a join
-  (`read-coalesce`, an `inflight` joiner) still reads as the waiter's own
-  time until it ends. A join's run is itself an open span, reported as the
-  deepest candidate when it is the stuck one.
+- **Every metered wait is told apart but the filesystem's.** The profiler
+  has no after-the-fact charge in its barrel: a wait is a `beginWait`
+  handle (announced as it starts, charged as it ends) or a gate's
+  `gateWaitHooks` pair — so every `packages/semaphore` gate, every
+  host-wide flock pool (`defineHostPool` meters `<id>-acquire` itself:
+  heavy-read, browser-fetch, worktree-mutate, db-fork, …), the pg pool's
+  `db-acquire` and every join (`read-coalesce`, `endpoint-dedupe`,
+  `git-coalesce:*`, `memo-coalesce:*`, `memo-opening:*` — `inflight`'s
+  `onJoin`) shows while in progress. The exception is `io`: timed-fs hands
+  over a file call past its floor only once it returns, so a call stuck in
+  progress (a hung mount) still reads as its caller's own time until then.
+  A join's run is itself an open span, reported as the deepest candidate
+  when it is the stuck one.
 
 - **A stuck flush also freezes its own alert in open tabs.** The report row is
   written, but the bell and the Reports list reach tabs through live-state,

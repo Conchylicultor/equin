@@ -108,7 +108,9 @@ one compute + one cached value (coalesce fan-out).
 ## Observability
 
 A hit charges a 0ms `git-memo-hit:<name>` marker and a miss a 0ms
-`git-memo-miss:<name>` marker via `chargeWait` (`runtime-profiler/core`). 0ms is
+`git-memo-miss:<name>` marker via `markWait` (`runtime-profiler/core`); a
+caller joining an in-flight compute shows, then charges, `git-coalesce:<name>`
+(`beginWait`, as `inflight`'s `onJoin`). 0ms is
 sound: with an active entry it adds 0 to the wait accumulator (no timing
 pollution), and with no active entry it records a 0ms `db [git-memo-hit:<name>]`
 span — a pure hit-rate signal. The 3-arg `get` signature is fixed; observability
@@ -134,7 +136,7 @@ const memo = createSignedMemo<Files>({ name, signature, compute });
 `memo.signature` feeds `revalidate`, `memo.get` feeds the `loader`. They cannot
 diverge because there is nothing to pass — divergence becomes structurally
 unrepresentable rather than a comment two files apart. Everything else (cache,
-per-key single-flight, `chargeWait` markers, the ≤1-event staleness-sharing of a
+per-key single-flight, the wait markers, the ≤1-event staleness-sharing of a
 mid-flight joiner) is `createGitStateMemo`'s: `createSignedMemo` is a thin binding
 wrapper over exactly one cache implementation.
 

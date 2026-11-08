@@ -3,7 +3,6 @@ import { defineHostPool } from "@plugins/infra/plugins/host/plugins/host-admissi
 import { HOST_POOLS } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import {
-  chargeWait,
   gateWaitHooks,
   registerGateGauge,
 } from "@plugins/infra/plugins/runtime-profiler/core";
@@ -49,7 +48,7 @@ const pool = defineHostPool({
 // The host-gate occupancy gauge (`heavy-read-acquire`) is auto-registered by
 // `defineHostPool` with TRUE host-wide occupancy. Only the LOCAL per-worktree
 // semaphore's gauge is ours to register — its layer name joins to the
-// same-named `chargeWait` layer below.
+// same-named wait layer below.
 registerGateGauge("heavy-read-local", () => perWorktreeGate().stats());
 
 // Ambient "this async context already holds a slot" flag, making the gate
@@ -107,11 +106,12 @@ export function withHeavyReadSlot<T>(
   // compete host-wide for an actual slot.
   //
   // Each tier charges its wait distinctly to the enclosing entry (loader/http):
-  // the host-wide cross-process lock-wait under "heavy-read-acquire" and the
-  // local in-process queue-wait under "heavy-read-local", so a heavy git/fs
+  // the host-wide cross-process lock-wait under "heavy-read-acquire" (metered by
+  // the pool itself — `defineHostPool`) and the local in-process queue-wait
+  // under "heavy-read-local", so a heavy git/fs
   // loader's span reads as wait-vs-work directly (e.g. edited-files 4032ms = lock
   // 3500 / git diff 532) instead of one opaque number. Context-less callers fall
-  // back to a standalone span inside chargeWait.
+  // back to a standalone span.
   return perWorktreeGate().run(() => {
     // The local gate has granted. It could not observe an abort while we were
     // queued on it (see the docblock), so this is the first place we can: stop
@@ -123,10 +123,7 @@ export function withHeavyReadSlot<T>(
     // auto-registers the true host-wide occupancy gauge, so there is no local
     // held-count to bracket here; we only mark this async context as holding a
     // slot so a reentrant acquire runs its body directly (the fast path above).
-    return pool.run(() => holdingSlot.run(true, fn), {
-      signal,
-      onAcquired: (waitMs) => chargeWait("heavy-read-acquire", waitMs, "queue"),
-    });
+    return pool.run(() => holdingSlot.run(true, fn), { signal });
   }, gateWaitHooks("heavy-read-local"));
 }
 

@@ -29,8 +29,8 @@ import type {
 import {
   recordEntrySpan,
   recordSpan,
-  chargeWait,
   beginWait,
+  gateWaitHooks,
   getRuntimeProfile,
   registerGateGauge,
   runInRootContext,
@@ -579,14 +579,14 @@ const runtime = createResourceRuntime({
   // Read-admission gate queue-wait, charged to the enclosing `sub` entry (mirrors
   // the DB background query gate's `background-acquire`), so a saturated read cap is visible in
   // get_runtime_profile as a `read-admit` wait rather than hidden queue time.
-  onReadGateWait: (ms) => chargeWait("read-admit", ms, "queue"),
-  // ...and shown while it is still in progress, so an open `sub` queued on the
+  // Shown while it is still in progress, too, so an open `sub` queued on the
   // gate reads as queued, not as busy with its own work (debug/stuck-spans).
-  onReadGateQueued: () => beginWait("read-admit", "queue"),
+  readGateWait: gateWaitHooks("read-admit"),
   // Read-path single-flight coalescing wait (mirrors read-admit): the time a
   // JOINING caller spent awaiting another caller's in-flight loader for the
-  // same (key, params), charged to the joiner's own enclosing entry.
-  onCoalesceWait: (ms) => chargeWait("read-coalesce", ms, "join"),
+  // same (key, params), shown while it lasts and charged to the joiner's own
+  // enclosing entry.
+  onCoalesceJoin: () => beginWait("read-coalesce", "join"),
   // Loader frequency for the _debug endpoint: find this key's loader aggregate in
   // the current profiling window and derive count / calls-per-minute / slowest.
   loaderStats: (key) => {
@@ -687,7 +687,7 @@ const runtime = createResourceRuntime({
 });
 
 // Occupancy gauge for the read-admission gate, under the same layer name as its
-// `onReadGateWait` charge above — the flight recorder's gate snapshot joins
+// `readGateWait` charge above — the flight recorder's gate snapshot joins
 // occupancy to `read-admit` span waits. Registered here (not in the runtime)
 // because resource-runtime stays profiler-free; central never registers.
 registerGateGauge("read-admit", () => runtime.readGateStats());
