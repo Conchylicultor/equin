@@ -10,7 +10,18 @@ import {
 import { adoptLegacyLogSync } from "@plugins/infra/plugins/launcher/plugins/gateway-logs/data-dirs";
 import { adoptFd } from "@plugins/packages/plugins/owned-fd/core";
 import { writeFileSync, rmSync } from "node:fs";
-import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
+import {
+  existsSync,
+  readFileSync,
+  statSync,
+} from "@plugins/packages/plugins/timed-fs/core";
+import {
+  judgePidFile,
+  psProbeArgv,
+  readPsProbe,
+  type PidFileHolder,
+  type PidFileRead,
+} from "@plugins/packages/plugins/pid-file-holder/core";
 import { join, dirname } from "node:path";
 import { spawn, spawnSync } from "node:child_process";
 import { connect } from "node:net";
@@ -159,23 +170,99 @@ interface Launched {
   exit: string | null;
 }
 
+// ─── who holds the pidfile ──────────────────────────────────
+
+/**
+ * Who holds PgBouncer's pidfile, judged by the pid it names
+ * (`packages/pid-file-holder`) — never by dialing the socket, which fails for
+ * a PgBouncer that is only slow: reading that as "crashed" deleted a live
+ * daemon's pidfile (so no stop or teardown could find it again) and started a
+ * second one beside it. The daemon this script launches runs as this user
+ * with its config file on its command line, so that process is PgBouncer.
+ */
+function pgbouncerHolder(file: PidFileRead | null): PidFileHolder {
+  return judgePidFile(file, {
+    uid: process.getuid!(),
+    executable: "pgbouncer",
+    argvMarker: PGBOUNCER_CONFIG_FILE,
+    probe: (pid) => {
+      const [cmd, ...args] = psProbeArgv(pid);
+      const ps = spawnSync(cmd!, args, { encoding: "utf8" });
+      if (ps.error) throw ps.error;
+      return readPsProbe(pid, ps, Date.now());
+    },
+  });
+}
+
+/** The pidfile's text and mtime (stat after the read, so the mtime is never older than the text), or null when there is none. */
+function readPidFile(): PidFileRead | null {
+  try {
+    const text = readFileSync(PGBOUNCER_PID_FILE, "utf-8");
+    return { text, mtimeMs: statSync(PGBOUNCER_PID_FILE).mtimeMs };
+  } catch (err: any) {
+    if (err.code === "ENOENT") return null;
+    throw err;
+  }
+}
+
+/** Wait for the socket to accept, failing if `exited` reports the daemon gone first. */
+async function waitReady(exited: () => string | null): Promise<void> {
+  const deadline = Date.now() + READY_TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    const exit = exited();
+    if (exit !== null) {
+      throw new Error(
+        `pgbouncer exited (${exit}) before it was ready (see ${PGBOUNCER_LOG_FILE})`,
+      );
+    }
+    if (await pingSocket(500)) return;
+    await Bun.sleep(300);
+  }
+  throw new Error(
+    `pgbouncer: did not become ready within ${READY_TIMEOUT_MS}ms (see ${PGBOUNCER_LOG_FILE})`,
+  );
+}
+
 // ─── main lifecycle ─────────────────────────────────────────
 
 async function main(): Promise<void> {
   const binary = resolveBinary();
 
-  // Reattach: if PgBouncer is already running, nothing to do. It keeps the
-  // config of its own start; the first backend to boot converges it onto the
-  // current one (`database/pgbouncer#machine`'s convergePgbouncerConfig).
-  if (existsSync(PGBOUNCER_PID_FILE) && (await pingSocket(1500))) {
-    console.log("pgbouncer: already running; reattaching");
-    return;
-  }
-
-  // Stale pidfile from a crashed prior run.
-  if (existsSync(PGBOUNCER_PID_FILE)) {
-    console.log("pgbouncer: removing stale pidfile");
-    rmSync(PGBOUNCER_PID_FILE, { force: true });
+  const judged = readPidFile();
+  const holder = pgbouncerHolder(judged);
+  switch (holder.kind) {
+    case "live":
+      // Reattach. It keeps the config of its own start; the first backend to
+      // boot converges it onto the current one (`database/pgbouncer#machine`'s
+      // convergePgbouncerConfig). Alive is not answering: a socket that never
+      // accepts fails the start, naming it — the daemon is left running.
+      console.log(
+        `pgbouncer: already running (pid ${holder.pid}); reattaching`,
+      );
+      await waitReady(() => null);
+      return;
+    case "absent":
+      break;
+    case "stale":
+      // Only while the file still says what was judged, so a PgBouncer that
+      // wrote it since is never the one unlinked.
+      const now = readPidFile();
+      if (now?.text !== judged!.text || now.mtimeMs !== judged!.mtimeMs) {
+        throw new Error(
+          `pgbouncer: ${PGBOUNCER_PID_FILE} changed while it was judged stale (${holder.why}); not removing it — re-run the start`,
+        );
+      }
+      console.log(`pgbouncer: removing stale pidfile (${holder.why})`);
+      rmSync(PGBOUNCER_PID_FILE, { force: true });
+      break;
+    case "foreign":
+      throw new Error(
+        `pgbouncer: ${PGBOUNCER_PID_FILE} names pid ${holder.pid}, a process of yours that is not PgBouncer (${holder.args}); not removing it. If no pgbouncer runs with ${PGBOUNCER_CONFIG_FILE}, remove the file and re-run the start`,
+      );
+    case "unreadable":
+      throw new Error(
+        `pgbouncer: ${PGBOUNCER_PID_FILE} names no pid (${JSON.stringify(holder.text.slice(0, 80))}); not removing it. If no pgbouncer runs with ${PGBOUNCER_CONFIG_FILE}, remove the file and re-run the start`,
+      );
   }
 
   // Generate config fresh each boot (idempotent), from the lane table — the
@@ -188,24 +275,8 @@ async function main(): Promise<void> {
     `pgbouncer: starting (socket=${PGBOUNCER_SOCKET_DIR}, port=${PGBOUNCER_PORT})`,
   );
   const launched = launch(binary, serviceLogTarget(process.argv));
-
-  // Wait for socket readiness.
-  const deadline = Date.now() + READY_TIMEOUT_MS;
-  while (Date.now() < deadline) {
-    if (launched.exit !== null) {
-      throw new Error(
-        `pgbouncer exited (${launched.exit}) before it was ready (see ${PGBOUNCER_LOG_FILE})`,
-      );
-    }
-    if (await pingSocket(500)) {
-      console.log("pgbouncer: ready");
-      return;
-    }
-    await Bun.sleep(300);
-  }
-  throw new Error(
-    `pgbouncer: did not become ready within ${READY_TIMEOUT_MS}ms (see ${PGBOUNCER_LOG_FILE})`,
-  );
+  await waitReady(() => launched.exit);
+  console.log("pgbouncer: ready");
 }
 
 main().catch((err) => {

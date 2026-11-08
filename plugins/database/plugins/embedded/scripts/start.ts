@@ -28,13 +28,20 @@ import {
   existsSync,
   lstatSync,
   readFileSync,
+  statSync,
 } from "@plugins/packages/plugins/timed-fs/core";
 import { join, dirname, basename } from "node:path";
 import { spawnSync } from "node:child_process";
-import { connect } from "node:net";
 import type { Client } from "pg";
 import { buildConnectionString } from "@plugins/database/core";
 import { createDbClient } from "@plugins/database/plugins/connection/server";
+import {
+  judgePidFile,
+  psProbeArgv,
+  readPsProbe,
+  type PidFileHolder,
+  type PidFileRead,
+} from "@plugins/packages/plugins/pid-file-holder/core";
 import {
   PG_PORT,
   PG_USER,
@@ -172,26 +179,63 @@ function ensureSymlinks(binDir: string): void {
   }
 }
 
-// ─── socket probe ───────────────────────────────────────────
+// ─── who holds postmaster.pid ───────────────────────────────
 
-function pingSocket(timeoutMs: number): Promise<boolean> {
-  const socketPath = join(PG_SOCKET_DIR, `.s.PGSQL.${PG_PORT}`);
-  return new Promise((resolve) => {
-    const sock = connect(socketPath);
-    const timer = setTimeout(() => {
-      sock.destroy();
-      resolve(false);
-    }, timeoutMs);
-    sock.on("connect", () => {
-      clearTimeout(timer);
-      sock.destroy();
-      resolve(true);
-    });
-    sock.on("error", () => {
-      clearTimeout(timer);
-      resolve(false);
-    });
+/**
+ * Who holds the cluster's lock file, judged by the pid it names
+ * (`packages/pid-file-holder`) — never by dialing the socket.
+ *
+ * A dial fails for a postmaster that is alive but slow (host load, a full
+ * accept backlog, an unlinked socket file) — exactly when the gateway's
+ * watchdog re-runs this script — and reading that as "crashed" deleted the
+ * live postmaster's lock file, which Postgres re-checks about once a minute
+ * and answers with an immediate shutdown. The pid cannot be slow: the
+ * postmaster this script starts runs as this user with `-D <PG_DATA_DIR>` on
+ * its command line, so that process is the cluster; no such process (or
+ * another user's) is a stale file; any other process of ours is refused,
+ * never resolved by deleting.
+ */
+function postmasterHolder(file: PidFileRead | null): PidFileHolder {
+  return judgePidFile(file, {
+    uid: process.getuid!(),
+    executable: "postgres",
+    argvMarker: PG_DATA_DIR,
+    probe: (pid) => {
+      const [cmd, ...args] = psProbeArgv(pid);
+      const ps = spawnSync(cmd!, args, { encoding: "utf8" });
+      if (ps.error) throw ps.error;
+      return readPsProbe(pid, ps, Date.now());
+    },
   });
+}
+
+/** The lock file's text and mtime (stat after the read, so the mtime is never older than the text), or null when there is none. */
+function readPidFile(): PidFileRead | null {
+  try {
+    const text = readFileSync(PG_PID_FILE, "utf-8");
+    return { text, mtimeMs: statSync(PG_PID_FILE).mtimeMs };
+  } catch (err: any) {
+    if (err.code === "ENOENT") return null;
+    throw err;
+  }
+}
+
+/**
+ * Remove a lock file judged stale — only if it still says what was judged,
+ * so a postmaster that took the lock since is never the one unlinked.
+ */
+function removeStalePidFile(
+  holder: PidFileHolder & { kind: "stale" },
+  judged: PidFileRead,
+): void {
+  const now = readPidFile();
+  if (now?.text !== judged.text || now.mtimeMs !== judged.mtimeMs) {
+    throw new Error(
+      `pg: ${PG_PID_FILE} changed while it was judged stale (${holder.why}); not removing it — re-run the start`,
+    );
+  }
+  console.log(`pg: removing stale postmaster.pid (${holder.why})`);
+  rmSync(PG_PID_FILE, { force: true });
 }
 
 // ─── data dir checks ────────────────────────────────────────
@@ -256,7 +300,8 @@ function postmasterLog(target: ServiceLogTarget): {
 
 /**
  * Bring the postmaster up: initdb on a fresh (or half-written) data dir, then
- * `pg_ctl start`. Only reached when nothing is serving yet.
+ * `pg_ctl start`. Only reached when no postmaster holds the lock file
+ * (`postmasterHolder`: absent, or a stale one already removed).
  */
 function startPostmaster(binDir: string, target: ServiceLogTarget): void {
   // Partial data dir (interrupted initdb) — nuke and redo.
@@ -290,10 +335,6 @@ function startPostmaster(binDir: string, target: ServiceLogTarget): void {
       const out = result.stderr?.toString() || result.stdout?.toString() || "";
       throw new Error(`initdb failed: ${out}`);
     }
-  } else if (existsSync(PG_PID_FILE)) {
-    // Stale pidfile from a crashed prior run; pg_ctl refuses to start with it.
-    console.log("pg: removing stale postmaster.pid");
-    rmSync(PG_PID_FILE, { force: true });
   }
 
   // pg_ctl start -w: forks PG, waits for readiness, then exits. All traffic
@@ -386,9 +427,9 @@ async function ensureClusterState(): Promise<void> {
   // A deadline-bearing client (`database/connection`): its connect and every
   // query give up after 60 s with no reply, closing the connection, and this
   // script exits non-zero naming the call. A bare `pg.Client` waits forever,
-  // and the reattach check above only DIALS the socket — which the kernel
-  // completes for a postmaster that is alive but not answering (wedged,
-  // stopped) — so this connect was the start command's one unbounded wait:
+  // and the reattach check above only asks whether the lock file's pid is a
+  // live postmaster — which it is for one that is alive but not answering
+  // (wedged, stopped) — so this connect was the start command's one unbounded wait:
   // the gateway's watchdog runs this script to completion, and a start that
   // never exits left the service down, unwatched and unreported.
   const client = createDbClient({
@@ -425,10 +466,32 @@ async function main(): Promise<void> {
   ensureSymlinks(binDir);
 
   // Reattach: PG is already running, so there is no cluster to start — but we
-  // still fall through to the base-database and settings checks below.
-  const reattached = existsSync(PG_PID_FILE) && (await pingSocket(1500));
-  if (reattached) console.log("pg: embedded PG already running; reattaching");
-  else startPostmaster(binDir, logTarget);
+  // still fall through to the base-database and settings checks below, whose
+  // deadline-bearing session is what says a live postmaster is not answering.
+  const judged = readPidFile();
+  const holder = postmasterHolder(judged);
+  switch (holder.kind) {
+    case "live":
+      console.log(
+        `pg: embedded PG already running (pid ${holder.pid}); reattaching`,
+      );
+      break;
+    case "absent":
+      startPostmaster(binDir, logTarget);
+      break;
+    case "stale":
+      removeStalePidFile(holder, judged!);
+      startPostmaster(binDir, logTarget);
+      break;
+    case "foreign":
+      throw new Error(
+        `pg: ${PG_PID_FILE} names pid ${holder.pid}, a process of yours that is not this cluster's postmaster (${holder.args}); not removing it. If no postgres runs for ${PG_DATA_DIR}, remove the file and re-run the start`,
+      );
+    case "unreadable":
+      throw new Error(
+        `pg: ${PG_PID_FILE} names no pid (${JSON.stringify(holder.text.slice(0, 80))}): a postmaster may be starting right now; not removing it. If no postgres runs for ${PG_DATA_DIR}, remove the file and re-run the start`,
+      );
+  }
 
   await ensureClusterState();
 

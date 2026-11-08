@@ -38237,6 +38237,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by: `conversations/conversation-view/jsonl-viewer`
       - Core:
         - Exports (values): `parsePartialJson`
+    - **`pid-file-holder`** — Who holds a daemon's pidfile, judged by the pid it names, never by a probe that can be slow: judgePidFile({ text, mtimeMs }, { uid, executable, argvMarker, probe }) answers live (a process of this user running the daemon's executable with its marker — data dir, config file — as a whole argument), stale (no such process, another user's, or one of ours that started after the file was written: safe to remove), foreign (one of ours, not the daemon, running since before the file: never removed) or unreadable (no pid on the first line); psProbeArgv / readPsProbe are the ps call that answers the probe (uid, elapsed time, full argv), run by the caller.
+      - Core:
+        - Exports (types):
+          - `JudgePidFileOptions`
+          - `PidFileHolder`
+          - `PidFileRead`
+          - `ProcessSnapshot`
+          - `PsResult`
+        - Exports (values):
+          - `judgePidFile`
+          - `psProbeArgv`
+          - `readPsProbe`
     - **`proc-rusage`** — One process's kernel usage record on macOS (proc_pid_rusage, read through bun:ffi): its physical footprint and resident size, and its CPU time — its own and that of every child it reaped, in ns. Says so where it cannot tell.
       - Cross-plugin:
         - Imported by: `debug/sentinel/machine-usage`
