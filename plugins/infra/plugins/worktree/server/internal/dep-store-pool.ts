@@ -4,9 +4,14 @@ import {
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { mkdir, rename, rm } from "node:fs/promises";
 import { lstat, readdir, stat } from "@plugins/packages/plugins/timed-fs/core";
-import { randomUUID } from "node:crypto";
 import { basename, join } from "node:path";
-import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import {
+  publishEntry,
+  putBack,
+  type RenamePool,
+  sweep,
+  takeNewest,
+} from "./rename-pool";
 
 // A removed checkout's installed dependency store, handed to the next checkout
 // instead of being deleted while that checkout installs one from scratch.
@@ -34,11 +39,8 @@ import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 // entry's own dependency links on every install (measured: a planted stale
 // link was repaired).
 //
-// THE POOL'S NAMES. `<ms>-<checkout>` is a published entry (its `store` inside);
-// every dot-name is transient and owned by whoever made it: `.staging-…` a
-// harvest before its publish, `.claimed-…` an entry an adopter or a delete took.
-// An entry is only ever TAKEN by renaming it to a claimed name — the rename is
-// exclusive, so an adopter can never move a store a delete is half-way through.
+// THE POOL'S NAMES and how an entry is taken: `rename-pool.ts`, shared with
+// the tree pool (`tree-pool.ts`).
 
 const STORE_REL = join("node_modules", ".bun");
 const NODE_MODULES = "node_modules";
@@ -74,22 +76,6 @@ const STAMP_REL = join("node_modules", ".equin-deps");
  */
 const POOL_MAX_AGE_MS = 7 * 24 * 60 * 60_000;
 
-/**
- * A transient name older than this was left by a process that died holding it
- * (a crashed harvest or adopt, a killed delete); the sweep deletes it. A live
- * delete is never raced: a store is deleted only by `emptyDepStorePool`, inside
- * the reaper's sweep, one sweep at a time (its job-wide lock), so a claimed name
- * a sweep finds is never one a delete is still working on.
- */
-const TRANSIENT_GRACE_MS = 60 * 60_000;
-
-// Deleting a store is ~75k entries, like a trash entry's node_modules: 5–50 s
-// measured. Counted in awake time (spawnCaptured's deadline), so a machine
-// dozing through the delete does not time it out.
-const POOL_RM_TIMEOUT_MS = 30 * 60_000;
-
-const STAGING_PREFIX = ".staging-";
-const CLAIMED_PREFIX = ".claimed-";
 const STORE_DIR = "store";
 
 /** Where harvested stores wait: beside the worktree trash, on the same volume, so every move is one `rename`. */
@@ -97,19 +83,13 @@ export function depStorePoolDir(repoRoot: AppPath): AppPath {
   return joinAppPath(repoRoot, ".claude", "worktree-dep-stores");
 }
 
-// The time a name was made, from its leading `<ms>-` (after any transient
-// prefix): a rename keeps a dir's own mtime, so the time rides in the name.
-function madeAtMs(name: string): number | undefined {
-  const bare = [STAGING_PREFIX, CLAIMED_PREFIX].reduce(
-    (n, p) => (n.startsWith(p) ? n.slice(p.length) : n),
-    name,
-  );
-  const m = /^(\d+)-/.exec(bare);
-  return m ? Number(m[1]) : undefined;
+function depStorePool(repoRoot: AppPath): RenamePool {
+  return {
+    what: "dependency store",
+    dir: depStorePoolDir(repoRoot),
+    maxAgeMs: POOL_MAX_AGE_MS,
+  };
 }
-
-const isPublished = (name: string): boolean =>
-  !name.startsWith(".") && madeAtMs(name) !== undefined;
 
 export type HarvestResult =
   | { kind: "harvested"; entry: string }
@@ -200,14 +180,12 @@ async function harvest(
     return { kind: "skipped", why: `changed after its install: ${changed}` };
   }
 
-  const pool = depStorePoolDir(repoRoot);
   const entry = `${now}-${basename(checkout)}`;
   // Staged then published by one rename, so an adopter never sees an entry
   // without its store.
-  const staging = join(pool, `${STAGING_PREFIX}${entry}`);
-  await mkdir(staging, { recursive: true });
-  await rename(store, join(staging, STORE_DIR));
-  await rename(staging, join(pool, entry));
+  await publishEntry(depStorePool(repoRoot), entry, (staging) =>
+    rename(store, join(staging, STORE_DIR)),
+  );
   return { kind: "harvested", entry };
 }
 
@@ -234,121 +212,32 @@ export async function adoptDepStore(
   now: number,
 ): Promise<AdoptResult> {
   if (await exists(join(checkout, NODE_MODULES))) return { kind: "present" };
-  const pool = depStorePoolDir(repoRoot);
-  for (const entry of await listPublished(pool)) {
-    const ageMs = now - madeAtMs(entry)!;
-    if (ageMs > POOL_MAX_AGE_MS) continue; // emptyDepStorePool deletes it
-    const claimed = await claim(pool, entry, now);
-    if (claimed === null) continue;
-    try {
-      await mkdir(join(checkout, NODE_MODULES));
-      await rename(join(claimed, STORE_DIR), join(checkout, STORE_REL));
-    } catch (err) {
-      // Unexpected (the checkout vanished, or grew a node_modules since the
-      // check): the store goes back to the pool, and the install fails loudly.
-      await rename(claimed, join(pool, entry));
-      throw err;
-    }
-    await rm(claimed, { recursive: true, force: true });
-    return { kind: "adopted", entry, ageMs };
+  const pool = depStorePool(repoRoot);
+  const taken = await takeNewest(pool, now);
+  if (taken === null) return { kind: "none" };
+  try {
+    await mkdir(join(checkout, NODE_MODULES));
+    await rename(join(taken.claimed, STORE_DIR), join(checkout, STORE_REL));
+  } catch (err) {
+    // Unexpected (the checkout vanished, or grew a node_modules since the
+    // check): the store goes back to the pool, and the install fails loudly.
+    await putBack(pool, taken);
+    throw err;
   }
-  return { kind: "none" };
+  await rm(taken.claimed, { recursive: true, force: true });
+  return { kind: "adopted", entry: taken.entry, ageMs: taken.ageMs };
 }
 
 /**
- * Delete what should not wait any more: published entries past the age bound,
- * and transient names a dead process left. Called by the reaper once per
+ * Delete what should not wait any more: stores past the age bound, and
+ * transient names a dead process left (`sweep`). Called by the reaper once per
  * sweep, beside the trash. Returns how many it deleted.
  */
-export async function emptyDepStorePool(
+export function emptyDepStorePool(
   repoRoot: AppPath,
   now: number,
 ): Promise<number> {
-  const pool = depStorePoolDir(repoRoot);
-  let deleted = 0;
-  for (const name of await listNames(pool)) {
-    const at = madeAtMs(name);
-    if (isPublished(name)) {
-      if (now - at! <= POOL_MAX_AGE_MS) continue;
-      if (await deleteEntry(pool, name, now)) deleted++;
-      continue;
-    }
-    // A transient or foreign name: past the grace, nobody alive owns it.
-    if (at !== undefined && now - at <= TRANSIENT_GRACE_MS) continue;
-    await deletePath(join(pool, name));
-    deleted++;
-  }
-  return deleted;
-}
-
-async function listNames(pool: string): Promise<string[]> {
-  try {
-    return await readdir(pool);
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
-    throw err;
-  }
-}
-
-/** Published entries, newest first. */
-async function listPublished(pool: string): Promise<string[]> {
-  return (await listNames(pool))
-    .filter(isPublished)
-    .sort((a, b) => madeAtMs(b)! - madeAtMs(a)!);
-}
-
-/**
- * Take `entry` for this process: rename it to a claimed name only this call
- * knows. Null when someone else took it first. The claimed name carries the
- * CLAIM's time (`.claimed-<now>-<entry>-<uuid>`), not the entry's: the sweep
- * reads a transient name's age as how long its owner has held it, and an
- * entry is usually older than the grace when it is taken.
- */
-async function claim(
-  pool: string,
-  entry: string,
-  now: number,
-): Promise<string | null> {
-  const claimed = join(
-    pool,
-    `${CLAIMED_PREFIX}${now}-${entry}-${randomUUID()}`,
-  );
-  try {
-    await rename(join(pool, entry), claimed);
-    return claimed;
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
-    throw err;
-  }
-}
-
-/** Claim then delete; false when an adopter or another delete took it first. */
-async function deleteEntry(
-  pool: string,
-  entry: string,
-  now: number,
-): Promise<boolean> {
-  const claimed = await claim(pool, entry, now);
-  if (claimed === null) return false;
-  await deletePath(claimed);
-  return true;
-}
-
-// Background tier, like a trash entry's delete; logged, not thrown, for the
-// same reason: what is left is disk space under a claimed name, which the next
-// `emptyDepStorePool` deletes once its grace has passed.
-async function deletePath(path: string): Promise<void> {
-  const r = await spawnCaptured(["rm", "-rf", path], {
-    tier: "background",
-    timeoutMs: POOL_RM_TIMEOUT_MS,
-  });
-  if (r.timedOut || r.exitCode !== 0) {
-    console.warn(
-      `[worktree] deleting pooled dependency store ${path} did not finish ` +
-        `(${r.timedOut ? `timed out after ${POOL_RM_TIMEOUT_MS} ms` : `exit ${r.exitCode}`}): ` +
-        `${r.stderr.trim() || "<no stderr>"} — the next emptyDepStorePool retries it`,
-    );
-  }
+  return sweep(depStorePool(repoRoot), now);
 }
 
 /** One line for a job's log: what a checkout's install started from. */

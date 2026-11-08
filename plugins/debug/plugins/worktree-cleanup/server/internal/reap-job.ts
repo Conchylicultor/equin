@@ -8,6 +8,7 @@ import { fileReportFromProcess } from "@plugins/reports/plugins/outbox/core";
 import {
   dropRetiredBranchReflogs,
   describeHarvest,
+  describeTreeHarvest,
   emptyWorktreeTrash,
   WorktreeGitTimeoutError,
 } from "@plugins/infra/plugins/worktree/server";
@@ -174,7 +175,9 @@ export const worktreeReapJob = defineSupervisedJob({
           worktreePath: t.worktreePath,
         });
         if (removal.kind === "removed") {
-          log(`reaped ${t.id}; ${describeHarvest(removal.depStore)}`);
+          log(
+            `reaped ${t.id}; ${describeHarvest(removal.depStore)}; ${describeTreeHarvest(removal.tree)}`,
+          );
         }
         reaped++;
       }),

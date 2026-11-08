@@ -70,6 +70,7 @@ Design: [`research/2026-10-28-global-supervised-worktree-checkout.md`](../../../
     - `infra/jobs/supervised-job.SupervisedRunRow`
     - `infra/worktree.checkoutState`
     - `infra/worktree.describeAdoption`
+    - `infra/worktree.describeTreeStart`
     - `infra/worktree.ensureMainWorktreeRoot`
     - `infra/worktree.gitWorktreesDir`
     - `infra/worktree.setupWorktree`

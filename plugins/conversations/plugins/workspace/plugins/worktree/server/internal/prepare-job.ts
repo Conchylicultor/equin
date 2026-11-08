@@ -3,6 +3,7 @@ import { getConfig } from "@plugins/config_v2/server";
 import { defineSupervisedJob } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
 import {
   describeAdoption,
+  describeTreeStart,
   setupWorktree,
 } from "@plugins/infra/plugins/worktree/server";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
@@ -53,14 +54,16 @@ export const worktreePrepareJob = defineSupervisedJob({
     // included) rather than inside `infra/worktree`, which must stay importable
     // from the CLI.
     log(`checkout ${attemptId} at ${path}: starting`);
-    const { source, depStore } = await setupWorktree(
+    const { source, tree, depStore } = await setupWorktree(
       attemptId,
       path,
       new Set(getConfig(compositionsConfig).manifests.map((m) => m.id)),
       // This backend: its database is where the attempt row lives.
       runtimeNamespace(),
     );
-    log(`checkout ${attemptId}: ${source}; ${describeAdoption(depStore)}`);
+    log(
+      `checkout ${attemptId}: ${source}; ${tree === null ? "" : `${describeTreeStart(tree)}; `}${describeAdoption(depStore)}`,
+    );
   },
   // A checkout was made — from a spare (the pool is now one short) or cold
   // (the pool was empty) — so top the pool back up for the next launch. Here

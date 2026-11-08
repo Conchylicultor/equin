@@ -38,6 +38,15 @@ import {
   harvestDepStore,
 } from "./dep-store-pool";
 import { installCheckout } from "./install-checkout";
+import {
+  emptyTreePool,
+  harvestTree,
+  takeTree,
+  type TakenTree,
+  trashedIndexPath,
+  type TreeHarvestResult,
+  type TreeStart,
+} from "./tree-pool";
 import { withWorktreeMutateSlot } from "./mutate-gate";
 import { isSpareName, SPARE_LOCK_REASON } from "./spare-name";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
@@ -574,7 +583,9 @@ async function deleteTrashEntry(path: string): Promise<void> {
  */
 export async function emptyWorktreeTrash(now: number): Promise<number> {
   const repoRoot = await ensureMainWorktreeRoot();
-  let deleted = await emptyDepStorePool(repoRoot, now);
+  let deleted =
+    (await emptyDepStorePool(repoRoot, now)) +
+    (await emptyTreePool(repoRoot, now));
   const dir = worktreeTrashDir(repoRoot);
   let entries: string[];
   try {
@@ -858,8 +869,9 @@ export async function addCheckout(
   repoRoot: AppPath,
   wtPath: string,
   head: CheckoutHead,
+  opts: { recycle: boolean },
   signal?: AbortSignal,
-): Promise<void> {
+): Promise<TreeStart> {
   // Never written into: an existing dir is someone's checkout (or a retry's
   // to converge), and every cleanup below deletes `wtPath`.
   if (await pathExists(wtPath)) {
@@ -923,71 +935,221 @@ export async function addCheckout(
     headText = `ref: ${ref}`;
   }
 
+  if (opts.recycle) {
+    const taken = await takeTree(repoRoot, Date.now());
+    if (taken !== null) {
+      try {
+        await writeCheckout(
+          label,
+          common,
+          repoRoot,
+          wtPath,
+          headText,
+          taken,
+          signal,
+        );
+        return { kind: "recycled", entry: taken.entry, ageMs: taken.ageMs };
+      } catch (err) {
+        // An abort or a timeout is the caller's to see, not a reason to write
+        // every file again.
+        if (signal?.aborted || err instanceof WorktreeGitTimeoutError)
+          throw err;
+        if (!(err instanceof Error)) throw err;
+        // The tree is gone (discarded with the partial checkout); the reason
+        // rides in the result the caller logs, and the checkout is written
+        // from empty, as it would have been with no tree waiting.
+        await writeCheckout(
+          label,
+          common,
+          repoRoot,
+          wtPath,
+          headText,
+          null,
+          signal,
+        );
+        return { kind: "empty", recycleFailed: err.message };
+      }
+    }
+    await writeCheckout(
+      label,
+      common,
+      repoRoot,
+      wtPath,
+      headText,
+      null,
+      signal,
+    );
+    return { kind: "empty" };
+  }
+  await writeCheckout(label, common, repoRoot, wtPath, headText, null, signal);
+  return { kind: "not-asked" };
+}
+
+/**
+ * `addCheckout`'s writes: the admin entry, the dir, and the tree — from empty,
+ * or from `recycled` (a removed checkout's tree and its index, `tree-pool.ts`).
+ * Leaves no partial checkout behind when it fails.
+ */
+async function writeCheckout(
+  label: string,
+  common: string,
+  repoRoot: AppPath,
+  wtPath: string,
+  headText: string,
+  recycled: TakenTree | null,
+  signal?: AbortSignal,
+): Promise<void> {
   // Staged beside `worktrees/`, not in it: nothing enumerates it there, and a
   // crash leaves a stray dir git ignores.
   const adminRoot = join(common, "worktrees");
-  await mkdir(adminRoot, { recursive: true });
-  const staging = await mkdtemp(join(common, "worktree-add-"));
+  let staging: string | null = null;
   let admin: string;
   try {
+    await mkdir(adminRoot, { recursive: true });
+    await mkdir(dirname(wtPath), { recursive: true });
+    staging = await mkdtemp(join(common, "worktree-add-"));
     await writeFile(join(staging, "locked"), `${ADD_IN_PROGRESS_LOCK}\n`);
     await writeFile(join(staging, "commondir"), "../..\n");
     await writeFile(join(staging, "HEAD"), `${headText}\n`);
     await writeFile(join(staging, "gitdir"), `${join(wtPath, ".git")}\n`);
     admin = await publishAdminEntry(staging, adminRoot, basename(wtPath));
   } catch (err) {
-    await rm(staging, { recursive: true, force: true });
+    if (staging !== null) await rm(staging, { recursive: true, force: true });
+    if (recycled !== null) await recycled.putBack();
     throw err;
   }
 
-  await mkdir(dirname(wtPath), { recursive: true });
   try {
-    await mkdir(wtPath);
+    if (recycled === null) {
+      await mkdir(wtPath);
+    } else {
+      // The tree's own index first, so the reset below trusts the stat data
+      // of every file it did not change. A rename onto an existing `wtPath`
+      // fails (non-empty) or replaces an empty dir someone made since the
+      // check above — the same race `mkdir` loses, narrower.
+      await rename(recycled.index, join(admin, "index"));
+      try {
+        await rename(recycled.tree, wtPath);
+      } catch (err) {
+        // The index goes back beside its tree before the entry is dropped,
+        // so what returns to the pool is whole.
+        await rename(join(admin, "index"), recycled.index);
+        throw err;
+      }
+    }
   } catch (err) {
-    // Not ours to delete (made since the check above): drop only our entry.
+    // Not ours to delete (made since the check above): drop only our entry,
+    // and give a tree that never moved back — whole, or not at all.
     await rm(admin, { recursive: true, force: true });
+    if (recycled !== null) {
+      if (
+        (await pathExists(recycled.tree)) &&
+        (await pathExists(recycled.index))
+      ) {
+        await recycled.putBack();
+      } else {
+        await recycled.release();
+      }
+    }
     throw err;
   }
   try {
     await writeFile(join(wtPath, ".git"), `gitdir: ${admin}\n`);
+    // A carried index is trusted wholesale by the reset — except an entry
+    // flagged skip-worktree or assume-unchanged, which git never compares with
+    // its file, so the reset would keep whatever (or nothing) is there. No
+    // checkout of ours sets either; one that does is not recycled.
+    if (recycled !== null) await assertNoTrustFlags(label, wtPath, signal);
     // Demoted (`tier: "background"` applies backgroundArgv/darwinbg): a
     // checkout runs in a deferred job — always background work relative to
     // the interactive backends.
-    const argv = [
-      ...checkoutGit(wtPath),
-      "reset",
-      "--hard",
-      "--quiet",
-      "--no-recurse-submodules",
-    ];
-    const r = await spawnCaptured(argv, {
-      tier: "background",
-      timeoutMs: ADD_TIMEOUT_MS,
+    await runCheckoutWrite(
+      label,
+      wtPath,
+      [
+        ...checkoutGit(wtPath),
+        "reset",
+        "--hard",
+        "--quiet",
+        "--no-recurse-submodules",
+      ],
       signal,
-    });
-    if (r.timedOut) {
-      throw new WorktreeGitTimeoutError({
-        message:
-          `writing the checkout for ${label} did not finish within ${ADD_TIMEOUT_MS} ms and was ` +
-          `killed; the partial checkout at ${wtPath} was removed so the retry starts clean`,
-        command: argv.join(" "),
-        timeoutMs: ADD_TIMEOUT_MS,
-        worktreePath: wtPath,
-      });
-    }
-    // Fail loudly so the durable spawn job retries instead of handing
-    // `runtime.create` a half-written worktree.
-    if (r.exitCode !== 0) {
-      throw new Error(
-        `writing the checkout for ${label} failed (exit ${r.exitCode}): ${r.stderr.trim() || "<no stderr>"}`,
+    );
+    // A recycled tree still holds whatever its last agent left untracked or
+    // ignored (build output, the `node_modules` links its store's harvest
+    // left): gone, so the tree is the target's exactly. `-ff` for a nested
+    // repo too. An empty start has nothing to clean.
+    if (recycled !== null) {
+      await runCheckoutWrite(
+        label,
+        wtPath,
+        [GIT, "-C", wtPath, "clean", "-ffdxq"],
+        signal,
       );
     }
     await unlink(join(admin, "locked"));
   } catch (err) {
     // Any failure — a killed or failed write, an abort — leaves no partial
-    // tree for a retry to adopt.
-    await discardPartialCheckout(label, repoRoot, wtPath);
+    // tree for a retry to adopt. A recycled tree went with it.
+    try {
+      await discardPartialCheckout(label, repoRoot, wtPath);
+    } finally {
+      if (recycled !== null) await recycled.release();
+    }
     throw err;
+  }
+  // The emptied claimed dir; after the checkout is whole, so a failure here
+  // (loud) leaves a complete checkout, and the pool's sweep takes the dir.
+  if (recycled !== null) await recycled.release();
+}
+
+// Throws when the index at `wtPath` holds an entry git would not compare with
+// its file (skip-worktree `S`, assume-unchanged: a lowercase tag under `-v`).
+async function assertNoTrustFlags(
+  label: string,
+  wtPath: string,
+  signal?: AbortSignal,
+): Promise<void> {
+  const out = await gitOk([GIT, "-C", wtPath, "ls-files", "-v"], ADD_TIMEOUT_MS, signal);
+  const flagged = out
+    .split("\n")
+    .find((l) => l.length > 1 && (l[0] === "S" || /^[a-z] /.test(l)));
+  if (flagged !== undefined) {
+    throw new Error(
+      `the recycled index for ${label} flags ${JSON.stringify(flagged)} (skip-worktree or assume-unchanged): a reset would not check it`,
+    );
+  }
+}
+
+// One tree-writing git command of a checkout, bounded like the add. Throws
+// `WorktreeGitTimeoutError` on a kill, a plain error on a failed exit — either
+// way the caller discards the partial checkout, so the durable spawn job
+// retries instead of handing `runtime.create` a half-written worktree.
+async function runCheckoutWrite(
+  label: string,
+  wtPath: string,
+  argv: string[],
+  signal?: AbortSignal,
+): Promise<void> {
+  const r = await spawnCaptured(argv, {
+    tier: "background",
+    timeoutMs: ADD_TIMEOUT_MS,
+    signal,
+  });
+  if (r.timedOut) {
+    throw new WorktreeGitTimeoutError({
+      message:
+        `writing the checkout for ${label} did not finish within ${ADD_TIMEOUT_MS} ms and was ` +
+        `killed; the partial checkout at ${wtPath} was removed so the retry starts clean`,
+      command: argv.join(" "),
+      timeoutMs: ADD_TIMEOUT_MS,
+      worktreePath: wtPath,
+    });
+  }
+  if (r.exitCode !== 0) {
+    throw new Error(
+      `writing the checkout for ${label} failed (exit ${r.exitCode}): ${argv.join(" ")}: ${r.stderr.trim() || "<no stderr>"}`,
+    );
   }
 }
 
@@ -1236,8 +1398,9 @@ export async function checkoutAttempt(
   id: string,
   wtPath: string,
   signal?: AbortSignal,
-): Promise<CheckoutSource> {
+): Promise<AttemptCheckout> {
   let source: CheckoutSource = "spare";
+  let tree: TreeStart | null = null;
   if (!(await claimSpare(repoRoot, id, wtPath, signal))) {
     source = "fresh";
     // Converge from a half-finished earlier try instead of assuming
@@ -1251,19 +1414,35 @@ export async function checkoutAttempt(
     const head: CheckoutHead = (await attemptBranchExists(repoRoot, id, signal))
       ? { kind: "branch", branch }
       : { kind: "new-branch", branch, from: "main" };
-    await addCheckout(id, repoRoot, wtPath, head, signal);
+    tree = await addCheckout(
+      id,
+      repoRoot,
+      wtPath,
+      head,
+      { recycle: true },
+      signal,
+    );
   }
   // Locked inside the same gate hold as the checkout that created it: the
   // window between "the directory exists" and "the directory is protected" is
   // exactly the window an outside sweep can take it, so it is closed here
   // rather than after the gate is released.
   await ensureWorktreeLocked(repoRoot, wtPath, signal);
-  return source;
+  return { source, tree };
 }
 
-/** What `setupWorktree` did: claimed a spare, added a fresh checkout, or found one in place — and what its install started from. */
+/** What `checkoutAttempt` made: where from, and — for a fresh add — what its files started from. */
+export interface AttemptCheckout {
+  source: CheckoutSource;
+  /** Null for a claimed spare: its files were written by its refill (logged there). */
+  tree: TreeStart | null;
+}
+
+/** What `setupWorktree` did: claimed a spare, added a fresh checkout, or found one in place — and what its files and its install started from. */
 export interface WorktreeSetup {
   source: CheckoutSource | "existing";
+  /** Null when no checkout was written here: a claimed spare (its refill wrote it), or one already in place. */
+  tree: TreeStart | null;
   depStore: AdoptResult;
 }
 
@@ -1285,16 +1464,15 @@ export async function convergeExistingCheckout(
   wtPath: string,
   gate: <T>(fn: () => Promise<T>) => Promise<T>,
   signal?: AbortSignal,
-): Promise<Pick<WorktreeSetup, "source">> {
+): Promise<Pick<WorktreeSetup, "source" | "tree">> {
   if (await isUnfinishedCheckout(repoRoot, wtPath, signal)) {
-    const source = await gate(async () => {
+    return gate(async () => {
       await discardPartialCheckout(id, repoRoot, wtPath);
       return checkoutAttempt(repoRoot, id, wtPath, signal);
     });
-    return { source };
   }
   await ensureWorktreeLocked(repoRoot, wtPath, signal);
-  return { source: "existing" };
+  return { source: "existing", tree: null };
 }
 
 /**
@@ -1346,7 +1524,7 @@ export async function setupWorktree(
   // guaranteed means a checkout cannot stay unlocked just because it predates
   // this code or something released its lock.
   if (await pathExists(wtPath)) {
-    const { source } = await convergeExistingCheckout(
+    const { source, tree } = await convergeExistingCheckout(
       repoRoot,
       id,
       wtPath,
@@ -1364,7 +1542,7 @@ export async function setupWorktree(
       signal,
     );
     await stampMinter(id, minter);
-    return { source, depStore };
+    return { source, tree, depStore };
   }
 
   // A checkout's namespace is its own name (the main composition's prefix
@@ -1389,7 +1567,7 @@ export async function setupWorktree(
   // Gate ONLY the heavy checkout host-wide (the 118 MB / 16k-file disk
   // offender). The idempotent existsSync early-return stays outside the gate —
   // it is cheap and must not hold a slot.
-  const source = await withWorktreeMutateSlot(
+  const { source, tree } = await withWorktreeMutateSlot(
     () => checkoutAttempt(repoRoot, id, wtPath, signal),
     signal,
   );
@@ -1405,7 +1583,7 @@ export async function setupWorktree(
     signal,
   );
   await stampMinter(id, minter);
-  return { source, depStore };
+  return { source, tree, depStore };
 }
 
 // Once the checkout exists, never before: a stamp-only `<ns>/` dir with no
@@ -1466,12 +1644,16 @@ export async function removeWorktree(
       (e) => e.path === wtPath,
     );
     if (registered) await unlockWorktreeForRemoval(repoRoot, wtPath, signal);
+    // Read before the prune below deletes it: the index goes with the tree
+    // to the next checkout (tree-pool.ts).
+    const admin = registered ? await adminDirForIndex(repoRoot, wtPath) : null;
 
     let moved = false;
     if (await pathExists(wtPath)) {
       await mkdir(trashDir, { recursive: true });
       await rename(wtPath, trashPath);
       moved = true;
+      if (admin !== null) await keepIndex(admin, trashPath);
     }
     // Drops the registration whose dir just left (and any other stale admin
     // entry). Logged rather than thrown, and deliberately NOT signal-bound: the
@@ -1499,10 +1681,51 @@ export async function removeWorktree(
   // while that one clones it again (dep-store-pool.ts). Outside the gate, like
   // the delete: a read-only walk of the store and a rename of it. Never throws.
   const depStore = await harvestDepStore(repoRoot, trashPath, Date.now());
-  await deleteTrashEntry(trashPath);
-  return { kind: "removed", depStore };
+  // Its tree (with the index kept above) goes to the next checkout too, which
+  // then writes only the files `main` changed since (tree-pool.ts). After the
+  // store's harvest: what is left of `node_modules` is `git clean`'s.
+  const tree = await harvestTree(repoRoot, trashPath, Date.now());
+  if (tree.kind !== "harvested") {
+    await deleteTrashEntry(trashPath);
+    await deleteTrashEntry(trashedIndexPath(trashPath));
+  }
+  return { kind: "removed", depStore, tree };
+}
+
+// The admin dir whose index `keepIndex` takes, read inside the removal's gate
+// hold. A read failure here must not fail a removal that never needed it: it
+// costs only the recycle, and says so.
+async function adminDirForIndex(
+  repoRoot: AppPath,
+  wtPath: string,
+): Promise<string | null> {
+  try {
+    return await adminDirOf(join(repoRoot, ".git"), wtPath);
+  } catch (err) {
+    if (!(err instanceof Error)) throw err;
+    console.warn(
+      `[worktree] could not find the admin dir of ${wtPath}: ${err.message} — its tree is deleted instead of recycled`,
+    );
+    return null;
+  }
+}
+
+// Move the removed checkout's index (in its admin dir, which the prune is
+// about to delete) beside its trash entry, for `harvestTree`. Never throws:
+// it runs after the removal's rename, which is committed; a checkout with no
+// index (never written) is a tree the harvest skips.
+async function keepIndex(admin: string, trashPath: string): Promise<void> {
+  try {
+    await rename(join(admin, "index"), trashedIndexPath(trashPath));
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return;
+    console.warn(
+      `[worktree] could not keep the index of ${trashPath}: ${(err as Error).message} — its tree is deleted instead of recycled`,
+    );
+  }
 }
 
 /** What `removeWorktree` did with the checkout's dir. */
 export type WorktreeRemoval =
-  { kind: "removed"; depStore: HarvestResult } | { kind: "absent" };
+  | { kind: "removed"; depStore: HarvestResult; tree: TreeHarvestResult }
+  | { kind: "absent" };

@@ -14,7 +14,7 @@ instead of re-created.
 
 ## Spare pool (`server/internal/spare.ts`, claim in `worktree.ts`)
 
-A launch's checkout is ~16k file writes (5–10 s). To take it off the launch path,
+A launch's checkout is ~23k file writes (5–10 s; far fewer when it starts from a reaped tree, below). To take it off the launch path,
 a **spare** — a detached checkout of `main` at `.claude/worktrees/spare-<ms>-<rand>`
 — is written beforehand, and `setupWorktree` claims it instead of running a cold
 `git worktree add`. It returns `{ source: "spare" | "fresh" | "existing" }`; the
@@ -181,12 +181,49 @@ install, at any tier. It ran per launch, and the reap then deleted the same
   install in the same checkout (the stamp is rewritten after the edit). Only
   content hashes would see it.
 
+## A removed checkout's tree goes to the next one (`server/internal/tree-pool.ts`)
+
+Writing a checkout is ~23k files (~33k file-system events) and the reap deletes
+the same files 72 h later; fseventsd sits at one core under load and delivers
+every folder watch late while it queues, and checkouts were a quarter to a half
+of the machine's events (`research/2026-11-08-global-fseventsd-event-volume.md`).
+Spares do not change the count — each is one launch's checkout, written early
+(46 written / 46 claimed on 11-08). So a checkout starts from a reaped one:
+
+- **Harvest** — `removeWorktree`: inside the gate, after the rename, the
+  admin dir's `index` moves beside the trash entry (`trashedIndexPath`) before
+  the prune deletes it; outside, after the store's harvest, the tree and its
+  index are published together as `.claude/worktree-trees/<ms>-<name>/{tree,index}`.
+  No index → skipped, deleted as before. A store its own harvest refused is
+  deleted here, not on a launch's path.
+- **Recycle** — `addCheckout(…, { recycle: true })` (the cold add and the
+  spare refill; the release checkout passes `false`): the newest tree under
+  3 days in the pool moves into place, its index into the new admin entry,
+  then the same `git reset --hard` an empty start runs — git trusts the stat
+  data of every file it did not change, so it writes only the diff (measured:
+  a 76 h-old tree, 2,771 files written in 1.1 s against 23,165 in 5.1 s) — and
+  `git clean -ffdx` deletes everything untracked or ignored. The result is the
+  target tree exactly. A recycle that fails (a broken index, an undeletable
+  file) discards the tree and writes from empty; the reason rides in the
+  `TreeStart` result (`describeTreeStart`, logged by `worktree-prepare` and
+  `worktree-spare-refill`), never hidden.
+- **The index travels with its tree**: its stat data is valid only for the
+  same inodes and times, which a `rename` keeps; nothing writes into the tree
+  between harvest and recycle.
+- **Bound**: age only, for the store's reason (supply is demand, 72 h late).
+  3 days, shorter than the store's: the diff grows with age (24 h: 1.6k files,
+  72 h: 2.8k, 96 h: 4.8k). A waiting tree is ~170 MB (real files).
+- **The pool mechanics** (publish by one rename, take by renaming to a claimed
+  name, sweep of expired and dead transient names) are `rename-pool.ts`,
+  shared with the dependency-store pool.
+
 ## Removal is a rename (`removeWorktree`)
 
 Inside the mutate gate: unlock → `rename` the dir into `.claude/worktree-trash/<ms>-<name>`
-(same volume: atomic, instant) → `git worktree prune`. Outside the gate: the
-dependency store's harvest (above), then a background-tier `rm -rf` of the
-trash entry. The branch ref is kept.
+(same volume: atomic, instant), its index beside it → `git worktree prune`.
+Outside the gate: the dependency store's harvest, then the tree's (above); a
+background-tier `rm -rf` of the trash entry only when the tree was not kept.
+The branch ref is kept.
 
 It used to be `git worktree remove --force` under a 300 s kill, holding a slot
 while it deleted file by file. A kill left a half-deleted checkout in place, which
@@ -290,6 +327,8 @@ pid liveness.
     - `NamespaceClaimant`
     - `NamespaceProbe`
     - `RetiredReflogSweep`
+    - `TreeHarvestResult`
+    - `TreeStart`
     - `WorktreeEntry`
     - `WorktreeHead`
     - `WorktreeOp`
@@ -306,6 +345,8 @@ pid liveness.
     - `createSpareWorktree`
     - `describeAdoption`
     - `describeHarvest`
+    - `describeTreeHarvest`
+    - `describeTreeStart`
     - `dropRetiredBranchReflogs`
     - `emptyWorktreeTrash`
     - `ensureMainWorktreeRoot`
@@ -350,7 +391,7 @@ pid liveness.
 - Exemptions:
   - Exempts itself from:
     - `worktree/no-raw-worktree-git` — `.` (sanctioned)
-    - `boundaries/no-platform-api` — `server/internal/composition-namespace.ts`, `server/internal/dep-store-pool.ts`, `server/internal/install-checkout.ts`, `server/internal/spare-name.ts`, `server/internal/spare.ts`, `server/internal/spec.ts`, `server/internal/worktree-op.ts`, `server/internal/worktree-op-marker.ts`, `server/internal/worktree.ts` (debt)
+    - `boundaries/no-platform-api` — `server/internal/composition-namespace.ts`, `server/internal/dep-store-pool.ts`, `server/internal/install-checkout.ts`, `server/internal/rename-pool.ts`, `server/internal/spare-name.ts`, `server/internal/spare.ts`, `server/internal/spec.ts`, `server/internal/tree-pool.ts`, `server/internal/worktree-op.ts`, `server/internal/worktree-op-marker.ts`, `server/internal/worktree.ts` (debt)
     - `user-path/no-unproven-claim` — `server/internal/worktree.ts` (sanctioned)
     - `blocking-fs/no-sync-fs` — `server/internal/worktree-op-marker.ts` (sanctioned)
   - Exempted by: `infra/worktree` (0 debt)

@@ -339,7 +339,7 @@ takes a `debt` exemption on the check's id.
     - `infra/spawn/daemon` (1 debt)
     - `infra/ssh` (2 debt)
     - `infra/stack-sampler` (1 debt)
-    - `infra/worktree` (9 debt)
+    - `infra/worktree` (11 debt)
     - `infra/worktree/reclaim` (2 debt)
     - `integrations/youtube/audio-fetch` (3 debt)
     - `packages/flock` (3 debt)

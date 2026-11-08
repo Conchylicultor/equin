@@ -78,6 +78,8 @@ skills-lock.json
 .claude/worktree-trash/
 # Removed checkouts' dependency stores awaiting the next checkout (depStorePoolDir, infra/worktree).
 .claude/worktree-dep-stores/
+# Removed checkouts' trees (with their git index) awaiting the next checkout (treePoolDir, infra/worktree).
+.claude/worktree-trees/
 .claude/scheduled_tasks.lock
 # Guard bypass files (BYPASS_TOKENS in tooling/guards): per-checkout overrides, never committed.
 .allow-*

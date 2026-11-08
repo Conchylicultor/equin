@@ -38,6 +38,12 @@ export {
   describeAdoption,
   describeHarvest,
 } from "./internal/dep-store-pool";
+export {
+  type TreeStart,
+  type TreeHarvestResult,
+  describeTreeStart,
+  describeTreeHarvest,
+} from "./internal/tree-pool";
 export { isCanonicalWorktreeName } from "./internal/worktree-name";
 export {
   type WorktreeOp,

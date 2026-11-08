@@ -10,6 +10,7 @@ import {
 import { basename, join } from "node:path";
 import type { AdoptResult } from "./dep-store-pool";
 import { installCheckout } from "./install-checkout";
+import type { TreeStart } from "./tree-pool";
 import { withWorktreeMutateSlot } from "./mutate-gate";
 import { isSpareName, newSpareName, SPARE_LOCK_REASON } from "./spare-name";
 import {
@@ -59,13 +60,14 @@ export async function createSpareIn(
   repoRoot: AppPath,
   install: (path: string, signal?: AbortSignal) => Promise<void>,
   signal?: AbortSignal,
-): Promise<string> {
+): Promise<{ path: string; tree: TreeStart }> {
   const path = joinAppPath(gitWorktreesDir(repoRoot), newSpareName());
-  await addCheckout(
+  const tree = await addCheckout(
     basename(path),
     repoRoot,
     path,
     { kind: "detached", rev: "main" },
+    { recycle: true },
     signal,
   );
   // Before the lock, so ready == installed. A failed install throws and leaves
@@ -78,16 +80,16 @@ export async function createSpareIn(
   if (r !== "locked") {
     throw new Error(`could not lock spare ${path}: ${r}`);
   }
-  return path;
+  return { path, tree };
 }
 
 /** Write one ready spare under the host-wide `worktree-mutate` gate. */
 export async function createSpareWorktree(
   signal?: AbortSignal,
-): Promise<{ path: string; depStore: AdoptResult }> {
+): Promise<{ path: string; tree: TreeStart; depStore: AdoptResult }> {
   const repoRoot = await ensureMainWorktreeRoot(signal);
   let depStore: AdoptResult = { kind: "none" };
-  const path = await withWorktreeMutateSlot(
+  const { path, tree } = await withWorktreeMutateSlot(
     () =>
       createSpareIn(
         repoRoot,
@@ -103,7 +105,7 @@ export async function createSpareWorktree(
       ),
     signal,
   );
-  return { path, depStore };
+  return { path, tree, depStore };
 }
 
 // The mtime of the spare's admin dir (`.git/worktrees/spare-…`), read through

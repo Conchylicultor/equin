@@ -183,8 +183,8 @@ the panel until it is given something to say.
     - `report-kind` "worktree-reap-failed"
     - `resource.declare` "debug.worktree-cleanup.worktrees"
     - `resource.declare` "debug.worktree-cleanup.worktrees:meta"
-  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra/worktree` ×13
+  - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra/worktree` ×14
     - `infra/worktree/reclaim` ×4
     - `tasks/tasks-core` ×4
     - `database/admin` ×3

@@ -21154,6 +21154,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/jobs/supervised-job.SupervisedRunRow`
               - `infra/worktree.checkoutState`
               - `infra/worktree.describeAdoption`
+              - `infra/worktree.describeTreeStart`
               - `infra/worktree.ensureMainWorktreeRoot`
               - `infra/worktree.gitWorktreesDir`
               - `infra/worktree.setupWorktree`
@@ -25423,8 +25424,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `report-kind` "worktree-reap-failed"
           - `resource.declare` "debug.worktree-cleanup.worktrees"
           - `resource.declare` "debug.worktree-cleanup.worktrees:meta"
-        - Uses: 39 symbols — full list in [`plugins/debug/plugins/worktree-cleanup/REFERENCE.md`](../plugins/debug/plugins/worktree-cleanup/REFERENCE.md)
-          - `infra/worktree` ×13
+        - Uses: 40 symbols — full list in [`plugins/debug/plugins/worktree-cleanup/REFERENCE.md`](../plugins/debug/plugins/worktree-cleanup/REFERENCE.md)
+          - `infra/worktree` ×14
           - `infra/worktree/reclaim` ×4
           - `tasks/tasks-core` ×4
           - `database/admin` ×3
@@ -28900,7 +28901,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/spawn/daemon` (1 debt)
               - `infra/ssh` (2 debt)
               - `infra/stack-sampler` (1 debt)
-              - `infra/worktree` (9 debt)
+              - `infra/worktree` (11 debt)
               - `infra/worktree/reclaim` (2 debt)
               - `integrations/youtube/audio-fetch` (3 debt)
               - `packages/flock` (3 debt)
@@ -35550,6 +35551,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `NamespaceClaimant`
           - `NamespaceProbe`
           - `RetiredReflogSweep`
+          - `TreeHarvestResult`
+          - `TreeStart`
           - `WorktreeEntry`
           - `WorktreeHead`
           - `WorktreeOp`
@@ -35566,6 +35569,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `createSpareWorktree`
           - `describeAdoption`
           - `describeHarvest`
+          - `describeTreeHarvest`
+          - `describeTreeStart`
           - `dropRetiredBranchReflogs`
           - `emptyWorktreeTrash`
           - `ensureMainWorktreeRoot`
@@ -35610,7 +35615,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempts itself from:
           - `worktree/no-raw-worktree-git` — `.` (sanctioned)
-          - `boundaries/no-platform-api` — `server/internal/composition-namespace.ts`, `server/internal/dep-store-pool.ts`, `server/internal/install-checkout.ts`, `server/internal/spare-name.ts`, `server/internal/spare.ts`, `server/internal/spec.ts`, `server/internal/worktree-op.ts`, `server/internal/worktree-op-marker.ts`, `server/internal/worktree.ts` (debt)
+          - `boundaries/no-platform-api` — `server/internal/composition-namespace.ts`, `server/internal/dep-store-pool.ts`, `server/internal/install-checkout.ts`, `server/internal/rename-pool.ts`, `server/internal/spare-name.ts`, `server/internal/spare.ts`, `server/internal/spec.ts`, `server/internal/tree-pool.ts`, `server/internal/worktree-op.ts`, `server/internal/worktree-op-marker.ts`, `server/internal/worktree.ts` (debt)
           - `user-path/no-unproven-claim` — `server/internal/worktree.ts` (sanctioned)
           - `blocking-fs/no-sync-fs` — `server/internal/worktree-op-marker.ts` (sanctioned)
         - Exempted by: `infra/worktree` (0 debt)
@@ -35662,6 +35667,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/worktree.countReadySpares`
               - `infra/worktree.createSpareWorktree`
               - `infra/worktree.describeAdoption`
+              - `infra/worktree.describeTreeStart`
               - `infra/worktree.pruneSpares`
               - `primitives/log-channels.defineLogSink`
             - Exports (values): `spareRefillJob`

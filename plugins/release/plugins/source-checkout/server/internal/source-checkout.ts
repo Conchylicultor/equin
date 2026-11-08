@@ -109,7 +109,16 @@ export async function acquireReleaseCheckout(opts: {
     // add half-way through writing its admin entry. It leaves no partial
     // checkout behind when it fails.
     await withWorktreeMutateSlot(() =>
-      addCheckout(name, sourceRoot, root, { kind: "detached", rev: sha }),
+      // Every file written (`recycle: false`): the tree pool holds this
+      // repo's agent checkouts, and a release checkout is read once and
+      // deleted — nothing it would save is on a launch's path.
+      addCheckout(
+        name,
+        sourceRoot,
+        root,
+        { kind: "detached", rev: sha },
+        { recycle: false },
+      ),
     );
     await assertCheckoutAt(root, sha);
   } catch (err) {
