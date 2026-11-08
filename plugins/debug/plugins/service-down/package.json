@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-debug-service-down",
+  "description": "A supervised service (embedded Postgres, PgBouncer — any service the gateway supervises) that stops answering mid-session is a report: the gateway's watchdog files a service-down entry in the report outbox once the outage settles (re-started, or left crashed), and main drains it. Declares the kind and renders its evidence (the probe's error, how long it had been up, the start command's output, the service's own last log lines).",
+  "private": true,
+  "version": "0.0.1"
+}

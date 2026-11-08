@@ -159,6 +159,7 @@ gateway/
 ├── principal.go   # principalOf: owner/anonymous verdict, X-Equin-Principal stamp, cross-site refusal
 ├── content.go     # the content host: <item>.content.localhost/<ns>/api/… stamped `content`, nothing else served
 ├── crash_report.go # A backend's signal death filed as a backend-crash report in the report outbox
+├── service_report.go # A supervised service's mid-session outage filed as a service-down report (same outbox writer)
 └── proxy.go       # http.Handler: routing, static serving, HTTP/WS proxy, /gateway API
 ```
 
@@ -239,6 +240,8 @@ The **watchdog deliberately does not share this policy.** A service that dies mi
 ### Watchdog
 
 Each service's watchdog dials its readiness probe every N seconds (default 2). On failure, attempts one re-execution of the start command. If that also fails, marks the service Crashed and stops watching.
+
+**Every outage is filed as a report** (`service_report.go`): once it settles — answering again after the re-start (`recovered`) or left `crashed` — the watchdog writes one `service-down` entry into the report outbox (`-report-outbox-dir`, the backend-crash writer), which main drains into `reports`. Generic over services: the payload is the probe and the dial's error, when the service last became running, the start command's output (a fresh start vs a reattach says whether it was really dead), and the last 60 lines of its `services/<name>.log` as of the detection. Before, the only record was the in-memory `crashed` state — and nothing at all for an outage the re-start recovered. Kind and schema: `plugins/debug/plugins/service-down` (contract pinned by `testdata/service-down-entry.json`).
 
 ### API
 

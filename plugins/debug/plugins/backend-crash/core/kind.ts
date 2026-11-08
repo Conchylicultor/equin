@@ -15,6 +15,18 @@ export const CRASH_TAIL_LINES = 60;
 export const CRASH_LINE_MAX_BYTES = 4096;
 const CUT_SUFFIX_BYTES = 9;
 
+/** One line the gateway kept of what a process wrote, cut at its bound (gateway `cutLine`). */
+export const CrashLineSchema = z
+  .string()
+  .max(CRASH_LINE_MAX_BYTES + CUT_SUFFIX_BYTES);
+
+/**
+ * The last lines the gateway keeps of what a dead process wrote, oldest first,
+ * under its bounds (gateway `lineTail`): a backend's stderr here, a supervised
+ * service's log in `service-down`.
+ */
+export const CrashTailSchema = z.array(CrashLineSchema).max(CRASH_TAIL_LINES);
+
 // The jsonb payload of a `backend-crash` report. Written by the GATEWAY (Go,
 // gateway/crash_report.go `backendCrash`) into the report outbox, so this
 // schema is a cross-language contract: gateway/testdata/backend-crash-entry.json
@@ -37,9 +49,7 @@ export const BackendCrashPayloadSchema = z.strictObject({
   /** Its binary's name — what macOS names its crash report by. */
   executable: z.string(),
   /** Its last stderr lines, oldest first. */
-  stderrTail: z
-    .array(z.string().max(CRASH_LINE_MAX_BYTES + CUT_SUFFIX_BYTES))
-    .max(CRASH_TAIL_LINES),
+  stderrTail: CrashTailSchema,
   /** The stderr pipe reached EOF: the tail is the end of what it wrote. */
   stderrComplete: z.boolean(),
 });

@@ -34,6 +34,7 @@ output: the log relay". The Go constants are pinned here by
     - `database/pgbouncer`
     - `debug/backend-crash`
     - `debug/logs`
+    - `debug/service-down`
     - `framework/cli/serve-app`
     - `framework/cli/start`
     - `infra/launcher`

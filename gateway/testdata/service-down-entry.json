@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "kind": "service-down",
+  "message": "service postgres stopped answering after 1h0m0s up (dial unix /x/.s.PGSQL.5433: connect: connection refused); re-start failed after 4.2s, left crashed: start command failed: exit status 1: pg: data dir locked",
+  "data": {
+    "service": "postgres",
+    "probe": "unix /x/.s.PGSQL.5433",
+    "probeError": "dial unix /x/.s.PGSQL.5433: connect: connection refused",
+    "upSince": 1794150000000,
+    "detectedAt": 1794153600000,
+    "outcome": "crashed",
+    "settledAt": 1794153604200,
+    "restartError": "start command failed: exit status 1: pg: data dir locked",
+    "restartOutput": ["pg: removing stale postmaster.pid", "pg: data dir locked"],
+    "logPath": "/x/logs/gateway/services/postgres.log",
+    "logTail": [
+      "2026-11-08 10:00:00.000 CET [123] LOG:  server process (PID 456) was terminated by signal 9: Killed",
+      "2026-11-08 10:00:00.001 CET [123] LOG:  terminating any other active server processes"
+    ],
+    "logTailError": null
+  },
+  "occurredAt": 1794153600000,
+  "writer": {
+    "pid": 1234,
+    "checkout": "/repo"
+  }
+}

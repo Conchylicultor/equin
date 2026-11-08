@@ -22104,11 +22104,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `BackendCrashPayloadSchema`
           - `bunPanicOf`
+          - `CrashLineSchema`
+          - `CrashTailSchema`
           - `describeBackendCrash`
           - `macCrashReportGlob`
           - `uptimeOf`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/color-palette --muted-foreground`
+        - Imported by: `debug/service-down`
     - **`backend-liveness`** — Backend-frozen report renderer: a one-line Debug → Reports summary for the backend-frozen kind. The backend-frozen report kind — filed by central's liveness probe through the report outbox, drained by main: every minute while a backend stays frozen, once when the episode ends (main's own freeze is filed as soon as its thread runs again). Plus a debug-only trigger that freezes a worktree backend's JS thread to reproduce it. Backend liveness probe (central): every 15 s asks each running backend for any HTTP answer on its own socket, and appends a frozen episode to the backend-liveness data dir when one stays unanswered for a minute of awake time (machine sleep never counts; a stopped process is paused, not frozen) — from outside the backend, so a frozen JS thread is noticed while it lasts.
       - Web:
         - Contributes: `Reports.KindView` → `BackendFrozenSummary`
@@ -24469,6 +24472,29 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SIGNAL_KEYS`
               - `SignalKeySchema`
               - `SignalVitalSchema`
+    - **`service-down`** — Service-down report renderer: a one-line Debug → Reports summary for the service-down kind (service, how long it had been up, whether it came back). The service-down report kind — filed by the gateway's watchdog through the report outbox when a supervised service (embedded Postgres, PgBouncer, any database.json service) stops answering mid-session, once the outage settles, drained by main: the probe and its error, how long it had been up, whether the re-start brought it back, the start command's output and the service's last log lines.
+      - Web:
+        - Contributes: `Reports.KindView` → `ServiceDownSummary`
+        - Uses:
+          - `primitives/css/badge.Badge`
+          - `primitives/css/inline.Inline`
+          - `reports.Reports`
+      - Server:
+        - Contributes: `report-kind` "service-down"
+        - Uses: `reports.ReportKind`
+      - Core:
+        - Uses:
+          - `debug/backend-crash.CrashLineSchema`
+          - `debug/backend-crash.CrashTailSchema`
+          - `fields/duration.formatDuration`
+        - Exports (types): `ServiceDownPayload`
+        - Exports (values):
+          - `describeServiceDown`
+          - `outageOf`
+          - `ServiceDownPayloadSchema`
+          - `upTimeOf`
+      - Cross-plugin:
+        - Uses tokens: `ui/tokens/color-palette --muted-foreground`
     - **`slow-ops`** — Records slow client operations (page load, element appearance, and every client latency signal — a live update applied, an optimistic write confirmed — split into its phases) into the durable slow-op store via the slow-ops client endpoint. Durable slow-op store: deduped per-operation aggregates and their callers (one row per op × caller), both written through change producers, plus the slow-op report kind and the live collections the pane reads (slow-ops.ops list, slow-ops.op detail, slow-ops.callers). Subscribes to runtime-profiler slow spans and client signals; files one deduped report per distinct slow operation (investigation task filed on demand).
       - Web:
         - Contributes:
@@ -25923,6 +25949,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/claude-cli-calls`
           - `debug/profiling/runtime`
           - `debug/queue`
+          - `debug/service-down`
           - `debug/slow-ops/cluster`
           - `debug/slow-ops/pane`
           - `debug/trace/gates`
@@ -33901,6 +33928,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `database/pgbouncer`
               - `debug/backend-crash`
               - `debug/logs`
+              - `debug/service-down`
               - `framework/cli/serve-app`
               - `framework/cli/start`
               - `infra/launcher`
@@ -43725,9 +43753,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×6
               - `ui/tokens/shape` ×3
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 177 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 178 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `apps` ×38
-              - `debug` ×35
+              - `debug` ×36
               - `conversations` ×27
               - `reports` ×17
               - `primitives` ×10
@@ -44157,10 +44185,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 106 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+            - Imported by: 107 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
               - `apps` ×21
               - `reports` ×18
-              - `debug` ×16
+              - `debug` ×17
               - `primitives` ×12
               - `conversations` ×9
               - `page` ×6
@@ -51893,8 +51921,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`reports`** — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. The reports table and its live read (reports.list), the ReportKind / ReportNoiseRule slots every kind and rule contributes to, and the fan-out ceiling config; recording is the engine's (reports/plugins/engine).
   - Web:
     - Slots: `Reports.KindView`
-    - Slot contributors: 37 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `Reports.KindView` ×37
+    - Slot contributors: 38 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+      - `Reports.KindView` ×38
     - Contributes:
       - `IdKinds.Kind` "report"
       - `ConfigV2.WebRegister` "reports"
@@ -52007,9 +52035,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `SERVER_REPORT_SOURCES`
       - `submitReport`
   - Cross-plugin:
-    - Imported by: 67 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+    - Imported by: 68 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
       - `reports` ×29
-      - `debug` ×16
+      - `debug` ×17
       - `conversations` ×6
       - `database` ×4
       - `infra` ×3
@@ -58430,11 +58458,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --space-sm`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 532 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 533 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×118
               - `conversations` ×93
               - `primitives` ×73
-              - `debug` ×38
+              - `debug` ×39
               - `page` ×33
               - `plugin-meta` ×28
               - `ui` ×26

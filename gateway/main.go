@@ -115,7 +115,7 @@ func parseFlags() (Config, string) {
 	// The report outbox (reports/outbox data-dirs, `state/report-outbox`): where
 	// the gateway files a backend's crash for main to record (crash_report.go).
 	defaultReportOutbox := filepath.Join(dataDir, "state", "report-outbox")
-	flag.StringVar(&cfg.ReportOutboxDir, "report-outbox-dir", defaultReportOutbox, "the report outbox directory a backend crash is filed into, for main's backend to record")
+	flag.StringVar(&cfg.ReportOutboxDir, "report-outbox-dir", defaultReportOutbox, "the report outbox directory a backend crash or a supervised service outage is filed into, for main's backend to record")
 	// Fallback namespace for subdomain-less requests. Empty ⇒ such requests 404
 	// (dev/multi-app). A packaged single-app build (desktop/Tauri, single-origin
 	// web) sets it to the app's name so a bare-localhost webview reaches the
@@ -243,7 +243,7 @@ func main() {
 	reconcileOrphanBackends(cfg.SocketsDir, reg)
 
 	routes := NewCentralRoutesStore(cfg.CentralRoutesFile)
-	sup, err := NewSupervisor(cfg.DbConfigFile, cfg.ChildEnv, cfg.LogDir)
+	sup, err := NewSupervisor(cfg.DbConfigFile, cfg.ChildEnv, cfg.LogDir, cfg.ReportOutboxDir)
 	if err != nil {
 		// A malformed database.json is a misconfiguration, not a signal. The
 		// benign "I manage my own database" case is a *missing* file, which

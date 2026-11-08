@@ -25,6 +25,7 @@
     - `debug/claude-cli-calls`
     - `debug/profiling/runtime`
     - `debug/queue`
+    - `debug/service-down`
     - `debug/slow-ops/cluster`
     - `debug/slow-ops/pane`
     - `debug/trace/gates`

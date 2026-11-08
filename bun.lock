@@ -2782,6 +2782,10 @@
       "name": "@equin/plugin-debug-sentinel-status-file",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/service-down": {
+      "name": "@equin/plugin-debug-service-down",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/slow-ops": {
       "name": "@equin/plugin-debug-slow-ops",
       "version": "0.0.1",
@@ -8731,6 +8735,8 @@
     "@equin/plugin-debug-sentinel-machine-usage": ["@equin/plugin-debug-sentinel-machine-usage@workspace:plugins/debug/plugins/sentinel/plugins/machine-usage"],
 
     "@equin/plugin-debug-sentinel-status-file": ["@equin/plugin-debug-sentinel-status-file@workspace:plugins/debug/plugins/sentinel/plugins/status-file"],
+
+    "@equin/plugin-debug-service-down": ["@equin/plugin-debug-service-down@workspace:plugins/debug/plugins/service-down"],
 
     "@equin/plugin-debug-slow-ops": ["@equin/plugin-debug-slow-ops@workspace:plugins/debug/plugins/slow-ops"],
 

@@ -64,7 +64,7 @@ func TestStartCommandHandsDaemonTheRelay(t *testing.T) {
 	sup := &Supervisor{env: testChildEnv(t), logDir: logDir}
 	cfg := ServiceConfig{Name: "svc", Start: []string{"/bin/sh", "-c",
 		`echo "$0=$1" >&3; (sleep 0.3; echo later >&3) </dev/null >/dev/null 2>&1 &`}}
-	if err := sup.execStartCommand(cfg); err != nil {
+	if _, err := sup.execStartCommand(cfg); err != nil {
 		t.Fatal(err)
 	}
 	waitForFile(t, serviceLogPath(logDir, "svc"), "--log-fd=3\nlater\n")
@@ -75,7 +75,7 @@ func TestStartCommandHandsDaemonTheRelay(t *testing.T) {
 func TestReattachLeavesNoFile(t *testing.T) {
 	logDir := t.TempDir()
 	sup := &Supervisor{env: testChildEnv(t), logDir: logDir}
-	if err := sup.execStartCommand(ServiceConfig{Name: "svc", Start: []string{"/usr/bin/true"}}); err != nil {
+	if _, err := sup.execStartCommand(ServiceConfig{Name: "svc", Start: []string{"/usr/bin/true"}}); err != nil {
 		t.Fatal(err)
 	}
 	time.Sleep(300 * time.Millisecond)

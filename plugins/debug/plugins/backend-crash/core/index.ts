@@ -1,5 +1,7 @@
 export {
   BackendCrashPayloadSchema,
+  CrashLineSchema,
+  CrashTailSchema,
   bunPanicOf,
   describeBackendCrash,
   macCrashReportGlob,

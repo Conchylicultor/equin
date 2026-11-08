@@ -94,13 +94,15 @@ type backendCrash struct {
 }
 
 // outboxEntry is one report outbox file (reports/outbox OutboxEntrySchema,
-// version 1). The writer leaves `writer.repo` and `code` out: no code is named
-// (the evidence is a stack, not repo files), so the drain files it as is.
+// version 1), of any kind the gateway files: Data is that kind's payload
+// (backendCrash here, serviceDown in service_report.go). The writer leaves
+// `writer.repo` and `code` out: no code is named (the evidence is a process's
+// own output, not repo files), so the drain files it as is.
 type outboxEntry struct {
 	Version    int          `json:"version"`
 	Kind       string       `json:"kind"`
 	Message    string       `json:"message"`
-	Data       backendCrash `json:"data"`
+	Data       any          `json:"data"`
 	OccurredAt int64        `json:"occurredAt"`
 	Writer     outboxWriter `json:"writer"`
 }
@@ -276,14 +278,20 @@ const lineCutSuffix = " …[cut]"
 
 func newLineTail(max int) *lineTail { return &lineTail{max: max} }
 
-func (t *lineTail) add(line string) {
-	if len(line) > crashLineMaxBytes {
-		cut := crashLineMaxBytes
-		for cut > 0 && !utf8.RuneStart(line[cut]) {
-			cut-- // never split a UTF-8 sequence
-		}
-		line = line[:cut] + lineCutSuffix
+// cutLine bounds one line at crashLineMaxBytes, marking a cut one.
+func cutLine(line string) string {
+	if len(line) <= crashLineMaxBytes {
+		return line
 	}
+	cut := crashLineMaxBytes
+	for cut > 0 && !utf8.RuneStart(line[cut]) {
+		cut-- // never split a UTF-8 sequence
+	}
+	return line[:cut] + lineCutSuffix
+}
+
+func (t *lineTail) add(line string) {
+	line = cutLine(line)
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.buf = append(t.buf, line)

@@ -105,7 +105,18 @@ func TestLineTailKeepsTheLastLinesAndCutsLongOnes(t *testing.T) {
 }
 
 // outboxEntries reads every complete entry in dir.
-func outboxEntries(t *testing.T, dir string) []outboxEntry {
+// outboxEntryOf is an outbox entry read back with its payload as kind T.
+type outboxEntryOf[T any] struct {
+	Kind    string `json:"kind"`
+	Message string `json:"message"`
+	Data    T      `json:"data"`
+}
+
+func outboxEntries(t *testing.T, dir string) []outboxEntryOf[backendCrash] {
+	return readOutbox[backendCrash](t, dir)
+}
+
+func readOutbox[T any](t *testing.T, dir string) []outboxEntryOf[T] {
 	t.Helper()
 	names, err := os.ReadDir(dir)
 	if errors.Is(err, os.ErrNotExist) {
@@ -114,7 +125,7 @@ func outboxEntries(t *testing.T, dir string) []outboxEntry {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var out []outboxEntry
+	var out []outboxEntryOf[T]
 	for _, n := range names {
 		if !outboxEntryName.MatchString(n.Name()) {
 			continue
@@ -123,7 +134,7 @@ func outboxEntries(t *testing.T, dir string) []outboxEntry {
 		if err != nil {
 			t.Fatal(err)
 		}
-		var e outboxEntry
+		var e outboxEntryOf[T]
 		if err := json.Unmarshal(body, &e); err != nil {
 			t.Fatal(err)
 		}
@@ -147,7 +158,7 @@ func TestBackendKilledBySignalIsReported(t *testing.T) {
 	if _, err := pf.wt.Ensure(context.Background(), StartBackground, "test"); !errors.Is(err, ErrSpawnFailed) {
 		t.Fatalf("Ensure: err = %v, want ErrSpawnFailed", err)
 	}
-	var entries []outboxEntry
+	var entries []outboxEntryOf[backendCrash]
 	deadline := time.Now().Add(5 * time.Second)
 	for len(entries) == 0 && time.Now().Before(deadline) {
 		time.Sleep(20 * time.Millisecond)

@@ -62,43 +62,53 @@ type databaseConfigFile struct {
 	Services []ServiceConfig `json:"services"`
 }
 
-// ReadyProbe checks whether a service is reachable.
+// ReadyProbe checks whether a service is reachable: nil when it answered, else
+// why not (the dial's own error — refused, no such socket, timed out), which a
+// service-down report carries as what the watchdog saw.
 type ReadyProbe interface {
-	Check(timeout time.Duration) bool
+	Check(timeout time.Duration) error
+	// String names what is probed, e.g. "unix /path/.s.PGSQL.5433".
+	String() string
 }
 
 // UnixProbe dials a Unix domain socket.
 type UnixProbe struct{ Path string }
 
-func (p UnixProbe) Check(timeout time.Duration) bool {
-	c, err := net.DialTimeout("unix", p.Path, timeout)
-	if err != nil {
-		return false
-	}
-	_ = c.Close()
-	return true
+func (p UnixProbe) Check(timeout time.Duration) error {
+	return dialProbe("unix", p.Path, timeout)
 }
+
+func (p UnixProbe) String() string { return "unix " + p.Path }
 
 // TCPProbe dials a TCP host:port.
 type TCPProbe struct{ Addr string }
 
-func (p TCPProbe) Check(timeout time.Duration) bool {
-	c, err := net.DialTimeout("tcp", p.Addr, timeout)
+func (p TCPProbe) Check(timeout time.Duration) error {
+	return dialProbe("tcp", p.Addr, timeout)
+}
+
+func (p TCPProbe) String() string { return "tcp " + p.Addr }
+
+func dialProbe(network, addr string, timeout time.Duration) error {
+	c, err := net.DialTimeout(network, addr, timeout)
 	if err != nil {
-		return false
+		return err
 	}
 	_ = c.Close()
-	return true
+	return nil
 }
 
 // Service is one supervised process.
 type Service struct {
-	config    ServiceConfig
-	probe     ReadyProbe
-	mu        sync.Mutex
-	state     ServiceState
-	lastErr   string // why the service last crashed; empty unless state is Crashed
-	watchStop chan struct{}
+	config  ServiceConfig
+	probe   ReadyProbe
+	mu      sync.Mutex
+	state   ServiceState
+	lastErr string // why the service last crashed; empty unless state is Crashed
+	// runningSince is when the service last reached ServiceRunning: how long
+	// it had been up when a watchdog found it down.
+	runningSince time.Time
+	watchStop    chan struct{}
 }
 
 // setState transitions the service. Reaching ServiceRunning clears lastErr here
@@ -111,6 +121,7 @@ func (s *Service) setState(st ServiceState) {
 	s.state = st
 	if st == ServiceRunning {
 		s.lastErr = ""
+		s.runningSince = time.Now()
 	}
 	s.mu.Unlock()
 }
@@ -162,6 +173,9 @@ type Supervisor struct {
 	// logDir is the gateway's -log-dir: each service's output goes to
 	// serviceLogPath(logDir, name) through a detached relay (logrelay.go).
 	logDir string
+	// outboxDir is the gateway's -report-outbox-dir: a service the watchdog
+	// finds down mid-session is filed there (service_report.go).
+	outboxDir string
 }
 
 const (
@@ -174,13 +188,14 @@ const (
 // NewSupervisor reads the config file and builds the supervisor. If the file
 // is missing or has no services, the supervisor is empty (nothing to manage).
 // env is the environment every service start command runs with; logDir is
-// where each service's output channel lives.
-func NewSupervisor(configPath string, env ChildEnv, logDir string) (*Supervisor, error) {
+// where each service's output channel lives; outboxDir is the report outbox a
+// mid-session outage is filed into.
+func NewSupervisor(configPath string, env ChildEnv, logDir, outboxDir string) (*Supervisor, error) {
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			slog.Info("supervisor: no database config file; no services to manage", "path", configPath)
-			return &Supervisor{env: env, logDir: logDir}, nil
+			return &Supervisor{env: env, logDir: logDir, outboxDir: outboxDir}, nil
 		}
 		return nil, fmt.Errorf("supervisor: read config: %w", err)
 	}
@@ -190,7 +205,7 @@ func NewSupervisor(configPath string, env ChildEnv, logDir string) (*Supervisor,
 		return nil, fmt.Errorf("supervisor: parse config: %w", err)
 	}
 
-	sup := &Supervisor{env: env, logDir: logDir}
+	sup := &Supervisor{env: env, logDir: logDir, outboxDir: outboxDir}
 	for _, sc := range cfg.Services {
 		probe, err := parseReadyProbe(sc.Ready)
 		if err != nil {
@@ -234,7 +249,7 @@ func (sup *Supervisor) startService(ctx context.Context, svc *Service) error {
 	svc.setState(ServiceStarting)
 	slog.Info("supervisor: starting service", "name", svc.config.Name)
 
-	if err := sup.execStartCommand(svc.config); err != nil {
+	if _, err := sup.execStartCommand(svc.config); err != nil {
 		svc.setCrashed(err)
 		return err
 	}
@@ -264,13 +279,16 @@ func (sup *Supervisor) startService(ctx context.Context, svc *Service) error {
 // file. A start that only reattaches to a running daemon leaves the fd unused;
 // once this function closes its own copy the relay reads EOF and exits without
 // ever opening the file.
-func (sup *Supervisor) execStartCommand(cfg ServiceConfig) error {
+//
+// Returns the command's own output (what it did: started the daemon, or found
+// it running and reattached); a failure's error carries it too.
+func (sup *Supervisor) execStartCommand(cfg ServiceConfig) (string, error) {
 	if len(cfg.Start) == 0 {
-		return fmt.Errorf("empty start command")
+		return "", fmt.Errorf("empty start command")
 	}
 	logW, err := startLogRelay(sup.env, serviceLogPath(sup.logDir, cfg.Name))
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer logW.Close()
 	args := append(append([]string{}, cfg.Start[1:]...), serviceLogFdFlag, strconv.Itoa(serviceLogFd))
@@ -278,9 +296,9 @@ func (sup *Supervisor) execStartCommand(cfg ServiceConfig) error {
 	cmd.ExtraFiles = []*os.File{logW}
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("start command failed: %w: %s", err, string(out))
+		return string(out), fmt.Errorf("start command failed: %w: %s", err, string(out))
 	}
-	return nil
+	return string(out), nil
 }
 
 func waitForReady(ctx context.Context, probe ReadyProbe, deadline time.Duration) bool {
@@ -290,7 +308,7 @@ func waitForReady(ctx context.Context, probe ReadyProbe, deadline time.Duration)
 	defer ticker.Stop()
 
 	// Check immediately before first tick.
-	if probe.Check(probeTimeout) {
+	if probe.Check(probeTimeout) == nil {
 		return true
 	}
 	for {
@@ -300,7 +318,7 @@ func waitForReady(ctx context.Context, probe ReadyProbe, deadline time.Duration)
 		case <-timer.C:
 			return false
 		case <-ticker.C:
-			if probe.Check(probeTimeout) {
+			if probe.Check(probeTimeout) == nil {
 				return true
 			}
 		}
@@ -357,6 +375,10 @@ func (sup *Supervisor) startWatchdog(ctx context.Context, svc *Service) {
 // runWatchdog dials the service's readiness probe on a ticker. On failure,
 // attempts one re-exec of the start command; if that also fails, marks the
 // service Crashed and stops watching.
+//
+// Either way the outage is filed as a service-down report once it settles
+// (service_report.go): a service that died mid-session took every database
+// connection with it, and the backends' downstream errors never name it.
 func (sup *Supervisor) runWatchdog(ctx context.Context, svc *Service, stop <-chan struct{}) {
 	interval := defaultWatchdogInterval
 	if svc.config.Watchdog != nil && svc.config.Watchdog.IntervalSec > 0 {
@@ -375,23 +397,46 @@ func (sup *Supervisor) runWatchdog(ctx context.Context, svc *Service, stop <-cha
 			if svc.getState() != ServiceRunning {
 				continue
 			}
-			if svc.probe.Check(probeTimeout) {
+			probeErr := svc.probe.Check(probeTimeout)
+			if probeErr == nil {
 				continue
 			}
-			slog.Error("supervisor: watchdog detected service down; attempting re-start", "name", svc.config.Name)
-			svc.setState(ServiceStarting)
-			if err := sup.execStartCommand(svc.config); err != nil {
-				slog.Error("supervisor: re-start failed; not retrying", "name", svc.config.Name, "err", err)
-				svc.setCrashed(err)
+			if !sup.recoverService(ctx, svc, probeErr) {
 				return
 			}
-			if !waitForReady(ctx, svc.probe, startReadyTimeout) {
-				slog.Error("supervisor: re-started but service not ready; marking crashed", "name", svc.config.Name)
-				svc.setCrashed(fmt.Errorf("re-started but service did not become ready within %s", startReadyTimeout))
-				return
-			}
-			svc.setState(ServiceRunning)
-			slog.Info("supervisor: service re-started successfully", "name", svc.config.Name)
 		}
 	}
+}
+
+// recoverService handles one outage the watchdog found: re-runs the start
+// command, waits for readiness, and files the outage with how it ended.
+// Returns false when the service is left Crashed (the watchdog stops).
+func (sup *Supervisor) recoverService(ctx context.Context, svc *Service, probeErr error) bool {
+	name := svc.config.Name
+	outage := sup.newOutage(svc, probeErr, time.Now())
+	slog.Error("supervisor: watchdog detected service down; attempting re-start", "name", name, "probe", svc.probe.String(), "err", probeErr)
+	svc.setState(ServiceStarting)
+	out, err := sup.execStartCommand(svc.config)
+	if err != nil {
+		slog.Error("supervisor: re-start failed; not retrying", "name", name, "err", err)
+		svc.setCrashed(err)
+		sup.reportServiceDown(outage.settle(outcomeCrashed, time.Now(), out, err))
+		return false
+	}
+	if !waitForReady(ctx, svc.probe, startReadyTimeout) {
+		if ctx.Err() != nil {
+			// The gateway is shutting down, not the service failing: nothing
+			// settled, so there is no outcome to file.
+			return false
+		}
+		slog.Error("supervisor: re-started but service not ready; marking crashed", "name", name)
+		err := fmt.Errorf("re-started but service did not become ready within %s", startReadyTimeout)
+		svc.setCrashed(err)
+		sup.reportServiceDown(outage.settle(outcomeCrashed, time.Now(), out, err))
+		return false
+	}
+	svc.setState(ServiceRunning)
+	slog.Info("supervisor: service re-started successfully", "name", name)
+	sup.reportServiceDown(outage.settle(outcomeRecovered, time.Now(), out, nil))
+	return true
 }
