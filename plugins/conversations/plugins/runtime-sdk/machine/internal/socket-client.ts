@@ -50,6 +50,20 @@ export class AgentCommandError extends Error {
 }
 
 /**
+ * Whether a socket error is the agent having closed the connection after it
+ * was established: our write met a closed peer (EPIPE) or a reset
+ * (ECONNRESET). `connect` fires once the kernel queued us in the listener's
+ * backlog, not once the agent accepted — an agent exiting then (its listener
+ * closed with us still queued, or it accepted and exited) is reproduced by
+ * `socket-client.test.ts`. That is a close before any reply, so the `close`
+ * that always follows the error judges it ({@link closedFailure}), the same as
+ * a close that came without one.
+ */
+function peerClosed(err: NodeJS.ErrnoException, connected: boolean): boolean {
+  return connected && (err.code === "EPIPE" || err.code === "ECONNRESET");
+}
+
+/**
  * A connect error as the agent's state. Nobody listening is "not running":
  * no socket (ENOENT), nothing behind it (ECONNREFUSED), or — before the
  * connection was ever established — a reset (ECONNRESET), which is the agent
@@ -93,9 +107,10 @@ const COMMAND_TIMEOUT_MS = 10_000;
 /**
  * Send `commands` on one connection, in order, and collect one reply per
  * command. Nobody listening ({@link connectFailure}) or an agent that exited
- * mid-exchange ({@link closedFailure}) is {@link AgentNotRunningError}; no
- * reply otherwise is {@link AgentUnresponsiveError};
- * anything else throws as itself (the state is unknown, not "dead").
+ * mid-exchange ({@link closedFailure}, {@link peerClosed}) is
+ * {@link AgentNotRunningError}; no reply otherwise is
+ * {@link AgentUnresponsiveError}; anything else throws as itself (the state is
+ * unknown, not "dead").
  */
 function exchange(
   conversationId: string,
@@ -144,6 +159,7 @@ function exchange(
       }
     });
     conn.on("error", (err: NodeJS.ErrnoException) => {
+      if (peerClosed(err, connected)) return; // `close` follows, and judges it
       finish(connectFailure(conversationId, err, connected));
     });
     conn.on("close", () => {
@@ -278,7 +294,8 @@ export function subscribeAgent(
       }
     });
     conn.on("error", (err: NodeJS.ErrnoException) => {
-      if (open) return; // `close` follows, and reports the end
+      // `close` follows, and reports the end (open) or judges it
+      if (open || peerClosed(err, connected)) return;
       fail(connectFailure(conversationId, err, connected));
     });
     conn.on("close", () => {

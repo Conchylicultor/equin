@@ -417,6 +417,33 @@ describe("createCheckoutWatchHub", () => {
     ]);
   });
 
+  test("an event on the root dir itself reaches every reader and is never asked about", async () => {
+    // The native watch reports its watched dir's own create / update / delete;
+    // asked about as `""`, `git check-ignore` exits 128 ("empty string is not
+    // a valid pathspec") and the batch's filtering failed.
+    const { dirs, hub, ignoreCalls } = linkedHub(
+      () => OWN,
+      async (_root, relPaths) => {
+        if (relPaths.includes("")) throw new Error("empty pathspec");
+        return new Set(relPaths.filter((p) => p.startsWith("dist/")));
+      },
+    );
+    const heard: string[] = [];
+    await hub.acquire("/wt", {
+      refs: ALSO_NONE,
+      onChange: (c) => void heard.push(...c.map((x) => x.path)),
+    });
+
+    dirs.emit("/wt", "/wt");
+    expect(heard).toEqual(["/wt"]);
+    expect(ignoreCalls).toEqual([]);
+
+    dirs.emit("/wt", "/wt", "/wt/dist/a.js", "/wt/src/a.ts");
+    await tick();
+    expect(heard).toEqual(["/wt", "/wt", "/wt/src/a.ts"]);
+    expect(ignoreCalls).toEqual([["dist/a.js", "src/a.ts"]]);
+  });
+
   test("a git-dir-only batch asks nothing and is delivered in the same turn", async () => {
     const { dirs, hub, ignoreCalls } = linkedHub();
     const heard: string[] = [];

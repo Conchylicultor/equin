@@ -82,8 +82,9 @@ export interface CheckoutWatchDeps {
   /** HEAD's target and its upstream, read now. */
   readBranch: (root: string) => Promise<CheckoutBranch>;
   /**
-   * Which of `relPaths` (relative to the root) git ignores, read now — the
-   * untracked ones its exclude rules match. A tracked path is never ignored.
+   * Which of `relPaths` (relative to the root, each a path inside the tree —
+   * never `""`, the root itself) git ignores, read now — the untracked ones its
+   * exclude rules match. A tracked path is never ignored.
    */
   ignored: (
     root: string,
@@ -97,6 +98,21 @@ function relativeTo(dir: string, abs: string): string | null {
   if (abs === dir) return "";
   const prefix = dir === "/" ? "/" : `${dir}/`;
   return abs.startsWith(prefix) ? abs.slice(prefix.length) : null;
+}
+
+/**
+ * Where a working-tree change sits in the tree, relative to the root — the
+ * pathspec git's ignore rules are asked about — or null for an event on the
+ * root dir itself. The dir watch reports its own dir's create / update /
+ * delete (that is how a watch hears its dir go), so a root event is the
+ * checkout itself appearing, changing or going: a change every reader hears,
+ * but no path of the tree. Git never ignores its own toplevel, and
+ * `check-ignore` refuses its spelling, `""`, as a pathspec.
+ */
+function treePathOf(root: string, change: CheckoutChange): string | null {
+  if (change.area !== "worktree") return null;
+  const rel = relativeTo(root, change.path);
+  return rel === "" ? null : rel;
 }
 
 /**
@@ -221,8 +237,8 @@ export function createCheckoutWatchHub(deps: CheckoutWatchDeps) {
     const headFiles = new Set([`${gitDir}/HEAD`, `${gitDir}/HEAD.lock`]);
 
     // Batches in order, one delivery at a time. A batch touching the working
-    // tree first drops the paths git ignores (one `check-ignore` per batch,
-    // shared by every reader): an ignored, untracked path cannot move the
+    // tree first drops the paths git ignores (one `check-ignore` per batch
+    // over its tree paths — `treePathOf` — shared by every reader): an ignored, untracked path cannot move the
     // checkout, so no reader recomputes on it — a build's `dist/`, another
     // worktree under the main checkout's `.claude/worktrees/`. A batch that
     // moves HEAD re-reads the branch BEFORE it (and anything queued behind
@@ -232,7 +248,8 @@ export function createCheckoutWatchHub(deps: CheckoutWatchDeps) {
       run: (changes) => {
         const treePaths = new Set<string>();
         for (const c of changes) {
-          if (c.area === "worktree") treePaths.add(relativeTo(root, c.path)!);
+          const treePath = treePathOf(root, c);
+          if (treePath !== null) treePaths.add(treePath);
         }
         const movesHead = changes.some((c) => headFiles.has(c.path));
         // Synchronous when there is nothing to read: a git-dir-only batch
@@ -259,11 +276,10 @@ export function createCheckoutWatchHub(deps: CheckoutWatchDeps) {
         try {
           const ignored = await deps.ignored(root, treePaths);
           if (ignored.size > 0) {
-            kept = changes.filter(
-              (c) =>
-                c.area !== "worktree" ||
-                !ignored.has(relativeTo(root, c.path)!),
-            );
+            kept = changes.filter((c) => {
+              const treePath = treePathOf(root, c);
+              return treePath === null || !ignored.has(treePath);
+            });
           }
         } catch (err) {
           failures.push(err);
