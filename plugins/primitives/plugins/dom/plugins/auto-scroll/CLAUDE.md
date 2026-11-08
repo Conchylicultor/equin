@@ -63,8 +63,9 @@ new event lands — which the follower read as the reader leaving, and parked.
 
 You follow until **you** scroll away: reader input (wheel, touch, a pointer
 down in the scroller, a scroll key) or a navigation you asked for, and your
-scroll settles away from the bottom. Stopping within `threshold`, or coming
-back to it, follows again. Content settling, reflow and new messages only
+scroll settles away from the bottom. Stopping within `threshold` on the way
+down, or coming back to it, follows again; a scroll up parks however short (one
+wheel notch stops inside the margin, and used to be snapped back). Content settling, reflow and new messages only
 *carry out* that standing intent. **A scroll no reader input explains is put
 back at the bottom.** That covers the browser clamping as content below
 shrinks, its scroll anchoring, `KeepAnchorAcross` keeping a row across a
@@ -87,7 +88,7 @@ Input *arms* the scroller for `SETTLE_MS`. A scroll that lands armed, and that
 the hook did not write, is the reader's: arriving at the bottom follows at
 once, anything else drives. While driving every scroll is the reader's (momentum
 after the input). On settle (no input or scroll for `SETTLE_MS`, the pointer
-up), the distance **at the reader's last scroll** decides. Content that
+up), the distance and direction **of the reader's last scroll** decide. Content that
 streamed in meanwhile is not their displacement. Arming without a scroll (a
 click on a card) changes nothing.
 

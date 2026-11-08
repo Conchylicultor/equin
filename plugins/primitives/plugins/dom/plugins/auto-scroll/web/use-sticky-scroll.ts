@@ -154,8 +154,8 @@ function isEditable(target: EventTarget | null): boolean {
  * You are following until YOU scroll away — reader input (wheel, touch, a
  * pointer down in the scroller, a scroll key) or a navigation you asked for
  * (`announceNavigation`, called by every sanctioned scroll funnel) — and your
- * scroll settles away from the bottom. Stopping within the threshold, or
- * coming back to it, follows again. Everything else — content settling,
+ * scroll settles away from the bottom. Stopping within the threshold on the
+ * way down, or coming back to it, follows again; any scroll up parks. Everything else — content settling,
  * reflow, images loading, new messages arriving, the browser clamping or
  * anchoring, a compensation keeping a row in place — only ever *carries out*
  * that standing intent: a scroll no reader input explains is put back at the
@@ -468,11 +468,16 @@ export function useStickyScroll(
     let previousTop = el.scrollTop;
     // How far the bottom was at the reader's last scroll: what settle judges.
     let readerDistance = distanceToBottom(el);
+    let readerMovedDown = false;
 
     const settle = () => {
       timer = null;
       armed = false;
-      dispatch({ t: "settle", distance: readerDistance });
+      dispatch({
+        t: "settle",
+        distance: readerDistance,
+        movedDown: readerMovedDown,
+      });
     };
     const restartSettle = () => {
       if (timer !== null) clearTimeout(timer);
@@ -492,6 +497,7 @@ export function useStickyScroll(
       const reader = !ours && (armed || modeRef.current.kind === "driving");
       if (reader) {
         readerDistance = distance;
+        readerMovedDown = movedDown;
         restartSettle();
       }
       dispatch({ t: "scroll", ours, armed, movedDown, distance });

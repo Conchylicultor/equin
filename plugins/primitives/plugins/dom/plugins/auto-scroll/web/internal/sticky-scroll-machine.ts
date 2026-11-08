@@ -62,9 +62,10 @@ export type StickySignal =
   /**
    * The reader's scroll came to rest (no input or scroll for the settle
    * window). `distance` is how far the bottom was at the reader's LAST scroll
-   * — content that streamed in since is not their displacement.
+   * — content that streamed in since is not their displacement — and
+   * `movedDown` that scroll's direction.
    */
-  | { t: "settle"; distance: number }
+  | { t: "settle"; distance: number; movedDown: boolean }
   /** The bottom sentinel entered or left the pin margin. */
   | { t: "sentinel"; visible: boolean }
   /** The user pressed the jump-to-bottom affordance. */
@@ -123,7 +124,11 @@ export function step(
       return { mode, action: followAction(mode, signal.visible) };
     case "settle":
       if (mode.kind !== "driving") return { mode, action: "none" };
-      return signal.distance <= pin
+      // The margin forgives a reader heading for the end who stops short of
+      // it. A reader heading away meant to leave, however little they moved:
+      // one wheel notch up from the bottom stops well inside the margin.
+      return signal.distance <= END_SLACK_PX ||
+        (signal.movedDown && signal.distance <= pin)
         ? { mode: FOLLOWING, action: "scroll-to-bottom" }
         : { mode: ANCHORED, action: "none" };
     case "scroll": {
@@ -131,7 +136,7 @@ export function step(
       if (signal.armed || mode.kind === "driving") {
         // The reader's. Arriving at the bottom resumes at once; anything else
         // is theirs to drive until it settles — no write fights it, and
-        // stopping inside the margin still sticks.
+        // stopping inside the margin on the way down still sticks.
         return signal.movedDown && signal.distance <= pin
           ? { mode: FOLLOWING, action: "none" }
           : { mode: DRIVING, action: "none" };

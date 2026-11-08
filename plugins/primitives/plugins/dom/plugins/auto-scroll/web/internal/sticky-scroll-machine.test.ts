@@ -46,15 +46,33 @@ describe("step — reader scrolls", () => {
     });
   });
 
-  test("settling inside the margin sticks; beyond it parks", () => {
-    expect(step(driving, { t: "settle", distance: 30 }, T)).toEqual({
+  test("settling inside the margin on the way down sticks; beyond it parks", () => {
+    const settle = (distance: number, movedDown = true): StickySignal => ({
+      t: "settle",
+      distance,
+      movedDown,
+    });
+    expect(step(driving, settle(30), T)).toEqual({
       mode: following,
       action: "scroll-to-bottom",
     });
-    expect(step(driving, { t: "settle", distance: 400 }, T)).toEqual({
+    expect(step(driving, settle(400), T)).toEqual({
       mode: anchored,
       action: "none",
     });
+  });
+
+  test("a short scroll up parks, even inside the margin", () => {
+    // One wheel notch up from the bottom stops ~40px away: the reader left.
+    const s = step(following, scroll({ armed: true, distance: 40 }), T);
+    expect(s.mode).toEqual(driving);
+    expect(
+      step(s.mode, { t: "settle", distance: 40, movedDown: false }, T),
+    ).toEqual({ mode: anchored, action: "none" });
+    // Scrolling up into the very end (nothing to scroll) still follows.
+    expect(
+      step(driving, { t: "settle", distance: 0, movedDown: false }, T).mode,
+    ).toEqual(following);
   });
 
   test("an armed scroll arriving at the bottom resumes at once", () => {
@@ -70,9 +88,9 @@ describe("step — reader scrolls", () => {
       T,
     );
     expect(s.mode).toEqual(driving);
-    expect(step(s.mode, { t: "settle", distance: 300 }, T).mode).toEqual(
-      anchored,
-    );
+    expect(
+      step(s.mode, { t: "settle", distance: 300, movedDown: true }, T).mode,
+    ).toEqual(anchored);
   });
 
   test("while driving every scroll is the reader's (momentum after the input)", () => {
@@ -102,8 +120,8 @@ describe("step — nothing but reader evidence stops following", () => {
     const signals: StickySignal[] = [
       { t: "sentinel", visible: true },
       { t: "sentinel", visible: false },
-      { t: "settle", distance: 0 },
-      { t: "settle", distance: 900 },
+      { t: "settle", distance: 0, movedDown: false },
+      { t: "settle", distance: 900, movedDown: true },
       scroll({ ours: true, distance: 0 }),
       scroll({ ours: true, distance: 700 }),
       scroll({ distance: 0 }),
