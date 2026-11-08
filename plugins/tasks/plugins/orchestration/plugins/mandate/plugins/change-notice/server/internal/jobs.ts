@@ -45,6 +45,10 @@ export const onMandateChangedJob = defineJob({
         });
         if (out.kind === "not-found")
           throw new Error(`mandate notice: conversation ${c.id} not found`);
+        if (out.kind === "stopped")
+          throw new Error(
+            `mandate notice: conversation ${c.id} stopped (${out.status}) after its MCP reconnect`,
+          );
       }),
     );
   },

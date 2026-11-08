@@ -23,11 +23,21 @@ export async function resumeStopped(
         text: RESUME_TURN_TEXT,
         typedText: RESUME_TURN_TEXT,
       });
-      results.push(
-        outcome.kind === "not-found"
-          ? { id, kind: "not-found" }
-          : { id, kind: "resumed" },
-      );
+      switch (outcome.kind) {
+        case "not-found":
+          results.push({ id, kind: "not-found" });
+          break;
+        case "stopped":
+          results.push({
+            id,
+            kind: "failed",
+            message: `Conversation is ${outcome.status}`,
+          });
+          break;
+        case "submitted":
+          results.push({ id, kind: "resumed" });
+          break;
+      }
     } catch (err) {
       // Reported to the caller, per conversation (the ledger row is marked
       // failed by submitTurn itself).

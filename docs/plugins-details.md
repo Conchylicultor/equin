@@ -20819,6 +20819,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversationTurns`
           - `LedgerTurnSchema`
           - `ledgerTurnsEntityRef`
+          - `resumesStopped`
           - `RETRYABLE_TURN_STATES`
           - `SETTLED_TURN_STATES`
           - `transcriptUuidOfTurn`

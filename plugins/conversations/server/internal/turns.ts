@@ -1,5 +1,6 @@
 import {
   RETRYABLE_TURN_STATES,
+  resumesStopped,
   turnIdKind,
   type TurnId,
   type TurnKind,
@@ -16,7 +17,11 @@ import {
   type TurnRow,
 } from "@plugins/conversations/plugins/turn-ledger/server";
 import { QUESTION_WAITING_FOR } from "../../core/turn-gate";
-import { ensureResumed, ResumeBlockedError } from "./lifecycle";
+import {
+  ensureResumed,
+  ResumeBlockedError,
+  resumeIfStopped,
+} from "./lifecycle";
 import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import {
   conversationRuntime,
@@ -59,12 +64,19 @@ export interface TurnSubmission {
 
 export type SubmitOutcome =
   | { kind: "not-found" }
+  /**
+   * Nothing was recorded or typed: the conversation has no agent (`gone` /
+   * `done`) and a turn of this kind does not bring it back (`resumesStopped`).
+   */
+  | { kind: "stopped"; status: "gone" | "done" }
   /** The ledger row as it stands after this call. */
   | { kind: "submitted"; turn: TurnRow };
 
 /**
  * Record a turn and deliver it: held while the conversation is `starting`,
- * typed now otherwise. A request repeating an id the ledger already has
+ * typed now otherwise. A stopped conversation (`gone` / `done`) is resumed by
+ * a turn whose kind resumes it — the turn then waits, held, for the agent —
+ * and refuses any other (`stopped`, nothing recorded). A request repeating an id the ledger already has
  * returns that row and types nothing. Throws when the delivery fails — the row
  * is `failed` by then, so the caller's error and the ledger agree.
  */
@@ -80,6 +92,7 @@ export async function submitTurn(
   });
   switch (accepted.kind) {
     case "not-found":
+    case "stopped":
       return accepted;
     case "held":
     case "duplicate":
@@ -88,7 +101,9 @@ export async function submitTurn(
       return {
         kind: "submitted",
         turn: await withTerminal(conversationId, () =>
-          deliverLocked(accepted.turn),
+          deliverLocked(accepted.turn, {
+            resumeStopped: resumesStopped(accepted.turn.kind),
+          }),
         ),
       };
   }
@@ -119,7 +134,12 @@ export async function retryTurn(
     });
     if (claimed.state !== "typing")
       return { kind: "not-retryable", turn: claimed };
-    return { kind: "retried", turn: await deliverLocked(claimed) };
+    return {
+      kind: "retried",
+      turn: await deliverLocked(claimed, {
+        resumeStopped: resumesStopped(claimed.kind),
+      }),
+    };
   });
 }
 
@@ -162,7 +182,9 @@ export async function deliverHeldTurns(conversationId: string): Promise<void> {
       });
       if (claimed.state !== "typing") continue;
       try {
-        await deliverLocked(claimed);
+        // Held turns wait for an agent coming up; one that stopped instead is
+        // not brought back by its own flush.
+        await deliverLocked(claimed, { resumeStopped: false });
       } catch (err) {
         firstError ??= err;
       }
@@ -272,10 +294,17 @@ function messageOf(err: unknown): string {
  * (its status stays `waiting`); the row is then held like any turn sent while
  * the agent comes up, and the flush delivers it once the agent answers. A resume that is refused fails the
  * turn: falling through would send it to an agent that is not there.
+ *
+ * `resumeStopped`: a stopped (`gone` / `done`) conversation is resumed the
+ * same way (Resume: status back to `starting`), and the row held for the flush.
  */
-async function deliverLocked(turn: TurnRow): Promise<TurnRow> {
+async function deliverLocked(
+  turn: TurnRow,
+  { resumeStopped }: { resumeStopped: boolean },
+): Promise<TurnRow> {
   const conversationId = turn.conversationId;
   try {
+    if (resumeStopped) await resumeIfStopped(conversationId);
     const resumed = await ensureResumed(conversationId);
     if (resumed.kind === "blocked") {
       throw new ResumeBlockedError(resumed.reason, resumed.message);

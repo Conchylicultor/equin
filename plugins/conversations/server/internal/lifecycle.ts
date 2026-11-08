@@ -23,6 +23,7 @@ import {
 } from "@plugins/tasks/plugins/tasks-core/server";
 import type { EmitTx } from "@plugins/infra/plugins/events/server";
 import type { MandateRef } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
+import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 import { withInlineLaunch } from "./inline-launch";
 import { Runtime } from "./runtime";
 import {
@@ -838,12 +839,43 @@ function statusAfterFailedResume(
 }
 
 export async function resumeConversation(id: string): Promise<Conversation> {
-  const row = await getConversation(id);
-  if (!row) throw new Error(`Conversation ${id} not found`);
-  if (row.status !== "gone" && row.status !== "done") {
-    throw new Error(`Cannot resume conversation ${id} (status: ${row.status})`);
+  const resumed = await resumeIfStopped(id);
+  if (resumed.kind === "not-stopped") {
+    throw new Error(
+      `Cannot resume conversation ${id} (status: ${resumed.status})`,
+    );
   }
+  return (await getConversation(id)) as Conversation;
+}
 
+// One resume of a stopped conversation at a time: the status read and the
+// respawn are not one write, so two resumes at once (the Resume button and a
+// sent turn) would both see `done` and the second respawn would kill the
+// first's agent mid-start. In-process is enough — a conversation is resumed
+// only by the backend that runs it.
+const stoppedResumes = createKeyedMutex();
+
+/**
+ * Resume a conversation if it is stopped (`gone` / `done`) — the Resume
+ * button's, and a sent turn's that brings it back (turns.ts), which treats
+ * `not-stopped` as nothing to do: another resume already brought it up, or it
+ * never stopped. A blocked resume throws {@link ResumeBlockedError}.
+ */
+export async function resumeIfStopped(
+  id: string,
+): Promise<{ kind: "resumed" } | { kind: "not-stopped"; status: string }> {
+  return stoppedResumes.run(id, async () => {
+    const row = await getConversation(id);
+    if (!row) throw new Error(`Conversation ${id} not found`);
+    if (row.status !== "gone" && row.status !== "done") {
+      return { kind: "not-stopped", status: row.status };
+    }
+    await resumeStopped(row);
+    return { kind: "resumed" };
+  });
+}
+
+async function resumeStopped(row: Conversation): Promise<void> {
   // Refuse before `respawnResume` touches anything, so a blocked resume leaves
   // the conversation exactly where the user left it. (`respawnResume` asserts
   // the same invariant; this call is what turns it into a clean 409 with an
@@ -856,8 +888,6 @@ export async function resumeConversation(id: string): Promise<Conversation> {
   await respawnResume(row);
 
   await updateTask(row.taskId, { drop: false, hold: false });
-
-  return (await getConversation(id)) as Conversation;
 }
 
 /**

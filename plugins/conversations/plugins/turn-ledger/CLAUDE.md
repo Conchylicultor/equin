@@ -151,7 +151,11 @@ messages — the web's echo retirement (`pending-turn`'s `transcriptShows`).
 Every sender goes through `submitTurn` (conversations server, `turns.ts`), so
 there is no typed turn without a row: the prompt input (`POST …/turn`), Push &
 Exit, AskUserQuestion answers, the held-turn flush and the spawn's launch
-message. The launch's own prompt is a `launch` row, accepted on the
+message. A **stopped** conversation (`gone` / `done`, no agent) is decided by
+the turn's kind (`resumesStopped`, core): a user's `turn` is recorded and
+resumes it (conversations `resumeIfStopped`), held until the agent is up;
+every other kind is refused as `stopped` and writes no row — never typed into
+an agent that is not there. The launch's own prompt is a `launch` row, accepted on the
 transaction that commits the conversation (conversations `commitConversation`),
 so it is `held` — and echoed — from the moment the conversation exists, and
 rides the launch message as the oldest held turn. `acceptTurn` holds a turn while its conversation's agent is coming up —
@@ -324,6 +328,7 @@ withdrawn).
     - `conversationTurns`
     - `LedgerTurnSchema`
     - `ledgerTurnsEntityRef`
+    - `resumesStopped`
     - `RETRYABLE_TURN_STATES`
     - `SETTLED_TURN_STATES`
     - `transcriptUuidOfTurn`

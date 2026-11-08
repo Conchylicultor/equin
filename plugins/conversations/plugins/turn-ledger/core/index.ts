@@ -4,6 +4,7 @@ export { conversationTurns } from "./resources";
 export { LedgerTurnSchema } from "./entity";
 export {
   RETRYABLE_TURN_STATES,
+  resumesStopped,
   SETTLED_TURN_STATES,
   TurnKindSchema,
   TurnStateSchema,

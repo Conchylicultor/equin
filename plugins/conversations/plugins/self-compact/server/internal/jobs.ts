@@ -21,6 +21,10 @@ const productionPorts: CompactionPorts = {
     });
     if (out.kind === "not-found")
       throw new Error(`compaction: conversation ${conversationId} not found`);
+    if (out.kind === "stopped")
+      throw new Error(
+        `compaction: conversation ${conversationId} is ${out.status}`,
+      );
   },
 };
 

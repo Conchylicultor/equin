@@ -29,6 +29,12 @@ const productionPorts: MessagePorts = {
     });
     if (out.kind === "not-found")
       throw new Error(`message: conversation ${conversationId} not found`);
+    // `sendAgentMessage` resumed a stopped target before this: only a target
+    // that stopped again in between is still one.
+    if (out.kind === "stopped")
+      throw new Error(
+        `message: conversation ${conversationId} is ${out.status}`,
+      );
   },
 };
 

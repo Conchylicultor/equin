@@ -19,6 +19,9 @@ export const handleAnswer = implementMachine(
       typedText: await resolvePromptAttachments(params.id, body.text),
     });
     if (outcome.kind === "not-found") throw new HttpError(404, "Not found");
+    // The question died with the agent: an answer never resumes it.
+    if (outcome.kind === "stopped")
+      throw new HttpError(409, `Conversation is ${outcome.status}`);
     return { turnId: outcome.turn.id };
   },
 );

@@ -60,6 +60,12 @@ const productionPorts: DeliverPorts = {
     });
     if (out.kind === "not-found")
       throw new Error(`event turn: conversation ${conversationId} not found`);
+    // An event never reopens a stopped agent: the failed send unclaims the
+    // rows (sendClaimedTurn), as the send to an absent agent did before.
+    if (out.kind === "stopped")
+      throw new Error(
+        `event turn: conversation ${conversationId} is ${out.status}`,
+      );
   },
   async digest(conversationId) {
     return (await treeDigest({ conversationId }))?.text ?? null;

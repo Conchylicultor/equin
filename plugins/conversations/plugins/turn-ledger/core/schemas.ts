@@ -30,6 +30,31 @@ export const TurnKindSchema = z.enum([
 export type TurnKind = z.infer<typeof TurnKindSchema>;
 
 /**
+ * What a turn of each kind does to a STOPPED conversation (`gone` / `done`:
+ * no agent to type into). `true` — the turn resumes it and waits, held, for
+ * the agent to come up: a person's own message to a conversation they left is
+ * them continuing it, as the Resume button would. `false` — the turn is
+ * refused (the accept's `stopped` outcome) and no row is written: an automatic
+ * turn never reopens what its agent ended, nor does a wrap-up (Push & Exit
+ * asks a running agent to finish), an answer's question died with the agent,
+ * and a launch is always held by a `starting` row. A Record, so a new
+ * kind cannot be added without deciding.
+ */
+const RESUMES_STOPPED: Record<TurnKind, boolean> = {
+  turn: true,
+  "push-and-exit": false,
+  answer: false,
+  launch: false,
+  event: false,
+  compact: false,
+};
+
+/** Whether a turn of this kind resumes a stopped conversation ({@link RESUMES_STOPPED}). */
+export function resumesStopped(kind: TurnKind): boolean {
+  return RESUMES_STOPPED[kind];
+}
+
+/**
  * Where one turn stands. Every verdict comes from an event — the runtime's
  * send, the agent's confirmation (`turn_started`: its CLI started the turn),
  * the agent going away, or Stop — never a timer.

@@ -6,7 +6,7 @@ import {
   getConversation,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { turnIdKind, type TurnId } from "../../core";
-import { typedTextOf } from "../../core";
+import { resumesStopped, typedTextOf } from "../../core";
 import type { TurnKind, TurnState } from "../../core";
 import { _conversationTurns } from "./tables";
 import { userTurnSent } from "./tables-user-turn-sent-event";
@@ -37,8 +37,17 @@ export type AcceptOutcome =
   | { kind: "not-found" }
   /** Kept as `held`: the conversation's agent is still coming up ({@link isComingUp}). */
   | { kind: "held"; turn: TurnRow }
-  /** Recorded as `typing`: the caller delivers it now. */
+  /**
+   * Recorded as `typing`: the caller delivers it now — resuming the
+   * conversation first when it is stopped and the turn's kind resumes it
+   * (`resumesStopped`).
+   */
   | { kind: "send"; turn: TurnRow }
+  /**
+   * Not recorded: the conversation is stopped (no agent) and a turn of this
+   * kind does not resume it (`resumesStopped`).
+   */
+  | { kind: "stopped"; status: "gone" | "done" }
   /** A row with this id exists already — a retried request; nothing to do. */
   | { kind: "duplicate"; turn: TurnRow };
 
@@ -90,6 +99,16 @@ export async function acceptTurn(
       .where(eq(_conversations.id, conversationId))
       .for("update");
     if (!conversation) return { kind: "not-found" };
+    if (
+      (conversation.status === "gone" || conversation.status === "done") &&
+      !resumesStopped(turn.kind)
+    ) {
+      // A retried request still finds the row its first attempt wrote.
+      const existing = await existingTurn(tx, conversationId, turn.id);
+      return existing
+        ? { kind: "duplicate", turn: existing }
+        : { kind: "stopped", status: conversation.status };
+    }
     const held = isComingUp(conversation);
     const [inserted] = await tx
       .insert(_conversationTurns)
@@ -106,17 +125,29 @@ export async function acceptTurn(
       .onConflictDoNothing({ target: _conversationTurns.id })
       .returning();
     if (inserted) return { kind: held ? "held" : "send", turn: inserted };
-    const [existing] = await tx
-      .select()
-      .from(_conversationTurns)
-      .where(eq(_conversationTurns.id, turn.id));
-    if (existing?.conversationId !== conversationId) {
-      throw new Error(
-        `turn ${turn.id} already belongs to conversation ${existing?.conversationId ?? "<none>"}, not ${conversationId}`,
-      );
-    }
+    const existing = await existingTurn(tx, conversationId, turn.id);
+    if (!existing) throw new Error(`turn ${turn.id} conflicted but is gone`);
     return { kind: "duplicate", turn: existing };
   });
+}
+
+/** The row a repeated id already wrote — throws when it is another conversation's. */
+async function existingTurn(
+  tx: Tx,
+  conversationId: string,
+  turnId: TurnId,
+): Promise<TurnRow | null> {
+  const [existing] = await tx
+    .select()
+    .from(_conversationTurns)
+    .where(eq(_conversationTurns.id, turnId));
+  if (!existing) return null;
+  if (existing.conversationId !== conversationId) {
+    throw new Error(
+      `turn ${turnId} already belongs to conversation ${existing.conversationId}, not ${conversationId}`,
+    );
+  }
+  return existing;
 }
 
 /**

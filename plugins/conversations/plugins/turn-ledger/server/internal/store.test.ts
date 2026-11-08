@@ -196,6 +196,39 @@ describe("acceptTurn", () => {
     expect(String(caught)).toContain("already belongs to conversation");
   });
 
+  test("a stopped conversation refuses a turn that does not resume it, writing no row", async () => {
+    for (const status of ["done", "gone"] as const) {
+      const id = await seedConversation(status);
+      const once = turn("hello");
+      expect(await acceptTurn(id, once, conn)).toEqual({
+        kind: "stopped",
+        status,
+      });
+      expect(await getTurn(once.id, conn)).toBeNull();
+    }
+  });
+
+  test("a stopped conversation still answers a repeated id with its row", async () => {
+    const id = await seedConversation("waiting");
+    const once = turn("hello");
+    expect((await acceptTurn(id, once, conn)).kind).toBe("send");
+    await t.db.execute(
+      sql`UPDATE conversations SET status = 'done' WHERE id = ${id}`,
+    );
+    expect((await acceptTurn(id, once, conn)).kind).toBe("duplicate");
+  });
+
+  test("a stopped conversation records a turn that resumes it, for the caller to deliver", async () => {
+    const id = await seedConversation("done");
+    const accepted = await acceptTurn(
+      id,
+      { ...turn("go on"), kind: "turn" },
+      conn,
+    );
+    expect(accepted.kind).toBe("send");
+    if (accepted.kind === "send") expect(accepted.turn.state).toBe("typing");
+  });
+
   test("a slash command is confirmed like any turn", async () => {
     const id = await seedConversation("waiting");
     const accepted = await acceptTurn(id, turn("/compact"), conn);

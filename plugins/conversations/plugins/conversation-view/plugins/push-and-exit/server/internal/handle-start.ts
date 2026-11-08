@@ -20,6 +20,8 @@ export const handleStart = implement(
       typedText: prompt,
     });
     if (outcome.kind === "not-found") throw new HttpError(404, "Not found");
+    if (outcome.kind === "stopped")
+      throw new HttpError(409, `Conversation is ${outcome.status}`);
     return { turnId: outcome.turn.id };
   },
 );
