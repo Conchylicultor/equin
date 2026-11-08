@@ -1,6 +1,6 @@
 {
-  "id": "3eae9304-169b-4ba5-9cd0-7179ea9f7118",
-  "prevId": "02649ede-c21c-49a2-8be8-299a7d9b6c00",
+  "id": "fb9ad05d-93a6-4e57-9062-4eabfd7e6dab",
+  "prevId": "3eae9304-169b-4ba5-9cd0-7179ea9f7118",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -11758,6 +11758,93 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.report_fixes": {
+      "name": "report_fixes",
+      "schema": "",
+      "columns": {
+        "report_id": {
+          "name": "report_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "commit": {
+          "name": "commit",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "landed_at": {
+          "name": "landed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "deployed_at": {
+          "name": "deployed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "regressed_at": {
+          "name": "regressed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "regressed_commit": {
+          "name": "regressed_commit",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "report_fixes_landed_idx": {
+          "name": "report_fixes_landed_idx",
+          "columns": [
+            {
+              "expression": "landed_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "report_fixes_report_id_reports_id_fk": {
+          "name": "report_fixes_report_id_reports_id_fk",
+          "tableFrom": "report_fixes",
+          "tableTo": "reports",
+          "columnsFrom": [
+            "report_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {
+        "report_fixes_report_id_commit_pk": {
+          "name": "report_fixes_report_id_commit_pk",
+          "columns": [
+            "report_id",
+            "commit"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.reports_reconciled": {
       "name": "reports_reconciled",
       "schema": "",
@@ -11890,6 +11977,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "last_commit": {
+          "name": "last_commit",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "recent": {
           "name": "recent",
           "type": "jsonb",
@@ -11906,6 +11999,25 @@
         "task_id": {
           "name": "task_id",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "fix_state": {
+          "name": "fix_state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'open'"
+        },
+        "fix_commit": {
+          "name": "fix_commit",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "fix_state_at": {
+          "name": "fix_state_at",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
         },
@@ -11986,6 +12098,21 @@
             },
             {
               "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "reports_fix_state_idx": {
+          "name": "reports_fix_state_idx",
+          "columns": [
+            {
+              "expression": "fix_state",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -12199,6 +12326,12 @@
         },
         "action": {
           "name": "action",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "state": {
+          "name": "state",
           "type": "jsonb",
           "primaryKey": false,
           "notNull": false

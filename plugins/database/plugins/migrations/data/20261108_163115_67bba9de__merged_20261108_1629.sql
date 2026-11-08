@@ -1,5 +1,6 @@
--- singularity:snapshot id=4156df70-3c35-42a1-bcba-b800f0fbc72a parents=59f5fa0f-368d-4bae-953a-1830707e831d
--- singularity:supersedes 5542c0cc
+-- singularity:snapshot id=fb9ad05d-93a6-4e57-9062-4eabfd7e6dab parents=3eae9304-169b-4ba5-9cd0-7179ea9f7118
+-- singularity:supersedes b39b80e9
+-- singularity:supersedes b39b80e9 <- 5542c0cc
 -- singularity:phase expand
 CREATE TABLE "report_fixes" (
 	"report_id" text NOT NULL,

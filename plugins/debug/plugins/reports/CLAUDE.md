@@ -40,21 +40,28 @@ All reports are listed — noise is surfaced via the badge, never filtered out.
 
 ## Plugin reference
 
-- Description: Debug pane listing all recorded reports (including low-signal/noise crashes) with kind, source, count, noise flag, and linked task; and a report notification's Fix (the fix-report notification action), the detail pane's investigate launch.
+- Description: Debug pane listing all recorded reports (including low-signal/noise crashes) with kind, source, count, noise flag, fix status and linked task — a view bar of Worklist (open ∪ regressed) / Regressed / Fix pending / Fixed / All; and a report notification's Fix (the fix-report notification action), the detail pane's investigate launch.
 - Web:
   - Slots:
     - `reportsPane.Actions`
     - `reportDetailPane.Actions`
+    - `sources`
   - Slot contributors:
     - `reportsPane.Actions` ← `primitives.pane`
     - `reportDetailPane.Actions` ← `primitives.pane`
+    - `sources` ← `debug.reports`
   - Contributes:
     - `Pane.Register` "report-detail"
     - `Pane.Register` "reports"
     - `DebugApp.Sidebar` "Reports"
     - `Notifications.Action` "fix-report"
-  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/data-view` ×5
+    - `sources` "Worklist" → `ReportsSource`
+    - `sources` "Regressed" → `ReportsSource`
+    - `sources` "Fix pending" → `ReportsSource`
+    - `sources` "Fixed" → `ReportsSource`
+    - `sources` "All" → `ReportsSource`
+  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×7
     - `primitives/pane` ×5
     - `network/live` ×2
     - `primitives/launch/investigate` ×2
