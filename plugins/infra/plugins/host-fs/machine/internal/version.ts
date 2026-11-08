@@ -1,4 +1,5 @@
 import { stat } from "@plugins/packages/plugins/timed-fs/core";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import { basename, dirname, join } from "node:path";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
@@ -156,8 +157,7 @@ async function watchEntriesOf(
           const error = err instanceof Error ? err : new Error(String(err));
           reportServerError({
             message: `[host-fs] reading the stat of ${dir} after a change failed: ${error.message}`,
-            stack: error.stack,
-            errorType: error.name,
+            ...crashFieldsOf(error),
           });
         }),
     });

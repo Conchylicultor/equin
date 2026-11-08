@@ -1,4 +1,5 @@
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import { containsCommit } from "@plugins/primitives/plugins/commit-list/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import {
@@ -60,8 +61,7 @@ export const regressionJudge = sinkHandler(
         const error = err instanceof Error ? err : new Error(String(err));
         reportServerError({
           message: `[reports] could not judge whether report ${o.reportId} regressed: ${error.message}`,
-          stack: error.stack,
-          errorType: error.name,
+          ...crashFieldsOf(error),
         });
       }
     });

@@ -1,4 +1,9 @@
 import { describe, expect, test } from "bun:test";
+import {
+  crashFingerprint,
+  type CrashPayload,
+} from "@plugins/reports/plugins/crash/core";
+import { SubjectError } from "@plugins/packages/plugins/error-subject/core";
 import { bootCrashReport, stackRepoPaths } from "./boot-crash";
 
 const ROOT = "/repo/wt";
@@ -34,7 +39,7 @@ describe("bootCrashReport", () => {
     expect(report).toEqual({
       kind: "crash",
       message: "Backend of wt-a crashed during boot: boom",
-      data: { errorType: "TypeError", stack: err.stack ?? null },
+      data: { errorType: "TypeError", stack: err.stack ?? null, scope: null },
     });
   });
 
@@ -49,5 +54,69 @@ describe("bootCrashReport", () => {
       mergeBase: "a".repeat(40),
     });
     expect(report.code?.mergeBase).toBe("a".repeat(40));
+  });
+});
+
+describe("boot-crash identity", () => {
+  // Every failed migration throws from the one runner frame: before the
+  // error carried its subject, all of them shared one fingerprint
+  // (report-1793851409-s559e6).
+  const RUNNER_STACK = [
+    "Error: migration failed",
+    `    at runSteps (${ROOT}/plugins/database/plugins/migrations/server/internal/runner.ts:727:17)`,
+    `    at async planAndRun (${ROOT}/plugins/database/plugins/migrations/server/internal/runner.ts:692:11)`,
+    `    at async <anonymous> (${ROOT}/plugins/database/plugins/migrations/server/internal/runner.ts:780:46)`,
+  ].join("\n");
+  function migrationFailure(subject: string, code: string, worktree: string) {
+    const err = new SubjectError(`migration ${subject} failed`, {
+      subject,
+      cause: Object.assign(new Error("pg"), { code }),
+    });
+    err.stack = RUNNER_STACK;
+    return bootCrashReport(worktree, err, null);
+  }
+  async function fingerprintOf(r: ReturnType<typeof bootCrashReport>) {
+    return crashFingerprint(r.data as CrashPayload, {
+      message: r.message,
+      source: "cli",
+    });
+  }
+
+  test("two migrations failing through the same runner frames are two rows", async () => {
+    const a = await fingerprintOf(
+      migrationFailure(
+        "migration page_links_first_edge (expand)",
+        "42701",
+        "wt-a",
+      ),
+    );
+    const b = await fingerprintOf(
+      migrationFailure(
+        "migration reports_stale_origin_backfill (whole)",
+        "42703",
+        "wt-a",
+      ),
+    );
+    expect(a).not.toBe(b);
+  });
+
+  test("one migration, two Postgres error classes: two rows", async () => {
+    const s = "migration page_links_first_edge (expand)";
+    expect(await fingerprintOf(migrationFailure(s, "42701", "wt-a"))).not.toBe(
+      await fingerprintOf(migrationFailure(s, "55P03", "wt-a")),
+    );
+  });
+
+  test("one cause in two worktrees is one row", async () => {
+    const s = "migration page_links_first_edge (expand)";
+    expect(await fingerprintOf(migrationFailure(s, "42701", "wt-a"))).toBe(
+      await fingerprintOf(migrationFailure(s, "42701", "wt-b")),
+    );
+  });
+
+  test("the subject is the report's scope", () => {
+    expect(
+      migrationFailure("migration x (expand)", "42701", "wt-a").data?.["scope"],
+    ).toBe("migration x (expand) › code 42701");
   });
 });

@@ -1,4 +1,5 @@
 import { hash64 } from "@plugins/packages/plugins/string-hash/core";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import {
   createResourceRuntime,
   ResourceGuardError,
@@ -397,7 +398,7 @@ function errorReport(context: string, err: unknown): ServerErrorReport {
   const e = err instanceof Error ? err : new Error(String(err));
   return {
     message: `[resources] ${context}: ${e.message}`,
-    stack: e.stack ?? null,
+    ...crashFieldsOf(e),
     errorType:
       e instanceof ResourceGuardError
         ? e.identity

@@ -1,4 +1,5 @@
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import { recordEntrySpan } from "@plugins/infra/plugins/runtime-profiler/core";
 import { UNSAFE_getRegisteredJob, type JobTaskPayload } from "./registry";
 import { scheduleResume } from "./resume-job";
@@ -37,7 +38,7 @@ export async function UNSAFE_runJobRow(
   const job = UNSAFE_getRegisteredJob(payload.jobName);
   if (!job) {
     const err = new Error(`[jobs] unknown job "${payload.jobName}"`);
-    reportServerError({ message: err.message, stack: err.stack ?? null });
+    reportServerError({ message: err.message, ...crashFieldsOf(err) });
     return { kind: "failed", error: err, retry: false };
   }
   // Validation only — the stored payload is already in post-transform shape
@@ -47,7 +48,7 @@ export async function UNSAFE_runJobRow(
     const err = new Error(
       `[jobs] input schema drift for "${payload.jobName}": ${validation.error.message}`,
     );
-    reportServerError({ message: err.message, stack: err.stack ?? null });
+    reportServerError({ message: err.message, ...crashFieldsOf(err) });
     return { kind: "failed", error: err, retry: false };
   }
 
@@ -90,8 +91,7 @@ export async function UNSAFE_runJobRow(
       maxAttempts: meta.maxAttempts,
       retrying: !finality.workflowDead,
       message: errObj.message,
-      stack: errObj.stack ?? null,
-      errorType: errObj.name,
+      crash: crashFieldsOf(errObj),
     });
     if (finality.workflowDead) await discardWorkflowLog(workflowRunId);
     return { kind: "failed", error: err, retry: !finality.workflowDead };

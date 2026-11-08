@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import { boundaryReportSink } from "@plugins/primitives/plugins/error-boundary/web";
 import { wedgeReportSink } from "@plugins/infra/plugins/health/web";
 import { report } from "@plugins/reports/web";
@@ -36,7 +37,9 @@ export function CrashCollector() {
         message: err?.message ?? e.message,
         url: window.location.href,
         userAgent: navigator.userAgent,
-        data: { errorType: err?.name ?? null, stack: err?.stack ?? null },
+        // No Error object: no type either, so the message is the identity.
+        data:
+          err === null ? { errorType: null, stack: null } : crashFieldsOf(err),
       });
     };
 
@@ -55,7 +58,9 @@ export function CrashCollector() {
         message: err?.message ?? String(e.reason ?? "Unhandled rejection"),
         url: window.location.href,
         userAgent: navigator.userAgent,
-        data: { errorType: err?.name ?? null, stack: err?.stack ?? null },
+        // No Error object: no type either, so the message is the identity.
+        data:
+          err === null ? { errorType: null, stack: null } : crashFieldsOf(err),
       });
     };
 
@@ -70,8 +75,7 @@ export function CrashCollector() {
         url: window.location.href,
         userAgent: navigator.userAgent,
         data: {
-          errorType: r.error.name,
-          stack: r.error.stack ?? null,
+          ...crashFieldsOf(r.error),
           componentStack: r.componentStack,
           slot: r.slot,
           label: r.label,
@@ -115,7 +119,7 @@ export function CrashCollector() {
         message: err.message,
         url: window.location.href,
         userAgent: navigator.userAgent,
-        data: { errorType: err.name, stack: err.stack ?? null },
+        data: crashFieldsOf(err),
       });
     });
 

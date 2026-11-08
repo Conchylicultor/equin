@@ -3,6 +3,7 @@ import {
   processCrashSink,
   sinkHandler,
 } from "@plugins/framework/plugins/server-core/core";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import type { ProcessCrash } from "@plugins/framework/plugins/server-core/core";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import type { ReportInput } from "@plugins/reports/core";
@@ -105,7 +106,7 @@ function recordSurvivedRejection(error: Error): boolean {
     kind: "crash",
     source: "server-unhandled",
     message: error.message,
-    data: { errorType: error.name, stack: error.stack ?? null },
+    data: crashFieldsOf(error),
   };
   // Caught, never rethrown: a rejection from here would come straight back to
   // this handler — a failing database would loop. Printed instead.
@@ -132,7 +133,7 @@ function outsideServingInput(
   return {
     kind: "crash",
     message: `${what} in ${where} of ${runtimeNamespace()}: ${error.message}`,
-    data: { errorType: error.name, stack: error.stack ?? null },
+    data: crashFieldsOf(error),
   };
 }
 
@@ -180,9 +181,12 @@ export function replayedReportInput(c: BufferedReport): ReportInput {
     message: c.message,
     commit: c.commit ?? null,
     ...(Number.isNaN(occurredAt) ? {} : { occurredAt }),
+    // A line from before uncaught exceptions carried their payload: no
+    // subject was recorded.
     data: c.data ?? {
       errorType: c.errorType ?? null,
       stack: c.stack ?? null,
+      scope: null,
     },
   };
 }

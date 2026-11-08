@@ -13,6 +13,13 @@
    `Error`, server call sites passing `stack: null`), with the per-occurrence
    tokens normalized away so a recurring failure still accumulates on one row.
 
+Whatever the branch, a `scope` is prefixed: what a shared throw site failed
+for. Filers derive it from the error with `packages/error-subject`'s
+`crashFieldsOf` (a `SubjectError`'s subject, the cause's class code such as a
+SQLSTATE, plus the caller's own — a job's name), never by copying `name` /
+`stack` by hand (`error-subject/crash-fields-of`). That is what splits the one
+migration runner's failures into one row per migration and error class.
+
 `core/crash-kind.test.ts` pins branch 1 and 2 as literal hashes: they reproduce
 the pre-2026-09 input byte for byte, so live report rows keep their identity.
 Add a case there before changing any of this.

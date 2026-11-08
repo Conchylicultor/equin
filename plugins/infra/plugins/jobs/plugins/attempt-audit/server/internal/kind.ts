@@ -29,7 +29,12 @@ export const jobAttemptFailedKind = ReportKind({
   schema: JobAttemptFailedPayloadSchema,
   fingerprint: async (d: JobAttemptFailedPayload, ctx) =>
     `job-attempt:${await crashFingerprint(
-      { errorType: d.errorType, stack: d.stack, scope: d.jobName },
+      {
+        ...d,
+        // Only an error naming its subject adds to the job's name, so every
+        // other job failure keeps its row.
+        scope: d.scope ? `${d.jobName} › ${d.scope}` : d.jobName,
+      },
       { ...ctx, message: d.error },
     )}`,
   meta: { tag: "[jobs]", notif: "Job attempt failed", variant: "error" },

@@ -4,6 +4,7 @@ import {
   machineNode,
   pluginOfNode,
 } from "@plugins/framework/plugins/plugin-id/core";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import {
   computeLoadWaves,
   topoSortPlugins,
@@ -482,12 +483,9 @@ function reportPostReadyHookFailure(
   console.error(`[plugin.${p.id}] ${hook} failed`, err);
   // A non-Error throw has no stack of its own: none, rather than this
   // function's (which would point at the reporter, not the hook).
-  const isError = err instanceof Error;
   reportServerError({
-    message: `[plugin.${p.id}] ${hook} failed: ${isError ? err.message : describeThrown(err)}`,
-    stack: isError ? (err.stack ?? null) : null,
-    errorType: isError ? err.name : typeof err,
-    scope: `plugin-hook:${p.id}:${hook}`,
+    message: `[plugin.${p.id}] ${hook} failed: ${err instanceof Error ? err.message : describeThrown(err)}`,
+    ...crashFieldsOf(err, `plugin-hook:${p.id}:${hook}`),
   });
 }
 

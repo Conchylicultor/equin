@@ -1,4 +1,5 @@
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import { queryRows } from "@plugins/database/plugins/sql-rows/core";
 import { z } from "zod";
 import { createDbClient, type DbClient } from "./client";
@@ -84,7 +85,7 @@ export function createSchemaGenerationLocks({
       session = null;
       reportServerError({
         message: `[database] schema-generation session lost (generation ${held ?? "none"} no longer held): ${err.message}`,
-        stack: err.stack ?? null,
+        ...crashFieldsOf(err),
         errorType: "DbConnectionError",
       });
     });

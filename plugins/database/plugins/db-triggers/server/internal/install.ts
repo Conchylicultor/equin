@@ -1,3 +1,4 @@
+import { SubjectError } from "@plugins/packages/plugins/error-subject/core";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
@@ -516,9 +517,11 @@ async function applyTable(
       }
     });
   } catch (e) {
-    throw new Error(
+    // One installer for every table: the table (and the cause's SQLSTATE) is
+    // what tells one table's failure report from another's.
+    throw new SubjectError(
       `db-triggers: installing the triggers on "${table}" failed. Tables are installed in the fixed order [${order.join(", ")}]; inside one transaction a writer taking them in another order during a hot swap can deadlock with the boot (SQLSTATE 40P01), which fails it loudly here — retry the deploy once that writer is gone. Cause: ${(e as Error).message}`,
-      { cause: e },
+      { subject: `db-triggers ${table}`, cause: e },
     );
   }
   if (creates.length + drops.length > 0) {

@@ -1,4 +1,5 @@
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import { runInBackgroundLane } from "@plugins/infra/plugins/runtime-profiler/core";
 import { UNSAFE_getRegisteredJob, type JobTaskPayload } from "./registry";
 import { announceAttemptSettled } from "./attempt-seam";
@@ -65,9 +66,7 @@ export async function announceRunDead(
     const errObj = err instanceof Error ? err : new Error(String(err));
     reportServerError({
       message: `[jobs] ${payload.jobName}: onDead (${death.cause}) threw: ${errObj.message}`,
-      stack: errObj.stack ?? null,
-      errorType: errObj.name,
-      scope: payload.jobName,
+      ...crashFieldsOf(errObj, payload.jobName),
     });
   }
 }

@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import {
   runInBackgroundLane,
@@ -174,7 +175,7 @@ export async function assembleEvents(
 function reportSectionError(id: string, what: string, err: unknown): void {
   reportServerError({
     message: `trace class "${id}" ${what}: ${err instanceof Error ? err.message : String(err)}`,
-    stack: err instanceof Error ? err.stack : null,
+    ...crashFieldsOf(err),
     errorType: "TraceClassError",
   });
 }

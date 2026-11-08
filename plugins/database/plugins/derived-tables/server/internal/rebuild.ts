@@ -1,3 +1,4 @@
+import { SubjectError } from "@plugins/packages/plugins/error-subject/core";
 import { sha256Hex } from "@plugins/packages/plugins/string-hash/core";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { sql as drizzleSql } from "drizzle-orm";
@@ -412,9 +413,9 @@ async function assertSelectDeclared(tx: Exec, r: Rollup): Promise<void> {
         drizzleSql.raw(`CREATE TEMP VIEW ${q(view)} AS ${r.selectCheckSql}`),
       );
     } catch (e) {
-      throw new Error(
+      throw new SubjectError(
         `derived-tables: rollup "${r.table}"'s select does not compile: ${(e as Error).message}`,
-        { cause: e },
+        { subject: `rollup ${r.table}`, cause: e },
       );
     }
     const out = await executeRows(sp, {

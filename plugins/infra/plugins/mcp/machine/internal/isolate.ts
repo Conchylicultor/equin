@@ -1,4 +1,5 @@
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import { recordMcpContribution } from "./health";
 
 /** One contribution's outcome: its value, or the failure it was confined to. */
@@ -32,8 +33,7 @@ export async function runContribution<T>(
     console.error(`[mcp] ${what} failed:`, err);
     reportServerError({
       message: `MCP ${what} failed: ${message}`,
-      stack: err instanceof Error ? (err.stack ?? null) : null,
-      errorType: err instanceof Error ? err.name : typeof err,
+      ...crashFieldsOf(err),
     });
     return { ok: false, message };
   }

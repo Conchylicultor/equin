@@ -1,4 +1,5 @@
 import { implement } from "@plugins/infra/plugins/endpoints/server";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import {
   keptSnapshotValue,
   loadResourceByKey,
@@ -22,7 +23,7 @@ function reportOmitted(key: string, what: string, err: unknown): void {
   const e = err instanceof Error ? err : new Error(String(err));
   reportServerError({
     message: `[boot-snapshot] ${key} ${what} not preloaded: ${e.message}`,
-    stack: e.stack ?? null,
+    ...crashFieldsOf(e),
     errorType: e.constructor.name !== "Error" ? e.constructor.name : null,
   });
 }

@@ -1,4 +1,5 @@
 import type { WorkerEventMap, WorkerEvents } from "graphile-worker";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import { desc, eq, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "@plugins/database/server";
@@ -347,8 +348,7 @@ function guarded(label: string, fn: () => void): void {
     console.error(message, errObj);
     reportServerError({
       message,
-      stack: errObj.stack ?? null,
-      errorType: errObj.name,
+      ...crashFieldsOf(errObj),
     });
   }
 }

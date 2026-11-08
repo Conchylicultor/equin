@@ -1,4 +1,5 @@
 import type { WorkerEventMap, WorkerEvents, WorkerPool } from "graphile-worker";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import { createCoalescer } from "@plugins/packages/plugins/coalesce/core";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { runInBackgroundLane } from "@plugins/infra/plugins/runtime-profiler/core";
@@ -270,7 +271,6 @@ function report(what: string, err: unknown): void {
   const errObj = err instanceof Error ? err : new Error(String(err));
   reportServerError({
     message: `[jobs] queue wake: ${what}: ${errObj.message}`,
-    stack: errObj.stack ?? null,
-    errorType: errObj.name,
+    ...crashFieldsOf(errObj),
   });
 }

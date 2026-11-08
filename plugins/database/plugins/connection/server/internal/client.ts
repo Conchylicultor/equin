@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import { Client, Pool, type ClientBase, type ClientConfig } from "pg";
 import {
   currentEntryLabel,
@@ -492,7 +493,7 @@ export class DbClient extends Client {
     if (!hasRuntimeNamespace()) process.stderr.write(`${message}\n`);
     reportServerError({
       message,
-      stack: err.stack ?? null,
+      ...crashFieldsOf(err),
       errorType: "DbConnectionError",
     });
   };
@@ -788,7 +789,7 @@ function installConnectionErrorHandlers(pool: Pool, name: DbPoolName): void {
     if (!hasRuntimeNamespace()) process.stderr.write(`${message}\n`);
     reportServerError({
       message,
-      stack: err.stack ?? null,
+      ...crashFieldsOf(err),
       errorType: "DbConnectionError",
     });
   };

@@ -1,4 +1,5 @@
 import { realpath } from "@plugins/packages/plugins/timed-fs/core";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import { basename, dirname, join } from "node:path";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import type {
@@ -85,8 +86,7 @@ export async function rearmable(
         console.error(`[host-fs] re-arming the watch of ${what} failed`, error);
         reportServerError({
           message: `[host-fs] re-arming the watch of ${what} failed: ${error.message}`,
-          stack: error.stack,
-          errorType: error.name,
+          ...crashFieldsOf(error),
         });
       },
     );

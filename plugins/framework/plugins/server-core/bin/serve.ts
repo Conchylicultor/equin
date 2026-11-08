@@ -17,6 +17,7 @@ import {
   markServerSettled,
   handOffEpoch,
 } from "@plugins/framework/plugins/server-core/core";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import type {
   WsData,
   WsHandler,
@@ -212,8 +213,7 @@ export async function serve({
         );
         reportServerError({
           message: `[http] ${req.method} ${pathname}: ${errObj.message}`,
-          stack: errObj.stack ?? null,
-          errorType: errObj.name,
+          ...crashFieldsOf(errObj),
         });
       },
     });

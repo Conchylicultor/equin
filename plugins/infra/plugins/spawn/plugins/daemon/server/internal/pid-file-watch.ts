@@ -1,4 +1,5 @@
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   defineFileWatcher,
@@ -140,8 +141,7 @@ export function holdPidFile(
           const error = err instanceof Error ? err : new Error(String(err));
           reportServerError({
             message: `[daemon] could not watch the pid file ${pidFile}; it is read only when asked until a refresh opens the watch: ${error.message}`,
-            stack: error.stack,
-            errorType: error.name,
+            ...crashFieldsOf(error),
           });
         }
       }

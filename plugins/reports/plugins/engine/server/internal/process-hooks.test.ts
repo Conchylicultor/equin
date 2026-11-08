@@ -45,7 +45,7 @@ for (const mode of ["exec", "serve"] as const) {
         {
           kind: "crash",
           message: expect.stringContaining("Uncaught exception in "),
-          data: { errorType: "TypeError", stack: err.stack },
+          data: { errorType: "TypeError", stack: err.stack, scope: null },
         },
       ]);
       expect(outboxed[0]?.message).toEndWith(": boom");
@@ -60,7 +60,7 @@ for (const mode of ["exec", "serve"] as const) {
         {
           kind: "crash",
           message: expect.stringContaining("Unhandled rejection in "),
-          data: { errorType: "Error", stack: err.stack },
+          data: { errorType: "Error", stack: err.stack, scope: null },
         },
       ]);
       expect(outboxed[0]?.message).toEndWith(": later");
@@ -127,7 +127,12 @@ describe("replayedReportInput", () => {
       message: "x.updated_at is derived",
       commit: "9b06a6dcc5",
       occurredAt: Date.parse("2026-11-08T17:21:05.123Z"),
-      data: { errorType: "error", stack: "error: x\n    at a (b.ts:1:1)" },
+      // A flat line (an older backend's) recorded no subject.
+      data: {
+        errorType: "error",
+        stack: "error: x\n    at a (b.ts:1:1)",
+        scope: null,
+      },
     });
   });
 

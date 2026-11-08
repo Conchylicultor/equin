@@ -1,4 +1,5 @@
 import { basename, join } from "path";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { serveValue } from "@plugins/network/plugins/live/machine";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
@@ -20,7 +21,7 @@ function worktreePathOf(
 function reportWatchOpenError(conversationId: string, err: unknown): void {
   reportServerError({
     message: `[allow-files] the bypass-file watch of conversation ${conversationId} failed to open — its BYPASS chip hears no change until a write moves its workspace row or it is subscribed again: ${err instanceof Error ? err.message : String(err)}`,
-    stack: err instanceof Error ? (err.stack ?? null) : null,
+    ...crashFieldsOf(err),
     errorType: "AllowFilesWatchOpenError",
   });
 }

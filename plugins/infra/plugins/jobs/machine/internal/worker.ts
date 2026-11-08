@@ -1,4 +1,5 @@
 import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import { sql } from "drizzle-orm";
 import { EventEmitter } from "node:events";
 import {
@@ -726,7 +727,7 @@ async function dispatch(
   const job = UNSAFE_getRegisteredJob(payload.jobName);
   if (!job) {
     const err = new Error(`[jobs] unknown job "${payload.jobName}"`);
-    reportServerError({ message: err.message, stack: err.stack ?? null });
+    reportServerError({ message: err.message, ...crashFieldsOf(err) });
     await runInBackgroundLane(() => markJobPermanentlyFailed(meta.jobId));
     throw err;
   }
@@ -742,7 +743,7 @@ async function dispatch(
     const err = new Error(
       `[jobs] input schema drift for "${payload.jobName}": ${validation.error.message}`,
     );
-    reportServerError({ message: err.message, stack: err.stack ?? null });
+    reportServerError({ message: err.message, ...crashFieldsOf(err) });
     await runInBackgroundLane(() => markJobPermanentlyFailed(meta.jobId));
     throw err;
   }
@@ -806,8 +807,7 @@ async function dispatch(
       console.warn(message, errObj);
       reportServerError({
         message,
-        stack: errObj.stack ?? null,
-        errorType: errObj.name,
+        ...crashFieldsOf(errObj),
       });
     },
     async (): Promise<"completed" | "suspended"> => {
@@ -862,8 +862,7 @@ async function dispatch(
           maxAttempts: meta.maxAttempts,
           retrying: !finality.workflowDead,
           message: errObj.message,
-          stack: errObj.stack ?? null,
-          errorType: errObj.name,
+          crash: crashFieldsOf(errObj),
         });
         // A NonRetryableError signals a DETERMINISTIC failure — the same stored
         // input will fail identically on every retry. Collapse the retry budget so
@@ -945,7 +944,7 @@ async function dispatch(
       `[jobs] ${payload.jobName} (job ${meta.jobId}) is already locked by another live worker — deferring this dispatch`,
     );
     console.warn(err.message);
-    reportServerError({ message: err.message, stack: err.stack ?? null });
+    reportServerError({ message: err.message, ...crashFieldsOf(err) });
     throw err;
   }
   // An attempt after the first got through: a report of an earlier failed

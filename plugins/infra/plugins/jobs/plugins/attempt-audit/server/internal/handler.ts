@@ -64,8 +64,7 @@ async function fileAttempt(event: Failed): Promise<void> {
     attempt: event.attempt,
     maxAttempts: event.maxAttempts,
     error: event.message,
-    errorType: event.errorType,
-    stack: event.stack,
+    ...event.crash,
     fate: { state: event.retrying ? "retrying" : "last-attempt" },
   };
   const occurredAt = Date.now();

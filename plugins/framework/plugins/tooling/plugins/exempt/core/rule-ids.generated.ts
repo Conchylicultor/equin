@@ -60,6 +60,7 @@ export type ExemptableRuleId =
   | "endpoints/no-void-fetch-endpoint"
   | "endpoints:no-raw-json-handlers"
   | "entity-projection-safety/no-hand-rolled-entity-projection"
+  | "error-subject/crash-fields-of"
   | "events/no-raw-events-write"
   | "exempt/no-path-allowlist"
   | "format-safety/no-adhoc-prettier"

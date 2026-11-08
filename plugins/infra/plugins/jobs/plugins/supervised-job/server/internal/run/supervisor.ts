@@ -1,4 +1,5 @@
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import { basename } from "node:path";
 import { mkdir } from "node:fs/promises";
 import { openOwnedFd } from "@plugins/packages/plugins/owned-fd/core";
@@ -248,7 +249,7 @@ function reportRunFailure(scope: string, err: unknown): void {
     message: `[supervised-run] reconcile failed for ${scope}: ${
       err instanceof Error ? err.message : String(err)
     }`,
-    stack: err instanceof Error ? (err.stack ?? null) : null,
+    ...crashFieldsOf(err),
   });
 }
 
@@ -438,7 +439,7 @@ function reportWatchFailure(err: unknown): void {
     message: `[supervised-run] following the live runs' files failed: ${
       err instanceof Error ? err.message : String(err)
     } — their output is not streamed live, and each settles on the liveness tick (every 60 s) instead of when it ends`,
-    stack: err instanceof Error ? (err.stack ?? null) : null,
+    ...crashFieldsOf(err),
   });
 }
 

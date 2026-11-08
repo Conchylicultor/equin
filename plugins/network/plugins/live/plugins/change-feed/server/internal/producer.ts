@@ -1,4 +1,5 @@
 import { getTableName, is, type SQLWrapper } from "drizzle-orm";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import {
   getTableConfig,
@@ -377,7 +378,7 @@ function reportRouteFailure(change: ProducerChange, err: unknown): void {
   const lost = change.ids === null ? "all ids" : `${change.ids.length} id(s)`;
   reportServerError({
     message: `[change-feed] change producer for "${change.table}" failed to route its ${change.op} change (${lost}) — readers of the table miss it until they resubscribe: ${err instanceof Error ? err.message : String(err)}`,
-    stack: err instanceof Error ? (err.stack ?? null) : null,
+    ...crashFieldsOf(err),
     errorType: "ChangeProducerRouteError",
   });
 }

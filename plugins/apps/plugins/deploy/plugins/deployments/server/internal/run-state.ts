@@ -1,4 +1,5 @@
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import { and, desc, eq, isNotNull, isNull, or } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
@@ -678,7 +679,7 @@ function reattachRun(legId: string): void {
         message:
           `[deploy] could not rebuild the live view for ${legId}: ` +
           (err instanceof Error ? err.message : String(err)),
-        stack: err instanceof Error ? (err.stack ?? null) : null,
+        ...crashFieldsOf(err),
       });
     }
   });
@@ -720,7 +721,7 @@ export async function reconcileDeployLiveView(): Promise<void> {
         message:
           `[deploy] could not rebuild the live view for ${row.id}: ` +
           (err instanceof Error ? err.message : String(err)),
-        stack: err instanceof Error ? (err.stack ?? null) : null,
+        ...crashFieldsOf(err),
       });
     }
   }

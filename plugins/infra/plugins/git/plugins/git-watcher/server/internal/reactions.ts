@@ -1,4 +1,5 @@
 import type { Registration } from "@plugins/framework/plugins/server-core/core";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import type { RefAdvancedPayload } from "../../shared/types";
@@ -91,8 +92,7 @@ export async function runRefReactions(
       const error = err instanceof Error ? err : new Error(String(err));
       reportServerError({
         message: `[git-watcher] ref reaction ${reaction.name} failed on ${advance.refName}: ${error.message}`,
-        stack: error.stack,
-        errorType: error.name,
+        ...crashFieldsOf(error),
       });
     }
   }

@@ -2,6 +2,10 @@ import {
   type AppPath,
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
+  crashFieldsOf,
+  type CrashFields,
+} from "@plugins/packages/plugins/error-subject/core";
 import { type FSWatcher, watch } from "node:fs";
 import { mkdir, rename, unlink, utimes, writeFile } from "node:fs/promises";
 import { readFile, stat } from "@plugins/packages/plugins/timed-fs/core";
@@ -137,11 +141,7 @@ let readWaiters: (() => void)[] = [];
 let watchFailedAt: number | null = null;
 
 /** A failure of the latch's own machinery, as {@link duressLatchFaultSink} carries it. */
-export interface DuressLatchFault {
-  message: string;
-  stack: string | null;
-  errorType: string;
-}
+export type DuressLatchFault = { message: string } & CrashFields;
 
 /**
  * Where the latch's own failures go. A held report sink rather than the
@@ -166,8 +166,7 @@ function reportLatchFailure(what: string, err: unknown): void {
   console.error(`[duress-latch] ${message}`, error);
   duressLatchFaultSink.emit({
     message,
-    stack: error.stack ?? null,
-    errorType: error.name,
+    ...crashFieldsOf(error),
   });
 }
 

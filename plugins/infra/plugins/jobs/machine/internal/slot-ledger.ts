@@ -1,4 +1,5 @@
 import type { EventEmitter } from "node:events";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import type { Job, WorkerEventMap, WorkerEvents } from "graphile-worker";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { HOLD_CLASSES, holdForTask, type HoldClass } from "../../core/hold";
@@ -357,8 +358,7 @@ function guarded(label: string, fn: () => void): void {
     console.error(message, errObj);
     reportServerError({
       message,
-      stack: errObj.stack ?? null,
-      errorType: errObj.name,
+      ...crashFieldsOf(errObj),
     });
   }
 }

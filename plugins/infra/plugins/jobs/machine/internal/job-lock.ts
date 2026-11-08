@@ -1,4 +1,5 @@
 import type { Pool } from "pg";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import { z } from "zod";
 import { connectionString } from "@plugins/database/plugins/admin/server";
 import { createDbPool } from "@plugins/database/plugins/connection/server";
@@ -185,8 +186,7 @@ export async function withJobLock<T>(
         console.warn(message, errObj);
         reportServerError({
           message,
-          stack: errObj.stack ?? null,
-          errorType: errObj.name,
+          ...crashFieldsOf(errObj),
         });
       }
     }

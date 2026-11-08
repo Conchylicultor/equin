@@ -2,6 +2,7 @@ import {
   formatDeadlineLogLine,
   type QueryDeadlineEvent,
 } from "@plugins/database/plugins/connection/server";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import type { recordReport } from "@plugins/reports/plugins/engine/server";
 import type { captureTrace } from "@plugins/debug/plugins/trace/plugins/engine/server";
 import {
@@ -111,7 +112,7 @@ export function createQueryDeadlineHandler(
     } catch (err) {
       reportServerError({
         message: `[db] query-deadline: capturing the trace of a lost call failed: ${err instanceof Error ? err.message : String(err)}`,
-        stack: err instanceof Error ? (err.stack ?? null) : null,
+        ...crashFieldsOf(err),
         errorType: "QueryDeadlineTraceError",
       });
     }

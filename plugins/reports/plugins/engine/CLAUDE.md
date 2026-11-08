@@ -303,6 +303,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `sink-safety/no-adhoc-file-sink` — `server/internal/crash-append.ts` (sanctioned)
     - `blocking-fs/no-sync-fs` — `server/internal/crash-append.ts` (sanctioned)
     - `boundaries/no-platform-api` — `server/internal/buffer.ts`, `server/internal/crash-append.ts` (debt)
+    - `error-subject/crash-fields-of` — `server/internal/noise-input.ts` (sanctioned)
 - Cli:
   - Exports (types): `FixedReports`
   - Exports (values):

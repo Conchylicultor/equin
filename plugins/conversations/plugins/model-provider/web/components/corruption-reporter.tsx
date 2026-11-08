@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import { registerModelCorruptionReporter } from "../../core";
 import { report } from "@plugins/reports/web";
 
@@ -19,7 +20,7 @@ export function ModelCorruptionReporter() {
         message: err.message,
         url: window.location.href,
         userAgent: navigator.userAgent,
-        data: { errorType: err.name, stack: err.stack ?? null },
+        data: crashFieldsOf(err),
       });
     });
     return () => registerModelCorruptionReporter((m) => console.error(m));

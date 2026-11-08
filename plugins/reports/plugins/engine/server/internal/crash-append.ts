@@ -1,5 +1,6 @@
 import { serverPinCommit } from "@plugins/build/plugins/server-build-id/server";
 import { reportsBufferDir } from "@plugins/reports/data-dirs";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import { appendFileSync } from "node:fs";
 import { bufferFile, type BufferedReport } from "./buffer";
 
@@ -45,11 +46,17 @@ export type BufferAppend = { ok: true } | { ok: false; error: unknown };
 
 /** Buffer an uncaught exception synchronously — the process exits next. */
 export function appendUncaughtExceptionSync(err: Error): BufferAppend {
+  // The crash payload is derived here, while the error is still an object:
+  // the line is all the next boot gets, and the error's own subject (a shared
+  // throw site's, its cause's class code) is part of the report's identity.
+  const data = crashFieldsOf(err);
   return appendLine({
     source: "server-uncaught",
-    errorType: err.name,
+    kind: "crash",
+    data,
+    errorType: data.errorType,
     message: err.message,
-    stack: err.stack,
+    stack: undefined,
   });
 }
 

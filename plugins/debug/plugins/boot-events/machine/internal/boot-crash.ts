@@ -1,4 +1,5 @@
 import { relative, sep } from "node:path";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import {
   getBootMode,
   isProcessCrashHandled,
@@ -39,11 +40,15 @@ export function bootCrashReport(
   base: { mergeBase: string } | null,
 ): ProcessReport {
   const error = err instanceof Error ? err : new Error(String(err));
-  const stack = error.stack ?? null;
+  // The error's own subject reaches the report: a boot fails mostly in shared
+  // code (every failed migration throws from the one runner), so its frames
+  // alone put every cause on one row.
+  const data = crashFieldsOf(error);
+  const stack = data.stack;
   return {
     kind: "crash",
     message: `Backend of ${worktree} crashed during boot: ${error.message}`,
-    data: { errorType: error.name, stack },
+    data,
     // Main drops the report when it has changed these files since this
     // checkout branched — the bug may already be fixed there.
     ...(base !== null

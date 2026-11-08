@@ -1,4 +1,5 @@
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import { activeClaudeAccountId } from "@plugins/infra/plugins/claude-cli/plugins/accounts/server";
 import { noteClaudeCodeFailure } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
 import {
@@ -154,8 +155,7 @@ export async function invokeClaude<T>({
     if (caughtError) {
       reportServerError({
         message: `[claude-cli] ${input.source.name}: ${caughtError.message}`,
-        stack: caughtError.stack,
-        errorType: caughtError.name,
+        ...crashFieldsOf(caughtError),
       });
     }
     // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- observability write: records a claude-cli call log; must stay profiler-invisible

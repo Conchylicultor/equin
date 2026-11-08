@@ -518,6 +518,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `network/live/resource-protocol.RESOURCE_HTTP_ROUTE`
     - `network/live/resource-runtime.createResourceRuntime`
     - `network/live/resource-runtime.ResourceGuardError`
+    - `packages/error-subject.crashFieldsOf`
     - `packages/string-hash.hash64`
     - `primitives/report-sink.defineReportSink`
     - `primitives/report-sink.defineRequestSink`

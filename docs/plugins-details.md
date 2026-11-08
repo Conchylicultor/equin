@@ -28419,6 +28419,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live/resource-protocol.RESOURCE_HTTP_ROUTE`
           - `network/live/resource-runtime.createResourceRuntime`
           - `network/live/resource-runtime.ResourceGuardError`
+          - `packages/error-subject.crashFieldsOf`
           - `packages/string-hash.hash64`
           - `primitives/report-sink.defineReportSink`
           - `primitives/report-sink.defineRequestSink`
@@ -38035,6 +38036,28 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live/live-state-snapshot`
       - Core:
         - Exports (values): `withDeadline`
+    - **`error-subject`** — What an error is about, carried by the error: SubjectError (a shared throw site — the migration runner, the trigger installer — names the one subject it failed for), errorSubject(err) (the subjects along the cause chain plus the innermost class code, ENOENT / SQLSTATE) and crashFieldsOf(err, scope?) — the errorType / stack / scope every crash filer derives from an error, so a shared throw site's failures land on one report row per cause instead of one for all. Enforced by error-subject/crash-fields-of.
+      - Cross-plugin:
+        - Imported by: 26 plugins — full list in [`plugins/packages/plugins/error-subject/REFERENCE.md`](../plugins/packages/plugins/error-subject/REFERENCE.md)
+          - `infra` ×8
+          - `database` ×5
+          - `conversations` ×4
+          - `reports` ×3
+          - `debug` ×2
+          - `network` ×2
+          - `apps/deploy/deployments`
+          - `framework/server-core`
+      - Exemptions:
+        - Exempts itself from: `error-subject/crash-fields-of` — `core/internal/error-subject.ts` (sanctioned)
+        - Exempted by:
+          - `packages/error-subject` (0 debt)
+          - `reports/engine` (0 debt)
+      - Core:
+        - Exports (types): `CrashFields`
+        - Exports (values):
+          - `crashFieldsOf`
+          - `errorSubject`
+          - `SubjectError`
     - **`flock`** — Kernel advisory file locking: flockTry/flockRelease over libc flock(2), and waitForFlock — a push-based blocking acquire run in a child so the event loop never freezes. The one lock ownership the kernel releases on process death (SIGKILL included) and that consults no pid.
       - Core:
         - Uses:
@@ -52581,6 +52604,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `sink-safety/no-adhoc-file-sink` — `server/internal/crash-append.ts` (sanctioned)
           - `blocking-fs/no-sync-fs` — `server/internal/crash-append.ts` (sanctioned)
           - `boundaries/no-platform-api` — `server/internal/buffer.ts`, `server/internal/crash-append.ts` (debt)
+          - `error-subject/crash-fields-of` — `server/internal/noise-input.ts` (sanctioned)
       - Cli:
         - Exports (types): `FixedReports`
         - Exports (values):

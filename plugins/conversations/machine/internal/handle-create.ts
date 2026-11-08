@@ -1,4 +1,5 @@
 import { recordReport } from "@plugins/reports/plugins/engine/server";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import { HttpError } from "@plugins/infra/plugins/endpoints/core";
 import { implementMachine } from "@plugins/infra/plugins/endpoints/machine";
 import {
@@ -99,8 +100,7 @@ export const handleCreate = implementMachine(
         source: "server-caught",
         message: `createConversation failed: ${message}`,
         data: {
-          errorType: err instanceof Error ? err.name : "Error",
-          stack: err instanceof Error ? (err.stack ?? null) : null,
+          ...crashFieldsOf(err),
           status: err instanceof HttpError ? err.status : 500,
           label: "conversations.handleCreate",
         },

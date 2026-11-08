@@ -1,4 +1,5 @@
 import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import {
   defineFileWatcher,
   type FileWatcher,
@@ -48,7 +49,7 @@ async function productionDeps(): Promise<DrainDeps> {
         kind: "crash",
         source: "server-caught",
         message: error.message,
-        data: { errorType: error.name, stack: error.stack ?? null },
+        data: crashFieldsOf(error),
       });
     },
     isKnownKind: isReportKindRegistered,

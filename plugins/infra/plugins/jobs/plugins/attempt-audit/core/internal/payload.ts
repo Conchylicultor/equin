@@ -48,6 +48,10 @@ export const JobAttemptFailedPayloadSchema = z.object({
   error: z.string(),
   errorType: z.string().nullable(),
   stack: z.string().nullable(),
+  /** What the error says it is about (a shared throw site's subject, its
+   * cause's class code — `packages/error-subject`), beside the job's name in
+   * the report's identity. Absent on rows filed before it existed. */
+  scope: z.string().nullable().optional(),
   fate: AttemptFateSchema,
 });
 export type JobAttemptFailedPayload = z.infer<

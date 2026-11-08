@@ -31,6 +31,8 @@ import {
 import { MIGRATIONS_TABLE_NAME } from "@plugins/database/plugins/derived-views/core";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { z } from "zod";
+import { SubjectError } from "@plugins/packages/plugins/error-subject/core";
+import { migrationSubject } from "./migration-subject";
 
 const log = defineLogSink({
   id: "migrations",
@@ -382,7 +384,10 @@ export function planSchemaSteps(
       try {
         return [m, parseMigration(m.sqlText)] as const;
       } catch (e) {
-        throw new Error(`migration ${m.file}: ${(e as Error).message}`);
+        throw new SubjectError(`migration ${m.file}: ${(e as Error).message}`, {
+          subject: migrationSubject(m.file, "parse"),
+          cause: e,
+        });
       }
     }),
   );
@@ -724,11 +729,13 @@ async function runSteps(tx: Tx, steps: readonly SchemaStep[]): Promise<void> {
     try {
       await tx.execute(drizzleSql.raw(step.sql));
     } catch (e) {
-      throw new Error(
+      // This one throw site applies every migration, so its frames are the
+      // same for all of them: the subject (the migration, by its stable slug)
+      // and the cause's SQLSTATE are what tell one failure's report from
+      // another's (packages/error-subject).
+      throw new SubjectError(
         `migration ${label} failed to apply: ${(e as Error).message}`,
-        {
-          cause: e,
-        },
+        { subject: migrationSubject(step.file, step.phase), cause: e },
       );
     }
   }

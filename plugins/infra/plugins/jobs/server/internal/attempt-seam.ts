@@ -1,3 +1,4 @@
+import type { CrashFields } from "@plugins/packages/plugins/error-subject/core";
 import { defineRequestSink } from "@plugins/primitives/plugins/report-sink/core";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import type { RunDeathCause } from "./run-death";
@@ -30,8 +31,11 @@ export type JobAttemptEvent =
        * is followed by the row's `settled` (`dead`, or `superseded`). */
       retrying: boolean;
       message: string;
-      stack: string | null;
-      errorType: string | null;
+      /** The error's crash fields (`crashFieldsOf`): its type, stack and
+       * what it says it is about (a shared throw site's subject, its cause's
+       * class code) — with the job's name, the report's identity, so two
+       * causes of one job's failure through shared code are two rows. */
+      crash: CrashFields;
     }
   /** The run of a row is over for good, or a later attempt got through. */
   | {
@@ -68,9 +72,11 @@ export function announceAttemptFailed(
   if (jobAttemptSink.emit({ phase: "failed", ...event }) === true) return;
   reportServerError({
     message: `[jobs] ${event.jobName} failed (attempt ${event.attempt}): ${event.message}`,
-    stack: event.stack,
-    errorType: event.errorType,
-    scope: event.jobName,
+    ...event.crash,
+    scope:
+      event.crash.scope === null
+        ? event.jobName
+        : `${event.jobName} › ${event.crash.scope}`,
   });
 }
 

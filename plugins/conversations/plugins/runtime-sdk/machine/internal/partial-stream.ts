@@ -1,4 +1,5 @@
 import { recordReport } from "@plugins/reports/plugins/engine/server";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import type { PartialMessage } from "../../core";
 import {
   AgentNotRunningError,
@@ -25,9 +26,9 @@ function reportBroken(id: string, err: Error): void {
     source: "server-caught",
     message: `SDK agent ${id}: its partial-message stream broke, so the reply shows only once finished — ${err.message}`,
     data: {
+      ...crashFieldsOf(err),
       errorType: "SdkPartialStreamBroken",
       label: "runtime-sdk.partial-stream",
-      stack: err.stack ?? null,
     },
   });
 }
