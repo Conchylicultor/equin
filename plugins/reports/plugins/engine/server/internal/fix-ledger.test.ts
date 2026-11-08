@@ -3,7 +3,7 @@
  * seeded with the REAL migration chain: a claim lands (pending), the code
  * containing it goes live (fixed), an occurrence from code containing it
  * regresses it — the report's derived fix state, its notifications restated
- * in place (never moved), and the regression filed as a NEW error row on top.
+ * in place (never moved), and the regression filed as a NEW row on top, in the kind's own variant.
  * Ancestry is real git, in a throwaway repo.
  *
  * Run: `./equin test plugins/reports/plugins/engine`
@@ -181,7 +181,7 @@ describe("fix ledger (real DB)", () => {
     expect(all[0]?.state?.tone).toBe("resolved");
   });
 
-  test("a regression files a new error row on top, restates the old one, and unlinks the task", async () => {
+  test("a regression files a new row on top in the kind's variant, restates the old one, and unlinks the task", async () => {
     const [old] = await notes();
     await stampRegression(REPORT, fix, later, new Date(), t.db);
     expect(await report()).toMatchObject({
@@ -192,7 +192,8 @@ describe("fix ledger (real DB)", () => {
     const all = await notes();
     expect(all).toHaveLength(2);
     const [top, earlier] = all;
-    expect(top?.variant).toBe("error");
+    // Severity is the kind's (a warning here); the regression is its state.
+    expect(top?.variant).toBe("warning");
     expect(top?.state?.tone).toBe("recurred");
     expect(earlier?.id).toBe(old?.id);
     expect(earlier?.createdAt).toEqual(old?.createdAt);

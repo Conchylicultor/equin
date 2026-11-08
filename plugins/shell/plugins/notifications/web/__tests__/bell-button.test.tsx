@@ -362,6 +362,16 @@ describe("BellButton — toasts mirror the bell", () => {
     expect(toast.duration).toBe(Infinity);
   });
 
+  it("a problem that came back stays too, whatever its severity", async () => {
+    const toast = await arrive(
+      note({
+        variant: "warning",
+        state: { tone: "recurred", text: "Came back after abc123" },
+      }),
+    );
+    expect(toast.duration).toBe(Infinity);
+  });
+
   it("a row from before actions opens its linkTo", () => {
     const linkTo = notificationsRoute.link(debugApp, {});
     render(

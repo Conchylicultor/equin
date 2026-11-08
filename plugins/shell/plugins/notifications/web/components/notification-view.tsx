@@ -97,18 +97,15 @@ const STATE_TONE: Record<
 };
 
 /**
- * The glyph: a resolved problem's check (the row settles, whatever it was),
- * one that came back's error; else the event's own (`icon`, set by its
- * producer), else a failure's (error / warning), else the category's. An
- * error or warning is tinted red / amber whichever glyph it draws; everything
- * else is faint.
+ * The glyph: a resolved problem's check (the row settles, whatever it was);
+ * else the event's own (`icon`, set by its producer), else a failure's (error
+ * / warning), else the category's. An error or warning is tinted red / amber
+ * whichever glyph it draws; everything else is faint. One that came back keeps
+ * its severity's glyph — the recurrence is its state line's (red, ↻).
  */
 function glyph(n: NotificationContent): { icon: IconRef; className: string } {
   if (n.state?.tone === "resolved") {
     return { icon: resolvedIcon, className: "text-success" };
-  }
-  if (n.state?.tone === "recurred") {
-    return { icon: errorIcon, className: "text-destructive" };
   }
   if (n.variant === "error") {
     return { icon: n.icon ?? errorIcon, className: "text-destructive" };
@@ -663,8 +660,20 @@ export function NotificationToastCard({
   );
 }
 
-/** Errors stay until dismissed or acted on; everything else leaves after 4s. */
+/** How long a toast that does not stay until handled is shown. */
 export const TOAST_DURATION_MS = 4000;
+
+/**
+ * Whether a toast stays until dismissed or acted on: an error, or a problem
+ * that came back after being resolved (whatever its severity — a fix that did
+ * not hold is not something to miss). Everything else leaves after
+ * `TOAST_DURATION_MS`.
+ */
+function staysUntilHandled(
+  n: Pick<NotificationContent, "variant" | "state">,
+): boolean {
+  return n.variant === "error" || n.state?.tone === "recurred";
+}
 
 /**
  * Shows a notification as a toast through the toast host's custom-content
@@ -681,7 +690,7 @@ export function useToastNotification(): (n: NotificationContent) => void {
         render: ({ dismiss }) => (
           <NotificationToastCard n={n} dismiss={dismiss} />
         ),
-        duration: n.variant === "error" ? Infinity : TOAST_DURATION_MS,
+        duration: staysUntilHandled(n) ? Infinity : TOAST_DURATION_MS,
         audience: n.audience,
       }),
     [showCustomToast],

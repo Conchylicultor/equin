@@ -214,7 +214,8 @@ tab's bundle commit, an outbox entry's writer.
 
 On a change of state the report's notifications say so in place
 (`restateByMetadata`, the `state` line: fix on its way / fixed by / came back
-after); a regression rings a NEW error row on top (`bellKeyOf`), and unlinks the
+after); a regression rings a NEW row on top (`bellKeyOf`) in the kind's own variant —
+its `recurred` state, not an error variant, keeps its toast up — and unlinks the
 old investigation task so the report is back on the worklist
 (`reportWorklist`: no task, not noise, open or regressed).
 

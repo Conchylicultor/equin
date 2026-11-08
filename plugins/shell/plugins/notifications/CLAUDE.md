@@ -12,7 +12,9 @@
 - **What changes in place is the row's `state`** — where its problem now
   stands (`pending` / `resolved` / `recurred`, the producer's words), set on
   every row about one subject by `restateByMetadata(key, value, state)`. A
-  resolved row settles (check glyph); one that recurred reads red. A report's
+  resolved row settles (check glyph); one that recurred keeps its severity's
+  glyph, draws a red state line, and its toast stays until handled
+  (`staysUntilHandled`). A report's
   regression is a new row (the reports engine's own key), never the old one
   moved.
 

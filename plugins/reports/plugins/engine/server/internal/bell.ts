@@ -114,17 +114,18 @@ function writeBell(
   // (research/2026-07-09-global-interactive-lane-origin-based-db-gating.md).
   //
   // A regressed report rings on its own key (`bellKeyOf`): the regression is a
-  // NEW row on top, an error whatever the kind's variant (a fix that did not
-  // hold stays until handled), and every later occurrence lands on it.
-  const regressed = row.fixState === "regressed";
+  // NEW row on top, and every later occurrence lands on it. It keeps the kind's
+  // own variant — how bad the problem is does not change because a fix did not
+  // hold; where it stands is its `state` (`recurred`), which also keeps its
+  // toast up until handled (`shell/notifications`).
   return recordNotification(
     {
       type: "report",
       category: "reports",
-      icon: spec.meta.variant === "info" && !regressed ? infoReportIcon : null,
+      icon: spec.meta.variant === "info" ? infoReportIcon : null,
       title: staleOrigin ? `${spec.meta.notif} (stale tab)` : spec.meta.notif,
       description: bellDescription(desc),
-      variant: regressed ? "error" : spec.meta.variant,
+      variant: spec.meta.variant,
       state: fixNoticeOf(row),
       // What the report itself is doing, as of this ring: its last 24 h
       // beside its lifetime total. The meta line's ×N is THIS
