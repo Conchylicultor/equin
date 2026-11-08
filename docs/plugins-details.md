@@ -27896,11 +27896,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readMergeMarkers`
           - `resolveGitDir`
       - Cross-plugin:
-        - Imported by: 36 plugins — full list in [`plugins/framework/plugins/cli/REFERENCE.md`](../plugins/framework/plugins/cli/REFERENCE.md)
+        - Imported by: 37 plugins — full list in [`plugins/framework/plugins/cli/REFERENCE.md`](../plugins/framework/plugins/cli/REFERENCE.md)
           - `framework` ×26
           - `infra` ×5
           - `apps` ×3
-          - `plugin-meta/relocate`
+          - `plugin-meta` ×2
           - `toolchain`
       - Exemptions:
         - Exempts itself from:
@@ -28026,14 +28026,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CLI_NAMES`
               - `isCliName`
           - Cross-plugin:
-            - Imported by: 22 plugins — full list in [`plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md)
+            - Imported by: 23 plugins — full list in [`plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md)
               - `framework` ×6
               - `infra` ×6
               - `build` ×2
               - `debug` ×2
+              - `plugin-meta` ×2
               - `apps/deploy/deployments`
               - `database/admin`
-              - `plugin-meta/plugin-records/verify`
               - `primitives/css/layout-harness`
               - `release`
               - `upstream`
@@ -33958,16 +33958,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `cliExecContext`
               - `runAttached`
           - Cross-plugin:
-            - Imported by: 27 plugins — full list in [`plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md`](../plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md)
+            - Imported by: 28 plugins — full list in [`plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md`](../plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md)
               - `framework` ×9
               - `infra` ×5
               - `apps` ×4
               - `build` ×3
+              - `plugin-meta` ×2
               - `backup`
               - `conversations/workspace/worktree`
               - `database/fork`
               - `debug/worktree-cleanup`
-              - `plugin-meta/plugin-records/verify`
               - `release`
           - Exemptions:
             - Exempts itself from:
@@ -34826,12 +34826,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/host-fs/user-path.asAppPath`
             - Exports (values): `REPO_ROOT`
           - Cross-plugin:
-            - Imported by: 41 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
+            - Imported by: 42 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
               - `framework` ×12
               - `infra` ×8
               - `build` ×6
               - `apps` ×5
-              - `plugin-meta` ×2
+              - `plugin-meta` ×3
               - `reports` ×2
               - `code-explorer`
               - `config_v2`
@@ -42953,6 +42953,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cli:
         - Uses: `packages/thread-pool.createThreadPool`
         - Exports (types):
+          - `ReclaimResult`
           - `RecordDisagreement`
           - `RecordVerification`
         - Exports (values):
@@ -42960,6 +42961,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `describeVerification`
           - `idealRecordWorkerThreads`
           - `openRecordStore`
+          - `reclaimRecordStore`
           - `verificationPassed`
           - `verifyRecordsAgainst`
       - Cross-plugin:
@@ -42973,6 +42975,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/tooling/web-artifacts`
           - `plugin-meta/plugin-records/evaluate`
           - `plugin-meta/plugin-records/key-width`
+          - `plugin-meta/plugin-records/reclaim`
           - `plugin-meta/plugin-tree/faceted`
           - `plugin-meta/relocate`
       - Exemptions:
@@ -43028,6 +43031,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `describeWideKeys`
               - `keyWidths`
               - `MAX_UNUSED_KEY_MODULES`
+        - **`reclaim`** — The daily plugin-records.reclaim job: on main, deletes the shared record store's key rows unread for 7 days and the values only they named, then returns the freed pages — a page at a time, off every build's path.
+          - Server:
+            - Uses:
+              - `infra/jobs/supervised-job.defineSupervisedJob`
+              - `primitives/log-channels.defineLogSink`
+            - Register: `defineSupervisedJob('plugin-records.reclaim')`
+          - Cli:
+            - Uses: `plugin-meta/plugin-records.reclaimRecordStore`
         - **`verify`** — The daily plugin-records.verify job: on main, recomputes every plugin record a tree check pass reads (`./equin check --verify-records`) and fails when one disagrees with the shared store under the same key.
           - Server:
             - Uses:
@@ -48503,7 +48514,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
-        - Imported by: 69 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
+        - Imported by: 70 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
           - `apps` ×12
           - `debug` ×10
           - `infra` ×10
@@ -48512,6 +48523,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework` ×5
           - `network` ×4
           - `build` ×2
+          - `plugin-meta` ×2
           - `reports` ×2
           - `tasks` ×2
           - `active-data/show-me`
@@ -48519,7 +48531,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `integrations/youtube/audio-fetch`
           - `menu-bar`
           - `page/annotations/agent-access`
-          - `plugin-meta/plugin-records/verify`
           - `primitives/log-channels/memory-persistence`
           - `release`
           - `stats/cost`

@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { recordKey } from "../../core";
-import { openRecordStore } from "./sqlite-store";
+import { openRecordStore, reclaimRecordStore } from "./sqlite-store";
 import { describeVerification, verifyRecordsAgainst } from "./verifying-store";
 
 const dir = mkdtempSync(join(tmpdir(), "plugin-records-"));
@@ -77,7 +77,7 @@ test("one value stored under many keys is stored once", () => {
   db.close();
 });
 
-test("the daily reclaim drops unread keys, then the values nobody names", () => {
+test("the reclaim drops unread keys, then the values only they named", () => {
   const path = join(dir, "reclaim.sqlite");
   const s = openRecordStore({ path });
   s.putMany("file", [
@@ -85,22 +85,104 @@ test("the daily reclaim drops unread keys, then the values nobody names", () => 
     [k("shared-old"), "shared"],
     [k("new"), "shared"],
   ]);
+  s.putMany("facet", [[k("old-facet"), "only-old-facet"]]);
   s.flush();
   const db = new Database(path);
   db.query("UPDATE keys SET used = used - 30 WHERE key != ?").run(
     Buffer.from(k("new"), "hex"),
   );
-  db.query("DELETE FROM meta").run();
+  // An open reclaims nothing: that is the daily job's, off every open's path.
+  openRecordStore({ path });
+  expect(db.query("SELECT count(*) AS n FROM keys").get()).toEqual({ n: 4 });
   db.close();
+  expect(reclaimRecordStore({ path })).toMatchObject({
+    keysRead: 4,
+    keysDeleted: 3,
+    valuesDeleted: 2,
+  });
   const again = openRecordStore({ path });
   expect([
     ...again.getMany("file", [k("old"), k("shared-old"), k("new")]),
   ]).toEqual([[k("new"), "shared"]]);
+  expect(again.getMany("facet", [k("old-facet")]).size).toBe(0);
   const check = new Database(path, { readonly: true });
   expect(check.query("SELECT value FROM vals").all()).toEqual([
     { value: "shared" },
   ]);
+  // Its marker, read by a checkout still on the code that reclaimed inside
+  // an open.
+  expect(check.query("SELECT name FROM meta").all()).toEqual([
+    { name: "pruned" },
+  ]);
   check.close();
+});
+
+test("a reclaim pages through more rows than one page holds", () => {
+  const path = join(dir, "reclaim-pages.sqlite");
+  const s = openRecordStore({ path });
+  s.putMany(
+    "module",
+    Array.from(
+      { length: 12_345 },
+      (_, i) => [k(`p${i}`), `v${i % 7}`] as const,
+    ),
+  );
+  s.flush();
+  const db = new Database(path);
+  db.exec("UPDATE keys SET used = used - 30");
+  db.close();
+  const r = reclaimRecordStore({ path });
+  expect(r).toMatchObject({
+    keysRead: 12_345,
+    keysDeleted: 12_345,
+    valuesDeleted: 7,
+    returnsPages: true,
+  });
+  expect(r.pagesFreed).toBeGreaterThan(0);
+});
+
+test("a reclaim of a file without incremental auto_vacuum ends, keeping its pages", () => {
+  const path = join(dir, "reclaim-none.sqlite");
+  // A store whose file does not have the setting (one created before it
+  // could take): VACUUM rewrites it without.
+  openRecordStore({ path });
+  const raw = new Database(path);
+  raw.exec("PRAGMA auto_vacuum = NONE");
+  raw.exec("VACUUM");
+  expect(raw.query("PRAGMA auto_vacuum").get()).toEqual({ auto_vacuum: 0 });
+  raw.close();
+  const s = openRecordStore({ path });
+  s.putMany(
+    "file",
+    Array.from({ length: 3_000 }, (_, i) => [k(`n${i}`), `v${i}`] as const),
+  );
+  s.flush();
+  const db = new Database(path);
+  db.exec("UPDATE keys SET used = used - 30");
+  db.close();
+  expect(reclaimRecordStore({ path })).toMatchObject({
+    keysDeleted: 3_000,
+    valuesDeleted: 3_000,
+    returnsPages: false,
+    pagesFreed: 0,
+  });
+});
+
+test("a flush of several write chunks lands whole", () => {
+  const path = join(dir, "chunks.sqlite");
+  const s = openRecordStore({ path });
+  const entries = Array.from(
+    { length: 4_321 },
+    (_, i) => [k(`c${i}`), `v${i}`] as const,
+  );
+  s.putMany("file", entries);
+  s.flush();
+  expect(
+    openRecordStore({ path }).getMany(
+      "file",
+      entries.map(([key]) => key),
+    ).size,
+  ).toBe(4_321);
 });
 
 test("opening an existing store never waits for a writer", () => {

@@ -5451,6 +5451,10 @@
       "name": "@equin/plugin-plugin-meta-plugin-records-key-width",
       "version": "0.0.1",
     },
+    "plugins/plugin-meta/plugins/plugin-records/plugins/reclaim": {
+      "name": "@equin/plugin-plugin-meta-plugin-records-reclaim",
+      "version": "0.0.1",
+    },
     "plugins/plugin-meta/plugins/plugin-records/plugins/verify": {
       "name": "@equin/plugin-plugin-meta-plugin-records-verify",
       "version": "0.0.1",
@@ -10012,6 +10016,8 @@
     "@equin/plugin-plugin-meta-plugin-records-evaluate": ["@equin/plugin-plugin-meta-plugin-records-evaluate@workspace:plugins/plugin-meta/plugins/plugin-records/plugins/evaluate"],
 
     "@equin/plugin-plugin-meta-plugin-records-key-width": ["@equin/plugin-plugin-meta-plugin-records-key-width@workspace:plugins/plugin-meta/plugins/plugin-records/plugins/key-width"],
+
+    "@equin/plugin-plugin-meta-plugin-records-reclaim": ["@equin/plugin-plugin-meta-plugin-records-reclaim@workspace:plugins/plugin-meta/plugins/plugin-records/plugins/reclaim"],
 
     "@equin/plugin-plugin-meta-plugin-records-verify": ["@equin/plugin-plugin-meta-plugin-records-verify@workspace:plugins/plugin-meta/plugins/plugin-records/plugins/verify"],
 

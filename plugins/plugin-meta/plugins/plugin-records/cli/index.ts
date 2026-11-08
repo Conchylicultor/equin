@@ -1,4 +1,5 @@
-export { openRecordStore } from "./internal/sqlite-store";
+export { openRecordStore, reclaimRecordStore } from "./internal/sqlite-store";
+export type { ReclaimResult } from "./internal/sqlite-store";
 export {
   describeVerification,
   verificationPassed,
