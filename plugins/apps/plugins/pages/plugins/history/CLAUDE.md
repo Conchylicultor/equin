@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Pages version-history UI: contributes the "Edited 2h ago" label to the page-detail title bar, which opens the reusable version-history dialog with a faithful, diffed read-only preview of each page version. Pages version-history consumer: registers the page history source (serialize/restore via the editor's page-content API), captures time-bucketed snapshots through a debounced two-job pipeline bound to blocksChanged, and drops a page's history on delete.
+- Description: Pages version-history UI: contributes the "Edited 2h ago" label to the page-detail title bar, which opens the reusable version-history dialog with a faithful, diffed read-only preview of each page version. Pages version-history consumer: registers the page history source (serialize/restore via the editor's page-content API), captures time-bucketed snapshots through a snapshot job bound to blocksChanged and settled per page (4 s after the last edit, at least every minute), and drops a page's history on delete.
 - Web:
   - Contributes: `pageDetailPane.Actions` "edited" → `EditedHistoryAction`
   - Uses:
@@ -26,12 +26,13 @@
     - `primitives/relative-time.RelativeTime`
 - Server:
   - Contributes:
-    - `trigger` "pages.history.schedule"
+    - `trigger` "pages.history.snapshot"
     - `page.editor.block.onDelete`
   - Uses:
     - `history/engine.defineHistorySource`
     - `history/engine.deleteVersions`
     - `history/engine.recordVersion`
+    - `infra/events.eventField`
     - `infra/events.Trigger`
     - `infra/jobs.defineJob`
     - `page/block-text-write.writeBlockTexts`
@@ -45,7 +46,6 @@
   - Register:
     - `defineHistorySource('pages')`
     - `defineJob('pages.history.snapshot')`
-    - `defineJob('pages.history.schedule')`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --faint-foreground`

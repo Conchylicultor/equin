@@ -10,10 +10,10 @@ computer's Claude CLI. The portable `server/` barrel holds only the
 `page_blocks_ext_auto_icon` provenance table (`pageBlocksAutoIcon`), so a host
 without the computer (the demo) boots it and runs none of this.
 
-- **Trigger.** `Trigger({ on: blocksChanged, do: autoIconScheduleJob })`. The
-  scheduler (`hold: "instant"`) re-enqueues the keyed `autoIconJob({ pageId })`
-  with `runAt: now + 10 s`; `dedup: { key: pageId }` (graphile replace) pushes
-  the one pending row back on every edit — the debounce, no polling.
+- **Trigger.** `Trigger({ on: blocksChanged, do: autoIconJob, with: { pageId:
+  eventField("pageId") } })`. `dedup: { key: pageId, settle: { quietMs: 10 s,
+  maxWaitMs: 2 min } }` pushes the one pending row back on every edit — the
+  debounce, no polling, and no scheduler job in between.
 - **`generatePageIcon(pageId, { force })`** (`machine/internal/generate-icon.ts`)
   does the pick; `autoIconJob` (`pages.auto-icon.generate`, `hold: "seconds"`,
   `serial`) runs it unforced, the Regenerate endpoint awaits it forced:
@@ -70,7 +70,7 @@ without the computer (the demo) boots it and runs none of this.
 
 - Description: Regenerate action for the page icon picker: a footer row that forces a new auto-picked emoji for the page pending while the pick runs in the request. Auto-icon provenance (page_blocks_ext_auto_icon): a row records that icon generation ran for a page, so it never runs again unasked. Everything model-driven — the pick, its jobs, the boot backfill and Regenerate — is the machine half's.
 - Server:
-  - Contributes: `trigger` "pages.auto-icon.schedule"
+  - Contributes: `trigger` "pages.auto-icon.generate"
   - Uses:
     - `infra/entity-extensions.defineExtension`
     - `page/editor._blocks`
@@ -88,7 +88,6 @@ without the computer (the demo) boots it and runs none of this.
   - Uses: `infra/endpoints.implementMachine`
   - Register:
     - `defineJob('pages.auto-icon.generate')`
-    - `defineJob('pages.auto-icon.schedule')`
     - `defineJob('pages.auto-icon.backfill')`
     - `defineWarmup('pages.auto-icon.backfill')`
   - Routes: `POST /api/pages/:pageId/auto-icon/regenerate`

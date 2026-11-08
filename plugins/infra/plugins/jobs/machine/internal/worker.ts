@@ -682,10 +682,17 @@ async function dispatch(
     runnerId: string;
   },
 ): Promise<void> {
+  // An unknown job and a stored input its schema no longer accepts are both
+  // DETERMINISTIC — a row queued in a shape the deploy since changed (a removed
+  // job, a reshaped input). Reported, and dead-lettered after this one attempt
+  // (the in-process queue's `retry: false`): retrying the same stored row can
+  // never succeed. They are raised before the attempt's own failure path below,
+  // so they collapse the budget themselves.
   const job = UNSAFE_getRegisteredJob(payload.jobName);
   if (!job) {
     const err = new Error(`[jobs] unknown job "${payload.jobName}"`);
     reportServerError({ message: err.message, stack: err.stack ?? null });
+    await runInBackgroundLane(() => markJobPermanentlyFailed(meta.jobId));
     throw err;
   }
   // Validation only — DO NOT use `parsed.data` for the handler. The stored
@@ -701,6 +708,7 @@ async function dispatch(
       `[jobs] input schema drift for "${payload.jobName}": ${validation.error.message}`,
     );
     reportServerError({ message: err.message, stack: err.stack ?? null });
+    await runInBackgroundLane(() => markJobPermanentlyFailed(meta.jobId));
     throw err;
   }
 

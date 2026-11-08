@@ -11,9 +11,11 @@
     - `page.inline-token` "\[\[(?:date:([0-9TZ:.+-]+)|reminder:([a-f0-9-]+):([0-9TZ:.+-]+))\]\]"
   - Uses:
     - `database.db`
+    - `infra/events.eventField`
     - `infra/events.Trigger`
     - `infra/jobs.defineJob`
     - `page/editor._blocks`
+    - `page/editor.BLOCKS_CHANGED_SETTLE`
     - `page/editor.blocksChanged`
     - `page/editor.Editor`
     - `page/editor.liveBlocks`

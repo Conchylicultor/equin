@@ -5,10 +5,12 @@ import { generatePageIcon } from "./generate-icon";
 /**
  * The edit-triggered (and backfill) run of `generatePageIcon`.
  *
- * Keyed on the page (`dedup: { key }`, graphile's replace), so the scheduler's
- * repeated `runAt: now + 10s` during an edit burst pushes the one pending row
- * back — the debounce. `serial`: one model call at a time, since the backfill
- * enqueues every page at once.
+ * Bound to `blocksChanged` with `with: { pageId: eventField("pageId") }`, keyed
+ * on the page and settled: every edit pushes the one pending row back to 10 s
+ * from now (at most 2 minutes after the first), so the pick sees the page once
+ * its edits pause, and leaving the page needs no signal of its own. The job
+ * returns at once for a page that already had its run. `serial`: one model call
+ * at a time, since the backfill enqueues every page at once.
  * Always unforced — Regenerate awaits `generatePageIcon` in its request instead.
  */
 export const autoIconJob = defineJob({
@@ -19,7 +21,10 @@ export const autoIconJob = defineJob({
   hold: "seconds",
   input: z.object({ pageId: z.string() }),
   event: z.never(),
-  dedup: { key: ({ pageId }) => pageId },
+  dedup: {
+    key: ({ pageId }) => pageId,
+    settle: { quietMs: 10_000, maxWaitMs: 120_000 },
+  },
   serial: true,
   maxAttempts: 2,
   run: async ({ input: { pageId } }) => {

@@ -5,6 +5,7 @@ import { db } from "@plugins/database/server";
 import { connectionString } from "@plugins/database/plugins/admin/server";
 import { executeRows, queryOne } from "@plugins/database/plugins/sql-rows/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
+import { settledRunAt } from "../../core";
 import type {
   JobQueueImpl,
   JobRowOpts,
@@ -62,7 +63,10 @@ async function insertJobRow(
   payload: JobTaskPayload,
   opts: JobRowOpts,
 ): Promise<{ jobId: string }> {
-  const insertion = graphileSpecFor(job, opts);
+  const insertion = graphileSpecFor(job, {
+    ...opts,
+    runAt: opts.settle ? await settledRunAtFor(opts) : opts.runAt,
+  });
   const addOnce = opts.tx
     ? addJobOnTx(opts.tx, insertion, payload)
     : async (): Promise<string | null> => {
@@ -83,6 +87,35 @@ async function insertJobRow(
   throw new Error(
     `[jobs] graphile add_job for "${insertion.task}" (job key ${JSON.stringify(insertion.spec.jobKey ?? null)}) returned no row ${ADD_JOB_LOCK_RACE_RETRIES + 1} times in a row — a worker locked the keyed row between add_jobs' key-detach and its upsert on every try`,
   );
+}
+
+/**
+ * The due time of a settled keyed row (`JobRowOpts.settle`). graphile's
+ * `add_job` in its default `replace` mode moves a pending row's `run_at` to the
+ * one given and keeps its `created_at`, so the debounce is just the right
+ * `run_at` — and its ceiling reads when the row it will collapse onto (unlocked,
+ * still within its attempts: what `add_jobs` upserts onto) was created. Read on
+ * the caller's transaction when there is one. A row locked between this read
+ * and the upsert releases its key, so the upsert inserts a fresh row with a
+ * full quiet window — the right answer for a fresh row.
+ */
+async function settledRunAtFor(opts: JobRowOpts): Promise<Date> {
+  const settle = opts.settle;
+  const key = opts.jobKey;
+  if (!settle || key == null) {
+    throw new Error("[jobs] a settled row needs a settle window and a job key");
+  }
+  const rows = await executeRows(opts.tx ?? db, {
+    label: "jobs.settlePending",
+    row: z.object({ created_at: z.coerce.date() }),
+    query: sql`
+      SELECT created_at
+        FROM graphile_worker._private_jobs
+       WHERE key = ${key}
+         AND locked_at IS NULL
+         AND attempts < max_attempts`,
+  });
+  return settledRunAt(settle, new Date(), rows[0]?.created_at ?? null);
 }
 
 /**

@@ -1,6 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { DerivedTable } from "@plugins/database/plugins/derived-tables/server";
-import { Trigger } from "@plugins/infra/plugins/events/server";
+import { eventField, Trigger } from "@plugins/infra/plugins/events/server";
 import {
   blocksChanged,
   BlockLifecycle,
@@ -41,7 +41,7 @@ export default {
     Trigger({
       on: blocksChanged,
       do: reindexLinksJob,
-      with: {},
+      with: { pageId: eventField("pageId") },
       oneShot: false,
     }),
     // Re-push the backlinks panels of pages a deleted subtree linked to: the FK

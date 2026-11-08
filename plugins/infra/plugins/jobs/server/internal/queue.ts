@@ -1,7 +1,7 @@
 import { defineHostService } from "@plugins/framework/plugins/server-core/core";
 import type { LiveGroup } from "@plugins/network/plugins/live/core";
 import type { FilterScalar } from "@plugins/network/plugins/live/plugins/filter/core";
-import type { HoldClass } from "../../core";
+import type { HoldClass, SettleSpec } from "../../core";
 import type { JobRow } from "../../core";
 import type {
   JobsCountQuery,
@@ -15,6 +15,13 @@ export interface JobRowOpts {
   /** The queue-row dedup key — taken literally (see `run-identity.ts`). */
   jobKey?: string | null;
   runAt?: Date | null;
+  /**
+   * A keyed row's settle window (`dedup: { key, settle }`): the provider
+   * derives the due time from it with `settledRunAt` — `now + quietMs`, capped
+   * at `maxWaitMs` after the pending row holding the key was created. Never
+   * set together with `runAt`.
+   */
+  settle?: SettleSpec;
   maxAttempts?: number;
   /**
    * Insert on the CALLER's transaction: the row commits (and the job may run)

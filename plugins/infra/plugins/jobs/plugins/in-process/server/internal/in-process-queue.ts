@@ -21,7 +21,9 @@ import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 import {
   nextCronFiring,
   parseCrontab,
+  settledRunAt,
   type Crontab,
+  type SettleSpec,
   type JobRow,
   type JobState,
 } from "@plugins/infra/plugins/jobs/core";
@@ -273,15 +275,19 @@ export function createInProcessQueue(
    * Take a row into the working copy — one just written to the store, or one
    * read back from it. A key collapses onto the pending row already holding it
    * (graphile's replace mode): its payload and due time become the newer
-   * row's, its id stays, and the newer row is removed from the store.
+   * row's, its id stays, and the newer row is removed from the store. A
+   * settled enqueue's due time is capped at its window's ceiling counted from
+   * the held row's creation (`settledRunAt`, the desktop's rule).
    */
-  function admit(row: QueueRow): void {
+  function admit(row: QueueRow, settle?: SettleSpec): void {
     if (rows.has(row.id)) return;
     if (row.jobKey !== null && !row.dead) {
       for (const held of rows.values()) {
         if (held.jobKey === row.jobKey && !held.running && !held.dead) {
           held.payload = row.payload;
-          held.runAt = row.runAt;
+          held.runAt = settle
+            ? settledRunAt(settle, new Date(), held.createdAt)
+            : row.runAt;
           held.updatedAt = new Date();
           detach("collapse", async () => {
             await Promise.all([save(held), drop(row.id)]);
@@ -310,7 +316,9 @@ export function createInProcessQueue(
       hold: job.hold,
       payload,
       jobKey: opts.jobKey ?? null,
-      runAt: opts.runAt ?? now,
+      runAt: opts.settle
+        ? settledRunAt(opts.settle, now, null)
+        : (opts.runAt ?? now),
       attempts: 0,
       maxAttempts: opts.maxAttempts ?? 1,
       dead: false,
@@ -522,12 +530,12 @@ export function createInProcessQueue(
       const row = newRow(job, payload, rest);
       if (tx === undefined) {
         await persist(row.id, () => store.insert(stored(row)));
-        admit(row);
+        admit(row, rest.settle);
       } else {
         // In the caller's transaction: the row is the caller's write, and
         // joins the working copy only once it commits.
         await store.insert(stored(row), tx);
-        afterCommit(tx, () => admit(row));
+        afterCommit(tx, () => admit(row, rest.settle));
       }
       return { jobId: row.id };
     },

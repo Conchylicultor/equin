@@ -32,6 +32,8 @@ export type {
   FilterSlot,
 } from "./internal/event";
 export { triggerTableRegistry } from "./internal/registry";
+export { eventField } from "./internal/event-field";
+export type { EventField, TriggerWith } from "./internal/event-field";
 export { _event_emissions } from "./internal/tables";
 export {
   deleteTrigger,

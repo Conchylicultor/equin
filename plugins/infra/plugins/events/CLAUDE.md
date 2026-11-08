@@ -21,6 +21,15 @@ stale binding can never re-accumulate dead jobs:
    trigger row and returns without throwing. This covers the window between a
    job's removal and the next boot sweep.
 
+A trigger's `with` is the target's input; a field may instead name a field of
+the event — `with: { pageId: eventField("pageId") }` (`internal/event-field.ts`,
+stored as `{ "$eventField": "pageId" }` in `job_with`) — which delivery replaces
+by the emitted payload's before parsing the input (a payload without it is
+drift). That is how a per-subject job is one job for every caller (trigger,
+backfill, button) and keys — and settles (`dedup: { key, settle }`, jobs) — on
+its event's subject; with a constant `with` the subject reached it only through
+`event`, which no key can see.
+
 Static triggers are declared as `Trigger({ on, do, with })` contributions and
 re-projected from code each boot by `syncTriggerContributions()`: their rows
 carry `declared = true`, and the sync wipes every declared row (plus every row
@@ -126,16 +135,19 @@ insert and the ring's inline prune reach it through the change feed. The
   - Exports (types):
     - `DefineTriggerEventSpec`
     - `EmitTx`
+    - `EventField`
     - `EventHandle`
     - `EventSource`
     - `FilterSlot`
     - `TriggerSpec`
+    - `TriggerWith`
     - `UnsafeTriggerByNameSpec`
   - Exports (values):
     - `_event_emissions`
     - `defineTriggerEvent`
     - `deleteTrigger`
     - `deleteTriggersFor`
+    - `eventField`
     - `trigger`
     - `Trigger`
     - `triggerTableRegistry`

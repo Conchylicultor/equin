@@ -4,7 +4,12 @@ import {
   registeringPlugin,
   type Registration,
 } from "@plugins/framework/plugins/server-core/core";
-import { ceilingMsFor, type HoldClass } from "../../core";
+import {
+  assertSettleSpec,
+  ceilingMsFor,
+  type HoldClass,
+  type SettleSpec,
+} from "../../core";
 import { DEFAULT_MAX_ATTEMPTS } from "./constants";
 import { JobQueue, type JobRowOpts, type QueuedJob } from "./queue";
 import { singletonJobKey } from "./run-identity";
@@ -212,7 +217,24 @@ export interface EnqueueOpts {
 }
 
 export type Dedup<S extends z.ZodType> =
-  "singleton" | "none" | { key: (input: z.infer<S>) => string };
+  | "singleton"
+  | "none"
+  | {
+      key: (input: z.infer<S>) => string;
+      /**
+       * Debounce the key: every enqueue moves its pending row's run to
+       * `quietMs` from now, capped at `maxWaitMs` after the row was first
+       * queued (`core/settle.ts`). For an idempotent recompute of a subject's
+       * current state (a page's search entry, its links) fed by a stream of
+       * change events: the work becomes one run per settled change, not one
+       * per event. Without it a key only collapses rows still pending, and
+       * events seconds apart each find nothing pending to fold into.
+       *
+       * A settled job's due time is the queue's to derive, so an enqueue of
+       * one passes no `runAt`.
+       */
+      settle?: SettleSpec;
+    };
 
 /**
  * Declares that runs of this job must not overlap — `true` serializes the job
@@ -573,6 +595,9 @@ export function defineJob<
   if (spec.description.trim() === "") {
     throw new Error(`[jobs] ${spec.name}: \`description\` must not be empty`);
   }
+  if (typeof spec.dedup === "object" && spec.dedup.settle !== undefined) {
+    assertSettleSpec(spec.name, spec.dedup.settle);
+  }
   if (spec.hold === "minutes" && spec.inProcess.trim() === "") {
     throw new Error(
       `[jobs] ${spec.name}: hold "minutes" needs a non-empty \`inProcess\` ` +
@@ -600,11 +625,18 @@ export function defineJob<
     // the job share one step log.
     let graphileJobKey: string | null = null;
     let workflowRunId: string | undefined;
+    let settle: SettleSpec | undefined;
     if (spec.dedup === "singleton") {
       graphileJobKey = singletonJobKey(spec.name);
     } else if (spec.dedup !== "none") {
       graphileJobKey = `${spec.name}:${spec.dedup.key(parsed as z.infer<typeof spec.input>)}`;
       workflowRunId = graphileJobKey;
+      settle = spec.dedup.settle;
+    }
+    if (settle !== undefined && opts?.runAt !== undefined) {
+      throw new Error(
+        `[jobs] ${spec.name}: a settled job's due time is derived from its settle window — enqueue it without \`runAt\``,
+      );
     }
     const maxAttempts =
       opts?.maxAttempts ?? spec.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
@@ -621,6 +653,7 @@ export function defineJob<
     return JobQueue.get().enqueue(spec, payload, {
       jobKey: graphileJobKey,
       runAt: opts?.runAt,
+      settle,
       maxAttempts,
       tx: opts?.tx,
     });

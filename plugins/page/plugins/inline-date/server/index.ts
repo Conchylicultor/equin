@@ -1,5 +1,5 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { Trigger } from "@plugins/infra/plugins/events/server";
+import { eventField, Trigger } from "@plugins/infra/plugins/events/server";
 import { blocksChanged, Editor } from "@plugins/page/plugins/editor/server";
 import { MENTION_TOKEN_PATTERN, dateMentionNode } from "../core";
 import { reminderReconcileJob } from "./internal/reconcile-job";
@@ -17,7 +17,7 @@ export default {
     Trigger({
       on: blocksChanged,
       do: reminderReconcileJob,
-      with: {},
+      with: { pageId: eventField("pageId") },
       oneShot: false,
     }),
     // The same combined date/reminder pattern the web extension deserializes

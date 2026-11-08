@@ -1,5 +1,5 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { Trigger } from "@plugins/infra/plugins/events/server";
+import { eventField, Trigger } from "@plugins/infra/plugins/events/server";
 import { blocksChanged } from "@plugins/page/plugins/editor/server";
 import { reconcileBlockAttachmentsJob } from "./internal/reconcile-job";
 import { attachmentLinkContributions } from "./internal/attachment-links";
@@ -20,6 +20,11 @@ export default {
     // Declared (not imperatively bound) so syncTriggerContributions makes it
     // idempotent across reboots. Match-any on pageId — the per-emit pageId
     // reaches the job via the event payload.
-    Trigger({ on: blocksChanged, do: reconcileBlockAttachmentsJob, with: {}, oneShot: false }),
+    Trigger({
+      on: blocksChanged,
+      do: reconcileBlockAttachmentsJob,
+      with: { pageId: eventField("pageId") },
+      oneShot: false,
+    }),
   ],
 } satisfies ServerPluginDefinition;

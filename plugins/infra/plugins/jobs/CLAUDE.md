@@ -132,6 +132,22 @@ A job row has two identities (`server/internal/run-identity.ts`):
     collapsing onto the pending row;
   - **resume rows** carry the suspended run's id explicitly.
 
+## Settled keys: one run per settled change
+
+`dedup: { key, settle: { quietMs, maxWaitMs } }` (`core/settle.ts`) debounces a
+key: every enqueue moves its pending row's due time to `now + quietMs`, never
+past `maxWaitMs` after the row was first queued (`settledRunAt`, the one rule
+both queue providers apply — graphile's `add_job` `replace` mode moves `run_at`
+and keeps `created_at`; the in-process queue's collapse in `admit()`). It is for
+an idempotent recompute of a subject's CURRENT state fed by a stream of change
+events (a page's search entry after each edit): a run at T covers every edit
+before T, so the work is per settled change instead of per event. A plain key
+cannot do it — edits arrive seconds apart and a run takes milliseconds, so no
+row is ever pending to fold into. A running row releases its key, so an enqueue
+landing mid-run gets a fresh row. A settled enqueue takes no `runAt` (it
+throws). Bind such a job to its event with `with: { id: eventField("id") }`
+(`infra/events`), so the subject is its input and the key can see it.
+
 A keyed job's `inFlight(keys)` answers "is this run still coming?" from both
 halves, in ONE read the queue owns (`keysInFlight`): a row holding the key, or
 the run suspended on a pending wait (`_jobWaits`) whose **waker** still holds
@@ -845,8 +861,10 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `JobRunRow`
     - `JobState`
     - `RunnerSpec`
+    - `SettleSpec`
   - Exports (values):
     - `ALL_JOB_TASKS`
+    - `assertSettleSpec`
     - `cancelJob`
     - `ceilingMsFor`
     - `cronMatches`
@@ -877,6 +895,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `reachableSlots`
     - `retryJob`
     - `RUNNERS`
+    - `settledRunAt`
     - `taskFor`
     - `TOTAL_JOB_SLOTS`
 - Cross-plugin:

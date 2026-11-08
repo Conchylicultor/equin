@@ -4,6 +4,7 @@ import type { z } from "zod";
 import type { JobFactory } from "@plugins/infra/plugins/jobs/server";
 import { db } from "@plugins/database/server";
 import type { EventSource } from "./event";
+import type { TriggerWith } from "./event-field";
 import { triggerTableRegistry } from "./registry";
 
 export interface TriggerSpec<P, I> {
@@ -11,11 +12,13 @@ export interface TriggerSpec<P, I> {
   do: JobFactory<string, z.ZodType<I>, z.ZodType>;
   /**
    * The target job's full `input` value. Stored verbatim in the trigger row
-   * and passed as `input` to the job's run handler at dispatch time. The
-   * event payload reaches the job through a separate `event` argument, so
-   * key collisions between `with` and event fields are impossible.
+   * and passed as `input` to the job's run handler at dispatch time. A field
+   * may instead name a field of the event (`eventField("pageId")`), replaced
+   * by the emitted payload's at delivery — how a per-subject job keys (and
+   * settles) on its event's subject. The whole payload still reaches the job
+   * through a separate `event` argument when its `event` schema asks for it.
    */
-  with: I;
+  with: NoInfer<TriggerWith<I, P>>;
   oneShot?: boolean;
 }
 

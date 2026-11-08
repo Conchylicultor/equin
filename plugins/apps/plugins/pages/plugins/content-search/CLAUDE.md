@@ -23,12 +23,14 @@
     - `page.editor.block.onRestore`
   - Uses:
     - `database.db`
+    - `infra/events.eventField`
     - `infra/events.Trigger`
     - `infra/jobs.defineJob`
     - `infra/warmup.defineWarmup`
     - `page/editor.BlockDeleteHook`
     - `page/editor.BlockLifecycle`
     - `page/editor.BlockRestoreHook`
+    - `page/editor.BLOCKS_CHANGED_SETTLE`
     - `page/editor.blocksChanged`
     - `page/editor.BlockTrashHook`
     - `page/editor.DeletedBlockRow`

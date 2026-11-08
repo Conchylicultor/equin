@@ -2414,6 +2414,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `agentCodeSpanTokens`
     - `applyPageBlockPatch`
     - `BlockLifecycle`
+    - `BLOCKS_CHANGED_SETTLE`
     - `blocksChanged`
     - `BlockSchema`
     - `blockTextProtectedSpans`

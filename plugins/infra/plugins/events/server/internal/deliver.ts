@@ -10,6 +10,7 @@ import {
 } from "@plugins/infra/plugins/jobs/server";
 import { db } from "@plugins/database/server";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
+import { resolveEventFields } from "./event-field";
 import { triggerTableRegistry } from "./registry";
 
 /** One matched trigger row, and the event payload it matched. */
@@ -27,6 +28,8 @@ export type TriggerDelivery = z.infer<typeof TriggerDeliverySchema>;
 export interface ResolvedDelivery {
   delivery: TriggerDelivery;
   target: RegisteredJob;
+  /** The trigger's `with`, its event fields resolved against the payload. */
+  input: Record<string, unknown>;
   event: unknown;
 }
 
@@ -37,8 +40,9 @@ export interface ResolvedDelivery {
  * roll back a task status change):
  * - Unknown target (a stale binding whose job was removed): the trigger row is
  *   removed (self-heal) and reported.
- * - Contract drift (the stored `with` or the event payload no longer parses
- *   against the target's schemas): reported and skipped. Deterministic — the same
+ * - Contract drift (the stored `with` — its event fields resolved — or the
+ *   event payload no longer parses against the target's schemas, or the
+ *   payload lacks a field an `eventField` names): reported and skipped. Deterministic — the same
  *   payload never parses — so there is nothing to retry; the binding stays, the
  *   contract needs fixing.
  */
@@ -74,12 +78,21 @@ export async function resolveDelivery(
     }
     event = parsedEvent.data;
   }
-  const parsedInput = target.inputSchema.safeParse(d.jobWith);
+  const resolvedWith = resolveEventFields(d.jobWith, d.eventPayload);
+  if (!resolvedWith.ok) {
+    reportDrift(
+      d,
+      "input",
+      `the payload has no ${resolvedWith.missing.map((f) => JSON.stringify(f)).join(", ")} for the trigger's eventField`,
+    );
+    return null;
+  }
+  const parsedInput = target.inputSchema.safeParse(resolvedWith.input);
   if (!parsedInput.success) {
     reportDrift(d, "input", parsedInput.error.message);
     return null;
   }
-  return { delivery: d, target, event };
+  return { delivery: d, target, input: resolvedWith.input, event };
 }
 
 /**
@@ -92,7 +105,7 @@ export async function enqueueDelivery(
   r: ResolvedDelivery,
   tx?: EnqueueTx,
 ): Promise<void> {
-  await r.target.enqueue(r.delivery.jobWith, { _event: r.event, tx });
+  await r.target.enqueue(r.input, { _event: r.event, tx });
   if (r.delivery.oneShot) await deleteTriggerRow(tx ?? db, r.delivery);
 }
 

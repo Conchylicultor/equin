@@ -5628,7 +5628,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Register: `defineJob('retention.page_blocks_ext_origin')`
         - **`auto-icon`** — Regenerate action for the page icon picker: a footer row that forces a new auto-picked emoji for the page pending while the pick runs in the request. Auto-icon provenance (page_blocks_ext_auto_icon): a row records that icon generation ran for a page, so it never runs again unasked. Everything model-driven — the pick, its jobs, the boot backfill and Regenerate — is the machine half's.
           - Server:
-            - Contributes: `trigger` "pages.auto-icon.schedule"
+            - Contributes: `trigger` "pages.auto-icon.generate"
             - Uses:
               - `infra/entity-extensions.defineExtension`
               - `page/editor._blocks`
@@ -5646,7 +5646,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `infra/endpoints.implementMachine`
             - Register:
               - `defineJob('pages.auto-icon.generate')`
-              - `defineJob('pages.auto-icon.schedule')`
               - `defineJob('pages.auto-icon.backfill')`
               - `defineWarmup('pages.auto-icon.backfill')`
             - Routes: `POST /api/pages/:pageId/auto-icon/regenerate`
@@ -5671,12 +5670,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page.editor.block.onRestore`
             - Uses:
               - `database.db`
+              - `infra/events.eventField`
               - `infra/events.Trigger`
               - `infra/jobs.defineJob`
               - `infra/warmup.defineWarmup`
               - `page/editor.BlockDeleteHook`
               - `page/editor.BlockLifecycle`
               - `page/editor.BlockRestoreHook`
+              - `page/editor.BLOCKS_CHANGED_SETTLE`
               - `page/editor.blocksChanged`
               - `page/editor.BlockTrashHook`
               - `page/editor.DeletedBlockRow`
@@ -5737,7 +5738,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `fixturePages`
           - Cross-plugin:
             - Imported by: `apps/website/promo-film/seed`
-        - **`history`** — Pages version-history UI: contributes the "Edited 2h ago" label to the page-detail title bar, which opens the reusable version-history dialog with a faithful, diffed read-only preview of each page version. Pages version-history consumer: registers the page history source (serialize/restore via the editor's page-content API), captures time-bucketed snapshots through a debounced two-job pipeline bound to blocksChanged, and drops a page's history on delete.
+        - **`history`** — Pages version-history UI: contributes the "Edited 2h ago" label to the page-detail title bar, which opens the reusable version-history dialog with a faithful, diffed read-only preview of each page version. Pages version-history consumer: registers the page history source (serialize/restore via the editor's page-content API), captures time-bucketed snapshots through a snapshot job bound to blocksChanged and settled per page (4 s after the last edit, at least every minute), and drops a page's history on delete.
           - Web:
             - Contributes: `pageDetailPane.Actions` "edited" → `EditedHistoryAction`
             - Uses:
@@ -5759,12 +5760,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/relative-time.RelativeTime`
           - Server:
             - Contributes:
-              - `trigger` "pages.history.schedule"
+              - `trigger` "pages.history.snapshot"
               - `page.editor.block.onDelete`
             - Uses:
               - `history/engine.defineHistorySource`
               - `history/engine.deleteVersions`
               - `history/engine.recordVersion`
+              - `infra/events.eventField`
               - `infra/events.Trigger`
               - `infra/jobs.defineJob`
               - `page/block-text-write.writeBlockTexts`
@@ -5778,7 +5780,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Register:
               - `defineHistorySource('pages')`
               - `defineJob('pages.history.snapshot')`
-              - `defineJob('pages.history.schedule')`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --faint-foreground`
@@ -32106,16 +32107,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `DefineTriggerEventSpec`
           - `EmitTx`
+          - `EventField`
           - `EventHandle`
           - `EventSource`
           - `FilterSlot`
           - `TriggerSpec`
+          - `TriggerWith`
           - `UnsafeTriggerByNameSpec`
         - Exports (values):
           - `_event_emissions`
           - `defineTriggerEvent`
           - `deleteTrigger`
           - `deleteTriggersFor`
+          - `eventField`
           - `trigger`
           - `Trigger`
           - `triggerTableRegistry`
@@ -33421,8 +33425,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `JobRunRow`
           - `JobState`
           - `RunnerSpec`
+          - `SettleSpec`
         - Exports (values):
           - `ALL_JOB_TASKS`
+          - `assertSettleSpec`
           - `cancelJob`
           - `ceilingMsFor`
           - `cronMatches`
@@ -33453,6 +33459,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reachableSlots`
           - `retryJob`
           - `RUNNERS`
+          - `settledRunAt`
           - `taskFor`
           - `TOTAL_JOB_SLOTS`
       - Cross-plugin:
@@ -38887,10 +38894,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `database.db`
           - `infra/attachments.Attachments`
+          - `infra/events.eventField`
           - `infra/events.Trigger`
           - `infra/jobs.defineJob`
           - `network/live.serveCollection`
           - `page/editor._blocks`
+          - `page/editor.BLOCKS_CHANGED_SETTLE`
           - `page/editor.blocksChanged`
           - `page/editor.liveBlocks`
         - DB schema: `plugins/page/plugins/attachment-block/server/internal/tables.ts`
@@ -39533,6 +39542,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `agentCodeSpanTokens`
           - `applyPageBlockPatch`
           - `BlockLifecycle`
+          - `BLOCKS_CHANGED_SETTLE`
           - `blocksChanged`
           - `BlockSchema`
           - `blockTextProtectedSpans`
@@ -40160,9 +40170,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page.inline-token` "\[\[(?:date:([0-9TZ:.+-]+)|reminder:([a-f0-9-]+):([0-9TZ:.+-]+))\]\]"
         - Uses:
           - `database.db`
+          - `infra/events.eventField`
           - `infra/events.Trigger`
           - `infra/jobs.defineJob`
           - `page/editor._blocks`
+          - `page/editor.BLOCKS_CHANGED_SETTLE`
           - `page/editor.blocksChanged`
           - `page/editor.Editor`
           - `page/editor.liveBlocks`
@@ -40254,27 +40266,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `derived-table` "page_link_targets"
           - `trigger` "page.links.reindex"
           - `page.editor.block.onDelete`
-        - Uses:
-          - `database.db`
-          - `database.DbExecutor`
+        - Uses: 22 symbols — full list in [`plugins/page/plugins/links/REFERENCE.md`](../plugins/page/plugins/links/REFERENCE.md)
+          - `page/editor` ×8
+          - `database/sql-projection` ×2
+          - `database` ×2
+          - `infra/events` ×2
+          - `network/live` ×2
+          - `primitives/text-editor/inline-chip` ×2
           - `database/derived-tables.DerivedTable`
-          - `database/sql-projection.nullable`
-          - `database/sql-projection.parsed`
-          - `infra/events.Trigger`
           - `infra/jobs.defineJob`
           - `infra/warmup.defineWarmup`
-          - `network/live.serveCollection`
-          - `network/live.serveValue`
           - `network/live/query-resource.materializeJoin`
-          - `page/editor._blocks`
-          - `page/editor.BlockLifecycle`
-          - `page/editor.blocksChanged`
-          - `page/editor.existingPageIds`
-          - `page/editor.liveBlocks`
-          - `page/editor.PAGE_BLOCK_TYPE`
-          - `page/editor.pageLive`
-          - `primitives/text-editor/inline-chip.inlineTokenReferentTables`
-          - `primitives/text-editor/inline-chip.inlineTokensAsText`
         - DB schema:
           - `plugins/page/plugins/links/server/internal/rollup-table.ts`
           - `plugins/page/plugins/links/server/internal/tables.ts`

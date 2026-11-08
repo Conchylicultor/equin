@@ -42,3 +42,5 @@ export { cronMatches, nextCronFiring, parseCrontab } from "./cron";
 export type { Crontab } from "./cron";
 export { ceilingMsFor } from "./hold";
 export { deadJobsEntityRef } from "./resources";
+export { assertSettleSpec, settledRunAt } from "./settle";
+export type { SettleSpec } from "./settle";

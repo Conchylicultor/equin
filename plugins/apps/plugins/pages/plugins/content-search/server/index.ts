@@ -1,5 +1,5 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { Trigger } from "@plugins/infra/plugins/events/server";
+import { eventField, Trigger } from "@plugins/infra/plugins/events/server";
 import { blocksChanged, BlockLifecycle } from "@plugins/page/plugins/editor/server";
 import { reindexPageSearchJob } from "./internal/reindex-job";
 import { backfillPagesSearchJob } from "./internal/backfill-job";
@@ -27,7 +27,12 @@ export default {
     // imperatively bound) so the events plugin makes it idempotent across
     // reboots. Match-any on pageId — the per-emit pageId reaches the job via
     // the event payload.
-    Trigger({ on: blocksChanged, do: reindexPageSearchJob, with: {}, oneShot: false }),
+    Trigger({
+      on: blocksChanged,
+      do: reindexPageSearchJob,
+      with: { pageId: eventField("pageId") },
+      oneShot: false,
+    }),
     // A page HARD delete / purge FK-cascades its blocks without firing the
     // reindexer for the page itself; drop its stale search doc.
     BlockLifecycle.OnDelete(deletePagesSearchHook),

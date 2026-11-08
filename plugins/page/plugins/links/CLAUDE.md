@@ -102,27 +102,17 @@ a steady-state reboot writes nothing).
     - `derived-table` "page_link_targets"
     - `trigger` "page.links.reindex"
     - `page.editor.block.onDelete`
-  - Uses:
-    - `database.db`
-    - `database.DbExecutor`
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `page/editor` ×8
+    - `database/sql-projection` ×2
+    - `database` ×2
+    - `infra/events` ×2
+    - `network/live` ×2
+    - `primitives/text-editor/inline-chip` ×2
     - `database/derived-tables.DerivedTable`
-    - `database/sql-projection.nullable`
-    - `database/sql-projection.parsed`
-    - `infra/events.Trigger`
     - `infra/jobs.defineJob`
     - `infra/warmup.defineWarmup`
-    - `network/live.serveCollection`
-    - `network/live.serveValue`
     - `network/live/query-resource.materializeJoin`
-    - `page/editor._blocks`
-    - `page/editor.BlockLifecycle`
-    - `page/editor.blocksChanged`
-    - `page/editor.existingPageIds`
-    - `page/editor.liveBlocks`
-    - `page/editor.PAGE_BLOCK_TYPE`
-    - `page/editor.pageLive`
-    - `primitives/text-editor/inline-chip.inlineTokenReferentTables`
-    - `primitives/text-editor/inline-chip.inlineTokensAsText`
   - DB schema:
     - `plugins/page/plugins/links/server/internal/rollup-table.ts`
     - `plugins/page/plugins/links/server/internal/tables.ts`

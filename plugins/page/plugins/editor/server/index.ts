@@ -60,7 +60,7 @@ export { existingPageIds } from "./internal/existing-pages";
 // The live pages as a rollup a materialized join nests (link edges into a
 // live page).
 export { pageLive } from "./internal/rollup-spec";
-export { blocksChanged } from "./internal/tables-events";
+export { BLOCKS_CHANGED_SETTLE, blocksChanged } from "./internal/tables-events";
 export type { BlocksChangedPayload } from "./internal/tables-events";
 export { BlockLifecycle } from "./internal/document-hooks";
 export type {

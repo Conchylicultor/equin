@@ -14,10 +14,12 @@
   - Uses:
     - `database.db`
     - `infra/attachments.Attachments`
+    - `infra/events.eventField`
     - `infra/events.Trigger`
     - `infra/jobs.defineJob`
     - `network/live.serveCollection`
     - `page/editor._blocks`
+    - `page/editor.BLOCKS_CHANGED_SETTLE`
     - `page/editor.blocksChanged`
     - `page/editor.liveBlocks`
   - DB schema: `plugins/page/plugins/attachment-block/server/internal/tables.ts`
