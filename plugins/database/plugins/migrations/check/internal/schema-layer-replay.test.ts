@@ -71,8 +71,24 @@ test("the whole data/ directory plus the real derived layer applies from scratch
   );
   expect(result.rollups.every((r) => r.definitionChanged)).toBe(true);
 
+  // Reconcile order is a dependency order, not a name order: a rollup whose
+  // source is another rollup's table (page_link_targets over page_live) is
+  // reconciled after it, so its heal reads the healed rows.
+  const order = result.rollups.map((r) => r.table);
+  const readsBeforeSource = inputs.derivedTables.flatMap((reader) =>
+    reader.sources
+      .filter((s) => order.includes(s.table))
+      .map((s) => ({
+        reader: reader.table,
+        source: s.table,
+        readerFirst: order.indexOf(reader.table) < order.indexOf(s.table),
+      })),
+  );
+  expect(readsBeforeSource.length).toBeGreaterThan(0);
+  expect(readsBeforeSource.filter((p) => p.readerFirst)).toEqual([]);
+
   // A second boot over the result finds nothing to do: no migration, no
-  // rollup definition, and a reconcile that heals nothing.
+  // rollup definition, and a reconcile that heals nothing — in the same order.
   expect(
     await applySchemaLayer(
       t.db,
@@ -85,14 +101,12 @@ test("the whole data/ directory plus the real derived layer applies from scratch
     ),
   ).toEqual({
     pending: 0,
-    rollups: inputs.derivedTables
-      .map((r) => ({
-        table: r.table,
-        upserted: 0,
-        deleted: 0,
-        definitionChanged: false,
-      }))
-      .sort((a, b) => a.table.localeCompare(b.table)),
+    rollups: order.map((table) => ({
+      table,
+      upserted: 0,
+      deleted: 0,
+      definitionChanged: false,
+    })),
     deferredContract: null,
   });
 }, 300_000); // Importing every server barrel, then ~270 migrations.
