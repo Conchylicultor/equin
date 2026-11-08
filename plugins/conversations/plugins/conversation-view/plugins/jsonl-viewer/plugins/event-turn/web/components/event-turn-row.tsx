@@ -24,24 +24,29 @@ function headline(text: string): string {
  * subtree it watches (a report, a flag, the subtree going quiet). The app's
  * voice, not the user's — a neutral dashed card like the harness's own turns,
  * folded to its first line; the whole body (every event line, then the
- * subtree digest) opens below.
+ * subtree digest) opens below. The one look of an event turn: the transcript
+ * row, and any other surface drawing one (the agent thread) or its echo.
  */
-export function EventTurnRow({ event }: { event: JsonlEvent }) {
-  const e = event as EventTurnEvent;
+export function EventTurnCard({ text }: { text: string }) {
   return (
     <CollapsibleCard
       className="border-dashed"
       icon={<Icon icon={eventIcon} className="size-3.5" />}
       label="Event"
-      summary={headline(e.text)}
+      summary={headline(text)}
     >
       <Text
         as="div"
         variant="caption"
         className="break-words text-muted-foreground"
       >
-        <Markdown>{e.text}</Markdown>
+        <Markdown>{text}</Markdown>
       </Text>
     </CollapsibleCard>
   );
+}
+
+/** The transcript's `event-turn` row. */
+export function EventTurnRow({ event }: { event: JsonlEvent }) {
+  return <EventTurnCard text={(event as EventTurnEvent).text} />;
 }

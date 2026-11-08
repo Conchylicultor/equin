@@ -10,7 +10,10 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
+import {
+  turnLineKind,
+  type JsonlEvent,
+} from "@plugins/conversations/plugins/transcript-source/core";
 import {
   JsonlViewer,
   useStreamingStandIns,
@@ -43,7 +46,7 @@ import {
 } from "../internal/use-thread";
 import {
   AgentThreadView,
-  UserBubble,
+  ThreadPromptView,
   type RenderThreadResult,
   type ResultWords,
   type ThreadHeaderOptions,
@@ -77,15 +80,22 @@ interface AgentThreadBaseProps<D extends ThreadResultDef> {
   prepareTurn?: PrepareTurn;
 }
 
-/** A sent turn's echo: the thread's own user bubble, its status under it. */
-const renderEcho: RenderEcho = (turn, status) => (
-  <Stack gap="sm">
-    <UserBubble text={turn.text} />
-    <Stack gap="none" align="end">
-      {status}
+/**
+ * A sent turn's echo: the prompt the thread will draw once the transcript
+ * holds its line (`turnLineKind` — an `event` turn's is the event card), its
+ * status under it, on the prompt's own side.
+ */
+const renderEcho: RenderEcho = (turn, status) => {
+  const kind = turnLineKind(turn.kind) === "event-turn" ? "event" : "user";
+  return (
+    <Stack gap="sm">
+      <ThreadPromptView prompt={{ kind, text: turn.text }} />
+      <Stack gap="none" align={kind === "user" ? "end" : "start"}>
+        {status}
+      </Stack>
     </Stack>
-  </Stack>
-);
+  );
+};
 
 /**
  * The user has seen what the thread said: stamp the conversation viewed while

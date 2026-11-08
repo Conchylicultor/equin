@@ -177,3 +177,19 @@ export const QUESTION: ThreadFixture = {
   ],
   conversation: { status: "waiting", waitingFor: "question" },
 };
+
+export const EVENT: ThreadFixture = {
+  events: [
+    ...harness,
+    ...firstTurn,
+    {
+      kind: "event-turn",
+      at: at(),
+      text: 'An event in the tasks you watch:\n- reported · task-1 "Check Golden Dragon\'s Tuesday hours" — Golden Dragon closes at 9pm on Tuesdays.',
+    },
+    say(
+      "Golden Dragon closes at 9pm on Tuesdays, so Lan Zhou is the late option.",
+    ),
+  ],
+  conversation: { status: "waiting", waitingFor: null },
+};

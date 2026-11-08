@@ -101,6 +101,7 @@ Design: `research/2026-10-19-global-demo-story-from-browser-worker.md` §3.
     - `ToolCallResult`
     - `TranscriptChain`
     - `TranscriptImage`
+    - `TurnLineKind`
     - `UserTextSegment`
   - Exports (values):
     - `activeLineUuids`
@@ -126,6 +127,7 @@ Design: `research/2026-10-19-global-demo-story-from-browser-worker.md` §3.
     - `TokenUsageSchema`
     - `transcriptChainOf`
     - `TranscriptImageSchema`
+    - `turnLineKind`
     - `unwrapPastedContent`
     - `unwrapRelayEnvelopes`
     - `userPromptText`
@@ -136,6 +138,7 @@ Design: `research/2026-10-19-global-demo-story-from-browser-worker.md` §3.
     - `apps/prototypes/checkpoints`
     - `backup/sources/transcripts`
     - `conversations`
+    - `conversations/agent-thread`
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/api-request`
     - `conversations/conversation-view/jsonl-viewer/background-shells`

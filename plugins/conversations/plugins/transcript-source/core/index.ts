@@ -21,6 +21,8 @@ export { isInterruptContent } from "./interrupt";
 export { taskStopTimes } from "./task-stop";
 export { unwrapPastedContent } from "./pasted-content";
 export { questionAnswerText, userPromptText } from "./user-prompt";
+export { turnLineKind } from "./turn-line";
+export type { TurnLineKind } from "./turn-line";
 export { activeLineUuids } from "./branch-filter";
 export { mergedSendUuids } from "./merged-sends";
 export type { TeammateMessage } from "./relay";

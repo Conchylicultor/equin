@@ -14,6 +14,7 @@ export { groupThread } from "./internal/group-thread";
 export type {
   AcceptedThreadResult,
   ThreadConversation,
+  ThreadPrompt,
   ThreadResult,
   ThreadStep,
   ThreadStepState,

@@ -109,7 +109,7 @@ describe("groupThread", () => {
     const turns = groupThread([...harness, ...searchTurn], [picks], IDLE);
     expect(turns).toHaveLength(1);
     const [turn] = turns;
-    expect(turn!.user.text).toBe("chinese restaurant open tuesday");
+    expect(turn!.prompt.text).toBe("chinese restaurant open tuesday");
     expect(turn!.steps.map((s) => s.event.name)).toEqual([
       "mcp__equin__places_search_text",
       "mcp__equin__places_details",
@@ -117,6 +117,23 @@ describe("groupThread", () => {
     expect(turn!.steps.map((s) => s.state)).toEqual(["done", "done"]);
     expect(turn!.answer?.text).toBe("Here are two picks open on Tuesday.");
     expect(turn!.state).toBe("done");
+  });
+
+  test("an event the app delivered opens a turn of its own, as an event", () => {
+    const event: JsonlEvent = {
+      kind: "event-turn",
+      at: at(),
+      text: "An event in the tasks you watch:\n- quiet · task-1",
+      uuid: `e-${++ids}`,
+    };
+    const turns = groupThread(
+      [...searchTurn, event, say("Noted, nothing left to do.")],
+      [picks],
+      IDLE,
+    );
+    expect(turns.map((t) => t.prompt.kind)).toEqual(["user", "event"]);
+    expect(turns[1]!.prompt.text).toBe(event.text);
+    expect(turns[1]!.answer?.text).toBe("Noted, nothing left to do.");
   });
 
   test("an accepted result-tool call is a typed result, not a step", () => {

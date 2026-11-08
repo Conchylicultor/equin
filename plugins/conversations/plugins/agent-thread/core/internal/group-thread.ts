@@ -78,9 +78,20 @@ export interface ThreadAnswer {
   streaming: boolean;
 }
 
-/** One exchange: what the user said, and everything the agent did about it. */
+/**
+ * What opened a turn: a message the user wrote (`user`), or an event the app
+ * delivered to the agent (`event` — a watched task reported, went quiet: the
+ * app's voice, never drawn as the user's).
+ */
+export interface ThreadPrompt {
+  kind: "user" | "event";
+  text: string;
+  at: string;
+}
+
+/** One exchange: what opened it, and everything the agent did about it. */
 export interface ThreadTurn<D extends ThreadResultDef = ThreadResultDef> {
-  user: { text: string; at: string };
+  prompt: ThreadPrompt;
   steps: ThreadStep[];
   /** The turn's last assistant text, or null when it wrote none. */
   answer: ThreadAnswer | null;
@@ -108,7 +119,7 @@ function lastTurnRuns(conversation: ThreadConversation): boolean {
 }
 
 interface TurnDraft {
-  user: { text: string; at: string };
+  prompt: ThreadPrompt;
   calls: ToolCallEvent[];
   answer: ThreadAnswer | null;
 }
@@ -178,7 +189,7 @@ function closeTurn<D extends ThreadResultDef>(
   }
   const delivered = [...results.values()];
   return {
-    user: draft.user,
+    prompt: draft.prompt,
     steps,
     answer: draft.answer,
     results: delivered,
@@ -192,7 +203,8 @@ function closeTurn<D extends ThreadResultDef>(
 
 /**
  * Fold a conversation's transcript into the turns of its thread. A turn opens
- * at each `user-text`; whatever comes before the first (the harness context)
+ * at each `user-text` — or `event-turn`, an event the app delivered, which the
+ * agent answers like a message (`prompt.kind`); whatever comes before the first (the harness context)
  * belongs to no turn. Inside a turn, each tool call is a step, unless it is an
  * accepted call of one of `results`' tools, which makes it a result; the
  * turn's last assistant text is its answer.
@@ -232,9 +244,13 @@ export function groupThread<D extends ThreadResultDef>(
   );
   const drafts: TurnDraft[] = [];
   for (const event of [...events, ...streamed]) {
-    if (event.kind === "user-text") {
+    if (event.kind === "user-text" || event.kind === "event-turn") {
       drafts.push({
-        user: { text: event.text, at: event.at },
+        prompt: {
+          kind: event.kind === "user-text" ? "user" : "event",
+          text: event.text,
+          at: event.at,
+        },
         calls: [],
         answer: null,
       });

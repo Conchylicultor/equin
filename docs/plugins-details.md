@@ -14981,7 +14981,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AgentThreadSlots.StepLabel` "TodoWrite" → `TodoWriteStepLabel`
           - `AgentThreadSlots.StepLabel` "AskUserQuestion" → `AskUserQuestionStepLabel`
           - `AgentThreadSlots.StepLabel` "^(Agent|Task)$" → `AgentStepLabel`
-        - Uses: 66 symbols — full list in [`plugins/conversations/plugins/agent-thread/REFERENCE.md`](../plugins/conversations/plugins/agent-thread/REFERENCE.md)
+        - Uses: 67 symbols — full list in [`plugins/conversations/plugins/agent-thread/REFERENCE.md`](../plugins/conversations/plugins/agent-thread/REFERENCE.md)
           - `conversations/conversation-view/pending-turn` ×10
           - `network/live/live-state` ×7
           - `conversations/conversation-view/jsonl-viewer` ×4
@@ -14994,6 +14994,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/latest-ref` ×2
           - `primitives/slot-render` ×2
           - `conversations/conversation-view/jsonl-viewer/assistant-text.AgentProse`
+          - `conversations/conversation-view/jsonl-viewer/event-turn.EventTurnCard`
           - `conversations/conversation-view/jsonl-viewer/tool-call.ToolNameLabel`
           - `conversations/hibernation.useMarkConversationViewed`
           - `conversations.useConversation`
@@ -15076,6 +15077,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ProgressConversation`
           - `ThreadConversation`
           - `ThreadProgress`
+          - `ThreadPrompt`
           - `ThreadResult`
           - `ThreadResultDef`
           - `ThreadResultOutput`
@@ -17400,7 +17402,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `network/live.useLive`
                   - `network/live/live-state.ResourceErrorInline`
                   - `primitives/css/text.Text`
-            - **`event-turn`** — Renders an event turn the app delivered to a watching agent (the turn ledger's <equin-event> envelope) as a compact system card — its first line in the header, the event lines and subtree digest folded below — never as a message the user wrote.
+            - **`event-turn`** — Renders an event turn the app delivered to a watching agent (the turn ledger's <equin-event> envelope) as a compact system card — its first line in the header, the event lines and subtree digest folded below — never as a message the user wrote. Exports EventTurnCard, that one look, for any other surface drawing an event turn (the agent thread).
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "event-turn" → `EventTurnRow`
                 - Uses:
@@ -17409,10 +17411,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/text.Text`
                   - `primitives/markdown.Markdown`
                   - `ui/icons.Icon`
+                - Exports (values): `EventTurnCard`
               - Cross-plugin:
                 - Uses tokens:
                   - `ui/tokens/color-palette --muted-foreground`
                   - `ui/tokens/shape --spacing`
+                - Imported by: `conversations/agent-thread`
             - **`fields-card`** — Shared appearance for a headline + truncating summary preview + fold-out key/value field list. Used by the queued task-notification card and the native task-notification row so the two never diverge.
               - Web:
                 - Uses:
@@ -20717,6 +20721,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ToolCallResult`
           - `TranscriptChain`
           - `TranscriptImage`
+          - `TurnLineKind`
           - `UserTextSegment`
         - Exports (values):
           - `activeLineUuids`
@@ -20742,6 +20747,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TokenUsageSchema`
           - `transcriptChainOf`
           - `TranscriptImageSchema`
+          - `turnLineKind`
           - `unwrapPastedContent`
           - `unwrapRelayEnvelopes`
           - `userPromptText`
@@ -20752,6 +20758,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/prototypes/checkpoints`
           - `backup/sources/transcripts`
           - `conversations`
+          - `conversations/agent-thread`
           - `conversations/conversation-view/jsonl-viewer`
           - `conversations/conversation-view/jsonl-viewer/api-request`
           - `conversations/conversation-view/jsonl-viewer/background-shells`

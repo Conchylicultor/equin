@@ -21,11 +21,13 @@ import {
   UserMessageCard,
   UserMessageText,
 } from "@plugins/conversations/plugins/conversation-view/plugins/user-message/web";
+import { EventTurnCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/event-turn/web";
 import { PromptComposerProvider } from "@plugins/conversations/plugins/conversation-view/web";
 import type {
   AcceptedThreadResult,
   ThreadResult,
   ThreadResultDef,
+  ThreadPrompt,
   ThreadState,
   ThreadTurn,
 } from "../../core";
@@ -122,13 +124,22 @@ function ThreadHeader({
   );
 }
 
-/** The user's message in a thread — also a sent turn's echo, so the two match. */
-export function UserBubble({ text }: { text: string }) {
+/**
+ * What opened a turn — also a sent turn's echo, so the two match: the user's
+ * message as a bubble on the right; an event the app delivered as the
+ * transcript's own event card (`EventTurnCard`), never as the user's words.
+ */
+export function ThreadPromptView({
+  prompt,
+}: {
+  prompt: Pick<ThreadPrompt, "kind" | "text">;
+}) {
+  if (prompt.kind === "event") return <EventTurnCard text={prompt.text} />;
   return (
     <Stack gap="none" align="end">
       <div className="max-w-[85%]">
         <UserMessageCard>
-          <UserMessageText text={text} />
+          <UserMessageText text={prompt.text} />
         </UserMessageCard>
       </div>
     </Stack>
@@ -161,7 +172,7 @@ function TurnView<D extends ThreadResultDef>({
 }) {
   return (
     <Stack gap="sm">
-      <UserBubble text={turn.user.text} />
+      <ThreadPromptView prompt={turn.prompt} />
       <StepList turn={turn} resultWords={resultWords} />
       {turn.answer && (
         <AgentProse
@@ -302,7 +313,7 @@ export function AgentThreadView<D extends ThreadResultDef>(
                   turns.map((turn, i) => (
                     <TurnView
                       conversationId={conversationId}
-                      key={`${turn.user.at}:${i}`}
+                      key={`${turn.prompt.at}:${i}`}
                       turn={turn}
                       latest={i === turns.length - 1}
                       working={

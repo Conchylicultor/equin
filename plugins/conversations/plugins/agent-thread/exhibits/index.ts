@@ -23,6 +23,12 @@ export default [
     load: () => import("./internal/failed"),
   }),
   appExhibit({
+    id: "agent-thread/event",
+    label: "Agent thread (a turn opened by an event)",
+    widths: [420, 640],
+    load: () => import("./internal/event"),
+  }),
+  appExhibit({
     id: "agent-thread/question",
     label: "Agent thread (waiting on a question)",
     widths: [420, 640],

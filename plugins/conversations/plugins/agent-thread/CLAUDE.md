@@ -30,7 +30,12 @@ server serves them (`mcp__<server>__<tool>`); a transcript name throws.
 ## Turns — `groupThread(events, results, conversation)` (core, pure)
 
 - A turn opens at each `user-text` of the transcript as rendered
-  (`useVisibleEvents`); the harness context before the first belongs to none.
+  (`useVisibleEvents`) — or `event-turn`, an event the app delivered to the
+  agent, which it answers like a message: `turn.prompt.kind` is `user` or
+  `event`. The view draws a `user` prompt as the bubble and an `event` one as
+  the transcript's own event card (`EventTurnCard`), never as the user's words
+  — a sent turn's echo too (`ThreadPromptView`, by transcript-source's
+  `turnLineKind`). The harness context before the first belongs to none.
 - Each `tool-call` is a **step** (`running` / `done` / `error`) — unless it is a
   call of a result tool the tool **accepted**, which makes it a **result**
   (`accepted`, typed by its kind; or `invalid` when its input no longer parses
@@ -168,7 +173,7 @@ waking a hibernated agent with nothing new to show. A refused resume is a toast.
     - `AgentThreadSlots.StepLabel` "TodoWrite" → `TodoWriteStepLabel`
     - `AgentThreadSlots.StepLabel` "AskUserQuestion" → `AskUserQuestionStepLabel`
     - `AgentThreadSlots.StepLabel` "^(Agent|Task)$" → `AgentStepLabel`
-  - Uses: 66 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 67 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations/conversation-view/pending-turn` ×10
     - `network/live/live-state` ×7
     - `conversations/conversation-view/jsonl-viewer` ×4
@@ -181,6 +186,7 @@ waking a hibernated agent with nothing new to show. A refused resume is a toast.
     - `primitives/latest-ref` ×2
     - `primitives/slot-render` ×2
     - `conversations/conversation-view/jsonl-viewer/assistant-text.AgentProse`
+    - `conversations/conversation-view/jsonl-viewer/event-turn.EventTurnCard`
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolNameLabel`
     - `conversations/hibernation.useMarkConversationViewed`
     - `conversations.useConversation`
@@ -263,6 +269,7 @@ waking a hibernated agent with nothing new to show. A refused resume is a toast.
     - `ProgressConversation`
     - `ThreadConversation`
     - `ThreadProgress`
+    - `ThreadPrompt`
     - `ThreadResult`
     - `ThreadResultDef`
     - `ThreadResultOutput`
