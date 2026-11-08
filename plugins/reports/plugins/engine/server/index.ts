@@ -24,6 +24,11 @@ export {
   uninvestigatedReports,
 } from "./internal/uninvestigated";
 export { recordReport, recordReportIncident } from "./internal/record-report";
+export { restateReportOccurrence } from "./internal/restate-report";
+export type {
+  RestateOccurrence,
+  RestateResult,
+} from "./internal/restate-report";
 export {
   reportOutboxFatalSink,
   reportOutboxSink,

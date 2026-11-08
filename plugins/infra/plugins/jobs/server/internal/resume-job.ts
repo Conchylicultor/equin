@@ -84,6 +84,7 @@ export const jobsResumeJob = defineJob({
         cause: "wake-failed",
         error: `its wake-up from "${waitName}" failed: ${death.error}`,
       },
+      null,
     );
   },
   run: async ({ input, event }) => {

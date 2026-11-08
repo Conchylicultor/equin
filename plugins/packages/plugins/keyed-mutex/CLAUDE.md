@@ -45,6 +45,7 @@ keystrokes into one concatenated turn.
     - `infra/claude-cli/sign-in`
     - `infra/deps`
     - `infra/jobs`
+    - `infra/jobs/attempt-audit`
     - `infra/jobs/in-process`
     - `infra/jobs/supervised-job`
     - `infra/launcher/login-services`

@@ -21,6 +21,7 @@ export { _notifications } from "./internal/tables";
 export { recordNotification } from "./internal/record-notification";
 export type { RecordNotificationInput } from "./internal/record-notification";
 export { setMutedByMetadata } from "./internal/reclassify-muted";
+export { restateNotification } from "./internal/restate-notification";
 
 export default {
   description:

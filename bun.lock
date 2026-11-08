@@ -4352,6 +4352,10 @@
         "graphile-worker": "^0.18.0",
       },
     },
+    "plugins/infra/plugins/jobs/plugins/attempt-audit": {
+      "name": "@equin/plugin-infra-jobs-attempt-audit",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/jobs/plugins/background-arm": {
       "name": "@equin/plugin-infra-jobs-background-arm",
       "version": "0.0.1",
@@ -9456,6 +9460,8 @@
     "@equin/plugin-infra-html-decode": ["@equin/plugin-infra-html-decode@workspace:plugins/infra/plugins/html-decode"],
 
     "@equin/plugin-infra-jobs": ["@equin/plugin-infra-jobs@workspace:plugins/infra/plugins/jobs"],
+
+    "@equin/plugin-infra-jobs-attempt-audit": ["@equin/plugin-infra-jobs-attempt-audit@workspace:plugins/infra/plugins/jobs/plugins/attempt-audit"],
 
     "@equin/plugin-infra-jobs-background-arm": ["@equin/plugin-infra-jobs-background-arm@workspace:plugins/infra/plugins/jobs/plugins/background-arm"],
 

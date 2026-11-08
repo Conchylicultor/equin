@@ -54,6 +54,12 @@ export {
   isJobDeadlineExceededError,
 } from "./internal/deadline-error";
 export { jobDeadlineSink } from "./internal/deadline-seam";
+export { jobAttemptSink } from "./internal/attempt-seam";
+export type {
+  JobAttemptEvent,
+  JobAttemptOutcome,
+} from "./internal/attempt-seam";
+export type { RunDeathCause } from "./internal/run-death";
 export type { JobDeadlineEvent } from "./internal/deadline-seam";
 // The floor's report kind + payload. Exported because the SPELLING must be
 // shared: this plugin writes the durable line (synchronously, on the way out of

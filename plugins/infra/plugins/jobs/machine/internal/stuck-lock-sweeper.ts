@@ -15,6 +15,7 @@ import {
   workflowRunIdFor,
 } from "../../server/internal/run-identity";
 import { announceRunDead } from "../../server/internal/run-death";
+import { announceAttemptSettled } from "../../server/internal/attempt-seam";
 import { pruneDyingRuns } from "./dying-runs";
 import { ANY_QUEUE_CHANGE, emitQueueActivity } from "./slot-ledger";
 import { discardWorkflowLogs } from "../../server/internal/workflow-log";
@@ -196,6 +197,12 @@ export async function sweepOnce(database: EnqueueTx = db): Promise<void> {
   await discardWorkflowLogs(ownedWorkflowRunIds(dropped), database);
 
   for (const row of dropped) {
+    // The row's run is the newer copy's now: a report of one of its failed
+    // attempts says so rather than waiting for an outcome this row never has.
+    announceAttemptSettled(
+      { jobName: row.job_name, jobId: row.id },
+      { kind: "superseded" },
+    );
     if (row.owner_died) {
       // Reported like a reclaim, because it IS one as far as backend health
       // goes: a worker died holding this row. Only the ending differs — the
@@ -276,6 +283,7 @@ export async function sweepOnce(database: EnqueueTx = db): Promise<void> {
         cause: "worker-died",
         error: `its worker died mid-run on its last attempt (job ${row.id})`,
       },
+      row.id,
     );
   }
 

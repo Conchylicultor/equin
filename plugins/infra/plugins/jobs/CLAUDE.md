@@ -186,6 +186,19 @@ nothing else: the run not being in flight stays true. Rows whose input no
 longer parses (schema drift) and unknown job names are not announced — their
 owners read the run as gone.
 
+## A failed attempt is reported, and so is how its run ended
+
+Every attempt that throws is announced on `jobAttemptSink`
+(`server/internal/attempt-seam.ts`, `announceAttemptFailed`) — retried or not:
+a retry that works hides a bug, it does not explain it. The same seam then
+carries the run's outcome for that row (`announceAttemptSettled`): a later
+attempt completing or suspending (`recovered`), `announceRunDead` (`dead`, with
+its `RunDeathCause` — so every death the table above lists reaches it, from
+both queues) and the sweeper's superseded DELETE (`superseded`).
+`plugins/attempt-audit` turns it into one `job-attempt-failed` report per
+failure, restated with the outcome. With no handler attached the failure falls
+back to `reportServerError`, so it can never go unreported.
+
 ## A stopped runner: patched graphile, and exit
 
 **Two local changes in `patches/graphile-worker@0.18.0.patch`** (0.18.0 is the
@@ -724,6 +737,8 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `EnqueueTx`
     - `HoldClass`
     - `HoldClassSpec`
+    - `JobAttemptEvent`
+    - `JobAttemptOutcome`
     - `JobCtx`
     - `JobDeadlineEvent`
     - `JobFactory`
@@ -735,6 +750,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `JobTaskPayload`
     - `QueuedJob`
     - `RegisteredJob`
+    - `RunDeathCause`
     - `RunnerSpec`
     - `ScheduleSpec`
     - `SerialSpec`
@@ -762,6 +778,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `isSuspendSignal`
     - `JOB_RUNNER_DIED_KIND`
     - `JOB_SLOT_FLOOR_KIND`
+    - `jobAttemptSink`
     - `JobDeadlineExceededError`
     - `jobDeadlineSink`
     - `JobQueue`
@@ -863,10 +880,10 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `taskFor`
     - `TOTAL_JOB_SLOTS`
 - Cross-plugin:
-  - Imported by: 76 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 77 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×20
     - `conversations` ×16
-    - `infra` ×12
+    - `infra` ×13
     - `debug` ×8
     - `tasks` ×7
     - `database` ×3
@@ -934,6 +951,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
   - Server: `@plugins/infra/plugins/jobs/server/testing`
     - `installQueueSchema` — Install (or bring up to date) graphile-worker's own schema on the database `connectionString` names, plus this plugin's superseded-row trigger on graphile's job table.
 - Sub-plugins:
+  - **`attempt-audit`** — Job attempt audit: registers a handler on the jobs plugin's attempt seam and files every failed job attempt as a job-attempt-failed report (error) — retried or not — then restates that occurrence…
   - **`background-arm`** — Jobs in the Background activity catalog: registers the `job` background kind — every registered job with its trigger (a schedule in words and its next firing, read from the one crontab parse every…
   - **`deadline-audit`** — Job deadline audit: registers a handler on the jobs plugin's deadline seam and turns each announcement into a report — job-deadline-exceeded (warning) when a run passes its hold class's wall-clock…
   - **`in-process`** (excluded) — The in-process job queue: provides the JobQueue host service for a host without the desktop's graphile queue — a row runs in this process when it is due, kept in the host's own database (written in…

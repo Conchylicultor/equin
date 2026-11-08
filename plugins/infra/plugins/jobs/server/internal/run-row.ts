@@ -5,6 +5,7 @@ import { scheduleResume } from "./resume-job";
 import { workflowRunIdFor } from "./run-identity";
 import { isSuspendSignal, makeDurableCtx } from "./step-ctx";
 import { classifyFailure, discardWorkflowLog } from "./workflow-log";
+import { announceAttemptFailed, announceAttemptSettled } from "./attempt-seam";
 
 /** How one run of a row ended, for the queue that dispatched it. */
 export type JobRowOutcome =
@@ -68,23 +69,47 @@ export async function UNSAFE_runJobRow(
       job.run({ input: payload.input, event: payload.event, ctx }),
     );
   } catch (err) {
-    if (isSuspendSignal(err)) return { kind: "suspended" };
+    if (isSuspendSignal(err)) {
+      announceRecovered(payload.jobName, meta, true);
+      return { kind: "suspended" };
+    }
     const errObj = err instanceof Error ? err : new Error(String(err));
-    reportServerError({
-      message: `[jobs] ${payload.jobName} failed (attempt ${meta.attempt}): ${errObj.message}`,
-      stack: errObj.stack ?? null,
-      errorType: errObj.name,
-      scope: payload.jobName,
-    });
     const finality = classifyFailure({
       err,
       deadlineAborted: false,
       attempt: meta.attempt,
       maxAttempts: meta.maxAttempts,
     });
+    // As the desktop's dispatch: every failed attempt is reported, and how
+    // its run ends follows on the same seam.
+    announceAttemptFailed({
+      jobName: payload.jobName,
+      jobId: meta.jobId,
+      workflowRunId,
+      attempt: meta.attempt,
+      maxAttempts: meta.maxAttempts,
+      retrying: !finality.workflowDead,
+      message: errObj.message,
+      stack: errObj.stack ?? null,
+      errorType: errObj.name,
+    });
     if (finality.workflowDead) await discardWorkflowLog(workflowRunId);
     return { kind: "failed", error: err, retry: !finality.workflowDead };
   }
   await discardWorkflowLog(workflowRunId);
+  announceRecovered(payload.jobName, meta, false);
   return { kind: "completed" };
+}
+
+// An attempt after the first got through (`attempt-seam.ts`).
+function announceRecovered(
+  jobName: string,
+  meta: { jobId: string; attempt: number },
+  suspended: boolean,
+): void {
+  if (meta.attempt <= 1) return;
+  announceAttemptSettled(
+    { jobName, jobId: meta.jobId },
+    { kind: "recovered", attempt: meta.attempt, suspended },
+  );
 }

@@ -31,6 +31,8 @@ export const eventsTestLogServed = serveValue(eventsTestLog, {
 // emits/enqueues. See docs/events.md §"Delivery semantics".
 const seenRuns = new Set<string>();
 
+const FAIL_ONCE_PREFIX = "fail-once";
+
 export function resetLog(): void {
   logEntries.length = 0;
   seenRuns.clear();
@@ -50,6 +52,12 @@ export const logPing = defineJob({
   event: z.object({ userId: z.string(), message: z.string() }),
   dedup: "none",
   run: ({ input: { label }, event, ctx }) => {
+    // A label starting `fail-once` throws on its first attempt and logs on
+    // its retry: the probe for a failed attempt whose run recovers (its
+    // `job-attempt-failed` report restated "Recovered on attempt 2").
+    if (label.startsWith(FAIL_ONCE_PREFIX) && ctx.attempt === 1) {
+      throw new Error(`events-test: ${label} fails its first attempt`);
+    }
     if (seenRuns.has(ctx.jobId)) return;
     seenRuns.add(ctx.jobId);
     logEntries.push({

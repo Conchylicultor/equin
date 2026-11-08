@@ -21106,11 +21106,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `libpqEnv`
       - `readDatabaseConfig`
   - Cross-plugin:
-    - Imported by: 152 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 153 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×42
       - `conversations` ×17
+      - `infra` ×15
       - `page` ×15
-      - `infra` ×14
       - `tasks` ×14
       - `active-data` ×8
       - `debug` ×7
@@ -21919,10 +21919,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens: `ui/tokens/color-palette --muted-foreground`
     - **`sql-column`** — Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union, or a jsonb shape, that nothing verifies. `withWire` declares a column type's JSON wire form (a codec applied in JS by whatever projects the column onto the wire), carried on the built column's type so a row schema must match it.
       - Cross-plugin:
-        - Imported by: 23 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
+        - Imported by: 24 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
           - `apps` ×6
           - `fields` ×5
-          - `infra` ×3
+          - `infra` ×4
           - `conversations` ×2
           - `network` ×2
           - `debug/latency-ledger`
@@ -28331,8 +28331,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `validatePersistedValue`
           - `withNotifyBatch`
       - Cross-plugin:
-        - Imported by: 104 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
-          - `infra` ×25
+        - Imported by: 105 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
+          - `infra` ×26
           - `debug` ×13
           - `conversations` ×10
           - `tasks` ×10
@@ -33228,6 +33228,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `EnqueueTx`
           - `HoldClass`
           - `HoldClassSpec`
+          - `JobAttemptEvent`
+          - `JobAttemptOutcome`
           - `JobCtx`
           - `JobDeadlineEvent`
           - `JobFactory`
@@ -33239,6 +33241,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `JobTaskPayload`
           - `QueuedJob`
           - `RegisteredJob`
+          - `RunDeathCause`
           - `RunnerSpec`
           - `ScheduleSpec`
           - `SerialSpec`
@@ -33266,6 +33269,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isSuspendSignal`
           - `JOB_RUNNER_DIED_KIND`
           - `JOB_SLOT_FLOOR_KIND`
+          - `jobAttemptSink`
           - `JobDeadlineExceededError`
           - `jobDeadlineSink`
           - `JobQueue`
@@ -33367,10 +33371,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskFor`
           - `TOTAL_JOB_SLOTS`
       - Cross-plugin:
-        - Imported by: 76 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
+        - Imported by: 77 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
           - `apps` ×20
           - `conversations` ×16
-          - `infra` ×12
+          - `infra` ×13
           - `debug` ×8
           - `tasks` ×7
           - `database` ×3
@@ -33438,6 +33442,32 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Server: `@plugins/infra/plugins/jobs/server/testing`
           - `installQueueSchema` — Install (or bring up to date) graphile-worker's own schema on the database `connectionString` names, plus this plugin's superseded-row trigger on graphile's job table.
       - Plugins:
+        - **`attempt-audit`** — Job attempt audit: registers a handler on the jobs plugin's attempt seam and files every failed job attempt as a job-attempt-failed report (error) — retried or not — then restates that occurrence once its run settles: recovered on attempt N, or gave up and why (last attempt failed, worker died, cancelled, superseded). The report stays open for investigation either way; job_attempt_reports links each unsettled attempt to its report occurrence, durably across restarts.
+          - Server:
+            - Contributes: `report-kind` "job-attempt-failed"
+            - Uses:
+              - `database.db`
+              - `database/sql-column.parsedJson`
+              - `infra/jobs.JobAttemptEvent`
+              - `infra/jobs.JobAttemptOutcome`
+              - `infra/jobs.jobAttemptSink`
+              - `infra/retention.defineRetention`
+              - `reports.ReportKind`
+              - `reports.ReportRow`
+              - `reports/engine.recordReport`
+              - `reports/engine.restateReportOccurrence`
+            - DB schema: `plugins/infra/plugins/jobs/plugins/attempt-audit/server/internal/tables.ts`
+            - Register: `defineJob('retention.job_attempt_reports')`
+          - Core:
+            - Exports (types):
+              - `AttemptFate`
+              - `JobAttemptFailedPayload`
+            - Exports (values):
+              - `AttemptFateSchema`
+              - `attemptReportMessage`
+              - `describeFate`
+              - `JOB_ATTEMPT_FAILED_KIND`
+              - `JobAttemptFailedPayloadSchema`
         - **`background-arm`** — Jobs in the Background activity catalog: registers the `job` background kind — every registered job with its trigger (a schedule in words and its next firing, read from the one crontab parse every scheduler matches by, and the installed item), scope, latest run and recent runs from the jobs run history, retention sweeps grouped as Cleanup and queue plumbing marked internal — and Run now for scheduled jobs; pushes the catalog when a run starts or finishes.
           - Machine:
             - Uses:
@@ -34534,12 +34564,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `getTableGrowthBounds`
           - `markCascadeBounded`
       - Cross-plugin:
-        - Imported by: 21 plugins — full list in [`plugins/infra/plugins/retention/REFERENCE.md`](../plugins/infra/plugins/retention/REFERENCE.md)
+        - Imported by: 22 plugins — full list in [`plugins/infra/plugins/retention/REFERENCE.md`](../plugins/infra/plugins/retention/REFERENCE.md)
           - `apps` ×5
           - `debug` ×5
+          - `infra` ×3
           - `page` ×3
           - `conversations` ×2
-          - `infra` ×2
           - `apps-core/app-usage`
           - `history/engine`
           - `primitives/usage-rank`
@@ -34649,8 +34679,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SPAN_MEASURES`
           - `waitSplit`
       - Cross-plugin:
-        - Imported by: 69 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
-          - `infra` ×22
+        - Imported by: 70 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
+          - `infra` ×23
           - `debug` ×20
           - `conversations` ×6
           - `apps` ×5
@@ -37748,6 +37778,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/claude-cli/sign-in`
           - `infra/deps`
           - `infra/jobs`
+          - `infra/jobs/attempt-audit`
           - `infra/jobs/in-process`
           - `infra/jobs/supervised-job`
           - `infra/launcher/login-services`
@@ -51876,13 +51907,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `SERVER_REPORT_SOURCES`
       - `submitReport`
   - Cross-plugin:
-    - Imported by: 64 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+    - Imported by: 65 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
       - `reports` ×28
       - `debug` ×15
       - `conversations` ×6
       - `database` ×4
+      - `infra` ×3
       - `framework` ×2
-      - `infra` ×2
       - `active-data/report`
       - `backup`
       - `network/live/boot-snapshot`
@@ -52017,6 +52048,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RESIZE_LOOP_OBSERVATIONS_MAX`
           - `RESIZE_LOOP_TARGETS_MAX`
           - `ResizeLoopTraceSchema`
+      - Cross-plugin:
+        - Imported by: `infra/jobs/attempt-audit`
     - **`endpoint-errors`** — Files crash tasks for bug-shaped handled endpoint errors (validation 400s and 5xx).
       - Web:
         - Contributes: `Core.Root` → `EndpointErrorReporter`
@@ -52029,10 +52062,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `change-producer` "reports"
           - `fork-data-exclusion` "reports"
-        - Uses: 21 symbols — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
+        - Uses: 22 symbols — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
           - `reports` ×8
+          - `shell/notifications` ×3
           - `infra/host/duress/shed` ×2
-          - `shell/notifications` ×2
           - `build/server-build-id.getServerGraphHash`
           - `config_v2.getConfig`
           - `database/admin.ExcludeFromFork`
@@ -52045,6 +52078,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - DB schema: `plugins/reports/plugins/engine/server/internal/tables.ts`
         - Exports (types):
           - `RecordReportResult`
+          - `RestateOccurrence`
+          - `RestateResult`
           - `StormRosterEntry`
           - `StormSummary`
         - Exports (values):
@@ -52057,6 +52092,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `renderReportTask`
           - `reportOutboxFatalSink`
           - `reportOutboxSink`
+          - `restateReportOccurrence`
           - `uninvestigatedReportCounts`
           - `uninvestigatedReports`
         - Register:
@@ -52065,11 +52101,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Machine:
         - Uses: `infra/endpoints.implementMachine`
       - Cross-plugin:
-        - Imported by: 27 plugins — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
+        - Imported by: 28 plugins — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
           - `debug` ×11
           - `conversations` ×4
           - `database` ×3
-          - `infra` ×2
+          - `infra` ×3
           - `reports` ×2
           - `backup`
           - `page/place/google`
@@ -53434,6 +53470,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `_notifications`
           - `recordNotification`
+          - `restateNotification`
           - `setMutedByMetadata`
         - Register: `defineJob('notifications.ttl-cleanup')`
         - Resources:

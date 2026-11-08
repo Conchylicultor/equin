@@ -72,11 +72,11 @@ export type RecordReportResult =
 // the notification, the task title — can ever exceed this. Kind-specific payload
 // (stack, etc.) is clamped by the kind's renderTask when it builds the task
 // description, where the ballooning actually hurt (markdown render).
-const MESSAGE_MAX = 4_000;
+export const MESSAGE_MAX = 4_000;
 
 // Truncate the middle, keeping head + tail. The closing context of an aggregated
 // error matters as much as the opening, so we drop the redundant middle.
-function clamp(value: string, max: number): string {
+export function clamp(value: string, max: number): string {
   if (value.length <= max) return value;
   const head = Math.ceil(max / 2);
   const tail = max - head;
@@ -528,7 +528,7 @@ function ringBell(bell: Bell, incident: IncidentBell | null): void {
         category: "reports",
         icon: spec.meta.variant === "info" ? infoReportIcon : null,
         title: staleOrigin ? `${spec.meta.notif} (stale tab)` : spec.meta.notif,
-        description: desc.length > 140 ? `${desc.slice(0, 137)}...` : desc,
+        description: bellDescription(desc),
         variant: spec.meta.variant,
         muted: row.noise,
         // equin's own telemetry: a user not in Developer mode never sees it.
@@ -555,6 +555,12 @@ function ringBell(bell: Bell, incident: IncidentBell | null): void {
       }),
     ),
   );
+}
+
+// The bell's one-line description, clamped — shared with a restated report's
+// (`./restate-report`), so the two can never be cut differently.
+export function bellDescription(desc: string): string {
+  return desc.length > 140 ? `${desc.slice(0, 137)}...` : desc;
 }
 
 // The validated, clamped, fingerprinted values recordReport computes before

@@ -48,6 +48,10 @@ import {
 } from "../../server/internal/registry";
 import { scheduleResume } from "../../server/internal/resume-job";
 import { announceRunDead } from "../../server/internal/run-death";
+import {
+  announceAttemptFailed,
+  announceAttemptSettled,
+} from "../../server/internal/attempt-seam";
 import { markRunDying } from "./dying-runs";
 import { queueNameFor } from "./graphile-routing";
 import { armDeadline } from "./deadline";
@@ -795,11 +799,28 @@ async function dispatch(
           return "suspended";
         }
         const errObj = err instanceof Error ? err : new Error(String(err));
-        reportServerError({
-          message: `[jobs] ${payload.jobName} failed (attempt ${meta.attempt}): ${errObj.message}`,
+        // Classified first (a pure reading) so the report can say whether
+        // another attempt follows; it is filed before any write below, so a
+        // failing collapse write still leaves the attempt reported.
+        const finality = classifyFailure({
+          err,
+          deadlineAborted: abort.signal.aborted,
+          attempt: meta.attempt,
+          maxAttempts: meta.maxAttempts,
+        });
+        // Every failed attempt is reported, retried or not; how its run ends
+        // follows on the same seam (`announceAttemptSettled` on completion
+        // below, `announceRunDead` on death), so the report can say it.
+        announceAttemptFailed({
+          jobName: payload.jobName,
+          jobId: meta.jobId,
+          workflowRunId,
+          attempt: meta.attempt,
+          maxAttempts: meta.maxAttempts,
+          retrying: !finality.workflowDead,
+          message: errObj.message,
           stack: errObj.stack ?? null,
           errorType: errObj.name,
-          scope: payload.jobName,
         });
         // A NonRetryableError signals a DETERMINISTIC failure — the same stored
         // input will fail identically on every retry. Collapse the retry budget so
@@ -823,12 +844,6 @@ async function dispatch(
         // of the handler, not of the day, and retrying it three more times
         // spends `maxAttempts × deadline` of slot time to learn nothing. So it
         // dead-letters here, loudly, through the same machinery.
-        const finality = classifyFailure({
-          err,
-          deadlineAborted: abort.signal.aborted,
-          attempt: meta.attempt,
-          maxAttempts: meta.maxAttempts,
-        });
         if (finality.collapseBudget) {
           await runInBackgroundLane(() => markJobPermanentlyFailed(meta.jobId));
         }
@@ -858,10 +873,11 @@ async function dispatch(
           // Marked before the hook runs, so what it sets off already reads
           // this still-locked row as over (`dying-runs.ts`).
           markRunDying(meta.jobId);
-          await announceRunDead(payload, {
-            cause: "failed",
-            error: errObj.message,
-          });
+          await announceRunDead(
+            payload,
+            { cause: "failed", error: errObj.message },
+            meta.jobId,
+          );
         }
         throw err;
       } finally {
@@ -888,6 +904,18 @@ async function dispatch(
     console.warn(err.message);
     reportServerError({ message: err.message, stack: err.stack ?? null });
     throw err;
+  }
+  // An attempt after the first got through: a report of an earlier failed
+  // attempt of this row can now say it recovered.
+  if (meta.attempt > 1) {
+    announceAttemptSettled(
+      { jobName: payload.jobName, jobId: meta.jobId },
+      {
+        kind: "recovered",
+        attempt: meta.attempt,
+        suspended: outcome === "suspended",
+      },
+    );
   }
   if (outcome === "suspended") {
     // graphile will report this run as a success; the run history must not.

@@ -1,0 +1,5 @@
+{
+  "name": "@equin/plugin-infra-jobs-attempt-audit",
+  "private": true,
+  "version": "0.0.1"
+}

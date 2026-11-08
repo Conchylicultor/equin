@@ -273,10 +273,14 @@ export const graphileQueue: JobQueueImpl = {
     // sends no notification → announce it.
     emitQueueActivity(ANY_QUEUE_CHANGE);
     for (const row of removed) {
-      await announceRunDead(row.payload as JobTaskPayload, {
-        cause: "cancelled",
-        error: "its queue row was removed (Debug → Queue)",
-      });
+      await announceRunDead(
+        row.payload as JobTaskPayload,
+        {
+          cause: "cancelled",
+          error: "its queue row was removed (Debug → Queue)",
+        },
+        String(row.id),
+      );
     }
   },
   onActivity: onQueueActivity,

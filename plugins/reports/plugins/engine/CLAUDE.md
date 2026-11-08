@@ -187,10 +187,10 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
   - Contributes:
     - `change-producer` "reports"
     - `fork-data-exclusion` "reports"
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `reports` ×8
+    - `shell/notifications` ×3
     - `infra/host/duress/shed` ×2
-    - `shell/notifications` ×2
     - `build/server-build-id.getServerGraphHash`
     - `config_v2.getConfig`
     - `database/admin.ExcludeFromFork`
@@ -203,6 +203,8 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
   - DB schema: `plugins/reports/plugins/engine/server/internal/tables.ts`
   - Exports (types):
     - `RecordReportResult`
+    - `RestateOccurrence`
+    - `RestateResult`
     - `StormRosterEntry`
     - `StormSummary`
   - Exports (values):
@@ -215,6 +217,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `renderReportTask`
     - `reportOutboxFatalSink`
     - `reportOutboxSink`
+    - `restateReportOccurrence`
     - `uninvestigatedReportCounts`
     - `uninvestigatedReports`
   - Register:
@@ -223,11 +226,11 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
 - Machine:
   - Uses: `infra/endpoints.implementMachine`
 - Cross-plugin:
-  - Imported by: 27 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 28 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×11
     - `conversations` ×4
     - `database` ×3
-    - `infra` ×2
+    - `infra` ×3
     - `reports` ×2
     - `backup`
     - `page/place/google`

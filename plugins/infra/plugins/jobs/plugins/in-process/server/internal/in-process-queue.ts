@@ -262,10 +262,11 @@ export function createInProcessQueue(
       throw err;
     }
     // Dead first, so what the hook sets off reads the run as over.
-    await announceRunDead(row.payload, {
-      cause: "failed",
-      error: row.lastError,
-    });
+    await announceRunDead(
+      row.payload,
+      { cause: "failed", error: row.lastError },
+      row.id,
+    );
   }
 
   /**
@@ -346,10 +347,11 @@ export function createInProcessQueue(
       admit(row);
     }
     for (const row of ended) {
-      await announceRunDead(row.payload, {
-        cause: "worker-died",
-        error: row.lastError ?? "",
-      });
+      await announceRunDead(
+        row.payload,
+        { cause: "worker-died", error: row.lastError ?? "" },
+        row.id,
+      );
     }
     return lastExecutions;
   }
@@ -599,10 +601,14 @@ export function createInProcessQueue(
       if (row === undefined || row.running) return;
       await cancelRow(row);
       activity();
-      await announceRunDead(row.payload, {
-        cause: "cancelled",
-        error: "its queue row was removed (Debug → Queue)",
-      });
+      await announceRunDead(
+        row.payload,
+        {
+          cause: "cancelled",
+          error: "its queue row was removed (Debug → Queue)",
+        },
+        row.id,
+      );
     },
     onActivity(listener) {
       listeners.add(listener);

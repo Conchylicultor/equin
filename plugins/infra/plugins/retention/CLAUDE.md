@@ -143,12 +143,12 @@ check would have been a patch on a footgun.
     - `getTableGrowthBounds`
     - `markCascadeBounded`
 - Cross-plugin:
-  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×5
     - `debug` ×5
+    - `infra` ×3
     - `page` ×3
     - `conversations` ×2
-    - `infra` ×2
     - `apps-core/app-usage`
     - `history/engine`
     - `primitives/usage-rank`

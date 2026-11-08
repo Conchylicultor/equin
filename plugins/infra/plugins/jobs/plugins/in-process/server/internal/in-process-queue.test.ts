@@ -7,7 +7,9 @@ import { z } from "zod";
 import { withHostServices } from "@plugins/framework/plugins/server-core/core/testing";
 import {
   defineJob,
+  jobAttemptSink,
   JobQueue,
+  type JobAttemptEvent,
   type JobQueueImpl,
   type JobRowOutcome,
   type JobTaskPayload,
@@ -255,6 +257,38 @@ test("a row with a retry still to come tells nothing", async () => {
   await queue.enqueue(job(MORTAL), mortal("b"), {});
   await settle(queue);
   expect(deaths).toEqual([]);
+});
+
+test("a dead row's settle reaches the attempt seam, naming its row", async () => {
+  const seen: JobAttemptEvent[] = [];
+  jobAttemptSink.register((e) => {
+    seen.push(e);
+    return true;
+  });
+  try {
+    const { queue } = harness({
+      [MORTAL]: () => ({
+        kind: "failed",
+        error: new Error("checkout lost"),
+        retry: false,
+      }),
+    });
+    await start(queue);
+    const { jobId } = await queue.enqueue(job(MORTAL), mortal("s"), {});
+    const death = nextDeath();
+    expect(settle(queue)).rejects.toThrow("checkout lost");
+    await death;
+    expect(seen).toEqual([
+      {
+        phase: "settled",
+        jobName: MORTAL,
+        jobId,
+        outcome: { kind: "dead", cause: "failed", error: "checkout lost" },
+      },
+    ]);
+  } finally {
+    jobAttemptSink.register(null);
+  }
 });
 
 test("a cancelled row tells its job it was cancelled", async () => {

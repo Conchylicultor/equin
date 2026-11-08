@@ -287,6 +287,7 @@ DataView (`web/components/notifications-view.tsx`):
   - Exports (values):
     - `_notifications`
     - `recordNotification`
+    - `restateNotification`
     - `setMutedByMetadata`
   - Register: `defineJob('notifications.ttl-cleanup')`
   - Resources:

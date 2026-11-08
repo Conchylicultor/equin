@@ -148,13 +148,13 @@ host first.
     - `SERVER_REPORT_SOURCES`
     - `submitReport`
 - Cross-plugin:
-  - Imported by: 64 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 65 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `reports` ×28
     - `debug` ×15
     - `conversations` ×6
     - `database` ×4
+    - `infra` ×3
     - `framework` ×2
-    - `infra` ×2
     - `active-data/report`
     - `backup`
     - `network/live/boot-snapshot`

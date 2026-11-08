@@ -1,6 +1,7 @@
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { runInBackgroundLane } from "@plugins/infra/plugins/runtime-profiler/core";
 import { UNSAFE_getRegisteredJob, type JobTaskPayload } from "./registry";
+import { announceAttemptSettled } from "./attempt-seam";
 
 /**
  * How a run ended for good — no attempt of it will ever run again. One of
@@ -31,6 +32,11 @@ export interface RunDeath {
  * flight (`keysInFlight`), so whatever `onDead` sets off reads the run as
  * over.
  *
+ * `jobId` is the queue row the run died on, announced on the attempt seam
+ * (`attempt-seam.ts`) so a report of one of its failed attempts can say the
+ * run gave up. `null` for a run with no row left to name (`wake-failed`: the
+ * suspended run's rows are gone, and each was settled when it suspended).
+ *
  * Never throws: the queue's own outcome (a recorded failure, a released row)
  * must not be replaced by a complaint about the hook. A hook that throws is
  * reported loudly, and what it would have recorded still follows from the
@@ -39,7 +45,14 @@ export interface RunDeath {
 export async function announceRunDead(
   payload: Pick<JobTaskPayload, "jobName" | "input">,
   death: RunDeath,
+  jobId: string | null,
 ): Promise<void> {
+  if (jobId !== null) {
+    announceAttemptSettled(
+      { jobName: payload.jobName, jobId },
+      { kind: "dead", cause: death.cause, error: death.error },
+    );
+  }
   const job = UNSAFE_getRegisteredJob(payload.jobName);
   if (job?.onDead === undefined) return;
   // A row whose input no longer parses (schema drift) cannot be handed to a
