@@ -1,6 +1,6 @@
 {
   "name": "@equin/plugin-debug-backend-crash",
-  "description": "A backend that dies by a signal (a segfault inside Bun or a native addon, an abort, a kill from outside) is a report: the gateway — the one process that sees the death and holds the dead process's stderr — files a backend-crash entry in the report outbox, and main drains it. Declares the kind and renders its evidence (the signal, Bun's panic line and bun.report link, where macOS wrote its symbolized crash report).",
+  "description": "A backend death the gateway did not cause is a report: the gateway — the one process that sees every death and holds the dead process's stderr — files it in the report outbox, and main drains it. Declares the kinds and renders their evidence: backend-crash (a signal: Bun's panic line and bun.report link, where macOS wrote its symbolized crash report), backend-exit (an exit code nobody asked for: booting or serving) and backend-crash-loop (a worktree that keeps dying: its deaths and causes).",
   "private": true,
   "version": "0.0.1"
 }

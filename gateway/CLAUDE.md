@@ -158,7 +158,8 @@ gateway/
 ├── encoding.go    # Content-encoding of statics: precompressed-sidecar negotiation, on-the-fly gzip of the spliced shell
 ├── principal.go   # principalOf: owner/anonymous verdict, X-Equin-Principal stamp, cross-site refusal
 ├── content.go     # the content host: <item>.content.localhost/<ns>/api/… stamped `content`, nothing else served
-├── crash_report.go # A backend's signal death filed as a backend-crash report in the report outbox
+├── crash_report.go # The report outbox writer; a backend's signal death as a backend-crash entry
+├── exit_report.go # Every unrequested backend death filed (backend-exit for an exit code) and counted into crash loops (backend-crash-loop)
 ├── service_report.go # A supervised service's mid-session outage filed as a service-down report (same outbox writer)
 └── proxy.go       # http.Handler: routing, static serving, HTTP/WS proxy, /gateway API
 ```
@@ -312,7 +313,7 @@ The gateway expects backends to:
 
 In Bun: `Bun.serve({ unix: readServingSocket(), fetch, websocket })`. There is no standalone dev mode — the backend is always spawned by the gateway.
 
-## A backend that dies by a signal is reported
+## Every backend death the gateway did not cause is reported
 
 A process killed by a signal (a segfault inside Bun or a native addon, an
 abort, a kill from outside) runs none of its own handlers, so it cannot report
@@ -322,8 +323,26 @@ death the gateway did not send (`backend.signalled`, set by `signalBackend`
 before every kill it makes) and writes one `backend-crash` entry into the
 report outbox (`-report-outbox-dir`, `reports/outbox`'s `state/report-outbox`),
 which main's backend drains into `reports` — main's own crash on its successor's
-boot. Any backend: worktrees, main, central. Exit-code exits are not filed (the
-process ran its handlers and reported itself).
+boot. Any backend: worktrees, main, central.
+
+**An exit by code is filed too** (`exit_report.go`), as `backend-exit` (the
+code, whether it died booting or how long after ready, its stderr tail). It was
+assumed to report itself, but the process that dies is the one least able to:
+on 2026-11-08 main exited 1 about every 10 s, 83 times in 28 minutes, and its
+own crash reports folded into a four-day-old rate-limited rejection row — no
+record said "main is dying". "Unrequested" is the one rule for both: the
+gateway did not signal it (`backend.signalled`); a SIGTERM stop that exits 0
+is the gateway's act, an exit 0 nobody asked for is a death.
+
+**A worktree that keeps dying is a crash loop** (`crashLoops`, per worktree):
+`crashLoopThreshold` (3) deaths, each within `crashLoopWindow` (5 min) of the
+previous, file a `backend-crash-loop` entry — again each time the count doubles
+(6, 12, 24, …), and once when the loop ends (no death for the window, with the
+backend's state then: `running` / `idle` / `broken`). It is a summary on top:
+every death is still its own entry, so nothing is muted below a threshold.
+Main's own loop waits in the outbox until a main backend lives long enough to
+drain it. Kinds: `plugins/debug/plugins/backend-crash` (goldens
+`testdata/backend-exit-entry.json`, `testdata/backend-crash-loop-entry.json`).
 
 The entry carries the dead process's own last 60 stderr lines (Bun's panic
 block and `bun.report` link): **stderr is a pipe the gateway owns**

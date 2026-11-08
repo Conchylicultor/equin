@@ -10,20 +10,22 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
 
 // TestHelperBackend is not a test: it is the backend the priority tests spawn,
 // by re-executing this test binary (argv: -test.run=^TestHelperBackend$ --
-// [spawns=F] [gate=F] [tiers=F] [crash] --namespace N --socket S). It records
+// [spawns=F] [gate=F] [tiers=F] [crash] [die-after-ready] --namespace N --socket S). It records
 // its start in the spawns file (and, with crash, exits 1 right there), binds the socket, records the boot tier each
 // readiness probe carries in the tiers file, answers 503 until the gate file
 // exists (no gate: ready at once) and 200 to everything after. Run directly,
 // it has no --socket and returns.
 func TestHelperBackend(t *testing.T) {
 	var socket, spawns, gate, tiers string
-	crash := false
+	crash, dieAfterReady := false, false
+	var dieOnce sync.Once
 	args := os.Args
 	for i, a := range args {
 		switch {
@@ -37,6 +39,8 @@ func TestHelperBackend(t *testing.T) {
 			tiers = strings.TrimPrefix(a, "tiers=")
 		case a == "crash":
 			crash = true
+		case a == "die-after-ready":
+			dieAfterReady = true
 		}
 	}
 	if socket == "" {
@@ -71,6 +75,16 @@ func TestHelperBackend(t *testing.T) {
 			}
 		}
 		w.WriteHeader(http.StatusOK)
+		if dieAfterReady {
+			// Serving, then gone by code on its own — once ready is answered.
+			dieOnce.Do(func() {
+				go func() {
+					time.Sleep(200 * time.Millisecond)
+					fmt.Fprintln(os.Stderr, "error: a write after ready failed")
+					os.Exit(3)
+				}()
+			})
+		}
 	}))
 	os.Exit(0)
 }

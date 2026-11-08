@@ -212,6 +212,9 @@ type backend struct {
 	// readiness-deadline kill). Its death by that signal is the gateway's own
 	// act, already logged where it was sent — not a crash to report.
 	signalled atomic.Bool
+	// readyAt: epoch ms it passed its readiness probe (0 while booting) —
+	// whether a death was a boot that never came up or a serving backend.
+	readyAt atomic.Int64
 
 	// connMu guards both connection counters. httpConns tracks in-flight HTTP
 	// requests — bounded, short-lived, and waited on at drain so they finish
@@ -293,6 +296,10 @@ type Worktree struct {
 	// promotes it on publish. Reset at each spawn.
 	browserJoined bool
 
+	// loops counts this worktree's unrequested backend deaths into crash
+	// loops (exit_report.go). Its own mutex; not guarded by mu.
+	loops *crashLoops
+
 	// restartMu serializes concurrent Restart() calls.
 	restartMu sync.Mutex
 	// restartDone is non-nil during StateRestarting. Closed when restart
@@ -320,6 +327,7 @@ func NewWorktree(name string, spec *Spec, cfg *Config) (*Worktree, error) {
 		Name:    name,
 		cfg:     cfg,
 		logBuf:  newLogRing(cfg.LogBufferLines),
+		loops:   newCrashLoops(name),
 		logFile: newRotatingWriter(filepath.Join(cfg.LogDir, name+".log"), maxLogBytes, maxLogBackups),
 	}
 	w.spec.Store(spec)
@@ -506,6 +514,7 @@ func (w *Worktree) Ensure(ctx context.Context, reason StartReason, cause string)
 	// Boot burst over — lift the darwinbg demotion for steady-state serving.
 	w.promoteBackend(bk)
 
+	bk.readyAt.Store(time.Now().UnixMilli())
 	w.mu.Lock()
 	w.state = StateRunning
 	bk.proxy = newReverseProxy(socketPath)
@@ -606,6 +615,7 @@ func (w *Worktree) Restart(ctx context.Context) error {
 	// Boot burst over — lift the darwinbg demotion for steady-state serving.
 	w.promoteBackend(newBk)
 	newBk.proxy = newReverseProxy(newSocketPath)
+	newBk.readyAt.Store(time.Now().UnixMilli())
 	w.mu.Lock()
 	w.active = newBk
 	w.state = StateRunning
@@ -960,12 +970,22 @@ func (w *Worktree) startBackend(spec *Spec, socketPath string, reason StartReaso
 // state if the exiting backend is the currently active one — a draining old
 // backend from a hot restart is silently ignored.
 //
-// A death by a signal the gateway did not send — a segfault, an abort, a kill
-// from outside — is a crash, filed as a report (reportBackendCrash) whichever
-// backend it was: a draining one too.
+// A death the gateway did not cause — by a signal it did not send (a
+// segfault, a kill from outside) or by an exit code nobody asked for — is
+// filed as a report and counted toward a crash loop (reportBackendDeath,
+// exit_report.go), whichever backend it was: a draining one too.
 func (w *Worktree) onBackendExit(bk *backend, err error, exitedAt time.Time) {
-	if sig, coreDumped, ok := signalDeath(err); ok && !bk.signalled.Load() {
-		go w.reportBackendCrash(bk, sig, coreDumped, exitedAt)
+	if !bk.signalled.Load() {
+		var ps *os.ProcessState
+		if bk.cmd != nil {
+			ps = bk.cmd.ProcessState
+		}
+		if d, ok := deathOf(ps); ok {
+			go w.reportBackendDeath(bk, d, exitedAt)
+		} else {
+			slog.Error("backend died and its wait status is unreadable; not reported",
+				"worktree", w.Name, "pid", backendPID(bk), "err", err)
+		}
 	}
 
 	w.mu.Lock()

@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "kind": "backend-crash-loop",
+  "message": "backend main's crash loop ended: 83 deaths in 29m8s (last: exit 1, 7s up); no death for 5m0s since, now running",
+  "data": {
+    "worktree": "main",
+    "state": "ended",
+    "deaths": 83,
+    "firstDeathAt": 1794157613456,
+    "lastDeathAt": 1794159361000,
+    "endedAt": 1794159661000,
+    "stateAtEnd": "running",
+    "windowMs": 300000,
+    "threshold": 3,
+    "recent": [
+      {
+        "at": 1794159350000,
+        "upMs": 8100,
+        "cause": "exit 1",
+        "ready": true
+      },
+      {
+        "at": 1794159361000,
+        "upMs": 7400,
+        "cause": "exit 1",
+        "ready": true
+      }
+    ],
+    "lastStderrTail": [
+      "error: conversations_ext_sdk_agent_stop.updated_at is derived (declared by its touchedBy); do not write it"
+    ],
+    "lastStderrComplete": true
+  },
+  "occurredAt": 1794159661000,
+  "writer": {
+    "pid": 1234,
+    "checkout": "/repo/plugins/framework/plugins/server-core"
+  }
+}

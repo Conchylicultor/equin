@@ -80,10 +80,22 @@ func TestWriteOutboxEntryRenamesIntoPlaceAndRefusesWhenFull(t *testing.T) {
 		t.Fatalf("an empty tail must be an array, not null: %s", body)
 	}
 
-	for i := 1; i < outboxMaxPending; i++ {
+	// A death's entry stops short of the cap, leaving the last slots to a
+	// crash loop's summary; that one stops at the cap itself.
+	for i := 1; i < outboxMaxPending-outboxLoopReserve; i++ {
 		mustTouch(t, filepath.Join(dir, fmt.Sprintf("%d-1-a.json", i)))
 	}
-	if _, err := writeOutboxEntry(dir, e, time.Now()); err == nil || !strings.Contains(err.Error(), "cap 1000") {
+	if _, err := writeOutboxEntry(dir, e, time.Now()); err == nil || !strings.Contains(err.Error(), "cap 950 for backend-crash") {
+		t.Fatalf("outbox at the death cap: err = %v, want a refusal naming the cap", err)
+	}
+	loop := outboxEntry{Version: 1, Kind: backendCrashLoopKind, Data: map[string]any{}}
+	if _, err := writeOutboxEntry(dir, loop, time.Now()); err != nil {
+		t.Fatalf("a loop summary must land in the reserve: %v", err)
+	}
+	for i := outboxMaxPending - outboxLoopReserve; i < outboxMaxPending-1; i++ {
+		mustTouch(t, filepath.Join(dir, fmt.Sprintf("%d-1-a.json", i)))
+	}
+	if _, err := writeOutboxEntry(dir, loop, time.Now()); err == nil || !strings.Contains(err.Error(), "cap 1000") {
 		t.Fatalf("full outbox: err = %v, want a refusal naming the cap", err)
 	}
 }

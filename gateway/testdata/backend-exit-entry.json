@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "kind": "backend-exit",
+  "message": "backend main exited with code 1 5s after ready (14s up)",
+  "data": {
+    "worktree": "main",
+    "pid": 49750,
+    "exitCode": 1,
+    "startedAt": 1794157606287,
+    "exitedAt": 1794157620456,
+    "readyAt": 1794157615000,
+    "executable": "equin · server · main",
+    "stderrTail": [
+      "[process-crash] uncaughtException: error: conversations_ext_sdk_agent_stop.updated_at is derived (declared by its touchedBy); do not write it",
+      "      at processTicksAndRejections (native:7:39)"
+    ],
+    "stderrComplete": true
+  },
+  "occurredAt": 1794157620456,
+  "writer": {
+    "pid": 1234,
+    "checkout": "/repo/plugins/framework/plugins/server-core"
+  }
+}

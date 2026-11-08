@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -36,9 +35,9 @@ import (
 // pump) open after the backend dies, its lines still landing in the log; that
 // is what crashStderrGrace bounds for the report.
 //
-// Exit-code exits are not filed here: the process ran its own handlers (a
-// boot crash files itself through boot-events, a crash after ready through
-// the reports engine's process sink), so a report here would be its second.
+// An exit-code death is filed too, as `backend-exit`, and every unrequested
+// death counts toward a crash loop: exit_report.go, where the one filing path
+// (reportBackendDeath) lives.
 
 // backendCrashKind is the report kind the entry is filed under. Declared by
 // plugins/debug/plugins/backend-crash (core/kind.ts), which owns the payload's
@@ -67,6 +66,21 @@ const crashStderrGrace = 2 * time.Second
 // outbox means main has been down a long time, and the cap keeps the directory
 // bounded by construction.
 const outboxMaxPending = 1000
+
+// outboxLoopReserve: the last slots under the cap only a crash-loop summary
+// may take. A loop on main is exactly when nothing drains the outbox, and at
+// one death every ~10 s its per-death entries fill the cap in under three
+// hours; past this point each death is still logged (refused, at error), but
+// the loop's own entries — its doublings and its end — still land.
+const outboxLoopReserve = 50
+
+// outboxCapFor is how many pending entries an entry of kind may join.
+func outboxCapFor(kind string) int {
+	if kind == backendCrashLoopKind {
+		return outboxMaxPending
+	}
+	return outboxMaxPending - outboxLoopReserve
+}
 
 // outboxEntryName is the drain's complete-entry pattern (reports/outbox
 // core/internal/entry.ts ENTRY_NAME): `<epoch ms>-<pid>-<random>.json`.
@@ -110,20 +124,6 @@ type outboxEntry struct {
 type outboxWriter struct {
 	Pid      int    `json:"pid"`
 	Checkout string `json:"checkout"`
-}
-
-// signalDeath reads a cmd.Wait error: the signal that killed the process, or
-// ok=false when it exited (any code) or the error is not a wait status.
-func signalDeath(err error) (sig syscall.Signal, coreDumped bool, ok bool) {
-	ee, isExit := err.(interface{ Sys() any })
-	if !isExit {
-		return 0, false, false
-	}
-	ws, isWS := ee.Sys().(syscall.WaitStatus)
-	if !isWS || !ws.Signaled() {
-		return 0, false, false
-	}
-	return ws.Signal(), ws.CoreDump(), true
 }
 
 // signalName is the SIG… name of sig, or "signal <n>" for one the platform
@@ -183,7 +183,7 @@ func newOutboxEntry(c backendCrash, gatewayPid int, checkout string) outboxEntry
 // writeOutboxEntry writes one entry into dir the way the TS writer does: under
 // a dot-prefixed temp name, then renamed into place, so the drain never reads
 // half a file. Refuses (an error) when the outbox already holds
-// outboxMaxPending entries. Returns the entry's path.
+// its kind's cap (outboxCapFor). Returns the entry's path.
 func writeOutboxEntry(dir string, e outboxEntry, now time.Time) (string, error) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return "", err
@@ -198,8 +198,8 @@ func writeOutboxEntry(dir string, e outboxEntry, now time.Time) (string, error) 
 			pending++
 		}
 	}
-	if pending >= outboxMaxPending {
-		return "", fmt.Errorf("report outbox %s already holds %d entries (cap %d): main has not drained it", dir, pending, outboxMaxPending)
+	if limit := outboxCapFor(e.Kind); pending >= limit {
+		return "", fmt.Errorf("report outbox %s already holds %d entries (cap %d for %s): main has not drained it", dir, pending, limit, e.Kind)
 	}
 	body, err := json.Marshal(e)
 	if err != nil {
@@ -230,37 +230,6 @@ func randomBase36(n int) string {
 		b[i] = alphabet[int(b[i])%len(alphabet)]
 	}
 	return string(b)
-}
-
-// reportBackendCrash files a signal death of bk: waits (bounded) for its
-// stderr to reach EOF, then writes the outbox entry. Runs on its own
-// goroutine, so the exit's state transition and a respawn never wait on it.
-// A failure to file is logged at error level — the gateway log is then the
-// only record of the crash, and it says so.
-func (w *Worktree) reportBackendCrash(bk *backend, sig syscall.Signal, coreDumped bool, exitedAt time.Time) {
-	complete := true
-	if bk.stderrDone != nil {
-		select {
-		case <-bk.stderrDone:
-		case <-time.After(crashStderrGrace):
-			complete = false
-		}
-	}
-	crash := newBackendCrash(w.Name, backendPID(bk), sig, coreDumped, bk.startedAt, exitedAt.UnixMilli(),
-		bk.executable, bk.stderrTail.lines(), complete)
-	if w.cfg.ReportOutboxDir == "" {
-		slog.Error("backend crashed and no report outbox is configured; not reported",
-			"worktree", w.Name, "pid", crash.Pid, "signal", crash.Signal)
-		return
-	}
-	path, err := writeOutboxEntry(w.cfg.ReportOutboxDir, newOutboxEntry(crash, os.Getpid(), bk.checkout), time.Now())
-	if err != nil {
-		slog.Error("backend crashed and its report could not be filed",
-			"worktree", w.Name, "pid", crash.Pid, "signal", crash.Signal, "err", err)
-		return
-	}
-	slog.Warn("backend crash reported", "worktree", w.Name, "pid", crash.Pid,
-		"signal", crash.Signal, "entry", path)
 }
 
 // lineTail keeps the last few lines one stream of ONE process wrote. The
