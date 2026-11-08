@@ -8,7 +8,7 @@ import {
 import {
   committedDocument,
   committedFilesFromMap,
-  committedFilesIn,
+  readCommittedFilesSync,
   propagateGitLayerDocument,
   resolveGitLayer,
 } from "./git-layer";
@@ -147,36 +147,45 @@ describe("propagateGitLayerDocument", () => {
   });
 });
 
-describe("committedFilesIn", () => {
+describe("readCommittedFilesSync", () => {
   // A dir on a stubbed fs: the reader's paths, not a real disk.
   const files = new Map<string, string>([
-    ["/c/top.jsonc", "T"],
+    ["/c/top/config.jsonc", "T"],
+    ["/c/top/@app/pages/config.jsonc", "P"],
     ["/c/a/b/config.origin.jsonc", "O"],
     ["/c/a/b/@app/home/config.jsonc", "H"],
+    ["/c/CLAUDE.md", "not config"],
   ]);
-  const dirs = new Map<string, string[]>([
-    ["/c/@app", ["pages"]],
-    ["/c/a/b/@app", ["home"]],
-  ]);
-  const read = committedFilesIn("/c", {
-    existsSync: (p) => files.has(p) || dirs.has(p),
+  const entries = (dir: string) => {
+    const names = new Map<string, boolean>();
+    for (const path of files.keys()) {
+      if (!path.startsWith(`${dir}/`)) continue;
+      const [first, ...rest] = path.slice(dir.length + 1).split("/");
+      names.set(first!, rest.length > 0);
+    }
+    return [...names].map(([name, isDir]) => ({
+      name,
+      isDirectory: () => isDir,
+    }));
+  };
+  const read = readCommittedFilesSync("/c", {
+    existsSync: (p) => p === "/c",
     readFileSync: (p) => files.get(p)!,
-    readdirSync: (p) =>
-      (dirs.get(p) ?? []).map((name) => ({ name, isDirectory: () => true })),
+    readdirSync: (p) => entries(p),
   });
 
   test("reads a file by its layout path, null when absent", () => {
-    expect(read.readSync({ storePath: "top.jsonc", file: "override" })).toBe(
+    expect(read.read({ storePath: "top/config.jsonc", file: "override" })).toBe(
       "T",
     );
+    expect(read.read({ storePath: "a/b/config.jsonc", file: "origin" })).toBe(
+      "O",
+    );
+    expect(read.read({ storePath: "a/b/config.jsonc", file: "override" })).toBe(
+      null,
+    );
     expect(
-      read.readSync({ storePath: "a/b/config.jsonc", file: "origin" }),
-    ).toBe("O");
-    expect(
-      read.readSync({ storePath: "a/b/config.jsonc", file: "override" }),
-    ).toBe(null);
-    expect(
-      read.readSync({
+      read.read({
         storePath: "a/b/config.jsonc",
         scopeId: "app:home",
         file: "override",
@@ -184,9 +193,24 @@ describe("committedFilesIn", () => {
     ).toBe("H");
   });
 
-  test("lists the app scopes under a nested and a top-level hierarchy", () => {
-    expect(read.appIdsSync("a/b/config.jsonc")).toEqual(["home"]);
-    expect(read.appIdsSync("top.jsonc")).toEqual(["pages"]);
-    expect(read.appIdsSync("x/config.jsonc")).toEqual([]);
+  test("lists the app scopes under each hierarchy", () => {
+    expect(read.appIds("a/b/config.jsonc")).toEqual(["home"]);
+    expect(read.appIds("top/config.jsonc")).toEqual(["pages"]);
+    expect(read.appIds("x/config.jsonc")).toEqual([]);
+  });
+
+  test("a missing dir is an empty layer", () => {
+    const none = readCommittedFilesSync("/absent", {
+      existsSync: () => false,
+      readFileSync: () => {
+        throw new Error("read nothing");
+      },
+      readdirSync: () => {
+        throw new Error("list nothing");
+      },
+    });
+    expect(none.read({ storePath: "a/config.jsonc", file: "origin" })).toBe(
+      null,
+    );
   });
 });

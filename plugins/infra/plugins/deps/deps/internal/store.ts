@@ -18,11 +18,12 @@ export interface DepStore {
   readonly locksRoot: AppPath;
 }
 
-export function defaultStore(): DepStore {
-  return {
-    cacheRoot: depsCacheDir.ensure(),
-    locksRoot: depsLocksDir.ensure(),
-  };
+export async function defaultStore(): Promise<DepStore> {
+  const [cacheRoot, locksRoot] = await Promise.all([
+    depsCacheDir.ensure(),
+    depsLocksDir.ensure(),
+  ]);
+  return { cacheRoot, locksRoot };
 }
 
 /**

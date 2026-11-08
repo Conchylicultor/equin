@@ -13874,9 +13874,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build/runs-arm`
           - `framework/cli/build`
       - Exemptions:
-        - Exempts itself from:
-          - `blocking-fs/sync-named` — `shared/stale-holder.ts` (debt)
-          - `sql-writes:fit:hand-written` — `shared/recorder.ts`, `shared/stale-holder.ts` (sanctioned)
+        - Exempts itself from: `sql-writes:fit:hand-written` — `shared/recorder.ts`, `shared/stale-holder.ts` (sanctioned)
       - Machine:
         - Exports (values): `settleDeadInflightRun`
       - Cli:
@@ -14341,7 +14339,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `codeConfigProxy`
       - `committedDocument`
       - `committedFilesFromMap`
-      - `committedFilesIn`
       - `computeHash`
       - `CONFIG_HASH_RE`
       - `configConflict`
@@ -14386,6 +14383,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `parseConfigFileRelPath`
       - `propagate`
       - `propagateGitLayerDocument`
+      - `readCommittedFilesSync`
       - `readonlyProxy`
       - `readTypedConfig`
       - `readTypedConfigWithLayer`
@@ -14427,9 +14425,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `reorder`
       - `review/code-review`
   - Exemptions:
-    - Exempts itself from:
-      - `check-thread-safety/no-blocking-check-work` — `check/config-registrations.ts`, `check/overrides-authored.ts` (debt)
-      - `blocking-fs/sync-named` — `core/internal/git-layer.ts` (debt)
+    - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/config-registrations.ts`, `check/overrides-authored.ts` (debt)
   - Test helpers:
     - Server: `@plugins/config_v2/server/testing`
       - `diskConfigGitLayer` — The committed config layer a browser host bundles (`config_v2/bundled-layer`, which reads it through vite's `import.meta.glob` — absent under `bun test`), provided from the same files read off disk: for a suite booting a portable graph without the computer.
@@ -14496,31 +14492,28 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `integrations/google-maps/usage`
           - `stats/commits`
           - `tasks/launch-options`
-    - **`disk-read`** — A config's resolved value read straight off disk, with no server runtime and no build tooling: readEffectiveConfigFromDisk (this checkout's git layer as propagation will write it, under a namespace's user overrides) and fileConfigProxy (one JSONC config file as a ConfigProxy).
+    - **`disk-read`** — A config's resolved value read straight off disk, with no server runtime and no build tooling: readEffectiveConfigFromDisk (this checkout's git layer as propagation will write it, under a namespace's user overrides; async for a backend, readEffectiveConfigFromDiskSync for a CLI step).
       - Core:
         - Uses:
           - `config_v2.CONFIG_HASH_RE`
           - `config_v2.effective`
+          - `config_v2.loadedProxy`
           - `config_v2.readonlyProxy`
           - `config_v2.readTypedConfig`
           - `infra/host-fs/user-path.AppPath`
-          - `infra/host-fs/user-path.appPathParent`
           - `infra/host-fs/user-path.joinAppPath`
-          - `packages/timed-fs.existsSync`
+          - `packages/timed-fs.readFile`
           - `packages/timed-fs.readFileSync`
         - Exports (values):
-          - `fileConfigProxy`
           - `readEffectiveConfigFromDisk`
+          - `readEffectiveConfigFromDiskSync`
       - Cross-plugin:
         - Imported by:
           - `build/serve-composition`
           - `framework/cli/build`
           - `framework/cli/deploy`
-          - `framework/tooling/codegen`
       - Exemptions:
-        - Exempts itself from:
-          - `boundaries/no-platform-api` — `core/effective-on-disk.ts` (debt)
-          - `blocking-fs/sync-named` — `core/effective-on-disk.ts` (debt)
+        - Exempts itself from: `boundaries/no-platform-api` — `core/effective-on-disk.ts` (debt)
     - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
       - Web:
         - Slots:
@@ -22665,7 +22658,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/host-fs/user-path.joinAppPath`
               - `packages/flock.flockTry`
               - `packages/flock.waitForFlock`
-              - `packages/owned-fd.openOwnedFdSync`
+              - `packages/owned-fd.openOwnedFd`
               - `packages/timed-fs.readdir`
               - `packages/timed-fs.stat`
             - Exports (types):
@@ -22677,9 +22670,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/e2e-harness`
               - `infra/mcp/browser`
           - Exemptions:
-            - Exempts itself from:
-              - `boundaries/no-platform-api` — `core/internal/writer.ts` (debt)
-              - `blocking-fs/sync-named` — `core/internal/writer.ts` (debt)
+            - Exempts itself from: `boundaries/no-platform-api` — `core/internal/writer.ts` (debt)
     - **`claude-cli-calls`** — Debug pane listing every single-shot `claude --print` call (Haiku/Sonnet/Opus) as a live DataView — searchable over prompt/output/error, filterable by source, model, status, duration and time — with a detail pane per call (prompt, system, output or error, context, meta).
       - Web:
         - Slots:
@@ -28867,7 +28858,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/boundaries` (2 debt)
               - `framework/tooling/checks` (11 debt)
               - `framework/tooling/checks/type-check` (16 debt)
-              - `framework/tooling/codegen` (21 debt)
+              - `framework/tooling/codegen` (22 debt)
               - `framework/tooling/codegen/composition-registries` (1 debt)
               - `framework/tooling/collected-dir/discovery` (1 debt)
               - `framework/tooling/format` (5 debt)
@@ -29266,7 +29257,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/facets` ×5
               - `plugin-meta/plugin-records/evaluate` ×5
               - `framework/tooling/codegen/composition-registries` ×4
-              - `infra/host-fs/user-path` ×3
+              - `infra/host-fs/user-path` ×4
               - `config_v2/ledger` ×2
               - `framework/tooling/boundaries` ×2
               - `framework/tooling/collected-dir/discovery` ×2
@@ -29275,7 +29266,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/paths` ×2
               - `network/live/resource-protocol` ×2
               - `plugin-meta/plugin-tree` ×2
-              - `config_v2/disk-read.fileConfigProxy`
               - `fields/reorder-tree.REORDER_NODE_LEGEND`
               - `framework/tooling/guards/agent-policy.agentPolicySettings`
               - `framework/tooling/web-artifacts.COMPOSITION_SPECIFIERS`
@@ -29452,10 +29442,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/relocate`
           - Exemptions:
             - Exempts itself from:
-              - `boundaries/no-platform-api` — `core/authored-override-seed.ts`, `core/barrel-stubs-gen.ts`, `core/claude-settings-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/data-views-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/evaluated-barrels.ts`, `core/fields-eager-gen.ts`, `core/file-scans.ts`, `core/git-layer-config.ts`, `core/icon-manifest-gen.ts`, `core/import-graph.ts`, `core/override-legend-stamp.ts`, `core/package-names.ts`, `core/pre-barrel-guard.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/test-helpers-doc.ts`, `core/write-generated.ts` (debt)
+              - `boundaries/no-platform-api` — `core/authored-override-seed.ts`, `core/barrel-stubs-gen.ts`, `core/claude-settings-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/data-views-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/evaluated-barrels.ts`, `core/fields-eager-gen.ts`, `core/file-config-proxy.ts`, `core/file-scans.ts`, `core/git-layer-config.ts`, `core/icon-manifest-gen.ts`, `core/import-graph.ts`, `core/override-legend-stamp.ts`, `core/package-names.ts`, `core/pre-barrel-guard.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/test-helpers-doc.ts`, `core/write-generated.ts` (debt)
               - `marker-scan-safety/no-adhoc-marker-scan` — `core/browser-host-coverage.scan.ts` (sanctioned)
               - `user-path/no-unproven-claim` — `core/test-helpers-doc.ts` (sanctioned)
-              - `blocking-fs/sync-named` — `core/authored-override-seed.ts`, `core/barrel-stubs-gen.ts`, `core/claude-settings-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/evaluated-barrels.ts`, `core/fields-eager-gen.ts`, `core/file-scans.ts`, `core/git-layer-config.ts`, `core/override-legend-stamp.ts`, `core/pre-barrel-guard.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/symbol-names-gen.ts`, `core/test-helpers-doc.ts`, `core/write-generated.ts` (sanctioned)
+              - `blocking-fs/sync-named` — `core/authored-override-seed.ts`, `core/barrel-stubs-gen.ts`, `core/claude-settings-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/evaluated-barrels.ts`, `core/fields-eager-gen.ts`, `core/file-config-proxy.ts`, `core/file-scans.ts`, `core/git-layer-config.ts`, `core/override-legend-stamp.ts`, `core/pre-barrel-guard.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/symbol-names-gen.ts`, `core/test-helpers-doc.ts`, `core/write-generated.ts` (sanctioned)
           - Plugins:
             - **`composition-registries`** — The per-composition registry files' grammar and listing: where a composition's `<dir>` registry lives (main's is the committed `<dir>.generated.ts`, any other's the gitignored `<dir>.composition.<id>.generated.ts`), which collected dirs get one, and every per-name registry and backend entry on disk — without the build pipeline, so a serving backend (worktree reclaim) can list them.
               - Core:
@@ -31769,7 +31759,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/deps/updates` ×6
               - `infra/host-fs/user-path` ×2
               - `infra/spawn.spawnCaptured`
-              - `packages/timed-fs.readFileSync`
+              - `packages/timed-fs.readFile`
             - Exports (values):
               - `installLockedToolchain`
               - `miseUpdater`
@@ -31779,9 +31769,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/start`
               - `toolchain`
           - Exemptions:
-            - Exempts itself from:
-              - `boundaries/no-platform-api` — `core/internal/mise-updater.ts`, `core/internal/mise.ts` (debt)
-              - `blocking-fs/sync-named` — `core/internal/mise-updater.ts`, `core/internal/mise.ts` (debt)
+            - Exempts itself from: `boundaries/no-platform-api` — `core/internal/mise-updater.ts`, `core/internal/mise.ts` (debt)
         - **`npm`** — The `npm` updater: moves every npm package a workspace package.json declares (its range and bun.lock) to the newest release past a 3-day cooldown, lockstep groups together, honouring reviewed holds — contributed to the infra/deps updater registry.
           - Server:
             - Contributes: `updater` "npm"
@@ -33360,14 +33348,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`blocking-fs`** — No synchronous fs call or child process on a backend's JS thread: the type-aware blocking-fs/no-sync-fs lint refuses node:fs / node:child_process *Sync calls (timed-fs's twins included), Bun.resolveSync / spawnSync, sync glob scans and core/shared/data-dirs *Sync helpers in server/, machine/, central/ and deps/ code; blocking-fs/sync-named makes every helper there that blocks carry the *Sync name, and the blocking-fs:sync-named-reach check holds a helper excused as tool-only to no backend loading it. A file that blocks no backend (its own child process, pre-listen boot, a sync exit handler) declares a sanctioned exemption.
           - Exemptions:
             - Exempted by:
-              - `build/run-ledger` (1 debt)
               - `build/server-build-id` (0 debt)
-              - `config_v2` (1 debt)
-              - `config_v2/disk-read` (1 debt)
               - `config_v2/ledger` (0 debt)
               - `database/migrations` (0 debt)
               - `debug/boot-events` (0 debt)
-              - `debug/browser-recordings/writer` (1 debt)
               - `debug/paging-probe` (0 debt)
               - `debug/profiling/fs-wait` (0 debt)
               - `framework/cli` (0 debt)
@@ -33383,18 +33367,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/lint` (0 debt)
               - `framework/tooling/web-artifacts` (0 debt)
               - `infra/asset-mirror/bundle` (0 debt)
-              - `infra/deps/mise` (2 debt)
               - `infra/file-sink` (0 debt)
               - `infra/git/tree-lock` (0 debt)
               - `infra/host/host-admission` (1 debt)
               - `infra/launcher` (0 debt)
-              - `infra/paths` (3 debt)
+              - `infra/paths` (2 debt)
               - `infra/worktree` (0 debt)
               - `packages/signal-origin` (0 debt)
-              - `packages/signal-origin/sink` (1 debt)
               - `packages/single-flight` (0 debt)
               - `packages/source-digest` (1 debt)
-              - `packages/ticket-line` (1 debt)
               - `plugin-meta/barrel-import` (0 debt)
               - `plugin-meta/plugin-tree/faceted` (2 debt)
               - `plugin-meta/relocate` (0 debt)
@@ -34628,7 +34609,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `boundaries/no-platform-api` — `core/internal/checkout-deploys.ts`, `core/internal/checkout-minter.ts`, `core/internal/checkout-owner.ts`, `core/internal/checkout-ref.ts`, `core/internal/data-dir.ts`, `core/internal/data-root-layout.ts`, `core/internal/data-dirs-manifest.ts`, `core/internal/paths.ts`, `core/internal/prune-artifacts.ts`, `core/internal/toolchain-pin.ts`, `core/internal/worktree-dirs.ts` (debt)
           - `user-path/no-unproven-claim` — `core/internal/paths.ts`, `core/internal/data-root-layout.ts` (sanctioned)
           - `user-path/no-unproven-claim` — `core/internal/checkout-deploys.ts` (sanctioned)
-          - `blocking-fs/sync-named` — `core/internal/checkout-ref.ts`, `core/internal/data-dir.ts`, `core/internal/paths.ts` (debt)
+          - `blocking-fs/sync-named` — `core/internal/data-dir.ts`, `core/internal/paths.ts` (debt)
       - Server:
         - Exports (types):
           - `AppIdentity`
@@ -38470,24 +38451,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`sink`**
           - Core:
-            - Uses:
-              - `infra/file-sink.readJsonlTailAsync`
-              - `infra/file-sink.readJsonlTailSync`
+            - Uses: `infra/file-sink.readJsonlTailAsync`
             - Exports (types):
               - `ArmFailedLine`
               - `SignalOriginLine`
               - `SignalOriginLineInput`
               - `SignalRecordedLine`
             - Exports (values):
-              - `readSignalOriginLines`
               - `readSignalOriginLinesAsync`
               - `SIGNAL_ORIGIN_FILE`
           - Cross-plugin:
             - Imported by:
               - `build/build-termination`
               - `framework/cli/op-runtime`
-          - Exemptions:
-            - Exempts itself from: `blocking-fs/sync-named` — `core/internal/read.ts` (debt)
     - **`single-flight`** — Cross-process single-flight: singleFlight(opts, lead) lets N processes asking for the same keyed work at once run it once — the first takes a kernel flock and leads, the rest wait on the lock push-based (waitForFlock) and adopt the verdict it publishes, re-leading only when no adoptable verdict from a run in flight since they arrived exists.
       - Core:
         - Uses:
@@ -38676,9 +38652,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/host-fs/user-path.joinAppPath`
           - `packages/flock.flockTry`
           - `packages/flock.waitForFlock`
-          - `packages/owned-fd.openOwnedFdSync`
+          - `packages/owned-fd.openOwnedFd`
           - `packages/owned-fd.OwnedFd`
-          - `packages/timed-fs.readdirSync`
+          - `packages/timed-fs.readdir`
         - Exports (types):
           - `Ticket`
           - `TicketLine`
@@ -38691,9 +38667,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/cli/op-runtime`
           - `packages/host-semaphore`
       - Exemptions:
-        - Exempts itself from:
-          - `boundaries/no-platform-api` — `core/internal/ticket-line.ts` (debt)
-          - `blocking-fs/sync-named` — `core/internal/ticket-line.ts` (debt)
+        - Exempts itself from: `boundaries/no-platform-api` — `core/internal/ticket-line.ts` (debt)
     - **`timed-fs`** — The file reads, listings, stats and glob scans every non-browser process makes, timed: node:fs's read calls under their own names and types (readFile / readdir / stat / lstat / access / realpath / readlink and their *Sync twins, existsSync) plus scanGlob / scanGlobSync over a Bun.Glob, each call metered while it runs (installFsWaitMeter — the backend's profiler shows one past FS_WAIT_FLOOR_MS in progress and charges it) and, once it returns past the floor, handed to onSlowFsCall subscribers, under a named wait layer (fs-read / fs-readdir / fs-stat / fs-glob) — so a disk stall names itself instead of reading as the caller's own work. A leaf (node builtins only), enforced by the timed-fs/no-untimed-fs-read lint.
       - Cross-plugin:
         - Imported by: 160 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
@@ -57504,6 +57478,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `HOLDS_FILE`
       - `isExactRelease`
       - `lockProblems`
+      - `miseBin`
       - `miseBinSync`
       - `parseMiseLock`
       - `parseMiseToolRequests`

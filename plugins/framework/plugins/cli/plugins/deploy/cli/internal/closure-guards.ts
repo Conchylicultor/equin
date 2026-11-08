@@ -74,7 +74,7 @@ interface ClosureContext {
 
 /** Build the plugin tree + edge graph once, and read the live manifest set. */
 async function loadClosureContext(): Promise<ClosureContext> {
-  const values = readEffectiveConfigFromDisk(compositionsConfig, {
+  const values = await readEffectiveConfigFromDisk(compositionsConfig, {
     root: REPO_ROOT,
     // The CHECKOUT's namespace, minted from git. A CLI process has no runtime
     // namespace; reading one used to answer the main namespace from every worktree,

@@ -56,14 +56,10 @@ export default [
   },
   {
     rule: "blocking-fs/sync-named",
-    paths: [
-      "core/internal/checkout-ref.ts",
-      "core/internal/data-dir.ts",
-      "core/internal/paths.ts",
-    ],
+    paths: ["core/internal/data-dir.ts", "core/internal/paths.ts"],
     kind: "debt",
     task: "task-1793991095-ppkf09",
     reason:
-      "A backend loads this module, and its blocking functions do not carry the *Sync name yet: a method bound by an interface others implement, an async function that does sync work inside, or a cascade (data-root resolution) left for the redesign.",
+      "dataRoot() / worktreesDir() decide the home data-root layout on first read (2 lstat + realpath, memoized per process), and a DataDir's movedFrom is inspected once until settled: not a recurring cost, but the name is not honest until the root is decided before any read in every realm.",
   },
 ] satisfies Exemptions;

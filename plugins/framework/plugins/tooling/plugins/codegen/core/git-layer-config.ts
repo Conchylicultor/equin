@@ -20,7 +20,7 @@ import type {
 import type { FieldsRecord } from "@plugins/fields/core";
 
 /**
- * The same `// @hash`-header contract as `fileConfigProxy`, but STRICT: a
+ * The same `// @hash`-header contract as `fileConfigProxy` (`./file-config-proxy.ts`), but STRICT: a
  * file that exists without the header is a corrupt config, not an unhashed one,
  * so reading it throws instead of quietly parsing the body with `hash: null`.
  *

@@ -636,16 +636,18 @@ export const cargoUpdater: Updater = {
   // The moved lock must still compile: `cargo check --locked` of each touched
   // crate, into its own dir of the shared target cache.
   async smoke(root, moves): Promise<UpdaterSmoke[]> {
-    return (await cargoCrates(root))
-      .filter((c) => moves.some((m) => m.name.startsWith(`${c.label}:`)))
-      .map((c) => {
+    const touched = (await cargoCrates(root)).filter((c) =>
+      moves.some((m) => m.name.startsWith(`${c.label}:`)),
+    );
+    return Promise.all(
+      touched.map(async (c) => {
         const { argv } = cargoCommand([
           "check",
           "--locked",
           "--manifest-path",
           join(c.dir, "Cargo.toml"),
         ]);
-        const env = cargoEnv({ targetDir: crateTargetDir(c.dir) });
+        const env = cargoEnv({ targetDir: await crateTargetDir(c.dir) });
         return {
           name: `cargo check (${c.label})`,
           argv,
@@ -655,7 +657,8 @@ export const cargoUpdater: Updater = {
           },
           timeoutMs: 45 * MINUTE,
         };
-      });
+      }),
+    );
   },
 
   holds: {

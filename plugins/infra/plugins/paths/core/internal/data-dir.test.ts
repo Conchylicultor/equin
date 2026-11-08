@@ -146,13 +146,24 @@ test("getDataDirs returns a copy, keyed by kind/name", () => {
   expect(first.get("cache/copy-fixture")?.spec.name).toBe("copy-fixture");
 });
 
-test("ensure() creates the directory and returns it", () => {
+test("ensure() creates the directory and returns it", async () => {
   const root = asAppPath(mkdtempSync(join(tmpdir(), "data-dir-ensure-")));
   setEnv("DIR", root);
   const dir = defineDataDir(spec("ensure-fixture"));
-  expect(dir.ensure()).toBe(joinAppPath(root, "cache", "ensure-fixture"));
+  const expected = joinAppPath(root, "cache", "ensure-fixture");
+  expect(await dir.ensure()).toBe(expected);
+  expect(lstatSync(expected).isDirectory()).toBe(true);
   // Idempotent: a second call on an existing directory is a no-op, not a throw.
-  expect(dir.ensure()).toBe(joinAppPath(root, "cache", "ensure-fixture"));
+  expect(await dir.ensure()).toBe(expected);
+});
+
+test("ensureSync() creates the directory and returns it", () => {
+  const root = asAppPath(mkdtempSync(join(tmpdir(), "data-dir-ensure-sync-")));
+  setEnv("DIR", root);
+  const dir = defineDataDir(spec("ensure-sync-fixture"));
+  const expected = joinAppPath(root, "cache", "ensure-sync-fixture");
+  expect(dir.ensureSync()).toBe(expected);
+  expect(dir.ensureSync()).toBe(expected);
 });
 
 test("ensure() throws when the target exists and is NOT a directory", () => {
@@ -172,7 +183,16 @@ test("ensure() throws when the target exists and is NOT a directory", () => {
     legacyLocation: { path: "some.latch", reason: "loose file at the root" },
   });
 
-  expect(() => dir.ensure()).toThrow(/is NOT a directory/);
+  expect(dir.ensure()).rejects.toThrow(/is NOT a directory/);
+  expect(() => dir.ensureSync()).toThrow(/is NOT a directory/);
+});
+
+test("ensure() still fails loudly when a FILE sits higher up the path", () => {
+  const root = asAppPath(mkdtempSync(join(tmpdir(), "data-dir-notdir-up-")));
+  writeFileSync(joinAppPath(root, "cache"), "a file where the kind dir goes");
+  setEnv("DIR", root);
+  const dir = defineDataDir(spec("notdir-up-fixture"));
+  expect(dir.ensure()).rejects.toThrow(/ENOTDIR|EEXIST/);
 });
 
 test("isDataDir accepts a real declaration and rejects a shape without subdir()", () => {
@@ -247,7 +267,7 @@ test("defineDataDir refuses the apps kind — a type error, and a throw for a ca
 
 // ── subdir: an area inside a declared dir ────────────────────────────────────
 
-test("subdir() names an area inside the dir: path, file() and ensure()", () => {
+test("subdir() names an area inside the dir: path, file() and ensure()", async () => {
   const root = asAppPath(mkdtempSync(join(tmpdir(), "data-dir-subdir-")));
   setEnv("DIR", root);
   const dir = defineAppDataDir(
@@ -260,8 +280,9 @@ test("subdir() names an area inside the dir: path, file() and ensure()", () => {
   expect(area.file("p1", "log.json")).toBe(
     joinAppPath(expected, "p1", "log.json"),
   );
-  expect(area.ensure()).toBe(expected);
+  expect(await area.ensure()).toBe(expected);
   expect(lstatSync(expected).isDirectory()).toBe(true);
+  expect(area.ensureSync()).toBe(expected);
   // Not a declaration: the registry holds the app dir and nothing more.
   expect(getDataDirs().has("apps/history")).toBe(false);
 });
@@ -278,7 +299,8 @@ test("an area's ensure() shares the not-a-directory guard", () => {
   const dir = defineDataDir(spec("area-notdir"));
   mkdirSync(dir.path, { recursive: true });
   writeFileSync(dir.file("blob"), "a file, not an area");
-  expect(() => dir.subdir("blob").ensure()).toThrow(/is NOT a directory/);
+  expect(dir.subdir("blob").ensure()).rejects.toThrow(/is NOT a directory/);
+  expect(() => dir.subdir("blob").ensureSync()).toThrow(/is NOT a directory/);
 });
 
 // ── movedFrom ────────────────────────────────────────────────────────────────
@@ -334,7 +356,7 @@ test("a pending move, in a process that may not move, resolves to the OLD locati
   });
   expect(dir.path).toBe(old);
   expect(dir.file("a.bin")).toBe(joinAppPath(old, "a.bin"));
-  expect(dir.ensure()).toBe(old);
+  expect(dir.ensureSync()).toBe(old);
   expect(dir.subdir("sub").path).toBe(joinAppPath(old, "sub"));
   // Nothing moved, nothing created at the new spot.
   expect(lstatSync(old).isDirectory()).toBe(true);
@@ -387,7 +409,8 @@ test("a split copy (old is a real dir AND the destination exists) throws, for ev
   asOrdinaryProcess();
   expect(() => dir.path).toThrow(/SPLIT COPY/);
   asMover();
-  expect(() => dir.ensure()).toThrow(/SPLIT COPY/);
+  expect(() => dir.ensureSync()).toThrow(/SPLIT COPY/);
+  expect(dir.ensure()).rejects.toThrow(/SPLIT COPY/);
   // And nothing was touched trying.
   expect(
     lstatSync(joinAppPath(root, "apps", "move-conflict-old")).isDirectory(),

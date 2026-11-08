@@ -87,8 +87,8 @@ export function cargoCommand(args: readonly string[]): {
 }
 
 /** The cargo `target/` dir of one crate, inside the shared `cargo-target` cache. */
-export function crateTargetDir(crate: string): string {
-  return join(cargoTargetDir.ensure(), crate.replaceAll("/", "__"));
+export async function crateTargetDir(crate: string): Promise<string> {
+  return join(await cargoTargetDir.ensure(), crate.replaceAll("/", "__"));
 }
 
 /** The argv `cargoBuild` runs to build `bin` of the crate at `crate` under `root`. */
@@ -142,7 +142,7 @@ export function cargoBuild(spec: CargoBuildSpec): CargoSource {
     tool: { versionArgv: ["rustc", "-vV"], env: () => cargoEnv() },
     output,
     async run(ctx) {
-      const targetDir = crateTargetDir(crate);
+      const targetDir = await crateTargetDir(crate);
       await ctx.run(cargoBuildArgv(ctx.root, crate, bin), {
         cwd: ctx.root,
         env: cargoEnv({ targetDir }),

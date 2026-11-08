@@ -116,7 +116,7 @@ export async function sweepUnusedDeps(args: {
   now: Date;
 }): Promise<SweepReport> {
   return sweepDeps({
-    store: defaultStore(),
+    store: await defaultStore(),
     deps: await declaredDeps(),
     checkouts: args.checkouts,
     now: args.now,

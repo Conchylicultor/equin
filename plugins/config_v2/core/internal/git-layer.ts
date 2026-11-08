@@ -1,6 +1,6 @@
 import { parseConfigFile } from "./config-file";
 import { readonlyProxy, type ConfigProxy } from "./config-proxy";
-import { APP_SCOPE_DIR, appScopeId, scopeAppId } from "./scope-format";
+import { appScopeId, scopeAppId } from "./scope-format";
 import {
   configFileRelPath,
   parseConfigFileRelPath,
@@ -56,15 +56,18 @@ export function resolveGitLayer(
 }
 
 /**
- * A committed layer's raw files, addressed by the one layout
+ * A committed layer's raw files, already read, addressed by the one layout
  * (`configFileRelPath`): the checkout's `config/` on the desktop, the bundled
- * copy of it in a browser host.
+ * copy of it in a browser host. A lookup, never a disk read — so resolving a
+ * document ({@link committedDocument}) holds no thread on any host; whoever
+ * builds one reads the files first ({@link committedFilesFromMap} over what it
+ * read, {@link readCommittedFilesSync} for a tool process).
  */
 export interface CommittedFiles {
   /** One file's text, or `null` when the layer has no such file. */
-  readSync(ref: ConfigFileRef): string | null;
+  read(ref: ConfigFileRef): string | null;
   /** The app ids with an `@app/<id>` directory under `storePath`'s hierarchy. */
-  appIdsSync(storePath: string): string[];
+  appIds(storePath: string): string[];
 }
 
 function committedProxy(
@@ -74,13 +77,13 @@ function committedProxy(
   const where = configFileRelPath(ref);
   return {
     read() {
-      const raw = files.readSync(ref);
+      const raw = files.read(ref);
       return raw === null ? null : parseConfigFile(raw, where);
     },
     write() {
       throw new Error(`The committed config layer is read-only: ${where}`);
     },
-    exists: () => files.readSync(ref) !== null,
+    exists: () => files.read(ref) !== null,
   };
 }
 
@@ -95,7 +98,7 @@ export function committedDocument(
   files: CommittedFiles,
 ): GitLayerDocument | undefined {
   const scoped = new Map<string, ConfigProxy>();
-  for (const appId of files.appIdsSync(storePath)) {
+  for (const appId of files.appIds(storePath)) {
     scoped.set(
       appId,
       committedProxy(files, {
@@ -131,8 +134,8 @@ export function committedFilesFromMap(
     ids.add(appId);
   }
   return {
-    readSync: (ref) => files.get(configFileRelPath(ref)) ?? null,
-    appIdsSync: (storePath) =>
+    read: (ref) => files.get(configFileRelPath(ref)) ?? null,
+    appIds: (storePath) =>
       [...(appIdsByHier.get(hierOf(storePath)) ?? [])].sort(),
   };
 }
@@ -141,7 +144,7 @@ function hierOf(storePath: string): string {
   return storePath.slice(0, Math.max(0, storePath.lastIndexOf("/")));
 }
 
-/** The synchronous fs calls {@link committedFilesIn} reads a directory with. */
+/** The synchronous fs calls {@link readCommittedFilesSync} reads a directory with. */
 export interface CommittedFs {
   existsSync(path: string): boolean;
   readFileSync(path: string, encoding: "utf8"): string;
@@ -151,30 +154,34 @@ export interface CommittedFs {
   ): { name: string; isDirectory(): boolean }[];
 }
 
+/** A config file's name in a committed dir: every layer file is JSONC. */
+const CONFIG_FILE = /\.jsonc$/;
+
 /**
  * A committed config dir on disk (`dir`, absolute — the checkout's `config/`, or
- * a release's vendored copy) as raw files, read per call. The fs is handed in, so
- * this core module stays host-free. The one disk reader every desktop-side
- * consumer of the committed layer shares (the repo layer, the build's
- * propagation, the plugin-move ledger).
+ * a release's vendored copy), read whole, once: every `*.jsonc` under it, keyed
+ * by its layer-relative path. The fs is handed in, so this core module stays
+ * host-free. The disk reader of the tool processes that resolve many documents
+ * in one pass (the build's propagation, the plugin-move ledger); a backend
+ * reads the files a document needs without holding its thread and hands them
+ * to {@link committedFilesFromMap} (`config_v2#machine`'s repo layer).
  */
-export function committedFilesIn(dir: string, fs: CommittedFs): CommittedFiles {
-  return {
-    readSync(ref) {
-      const file = `${dir}/${configFileRelPath(ref)}`;
-      return fs.existsSync(file) ? fs.readFileSync(file, "utf8") : null;
-    },
-    appIdsSync(storePath) {
-      const hier = hierOf(storePath);
-      const appDir = `${dir}/${hier === "" ? "" : `${hier}/`}${APP_SCOPE_DIR}`;
-      if (!fs.existsSync(appDir)) return [];
-      return fs
-        .readdirSync(appDir, { withFileTypes: true })
-        .filter((e) => e.isDirectory())
-        .map((e) => e.name)
-        .sort();
-    },
+export function readCommittedFilesSync(
+  dir: string,
+  fs: CommittedFs,
+): CommittedFiles {
+  const files = new Map<string, string>();
+  const walkSync = (rel: string): void => {
+    const abs = rel === "" ? dir : `${dir}/${rel}`;
+    for (const entry of fs.readdirSync(abs, { withFileTypes: true })) {
+      const child = rel === "" ? entry.name : `${rel}/${entry.name}`;
+      if (entry.isDirectory()) walkSync(child);
+      else if (CONFIG_FILE.test(entry.name))
+        files.set(child, fs.readFileSync(`${dir}/${child}`, "utf8"));
+    }
   };
+  if (fs.existsSync(dir)) walkSync("");
+  return committedFilesFromMap(files);
 }
 
 /**

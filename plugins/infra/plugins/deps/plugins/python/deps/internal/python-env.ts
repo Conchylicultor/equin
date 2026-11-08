@@ -82,7 +82,7 @@ export function pythonEnv(opts: { project: string }): PythonEnvSource {
         ],
         {
           cwd: ctx.root,
-          env: { ...uvEnv(), UV_PROJECT_ENVIRONMENT: ctx.dir },
+          env: { ...(await uvEnv()), UV_PROJECT_ENVIRONMENT: ctx.dir },
           // A cold install downloads a CPython and every wheel.
           timeoutMs: 30 * MINUTE,
         },

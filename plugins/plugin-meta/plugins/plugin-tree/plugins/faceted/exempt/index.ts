@@ -21,6 +21,6 @@ export default [
     kind: "debt",
     task: "task-1793991095-ppkf09",
     reason:
-      "A backend loads this module, and its blocking functions do not carry the *Sync name yet: a method bound by an interface others implement, an async function that does sync work inside, or a cascade (data-root resolution) left for the redesign.",
+      "readOutside is a synchronous member of the plugin-records keying input, read deep in the module graph; making it async ripples through plugin-records' keying.",
   },
 ] satisfies Exemptions;

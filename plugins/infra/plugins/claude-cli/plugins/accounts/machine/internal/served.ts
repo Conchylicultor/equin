@@ -15,7 +15,7 @@ export const claudeAccountsServed = serveValue(claudeAccounts, {
   loader: readClaudeAccounts,
   whileSubscribed: async (_params, notify) => {
     const release = await acquireDirWatch({
-      dir: claudeAccountsDir.ensure(),
+      dir: await claudeAccountsDir.ensure(),
       scope: "subtree",
       onChange: () => notify(),
     });

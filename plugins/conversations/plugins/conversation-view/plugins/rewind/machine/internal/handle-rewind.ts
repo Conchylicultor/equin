@@ -5,8 +5,8 @@ import { rewindBackupsDir } from "../../data-dirs";
 
 export const handleRewind = implementMachine(
   rewindConversationEndpoint,
-  ({ params, body }) => {
-    rewindBackupsDir.ensure();
+  async ({ params, body }) => {
+    await rewindBackupsDir.ensure();
     // `<conversationId>.<epochMs>.jsonl` — the name is the whole index: which
     // conversation the backup belongs to and when it was taken. The sweep ages
     // files out by mtime, so nothing else needs to remember them.

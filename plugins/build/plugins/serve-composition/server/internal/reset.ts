@@ -107,7 +107,7 @@ export async function resetCompositionData(
   // serve build now reads the manifest of the checkout it runs in, so a guard
   // reading main's would judge the wrong document. Two reads with different
   // options would let the guards disagree about what the manifest says.
-  const values = readCompositionManifests(
+  const values = await readCompositionManifests(
     root,
     configDir.file(manifestNamespace),
   );

@@ -63,7 +63,13 @@ function fakeLine() {
           if (i >= 0) live.splice(i, 1);
           pump();
         };
-        const ticket: Ticket = { place, leave };
+        const ticket: Ticket = {
+          place,
+          leave: () => {
+            leave();
+            return Promise.resolve();
+          },
+        };
         live.push(entry);
         signal.addEventListener(
           "abort",
@@ -498,7 +504,7 @@ describe("createGateLocks (real flocks)", () => {
     root = dir;
     return createGateLocks({
       file: (...segments) => join(dir, ...segments),
-      ensure: () => {
+      ensureSync: () => {
         mkdirSync(dir, { recursive: true });
         return dir;
       },

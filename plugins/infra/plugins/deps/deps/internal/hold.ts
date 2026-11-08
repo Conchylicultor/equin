@@ -27,7 +27,7 @@ export async function holdDep(
       `holdDep: holder ${JSON.stringify(holder)} must match ${HOLDER}`,
     );
   }
-  const store = opts.store ?? defaultStore();
+  const store = opts.store ?? (await defaultStore());
   const paths = installPaths(store, ready.dep.id, ready.identity);
   if (paths.env !== ready.dir) return;
   const idDir = join(store.cacheRoot, ready.dep.id);

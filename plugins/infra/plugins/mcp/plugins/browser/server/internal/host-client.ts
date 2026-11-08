@@ -174,7 +174,7 @@ export async function startStatusWatcher(): Promise<void> {
   if (watcher) return;
   watcher = await agentBrowserStatusWatcher.start({
     // Subscribing to a missing directory fails; it is host-global and tiny.
-    dirs: [agentBrowserDir.ensure()],
+    dirs: [await agentBrowserDir.ensure()],
     onChange: () => runTracked("mcp-browser:status-change", onStatusChange),
   });
   if ((await readAgentBrowserStatus()).kind === "running") followHost();

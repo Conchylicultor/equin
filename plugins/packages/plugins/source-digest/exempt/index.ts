@@ -14,6 +14,6 @@ export default [
     kind: "debt",
     task: "task-1793991095-ppkf09",
     reason:
-      "A backend loads this module, and its blocking functions do not carry the *Sync name yet: a method bound by an interface others implement, an async function that does sync work inside, or a cascade (data-root resolution) left for the redesign.",
+      "walkClosure resolves each import with Bun.resolveSync while a backend digests a closure: needs an async resolver (an async realpath walk of node_modules plus the @plugins/* paths), or the walk off the thread.",
   },
 ] satisfies Exemptions;

@@ -47,7 +47,7 @@ export const depsStatesServed = serveValue(depsStates, {
   loader: loadDepRows,
   whileSubscribed: async (_params, notify) => {
     const watcher = await depsCacheWatcher.start({
-      dirs: [depsCacheDir.ensure()],
+      dirs: [await depsCacheDir.ensure()],
       onChange: () => notify(),
     });
     // The stop is fire-and-forget (unsubscribing does not wait on parcel),

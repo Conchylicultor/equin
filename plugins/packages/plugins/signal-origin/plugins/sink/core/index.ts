@@ -12,7 +12,4 @@ export type {
   SignalOriginLineInput,
   SignalRecordedLine,
 } from "./internal/lines";
-export {
-  readSignalOriginLines,
-  readSignalOriginLinesAsync,
-} from "./internal/read";
+export { readSignalOriginLinesAsync } from "./internal/read";

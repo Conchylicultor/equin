@@ -24,7 +24,7 @@ export const rewindBackupSweepJob = defineJob({
   dedup: "singleton",
   schedule: { cron: "30 4 * * *" }, // daily at 04:30 UTC
   async run() {
-    const dir = rewindBackupsDir.ensure();
+    const dir = await rewindBackupsDir.ensure();
     const cutoff = Date.now() - REWIND_BACKUP_TTL_DAYS * 24 * 60 * 60 * 1000;
     let removed = 0;
     for (const name of await readdir(dir)) {

@@ -239,7 +239,7 @@ export async function admitThroughGate(
       return admitted(shared, "cleared");
     }
   } finally {
-    line.leave();
+    await line.leave();
   }
 }
 
@@ -281,8 +281,8 @@ function placeInLine(gate: GateLocks, place: TicketPlace) {
       void head();
     },
     head,
-    leave(): void {
-      if (ticket) ticket.leave();
+    async leave(): Promise<void> {
+      if (ticket) await ticket.leave();
       else withdraw.abort(new LeftLine());
     },
   };
@@ -413,7 +413,7 @@ export function createValveDeps(): ValveDeps {
 /** Where a gate keeps its lock and line — `agentBuildGateDir` in production. */
 export interface GateDir {
   file(...segments: string[]): string;
-  ensure(): string;
+  ensureSync(): string;
 }
 
 /** The gate's real flocks and ticket line, in `dir`. */
@@ -425,7 +425,7 @@ export function createGateLocks(dir: GateDir): GateLocks {
   };
   return {
     tryLock(mode) {
-      dir.ensure();
+      dir.ensureSync();
       const lock = adoptFd(openSync(lockFile(), "w"));
       if (mode === "shared" ? flockTryShared(lock.fd) : flockTry(lock.fd)) {
         return hold(mode, () => {
@@ -437,7 +437,7 @@ export function createGateLocks(dir: GateDir): GateLocks {
       return null;
     },
     async waitLock(mode, signal) {
-      dir.ensure();
+      dir.ensureSync();
       const held = await waitForFlock(lockFile(), {
         shared: mode === "shared",
         signal,
@@ -467,7 +467,7 @@ function waitForLatchWake(signal: AbortSignal): Promise<void> {
     // exists by now (a live episode's `setDuress` created it), but a clear
     // between the duress check and this call could have left the CLI watching
     // nothing — so mint it rather than turn a benign race into a crashed build.
-    const dir = duressLatchDir.ensure();
+    const dir = duressLatchDir.ensureSync();
     let leaseLapsesInMs: number;
     try {
       leaseLapsesInMs =

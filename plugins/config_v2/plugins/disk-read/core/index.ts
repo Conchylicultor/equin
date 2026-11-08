@@ -1,4 +1,4 @@
 export {
-  fileConfigProxy,
   readEffectiveConfigFromDisk,
+  readEffectiveConfigFromDiskSync,
 } from "./effective-on-disk";

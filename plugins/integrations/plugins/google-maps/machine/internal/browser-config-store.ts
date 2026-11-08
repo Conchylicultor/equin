@@ -46,7 +46,7 @@ export async function readBrowserConfig(): Promise<MapsBrowserConfigValue> {
  * so another checkout's watcher-triggered read never sees a half-written file.
  */
 async function writeStored(stored: Stored): Promise<void> {
-  googleMapsDir.ensure();
+  await googleMapsDir.ensure();
   const target = configPath();
   const staging = `${target}.${process.pid}.tmp`;
   await writeFile(staging, JSON.stringify(stored, null, 2));

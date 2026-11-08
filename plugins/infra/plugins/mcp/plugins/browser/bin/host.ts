@@ -44,7 +44,7 @@ import {
 import { drivesSnapshot, wireDrives } from "./host-drives";
 import { runTool } from "./host-tools";
 
-const dir = agentBrowserDir.ensure();
+const dir = agentBrowserDir.ensureSync();
 const file = (name: string) => agentBrowserDir.file(name);
 const codeId = await hostCodeId(asAppPath(resolve(import.meta.dir, "..")));
 const startedAt = new Date().toISOString();

@@ -11,13 +11,13 @@ import {
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { join, relative } from "path";
 import { buildEnrichedTree } from "./enriched-tree";
-import { fileConfigProxy } from "@plugins/config_v2/plugins/disk-read/core";
+import { fileConfigProxy } from "./file-config-proxy";
 import {
   computeHash,
   configFileRelPath,
   propagateGitLayerDocument,
   committedDocument,
-  committedFilesIn,
+  readCommittedFilesSync,
   stringifyConfigValue,
   APP_SCOPE_DIR,
   configFileOwner,
@@ -660,7 +660,7 @@ export async function propagateConfigToUser(opts: {
   // The checkout's committed layer, resolved by the same `committedDocument` a
   // host's ConfigGitLayer answers with, so the desktop's propagated origins and
   // its committed layer cannot disagree.
-  const committed = committedFilesIn(joinAppPath(root, "config"), {
+  const committed = readCommittedFilesSync(joinAppPath(root, "config"), {
     existsSync,
     readFileSync,
     readdirSync,

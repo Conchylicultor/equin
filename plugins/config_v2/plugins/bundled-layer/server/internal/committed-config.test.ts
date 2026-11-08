@@ -38,7 +38,7 @@ describe("the committed config layer", () => {
     for (const s of reorderableSlots) {
       const storePath = `${asPath(asPluginId(s.pluginId))}/${s.configName}.jsonc`;
       const doc = committedDocument(storePath, files);
-      const origin = files.readSync({ storePath, file: "origin" });
+      const origin = files.read({ storePath, file: "origin" });
       if (doc === undefined || origin === null) {
         problems.push(`${storePath}: not committed`);
         continue;

@@ -111,7 +111,7 @@ export function machineMacosAppHost(
     platform: process.platform,
     bundle,
     async withLock(fn) {
-      macosAppDir.ensure();
+      await macosAppDir.ensure();
       const held = await waitForFlock(macosAppDir.file("equin.app.lock"));
       try {
         return await fn();

@@ -2,8 +2,8 @@ import {
   type AppPath,
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { writeFileSync } from "node:fs";
-import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
+import { writeFile } from "node:fs/promises";
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { z } from "zod";
 import {
   HOLDS,
@@ -47,19 +47,19 @@ function miseVersion(output: string): string {
   return output.trim().split(/\s+/)[0] ?? "";
 }
 
-function readRequestsSync(root: AppPath): Map<string, string> {
+async function readRequests(root: AppPath): Promise<Map<string, string>> {
   return parseMiseToolRequests(
-    readFileSync(joinAppPath(root, "mise.toml"), "utf8"),
+    await readFile(joinAppPath(root, "mise.toml"), "utf8"),
   );
 }
 
 /** Tools `mise.toml` declares that the lock does not record yet: first locks. */
-function newlyDeclaredSync(
-  root: AppPath,
+function newlyDeclared(
+  requests: ReadonlyMap<string, string>,
   locked: ReadonlyMap<string, readonly string[]>,
 ): Set<string> {
   return new Set(
-    [...readRequestsSync(root).keys()].filter(
+    [...requests.keys()].filter(
       (tool) =>
         TOOLS.some((t) => t.name === tool) &&
         (locked.get(tool)?.length ?? 0) === 0,
@@ -72,15 +72,17 @@ function newlyDeclaredSync(
  * tool `mise.toml` has just started declaring may have no lock entry yet (the
  * upgrade records its first one). Throws naming every problem.
  */
-function assertSoundSync(root: AppPath): {
+async function assertSound(root: AppPath): Promise<{
   locked: Map<string, string[]>;
   fresh: Set<string>;
-} {
-  const locked = parseMiseLock(
-    readFileSync(joinAppPath(root, "mise.lock"), "utf8"),
-  );
-  const fresh = newlyDeclaredSync(root, locked);
-  const problems = lockProblems(readRequestsSync(root), locked, {
+}> {
+  const [lockText, requests] = await Promise.all([
+    readFile(joinAppPath(root, "mise.lock"), "utf8"),
+    readRequests(root),
+  ]);
+  const locked = parseMiseLock(lockText);
+  const fresh = newlyDeclared(requests, locked);
+  const problems = lockProblems(requests, locked, {
     holds: HOLDS,
     today: utcDay(new Date()),
     unlockedAllowed: fresh,
@@ -112,7 +114,7 @@ export const miseUpdater: Updater = {
   async prepare(root, log) {
     // Soundness first, as before the move onto the runner: a broken pair is
     // refused before mise touches anything.
-    assertSoundSync(root);
+    await assertSound(root);
     const before = miseVersion(await mise(root, ["--version"], MINUTE));
     log("Updating mise itself…");
     await mise(root, ["self-update", "--yes"], 10 * MINUTE);
@@ -164,7 +166,7 @@ export const miseUpdater: Updater = {
         `Unknown tool ${unknown.join(", ")}. Tools: ${TOOLS.map((t) => t.name).join(", ")}.`,
       );
     }
-    const { locked, fresh } = assertSoundSync(root);
+    const { locked, fresh } = await assertSound(root);
     const moves: Move[] = [];
     for (const spec of TOOLS) {
       if (only !== undefined && !only.includes(spec.name)) continue;
@@ -188,7 +190,7 @@ export const miseUpdater: Updater = {
   // worktree keep running their own locked releases), then record them.
   async apply(root, moves, log) {
     const lockPath = joinAppPath(root, "mise.lock");
-    let nextLock = readFileSync(lockPath, "utf8");
+    let nextLock = await readFile(lockPath, "utf8");
     for (const { name, from, to } of moves) {
       log(`  installing ${name}@${to}`);
       await mise(root, ["install", `${name}@${to}`], 30 * MINUTE);
@@ -202,9 +204,9 @@ export const miseUpdater: Updater = {
             )
           : setLockedVersion(nextLock, name, to);
     }
-    writeFileSync(lockPath, nextLock);
+    await writeFile(lockPath, nextLock);
     await mise(root, ["lock"], 10 * MINUTE);
-    const relocked = parseMiseLock(readFileSync(lockPath, "utf8"));
+    const relocked = parseMiseLock(await readFile(lockPath, "utf8"));
     for (const { name, to } of moves) {
       const got = relocked.get(name);
       if (got?.length !== 1 || got[0] !== to)

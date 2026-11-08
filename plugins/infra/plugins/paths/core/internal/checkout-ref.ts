@@ -12,11 +12,8 @@ import { getMainRepoRoot } from "@plugins/infra/plugins/spawn/core";
 // this file lives INSIDE the `paths` plugin, so the alias would cycle back
 // through the barrel that re-exports it. Same reasoning as `data-dir.ts`
 // importing `./paths`.
-import {
-  comparableCheckoutPathSync,
-  mainNamespaceOwnerSync,
-} from "./checkout-deploys";
-import { stampCheckoutOwnerSync } from "./checkout-owner";
+import { comparableCheckoutPath, mainNamespaceOwner } from "./checkout-deploys";
+import { stampCheckoutOwner } from "./checkout-owner";
 import { checkoutWorktreeName } from "./paths";
 
 /**
@@ -49,23 +46,23 @@ export class MainNamespaceCollisionError extends Error {
  * 2. Is that repository the one this data root's main app is served from? The
  *    data root serves ONE instance (research/2026-07-02-global-adr-single-
  *    instance-per-user.md), recorded by the `spec.json` its main build wrote
- *    (`mainNamespaceOwnerSync`). Without this, the main checkout of ANY clone on
+ *    (`mainNamespaceOwner`). Without this, the main checkout of ANY clone on
  *    the machine — a second copy, an e2e's temp repo — minted the main namespace and
  *    ran its ops, logs and deploys as main's. Such a checkout is named like any
  *    other non-main one, by its basename, and one whose basename IS the main
  *    namespace is refused ({@link MainNamespaceCollisionError}).
  *
- * Async because the answer comes from git. `getMainRepoRoot` is memoized per
+ * Async because the answer comes from git and the main spec. `getMainRepoRoot` is memoized per
  * cwd, so repeated calls cost one spawn per process.
  */
 export async function checkoutRef(root: AppPath): Promise<CheckoutRef> {
   const mainRoot = await getMainRepoRoot(root);
   const name = checkoutWorktreeName(root);
   if (resolve(root) !== resolve(mainRoot)) return { kind: "worktree", name };
-  const owner = mainNamespaceOwnerSync();
+  const owner = await mainNamespaceOwner();
   if (
     owner.kind === "unclaimed" ||
-    owner.checkoutRoot === comparableCheckoutPathSync(root)
+    owner.checkoutRoot === (await comparableCheckoutPath(root))
   )
     return { kind: "main" };
   if (name === MAIN_WORKTREE_NAME)
@@ -96,7 +93,7 @@ export async function checkoutNamespace(root: AppPath): Promise<Namespace> {
 /**
  * {@link checkoutNamespace}, for a caller about to ACT as that namespace — an op
  * (`build`, `push`, a direct op) that will write into its data dir. Also records
- * the checkout on the namespace (`stampCheckoutOwnerSync`), so the reaper can
+ * the checkout on the namespace (`stampCheckoutOwner`), so the reaper can
  * reclaim a dir whose checkout is gone even when no attempt row or composition
  * marker names it. One function, so an op cannot mint without stamping.
  */
@@ -104,6 +101,6 @@ export async function actAsCheckoutNamespace(
   root: AppPath,
 ): Promise<Namespace> {
   const ns = await checkoutNamespace(root);
-  stampCheckoutOwnerSync(ns, root);
+  await stampCheckoutOwner(ns, root);
   return ns;
 }

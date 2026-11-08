@@ -23,7 +23,7 @@ const COMPOSITIONS_HIERARCHY_PATH = asPath(
 const PROPAGATE_TIMEOUT_MS = 10 * 60_000;
 
 /** The checkout's resolved `compositions` config, as `userConfigDir` layers it. */
-export function readCompositionManifests(
+export async function readCompositionManifests(
   root: AppPath,
   userConfigDir: AppPath,
 ) {

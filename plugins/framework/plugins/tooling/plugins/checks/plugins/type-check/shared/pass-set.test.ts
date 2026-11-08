@@ -44,7 +44,7 @@ function tempDir(): PassSetDir {
   return {
     path,
     file: (...segments: string[]) => joinAppPath(path, ...segments),
-    ensure: () => {
+    ensureSync: () => {
       mkdirSync(path, { recursive: true });
       return path;
     },

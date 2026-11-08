@@ -77,9 +77,9 @@ beforeEach(() => {
   writeFileSync(join(root, ".gitignore"), "plugins/**/rust/target/\n");
   process.env.MISE_TRUSTED_CONFIG_PATHS = root;
 });
-afterEach(() => {
+afterEach(async () => {
   rmSync(base, { recursive: true, force: true });
-  rmSync(crateTargetDir(crate), { recursive: true, force: true });
+  rmSync(await crateTargetDir(crate), { recursive: true, force: true });
   delete process.env.MISE_TRUSTED_CONFIG_PATHS;
 });
 
@@ -162,9 +162,11 @@ describe("cargoBuild", () => {
     expect(cargoCommand(["update"]).argv).toEqual(["cargo", "update"]);
   });
 
-  test("env: mise's shims first, and the crate's own dir in the shared target cache", () => {
+  test("env: mise's shims first, and the crate's own dir in the shared target cache", async () => {
     const env = cargoEnv({
-      targetDir: crateTargetDir("plugins/infra/plugins/deps/plugins/rust/rust"),
+      targetDir: await crateTargetDir(
+        "plugins/infra/plugins/deps/plugins/rust/rust",
+      ),
     });
     expect(env.CARGO_TARGET_DIR).toEndWith(
       "/cargo-target/plugins__infra__plugins__deps__plugins__rust__rust",
@@ -206,9 +208,9 @@ describe("cargoBuild", () => {
     expect(out.status).toBe(0);
     expect(out.stdout.toString()).toBe("hello from the rust kind\n");
     // Compiled into the shared cache, not into the crate.
-    expect(existsSync(join(crateTargetDir(crate), "release", "hello"))).toBe(
-      true,
-    );
+    expect(
+      existsSync(join(await crateTargetDir(crate), "release", "hello")),
+    ).toBe(true);
     expect(existsSync(join(root, crate, "target"))).toBe(false);
   }, 300_000);
 

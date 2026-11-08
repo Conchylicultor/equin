@@ -4,7 +4,7 @@ import {
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
-  existsSync,
+  exists,
   readFile,
   readFileSync,
   realpath,
@@ -565,9 +565,9 @@ export function resolveCheckoutDeploySync(
 export type MainNamespaceOwner =
   { kind: "unclaimed" } | { kind: "claimed"; checkoutRoot: string };
 
-export function mainNamespaceOwnerSync(): MainNamespaceOwner {
+export async function mainNamespaceOwner(): Promise<MainNamespaceOwner> {
   const path = worktreeArtifacts.spec(MAIN_WORKTREE_NAME);
-  const read = readDeploySpecSync(path);
+  const read = await readDeploySpec(path);
   if (read.kind === "absent") return { kind: "unclaimed" };
   if (read.kind === "malformed") {
     throw new Error(
@@ -585,11 +585,11 @@ export function mainNamespaceOwnerSync(): MainNamespaceOwner {
   }
   // The checkout a spec the app wrote names: app-owned by that claim.
   const checkoutRoot = asAppPath(server.slice(0, -suffix.length));
-  if (!existsSync(checkoutRoot)) return { kind: "unclaimed" };
-  return { kind: "claimed", checkoutRoot: comparablePathSync(checkoutRoot) };
+  if (!(await exists(checkoutRoot))) return { kind: "unclaimed" };
+  return { kind: "claimed", checkoutRoot: await comparablePath(checkoutRoot) };
 }
 
-/** `root`'s comparable identity, for matching against {@link mainNamespaceOwnerSync}. */
-export function comparableCheckoutPathSync(root: AppPath): string {
-  return comparablePathSync(root);
+/** `root`'s comparable identity, for matching against {@link mainNamespaceOwner}. */
+export async function comparableCheckoutPath(root: AppPath): Promise<string> {
+  return comparablePath(root);
 }

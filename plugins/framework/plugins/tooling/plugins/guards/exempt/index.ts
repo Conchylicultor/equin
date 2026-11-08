@@ -66,7 +66,7 @@ export default [
     kind: "debt",
     task: "task-1793991095-ppkf09",
     reason:
-      "A backend loads this module, and its blocking functions do not carry the *Sync name yet: a method bound by an interface others implement, an async function that does sync work inside, or a cascade (data-root resolution) left for the redesign.",
+      "Guards run in their own hook process, but backends load guards core for two constants (TOOL_USE_ID_RE, BYPASS_TOKENS) and the barrel pulls the whole guard registry: cut that reach and these become sanctioned, held there by blocking-fs:sync-named-reach.",
   },
   {
     rule: "blocking-fs/sync-named",

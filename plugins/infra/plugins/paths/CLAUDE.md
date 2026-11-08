@@ -108,9 +108,16 @@ export const checkCache = defineDataDir({
   reclaim: { kind: "safe" },
 });
 
-checkCache.ensure();                 // mkdir -p, returns the path
+await checkCache.ensure();           // mkdir -p off the thread, returns the path
+checkCache.ensureSync();             // the same, holding the thread: CLI / check / bin only
 checkCache.file("abc123.json");      // a path INSIDE it
 ```
+
+`ensure()` is asynchronous (`fs/promises` mkdir, the stat only to explain a
+failure), so a backend can call it on every write; `ensureSync()` is its
+blocking twin, refused on a backend by `blocking-fs/no-sync-fs` like any
+`*Sync`. `.path` and `.file()` touch no disk once a process has resolved its
+data root and its declared moves (both memoized per process).
 
 ### The kinds are a closed set
 
@@ -159,7 +166,7 @@ is what once made a release report a null build id.
    plugin's `core/collected-dir.ts`), auto-discovered by codegen exactly like
    `check/` — no registry edit, no codegen edit.
 2. Import the declaration from your own plugin's code and read `.path` /
-   `.file(…)` / `.ensure()`. Never re-derive the path.
+   `.file(…)` / `await .ensure()`. Never re-derive the path.
 3. Run `./equin build`, then `./equin check paths:no-undeclared-data-dirs`.
 
 A directory is declared **exactly once** — a duplicate `${kind}/${name}` throws,
@@ -189,7 +196,7 @@ export const prototypesDir = defineAppDataDir(prototypesApp, { owner: "apps/prot
 - A second `defineAppDataDir` for the same app throws, naming the fix.
 
 **A sub-plugin's space is an area, not a directory:** `desktopDir.subdir("wallpaper")`
-returns `{ path, file(…), ensure() }` — one lowercase segment, NOT registered.
+returns `{ path, file(…), ensure(), ensureSync() }` — one lowercase segment, NOT registered.
 
 ### Moving a declared dir: `movedFrom`
 
@@ -437,7 +444,7 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `boundaries/no-platform-api` — `core/internal/checkout-deploys.ts`, `core/internal/checkout-minter.ts`, `core/internal/checkout-owner.ts`, `core/internal/checkout-ref.ts`, `core/internal/data-dir.ts`, `core/internal/data-root-layout.ts`, `core/internal/data-dirs-manifest.ts`, `core/internal/paths.ts`, `core/internal/prune-artifacts.ts`, `core/internal/toolchain-pin.ts`, `core/internal/worktree-dirs.ts` (debt)
     - `user-path/no-unproven-claim` — `core/internal/paths.ts`, `core/internal/data-root-layout.ts` (sanctioned)
     - `user-path/no-unproven-claim` — `core/internal/checkout-deploys.ts` (sanctioned)
-    - `blocking-fs/sync-named` — `core/internal/checkout-ref.ts`, `core/internal/data-dir.ts`, `core/internal/paths.ts` (debt)
+    - `blocking-fs/sync-named` — `core/internal/data-dir.ts`, `core/internal/paths.ts` (debt)
 - Server:
   - Exports (types):
     - `AppIdentity`

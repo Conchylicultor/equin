@@ -1,4 +1,9 @@
-export { findMiseBin, findMiseBinSync, miseBinSync } from "./internal/mise-bin";
+export {
+  findMiseBin,
+  findMiseBinSync,
+  miseBin,
+  miseBinSync,
+} from "./internal/mise-bin";
 export {
   HOLDS,
   HOLDS_FILE,

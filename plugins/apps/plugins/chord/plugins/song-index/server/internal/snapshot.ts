@@ -64,7 +64,7 @@ export async function ensureSnapshot(hooks: SnapshotHooks): Promise<AppPath> {
   const path = snapshotPath();
   if (await exists(path)) return path;
 
-  songIndexArea.ensure();
+  await songIndexArea.ensure();
   const lock = await openOwnedFd(songIndexArea.file("snapshot.lock"), "a");
   try {
     if (!flockTry(lock.fd)) {
@@ -207,7 +207,7 @@ export async function buildSnapshot(args: {
 
   const gz = gzipSync(`${lines.join("\n")}\n`);
   const tmp = `${args.outPath}.tmp-${process.pid}`;
-  songIndexArea.ensure();
+  await songIndexArea.ensure();
   await writeFile(tmp, gz);
   await rename(tmp, args.outPath);
   const skipped = lines.length - sections;

@@ -337,7 +337,7 @@ export async function ensureDatabaseConfig(
         services: [],
       };
 
-  dbConfigDir.ensure();
+  await dbConfigDir.ensure();
   await writeFile(DATABASE_CONFIG_PATH, JSON.stringify(config, null, 2) + "\n");
   log(
     hasEmbedded
@@ -399,7 +399,7 @@ export async function writeReleaseDatabaseConfig(
     ],
   };
 
-  dbConfigDir.ensure();
+  await dbConfigDir.ensure();
   await writeFile(DATABASE_CONFIG_PATH, JSON.stringify(config, null, 2) + "\n");
   log(
     `Generated release database config (embedded Postgres${hasPgBouncer ? " + PgBouncer" : ""})`,
@@ -499,6 +499,12 @@ export function gatewayLaunchSpec(opts: GatewayLaunchOptions): {
   stdioLog: AppPath;
   logsDir: string;
 } {
+  // Every directory a flag names must exist before the gateway opens it. Here
+  // and not in the flags: the health report's drift row derives the flags in
+  // main's backend, which must neither create anything nor hold its thread.
+  gatewayLogs.ensureSync();
+  gatewayState.ensureSync();
+  gatewayLocks.ensureSync();
   return {
     argv: [opts.executable.path, ...gatewayLaunchFlags(opts)],
     // Nothing the gateway reads is relative (every path is a flag), but
@@ -525,9 +531,7 @@ export function gatewayLaunchSpec(opts: GatewayLaunchOptions): {
 export function gatewayLaunchFlags(
   opts: Omit<GatewayLaunchOptions, "executable">,
 ): string[] {
-  const logsDir = gatewayLogs.ensure();
-  gatewayState.ensure();
-  gatewayLocks.ensure();
+  const logsDir = gatewayLogs.path;
   return [
     "-listen",
     listenFlag({ host: opts.bindHost, port: opts.port }),

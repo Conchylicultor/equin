@@ -70,7 +70,7 @@ export const browserRecordingRunsServed = serveValue(browserRecordingRuns, {
   whileSubscribed: async ({ toolUseId }, notify) => {
     const prefix = callDir(toolUseId) + sep;
     return acquireDirWatch({
-      dir: browserRecordingsDir.ensure(),
+      dir: await browserRecordingsDir.ensure(),
       scope: "subtree",
       onChange: (events) => {
         if (
@@ -118,7 +118,7 @@ export const browserRecordedCallsServed = serveValue(browserRecordedCalls, {
   loader: listRecordedCalls,
   whileSubscribed: async (_params, notify) =>
     acquireDirWatch({
-      dir: browserRecordingsDir.ensure(),
+      dir: await browserRecordingsDir.ensure(),
       scope: "subtree",
       onChange: (events) => {
         if (events.some((e) => e.path.endsWith(sep + RECORDED_CALLS_FILE)))

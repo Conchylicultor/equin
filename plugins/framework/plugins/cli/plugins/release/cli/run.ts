@@ -1389,7 +1389,7 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
       // Rust shell cold on every release: share one cargo target dir instead.
       cargoTargetDir:
         mode === "inner"
-          ? releaseCargoTargetDir.ensure()
+          ? releaseCargoTargetDir.ensureSync()
           : join(root, "tauri", "src-tauri", "target"),
     });
     return;

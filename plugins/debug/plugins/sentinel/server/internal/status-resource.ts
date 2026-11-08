@@ -148,8 +148,8 @@ let lastVitalsFacts: string | undefined;
 export async function startStatusWatcher(): Promise<void> {
   if (watcher) return;
   // Subscribing to a missing directory fails; both dirs are host-global and cheap.
-  const statusDir = sentinelStatusDir.ensure();
-  const latchDir = duressLatchDir.ensure();
+  const statusDir = await sentinelStatusDir.ensure();
+  const latchDir = await duressLatchDir.ensure();
   watcher = await sentinelStatusWatcher.start({
     dirs: [statusDir, latchDir],
     onChange: async (events) => {

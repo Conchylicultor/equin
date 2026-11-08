@@ -8,12 +8,16 @@ import { uvCacheDir, uvPythonDir } from "../../data-dirs";
  * records), the declared caches, and uv-managed Pythons only — the system
  * Python is never used, and never touched.
  */
-export function uvEnv(): Record<string, string | undefined> {
+export async function uvEnv(): Promise<Record<string, string | undefined>> {
+  const [cacheDir, pythonDir] = await Promise.all([
+    uvCacheDir.ensure(),
+    uvPythonDir.ensure(),
+  ]);
   return {
     ...process.env,
     PATH: runtimePath(process.env),
-    UV_CACHE_DIR: uvCacheDir.ensure(),
-    UV_PYTHON_INSTALL_DIR: uvPythonDir.ensure(),
+    UV_CACHE_DIR: cacheDir,
+    UV_PYTHON_INSTALL_DIR: pythonDir,
     UV_PYTHON_PREFERENCE: "only-managed",
   };
 }
@@ -24,7 +28,7 @@ export async function uvVersion(root: string): Promise<string> {
   try {
     result = await spawnCaptured(["uv", "--version"], {
       cwd: root,
-      env: uvEnv(),
+      env: await uvEnv(),
       timeoutMs: 30_000,
     });
   } catch (err) {

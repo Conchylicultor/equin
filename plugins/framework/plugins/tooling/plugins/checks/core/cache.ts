@@ -194,7 +194,7 @@ export interface CheckCache {
 /** Open (and lazily create) the global check-result cache. */
 export function openCheckCache(): CheckCache {
   // A genuinely unwritable home is a real fault and should surface loudly.
-  checkCacheDir.ensure();
+  checkCacheDir.ensureSync();
   return {
     has(checkId, treeHash, sig) {
       return existsSync(entryFile(checkId, treeHash, sig));
@@ -262,7 +262,7 @@ export interface CheckCachePruneReport {
  * slots end in `.json`, so one sweep ages/caps both.
  */
 export function pruneCheckCache(): CheckCachePruneReport {
-  checkCacheDir.ensure();
+  checkCacheDir.ensureSync();
   const all = readdirSync(checkCacheDir.path);
   const names = all.filter((n) => n.endsWith(".json"));
   const now = Date.now();

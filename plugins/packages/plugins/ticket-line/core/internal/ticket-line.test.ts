@@ -44,11 +44,11 @@ const tickets = (): string[] =>
 describe("createTicketLine", () => {
   test("an empty line admits at once and isEmpty reflects the holder", async () => {
     const line = createTicketLine(dir);
-    expect(line.isEmpty()).toBe(true);
+    expect(await line.isEmpty()).toBe(true);
     const t = await line.join();
-    expect(line.isEmpty()).toBe(false);
-    t.leave();
-    expect(line.isEmpty()).toBe(true);
+    expect(await line.isEmpty()).toBe(false);
+    await t.leave();
+    expect(await line.isEmpty()).toBe(true);
     expect(tickets()).toEqual([]);
   });
 
@@ -61,14 +61,14 @@ describe("createTicketLine", () => {
     await settle();
     expect([b.state(), c.state()]).toEqual(["waiting", "waiting"]);
 
-    a.leave();
+    await a.leave();
     await settle();
     expect([b.state(), c.state()]).toEqual(["head", "waiting"]);
 
-    (await b.ticket).leave();
+    await (await b.ticket).leave();
     await settle();
     expect(c.state()).toBe("head");
-    (await c.ticket).leave();
+    await (await c.ticket).leave();
   });
 
   test("a waiter that abandons its place hands it on without reordering", async () => {
@@ -86,10 +86,10 @@ describe("createTicketLine", () => {
     // C now waits on A, the live ticket ahead of it — not the head yet.
     expect(c.state()).toBe("waiting");
 
-    a.leave();
+    await a.leave();
     await settle();
     expect(c.state()).toBe("head");
-    (await c.ticket).leave();
+    await (await c.ticket).leave();
     expect(tickets()).toEqual([]);
   });
 
@@ -111,15 +111,15 @@ describe("createTicketLine", () => {
     await settle();
     expect([back.state(), c.state()]).toEqual(["waiting", "waiting"]);
 
-    a.leave();
+    await a.leave();
     await settle();
     expect([back.state(), c.state()]).toEqual(["head", "waiting"]);
     const bt = await back.ticket;
     expect(bt.place).toBe(place);
-    bt.leave();
+    await bt.leave();
     await settle();
     expect(c.state()).toBe("head");
-    (await c.ticket).leave();
+    await (await c.ticket).leave();
     expect(tickets()).toEqual([]);
   });
 
@@ -128,7 +128,7 @@ describe("createTicketLine", () => {
     const before = arrive();
     const t = await line.join();
     expect(t.place > before).toBe(true);
-    t.leave();
+    await t.leave();
   });
 
   test("a SIGKILLed head frees its place; its file is reaped", async () => {
@@ -159,7 +159,7 @@ describe("createTicketLine", () => {
     await child.exited;
     await settle();
     expect(me.state()).toBe("head");
-    (await me.ticket).leave();
+    await (await me.ticket).leave();
     expect(tickets()).toEqual([]);
   });
 
@@ -177,7 +177,7 @@ describe("createTicketLine", () => {
         "-e",
         `const { createTicketLine } = await import(process.env.TL_MODULE);
          console.log("joining");
-         (await createTicketLine(process.env.TL_DIR).join()).leave();
+         await (await createTicketLine(process.env.TL_DIR).join()).leave();
          console.log("head");`,
       ],
       {
@@ -195,7 +195,7 @@ describe("createTicketLine", () => {
     await settle();
     expect(out).not.toContain("head");
 
-    mine.leave();
+    await mine.leave();
     await child.exited;
     await drained;
     expect(out).toContain("head");
@@ -208,10 +208,10 @@ describe("createTicketLine", () => {
     const [name] = tickets();
     // Simulate an owner that died between its unlink and its close: the file
     // stays, the lock goes.
-    t.leave();
+    await t.leave();
     await Bun.write(join(dir, name ?? "missing"), "");
     expect(tickets()).toHaveLength(1);
-    expect(line.isEmpty()).toBe(true);
+    expect(await line.isEmpty()).toBe(true);
     expect(tickets()).toEqual([]);
   });
 
@@ -222,6 +222,6 @@ describe("createTicketLine", () => {
     expect(line.join({ signal: abort.signal })).rejects.toMatchObject({
       message: "stop",
     });
-    expect(line.isEmpty()).toBe(true);
+    expect(await line.isEmpty()).toBe(true);
   });
 });

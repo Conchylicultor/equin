@@ -40,7 +40,8 @@ const raw = (blob: string): Uint8Array => Buffer.from(blob, "hex");
 export function openGrepIndexStore(opts?: { path?: string }): GrepIndexStore {
   const path =
     opts?.path ??
-    (checkGrepIndexDir.ensure(), checkGrepIndexDir.file("grep-index.sqlite"));
+    (checkGrepIndexDir.ensureSync(),
+    checkGrepIndexDir.file("grep-index.sqlite"));
   const db = new Database(path, { create: true });
   db.exec("PRAGMA journal_mode = WAL");
   db.exec("PRAGMA synchronous = NORMAL");

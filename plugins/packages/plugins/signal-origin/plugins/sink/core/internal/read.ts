@@ -1,7 +1,4 @@
-import {
-  readJsonlTailSync,
-  readJsonlTailAsync,
-} from "@plugins/infra/plugins/file-sink/core";
+import { readJsonlTailAsync } from "@plugins/infra/plugins/file-sink/core";
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { SIGNAL_ORIGIN_FILE, type SignalOriginLine } from "./lines";
 
@@ -20,27 +17,13 @@ import { SIGNAL_ORIGIN_FILE, type SignalOriginLine } from "./lines";
  * the reader: no op on this host has ever caught a fatal signal, which is a
  * legitimately empty history and not a failure.
  *
- * Synchronous by contract — the same property that lets the writer run from a
- * signal handler, and the reason a caller may use this from any context.
- */
-export function readSignalOriginLines(): SignalOriginLine[] {
-  return readSignalOriginLinesFromSync(SIGNAL_ORIGIN_FILE);
-}
-
-/**
- * {@link readSignalOriginLines} without blocking the event loop — for a reader
- * inside the live-resource flush cycle (a loader), where a synchronous read
- * freezes every other loader and every socket send.
+ * Asynchronous: its readers are loaders inside the live-resource flush cycle,
+ * where a synchronous read freezes every other loader and every socket send.
  */
 export async function readSignalOriginLinesAsync(): Promise<
   SignalOriginLine[]
 > {
-  const result = await readJsonlTailAsync<SignalOriginLine>(
-    SIGNAL_ORIGIN_FILE,
-    { includeRotated: true },
-  );
-  if (result.kind === "missing") return [];
-  return result.records;
+  return readSignalOriginLinesFrom(SIGNAL_ORIGIN_FILE);
 }
 
 /**
@@ -52,10 +35,10 @@ export async function readSignalOriginLinesAsync(): Promise<
  * testable against a fixture, since `SIGNAL_ORIGIN_FILE` is frozen at module
  * eval and cannot be redirected once the graph is loaded.
  */
-export function readSignalOriginLinesFromSync(
+export async function readSignalOriginLinesFrom(
   file: AppPath,
-): SignalOriginLine[] {
-  const result = readJsonlTailSync<SignalOriginLine>(file, {
+): Promise<SignalOriginLine[]> {
+  const result = await readJsonlTailAsync<SignalOriginLine>(file, {
     includeRotated: true,
   });
   if (result.kind === "missing") return [];

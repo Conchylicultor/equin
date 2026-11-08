@@ -166,6 +166,7 @@ async function analyse(
     await phase("installing");
     const ready = await ensureDep(audioPythonDep, exec, { log: say });
     await phase("analysing");
+    const modelsDir = await audioModelsCacheDir.ensure();
     const summary = await exec.admit(() =>
       runPython(ready, {
         module: "equin_audio.beat_features",
@@ -173,7 +174,7 @@ async function analyse(
           audioPath: audio.path,
           outPath: tmp,
           device,
-          modelsDir: audioModelsCacheDir.ensure(),
+          modelsDir,
           videoId: id,
           analysisVersion: ANALYSIS_VERSION,
           settings,

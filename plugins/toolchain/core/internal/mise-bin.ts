@@ -57,7 +57,18 @@ async function isExecutable(path: string): Promise<boolean> {
 export function miseBinSync(): string {
   const bin = findMiseBinSync();
   if (bin !== null) return bin;
-  throw new Error(
+  throw miseMissingError();
+}
+
+/** {@link miseBinSync}'s async twin, for a backend. */
+export async function miseBin(): Promise<string> {
+  const bin = await findMiseBin();
+  if (bin !== null) return bin;
+  throw miseMissingError();
+}
+
+function miseMissingError(): Error {
+  return new Error(
     `mise is not installed (not on PATH, not at ${join(HOME_DIR, ".local", "bin", "mise")}). Install it: https://mise.jdx.dev`,
   );
 }

@@ -6,7 +6,7 @@ import {
   asAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { readSignalOriginLinesFromSync } from "./read";
+import { readSignalOriginLinesFrom } from "./read";
 
 function line(buildId: string, signal: string): string {
   return JSON.stringify({
@@ -25,31 +25,30 @@ function fixtureFile(): AppPath {
   );
 }
 
-describe("readSignalOriginLines", () => {
-  test("a host where nothing was ever killed reads as an empty history", () => {
-    expect(readSignalOriginLinesFromSync(fixtureFile())).toEqual([]);
+describe("readSignalOriginLinesFrom", () => {
+  test("a host where nothing was ever killed reads as an empty history", async () => {
+    expect(await readSignalOriginLinesFrom(fixtureFile())).toEqual([]);
   });
 
-  test("stitches rotations back in, oldest-first", () => {
+  test("stitches rotations back in, oldest-first", async () => {
     // A busy host rotates, and every question asked of this file is about ONE
     // past run — so a run that has slid into `.1` must still be findable.
     const file = fixtureFile();
     writeFileSync(`${file}.1`, line("older", "SIGINT") + "\n");
     writeFileSync(file, line("newer", "SIGTERM") + "\n");
 
-    expect(readSignalOriginLinesFromSync(file).map((r) => r.buildId)).toEqual([
-      "older",
-      "newer",
-    ]);
+    expect(
+      (await readSignalOriginLinesFrom(file)).map((r) => r.buildId),
+    ).toEqual(["older", "newer"]);
   });
 
-  test("skips a torn tail line instead of throwing", () => {
+  test("skips a torn tail line instead of throwing", async () => {
     // The normal case for this file: its writer is a process in the middle of
     // dying, so the last append can be half-flushed.
     const file = fixtureFile();
     writeFileSync(file, line("b1", "SIGTERM") + "\n" + '{"event":"sig');
 
-    const records = readSignalOriginLinesFromSync(file);
+    const records = await readSignalOriginLinesFrom(file);
     expect(records).toHaveLength(1);
     expect(records[0]?.buildId).toBe("b1");
   });

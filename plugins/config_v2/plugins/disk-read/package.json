@@ -1,5 +1,5 @@
 {
   "name": "@equin/plugin-config_v2-disk-read",
   "private": true,
-  "description": "A config's resolved value read straight off disk, with no server runtime and no build tooling: readEffectiveConfigFromDisk (this checkout's git layer as propagation will write it, under a namespace's user overrides) and fileConfigProxy (one JSONC config file as a ConfigProxy)."
+  "description": "A config's resolved value read straight off disk, with no server runtime and no build tooling: readEffectiveConfigFromDisk (this checkout's git layer as propagation will write it, under a namespace's user overrides; async for a backend, readEffectiveConfigFromDiskSync for a CLI step)."
 }

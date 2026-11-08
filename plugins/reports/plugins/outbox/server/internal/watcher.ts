@@ -113,7 +113,7 @@ export function startReportOutbox(): void {
 }
 
 async function becomeDrainer(current: DrainerSession): Promise<void> {
-  const dir = reportOutboxDir.ensure();
+  const dir = await reportOutboxDir.ensure();
   const { signal } = current.abort;
   try {
     current.lock = await acquireDrainerLock(

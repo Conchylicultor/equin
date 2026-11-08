@@ -142,7 +142,7 @@ const passSetDir = (raw: string): PassSetDir => {
   return {
     path,
     file: (...s: string[]) => joinAppPath(path, ...s),
-    ensure: () => {
+    ensureSync: () => {
       mkdirSync(path, { recursive: true });
       return path;
     },

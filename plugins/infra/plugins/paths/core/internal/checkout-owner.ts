@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdir, writeFile } from "node:fs/promises";
 import {
   readFile,
   readFileSync,
@@ -23,10 +23,13 @@ import { worktreeArtifacts } from "./paths";
 // it one more "owner is gone" case.
 
 /** Record that `root`'s CLI is acting as `ns`. Rewritten on every op, so the file's mtime is the last use. */
-export function stampCheckoutOwnerSync(ns: Namespace, root: string): void {
+export async function stampCheckoutOwner(
+  ns: Namespace,
+  root: string,
+): Promise<void> {
   const path = worktreeArtifacts.checkoutOwner(ns);
-  mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, `${JSON.stringify({ root: resolve(root) })}\n`);
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(path, `${JSON.stringify({ root: resolve(root) })}\n`);
 }
 
 export type CheckoutOwnerRead =

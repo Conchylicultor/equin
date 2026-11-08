@@ -54,7 +54,7 @@ import {
   closeRunOn,
   type InsertRunRow,
 } from "../../shared/recorder";
-import { readBuildTerminalSync } from "../../shared/stale-holder";
+import { readBuildTerminal } from "../../shared/stale-holder";
 import { _buildRuns } from "./tables";
 import { buildRunIdKind } from "../../core/internal/id-kind";
 import { BUILD_RUN_KIND_ID } from "../../core/internal/supervised-kind";
@@ -225,14 +225,14 @@ describe("closeRunOn", () => {
 });
 
 describe("readBuildTerminal", () => {
-  test("missing file ⇒ null", () => {
-    expect(readBuildTerminalSync(NS, "no-such-build")).toBeNull();
+  test("missing file ⇒ null", async () => {
+    expect(await readBuildTerminal(NS, "no-such-build")).toBeNull();
   });
 
-  test("the marker's code and mtime", () => {
+  test("the marker's code and mtime", async () => {
     const ended = new Date("2026-09-16T14:27:06.000Z");
     writeMarker("ended", "143 TERM\n", ended);
-    expect(readBuildTerminalSync(NS, "ended")).toEqual({
+    expect(await readBuildTerminal(NS, "ended")).toEqual({
       exitCode: 143,
       finishedAt: ended,
     });
@@ -240,7 +240,7 @@ describe("readBuildTerminal", () => {
 
   test("a malformed marker ⇒ throws", () => {
     writeMarker("bad-shape", "{}");
-    expect(() => readBuildTerminalSync(NS, "bad-shape")).toThrow(
+    expect(readBuildTerminal(NS, "bad-shape")).rejects.toThrow(
       /malformed exit marker/,
     );
   });

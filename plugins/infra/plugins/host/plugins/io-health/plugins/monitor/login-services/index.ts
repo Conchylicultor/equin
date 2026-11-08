@@ -32,7 +32,7 @@ export const fsLatencyMonitorService = defineLoginService({
     argv: [
       executable,
       "--dir",
-      monitorLogsDir.ensure(),
+      monitorLogsDir.ensureSync(),
       // The root daemon of the same label is the one it stands aside for
       // while it writes, and reports while it is installed but silent.
       "--root-label",

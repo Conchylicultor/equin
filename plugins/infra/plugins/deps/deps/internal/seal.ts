@@ -83,7 +83,7 @@ export async function sealDep(
 
   const { identity, paths } = await installInCache(dep, targeted.source, exec, {
     root,
-    store: opts.store ?? defaultStore(),
+    store: opts.store ?? (await defaultStore()),
     say,
   });
   const rel = sealedPayloadDir(dep.id);

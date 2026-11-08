@@ -180,7 +180,7 @@ const check: Check = {
     // Steady state: an unchanged css subtree ⇒ the sidecar marker exists ⇒ return
     // OK WITHOUT launching Chromium, regardless of unrelated edits elsewhere. This
     // fast path stays UN-gated, so the zero-launch steady state never queues.
-    layoutLabDir.ensure();
+    layoutLabDir.ensureSync();
     if (existsSync(markerFile(sig))) return { ok: true };
 
     // Chromium is an on-demand dependency. Install it (a no-op once it is)

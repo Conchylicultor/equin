@@ -201,7 +201,7 @@ export async function fetchYouTubeAudio(
   opts: FetchOptions = {},
 ): Promise<YouTubeAudio> {
   const id = VideoIdSchema.parse(videoId);
-  const dir = opts.dir ?? youtubeAudioCacheDir.ensure();
+  const dir = opts.dir ?? (await youtubeAudioCacheDir.ensure());
   const say = opts.log ?? (() => {});
 
   const cached = await lookupCached(dir, id);

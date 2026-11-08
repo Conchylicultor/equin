@@ -88,7 +88,7 @@ export async function startCatalogWatcher(): Promise<void> {
   if (watcher) return;
   watcher = await modelCatalogWatcher.start({
     // Subscribing to a missing directory fails; the dir is host-global and cheap.
-    dirs: [modelCatalogDir.ensure()],
+    dirs: [await modelCatalogDir.ensure()],
     onChange: () => invalidate(),
   });
   // A rewrite between the first read and the subscription would be missed.

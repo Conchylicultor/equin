@@ -1,6 +1,6 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
-import { readEffectiveConfigFromDisk } from "@plugins/config_v2/plugins/disk-read/core";
+import { readEffectiveConfigFromDiskSync } from "@plugins/config_v2/plugins/disk-read/core";
 import {
   assertCompositionId,
   compositionsConfig,
@@ -84,7 +84,7 @@ export function readCheckoutCompositions(
   root: AppPath,
   checkout: CheckoutRef,
 ): CompositionManifestItem[] {
-  const values = readEffectiveConfigFromDisk(compositionsConfig, {
+  const values = readEffectiveConfigFromDiskSync(compositionsConfig, {
     root,
     userConfigDir: configDir.file(namespaceFor(MAIN_COMPOSITION_ID, checkout)),
     hierarchyPath: COMPOSITIONS_HIERARCHY_PATH,

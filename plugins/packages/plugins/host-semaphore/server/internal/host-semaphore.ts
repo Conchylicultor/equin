@@ -349,9 +349,8 @@ function slotAccess(slots: DataDir | RepoLockDir): {
   return {
     spec: dataDir.spec,
     file: (rel) => dataDir.file(rel),
-    ensure: () => {
-      dataDir.ensure();
-      return Promise.resolve();
+    ensure: async () => {
+      await dataDir.ensure();
     },
   };
 }
@@ -885,7 +884,7 @@ export function createHostSemaphore(opts: {
           // `normal` waiter's fan-out takes it.
           yielded = priority === "low" && (await demandPresent());
           if (!yielded) {
-            ticket.leave();
+            await ticket.leave();
             if (taken.winner)
               taken.fds = await sweepKeep(effectiveMax - 1, order);
           }
@@ -901,10 +900,15 @@ export function createHostSemaphore(opts: {
       // Decremented FIRST, synchronously: a throwing release below must never
       // leave the queue-depth gauge permanently inflated.
       waiting--;
-      // Covers a cancellation anywhere in the wait — never strand the line.
-      ticket?.leave();
-      // No longer waiting: stop holding `low` acquires back.
-      if (releaseDemand) await releaseDemand();
+      try {
+        // Covers a cancellation anywhere in the wait — never strand the line.
+        // (A failed unlink still closes the ticket's lock: see `leave`.)
+        await ticket?.leave();
+      } finally {
+        // No longer waiting: stop holding `low` acquires back — even when the
+        // leave above threw.
+        if (releaseDemand) await releaseDemand();
+      }
     }
   }
 
@@ -964,7 +968,10 @@ export function createHostSemaphore(opts: {
     // never the bound.
     const line = lineFor(lane, priority);
     let taken: Taken | undefined;
-    if (line.isEmpty() && (priority === "normal" || !(await demandPresent()))) {
+    if (
+      (await line.isEmpty()) &&
+      (priority === "normal" || !(await demandPresent()))
+    ) {
       const fds = await sweepKeep(effectiveMax, order);
       if (fds.length > 0) {
         const swept: Taken = { fds, winner: undefined };

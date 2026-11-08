@@ -48,7 +48,7 @@ export function centralRoutePrefixes(
  * read a half-written file.
  */
 export function writeCentralRoutesManifest(routes: readonly string[]): void {
-  gatewayState.ensure();
+  gatewayState.ensureSync();
   const file = gatewayState.file(CENTRAL_ROUTES_FILENAME);
   const tmp = `${file}.tmp.${process.pid}`;
   writeFileSync(

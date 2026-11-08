@@ -65,7 +65,7 @@ import {
 import type { DataDir } from "@plugins/infra/plugins/paths/core";
 
 /** What a store needs of its data dir: its path, a child's path, and `mkdir -p`. */
-export type PassSetDir = Pick<DataDir, "path" | "file" | "ensure">;
+export type PassSetDir = Pick<DataDir, "path" | "file" | "ensureSync">;
 
 /** How the store is bounded. AGE is the evictor; count is a disk backstop. */
 export interface PassSetBounds {
@@ -189,7 +189,7 @@ export function openPassSet(
   const now = options.now ?? Date.now;
   const period = bounds.maxAgeMs / bounds.generations;
   // A genuinely unwritable home is a real fault and should surface loudly.
-  dir.ensure();
+  dir.ensureSync();
   const home = joinAppPath(dir.path, LAYOUT_DIR);
   const born = bornAt(dir, home, now());
   // Removal is bounded per open: what an open evicts is renamed aside (or, for

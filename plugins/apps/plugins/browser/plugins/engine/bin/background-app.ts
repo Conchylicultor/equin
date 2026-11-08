@@ -37,7 +37,7 @@ export async function backgroundOnlyChromium(
   executable: string,
 ): Promise<string> {
   const bundle = bundleOf(executable);
-  const root = browserEngineAppDir.ensure();
+  const root = browserEngineAppDir.ensureSync();
   const key = hashHex(executable).slice(0, 16);
   const dir = join(root, key);
   const inside = relative(bundle, executable);

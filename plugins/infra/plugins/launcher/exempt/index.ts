@@ -42,6 +42,6 @@ export default [
     paths: ["server/internal/boot.ts"],
     kind: "sanctioned",
     reason:
-      "killListenerOnPort's `lsof` runs only in the launcher's own process (`./equin start` / `stop`, the release `launch` binary) tearing the stack down \u2014 never on a serving backend.",
+      "killListenerOnPort's `lsof` and gatewayLaunchSpec's ensureSync of the gateway's dirs run only in the launcher's own process (`./equin start` / `stop`, the release `launch` binary) bringing the stack up or tearing it down \u2014 never on a serving backend.",
   },
 ] satisfies Exemptions;

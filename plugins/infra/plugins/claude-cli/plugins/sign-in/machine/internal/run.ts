@@ -273,7 +273,7 @@ export async function startSignIn(target: ClaudeSignInTarget): Promise<string> {
   if (running) await endRun(running);
   const id = crypto.randomUUID();
   // The real path of the app's own sign-in dir.
-  const root = asAppPath(await realpath(claudeSignInDir.ensure()));
+  const root = asAppPath(await realpath(await claudeSignInDir.ensure()));
   await sweepOrphanedRuns(root);
   const dir = joinAppPath(root, runDirName(id));
   await mkdir(dir, { mode: 0o700 });

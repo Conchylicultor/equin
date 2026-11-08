@@ -140,7 +140,9 @@ function write(db: Database, fn: () => void): void {
 }
 
 function storePath(opts?: { path?: string }): string {
-  return opts?.path ?? (pluginRecordsDir.ensure(), pluginRecordsDir.file(FILE));
+  return (
+    opts?.path ?? (pluginRecordsDir.ensureSync(), pluginRecordsDir.file(FILE))
+  );
 }
 
 export interface ReclaimResult {

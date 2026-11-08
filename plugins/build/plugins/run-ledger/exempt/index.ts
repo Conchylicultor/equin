@@ -2,14 +2,6 @@ import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exem
 
 export default [
   {
-    rule: "blocking-fs/sync-named",
-    paths: ["shared/stale-holder.ts"],
-    kind: "debt",
-    task: "task-1793991095-ppkf09",
-    reason:
-      "A backend loads this module, and its blocking functions do not carry the *Sync name yet: a method bound by an interface others implement, an async function that does sync work inside, or a cascade (data-root resolution) left for the redesign.",
-  },
-  {
     rule: "sql-writes:fit:hand-written",
     paths: ["shared/recorder.ts", "shared/stale-holder.ts"],
     kind: "sanctioned",

@@ -44,7 +44,7 @@ import {
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   committedDocument,
-  committedFilesIn,
+  readCommittedFilesSync,
   computeHash,
   parseConfigFileRelPath,
   scopeAppId,
@@ -164,7 +164,7 @@ export function applyPluginMoves(opts: {
 }): AppliedMove[] {
   const { root, userConfigDir } = opts;
   // The committed layer the build's propagation reads.
-  const committed = committedFilesIn(joinAppPath(root, "config"), {
+  const committed = readCommittedFilesSync(joinAppPath(root, "config"), {
     existsSync,
     readFileSync,
     readdirSync,

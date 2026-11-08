@@ -1,8 +1,8 @@
-import { mkdirSync, renameSync, rmSync } from "node:fs";
-import { readdirSync } from "@plugins/packages/plugins/timed-fs/core";
+import { mkdir, rename, rm } from "node:fs/promises";
+import { readdir } from "@plugins/packages/plugins/timed-fs/core";
 import { dlopen } from "bun:ffi";
 import {
-  openOwnedFdSync,
+  openOwnedFd,
   type OwnedFd,
 } from "@plugins/packages/plugins/owned-fd/core";
 import { flockTry, waitForFlock } from "@plugins/packages/plugins/flock/core";
@@ -51,10 +51,11 @@ export interface Ticket {
   /** Where this ticket stands — pass it to a later `join` to rejoin here. */
   readonly place: TicketPlace;
   /**
-   * Leave the line: the next waiter becomes the head. Synchronous and
-   * idempotent — the instant it returns, the ticket's lock is gone.
+   * Leave the line: the next waiter becomes the head. Idempotent — once it
+   * resolves, the ticket's lock is gone; a second call resolves with the first.
+   * Off the thread: the unlink is the disk's to answer.
    */
-  leave(): void;
+  leave(): Promise<void>;
 }
 
 export interface TicketLine {
@@ -76,7 +77,7 @@ export interface TicketLine {
    * whose owner is gone. A caller deciding whether it may skip the line
    * (a free slot, nobody ahead) asks this.
    */
-  isEmpty(): boolean;
+  isEmpty(): Promise<boolean>;
 }
 
 const TICKET = /^t-\d{20}-\d{10}-\d{6}\.lock$/;
@@ -135,10 +136,10 @@ function ticketName(place: TicketPlace): string {
 }
 
 /** Live tickets in `dir`, oldest first. Unowned ones are reaped on the way. */
-function liveTicketsSync(dir: AppPath, before?: string): string[] {
+async function liveTickets(dir: AppPath, before?: string): Promise<string[]> {
   let names: string[];
   try {
-    names = readdirSync(dir);
+    names = await readdir(dir);
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
     throw err;
@@ -146,7 +147,7 @@ function liveTicketsSync(dir: AppPath, before?: string): string[] {
   const live: string[] = [];
   for (const name of names.filter((n) => TICKET.test(n)).sort()) {
     if (before !== undefined && name >= before) break;
-    if (isLiveSync(joinAppPath(dir, name))) live.push(name);
+    if (await isLive(joinAppPath(dir, name))) live.push(name);
   }
   return live;
 }
@@ -155,17 +156,17 @@ function liveTicketsSync(dir: AppPath, before?: string): string[] {
  * Is a ticket held by its owner? A lock we can take means nobody holds it: the
  * owner left (between its unlink and its close) or died — reap the file.
  */
-function isLiveSync(path: AppPath): boolean {
+async function isLive(path: AppPath): Promise<boolean> {
   let lock: OwnedFd;
   try {
-    lock = openOwnedFdSync(path, "r");
+    lock = await openOwnedFd(path, "r");
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return false;
     throw err;
   }
   try {
     if (!flockTry(lock.fd)) return true;
-    rmSync(path, { force: true });
+    await rm(path, { force: true });
     return false;
   } finally {
     lock.close();
@@ -178,42 +179,48 @@ function isLiveSync(path: AppPath): boolean {
  */
 export function createTicketLine(dir: AppPath): TicketLine {
   return {
-    isEmpty: () => liveTicketsSync(dir).length === 0,
+    isEmpty: async () => (await liveTickets(dir)).length === 0,
 
     async join(opts = {}) {
       const { signal } = opts;
       signal?.throwIfAborted();
-      mkdirSync(dir, { recursive: true });
+      await mkdir(dir, { recursive: true });
 
       const place = opts.place ?? arrive();
       const name = ticketName(place);
       const path = joinAppPath(dir, name);
       const tmp = joinAppPath(dir, `.${name}.tmp`);
-      const lock = openOwnedFdSync(tmp, "wx");
+      const lock = await openOwnedFd(tmp, "wx");
       if (!flockTry(lock.fd)) {
         lock.close();
-        rmSync(tmp, { force: true });
+        await rm(tmp, { force: true });
         throw new Error(`ticket-line(${dir}): could not lock a fresh ticket`);
       }
-      renameSync(tmp, path);
+      await rename(tmp, path);
 
-      let left = false;
+      let left: Promise<void> | undefined;
       const ticket: Ticket = {
         place,
         leave() {
-          if (left) return;
-          left = true;
-          // Unlink first, then close: the close is what wakes the waiter behind
-          // us, and by then the file is already gone from its next scan.
-          rmSync(path, { force: true });
-          lock.close();
+          left ??= (async () => {
+            // Unlink first, then close: the close is what wakes the waiter
+            // behind us, and by then the file is already gone from its next
+            // scan. The close runs even when the unlink fails, so a failed
+            // leave never keeps the line held.
+            try {
+              await rm(path, { force: true });
+            } finally {
+              lock.close();
+            }
+          })();
+          return left;
         },
       };
 
       try {
         for (;;) {
           signal?.throwIfAborted();
-          const ahead = liveTicketsSync(dir, name);
+          const ahead = await liveTickets(dir, name);
           const predecessor = ahead.at(-1);
           if (predecessor === undefined) return ticket;
           const predecessorPath = joinAppPath(dir, predecessor);
@@ -222,11 +229,11 @@ export function createTicketLine(dir: AppPath): TicketLine {
           // recreated empty and granted at once — reap it either way and look
           // again: whoever was ahead of it is who we wait on next.
           const held = await waitForFlock(predecessorPath, { signal });
-          rmSync(predecessorPath, { force: true });
+          await rm(predecessorPath, { force: true });
           await held.release();
         }
       } catch (err) {
-        ticket.leave();
+        await ticket.leave();
         throw err;
       }
     },

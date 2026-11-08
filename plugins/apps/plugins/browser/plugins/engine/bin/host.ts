@@ -51,7 +51,7 @@ function argValue(name: string): string {
 }
 
 const launchedBy = argValue("--launched-by");
-const dir = browserEngineDir.ensure();
+const dir = browserEngineDir.ensureSync();
 const file = (name: string) => browserEngineDir.file(name);
 const codeId = await hostCodeId(asAppPath(resolve(import.meta.dir, "..")));
 const startedAt = new Date().toISOString();
@@ -74,7 +74,7 @@ void withForegroundPriority(() => new Promise<never>(() => {}));
 
 // Holding the lock, uploads left behind are a dead host's pages' — gone with them.
 rmSync(browserEngineUploadsDir.path, { recursive: true, force: true });
-browserEngineUploadsDir.ensure();
+browserEngineUploadsDir.ensureSync();
 
 // Holding the lock, anything left at the socket path is a dead host's.
 const socketPath = file(HOST_FILES.socket);
@@ -186,7 +186,7 @@ writeFileSync(file(HOST_FILES.pid), `${process.pid}\n`);
 wirePages({
   onChange: publish,
   onIdle: () => exitOn("idle"),
-  profileDir: browserDir.subdir("profile").ensure(),
+  profileDir: browserDir.subdir("profile").ensureSync(),
 });
 for (const signal of ["SIGTERM", "SIGINT", "SIGHUP"] as const) {
   process.on(signal, () => exitOn(`signal ${signal}`));

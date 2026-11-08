@@ -1,6 +1,6 @@
 import { dirname } from "path";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
-import { miseBinSync } from "@plugins/toolchain/core";
+import { miseBin } from "@plugins/toolchain/core";
 
 /**
  * Runs `mise <args>` for the checkout at `root`, seeing ONLY that checkout's
@@ -19,7 +19,7 @@ export async function mise(
   args: string[],
   timeoutMs: number,
 ): Promise<string> {
-  const argv = [miseBinSync(), ...args];
+  const argv = [await miseBin(), ...args];
   const result = await spawnCaptured(argv, {
     cwd: root,
     env: { ...process.env, MISE_CEILING_PATHS: dirname(root) },

@@ -3,7 +3,12 @@ import {
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { mkdirSync, renameSync, symlinkSync } from "node:fs";
-import { lstatSync, statSync } from "@plugins/packages/plugins/timed-fs/core";
+import { mkdir } from "node:fs/promises";
+import {
+  lstatSync,
+  stat,
+  statSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { dirname, join, relative, sep } from "node:path";
 // Relative sibling import: this file lives INSIDE the `paths` plugin, so the
 // `@plugins/infra/plugins/paths/core` alias would cycle back through the barrel
@@ -206,8 +211,10 @@ export interface DataDirArea {
   readonly path: AppPath;
   /** A path INSIDE this area. */
   file(...segments: string[]): AppPath;
-  /** `mkdir -p` the area, and return its path. */
-  ensure(): AppPath;
+  /** `mkdir -p` the area, and return its path. See {@link DataDir.ensure}. */
+  ensure(): Promise<AppPath>;
+  /** {@link ensure}, holding the thread: for a process that may block (a CLI, a check, a script). */
+  ensureSync(): AppPath;
 }
 
 export interface DataDir {
@@ -219,8 +226,17 @@ export interface DataDir {
   readonly path: AppPath;
   /** A path INSIDE this directory. The only sanctioned way to name a child. */
   file(...segments: string[]): AppPath;
-  /** `mkdir -p` the directory, and return its path. */
-  ensure(): AppPath;
+  /**
+   * `mkdir -p` the directory, and return its path — without holding the
+   * thread, so a backend can call it on every write.
+   */
+  ensure(): Promise<AppPath>;
+  /**
+   * {@link ensure}, holding the thread: for a process that may block (a CLI,
+   * a check, a script, a `bin/` entry before it serves). A backend cannot call
+   * it (`blocking-fs/no-sync-fs`).
+   */
+  ensureSync(): AppPath;
   /**
    * A named area inside this directory — ONE lowercase segment, validated like
    * a data-dir name. See {@link DataDirArea}.
@@ -302,33 +318,56 @@ export function relativeToDataRoot(
 
 /**
  * `mkdir -p` a directory a declaration resolved to, and return it — the ONE
- * implementation behind both `DataDir.ensure()` and `DataDirArea.ensure()`, so
- * the guard below cannot exist on one and be forgotten on the other.
+ * implementation behind both `DataDir.ensure()` and `DataDirArea.ensure()`
+ * (and their `ensureSync()` twins), so the guard below cannot exist on one and
+ * be forgotten on the other.
  *
  * `what` names the thing being ensured in the error (`cache/check (owner …)`,
  * or an area of one).
  */
-function ensureDirectorySync(path: AppPath, what: string): AppPath {
-  // A `DataDir` names a DIRECTORY. Several entries at the root are loose
-  // FILES today (`duress.latch`, `gateway.pid`, `push-holder.json`, the
-  // `*.jsonl` sinks), and pointing a declaration's `legacyLocation` at one
-  // of those is a trap: `mkdirSync` would try to create a DIRECTORY where
-  // the file is, and the owner's next write would fail with EISDIR — far
-  // from the declaration that caused it. Such an entry belongs INSIDE a
-  // declared dir, reached via `file()`; say so here rather than let the
-  // raw EEXIST surface with no explanation of what to do about it.
-  const existing = statSync(path, { throwIfNoEntry: false });
-  if (existing && !existing.isDirectory()) {
-    throw new Error(
-      `[data-dir] ${what} resolves to ${path}, which exists and is NOT a directory. ` +
-        `A DataDir (and each of its subdir() areas) names a directory; a single file belongs inside one — declare the containing dir and reach the file with .file("<name>").`,
-    );
+async function ensureDirectory(path: AppPath, what: string): Promise<AppPath> {
+  // `mkdir -p` first: on an existing directory it is one syscall that
+  // succeeds, and on a path that is a FILE it fails with EEXIST (or ENOTDIR on
+  // a file higher up) — only then is the stat worth paying, to explain it.
+  try {
+    await mkdir(path, { recursive: true });
+  } catch (err) {
+    const code = errnoCode(err);
+    if (code !== "EEXIST" && code !== "ENOTDIR") throw err;
+    const existing = await stat(path).catch((statErr: unknown) => {
+      if (errnoCode(statErr) === "ENOENT" || errnoCode(statErr) === "ENOTDIR")
+        return undefined;
+      throw statErr;
+    });
+    if (existing === undefined || existing.isDirectory()) throw err;
+    throw notADirectoryError(path, what);
   }
+  return path;
+}
 
+/** {@link ensureDirectory}, holding the thread. */
+function ensureDirectorySync(path: AppPath, what: string): AppPath {
+  const existing = statSync(path, { throwIfNoEntry: false });
+  if (existing && !existing.isDirectory()) throw notADirectoryError(path, what);
   // A genuinely unwritable data root is a real fault and should surface
   // loudly rather than be swallowed into a silent no-write.
   mkdirSync(path, { recursive: true });
   return path;
+}
+
+// A `DataDir` names a DIRECTORY. Several entries at the root are loose FILES
+// today (`duress.latch`, `gateway.pid`, `push-holder.json`, the `*.jsonl`
+// sinks), and pointing a declaration's `legacyLocation` at one of those is a
+// trap: `mkdir` would try to create a DIRECTORY where the file is, and the
+// owner's next write would fail with EISDIR — far from the declaration that
+// caused it. Such an entry belongs INSIDE a declared dir, reached via
+// `file()`; say so here rather than let the raw EEXIST surface with no
+// explanation of what to do about it.
+function notADirectoryError(path: AppPath, what: string): Error {
+  return new Error(
+    `[data-dir] ${what} resolves to ${path}, which exists and is NOT a directory. ` +
+      `A DataDir (and each of its subdir() areas) names a directory; a single file belongs inside one — declare the containing dir and reach the file with .file("<name>").`,
+  );
 }
 
 function assertAreaName(name: string, what: string): void {
@@ -374,6 +413,10 @@ function makeDataDir(spec: DataDirSpec): DataDir {
     return joinAppPath(from, ...below);
   };
 
+  const what = `${key} (owner ${spec.owner})`;
+  const areaWhat = (name: string): string =>
+    `${key} area "${name}" (owner ${spec.owner})`;
+
   const area = (name: string): DataDirArea => {
     assertAreaName(name, `${key}.subdir() name`);
     return {
@@ -383,11 +426,11 @@ function makeDataDir(spec: DataDirSpec): DataDir {
       file(...segments: string[]): AppPath {
         return resolveInSync([name, ...segments]);
       },
-      ensure(): AppPath {
-        return ensureDirectorySync(
-          resolveInSync([name]),
-          `${key} area "${name}" (owner ${spec.owner})`,
-        );
+      async ensure(): Promise<AppPath> {
+        return ensureDirectory(resolveInSync([name]), areaWhat(name));
+      },
+      ensureSync(): AppPath {
+        return ensureDirectorySync(resolveInSync([name]), areaWhat(name));
       },
     };
   };
@@ -400,11 +443,11 @@ function makeDataDir(spec: DataDirSpec): DataDir {
     file(...segments: string[]): AppPath {
       return resolveInSync(segments);
     },
-    ensure(): AppPath {
-      return ensureDirectorySync(
-        resolveInSync([]),
-        `${key} (owner ${spec.owner})`,
-      );
+    async ensure(): Promise<AppPath> {
+      return ensureDirectory(resolveInSync([]), what);
+    },
+    ensureSync(): AppPath {
+      return ensureDirectorySync(resolveInSync([]), what);
     },
     subdir: area,
   };
@@ -821,6 +864,7 @@ export function isDataDir(value: unknown): value is DataDir {
     typeof spec.owner === "string" &&
     typeof candidate.file === "function" &&
     typeof candidate.ensure === "function" &&
+    typeof candidate.ensureSync === "function" &&
     typeof candidate.subdir === "function"
   );
 }

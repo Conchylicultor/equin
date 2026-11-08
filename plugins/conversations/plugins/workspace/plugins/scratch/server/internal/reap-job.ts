@@ -34,7 +34,7 @@ export const scratchReapJob = defineJob({
   dedup: "singleton",
   schedule: { cron: "20 5 * * *" },
   run: async () => {
-    const root = scratchWorkspacesDir.ensure();
+    const root = await scratchWorkspacesDir.ensure();
     const entries = await readdir(root, { withFileTypes: true });
     const now = Date.now();
     const reclaimed: string[] = [];

@@ -40,7 +40,7 @@ export const browserConfigFile: MapsBrowserConfigSourceImpl = {
   read: () => readBrowserConfig(),
   async watch(changed) {
     // Subscribing to a missing directory fails; creating it is free.
-    const dir = googleMapsDir.ensure();
+    const dir = await googleMapsDir.ensure();
     const watcher = await mapsBrowserConfigWatcher.start({
       dirs: [dir],
       onChange: (events) => {

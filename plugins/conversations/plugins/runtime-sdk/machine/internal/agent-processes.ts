@@ -243,7 +243,7 @@ export const agentProcessesServed = serveValue(sdkAgentProcesses, {
   loader: countAgents,
   whileSubscribed: async (_params, notify) => {
     notifiers.add(notify);
-    const root = sdkAgentPidsDir.ensure();
+    const root = await sdkAgentPidsDir.ensure();
     const release = await acquireDirWatch({
       dir: root,
       scope: "subtree",

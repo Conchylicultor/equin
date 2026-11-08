@@ -79,6 +79,7 @@ every move proven before it lands.
     - `HOLDS_FILE`
     - `isExactRelease`
     - `lockProblems`
+    - `miseBin`
     - `miseBinSync`
     - `parseMiseLock`
     - `parseMiseToolRequests`

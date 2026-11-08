@@ -389,8 +389,11 @@ services, both portable providers in the host's graph:
   resolved per storePath by `committedDocument` (core) — `resolveGitLayer` over
   strictly parsed files (`parseConfigFile`; a hashless file throws). The same
   rule the desktop's `repoConfigLayer`, the build's `propagateConfigToUser` and
-  the plugin-move ledger read the checkout with — all three over
-  `committedFilesIn(dir, fs)` (core), the one disk reader of a committed dir.
+  the plugin-move ledger read the checkout with. `CommittedFiles` is a lookup
+  over files already read, never a disk read: the repo layer reads the files one
+  document needs without holding the backend's thread
+  (`committedFilesFromMap`), and the tool processes read the whole dir once with
+  `readCommittedFilesSync(dir, fs)` (core).
 - **User layer** — `config_v2/plugins/browser-store` (`ConfigStore`):
   `createMemoryConfigStore({ propagatedFrom })` (core). The first time the
   registry touches a storePath, the store propagates its committed document
@@ -552,7 +555,6 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `codeConfigProxy`
     - `committedDocument`
     - `committedFilesFromMap`
-    - `committedFilesIn`
     - `computeHash`
     - `CONFIG_HASH_RE`
     - `configConflict`
@@ -597,6 +599,7 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `parseConfigFileRelPath`
     - `propagate`
     - `propagateGitLayerDocument`
+    - `readCommittedFilesSync`
     - `readonlyProxy`
     - `readTypedConfig`
     - `readTypedConfigWithLayer`
@@ -638,9 +641,7 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `reorder`
     - `review/code-review`
 - Exemptions:
-  - Exempts itself from:
-    - `check-thread-safety/no-blocking-check-work` — `check/config-registrations.ts`, `check/overrides-authored.ts` (debt)
-    - `blocking-fs/sync-named` — `core/internal/git-layer.ts` (debt)
+  - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/config-registrations.ts`, `check/overrides-authored.ts` (debt)
 - Test helpers:
   - Server: `@plugins/config_v2/server/testing`
     - `diskConfigGitLayer` — The committed config layer a browser host bundles (`config_v2/bundled-layer`, which reads it through vite's `import.meta.glob` — absent under `bun test`), provided from the same files read off disk: for a suite booting a portable graph without the computer.

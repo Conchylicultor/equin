@@ -19,7 +19,7 @@ const USAGE_FILE = /^(.+)\.json$/;
 
 /** Every account's last report: one `<accountId>.json` per account. */
 export async function readClaudeUsage(): Promise<ClaudeUsageRead> {
-  const dir = claudeUsageDir.ensure();
+  const dir = await claudeUsageDir.ensure();
   const byAccount: Record<string, ClaudeUsage> = {};
   for (const name of await readdir(dir)) {
     // The rename's temp file is `<file>.<pid>.tmp`.
@@ -67,7 +67,7 @@ export const claudeUsageServed = serveValue(claudeUsage, {
   loader: readClaudeUsage,
   whileSubscribed: async (_params, notify) => {
     const release = await acquireDirWatch({
-      dir: claudeUsageDir.ensure(),
+      dir: await claudeUsageDir.ensure(),
       scope: "subtree",
       onChange: () => notify(),
     });

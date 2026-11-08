@@ -49,7 +49,7 @@ async function uvPython(args: string[]) {
   // a directory with no mise config, like the temp dir).
   return spawnCaptured(["uv", "python", ...args], {
     cwd: REPO_ROOT,
-    env: uvEnv(),
+    env: await uvEnv(),
     timeoutMs: 10 * 60_000,
   });
 }

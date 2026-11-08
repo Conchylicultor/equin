@@ -59,7 +59,7 @@ let watcher: FileWatcher | null = null;
 export async function startIoHealth(): Promise<void> {
   if (watcher) return;
   watcher = await fsLatencyLogWatcher.start({
-    dirs: [monitorLogsDir.ensure()],
+    dirs: [await monitorLogsDir.ensure()],
     onChange: (events) =>
       events.some((e) => e.path.endsWith(`/${FS_LATENCY_LOG_NAME}`))
         ? refreshes.run()

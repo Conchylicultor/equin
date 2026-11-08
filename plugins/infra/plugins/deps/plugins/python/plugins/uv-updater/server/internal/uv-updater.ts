@@ -197,7 +197,7 @@ async function cpythonDownloads(root: AppPath): Promise<CpythonDownload[]> {
   ];
   const result = await spawnCaptured(argv, {
     cwd: root,
-    env: uvEnv(),
+    env: await uvEnv(),
     timeoutMs: MINUTE,
   });
   if (result.exitCode !== 0) {
@@ -225,7 +225,7 @@ async function uvLock(
   ];
   const result = await spawnCaptured(argv, {
     cwd: root,
-    env: uvEnv(),
+    env: await uvEnv(),
     mergeStderr: true,
     timeoutMs: 10 * MINUTE,
   });
@@ -431,7 +431,7 @@ export const uvUpdater: Updater = {
   // The moved lock must still install: a throwaway `uv sync --frozen` of each
   // touched project, into a temp env removed afterwards.
   async smoke(root, moves): Promise<UpdaterSmoke[]> {
-    const env = uvEnv();
+    const env = await uvEnv();
     const cacheEnv = {
       UV_CACHE_DIR: env.UV_CACHE_DIR ?? "",
       UV_PYTHON_INSTALL_DIR: env.UV_PYTHON_INSTALL_DIR ?? "",

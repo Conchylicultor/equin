@@ -75,7 +75,7 @@ export async function ensureDep<S extends DepSource>(
 
   const { identity, paths } = await installInCache(dep, dep.source, exec, {
     root,
-    store: opts.store ?? defaultStore(),
+    store: opts.store ?? (await defaultStore()),
     say: opts.log ?? (() => {}),
   });
   return await found(dep, paths, identity);
@@ -341,7 +341,7 @@ async function locate<S extends DepSource>(
       },
     };
   }
-  const store = opts.store ?? defaultStore();
+  const store = opts.store ?? (await defaultStore());
   let identity: string;
   try {
     identity = (await currentIdentity(dep, root)).identity;
@@ -381,7 +381,7 @@ export async function removeDep(
       `${dep.id}: ${root} is a sealed release bundle; its dependencies are part of it and cannot be removed.`,
     );
   }
-  const store = opts.store ?? defaultStore();
+  const store = opts.store ?? (await defaultStore());
   const { identity } = await currentIdentity(dep, root);
   const paths = installPaths(store, dep.id, identity);
   if (!(await exists(paths.root))) return { kind: "absent" };

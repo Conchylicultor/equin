@@ -64,7 +64,7 @@ export {
   resolveGitLayer,
   committedDocument,
   committedFilesFromMap,
-  committedFilesIn,
+  readCommittedFilesSync,
   propagateGitLayerDocument,
 } from "./internal/git-layer";
 export type {

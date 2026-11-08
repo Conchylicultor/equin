@@ -44,7 +44,7 @@ export async function readClaudeAccounts(): Promise<ClaudeAccounts> {
 }
 
 async function writeClaudeAccounts(state: ClaudeAccounts): Promise<void> {
-  claudeAccountsDir.ensure();
+  await claudeAccountsDir.ensure();
   const path = claudeAccountsPath();
   const tmp = asAppPath(`${path}.${process.pid}.tmp`);
   await writeFile(tmp, JSON.stringify(state, null, 2));

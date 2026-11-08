@@ -157,7 +157,7 @@ async function startStatusWatcher(): Promise<void> {
   if (watcher) return;
   watcher = await engineStatusWatcher.start({
     // Subscribing to a missing directory fails; it is host-global and tiny.
-    dirs: [browserEngineDir.ensure()],
+    dirs: [await browserEngineDir.ensure()],
     onChange: () => runTracked("browser-engine:status-change", onStatusChange),
   });
 }

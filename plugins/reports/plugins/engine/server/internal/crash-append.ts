@@ -27,7 +27,7 @@ import { bufferFile, type BufferedReport } from "./buffer";
 // failure) is stated once rather than copied.
 function appendLine(line: Omit<BufferedReport, "at" | "commit">): BufferAppend {
   try {
-    reportsBufferDir.ensure();
+    reportsBufferDir.ensureSync();
     const stamped: BufferedReport = {
       ...line,
       at: new Date().toISOString(),

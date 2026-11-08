@@ -120,7 +120,7 @@ async function markNoPhoto(id: string): Promise<Thumbnail> {
 
 /** Temp file + rename: a concurrent reader never sees a half-written image. */
 async function writeAtomic(path: string, bytes: Uint8Array): Promise<void> {
-  placeThumbnailDir.ensure();
+  await placeThumbnailDir.ensure();
   const tmp = placeThumbnailDir.file(`.${randomUUID()}.tmp`);
   await Bun.write(tmp, bytes);
   await rename(tmp, path);

@@ -635,7 +635,7 @@ export const worktreeArtifacts = {
     joinAppPath(worktreeDataDir(name), "data-dirs.json"),
   /**
    * Which checkout's CLI last acted as this namespace — `{ root }`, rewritten
-   * by every op that mints the namespace from a checkout (`stampCheckoutOwnerSync`).
+   * by every op that mints the namespace from a checkout (`stampCheckoutOwner`).
    * The provenance the reaper needs for a namespace that no attempt row and no
    * composition marker owns: a second clone's main checkout, an e2e's temp
    * repo, a hand-made worktree.

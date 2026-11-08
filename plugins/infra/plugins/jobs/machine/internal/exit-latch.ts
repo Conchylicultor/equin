@@ -69,7 +69,7 @@ async function recordTripNow(): Promise<number> {
   const recent = trips.filter((t) => now - t < LATCH_WINDOW_MS);
   recent.push(now);
   try {
-    jobsStateDir.ensure();
+    await jobsStateDir.ensure();
     await writeFile(latchFile(), JSON.stringify({ trips: recent }));
     // eslint-disable-next-line promise-safety/no-bare-catch -- every failure mode here (dir creation, disk IO, a kill mid-write) maps to the same handling, and this runs on the way OUT: the caller's next statement is process.exit(1). Rethrowing would replace a deliberate exit with an unhandled rejection and lose the exit itself, which is strictly worse than losing one latch entry — the cost of that loss is bounded at one extra restart of a backend whose pool is already broken. Same crash-path argument as reports/plugins/engine/server/internal/buffer.ts.
   } catch (err) {
