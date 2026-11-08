@@ -187,6 +187,8 @@ export const pageBlocks = liveCollection("page-blocks.v2", {
     unbounded: {
       reason:
         "one page's content forest — the reducer, the optimistic overlay and document order need every block of the page",
+      // Measured on main, 2026-11-08: 545 for the largest page.
+      budget: 1200,
     },
   },
 });

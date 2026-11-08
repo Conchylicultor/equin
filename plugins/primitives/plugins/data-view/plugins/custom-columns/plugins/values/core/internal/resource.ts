@@ -52,6 +52,8 @@ export const customColumnValues = liveCollection("data-view-custom-values.v2", {
     unbounded: {
       reason:
         "one DataView surface's custom-column cells, indexed client-side onto every rendered row",
+      // Measured on main, 2026-11-08: 9 for the largest data view.
+      budget: 200,
     },
   },
 });

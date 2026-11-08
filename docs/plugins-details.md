@@ -28373,7 +28373,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `validatePersistedValue`
           - `withNotifyBatch`
       - Cross-plugin:
-        - Imported by: 105 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
+        - Imported by: 106 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
           - `infra` ×26
           - `debug` ×13
           - `conversations` ×10
@@ -28381,7 +28381,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database` ×9
           - `apps` ×6
           - `network` ×5
-          - `reports` ×4
+          - `reports` ×5
           - `page` ×3
           - `primitives` ×3
           - `build` ×2
@@ -36549,11 +36549,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValue`
           - `sliceRange`
       - Core:
-        - Uses: 39 symbols — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Uses: 41 symbols — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `network/live/query-resource` ×8
           - `network/live/filter` ×7
           - `fields` ×6
           - `network/live/live-state` ×6
-          - `network/live/query-resource` ×6
           - `packages/zod-introspect` ×6
           - `packages/list-bound` ×3
           - `network/live/resource-protocol` ×2
@@ -37375,7 +37375,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `readsClockNow`
               - `windowQueryResource`
           - Core:
-            - Uses: `packages/source-digest.defineSourceSet`
+            - Uses:
+              - `packages/source-digest.defineSourceSet`
+              - `primitives/report-sink.defineReportSink`
             - Exports (types):
               - `Aggregate`
               - `AggregateOrder`
@@ -37425,6 +37427,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `aggregate`
               - `armKeyCodec`
               - `BASE_RELATION`
+              - `checkSetBudget`
               - `childrenJoin`
               - `closureJoin`
               - `COMPOSITE_KEY_MAX_FIELDS`
@@ -37438,9 +37441,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `jsonAggValue`
               - `KIND_RE`
               - `liveReadCode`
+              - `liveSetOverBudgetSink`
               - `SQL_TYPE_RE`
           - Cross-plugin:
-            - Imported by: 27 plugins — full list in [`plugins/network/plugins/live/plugins/query-resource/REFERENCE.md`](../plugins/network/plugins/live/plugins/query-resource/REFERENCE.md)
+            - Imported by: 28 plugins — full list in [`plugins/network/plugins/live/plugins/query-resource/REFERENCE.md`](../plugins/network/plugins/live/plugins/query-resource/REFERENCE.md)
               - `apps` ×6
               - `page` ×4
               - `infra` ×3
@@ -37452,6 +37456,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `backup/runs-arm`
               - `build/runs-arm`
               - `release/runs-arm`
+              - `reports/live-set-budget`
               - `runs`
               - `tasks/tasks-core`
           - Exemptions:
@@ -43670,11 +43675,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×6
               - `ui/tokens/shape` ×3
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 175 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 176 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `apps` ×38
               - `debug` ×34
               - `conversations` ×27
-              - `reports` ×16
+              - `reports` ×17
               - `primitives` ×10
               - `tasks` ×10
               - `plugin-meta` ×8
@@ -44102,9 +44107,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 104 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+            - Imported by: 105 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
               - `apps` ×21
-              - `reports` ×17
+              - `reports` ×18
               - `debug` ×15
               - `primitives` ×12
               - `conversations` ×9
@@ -49812,10 +49817,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useNow`
     - **`report-sink`** — Web presence for the report-sink primitive; the runtime-agnostic factories live in ./core so both web and server can import them. defineReportSink() is fire-and-forget and holds reports emitted before a handler registers (bounded), replaying them on register; defineRequestSink() returns the handler's answer and never holds. emit() never throws — it is called on error paths.
       - Cross-plugin:
-        - Imported by: 25 plugins — full list in [`plugins/primitives/plugins/report-sink/REFERENCE.md`](../plugins/primitives/plugins/report-sink/REFERENCE.md)
+        - Imported by: 26 plugins — full list in [`plugins/primitives/plugins/report-sink/REFERENCE.md`](../plugins/primitives/plugins/report-sink/REFERENCE.md)
           - `primitives` ×10
           - `infra` ×4
-          - `network` ×2
+          - `network` ×3
           - `reports` ×2
           - `ui` ×2
           - `database/connection`
@@ -51837,8 +51842,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`reports`** — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. The reports table and its live read (reports.list), the ReportKind / ReportNoiseRule slots every kind and rule contributes to, and the fan-out ceiling config; recording is the engine's (reports/plugins/engine).
   - Web:
     - Slots: `Reports.KindView`
-    - Slot contributors: 35 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `Reports.KindView` ×35
+    - Slot contributors: 36 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+      - `Reports.KindView` ×36
     - Contributes:
       - `IdKinds.Kind` "report"
       - `ConfigV2.WebRegister` "reports"
@@ -51934,8 +51939,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `SERVER_REPORT_SOURCES`
       - `submitReport`
   - Cross-plugin:
-    - Imported by: 65 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `reports` ×28
+    - Imported by: 66 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+      - `reports` ×29
       - `debug` ×15
       - `conversations` ×6
       - `database` ×4
@@ -52128,12 +52133,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Machine:
         - Uses: `infra/endpoints.implementMachine`
       - Cross-plugin:
-        - Imported by: 28 plugins — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
+        - Imported by: 29 plugins — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
           - `debug` ×11
           - `conversations` ×4
           - `database` ×3
           - `infra` ×3
-          - `reports` ×2
+          - `reports` ×3
           - `backup`
           - `page/place/google`
           - `stats/cost`
@@ -52199,6 +52204,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
+    - **`live-set-budget`** — Live-set-over-budget report renderer: a one-line Debug → Reports summary (the set's key, its rows against its budget). Live-set-over-budget report kind: drains network/live's liveSetOverBudgetSink — a whole set declared `all: { unbounded: { reason, budget } }` that loaded more rows than its budget — into one deduped report per key (debounced 10 min), so a wrong `unbounded` reason surfaces long before the set costs every tab megabytes. Renders an investigation task naming the key, the rows, the budget and the reason.
+      - Web:
+        - Contributes: `Reports.KindView` → `OverBudgetKindView`
+        - Uses:
+          - `primitives/css/badge.Badge`
+          - `primitives/css/inline.Inline`
+          - `reports.Reports`
+      - Server:
+        - Contributes: `report-kind` "live-set-over-budget"
+        - Uses:
+          - `reports.ReportKind`
+          - `reports/engine.recordReportDebounced`
+      - Core:
+        - Exports (types): `LiveSetOverBudgetPayload`
+        - Exports (values):
+          - `LIVE_SET_OVER_BUDGET_KIND`
+          - `liveSetOverBudgetFingerprint`
+          - `LiveSetOverBudgetPayloadSchema`
     - **`live-state-stale-drop`** — Live-state stale-drop collector: drains the live-state primitive's httpStaleDropReportSink into a deduped report when a resource wedges on a stale HTTP body (3 consecutive drops, never applied — the 'Close (state unknown)' bug), plus the Debug → Reports summary view. Live-state stale-drop report kind: validates stale-drop payloads (a live-state HTTP body dropped by the version/epoch guard while the query still holds only its placeholder — the 'Close (state unknown)' wedge), fingerprints by key + reason (excluding the volatile params/counts/versions/epochs so one wedge = one row), and renders an investigation task. Re-arms periodically (6h) since a still-wedged resource keeps dropping.
       - Web:
         - Contributes:

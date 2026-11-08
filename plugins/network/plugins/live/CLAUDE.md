@@ -39,7 +39,7 @@ Two independent questions, declared in two places:
 
 - **Shape** (how much of a list the browser holds) — on the DECLARATION
   (`core/`), whatever the source: a window's `maxLimit`, `all: { max }` or
-  `all: { unbounded: { reason } }`, `:rows`' `maxIds`, a value `paged` by key
+  `all: { unbounded: { reason, budget } }`, `:rows`' `maxIds`, a value `paged` by key
   ranges, and every other list in a payload/row marked in its zod schema with
   `packages/list-bound` — capped (`cappedList` / `cappedRecord`, `.max(n)`) or
   whole (`wholeList` / `wholeRecord` + reason). A bare list throws at
@@ -101,7 +101,7 @@ export const graphNodes = liveCollection("graph.nodes", {
   id: "id",
   all: {
     orderBy: [["createdAt", "asc"]],
-    unbounded: { reason: "the graph view lays out every node" },
+    unbounded: { reason: "the graph view lays out every node", budget: 400 },
   },
   preload: "boot",
 });
@@ -116,7 +116,7 @@ export const blocks = liveCollection("page.blocks", {
   all: {
     by: ["pageId"],
     orderBy: [["rank", "asc"]],
-    unbounded: { reason: "one page's blocks" },
+    unbounded: { reason: "one page's blocks", budget: 1200 },
   },
 });
 useLive(blocks, { where: { pageId } });
@@ -151,9 +151,21 @@ useLive(blocks, { where: { pageId } });
   param'd value over a one-row table.
 - **`all`.** Every row in `orderBy` (row fields; id breaks ties), for a set
   small enough to hold whole whose readers need all of it. Exactly one of
-  `max` (a positive integer) or `unbounded: { reason }`. `max` is never a
+  `max` (a positive integer) or `unbounded: { reason, budget }`. `max` is never a
   silent truncation: the schema is `.max(max)` and a load past it is a loud
   loader error. No `:groups`; window/union fields are `never`.
+  - **`unbounded` is a checked claim — `budget`.** Required (tsc): how many
+    rows per tuple the reason promises — today's size measured on main (the
+    largest tuple of a scoped set) with headroom, the measurement in a comment
+    beside it. Never a cap: a load past it is served and emits
+    `liveSetOverBudgetSink` (query-resource/core), which
+    `reports/live-set-budget` files as one `live-set-over-budget` report per
+    key. Checked on every load reading a whole tuple — `full`, and `orderIds`,
+    which every entrant runs — and every `all()` of an external set, so a set
+    cannot outgrow its reason unseen (the way `tasks` reached 5.5 MB of every
+    tab's boot). A set seeded from its L2 snapshot is checked at its next
+    entrant, not at the seed. Report filed → bound it (a window, `by`, `max`), or re-measure
+    and raise the budget with a reason saying what bounds it.
   - **Scoped — `all: { by }`.** Params are exactly the `by` fields, each a
     non-empty string (canonical text of a text/uuid/integer column). `by` never
     names the id; `preload` is `never` (boot has no tuple). `:rows` stays
@@ -1535,11 +1547,11 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `serveValue`
     - `sliceRange`
 - Core:
-  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 41 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `network/live/query-resource` ×8
     - `network/live/filter` ×7
     - `fields` ×6
     - `network/live/live-state` ×6
-    - `network/live/query-resource` ×6
     - `packages/zod-introspect` ×6
     - `packages/list-bound` ×3
     - `network/live/resource-protocol` ×2

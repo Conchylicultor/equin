@@ -76,6 +76,8 @@ export const pageBlockDocs = liveCollection("page-block-docs", {
     unbounded: {
       reason:
         "one page's block docs — every block editor of an open page reads its own row, the same set as the page's content forest (`pageBlocks`)",
+      // Measured on main, 2026-11-08: 545 for the largest page.
+      budget: 1200,
     },
   },
 });

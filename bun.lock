@@ -6529,6 +6529,10 @@
       "name": "@equin/plugin-reports-launch-fix",
       "version": "0.0.1",
     },
+    "plugins/reports/plugins/live-set-budget": {
+      "name": "@equin/plugin-reports-live-set-budget",
+      "version": "0.0.1",
+    },
     "plugins/reports/plugins/live-state-stale-drop": {
       "name": "@equin/plugin-reports-live-state-stale-drop",
       "version": "0.0.1",
@@ -10477,6 +10481,8 @@
     "@equin/plugin-reports-icon-family-gap": ["@equin/plugin-reports-icon-family-gap@workspace:plugins/reports/plugins/icon-family-gap"],
 
     "@equin/plugin-reports-launch-fix": ["@equin/plugin-reports-launch-fix@workspace:plugins/reports/plugins/launch-fix"],
+
+    "@equin/plugin-reports-live-set-budget": ["@equin/plugin-reports-live-set-budget@workspace:plugins/reports/plugins/live-set-budget"],
 
     "@equin/plugin-reports-live-state-stale-drop": ["@equin/plugin-reports-live-state-stale-drop@workspace:plugins/reports/plugins/live-state-stale-drop"],
 

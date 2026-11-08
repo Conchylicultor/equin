@@ -69,7 +69,11 @@ export const opsInFlight = liveCollection("op-store.in-flight.all", {
   id: "opId",
   all: {
     orderBy: [["requestedAt", "asc"]],
-    unbounded: { reason: "every op in flight on the host" },
+    unbounded: {
+      reason: "every op in flight on the host",
+      // Measured on main, 2026-11-08: 32 at once at most since 2026-10-09.
+      budget: 100,
+    },
   },
   preload: "boot",
   needsMachine: OPS_ON_THIS_MACHINE,

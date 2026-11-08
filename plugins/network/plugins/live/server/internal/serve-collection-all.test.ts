@@ -73,7 +73,7 @@ type Row = z.infer<typeof Row>;
 
 const ALL = {
   orderBy: [["rank", "asc"]],
-  unbounded: { reason: "a test set" },
+  unbounded: { reason: "a test set", budget: 1000 },
 } as const;
 
 let seq = 0;
@@ -213,7 +213,10 @@ describe("serveCollection — the `all` arm (C4)", () => {
       baseExposures: false,
       fields: { label: textField({ label: "Label" }) },
       id: "id",
-      all: { orderBy: [["id", "asc"]], unbounded: { reason: "a test set" } },
+      all: {
+        orderBy: [["id", "asc"]],
+        unbounded: { reason: "a test set", budget: 1000 },
+      },
     });
     const { db, calls } = recordingQueryDb(() => [{ id: "a", label: "T (2)" }]);
     const specs = compileCollection(c, {
@@ -305,7 +308,10 @@ describe("serveCollection — the `all` arm (C4)", () => {
         blob: textField({ label: "Blob" }),
       },
       id: "id",
-      all: { orderBy: [["id", "asc"]], unbounded: { reason: "a test set" } },
+      all: {
+        orderBy: [["id", "asc"]],
+        unbounded: { reason: "a test set", budget: 1000 },
+      },
     });
     // A set that may be persisted (the whole set) cannot bind one: a tsc
     // error at the serve site, and a throw for an untyped caller.
@@ -334,7 +340,7 @@ describe("serveCollection — the `all` arm (C4)", () => {
       all: {
         by: ["scope"],
         orderBy: [["id", "asc"]],
-        unbounded: { reason: "a test set" },
+        unbounded: { reason: "a test set", budget: 1000 },
       },
     });
     const { db } = recordingQueryDb(() => [
@@ -357,7 +363,10 @@ describe("serveCollection — the `all` arm (C4)", () => {
     const own = liveCollection(`test.live.all-own-${seq++}`, {
       fields: { id: textField({ label: "Id" }) },
       id: "id",
-      all: { orderBy: [["id", "asc"]], unbounded: { reason: "a test set" } },
+      all: {
+        orderBy: [["id", "asc"]],
+        unbounded: { reason: "a test set", budget: 1000 },
+      },
     });
     expect(() => serveCollection(own, { from: items, db })).toThrow(
       /declared by its own fields/,
@@ -428,7 +437,10 @@ describe("serveCollection — the `all` arm (C4)", () => {
           },
         },
         id: "id",
-        all: { orderBy: [["id", "asc"]], unbounded: { reason: "a test set" } },
+        all: {
+          orderBy: [["id", "asc"]],
+          unbounded: { reason: "a test set", budget: 1000 },
+        },
       });
       serveCollection(datedList, {
         from: items,
@@ -441,7 +453,10 @@ describe("serveCollection — the `all` arm (C4)", () => {
           last: dateField({ label: "Last" }),
         },
         id: "id",
-        all: { orderBy: [["id", "asc"]], unbounded: { reason: "a test set" } },
+        all: {
+          orderBy: [["id", "asc"]],
+          unbounded: { reason: "a test set", budget: 1000 },
+        },
       });
       // @ts-expect-error — a scalar aggregate's `string` is no proof of a `Date` field's ISO form
       serveCollection(datedLast, {
@@ -474,7 +489,7 @@ describe("serveCollection — a scoped `all` (`all: { by }`)", () => {
       all: {
         by: by as readonly ["pageId"],
         orderBy: [["rank", "asc"]],
-        unbounded: { reason: "one page's blocks" },
+        unbounded: { reason: "one page's blocks", budget: 1000 },
       },
     });
   const block = {

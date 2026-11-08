@@ -66,3 +66,4 @@ export type { ArmKeyCodec } from "./internal/arm-key";
 export { SQL_TYPE_RE } from "./internal/expr";
 export type { ExprDecoder } from "./internal/expr";
 export { liveReadCode } from "./internal/live-read-code";
+export { checkSetBudget, liveSetOverBudgetSink } from "./internal/set-budget";

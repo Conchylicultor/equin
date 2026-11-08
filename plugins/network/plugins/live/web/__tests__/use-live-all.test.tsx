@@ -87,7 +87,10 @@ function allCollection() {
   return liveCollection(`test.use-live-all.${seq++}`, {
     fields: ROW_FIELDS,
     id: "id",
-    all: { orderBy: [["rank", "asc"]], unbounded: { reason: "a test set" } },
+    all: {
+      orderBy: [["rank", "asc"]],
+      unbounded: { reason: "a test set", budget: 1000 },
+    },
   });
 }
 
@@ -382,7 +385,7 @@ describe("useLive(scoped, { where }) — a set declared `all: { by }`", () => {
       all: {
         by: ["pageId"],
         orderBy: [["rank", "asc"]],
-        unbounded: { reason: "one page's rows" },
+        unbounded: { reason: "one page's rows", budget: 1000 },
       },
     });
   }

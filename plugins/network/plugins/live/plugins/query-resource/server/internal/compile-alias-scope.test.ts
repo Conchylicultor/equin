@@ -98,7 +98,7 @@ function contracts(key: string, by: readonly string[]) {
     keyed: { keyOf: (r: unknown) => (r as Row).id },
     all: {
       orderBy: ORDER,
-      unbounded: { reason: "a test set" },
+      unbounded: { reason: "a test set", budget: 1000 },
       ...(by.length === 0 ? {} : { by }),
     },
     queryPk: "id",

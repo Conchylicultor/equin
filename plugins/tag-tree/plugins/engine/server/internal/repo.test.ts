@@ -295,7 +295,7 @@ describe("defineTagTree", () => {
       id: "id",
       all: {
         orderBy: [["rank", "asc"]],
-        unbounded: { reason: "a test of the refusal" },
+        unbounded: { reason: "a test of the refusal", budget: 1000 },
       },
     });
     expect(() =>

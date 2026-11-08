@@ -37,6 +37,8 @@ export const subjectLinks = liveCollection("task-subject-links", {
     unbounded: {
       reason:
         "the tasks filed about one subject — one per launch about it, a handful",
+      // Measured on main, 2026-11-08: 1.
+      budget: 10,
     },
   },
 });

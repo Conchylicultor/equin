@@ -91,7 +91,7 @@ const convsOfAttempt = liveCollection(`${P}.convs-of-attempt`, {
   all: {
     by: ["attemptId"],
     orderBy: [["id", "asc"]],
-    unbounded: { reason: "one attempt's conversations" },
+    unbounded: { reason: "one attempt's conversations", budget: 1000 },
   },
 });
 

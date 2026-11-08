@@ -74,7 +74,10 @@ const lookup = liveCollection("fx.lookup", { fields: FIELDS, id: "id" });
 const whole = liveCollection("fx.all", {
   fields: FIELDS,
   id: "id",
-  all: { orderBy: [["n", "asc"]], unbounded: { reason: "fixture" } },
+  all: {
+    orderBy: [["n", "asc"]],
+    unbounded: { reason: "fixture", budget: 1000 },
+  },
 });
 const scoped = liveCollection("fx.scoped", {
   fields: SCOPED,
@@ -82,7 +85,7 @@ const scoped = liveCollection("fx.scoped", {
   all: {
     by: ["pageId"],
     orderBy: [["n", "asc"]],
-    unbounded: { reason: "fixture" },
+    unbounded: { reason: "fixture", budget: 1000 },
   },
 });
 const machineRows = liveCollection("fx.machine", {

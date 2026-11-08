@@ -172,7 +172,10 @@ const allOf = (preload?: "boot") =>
     baseExposures: false,
     related: { task: tasksRef },
     id: "id",
-    all: { orderBy: [["createdAt", "desc"]], unbounded: { reason: "test" } },
+    all: {
+      orderBy: [["createdAt", "desc"]],
+      unbounded: { reason: "test", budget: 1000 },
+    },
     ...(preload ? { preload } : {}),
   });
 

@@ -15,6 +15,7 @@ import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { createHarness } from "@plugins/network/plugins/live/plugins/resource-runtime/core/testing";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
+import { liveSetOverBudgetSink } from "@plugins/network/plugins/live/plugins/query-resource/core";
 import { liveCollection } from "./live-collection";
 import { liveValue } from "./live-value";
 import { serveCollectionOn, serveValueOn } from "./serve-on";
@@ -508,7 +509,10 @@ describe("serveCollectionOn — an `all` collection", () => {
     const h = createHarness();
     const c = liveCollection(key("all"), {
       ...F,
-      all: { orderBy: [["rank", "asc"]], unbounded: { reason: "a test set" } },
+      all: {
+        orderBy: [["rank", "asc"]],
+        unbounded: { reason: "a test set", budget: 1000 },
+      },
     });
     const src = source(initial);
     const served = serveCollectionOn(h.runtime, c, {
@@ -548,6 +552,42 @@ describe("serveCollectionOn — an `all` collection", () => {
     expect(served.all.load({})).rejects.toThrow(
       /all\(\) returned 4 rows for at most 3/,
     );
+  });
+
+  test("a whole set (`unbounded: { reason, budget }`) past its budget is served, and reported", async () => {
+    const c = liveCollection(key("all-budget"), {
+      ...F,
+      all: {
+        orderBy: [["rank", "asc"]],
+        unbounded: { reason: "three rows at most", budget: 3 },
+      },
+    });
+    const src = source(initial);
+    const served = serveCollectionOn(createHarness().runtime, c, {
+      source: "external",
+      changes: "notified",
+      all: () => src.all(),
+      rows: (ids) => src.byIds(ids),
+    });
+    const reported: unknown[] = [];
+    liveSetOverBudgetSink.register((body) => reported.push(body));
+    try {
+      expect(await served.all.load({})).toEqual(initial);
+      expect(reported).toEqual([]);
+      src.rows.set("d", { id: "d", title: "D", rank: 4 });
+      expect(await served.all.load({})).toHaveLength(4);
+      expect(reported).toEqual([
+        {
+          key: c.key,
+          params: {},
+          rows: 4,
+          budget: 3,
+          reason: "three rows at most",
+        },
+      ]);
+    } finally {
+      liveSetOverBudgetSink.register(null);
+    }
   });
 });
 
@@ -593,7 +633,10 @@ describe("serveCollectionOn — an exposing collection", () => {
   const exposing = () =>
     liveCollection(key("exposing"), {
       ...E,
-      all: { orderBy: [["rank", "asc"]], unbounded: { reason: "a test set" } },
+      all: {
+        orderBy: [["rank", "asc"]],
+        unbounded: { reason: "a test set", budget: 1000 },
+      },
     });
 
   test("its rows carry an empty fold, through `all` and `:rows`", async () => {

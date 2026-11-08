@@ -40,7 +40,10 @@ const peopleCollection = (preload?: "boot") =>
     baseExposures: false,
     carry: { pick: ["id", "name"] },
     id: "id",
-    all: { orderBy: [["name", "asc"]], unbounded: { reason: "a test set" } },
+    all: {
+      orderBy: [["name", "asc"]],
+      unbounded: { reason: "a test set", budget: 1000 },
+    },
     ...(preload === undefined ? {} : { preload }),
   });
 const scoresCollection = () =>
@@ -60,7 +63,10 @@ const teamsCollection = () =>
     baseExposures: false,
     carry: { pick: ["id", "captainId"] },
     id: "id",
-    all: { orderBy: [["id", "asc"]], unbounded: { reason: "a test set" } },
+    all: {
+      orderBy: [["id", "asc"]],
+      unbounded: { reason: "a test set", budget: 1000 },
+    },
     preload: "boot",
   });
 

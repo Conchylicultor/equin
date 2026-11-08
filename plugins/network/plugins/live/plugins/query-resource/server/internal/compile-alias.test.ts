@@ -48,6 +48,7 @@ import {
   closureJoin,
   expr,
   jsonAgg,
+  liveSetOverBudgetSink,
   type AllJoinSpec,
   type AllQueryResourceContract,
   type LookupJoin,
@@ -316,8 +317,8 @@ function contracts(
   orderBy: readonly (readonly [string, "asc" | "desc"])[] = [
     ["createdAt", "desc"],
   ],
-  bound: { max: number } | { unbounded: { reason: string } } = {
-    unbounded: { reason: "a test set" },
+  bound: { max: number } | { unbounded: { reason: string; budget: number } } = {
+    unbounded: { reason: "a test set", budget: 1000 },
   },
 ) {
   const all = {
@@ -600,6 +601,46 @@ describe("the shapes", () => {
     const whole = compile("a-max-whole");
     await whole.all.loader({});
     expect(last(whole.calls).sql).not.toContain("LIMIT");
+  });
+
+  test("a whole set (`unbounded: { reason, budget }`): a full or orderIds read past the budget is served, and reported", async () => {
+    let n = 2;
+    const rec = recordingQueryDb((q) =>
+      /^SELECT \S+ AS __id /.test(q.sql)
+        ? Array.from({ length: n }, (_, i) => ({ __id: `t${i}` }))
+        : Array.from({ length: n }, (_, i) => ({ ...ROW, id: `t${i}` })),
+    );
+    const c = compileAllCollection(
+      contracts("a-budget", undefined, {
+        unbounded: { reason: "two at most", budget: 2 },
+      }),
+      { ...spec(), db: rec.db },
+    );
+    const policy = c.all as unknown as {
+      scopedMembership: { orderOf(p: object): Promise<string[]> };
+    };
+    const reported: unknown[] = [];
+    liveSetOverBudgetSink.register((body) => reported.push(body));
+    try {
+      expect(await c.all.loader({})).toHaveLength(2);
+      expect(await policy.scopedMembership.orderOf({})).toHaveLength(2);
+      expect(reported).toEqual([]);
+      n = 3;
+      // Served whole — a budget is never a cap: the SQL reads no LIMIT.
+      expect(await c.all.loader({})).toHaveLength(3);
+      expect(last(rec.calls).sql).not.toContain("LIMIT");
+      expect(await policy.scopedMembership.orderOf({})).toHaveLength(3);
+      const body = {
+        key: "a-budget",
+        params: {},
+        rows: 3,
+        budget: 2,
+        reason: "two at most",
+      };
+      expect(reported).toEqual([body, body]);
+    } finally {
+      liveSetOverBudgetSink.register(null);
+    }
   });
 
   test("debounceMs passes through to the whole set only (C18)", () => {

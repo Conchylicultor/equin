@@ -86,7 +86,10 @@ const tracks = liveCollection(key("tracks"), {
   fields: { title: textField({ label: "Title" }) },
   carry: { fields: { id: textField(), rank: floatField() } },
   id: "id",
-  all: { orderBy: [["rank", "asc"]], unbounded: { reason: "test fixture" } },
+  all: {
+    orderBy: [["rank", "asc"]],
+    unbounded: { reason: "test fixture", budget: 1000 },
+  },
 });
 const note = liveValue(key("note"), { schema: z.object({ text: z.string() }) });
 // Declared, served by no host.

@@ -60,6 +60,8 @@ export const prototypeStates = liveCollection("prototypes.state.all", {
     unbounded: {
       reason:
         "one row per prototype the user marked; the gallery joins it onto the whole list it already holds",
+      // Measured on main, 2026-11-08: 63.
+      budget: 200,
     },
   },
 });

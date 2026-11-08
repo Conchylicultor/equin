@@ -47,6 +47,8 @@ export const places = liveCollection("places.places.all", {
     unbounded: {
       reason:
         "a person saves every place by hand, and the map draws every one of them",
+      // Measured on main, 2026-11-08: 966.
+      budget: 2000,
     },
   },
 });

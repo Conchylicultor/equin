@@ -57,6 +57,8 @@ export const eventSources = liveCollection("events.sources.all", {
     unbounded: {
       reason:
         "a person adds every source by hand, and the Sources list and the events list's Source field each need every source",
+      // Measured on main, 2026-11-08: 15.
+      budget: 60,
     },
   },
 });

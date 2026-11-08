@@ -313,7 +313,10 @@ describe("serveCollection with `changes` — served off the feed", () => {
       pick: ["title", "rank", "ownerId"],
       carry: { pick: ["id"] },
       id: "id",
-      all: { orderBy: [["rank", "asc"]], unbounded: { reason: "a test set" } },
+      all: {
+        orderBy: [["rank", "asc"]],
+        unbounded: { reason: "a test set", budget: 1000 },
+      },
     });
     expect(() =>
       serveCollection(all, {

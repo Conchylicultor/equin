@@ -226,12 +226,12 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
 - Machine:
   - Uses: `infra/endpoints.implementMachine`
 - Cross-plugin:
-  - Imported by: 28 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 29 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×11
     - `conversations` ×4
     - `database` ×3
     - `infra` ×3
-    - `reports` ×2
+    - `reports` ×3
     - `backup`
     - `page/place/google`
     - `stats/cost`

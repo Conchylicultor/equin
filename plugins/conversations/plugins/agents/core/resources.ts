@@ -62,7 +62,11 @@ export const agentRows = liveCollection("agents.roster", {
       ["rank", "asc"],
       ["createdAt", "asc"],
     ],
-    unbounded: { reason: "hand-grown roster, rendered whole" },
+    unbounded: {
+      reason: "hand-grown roster, rendered whole",
+      // Measured on main, 2026-11-08: 75.
+      budget: 200,
+    },
   },
   preload: "boot",
 });
@@ -114,6 +118,8 @@ export const agentLaunchRows = liveCollection("agent-launches", {
     unbounded: {
       reason:
         "every agent avatar, status dot and Attempts list looks a launch up by task or agent; launches grow only by hand (one per agent launch)",
+      // Measured on main, 2026-11-08: 29.
+      budget: 100,
     },
   },
   preload: "boot",

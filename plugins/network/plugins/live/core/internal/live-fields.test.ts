@@ -171,7 +171,10 @@ describe("liveCollection — the fields spelling", () => {
       carry: { pick: ["id"] },
       baseExposures: false,
       id: "id",
-      all: { orderBy: [["title", "asc"]], unbounded: { reason: "a test set" } },
+      all: {
+        orderBy: [["title", "asc"]],
+        unbounded: { reason: "a test set", budget: 1000 },
+      },
     });
     expect(c.exposes).toEqual({ task: tasks });
     expect(c.fields.title.sortable).toBe(true);
@@ -252,7 +255,10 @@ describe("liveCollection — the fields spelling", () => {
       from: notes,
       carry: { pick: ["id"] },
       id: "id",
-      all: { orderBy: [["id", "asc"]], unbounded: { reason: "r" } },
+      all: {
+        orderBy: [["id", "asc"]],
+        unbounded: { reason: "r", budget: 1000 },
+      },
     };
     expect(declare({ ...base, pick: ["internal"] })).toThrow(
       /listed field "internal" has no label/,

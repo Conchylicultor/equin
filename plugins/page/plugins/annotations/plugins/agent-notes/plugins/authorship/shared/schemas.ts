@@ -53,6 +53,8 @@ export const agentNotesAuthors = liveCollection("agent-notes-authors.v2", {
     unbounded: {
       reason:
         "one card's authors — the conversations that wrote into one block",
+      // Measured on main, 2026-11-08: 32 for the largest block.
+      budget: 100,
     },
   },
 });

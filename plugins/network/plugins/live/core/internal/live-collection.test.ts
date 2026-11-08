@@ -135,7 +135,7 @@ describe("liveCollection — lookup-only (no default window)", () => {
 describe("liveCollection — the `all` overload (C16, C39, T13)", () => {
   const all = {
     orderBy: [["n", "asc"]],
-    unbounded: { reason: "a test set" },
+    unbounded: { reason: "a test set", budget: 1000 },
   } as const;
 
   test("mints `key` (the whole ordered set) and :rows — no window, no groups", () => {
@@ -164,7 +164,7 @@ describe("liveCollection — the `all` overload (C16, C39, T13)", () => {
     expect(c.all.queryPk).toBe("id");
     expect(c.all.all).toEqual({
       orderBy: [["n", "asc"]],
-      unbounded: { reason: "a test set" },
+      unbounded: { reason: "a test set", budget: 1000 },
     });
   });
 
@@ -242,12 +242,20 @@ describe("liveCollection — the `all` overload (C16, C39, T13)", () => {
       [{ ...base, columnScope: "s" }, /`columnScope` no longer exists/],
       [{ ...base, arms: { discriminator: "n" } }, /arms beside `all`/],
       [
-        { ...base, all: { ...all, unbounded: { reason: " " } } },
+        { ...base, all: { ...all, unbounded: { reason: " ", budget: 1000 } } },
         /`all` declares no bound .* \(the reason is empty\)/,
       ],
       [
         { ...base, all: { orderBy: [["n", "asc"]] } },
         /`all` declares no bound/,
+      ],
+      [
+        { ...base, all: { ...all, unbounded: { reason: "small" } } },
+        /`all.unbounded.budget` is undefined, not a positive integer/,
+      ],
+      [
+        { ...base, all: { ...all, unbounded: { reason: "small", budget: 0 } } },
+        /`all.unbounded.budget` is 0, not a positive integer/,
       ],
       [
         { ...base, all: { ...all, max: 5 } },
@@ -295,7 +303,7 @@ describe("liveCollection — the `all` overload (C16, C39, T13)", () => {
     // report the call itself rather than the field at fault.
     const _typesOnly = () => {
       const s = { fields: F, id: "id", all } as const;
-      const order = { unbounded: { reason: "r" } } as const;
+      const order = { unbounded: { reason: "r", budget: 1000 } } as const;
       // @ts-expect-error — the whole set has no window
       liveCollection("t.a", { ...s, sortable: ["n"] });
       // @ts-expect-error — nor a cap
@@ -341,7 +349,7 @@ describe("liveCollection — a scoped `all` (`all: { by }`)", () => {
   const all = {
     by: ["pageId"],
     orderBy: [["n", "asc"]],
-    unbounded: { reason: "one page's rows" },
+    unbounded: { reason: "one page's rows", budget: 1000 },
   } as const;
 
   test("mints `key` keyed by its scope — no preload — and a global :rows", () => {
@@ -352,7 +360,7 @@ describe("liveCollection — a scoped `all` (`all: { by }`)", () => {
     });
     expect(c.all.all).toEqual({
       orderBy: [["n", "asc"]],
-      unbounded: { reason: "one page's rows" },
+      unbounded: { reason: "one page's rows", budget: 1000 },
       by: ["pageId"],
     });
     expect("preload" in c.all).toBe(false);
@@ -434,7 +442,10 @@ describe("liveCollection — a scoped `all` (`all: { by }`)", () => {
       const whole = liveCollection("t.s.d", {
         fields: FS,
         id: "id",
-        all: { orderBy: [["n", "asc"]], unbounded: { reason: "r" } },
+        all: {
+          orderBy: [["n", "asc"]],
+          unbounded: { reason: "r", budget: 1000 },
+        },
       });
       // @ts-expect-error — nor the whole set a scoped one
       const _scoped: LiveAllCollection<R, "pageId"> = whole;

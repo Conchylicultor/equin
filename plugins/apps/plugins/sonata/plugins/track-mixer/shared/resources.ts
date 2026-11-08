@@ -43,6 +43,8 @@ export const trackViews = liveCollection("sonata-track-view.v2", {
     unbounded: {
       reason:
         "one song's per-track view overrides — at most one row per track of that song",
+      // Measured on main, 2026-11-08: 21 for the largest song.
+      budget: 100,
     },
   },
 });

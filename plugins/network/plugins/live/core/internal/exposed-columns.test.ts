@@ -150,7 +150,10 @@ describe("liveCollection — exposes", () => {
       pick: ["id", "title"],
       related: { task: tasks },
       id: "id",
-      all: { orderBy: [["title", "asc"]], unbounded: { reason: "test" } },
+      all: {
+        orderBy: [["title", "asc"]],
+        unbounded: { reason: "test", budget: 1000 },
+      },
     });
     expect(c.exposes).toEqual({ base: conversations, task: tasks });
     expect(c.rowKeys).toEqual(["id", "title"]);

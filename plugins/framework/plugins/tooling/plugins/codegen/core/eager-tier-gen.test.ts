@@ -207,7 +207,7 @@ describe("preloadedKeysIn", () => {
       export const unread = liveValue("unread", { schema: S, preload: "boot-and-keep" });
       export const tasks = liveCollection("tasks", {
         row: S, id: "id",
-        all: { orderBy: [["rank", "asc"]], unbounded: { reason: "the task tree" } },
+        all: { orderBy: [["rank", "asc"]], unbounded: { reason: "the task tree", budget: 1000 } },
         preload: "boot",
       });
       export const quiet = liveValue("quiet", { schema: S });
@@ -243,7 +243,7 @@ describe("preloadedKeysIn", () => {
     const src = `
       export const tasks = liveCollection("tasks", {
         row: S, id: "id",
-        all: { orderBy: [["rank", "asc"]], unbounded: { reason: "the task tree" } },
+        all: { orderBy: [["rank", "asc"]], unbounded: { reason: "the task tree", budget: 1000 } },
         preload: "boot",
       });
     `;
@@ -251,7 +251,7 @@ describe("preloadedKeysIn", () => {
   });
 
   test("throws on a collection whose spec sets both `default` and `all` (A28)", () => {
-    const src = `export const c = liveCollection("c", { row: S, id: "id", default: { orderBy: [["n", "asc"]], limit: 1 }, all: { orderBy: [["n", "asc"]], unbounded: { reason: "r" } }, preload: "boot" });`;
+    const src = `export const c = liveCollection("c", { row: S, id: "id", default: { orderBy: [["n", "asc"]], limit: 1 }, all: { orderBy: [["n", "asc"]], unbounded: { reason: "r", budget: 1000 } }, preload: "boot" });`;
     expect(() => preloadedKeysIn(src, "c.ts", NOT_OWNER)).toThrow(
       /c\.ts:1: one declaration mints the key suffix "" twice/,
     );
@@ -259,7 +259,7 @@ describe("preloadedKeysIn", () => {
 
   test("throws on a collection whose spec is not inline — its `preload:` is hidden too", () => {
     const src = `
-      const spec = { row: S, id: "id", all: { orderBy: [["n", "asc"]], unbounded: { reason: "r" } }, preload: "boot" };
+      const spec = { row: S, id: "id", all: { orderBy: [["n", "asc"]], unbounded: { reason: "r", budget: 1000 } }, preload: "boot" };
       export const c = liveCollection("c", spec);
     `;
     expect(() => preloadedKeysIn(src, "c.ts", NOT_OWNER)).toThrow(

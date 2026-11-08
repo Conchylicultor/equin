@@ -86,7 +86,7 @@ const collection = liveCollection(KEY, {
   all: {
     by: ["pageId"],
     orderBy: [["rank", "asc"]],
-    unbounded: { reason: "one page's blocks" },
+    unbounded: { reason: "one page's blocks", budget: 1000 },
   },
 });
 

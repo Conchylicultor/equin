@@ -90,7 +90,7 @@ const collection = liveCollection(KEY, {
   all: {
     by: ["surface"],
     orderBy: [["value", "asc"]],
-    unbounded: { reason: "one surface's cells" },
+    unbounded: { reason: "one surface's cells", budget: 1000 },
   },
 });
 const id = (surface: string, rowKey: string, idx: number) =>

@@ -892,7 +892,9 @@ query.
     - `readsClockNow`
     - `windowQueryResource`
 - Core:
-  - Uses: `packages/source-digest.defineSourceSet`
+  - Uses:
+    - `packages/source-digest.defineSourceSet`
+    - `primitives/report-sink.defineReportSink`
   - Exports (types):
     - `Aggregate`
     - `AggregateOrder`
@@ -942,6 +944,7 @@ query.
     - `aggregate`
     - `armKeyCodec`
     - `BASE_RELATION`
+    - `checkSetBudget`
     - `childrenJoin`
     - `closureJoin`
     - `COMPOSITE_KEY_MAX_FIELDS`
@@ -955,9 +958,10 @@ query.
     - `jsonAggValue`
     - `KIND_RE`
     - `liveReadCode`
+    - `liveSetOverBudgetSink`
     - `SQL_TYPE_RE`
 - Cross-plugin:
-  - Imported by: 27 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 28 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×6
     - `page` ×4
     - `infra` ×3
@@ -969,6 +973,7 @@ query.
     - `backup/runs-arm`
     - `build/runs-arm`
     - `release/runs-arm`
+    - `reports/live-set-budget`
     - `runs`
     - `tasks/tasks-core`
 - Exemptions:

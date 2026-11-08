@@ -139,6 +139,8 @@ export const launchDecisions = liveCollection(
       unbounded: {
         reason:
           "at most one row per task (a person's call on launching it), and a launch list joins them to every task it shows",
+        // Measured on main, 2026-11-08: 9.
+        budget: 50,
       },
     },
   },

@@ -140,7 +140,7 @@ const CONTRACTS = {
     keyed: { keyOf: (r: unknown) => (r as NodeRow).id },
     all: {
       orderBy: [["createdAt", "desc"]],
-      unbounded: { reason: "a test graph" },
+      unbounded: { reason: "a test graph", budget: 1000 },
     },
     queryPk: "id",
   } as unknown as AllQueryResourceContract<NodeRow>,

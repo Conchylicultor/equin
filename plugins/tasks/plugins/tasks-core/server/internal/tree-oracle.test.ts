@@ -127,7 +127,7 @@ const probe = liveCollection(PROBE, {
   id: "id",
   all: {
     orderBy: [["title", "asc"]],
-    unbounded: { reason: "the tree oracle's probe" },
+    unbounded: { reason: "the tree oracle's probe", budget: 1000 },
   },
 });
 

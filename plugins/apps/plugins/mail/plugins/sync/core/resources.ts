@@ -93,6 +93,8 @@ export const mailMessageAttachments = liveCollection(
       orderBy: [["createdAt", "asc"]],
       unbounded: {
         reason: "one message's attachments — Gmail bounds a message at 25 MB",
+        // Measured on main, 2026-11-08: 41 for the largest message.
+        budget: 150,
       },
     },
   },

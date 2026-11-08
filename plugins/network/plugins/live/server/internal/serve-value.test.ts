@@ -246,7 +246,7 @@ describe("compileValue", () => {
         source: "db",
         loader: () => [],
         // @ts-expect-error — retired: the reason lives in the schema now
-        unbounded: { reason: "one row per configured host" },
+        unbounded: { reason: "one row per configured host", budget: 1000 },
       }),
     ).toThrow(/`unbounded` is not a serve option/);
     expect(() =>
@@ -255,7 +255,7 @@ describe("compileValue", () => {
         changes: "notified",
         loader: () => [],
         // @ts-expect-error — nor on an external one
-        unbounded: { reason: "r" },
+        unbounded: { reason: "r", budget: 1000 },
       }),
     ).toThrow(/`unbounded` is not a serve option/);
   });

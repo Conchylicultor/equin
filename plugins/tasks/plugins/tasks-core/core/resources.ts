@@ -314,6 +314,8 @@ export const attemptRows = liveCollection("attempts.v2", {
     orderBy: [["createdAt", "asc"]],
     unbounded: {
       reason: "one task's attempts — a handful each (at most 8 on main)",
+      // Measured on main, 2026-11-08: 8 for the largest task.
+      budget: 20,
     },
   },
 });
@@ -370,6 +372,8 @@ export const attemptConversationIds = liveCollection(
       orderBy: [["createdAt", "asc"]],
       unbounded: {
         reason: "one attempt's conversations — a handful each",
+        // Measured on main, 2026-11-08: 7 for the largest attempt.
+        budget: 20,
       },
     },
   },
@@ -411,6 +415,8 @@ export const attemptPushIds = liveCollection("attempt-push-ids", {
     orderBy: [["createdAt", "asc"]],
     unbounded: {
       reason: "one attempt's pushes — at most a handful each",
+      // Measured on main, 2026-11-08: 15 for the largest attempt.
+      budget: 40,
     },
   },
 });
@@ -608,6 +614,8 @@ export const conversationsActive = liveCollection("conversations-active", {
     unbounded: {
       reason:
         "the queue, the welcome counts and the sibling checks behind the exit buttons read every live conversation",
+      // Measured on main, 2026-11-08: 40.
+      budget: 120,
     },
   },
   preload: "boot",
@@ -627,6 +635,8 @@ export const conversationsSystem = liveCollection("conversations-system", {
     unbounded: {
       reason:
         "the worktree-title lookup reads every live system conversation beside the active ones",
+      // Measured on main, 2026-11-08: 0.
+      budget: 20,
     },
   },
   preload: "boot",

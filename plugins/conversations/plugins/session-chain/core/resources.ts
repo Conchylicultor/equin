@@ -21,6 +21,8 @@ export const conversationSessions = liveCollection("conversation-sessions", {
     unbounded: {
       reason:
         "one conversation's session chain — a new id per fork or handoff, a handful each",
+      // Measured on main, 2026-11-08: 3 for the largest conversation.
+      budget: 20,
     },
   },
 });

@@ -1321,7 +1321,7 @@ async function allCases(): Promise<Record<string, Json>> {
         ["rank", "asc"],
         ["createdAt", "desc"],
       ],
-      unbounded: { reason: "a golden fixture" },
+      unbounded: { reason: "a golden fixture", budget: 1000 },
     },
   });
   const tree = liveCollection("golden.all-tree", {
@@ -1330,7 +1330,7 @@ async function allCases(): Promise<Record<string, Json>> {
     id: "id",
     all: {
       orderBy: [["createdAt", "asc"]],
-      unbounded: { reason: "a golden fixture" },
+      unbounded: { reason: "a golden fixture", budget: 1000 },
     },
     preload: "boot",
   });
@@ -1735,7 +1735,7 @@ async function exposedCases(): Promise<Record<string, Json>> {
       id: "id",
       all: {
         orderBy: [["createdAt", "desc"]],
-        unbounded: { reason: "a golden fixture" },
+        unbounded: { reason: "a golden fixture", budget: 1000 },
       },
     });
     const sample = {

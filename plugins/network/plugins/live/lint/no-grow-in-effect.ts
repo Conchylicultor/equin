@@ -96,7 +96,7 @@ export default createRule({
         "it is full — reading a bounded window as the whole set, which still " +
         "drops rows past its cap. A reader that needs every row reads a " +
         "collection declared `all` (`liveCollection(key, { all: { orderBy, " +
-        "unbounded: { reason } } })`, read with `useLive(c)`); a list that " +
+        "unbounded: { reason, budget } } })`, read with `useLive(c)`); a list that " +
         "pages as the user scrolls goes through data-view or " +
         "`useInfiniteScroll`. See plugins/network/plugins/live/CLAUDE.md.",
     },

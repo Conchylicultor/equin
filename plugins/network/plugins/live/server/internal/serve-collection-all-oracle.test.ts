@@ -123,7 +123,10 @@ const RowSchema = fieldsToZodObject(ROW_FIELDS);
 const collection = liveCollection(KEY, {
   fields: ROW_FIELDS,
   id: "id",
-  all: { orderBy: [["rank", "asc"]], unbounded: { reason: "an oracle set" } },
+  all: {
+    orderBy: [["rank", "asc"]],
+    unbounded: { reason: "an oracle set", budget: 1000 },
+  },
 });
 
 interface Load {

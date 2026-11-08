@@ -25,6 +25,10 @@ import {
   type ServedValueBase,
   type StopFn,
 } from "./compile-value";
+import {
+  checkSetBudget,
+  type AllBound,
+} from "@plugins/network/plugins/live/plugins/query-resource/core";
 import { LIVE_COLUMNS_KEY } from "./live-columns";
 import type {
   LiveAllCollection,
@@ -605,7 +609,11 @@ export type AnyCollection = {
   rows: KeyedResourceContract<unknown[], PointParams> & {
     point: { decode: (params: Record<string, string>) => string[] };
   };
-  all?: KeyedResourceContract<unknown[], Record<string, never>> | undefined;
+  all?:
+    | (KeyedResourceContract<unknown[], Record<string, never>> & {
+        all: AllBound;
+      })
+    | undefined;
   window?: KeyedResourceContract<unknown[], LiveWindowParams> & {
     window: {
       decode: (params: Record<string, string>) => LiveDecodedQuery<string>;
@@ -1062,9 +1070,11 @@ export function compileExternalCollection(
     // diffed by key. Its contract is keyed, so it is never a plain value.
     // A capped set (`all: { max }`) is that wide and no wider: an answer past
     // the cap is a loud loader error, as a window's past `q.limit`.
-    const max =
-      (collection.all as { all?: { max?: number } } | undefined)?.all?.max ??
-      null;
+    // A whole set (`unbounded: { reason, budget }`) is served past its
+    // budget, and reported: every notify() re-reads the whole set, so its
+    // growth cannot pass unseen.
+    const bound = collection.all!.all;
+    const max = bound.max ?? null;
     const all = reg.register((common) =>
       rt.defineExternalResource(
         collection.all as KeyedResourceContract<
@@ -1076,7 +1086,11 @@ export function compileExternalCollection(
             kind: "window",
             limitOf: () => max ?? Number.MAX_SAFE_INTEGER,
           },
-          loader: async () => checkedRows("all()", await allAnswer!(), max),
+          loader: async () => {
+            const out = checkedRows("all()", await allAnswer!(), max);
+            checkSetBudget(collection.key, bound, {}, out.length);
+            return out;
+          },
           ...common,
         },
       ),

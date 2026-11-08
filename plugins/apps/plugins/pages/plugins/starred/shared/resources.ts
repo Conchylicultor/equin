@@ -49,6 +49,8 @@ export const starredPages = liveCollection("pages-starred.all", {
     unbounded: {
       reason:
         "at most one row per page, and the star toggles read starred-ness for any page",
+      // Measured on main, 2026-11-08: 6.
+      budget: 50,
     },
   },
 });

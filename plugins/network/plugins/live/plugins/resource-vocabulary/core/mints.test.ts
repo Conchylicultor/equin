@@ -98,11 +98,14 @@ describe("mintsOf ≡ liveCollection's runtime mints (A28)", () => {
   test("an `all` collection: the whole set and :rows, no :groups", () => {
     const c = liveCollection("test.mints.all", {
       ...ROW,
-      all: { orderBy: [["n", "asc"]], unbounded: { reason: "a test set" } },
+      all: {
+        orderBy: [["n", "asc"]],
+        unbounded: { reason: "a test set", budget: 1000 },
+      },
     });
     const scanned = scannedMints(
       "test.mints.all",
-      `{ ${ROW_TEXT}, all: { orderBy: [["n", "asc"]], unbounded: { reason: "a test set" } } }`,
+      `{ ${ROW_TEXT}, all: { orderBy: [["n", "asc"]], unbounded: { reason: "a test set", budget: 1000 } } }`,
     );
     expect(scanned).toEqual(runtimeMints(c));
     expect(scanned.map((m) => m.key)).toEqual([
@@ -131,7 +134,7 @@ describe("mintsOf ≡ liveCollection's runtime mints (A28)", () => {
     expect(() =>
       scannedMints(
         "both",
-        `{ row: Row, id: "id", default: { orderBy: [], limit: 1 }, all: { orderBy: [], unbounded: { reason: "r" } } }`,
+        `{ row: Row, id: "id", default: { orderBy: [], limit: 1 }, all: { orderBy: [], unbounded: { reason: "r", budget: 1000 } } }`,
       ),
     ).toThrow(
       /x\.ts:1: one declaration mints the key suffix "" twice — its spec sets both `default` and `all`/,
@@ -163,7 +166,7 @@ describe("mintsOf ≡ liveCollection's runtime mints (A28)", () => {
     expect(
       scannedMints(
         "fine",
-        `{ row, id: "id", meta: { ...extra }, all: { orderBy: [], unbounded: { reason: "r" } } }`,
+        `{ row, id: "id", meta: { ...extra }, all: { orderBy: [], unbounded: { reason: "r", budget: 1000 } } }`,
       ).map((m) => m.key),
     ).toEqual(["fine", "fine:rows"]);
   });

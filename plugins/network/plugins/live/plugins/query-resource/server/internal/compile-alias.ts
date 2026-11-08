@@ -47,6 +47,7 @@ import {
   type PointQueryResourceContract,
   type QueryKey,
   type RollupJoin,
+  checkSetBudget,
 } from "@plugins/network/plugins/live/plugins/query-resource/core";
 import { routedReads } from "./arm-plan";
 import { canonicalTextOf } from "./canonical-text";
@@ -492,13 +493,19 @@ export function compileAllCollection<
     fail(`\`all.max\` is ${String(max)}, not a positive integer.`);
   }
   const limitSql = max === null ? null : sql.raw(`LIMIT ${max + 1}`);
-  /** Refuse a load past the declared cap, naming the key and the cap. */
-  const capped = <R>(rows: R[], shape: string): R[] => {
+  /**
+   * Refuse a load past the declared cap, naming the key and the cap; report
+   * one past a whole set's budget (served all the same). Both shapes that
+   * read every row of a tuple run it — `full`, and `orderIds`, which every
+   * entrant runs — so a set cannot grow past either unseen.
+   */
+  const capped = <R>(rows: R[], shape: string, params: AllParams): R[] => {
     if (max !== null && rows.length > max) {
       fail(
-        `the ${shape} shape read more than ${max} rows — the set is declared \`all: { max: ${max} }\` and outgrew it: raise the cap with a reason, page it as a window, or declare it whole (\`unbounded: { reason }\`).`,
+        `the ${shape} shape read more than ${max} rows — the set is declared \`all: { max: ${max} }\` and outgrew it: raise the cap with a reason, page it as a window, or declare it whole (\`unbounded: { reason, budget }\`).`,
       );
     }
+    checkSetBudget(key, contract.all, params, rows.length);
     return rows;
   };
 
@@ -712,7 +719,7 @@ export function compileAllCollection<
         row: decodedRow(Object.fromEntries(parts.map((p) => [p, String]))),
         label: `${key}:orderIds`,
       });
-      return capped(rows, "orderIds").map((r) =>
+      return capped(rows, "orderIds", params).map((r) =>
         composite.encodeParts(parts.map((p) => r[p] as string)),
       );
     }
@@ -721,7 +728,7 @@ export function compileAllCollection<
       row: decodedRow({ __id: String }),
       label: `${key}:orderIds`,
     });
-    return capped(rows, "orderIds").map((r) => r.__id);
+    return capped(rows, "orderIds", params).map((r) => r.__id);
   };
   const readField =
     spec.readField ??
@@ -820,7 +827,7 @@ export function compileAllCollection<
     loader: (params: AllParams, ctx?: { affectedIds: readonly string[] }) => {
       if (!ctx) {
         return load(fullSql(params), "full").then((rows) =>
-          capped(rows, "full"),
+          capped(rows, "full", params),
         );
       }
       const scoped = scopedSql(ctx.affectedIds, "throws", params);

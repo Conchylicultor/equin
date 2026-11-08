@@ -67,7 +67,10 @@ export type AllQueryParams<B extends string> = [B] extends [never]
  */
 export type AllBound =
   | { readonly max: number; readonly unbounded?: never }
-  | { readonly unbounded: { reason: string }; readonly max?: never };
+  | {
+      readonly unbounded: { reason: string; budget: number };
+      readonly max?: never;
+    };
 
 /**
  * The whole ordered set of a collection declared `all`

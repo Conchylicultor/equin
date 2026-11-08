@@ -37,6 +37,9 @@ export const SERVER_REPORT_SOURCES = [
   // monitor's log showed a sustained degradation of this machine's disk or
   // file system. A scheduled observation of the host, not an error anyone caught.
   "server-host-io-monitor",
+  // A whole live set (network/live `all: { unbounded: { reason, budget } }`)
+  // loaded past its declared budget: its reason no longer holds.
+  "server-live-set-budget",
   "server-cost-monitor",
   // Model discovery (conversations/model-provider/catalog): the Claude CLI's
   // model menu named something outside the model id grammar, or left out a

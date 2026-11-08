@@ -45,7 +45,7 @@ const scoped = (id: unknown) =>
     all: {
       by: ["surface"],
       orderBy: [["value", "asc"]],
-      unbounded: { reason: "test" },
+      unbounded: { reason: "test", budget: 1000 },
     },
   });
 
@@ -67,7 +67,7 @@ describe("composite id refusals", () => {
         all: {
           by: ["surface", "rowKey"],
           orderBy: [["value", "asc"]],
-          unbounded: { reason: "test" },
+          unbounded: { reason: "test", budget: 1000 },
         },
       }),
     ).toThrow(/names every part of the composite id/);

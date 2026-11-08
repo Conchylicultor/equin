@@ -40,6 +40,8 @@ export const servers = liveCollection("deploy.servers.all", {
     unbounded: {
       reason:
         "the hand-registered server registry (a handful of boxes); the list, the pickers and the deploy surfaces read every one",
+      // Measured on main, 2026-11-08: 1.
+      budget: 20,
     },
   },
 });

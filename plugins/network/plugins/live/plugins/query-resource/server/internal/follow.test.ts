@@ -114,7 +114,7 @@ function pageBlocks(): FollowablePlan {
     keyed: { keyOf: (r: unknown) => (r as { id: string }).id },
     all: {
       orderBy: [["rank", "asc"]],
-      unbounded: { reason: "a test set" },
+      unbounded: { reason: "a test set", budget: 1000 },
       by: ["pageId"],
     },
     queryPk: "id",

@@ -1217,7 +1217,7 @@ const scopedBlocks = liveCollection("test.optimistic-mutation.scoped", {
   all: {
     by: ["pageId"],
     orderBy: [["rank", "asc"]],
-    unbounded: { reason: "one page's blocks" },
+    unbounded: { reason: "one page's blocks", budget: 1000 },
   },
 });
 // A second scoped key, for the lane case: the send lanes are module-level.
@@ -1227,7 +1227,7 @@ const scopedLane = liveCollection("test.optimistic-mutation.scoped-lane", {
   all: {
     by: ["pageId"],
     orderBy: [["id", "asc"]],
-    unbounded: { reason: "one page's blocks" },
+    unbounded: { reason: "one page's blocks", budget: 1000 },
   },
 });
 const blockKeyOf = (row: unknown): string => (row as BlockRow).id;
@@ -1485,7 +1485,10 @@ describe("useOptimisticResource — a scoped `all` set ({ where })", () => {
     const whole = liveCollection("test.optimistic-mutation.whole", {
       carry: { fields: { id: textField() } },
       id: "id",
-      all: { orderBy: [["id", "asc"]], unbounded: { reason: "test" } },
+      all: {
+        orderBy: [["id", "asc"]],
+        unbounded: { reason: "test", budget: 1000 },
+      },
     });
     expect(() =>
       enqueueResourceWrite(
@@ -1500,7 +1503,10 @@ describe("useOptimisticResource — a scoped `all` set ({ where })", () => {
     const whole = liveCollection("test.optimistic-mutation.whole-types", {
       carry: { fields: { id: textField() } },
       id: "id",
-      all: { orderBy: [["id", "asc"]], unbounded: { reason: "test" } },
+      all: {
+        orderBy: [["id", "asc"]],
+        unbounded: { reason: "test", budget: 1000 },
+      },
     });
     const opts = {
       apply: (rows: BlockRow[]) => rows,

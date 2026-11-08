@@ -61,6 +61,8 @@ export const rowOrder = liveCollection("data-view-row-order.v2", {
     unbounded: {
       reason:
         "one view instance's manual order — the rows a user dragged plus the seeds ahead of them",
+      // Measured on main, 2026-11-08: 18 for the largest view.
+      budget: 200,
     },
   },
 });

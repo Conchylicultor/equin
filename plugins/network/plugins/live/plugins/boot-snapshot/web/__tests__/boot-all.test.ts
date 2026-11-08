@@ -69,7 +69,10 @@ const tasks = liveCollection("test.boot.all-tasks", {
   },
   carry: { fields: { id: textField() } },
   id: "id",
-  all: { orderBy: [["rank", "asc"]], unbounded: { reason: "a boot test" } },
+  all: {
+    orderBy: [["rank", "asc"]],
+    unbounded: { reason: "a boot test", budget: 1000 },
+  },
   preload: "boot",
 });
 

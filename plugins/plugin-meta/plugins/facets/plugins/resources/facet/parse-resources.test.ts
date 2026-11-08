@@ -31,7 +31,7 @@ describe("buildDescriptorIndex", () => {
     const src = `
       export const tasksResource = liveCollection("tasks", {
         row: TaskListItemSchema, id: "id",
-        all: { orderBy: [["rank", "asc"]], unbounded: { reason: "the task tree" } },
+        all: { orderBy: [["rank", "asc"]], unbounded: { reason: "the task tree", budget: 1000 } },
         preload: "boot",
       });
       export const taskDetailResource = liveValue("task-detail", {
@@ -133,7 +133,7 @@ describe("buildDescriptorIndex", () => {
     const src = `
       export const tasks = liveCollection("tasks", {
         row: TaskSchema, id: "id",
-        all: { orderBy: [["rank", "asc"]], unbounded: { reason: "the task tree" } },
+        all: { orderBy: [["rank", "asc"]], unbounded: { reason: "the task tree", budget: 1000 } },
         preload: "boot",
       });
       export const windowed = liveCollection("windowed", {
@@ -161,7 +161,7 @@ describe("buildDescriptorIndex", () => {
       export const both = liveCollection("both", {
         row: S, id: "id", filterable: {}, sortable: ["n"],
         default: { orderBy: [["n", "asc"]], limit: 10 }, maxLimit: 20,
-        all: { orderBy: [["n", "asc"]], unbounded: { reason: "r" } },
+        all: { orderBy: [["n", "asc"]], unbounded: { reason: "r", budget: 1000 } },
       });
     `;
     expect(() =>
@@ -546,7 +546,7 @@ describe("resolveRegisterCall", () => {
         `hosts, {
           source: "db",
           loader: readHosts,
-          unbounded: { reason: "one row per configured host — a handful" },
+          unbounded: { reason: "one row per configured host — a handful", budget: 1000 },
         }`,
         bound("hosts"),
         valueIndex,
@@ -661,7 +661,7 @@ describe("resolveRegisterCall", () => {
           loader: ({ id }) => loadEditedFilesFor(id),
           revalidate: ({ id }) => signatureFor(id),
           whileSubscribed: async ({ id }, notify) => {
-            const w = { unbounded: { reason: "nope" } };
+            const w = { unbounded: { reason: "nope", budget: 1000 } };
             return watch(id, notify, w);
           },
         }`,
@@ -878,7 +878,7 @@ describe("parseRegisterCalls (end to end over runtime sources)", () => {
       file(`
       export const tasks = liveCollection("tasks", {
         row: S, id: "id",
-        all: { orderBy: [["rank", "asc"]], unbounded: { reason: "the task tree" } },
+        all: { orderBy: [["rank", "asc"]], unbounded: { reason: "the task tree", budget: 1000 } },
       });
       export const pushesResource = liveValue("pushes", { schema: S });
       export const notifications = liveCollection("notifications", {

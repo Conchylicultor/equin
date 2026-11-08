@@ -701,11 +701,28 @@ export interface LiveAllOrderBase<Row> {
  *   is `.max(max)` (every parse refuses one more) and the server's loads
  *   refuse a set that outgrew it, loudly — a cap is a statement about the
  *   data, never a silent truncation.
- * - `unbounded: { reason }`: held whole, and why that stays small. Non-empty.
+ * - `unbounded: { reason, budget }`: held whole — why that stays small
+ *   (non-empty), and the claim made checkable: `budget`, how many rows per
+ *   tuple the set stays under (measured, with headroom). Unlike `max` it
+ *   refuses nothing: a load past it is served, and files a
+ *   `live-set-over-budget` report (`liveSetOverBudgetSink`), so a wrong
+ *   reason surfaces long before it costs every tab megabytes.
  */
 export type LiveAllBound =
   | { max: number; unbounded?: never }
-  | { unbounded: { reason: string }; max?: never };
+  | { unbounded: LiveUnbounded; max?: never };
+
+/** A whole set's {@link LiveAllBound} `unbounded` arm: the reason, and its measured budget. */
+export interface LiveUnbounded {
+  /** Why the set stays small enough to hold whole. Non-empty. */
+  reason: string;
+  /**
+   * The most rows per tuple the reason promises: today's measured size (on
+   * main, the largest tuple of a scoped set) with headroom. A positive
+   * integer. Past it the set is still served — and reported, loudly.
+   */
+  budget: number;
+}
 
 /**
  * The `all` of a whole-ordered-set declaration: the total order every row is
@@ -1272,7 +1289,7 @@ function allCollection<Row>(
   const all = spec.all as {
     by?: unknown;
     orderBy?: unknown;
-    unbounded?: { reason?: unknown };
+    unbounded?: { reason?: unknown; budget?: unknown };
     max?: unknown;
   };
   const bound = allBound(fail, all);
@@ -1330,12 +1347,13 @@ function allCollection<Row>(
 
 /**
  * An `all` declaration's bound (see {@link LiveAllBound}), checked: exactly
- * one of a positive-integer `max` or a non-empty `unbounded.reason`, frozen.
+ * one of a positive-integer `max` or a non-empty `unbounded.reason` with a
+ * positive-integer `unbounded.budget`, frozen.
  */
 function allBound(
   fail: (message: string) => never,
-  all: { unbounded?: { reason?: unknown }; max?: unknown },
-): { max: number } | { unbounded: { reason: string } } {
+  all: { unbounded?: { reason?: unknown; budget?: unknown }; max?: unknown },
+): { max: number } | { unbounded: LiveUnbounded } {
   if (all.max !== undefined && all.unbounded !== undefined) {
     fail(
       "`all` declares both `max` and `unbounded` — a set is capped or held whole, not both.",
@@ -1353,12 +1371,25 @@ function allBound(
   const reason = all.unbounded?.reason;
   if (typeof reason !== "string" || reason.trim().length === 0) {
     fail(
-      "`all` declares no bound — cap it (`max`), or hold it whole with `unbounded: { reason }` saying why it stays small" +
+      "`all` declares no bound — cap it (`max`), or hold it whole with `unbounded: { reason, budget }` saying why it stays small and how many rows it stays under" +
         (all.unbounded === undefined ? "." : " (the reason is empty)."),
     );
   }
+  const budget = all.unbounded!.budget;
+  if (
+    typeof budget !== "number" ||
+    !Number.isSafeInteger(budget) ||
+    budget < 1
+  ) {
+    fail(
+      `\`all.unbounded.budget\` is ${JSON.stringify(budget)}, not a positive integer — a whole set states how many rows per tuple its reason promises (measured, with headroom), so a wrong reason is reported.`,
+    );
+  }
   return Object.freeze({
-    unbounded: Object.freeze({ reason: reason as string }),
+    unbounded: Object.freeze({
+      reason: reason as string,
+      budget: budget as number,
+    }),
   });
 }
 

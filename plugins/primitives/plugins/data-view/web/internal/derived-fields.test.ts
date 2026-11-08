@@ -385,7 +385,10 @@ describe("deriveFields — a collection's own presentation and non-string option
     carry: { fields: { id: textField() } },
     related: { task: tasks },
     id: "id",
-    all: { orderBy: [["name", "asc"]], unbounded: { reason: "a test" } },
+    all: {
+      orderBy: [["name", "asc"]],
+      unbounded: { reason: "a test", budget: 1000 },
+    },
   });
 
   test("an exposure over a boolean keeps its raw values, keyed options and a boolean valueDomain", () => {
@@ -424,7 +427,10 @@ describe("deriveFields — a collection's own presentation and non-string option
       },
       carry: { fields: { id: textField() } },
       id: "id",
-      all: { orderBy: [["stage", "asc"]], unbounded: { reason: "a test" } },
+      all: {
+        orderBy: [["stage", "asc"]],
+        unbounded: { reason: "a test", budget: 1000 },
+      },
     });
     const stage = deriveFields(ranked, false, []).fields.find(
       (f) => f.id === "stage",
@@ -475,7 +481,10 @@ describe("deriveFields — token and extent", () => {
     },
     carry: { fields: { id: textField() } },
     id: "id",
-    all: { orderBy: [["name", "asc"]], unbounded: { reason: "a test" } },
+    all: {
+      orderBy: [["name", "asc"]],
+      unbounded: { reason: "a test", budget: 1000 },
+    },
   });
   const song = { id: "s", name: "Song", plays: 12 };
 

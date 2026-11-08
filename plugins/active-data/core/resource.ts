@@ -74,6 +74,8 @@ export const activeDataBindings = liveCollection("active-data.bindings.v2", {
     unbounded: {
       reason:
         "one conversation's widget bindings — a handful per assistant message",
+      // Measured on main, 2026-11-08: 4 for the largest conversation.
+      budget: 50,
     },
   },
 });
