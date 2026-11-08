@@ -388,6 +388,23 @@ const check: Check = {
           );
         }
 
+        // 3e. No negative takes an asked-for plugin it does not name. The
+        //     cascade removes every importer of a negated target, and an
+        //     importer can be a plugin a positive pattern seeded on purpose:
+        //     `!apps.file-explorer.**` took ~20 transcript renderers out of
+        //     `conversations.**` in the demo, and nothing said so. The chain
+        //     is printed so the author sees what the negative costs.
+        if (comp.cascadeLosses.length > 0) {
+          const lines = comp.cascadeLosses.map(
+            ({ lost, chain }) =>
+              `${lost}: ${chain.map((h) => `${h.via === "import" ? "imports" : "child of"} ${h.to}`).join(" → ")}`,
+          );
+          return fail(
+            `composition "${m.name}"${on}: ${comp.cascadeLosses.length} plugin(s) a positive pattern asks for are removed by a negative that does not name them:\n    ${lines.join("\n    ")}`,
+            `A negative also removes everything that imports its target. Each plugin above was asked for (by an \`x\` or \`x.**\` entry) and left only because of that cascade. Decide each one: narrow the negative so it stops reaching it; name the plugin as an entry to keep it (the cascade stops at a named plugin; if it still imports the negated one, 3c then fails naming the import); or write it down as its own negative (\`!${comp.cascadeLosses[0]!.lost}\`) to accept losing it.`,
+          );
+        }
+
         // 4. No selection already locked in by the entries' hard edges.
         if (comp.redundantSelections.length > 0) {
           return fail(

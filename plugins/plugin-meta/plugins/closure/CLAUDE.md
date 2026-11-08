@@ -326,6 +326,23 @@ cascade and drags the target back. `composition-closure` fails on a non-empty
 list, codegen throws on one, and Studio renders it — so a negative that did not
 take effect is a value in the result rather than silence.
 
+### `cascadeLosses` — what a negative cost
+
+The second required postcondition. Each entry is `{ lost, target, chain }`: a
+plugin a positive ID pattern asked for (`x`, or inside `x.**`), named by no
+negative, that the cascade removed because it imports (or descends from) a
+negated target — with the hops from it to that target (`removalTrail`, BFS, so
+the chain is a shortest one). A root `**` asks for nothing in particular, so it
+yields none (the base row's cascade out of main is not a loss).
+
+It exists because a negative written for one surface can take unrelated ones
+with it, and its author never sees the list: in the demo,
+`!apps.file-explorer.**` took ~20 transcript renderers out of
+`conversations.**` through `file-path → file-pane → file-explorer.browser`,
+and each fell back to the generic card for months. `composition-closure` fails
+on a non-empty list; the author narrows the negative, names the plugin (the
+cascade stops there), or writes it down as its own negative.
+
 ## Causality queries
 
 - `explainInclusion(graph, manifest, target)` → shortest "why bundled": BFS over
@@ -406,6 +423,7 @@ Run with `./equin test plugins/plugin-meta/plugins/closure`.
     - `plugin-meta/facets/cross-refs.crossRefsFacetDef`
     - `plugin-meta/facets/slots.slotsFacetDef`
   - Exports (types):
+    - `CascadeLoss`
     - `CompanionEntry`
     - `CompanionSlot`
     - `Composition`

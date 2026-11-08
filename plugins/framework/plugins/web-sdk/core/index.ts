@@ -23,6 +23,7 @@ export {
   PluginProvider,
   useComposition,
   useRawContributions,
+  useScopedOutContributions,
   SLOT_READ_TIMING_PREFIX,
   PluginScope,
   usePluginScopeId,

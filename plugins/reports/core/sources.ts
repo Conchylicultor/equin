@@ -93,6 +93,9 @@ export const CLIENT_REPORT_SOURCES = [
   // An open popover's anchor left the document or went display: none
   // (reports/popover-anchor-lost).
   "client-popover-anchor-lost",
+  // A dispatch slot fell back inside a PluginScope though the page holds a
+  // matching contribution the scope dropped (reports/scoped-out-dispatch).
+  "client-scoped-out-dispatch",
   "client-collab-hydration",
   "client-page-undo-conflict",
   "client-theme-resolution",
@@ -151,6 +154,7 @@ export const CLIENT_REPORT_SUBJECT: Record<
   "client-viewport-escape": "page",
   "client-panel-overflow": "page",
   "client-popover-anchor-lost": "page",
+  "client-scoped-out-dispatch": "page",
   "client-collab-hydration": "page",
   "client-page-undo-conflict": "page",
   "client-theme-resolution": "page",

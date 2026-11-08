@@ -209,6 +209,12 @@ export interface InferredBrowserHostGraph extends BrowserHostGraph {
   /** The bundle's plugins that have a `web/index.ts`, by dot id, sorted. */
   webPlugins: PluginId[];
   /**
+   * The plugins with a `web/index.ts` the composition negates by name (its
+   * negatives' direct targets), sorted — left out of the scope on purpose, so
+   * a dispatch falling back for one is no surprise (`ScopedComposition.negated`).
+   */
+  negatedWebPlugins: PluginId[];
+  /**
    * The composition's option frontier (`resolveComposition`'s `available`):
    * plugins NOT in the bundle that soft-contribute to a bundled one — exactly
    * what a page scoped to the composition stops rendering. Sorted.
@@ -539,9 +545,10 @@ async function inferUncached(
     // over the host's own outputs as they render empty (`ownOutputs`).
     closure: (entries) => bundledClosureOf(repo, entries, own),
   });
-  const webPlugins = [...resolved.bundle]
-    .filter((id) => repo.has(`plugins/${asFsPath(id)}/web/index.ts`))
-    .sort();
+  const hasWeb = (id: PluginId) =>
+    repo.has(`plugins/${asFsPath(id)}/web/index.ts`);
+  const webPlugins = [...resolved.bundle].filter(hasWeb).sort();
+  const negatedWebPlugins = [...resolved.negatedTargets].filter(hasWeb).sort();
   return {
     ...graph,
     label,
@@ -556,6 +563,7 @@ async function inferUncached(
       row.home,
     ),
     webPlugins,
+    negatedWebPlugins,
     available: resolved.available,
   };
 }
@@ -640,6 +648,7 @@ export function renderBrowserHostScope(
     home,
     unlisted,
     webPlugins,
+    negatedWebPlugins,
     reads,
     externalHosts,
   }: Pick<
@@ -648,6 +657,7 @@ export function renderBrowserHostScope(
     | "home"
     | "unlisted"
     | "webPlugins"
+    | "negatedWebPlugins"
     | "reads"
     | "externalHosts"
   >,
@@ -672,6 +682,13 @@ export function renderBrowserHostScope(
     "  plugins: [",
     ...webPlugins.map((id) => `    ${JSON.stringify(id)},`),
     "  ],",
+    ...(negatedWebPlugins.length > 0
+      ? [
+          "  negated: [",
+          ...negatedWebPlugins.map((id) => `    ${JSON.stringify(id)},`),
+          "  ],",
+        ]
+      : []),
     `  start: () => import(${JSON.stringify(`@browser-host/${host.pluginPath}`)}),`,
     "} satisfies DemoHost;",
     "",
@@ -800,6 +817,7 @@ function ownOutputs(host: BrowserHostDecl): ReadonlyMap<string, string> {
         home: null,
         unlisted: [],
         webPlugins: [],
+        negatedWebPlugins: [],
         reads: [],
         externalHosts: [],
       }),

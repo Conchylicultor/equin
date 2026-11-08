@@ -51,6 +51,13 @@ export interface PluginRegistryReader {
   replace(plugins: readonly LoadedPlugin[]): void;
   /** Every slot the loaded plugins declare, as the last declaration pass named them. */
   declared(): readonly SlotNamingEntry[];
+  /**
+   * The contributions to `slot` the innermost `PluginScope` left out, minus
+   * those of plugins its composition negates on purpose — what is on the page
+   * but not in the scope though nobody asked it to stay out. Empty outside
+   * every scope, and for a `pageWide` slot. Same identity contract as `read`.
+   */
+  scopedOut(slot: SlotHandle): readonly Contribution[];
 }
 
 /** Shared "no contributions" list, so an empty slot's snapshot is stable. */
@@ -216,6 +223,7 @@ export function createPluginRegistry(): PluginRegistry {
     },
     replace,
     declared: () => declared,
+    scopedOut: () => NO_CONTRIBUTIONS,
   });
   return registry;
 }
@@ -223,7 +231,8 @@ export function createPluginRegistry(): PluginRegistry {
 /**
  * A read-only view of `parent` narrowed to the plugins in `plugins`: every slot
  * read keeps only the contributions whose stamped `_pluginId` is in the set, and
- * `declared()` only the slots those plugins declare. What `PluginScope` provides
+ * `declared()` only the slots those plugins declare. `scopedOut()` answers the
+ * rest, minus `negated` (the plugins the scope's composition excludes by name). What `PluginScope` provides
  * to its subtree, so an out-of-set contribution has no spelling inside it.
  *
  * - A `pageWide` slot (`SlotMeta.pageWide`) passes unfiltered — the slot says
@@ -238,11 +247,13 @@ export function createPluginRegistry(): PluginRegistry {
 export function scopedReader(
   parent: PluginRegistryReader,
   plugins: ReadonlySet<string>,
+  negated: ReadonlySet<string> = new Set(),
 ): PluginRegistryReader {
   const filtered = new WeakMap<
     readonly Contribution[],
     readonly Contribution[]
   >();
+  const left = new WeakMap<readonly Contribution[], readonly Contribution[]>();
   let declaredFrom: readonly SlotNamingEntry[] | undefined;
   let declaredScoped: readonly SlotNamingEntry[] = [];
   return {
@@ -272,6 +283,24 @@ export function scopedReader(
         declaredScoped = all.filter((e) => plugins.has(e.pluginId));
       }
       return declaredScoped;
+    },
+    scopedOut(slot) {
+      if (slot.meta.pageWide) return NO_CONTRIBUTIONS;
+      const list = parent.read(slot);
+      let out = left.get(list);
+      if (!out) {
+        // An unstamped contribution names no plugin the page holds, so it is
+        // never one the scope "left out".
+        const dropped = list.filter(
+          (c) =>
+            c._pluginId !== undefined &&
+            !plugins.has(c._pluginId) &&
+            !negated.has(c._pluginId),
+        );
+        out = dropped.length === 0 ? NO_CONTRIBUTIONS : Object.freeze(dropped);
+        left.set(list, out);
+      }
+      return out;
     },
   };
 }

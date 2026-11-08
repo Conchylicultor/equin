@@ -6,6 +6,7 @@ import { GrowRelay } from "@plugins/primitives/plugins/css/plugins/grow-relay/we
 import {
   createElement,
   useCallback,
+  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -16,7 +17,9 @@ import {
 import {
   defineSlot,
   defineSlotFacade,
+  usePluginScopeId,
   useRawContributions,
+  useScopedOutContributions,
   UNSAFE_unsealSlotComponent,
   type Slot,
   type SlotOptions,
@@ -37,6 +40,7 @@ import {
   useSlotListMiddlewares,
 } from "./registry";
 import { DispatchOutcomeContext } from "./dispatch-outcome";
+import { emitScopedOutDispatch } from "./scoped-out-dispatch";
 import { useSlotItemLayout } from "./item-layout";
 import {
   flowAxis,
@@ -754,6 +758,33 @@ export function defineDispatchSlot<
     // matched at all. The provider wraps OUTSIDE `applyItemMiddlewares` so the
     // outcome is still readable from inside an error-boundary fallback.
     const matched = matchedIndex >= 0;
+
+    // A fallback inside a scope, though the page holds a contribution for
+    // this key that the scope dropped without its composition negating it:
+    // the scope lost a plugin nobody asked it to lose. Said, never silent
+    // (`reports/scoped-out-dispatch` files it); the fallback still renders.
+    const scopeId = usePluginScopeId();
+    const left = useScopedOutContributions(slot);
+    const leftIndex =
+      matched || left.length === 0
+        ? -1
+        : matchDispatchIndex(
+            left as readonly { match?: unknown }[],
+            key,
+            props,
+          );
+    const leftPlugin =
+      leftIndex >= 0 ? String(left[leftIndex]!._pluginId) : null;
+    useEffect(() => {
+      if (leftPlugin === null || scopeId === null) return;
+      emitScopedOutDispatch({
+        slotId: slot.id,
+        key,
+        plugin: leftPlugin,
+        scope: scopeId,
+      });
+    }, [leftPlugin, scopeId, key]);
+
     const outcome = useMemo(
       () => ({ slotId: slot.id, key, matched }),
       [key, matched],

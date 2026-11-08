@@ -1,4 +1,4 @@
-// @hash a4c02bdd996c
+// @hash 32f1af6a347e
 {
   "manifests": [
     {
@@ -187,6 +187,7 @@
         "!tasks.reports-investigation.**",
         "!tasks.sidequest-autopilot.**",
         "!tasks.outcome-report.**",
+        "!tasks.task-triage",
         "conversations.conversation-view.push-and-exit.capabilities",
         "tasks.outcome-report.capability",
         "!conversations.workspace.worktree.**",

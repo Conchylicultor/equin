@@ -97,6 +97,30 @@ export function useRawContributions(
 }
 
 /**
+ * The contributions to `slot` that are on the page but that the innermost
+ * `<PluginScope>` leaves out, though its composition does not negate their
+ * plugin — empty outside every scope. For a framework primitive that falls
+ * back when nothing in scope serves a key (`.Dispatch`), to tell "nothing on
+ * the page serves this" from "the page serves it, and the scope dropped it":
+ * the second is a composition that lost a plugin nobody asked to lose.
+ * Subscribed to `slot` only, like {@link useRawContributions}.
+ */
+export function useScopedOutContributions(
+  slot: SlotHandle,
+): readonly Contribution[] {
+  const reader = useContext(PluginRegistryContext);
+  if (!reader) {
+    throw new Error("slot contributions must be read within PluginProvider");
+  }
+  const subscribe = useCallback(
+    (listener: () => void) => reader.subscribe(slot, listener),
+    [reader, slot],
+  );
+  const getSnapshot = () => reader.scopedOut(slot);
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+}
+
+/**
  * The composition this page was deployed as — the `composition` export of the
  * web registry it booted from (`@composition-web-registry`), baked in by
  * codegen at build time, so reading it never waits on a request.
@@ -214,6 +238,12 @@ export function usePluginScopeId(): string | null {
  */
 export type ScopedComposition = CompositionIdentity & {
   plugins: readonly string[];
+  /**
+   * The web plugins the composition excludes by name (its negatives' direct
+   * targets) — left out on purpose, so a fallback for one of them is no
+   * surprise (`useScopedOutContributions` skips them). Absent = none.
+   */
+  negated?: readonly string[];
 };
 
 /**
@@ -243,10 +273,10 @@ export function PluginScope({
   if (!parent) {
     throw new Error("PluginScope must be rendered within PluginProvider");
   }
-  const { id, home, unlisted, plugins } = composition;
+  const { id, home, unlisted, plugins, negated } = composition;
   const reader = useMemo(
-    () => scopedReader(parent, new Set(plugins)),
-    [parent, plugins],
+    () => scopedReader(parent, new Set(plugins), new Set(negated)),
+    [parent, plugins, negated],
   );
   const identity = useMemo(
     () => (unlisted === undefined ? { id, home } : { id, home, unlisted }),

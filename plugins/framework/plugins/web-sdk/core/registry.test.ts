@@ -163,6 +163,19 @@ describe("scopedReader — a registry view narrowed to a plugin set", () => {
     expect(reader.declared()).toBe(reader.declared());
   });
 
+  it("scopedOut() answers what the scope dropped, minus its negated plugins", () => {
+    const { parent, reader } = scoped(["in"]);
+    expect(reader.scopedOut(A).map((c) => c.id)).toEqual(["a-out"]);
+    expect(reader.scopedOut(A)).toBe(reader.scopedOut(A));
+    expect(reader.scopedOut(B)).toHaveLength(0);
+    // A page-wide slot is never filtered, so nothing is dropped from it.
+    expect(reader.scopedOut(Wide)).toHaveLength(0);
+    // Outside every scope nothing is dropped.
+    expect(parent.scopedOut(A)).toHaveLength(0);
+    const negating = scopedReader(parent, new Set(["in"]), new Set(["out"]));
+    expect(negating.scopedOut(A)).toHaveLength(0);
+  });
+
   it("replace throws: the plugin set belongs to the enclosing provider", () => {
     const { reader } = scoped(["in"]);
     expect(() => reader.replace([])).toThrow(/read-only/);

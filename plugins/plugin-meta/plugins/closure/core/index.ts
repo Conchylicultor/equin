@@ -27,5 +27,6 @@ export type {
   InclusionStep,
   InclusionPath,
   UnsatisfiedExclusion,
+  CascadeLoss,
   UsageRule,
 } from "./types";

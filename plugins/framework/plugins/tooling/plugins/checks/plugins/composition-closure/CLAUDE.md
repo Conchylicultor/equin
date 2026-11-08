@@ -111,6 +111,15 @@ author meant, and this check **fails on a non-empty list**, printing the import
 chain — which is the repair instruction: exclude the importer at the head of the
 chain too, or drop the exclusion.
 
+## A negative may not take what a positive asked for, unnamed
+
+The cascade removes every transitive importer of a negated target, and an
+importer can be a plugin a positive pattern seeded on purpose. The engine
+reports each such plugin as `Composition.cascadeLosses` (with the import chain
+to the negated target), and the check **fails on a non-empty list**. Decide each
+one: narrow the negative, name the plugin as an entry to keep it, or write it
+down as its own negative (`!x`) to accept losing it. A root `**` reports none.
+
 ## Dead negatives are judged across ALL compositions
 
 A negative that trims nothing is a typo or a stale leftover — but only if it

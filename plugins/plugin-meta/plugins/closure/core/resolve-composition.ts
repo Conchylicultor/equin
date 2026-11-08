@@ -9,6 +9,7 @@ import { inclusionPathWithin } from "./inclusion-path";
 import { parseEntryPattern } from "@plugins/plugin-meta/plugins/closure/plugins/entry-pattern/core";
 import { allNodeIds, matchEntryPattern } from "./entry-pattern";
 import type {
+  CascadeLoss,
   Composition,
   CompositionManifest,
   EdgeGraph,
@@ -81,15 +82,34 @@ export function removalClosure(
   graph: EdgeGraph,
   kept: ReadonlySet<PluginId> = new Set(),
 ): Set<PluginId> {
-  const out = new Set<PluginId>();
-  const stack = [...seeds];
-  while (stack.length) {
-    const x = stack.pop()!;
+  return new Set(removalTrail(seeds, graph, kept).keys());
+}
+
+/** Why a plugin left in {@link removalTrail}: the plugin it left with, and how. */
+type RemovalCause = { to: PluginId; via: "import" | "subtree" } | null;
+
+/**
+ * {@link removalClosure}, remembering for each removed id what took it: the
+ * id it was reached from (it imports it, or descends from it), or `null` for
+ * a seed. Breadth-first, so the chain back to a seed is a shortest one.
+ */
+function removalTrail(
+  seeds: Iterable<PluginId>,
+  graph: EdgeGraph,
+  kept: ReadonlySet<PluginId>,
+): Map<PluginId, RemovalCause> {
+  const out = new Map<PluginId, RemovalCause>();
+  const queue: [PluginId, RemovalCause][] = [...seeds].map((s) => [s, null]);
+  for (let i = 0; i < queue.length; i++) {
+    const [x, cause] = queue[i]!;
     if (out.has(x) || kept.has(x)) continue;
-    out.add(x);
-    for (const d of graph.subtree.get(x) ?? []) if (!out.has(d)) stack.push(d); // descendants
+    out.set(x, cause);
+    for (const d of graph.subtree.get(x) ?? [])
+      // descendants
+      if (!out.has(d)) queue.push([d, { to: x, via: "subtree" }]);
     for (const r of graph.hardReverse.get(x) ?? [])
-      if (!out.has(r)) stack.push(r); // importers
+      // importers
+      if (!out.has(r)) queue.push([r, { to: x, via: "import" }]);
   }
   return out;
 }
@@ -122,7 +142,11 @@ export function expandEntrySeeds(
   graph: EdgeGraph,
   host?: HostId,
 ): { seeds: Set<PluginId>; named: Set<PluginId>; negated: Set<PluginId> } {
-  return expandOver(manifest, viewFor(graph, manifest, host));
+  const { seeds, named, negated } = expandOver(
+    manifest,
+    viewFor(graph, manifest, host),
+  );
+  return { seeds, named, negated };
 }
 
 /**
@@ -141,9 +165,17 @@ function viewFor(
 function expandOver(
   manifest: CompositionManifest,
   graph: EdgeGraph,
-): { seeds: Set<PluginId>; named: Set<PluginId>; negated: Set<PluginId> } {
+): {
+  seeds: Set<PluginId>;
+  named: Set<PluginId>;
+  negated: Set<PluginId>;
+  cascadeLosses: CascadeLoss[];
+} {
   const seeds = new Set<PluginId>();
   const named = new Set<PluginId>();
+  // What a positive ID pattern asked for (its base and, for `.**`, its
+  // subtree). A root `**` asks for nothing in particular — see below.
+  const requested = new Set<PluginId>();
   const parsed = [...manifest.entryPoints].map(parseEntryPattern);
   for (const p of parsed) {
     if (p.negate) continue;
@@ -154,7 +186,10 @@ function expandOver(
     // explicitly demanded" — that distinction is what keeps `**` plus negatives a
     // usable way to spell "the whole app minus this branch".
     if (p.kind === "id") named.add(p.base);
-    for (const id of matchEntryPattern(p, graph)) seeds.add(id);
+    for (const id of matchEntryPattern(p, graph)) {
+      seeds.add(id);
+      if (p.kind === "id") requested.add(id);
+    }
   }
 
   // ── The negative pass ──────────────────────────────────────────────────────
@@ -202,9 +237,32 @@ function expandOver(
   //  - a named plugin stays, so the cascade stops at it: its importers and
   //    descendants lose nothing through it.
   const kept = new Set<PluginId>([...named, ...selected]);
-  for (const id of removalClosure(negated, graph, kept)) seeds.delete(id);
+  const trail = removalTrail(negated, graph, kept);
+  for (const id of trail.keys()) seeds.delete(id);
 
-  return { seeds, named, negated };
+  // THE COST. A plugin a positive pattern asked for, which no negative names,
+  // that left only through the cascade: the negative took more than its author
+  // wrote down. Reported with the chain that took it (see
+  // `Composition.cascadeLosses`), never decided here.
+  const cascadeLosses: CascadeLoss[] = [];
+  for (const [lost, cause] of trail) {
+    if (cause === null || negated.has(lost) || !requested.has(lost)) continue;
+    const chain: CascadeLoss["chain"] = [];
+    let from = lost;
+    for (let c: RemovalCause = cause; c !== null; c = trail.get(c.to)!) {
+      chain.push({ from, to: c.to, via: c.via });
+      from = c.to;
+    }
+    // A descendant of a negated plugin is part of what that negative names:
+    // only an import on the way makes the cost unwritten.
+    if (chain.every((h) => h.via === "subtree")) continue;
+    cascadeLosses.push({ lost, target: from, chain });
+  }
+  cascadeLosses.sort((a, b) =>
+    a.lost < b.lost ? -1 : a.lost > b.lost ? 1 : 0,
+  );
+
+  return { seeds, named, negated, cascadeLosses };
 }
 
 /**
@@ -246,7 +304,12 @@ export function resolveComposition(
   // node classifies `entry` and every bundled node is `required` — correct:
   // "everything" demands no particular plugin. `negated` is what the author
   // asserted must leave, kept for the postcondition at the end of this function.
-  const { seeds: entrySeeds, named, negated } = expandOver(manifest, graph);
+  const {
+    seeds: entrySeeds,
+    named,
+    negated,
+    cascadeLosses,
+  } = expandOver(manifest, graph);
 
   // `required` = hard closure of the entry seeds ALONE — the locked set, unchanged.
   const required = hardClosure(entrySeeds, graph);
@@ -344,6 +407,7 @@ export function resolveComposition(
     redundantSelections,
     negatedTargets: negated,
     unsatisfiedExclusions,
+    cascadeLosses,
   };
 }
 

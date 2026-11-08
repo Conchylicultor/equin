@@ -194,6 +194,51 @@ export interface Composition {
    * Sorted by target. Empty is the healthy answer, and the common one.
    */
   unsatisfiedExclusions: UnsatisfiedExclusion[];
+  /**
+   * Plugins a positive pattern ASKED for that a negative took out anyway,
+   * without naming them — **non-empty means a negative costs more than its
+   * author wrote down.**
+   *
+   * A negative removes its targets and everything that would break without
+   * them: their descendants and their transitive importers. An importer can be
+   * a plugin a positive pattern seeded on purpose (`conversations.**` holds the
+   * Read/Edit renderers; `!apps.file-explorer.**` took them, through the
+   * file-path chip that imports the file pane). Each entry is such a plugin and
+   * the chain that dragged it out, ending at the negated target.
+   *
+   * Only a chain through an import counts: a descendant of a negated plugin
+   * is part of what the negative names (`!x` takes `x`'s children).
+   *
+   * "Asked for" is a match of a positive ID pattern (`x` or `x.**`). A root
+   * `**` asks for nothing in particular, so under it no loss is reported —
+   * the same rule that keeps root from naming anything.
+   *
+   * `composition-closure` fails on a non-empty list. The repair is a choice,
+   * and only the author can make it: narrow the negative, name the plugin to
+   * keep it (which stops the cascade at it), or write the loss down as its own
+   * negative.
+   *
+   * Sorted by `lost`. Empty is the healthy answer.
+   */
+  cascadeLosses: CascadeLoss[];
+}
+
+/**
+ * One plugin a negative removed without naming it, though a positive pattern
+ * asked for it: the plugin, and the hops from it to the negated target that
+ * took it.
+ */
+export interface CascadeLoss {
+  /** The asked-for plugin the cascade removed. */
+  lost: PluginId;
+  /** The negated target at the end of the chain. */
+  target: PluginId;
+  /**
+   * The hops, from `lost` to `target`: each hop's `from` leaves because
+   * `to` does — it imports `to` (`"import"`), or it is a descendant of `to`
+   * (`"subtree"`). Never empty.
+   */
+  chain: { from: PluginId; to: PluginId; via: "import" | "subtree" }[];
 }
 
 /**

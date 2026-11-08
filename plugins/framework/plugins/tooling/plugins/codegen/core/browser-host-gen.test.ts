@@ -97,14 +97,19 @@ describe("deriveBrowserHostGraph over the repo", () => {
     }
     expect(graph.available).toContain(asPluginId("review.code-review"));
 
-    // The page's scope file names exactly the web plugins, the home and the
-    // host's own start module.
+    // The page's scope file names exactly the web plugins, then the ones
+    // the composition negates, the home and the host's own start module.
     const scope = renderBrowserHostScope(host!, graph);
     expect(host!.scopeGenerated).toBe(
       `plugins/${DEMO}/core/browser-host.generated.ts`,
     );
     const listed = [...scope.matchAll(/^ {4}"([^"]+)",$/gm)].map((m) => m[1]!);
-    expect(listed).toEqual(graph.webPlugins);
+    expect(listed).toEqual([...graph.webPlugins, ...graph.negatedWebPlugins]);
+    // A negated plugin is never in the scope.
+    for (const id of graph.negatedWebPlugins) {
+      expect(graph.webPlugins).not.toContain(id);
+    }
+    expect(graph.negatedWebPlugins).toContain(asPluginId("tasks.task-triage"));
     expect(scope).toContain('  id: "agent-manager-demo",');
     expect(scope).toContain('  home: "home",');
     expect(scope).toContain(`import("@browser-host/${DEMO}")`);

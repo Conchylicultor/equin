@@ -290,6 +290,16 @@ reordering contributions must not churn the value.
 The provider wraps **outside** the item middlewares, so the outcome stays
 readable from inside an error-boundary fallback.
 
+### A fallback inside a scope that the page could have served
+
+Inside a `<PluginScope>`, a fallback can mean "the page serves this key, the
+scope dropped its plugin". `.Dispatch` then matches the key against
+`useScopedOutContributions(slot)` (what the scope left out, minus the plugins
+its composition negates by name) and emits a `ScopedOutDispatchFault` into
+`scopedOutDispatchSink`, once per (slot, key, plugin, scope) per page —
+`reports/scoped-out-dispatch` files it. The fallback still renders. Outside a
+scope the list is empty and nothing runs.
+
 `DispatchOutcomeContext` itself is **not** exported — `.Dispatch` is the single
 writer. A consumer able to provide it could lie about whether its subtree was
 handled.
@@ -343,6 +353,7 @@ the outcome too, with no separate code path.
     - `OrderedDispatchSlot`
     - `RenderSlot`
     - `RenderSlotConfig`
+    - `ScopedOutDispatchFault`
     - `SlotItemAttrsFn`
     - `SlotItemBox`
     - `SlotItemMiddleware`
@@ -363,12 +374,13 @@ the outcome too, with no separate code path.
     - `RenderCoreRoot`
     - `renderIsolated`
     - `RenderSlotSubIdContext`
+    - `scopedOutDispatchSink`
     - `SlotItemLayout`
     - `SlotRender`
     - `useDispatchOutcome`
     - `useSlotOrder`
 - Cross-plugin:
-  - Imported by: 94 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 95 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×31
     - `primitives` ×15
     - `conversations` ×13
@@ -379,6 +391,7 @@ the outcome too, with no separate code path.
     - `tasks` ×3
     - `config_v2` ×2
     - `debug` ×2
+    - `reports` ×2
     - `framework/web-core`
     - `hints/help-menu`
     - `integrations/google-maps`
@@ -386,7 +399,6 @@ the outcome too, with no separate code path.
     - `menu-bar`
     - `network/live`
     - `reorder/slot-middleware`
-    - `reports`
     - `review/plugin-changes`
     - `stats`
     - `wish`

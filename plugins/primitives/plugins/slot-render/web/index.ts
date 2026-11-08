@@ -34,6 +34,8 @@ export { useSlotOrder } from "./internal/slot-order";
 export { SlotItemLayout } from "./internal/item-layout";
 export type { SlotItemOrientation } from "./internal/item-layout";
 export { useDispatchOutcome } from "./internal/dispatch-outcome";
+export { scopedOutDispatchSink } from "./internal/scoped-out-dispatch";
+export type { ScopedOutDispatchFault } from "./internal/scoped-out-dispatch";
 export type { DispatchOutcome } from "./internal/dispatch-outcome";
 export type {
   SlotItemAttrsFn,

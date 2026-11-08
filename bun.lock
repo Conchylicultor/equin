@@ -6572,6 +6572,10 @@
       "name": "@equin/plugin-reports-resource-errors",
       "version": "0.0.1",
     },
+    "plugins/reports/plugins/scoped-out-dispatch": {
+      "name": "@equin/plugin-reports-scoped-out-dispatch",
+      "version": "0.0.1",
+    },
     "plugins/reports/plugins/theme-resolution": {
       "name": "@equin/plugin-reports-theme-resolution",
       "version": "0.0.1",
@@ -10478,6 +10482,8 @@
     "@equin/plugin-reports-render-loop": ["@equin/plugin-reports-render-loop@workspace:plugins/reports/plugins/render-loop"],
 
     "@equin/plugin-reports-resource-errors": ["@equin/plugin-reports-resource-errors@workspace:plugins/reports/plugins/resource-errors"],
+
+    "@equin/plugin-reports-scoped-out-dispatch": ["@equin/plugin-reports-scoped-out-dispatch@workspace:plugins/reports/plugins/scoped-out-dispatch"],
 
     "@equin/plugin-reports-theme-resolution": ["@equin/plugin-reports-theme-resolution@workspace:plugins/reports/plugins/theme-resolution"],
 

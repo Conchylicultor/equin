@@ -426,6 +426,11 @@ export const compositionsConfig = defineConfig({
             "!tasks.reports-investigation.**",
             "!tasks.sidequest-autopilot.**",
             "!tasks.outcome-report.**",
+            // The task detail's Triage card: it imports automations (the
+            // prompt renderer, the approve footer's launch decision), so it
+            // leaves with them. Written here because the cascade took it out
+            // of `tasks.**` without a word until `cascadeLosses` said so.
+            "!tasks.task-triage",
             // Kept under those negatives: the mandate capabilities as plain
             // data. `tasks.mandate-presets` (which every task runs with)
             // grants them from its `shared/`, so the features leave and the

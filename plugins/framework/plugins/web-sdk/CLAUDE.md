@@ -243,6 +243,12 @@ and an out-of-composition read has no spelling inside the demo.
   `usePluginScopeId()` (its composition id; `null` outside every scope), which
   `web-storage` keys every per-composition store by — so what a scoped
   subtree keeps in localStorage / sessionStorage is never the page's.
+- **What the scope dropped is readable**: `useScopedOutContributions(slot)`
+  answers the contributions on the page the innermost scope left out, minus
+  the composition's `negated` plugins (its negatives' direct targets,
+  generated beside `plugins`). `.Dispatch` asks it on a fallback, so a scoped
+  surface falling back for a renderer the page holds is reported
+  (`reports/scoped-out-dispatch`), never silent.
 - **Identity kept**: a read that filters nothing returns the parent array;
   `subscribe` delegates to the parent; nested scopes intersect; `replace`
   throws.
@@ -356,8 +362,8 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
   - Slots:
     - `Core.Root`
     - `Core.Boot`
-  - Slot contributors: 51 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Core.Root` ×50
+  - Slot contributors: 52 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Core.Root` ×51
     - `Core.Boot` ← `network.live.boot-snapshot`
 - Core:
   - Uses:
@@ -418,12 +424,13 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
     - `useHasLoadErrorUnder`
     - `usePluginScopeId`
     - `useRawContributions`
+    - `useScopedOutContributions`
     - `webCollectedDir`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
-  - Imported by: 113 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 114 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×21
-    - `reports` ×19
+    - `reports` ×20
     - `apps` ×17
     - `ui` ×6
     - `apps-core` ×5

@@ -29892,8 +29892,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots:
           - `Core.Root`
           - `Core.Boot`
-        - Slot contributors: 51 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
-          - `Core.Root` ×50
+        - Slot contributors: 52 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+          - `Core.Root` ×51
           - `Core.Boot` ← `network.live.boot-snapshot`
       - Core:
         - Uses:
@@ -29954,12 +29954,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useHasLoadErrorUnder`
           - `usePluginScopeId`
           - `useRawContributions`
+          - `useScopedOutContributions`
           - `webCollectedDir`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 113 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+        - Imported by: 114 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
           - `primitives` ×21
-          - `reports` ×19
+          - `reports` ×20
           - `apps` ×17
           - `ui` ×6
           - `apps-core` ×5
@@ -41285,6 +41286,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta/facets/cross-refs.crossRefsFacetDef`
           - `plugin-meta/facets/slots.slotsFacetDef`
         - Exports (types):
+          - `CascadeLoss`
           - `CompanionEntry`
           - `CompanionSlot`
           - `Composition`
@@ -43582,11 +43584,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×6
               - `ui/tokens/shape` ×3
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 173 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 174 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `apps` ×38
               - `debug` ×34
               - `conversations` ×26
-              - `reports` ×15
+              - `reports` ×16
               - `primitives` ×10
               - `tasks` ×10
               - `plugin-meta` ×8
@@ -44014,9 +44016,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 103 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+            - Imported by: 104 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
               - `apps` ×21
-              - `reports` ×16
+              - `reports` ×17
               - `debug` ×15
               - `primitives` ×12
               - `conversations` ×9
@@ -49739,8 +49741,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useNow`
     - **`report-sink`** — Web presence for the report-sink primitive; the runtime-agnostic factories live in ./core so both web and server can import them. defineReportSink() is fire-and-forget and holds reports emitted before a handler registers (bounded), replaying them on register; defineRequestSink() returns the handler's answer and never holds. emit() never throws — it is called on error paths.
       - Cross-plugin:
-        - Imported by: 24 plugins — full list in [`plugins/primitives/plugins/report-sink/REFERENCE.md`](../plugins/primitives/plugins/report-sink/REFERENCE.md)
-          - `primitives` ×9
+        - Imported by: 25 plugins — full list in [`plugins/primitives/plugins/report-sink/REFERENCE.md`](../plugins/primitives/plugins/report-sink/REFERENCE.md)
+          - `primitives` ×10
           - `infra` ×4
           - `network` ×2
           - `reports` ×2
@@ -50137,6 +50139,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `OrderedDispatchSlot`
           - `RenderSlot`
           - `RenderSlotConfig`
+          - `ScopedOutDispatchFault`
           - `SlotItemAttrsFn`
           - `SlotItemBox`
           - `SlotItemMiddleware`
@@ -50157,12 +50160,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RenderCoreRoot`
           - `renderIsolated`
           - `RenderSlotSubIdContext`
+          - `scopedOutDispatchSink`
           - `SlotItemLayout`
           - `SlotRender`
           - `useDispatchOutcome`
           - `useSlotOrder`
       - Cross-plugin:
-        - Imported by: 94 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
+        - Imported by: 95 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
           - `apps` ×31
           - `primitives` ×15
           - `conversations` ×13
@@ -50173,6 +50177,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks` ×3
           - `config_v2` ×2
           - `debug` ×2
+          - `reports` ×2
           - `framework/web-core`
           - `hints/help-menu`
           - `integrations/google-maps`
@@ -50180,7 +50185,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `menu-bar`
           - `network/live`
           - `reorder/slot-middleware`
-          - `reports`
           - `review/plugin-changes`
           - `stats`
           - `wish`
@@ -51762,8 +51766,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`reports`** — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. The reports table and its live read (reports.list), the ReportKind / ReportNoiseRule slots every kind and rule contributes to, and the fan-out ceiling config; recording is the engine's (reports/plugins/engine).
   - Web:
     - Slots: `Reports.KindView`
-    - Slot contributors: 34 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `Reports.KindView` ×34
+    - Slot contributors: 35 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+      - `Reports.KindView` ×35
     - Contributes:
       - `IdKinds.Kind` "report"
       - `ConfigV2.WebRegister` "reports"
@@ -51859,8 +51863,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `SERVER_REPORT_SOURCES`
       - `submitReport`
   - Cross-plugin:
-    - Imported by: 63 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `reports` ×27
+    - Imported by: 64 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+      - `reports` ×28
       - `debug` ×15
       - `conversations` ×6
       - `database` ×4
@@ -52425,6 +52429,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RESOURCE_ERROR_KIND`
           - `resourceErrorFingerprint`
           - `ResourceErrorPayloadSchema`
+    - **`scoped-out-dispatch`** — Scoped-out-dispatch collector: drains slot-render's scopedOutDispatchSink into a deduped report whenever a dispatch slot renders its fallback inside a PluginScope though the page holds a contribution for that key which the scope's composition neither bundles nor negates (the demo's tool cards falling back to the generic card), plus the Debug → Reports summary view. Scoped-out-dispatch report kind: validates slot-render's fault for a dispatch slot that rendered its fallback inside a PluginScope though the page holds a matching contribution the scope's composition neither bundles nor negates, fingerprints by scope + slot + plugin, and renders a task naming them. Re-arms daily.
+      - Web:
+        - Contributes:
+          - `Core.Root` → `ScopedOutDispatchCollector`
+          - `Reports.KindView` → `ScopedOutDispatchKindView`
+        - Uses:
+          - `primitives/css/badge.Badge`
+          - `primitives/css/inline.Inline`
+          - `primitives/slot-render.scopedOutDispatchSink`
+          - `reports.report`
+          - `reports.Reports`
+      - Server:
+        - Contributes: `report-kind` "scoped-out-dispatch"
+        - Uses: `reports.ReportKind`
+      - Cross-plugin:
+        - Uses tokens: `ui/tokens/color-palette --muted-foreground`
+      - Core:
+        - Exports (types): `ScopedOutDispatchPayload`
+        - Exports (values):
+          - `scopedOutDispatchFingerprint`
+          - `ScopedOutDispatchPayloadSchema`
     - **`theme-resolution`** — Theme-resolution collector: drains theme-engine's themeResolutionReportSink into a report whenever a scope's theme cannot be painted as stored (its selected theme does not exist, or a stored theme carries values the token groups no longer declare), plus the Debug → Reports summary view. Theme-resolution report kind: validates the theme painter's fault payloads (a scope selecting a theme that does not exist, so it paints Default; a stored theme carrying values for an unregistered token group or unknown tokens, which are skipped), fingerprints each by what it is about, and renders a task naming the stored data to fix.
       - Web:
         - Contributes:
@@ -58188,7 +58213,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --space-sm`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 529 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 530 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×118
               - `conversations` ×92
               - `primitives` ×73
@@ -58197,7 +58222,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta` ×28
               - `ui` ×26
               - `tasks` ×17
-              - `reports` ×14
+              - `reports` ×15
               - `fields` ×12
               - `active-data` ×8
               - `apps-core` ×6
