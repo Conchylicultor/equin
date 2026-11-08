@@ -26,6 +26,11 @@ export function MainThreadStallKindView({ report }: { report: Report }) {
       <span className="truncate text-muted-foreground font-mono">
         {d.topFunction ?? "unattributed"}
       </span>
+      {d.frozenIn && (
+        <span className="truncate font-mono" title={d.frozenIn.detail}>
+          {d.frozenIn.source} {d.frozenIn.what}
+        </span>
+      )}
       {d.cohort.length > 0 && (
         <span className="text-muted-foreground">+{d.cohort.length} tabs</span>
       )}

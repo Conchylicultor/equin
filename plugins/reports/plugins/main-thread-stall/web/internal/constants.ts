@@ -32,10 +32,12 @@ export const STALL = {
   // Breadcrumb ring per tab (and frames-during kept per stall, the longest),
   // scripts kept per frame, string cap.
   CRUMBS: 10,
+  // Task marks kept per tab and per stall (the latest).
+  MARKS: 20,
   MAX_SCRIPTS: 5,
   STRING_CAP: 300,
   // Tab ↔ worker protocol version: a loud tripwire, never a negotiation.
-  PROTO: 1,
+  PROTO: 2,
 } as const;
 
 // Every browser-visible name the watchdog takes (the SharedWorker, its Web

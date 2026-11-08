@@ -11,4 +11,5 @@ export type {
   StallFrame,
   StallFrameScript,
   StallTab,
+  TaskMark,
 } from "./main-thread-stall-kind";

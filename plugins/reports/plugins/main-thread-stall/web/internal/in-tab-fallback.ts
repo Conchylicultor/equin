@@ -131,5 +131,8 @@ function payload(
     frames: [],
     cohort: [],
     topFunction: topFunction(frame ? [frame] : []),
+    // Marks need a holder on another thread; the fallback has none.
+    marks: [],
+    frozenIn: null,
   };
 }

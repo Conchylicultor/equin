@@ -9,7 +9,12 @@
 // Imports only this plugin's own worker-safe files (and types): the worker
 // bundle must be self-contained.
 
-import type { MainThreadStallPayload, StallFrame, StallTab } from "../../core";
+import type {
+  MainThreadStallPayload,
+  StallFrame,
+  StallTab,
+  TaskMark,
+} from "../../core";
 import { STALL } from "./constants";
 
 export interface PortState {
@@ -21,6 +26,10 @@ export interface PortState {
   lastPong: number;
   /** The last long frames (≥ FRAME_POST_MIN_MS), oldest first, capped at CRUMBS. */
   crumbs: StallFrame[];
+  /** The last task marks, in the order the tab began them, capped at MARKS. */
+  marks: TaskMark[];
+  /** The marked task running now: begun, its `mark-end` not yet received. */
+  open: { id: number; mark: TaskMark } | null;
   /** A suppressed (hidden / frozen) stale stretch was already logged. */
   suppressedLogged: boolean;
   /**
@@ -40,6 +49,14 @@ interface Incident {
   /** Long frames inside the stall window (the longest CRUMBS), whenever they arrived. */
   readonly during: StallFrame[];
   readonly cohort: Map<string, StallTab>;
+  /** The primary's marks from CRUMB_WINDOW_MS before the stall on (the latest MARKS). */
+  readonly marks: TaskMark[];
+  /**
+   * The primary's open mark when the stall opened: the marked task the thread
+   * was inside, silent. Taken at onset — nothing runs between the freeze and
+   * then, and what the tab runs once it is back is not the freeze.
+   */
+  readonly frozenIn: TaskMark | null;
   startedAt: number;
   phase: "open" | "settling";
   endedAt: number | null;
@@ -95,6 +112,9 @@ export type StallEvent =
     }
   | { type: "pong"; portId: string; now: number }
   | { type: "frame"; portId: string; frame: StallFrame; now: number }
+  | { type: "mark"; portId: string; id: number; mark: TaskMark }
+  /** Only the matching id closes the open mark: a late end never closes a later one. */
+  | { type: "mark-end"; portId: string; id: number }
   /** The tab's port is gone: its liveness lock was granted to us, or it detached. */
   | { type: "gone"; portId: string; now: number }
   | { type: "tick"; now: number }
@@ -148,6 +168,8 @@ export function step(m: StallMachine, ev: StallEvent): StallEffect[] {
         frozen: ev.frozen,
         lastPong: ev.now,
         crumbs: [],
+        marks: [],
+        open: null,
         suppressedLogged: false,
         covered: false,
       });
@@ -173,6 +195,14 @@ export function step(m: StallMachine, ev: StallEvent): StallEffect[] {
     case "frame":
       onFrame(m, ev.portId, ev.frame, ev.now);
       break;
+    case "mark":
+      onMark(m, ev.portId, ev.id, ev.mark);
+      break;
+    case "mark-end": {
+      const p = m.ports.get(ev.portId);
+      if (p?.open?.id === ev.id) p.open = null;
+      break;
+    }
     case "gone":
       onGone(m, ev.portId, ev.now, out);
       break;
@@ -273,6 +303,24 @@ function onFrame(
   if (!inc || inc.phase !== "open") p.lastPong = now;
   p.crumbs.push(frame);
   if (p.crumbs.length > STALL.CRUMBS) p.crumbs.shift();
+}
+
+function onMark(
+  m: StallMachine,
+  portId: string,
+  id: number,
+  mark: TaskMark,
+): void {
+  const p = m.ports.get(portId);
+  if (!p) return;
+  // A mark is NOT a sign of life: a render storm still begins tasks while it
+  // never answers a ping. Pongs alone say "answering".
+  p.open = { id, mark };
+  keepLatest(p.marks, mark);
+  const inc = primaryIncident(m, portId);
+  // A settling stall has ended: what the tab began since is after it.
+  if (inc && (inc.endedAt === null || mark.at < inc.endedAt))
+    keepLatest(inc.marks, mark);
 }
 
 function onGone(
@@ -396,6 +444,10 @@ function openStalls(m: StallMachine, now: number, out: StallEffect[]): void {
     crumbs: primary.crumbs.filter((f) => isCrumbOf(primary.lastPong, f)),
     during: [],
     cohort: new Map(),
+    marks: primary.marks.filter(
+      (k) => k.at >= primary.lastPong - STALL.CRUMB_WINDOW_MS,
+    ),
+    frozenIn: primary.open?.mark ?? null,
     startedAt: primary.lastPong,
     phase: "open",
     endedAt: null,
@@ -493,6 +545,9 @@ function payloadOf(
   endedAt: number,
   lowerBound: boolean,
 ): MainThreadStallPayload {
+  const marks = inc.marks.filter(
+    (k) => k.at < endedAt && k.at >= inc.startedAt - STALL.CRUMB_WINDOW_MS,
+  );
   return {
     ...inc.primaryTab,
     startedAt: inc.startedAt,
@@ -507,6 +562,8 @@ function payloadOf(
     frames: byStart(inc.crumbs),
     cohort: [...inc.cohort.values()],
     topFunction: stallTopFunction(inc, endedAt),
+    marks,
+    frozenIn: inc.frozenIn,
   };
 }
 
@@ -605,6 +662,12 @@ function keepLongest(frames: StallFrame[], frame: StallFrame): void {
   frames.push(frame);
   frames.sort((a, b) => b.durationMs - a.durationMs);
   if (frames.length > STALL.CRUMBS) frames.length = STALL.CRUMBS;
+}
+
+/** Add `mark`, keeping only the MARKS latest (arrival order). */
+function keepLatest(marks: TaskMark[], mark: TaskMark): void {
+  marks.push(mark);
+  if (marks.length > STALL.MARKS) marks.shift();
 }
 
 /** Oldest first — LoAF entries arrive out of order. */

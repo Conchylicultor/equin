@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import type { StallFrame, StallTab } from "../../core";
+import {
+  mainThreadStallFingerprint,
+  mainThreadStallSummary,
+  type StallFrame,
+  type StallTab,
+  type TaskMark,
+} from "../../core";
 import { STALL } from "./constants";
 import {
   createStallMachine,
@@ -365,6 +371,8 @@ describe("endings", () => {
           frames: [],
           cohort: [],
           topFunction: null,
+          marks: [],
+          frozenIn: null,
         },
       },
     });
@@ -398,6 +406,136 @@ describe("endings", () => {
     const again = step(m, { type: "gone", portId: first, now: T0 + 6600 });
     expect(of(again, "deliver")).toHaveLength(1);
     expect(of(again, "deliver")[0]!.portId).not.toBe(first);
+  });
+});
+
+function mark(
+  m: StallMachine,
+  portId: string,
+  at: number,
+  what: string,
+): TaskMark {
+  const k = { at, source: "live-state", what, detail: "42 B" };
+  step(m, { type: "mark", portId, id: ++markIds, mark: k });
+  return k;
+}
+let markIds = 0;
+
+/** End the port's latest mark. */
+const markEnd = (m: StallMachine, portId: string) =>
+  step(m, { type: "mark-end", portId, id: markIds });
+
+describe("task marks", () => {
+  test("the 2026-11-08 shape: a gone stall names the marked task left open", () => {
+    const m = machine();
+    attach(m, "a", tab("A"));
+    attach(m, "b", tab("B"));
+    const before = mark(m, "a", T0 - 500, "update prototypes.state.all");
+    markEnd(m, "a");
+    step(m, { type: "pong", portId: "a", now: T0 });
+    const frozen = mark(m, "a", T0 + 100, "update tasks.v2:rows");
+    run(m, T0 + 1000, T0 + 9000, ["b"]);
+    // Reload: Chrome terminates the script; the tab answers once, runs a
+    // queued frame, its LoAF entry arrives, then it goes.
+    step(m, { type: "pong", portId: "a", now: T0 + 9200 });
+    mark(m, "a", T0 + 9210, "sub-ack config-v2.values");
+    markEnd(m, "a");
+    step(m, {
+      type: "frame",
+      portId: "a",
+      frame: frame(T0 + 90, 9050, "(anonymous)"),
+      now: T0 + 9250,
+    });
+    const fx = step(m, { type: "gone", portId: "a", now: T0 + 9300 });
+    const d = of(fx, "deliver")[0]?.payload;
+    expect(d?.ended).toBe("gone");
+    expect(d?.frozenIn).toEqual(frozen);
+    expect(d?.marks).toEqual([before, frozen]);
+    expect(mainThreadStallFingerprint(d!)).toBe(
+      "main-thread-stall:agent-manager|conversation|(anonymous) (Window.setTimeout)|live-state:update tasks.v2:rows",
+    );
+    expect(mainThreadStallSummary(d!)).toContain(
+      "in live-state update tasks.v2:rows",
+    );
+  });
+
+  test("a marked task that ended just before an unmarked freeze is not blamed (the first e2e run's shape)", () => {
+    const m = machine();
+    attach(m, "a", tab("A"));
+    attach(m, "b", tab("B"));
+    step(m, { type: "pong", portId: "a", now: T0 });
+    const finished = mark(m, "a", T0 + 100, "update db-lock-watch");
+    markEnd(m, "a");
+    run(m, T0 + 1000, T0 + 8000, ["b"]);
+    const fx = step(m, { type: "gone", portId: "a", now: T0 + 8100 });
+    const d = of(fx, "deliver")[0]?.payload;
+    expect(d?.frozenIn).toBeNull();
+    expect(d?.marks).toEqual([finished]);
+    expect(mainThreadStallFingerprint(d!)).toBe(
+      "main-thread-stall:agent-manager|conversation|unattributed",
+    );
+  });
+
+  test("tasks the tab runs once it is back (before the recovering pong) are not the frozen one", () => {
+    const m = machine();
+    attach(m, "a", tab("A"));
+    step(m, { type: "pong", portId: "a", now: T0 });
+    const frozen = mark(m, "a", T0 + 100, "update tasks.v2:rows");
+    run(m, T0 + 1000, T0 + 7000, []);
+    // The thread comes back: the frozen task ends, a queued frame runs, then
+    // the ping is answered.
+    markEnd(m, "a");
+    mark(m, "a", T0 + 7400, "update notifications");
+    markEnd(m, "a");
+    step(m, { type: "pong", portId: "a", now: T0 + 7500 });
+    const d = of(run(m, T0 + 10_000, T0 + 10_000, ["a"]), "deliver")[0]
+      ?.payload;
+    expect(d?.ended).toBe("recovered");
+    expect(d?.frozenIn).toEqual(frozen);
+  });
+
+  test("an open stall's persisted record already names the frozen task (the watchdog may die with it)", () => {
+    const m = machine();
+    attach(m, "a", tab("A"));
+    step(m, { type: "pong", portId: "a", now: T0 });
+    const frozen = mark(m, "a", T0 + 100, "delta notifications");
+    const fx = run(m, T0 + 1000, T0 + 6000, []);
+    const [rec] = of(fx, "persist");
+    expect(rec?.record.payload.ended).toBe("unknown");
+    expect(rec?.record.payload.frozenIn).toEqual(frozen);
+  });
+
+  test("a late end of an earlier task does not close a later task's mark", () => {
+    const m = machine();
+    attach(m, "a", tab("A"));
+    attach(m, "b", tab("B"));
+    step(m, { type: "pong", portId: "a", now: T0 });
+    mark(m, "a", T0 + 100, "update first");
+    const earlier = markIds;
+    const frozen = mark(m, "a", T0 + 101, "update second");
+    step(m, { type: "mark-end", portId: "a", id: earlier });
+    run(m, T0 + 1000, T0 + 8000, ["b"]);
+    const fx = step(m, { type: "gone", portId: "a", now: T0 + 8100 });
+    expect(of(fx, "deliver")[0]?.payload.frozenIn).toEqual(frozen);
+  });
+
+  test("marks are not a sign of life: a tab that marks but never answers stays stalled", () => {
+    const m = machine();
+    attach(m, "a", tab("A"));
+    run(m, T0, T0 + 3000, []);
+    expect(m.incidents.size).toBe(1);
+    mark(m, "a", T0 + 3100, "update x");
+    run(m, T0 + 4000, T0 + 4000, []);
+    expect([...m.incidents.values()][0]?.phase).toBe("open");
+  });
+
+  test("the per-tab ring keeps the latest MARKS", () => {
+    const m = machine();
+    attach(m, "a", tab("A"));
+    for (let i = 0; i < STALL.MARKS + 5; i++) mark(m, "a", T0 + i, `t${i}`);
+    const p = m.ports.get("a")!;
+    expect(p.marks.length).toBe(STALL.MARKS);
+    expect(p.marks.at(-1)?.what).toBe(`t${STALL.MARKS + 4}`);
   });
 });
 

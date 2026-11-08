@@ -6210,6 +6210,10 @@
       "name": "@equin/plugin-primitives-perfs-scheduler",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/perfs/plugins/task-marks": {
+      "name": "@equin/plugin-primitives-perfs-task-marks",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/persistent-draft": {
       "name": "@equin/plugin-primitives-persistent-draft",
       "version": "0.0.1",
@@ -10359,6 +10363,8 @@
     "@equin/plugin-primitives-perfs-page-pauses": ["@equin/plugin-primitives-perfs-page-pauses@workspace:plugins/primitives/plugins/perfs/plugins/page-pauses"],
 
     "@equin/plugin-primitives-perfs-scheduler": ["@equin/plugin-primitives-perfs-scheduler@workspace:plugins/primitives/plugins/perfs/plugins/scheduler"],
+
+    "@equin/plugin-primitives-perfs-task-marks": ["@equin/plugin-primitives-perfs-task-marks@workspace:plugins/primitives/plugins/perfs/plugins/task-marks"],
 
     "@equin/plugin-primitives-persistent-draft": ["@equin/plugin-primitives-persistent-draft@workspace:plugins/primitives/plugins/persistent-draft"],
 

@@ -37398,10 +37398,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `liveStringArray` — A jsonb string array (tags, label ids).
         - **`live-state`** — Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's tab-shared /ws/notifications channel. useQueryResource reads a local async load (not a server read — those are live) as a ResourceResult.
           - Web:
-            - Uses: 23 symbols — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
+            - Uses: 25 symbols — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
               - `primitives/networking` ×10
               - `primitives/css/spacing` ×2
               - `primitives/css/ui-kit` ×2
+              - `primitives/perfs/task-marks` ×2
               - `primitives/css/center.Center`
               - `primitives/css/inline.Inline`
               - `primitives/css/placeholder.Placeholder`
@@ -50029,6 +50030,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by: `framework/web-core`
           - Web:
             - Exports (values): `yieldToMain`
+        - **`task-marks`** — Say what the main thread is starting, for whoever watches it from another thread: runMarked(source, describe, fn) wraps a task's entry point — the listener hears it begin before fn runs and end one microtask after (describe runs only while a listener is installed); onTaskMark installs the one listener — main-thread-stall posts both to its out-of-thread watchdog, so a tab that freezes inside the task has already said which: the mark left open.
+          - Cross-plugin:
+            - Imported by:
+              - `network/live/live-state`
+              - `reports/main-thread-stall`
+          - Web:
+            - Exports (types):
+              - `TaskMarkListener`
+              - `TaskMarkText`
+            - Exports (values):
+              - `onTaskMark`
+              - `runMarked`
     - **`persistent-draft`** — Drafts over a web-storage store: useDraft is the reactive useState drop-in (all calls on one store and scope stay in sync within and across tabs); readDraft/writeDraft are the render-free imperative twin for callers writing at input frequency; onDraftWritten observes every write and clear in the tab; legacyDraftKeys carries drafts written before web-storage into a store. The store (defineStore) owns the cap, TTL and loud refusal.
       - Web:
         - Uses:
@@ -52683,6 +52696,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/log-channels.clientLog`
           - `primitives/pane.peekRoute`
           - `primitives/pane.usePathname`
+          - `primitives/perfs/task-marks.onTaskMark`
+          - `primitives/perfs/task-marks.runMarked`
           - `primitives/scope/tab-id.getTabId`
           - `reports.report`
           - `reports.Reports`
@@ -52699,6 +52714,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `StallFrame`
           - `StallFrameScript`
           - `StallTab`
+          - `TaskMark`
         - Exports (values):
           - `mainThreadStallFingerprint`
           - `MainThreadStallPayloadSchema`

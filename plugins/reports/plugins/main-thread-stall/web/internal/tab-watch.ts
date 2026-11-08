@@ -1,5 +1,9 @@
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
+import {
+  onTaskMark,
+  runMarked,
+} from "@plugins/primitives/plugins/perfs/plugins/task-marks/web";
 import type { StallFrame, StallTab } from "../../core";
 import {
   STALL,
@@ -124,8 +128,15 @@ export function installStallWatch(readTab: () => StallTab): StallWatch {
         "main-thread-stall: the watchdog SharedWorker failed to load or crashed",
       );
     };
+    // Marked like any entry point: LoAF has blamed this very handler for a
+    // freeze (106 s, 2026-11-06) — if the detector's own work ever freezes a
+    // tab, its report names the message.
     worker.port.onmessage = (ev: MessageEvent<WorkerToTab>) =>
-      onWorkerMessage(s, ev.data);
+      runMarked(
+        "main-thread-stall",
+        () => ({ what: ev.data.kind, detail: "" }),
+        () => onWorkerMessage(s, ev.data),
+      );
     // Hold the port's liveness lock for its whole life and attach only once it
     // is held: the worker queues for the same lock, so its grant means "gone".
     void navigator.locks.request(
@@ -162,6 +173,44 @@ export function installStallWatch(readTab: () => StallTab): StallWatch {
     s.worker.port.close();
     s.releaseLock?.();
   }
+
+  // Every marked task's begin and end go to the watchdog as they happen:
+  // postMessage hands them to the worker's thread at once, so a task that
+  // freezes this thread leaves its mark open there. Only while attached (never
+  // queued — a mark is worth something only at the instant it is sent) and
+  // visible (a hidden tab's stall is never reported); an end is sent only for
+  // a begin that was, carrying its id.
+  const capText = (t: string): string =>
+    t.length > STALL.STRING_CAP ? `${t.slice(0, STALL.STRING_CAP)}…` : t;
+  let markId = 0;
+  const uninstallMarks = useWorker
+    ? onTaskMark({
+        begin(source, describe) {
+          const s = session;
+          if (!s?.attached || document.visibilityState !== "visible")
+            return null;
+          const id = ++markId;
+          const at = Date.now();
+          const { what, detail } = describe();
+          s.worker.port.postMessage({
+            kind: "mark",
+            id,
+            mark: { at, source, what: capText(what), detail: capText(detail) },
+          } satisfies TabToWorker);
+          return id;
+        },
+        // Sent even if the tab went hidden meanwhile: a begun mark must end.
+        // A new session's port never saw the begin — the worker ignores it.
+        end(id) {
+          const s = session;
+          if (id !== null && s?.attached)
+            s.worker.port.postMessage({
+              kind: "mark-end",
+              id,
+            } satisfies TabToWorker);
+        },
+      })
+    : null;
 
   const postState = (): void => post({ kind: "state", tab: readTab(), frozen });
   const onFreeze = (): void => {
@@ -225,6 +274,7 @@ export function installStallWatch(readTab: () => StallTab): StallWatch {
     refresh: postState,
     dispose() {
       disposed = true;
+      uninstallMarks?.();
       observer?.disconnect();
       fallback?.dispose();
       detach();

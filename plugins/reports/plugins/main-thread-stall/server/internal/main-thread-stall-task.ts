@@ -4,6 +4,7 @@ import {
   mainThreadStallSummary,
   type MainThreadStallPayload,
   type StallFrame,
+  type TaskMark,
 } from "../../core";
 
 // A recurring freeze on the same screen is a standing bug, not news each time:
@@ -39,6 +40,13 @@ function frameLine(f: StallFrame, stallStartedAt: number): string {
   const offset = (f.startedAt - stallStartedAt) / 1000;
   const at = `${offset < 0 ? "−" : "+"}${Math.abs(offset).toFixed(1)} s`;
   return `${at} (${new Date(f.startedAt).toISOString()}) — ${f.durationMs} ms (blocking ${f.blockingDurationMs} ms): ${what}`;
+}
+
+/** One task mark, timed relative to the stall's start. */
+function markLine(k: TaskMark, stallStartedAt: number): string {
+  const offset = (k.at - stallStartedAt) / 1000;
+  const at = `${offset < 0 ? "−" : "+"}${Math.abs(offset).toFixed(1)} s`;
+  return `${at} — \`${k.source}\` \`${k.what}\` (${k.detail})`;
 }
 
 function renderDescription(row: ReportRow, d: MainThreadStallPayload): string {
@@ -91,6 +99,28 @@ function renderDescription(row: ReportRow, d: MainThreadStallPayload): string {
         `No Long Animation Frame entry from inside the stall: the tab never finished the frozen frame (${d.ended}).${d.framesDuring === 0 ? " No frame completed during it: one task never yielded (an endless or very long synchronous loop)." : ""}`,
       );
     }
+  }
+  lines.push("");
+  lines.push("**The task it froze in**");
+  if (d.frozenIn) {
+    lines.push(
+      `The tab said, as it began it, that it was running **\`${d.frozenIn.source}\` \`${d.frozenIn.what}\`** (${d.frozenIn.detail}) — a task it began and never ended: it was still inside it, silent, when the stall opened${d.framesDuring === 0 ? "; no frame completed inside the stall, so it never yielded" : ""}. Start there: what that task runs (its handler, the microtasks it queues — LoAF counts them in the entry point's script time).`,
+    );
+  } else if (d.marks.length > 0) {
+    lines.push(
+      "No marked task was open when the stall opened: the tab froze **outside every marked entry point** (`primitives/perfs/task-marks` lists them: live-state socket frames, the detector's own watchdog messages). The marks below are tasks that finished — not the freeze.",
+    );
+  } else {
+    lines.push(
+      "No task marks reached the watchdog (an in-tab fallback stall, a hidden tab, or filed before marks existed).",
+    );
+  }
+  if (d.marks.length > 0) {
+    lines.push("");
+    lines.push(
+      "**Task marks (the latest, oldest first)** — what the tab said it was starting, timed from the stall's start:",
+    );
+    for (const k of d.marks) lines.push(`- ${markLine(k, d.startedAt)}`);
   }
   if (d.frames.length > 0) {
     lines.push("");

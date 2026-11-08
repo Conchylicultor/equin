@@ -2,7 +2,12 @@
 // artifact (the worker script is content-addressed beside the tab code), so a
 // tab only ever talks to a worker of its own build; `proto` is a tripwire.
 
-import type { MainThreadStallPayload, StallFrame, StallTab } from "../../core";
+import type {
+  MainThreadStallPayload,
+  StallFrame,
+  StallTab,
+  TaskMark,
+} from "../../core";
 
 /** Tab → worker. */
 export type TabToWorker =
@@ -19,6 +24,14 @@ export type TabToWorker =
   | { kind: "state"; tab: StallTab; frozen: boolean }
   /** A long animation frame (≥ FRAME_POST_MIN_MS) just ended. */
   | { kind: "frame"; frame: StallFrame }
+  /**
+   * The tab is about to run this task (primitives/perfs/task-marks). Sent
+   * BEFORE the task runs: if it freezes the thread, no `mark-end` follows —
+   * the mark left open is what it froze in.
+   */
+  | { kind: "mark"; id: number; mark: TaskMark }
+  /** Task `id` (and the microtasks it queued itself) ran to the end. */
+  | { kind: "mark-end"; id: number }
   /** The tab filed the stall it was handed (`ok: false`: it could not). */
   | { kind: "filed"; id: string; ok: boolean }
   /** pagehide / unmount: the port is leaving. */

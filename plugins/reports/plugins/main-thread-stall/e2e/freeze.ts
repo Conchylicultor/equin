@@ -4,6 +4,11 @@
  *
  *  1. An 8 s busy loop in a visible tab ⇒ one `main-thread-stall` report,
  *     `ended: recovered`, attributed (LoAF) to the injected function.
+ *  1b. An 8 s freeze INSIDE a live-state socket frame's handler (spun right
+ *     after the frame's task mark was posted) ⇒ the report's `frozenIn`
+ *     names that frame (`live-state`), and the fingerprint carries it.
+ *     The injected (unmarked) loops of 1, 2 and 3 name none: a live-state
+ *     frame that finished just before them is never blamed.
  *  2. An endless loop in a second tab, then its renderer is killed (CDP
  *     Page.crash — headless Chromium cannot reload or close a hung tab) ⇒
  *     `ended: gone`, `framesDuring: 0`, naming that tab, filed through the
@@ -42,7 +47,9 @@ interface StallRow extends Record<string, unknown> {
     topFunction: string | null;
     tabId: string;
     durationIsLowerBound: boolean;
+    frozenIn?: { source: string; what: string } | null;
   };
+  fingerprint: string;
   count: number;
 }
 
@@ -54,7 +61,7 @@ onBeforeFinish(() => db.close());
 /** Main-thread-stall reports whose newest sighting started after `sinceMs`. */
 async function stallsSince(sinceMs: number): Promise<StallRow[]> {
   return db.query<StallRow>(
-    `SELECT data, count FROM reports
+    `SELECT data, count, fingerprint FROM reports
       WHERE kind = 'main-thread-stall' AND (data->>'startedAt')::bigint >= $1
       ORDER BY (data->>'startedAt')::bigint`,
     [sinceMs],
@@ -101,6 +108,56 @@ await withBrowser(async (h) => {
     rec?.data.topFunction?.includes("mtsInjectedSpin") ?? false,
     String(rec?.data.topFunction),
   );
+  r.ok(
+    "an unmarked loop names no frozen task",
+    rec?.data.frozenIn === null,
+    JSON.stringify(rec?.data.frozenIn),
+  );
+
+  // ── 1b. A freeze inside a marked task ──────────────────────────────────
+  // The next live-state frame's mark is posted to the watchdog, then THAT
+  // task spins for 8 s: the real path (a real server frame, the real mark,
+  // the real watchdog), frozen exactly where the 2026-11-08 tab froze — inside
+  // the shared socket's port handler, which LoAF alone cannot tell apart.
+  const t1b = Date.now() - 1000;
+  await page.addScriptTag({
+    content: `(() => {
+      const real = MessagePort.prototype.postMessage;
+      MessagePort.prototype.postMessage = function (msg, ...rest) {
+        const out = real.call(this, msg, ...rest);
+        if (msg && msg.kind === "mark" && msg.mark.source === "live-state") {
+          MessagePort.prototype.postMessage = real;
+          const until = Date.now() + 8000;
+          while (Date.now() < until) {}
+        }
+        return out;
+      };
+    })();`,
+  });
+  r.note(
+    "waiting for the next live-state frame (a server heartbeat at the latest)",
+  );
+  const marked = await waitFor(
+    () => stallsSince(t1b),
+    (rows) => rows.some((x) => x.data.ended === "recovered"),
+    { timeoutMs: 90_000, intervalMs: 1000 },
+  );
+  const mk = marked.value.find((x) => x.data.ended === "recovered");
+  r.ok(
+    "a freeze inside a live-state frame files a recovered report",
+    marked.ok,
+    JSON.stringify(marked.value.map((x) => x.data)),
+  );
+  r.ok(
+    "its frozenIn names the live-state frame it froze in",
+    mk?.data.frozenIn?.source === "live-state",
+    JSON.stringify(mk?.data.frozenIn),
+  );
+  r.ok(
+    "the fingerprint carries the frozen task",
+    mk?.fingerprint.includes("|live-state:") ?? false,
+    String(mk?.fingerprint),
+  );
 
   // ── 2. A stall that never ends: the frozen tab is killed ────────────────
   // Headless Chromium has no "page unresponsive" path: a reload or close of a
@@ -134,6 +191,11 @@ await withBrowser(async (h) => {
     String(g?.data.framesDuring),
   );
   r.ok(
+    "an unmarked endless loop names no frozen task",
+    g?.data.frozenIn === null,
+    JSON.stringify(g?.data.frozenIn),
+  );
+  r.ok(
     "it lasted ≥ 5 s",
     g !== undefined && g.data.durationMs >= 5000,
     String(g?.data.durationMs),
@@ -162,6 +224,11 @@ await withBrowser(async (h) => {
     "the stall the last tab died in is filed on the next start (unknown)",
     unknown.ok,
     JSON.stringify(unknown.value.map((x) => x.data)),
+  );
+  r.ok(
+    "an unmarked loop in the watchdog's host names no frozen task",
+    u?.data.frozenIn === null,
+    JSON.stringify(u?.data.frozenIn),
   );
   r.ok(
     "its duration is a lower bound ≥ 5 s",

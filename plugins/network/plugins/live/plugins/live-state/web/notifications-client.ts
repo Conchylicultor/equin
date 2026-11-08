@@ -15,6 +15,10 @@ import {
 import { z } from "zod";
 import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
+import {
+  runMarked,
+  type TaskMarkText,
+} from "@plugins/primitives/plugins/perfs/plugins/task-marks/web";
 import { getTabId } from "@plugins/primitives/plugins/scope/plugins/tab-id/web";
 import type { ResourceDescriptor, ResourceOrigin } from "../core";
 import { mergeKeyedDelta } from "./keyed-delta-merge";
@@ -355,6 +359,30 @@ type DerivationFrame = Derivation;
 // across this tab's unsub: every kind below is gated on a live local sub
 // before it touches the cache (`handleServerMessage`).
 type ServerMsg = ServerFrame;
+
+/**
+ * A frame as a task mark: its kind and resource key (the grain a recurring
+ * freeze groups by), its params and size (which one). LoAF names only the
+ * shared socket's port handler — the entry point of EVERY frame.
+ */
+function frameMark(msg: ServerMsg, bytes: number): TaskMarkText {
+  const key = "key" in msg && typeof msg.key === "string" ? msg.key : null;
+  // Each value capped BEFORE it is joined: the work stays O(param count)
+  // whatever a typed query's `q` weighs — this runs on every visible frame.
+  const params =
+    "params" in msg && msg.params
+      ? Object.entries(msg.params)
+          .map(
+            ([k, v]) =>
+              ` ${k}=${typeof v === "string" ? v.slice(0, 80) : typeof v}`,
+          )
+          .join("")
+      : "";
+  return {
+    what: key === null ? msg.kind : `${msg.kind} ${key}`,
+    detail: `${bytes} B${params}`,
+  };
+}
 /** The co-produced push timing an update / delta frame may carry. */
 type FrameTiming = NonNullable<
   Extract<ServerMsg, { kind: "update" | "patch" | "delta" }>["timing"]
@@ -2044,21 +2072,30 @@ export class NotificationsClient {
         trace(`drop reason=parse-error error=${String(err)}`);
         return;
       }
-      try {
-        this.handleServerMessage(channel, msg, receipt);
-      } catch (err) {
-        // A schema.parse failure would otherwise silently leave the cache at
-        // its empty default. Re-throw asynchronously so the global browser
-        // crash reporter observes it as an uncaught error — without importing
-        // the crashes plugin (live-state ← crashes would be an import cycle)
-        // and without breaking the WS loop for subsequent messages.
-        trace(
-          `drop reason=parse-error key=${msg.kind === "ping" ? "ping" : ((msg as { key?: string }).key ?? "?")} error=${String(err)}`,
-        );
-        queueMicrotask(() => {
-          throw err;
-        });
-      }
+      const parsed = msg;
+      // A marked task: if handling it freezes the thread, the watchdog holds
+      // its open mark — which frame did it (LoAF names only this handler).
+      runMarked(
+        "live-state",
+        () => frameMark(parsed, ev.data.length),
+        () => {
+          try {
+            this.handleServerMessage(channel, parsed, receipt);
+          } catch (err) {
+            // A schema.parse failure would otherwise silently leave the cache at
+            // its empty default. Re-throw asynchronously so the global browser
+            // crash reporter observes it as an uncaught error — without importing
+            // the crashes plugin (live-state ← crashes would be an import cycle)
+            // and without breaking the WS loop for subsequent messages.
+            trace(
+              `drop reason=parse-error key=${parsed.kind === "ping" ? "ping" : ((parsed as { key?: string }).key ?? "?")} error=${String(err)}`,
+            );
+            queueMicrotask(() => {
+              throw err;
+            });
+          }
+        },
+      );
     };
     return channel;
   }

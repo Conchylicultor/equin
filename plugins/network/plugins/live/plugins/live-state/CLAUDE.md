@@ -699,10 +699,11 @@ Details:
 - Description: Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's tab-shared /ws/notifications channel. useQueryResource reads a local async load (not a server read — those are live) as a ResourceResult.
 - Load-bearing: yes
 - Web:
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/networking` ×10
     - `primitives/css/spacing` ×2
     - `primitives/css/ui-kit` ×2
+    - `primitives/perfs/task-marks` ×2
     - `primitives/css/center.Center`
     - `primitives/css/inline.Inline`
     - `primitives/css/placeholder.Placeholder`

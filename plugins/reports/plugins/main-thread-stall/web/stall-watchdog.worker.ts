@@ -193,6 +193,12 @@ function boot(): void {
           case "frame":
             feed({ type: "frame", portId, frame: m.frame, now });
             return;
+          case "mark":
+            feed({ type: "mark", portId, id: m.id, mark: m.mark });
+            return;
+          case "mark-end":
+            feed({ type: "mark-end", portId, id: m.id });
+            return;
           case "filed":
             feed({ type: "filed", id: m.id, ok: m.ok });
             return;

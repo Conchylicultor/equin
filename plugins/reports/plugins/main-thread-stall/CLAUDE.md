@@ -50,6 +50,29 @@ All rules live (and are tested) there:
   when those frames cover ≥ half the stall (else `unattributed`: silence no
   long task fills is most likely a renderer starved of CPU, not app code). DevTools breakpoint pauses are accepted as noise.
 
+## A task says what it is before it runs
+
+LoAF names a frozen frame's **entry point** only — and an entry point such as
+the shared socket's port handler runs every live-state frame, so "(anonymous)
+(MessagePort.onmessage)" in `primitives/networking` says nothing about which
+frame froze the tab (the 243.9 s prototypes freeze of 2026-11-08). So entry
+points run as **marked tasks** (`primitives/perfs/task-marks`:
+`runMarked(source, describe, fn)`; live-state marks every frame as
+`<kind> <key>`, params and size as detail), and the tab watch posts each
+begin and end to the watchdog as they happen — `postMessage` reaches the
+worker's thread at once, so a task that freezes the thread leaves its mark
+open there. Only while attached and visible; `describe` never runs otherwise.
+
+- `frozenIn` is the tab's **open** mark when the stall opened (begun, no
+  `mark-end`): nothing runs between the freeze and the onset, and what the tab
+  runs once back is not the freeze. A marked task that finished just before an
+  unmarked freeze is closed, so it is never blamed (a time window did: the
+  first e2e run blamed `update db-lock-watch` for an injected setTimeout loop).
+  Null: the tab froze outside every marked task.
+- `marks`: the latest (≤ 20) from 10 s before the stall to its end.
+- A mark is not a sign of life (a render storm still begins tasks).
+- The fingerprint appends `|<source>:<what>` of `frozenIn` when set.
+
 ## Filing goes through a live tab
 
 The worker bundle must be self-contained (no other plugin), so it never POSTs:
@@ -110,6 +133,8 @@ renderer forever — so the script kills it with CDP `Page.crash`.
     - `primitives/log-channels.clientLog`
     - `primitives/pane.peekRoute`
     - `primitives/pane.usePathname`
+    - `primitives/perfs/task-marks.onTaskMark`
+    - `primitives/perfs/task-marks.runMarked`
     - `primitives/scope/tab-id.getTabId`
     - `reports.report`
     - `reports.Reports`
@@ -126,6 +151,7 @@ renderer forever — so the script kills it with CDP `Page.crash`.
     - `StallFrame`
     - `StallFrameScript`
     - `StallTab`
+    - `TaskMark`
   - Exports (values):
     - `mainThreadStallFingerprint`
     - `MainThreadStallPayloadSchema`
