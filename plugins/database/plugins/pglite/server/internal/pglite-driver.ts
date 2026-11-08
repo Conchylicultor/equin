@@ -19,7 +19,8 @@ export interface PgliteDriverOptions {
   /**
    * The browser host's storage, read when the database first opens: its
    * `databaseDir` (in memory, or `idb://…`) and `databaseStart` (a snapshot's
-   * data directory to load, its clock shifted to now in `ready`), and the
+   * data directory to load, its clock shifted to now in `ready`, or an
+   * initialized cluster to open instead of running initdb), and the
    * storage closes the database with it (flushed before the storage records
    * it booted, closed before it is wiped or handed to another worker) and can
    * dump it (a snapshot being taken). Absent: in memory, owned by nobody (a
@@ -143,9 +144,10 @@ export function createPgliteDriver(
     const start = storage.databaseStart;
     const dir = storage.databaseDir;
     // Writes reach IndexedDB after the query, not before it answers: the
-    // storage flushes before it records anything as durable.
+    // storage flushes before it records anything as durable. A loaded data
+    // dir (a snapshot, or an initialized cluster) spares PGlite its initdb.
     const load =
-      start.from === "snapshot" ? { loadDataDir: start.dataDir } : {};
+      start.from === "stored-or-empty" ? {} : { loadDataDir: start.dataDir };
     // In memory, the options are the only argument: `new PGlite(undefined,
     // options)` reads the `undefined` as its options and drops the second.
     const pglite =

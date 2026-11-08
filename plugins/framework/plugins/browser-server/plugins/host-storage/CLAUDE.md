@@ -33,7 +33,10 @@ serveBrowserHost({
   the take can run, derived from the script's import graph (the whole server
   graph the seed boots, this plugin's codec included), the bundled migrations
   and config, the host's own data files, the npm resolutions and the Bun
-  version). A fresh storage
+  version). The take's database opens from the initialized PGlite cluster
+  the build hands it (`takeHostSnapshot`'s `cluster`, `databaseStart:
+  { from: "initialized" }`: initdb's output, no app state), so a take never
+  runs initdb. A fresh storage
   loads it instead of starting empty (`origin: { kind: "snapshot" }`), and its
   times move to now: the database's timestamp columns are shifted by the
   driver before anything reads them, each store's values by its owner's

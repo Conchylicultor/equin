@@ -25,6 +25,10 @@ the computer names it to take it back.
   the clock did). `dump()` (what the storage adopts) is `dumpDataDir("gzip")`.
   Pinned by `server/internal/snapshot-load.test.ts`. In memory, PGlite takes
   its options as its ONLY argument: `new PGlite(undefined, options)` drops them.
+- **An initialized cluster** (`databaseStart: { from: "initialized",
+  dataDir }`): initdb's output for this PGlite build, opened with
+  `loadDataDir` and nothing shifted — what a snapshot take opens from, so it
+  never runs initdb (a fresh PGlite runs it on every start: 0.5–0.85 s).
 - **Scripts go through `exec`.** node-postgres runs a parameterless query over
   the simple protocol, which accepts several statements (a migration file, a
   view rebuild); PGlite's `query` is extended-protocol, one statement only. The

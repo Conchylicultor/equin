@@ -172,8 +172,16 @@ Key invariants:
   files of the worker closure's artifacts — the migrations and committed
   config the worker inlines — and every file of the host plugin's `data/`),
   the npm resolutions (`lockfileNpmResolutions`, `infra/deps/npm`) and the
-  `patches/` applied to them, the Bun version and the stage's layout. An
-  import in the take's graph that resolves to no file throws. A stale snapshot cannot ship: build
+  `patches/` applied to them, the Bun version, the initialized PGlite cluster
+  the take opens from (below) and the stage's layout. An
+  import in the take's graph that resolves to no file throws.
+  **A take never runs initdb**: its database opens from an initialized,
+  empty PGlite cluster (`bin/pglite-cluster.ts`, one initdb in a fresh
+  process, published as `pglite.pglite-cluster.<hash>/cluster.tar.gz`),
+  keyed on what decides its bytes — PGlite's lockfile line, `patches/`, the
+  script and a layout — so one is written per PGlite build and every take of
+  every checkout shares it. initdb was half of a fresh take's
+  `onReadyBlocking:database` (0.5–0.85 s of 1.0–1.6 s, foreground). A stale snapshot cannot ship: build
   pipeline step 8 had keyed it on data only, and a changed warm-up shipped
   stale data (`research/2026-11-06-global-host-snapshot-address-covers-what-runs.md`,
   with the re-take frequency this costs).

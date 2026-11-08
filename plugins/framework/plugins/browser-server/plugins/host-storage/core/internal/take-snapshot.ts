@@ -5,7 +5,9 @@
 // own graph on a storage that keeps everything in memory and records every
 // store write, let its boot fill it (a demo's seed), wait until it is settled,
 // then take the database's data directory and every store's entries as one
-// snapshot file (`./snapshot.ts`).
+// snapshot file (`./snapshot.ts`). The database opens from the initialized
+// cluster the build hands over (initdb's output for this PGlite build), so a
+// take never runs initdb.
 
 import {
   declareHostStorage,
@@ -24,6 +26,8 @@ import { encodeHostSnapshot } from "./snapshot";
 export async function takeHostSnapshot(opts: {
   /** The migration hashes the booted graph's database applies. */
   migrations: readonly string[];
+  /** An initialized, empty cluster's data directory: what the database opens from. */
+  cluster: Blob;
   boot: () => Promise<{ settled: Promise<void> }>;
 }): Promise<Uint8Array> {
   const stores = new Map<string, Map<string, unknown>>();
@@ -31,7 +35,7 @@ export async function takeHostSnapshot(opts: {
   const storage: HostStorage = {
     kind: "memory",
     databaseDir: undefined,
-    databaseStart: { from: "stored-or-empty" },
+    databaseStart: { from: "initialized", dataDir: opts.cluster },
     store<V>(name: string): HostStore<V> {
       let entries = stores.get(name);
       if (entries === undefined) stores.set(name, (entries = new Map()));

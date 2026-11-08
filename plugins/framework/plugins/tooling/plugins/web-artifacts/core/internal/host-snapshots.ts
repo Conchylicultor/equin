@@ -26,8 +26,18 @@
 //     PGlite, which decides the data directory's format, and every package
 //     the graph runs), the `patches/` bun applies to them (the lockfile names
 //     a patch by path only) and the Bun version;
+//   - the initialized PGlite cluster the take's database opens from (below),
+//     by its address;
 //   - this stage's layout and the module it writes beside the file.
 // The version the worker compares is the hash of the file's bytes.
+//
+// A take's database opens from an initialized, empty PGlite cluster — what
+// initdb writes for this PGlite build (`bin/pglite-cluster.ts`) — instead of
+// running initdb itself, which a fresh PGlite does on every start and which
+// was half of the take's `onReadyBlocking:database`. The cluster holds no app
+// state, so its address is what decides its bytes: PGlite's resolution in the
+// lockfile, the `patches/` bun applies, the producing script and a layout;
+// one is made per PGlite build and shared by every host and checkout.
 //
 // History: build pipeline step 8 dropped server code from the address (the
 // snapshot was re-taken in most builds), so a changed warm-up shipped stale
@@ -83,6 +93,27 @@ const SNAPSHOT_LAYOUT = "2";
 /** How long taking one snapshot may run (a boot of the whole graph plus a seed). */
 const TAKE_TIMEOUT_MS = 10 * 60_000;
 
+/** The script that writes an initialized PGlite cluster, repo-relative. */
+const CLUSTER_SCRIPT_REL =
+  "plugins/framework/plugins/tooling/plugins/web-artifacts/bin/pglite-cluster.ts";
+
+/** The cluster's data directory (gzipped) inside its store dir. */
+const CLUSTER_FILE = "cluster.tar.gz";
+
+/** Bumped when what a cluster dir holds, or how its script is run, changes shape. */
+const CLUSTER_LAYOUT = "1";
+
+/** How long writing one cluster may run (one initdb). */
+const CLUSTER_TIMEOUT_MS = 2 * 60_000;
+
+/**
+ * A lockfile package line resolving PGlite (its exact version and
+ * integrity): the top-level entry, or a nested `<pkg>/@electric-sql/pglite`
+ * one a workspace pinning another range would add — so a second PGlite fails
+ * the address loudly instead of escaping it.
+ */
+const PGLITE_LOCK_LINE_RE = /^ {4}"(?:[^"]*\/)?@electric-sql\/pglite": \[/;
+
 const slugOf = (pluginPath: string) => pluginPath.split("/plugins/").join(".");
 
 /** Whether the host at `pluginPath` declares a snapshot. */
@@ -112,6 +143,33 @@ function isSeedData(relInPlugin: string): boolean {
 
 /** Where bun reads `patchedDependencies`' patches: npm code the lockfile names by path only. */
 const PATCHES_DIR = "patches";
+
+/**
+ * The store dir of the initialized PGlite cluster this tree's takes open
+ * their database from: its address over what decides its bytes (see the
+ * header).
+ */
+export async function pgliteClusterDirName(
+  repo: RepoSnapshot,
+): Promise<string> {
+  const lock = await repo.read("bun.lock");
+  if (lock === null)
+    throw new Error("pglite cluster: the tree has no bun.lock to read");
+  const resolution = lock
+    .split("\n")
+    .filter((line) => PGLITE_LOCK_LINE_RE.test(line));
+  if (resolution.length !== 1)
+    throw new Error(
+      `pglite cluster: bun.lock resolves @electric-sql/pglite on ${resolution.length} lines, expected one`,
+    );
+  const h = createHash("sha256");
+  h.update(`layout\t${CLUSTER_LAYOUT}\n`);
+  h.update(`pglite\t${resolution[0]!.trim()}\n`);
+  for (const file of repo.under(PATCHES_DIR))
+    h.update(`patch\t${file}\t${repo.blobOf(file)}\n`);
+  h.update(`script\t${repo.blobOf(CLUSTER_SCRIPT_REL)}\n`);
+  return artifactDirName("pglite", "pglite-cluster", h.digest("hex"));
+}
 
 /**
  * The store dir of the snapshot the host at `pluginPath` ships in this tree:
@@ -155,6 +213,7 @@ export async function hostSnapshotDirName(opts: {
         `host snapshot ${pluginPath}: ${path} imports ${node.unresolved.map((u) => JSON.stringify(u)).join(", ")}, which resolves to no file of the tree — the snapshot's address cannot cover the code it loads`,
       );
   h.update(`code\t${graph.keyOf(script)}\n`);
+  h.update(`cluster\t${await pgliteClusterDirName(repo)}\n`);
   const bundled = new Set<string>();
   for (const t of opts.closure)
     for (const abs of t.globFiles) bundled.add(repoRel(repo, abs));
@@ -268,14 +327,64 @@ function snapshotModuleSource(facts: {
 }
 
 /**
+ * Write the initialized PGlite cluster into `dirName` unless the store has it
+ * (one initdb, in a fresh Bun process: PGlite is the script's own dependency),
+ * and answer its file.
+ */
+async function ensurePgliteCluster(opts: {
+  root: AppPath;
+  dirName: string;
+  log: (line: string) => void;
+  pin: (paths: readonly AppPath[]) => Promise<void>;
+}): Promise<AppPath> {
+  const { dirName } = opts;
+  const file = joinAppPath(artifactStorePath(dirName), CLUSTER_FILE);
+  await opts.pin([artifactStorePath(dirName)]);
+  if (hasArtifact(dirName)) {
+    touchArtifact(dirName);
+    return file;
+  }
+  const tmp = artifactTmpDir(dirName);
+  const out = joinAppPath(tmp, CLUSTER_FILE);
+  const t0 = performance.now();
+  const result = await spawnCaptured(
+    [process.execPath, joinAppPath(opts.root, CLUSTER_SCRIPT_REL), out],
+    { cwd: opts.root, timeoutMs: CLUSTER_TIMEOUT_MS },
+  );
+  if (result.exitCode !== 0 || !existsSync(out)) {
+    rmSync(tmp, { recursive: true, force: true });
+    throw new Error(
+      `pglite cluster: ${CLUSTER_SCRIPT_REL} exited ${result.exitCode}${existsSync(out) ? "" : " without writing its file"}\n--- stdout ---\n${result.stdout}\n--- stderr ---\n${result.stderr}`,
+    );
+  }
+  const meta: ArtifactMeta = {
+    specifier: null,
+    kind: "pglite-cluster",
+    pluginPath: null,
+    inputsHash: dirName,
+    staticImportsByFile: {},
+    dynamicImports: [],
+    tailwindCandidates: [],
+    builtAtMs: Date.now(),
+  };
+  await publishArtifact(dirName, tmp, meta);
+  opts.log(
+    `pglite cluster: written in ${Math.round(performance.now() - t0)} ms (${dirName})`,
+  );
+  return file;
+}
+
+/**
  * Take the host's snapshot into `dirName` unless the store has it: run the
- * host's script in a fresh Bun process (its graph registers process-wide), then
+ * host's script in a fresh Bun process (its graph registers process-wide),
+ * its database opening from the initialized cluster `clusterDirName`, then
  * publish the file and the module the worker imports.
  */
 export async function ensureHostSnapshot(opts: {
   root: AppPath;
   pluginPath: string;
   dirName: string;
+  clusterDirName: string;
   log: (line: string) => void;
   pin: (paths: readonly AppPath[]) => Promise<void>;
 }): Promise<void> {
@@ -285,6 +394,12 @@ export async function ensureHostSnapshot(opts: {
     touchArtifact(dirName);
     return;
   }
+  const cluster = await ensurePgliteCluster({
+    root: opts.root,
+    dirName: opts.clusterDirName,
+    log: opts.log,
+    pin: opts.pin,
+  });
   const tmp = artifactTmpDir(dirName);
   const out = joinAppPath(tmp, SNAPSHOT_FILE);
   const script = joinAppPath(
@@ -294,7 +409,7 @@ export async function ensureHostSnapshot(opts: {
     HOST_SNAPSHOT_ENTRY_REL,
   );
   const t0 = performance.now();
-  const result = await spawnCaptured([process.execPath, script, out], {
+  const result = await spawnCaptured([process.execPath, script, out, cluster], {
     cwd: opts.root,
     timeoutMs: TAKE_TIMEOUT_MS,
   });

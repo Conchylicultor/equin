@@ -39,12 +39,15 @@ export interface HostStoreOptions<V> {
 
 /**
  * What the database opens with: nothing (it starts empty, or with what the
- * storage already holds), or a snapshot's data directory to load — every
- * instant in it shifted by `shiftMs` before anything reads it.
+ * storage already holds), a snapshot's data directory to load — every
+ * instant in it shifted by `shiftMs` before anything reads it — or an
+ * initialized, empty cluster (initdb's output for this PGlite build, no app
+ * state in it), so a fresh database opens without running initdb.
  */
 export type DatabaseStart =
   | { from: "stored-or-empty" }
-  | { from: "snapshot"; dataDir: Blob; shiftMs: number };
+  | { from: "snapshot"; dataDir: Blob; shiftMs: number }
+  | { from: "initialized"; dataDir: Blob };
 
 /** Something the storage closes with it — the database, which it does not own. */
 export interface HostStorageResource {

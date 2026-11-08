@@ -4007,6 +4007,7 @@
       "version": "0.0.1",
       "dependencies": {
         "@babel/core": "^7.29.0",
+        "@electric-sql/pglite": "^0.5.11",
         "@tailwindcss/node": "^4.3.3",
         "@tailwindcss/oxide": "^4.3.3",
         "@tailwindcss/vite": "^4.3.3",

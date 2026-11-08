@@ -61,7 +61,11 @@ import {
 } from "./global-css";
 import { openBuildLease, type BuildLease } from "./lease";
 import { ensureBrowserHost } from "./browser-hosts";
-import { ensureHostSnapshot, hostSnapshotLinks } from "./host-snapshots";
+import {
+  ensureHostSnapshot,
+  hostSnapshotLinks,
+  pgliteClusterDirName,
+} from "./host-snapshots";
 import type { OwnSources } from "./own-files";
 import {
   installedRepoView,
@@ -484,11 +488,13 @@ async function runPipeline(
         targets: allTargets,
         metaOf: (dirName) => buildOut.metas.get(dirName)!,
       });
+      const clusterDirName = await pgliteClusterDirName(sources.snapshot);
       for (const link of links) {
         await ensureHostSnapshot({
           root,
           pluginPath: link.pluginPath,
           dirName: link.linkedDirName,
+          clusterDirName,
           log,
           pin: (paths) => lease.pin(paths),
         });
