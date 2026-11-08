@@ -62,8 +62,8 @@ per-plugin artifacts, `vendors/` npm pre-bundles, `css/` cached global Tailwind
 passes, `fingerprints/` stat caches), shared across all worktrees, pruned by age.
 A **served** dist symlinks into that store; a **release** dist is composed with
 `materialize: true`, so its `artifacts/` are real copies and the bundle is
-self-contained. Guarded by the `web-artifacts:map-in-sync` and
-`web-artifacts:no-vendored-state-inlined` checks; engine lives in
+self-contained. Guarded by the `web-artifacts:map-in-sync` check and, per
+artifact at build time, the vendored-module guard; engine lives in
 [`framework/tooling/web-artifacts`](../tooling/plugins/web-artifacts/CLAUDE.md).
 `--no-minify` skips esbuild minification for debugging (hash input).
 

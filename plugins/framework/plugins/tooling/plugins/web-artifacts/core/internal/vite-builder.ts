@@ -8,6 +8,7 @@
 import { rmSync, writeFileSync } from "node:fs";
 import {
   existsSync,
+  readFile,
   readFileSync,
   readdirSync,
 } from "@plugins/packages/plugins/timed-fs/core";
@@ -40,6 +41,7 @@ import { createInlineAudit } from "./inline-audit";
 import { hashedRootsFor } from "./own-files";
 import { artifactSourcemaps } from "./sourcemaps";
 import type { ArtifactMeta } from "./store";
+import { assertNoVendoredStateInlined } from "./vendored-inline";
 import { artifactTmpDir, publishArtifact } from "./store";
 import { tailwindCandidatesOf } from "./tailwind-candidates";
 
@@ -545,12 +547,17 @@ export async function buildArtifact(
       staticImportsByFile,
       coEntries: target.coEntries,
     });
-    // The vendored-module scan reads these maps: a module without one would
-    // hide whatever it inlined, so fail on THIS artifact, not later in a check.
-    await artifactSourcemaps({
+    // The vendored-module guard reads these maps: a module without one would
+    // hide whatever it inlined, so fail on THIS artifact.
+    const maps = await artifactSourcemaps({
       label: target.dirName,
       files: readdirSync(tmpDir),
       read: (name) => readFileSync(joinAppPath(tmpDir, name), "utf8"),
+    });
+    await assertNoVendoredStateInlined({
+      dirName: target.dirName,
+      maps,
+      read: (name) => readFile(joinAppPath(tmpDir, name), "utf8"),
     });
     const meta: ArtifactMeta = {
       specifier: target.specifier,

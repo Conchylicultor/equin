@@ -37,12 +37,7 @@ import {
 } from "../own-roots";
 import { computeBuilderIdentity, type BuilderIdentity } from "./identity";
 import { ownHashFor, type OwnSources } from "./own-files";
-import {
-  allStaticImports,
-  artifactDirName,
-  hasArtifact,
-  type ArtifactMeta,
-} from "./store";
+import { allStaticImports, artifactDirName, type ArtifactMeta } from "./store";
 import {
   coEntryFileName,
   type ArtifactBuildTarget,
@@ -151,15 +146,19 @@ export async function compositionFleetSource(opts: {
   };
 }
 
-export interface PlannedTarget extends ArtifactBuildTarget {
-  needsBuild: boolean;
-}
+/**
+ * A target as planned: pure hashing over the repo snapshot. Planning never
+ * reads the store — whether an address is already published is the reader's
+ * question (the pipeline asks it after pinning; the map-in-sync check reads
+ * the meta without blocking), so the check runner's thread pays no store
+ * lookup per target.
+ */
+export type PlannedTarget = ArtifactBuildTarget;
 
 export interface RegistryTargetPlan {
   dirName: string;
   inputsHash: string;
   registryFile: AppPath;
-  needsBuild: boolean;
 }
 
 export interface FleetPlan {
@@ -171,7 +170,6 @@ export interface FleetPlan {
   webTargets: PlannedTarget[];
   entryTarget: PlannedTarget;
   registryTarget: RegistryTargetPlan;
-  staleWeb: number;
 }
 
 export function pluginIdOf(pluginPath: string): string {
@@ -300,7 +298,6 @@ export async function planFleet(opts: {
       ownFiles,
       globFiles,
       coEntries: pluginPath ? coEntriesFor(kind, pluginPath, pluginDir) : [],
-      needsBuild: !hasArtifact(dirName),
     };
   };
 
@@ -347,7 +344,6 @@ export async function planFleet(opts: {
         dirName,
         inputsHash: registryInputsHash,
         registryFile,
-        needsBuild: !hasArtifact(dirName),
       };
     },
   );
@@ -368,7 +364,6 @@ export async function planFleet(opts: {
     webTargets,
     entryTarget,
     registryTarget,
-    staleWeb: webTargets.filter((t) => t.needsBuild).length,
   };
 }
 
@@ -513,7 +508,6 @@ export async function planBarrelTarget(opts: {
     ownFiles,
     globFiles,
     coEntries: coEntriesFor(kind, pluginPath, pluginDir),
-    needsBuild: !hasArtifact(dirName),
   };
 }
 

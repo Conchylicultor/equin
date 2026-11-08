@@ -1,11 +1,11 @@
-// Contributed checks guarding the per-plugin web-artifact composition.
+// The contributed check guarding the per-plugin web-artifact composition.
 //
-// BOTH are `scope: "deploy"`: their subject is the local deployment `build`
+// It is `scope: "deploy"`: its subject is the local deployment `build`
 // produces — this checkout's served dist (`~/.equin/worktrees/<name>/web`)
 // and the `~/.equin/cache/web-artifacts` store, both outside any repo — not the
-// tree. So neither is in the push payload,
-// and `push` (which asks for `--scope tree`) does not run them; `build`, a
-// standalone `./equin check`, and main's post-push auto-build do. Each
+// tree. So it is not in the push payload,
+// and `push` (which asks for `--scope tree`) does not run it; `build`, a
+// standalone `./equin check`, and main's post-push auto-build do. It
 // therefore owes a `cacheSignature()` covering that deploy state, since the
 // runner's tree hash does not reach it — see `Check.scope`.
 //
@@ -19,17 +19,14 @@
 //   process, where the dist under inspection is the one that very build is about
 //   to replace — standalone runs verify for real.
 //
-//   web-artifacts:no-vendored-state-inlined — no plugin artifact in the current
-//   fleet's expected set bundles modules of an npm package outside the inline
-//   allowlist. Vendoring is what guarantees one module instance per package;
-//   an inlined copy of a stateful package (React context registries, scheduler,
-//   …) is the silent dual-instance bug class. Verdicts are cached per artifact
-//   dir (content-addressed ⇒ immutable) so the sourcemap scan is one-time.
+// The module-identity guard (no artifact inlines a non-allowlisted npm
+// package) is not a check: it runs on each artifact as it builds
+// (`core/internal/vendored-inline.ts`), so its cost is what a build built.
 //
 // `scope` and `isBuildInProgress()` are ORTHOGONAL — neither subsumes the other,
 // and deleting either as redundant reopens a real hole:
 //   - `isBuildInProgress()` (run-context) answers "a build races its own
-//     publish": a build MUST run these checks — it IS the deploy — but at check
+//     publish": a build MUST run this check — it IS the deploy — but at check
 //     time its dist is still the previous one, so the comparison is skipped for
 //     that one process.
 //   - `scope` answers "push is not a deploy": push never inspects the dist at
@@ -40,17 +37,12 @@ import {
   asAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { renameSync, writeFileSync } from "node:fs";
 import {
-  existsSync,
-  readdirSync,
   readFileSync,
   statSync,
-  readFile,
 } from "@plugins/packages/plugins/timed-fs/core";
 
 import { join } from "node:path";
-import { createTimeSlicer } from "@plugins/packages/plugins/macrotask-yield/core";
 import type {
   Check,
   CheckContext,
@@ -69,25 +61,10 @@ import {
   resolveCheckoutDeploy,
   worktreeArtifacts,
 } from "@plugins/infra/plugins/paths/core";
-import { INLINE_PACKAGES } from "../core/constants";
-import { artifactSourcemaps } from "../core/internal/sourcemaps";
 import { diffImportMaps } from "../core/import-map";
-import {
-  computeExpectedComposition,
-  planExpectedFleet,
-} from "../core/internal/expected";
-import {
-  artifactStorePath,
-  hasArtifact,
-  WEB_ARTIFACTS_DIR,
-  WEB_ARTIFACTS_STORE_DIR,
-} from "../core/internal/store";
-import {
-  extractEntryScriptSrc,
-  extractImportMap,
-  offendingPackages,
-  packagesInSourcemapSources,
-} from "./scan";
+import { computeExpectedComposition } from "../core/internal/expected";
+import { WEB_ARTIFACTS_STORE_DIR } from "../core/internal/store";
+import { extractEntryScriptSrc, extractImportMap } from "./scan";
 
 const MARKER_NAME = ".web-artifacts.json";
 const BUILD_HINT =
@@ -325,150 +302,4 @@ const mapInSync: Check = {
   },
 };
 
-// ── no-vendored-state-inlined ───────────────────────────────────────
-
-const SCANNER_VERSION = 2; // 2: every module's map, not index.js.map alone
-const SCAN_CACHE_FILE = join(WEB_ARTIFACTS_DIR, "vendored-scan.json");
-
-interface VendoredScanCache {
-  version: number;
-  /** artifact dirName → ALL node_modules packages found in its sourcemap.
-   * Unfiltered by the allowlist, so an allowlist edit re-filters without
-   * re-scanning; immutable per dirName (content-addressed artifacts). */
-  inlined: Record<string, string[]>;
-}
-
-function loadScanCache(): VendoredScanCache {
-  const raw = readIfExists(SCAN_CACHE_FILE);
-  if (raw !== null) {
-    try {
-      const parsed = JSON.parse(raw) as VendoredScanCache;
-      if (
-        parsed.version === SCANNER_VERSION &&
-        typeof parsed.inlined === "object"
-      ) {
-        return parsed;
-      }
-    } catch (err) {
-      if (!(err instanceof SyntaxError)) throw err;
-    }
-  }
-  return { version: SCANNER_VERSION, inlined: {} };
-}
-
-function saveScanCache(cache: VendoredScanCache): void {
-  // Keep only verdicts whose artifact still exists — bounds the file to the
-  // live store. Atomic write (concurrent check runs: last writer wins; verdicts
-  // are immutable, a lost entry merely re-scans).
-  const inlined: Record<string, string[]> = {};
-  for (const [dirName, pkgs] of Object.entries(cache.inlined)) {
-    if (hasArtifact(dirName)) inlined[dirName] = pkgs;
-  }
-  const tmp = `${SCAN_CACHE_FILE}.${process.pid}.tmp`;
-  writeFileSync(tmp, JSON.stringify({ version: SCANNER_VERSION, inlined }));
-  renameSync(tmp, SCAN_CACHE_FILE);
-}
-
-/**
- * Scan every sourcemap of one store artifact (`index.js`, co-entries, shared
- * and lazy `.mjs` chunks) for inlined node_modules packages. A module without
- * a map throws unless it is a pure re-export facade (`artifactSourcemaps`) —
- * a missing map means the scan has no signal, which must be loud, not a silent
- * pass. Maps are read without blocking: a build that rebuilt many artifacts
- * leaves many multi-MB maps to scan in one pass, on the check runner's shared
- * thread.
- */
-async function scanArtifact(dirName: string): Promise<string[]> {
-  const dir = artifactStorePath(dirName);
-  const maps = await artifactSourcemaps({
-    label: dirName,
-    files: readdirSync(dir),
-    read: (name) => readFileSync(join(dir, name), "utf8"),
-  });
-  const pkgs = new Set<string>();
-  for (const map of maps) {
-    const raw = await readFile(join(dir, map), "utf8");
-    // Fast path: no `node_modules/` substring anywhere ⇒ no npm module inlined
-    // (spares the JSON.parse of multi-MB maps for the overwhelmingly common case).
-    if (!raw.includes("node_modules/")) continue;
-    const parsed = JSON.parse(raw) as { sources?: string[] };
-    for (const pkg of packagesInSourcemapSources(parsed.sources ?? []))
-      pkgs.add(pkg);
-  }
-  return [...pkgs].sort();
-}
-
-const noVendoredStateInlined: Check = {
-  id: "web-artifacts:no-vendored-state-inlined",
-  description:
-    "no web artifact in the current fleet bundles modules of an npm package outside the inline allowlist (the module-identity / dual-instance guard)",
-  scope: "deploy",
-  cacheSignature(): string {
-    // The verdict is a function of the tree (expected fleet) — covered by the
-    // runner's tree hash — plus which artifacts the store holds.
-    return storeMtime();
-  },
-  async run(ctx: CheckContext): Promise<CheckResult> {
-    if (!existsSync(WEB_ARTIFACTS_STORE_DIR)) return { ok: true }; // nothing composed yet
-
-    const repo = await ctx.repo();
-    const { root } = repo;
-    // The marker is read for ONE field — how the deployed dist was minified — so
-    // that the fleet planned here matches the artifacts the store actually
-    // holds. No deploy means no marker to read, which lands on the same default
-    // as a Phase-1 marker that never carried the field: minified. It is not a
-    // failure here — this check's subject is the CONTENT of the artifacts in the
-    // store, which exist and are worth scanning whether or not a dist was ever
-    // composed from them. Staleness is map-in-sync's job, and it refuses above.
-    const dist = deployedDist(root);
-    const markerRaw =
-      dist.kind === "none" ? null : readIfExists(join(dist.dir, MARKER_NAME));
-    const minify = markerRaw === null ? true : markerMinify(markerRaw);
-
-    // The expected fleet for the current tree; artifacts not (yet) in the store
-    // are skipped — staleness is map-in-sync's job, this check verifies the
-    // content of what exists. The registry artifact is excluded by construction
-    // (type-stripped transform, never bundles).
-    const fleet = await planExpectedFleet({ repo, minify });
-    const present = fleet.targets.filter((t) => hasArtifact(t.dirName));
-    if (present.length === 0) return { ok: true }; // nothing composed yet
-
-    const cache = loadScanCache();
-    let scanned = 0;
-    const offenders: string[] = [];
-    // Each uncached map is a `JSON.parse` of up to several MB: pause between
-    // artifacts so a freshly rebuilt fleet is not scanned as one block.
-    const slice = createTimeSlicer();
-    for (const t of present) {
-      let inlined = cache.inlined[t.dirName];
-      if (inlined === undefined) {
-        await slice();
-        inlined = await scanArtifact(t.dirName);
-        cache.inlined[t.dirName] = inlined;
-        scanned++;
-      }
-      const offending = offendingPackages(inlined, INLINE_PACKAGES);
-      if (offending.length > 0) {
-        offenders.push(`${t.dirName}: ${offending.join(", ")}`);
-      }
-    }
-    if (scanned > 0) saveScanCache(cache);
-
-    if (offenders.length > 0) {
-      return {
-        ok: false,
-        message:
-          `${offenders.length} artifact(s) bundle npm modules outside the inline allowlist ` +
-          `(INLINE_PACKAGES in web-artifacts/core/constants.ts) — each inlined copy is a second ` +
-          `module instance next to the vendored one (the React-context dual-instance bug class):\n` +
-          truncatedList(offenders),
-        hint:
-          "Fix the externals rule regression (web-artifacts/core/externals.ts) — or, ONLY for a " +
-          "provably stateless package, extend INLINE_PACKAGES. Then bump BUILDER_VERSION and rebuild.",
-      };
-    }
-    return { ok: true };
-  },
-};
-
-export default [mapInSync, noVendoredStateInlined];
+export default mapInSync;

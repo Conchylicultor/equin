@@ -73,13 +73,27 @@ Key invariants:
 - **One URL = one module instance.** An import landing in one of the plugin's
   own non-inlined folders is rewritten to that folder's external
   `@plugins/<path>/<folder>` barrel (never inlined); vendors are one esbuild
-  split build so stateful transitives are shared. Guarded by the
-  `web-artifacts:no-vendored-state-inlined` check, which reads the `sources`
-  of EVERY module's sourcemap (`index.js`, co-entries, shared and lazy `.mjs`
-  chunks — `core/internal/sourcemaps.ts`). The one module allowed no map is a
-  pure re-export facade (Rolldown emits a multi-entry `index.js` that way when
-  everything it reaches is shared with `exhibits.js`); any other map-less
-  module fails the build of that artifact.
+  split build so stateful transitives are shared. Guarded at build time, on
+  each artifact before it is published (`core/internal/vendored-inline.ts`):
+  the `sources` of EVERY module's sourcemap (`index.js`, co-entries, shared and
+  lazy `.mjs` chunks — `core/internal/sourcemaps.ts`) must name no npm package
+  outside `INLINE_PACKAGES`, or that artifact's build fails. Its cost is what a
+  build built; a reused artifact was guarded by a builder of the same identity
+  (the guard and the allowlist both feed it). It used to be a check that
+  re-derived every verdict per pass — an `existsSync` per artifact and per
+  cached verdict (~58k), 4–7 s of the check thread on every build. The one
+  module allowed no map is a pure re-export facade (Rolldown emits a
+  multi-entry `index.js` that way when everything it reaches is shared with
+  `exhibits.js`); any other map-less module fails the build of that artifact.
+- **A planned target carries no store fact.** A target's address is pure
+  hashing over the repo snapshot; whether the store holds it is not part of
+  the plan (`PlannedTarget` has no "is it published" bit — only a browser
+  host's planning reads its stored records, `matchHostRecord`). The pipeline
+  asks the store after pinning, and
+  `map-in-sync` reads each meta once, without blocking
+  (`readPublishedArtifactMeta`, bounded concurrency) — it runs on the check
+  runner's shared thread, where a lookup in the ~80k-entry store dir is
+  ~0.3 ms of kernel time.
 - **Across own folders, only the barrel is importable.** The rewrite above
   accepts only the barrel spelling (`../core`, `@plugins/<own>/core`) and
   throws on a deep path (`../core/x`). Rewriting a deep path made it mean the

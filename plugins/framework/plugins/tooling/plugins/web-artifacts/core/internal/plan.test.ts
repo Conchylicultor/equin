@@ -57,7 +57,6 @@ function target(
     ownFiles: [],
     globFiles: [],
     coEntries: [],
-    needsBuild: false,
   };
 }
 

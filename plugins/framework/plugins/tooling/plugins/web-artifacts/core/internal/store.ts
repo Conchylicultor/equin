@@ -14,6 +14,7 @@ import {
   existsSync,
   lstatSync,
   readdirSync,
+  readFile,
   readFileSync,
   statSync,
 } from "@plugins/packages/plugins/timed-fs/core";
@@ -202,6 +203,29 @@ export function readArtifactMeta(dirName: string): ArtifactMeta {
   return JSON.parse(
     readFileSync(joinAppPath(artifactStorePath(dirName), "meta.json"), "utf8"),
   ) as ArtifactMeta;
+}
+
+/**
+ * The artifact's meta, or null when it is not (completely) published — ONE
+ * non-blocking read where `hasArtifact` + `readArtifactMeta` are two blocking
+ * ones. For a reader that plans a whole fleet on a shared thread (the
+ * map-in-sync check): a lookup in the ~80k-entry store dir costs ~0.3 ms of
+ * kernel time, ×2 per artifact × ~3k artifacts.
+ */
+export async function readPublishedArtifactMeta(
+  dirName: string,
+): Promise<ArtifactMeta | null> {
+  let raw: string;
+  try {
+    raw = await readFile(
+      joinAppPath(artifactStorePath(dirName), "meta.json"),
+      "utf8",
+    );
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+    return null;
+  }
+  return JSON.parse(raw) as ArtifactMeta;
 }
 
 /** Bump the artifact dir's mtime so pruning treats reused artifacts as live. */

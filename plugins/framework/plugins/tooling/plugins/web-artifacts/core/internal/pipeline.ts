@@ -242,10 +242,17 @@ async function runPipeline(
           stage(`artifacts:detect:${id}`, `detect: ${id}`, run),
       });
       sources.globs.save();
+      // Planning is pure hashing; which addresses the store lacks is asked
+      // here, for the log. `ensure` asks again after pinning — the answer can
+      // change either way in between (a prune, a concurrent build's publish).
+      const staleWeb = fleet.webTargets.filter(
+        (t) => !hasArtifact(t.dirName),
+      ).length;
+      const entryStale = !hasArtifact(fleet.entryTarget.dirName);
       log(
-        `detect: ${fleet.webTargets.length} web artifacts (${fleet.staleWeb} stale), entry ${fleet.entryTarget.needsBuild ? "stale" : "cached"}, registry ${fleet.registryTarget.needsBuild ? "stale" : "cached"}`,
+        `detect: ${fleet.webTargets.length} web artifacts (${staleWeb} stale), entry ${entryStale ? "stale" : "cached"}, registry ${hasArtifact(fleet.registryTarget.dirName) ? "cached" : "stale"}`,
       );
-      return fleet;
+      return { ...fleet, staleWeb, entryStale };
     },
   );
 
@@ -255,12 +262,11 @@ async function runPipeline(
   const builder = opts.builder ?? inProcessBuilder(root, opts.minify);
   const metas = new Map<string, ArtifactMeta>(); // dirName → meta
   const counts = { built: 0, reused: 0 };
-  // Pin first, then look: planning read the store before this build held
-  // anything, so a prune since may have taken a planned reuse — which then
-  // simply builds.
+  // Pin first, then look: a prune between detect and here may have taken a
+  // reuse — which then simply builds.
   const ensure = async (t: PlannedTarget): Promise<ArtifactMeta> => {
     await lease.pin([artifactStorePath(t.dirName)]);
-    if (t.needsBuild || !hasArtifact(t.dirName)) {
+    if (!hasArtifact(t.dirName)) {
       const meta = await builder.build(t);
       metas.set(t.dirName, meta);
       counts.built++;
@@ -275,14 +281,11 @@ async function runPipeline(
 
   const buildOut = await stage(
     "artifacts:build",
-    `build artifacts (${plan.staleWeb + (plan.entryTarget.needsBuild ? 1 : 0)} stale)`,
+    `build artifacts (${plan.staleWeb + (plan.entryStale ? 1 : 0)} stale)`,
     async () => {
       const registryPromise = (async () => {
         await lease.pin([artifactStorePath(plan.registryTarget.dirName)]);
-        if (
-          plan.registryTarget.needsBuild ||
-          !hasArtifact(plan.registryTarget.dirName)
-        ) {
+        if (!hasArtifact(plan.registryTarget.dirName)) {
           const meta = await buildRegistryArtifact({
             dirName: plan.registryTarget.dirName,
             inputsHash: plan.registryTarget.inputsHash,

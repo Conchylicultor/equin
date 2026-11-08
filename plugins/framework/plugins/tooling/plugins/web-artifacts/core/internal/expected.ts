@@ -25,10 +25,11 @@ import {
   type FleetSource,
   type PlannedTarget,
 } from "./plan";
+import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import {
   hasArtifact,
   loadGlobPatternMemo,
-  readArtifactMeta,
+  readPublishedArtifactMeta,
   type ArtifactMeta,
 } from "./store";
 import {
@@ -128,25 +129,34 @@ export async function planExpectedFleet(opts: {
 
   const metas = new Map<string, ArtifactMeta>();
   const missing: string[] = [];
-  const read = (dirName: string): ArtifactMeta | null => {
-    if (!hasArtifact(dirName)) {
-      missing.push(dirName);
-      return null;
-    }
-    const meta = readArtifactMeta(dirName);
-    metas.set(dirName, meta);
+  // Every store read is one non-blocking `meta.json` read (absent ⇒ missing):
+  // this runs on the check runner's shared thread, ~3k artifacts per plan.
+  // Bounded, so a plan never holds thousands of descriptors open at once.
+  const gate = createSemaphore(16);
+  const record = (dirName: string, meta: ArtifactMeta | null) => {
+    if (meta === null) missing.push(dirName);
+    else metas.set(dirName, meta);
     return meta;
   };
+  const read = async (dirName: string): Promise<ArtifactMeta | null> =>
+    record(dirName, await gate.run(() => readPublishedArtifactMeta(dirName)));
 
-  for (const t of [...plan.webTargets, plan.entryTarget]) read(t.dirName);
-  read(plan.registryTarget.dirName);
+  // The seeds are read concurrently, then recorded in plan order, so the
+  // closure below sees them exactly as a sequential read would.
+  const seeds = [...plan.webTargets, plan.entryTarget, plan.registryTarget].map(
+    (t) => t.dirName,
+  );
+  const seedMetas = await Promise.all(
+    seeds.map((dirName) => gate.run(() => readPublishedArtifactMeta(dirName))),
+  );
+  seeds.forEach((dirName, i) => record(dirName, seedMetas[i]!));
   const barrelTargets = await resolveBarrelClosure({
     pluginsRoot,
     identityHash: plan.identity.identityHash,
     sources,
     servedSpecs: servedSpecsOf(plan.webTargets),
     seedMetas: [...metas.values()],
-    ensure: async (t) => read(t.dirName),
+    ensure: (t) => read(t.dirName),
   });
   const pageTargets = [
     ...plan.webTargets,
@@ -166,11 +176,11 @@ export async function planExpectedFleet(opts: {
       identityHash: plan.identity.identityHash,
       sources,
       servedSpecs: served,
-      ensure: async (t) => read(t.dirName),
+      ensure: (t) => read(t.dirName),
     });
     for (const s of servedSpecsOf(added)) served.add(s);
     if (host.dirName === null) missing.push(`browser host ${host.pluginPath}`);
-    else if (read(host.dirName) !== null)
+    else if ((await read(host.dirName)) !== null)
       hosts.push({ plan: host, dirName: host.dirName, entry, added });
   }
   // Persist the glob patterns this plan read, so a later run reads none.
