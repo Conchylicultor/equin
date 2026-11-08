@@ -240,7 +240,7 @@ export async function recordReportIncident(
 // The commit the reporting code ran, for an in-process report that does not
 // name one: this process's own pin (null when it cannot say — a mixed boot).
 // A report from elsewhere names its own (a tab's bundle commit, an outbox
-// entry's writer — null included), so only `undefined` is filled; stamped
+// entry's writer, a crash-buffer line's writer — null included), so only `undefined` is filled; stamped
 // before the outbox hand-off too, so an exec child's report carries ITS pin.
 function stampCommit(input: ReportInput): void {
   if (input.commit === undefined) input.commit = serverPinCommit();

@@ -1,3 +1,4 @@
+import { serverPinCommit } from "@plugins/build/plugins/server-build-id/server";
 import { reportsBufferDir } from "@plugins/reports/data-dirs";
 import { appendFileSync } from "node:fs";
 import { bufferFile, type BufferedReport } from "./buffer";
@@ -23,13 +24,15 @@ import { bufferFile, type BufferedReport } from "./buffer";
 // described in exactly one place — and so the best-effort catch (we are on a
 // dying event loop; throwing here would replace the report with a worse
 // failure) is stated once rather than copied.
-function appendLine(line: Omit<BufferedReport, "at">): BufferAppend {
+function appendLine(line: Omit<BufferedReport, "at" | "commit">): BufferAppend {
   try {
     reportsBufferDir.ensure();
-    appendFileSync(
-      bufferFile(),
-      JSON.stringify({ ...line, at: new Date().toISOString() }) + "\n",
-    );
+    const stamped: BufferedReport = {
+      ...line,
+      at: new Date().toISOString(),
+      commit: serverPinCommit(),
+    };
+    appendFileSync(bufferFile(), JSON.stringify(stamped) + "\n");
     return { ok: true };
   } catch (error) {
     // Best-effort: we're in a crash path; swallowing is better than throwing.

@@ -210,7 +210,9 @@ from forks; `server/internal/fix-ledger.ts`):
 of `fix_state` / `fix_commit` / `fix_state_at`. Every occurrence carries the
 commit its code ran (`recent[].commit`, `last_commit`): this backend's pin
 (`server-build-id`'s `serverPinCommit`) unless the report names its own — a
-tab's bundle commit, an outbox entry's writer.
+tab's bundle commit, an outbox entry's writer, a crash-buffer line's
+writer (`replayedReportInput`: the next boot replays it, and may run other
+code — a replay stamped with the replayer's pin once read as a regression).
 
 On a change of state the report's notifications say so in place
 (`restateByMetadata`, the `state` line: fix on its way / fixed by / came back

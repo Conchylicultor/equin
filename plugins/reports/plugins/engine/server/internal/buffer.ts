@@ -45,7 +45,16 @@ export interface BufferedReport {
   errorType: string;
   message: string;
   stack: string | undefined;
+  /** When the WRITER buffered it (ISO) — the occurrence's instant on replay. */
   at: string;
+  /**
+   * The commit the WRITER ran (its pin; null when it could not name one).
+   * Replayed as the occurrence's commit, never the flushing process's: the
+   * flush runs in the NEXT boot, which may run other code (main's HEAD moves
+   * while a crashed backend is down). ABSENT on a line from an older backend,
+   * which replays as null — unknown, not the replayer's.
+   */
+  commit?: string | null;
 }
 
 export async function readAndClearBuffer(): Promise<BufferedReport[]> {

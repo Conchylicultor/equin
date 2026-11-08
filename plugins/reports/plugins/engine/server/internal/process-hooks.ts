@@ -6,7 +6,7 @@ import {
 import type { ProcessCrash } from "@plugins/framework/plugins/server-core/core";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import type { ReportInput } from "@plugins/reports/core";
-import { readAndClearBuffer } from "./buffer";
+import { readAndClearBuffer, type BufferedReport } from "./buffer";
 import { appendUncaughtExceptionSync } from "./crash-append";
 import { reportOutboxFatalSink } from "./outbox-sink";
 import { reportsProducer } from "./producer";
@@ -142,23 +142,47 @@ export async function flushBufferedReports(): Promise<void> {
   const reports = await readAndClearBuffer();
   for (const c of reports) {
     try {
-      // A line that named its own kind carries its own payload; one that did
-      // not is a process-level crash, and its payload is rebuilt from the flat
-      // error fields the crash ReportKind validates. The default is what keeps
-      // every pre-existing caller (and every line written by an older backend)
-      // behaving exactly as before.
-      await recordReport({
-        kind: c.kind ?? "crash",
-        source: c.source,
-        message: c.message,
-        data: c.data ?? {
-          errorType: c.errorType ?? null,
-          stack: c.stack ?? null,
-        },
-      });
+      await recordReport(replayedReportInput(c));
       // eslint-disable-next-line promise-safety/no-bare-catch
     } catch (err) {
       console.error("[reports] failed to flush buffered report", err);
     }
   }
+}
+
+/**
+ * One buffered line as the occurrence it records — the WRITER's: its instant
+ * (`at`) and its commit, never the flushing boot's, which may run other code
+ * (main's HEAD moves while a crashed backend is down). On 2026-11-08 a crash
+ * buffered by the unfixed 9b06a6dcc5 replayed 11 min later stamped with the
+ * new HEAD, which contained the fix, and read as a regression. A line from an
+ * older backend names no commit: unknown (null) — passing `undefined` would
+ * let `stampCommit` fill in this process's pin.
+ *
+ * A line that named its own kind carries its own payload; one that did not is
+ * a process-level crash, whose payload is rebuilt from the flat error fields
+ * the crash ReportKind validates (every line written by an older backend
+ * reads that way too).
+ */
+export function replayedReportInput(c: BufferedReport): ReportInput {
+  // An unreadable instant (only a hand-edited or torn line — appendLine always
+  // writes one) is said, and the crash is still recorded, at the flush time:
+  // the buffer is already unlinked, so refusing the line would lose it.
+  const occurredAt = Date.parse(c.at);
+  if (Number.isNaN(occurredAt)) {
+    console.error(
+      `[reports] buffered report has no valid \`at\` (${String(c.at)}); recorded at the flush time`,
+    );
+  }
+  return {
+    kind: c.kind ?? "crash",
+    source: c.source,
+    message: c.message,
+    commit: c.commit ?? null,
+    ...(Number.isNaN(occurredAt) ? {} : { occurredAt }),
+    data: c.data ?? {
+      errorType: c.errorType ?? null,
+      stack: c.stack ?? null,
+    },
+  };
 }

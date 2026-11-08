@@ -4,7 +4,11 @@ import {
   type ServerReport,
 } from "@plugins/framework/plugins/server-core/core";
 import { mountProducersForTest } from "@plugins/network/plugins/live/plugins/change-feed/server/testing";
-import { crashWriteLane, processCrashHandler } from "./process-hooks";
+import {
+  crashWriteLane,
+  processCrashHandler,
+  replayedReportInput,
+} from "./process-hooks";
 import { reportOutboxFatalSink } from "./outbox-sink";
 import { reportsProducer } from "./producer";
 
@@ -104,5 +108,60 @@ describe("crashWriteLane", () => {
     ["unhandledRejection", false, "outbox-sync"],
   ] as const)("%s, serving %p → %s", (event, serving, lane) => {
     expect(crashWriteLane(event, serving)).toBe(lane);
+  });
+});
+
+describe("replayedReportInput", () => {
+  const line = {
+    source: "server-uncaught" as const,
+    errorType: "error",
+    message: "x.updated_at is derived",
+    stack: "error: x\n    at a (b.ts:1:1)",
+    at: "2026-11-08T17:21:05.123Z",
+  };
+
+  test("the occurrence is the writer's: its commit and its instant, not the flushing boot's", () => {
+    expect(replayedReportInput({ ...line, commit: "9b06a6dcc5" })).toEqual({
+      kind: "crash",
+      source: "server-uncaught",
+      message: "x.updated_at is derived",
+      commit: "9b06a6dcc5",
+      occurredAt: Date.parse("2026-11-08T17:21:05.123Z"),
+      data: { errorType: "error", stack: "error: x\n    at a (b.ts:1:1)" },
+    });
+  });
+
+  test("a writer that could not name its commit replays as null", () => {
+    expect(replayedReportInput({ ...line, commit: null }).commit).toBeNull();
+  });
+
+  // `undefined` would let recordReport's stampCommit fill in THIS process's
+  // pin — the replayer's code, not the code that crashed.
+  test("a line from an older backend (no commit field) replays as unknown, never undefined", () => {
+    expect(replayedReportInput(line).commit).toBeNull();
+  });
+
+  test("a line naming its own kind keeps its payload", () => {
+    const input = replayedReportInput({
+      ...line,
+      source: "server-fatal",
+      kind: "jobs-runner-floor",
+      data: { runner: "floor" },
+      commit: "abc",
+    });
+    expect(input.kind).toBe("jobs-runner-floor");
+    expect(input.data).toEqual({ runner: "floor" });
+  });
+
+  // The buffer is unlinked before the replay: a refused line would be lost.
+  test("a line with an unreadable instant is still recorded (at the flush time), and says so", () => {
+    const error = spyOn(console, "error").mockImplementation(() => {});
+    const input = replayedReportInput({ ...line, at: "nope", commit: "abc" });
+    expect(input.occurredAt).toBeUndefined();
+    expect(input.commit).toBe("abc");
+    expect(error).toHaveBeenCalledWith(
+      expect.stringContaining("no valid `at`"),
+    );
+    error.mockRestore();
   });
 });
