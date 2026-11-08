@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-packages-heap-pacing",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Heap pacing for heavy bun processes: pacedHeapEnv(env) sets BUN_JSC_forceRAMSize to HEAVY_PROCESS_RAM_BYTES (4 GB) unless the env already names one, so JavaScriptCore grows a multi-GB heap by ~1.3x before collecting instead of the ~2.7x it allows against the machine's whole RAM. Applied where TypeScript-program processes start (the type-check worker and its batches, ./equin run scripts) and inherited by their children."
+}

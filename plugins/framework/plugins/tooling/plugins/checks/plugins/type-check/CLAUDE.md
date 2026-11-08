@@ -155,6 +155,7 @@ Batching changes which program a file is checked in, never what it is checked ag
 - **One process per batch, one at a time** (`shared/batch-processes.ts`, `shared/batch-worker.ts`; job file in, JSON out, `.d.ts` via a spool dir).
   - A fresh process is what K bounds (sequential programs in one process kept 11–15 GB).
   - K stays large and batches serial because each program re-pays the environment (~10–15 CPU-s); three at once cost +54–125 % CPU.
+- **Workers and batches run heap-paced** (`packages/heap-pacing`, passed as the spawn `env`): JSC sizes its collection pacing against the machine's RAM, so on a 64 GB host a batch's 4.4 GB live heap grew ~2× before collecting (peak 8.6–10.4 GB); paced against 4 GB the same batch peaks 5.3–7 GB for +0–10 % CPU. `--smol` and `Bun.gc(true)` between phases or lint files did nothing measurable. Measure a batch with `scripts/batch-memory-bench.ts` over a run kept with `EQUIN_TYPE_CHECK_KEEP_BATCHES` (research/2026-11-08-global-type-check-bun-heap-pacing.md).
 - **Lint goes with the file**: a batch lints its files inside its program before their keys exist; the worker keeps the typed parts stale under the key it computes (`LintHook.adopt`).
 
 ## The lint cache is keyed on what the rules read, and exemptions apply when it is read

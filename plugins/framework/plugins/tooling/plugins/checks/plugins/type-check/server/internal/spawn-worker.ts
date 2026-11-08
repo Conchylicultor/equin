@@ -33,6 +33,7 @@ import {
 } from "../../core";
 import { fileReportFromProcess } from "@plugins/reports/plugins/outbox/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import { pacedHeapEnv } from "@plugins/packages/plugins/heap-pacing/core";
 import { reportMisses, type MissReportSink } from "./miss-reports";
 import { typeCheckLightPool, typeCheckWorkerPool } from "./worker-pool";
 
@@ -304,6 +305,9 @@ async function spawnWorker(opts: {
   const startedAt = performance.now();
   const spawned = await slot.spawn([process.execPath, WORKER, jobPath], {
     cwd: root,
+    // A multi-GB heap, paced against what one process may hold rather than
+    // the machine's whole RAM; its batch processes inherit the same pacing.
+    env: pacedHeapEnv(process.env),
     // A type-check worker builds a whole TypeScript program; cold, that is
     // minutes of unavoidable CPU, and on a saturated box it is longer still by
     // an amount nothing here can predict. There is no shorter deadline to

@@ -34098,8 +34098,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `setEnvDefault`
               - `unsetEnv`
           - Cross-plugin:
-            - Imported by: 43 plugins — full list in [`plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md`](../plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md)
-              - `framework` ×15
+            - Imported by: 44 plugins — full list in [`plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md`](../plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md)
+              - `framework` ×16
               - `infra` ×11
               - `database` ×4
               - `packages` ×4
@@ -38133,6 +38133,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `flockTry`
           - `flockTryShared`
           - `waitForFlock`
+    - **`heap-pacing`** — Heap pacing for heavy bun processes: pacedHeapEnv(env) sets BUN_JSC_forceRAMSize to HEAVY_PROCESS_RAM_BYTES (4 GB) unless the env already names one, so JavaScriptCore grows a multi-GB heap by ~1.3x before collecting instead of the ~2.7x it allows against the machine's whole RAM. Applied where TypeScript-program processes start (the type-check worker and its batches, ./equin run scripts) and inherited by their children.
+      - Cross-plugin:
+        - Imported by:
+          - `framework/cli/run`
+          - `framework/tooling/checks/type-check`
+      - Core:
+        - Exports (values):
+          - `HEAVY_PROCESS_RAM_BYTES`
+          - `JSC_RAM_SIZE_ENV`
+          - `pacedHeapEnv`
     - **`host-semaphore`** — Cross-process concurrency primitive: createHostSemaphore bounds work across processes via flock slot files (the host-wide twin of packages/semaphore).
       - Server:
         - Uses:

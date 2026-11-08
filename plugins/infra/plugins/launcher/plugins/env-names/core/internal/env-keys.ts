@@ -118,6 +118,8 @@ export const RUNTIME_WITHHELD_ENV = {
     "cache bypass for one check run, typed by whoever runs it; reaches that run's subprocesses, never a backend",
   CHECK_SHADOW:
     "shadow-mode switch for one check run, typed by whoever runs it; reaches that run's subprocesses, never a backend",
+  TYPE_CHECK_KEEP_BATCHES:
+    "directory a type-check run copies its batches' spool (job files and .d.ts) into before deleting it, typed by whoever measures a batch (type-check scripts/batch-memory-bench.ts); reaches that run's subprocesses, never a backend",
   DEPS_REEXEC:
     "re-exec budget the CLI carries across its own dependency-install re-exec; taken out of the env by the bootstrap, so it never reaches a descendant (cli/bootstrap reexec.ts)",
   FROZEN_LOCKFILE:

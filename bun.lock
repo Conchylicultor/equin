@@ -4754,6 +4754,10 @@
       "name": "@equin/plugin-packages-flock",
       "version": "0.0.1",
     },
+    "plugins/packages/plugins/heap-pacing": {
+      "name": "@equin/plugin-packages-heap-pacing",
+      "version": "0.0.1",
+    },
     "plugins/packages/plugins/host-semaphore": {
       "name": "@equin/plugin-packages-host-semaphore",
       "version": "0.0.1",
@@ -9698,6 +9702,8 @@
     "@equin/plugin-packages-error-subject": ["@equin/plugin-packages-error-subject@workspace:plugins/packages/plugins/error-subject"],
 
     "@equin/plugin-packages-flock": ["@equin/plugin-packages-flock@workspace:plugins/packages/plugins/flock"],
+
+    "@equin/plugin-packages-heap-pacing": ["@equin/plugin-packages-heap-pacing@workspace:plugins/packages/plugins/heap-pacing"],
 
     "@equin/plugin-packages-host-semaphore": ["@equin/plugin-packages-host-semaphore@workspace:plugins/packages/plugins/host-semaphore"],
 

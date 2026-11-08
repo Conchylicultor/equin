@@ -23,6 +23,13 @@ import { PER_UNIT_BYTES } from "@plugins/infra/plugins/host/plugins/host-admissi
  * has never carried tail headroom, and giving this one consumer a tail-sized
  * weight while every other holder is sized on its mean would ration the wrong
  * thing. See research/2026-09-18-global-type-check-one-program.md.
+ *
+ * Re-checked 2026-11-08 once workers and batches run heap-paced
+ * (`packages/heap-pacing`): a cold whole-tree run — the heaviest a worker
+ * does — peaked at 5.3 GB (10.4 GB unpaced, same tree). Any peak in
+ * (3.6, 7.2] GB is 2 units, so the weight is unchanged; the mean is to be
+ * re-read from transcripts once paced runs dominate them
+ * (research/2026-11-08-global-type-check-bun-heap-pacing.md).
  */
 export const TYPE_CHECK_WORKER_PEAK_BYTES = 7.2e9;
 
@@ -50,6 +57,12 @@ export const TYPE_CHECK_WORKER_UNITS = Math.ceil(
  * 2000 (7 batches) 442 / 10.3 — the whole program's memory pressure costs
  * more than the batches re-pay
  * (research/2026-10-23-global-type-check-bounded-batches.md).
+ *
+ * Re-measured heap-paced (2026-11-08, cold, lint included): K 2000 (8 batches)
+ * 473 CPU-s / 5.3 GB; K 3000 (6) 460 / 6.1. Pacing moved both peaks down but
+ * not the trade: a larger K saves ~3 % CPU (inside run-to-run noise) for
+ * +15 % peak, and memory is what the host runs out of, so K stays
+ * (research/2026-11-08-global-type-check-bun-heap-pacing.md).
  */
 export const TYPE_CHECK_BATCH_FILES = 2000;
 

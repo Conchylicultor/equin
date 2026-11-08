@@ -12,6 +12,7 @@ import { MODULE_EXTENSION } from "@plugins/framework/plugins/tooling/plugins/gua
 import { isE2eScriptPath } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
 import { withDirectOp } from "@plugins/framework/plugins/cli/plugins/op-runtime/cli";
 import { withForegroundPriority } from "@plugins/packages/plugins/spawn-priority/core";
+import { pacedHeapEnv } from "@plugins/packages/plugins/heap-pacing/core";
 import {
   getWorktreeRoot,
   spawnPassthrough,
@@ -102,7 +103,14 @@ const run: CliAction<[string, string[]], object> = async (script, args) => {
       spawnPassthrough([process.execPath, abs, ...args], {
         cwd: root,
         stdin: "inherit",
-        env: { ...process.env, ...(grant === null ? {} : grant.env()) },
+        // Paced heap: a script that builds a whole-repo TypeScript program
+        // (an inventory, a rename) holds GBs, and JSC sized against the
+        // machine's RAM lets it grow ~2.7× before collecting. A small script's
+        // heap is far below the pacing size and runs as before.
+        env: pacedHeapEnv({
+          ...process.env,
+          ...(grant === null ? {} : grant.env()),
+        }),
       });
     const { exitCode, signalCode } =
       grant === null
