@@ -249,6 +249,7 @@ export async function updateAgentRow(
  * exists: a conversation deleted under its agent (the cascade took the
  * checkpoint) writes nothing rather than failing the stop row's foreign key,
  * and its next checkpoint-only write answers null, as before the split.
+ * `updated_at` is derived (its touchedBy trigger sets it, and refuses a write).
  */
 function stopUpsert(id: string, stop: StopFields) {
   return sql`INSERT INTO ${sdkAgentStops.table} ("parent_id", "stopped_at", "stop_error", "account")
@@ -257,8 +258,7 @@ function stopUpsert(id: string, stop: StopFields) {
     ON CONFLICT ("parent_id") DO UPDATE SET
       "stopped_at" = EXCLUDED."stopped_at",
       "stop_error" = EXCLUDED."stop_error",
-      "account" = EXCLUDED."account",
-      "updated_at" = now()`;
+      "account" = EXCLUDED."account"`;
 }
 
 /**
