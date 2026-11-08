@@ -189,3 +189,11 @@ median).
 - `./equin run` scripts are unadmitted against memory and CPU.
 - Size `check` / `build` grant `max` from their fan-out, measured from
   `health-owners`' agent-ops bucket during a window.
+
+**Agent ops, decomposed (task-1793984663):** the tail is per-process size,
+not concurrency. A type-check batch holds ~2.3 GB of live data but peaks at
+7.5–14 GB on bun/JSC (GC slack + allocator retention). The same program on
+node peaks at 3.1 GB (a baseline only: the user
+chose to stay on bun, so the fix is bun-side). The unadmitted TS-program scripts in the agents bucket
+have the same cause. See
+[`2026-11-06-global-agent-ops-memory-is-gc-slack.md`](2026-11-06-global-agent-ops-memory-is-gc-slack.md).
