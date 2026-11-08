@@ -135,7 +135,9 @@ Tests run under Bun, so they build the rule with the real `lintToolkit`,
 imported from `@plugins/framework/plugins/tooling/plugins/lint/core/testing`.
 
 The toolkit also carries **`declaredUtilities`**: every custom `@utility` in
-app.css, read when the config is built (`core/declared-utilities.ts`), so a rule
+app.css, read by whoever builds the config (`readDeclaredUtilities`, in
+`core/declared-utilities.ts`) and handed to the builder as data — never read by
+the builder itself, whose import closure is the type-check lint engine — so a rule
 can tell a class that exists from one Tailwind would silently compile to
 nothing (`space-ramp/no-dead-spacing`). A rule must never import a generated
 manifest for such facts: `build` regenerates manifests after loading the rules,
@@ -234,6 +236,7 @@ its disable does not cover. Parameters and imports have no in-file value.
     - `lintRuleIds`
     - `loadLintContributions`
     - `ownClass`
+    - `readDeclaredUtilities`
     - `typeAwareLintGroups`
 - Cross-plugin:
   - Imported by:

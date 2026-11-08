@@ -40,7 +40,6 @@ import {
 import type { CollectedEntry } from "./lint.generated";
 import { LINT_SCOPE_EXCLUDE_GLOBS } from "./lint-scope-exceptions";
 import { createLintToolkit, type LintToolkit } from "./class-token-walk";
-import { readDeclaredUtilities } from "./declared-utilities";
 import { scopeDeclarationError } from "./scope-declaration";
 
 // Loaded lazily: importing anything from this module's barrel
@@ -231,11 +230,19 @@ function buildClassRules(
 /**
  * Load every plugin's `lint/index.ts` contribution. Fail loudly: a dropped
  * contribution silently stops enforcing its rules.
+ *
+ * `declaredUtilities` is the stylesheet's `@utility` set
+ * (`readDeclaredUtilities`), taken as DATA rather than read here: this file's
+ * import closure is the type-check lint ENGINE, folded into every cached
+ * result's key, and a reader here put its file I/O plumbing (timed-fs) in it —
+ * 4 of the 20 whole-tree re-lints of every worktree in 11-01..11-08 came from
+ * timed-fs edits, none of which can change a message. The data itself is keyed
+ * by `lintDataKey`.
  */
 export async function loadLintContributions(
-  root: AppPath,
+  declaredUtilities: ReadonlySet<string>,
 ): Promise<LoadedLintContribution[]> {
-  const toolkit = createLintToolkit(readDeclaredUtilities(root));
+  const toolkit = createLintToolkit(declaredUtilities);
   const lintEntries = await loadLintEntries();
   // One at a time, not `Promise.all`: under the editor's jiti (Node), an
   // `import()` landing while another is still evaluating a shared module
@@ -430,6 +437,8 @@ export interface BuildLintConfigOptions {
   /** projectService (IDE/CLI) or a pre-built program set (type-check worker). */
   typeSource: ParserTypeSource;
   exemptions: LintExemptions;
+  /** The stylesheet's `@utility` set, `readDeclaredUtilities(root)` (see `loadLintContributions`). */
+  declaredUtilities: ReadonlySet<string>;
   /**
    * Enable only these rules (default: all). The type-check worker re-runs only
    * the rule groups whose cached result is stale for a file; a contribution
@@ -587,7 +596,7 @@ export async function buildLintConfig(
   const { root, typeSource, rules: selection } = opts;
   const [allContributions, exemptions, tsPlugin, tsParser, reactHooks] =
     await Promise.all([
-      loadLintContributions(root),
+      loadLintContributions(opts.declaredUtilities),
       opts.exemptions.mode === "config-off"
         ? loadExemptions(opts.exemptions.manifests)
         : Promise.resolve([]),
@@ -767,11 +776,11 @@ function isRuleEntryOff(entry: Linter.RuleEntry): boolean {
  * `kind: "type-aware"` selection registers a rule.
  */
 export async function typeAwareLintGroups(
-  root: AppPath,
+  declaredUtilities: ReadonlySet<string>,
 ): Promise<{ base: boolean; contributions: Set<string> }> {
   const [contributions, tsPlugin, reactHooks, builtinRules] = await Promise.all(
     [
-      loadLintContributions(root),
+      loadLintContributions(declaredUtilities),
       loadTsPlugin(),
       loadReactHooks(),
       loadBuiltinRules(),

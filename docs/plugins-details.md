@@ -29232,7 +29232,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Uses: `framework/tooling/checks/type-check.readTypeCheckTree`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 140 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+            - Uses: 141 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
               - `plugin-meta/parse-utils` ×19
               - `config_v2` ×15
               - `framework/plugin-id` ×13
@@ -29251,13 +29251,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/boundaries` ×2
               - `framework/tooling/collected-dir/discovery` ×2
               - `framework/tooling/format` ×2
+              - `framework/tooling/lint` ×2
               - `infra/paths` ×2
               - `network/live/resource-protocol` ×2
               - `plugin-meta/plugin-tree` ×2
               - `config_v2/disk-read.fileConfigProxy`
               - `fields/reorder-tree.REORDER_NODE_LEGEND`
               - `framework/tooling/guards/agent-policy.agentPolicySettings`
-              - `framework/tooling/lint.loadLintContributions`
               - `framework/tooling/web-artifacts.COMPOSITION_SPECIFIERS`
               - `framework/tooling.noteRepoWrites`
               - `infra/namespace.MAIN_COMPOSITION_ID`
@@ -29809,6 +29809,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `lintRuleIds`
               - `loadLintContributions`
               - `ownClass`
+              - `readDeclaredUtilities`
               - `typeAwareLintGroups`
           - Cross-plugin:
             - Imported by:

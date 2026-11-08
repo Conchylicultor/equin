@@ -25,8 +25,10 @@ import {
   lintExemptions,
   loadLintContributions,
 } from "./build-lint-config";
+import { readDeclaredUtilities } from "./declared-utilities";
 
 const ROOT = REPO_ROOT;
+const DECLARED = readDeclaredUtilities(ROOT);
 
 /** A file the exemption covers: the target itself, or one inside it. */
 function probeOf(e: ResolvedExemption): string {
@@ -58,7 +60,7 @@ async function ruleAt(
 const repo = await loadRepoFiles(ROOT);
 const [exemptions, contributions] = await Promise.all([
   loadExemptions(repo),
-  loadLintContributions(ROOT),
+  loadLintContributions(DECLARED),
 ]);
 const lint = lintExemptions(exemptions, contributions);
 
@@ -72,6 +74,7 @@ describe("lint exemptions are honored", () => {
       root: ROOT,
       typeSource: { none: true },
       exemptions: { mode: "config-off", manifests: repo },
+      declaredUtilities: DECLARED,
     });
     const notOff: string[] = [];
     for (const e of lint) {

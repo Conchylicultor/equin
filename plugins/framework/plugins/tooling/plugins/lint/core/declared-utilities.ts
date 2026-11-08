@@ -6,7 +6,10 @@ import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 
 /**
  * Which custom `@utility` classes exist — the one stylesheet fact a class rule
- * may consult, read from app.css when the lint config is built.
+ * may consult, read from app.css by whoever builds the lint config and handed
+ * to the builder as data (`BuildLintConfigOptions.declaredUtilities`): the
+ * builder's import closure is the type-check lint engine, and this reader's
+ * file I/O must stay out of it.
  *
  * Read from the stylesheet by PATH rather than imported from a generated TS
  * manifest, for two reasons. A rule file cannot import a runtime value from
@@ -14,7 +17,8 @@ import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
  * `@plugins/*` alias). And `build` regenerates its manifests in-process after
  * the lint config is first loaded, so a statically imported manifest would be
  * frozen at its previous contents (`cli:codegen-manifests-not-frozen`). A file
- * read at `buildLintConfig` time is current for every lint pass.
+ * read by the config's builder each time it builds one is current for every
+ * lint pass.
  *
  * The file is listed in {@link LINT_DATA_FILES}; the type-check lint cache keys
  * on {@link lintDataKey} — the declared set, not the file's bytes — so editing a

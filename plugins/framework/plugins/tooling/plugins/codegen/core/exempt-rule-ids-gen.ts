@@ -2,7 +2,10 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { loadLintContributions } from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import {
+  loadLintContributions,
+  readDeclaredUtilities,
+} from "@plugins/framework/plugins/tooling/plugins/lint/core";
 import type * as ChecksCore from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { writeGenerated } from "./write-generated";
 
@@ -56,7 +59,7 @@ export async function collectExemptRuleIds(
 ): Promise<ExemptRuleIdSets> {
   const { listAllChecks } = (await import(CHECKS_CORE)) as typeof ChecksCore;
   const [contributions, checks] = await Promise.all([
-    loadLintContributions(root),
+    loadLintContributions(readDeclaredUtilities(root)),
     listAllChecks(),
   ]);
   const exemptable = new Set<string>();

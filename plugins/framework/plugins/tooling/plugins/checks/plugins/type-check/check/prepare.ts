@@ -52,7 +52,10 @@ import {
   isLintRuleId,
   loadExemptions,
 } from "@plugins/framework/plugins/tooling/plugins/exempt/core";
-import { typeAwareLintGroups } from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import {
+  readDeclaredUtilities,
+  typeAwareLintGroups,
+} from "@plugins/framework/plugins/tooling/plugins/lint/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import {
   LINT_GROUP_ALL,
@@ -483,7 +486,7 @@ export async function openPreparation({
   let typeAware = store.readTypeAware(awareKey);
   const typeAwareLoaded = typeAware === undefined;
   if (typeAware === undefined) {
-    typeAware = await typeAwareLintGroups(root);
+    typeAware = await typeAwareLintGroups(readDeclaredUtilities(root));
     store.writeTypeAware(awareKey, typeAware);
   }
   const typedFps = typedGroupFps(groups, typeAware);

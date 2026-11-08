@@ -8,6 +8,7 @@ import { Linter } from "eslint";
 import {
   buildLintConfig,
   loadLintContributions,
+  readDeclaredUtilities,
 } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 import { LINT_GROUP_ALL, LINT_GROUP_BASE, type RawLintMessage } from "../core";
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
@@ -57,9 +58,14 @@ export function createLintEngine(root: AppPath): LintEngine {
   // Loaded on the first file that lints: a run with nothing to lint (most)
   // never pays for the rules.
   let groupOfNamespace: Map<string, string> | undefined;
+  // The stylesheet's `@utility` set every config is built with, read once —
+  // what `lintDataKey` keyed this run's results on.
+  let declared: ReadonlySet<string> | undefined;
+  const declaredUtilities = (): ReadonlySet<string> =>
+    (declared ??= readDeclaredUtilities(root));
   const loadGroups = async (): Promise<void> => {
     groupOfNamespace ??= new Map(
-      (await loadLintContributions(root)).map(
+      (await loadLintContributions(declaredUtilities())).map(
         (c) => [c.name, c.relPath] as const,
       ),
     );
@@ -96,6 +102,7 @@ export function createLintEngine(root: AppPath): LintEngine {
               root,
               typeSource: { programs: [program!] },
               exemptions: { mode: "report" },
+              declaredUtilities: declaredUtilities(),
             })
           : buildLintConfig({
               root,
@@ -104,6 +111,7 @@ export function createLintEngine(root: AppPath): LintEngine {
                   ? { none: true }
                   : { programs: [program!] },
               exemptions: { mode: "report" },
+              declaredUtilities: declaredUtilities(),
               rules: {
                 base: groups.includes(LINT_GROUP_BASE),
                 contributions: new Set(groups),

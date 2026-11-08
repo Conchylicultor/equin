@@ -14,6 +14,7 @@ import {
   isLintScopeExcluded,
   lintRuleIds,
   loadLintContributions,
+  readDeclaredUtilities,
 } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 import {
   describeExemption,
@@ -94,7 +95,7 @@ async function manifestProblems(ctx: CheckContext): Promise<string[]> {
   }
 
   const [contributions, checks] = await Promise.all([
-    loadLintContributions(repo.root),
+    loadLintContributions(readDeclaredUtilities(repo.root)),
     listAllChecks(),
   ]);
   const lint = lintRuleIds(contributions);

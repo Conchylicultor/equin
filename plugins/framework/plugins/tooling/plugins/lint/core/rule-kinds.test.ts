@@ -14,8 +14,10 @@ import {
   typeAwareLintGroups,
   type LintRuleSelection,
 } from "./build-lint-config";
+import { readDeclaredUtilities } from "./declared-utilities";
 
 const ROOT = REPO_ROOT;
+const DECLARED = readDeclaredUtilities(ROOT);
 const BUTTON_SAFETY =
   "framework/plugins/tooling/plugins/lint/plugins/button-safety";
 // A web file of a real plugin (a fake plugin path fails plugin-refs-resolve),
@@ -28,6 +30,7 @@ async function config(rules: LintRuleSelection): Promise<Linter.Config[]> {
     root: ROOT,
     typeSource: { none: true },
     exemptions: { mode: "report" },
+    declaredUtilities: DECLARED,
     rules,
   });
 }
@@ -125,7 +128,7 @@ describe("{ none: true } type source", () => {
 
 describe("typeAwareLintGroups", () => {
   it("names exactly the groups a type-aware selection registers a rule from", async () => {
-    const groups = await typeAwareLintGroups(ROOT);
+    const groups = await typeAwareLintGroups(DECLARED);
     expect(groups.base).toBe(true);
     expect(groups.contributions.has(BUTTON_SAFETY)).toBe(true);
     const cfg = await config({

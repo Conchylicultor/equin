@@ -11,7 +11,11 @@ export {
   loadLintContributions,
   typeAwareLintGroups,
 } from "./build-lint-config";
-export { LINT_DATA_FILES, lintDataKey } from "./declared-utilities";
+export {
+  LINT_DATA_FILES,
+  lintDataKey,
+  readDeclaredUtilities,
+} from "./declared-utilities";
 export {
   LINT_SCOPE_EXCLUDE_GLOBS,
   isLintScopeExcluded,

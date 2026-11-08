@@ -163,16 +163,16 @@ test("a type-only import is no edge; a value, side-effect or inline import is", 
 // reaches are declared here: a new one fails this test, and whoever adds it
 // decides whether a rule's output really depends on it — or takes it as data,
 // the way the builder takes the manifests' file set its IDE entry lists
-// (`lint/core/ide-lint-config.ts`).
+// (`lint/core/ide-lint-config.ts`) and the stylesheet's `@utility` set
+// (`readDeclaredUtilities`, keyed by `lintDataKey`): the builder read that file
+// itself until 2026-11-08, which put timed-fs and user-path in the engine — 4 of
+// the 20 engine moves of 11-01..11-08 were timed-fs edits, each a whole-tree
+// re-lint in every worktree.
 const ENGINE_FOLDERS = [
-  // The builder, its classifier, scope lists and the declared-utilities reader.
+  // The builder, its classifier and scope lists.
   "plugins/framework/plugins/tooling/plugins/lint/core",
   // File categories: which rules are off in tests, e2e, and declared scopes.
   "plugins/framework/plugins/tooling/plugins/exempt/core",
-  // The AppPath brand the declared-utilities reader resolves its file with.
-  "plugins/infra/plugins/host-fs/plugins/user-path/core",
-  // The read of the declared-utilities stylesheet.
-  "plugins/packages/plugins/timed-fs/core",
 ];
 
 test("the lint engine reaches only its declared folders", () => {

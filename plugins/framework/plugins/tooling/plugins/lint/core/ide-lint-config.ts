@@ -4,6 +4,7 @@ import { promisify } from "node:util";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import type { ManifestSource } from "@plugins/framework/plugins/tooling/plugins/exempt/core";
 import { buildLintConfig } from "./build-lint-config";
+import { readDeclaredUtilities } from "./declared-utilities";
 
 /**
  * The editor's config (`eslint.config.ts`): every rule, types from each file's
@@ -26,6 +27,7 @@ export async function buildIdeLintConfig(): Promise<Linter.Config[]> {
     root: REPO_ROOT,
     typeSource: { projectService: true },
     exemptions: { mode: "config-off", manifests: await manifestFiles() },
+    declaredUtilities: readDeclaredUtilities(REPO_ROOT),
   });
 }
 
