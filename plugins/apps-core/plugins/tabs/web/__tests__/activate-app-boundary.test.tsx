@@ -90,7 +90,9 @@ async function mountEmbedded(onLeave: (url: string) => void) {
     wrapper: ({ children }: { children: ReactNode }) => (
       <PluginProvider plugins={[plugin]} composition={composition}>
         <TabsProvider>
-          <TabsProvider embedded={{ app: "pages", route: "/", onLeave }}>
+          <TabsProvider
+            embedded={{ app: "pages", route: "/", onLeave, fillsPage: false }}
+          >
             {children}
           </TabsProvider>
         </TabsProvider>

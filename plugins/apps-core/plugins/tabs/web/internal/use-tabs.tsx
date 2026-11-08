@@ -60,6 +60,7 @@ import {
 } from "./placement-registry";
 import {
   claimTabSet,
+  peekFocusedTabSet,
   PAGE_TAB_SET_ID,
   registerTabSet,
   tabSetModeChanged,
@@ -553,6 +554,13 @@ export interface EmbeddedTabSet {
   route: string;
   /** An app-rooted URL no app in scope owns. */
   onLeave: (url: string) => void;
+  /**
+   * The set is the page's whole surface (the page shows nothing but it): it
+   * takes the keyboard when it mounts, as the page's own set does at boot.
+   * Otherwise it is a box inside a bigger page, and mounting it is not the
+   * user moving into it — it waits for a pointer-down or a focus change.
+   */
+  fillsPage: boolean;
 }
 
 /** The embedded boot: one tab of the seed app, its route pending until resolved. */
@@ -1066,18 +1074,35 @@ export function TabsProvider({
   // window keydown handler outside any React subtree.
   //
   // An embedded set publishes too — keyboard scope follows the user into it —
-  // but not at mount: mounting an embed is not the user moving into it. The
-  // surface body also claims focus on pointer-down, for a tab that was
-  // already its set's focused one.
+  // but not at mount: mounting a box inside a bigger page is not the user
+  // moving into it. The surface body also claims focus on pointer-down, for a
+  // tab that was already its set's focused one.
   const lastPublishedRef = useRef<string | undefined | null>(
     page ? null : focusedTabId,
   );
   useEffect(() => {
     if (lastPublishedRef.current === focusedTabId) return;
+    const booting = lastPublishedRef.current === null;
     lastPublishedRef.current = focusedTabId;
+    // The page's boot publish yields to an embed that already took the
+    // keyboard (a page-filling one mounted in the page's first commit runs its
+    // effects first: children before parents).
+    if (booting && peekFocusedTabSet()?.contained === true) return;
     setFocusedSurfaceId(focusedTabId);
     claimTabSet(id);
   }, [focusedTabId, id]);
+
+  // An embed that fills the page is where the keyboard is from the start: it
+  // takes it at mount, as the page's own set does at boot. Its own effect, so
+  // a remount (StrictMode's included, whose unregister hands the claim back to
+  // the page) claims again.
+  const fillsPage = embedded?.fillsPage === true;
+  const focusedTabIdRef = useLatestRef(focusedTabId);
+  useEffect(() => {
+    if (!fillsPage) return;
+    setFocusedSurfaceId(focusedTabIdRef.current);
+    claimTabSet(id);
+  }, [fillsPage, focusedTabIdRef, id]);
 
   // Publish the focused tab's app to the chrome-identity module store on every
   // focus/app change (and on boot). Chrome rendered OUTSIDE a surface (rail, tab

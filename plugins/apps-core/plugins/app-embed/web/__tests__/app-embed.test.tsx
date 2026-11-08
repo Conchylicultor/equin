@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
 
-import type { ReactNode } from "react";
+import { StrictMode, type ReactNode } from "react";
 import {
   PluginProvider,
   PluginScope,
@@ -11,6 +11,10 @@ import { Apps } from "@plugins/apps-core/web";
 import { useNavigate, useTabs } from "@plugins/apps-core/plugins/tabs/web";
 import { useRouteState } from "@plugins/primitives/plugins/pane/web";
 import { ErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
+import {
+  getFocusedSurfaceId,
+  setFocusedSurfaceId,
+} from "@plugins/primitives/plugins/shortcuts/web";
 import { AppEmbed } from "../components/app-embed";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
@@ -106,27 +110,40 @@ const withoutOther = {
 
 afterEach(() => {
   cleanup();
+  setFocusedSurfaceId(undefined);
   window.history.replaceState(null, "", "/");
 });
 
-function mount({ scoped = false }: { scoped?: boolean } = {}) {
+function mount({
+  scoped = false,
+  fillsPage = false,
+  strict = false,
+}: { scoped?: boolean; fillsPage?: boolean; strict?: boolean } = {}) {
   const onLeave = vi.fn();
   window.history.replaceState(null, "", "/host/page");
-  const embed = <AppEmbed app="emb" route="/c/one" onLeave={onLeave} />;
+  const embed = (
+    <AppEmbed
+      app="emb"
+      route="/c/one"
+      onLeave={onLeave}
+      fillsPage={fillsPage}
+    />
+  );
   const inScope = (children: ReactNode) =>
     scoped ? (
       <PluginScope composition={withoutOther}>{children}</PluginScope>
     ) : (
       children
     );
-  render(
+  const tree = (
     <PluginProvider
       plugins={[slotsPlugin, appsPlugin, otherPlugin]}
       composition={{ id: "app-embed-test", home: "emb" }}
     >
       {inScope(embed)}
-    </PluginProvider>,
+    </PluginProvider>
   );
+  render(strict ? <StrictMode>{tree}</StrictMode> : tree);
   return onLeave;
 }
 
@@ -213,5 +230,27 @@ describe("<AppEmbed>", () => {
     expect(onLeave).not.toHaveBeenCalled();
     expect(screen.getByTestId("app").textContent).toBe("emb");
     expect(window.location.pathname).toBe("/host/page");
+  });
+
+  it("an embed inside a page leaves the keyboard where it was at mount", () => {
+    setFocusedSurfaceId("host-tab");
+    mount();
+    expect(getFocusedSurfaceId()).toBe("host-tab");
+  });
+
+  it("an embed that fills the page takes the keyboard at mount", () => {
+    setFocusedSurfaceId("host-tab");
+    mount({ fillsPage: true });
+    const focused = getFocusedSurfaceId();
+    expect(focused).not.toBe("host-tab");
+    expect(focused).toBeDefined();
+  });
+
+  it("keeps the keyboard through StrictMode's remount", () => {
+    setFocusedSurfaceId("host-tab");
+    mount({ fillsPage: true, strict: true });
+    const focused = getFocusedSurfaceId();
+    expect(focused).not.toBe("host-tab");
+    expect(focused).toBeDefined();
   });
 });

@@ -55,7 +55,12 @@ export function DemoLayout() {
         <div className="flex min-h-0 flex-1 flex-col p-lg">
           {/* eslint-disable-next-line layout/no-adhoc-layout -- the demo's frame: the embedded app fills it */}
           <div className="min-h-0 flex-1 overflow-hidden rounded-lg border">
-            <AppEmbed app={workspaceDemo.app} route={workspaceDemo.route} />
+            {/* The embed is all this page shows: its shortcuts answer at once. */}
+            <AppEmbed
+              app={workspaceDemo.app}
+              route={workspaceDemo.route}
+              fillsPage
+            />
           </div>
         </div>
       </DemoScope>

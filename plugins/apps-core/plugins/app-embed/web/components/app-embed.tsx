@@ -58,6 +58,11 @@ const refuseLeave: AppEmbedLeave = () => {
  *   the floating launcher, so an app that draws no brand of its own is not a
  *   dead end in a box with no rail or tab bar.
  *
+ * - **The keyboard, when it is the page.** An embed inside a bigger page does
+ *   not take the keyboard when it mounts — the user moves into it by pointing
+ *   at it. One that `fillsPage` (the page shows nothing but it) takes it at
+ *   mount, as the app's own surface does, so its shortcuts answer at once.
+ *
  * Size it with `className` (it fills its box). `app` / `route` seed the first
  * tab only.
  */
@@ -65,17 +70,20 @@ export function AppEmbed({
   app,
   route,
   onLeave = refuseLeave,
+  fillsPage = false,
   className,
 }: {
   app: string;
   route: string;
   onLeave?: AppEmbedLeave;
+  /** The embed is the page's whole surface: it takes the keyboard when it mounts. */
+  fillsPage?: boolean;
   className?: string;
 }): ReactNode {
   // The seed is read once, at the tab set's first render.
   const embedded = useMemo<EmbeddedTabSet>(
-    () => ({ app, route, onLeave }),
-    [app, route, onLeave],
+    () => ({ app, route, onLeave, fillsPage }),
+    [app, route, onLeave, fillsPage],
   );
   return (
     <TabsProvider embedded={embedded}>

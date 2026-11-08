@@ -111,8 +111,10 @@ the one the page-global readers (`usePlacementCapabilities`, the tab bar, the
 theme scope) read. Code outside React that must act on the tab set the user is
 in — a shortcut's `when` / handler — reads `peekFocusedTabSet()`: the set last
 claimed (`claimTabSet`, by the surface body on pointer-down and by the
-provider on a focus change), else the page's. Chrome outside every set that
-acts on that one (the action bar's Layout control) reads `useFocusedTabSet()`,
+provider on a focus change), else the page's. An embedded set does not claim
+at mount — a box inside a page is not where the user is yet — unless its seed
+says it `fillsPage` (the page shows nothing but it); the page's own boot claim
+then yields to it. Chrome outside every set that acts on that one (the action bar's Layout control) reads `useFocusedTabSet()`,
 its reactive twin; its handle switches the set's mode (`setMode`,
 `exitToPreviousMode` — solo's Esc). A surface-mode app's activation
 (`useActivateApp`) switches the mode of the set it is drawn in, the context's.

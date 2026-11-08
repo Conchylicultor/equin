@@ -42,6 +42,11 @@ around nothing the real instance. Designs:
 - **Keyboard.** Its tabs register their surface shortcuts (`mod+z`) like any
   tab; pointing at the embed claims the page's focused surface and tab set
   (`claimTabSet`), so shortcuts — the desktop's included — act on it.
+  Mounting does not claim it: an embed inside a bigger page must not steal
+  the keyboard from the page around it. An embed that is the page's whole
+  surface says so — `fillsPage` (`/demo`) — and takes the keyboard at mount,
+  as the app's own surface does at boot, so Space reaches Sonata with no
+  click first.
 - **Accepted leaks.** Modifier-click hrefs open on the host origin; DataView
   view state in `localStorage` is shared with the real app.
 

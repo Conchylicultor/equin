@@ -8,7 +8,9 @@
  *     to Sonata, whose library lists the demo's songs ("ii–V–I warm-up", "Late
  *     night", "Rain on the window") and the MIDI starters a fresh install has ("Für Elise"), with
  *     the starters' covers drawn by the worker (loaded through the transport
- *     as blob URLs, never from the page's origin);
+ *     as blob URLs, never from the page's origin). The tile and the song are
+ *     activated by a bare `click` event, no pointer-down: pointing into the
+ *     embed would hand it the keyboard, which it must hold from its mount on;
  *  2. opens "Für Elise" and plays two notes on its keyboard: the first the
  *     moment the keyboard shows (before the samples are in, as a visitor
  *     would) — it must still start a sampled voice (an
@@ -20,7 +22,10 @@
  *     answered), while the page itself requests no sample at all;
  *  3. presses Space twice: the transport plays, then pauses (the play button
  *     reads Pause, then Play) — the embedded app's surface-scoped shortcuts
- *     answer as in a tab, not the host page's;
+ *     answer as in a tab, not the host page's. On the warm pass (4.) Space
+ *     comes right after the song opens, before any click into the demo: the
+ *     embed is the page's whole surface, so it has the keyboard from its
+ *     mount (`AppEmbed fillsPage`) — a key click first would hand it over;
  *  4. leaves the demo until its worker has ended, and does 1–3 again in the
  *     same context: the mirror's cache is the host's `data-files` store, kept
  *     in IndexedDB (`browser-server/host-storage`), so the piano sounds again
@@ -41,7 +46,11 @@
  */
 import type { Locator, Page, Request, WebSocket } from "playwright";
 import { isWorkerTreePath } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/core";
-import { pickFromLauncher } from "@plugins/apps-core/plugins/app-launcher/e2e";
+import {
+  closeLauncherGrid,
+  launcherTiles,
+  openLauncherGrid,
+} from "@plugins/apps-core/plugins/app-launcher/e2e";
 import {
   arg,
   boot,
@@ -196,8 +205,39 @@ await withBrowser(async (h) => {
   const cdnRequests = () =>
     worker.requests.filter((req) => new URL(req.url).host === SAMPLE_CDN);
 
-  /** /demo → launcher → Sonata → "Für Elise" → two notes; `pass` names the run. */
-  const playFurElise = async (pass: string): Promise<void> => {
+  /** Space plays the song, Space pauses it; `when` says what came before. */
+  const spaceToggles = async (pass: string, when: string): Promise<void> => {
+    const transport = (label: string): Locator =>
+      embedRoot(page).getByRole("button", { name: label, exact: true });
+    await renders(
+      `${pass}: the transport rests on Play`,
+      () => transport("Play").count(),
+      (n) => n > 0,
+    );
+    await page.keyboard.press("Space");
+    await renders(
+      `${pass}: Space, ${when}, starts the song (the button reads Pause)`,
+      () => transport("Pause").count(),
+      (n) => n > 0,
+    );
+    await snap(page, OUT, `${pass}-3-playing`);
+    await page.keyboard.press("Space");
+    await renders(
+      `${pass}: Space pauses it again (the button reads Play)`,
+      () => transport("Play").count(),
+      (n) => n > 0,
+    );
+  };
+
+  /**
+   * /demo → launcher → Sonata → "Für Elise" → two notes and Space; `pass`
+   * names the run. `spaceFirst`: Space before the notes, so before anything
+   * pointed into the demo.
+   */
+  const playFurElise = async (
+    pass: string,
+    { spaceFirst }: { spaceFirst: boolean },
+  ): Promise<void> => {
     await boot(page, pathUrl("/demo"), {
       marker: 'button:has-text("Conversations")',
     });
@@ -210,10 +250,13 @@ await withBrowser(async (h) => {
     );
 
     // ── 1. launcher → Sonata, its library ─────────────────────────────────
-    r.ok(
-      `${pass}: the launcher offers Sonata`,
-      await pickFromLauncher(embedRoot(page), /^\s*Sonata\s*$/),
-    );
+    // Picked by a bare `click` event, no pointer-down: pointing into the embed
+    // would hand it the keyboard, which the warm pass asserts it already has.
+    const grid = await openLauncherGrid(embedRoot(page));
+    const tile = launcherTiles(grid).filter({ hasText: /^\s*Sonata\s*$/ });
+    r.ok(`${pass}: the launcher offers Sonata`, (await tile.count()) > 0);
+    await tile.first().dispatchEvent("click");
+    await closeLauncherGrid(grid);
     await renders(
       `${pass}: the embed switches to Sonata`,
       () => embedRoot(page).getAttribute("data-app-embed"),
@@ -239,7 +282,11 @@ await withBrowser(async (h) => {
     await snap(page, OUT, `${pass}-1-library`);
 
     // ── 2. open a song, play two notes ────────────────────────────────────
-    await embedRoot(page).getByText(STARTER, { exact: true }).first().click();
+    await embedRoot(page)
+      .getByText(STARTER, { exact: true })
+      .first()
+      .dispatchEvent("click");
+    if (spaceFirst) await spaceToggles(pass, "with no click into the demo");
     const keyboard = embedRoot(page).locator(`[data-pitch="${KEYS[0]}"]`);
     await keyboard.first().waitFor({ timeout: RENDER_TIMEOUT_MS });
     await renders(
@@ -282,30 +329,11 @@ await withBrowser(async (h) => {
     await snap(page, OUT, `${pass}-2-played`);
 
     // ── 3. Space plays, Space pauses ──────────────────────────────────────
-    const transport = (label: string): Locator =>
-      embedRoot(page).getByRole("button", { name: label, exact: true });
-    await renders(
-      `${pass}: the transport rests on Play`,
-      () => transport("Play").count(),
-      (n) => n > 0,
-    );
-    await page.keyboard.press("Space");
-    await renders(
-      `${pass}: Space starts the song (the button reads Pause)`,
-      () => transport("Pause").count(),
-      (n) => n > 0,
-    );
-    await snap(page, OUT, `${pass}-3-playing`);
-    await page.keyboard.press("Space");
-    await renders(
-      `${pass}: Space pauses it again (the button reads Play)`,
-      () => transport("Play").count(),
-      (n) => n > 0,
-    );
+    if (!spaceFirst) await spaceToggles(pass, "after the notes");
   };
 
   // ── cold: a fresh context, the mirror fetches from the CDN ────────────────
-  await playFurElise("cold");
+  await playFurElise("cold", { spaceFirst: false });
 
   // ── warm: the worker gone, its cache kept — no sample downloaded again ────
   // Attached, the workers would outlive the page (see tapSharedWorkerRequests).
@@ -333,7 +361,7 @@ await withBrowser(async (h) => {
     async () => worker.workers().map((w) => w.url),
     (urls) => urls.length === 0,
   );
-  await playFurElise("warm");
+  await playFurElise("warm", { spaceFirst: true });
   r.eq(
     "warm: the samples come from the mirror's kept cache, no CDN request",
     cdnRequests()
