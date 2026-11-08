@@ -6,10 +6,11 @@ import * as fsp from "node:fs/promises";
 // was recorded as the read's own time, and nobody could tell from the record
 // that the filesystem was the cause. Each call here keeps node's own name and
 // type, so moving an import onto this module changes nothing but the timing —
-// and every call past `FS_WAIT_FLOOR_MS` is handed to `onSlowFsCall`
-// subscribers under a named wait layer, which the backend charges as a wait
-// (runtime-profiler's server install) and every process writes down
-// (`debug/profiling/fs-wait`).
+// and every call is metered as a wait on a named layer while it runs
+// (`installFsWaitMeter`: the backend's profiler shows it in progress past
+// `FS_WAIT_FLOOR_MS` and charges it — runtime-profiler's server install), and
+// every call past the floor is handed, once it returns, to `onSlowFsCall`
+// subscribers (every process writes it down: `debug/profiling/fs-wait`).
 //
 // A LEAF: node builtins only. Every process imports it (the CLI bootstrap,
 // file-sink, the profiler's own dependencies), so a single `@plugins/*` import
@@ -151,6 +152,40 @@ function observe(
   }
 }
 
+/** A file call that just started; the returned function is its end. */
+type FsWaitMeter = (layer: FsWaitLayer) => () => void;
+const NO_METER_END = (): void => {};
+let fsWaitMeter: FsWaitMeter | null = null;
+
+/**
+ * Install the one meter every file call of this process (each glob step its
+ * own call) is metered by: called synchronously as the call starts — in its
+ * caller's ambient context — and its returned end as the call returns, failed
+ * or not. Unlike `onSlowFsCall`, it sees a call WHILE it runs, so a call hung on
+ * a dead mount can be shown as a wait before it returns (runtime-profiler's
+ * `beginDeferredWait`). It runs on every call: it must cost next to nothing on
+ * a fast one. A file call the meter's own end makes is not metered again.
+ */
+export function installFsWaitMeter(meter: FsWaitMeter | null): void {
+  fsWaitMeter = meter;
+}
+
+let metering = false;
+
+function meterStart(layer: FsWaitLayer): () => void {
+  return fsWaitMeter && !metering ? fsWaitMeter(layer) : NO_METER_END;
+}
+
+function meterEnd(end: () => void): void {
+  if (end === NO_METER_END) return;
+  metering = true;
+  try {
+    end();
+  } finally {
+    metering = false;
+  }
+}
+
 /** How an awaited file call is awaited (identity until one is installed). */
 type FsAwait = <T>(pending: Promise<T>) => Promise<T>;
 let fsAwait: FsAwait = (pending) => pending;
@@ -187,12 +222,14 @@ type AnyFn = (...args: any[]) => any;
 
 function timedAsync<F extends AnyFn>(layer: FsWaitLayer, op: string, fn: F): F {
   const timed = async (...args: Parameters<F>) => {
+    const end = meterStart(layer);
     const concurrent = ++inFlight;
     const t0 = performance.now();
     try {
       return await fsAwait(fn(...args) as Promise<unknown>);
     } finally {
       inFlight--;
+      meterEnd(end);
       observe(layer, op, performance.now() - t0, targetOf(args[0]), concurrent);
     }
   };
@@ -210,10 +247,12 @@ function timedSyncCall<F extends AnyFn>(
 ): F {
   return ((...args: Parameters<F>) => {
     fsCallGuard?.(op, targetOf(args[0]));
+    const end = meterStart(layer);
     const t0 = performance.now();
     try {
       return fn(...args);
     } finally {
+      meterEnd(end);
       observe(
         layer,
         op,
@@ -345,6 +384,7 @@ export async function* scanGlob(
   let concurrent = 0;
   try {
     for (;;) {
+      const end = meterStart("fs-glob");
       concurrent = Math.max(concurrent, ++inFlight);
       const t0 = performance.now();
       let step: IteratorResult<string>;
@@ -352,6 +392,7 @@ export async function* scanGlob(
         step = await fsAwait(it.next());
       } finally {
         inFlight--;
+        meterEnd(end);
         inScan += performance.now() - t0;
       }
       if (step.done) return;
@@ -381,11 +422,13 @@ export function* scanGlobSync(
   let inScan = 0;
   try {
     for (;;) {
+      const end = meterStart("fs-glob");
       const t0 = performance.now();
       let step: IteratorResult<string>;
       try {
         step = it.next();
       } finally {
+        meterEnd(end);
         inScan += performance.now() - t0;
       }
       if (step.done) return;

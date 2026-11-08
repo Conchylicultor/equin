@@ -27,15 +27,30 @@ own time, and each needed a manual investigation to blame the filesystem.
   a queue: the call waited behind the process's own reads for one of libuv's
   few fs threads, rather than on one slow disk answer. The first recorded
   check showed this, with 17,089 readFiles of one pass, each about 2 s.
-  - runtime-profiler's server install charges each one with
-    an `io` wait on `layer`. The enclosing spans then name it, and
-    slow-ops files it as `wait fs-<op>`, not as the caller's own time. It is
-    the profiler's one wait charged after the fact: a call is handed over
-    only once it returns, so one stuck in progress is not shown as a wait
-    until then.
   - `debug/profiling/fs-wait` writes each one to the namespace's `fs-wait`
     log channel. A backend, an exec child and every CLI run (build, check,
     test) all write there.
+- **The meter — a call while it runs.** `installFsWaitMeter(meter | null)`
+  installs the one meter every call is metered by (each glob step its own
+  call, sync calls too): `meter(layer)` runs synchronously as the call
+  starts, in its caller's context, and the end it returns as the call
+  returns, failed or not. A file call the meter's end itself makes is not
+  metered again. runtime-profiler's server install meters each call as a
+  `beginDeferredWait(layer, "io", FS_WAIT_FLOOR_MS)`: a call still running
+  past the floor is shown as a wait in progress (so a read hung on a dead
+  mount reads to the stuck-span watchdog as a wait on `fs-<op>`, not as its
+  caller's own work), and one that reached the floor is charged as an `io`
+  wait as it ends — the enclosing spans name it, and slow-ops files it as
+  `wait fs-<op>`. It runs on every call, so it must cost next to nothing on a
+  fast one: measured (`runtime-profiler/scripts/fs-meter-bench.ts`), the
+  deferred wait is ~170 ns a call, against ~1.2–1.9 µs for an eager
+  `beginWait` under three entries and 15–28 µs for an awaited `stat` (2 µs
+  for a `statSync`). A glob is metered per step, like any call, so the
+  profiler charges a step that reached the floor — not the sum of a scan's
+  short steps (`onSlowFsCall` still gets the summed scan). A `Bun.Glob` async
+  scan walks the whole tree in its first step (12,940 hits, 640 of 644 ms in
+  step one), so for it the two agree; a scan of many short steps, like many
+  short stats, charges nothing, which is the floor's meaning for every call.
 - **Awaiting.** `installFsAwait(wrap)` sets how every awaited call (and every
   `scanGlob` step) is awaited. It is the identity until something installs
   one. A backend installs `whileWaiting` (`packages/semaphore`, from
@@ -76,7 +91,7 @@ its boot journal attribute that.
 
 ## Plugin reference
 
-- Description: The file reads, listings, stats and glob scans every non-browser process makes, timed: node:fs's read calls under their own names and types (readFile / readdir / stat / lstat / access / realpath / readlink and their *Sync twins, existsSync) plus scanGlob / scanGlobSync over a Bun.Glob, each call past FS_WAIT_FLOOR_MS handed to onSlowFsCall subscribers as a named wait layer (fs-read / fs-readdir / fs-stat / fs-glob) — so a disk stall names itself instead of reading as the caller's own work. A leaf (node builtins only), enforced by the timed-fs/no-untimed-fs-read lint.
+- Description: The file reads, listings, stats and glob scans every non-browser process makes, timed: node:fs's read calls under their own names and types (readFile / readdir / stat / lstat / access / realpath / readlink and their *Sync twins, existsSync) plus scanGlob / scanGlobSync over a Bun.Glob, each call metered while it runs (installFsWaitMeter — the backend's profiler shows one past FS_WAIT_FLOOR_MS in progress and charges it) and, once it returns past the floor, handed to onSlowFsCall subscribers, under a named wait layer (fs-read / fs-readdir / fs-stat / fs-glob) — so a disk stall names itself instead of reading as the caller's own work. A leaf (node builtins only), enforced by the timed-fs/no-untimed-fs-read lint.
 - Cross-plugin:
   - Imported by: 160 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra` ×46
@@ -106,6 +121,7 @@ its boot journal attribute that.
   - Exempted by:
     - `framework/tooling/guards` (0 debt)
     - `infra/host/io-health/monitor` (0 debt)
+    - `infra/runtime-profiler` (0 debt)
     - `packages/timed-fs` (0 debt)
 - Core:
   - Exports (types):
@@ -120,6 +136,7 @@ its boot journal attribute that.
     - `FS_WAIT_LAYERS`
     - `installFsAwait`
     - `installFsCallGuard`
+    - `installFsWaitMeter`
     - `lstat`
     - `lstatSync`
     - `onSlowFsCall`

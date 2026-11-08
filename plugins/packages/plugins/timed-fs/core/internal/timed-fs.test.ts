@@ -6,6 +6,7 @@ import {
   FS_WAIT_FLOOR_MS,
   installFsAwait,
   installFsCallGuard,
+  installFsWaitMeter,
   onSlowFsCall,
   readFile,
   readFileSync,
@@ -116,4 +117,54 @@ test("an installed call guard sees every call first, and its throw refuses the c
     `scanGlobSync ${dir}/*.txt`,
   ]);
   expect(readFileSync(join(dir, "a.txt"), "utf8")).toBe("hello");
+});
+
+test("the wait meter sees every call while it runs: started before the disk answers, ended after", async () => {
+  const log: string[] = [];
+  let release!: () => void;
+  const held = new Promise<void>((r) => (release = r));
+  installFsAwait((p) => held.then(() => p));
+  installFsWaitMeter((layer) => {
+    log.push(`start ${layer}`);
+    return () => log.push(`end ${layer}`);
+  });
+  try {
+    const pending = stat(join(dir, "a.txt"));
+    // In progress: started, not ended — what a hung call looks like.
+    expect(log).toEqual(["start fs-stat"]);
+    release();
+    await pending;
+    statSync(join(dir, "a.txt"));
+    const hits: string[] = [];
+    for await (const rel of scanGlob("*.txt", { cwd: dir })) hits.push(rel);
+    expect(log.slice(0, 4)).toEqual([
+      "start fs-stat",
+      "end fs-stat",
+      "start fs-stat",
+      "end fs-stat",
+    ]);
+    // Each glob step is its own call.
+    expect(
+      log
+        .slice(4)
+        .every((l, i) => l === (i % 2 ? "end fs-glob" : "start fs-glob")),
+    ).toBe(true);
+    expect(log.length).toBeGreaterThan(4);
+  } finally {
+    installFsWaitMeter(null);
+  }
+});
+
+test("a file call the meter's own end makes is not metered again", () => {
+  let starts = 0;
+  installFsWaitMeter(() => {
+    starts++;
+    return () => void statSync(join(dir, "a.txt"));
+  });
+  try {
+    statSync(join(dir, "b.txt"));
+    expect(starts).toBe(1);
+  } finally {
+    installFsWaitMeter(null);
+  }
 });

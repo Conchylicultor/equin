@@ -34988,6 +34988,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `__contribute`
           - `__pushBand`
+          - `beginDeferredWait`
           - `beginWait`
           - `captureFlightWindow`
           - `currentCallerKind`
@@ -35039,7 +35040,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live/change-feed`
           - `plugin-meta/plugin-tree`
       - Exemptions:
-        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/install.ts` (debt)
+        - Exempts itself from:
+          - `boundaries/no-platform-api` — `server/internal/install.ts` (debt)
+          - `timed-fs/no-untimed-fs-read` — `scripts/fs-meter-bench.ts` (sanctioned)
     - **`safe-fetch`** — SSRF-guarded fetch primitive: parsePublicUrl + DNS-resolution checks (isPrivateIp/assertResolvesPublic) and safeFetch, which dials the validated IP directly (closing the DNS-rebinding TOCTOU) while preserving Host/SNI/cert via Bun fetch tls.serverName, following redirects with per-hop revalidation so a target can never reach loopback/private/link-local/metadata addresses.
       - Cross-plugin:
         - Imported by:
@@ -38616,7 +38619,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `boundaries/no-platform-api` — `core/internal/ticket-line.ts` (debt)
           - `blocking-fs/sync-named` — `core/internal/ticket-line.ts` (debt)
-    - **`timed-fs`** — The file reads, listings, stats and glob scans every non-browser process makes, timed: node:fs's read calls under their own names and types (readFile / readdir / stat / lstat / access / realpath / readlink and their *Sync twins, existsSync) plus scanGlob / scanGlobSync over a Bun.Glob, each call past FS_WAIT_FLOOR_MS handed to onSlowFsCall subscribers as a named wait layer (fs-read / fs-readdir / fs-stat / fs-glob) — so a disk stall names itself instead of reading as the caller's own work. A leaf (node builtins only), enforced by the timed-fs/no-untimed-fs-read lint.
+    - **`timed-fs`** — The file reads, listings, stats and glob scans every non-browser process makes, timed: node:fs's read calls under their own names and types (readFile / readdir / stat / lstat / access / realpath / readlink and their *Sync twins, existsSync) plus scanGlob / scanGlobSync over a Bun.Glob, each call metered while it runs (installFsWaitMeter — the backend's profiler shows one past FS_WAIT_FLOOR_MS in progress and charges it) and, once it returns past the floor, handed to onSlowFsCall subscribers, under a named wait layer (fs-read / fs-readdir / fs-stat / fs-glob) — so a disk stall names itself instead of reading as the caller's own work. A leaf (node builtins only), enforced by the timed-fs/no-untimed-fs-read lint.
       - Cross-plugin:
         - Imported by: 160 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
           - `infra` ×46
@@ -38646,6 +38649,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempted by:
           - `framework/tooling/guards` (0 debt)
           - `infra/host/io-health/monitor` (0 debt)
+          - `infra/runtime-profiler` (0 debt)
           - `packages/timed-fs` (0 debt)
       - Core:
         - Exports (types):
@@ -38660,6 +38664,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FS_WAIT_LAYERS`
           - `installFsAwait`
           - `installFsCallGuard`
+          - `installFsWaitMeter`
           - `lstat`
           - `lstatSync`
           - `onSlowFsCall`

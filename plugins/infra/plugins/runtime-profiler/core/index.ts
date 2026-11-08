@@ -5,6 +5,7 @@ export {
   noteLoopObserved,
   markWait,
   beginWait,
+  beginDeferredWait,
   gateWaitHooks,
   recordReadTables,
   installLoaderReadSetSink,

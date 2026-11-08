@@ -15,6 +15,7 @@ import {
   TRACK_SPAN_CAP,
   WAIT_BAND_CAP,
   beginWait,
+  beginDeferredWait,
   captureFlightWindow,
   chargeWait,
   gateWaitHooks,
@@ -2261,5 +2262,78 @@ describe("waits in progress (beginWait)", () => {
     end();
     end();
     expect(captureFlightWindow({ windowStartMs: 0 }).open).toEqual([]);
+  });
+});
+
+describe("deferred waits in progress (beginDeferredWait)", () => {
+  // A file call (timed-fs) is metered on every call, so it is only registered
+  // as it starts; a capture shows it once past its floor, and its end charges
+  // it only if it reached the floor.
+  test("under its floor: never shown, never charged", async () => {
+    let mid!: FlightWindow;
+    let after!: FlightWindow;
+    await recordEntrySpan("sub", "s", async () => {
+      fakeNow = 10;
+      const end = beginDeferredWait("fs-stat", "io", 100);
+      fakeNow = 60;
+      mid = captureFlightWindow({ windowStartMs: 0 });
+      end(); // 50 ms: under the floor
+      after = captureFlightWindow({ windowStartMs: 0 });
+    });
+    const subMid = mid.open.find((x) => x.label === "s")!;
+    expect(subMid.waiting).toBeUndefined();
+    expect(subMid.pendingWaitMs).toBeUndefined();
+    const subAfter = after.open.find((x) => x.label === "s")!;
+    expect(subAfter.waitMs).toBe(0);
+    expect(subAfter.waits).toBeUndefined();
+  });
+
+  test("past its floor: shown from its real start on the owner and its ancestors, charged once at its end", async () => {
+    let mid!: FlightWindow;
+    let after!: FlightWindow;
+    await recordEntrySpan("flush", "f", async () => {
+      fakeNow = 5;
+      await recordEntrySpan("sub", "s", async () => {
+        fakeNow = 10;
+        const end = beginDeferredWait("fs-readdir", "io", 100);
+        fakeNow = 300; // a readdir hung on a dead mount
+        mid = captureFlightWindow({ windowStartMs: 0 });
+        fakeNow = 400;
+        end(); // [10, 400]
+        end(); // a second end charges nothing more
+        after = captureFlightWindow({ windowStartMs: 0 });
+      });
+    });
+    const sub = mid.open.find((x) => x.label === "s")!;
+    expect(sub.waitMs).toBe(0); // not charged yet
+    expect(sub.pendingWaitMs).toBe(290);
+    expect(sub.waiting).toEqual([
+      { layer: "fs-readdir", kind: "io", waitedMs: 290 },
+    ]);
+    const flush = mid.open.find((x) => x.label === "f")!;
+    expect(flush.pendingWaitMs).toBe(290);
+    expect(flush.waiting).toBeUndefined();
+
+    const subAfter = after.open.find((x) => x.label === "s")!;
+    expect(subAfter.waits).toEqual({ "fs-readdir": 390 });
+    expect(subAfter.waiting).toBeUndefined();
+    expect(subAfter.pendingWaitMs).toBeUndefined();
+    expect(after.open.find((x) => x.label === "f")!.pendingWaitMs).toBe(
+      undefined,
+    );
+  });
+
+  test("past its floor but never captured: charged at its end", async () => {
+    let after!: FlightWindow;
+    await recordEntrySpan("sub", "s", async () => {
+      fakeNow = 10;
+      const end = beginDeferredWait("fs-read", "io", 100);
+      fakeNow = 250;
+      end();
+      after = captureFlightWindow({ windowStartMs: 0 });
+    });
+    const sub = after.open.find((x) => x.label === "s")!;
+    expect(sub.waits).toEqual({ "fs-read": 240 });
+    expect(sub.waiting).toBeUndefined();
   });
 });

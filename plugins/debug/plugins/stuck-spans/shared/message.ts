@@ -46,8 +46,16 @@ export function describeWaiters(gate: Pick<StuckGate, "waiters">): string {
 
 // A gate finding's message: the gate, how long its waiters waited, who held
 // it — the waiters are named after it, as what the gate holds up.
+// A file call (`io`, timed-fs's `fs-*` layers) has no gate to be admitted to
+// and no holder: the call itself has not returned.
 function gateMessage(gate: StuckGate, runs: number): string {
   const who = runs > 1 ? `${runs} operations have` : "An operation has";
+  if (gate.waitKind === "io")
+    return (
+      `${who} been waiting on the filesystem (${gate.layer}) for up to ` +
+      `${formatAge(gate.waitedMs)}: the file call has not returned. ` +
+      `Waiting: ${describeWaiters(gate)}`
+    );
   return (
     `${who} been queued on the ${gate.layer} gate for up to ` +
     `${formatAge(gate.waitedMs)} without being admitted; it is held by ` +
@@ -81,7 +89,8 @@ export function stuckSpanSummaryLead(
   if (d.gate)
     return (
       `${runs > 1 ? `${runs} waiting` : "1 waiting"} on ${d.gate.layer} ` +
-      `for ${formatAge(d.gate.waitedMs)}, held by:`
+      `for ${formatAge(d.gate.waitedMs)}` +
+      (d.gate.waitKind === "io" ? ":" : ", held by:")
     );
   return `${runs > 1 ? `${runs} runs ` : ""}still running after ${formatAge(d.ageMs)}:`;
 }

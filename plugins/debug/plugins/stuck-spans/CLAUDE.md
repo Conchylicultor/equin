@@ -92,6 +92,9 @@ properties of the detector, as in `debug/queue-health`.
 - **Gate message:** `81 operations have been queued on the read-admit gate for
   up to 1 min without being admitted; it is held by host-fs.peek {…} (1 min).
   Waiting: sub reports.list:rows ×80, sub host-fs.peek`.
+  A file call (`waitKind: io`, an `fs-*` layer) has no gate and no holder:
+  `An operation has been waiting on the filesystem (fs-readdir) for up to
+  2 min: the file call has not returned. Waiting: sub host-fs.peek`.
 - **Message:** `An operation has been running for 3 min and has not finished:
   flush flushNotifies → push conversations-gone:count` — open ancestors
   outermost first, then the stuck span. The age is the age *when detected*; a
@@ -148,7 +151,7 @@ run no `onReady`, so no watchdog.
 
 ## Known limits
 
-- **Every metered wait is told apart but the filesystem's.** The profiler
+- **Every metered wait is told apart, the filesystem's included.** The profiler
   has no after-the-fact charge in its barrel: a wait is a `beginWait`
   handle (announced as it starts, charged as it ends) or a gate's
   `gateWaitHooks` pair — so every `packages/semaphore` gate, every
@@ -156,9 +159,11 @@ run no `onReady`, so no watchdog.
   heavy-read, browser-fetch, worktree-mutate, db-fork, …), the pg pool's
   `db-acquire` and every join (`read-coalesce`, `endpoint-dedupe`,
   `git-coalesce:*`, `memo-coalesce:*`, `memo-opening:*` — `inflight`'s
-  `onJoin`) shows while in progress. The exception is `io`: timed-fs hands
-  over a file call past its floor only once it returns, so a call stuck in
-  progress (a hung mount) still reads as its caller's own time until then.
+  `onJoin`) shows while in progress. A file call (`io`, timed-fs's meter) is
+  a `beginDeferredWait`: shown from its real start once a tick finds it past
+  timed-fs's 100 ms floor, so a read hung on a dead mount is queued on
+  `fs-<op>`, not stuck in its caller's own work. It names the layer, not the
+  path; a gate finding for `fs-*` has no holders (no gauge).
   A join's run is itself an open span, reported as the deepest candidate
   when it is the stuck one.
 

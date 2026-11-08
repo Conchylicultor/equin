@@ -6,8 +6,9 @@
 
 import { AsyncLocalStorage } from "node:async_hooks";
 import {
+  FS_WAIT_FLOOR_MS,
   installFsAwait,
-  onSlowFsCall,
+  installFsWaitMeter,
 } from "@plugins/packages/plugins/timed-fs/core";
 import {
   recordLoaderReadSet,
@@ -28,6 +29,7 @@ import {
   runTracked,
   recordSpan,
   beginWait,
+  beginDeferredWait,
   gateWaitHooks,
   runInRootContext,
   getRuntimeProfile,
@@ -38,9 +40,6 @@ import {
   type GateGauge,
   type LeafSpanOptions,
 } from "../../core";
-// The bare after-the-fact charge, module-internal (the barrel exports none:
-// every other wait is a `beginWait` handle) — see the fs subscriber below.
-import { chargeWait } from "../../core/recorder";
 import {
   installLeaseContextRuntime,
   whileWaiting,
@@ -52,17 +51,16 @@ import {
 // inside a loader mutates the very wait map `recordEntrySpan` later reads.
 const als = new AsyncLocalStorage<EntryContext>();
 
-// A file read past timed-fs's floor is the disk's time, not the caller's: charge
-// it as an `io` wait on its layer (`fs-read` / `fs-readdir` / `fs-stat` /
-// `fs-glob`), so the enclosing entries name it and slow-ops files it as
-// `wait fs-<op>` instead of folding it into the caller's own time. Called as the
-// call returns, still inside the caller's ambient context.
-//
-// The one wait charged after the fact, never announced as it starts: timed-fs
-// hands over only calls past its floor, once they return. So a file call
-// stuck in progress (a hung mount) still reads as its caller's own time until
-// it returns — a known limit (debug/stuck-spans' CLAUDE.md).
-onSlowFsCall((call) => chargeWait(call.layer, call.ms, "io"));
+// A file call past timed-fs's floor is the disk's time, not the caller's: it is
+// an `io` wait on its layer (`fs-read` / `fs-readdir` / `fs-stat` / `fs-glob`),
+// so the enclosing entries name it and slow-ops files it as `wait fs-<op>`
+// instead of folding it into the caller's own time. Metered as it STARTS, in the
+// caller's ambient context — a deferred wait, since nearly every call is over
+// in microseconds: one still running past the floor is shown in progress (a
+// read hung on a dead mount reads to the stuck-span watchdog as a wait on the
+// filesystem), and its end charges it. Measured overhead per call
+// (scripts/fs-meter-bench.ts): see the plugin's CLAUDE.md.
+installFsWaitMeter((layer) => beginDeferredWait(layer, "io", FS_WAIT_FLOOR_MS));
 
 installSpanContextRuntime({
   run: (ctx, fn) => als.run(ctx, fn),

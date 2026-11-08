@@ -116,3 +116,33 @@ describe("a gate not admitting its waiters", () => {
     );
   });
 });
+
+describe("a file call that has not returned", () => {
+  const gate = {
+    layer: "fs-readdir",
+    waitKind: "io",
+    waitedMs: 95_000,
+    occupancy: null,
+    holders: [],
+    waiters: [{ kind: "sub", label: "host-fs.peek", runs: 1 }],
+  };
+  const d = {
+    kind: "sub",
+    label: "host-fs.peek",
+    ageMs: 96_000,
+    ancestors: [],
+    runs: 1,
+    gate,
+  };
+
+  test("the message names the filesystem layer, not a gate's holders", () => {
+    expect(stuckSpanMessage(d)).toBe(
+      "An operation has been waiting on the filesystem (fs-readdir) for up to " +
+        "1 min: the file call has not returned. Waiting: sub host-fs.peek",
+    );
+  });
+
+  test("the summary lead names no holder", () => {
+    expect(stuckSpanSummaryLead(d)).toBe("1 waiting on fs-readdir for 1 min:");
+  });
+});

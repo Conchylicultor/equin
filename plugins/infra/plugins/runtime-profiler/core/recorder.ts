@@ -1564,6 +1564,7 @@ export function captureFlightWindow(opts: {
   const atMs = now();
   const maxOpen = opts.maxOpen ?? 200;
   const maxCompleted = opts.maxCompleted ?? 400;
+  promoteDeferredWaits(atMs);
 
   const ctxs: EntryContext[] = [];
   const taken = new Set<EntryContext>();
@@ -2446,8 +2447,7 @@ export type WaitEnd = () => void;
  * announcement and the charge one object, a metered wait that was never
  * announced has no spelling: the barrel exports no bare charge (`chargeWait`
  * stays module-internal; `markWait` is the 0 ms marker, `gateWaitHooks` the
- * semaphore pair). The one wait still charged after the fact is the
- * filesystem's (`io`, timed-fs past its floor — this plugin's install).
+ * semaphore pair, `beginDeferredWait` the high-rate twin shown from its floor).
  *
  * Kill-switch or suppression at the start: nothing is announced or charged.
  * No open entry: nothing to show, and the end charges the context-less
@@ -2466,6 +2466,69 @@ export function beginWait(layer: string, kind: WaitKind): WaitEnd {
     unannounce();
     chargeWaitIn(cur, layer, now() - startMs, kind);
   };
+}
+
+/** One wait begun with `beginDeferredWait`, until its end. */
+interface DeferredWait {
+  layer: string;
+  kind: WaitKind;
+  floorMs: number;
+  startMs: number;
+  /** The context it began in — what it is shown on, and charged to. */
+  cur: EntryContext | undefined;
+  /** Set once a capture found it past its floor and announced it. */
+  unannounce: (() => void) | null;
+}
+
+// Every deferred wait in progress. A Set add / delete per wait, nothing more:
+// no ancestor walk, no charge, until a capture or its end finds it past its
+// floor.
+const deferredWaits = new Set<DeferredWait>();
+
+/**
+ * `beginWait` for a wait that is almost always over in microseconds — a file
+ * call (`io`, timed-fs): too frequent for `beginWait`'s ancestor walk on every
+ * one, and below `floorMs` not a wait worth naming at all. Starting it only
+ * registers it; a wait that ends under its floor is neither shown nor charged.
+ * One still in progress past its floor is shown as `beginWait` shows it — from
+ * its real start — by the next `captureFlightWindow` (every reader of waits in
+ * progress goes through it: the stuck-span watchdog, traces), so a call hung on
+ * a dead mount reads as a wait on its layer, not as its caller's own work. Its
+ * end charges `[start, end]` once it reached the floor, into the context it
+ * began in.
+ */
+export function beginDeferredWait(
+  layer: string,
+  kind: WaitKind,
+  floorMs: number,
+): WaitEnd {
+  if (profilingDisabled()) return NO_WAIT_END;
+  if (suppressionRuntime.suppressed()) return NO_WAIT_END;
+  const wait: DeferredWait = {
+    layer,
+    kind,
+    floorMs,
+    startMs: now(),
+    cur: contextRuntime.current(),
+    unannounce: null,
+  };
+  deferredWaits.add(wait);
+  return () => {
+    if (!deferredWaits.delete(wait)) return;
+    wait.unannounce?.();
+    const ms = now() - wait.startMs;
+    if (ms >= wait.floorMs) chargeWaitIn(wait.cur, layer, ms, wait.kind);
+  };
+}
+
+// Announce every deferred wait that has passed its floor by `atMs` and is not
+// shown yet (`announceWait`, from its real start). Capture-time only: the cost
+// is one pass over the waits in progress, on a (rate-limited) trip.
+function promoteDeferredWaits(atMs: number): void {
+  for (const w of deferredWaits) {
+    if (w.unannounce || atMs - w.startMs < w.floorMs) continue;
+    w.unannounce = announceWait(w.cur, w.layer, w.kind, w.startMs);
+  }
 }
 
 /**
