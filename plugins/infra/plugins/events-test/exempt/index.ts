@@ -30,4 +30,15 @@ export default [
     task: "task-1792338443-riwqev",
     reason: "not yet split into server/ + machine/",
   },
+  {
+    rule: "sql-writes:fit:schema",
+    paths: [
+      "machine/internal/crash-recovery.ts",
+      "machine/internal/queue-lock-no-steal.ts",
+      "machine/internal/superseded.ts",
+    ],
+    kind: "sanctioned",
+    reason:
+      "Drives graphile-worker's own tables (graphile_worker._private_*) to stage crash and lock scenarios; those tables come from graphile-worker's migrations, not from a declaration in this repo.",
+  },
 ] satisfies Exemptions;

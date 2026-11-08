@@ -12,6 +12,7 @@
   - Contributes: `ids.kind` "cgrp"
   - Uses:
     - `database.db`
+    - `database/derived-updated-at.derivedUpdatedAt`
     - `database/derived-updated-at.deriveUpdatedAt`
     - `ids.idColumn`
     - `ids.IdKinds`

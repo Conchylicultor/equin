@@ -1,6 +1,9 @@
 import { sql } from "drizzle-orm";
 import { bigint, index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
-import { deriveUpdatedAt } from "@plugins/database/plugins/derived-updated-at/server";
+import {
+  deriveUpdatedAt,
+  derivedUpdatedAt,
+} from "@plugins/database/plugins/derived-updated-at/server";
 // The specific module, not the `core` barrel: drizzle-kit loads this file to
 // build the schema, and the barrel also pulls the live-collection declarations.
 import { opLogOpsEntityRef } from "../../core/internal/schemas";
@@ -89,9 +92,7 @@ export const _opLogIngestCursor = deriveUpdatedAt(
     inode: text("inode").notNull(),
     offset: bigint("offset", { mode: "number" }).notNull(),
     gapAt: timestamp("gap_at", { withTimezone: true }),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
+    updatedAt: derivedUpdatedAt(),
   }),
   {
     touchedBy: { source: false, inode: true, offset: true, gapAt: true },

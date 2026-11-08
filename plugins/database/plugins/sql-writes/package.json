@@ -1,0 +1,9 @@
+{
+  "name": "@equin/plugin-database-sql-writes",
+  "description": "Every hand-written SQL write (INSERT / UPDATE / DELETE / MERGE, in CTEs too) parsed with Postgres's own grammar (libpg_query) and checked against the schema the code declares \u2014 drizzle tables with their derived updated_at and generated columns, plus hand-written DDL: known tables and columns, required columns inserted, no write to a derived column (check sql-writes:fit).",
+  "private": true,
+  "version": "0.0.1",
+  "dependencies": {
+    "libpg-query": "^18.2.2"
+  }
+}

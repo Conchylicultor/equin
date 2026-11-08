@@ -4,6 +4,7 @@ import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import {
   compileFromTable,
   deriveUpdatedAt,
+  derivedUpdatedAt,
 } from "@plugins/database/plugins/derived-updated-at/server";
 import { collectContributions } from "@plugins/framework/plugins/server-core/core";
 import { defineFieldType } from "@plugins/fields/core";
@@ -117,9 +118,7 @@ test("deriveUpdatedAt on a raw pgTable compiles the same spec as the equivalent 
     title: text("title").notNull(),
     status: text("status").$type<Status>().notNull(),
     lastViewedAt: timestamp("seen_at", { withTimezone: true }).notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    updatedAt: derivedUpdatedAt(),
   });
   // Registers the same table again: identical rules, so no conflict.
   deriveUpdatedAt(raw, { touchedBy });

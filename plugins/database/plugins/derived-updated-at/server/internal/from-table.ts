@@ -1,5 +1,19 @@
-import { getTableColumns, getTableName } from "drizzle-orm";
-import { getTableConfig, type PgTable } from "drizzle-orm/pg-core";
+import {
+  getTableColumns,
+  getTableName,
+  type HasDefault,
+  type HasGenerated,
+  type NotNull,
+} from "drizzle-orm";
+import {
+  getTableConfig,
+  timestamp,
+  type PgInsertBase,
+  type PgInsertBuilder,
+  type PgQueryResultHKT,
+  type PgTable,
+  type PgTimestampBuilderInitial,
+} from "drizzle-orm/pg-core";
 import { compileDerivedUpdatedAt } from "./compile";
 import { registerDerivedUpdatedAt } from "./registry";
 import type { DerivedUpdatedAtSpec, TouchRule } from "./types";
@@ -23,9 +37,38 @@ export type TableTouchedBy<T extends PgTable> = {
   >;
 };
 
-/** A drizzle table that has an `updatedAt` column — the only kind that can derive one. */
+/**
+ * A raw table's derived `updated_at` column: `timestamptz NOT NULL DEFAULT
+ * now()`, typed as never written by the app — `HasGenerated` takes it out of
+ * the table's insert model, so a typed `.values()` / `.set()` /
+ * `onConflictDoUpdate({ set })` naming `updatedAt` is a tsc error (the trigger
+ * would refuse the UPDATE at runtime). Type-only: the runtime column is a plain
+ * defaulted timestamp, so the DDL is unchanged.
+ */
+export function derivedUpdatedAt() {
+  return timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull() as DerivedUpdatedAtColumn;
+}
+type DerivedUpdatedAtColumn = HasGenerated<
+  NotNull<HasDefault<PgTimestampBuilderInitial<"updated_at">>>,
+  { type: "always" }
+>;
+
+/**
+ * A drizzle table whose `updatedAt` column is unwritten (`derivedUpdatedAt()`)
+ * — the only kind that can derive one, so a raw table cannot declare a derived
+ * `updatedAt` its typed writes may still name.
+ */
 export type TableWithUpdatedAt = PgTable & {
   readonly $inferSelect: { readonly updatedAt: unknown };
+  readonly _: {
+    readonly columns: {
+      readonly updatedAt: {
+        readonly _: { readonly generated: { type: "always" } };
+      };
+    };
+  };
 };
 
 type DrizzleColumn = { readonly name: string; getSQLType(): string };
@@ -107,4 +150,31 @@ export function deriveUpdatedAt<T extends TableWithUpdatedAt>(
     ),
   );
   return table;
+}
+
+/** A row of `T` to insert with its `updatedAt` given (`insertWithUpdatedAt`). */
+export type RowWithUpdatedAt<T extends TableWithUpdatedAt> =
+  T["$inferInsert"] & {
+    readonly updatedAt: Date;
+  };
+
+/**
+ * INSERT rows whose `updatedAt` is given rather than now() — history being
+ * written (a seed, an import), which Postgres takes: the derived-updatedAt
+ * trigger is BEFORE UPDATE only. The one spelling of a typed write naming
+ * `updatedAt`, and an INSERT only: the builder it returns still takes no
+ * `updatedAt` in an `onConflictDoUpdate({ set })`, where the trigger would
+ * refuse it.
+ */
+export function insertWithUpdatedAt<
+  T extends TableWithUpdatedAt,
+  Q extends PgQueryResultHKT,
+>(
+  exec: { insert<U extends PgTable>(table: U): PgInsertBuilder<U, Q> },
+  table: T,
+  rows: readonly RowWithUpdatedAt<T>[],
+): PgInsertBase<T, Q> {
+  // The cast is the point: the insert model leaves `updatedAt` out so no other
+  // write can name it, and the runtime column takes a value like any other.
+  return exec.insert(table).values(rows as never);
 }

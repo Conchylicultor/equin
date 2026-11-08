@@ -131,6 +131,7 @@ curl -sX POST http://<ns>.localhost:9000/api/events-test/queue-saturate \
     - `endpoints:no-raw-json-handlers` — `server/internal`, `machine/internal` (sanctioned)
     - `ids:pk-declared` — `server/internal/tables.ts` (debt)
     - `boundaries/no-platform-api` — `server/internal/serial-queue.ts` (debt)
+    - `sql-writes:fit:schema` — `machine/internal/crash-recovery.ts`, `machine/internal/queue-lock-no-steal.ts`, `machine/internal/superseded.ts` (sanctioned)
 - Shared:
   - Exports (types):
     - `DeleteTargetingBody`

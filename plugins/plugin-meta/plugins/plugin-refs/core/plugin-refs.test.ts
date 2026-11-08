@@ -115,6 +115,25 @@ describe("lint rule import sources", () => {
   });
 });
 
+describe("exempt manifests", () => {
+  // A manifest's paths are relative to its own plugin: a parent exempting a
+  // child's file spells `plugins/<child>/…`, which is no repo-root plugin path.
+  test("a manifest's plain strings are not refs; its imports still are", () => {
+    const src = [
+      'import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exempt/core";',
+      'export default [{ rule: "r", paths: ["plugins/pglite/server/x.ts"], kind: "sanctioned", reason: "x" }] satisfies Exemptions;',
+    ].join("\n");
+    expect(
+      scanPathRefs("plugins/database/exempt/index.ts", src).map((r) => [
+        r.syntax,
+        r.value,
+      ]),
+    ).toEqual([
+      ["specifier", "plugins/framework/plugins/tooling/plugins/exempt"],
+    ]);
+  });
+});
+
 describe("dot refs", () => {
   test("asPluginId: fixed string arguments only, empty root skipped", () => {
     const src = [

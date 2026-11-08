@@ -1,6 +1,9 @@
 import { z } from "zod";
-import { integer, pgTable, timestamp } from "drizzle-orm/pg-core";
-import { deriveUpdatedAt } from "@plugins/database/plugins/derived-updated-at/server";
+import { integer, pgTable } from "drizzle-orm/pg-core";
+import {
+  deriveUpdatedAt,
+  derivedUpdatedAt,
+} from "@plugins/database/plugins/derived-updated-at/server";
 import {
   parsedJson,
   parsedText,
@@ -36,9 +39,7 @@ export const _chordCurriculum = deriveUpdatedAt(
     blanks: parsedText("blanks", RecordedBlanksSchema).notNull(),
     /** How many chords that are off a loop may hold besides: 0, 1, 2 or "any". */
     extras: parsedJson("extras", LoopExtrasSchema).notNull().default(0),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
+    updatedAt: derivedUpdatedAt(),
   }),
   { touchedBy: { chords: true, blanks: true, extras: true, id: false } },
 );

@@ -35,6 +35,11 @@ export type ObjectKeyOf<T> = unknown extends T
 export interface DerivedUpdatedAtSpec {
   /** Physical table name. */
   readonly table: string;
+  /**
+   * Physical name of the derived column (`updated_at`) — the one no write may
+   * name: the `sql-writes` check reads it to refuse a hand-written SQL write.
+   */
+  readonly column: string;
   /** Name of both the trigger and its function (`<table>_derive_updated_at`). */
   readonly triggerName: string;
   readonly functionDdl: string;

@@ -305,6 +305,7 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
     - `database.db`
     - `database/admin.ExcludeFromBackup`
     - `database/admin.ExcludeFromFork`
+    - `database/derived-updated-at.derivedUpdatedAt`
     - `database/derived-updated-at.deriveUpdatedAt`
     - `database/sql-column.parsedJson`
     - `database/sql-column.parsedText`

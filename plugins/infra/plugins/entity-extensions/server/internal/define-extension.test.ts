@@ -256,6 +256,76 @@ describe("defineExtension accessors", () => {
   });
 });
 
+// `onlyIf`: the INSERT half proposes its row only while the condition holds
+// (`INSERT … SELECT … WHERE`), the SET list is the given columns — so a parent
+// gone under the writer writes nothing instead of failing the foreign key.
+describe("upsertQuery with onlyIf", () => {
+  test("is INSERT … SELECT … WHERE, its SET the given columns", () => {
+    const built = new PgDialect().sqlToQuery(
+      thing.upsertQuery(
+        "s1",
+        { semitones: 3, source: "user" },
+        {
+          onlyIf: sql`exists (select 1 from "ext_probe" where "id" = ${"s1"})`,
+        },
+      ),
+    );
+    expect(built.sql).toBe(
+      `insert into "ext_probe_ext_thing" ("parent_id", "semitones", "source") ` +
+        `select $1::text, $2::integer, $3::text ` +
+        `where exists (select 1 from "ext_probe" where "id" = $4) ` +
+        `on conflict ("parent_id") do update set "semitones" = excluded."semitones", "source" = excluded."source"`,
+    );
+    expect(built.params).toEqual(["s1", 3, "user", "s1"]);
+  });
+
+  test("an empty patch rewrites the key, as upsert does", () => {
+    const built = new PgDialect().sqlToQuery(
+      bare.upsertQuery("s1", {}, { onlyIf: sql`true` }),
+    );
+    expect(built.sql).toEndWith(
+      `do update set "parent_id" = excluded."parent_id"`,
+    );
+  });
+
+  test("refuses the derived updatedAt at runtime, for a caller typed loosely", () => {
+    const loose = thing.upsertQuery as (
+      id: string,
+      v: Record<string, unknown>,
+      o: { onlyIf: SQL },
+    ) => SQL;
+    expect(() =>
+      loose("s1", { updatedAt: new Date() }, { onlyIf: sql`true` }),
+    ).toThrow(/"updatedAt" is not one of its own columns/);
+  });
+});
+
+// The derived `updatedAt` is out of the table's insert model: a typed write of
+// it is a tsc error (the trigger would refuse it at runtime).
+function _derivedUpdatedAtHasNoTypedSpelling() {
+  void recordingDb.update(thing.table).set({
+    // @ts-expect-error — updatedAt is derived, not writable
+    updatedAt: new Date(),
+  });
+  const row: (typeof thing.table)["$inferInsert"] = {
+    songId: "s",
+    source: "user",
+    // @ts-expect-error — nor on insert
+    updatedAt: new Date(),
+  };
+  void recordingDb
+    .insert(thing.table)
+    .values(row)
+    .onConflictDoUpdate({
+      target: thing.table.songId,
+      set: {
+        // @ts-expect-error — nor in an upsert's SET
+        updatedAt: new Date(),
+      },
+    });
+}
+void _derivedUpdatedAtHasNoTypedSpelling;
+
 function returningOf(statement: string | undefined): string {
   const m = statement?.match(/ returning (.*)$/);
   if (!m?.[1]) throw new Error(`no returning in: ${statement}`);

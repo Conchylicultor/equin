@@ -62,4 +62,17 @@ export default [
     reason:
       "graphile's schema install stays in server/ (reached only from server/testing and the machine queue, never from the server barrel) because DB test suites in other plugins' server/ folders install it on throwaway databases, and test code follows its folder's row; move it once those suites can reach a machine testing barrel.",
   },
+  {
+    rule: "sql-writes:fit:schema",
+    paths: [
+      "machine/internal/dead-job-gc.ts",
+      "machine/internal/graphile-queue.ts",
+      "machine/internal/introspection.ts",
+      "machine/internal/stuck-lock-sweeper.ts",
+      "machine/internal/worker.ts",
+    ],
+    kind: "sanctioned",
+    reason:
+      "Writes graphile-worker's own tables (graphile_worker._private_*), created by graphile-worker's migrations rather than declared in this repo, so the check cannot know their columns. The jobs plugin owns the graphile integration.",
+  },
 ] satisfies Exemptions;

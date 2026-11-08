@@ -4,7 +4,10 @@ import {
   parsedJson,
   parsedText,
 } from "@plugins/database/plugins/sql-column/server";
-import { deriveUpdatedAt } from "@plugins/database/plugins/derived-updated-at/server";
+import {
+  deriveUpdatedAt,
+  derivedUpdatedAt,
+} from "@plugins/database/plugins/derived-updated-at/server";
 import {
   ColorAdjustmentSchema,
   TokenGroupFragmentsSchema,
@@ -37,9 +40,7 @@ export const _savedThemes = deriveUpdatedAt(
       createdAt: timestamp("created_at", { withTimezone: true })
         .defaultNow()
         .notNull(),
-      updatedAt: timestamp("updated_at", { withTimezone: true })
-        .defaultNow()
-        .notNull(),
+      updatedAt: derivedUpdatedAt(),
     },
     (t) => [
       // One row per external theme: re-importing a tweakcn theme updates it.

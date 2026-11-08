@@ -107,6 +107,7 @@ from the reconciler terminal main appends to the log.
     - `resource.declare` "op-store.in-flight.all:rows"
   - Uses:
     - `database.db`
+    - `database/derived-updated-at.derivedUpdatedAt`
     - `database/derived-updated-at.deriveUpdatedAt`
     - `debug/profiling/op-log.appendOpLog`
     - `debug/profiling/op-log.OP_LOG_FILE`

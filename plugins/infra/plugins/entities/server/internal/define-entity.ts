@@ -21,7 +21,7 @@ import type {
   EntityColumns,
   EntityMeta,
   EntityMetaBase,
-  GeneratedKeys,
+  UnwrittenKeys,
   UpdatedAtMeta,
 } from "./types";
 import { isDbDefault } from "./types";
@@ -121,7 +121,7 @@ export function defineEntity<
 >(
   ref: EntityRef<string, F>,
   meta: M,
-): Entity<F, DefaultedKeys<F, M>, never, GeneratedKeys<F, M>>;
+): Entity<F, DefaultedKeys<F, M>, never, UnwrittenKeys<F, M>>;
 export function defineEntity<F extends FieldsRecord & { updatedAt?: never }>(
   ref: EntityRef<string, F>,
 ): Entity<F>;
@@ -139,7 +139,7 @@ export function defineEntity<
   F & SF,
   DefaultedKeys<F & SF, M>,
   keyof SF & string,
-  GeneratedKeys<F & SF, M>
+  UnwrittenKeys<F & SF, M>
 >;
 // The implementation is typed loosely (`object` in, `unknown` out) so every
 // overload is compatible with it; the overloads are the contract.

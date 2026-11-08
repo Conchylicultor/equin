@@ -210,6 +210,15 @@ export type GeneratedKeys<
       keyof F
   : never;
 
+// The keys the app never writes, so drizzle drops them from the insert model
+// and from every `.set()` / `onConflictDoUpdate({ set })` (`HasGenerated`): the
+// STORED generated columns, and a derived `updatedAt` — which the database's
+// touchedBy trigger sets, and refuses an UPDATE of (database/derived-updated-at).
+// A typed write naming either is a tsc error; a raw-SQL one is the
+// `derived-updated-at:no-raw-write` check's.
+export type UnwrittenKeys<F extends FieldsRecord, M extends EntityMetaBase<F>> =
+  GeneratedKeys<F, M> | ("updatedAt" & keyof F);
+
 // The part of `EntityMeta` that does not depend on whether the record has an
 // `updatedAt` field. The derived-`updatedAt` declaration is layered on top of it
 // (see `EntityMeta` below), because it is REQUIRED exactly when that field exists.

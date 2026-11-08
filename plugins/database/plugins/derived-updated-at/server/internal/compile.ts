@@ -248,5 +248,13 @@ export function compileDerivedUpdatedAt(
       { name: triggerName, table, ddl: triggerDdl, legacyStamp: signature },
     ],
   });
-  return { table, triggerName, functionDdl, triggerDdl, signature, triggerSet };
+  return {
+    table,
+    column: updatedAtColumn,
+    triggerName,
+    functionDdl,
+    triggerDdl,
+    signature,
+    triggerSet,
+  };
 }

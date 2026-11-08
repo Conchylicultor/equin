@@ -27,7 +27,7 @@ Two declaration sites, one compiler path:
   import { deriveUpdatedAt } from "@plugins/database/plugins/derived-updated-at/server";
 
   export const agents = deriveUpdatedAt(
-    pgTable("agents", { id: …, name: …, rank: …, createdAt: …, updatedAt: … }),
+    pgTable("agents", { id: …, name: …, rank: …, createdAt: …, updatedAt: derivedUpdatedAt() }),
     { touchedBy: { name: true, rank: true, id: false, createdAt: false } },
   );
   ```
@@ -38,7 +38,23 @@ Two declaration sites, one compiler path:
   over `keyof T["$inferSelect"]` minus `updatedAt`, each rule a
   `TouchRule<column value>` — a new column nobody classified, a misspelled
   transition value (on a `$type<Union>()` / enum column) and a table with no
-  `updatedAt` are all tsc errors.
+  `updatedAt` are all tsc errors. So is an `updatedAt` not declared with
+  `derivedUpdatedAt()` (`TableWithUpdatedAt`).
+
+## No write names it
+
+The derived column is **out of the table's insert model** (drizzle's
+`HasGenerated` brand, type-only — the runtime column is a plain
+`timestamptz NOT NULL DEFAULT now()`): a typed `.values()`, `.set()` or
+`onConflictDoUpdate({ set })` naming `updatedAt` is a tsc error, for a raw
+table (`derivedUpdatedAt()`), an entity (`UnwrittenKeys`, infra/entities) and an
+extension alike. Postgres would take one on INSERT (the trigger is BEFORE
+UPDATE), so writing history — a seed's rows that must read "3 h ago" — has one
+spelling, `insertWithUpdatedAt(exec, table, rows)`: an INSERT only, whose
+builder's `onConflictDoUpdate` still cannot name it. A hand-written SQL write
+naming a derived column is the `sql-writes:fit` check's
+([`database/sql-writes`](../sql-writes/CLAUDE.md)); it reads `spec.column`, the
+physical name each spec carries.
 
 Both call `compileFromTable(table, touchedBy, where?)`: it reads the physical
 column names and SQL types off `getTableColumns(table)` and runtime-checks what
@@ -119,18 +135,22 @@ are in `infra/entities/server/internal/`
   - DB schema: `plugins/database/plugins/derived-updated-at/server/internal/from-table.ts`
   - Exports (types):
     - `DerivedUpdatedAtSpec`
+    - `RowWithUpdatedAt`
     - `TableTouchedBy`
     - `TableWithUpdatedAt`
     - `TouchRule`
   - Exports (values):
     - `compileFromTable`
+    - `derivedUpdatedAt`
     - `deriveUpdatedAt`
+    - `insertWithUpdatedAt`
     - `registerDerivedUpdatedAt`
     - `registeredDerivedUpdatedAt`
 - Cross-plugin:
   - Imported by:
     - `apps/chord/curriculum`
     - `apps/chord/song-index`
+    - `apps/website/promo-film/seed`
     - `conversations/conversations-view/grouped`
     - `database`
     - `debug/profiling/op-log/op-store`

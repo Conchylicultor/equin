@@ -10,6 +10,7 @@ import { placeDetails } from "@plugins/integrations/plugins/google-maps/plugins/
 import { systemOrigin } from "@plugins/infra/plugins/request-origin/core";
 import { experimentalMarksConfig } from "@plugins/framework/plugins/cli/plugins/build/plugins/experimental-marks/core";
 import { db } from "@plugins/database/server";
+import { insertWithUpdatedAt } from "@plugins/database/plugins/derived-updated-at/server";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { namespaceFor } from "@plugins/infra/plugins/namespace/core";
 import { checkoutRef } from "@plugins/infra/plugins/paths/server";
@@ -215,26 +216,30 @@ async function writeRun(run: FilmRun, ago: (ms: number) => Date) {
     shortTitle: run.shortTitle,
     sourceTitle: run.task,
   });
-  await db.insert(_attempts).values({
-    id: run.attemptId,
-    taskId: run.taskId,
-    worktreePath: runWorkspace(run),
-    createdAt: ago(run.startedAgo),
-    updatedAt: ago(run.updatedAgo),
-  });
-  await db.insert(_conversations).values({
-    id: run.conversationId,
-    attemptId: run.attemptId,
-    title: run.title,
-    status: run.status,
-    workingOn: null,
-    model: run.model,
-    claudeSessionId: run.sessionId,
-    createdAt: ago(run.startedAgo),
-    updatedAt: ago(run.updatedAgo),
-    endedAt: run.landed === undefined ? null : ago(run.landed.ago),
-    lastViewedAt: ago(run.updatedAgo),
-  });
+  await insertWithUpdatedAt(db, _attempts, [
+    {
+      id: run.attemptId,
+      taskId: run.taskId,
+      worktreePath: runWorkspace(run),
+      createdAt: ago(run.startedAgo),
+      updatedAt: ago(run.updatedAgo),
+    },
+  ]);
+  await insertWithUpdatedAt(db, _conversations, [
+    {
+      id: run.conversationId,
+      attemptId: run.attemptId,
+      title: run.title,
+      status: run.status,
+      workingOn: null,
+      model: run.model,
+      claudeSessionId: run.sessionId,
+      createdAt: ago(run.startedAgo),
+      updatedAt: ago(run.updatedAgo),
+      endedAt: run.landed === undefined ? null : ago(run.landed.ago),
+      lastViewedAt: ago(run.updatedAgo),
+    },
+  ]);
   await recordSessionId(run.conversationId, run.sessionId);
   await conversationProgress.upsert(run.conversationId, {
     phase: run.phase,

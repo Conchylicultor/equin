@@ -39,6 +39,7 @@
     - `config_v2.setConfig`
     - `database.currentTxId`
     - `database.db`
+    - `database/derived-updated-at.derivedUpdatedAt`
     - `database/derived-updated-at.deriveUpdatedAt`
     - `database/sql-column.parsedJson`
     - `database/sql-column.parsedText`

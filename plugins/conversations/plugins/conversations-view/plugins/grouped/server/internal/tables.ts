@@ -1,5 +1,8 @@
 import { boolean, index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
-import { deriveUpdatedAt } from "@plugins/database/plugins/derived-updated-at/server";
+import {
+  deriveUpdatedAt,
+  derivedUpdatedAt,
+} from "@plugins/database/plugins/derived-updated-at/server";
 import { rankText } from "@plugins/primitives/plugins/rank/core";
 import { _conversations } from "@plugins/tasks/plugins/tasks-core/server";
 import { idColumn } from "@plugins/ids/server";
@@ -17,9 +20,7 @@ export const _conversationGroups = deriveUpdatedAt(
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
+    updatedAt: derivedUpdatedAt(),
   }),
   // `expanded` is view state, not a fact about the group.
   {

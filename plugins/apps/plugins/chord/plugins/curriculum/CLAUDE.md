@@ -225,6 +225,7 @@ A round nothing was typed into reads exactly like the next one, so after
     - `apps/chord/song-index.countTokenSets`
     - `apps/chord/song-index.loadReadyIndexIdentity`
     - `database.db`
+    - `database/derived-updated-at.derivedUpdatedAt`
     - `database/derived-updated-at.deriveUpdatedAt`
     - `database/sql-column.parsedJson`
     - `database/sql-column.parsedText`

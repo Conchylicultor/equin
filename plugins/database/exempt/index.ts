@@ -16,4 +16,13 @@ export default [
     reason:
       "Calls a *Sync helper (or a sync child process) that has no async twin yet; blocks the backend's thread for as long as the disk or the child takes.",
   },
+  {
+    // Declared here, on the parent: pglite is a host provider, which holds no
+    // exempt/ of its own (host-services:provider-placement).
+    rule: "sql-writes:fit:dynamic",
+    paths: ["plugins/pglite/server/internal/pglite-driver.ts"],
+    kind: "sanctioned",
+    reason:
+      "A generator over the catalog: shifts every timestamp column of every table the snapshot holds (read from information_schema), so its table and column names are data, not source.",
+  },
 ] satisfies Exemptions;

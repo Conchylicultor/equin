@@ -1,5 +1,6 @@
 import { interactiveMandate } from "@plugins/tasks/plugins/mandate-presets/core";
 import { db } from "@plugins/database/server";
+import { insertWithUpdatedAt } from "@plugins/database/plugins/derived-updated-at/server";
 import {
   setTaskCategory,
   TaskCategory,
@@ -154,25 +155,29 @@ export async function seed(
       sourceTitle: story.task,
     });
     if (story.track !== undefined) await setTaskTrack(taskId, story.track);
-    await db.insert(_attempts).values({
-      id: attemptId,
-      taskId,
-      worktreePath: demoWorktreePath(story),
-      createdAt: ago(story.startedAgo),
-      updatedAt: ago(story.updatedAgo),
-    });
-    await db.insert(_conversations).values({
-      id: conversationId,
-      attemptId,
-      title: story.title,
-      status: story.status,
-      workingOn: story.status === "working" ? "turn" : null,
-      model: story.model,
-      createdAt: ago(story.startedAgo),
-      updatedAt: ago(story.updatedAgo),
-      endedAt: story.endedAgo === undefined ? null : ago(story.endedAgo),
-      lastViewedAt: ago(story.updatedAgo),
-    });
+    await insertWithUpdatedAt(db, _attempts, [
+      {
+        id: attemptId,
+        taskId,
+        worktreePath: demoWorktreePath(story),
+        createdAt: ago(story.startedAgo),
+        updatedAt: ago(story.updatedAgo),
+      },
+    ]);
+    await insertWithUpdatedAt(db, _conversations, [
+      {
+        id: conversationId,
+        attemptId,
+        title: story.title,
+        status: story.status,
+        workingOn: story.status === "working" ? "turn" : null,
+        model: story.model,
+        createdAt: ago(story.startedAgo),
+        updatedAt: ago(story.updatedAgo),
+        endedAt: story.endedAgo === undefined ? null : ago(story.endedAgo),
+        lastViewedAt: ago(story.updatedAgo),
+      },
+    ]);
     await conversationProgress.upsert(conversationId, {
       phase: story.phase,
       source: story.phase === "pushed" ? "push" : "heuristic",

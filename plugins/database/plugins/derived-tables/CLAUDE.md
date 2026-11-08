@@ -270,6 +270,8 @@ is recomputed in `onReady`.
     - `page/editor`
     - `page/links`
     - `tasks/tasks-core`
+- Exemptions:
+  - Exempts itself from: `sql-writes:fit:dynamic` — `core/internal/define-rollup.ts`, `server/internal/rebuild.ts` (sanctioned)
 - Test helpers:
   - Server: `@plugins/database/plugins/derived-tables/server/testing`
     - `installRollups` — Install `rollups` onto a throwaway test database (`createTestDb`) whose source tables exist, and reconcile them — the SAME code path the boot schema layer runs (prepare the tables, install the trigger sets, reconcile), so the DDL and the reconcile under test are byte-identical to what a backend installs.

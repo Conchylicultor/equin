@@ -171,6 +171,7 @@ cannot be a `recomputeOn` upstream (a keyed window cascades nothing, D32).
     - `boundaries/no-platform-api` — `server/internal/compute-edited-files.ts`, `server/internal/edited-files-signature.ts` (debt)
     - `no-raw-websocket` — `e2e/edited-files-cost.ts` (sanctioned)
     - `repo-walk-safety/no-adhoc-repo-listing` — `server/internal/edited-files-signature.ts` (sanctioned)
+    - `sql-writes:fit:schema` — `e2e/edited-files-cost.ts` (sanctioned)
 - Sub-plugins:
   - **`file-pane`** — Hosts the file-peek pane: a checkout file opened from a conversation (chat file links, review, commits), shown through primitives/file-viewer with the conversation's edited-file status as context.
 

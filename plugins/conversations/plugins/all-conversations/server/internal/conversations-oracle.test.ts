@@ -566,11 +566,14 @@ describe("conversation lists — scoped differential oracle", () => {
         const at = tick();
         await testDb.db
           .update(_conversations)
+          // This database has no derived-updatedAt trigger (migrations
+          // only), so the suite stamps updated_at as the trigger would —
+          // past the insert model, which leaves the derived column out.
           .set({
             status,
             updatedAt: at,
             endedAt: status === "done" ? at : null,
-          })
+          } as Partial<typeof _conversations.$inferInsert>)
           .where(eq(_conversations.id, id));
         changed.add(id);
       } else if (r < 0.43) {

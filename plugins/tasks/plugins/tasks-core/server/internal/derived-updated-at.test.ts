@@ -161,6 +161,7 @@ describe("conversations.updated_at", () => {
     const id = await seedConversation();
     let err: Error | undefined;
     try {
+      // @ts-expect-error — no typed spelling either: updatedAt is out of the insert model
       await setConv(id, { updatedAt: new Date() });
     } catch (e) {
       err = e as Error;

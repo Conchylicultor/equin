@@ -9,7 +9,7 @@ Owns all database infrastructure for the equin server:
 
 ## Typed at the SQL boundary
 
-Three sibling guardrails, one class of bug: a type written by hand where nothing
+Sibling guardrails, one class of bug: a type written by hand where nothing
 verifies it. They split by spelling — around the row, inside the row, and on the
 column — so there is never a question of which one owns a site.
 
@@ -18,11 +18,12 @@ column — so there is never a question of which one owns a site.
 | a raw SQL **result** — `pool.query(…)`, `db.execute(sql\`…\`)` — whose rows you read | `plugins/database/plugins/sql-rows` — parse the rows (`queryRows` / `executeRows`) |
 | a raw SQL **expression selected as a value** — ``sql`…` `` in a `db.select()` or a `pgView` | `plugins/database/plugins/sql-projection` — give it a decoder (`.mapWith(…)`) |
 | a **column** narrower than the Postgres type under it — a string-literal union, or a shape over `jsonb`, in a `tables.ts` | `plugins/database/plugins/sql-column` — decode it (`parsedText(name, schema)` / `parsedJson(name, schema)`). A `jsonb` column whose value really is arbitrary keeps a bare `jsonb(x)` and its honest `unknown` |
+| a raw SQL **write** — an INSERT / UPDATE / DELETE / MERGE in a ``sql`…` `` tag or a `pool.query` string | `plugins/database/plugins/sql-writes` — parsed with Postgres's grammar and checked against the declared schema (`sql-writes:fit`): known tables and columns, required columns inserted, no write to a derived `updated_at` or a generated column |
 | a column `defineEntity` derives from a **field record** | nothing to do — the field type's storage contribution decodes it, text and jsonb alike (`fields/{text,json,tags}/plugins/storage`); see `plugins/infra/plugins/entities/CLAUDE.md` |
 
-All three are enforced (`sql-rows/no-unparsed-sql-rows`,
-`sql-projection/no-asserted-sql-type`, `sql-column/no-asserted-column-type`), and
-each plugin's `CLAUDE.md` carries the measured pg decoding facts — including the
+All are enforced (`sql-rows/no-unparsed-sql-rows`,
+`sql-projection/no-asserted-sql-type`, `sql-column/no-asserted-column-type`,
+`sql-writes:fit`), and the three decoding plugins' `CLAUDE.md` carries the measured pg decoding facts — including the
 one that catches everybody once:
 **`timestamptz` has no single answer.** Through drizzle raw SQL it is a `string`;
 through a raw `pg` client it is a `Date`; through a drizzle column it is a `Date`.

@@ -31,6 +31,8 @@ import { defineEntity } from "./define-entity";
 import {
   compileFromTable,
   deriveUpdatedAt,
+  derivedUpdatedAt,
+  insertWithUpdatedAt,
 } from "@plugins/database/plugins/derived-updated-at/server";
 import { installDbTriggers } from "@plugins/database/plugins/db-triggers/server";
 import { executeOne } from "@plugins/database/plugins/sql-rows/core";
@@ -106,9 +108,7 @@ const rawNotes = deriveUpdatedAt(
     id: text("id").primaryKey(),
     body: jsonb("body").$type<{ text: string; icon?: string }>().notNull(),
     expanded: text("expanded_state").notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    updatedAt: derivedUpdatedAt(),
   }),
   { touchedBy: { id: false, body: { exceptKeys: ["icon"] }, expanded: false } },
 );
@@ -291,12 +291,9 @@ describe("the derived updated_at trigger", () => {
 describe("a raw pgTable declared through deriveUpdatedAt", () => {
   async function insertNote(): Promise<string> {
     const id = `n${++seq}`;
-    await t.db.insert(rawNotes).values({
-      id,
-      body: { text: "a" },
-      expanded: "open",
-      updatedAt: new Date(OLD),
-    });
+    await insertWithUpdatedAt(t.db, rawNotes, [
+      { id, body: { text: "a" }, expanded: "open", updatedAt: new Date(OLD) },
+    ]);
     return id;
   }
 
@@ -351,7 +348,10 @@ describe("a raw pgTable declared through deriveUpdatedAt", () => {
     const rejected = Promise.resolve(
       t.db
         .update(rawNotes)
-        .set({ updatedAt: new Date() })
+        .set({
+          // @ts-expect-error — no typed spelling either: out of the insert model
+          updatedAt: new Date(),
+        })
         .where(eq(rawNotes.id, id)),
     );
     expect(rejected).rejects.toThrow(/dua_raw_notes.updated_at is derived/);

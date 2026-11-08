@@ -1,13 +1,17 @@
 import {
   type BuildExtraConfigColumns,
   eq,
+  getTableColumns,
   getTableName,
+  param,
+  sql,
   type SQL,
 } from "drizzle-orm";
 import {
   type AnyIndexBuilder,
   type AnyPgColumn,
   index,
+  type PgColumn,
   type PgTable,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
@@ -86,9 +90,15 @@ type ExtensionDefaultedKeys<
 > =
   DefaultedKeys<OwnFields<Sh>, { columns: M["columns"] }> | ExtensionTimestamp;
 
+// `updatedAt` is derived (the touchedBy trigger sets it), so it is unwritten:
+// out of the table's insert model and every typed `.set()`, as in `defineEntity`.
+type Derived<F extends FieldsRecord> = "updatedAt" & keyof F;
+
 type ExtensionTable<F extends FieldsRecord, D extends keyof F> = Entity<
   F,
-  D
+  D,
+  never,
+  Derived<F>
 >["table"];
 
 // The handle `defineExtension` returns: an `Entity` over the extension's full
@@ -105,7 +115,7 @@ export interface EntityExtension<
   D extends keyof F = never,
   S extends keyof F = never,
   E extends EntityExposure | null = EntityExposure | null,
-> extends Entity<F, D, S> {
+> extends Entity<F, D, S, Derived<F>> {
   // The parent key's name: the key column's JS property and the wire field.
   readonly key: K;
   // The fields this extension exposes to every list reaching its parent — the
@@ -135,9 +145,17 @@ export interface EntityExtension<
   // that holds its row locks while the app thinks between them. Plain `SQL`,
   // not the builder: drizzle parenthesises a builder embedded in sql`…`, and a
   // CTE body or main statement in parentheses is a syntax error.
+  //
+  // `onlyIf` guards the INSERT half: the row is written only while the
+  // condition holds (`INSERT … SELECT … WHERE <onlyIf>`), and nothing at all
+  // otherwise — e.g. only while another row of the same parent still exists,
+  // so a parent deleted under the writer writes nothing instead of failing
+  // the side row's foreign key. Its SET list is the given columns, as without
+  // it: the derived `updatedAt` cannot be named.
   upsertQuery(
     id: string,
     values: Omit<ExtensionTable<F, D>["$inferInsert"], K | ExtensionTimestamp>,
+    opts?: { readonly onlyIf?: SQL },
   ): SQL;
   // Change some columns of an EXISTING row; `undefined` when there is none
   // (nothing is inserted).
@@ -294,6 +312,47 @@ export function defineExtension<
       .onConflictDoUpdate({ target: keyColumn, set });
   };
 
+  // The guarded upsert (`upsertQuery`'s `onlyIf`): drizzle's insert builder
+  // takes VALUES or a whole-row SELECT, so the statement is assembled here —
+  // once, from the table's own columns: the given ones (each param cast to its
+  // column's SQL type, which a SELECT list needs) in the INSERT, the same ones
+  // as `EXCLUDED` in the SET. Every column left out keeps its DB default.
+  const columns = getTableColumns(table) as Record<string, PgColumn>;
+  const guardedUpsert = (
+    id: string,
+    patch: Record<string, unknown>,
+    onlyIf: SQL,
+  ): SQL => {
+    const given = Object.entries(patch).filter(([, v]) => v !== undefined);
+    const cols = given.map(([k]) => {
+      const col = columns[k];
+      if (!col || k === key || k === "createdAt" || k === "updatedAt") {
+        throw new Error(
+          `defineExtension("${tableName}").upsertQuery: "${k}" is not one of its own columns.`,
+        );
+      }
+      return col;
+    });
+    const name = (col: PgColumn) => sql.identifier(col.name);
+    const typed = (value: unknown, col: PgColumn) =>
+      sql`${param(value, col)}::${sql.raw(col.getSQLType())}`;
+    // An empty patch rewrites the key with its own value, as `upsertBuilder`.
+    const set = cols.length > 0 ? cols : [keyColumn];
+    return sql`insert into ${table} (${sql.join(
+      [keyColumn, ...cols].map(name),
+      sql`, `,
+    )}) select ${sql.join(
+      [
+        typed(id, keyColumn),
+        ...given.map(([, v], i) => typed(v, cols[i] as PgColumn)),
+      ],
+      sql`, `,
+    )} where ${onlyIf} on conflict (${name(keyColumn)}) do update set ${sql.join(
+      set.map((col) => sql`${name(col)} = excluded.${name(col)}`),
+      sql`, `,
+    )}`;
+  };
+
   // The one cast, as in `defineEntity`: the body is typed against the widened
   // `FieldsRecord`; `ExtensionOf<Sh, M>` restates the precise types the shape
   // and meta produce (the rows the methods read are that table's rows).
@@ -319,8 +378,14 @@ export function defineExtension<
       const rows = await upsertBuilder(id, patch, exec).returning();
       return rows[0];
     },
-    upsertQuery(id: string, patch: Record<string, unknown>): SQL {
-      return upsertBuilder(id, patch, db).getSQL();
+    upsertQuery(
+      id: string,
+      patch: Record<string, unknown>,
+      opts?: { readonly onlyIf?: SQL },
+    ): SQL {
+      return opts?.onlyIf
+        ? guardedUpsert(id, patch, opts.onlyIf)
+        : upsertBuilder(id, patch, db).getSQL();
     },
     async update(
       id: string,

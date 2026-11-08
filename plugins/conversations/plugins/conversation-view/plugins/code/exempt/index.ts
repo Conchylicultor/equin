@@ -25,4 +25,11 @@ export default [
     reason:
       "The edited-files signature of ANOTHER checkout (an agent's worktree): the untracked files of each untracked directory git reports, for a live read; no pass holds that checkout's set.",
   },
+  {
+    rule: "sql-writes:fit:schema",
+    paths: ["e2e/edited-files-cost.ts"],
+    kind: "sanctioned",
+    reason:
+      "Clones one conversation row under a new id with INSERT … SELECT (jsonb_populate_record(c, …)).* FROM conversations c: positional by construction, the same table's own columns in their own order.",
+  },
 ] satisfies Exemptions;

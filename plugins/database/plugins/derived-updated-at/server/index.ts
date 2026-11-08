@@ -1,12 +1,21 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 
-export { compileFromTable, deriveUpdatedAt } from "./internal/from-table";
+export {
+  compileFromTable,
+  deriveUpdatedAt,
+  derivedUpdatedAt,
+  insertWithUpdatedAt,
+} from "./internal/from-table";
 export {
   registerDerivedUpdatedAt,
   registeredDerivedUpdatedAt,
 } from "./internal/registry";
 export type { TouchRule, DerivedUpdatedAtSpec } from "./internal/types";
-export type { TableTouchedBy, TableWithUpdatedAt } from "./internal/from-table";
+export type {
+  RowWithUpdatedAt,
+  TableTouchedBy,
+  TableWithUpdatedAt,
+} from "./internal/from-table";
 
 export default {
   description:

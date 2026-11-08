@@ -1,6 +1,7 @@
 import {
   and,
   eq,
+  exists,
   getTableColumns,
   inArray,
   isNotNull,
@@ -249,16 +250,19 @@ export async function updateAgentRow(
  * exists: a conversation deleted under its agent (the cascade took the
  * checkpoint) writes nothing rather than failing the stop row's foreign key,
  * and its next checkpoint-only write answers null, as before the split.
- * `updated_at` is derived (its touchedBy trigger sets it, and refuses a write).
+ * Through the handle, so its SET list is the stop fields: the derived
+ * `updated_at` (set by its touchedBy trigger, refused on a write) has no
+ * spelling here.
  */
 function stopUpsert(id: string, stop: StopFields) {
-  return sql`INSERT INTO ${sdkAgentStops.table} ("parent_id", "stopped_at", "stop_error", "account")
-    SELECT "parent_id", ${stop.stoppedAt}::timestamptz, ${stop.stopError}::text, ${stop.account}::text
-    FROM ${sdkAgents.table} WHERE "parent_id" = ${id}
-    ON CONFLICT ("parent_id") DO UPDATE SET
-      "stopped_at" = EXCLUDED."stopped_at",
-      "stop_error" = EXCLUDED."stop_error",
-      "account" = EXCLUDED."account"`;
+  return sdkAgentStops.upsertQuery(id, stop, {
+    onlyIf: exists(
+      db
+        .select({ one: sql`1` })
+        .from(sdkAgents.table)
+        .where(eq(sdkAgents.table.conversationId, id)),
+    ),
+  });
 }
 
 /**

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, exists, sql } from "drizzle-orm";
 import { db, type DbExecutor } from "@plugins/database/server";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { _tasks } from "@plugins/tasks/plugins/tasks-core/server";
@@ -56,8 +56,8 @@ export const shortTitleJob = defineJob({
 });
 
 // Persist only if the title is still the one we shortened — in ONE statement:
-// the upsert's rows come from a SELECT of the task guarded on its title, so a
-// rename that commits first leaves nothing to write (its own event brings its
+// the handle's upsert, guarded (`onlyIf`) on the task still having its title, so
+// a rename that commits first leaves nothing to write (its own event brings its
 // own run). It replaced a `FOR UPDATE` read, a compare in the app, then the
 // upsert: two round trips with the task row locked between them. A rename that
 // commits after the statement's snapshot can still land a short title made from
@@ -69,23 +69,20 @@ export async function storeIfTitleUnchanged(
   title: string,
   shortTitle: string,
 ): Promise<void> {
-  const t = tasksShortTitle.table;
-  const col = (c: { name: string }) => sql.identifier(c.name);
-  const source = exec
-    .select({
-      id: _tasks.id,
-      shortTitle: sql`${shortTitle}`,
-      title: _tasks.title,
-    })
-    .from(_tasks)
-    .where(and(eq(_tasks.id, taskId), eq(_tasks.title, title)));
-  await exec.execute(sql`
-    INSERT INTO ${t} (${col(t[tasksShortTitle.key])}, ${col(t.shortTitle)}, ${col(t.sourceTitle)})
-    ${source.getSQL()}
-    ON CONFLICT (${col(t[tasksShortTitle.key])}) DO UPDATE
-      SET ${col(t.shortTitle)} = excluded.${col(t.shortTitle)},
-          ${col(t.sourceTitle)} = excluded.${col(t.sourceTitle)}
-  `);
+  await exec.execute(
+    tasksShortTitle.upsertQuery(
+      taskId,
+      { shortTitle, sourceTitle: title },
+      {
+        onlyIf: exists(
+          exec
+            .select({ one: sql`1` })
+            .from(_tasks)
+            .where(and(eq(_tasks.id, taskId), eq(_tasks.title, title))),
+        ),
+      },
+    ),
+  );
 }
 
 // A title already that short is its own short title (no model call); otherwise

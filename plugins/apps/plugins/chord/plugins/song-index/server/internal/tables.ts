@@ -9,7 +9,10 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
-import { deriveUpdatedAt } from "@plugins/database/plugins/derived-updated-at/server";
+import {
+  deriveUpdatedAt,
+  derivedUpdatedAt,
+} from "@plugins/database/plugins/derived-updated-at/server";
 import {
   parsedJson,
   parsedText,
@@ -142,9 +145,7 @@ export const _chordIndexState = deriveUpdatedAt(
     /** Sections left out, by reason (snapshot skips and derivation skips), with example ids. */
     skipped: parsedJson("skipped", SkipSummarySchema).notNull(),
     startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
+    updatedAt: derivedUpdatedAt(),
     finishedAt: timestamp("finished_at", { withTimezone: true }),
   }),
   {

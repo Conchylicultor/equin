@@ -90,11 +90,19 @@ function isLintRuleSource(file: string): boolean {
   return segs.some((s, i) => s === "lint" && segs[i - 2] === PLUGINS_DIR);
 }
 
+// An exempt manifest: its `paths` are plugin-relative (see `scanPathRefs`).
+const EXEMPT_MANIFEST_RE = /(^|\/)exempt\/index\.ts$/;
+
 /**
  * `path` refs in one TS/TSX source: every string literal that is wholly a
  * `plugins/…` path, and every `@plugins/…` module specifier (static, dynamic
  * and mocked imports). The range spans exactly the plugin directory
  * (`plugins/a/plugins/b`) — for a specifier, starting after its `@`.
+ *
+ * An exempt manifest's (`<plugin>/exempt/index.ts`) plain strings are not
+ * refs either: its `paths` are relative to its own plugin, so a parent
+ * exempting a child's file spells `plugins/<child>/…`, which names no plugin
+ * from the repo root (`exempt:manifests-valid` owns whether they resolve).
  *
  * A `@plugins/…` string that is NOT in a specifier position is not a ref —
  * test fixtures spell fake specifiers (`"@plugins/a/web"`) as data by the
@@ -109,6 +117,7 @@ export function scanPathRefs(file: string, src: string): PathRef[] {
     ? specifierStarts(src, masked)
     : new Set<number>();
   const ruleSource = isLintRuleSource(file);
+  const manifest = EXEMPT_MANIFEST_RE.test(file);
   const lineOf = lineIndex(src);
   const out: PathRef[] = [];
   for (const lit of literalsIn(src, masked)) {
@@ -120,6 +129,7 @@ export function scanPathRefs(file: string, src: string): PathRef[] {
       !(ruleSource && RULE_SOURCE_RE.test(lit.value))
     )
       continue;
+    if (manifest && !specifier) continue;
     const pathText = specifier ? lit.value.slice(1) : lit.value;
     const under = pluginPathFromLiteral(pathText);
     if (under == null) continue;

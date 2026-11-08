@@ -7,7 +7,13 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
-import { compileFromTable, deriveUpdatedAt } from "./from-table";
+import { drizzle } from "drizzle-orm/node-postgres";
+import {
+  compileFromTable,
+  deriveUpdatedAt,
+  derivedUpdatedAt,
+  insertWithUpdatedAt,
+} from "./from-table";
 
 // `compileFromTable` / `deriveUpdatedAt` on raw drizzle tables. That it compiles
 // the same spec as the equivalent `defineEntity` is pinned in infra/entities
@@ -21,9 +27,7 @@ function itemsTable(name: string) {
     title: text("title").notNull(),
     status: text("status").$type<Status>().notNull(),
     lastViewedAt: timestamp("seen_at", { withTimezone: true }),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    updatedAt: derivedUpdatedAt(),
   });
 }
 
@@ -139,7 +143,7 @@ function _typeTests(): void {
   const withJson = pgTable("t_json", {
     id: text("id"),
     data: jsonb("data").$type<{ title: string; icon: string | null }>(),
-    updatedAt: timestamp("updated_at"),
+    updatedAt: derivedUpdatedAt(),
   });
   deriveUpdatedAt(withJson, {
     // @ts-expect-error — "cover" is not a key of the data object
@@ -160,6 +164,46 @@ function _typeTests(): void {
       updatedAt: false,
     },
   });
+
+  // A raw table whose updatedAt is a plain, writable timestamp cannot derive
+  // one: its typed writes could still name it. `derivedUpdatedAt()` it.
+  const writable = pgTable("t_writable", {
+    id: text("id"),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  });
+  // @ts-expect-error — updatedAt is not declared with derivedUpdatedAt()
+  deriveUpdatedAt(writable, { touchedBy: { id: false } });
+
+  // A derived updatedAt has no typed write: not in an insert's values, an
+  // update's SET or an upsert's SET; only insertWithUpdatedAt (INSERT, history)
+  // names it.
+  const db = drizzle.mock();
+  const row: (typeof t)["$inferInsert"] = {
+    id: "a",
+    title: "x",
+    status: "idle",
+    // @ts-expect-error — derived, not in the insert model
+    updatedAt: new Date(),
+  };
+  void db.update(t).set({
+    // @ts-expect-error — derived, not in an update's SET
+    updatedAt: new Date(),
+  });
+  void db
+    .insert(t)
+    .values(row)
+    .onConflictDoUpdate({
+      target: t.id,
+      set: {
+        // @ts-expect-error — derived, not in an upsert's SET
+        updatedAt: new Date(),
+      },
+    });
+  void insertWithUpdatedAt(db, t, [
+    { id: "a", title: "x", status: "idle", updatedAt: new Date() },
+  ]);
 
   // A table WITHOUT updatedAt cannot derive one.
   const noUpdatedAt = pgTable("t_no_col", { id: text("id"), n: integer("n") });

@@ -53,7 +53,6 @@ async function insertAccount(id: string, connectedAt: Date | null) {
     email: `${id}@example.invalid`,
     connectedAt,
     createdAt: now,
-    updatedAt: now,
   });
 }
 
