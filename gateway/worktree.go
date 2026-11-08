@@ -639,7 +639,7 @@ func (w *Worktree) drainAndStop(bk *backend) {
 		slog.Info("hot restart: cutting WebSocket connections; clients will reconnect",
 			"worktree", w.Name, "wsConns", n)
 	}
-	w.terminateBackend(bk, "hot restart drain")
+	w.terminateBackend(context.Background(), bk, "hot restart drain")
 	_ = removeBackendArtifacts(bk.socketPath)
 	slog.Info("hot restart: old backend drained and stopped",
 		"worktree", w.Name, "socket", bk.socketPath)
@@ -682,7 +682,7 @@ func (w *Worktree) Stop(ctx context.Context) error {
 	w.mu.Unlock()
 
 	if bk != nil {
-		w.terminateBackend(bk, "stop")
+		w.terminateBackend(ctx, bk, "stop")
 	}
 
 	if bk != nil {
@@ -1072,25 +1072,39 @@ func (w *Worktree) abandonUnreadyBackend(bk *backend, phase string, wait readyWa
 }
 
 // terminateBackend stops a ready backend: SIGTERM, then SIGKILL if it outlives
-// ShutdownGrace. The escalation is logged with how long it waited, since the
-// stop's own log line cannot tell a clean exit from a kill. why names the caller.
-func (w *Worktree) terminateBackend(bk *backend, why string) {
+// ShutdownGrace — or ctx, whichever ends first: a stop inside the gateway's
+// shutdown must finish within that shutdown's budget (shutdownWithin), not
+// within a grace started whenever its turn came. The escalation is logged with
+// how long it waited, since the stop's own log line cannot tell a clean exit
+// from a kill. why names the caller.
+func (w *Worktree) terminateBackend(ctx context.Context, bk *backend, why string) {
 	if bk.cmd == nil || bk.cmd.Process == nil {
 		return
 	}
 	signalBackend(bk, syscall.SIGTERM, w.Name)
+	started := time.Now()
+	grace := time.NewTimer(w.cfg.ShutdownGrace)
+	defer grace.Stop()
 	select {
 	case <-bk.exitCh:
-	case <-time.After(w.cfg.ShutdownGrace):
-		signalBackend(bk, syscall.SIGKILL, w.Name)
-		outcome := "exited"
-		if !waitBackendExit(bk, w.Name, postKillTimeout) {
-			outcome = fmt.Sprintf("still running after %s", postKillTimeout)
-		}
-		slog.Warn("backend killed: still running after SIGTERM grace",
-			"worktree", w.Name, "phase", why, "pid", backendPID(bk), "socket", bk.socketPath,
-			"grace", w.cfg.ShutdownGrace, "outcome", outcome)
+	case <-ctx.Done():
+		w.killAfterSIGTERM(bk, why, time.Since(started))
+	case <-grace.C:
+		w.killAfterSIGTERM(bk, why, time.Since(started))
 	}
+}
+
+// killAfterSIGTERM is terminateBackend's escalation: SIGKILL, a bounded wait
+// for the exit, and the line saying so.
+func (w *Worktree) killAfterSIGTERM(bk *backend, why string, waited time.Duration) {
+	signalBackend(bk, syscall.SIGKILL, w.Name)
+	outcome := "exited"
+	if !waitBackendExit(bk, w.Name, postKillTimeout) {
+		outcome = fmt.Sprintf("still running after %s", postKillTimeout)
+	}
+	slog.Warn("backend killed: still running after SIGTERM grace",
+		"worktree", w.Name, "phase", why, "pid", backendPID(bk), "socket", bk.socketPath,
+		"grace", w.cfg.ShutdownGrace, "waited", waited, "outcome", outcome)
 }
 
 // exitTailLines is how much of a backend's own stderr an early exit reports:

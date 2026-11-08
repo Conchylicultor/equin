@@ -1,4 +1,4 @@
-import type { LoginServiceSpec } from "../../core";
+import { SERVICE_STOP_TIMEOUT_S, type LoginServiceSpec } from "../../core";
 import type { InstalledJob } from "./login-service";
 
 /**
@@ -10,8 +10,8 @@ import type { InstalledJob } from "./login-service";
  *   stop (exit 0 on SIGTERM) stays stopped (launchd's `SuccessfulExit=false`).
  * - `RestartSec=10` — the gateway exits 1 when Postgres cannot start, and that
  *   must retry, not hot-loop (launchd's `ThrottleInterval`).
- * - `TimeoutStopSec=20` — the gateway's own shutdown budget is 15s (launchd's
- *   `ExitTimeOut`).
+ * - `TimeoutStopSec` {@link SERVICE_STOP_TIMEOUT_S} — launchd's `ExitTimeOut`;
+ *   the gateway's own shutdown is budgeted inside it.
  * - `KillMode=process` — a stop signals the main process ALONE, as launchd
  *   does. The gateway tears its own children (backends, Postgres, PgBouncer)
  *   down in order; and everything a backend spawned lives in this unit's cgroup
@@ -53,7 +53,7 @@ WorkingDirectory=${path(spec.cwd)}
 ${env}
 Restart=on-failure
 RestartSec=10
-TimeoutStopSec=20
+TimeoutStopSec=${SERVICE_STOP_TIMEOUT_S}
 KillMode=process
 StandardOutput=append:${path(spec.stdioLog)}
 StandardError=append:${path(spec.stdioLog)}

@@ -34002,6 +34002,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `componentIdentity`
               - `executableEnv`
+              - `SERVICE_SHUTDOWN_BUDGET_S`
+              - `SERVICE_STOP_TIMEOUT_S`
+              - `SERVICE_STOP_WAIT_MS`
               - `unbundledExecutable`
           - Cross-plugin:
             - Imported by:
@@ -34042,6 +34045,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `machineMacosAppHost`
               - `plannedServiceExecutable`
               - `reconcileLoginService`
+              - `reloadService`
               - `terminateProcess`
             - Register: `defineRefReaction('login-services.follow-main (refs/heads/main)')`
         - **`runtime-env`** — What environment the runtime tree starts from: the declared allowlist the launcher spawns the gateway with and the gateway forwards to its children (pickRuntimeEnv / runtimeEnvNames / pickHostEnv), and the runtime's PATH with mise's shims first (runtimePath / runtimeShimsDir). A core-only leaf, so a tool runner needing the runtime PATH never bundles the launcher's release boot.

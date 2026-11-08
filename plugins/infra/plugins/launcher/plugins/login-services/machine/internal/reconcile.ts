@@ -16,6 +16,7 @@ import {
 } from "./define";
 import type { LoginService, LoginServiceManager } from "./login-service";
 import { installServiceExecutable, type MacosAppHost } from "./macos-app";
+import { SERVICE_STOP_WAIT_MS } from "../../core";
 import { awaitProcessGone } from "./process";
 
 /**
@@ -123,22 +124,80 @@ async function reconcileBound<S extends DepSource>(
     return { kind: "unchanged", pid: runningPid };
   }
 
-  if (before.kind === "loaded") {
-    // Neither manager re-reads a loaded job: a rewritten one takes effect
-    // only through a reload.
-    await service.unload();
-    if (runningPid !== null) await awaitProcessGone(runningPid);
-  }
   // The manager appends; truncate so the log holds this start's output. Its
   // folder may not exist yet (a declaration's first start), and neither
   // launchd nor systemd creates it — the job would fail to spawn.
-  await mkdir(asAppPath(dirname(job.stdioLog)), { recursive: true });
-  await writeFile(job.stdioLog, "");
-  const pid = await service.load();
+  const truncateLog = async () => {
+    await mkdir(asAppPath(dirname(job.stdioLog)), { recursive: true });
+    await writeFile(job.stdioLog, "");
+  };
+  // Neither manager re-reads a loaded job: a rewritten one takes effect only
+  // through a reload.
+  let pid: number | null;
+  if (before.kind === "loaded") {
+    pid = await reloadService(service, runningPid, truncateLog);
+  } else {
+    await truncateLog();
+    pid = await service.load();
+  }
   return {
     kind: "started",
     pid,
     path: written.path,
     reloaded: before.kind === "loaded",
   };
+}
+
+/**
+ * Swap a loaded service for its written job: unload it, wait for the running
+ * generation (`runningPid`) to be gone, run `beforeLoad` (skipped when the wait
+ * gave up), load. The one reload
+ * body — `reconcileLoginService` and the gateway's `./equin start --force`
+ * both go through it.
+ *
+ * **Once `unload` has run, the load is always attempted.** The unload has
+ * already taken the service down, so a reload that stops there leaves the
+ * machine without it — for the gateway, without every backend and every tab
+ * (2026-11-08: the wait gave up, the command aborted, no gateway for minutes).
+ * So a wait that gives up does not skip the load; it is reported with it:
+ *
+ * - The load succeeds → the old process is gone after all: the manager runs
+ *   one instance of a job and refuses to load it while the old one is still
+ *   being stopped (launchd's bootstrap fails with EIO), so a load that went
+ *   through is itself the proof. No overlap of generations is possible.
+ * - The load fails → both errors are thrown together: the old process
+ *   survived its manager's SIGKILL (a process stuck in the kernel) and the
+ *   manager will not start a second one. Nothing here can fix that; it is
+ *   said, not hidden.
+ *
+ * Resolves with the loaded pid ({@link LoginService.load}). `stopWaitMs`
+ * bounds the wait (default: past the manager's own kill).
+ */
+export async function reloadService(
+  service: LoginService,
+  runningPid: number | null,
+  beforeLoad: () => Promise<void> | void,
+  stopWaitMs: number = SERVICE_STOP_WAIT_MS,
+): Promise<number | null> {
+  await service.unload();
+  let notGone: unknown = null;
+  if (runningPid !== null) {
+    try {
+      await awaitProcessGone(runningPid, stopWaitMs);
+    } catch (err) {
+      notGone = err;
+    }
+  }
+  // A process that outlived its stop keeps its output: beforeLoad truncates
+  // the stdio log, which is then the one record of what it was stuck in.
+  if (notGone === null) await beforeLoad();
+  try {
+    return await service.load();
+  } catch (loadErr) {
+    if (notGone === null) throw loadErr;
+    throw new AggregateError(
+      [notGone, loadErr],
+      `${service.id.label}: the old process (PID ${runningPid}) outlived its stop and ${service.manager} would not load the new one: ${String(loadErr)}`,
+    );
+  }
 }

@@ -422,7 +422,10 @@ func (p *Proxy) handleGatewayAPI(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, name+" is pinned and is never stopped", http.StatusConflict)
 				return
 			}
-			if err := wt.Stop(r.Context()); err != nil {
+			// Not the request's own context: a caller that hangs up must not
+			// turn the backend's SIGTERM grace into an instant SIGKILL
+			// (terminateBackend ends the grace when its context does).
+			if err := wt.Stop(context.WithoutCancel(r.Context())); err != nil {
 				http.Error(w, "stop failed: "+err.Error(), http.StatusInternalServerError)
 				return
 			}

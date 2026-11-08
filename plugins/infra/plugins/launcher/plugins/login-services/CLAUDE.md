@@ -94,8 +94,8 @@ one).
 is the one per-service body, answering `{ service, outcome }`: bind the
 service and every service it `refersTo` under `manager`, hold the dependency (`loginServiceHolder` — off
 macOS the job names the binary by path long after main moves on), install its
-executable into the equin app (macOS, below), write the job, unload +
-`awaitProcessGone` when loaded, truncate the stdio log, load.
+executable into the equin app (macOS, below), write the job,
+`reloadService` when loaded (unload, `awaitProcessGone`, truncate the stdio log, load — the load attempted whatever the wait says), else truncate and load.
 
 | policy | not registered | registered, not loaded | loaded, job same | loaded, job changed |
 |---|---|---|---|---|
@@ -116,6 +116,29 @@ environment is the starter's: the gateway's drift row (`launcher/gateway-drift`)
 `awaitProcessGone` / `terminateProcess` live here (`machine/internal/process.ts`),
 moved from the launcher's `server` barrel: this machine half could not import
 that barrel without a launcher ↔ login-services cycle.
+
+## A reload never ends with the service down
+
+Every reload (the reconcile's, and the gateway's `start --force`) is
+`reloadService` (`machine/internal/reconcile.ts`): unload, wait for the old
+process, load. **Once the unload has run, the load is always attempted** — a
+reload that gives up between the two leaves the machine without the service,
+and for the gateway that is every backend and every tab (2026-11-08: the old
+gateway took longer than the wait, `start --force` aborted, no gateway for
+minutes). A wait that gives up is thrown with the load only when the load fails
+too; a load that goes through is the proof the old process is gone, since the
+manager runs one instance of a job and refuses to load it while the old one is
+still stopping (measured: `launchctl bootout` returns in ~70 ms with the
+process alive, and `bootstrap` fails with EIO until launchd has reaped it).
+
+The stop timeout is ONE number (`SERVICE_STOP_TIMEOUT_S`, `core`): rendered as
+`ExitTimeOut` / `TimeoutStopSec` (the manager SIGKILLs at it — measured, a
+SIGTERM-ignoring job is dead at ExitTimeOut + ~0.5 s); the gateway's whole
+shutdown is budgeted inside it (`SERVICE_SHUTDOWN_BUDGET_S`, passed as
+`-shutdown-timeout`); the wait runs past it (`SERVICE_STOP_WAIT_MS`), so a
+process still alive then survived SIGKILL; and `terminateProcess` (a process no
+manager owns) SIGKILLs at it itself. They were three literals, and the wait
+equal to the kill made a slow stop a race the CLI could lose.
 
 ## The equin app (macOS)
 
@@ -174,7 +197,7 @@ responsible process); agents disclaim (`packages/spawn-disclaim`).
 
 The rest of the policy is shared and fixed in the pure renderers
 (`machine/internal/launchd-plist.ts`, `systemd-unit.ts`): relaunch on a
-non-zero exit only, 10 s throttle, 20 s stop budget, `KillMode=process`. A
+non-zero exit only, 10 s throttle, a `SERVICE_STOP_TIMEOUT_S` (20 s) stop timeout, `KillMode=process`. A
 `background` spec renders byte-identical to the gateway's plist / unit from
 before this was generic — the renderer tests pin it.
 
@@ -221,6 +244,9 @@ folder needs only its boundary row, not a barrel's doc and shipping policy.
   - Exports (values):
     - `componentIdentity`
     - `executableEnv`
+    - `SERVICE_SHUTDOWN_BUDGET_S`
+    - `SERVICE_STOP_TIMEOUT_S`
+    - `SERVICE_STOP_WAIT_MS`
     - `unbundledExecutable`
 - Cross-plugin:
   - Imported by:
@@ -261,6 +287,7 @@ folder needs only its boundary row, not a barrel's doc and shipping policy.
     - `machineMacosAppHost`
     - `plannedServiceExecutable`
     - `reconcileLoginService`
+    - `reloadService`
     - `terminateProcess`
   - Register: `defineRefReaction('login-services.follow-main (refs/heads/main)')`
 

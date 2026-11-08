@@ -18,3 +18,8 @@ export type {
   ComponentBuild,
   ServiceExecutable,
 } from "./internal/app-component";
+export {
+  SERVICE_SHUTDOWN_BUDGET_S,
+  SERVICE_STOP_TIMEOUT_S,
+  SERVICE_STOP_WAIT_MS,
+} from "./internal/stop-timeout";

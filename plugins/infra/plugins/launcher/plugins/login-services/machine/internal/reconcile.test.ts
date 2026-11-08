@@ -27,7 +27,11 @@ import type {
   LoginServiceState,
 } from "./login-service";
 import type { MacosAppHost } from "./macos-app";
-import { reconcileLoginService, type ReconcilePolicy } from "./reconcile";
+import {
+  reconcileLoginService,
+  reloadService,
+  type ReconcilePolicy,
+} from "./reconcile";
 
 const dir = asAppPath(mkdtempSync(join(tmpdir(), "login-service-reconcile-")));
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
@@ -369,5 +373,55 @@ describe("reconcileLoginService — macOS (the equin app bundle)", () => {
     const job = JSON.parse(fake.definition()!) as LoginServiceJob;
     expect(job.argv[0]).toBe(join(bundle, "Contents", "MacOS", "example"));
     expect(readEnv("APP_COMPONENT", job.env)).toBe("example-helper@two");
+  });
+});
+
+describe("reloadService — once unloaded, always loaded", () => {
+  // This test process: alive for the whole test, like an old generation that
+  // will not die.
+  const LIVE_PID = process.pid;
+
+  test("a wait that gives up still loads, and a load that goes through is the proof the old one is gone", async () => {
+    const fake = fakeService("loaded", oldBuild, decl, LIVE_PID);
+    const pid = await reloadService(
+      fake.service,
+      LIVE_PID,
+      () => {
+        fake.calls.push("before-load");
+      },
+      200,
+    );
+    expect(pid).toBe(4242);
+    // beforeLoad (the log truncation) is skipped: the old process's output is
+    // the record of what it was stuck in.
+    expect(fake.calls).toEqual(["unload", "load"]);
+  });
+
+  test("when the load fails too, both failures are thrown together", async () => {
+    const fake = fakeService("loaded", oldBuild, decl, LIVE_PID);
+    fake.service.load = async () => {
+      fake.calls.push("load");
+      throw new Error("Bootstrap failed: 5: Input/output error");
+    };
+    const err = await reloadService(
+      fake.service,
+      LIVE_PID,
+      () => {},
+      200,
+    ).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(AggregateError);
+    const { errors, message } = err as AggregateError;
+    expect(errors).toHaveLength(2);
+    expect(String(errors[0])).toContain(`Process ${LIVE_PID} is still running`);
+    expect(message).toContain("Input/output error");
+    expect(fake.calls).toEqual(["unload", "load"]);
+  });
+
+  test("beforeLoad runs between the wait and the load", async () => {
+    const fake = fakeService("loaded", oldBuild);
+    await reloadService(fake.service, DEAD_PID, () => {
+      fake.calls.push("before-load");
+    });
+    expect(fake.calls).toEqual(["unload", "before-load", "load"]);
   });
 });

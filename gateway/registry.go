@@ -352,9 +352,17 @@ func (r *Registry) Sweep(ctx context.Context) {
 			return
 		case <-t.C:
 			for _, wt := range r.List() {
+				// A shutdown that began mid-tick stops the rest itself, inside
+				// its budget (StopAll).
+				if ctx.Err() != nil {
+					break
+				}
 				if wt.ShouldSweep(r.cfg.IdleTimeout) {
 					slog.Info("sweeping idle worktree", "worktree", wt.Name)
-					if err := wt.Stop(ctx); err != nil {
+					// Not ctx itself: it ends on SIGTERM, and a stop already under
+					// way keeps its SIGTERM grace (terminateBackend SIGKILLs when its
+					// context ends).
+					if err := wt.Stop(context.WithoutCancel(ctx)); err != nil {
 						slog.Warn("sweep stop failed", "worktree", wt.Name, "err", err)
 					}
 				}

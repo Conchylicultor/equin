@@ -69,6 +69,7 @@ import { readyNow, type Ready } from "@plugins/infra/plugins/deps/deps";
 import type { BuildSource } from "@plugins/infra/plugins/deps/plugins/build/deps";
 import {
   executableEnv,
+  SERVICE_SHUTDOWN_BUDGET_S,
   unbundledExecutable,
   type ServiceExecutable,
 } from "@plugins/infra/plugins/launcher/plugins/login-services/core";
@@ -562,6 +563,11 @@ export function gatewayLaunchFlags(
     // file naming a dead one.
     "-pid-file",
     pidFile(),
+    // The whole shutdown's budget, inside the stop timeout its service
+    // manager (or `terminateProcess`) kills at — one number for both, so the
+    // gateway exits on its own instead of being SIGKILLed mid-teardown.
+    "-shutdown-timeout",
+    `${SERVICE_SHUTDOWN_BUDGET_S}s`,
     ...(opts.defaultNamespace
       ? ["-default-namespace", opts.defaultNamespace]
       : []),

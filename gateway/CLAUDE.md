@@ -199,7 +199,21 @@ Before, the next request after the 10 s cooldown respawned it, whoever sent it �
 
 - `200` + the worktree's `WorktreeStatus` JSON (the `GET /gateway/worktrees` element shape) once the backend has exited. Already idle (or broken) → `200`, no-op.
 - `409` for a pinned worktree (`Worktree.Pinned`, today `central`) — the same rule that keeps the sweeper off it. Main (`mainNamespace`) is not pinned: the sweeper stops it too.
-- `503` when another stop is already tearing it down (not yet exited — retry); `404` for an unknown worktree; `500` if the stop fails (e.g. the request's context ends while waiting on a spawn).
+- `503` when another stop is already tearing it down (not yet exited — retry); `404` for an unknown worktree; `500` if the stop fails. The stop runs on the request's context without its cancellation: a caller hanging up must not turn the SIGTERM grace into an instant SIGKILL, so a stop that arrives mid-spawn waits that spawn out even if its caller has gone. The idle sweeper stops the same way, and stops sweeping once shutdown begins (shutdown's `StopAll` takes the rest, inside its budget).
+
+## Shutdown fits one budget
+
+On SIGTERM the gateway drains its HTTP server, then stops every backend, inside
+ONE deadline, `-shutdown-timeout` (`shutdown.go`, `shutdownWithin`; the
+launcher passes login-services' `SERVICE_SHUTDOWN_BUDGET_S`, 15 s, inside the
+20 s its service manager SIGKILLs at). The drain gets what is left after the
+stops' share (one `-shutdown-grace` plus `postKillTimeout`); requests still open
+then end when their backend stops. The stops run under a context ending
+`postKillTimeout` before the deadline, and `terminateBackend` sends SIGKILL when
+its context ends, not only after its grace. Before, each step had its own clock: the
+drain took its full 15 s whenever one proxied stream was open (a stream never
+ends on its own), then a backend's 5 s grace started — 15 + 5 = launchd's
+`ExitTimeOut`, so launchd killed the gateway mid-teardown (2026-11-08 18:05).
 
 ## Service supervision
 

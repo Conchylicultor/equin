@@ -21,7 +21,7 @@ export type {
 } from "./internal/define";
 export { declaredLoginServices } from "./internal/registry";
 export { loginService, loginServiceManager } from "./internal/host";
-export { reconcileLoginService } from "./internal/reconcile";
+export { reconcileLoginService, reloadService } from "./internal/reconcile";
 export {
   appExecutablePath,
   bundleOfExecutable,

@@ -8,7 +8,7 @@ import { join } from "node:path";
 import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
 import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
 import { retryUntil, exponential } from "@plugins/packages/plugins/retry/core";
-import type { LoginServiceId } from "../../core";
+import { SERVICE_STOP_WAIT_MS, type LoginServiceId } from "../../core";
 import {
   isDefinitionCurrent,
   readDefinition,
@@ -185,9 +185,13 @@ function systemdService(id: LoginServiceId): LoginService {
     },
     remove,
     load,
+    // `systemctl stop` blocks until the unit is inactive — up to
+    // TimeoutStopSec, then systemd's SIGKILL — so its bound runs past that
+    // (SERVICE_STOP_WAIT_MS): a shorter one threw mid-stop, before the reload's
+    // load, leaving the unit stopped.
     unload: async () => {
       await spawnExpectOk(systemctl("stop", unit), {
-        timeoutMs: SYSTEMCTL_TIMEOUT_MS,
+        timeoutMs: SERVICE_STOP_WAIT_MS,
       });
     },
   };

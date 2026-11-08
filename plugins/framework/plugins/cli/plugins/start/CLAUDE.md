@@ -32,8 +32,12 @@ the two launch paths cannot drift. Consequences worth knowing:
   on the next `start --force`.
 - **Reloading is `bootout` + `bootstrap`, not `kickstart`**: launchd reads a
   plist only when it is loaded, so a rewritten job takes effect only through a
-  reload. `start --force` does exactly that, and waits for the old process to be
-  gone first. launchd never runs two instances of a label, so there is no
+  reload. `start --force` does exactly that (`reloadService`), and waits for the
+  old process to be gone first — past the plist's `ExitTimeOut`, where launchd
+  SIGKILLs it — then loads **whatever the wait said**: an unloaded gateway
+  is never left unloaded (see login-services' *A reload never ends with the
+  service down*). launchd never runs two instances of a label (its `bootstrap`
+  fails while the old one is still stopping), so there is no
   overlapping-generation window (the routine trigger for orphaned backends).
 - **The gateway writes its own pidfile** (`-pid-file`): no launcher sees a
   launchd relaunch, and `readPid()` has readers.

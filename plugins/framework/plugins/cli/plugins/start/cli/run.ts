@@ -36,13 +36,13 @@ import {
   type GatewayLaunchOptions,
 } from "@plugins/infra/plugins/launcher/server";
 import {
-  awaitProcessGone,
   declaredLoginServices,
   installServiceExecutable,
   loginServiceManager,
   machineMacosAppHost,
   plannedServiceExecutable,
   reconcileLoginService,
+  reloadService,
   terminateProcess,
   type LoginService,
   type LoginServiceDeclaration,
@@ -185,18 +185,19 @@ async function startAsLoginService(
     await terminateProcess(legacyPid);
   }
 
+  // The manager appends; truncate so the tail quoted on a failed start is this boot's.
+  const truncateLog = () => writeFileSync(spec.stdioLog, "");
+  let pid: number | null;
   if (service.kind === "loaded") {
     // Unload rather than restart in place: neither manager re-reads a job
     // definition while it is loaded, so a rewritten job takes effect only
-    // through a reload.
+    // through a reload — one that always loads once it has unloaded.
     console.log(`Reloading the ${manager} job...`);
-    await loginService.unload();
-    if (managedPid !== null) await awaitProcessGone(managedPid);
+    pid = await reloadService(loginService, managedPid, truncateLog);
+  } else {
+    truncateLog();
+    pid = await loginService.load();
   }
-
-  // The manager appends; truncate so the tail quoted on a failed start is this boot's.
-  writeFileSync(spec.stdioLog, "");
-  const pid = await loginService.load();
   // The gateway's service id carries no schedule: it always runs.
   if (pid === null)
     throw new Error(`${loginService.id.label} loaded with no running process`);

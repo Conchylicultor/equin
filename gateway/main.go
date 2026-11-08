@@ -20,6 +20,7 @@ type Config struct {
 	Listen            string
 	IdleTimeout       time.Duration
 	ShutdownGrace     time.Duration
+	ShutdownTimeout   time.Duration
 	ReadyTimeout      time.Duration
 	ReadyTimeoutMax   time.Duration
 	SweepInterval     time.Duration
@@ -83,6 +84,7 @@ func parseFlags() (Config, string) {
 	flag.StringVar(&cfg.Listen, "listen", loopbackHost+":9000", "address to listen on: loopback:<port> (127.0.0.1 and [::1]), a host:port, or :<port> for every interface")
 	flag.DurationVar(&cfg.IdleTimeout, "idle-timeout", 10*time.Minute, "backend idle timeout")
 	flag.DurationVar(&cfg.ShutdownGrace, "shutdown-grace", 5*time.Second, "grace period before SIGKILL")
+	flag.DurationVar(&cfg.ShutdownTimeout, "shutdown-timeout", 15*time.Second, "the whole shutdown's budget, SIGTERM to exit: the HTTP drain, every backend's stop and its SIGKILL fit inside it (the launcher passes its service manager's stop timeout minus a margin)")
 	flag.DurationVar(&cfg.ReadyTimeout, "ready-timeout", 15*time.Second, "max wait for backend readiness")
 	flag.DurationVar(&cfg.ReadyTimeoutMax, "ready-timeout-max", 90*time.Second, "ceiling for the load-adaptive backend readiness timeout; also the extra wait granted when a slow-but-alive boot escalates instead of being killed")
 	flag.DurationVar(&cfg.SweepInterval, "sweep-interval", 30*time.Second, "idle sweeper tick")
@@ -318,11 +320,8 @@ func main() {
 	go func() {
 		defer close(shutdownDone)
 		<-ctx.Done()
-		slog.Info("shutdown signal received")
-		shutCtx, shutCancel := context.WithTimeout(context.Background(), 15*time.Second)
-		defer shutCancel()
-		_ = srv.Shutdown(shutCtx)
-		_ = reg.StopAll(shutCtx)
+		slog.Info("shutdown signal received", "budget", cfg.ShutdownTimeout)
+		shutdownWithin(cfg.ShutdownTimeout, cfg.ShutdownGrace, srv.Shutdown, reg.StopAll)
 		// Clears watchdog goroutines; services keep running as daemons.
 		sup.StopAll()
 	}()

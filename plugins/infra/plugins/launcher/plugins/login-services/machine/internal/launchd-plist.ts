@@ -1,4 +1,4 @@
-import type { LoginServiceSpec } from "../../core";
+import { SERVICE_STOP_TIMEOUT_S, type LoginServiceSpec } from "../../core";
 import type { InstalledJob } from "./login-service";
 
 /**
@@ -12,8 +12,8 @@ import type { InstalledJob } from "./login-service";
  *   exit; a clean stop (exit 0 on SIGTERM) stays stopped.
  * - `ThrottleInterval` 10s — the gateway exits 1 when Postgres cannot start, and
  *   that must retry, not hot-loop.
- * - `ExitTimeOut` 20s — the gateway's own shutdown budget is 15s; SIGKILL after
- *   it, not the launchd default, which could cut a backend teardown short.
+ * - `ExitTimeOut` {@link SERVICE_STOP_TIMEOUT_S} — SIGKILL after it, not the
+ *   launchd default; the gateway's own shutdown is budgeted inside it.
  *
  * The session is the one varying fact: a `graphical` service carries
  * `LimitLoadToSessionType=Aqua`, so launchd loads it only into a GUI login
@@ -64,7 +64,7 @@ ${envEntries}
 \t<key>RunAtLoad</key>
 \t<true/>
 ${runs}${processType}\t<key>ExitTimeOut</key>
-\t<integer>20</integer>
+\t<integer>${SERVICE_STOP_TIMEOUT_S}</integer>
 \t<key>StandardOutPath</key>
 \t${str(spec.stdioLog)}
 \t<key>StandardErrorPath</key>
