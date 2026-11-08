@@ -2366,6 +2366,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `ids.kind` "block"
     - `resource.declare` "page-blocks.v2"
     - `resource.declare` "page-blocks.v2:rows"
+    - `resource.declare` "page.block-contents:rows"
     - `resource.declare` "page.block-locations:rows"
     - `resource.declare` "pages.tree.v2"
     - `resource.declare` "pages.tree.v2:ancestors"
@@ -2421,6 +2422,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `_blocks`
     - `agentCodeSpanTokens`
     - `applyPageBlockPatch`
+    - `blockContentsServed`
     - `BlockLifecycle`
     - `BLOCKS_CHANGED_SETTLE`
     - `blocksChanged`
@@ -2450,6 +2452,7 @@ status, which live in another table) in both directions; the CALLER supplies val
   - Resources:
     - `page-blocks.v2` (keyed)
     - `page-blocks.v2:rows` (keyed, point)
+    - `page.block-contents:rows` (keyed, point)
     - `page.block-locations:rows` (keyed, point)
     - `pages.tree.v2` (keyed, window)
     - `pages.tree.v2:ancestors` (keyed, window)
@@ -2490,6 +2493,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `Block`
     - `BlockAudience`
     - `BlockAuthor`
+    - `BlockContentsRow`
     - `BlockDiff`
     - `BlockFieldChanges`
     - `BlockHandle`
@@ -2550,6 +2554,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `applyBlockOp`
     - `applyBlockOpEndpoint`
     - `blockAuthorOf`
+    - `blockContents`
     - `BlockFieldChangesSchema`
     - `blockIdKind`
     - `blockLocations`

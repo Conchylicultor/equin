@@ -85,6 +85,10 @@ export const pageBacklinkEdges = liveCollection("page-links.first-edges", {
     unbounded: {
       reason:
         "the pages linking to one page, one edge each — as many as link there",
+      // Measured on main 2026-11-08: at most 4 linking pages per page (median
+      // 1, 20 linked pages); a hub page linked from everywhere is the case
+      // the headroom is for.
+      budget: 100,
     },
   },
 });

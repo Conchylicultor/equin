@@ -130,18 +130,21 @@ a steady-state reboot writes nothing).
 - Server:
   - Contributes:
     - `resource.declare` "page-backlinks"
+    - `resource.declare` "page-links.first-edges"
+    - `resource.declare` "page-links.first-edges:rows"
     - `resource.declare` "page-links.targets:rows"
     - `derived-table` "page_link_targets"
     - `trigger` "page.links.reindex"
     - `page.editor.block.onDelete`
-  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `page/editor` ×8
-    - `database/sql-projection` ×2
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `page/editor` ×9
+    - `network/live` ×3
     - `database` ×2
     - `infra/events` ×2
-    - `network/live` ×2
     - `primitives/text-editor/inline-chip` ×2
     - `database/derived-tables.DerivedTable`
+    - `database/sql-projection.parsed`
+    - `infra/entities.defineEntity`
     - `infra/jobs.defineJob`
     - `infra/warmup.defineWarmup`
     - `network/live/query-resource.materializeJoin`
@@ -161,6 +164,8 @@ a steady-state reboot writes nothing).
     - `defineWarmup('page.links.backfill')`
   - Resources:
     - `page-backlinks` (push, whole: the pages that link to one page — a join over page_links and the live page blocks, not the rows of one table, whole: one page's ancestors — as deep as the page tree nests)
+    - `page-links.first-edges` (keyed)
+    - `page-links.first-edges:rows` (keyed, point)
     - `page-links.targets:rows` (keyed, point)
 - Web:
   - Uses:
@@ -183,9 +188,13 @@ a steady-state reboot writes nothing).
   - Exports (values): `Backlinks`
 - Core:
   - Uses:
+    - `fields/bool/config.boolField`
     - `fields/string-list/config.stringListField`
+    - `fields/text/config.textField`
+    - `infra/entities.entityRef`
     - `network/live.liveCollection`
     - `network/live.liveValue`
+    - `network/live/query-resource.compositeKey`
     - `packages/list-bound.wholeList`
     - `page/block-entity.pagesEntityRef`
     - `ui/icons/emoji.EmojiSchema`
@@ -195,7 +204,9 @@ a steady-state reboot writes nothing).
     - `PageLinkTargetsRow`
   - Exports (values):
     - `BacklinkRowSchema`
+    - `pageBacklinkEdges`
     - `pageBacklinks`
+    - `pageLinksEntityRef`
     - `pageLinkTargets`
 - Cross-plugin:
   - Uses tokens:

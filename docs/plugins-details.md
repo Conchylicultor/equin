@@ -132,18 +132,28 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `AttemptChip`
       - Server:
         - Contributes:
+          - `resource.declare` "attempt-chip.referents:rows"
           - `ids.referent` "att"
           - `primitives.text-editor.inline-chip.referent` "(?<!\/)(?<![A-Za-z0-9_-])(?:att-(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d{9,13}-[a-z0-9]{4,8}))(?!\/)(?!\.[0-9A-Za-z])\b"
           - `page.inline-token` "(?<!\/)(?<![A-Za-z0-9_-])(?:att-(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d{9,13}-[a-z0-9]{4,8}))(?!\/)(?!\.[0-9A-Za-z])\b"
         - Uses:
           - `active-data/id-chip.idChipServer`
           - `database.db`
+          - `network/live.serveCollection`
+          - `primitives/text-editor/inline-chip.followedReferent`
           - `tasks/tasks-core._attempts`
           - `tasks/tasks-core._tasks`
+        - Resources: `attempt-chip.referents:rows` (keyed, point)
+      - Core:
+        - Uses:
+          - `network/live.liveCollection`
+          - `tasks/tasks-core.attemptsEntityRef`
+          - `tasks/tasks-core.tasksEntityRef`
+        - Exports (values):
+          - `ATTEMPT_CHIP_SURFACES`
+          - `attemptChipReferents`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/color-palette --muted-foreground`
-      - Core:
-        - Exports (values): `ATTEMPT_CHIP_SURFACES`
     - **`build-run`** — Renders a bare `build-<id>` in a transcript as the generic id chip (`Build <short commit>`) that opens the build's run-detail pane, and presents the build-run id kind to the id registry. The build-run id chip's server half (idChipServer): resolves a `build-<id>` to `Build <short commit>` for the id registry and for model-read text.
       - Web:
         - Contributes:
@@ -204,19 +214,30 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `ConvChip`
       - Server:
         - Contributes:
+          - `resource.declare` "conversation-chip.referents:rows"
           - `ids.referent` "conv"
           - `primitives.text-editor.inline-chip.referent` "(?<!\/)(?<![A-Za-z0-9_-])(?:conv-(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d{9,13}-[a-z0-9]{4,8}))(?!\/)(?!\.[0-9A-Za-z])\b"
           - `page.inline-token` "(?<!\/)(?<![A-Za-z0-9_-])(?:conv-(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d{9,13}-[a-z0-9]{4,8}))(?!\/)(?!\.[0-9A-Za-z])\b"
         - Uses:
           - `active-data/id-chip.idChipServer`
           - `database.db`
+          - `network/live.serveCollection`
+          - `primitives/text-editor/inline-chip.followedReferent`
           - `tasks/tasks-core._attempts`
           - `tasks/tasks-core._conversations`
           - `tasks/tasks-core._tasks`
+          - `tasks/tasks-core.conversationOwnerJoins`
+        - Resources: `conversation-chip.referents:rows` (keyed, point)
+      - Core:
+        - Uses:
+          - `network/live.liveCollection`
+          - `tasks/tasks-core.conversationsEntityRef`
+          - `tasks/tasks-core.tasksEntityRef`
+        - Exports (values):
+          - `CONV_CHIP_SURFACES`
+          - `conversationChipReferents`
       - Cross-plugin:
         - Imported by: `conversations/conversation-view/jsonl-viewer/tool-call/orchestration-tools`
-      - Core:
-        - Exports (values): `CONV_CHIP_SURFACES`
     - **`event-source`** — Renders a bare `evs-<id>` in a transcript as the generic id chip (the source's name) that opens the event source's detail pane, and presents the event-source id kind to the id registry. The event-source id chip's server half (idChipServer): resolves an `evs-<id>` to the source's name for the id registry and for model-read text.
       - Web:
         - Contributes:
@@ -323,6 +344,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ids.IdKinds`
           - `ids.IdReferent`
           - `page/editor.Editor`
+          - `primitives/text-editor/inline-chip.InlineTokenLiveRead`
           - `primitives/text-editor/inline-chip.InlineTokenReferentSource`
         - Exports (values): `idChipServer`
       - Core:
@@ -369,7 +391,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `active-data/id-chip.idChipServer`
           - `database.db`
-          - `page/editor._blocks`
           - `page/editor.liveBlocks`
       - Core:
         - Exports (values): `BLOCK_CHIP_SURFACES`
@@ -445,7 +466,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives.text-editor.inline-chip.referent` "(?<!\/)(?<![A-Za-z0-9_-])(?:report-(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d{9,13}-[a-z0-9]{4,8}))(?!\/)(?!\.[0-9A-Za-z])\b"
         - Uses:
           - `active-data/id-chip.idChipServer`
-          - `reports._reports`
           - `reports.getReportTitle`
       - Core:
         - Exports (values): `REPORT_CHIP_SURFACES`
@@ -478,6 +498,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.useLive`
       - Server:
         - Contributes:
+          - `resource.declare` "song-chip.referents:rows"
           - `ids.referent` "song"
           - `primitives.text-editor.inline-chip.referent` "(?<!\/)(?<![A-Za-z0-9_-])(?:song-(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d{9,13}-[a-z0-9]{4,8}))(?!\/)(?!\.[0-9A-Za-z])\b"
           - `page.inline-token` "(?<!\/)(?<![A-Za-z0-9_-])(?:song-(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d{9,13}-[a-z0-9]{4,8}))(?!\/)(?!\.[0-9A-Za-z])\b"
@@ -485,8 +506,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `active-data/id-chip.idChipServer`
           - `apps/sonata/library._songs`
           - `database.db`
+          - `network/live.serveCollection`
+          - `primitives/text-editor/inline-chip.followedReferent`
+        - Resources: `song-chip.referents:rows` (keyed, point)
       - Core:
-        - Exports (values): `SONG_CHIP_SURFACES`
+        - Uses:
+          - `apps/sonata/library.songsEntityRef`
+          - `network/live.liveCollection`
+        - Exports (values):
+          - `SONG_CHIP_SURFACES`
+          - `songChipReferents`
     - **`task`** — Renders <task>prompt</task> tags as editable cards with Create + Launch actions. Models suggest tasks inline; users tweak and act without leaving the transcript.
       - Web:
         - Contributes: `ActiveData.Tag` "task" → `TaskCard`
@@ -536,20 +565,29 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `TaskLinkChip`
       - Server:
         - Contributes:
+          - `resource.declare` "task-chip.referents:rows"
           - `ids.referent` "task"
           - `primitives.text-editor.inline-chip.referent` "(?<!\/)(?<![A-Za-z0-9_-])(?:task-(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d{9,13}-[a-z0-9]{4,8}))(?!\/)(?!\.[0-9A-Za-z])\b"
           - `page.inline-token` "(?<!\/)(?<![A-Za-z0-9_-])(?:task-(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d{9,13}-[a-z0-9]{4,8}))(?!\/)(?!\.[0-9A-Za-z])\b"
         - Uses:
           - `active-data/id-chip.idChipServer`
           - `database.db`
+          - `network/live.serveCollection`
+          - `primitives/text-editor/inline-chip.followedReferent`
           - `tasks/tasks-core._tasks`
+        - Resources: `task-chip.referents:rows` (keyed, point)
+      - Core:
+        - Uses:
+          - `network/live.liveCollection`
+          - `tasks/tasks-core.tasksEntityRef`
+        - Exports (values):
+          - `TASK_CHIP_SURFACES`
+          - `taskChipReferents`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/font-family --font-mono`
         - Imported by: `conversations/conversation-view/jsonl-viewer/tool-call/orchestration-tools`
-      - Core:
-        - Exports (values): `TASK_CHIP_SURFACES`
 
 - **`apps`** — Container for the installed apps (agent-manager, pages, settings, …). The switcher infrastructure lives in apps-core.
   - Plugins:
@@ -25528,7 +25566,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boolField`
               - `boolSample`
           - Cross-plugin:
-            - Imported by: 76 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
+            - Imported by: 77 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
               - `apps` ×25
               - `backup` ×12
               - `debug` ×11
@@ -25536,13 +25574,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks` ×4
               - `shell` ×3
               - `infra` ×2
+              - `page` ×2
               - `stats` ×2
               - `audience`
               - `build`
               - `framework/cli/build/experimental-marks`
               - `history/engine`
               - `integrations/gmail`
-              - `page/block-entity`
               - `primitives/data-view/list`
               - `release`
               - `reports`
@@ -27406,11 +27444,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `textField`
               - `textSample`
           - Cross-plugin:
-            - Imported by: 104 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
+            - Imported by: 105 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
               - `apps` ×29
               - `conversations` ×19
               - `tasks` ×14
-              - `page` ×7
+              - `page` ×8
               - `infra` ×6
               - `primitives` ×6
               - `debug` ×4
@@ -32024,11 +32062,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `entityRef`
           - `wireSchema`
       - Cross-plugin:
-        - Imported by: 47 plugins — full list in [`plugins/infra/plugins/entities/REFERENCE.md`](../plugins/infra/plugins/entities/REFERENCE.md)
+        - Imported by: 48 plugins — full list in [`plugins/infra/plugins/entities/REFERENCE.md`](../plugins/infra/plugins/entities/REFERENCE.md)
           - `apps` ×10
           - `conversations` ×7
+          - `page` ×7
           - `infra` ×6
-          - `page` ×6
           - `debug` ×4
           - `primitives` ×3
           - `active-data`
@@ -39507,6 +39545,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ids.kind` "block"
           - `resource.declare` "page-blocks.v2"
           - `resource.declare` "page-blocks.v2:rows"
+          - `resource.declare` "page.block-contents:rows"
           - `resource.declare` "page.block-locations:rows"
           - `resource.declare` "pages.tree.v2"
           - `resource.declare` "pages.tree.v2:ancestors"
@@ -39562,6 +39601,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `_blocks`
           - `agentCodeSpanTokens`
           - `applyPageBlockPatch`
+          - `blockContentsServed`
           - `BlockLifecycle`
           - `BLOCKS_CHANGED_SETTLE`
           - `blocksChanged`
@@ -39591,6 +39631,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Resources:
           - `page-blocks.v2` (keyed)
           - `page-blocks.v2:rows` (keyed, point)
+          - `page.block-contents:rows` (keyed, point)
           - `page.block-locations:rows` (keyed, point)
           - `pages.tree.v2` (keyed, window)
           - `pages.tree.v2:ancestors` (keyed, window)
@@ -39631,6 +39672,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Block`
           - `BlockAudience`
           - `BlockAuthor`
+          - `BlockContentsRow`
           - `BlockDiff`
           - `BlockFieldChanges`
           - `BlockHandle`
@@ -39691,6 +39733,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `applyBlockOp`
           - `applyBlockOpEndpoint`
           - `blockAuthorOf`
+          - `blockContents`
           - `BlockFieldChangesSchema`
           - `blockIdKind`
           - `blockLocations`
@@ -40247,10 +40290,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives.text-editor.inline-chip.referent` "\[\[(?:page:([^[\]\n]+)|(block-\d+-[a-z0-9]+))\]\]"
         - Uses:
           - `database.db`
-          - `page/editor._blocks`
+          - `page/editor.blockContentsServed`
           - `page/editor.Editor`
           - `page/editor.liveBlocks`
           - `page/links.PageLinks`
+          - `primitives/text-editor/inline-chip.followedReferent`
+          - `primitives/text-editor/inline-chip.InlineTokenReferent`
           - `primitives/text-editor/inline-chip.InlineTokenReferentSource`
       - Web:
         - Uses: 23 symbols — full list in [`plugins/page/plugins/inline-page-link/REFERENCE.md`](../plugins/page/plugins/inline-page-link/REFERENCE.md)
@@ -40283,18 +40328,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Contributes:
           - `resource.declare` "page-backlinks"
+          - `resource.declare` "page-links.first-edges"
+          - `resource.declare` "page-links.first-edges:rows"
           - `resource.declare` "page-links.targets:rows"
           - `derived-table` "page_link_targets"
           - `trigger` "page.links.reindex"
           - `page.editor.block.onDelete`
-        - Uses: 22 symbols — full list in [`plugins/page/plugins/links/REFERENCE.md`](../plugins/page/plugins/links/REFERENCE.md)
-          - `page/editor` ×8
-          - `database/sql-projection` ×2
+        - Uses: 24 symbols — full list in [`plugins/page/plugins/links/REFERENCE.md`](../plugins/page/plugins/links/REFERENCE.md)
+          - `page/editor` ×9
+          - `network/live` ×3
           - `database` ×2
           - `infra/events` ×2
-          - `network/live` ×2
           - `primitives/text-editor/inline-chip` ×2
           - `database/derived-tables.DerivedTable`
+          - `database/sql-projection.parsed`
+          - `infra/entities.defineEntity`
           - `infra/jobs.defineJob`
           - `infra/warmup.defineWarmup`
           - `network/live/query-resource.materializeJoin`
@@ -40314,6 +40362,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineWarmup('page.links.backfill')`
         - Resources:
           - `page-backlinks` (push, whole: the pages that link to one page — a join over page_links and the live page blocks, not the rows of one table, whole: one page's ancestors — as deep as the page tree nests)
+          - `page-links.first-edges` (keyed)
+          - `page-links.first-edges:rows` (keyed, point)
           - `page-links.targets:rows` (keyed, point)
       - Web:
         - Uses:
@@ -40336,9 +40386,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `Backlinks`
       - Core:
         - Uses:
+          - `fields/bool/config.boolField`
           - `fields/string-list/config.stringListField`
+          - `fields/text/config.textField`
+          - `infra/entities.entityRef`
           - `network/live.liveCollection`
           - `network/live.liveValue`
+          - `network/live/query-resource.compositeKey`
           - `packages/list-bound.wholeList`
           - `page/block-entity.pagesEntityRef`
           - `ui/icons/emoji.EmojiSchema`
@@ -40348,7 +40402,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PageLinkTargetsRow`
         - Exports (values):
           - `BacklinkRowSchema`
+          - `pageBacklinkEdges`
           - `pageBacklinks`
+          - `pageLinksEntityRef`
           - `pageLinkTargets`
       - Cross-plugin:
         - Uses tokens:
@@ -50802,7 +50858,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `page/editor`
               - `primitives/text-editor`
-        - **`inline-chip`** — Inline chips for every text surface: inlineChip() declares one (a self-certifying pattern, the surfaces it belongs on, and the component that renders it) and records it in a module registry; one generic Lexical node renders any declared chip, and inlineChipExtension(surface) hands a Lexical host that surface's chips as a single token extension. renderInlineChip(token) is the one rendering of a matched token, inside its own error boundary. Server-side referents of inline tokens: chip families contribute InlineTokenReferentSource (their chip's pattern + a resolve to the referent's title), and expandInlineTokenReferents rewrites a text's tokens as `<kind id title/>` so a model reads what the chip shows instead of an opaque id; inlineTokensAsText replaces them with the bare title, for text a person reads.
+        - **`inline-chip`** — Inline chips for every text surface: inlineChip() declares one (a self-certifying pattern, the surfaces it belongs on, and the component that renders it) and records it in a module registry; one generic Lexical node renders any declared chip, and inlineChipExtension(surface) hands a Lexical host that surface's chips as a single token extension. renderInlineChip(token) is the one rendering of a matched token, inside its own error boundary. Server-side referents of inline tokens: chip families contribute InlineTokenReferentSource (their chip's pattern, a resolve to the referent's title, and how a live value reads it — followed by id through a served lookup, untracked for a file, or not-in-text for a transcript-only chip), and expandInlineTokenReferents rewrites a text's tokens as `<kind id title/>` so a model reads what the chip shows instead of an opaque id; inlineTokensAsLiveText replaces them with the bare title inside a live value, reading only the referent rows its inlineTokenReferentFollows followed.
           - Web:
             - Slots: `InlineChip.Tag`
             - Slot contributors:
@@ -50841,7 +50897,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens: `ui/tokens/density --space-2xs`
             - Imported by:
               - `active-data`
+              - `active-data/attempt`
+              - `active-data/conv`
               - `active-data/id-chip`
+              - `active-data/song`
+              - `active-data/task-link`
               - `conversations/runtime-sdk`
               - `hints/ask`
               - `page/inline-page-link`
@@ -50849,12 +50909,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/ui-context/element-picker`
               - `tasks/task-title`
           - Server:
-            - Exports (types): `InlineTokenReferent`
+            - Exports (types):
+              - `FollowedReferent`
+              - `InlineTokenLiveRead`
+              - `InlineTokenReferent`
             - Exports (values):
               - `expandInlineTokenReferents`
+              - `followedReferent`
+              - `inlineTokenReferentFollows`
               - `InlineTokenReferentSource`
-              - `inlineTokenReferentTables`
-              - `inlineTokensAsText`
+              - `inlineTokensAsLiveText`
         - **`paste-images`** — File paste/drop/pick support for the text editor. Uploads files via the attachments primitive and renders them inline: an image as a thumbnail chip that opens the full-window image viewer, any other file as a file chip; AttachFilesButton is the composer bar's "+" picker. Keeps every attachment an unsent draft references alive on the server for as long as the draft lives.
           - Web:
             - Slots: `AttachmentSlots.Opener`

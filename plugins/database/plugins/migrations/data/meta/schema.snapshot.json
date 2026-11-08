@@ -1,6 +1,6 @@
 {
-  "id": "9f401d92-b693-427e-a038-0aa7ace678e0",
-  "prevId": "3eae9304-169b-4ba5-9cd0-7179ea9f7118",
+  "id": "c187774b-eb1e-4898-8d7f-02c93c1f1062",
+  "prevId": "9f401d92-b693-427e-a038-0aa7ace678e0",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -10955,6 +10955,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "first": {
+          "name": "first",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         }
       },
       "indexes": {
