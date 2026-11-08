@@ -1,4 +1,5 @@
 import { implement } from "@plugins/infra/plugins/endpoints/server";
+import { serverBootState } from "@plugins/framework/plugins/server-core/core";
 import { releaseIdentity } from "@plugins/infra/plugins/paths/core";
 import { getHealth } from "../../core/endpoints";
 import type { HealthResponse } from "../../core/protocol";
@@ -11,5 +12,11 @@ export const handleHealth = implement(getHealth, () => {
   // at module load (a module must not read the environment as it loads —
   // barrel-import's load guard), and an env read is free.
   const { runId, composition } = releaseIdentity();
-  return { ok: true, startedAt, runId, composition } satisfies HealthResponse;
+  return {
+    ok: true,
+    startedAt,
+    boot: serverBootState(),
+    runId,
+    composition,
+  } satisfies HealthResponse;
 });

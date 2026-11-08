@@ -28501,6 +28501,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `loadResourceFresh`
           - `machineCollectedDir`
           - `markServerReady`
+          - `markServerSettled`
           - `measureSubscribeCycle`
           - `notificationsWsHandler`
           - `notifyStatsFor`
@@ -28528,6 +28529,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `scopedResourceTables`
           - `seedPersistedSnapshot`
           - `seedRouteDrift`
+          - `serverBootState`
           - `serverCollectedDir`
           - `serverErrorSink`
           - `serverFatalSink`

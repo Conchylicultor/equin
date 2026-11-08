@@ -14,6 +14,7 @@ import {
   hostHttpRoutes,
   reportServerError,
   markServerReady,
+  markServerSettled,
   handOffEpoch,
 } from "@plugins/framework/plugins/server-core/core";
 import type {
@@ -407,4 +408,7 @@ export async function serve({
   // handlers and the orphan poll are installed, so a SIGTERM during a long drain
   // shuts the backend down instead of waiting for it.
   await runSettledPhase(ordered);
+  // Every boot phase ran in THIS process: `/api/health` now says `settled`,
+  // the instant a deploy counts as having stayed up (build's deploy-namespace).
+  markServerSettled();
 }

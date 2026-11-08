@@ -4,6 +4,22 @@ export const HealthResponseSchema = z.object({
   ok: z.literal(true),
   startedAt: z.number(),
   /**
+   * Where this process's boot stands: `booting` (routes installed, the ready
+   * barrier still running — the gateway routes nothing here yet), `ready` (the
+   * barrier passed; post-ready phases still running), `settled` (every boot
+   * phase ran, `onSettled` included).
+   *
+   * What a deploy's verdict reads: a backend that answered once and then died
+   * in a post-ready phase never says `settled`, so `./equin build` counts a
+   * namespace deployed only when the process that took over (same `startedAt`)
+   * reports it.
+   *
+   * Absent on a backend from before this field — still answering while a
+   * deploy replaces it — and never read as settled: optional so that answer
+   * still parses (its `startedAt` is what a deploy compares against).
+   */
+  boot: z.enum(["booting", "ready", "settled"]).optional(),
+  /**
    * WHICH build is answering, propagated from the bundle's `RELEASE.json`; both
    * null when this backend is not a release (dev, a worktree).
    *

@@ -57,7 +57,12 @@ export type {
   Span,
   MemoryCheckpoint,
 } from "./profiler";
-export { isServerReady, markServerReady } from "./readiness";
+export {
+  isServerReady,
+  markServerReady,
+  markServerSettled,
+  serverBootState,
+} from "./readiness";
 export { hostHttpRoutes } from "./host-routes";
 export { bootBrowserHost } from "./browser-host";
 export type {

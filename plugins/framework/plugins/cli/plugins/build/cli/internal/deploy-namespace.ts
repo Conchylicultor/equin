@@ -8,7 +8,10 @@ import { z } from "zod";
 import { fixed, retryUntil } from "@plugins/packages/plugins/retry/core";
 import { callEndpoint } from "@plugins/infra/plugins/endpoints/server";
 import { EndpointError } from "@plugins/infra/plugins/endpoints/core";
-import { getHealth } from "@plugins/infra/plugins/health/core";
+import {
+  getHealth,
+  type HealthResponse,
+} from "@plugins/infra/plugins/health/core";
 import { adoptDeploy } from "@plugins/build/plugins/restart-skip/core";
 import {
   propagateConfigToUser,
@@ -43,6 +46,11 @@ import {
 } from "./app-artifacts";
 import type { BuildTarget } from "./build-targets";
 import { askAdoption } from "./adopt";
+import {
+  judgeSettleDeadline,
+  judgeSettleStep,
+  type SettleObservation,
+} from "./stay-up";
 import { namedBackendCommand } from "./named-backend";
 
 /**
@@ -51,7 +59,8 @@ import { namedBackendCommand } from "./named-backend";
  * plain build).
  *
  *   marker → dist → database → config → (marker again) + spec → adopt, or
- *   restart → health probe → keep the dist, or put the previous one back
+ *   restart → health probe (took over, then settled) → keep the dist, or put
+ *   the previous one back
  *
  * The dist is published before the restart (the new backend reads its graph at
  * boot), so a deploy that fails after it rolls the frontend back: a namespace
@@ -75,7 +84,9 @@ import { namedBackendCommand } from "./named-backend";
  * the spec-LAST ordering. What it does NOT absorb is that stage's tolerance for
  * a failed restart — a composition backend that crashes on boot now fails the
  * build the same way the main app's does, because "the build said OK and the app
- * 502s" is the one outcome a deploy verb may never produce.
+ * 502s" is the one outcome a deploy verb may never produce. Nor may "the build
+ * said OK and the backend died seconds later": a namespace is deployed only once
+ * the process that took over reports its boot settled (`./stay-up.ts`).
  */
 export type DeployNamespaceResult =
   | {
@@ -181,13 +192,24 @@ async function readHealthStartedAt(name: Namespace): Promise<number | null> {
 }
 
 /**
- * What the health probe concluded. Three arms rather than "a note or a throw":
- * a soft degrade (the server is still booting under host load, but the artifacts
- * are valid) and an unambiguous deploy failure are genuinely different outcomes,
+ * What the health probe concluded. Arms rather than "a note or a throw": a soft
+ * degrade (the server is still booting under host load, but the artifacts are
+ * valid) and an unambiguous deploy failure are genuinely different outcomes,
  * and only the caller owns the verdict that reports either.
+ *
+ * A failure says WHICH backend the namespace is left on, because that decides
+ * what happens to the frontend just published: `previous` — the new backend
+ * never took over, the old one still serves, so the old frontend goes back
+ * with it; `this-tree` — the new backend took over and then died, the old one
+ * is gone and every respawn boots this tree's code, so the new frontend stays
+ * (putting the old one back would pair it with the new backend).
  */
 type HealthOutcome =
-  { kind: "ok"; note: string | null } | { kind: "failed"; reason: string[] };
+  | { kind: "ok"; note: string | null }
+  | { kind: "failed"; label: string; reason: string[]; backend: ServedBackend };
+
+/** Which backend code a namespace runs after a failed deploy (see `HealthOutcome`). */
+type ServedBackend = "previous" | "this-tree";
 
 /**
  * Verify the freshly-restarted backend actually took over. `previousStartedAt`
@@ -199,10 +221,15 @@ type HealthOutcome =
  * `resp.ok` is not enough — a failed hot-restart leaves the OLD backend
  * answering `{ok:true}` with stale code and the build would falsely pass.
  * `restartError` carries the gateway's 500 body, if any, for the failure message.
+ *
+ * Taking over is half of it: the process that did must then report its boot
+ * settled ({@link awaitSettled}) — staying up through the post-ready phases is
+ * part of what "deployed" means.
  */
 async function probeHealth(
   name: Namespace,
   previousStartedAt: number | null,
+  restartRequestedAt: number,
   restartError: string | null,
 ): Promise<HealthOutcome> {
   const isRestart = previousStartedAt != null;
@@ -212,23 +239,26 @@ async function probeHealth(
   );
   const site = namespaceUrl(name);
   let lastStatus: number | string = "no response";
-  const result = await retryUntil<true, Promise<HealthOutcome>>(
+  type TakeOver = { kind: "took-over"; startedAt: number; boot: Boot };
+  const result = await retryUntil<TakeOver, Promise<HealthOutcome>>(
     async () => {
       try {
-        const { startedAt } = await callEndpoint(
+        const { startedAt, boot } = await callEndpoint(
           getHealth,
           {},
           { origin: site, signal: AbortSignal.timeout(5_000) },
         );
-        // Cold start: any healthy backend is the one we just built.
-        if (!isRestart) return true;
-        // Hot restart: the gateway swaps `w.active` to the new backend only
-        // after it passes `waitReady`, so a served `startedAt` past the old
-        // one proves the new backend is live AND ready. Without this a failed
-        // hot-restart leaves the old backend answering ok and the build
-        // falsely passes.
-        if (startedAt > previousStartedAt) return true;
-        lastStatus = `stale backend (startedAt ${startedAt} <= ${previousStartedAt})`;
+        // Only a process started after the restart was requested is one this
+        // deploy brought up — hot restart and cold start alike. The gateway
+        // swaps `w.active` to the new backend only after it passes
+        // `waitReady`, so such a `startedAt` proves the new backend is live
+        // AND ready; anything older is a backend that was already there (a
+        // failed hot restart's old one, or one `readHealthStartedAt` could not
+        // see), and taking it for the new one would pass stale code — and then
+        // read its replacement as a death.
+        if (startedAt > restartRequestedAt)
+          return { kind: "took-over", startedAt, boot };
+        lastStatus = `stale backend (startedAt ${startedAt}, from before the restart at ${restartRequestedAt}${isRestart ? `; previous ${previousStartedAt}` : ""})`;
         return null;
       } catch (err) {
         // A non-2xx, a per-attempt abort (DOMException — just a slow request)
@@ -260,6 +290,8 @@ async function probeHealth(
             : "";
           return {
             kind: "failed",
+            label: "backend never ready",
+            backend: "previous",
             reason: [
               `NOT DEPLOYED. ${site} still serves the previous backend (stale code).`,
               `The freshly-built backend never became ready within ${Math.round(deadline / 1000)}s — ` +
@@ -286,6 +318,8 @@ async function probeHealth(
           case "broken":
             return {
               kind: "failed",
+              label: "backend never ready",
+              backend: "previous",
               reason: [
                 `Server crashed during boot (state: broken): ${info.lastSpawnErr || "no error reported"}.`,
                 `NOT DEPLOYED. ${site} still serves the previous build.`,
@@ -293,8 +327,15 @@ async function probeHealth(
               ],
             };
           case "running":
-            console.log("Server is up.");
-            return { kind: "ok", note: null };
+            // The gateway calls it ready, but /api/health never answered us, so
+            // no process can be followed to its settled boot: say so.
+            console.warn(
+              `The gateway reports the server running, but /api/health never answered (last: ${lastStatus}).`,
+            );
+            return {
+              kind: "ok",
+              note: "server running per the gateway, but staying up is unproven (/api/health never answered)",
+            };
           case "starting":
           case "restarting":
           case "idle":
@@ -315,7 +356,100 @@ async function probeHealth(
       },
     },
   );
-  return result === true ? { kind: "ok", note: null } : result;
+  if (result.kind !== "took-over") return result;
+  return awaitSettled(name, result.startedAt, result.boot);
+}
+
+type Boot = HealthResponse["boot"];
+
+/**
+ * Phase two of the probe: the process that took over (`incarnation`, its
+ * `startedAt`) must report its boot settled before the namespace counts as
+ * deployed — the definition and its arms are `./stay-up.ts`'s. Gating on the
+ * first answer alone passed a backend that died seconds after ready (the
+ * 2026-11-08 crash loop: five auto-builds "deployed").
+ */
+async function awaitSettled(
+  name: Namespace,
+  incarnation: number,
+  firstBoot: Boot,
+): Promise<HealthOutcome> {
+  if (firstBoot === "settled") return { kind: "ok", note: null };
+  const site = namespaceUrl(name);
+  const deadline = adaptiveTimeoutMs(60_000, 180_000);
+  const tookOverAt = Date.now();
+  console.log(
+    `Backend took over (startedAt ${incarnation}); waiting for its boot to settle... (deadline ${Math.round(deadline / 1000)}s)`,
+  );
+  let last: SettleObservation | null = null;
+  const died = (why: string): HealthOutcome => ({
+    kind: "failed",
+    label: "backend died after ready",
+    backend: "this-tree",
+    reason: [
+      `NOT DEPLOYED: the backend built from this tree took over ${site} and then exited before its boot settled — ${why}.`,
+      `The previous backend is gone, and every respawn boots this tree's code: a crash there repeats on every boot of this commit.`,
+      `Inspect the backend log at ${join(worktreeDataDir(name), "logs")} for the throw; the gateway files the exit (backend-exit / backend-crash-loop report) with its stderr.`,
+    ],
+  });
+  return retryUntil<HealthOutcome, Promise<HealthOutcome>>(
+    async () => {
+      let obs: SettleObservation;
+      try {
+        const { startedAt, boot } = await callEndpoint(
+          getHealth,
+          {},
+          { origin: site, signal: AbortSignal.timeout(5_000) },
+        );
+        obs = { kind: "answer", startedAt, boot };
+      } catch (err) {
+        // The same errors `readHealthStartedAt` names: none is a served answer.
+        if (
+          !(err instanceof TypeError) &&
+          !(err instanceof DOMException) &&
+          !(err instanceof EndpointError) &&
+          !(err instanceof z.ZodError)
+        )
+          throw err;
+        obs = {
+          kind: "no-answer",
+          detail:
+            err instanceof EndpointError ? `HTTP ${err.status}` : err.message,
+        };
+      }
+      last = obs;
+      const step = judgeSettleStep(incarnation, obs);
+      switch (step.kind) {
+        case "settled":
+          console.log(
+            `Backend boot settled ${Math.round((Date.now() - tookOverAt) / 1000)}s after it took over.`,
+          );
+          return { kind: "ok", note: null };
+        case "died":
+          return died(
+            `a new process (startedAt ${step.successorStartedAt}) answers in its place`,
+          );
+        case "waiting":
+          return null;
+      }
+    },
+    {
+      delay: fixed(250),
+      deadline,
+      onDeadline: async (): Promise<HealthOutcome> => {
+        const info = await getWorktreeState(name);
+        const verdict = judgeSettleDeadline(
+          last,
+          incarnation,
+          info?.state ?? null,
+        );
+        if (verdict.kind === "died") return died(verdict.why);
+        const note = `backend up ${Math.round(deadline / 1000)}s after takeover but staying up is unproven: ${verdict.why}`;
+        console.warn(`${note}.`);
+        return { kind: "ok", note };
+      },
+    },
+  );
 }
 
 /**
@@ -502,7 +636,17 @@ export async function deployNamespace(
   // an unexpected throw says nothing about which backend serves, so the
   // publication is left as it stands (the next build sweeps it).
   let backendAsked = false;
-  const serve = async (): Promise<DeployNamespaceResult> => {
+  // A failure here also says which backend the namespace is left on — what
+  // decides the publication below (see `HealthOutcome`).
+  type ServeResult =
+    | { ok: true; notes: string[] }
+    | {
+        ok: false;
+        failedLabels: string[];
+        reason: string[];
+        backend: ServedBackend;
+      };
+  const serve = async (): Promise<ServeResult> => {
     // DATABASE — opposite operations, not one function with a flag.
     //
     // The checkout's own app runs on the worktree FORK: it carries main's data and
@@ -649,6 +793,7 @@ export async function deployNamespace(
     // restart. probeHealth compares against it to prove the NEW backend took over,
     // rather than the old one still answering ok with stale code.
     const previousStartedAt = await readHealthStartedAt(ns);
+    const restartRequestedAt = Date.now();
     const restart = await span(
       "restartBackend",
       "build:deploy",
@@ -660,6 +805,7 @@ export async function deployNamespace(
         ok: false,
         failedLabels: ["backend crashed"],
         reason: restart.reason,
+        backend: "previous",
       };
     }
 
@@ -672,13 +818,20 @@ export async function deployNamespace(
         "probeHealth",
         "build:deploy",
         "health probe",
-        () => probeHealth(ns, previousStartedAt, restart.restartError),
+        () =>
+          probeHealth(
+            ns,
+            previousStartedAt,
+            restartRequestedAt,
+            restart.restartError,
+          ),
       );
       if (health.kind === "failed") {
         return {
           ok: false,
-          failedLabels: ["backend never ready"],
+          failedLabels: [health.label],
           reason: health.reason,
+          backend: health.backend,
         };
       }
       if (health.note !== null) notes.push(health.note);
@@ -687,7 +840,7 @@ export async function deployNamespace(
     return { ok: true, notes };
   };
 
-  let result: DeployNamespaceResult;
+  let result: ServeResult;
   try {
     result = await serve();
   } catch (err) {
@@ -698,11 +851,24 @@ export async function deployNamespace(
     await publication.keep();
     return result;
   }
+  const { backend, ...failure } = result;
+  if (backend === "this-tree") {
+    // The new backend took over and the old one is gone: the frontend that
+    // matches what any respawn runs is the new one.
+    await publication.keep();
+    return {
+      ...failure,
+      reason: [
+        ...failure.reason,
+        `The new frontend stays published: it matches the backend code every respawn of ${site} boots.`,
+      ],
+    };
+  }
   await publication.revert();
   return {
-    ...result,
+    ...failure,
     reason: [
-      ...result.reason,
+      ...failure.reason,
       publication.revertible
         ? `The new frontend was rolled back with it: ${site} serves the previous build, frontend and backend alike.`
         : `There was no previous frontend to roll back to, so the new one stays published.`,

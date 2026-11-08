@@ -622,6 +622,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `loadResourceFresh`
     - `machineCollectedDir`
     - `markServerReady`
+    - `markServerSettled`
     - `measureSubscribeCycle`
     - `notificationsWsHandler`
     - `notifyStatsFor`
@@ -649,6 +650,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `scopedResourceTables`
     - `seedPersistedSnapshot`
     - `seedRouteDrift`
+    - `serverBootState`
     - `serverCollectedDir`
     - `serverErrorSink`
     - `serverFatalSink`
