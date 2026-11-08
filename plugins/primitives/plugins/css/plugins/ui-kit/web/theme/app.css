@@ -329,19 +329,28 @@
  * values. Keep the resting `border-*` class on the control; the ring alone
  * signals focus. No ring while the page is in pointer modality
  * (`theme/input-modality.tsx`): focus a closing popup hands back to its
- * clicked trigger after Escape is `:focus-visible` to Chrome, not to the user. */
+ * clicked trigger after Escape is `:focus-visible` to Chrome, not to the user.
+ *
+ * The ring is drawn INSIDE the control's box — a 2px outline inset by its own
+ * width, over the resting border, following the control's corners. An outside
+ * halo is painted past the box, so any clipping ancestor cut it: a
+ * single-line bar (`region-line` is `overflow-hidden`) exactly as tall as its
+ * buttons kept the halo's sides and dropped its top and bottom. Inside the
+ * box there is nothing to clip, and the stroke is one line, not border + halo. */
 @utility focus-ring {
   /* twmerge: standalone -- Additive box-shadow/outline; no single-value built-in group to conflict with. */
   @apply outline-none;
   &:focus-visible:not(:where([data-input-modality="pointer"] *)) {
-    @apply ring-3 ring-ring/50;
+    outline: 2px solid var(--ring);
+    outline-offset: -2px;
   }
 }
 
 @utility focus-ring-within {
   /* twmerge: standalone -- Additive box-shadow/outline; no single-value built-in group to conflict with. */
   &:has(:focus-visible):not(:where([data-input-modality="pointer"] *)) {
-    @apply ring-3 ring-ring/50;
+    outline: 2px solid var(--ring);
+    outline-offset: -2px;
   }
 }
 
@@ -385,7 +394,8 @@
 @utility focus-ring-from {
   /* twmerge: standalone -- Additive box-shadow/outline; no single-value built-in group to conflict with. */
   &:has(> [data-focus-ring]:focus-visible):not(:where([data-input-modality="pointer"] *)) {
-    @apply ring-3 ring-ring/50;
+    outline: 2px solid var(--ring);
+    outline-offset: -2px;
   }
 }
 
