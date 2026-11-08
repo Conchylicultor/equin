@@ -1,7 +1,7 @@
 # workspace
 
 The workspace demo — the website's live demo: the Agent Manager, Pages,
-Prototypes, Sonata, Keyboard Party and Places on Demo's own equin, the story being what equin is for:
+Prototypes, Sonata, Keyboard Party, Places and Files on Demo's own equin, the story being what equin is for:
 a person shaping their apps with agents. Its
 scenario is `workspaceDemo` (`core`) — the app, the
 route it opens at (`/c/conv-demo-practice-timer`) and its browser host
@@ -51,15 +51,20 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
   (`core/internal/prototypes.ts`), the Sonata songs (`core/internal/songs.ts`,
   a Sonata fixture), Demo's Places map — a trip to Lisbon, 15 places on the
   starter tag tree plus Demo's "Trips › Lisbon" (`core/internal/places.ts`, a
-  Places fixture). How each app's data is written is that
+  Places fixture), and Demo's Documents in Files (`data/documents/`: notes,
+  markdown, code, a picture, an HTML recipe, a PDF and a recording — real
+  files, path → bytes). How each app's data is written is that
   app's fixture writer: `apps/pages/fixtures`' `writePageTree`,
   `apps/prototypes/fixtures`' `writePrototypeFixture`,
   `apps/sonata/fixtures`' `writeSongFixtures` and `apps/places/fixtures`'
   `writePlacesFixture` (its tags through the tag tree's endpoints on the
-  seed's `host`). Design:
+  seed's `host`), `apps/file-explorer/documents`' `writeDocumentsFixture`.
+  Design:
   `research/2026-10-28-global-per-app-demo-seeds-v2.md`.
-- **The prototypes and the boot test read `data/` off disk** (`bin/bun-host.ts`):
-  the seed runs in Bun only, so nothing inlines the folder into the worker.
+- **The prototypes, the Documents and the boot test read `data/` off disk**
+  (`bin/bun-host.ts`'s `diskDemoData`: `data/documents/` is the Documents
+  fixture, the rest Prototypes'): the seed runs in Bun only, so nothing
+  inlines the folder into the worker.
 - **The seed writes into a live host** (`bin/seed.ts`, run by the snapshot
   script). `bootBrowserHost` seeds after the post-ready phases, so triggers, the job queue and the files
   watchers are running: a page write derives its backlinks, search doc and
@@ -78,7 +83,8 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
   → the user decorating the page the agent minted with an icon (⏳), through
   the page header's own `PATCH` sent to the host's router (`seed`'s `host`
   argument) — an agent's tools cannot set an icon, a person can — → settle →
-  the transcripts → the prototypes fixture → settle → the songs → settle. (Sonata's MIDI starters are not the demo's: the MIDI source seeds
+  the transcripts → the prototypes fixture → settle → the songs → settle →
+  Places → settle → the Documents → settle. (Sonata's MIDI starters are not the demo's: the MIDI source seeds
   them itself, as on a fresh install.)
 - **Every id carries `demo`** (`conv-demo-…`, `task-demo-…`, `att-demo-…`, the
   pages and the blocks a record names), so a request that leaked past the
@@ -110,7 +116,7 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
   adapters into Places, since the demo ships Places — plus the `pages` app
   (the Origin section, page chips, page artifacts and tool renderers, and the
   Pages app itself) minus what means nothing without the
-  computer (push-and-exit, the automations, the file explorer), plus Prototypes
+  computer (push-and-exit, the automations), plus Prototypes
   (`apps.prototypes.**`, a positive: its tree is a `data-files` root, memory
   here — `research/2026-10-24-global-data-files-host-service.md`), Home
   (`apps.home.**`, the app gallery, minus its onboarding tour) and Sonata
@@ -132,7 +138,13 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
   with the browser key the page's chrome hands the worker (a page input,
   `google-maps/page-config`; never in the snapshot); searching, saving,
   Google's details and photos, the icon pick and Ask need the computer and say
-  so (`research/2026-11-06-global-places-in-browser-demo.md`). The third-party
+  so (`research/2026-11-06-global-places-in-browser-demo.md`). Files
+  (`apps.file-explorer.**`, whole, listed) is a virtual file system: on a
+  host without a home folder it lands on App data — every browsable
+  `data-files` root the worker holds (Demo's Documents, Prototypes) — and
+  leaves out the places that need the computer (their reads are
+  `needsMachine`); `apps/demo`'s `file-explorer-in-demo.ts` opens each viewer.
+  The third-party
   hosts the demo may reach are the scoped plugins' `ExternalHosts.Declare`s
   (`externalHosts`, exported from `core`), which `apps/demo`'s e2e hold every
   off-origin request to. Sonata's samples load

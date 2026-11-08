@@ -18,6 +18,7 @@ export const dataDirsEntries: CollectedEntry[] = [
   { pluginPath: "apps/plugins/chord", id: "apps.chord", loader: () => import("@plugins/apps/plugins/chord/data-dirs"), dependsOn: [] },
   { pluginPath: "apps/plugins/deploy/plugins/analytics/plugins/ip-country", id: "apps.deploy.analytics.ip-country", loader: () => import("@plugins/apps/plugins/deploy/plugins/analytics/plugins/ip-country/data-dirs"), dependsOn: [] },
   { pluginPath: "apps/plugins/desktop", id: "apps.desktop", loader: () => import("@plugins/apps/plugins/desktop/data-dirs"), dependsOn: [] },
+  { pluginPath: "apps/plugins/file-explorer", id: "apps.file-explorer", loader: () => import("@plugins/apps/plugins/file-explorer/data-dirs"), dependsOn: [] },
   { pluginPath: "apps/plugins/places/plugins/place-details", id: "apps.places.place-details", loader: () => import("@plugins/apps/plugins/places/plugins/place-details/data-dirs"), dependsOn: [] },
   { pluginPath: "apps/plugins/prototypes", id: "apps.prototypes", loader: () => import("@plugins/apps/plugins/prototypes/data-dirs"), dependsOn: [] },
   { pluginPath: "apps/plugins/prototypes/plugins/thumbnails", id: "apps.prototypes.thumbnails", loader: () => import("@plugins/apps/plugins/prototypes/plugins/thumbnails/data-dirs"), dependsOn: [] },

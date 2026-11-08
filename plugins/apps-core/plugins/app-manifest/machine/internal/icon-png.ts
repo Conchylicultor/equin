@@ -5,7 +5,7 @@ import {
   appTileFill,
 } from "@plugins/apps-core/plugins/app-icon/core";
 import type { AppRef } from "@plugins/primitives/plugins/pane/core";
-import { symbolBody } from "@plugins/ui/plugins/icons/server";
+import { symbolBody } from "@plugins/ui/plugins/icons/machine";
 
 // Rendered PNGs, by app and size. The inputs (the generated app set, the
 // installed icon sets) only change with a new build, which restarts the

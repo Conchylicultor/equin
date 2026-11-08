@@ -605,6 +605,10 @@
       "name": "@equin/plugin-apps-file-explorer-browser",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/file-explorer/plugins/documents": {
+      "name": "@equin/plugin-apps-file-explorer-documents",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/file-explorer/plugins/folder-peek": {
       "name": "@equin/plugin-apps-file-explorer-folder-peek",
       "version": "0.0.1",
@@ -6988,6 +6992,10 @@
       "name": "@equin/plugin-ui-icons-sprites",
       "version": "0.0.1",
     },
+    "plugins/ui/plugins/icons/plugins/sprites/plugins/bundled-sprites": {
+      "name": "@equin/plugin-ui-icons-sprites-bundled-sprites",
+      "version": "0.0.1",
+    },
     "plugins/ui/plugins/icons/plugins/sprites/plugins/bundled-symbols": {
       "name": "@equin/plugin-ui-icons-sprites-bundled-symbols",
       "version": "0.0.1",
@@ -7652,6 +7660,8 @@
     "@equin/plugin-apps-file-explorer-attachment-preview": ["@equin/plugin-apps-file-explorer-attachment-preview@workspace:plugins/apps/plugins/file-explorer/plugins/attachment-preview"],
 
     "@equin/plugin-apps-file-explorer-browser": ["@equin/plugin-apps-file-explorer-browser@workspace:plugins/apps/plugins/file-explorer/plugins/browser"],
+
+    "@equin/plugin-apps-file-explorer-documents": ["@equin/plugin-apps-file-explorer-documents@workspace:plugins/apps/plugins/file-explorer/plugins/documents"],
 
     "@equin/plugin-apps-file-explorer-folder-peek": ["@equin/plugin-apps-file-explorer-folder-peek@workspace:plugins/apps/plugins/file-explorer/plugins/folder-peek"],
 
@@ -10678,6 +10688,8 @@
     "@equin/plugin-ui-icons-saved-sources": ["@equin/plugin-ui-icons-saved-sources@workspace:plugins/ui/plugins/icons/plugins/saved-sources"],
 
     "@equin/plugin-ui-icons-sprites": ["@equin/plugin-ui-icons-sprites@workspace:plugins/ui/plugins/icons/plugins/sprites"],
+
+    "@equin/plugin-ui-icons-sprites-bundled-sprites": ["@equin/plugin-ui-icons-sprites-bundled-sprites@workspace:plugins/ui/plugins/icons/plugins/sprites/plugins/bundled-sprites"],
 
     "@equin/plugin-ui-icons-sprites-bundled-symbols": ["@equin/plugin-ui-icons-sprites-bundled-symbols@workspace:plugins/ui/plugins/icons/plugins/sprites/plugins/bundled-symbols"],
 

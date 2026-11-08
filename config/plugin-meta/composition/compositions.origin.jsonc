@@ -1,4 +1,4 @@
-// @hash 32f1af6a347e
+// @hash 3e8e873231f2
 {
   "manifests": [
     {
@@ -190,6 +190,7 @@
         "!tasks.task-triage",
         "conversations.conversation-view.push-and-exit.capabilities",
         "tasks.outcome-report.capability",
+        "apps.file-explorer.**",
         "!conversations.workspace.worktree.**",
         "!conversations.conversation-view.jsonl-viewer.tool-call.timeline.**",
         "apps.home.**",
@@ -220,9 +221,7 @@
       "excludes": [],
       "serve": "off",
       "home": "home",
-      "unlisted": [
-        "file-explorer"
-      ]
+      "unlisted": []
     },
     {
       "id": "home",

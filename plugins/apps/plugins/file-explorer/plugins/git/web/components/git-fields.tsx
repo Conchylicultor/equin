@@ -120,7 +120,7 @@ export function GitFieldsResolver({
         refetch: view.refetch,
       };
     }
-    if (view.kind === "none") {
+    if (view.kind === "none" || view.kind === "unavailable") {
       return {
         status: "ready",
         data: { git: () => null, changed: () => null },

@@ -4438,6 +4438,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Exemptions:
                 - Exempts itself from: `boundaries/no-platform-api` — `server/internal/page-text.ts` (debt)
     - **`file-explorer`** — File explorer app.
+      - Cross-plugin:
+        - Imported by: `apps/file-explorer/documents`
       - Plugins:
         - **`app-data`** — The file explorer's App data place: a Locations entry leading to every file root an app declares browsable (data-files.roots — the root ids are the server's, the explorer names none), each browsed read-only at /files/data/<root>[/<path>] — a folder's entries as a paged live DataView list, a file previewed beside its folder through the file viewer (a data FileRef) — on every host: the computer's disk on the desktop, memory in a browser host.
           - Web:
@@ -4512,12 +4514,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `FieldPresentation.Register` "collection:file-explorer.entry"
               - `FileBrowserSlots.RowActions` "extract" → `ExtractAction`
               - `FileBrowserSlots.RowActions` "copy-path" → `CopyPathAction`
-            - Uses: 69 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
+            - Uses: 72 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
               - `primitives/data-view` ×10
               - `primitives/css/ui-kit` ×8
               - `primitives/file-viewer` ×5
               - `network/live` ×4
               - `primitives/pane` ×4
+              - `apps/file-explorer/shell` ×3
               - `infra/endpoints` ×3
               - `network/live/live-state` ×3
               - `primitives/networking` ×2
@@ -4630,6 +4633,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/code/file-pane`
               - `conversations/conversation-view/explorer`
               - `plugin-meta/plugin-view/file-tree`
+        - **`documents`** — Documents, portable half: Files' data dir (apps/file-explorer) as the documentsFiles file root — watched, and browsable read-only in App data as "Documents" on every host (the computer's disk on the desktop, memory in a browser host) — and writeDocumentsFixture, which writes a fixture's files through the root's own writes for a demo's seed or a test.
+          - Server:
+            - Contributes: `data-files.root-location` "apps.file-explorer.documents"
+            - Uses: `infra/paths/data-files.defineFileRoot`
+            - Exports (types): `DocumentsFixture`
+            - Exports (values):
+              - `documentsFiles`
+              - `writeDocumentsFixture`
+          - Machine:
+            - Uses: `infra/paths/data-files.FileRootLocation`
         - **`folder-peek`** — A host folder browsed as a side pane through the Files browser (tree, path bar, Up, a file previewed beside it): the folder/<dir>[/<open file>] pane, homed in Files and opened beside any surface — useFolderPeekTarget(dir) is its link — with Expand opening Files at the pane's location.
           - Web:
             - Slots: `folderPeekPane.Actions`
@@ -4654,7 +4667,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `active-data/folder-link`
               - `conversations/conversation-view/code/file-pane`
-        - **`git`** — Git awareness for the file explorer: inside a git checkout the tree gains a git status badge (M / A / D / R / C / ?, a dot on a folder holding changes; pending until the status is known) and a Changed vs main filter field (client fields of the file-entry row kind, empty outside a checkout), ignored files hide behind a Show ignored files toggle, and a changed file's preview gets its git context (the Diff tab). Git awareness for the file explorer, server half: which checkout holds a folder (the file-explorer.git-checkout snapshot value, git rev-parse) and the checkout's status as the file-explorer.git-status live value — each path's status vs HEAD and vs the main merge-base, untracked and ignored folders collapsed — memoized behind a content signature and pushed from the shared checkout watch (infra/git/checkout-watch: working tree + git dir) while subscribed.
+        - **`git`** — Git awareness for the file explorer: inside a git checkout the tree gains a git status badge (M / A / D / R / C / ?, a dot on a folder holding changes; pending until the status is known) and a Changed vs main filter field (client fields of the file-entry row kind, empty outside a checkout), ignored files hide behind a Show ignored files toggle, and a changed file's preview gets its git context (the Diff tab).
           - Web:
             - Contributes:
               - `ClientFields.Resolve` "client:file-explorer.entry:git" → `GitFieldsResolver`
@@ -4670,6 +4683,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live/live-state.mapResource`
               - `network/live/live-state.ResourceError`
               - `network/live/live-state.ResourceResult`
+              - `network/live/live-state.ResourceUnavailable`
               - `primitives/css/badge.Badge`
               - `primitives/css/status-dot.StatusDot`
               - `primitives/css/ui-kit.WithTooltip`
@@ -4677,18 +4691,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `resource.declare` "file-explorer.git-checkout"
               - `resource.declare` "file-explorer.git-status"
-            - Uses:
-              - `infra/git/checkout-watch.acquireCheckoutWatch`
-              - `infra/git/git-read-cache.createSignedMemo`
-              - `infra/host/host-read-pool.withHeavyReadSlot`
-              - `network/live.serveValue`
-              - `primitives/commit-list.GitError`
-              - `primitives/commit-list.parseDiffNameStatusZ`
-              - `primitives/commit-list.runGit`
-              - `primitives/commit-list.tryRunGit`
             - Resources:
               - `file-explorer.git-checkout` (invalidate, snapshot)
               - `file-explorer.git-status` (push, notified, capped: GIT_STATUS_MAX_PATHS)
+          - Machine:
+            - Uses: `network/live.serveValue`
           - Core:
             - Uses:
               - `apps/file-explorer/browser.fileEntry`
@@ -4702,10 +4709,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --warning`
           - Exemptions:
-            - Exempts itself from:
-              - `live-state/no-handrolled-result` — `web/components/git-fields.tsx` (sanctioned)
-              - `boundaries/no-platform-api` — `server/internal/checkout.ts`, `server/internal/status.ts` (debt)
-        - **`places`** — The file explorer's Places sidebar: the places of every FileExplorer.Places source (its own: Home, Downloads, the equin checkout, the user's pinned favorites, the startup volume, Trash) as a DataView list in Favorites / Worktrees / Locations sections with the current folder's place active, and the startup volume's storage meter at its foot. Host paths dragged onto Favorites (HOST_PATHS_MIME) are pinned there — a folder opens itself, a file its folder with the file previewed — kept in the file-explorer places config; a pin's row offers Remove from Favorites, and the browser's row ⋯ menu Add to Favorites. Where the file explorer's equin place leads: serves the file-explorer.main-checkout value, the main checkout's path; registers the pinned-favorites config.
+            - Exempts itself from: `live-state/no-handrolled-result` — `web/components/git-fields.tsx` (sanctioned)
+        - **`places`** — The file explorer's Places sidebar: the places of every FileExplorer.Places source (its own: Home, Downloads, the equin checkout, the user's pinned favorites, the startup volume, Trash) as a DataView list in Favorites / Worktrees / Locations sections with the current folder's place active, and the startup volume's storage meter at its foot. Host paths dragged onto Favorites (HOST_PATHS_MIME) are pinned there — a folder opens itself, a file its folder with the file previewed — kept in the file-explorer places config; a pin's row offers Remove from Favorites, and the browser's row ⋯ menu Add to Favorites. The file explorer's places, portable half: registers the pinned-favorites config.
           - Web:
             - Slots: `row-actions`
             - Slot contributors: `row-actions` ← `apps.file-explorer.places`
@@ -4721,10 +4726,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ConfigV2.WebRegister` "config"
               - `row-actions` "remove-favorite" → `RemoveFavoriteAction`
               - `FileBrowserSlots.RowActions` "add-to-favorites" → `AddToFavoritesAction`
-            - Uses: 27 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/places/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/places/REFERENCE.md)
+            - Uses: 28 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/places/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/places/REFERENCE.md)
               - `primitives/data-view` ×6
               - `apps/file-explorer/browser` ×4
-              - `apps/file-explorer/shell` ×3
+              - `apps/file-explorer/shell` ×4
               - `config_v2` ×3
               - `primitives/css/ui-kit` ×2
               - `infra/endpoints.EndpointError`
@@ -4738,12 +4743,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/icons.Icon`
           - Server:
             - Contributes:
-              - `resource.declare` "file-explorer.main-checkout"
               - `ConfigV2.Register` "config"
-            - Uses:
-              - `config_v2.ConfigV2`
-              - `network/live.serveValue`
+              - `resource.declare` "file-explorer.main-checkout"
+            - Uses: `config_v2.ConfigV2`
             - Resources: `file-explorer.main-checkout` (push, fixed)
+          - Machine:
+            - Uses: `network/live.serveValue`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/density --space-lg`
@@ -4764,7 +4769,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --line-height-label`
           - Exemptions:
             - Exempts itself from: `product-name:legacy-id` — `CLAUDE.md` (sanctioned)
-        - **`shell`** — App shell for Files (the file explorer): registers the /files app entry with its outline-folder mark, contributes the app's own theme (files: the prototype's zinc palette, blue accent, Lucide icons and metrics), lays the Places sidebar beside one full-surface browser pane, and defines the FileExplorer.Sidebar / Toolbar / Places slots.
+        - **`shell`** — App shell for Files (the file explorer): registers the /files app entry with its outline-folder mark, contributes the app's own theme (files: the prototype's zinc palette, blue accent, Lucide icons and metrics), lays the Places sidebar beside one full-surface browser pane, and defines the FileExplorer.Sidebar / Toolbar / Places slots, with ResolvePlaces reading every Places source's answer at once (a place a host has not got answers unavailable and is left out).
           - Web:
             - Slots:
               - `FileExplorer.Sidebar`
@@ -4790,8 +4795,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PlaceGroup`
               - `PlacesSource`
               - `PlacesState`
+              - `ResolvedPlaces`
               - `RoutePlace`
-            - Exports (values): `FileExplorer`
+            - Exports (values):
+              - `FileExplorer`
+              - `ResolvePlaces`
           - Core:
             - Uses:
               - `primitives/pane.defineApp`
@@ -4799,6 +4807,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `fileExplorerApp`
           - Cross-plugin:
             - Imported by:
+              - `apps/file-explorer`
               - `apps/file-explorer/app-data`
               - `apps/file-explorer/attachment-preview`
               - `apps/file-explorer/browser`
@@ -12073,7 +12082,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `appIconPath`
         - Routes: `GET /api/apps/:appId/manifest.webmanifest`
       - Machine:
-        - Uses: `infra/endpoints.machineHandler`
+        - Uses:
+          - `infra/endpoints.machineHandler`
+          - `ui/icons.symbolBody`
         - Exports (values):
           - `appIconPng`
           - `appIconSvg`
@@ -28529,7 +28540,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/events/sources/dmda` (1 debt)
               - `apps/events/sources/salsanueva` (2 debt)
               - `apps/events/sources/url-extract` (1 debt)
-              - `apps/file-explorer/git` (2 debt)
               - `apps/sonata/transcription` (5 debt)
               - `auth/apple-signing` (1 debt)
               - `backup` (2 debt)
@@ -34169,9 +34179,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 126 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Imported by: 127 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `infra` ×31
-          - `apps` ×19
+          - `apps` ×20
           - `framework` ×17
           - `debug` ×13
           - `conversations` ×7
@@ -34364,6 +34374,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/desktop/wallpaper`
               - `apps/file-explorer/app-data`
+              - `apps/file-explorer/documents`
               - `apps/prototypes`
               - `apps/prototypes/files`
               - `apps/prototypes/files/snapshot-history`
@@ -34451,6 +34462,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `UNREVERTED_WRITE_HEADER`
       - Cross-plugin:
         - Imported by:
+          - `apps/file-explorer/documents`
           - `apps/pages/agent-origin`
           - `apps/prototypes/files`
           - `apps/prototypes/files/snapshot-history`
@@ -38123,7 +38135,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withForegroundPriority`
     - **`string-hash`** — Portable string hashes in plain JS (no node:crypto, no Bun.hash), so every host — the Bun server, central and a browser page — computes the same value: hash53 (cyrb53, a 53-bit number, optionally seeded), hashHex (two seeded cyrb53s, ~106 bits as hex), hash64 (a 64-bit bigint), sha256Hex (a synchronous SHA-256, identical to node:crypto's hex digest), createSha256 (the same SHA-256, incremental over strings and bytes) and sha1Hex (SHA-1 for values already stored as one).
       - Cross-plugin:
-        - Imported by: 35 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
+        - Imported by: 36 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
           - `apps` ×10
           - `network` ×5
           - `database` ×4
@@ -38132,11 +38144,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page` ×2
           - `plugin-meta` ×2
           - `reports` ×2
+          - `ui` ×2
           - `debug/queue-health`
           - `map`
           - `menu-bar`
           - `tasks/orchestration/watch`
-          - `ui/icons/sprites`
       - Core:
         - Exports (types): `Sha256Hasher`
         - Exports (values):
@@ -56948,7 +56960,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/breadcrumb-separator.BreadcrumbSeparator`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --muted-foreground`
-    - **`icons`** — Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Icon families beyond Material are contributed to Icons.Family (Lucide is this plugin's own; an app draws its own with defineIconFamily), published to <Icon> by IconFamilyHost. A family states its coverage: fallback (an unmapped symbol draws the next family of its chain, Material last) or strict (its gap glyph, reported through iconFamilyGapReportSink); resolveIconSource answers which, by the same chain. Animated family glyphs (data-motion parts, a closed ICON_MOTIONS vocabulary) are drawn inline and play once on hover inside an IconMotionRegion. Reads glyphs out of the installed Iconify JSON (the pure drawing — resolveIcon, resolveSymbol, buildSymbol — is core's): symbolBody (one Material Symbols glyph in a style, for a consumer with no sprite sheet — the release CLI's app icon); SETI_SET / readSetiSet expose the vendored Seti file-type set (jesseweed/seti-ui, MIT, one colour).
+    - **`icons`** — Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Icon families beyond Material are contributed to Icons.Family (Lucide is this plugin's own; an app draws its own with defineIconFamily), published to <Icon> by IconFamilyHost. A family states its coverage: fallback (an unmapped symbol draws the next family of its chain, Material last) or strict (its gap glyph, reported through iconFamilyGapReportSink); resolveIconSource answers which, by the same chain. Animated family glyphs (data-motion parts, a closed ICON_MOTIONS vocabulary) are drawn inline and play once on hover inside an IconMotionRegion. The vendored Seti file-type set (jesseweed/seti-ui, MIT, one colour), portable: SETI_SET names it, readSetiSet loads it (a lazy JSON module, so a browser host bundles it too). The pure drawing — resolveIcon, resolveSymbol, buildSymbol — is core's; reading the installed Material sets is the machine half's (symbolBody).
       - Web:
         - Slots:
           - `Icons.Root`
@@ -56993,11 +57005,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useIconStyle`
           - `usePublishIconStyle`
           - `useScopeIconStyles`
+          - `useWantedScopeSprites`
           - `useWantedSprites`
           - `useWantedStyleKeys`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 543 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 544 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×154
           - `conversations` ×82
           - `page` ×52
@@ -57007,7 +57020,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks` ×23
           - `plugin-meta` ×16
           - `active-data` ×11
-          - `ui` ×10
+          - `ui` ×11
           - `infra` ×8
           - `apps-core` ×7
           - `auth` ×6
@@ -57043,7 +57056,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `readSetiSet`
           - `SETI_SET`
-          - `symbolBody`
+      - Machine:
+        - Exports (values): `symbolBody`
       - Core:
         - Exports (types):
           - `BrandName`
@@ -57245,7 +57259,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `defineSavedIconSource`
               - `savedIconSources`
               - `savedIconSourcesCode`
-        - **`sprites`** — Mounts the page's icon sprites inline: the resident default-style sprites from the boot snapshot (present at first paint) plus, on demand, the sprite of every other style a theme scope picks, and the page's saved-icon symbols. ScopeIconSymbols gives a plugin scope (a demo) saved icons of its own, read from the scope's server and drawn in a sheet inside it. Saved (user-picked) icons as runtime symbols, on every host: the resident icons.saved-sprites value draws every name a saved-icon source (ui/icons/saved-sources) reports in the default style, and the on-demand icons.runtime-symbols value serves any saved names in any style, immutable (content-addressed by symbolsHash). Both draw through the host's RuntimeSymbolDrawer — the icon sets installed on the computer (this plugin's machine half), or a set bundled with the page (plugins/bundled-symbols, a browser host) — so a demo's icons come from its own server.
+        - **`sprites`** — Mounts the page's icon sprites inline: the resident default-style sprites from the boot snapshot (present at first paint) plus, on demand, the sprite of every other style a theme scope picks, and the page's saved-icon symbols. ScopeIconSymbols gives a plugin scope (a demo) saved icons of its own, read from the scope's server and drawn in a sheet inside it. The build's sprites on demand, on every host: icons.sprite (one sprite by key, immutable, content-addressed by icons.sprite-hash) drawn through the host's SpriteDrawer — the computer's installed sets (this plugin's machine half) or the Seti and Lucide sets bundled with a browser host (plugins/bundled-sprites) — so a scope reads its sprites from its own server. Saved (user-picked) icons as runtime symbols, on every host: the resident icons.saved-sprites value draws every name a saved-icon source (ui/icons/saved-sources) reports in the default style, and the on-demand icons.runtime-symbols value serves any saved names in any style, immutable (content-addressed by symbolsHash). Both draw through the host's RuntimeSymbolDrawer — the icon sets installed on the computer (this plugin's machine half), or a set bundled with the page (plugins/bundled-symbols, a browser host) — so a demo's icons come from its own server.
           - Web:
             - Contributes: `Icons.Root` → `IconSpriteHost`
             - Uses:
@@ -57258,6 +57272,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/icons.RuntimeSymbolScope`
               - `ui/icons.RuntimeSymbolSheet`
               - `ui/icons.RuntimeSymbolStore`
+              - `ui/icons.useWantedScopeSprites`
               - `ui/icons.useWantedSprites`
               - `ui/icons.useWantedStyleKeys`
             - Exports (values): `ScopeIconSymbols`
@@ -57268,24 +57283,35 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `resource.declare` "icons.saved-icons-changed"
               - `resource.declare` "icons.saved-sprites"
               - `resource.declare` "icons.sprite"
+              - `resource.declare` "icons.sprite-hash"
               - `resource.declare` "icons.sprites"
+              - `host-service:icons.sprite-drawer` "icons.sprite-drawer"
               - `host-service:icons.runtime-symbol-drawer` "icons.runtime-symbol-drawer"
             - Uses:
               - `network/live.serveValue`
               - `ui/icons/saved-sources.savedIconSources`
               - `ui/icons/saved-sources.savedIconSourcesCode`
-            - Exports (types): `RuntimeSymbolDrawerImpl`
+            - Exports (types):
+              - `DrawnSprite`
+              - `RuntimeSymbolDrawerImpl`
+              - `SpriteDrawerImpl`
             - Exports (values):
+              - `buildLucideSprites`
+              - `buildSetiSprite`
+              - `buildSprite`
               - `drawRuntimeSymbol`
+              - `LUCIDE_TUNING_VERSION`
               - `RUNTIME_SYMBOL_BUILD_VERSION`
               - `RuntimeSymbolDrawer`
               - `savedIconNames`
+              - `SpriteDrawer`
             - Resources:
               - `icons.manifest` (push, fixed, whole: the symbol names the build scanned from the code — fixed for the process, and the Icons pane lists them all)
               - `icons.runtime-symbols` (invalidate, immutable)
               - `icons.saved-icons-changed` (push, notified)
               - `icons.saved-sprites` (push, whole: every saved icon name — each picked by hand, and every one must be drawable at first paint, whole: one sprite per default style key — a handful)
               - `icons.sprite` (invalidate, immutable)
+              - `icons.sprite-hash` (push, fixed)
               - `icons.sprites` (push, fixed, whole: the resident sprites — the default style's two and the brands)
           - Machine:
             - Uses: `network/live.serveValue`
@@ -57307,12 +57333,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `savedIconsChanged`
               - `savedIconSprites`
               - `SavedIconSpritesSchema`
+              - `spriteHash`
           - Cross-plugin:
             - Imported by:
               - `debug/icons`
               - `framework/browser-server/demo/scope`
+              - `ui/icons/sprites/bundled-sprites`
               - `ui/icons/sprites/bundled-symbols`
           - Plugins:
+            - **`bundled-sprites`** (excluded) — The on-demand sprites of a host without the computer's icon sets (the browser composition): provides the SpriteDrawer from the sets bundled with the worker — the vendored Seti file-type set (every glyph) and the Lucide set (every name LUCIDE_MAP draws), each loaded lazily on its first read — so a scope's file-type and Lucide icons come from its own server. The Material styles and the brands are the page's resident sprites: a read of one is refused not-drawn-here. Never booted by the desktop.
+              - Server:
+                - Contributes: `host-service:icons.sprite-drawer` "icons.sprite-drawer"
+                - Uses:
+                  - `ui/icons.readSetiSet`
+                  - `ui/icons.SETI_SET`
+                  - `ui/icons/sprites.buildLucideSprites`
+                  - `ui/icons/sprites.buildSetiSprite`
+                  - `ui/icons/sprites.LUCIDE_TUNING_VERSION`
+                  - `ui/icons/sprites.SpriteDrawer`
+                  - `ui/icons/sprites.SpriteDrawerImpl`
             - **`bundled-symbols`** (excluded) — The saved-icon drawings of a host without the computer's icon sets (the browser composition): provides the RuntimeSymbolDrawer from the Material Symbols set bundled with the worker (weight 400, every shape and fill; a light style draws its 400 drawing), loaded lazily and only on a miss. Its warm-up draws every saved name in every style and keeps those drawings in the host's storage (a picker's are held in memory only), so a build-time snapshot ships the demo's icons drawn and a visitor never loads the set for them. Never booted by the desktop.
               - Server:
                 - Contributes: `host-service:icons.runtime-symbol-drawer` "icons.runtime-symbol-drawer"

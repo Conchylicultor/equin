@@ -14,11 +14,7 @@ import {
 } from "@plugins/framework/plugins/browser-server/plugins/host-storage/core";
 import { bootBrowserHost } from "@plugins/framework/plugins/server-core/core";
 import { unmatchedApiResponse } from "@plugins/infra/plugins/endpoints/core";
-import {
-  bunHostEntries,
-  diskDemoPrototypes,
-  diskMigrationHashes,
-} from "./bun-host";
+import { bunHostEntries, diskDemoData, diskMigrationHashes } from "./bun-host";
 import { seed } from "./seed";
 
 const out = process.argv[2];
@@ -30,7 +26,7 @@ const file = await takeHostSnapshot({
   boot: async () => {
     const host = await bootBrowserHost({
       entries: bunHostEntries(),
-      seed: (h) => seed(diskDemoPrototypes(), h),
+      seed: (h) => seed(diskDemoData(), h),
       onUnmatched: unmatchedApiResponse,
     });
     // What the take cost, split: the build log carries it for every take.

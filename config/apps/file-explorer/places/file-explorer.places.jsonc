@@ -5,6 +5,9 @@
   // its own header, in this order. Both are lists of the contributed places,
   // partitioned by their `group` (favorites / locations); `properties`
   // keeps `group` a filter dimension only, so a row is just its icon and name.
+  // Favorites is `hideWhenEmpty`: on a host without the computer (the demo)
+  // every favorite is a host folder it has not got, so the section would be
+  // a bare header.
   "views": [
     {
       "id": "favorites",
@@ -13,6 +16,7 @@
       "view": {
         "type": "list",
         "properties": [{ "id": "icon" }, { "id": "label" }],
+        "hideWhenEmpty": true,
         "filter": {
           "kind": "group",
           "id": "favorites",

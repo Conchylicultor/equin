@@ -87,6 +87,7 @@ export const fileExplorerGitCheckoutValue = liveValue(
     params: ["path"],
     load: "snapshot",
     refusals: ["invalid-path"],
+    needsMachine: { feature: "Git status" },
   },
 );
 
@@ -98,4 +99,5 @@ export const fileExplorerGitCheckoutValue = liveValue(
 export const fileExplorerGitStatus = liveValue("file-explorer.git-status", {
   schema: GitStatusSchema,
   params: ["root"],
+  needsMachine: { feature: "Git status" },
 });

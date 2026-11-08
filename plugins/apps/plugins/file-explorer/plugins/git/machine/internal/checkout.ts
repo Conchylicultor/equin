@@ -3,7 +3,7 @@ import {
   runGit,
   tryRunGit,
 } from "@plugins/primitives/plugins/commit-list/server";
-import { serveValue } from "@plugins/network/plugins/live/server";
+import { serveValue } from "@plugins/network/plugins/live/machine";
 import {
   fileExplorerGitCheckoutValue,
   type GitCheckout,

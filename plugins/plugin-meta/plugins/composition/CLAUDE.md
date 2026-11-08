@@ -42,14 +42,13 @@ composition the Agent Manager demo's browser host serves
 (`apps/website/demos/workspace/bin/browser-host.composition.ts`): it `extends:
 ["agent-manager", "pages"]` — the agent manager with the Pages app beside it,
 so the demo can switch to it — and only subtracts what means nothing without
-the computer — push-and-exit, automations (`tasks.automations.**`, every
-automation and the outcome-report card with it), `stats.**` and the file
-explorer — and adds Prototypes back (`apps.prototypes.**`: its files are a
+the computer — push-and-exit and the automations (`tasks.automations.**`, every
+automation and the outcome-report card with it) — and adds Prototypes back (`apps.prototypes.**`: its files are a
 `data-files` root, memory in the worker; the prototype chips stay negated by the
 agent-manager profile) and Home (`apps.home.**`), the app gallery, which is its
 home as on main: the app launcher's grid lists every app but the home, and its
 "All apps" opens the home, so an agent-manager home would hide the agent manager
-from the demo's launcher (Home's onboarding tour, `apps.home.tour`, stays out). Sonata, the Desktop and Keyboard Party (`apps.keyboard-party.**`) join it whole, minus what needs the computer. Its web plugins are the scope the demo page renders in
+from the demo's launcher (Home's onboarding tour, `apps.home.tour`, stays out). Sonata, the Desktop, Keyboard Party (`apps.keyboard-party.**`), Places and Files (`apps.file-explorer.**`: a virtual file system over the worker's `data-files` roots, its disk places left out) join it whole, minus what needs the computer. Its web plugins are the scope the demo page renders in
 (`web-sdk`'s `<PluginScope>`) and its portable server barrels (portability
 derived from each barrel's closure, `serverPortabilityOf`) the worker's graph,
 both derived by codegen (`browser-host-gen.ts`). A plugin portable by its
@@ -234,10 +233,9 @@ composition detail pane's Home app section (`useManifestActions().setHome`).
 `unlisted` is a list of `defineApp` ids its launchers leave out
 (`apps-core`'s `isListedApp`, read through `useAppListing`). An app reaches a
 bundle because the composition asks for it, or because something it asks for
-imports the app's shell: `agent-manager-demo` holds Files only because the
-file-peek pane every transcript path opens imports Files' panes, and Files
-itself only says "not available" in the demo, so it unlists `file-explorer`.
-The app still owns its URL and panes. `resolveCompositionUnlisted`
+imports the app's shell — an app pulled in only that way, which means nothing
+on its own in that composition, is one to unlist. The app still owns its URL
+and panes. `resolveCompositionUnlisted`
 (`core/unlisted.ts`) is the one verdict: `composition-closure` and codegen both
 reject an id that is no app, outside the bundle, or the `home`. Codegen bakes
 the list into the composition identity (`{ id, home, unlisted }`, only spelled

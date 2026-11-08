@@ -6,7 +6,8 @@ import {
   type ReactNode,
 } from "react";
 import { usePluginScopeId } from "@plugins/framework/plugins/web-sdk/core";
-import { runtimeSymbolId, type StyleKey } from "../../core";
+import { runtimeSymbolId, type SpriteKey, type StyleKey } from "../../core";
+import { wantSprite as wantPageSprite } from "./sprite-store";
 
 /**
  * The RUNTIME symbols a server drew for the icons in one part of the page:
@@ -55,6 +56,17 @@ export interface RuntimeSymbolStore {
   subscribe(listener: () => void): () => void;
   /** Every chunk's markup (ids as {@link symbolId} spells them), sorted by chunk id. */
   chunks(): readonly (readonly [string, string])[];
+  /**
+   * Ask for a never-resident SPRITE (the Seti glyphs, a Lucide scope's) from
+   * this part's server: the page's store hands it to the page's sprite host;
+   * a scope's keeps it for the scope's own reader ({@link wantedSprites}), so
+   * a demo's file icons are drawn by the demo's server.
+   */
+  wantSprite(key: SpriteKey): void;
+  /** Every sprite asked for here, sorted (a scope's; the page's lives in the sprite store). */
+  wantedSprites(): readonly SpriteKey[];
+  /** Subscribe to a new sprite asked for here. */
+  subscribeWantedSprites(listener: () => void): () => void;
 }
 
 function entryKey(styleKey: StyleKey, name: string): string {
@@ -66,7 +78,13 @@ function entryKey(styleKey: StyleKey, name: string): string {
  * (`msr-…`), so two stores' sheets in one document never hold one id twice.
  * The page's store has none.
  */
-function createStore(idPrefix: string): RuntimeSymbolStore {
+function createStore(
+  idPrefix: string,
+  ownSprites: boolean,
+): RuntimeSymbolStore {
+  const sprites = new Set<SpriteKey>();
+  let spritesSnapshot: readonly SpriteKey[] = [];
+  const spriteListeners = new Set<() => void>();
   const held = new Map<
     string,
     { markup: string; entries: readonly RuntimeSymbolEntry[] }
@@ -128,21 +146,47 @@ function createStore(idPrefix: string): RuntimeSymbolStore {
       return () => listeners.delete(listener);
     },
     chunks: () => snapshot,
+    wantSprite(key) {
+      if (!ownSprites) {
+        wantPageSprite(key);
+        return;
+      }
+      if (sprites.has(key)) return;
+      sprites.add(key);
+      spritesSnapshot = [...sprites].sort();
+      for (const l of spriteListeners) l();
+    },
+    wantedSprites: () => spritesSnapshot,
+    subscribeWantedSprites(listener) {
+      spriteListeners.add(listener);
+      return () => spriteListeners.delete(listener);
+    },
   };
 }
 
 /** The page's own store: every icon outside a plugin scope draws from it. */
-export const pageRuntimeSymbols: RuntimeSymbolStore = createStore("");
+export const pageRuntimeSymbols: RuntimeSymbolStore = createStore("", false);
 
 let scopedStores = 0;
 
 /** A store of its own, for a plugin scope's icons (see {@link RuntimeSymbolScope}). */
 export function createScopedRuntimeSymbols(): RuntimeSymbolStore {
   scopedStores++;
-  return createStore(`rs${scopedStores}-`);
+  return createStore(`rs${scopedStores}-`, true);
 }
 
 const NO_CHUNKS: readonly (readonly [string, string])[] = [];
+const NO_SPRITES: readonly SpriteKey[] = [];
+
+/** Every sprite asked for in `store` (a scope's), re-read when one is. */
+export function useWantedScopeSprites(
+  store: RuntimeSymbolStore,
+): readonly SpriteKey[] {
+  return useSyncExternalStore(
+    store.subscribeWantedSprites,
+    store.wantedSprites,
+  );
+}
 
 /** Every chunk of `store`, re-read when one lands. */
 export function useRuntimeSymbolChunks(
@@ -172,6 +216,12 @@ function unsourced(scope: string): RuntimeSymbolStore {
     // saved icon asks for a symbol, which is what refuses.
     subscribe: () => () => {},
     chunks: () => NO_CHUNKS,
+    // A build sprite in a scope with no store of its own is the page's, as
+    // before scopes had stores: a scope that must not reach the page's server
+    // mounts one (`ScopeIconSymbols`).
+    wantSprite: wantPageSprite,
+    wantedSprites: () => NO_SPRITES,
+    subscribeWantedSprites: () => () => {},
   };
 }
 

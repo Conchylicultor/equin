@@ -7,6 +7,10 @@ import { FileExplorerLayout } from "./components/file-explorer-layout";
 import { FilesMark } from "./components/files-mark";
 import { filesTheme } from "./internal/theme";
 import { FileExplorer } from "./slots";
+export {
+  ResolvePlaces,
+  type ResolvedPlaces,
+} from "./components/resolve-places";
 
 export {
   FileExplorer,
@@ -20,7 +24,7 @@ export {
 
 export default {
   description:
-    "App shell for Files (the file explorer): registers the /files app entry with its outline-folder mark, contributes the app's own theme (files: the prototype's zinc palette, blue accent, Lucide icons and metrics), lays the Places sidebar beside one full-surface browser pane, and defines the FileExplorer.Sidebar / Toolbar / Places slots.",
+    "App shell for Files (the file explorer): registers the /files app entry with its outline-folder mark, contributes the app's own theme (files: the prototype's zinc palette, blue accent, Lucide icons and metrics), lays the Places sidebar beside one full-surface browser pane, and defines the FileExplorer.Sidebar / Toolbar / Places slots, with ResolvePlaces reading every Places source's answer at once (a place a host has not got answers unavailable and is left out).",
   contributions: [
     Apps.App({
       app: fileExplorerApp,

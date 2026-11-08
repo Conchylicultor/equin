@@ -30,6 +30,7 @@ export {
   createScopedRuntimeSymbols,
   pageRuntimeSymbols,
   RuntimeSymbolScope,
+  useWantedScopeSprites,
 } from "./internal/runtime-symbol-store";
 export type {
   RuntimeSymbolEntry,

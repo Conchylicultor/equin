@@ -46,7 +46,7 @@ import {
   compositionsConfig,
   manifestItemToManifest,
 } from "@plugins/plugin-meta/plugins/composition/core";
-import { symbolBody } from "@plugins/ui/plugins/icons/server";
+import { symbolBody } from "@plugins/ui/plugins/icons/machine";
 import type { SymbolName } from "@plugins/ui/plugins/icons/core";
 import { appIconToSvg } from "@plugins/apps-core/plugins/app-icon/core";
 import { runAssetMirrorPrewarm } from "@plugins/infra/plugins/asset-mirror/plugins/bundle/cli";

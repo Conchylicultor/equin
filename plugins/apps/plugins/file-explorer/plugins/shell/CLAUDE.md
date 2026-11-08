@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: App shell for Files (the file explorer): registers the /files app entry with its outline-folder mark, contributes the app's own theme (files: the prototype's zinc palette, blue accent, Lucide icons and metrics), lays the Places sidebar beside one full-surface browser pane, and defines the FileExplorer.Sidebar / Toolbar / Places slots.
+- Description: App shell for Files (the file explorer): registers the /files app entry with its outline-folder mark, contributes the app's own theme (files: the prototype's zinc palette, blue accent, Lucide icons and metrics), lays the Places sidebar beside one full-surface browser pane, and defines the FileExplorer.Sidebar / Toolbar / Places slots, with ResolvePlaces reading every Places source's answer at once (a place a host has not got answers unavailable and is left out).
 - Web:
   - Slots:
     - `FileExplorer.Sidebar`
@@ -30,8 +30,11 @@
     - `PlaceGroup`
     - `PlacesSource`
     - `PlacesState`
+    - `ResolvedPlaces`
     - `RoutePlace`
-  - Exports (values): `FileExplorer`
+  - Exports (values):
+    - `FileExplorer`
+    - `ResolvePlaces`
 - Core:
   - Uses:
     - `primitives/pane.defineApp`
@@ -39,6 +42,7 @@
   - Exports (values): `fileExplorerApp`
 - Cross-plugin:
   - Imported by:
+    - `apps/file-explorer`
     - `apps/file-explorer/app-data`
     - `apps/file-explorer/attachment-preview`
     - `apps/file-explorer/browser`

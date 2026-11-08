@@ -52,7 +52,9 @@ head tags linking them from the app's pages.
   - Exports (values): `appIconPath`
   - Routes: `GET /api/apps/:appId/manifest.webmanifest`
 - Machine:
-  - Uses: `infra/endpoints.machineHandler`
+  - Uses:
+    - `infra/endpoints.machineHandler`
+    - `ui/icons.symbolBody`
   - Exports (values):
     - `appIconPng`
     - `appIconSvg`

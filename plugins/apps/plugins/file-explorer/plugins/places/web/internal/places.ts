@@ -17,7 +17,10 @@ const folderIcon = symbol("folder");
 const driveIcon = symbol("hard-drive");
 const trashIcon = symbol("delete");
 
-/** A source of one place that is the same everywhere: a fixed label and path. */
+/**
+ * A source of one host folder that is the same on every computer: a fixed
+ * label and path under home — none on a host without a home folder.
+ */
 function fixedPlace(
   id: string,
   label: string,
@@ -29,7 +32,22 @@ function fixedPlace(
     places: [{ kind: "folder", id, label, path, icon }],
   };
   return function useFixedPlace() {
-    return state;
+    const home = useHomeDir();
+    switch (home.kind) {
+      case "pending":
+        return { kind: "pending" };
+      case "unavailable":
+        return { kind: "unavailable" };
+      case "failed":
+        return {
+          kind: "failed",
+          label,
+          icon,
+          message: home.error.message,
+        };
+      case "ready":
+        return state;
+    }
   };
 }
 
@@ -38,6 +56,9 @@ function useRepoPlace(): PlacesState {
   const checkout = useLive(fileExplorerMainCheckout);
   const home = useHomeDir();
   const label = "equin";
+  if (checkout.status === "unavailable" || home.kind === "unavailable") {
+    return { kind: "unavailable" };
+  }
   if (checkout.status === "error") {
     return {
       kind: "failed",
@@ -77,12 +98,7 @@ function useStartupVolumePlace(): PlacesState {
     case "loading":
       return { kind: "pending" };
     case "unavailable":
-      return {
-        kind: "failed",
-        label: "/",
-        icon: driveIcon,
-        message: volume.message,
-      };
+      return { kind: "unavailable" };
     case "error":
       return {
         kind: "failed",

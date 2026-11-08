@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: The file explorer's Places sidebar: the places of every FileExplorer.Places source (its own: Home, Downloads, the equin checkout, the user's pinned favorites, the startup volume, Trash) as a DataView list in Favorites / Worktrees / Locations sections with the current folder's place active, and the startup volume's storage meter at its foot. Host paths dragged onto Favorites (HOST_PATHS_MIME) are pinned there — a folder opens itself, a file its folder with the file previewed — kept in the file-explorer places config; a pin's row offers Remove from Favorites, and the browser's row ⋯ menu Add to Favorites. Where the file explorer's equin place leads: serves the file-explorer.main-checkout value, the main checkout's path; registers the pinned-favorites config.
+- Description: The file explorer's Places sidebar: the places of every FileExplorer.Places source (its own: Home, Downloads, the equin checkout, the user's pinned favorites, the startup volume, Trash) as a DataView list in Favorites / Worktrees / Locations sections with the current folder's place active, and the startup volume's storage meter at its foot. Host paths dragged onto Favorites (HOST_PATHS_MIME) are pinned there — a folder opens itself, a file its folder with the file previewed — kept in the file-explorer places config; a pin's row offers Remove from Favorites, and the browser's row ⋯ menu Add to Favorites. The file explorer's places, portable half: registers the pinned-favorites config.
 - Web:
   - Slots: `row-actions`
   - Slot contributors: `row-actions` ← `apps.file-explorer.places`
@@ -20,10 +20,10 @@
     - `ConfigV2.WebRegister` "config"
     - `row-actions` "remove-favorite" → `RemoveFavoriteAction`
     - `FileBrowserSlots.RowActions` "add-to-favorites" → `AddToFavoritesAction`
-  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×6
     - `apps/file-explorer/browser` ×4
-    - `apps/file-explorer/shell` ×3
+    - `apps/file-explorer/shell` ×4
     - `config_v2` ×3
     - `primitives/css/ui-kit` ×2
     - `infra/endpoints.EndpointError`
@@ -37,12 +37,12 @@
     - `ui/icons.Icon`
 - Server:
   - Contributes:
-    - `resource.declare` "file-explorer.main-checkout"
     - `ConfigV2.Register` "config"
-  - Uses:
-    - `config_v2.ConfigV2`
-    - `network/live.serveValue`
+    - `resource.declare` "file-explorer.main-checkout"
+  - Uses: `config_v2.ConfigV2`
   - Resources: `file-explorer.main-checkout` (push, fixed)
+- Machine:
+  - Uses: `network/live.serveValue`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/density --space-lg`

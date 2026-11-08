@@ -4,6 +4,7 @@ import {
   mapResource,
   ResourceError,
   type ResourceResult,
+  type ResourceUnavailable,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   fileExplorerGitCheckoutValue,
@@ -22,18 +23,26 @@ export type Checkout = Extract<GitCheckout, { kind: "checkout" }>;
  */
 export function useGitStatus(
   root: string | null,
-): ResourceResult<GitStatusIndex> {
+): ResourceResult<GitStatusIndex> | ResourceUnavailable {
   const status = useLive(
     fileExplorerGitStatus,
     root === null ? null : { root },
   );
-  return useMemo(() => mapResource(status, indexGitStatus), [status]);
+  return useMemo(
+    () =>
+      status.status === "unavailable"
+        ? status
+        : mapResource(status, indexGitStatus),
+    [status],
+  );
 }
 
 /** The checkout and its indexed status for the folder `dir`. */
 export type GitView =
   | { kind: "loading" }
   | { kind: "none" }
+  // A host without the computer (the demo) has no git: no folder is in a checkout.
+  | { kind: "unavailable" }
   | { kind: "failed"; error: ResourceError; refetch: () => Promise<void> }
   | { kind: "ready"; checkout: Checkout; index: GitStatusIndex };
 
@@ -54,11 +63,15 @@ export function useGitView(dir: string): GitView {
     checkoutKnown && checkout.data.kind === "checkout" ? checkout.data : null;
   const status = useGitStatus(found?.root ?? null);
   const checkoutError = checkout.status === "error" ? checkout.error : null;
-  const refetchCheckout = checkout.refetch;
+  const refetchCheckout =
+    checkout.status === "unavailable" ? null : checkout.refetch;
   const index = status.status === "ready" ? status.data : null;
   const statusError = status.status === "error" ? status.error : null;
-  const refetchStatus = status.refetch;
+  const refetchStatus = status.status === "unavailable" ? null : status.refetch;
   return useMemo<GitView>(() => {
+    // Either read unavailable: this host has no git.
+    if (refetchCheckout === null || refetchStatus === null)
+      return { kind: "unavailable" };
     if (checkoutError !== null)
       return { kind: "failed", error: checkoutError, refetch: refetchCheckout };
     if (found !== null && index?.truncated === true) {

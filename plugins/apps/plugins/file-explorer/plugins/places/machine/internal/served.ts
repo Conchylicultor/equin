@@ -1,4 +1,4 @@
-import { serveValue } from "@plugins/network/plugins/live/server";
+import { serveValue } from "@plugins/network/plugins/live/machine";
 import { getMainRepoRoot } from "@plugins/infra/plugins/spawn/core";
 import { fileExplorerMainCheckout } from "../../shared/resources";
 

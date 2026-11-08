@@ -32,6 +32,10 @@ import {
 import { writePrototypeFixture } from "@plugins/apps/plugins/prototypes/plugins/fixtures/server";
 import { writeSongFixtures } from "@plugins/apps/plugins/sonata/plugins/fixtures/server";
 import { writePlacesFixture } from "@plugins/apps/plugins/places/plugins/fixtures/server";
+import {
+  writeDocumentsFixture,
+  type DocumentsFixture,
+} from "@plugins/apps/plugins/file-explorer/plugins/documents/server";
 import { settleJobQueue } from "@plugins/infra/plugins/jobs/plugins/in-process/server";
 import { eq } from "drizzle-orm";
 import {
@@ -93,14 +97,26 @@ import {
  *    (`writeSongFixtures`), beside the MIDI starters the MIDI source seeds;
  * 7. Demo's Places map (`../core`'s), through Places' fixture writer
  *    (`writePlacesFixture`): its tags through the tag tree's endpoints on the
- *    host, its places through the app's one insert, icons given.
+ *    host, its places through the app's one insert, icons given;
+ * 8. Demo's Documents in Files (`../data/documents/`), through Files'
+ *    fixture writer (`writeDocumentsFixture`): notes, a markdown doc, code, a
+ *    picture, a page and a PDF, each written through the root's own write.
  */
+/** The seed's input: the demo's `data/` folder, split by what each writer takes. */
+export interface DemoSeedData {
+  /** `data/prototypes/` and `data/thumbnails/`: Prototypes' fixture. */
+  prototypes: PrototypeFixtureData;
+  /** `data/documents/`: the user's Documents in Files, path → bytes. */
+  documents: DocumentsFixture;
+}
+
 const PRACTICE_TIMER = demoStoryByKey("practice-timer");
 
 export async function seed(
-  prototypes: PrototypeFixtureData,
+  data: DemoSeedData,
   host: { request(req: Request): Promise<Response> },
 ): Promise<void> {
+  const { prototypes } = data;
   assertStoryCategoriesRegistered();
   await writePageTree(DEMO_PAGES);
   await settleJobQueue();
@@ -211,6 +227,8 @@ export async function seed(
   await writeSongFixtures(DEMO_SONGS);
   await settleJobQueue();
   await writePlacesFixture(DEMO_PLACES, host);
+  await settleJobQueue();
+  await writeDocumentsFixture(data.documents);
   await settleJobQueue();
 }
 

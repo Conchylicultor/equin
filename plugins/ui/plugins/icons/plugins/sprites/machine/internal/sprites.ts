@@ -9,21 +9,20 @@ import {
   LUCIDE_SPRITE,
   SETI_SPRITE,
   brandId,
-  deriveActiveForm,
-  lucideActiveId,
-  lucideId,
-  placeActiveIds,
-  lucideNameOf,
   resolveSymbol,
-  setiId,
   symbolId,
   type SpriteKey,
   type SymbolSets,
 } from "@plugins/ui/plugins/icons/core";
 import { SETI_SET, readSetiSet } from "@plugins/ui/plugins/icons/server";
-import { buildSprite } from "./build-sprite";
+import {
+  buildLucideSprites,
+  buildSetiSprite,
+  buildSprite,
+  LUCIDE_TUNING_VERSION,
+  type SpriteDrawerImpl,
+} from "../../server";
 import { ICON_MANIFEST } from "./icon-manifest.generated";
-import { LUCIDE_TUNING_VERSION, tuneLucideBody } from "./lucide";
 import { PACKAGE, setIdentity, readSet, withSymbolSets } from "./symbol-sets";
 
 /**
@@ -71,76 +70,28 @@ function brandSprite(brands: IconifyJSON): Map<SpriteKey, string> {
 }
 
 /**
- * The Seti file-type sprite. Never resident (see `resident.ts`): fetched the
- * first time a Seti icon mounts, so it costs nothing until a file is shown.
+ * The Seti file-type sprite, for the manifest's Seti names. Never resident
+ * (see `resident.ts`): fetched the first time a Seti icon mounts, so it costs
+ * nothing until a file is shown.
  */
 async function setiSprite(): Promise<Map<SpriteKey, string>> {
   const set =
     ICON_MANIFEST.seti.length === 0
       ? { prefix: "seti", icons: {} }
       : await readSetiSet();
-  return new Map([
-    [
-      SETI_SPRITE,
-      buildSprite(
-        ICON_MANIFEST.seti.map((name) => ({
-          id: setiId(name),
-          set,
-          iconifyName: name,
-        })),
-      ),
-    ],
-  ]);
+  return buildSetiSprite(set, ICON_MANIFEST.seti);
 }
 
 /**
- * The Lucide sprites: under `lucide-<material name>`, the tuned Lucide drawing
- * of every manifest symbol `LUCIDE_MAP` gives one, and under
- * `lucide-active-<material name>` (the active sprite) its derived active form
- * — the drawing at rest when it has nothing to fill. A symbol the map does not
- * draw is left out of both — `<Icon>` draws its Material symbol instead.
- * Never resident: each is fetched the first time an icon (an active one) in a
+ * The Lucide sprites, for every manifest symbol `LUCIDE_MAP` draws. Never
+ * resident: each is fetched the first time an icon (an active one) in a
  * Lucide scope mounts.
  */
 async function lucideSprite(): Promise<Map<SpriteKey, string>> {
-  const set = await readSet(PACKAGE.lucide);
-  const mapped = ICON_MANIFEST.symbols.flatMap((name) => {
-    const lucide = lucideNameOf(name);
-    return lucide === undefined ? [] : [{ name, lucide }];
-  });
-  return new Map([
-    [
-      LUCIDE_SPRITE,
-      buildSprite(
-        mapped.map(({ name, lucide }) => ({
-          id: lucideId(name),
-          set,
-          iconifyName: lucide,
-          tune: tuneLucideBody,
-        })),
-      ),
-    ],
-    [
-      LUCIDE_ACTIVE_SPRITE,
-      buildSprite(
-        mapped.map(({ name, lucide }) => ({
-          id: lucideActiveId(name),
-          set,
-          iconifyName: lucide,
-          tune: (body) => {
-            const tuned = tuneLucideBody(body);
-            const active = deriveActiveForm(tuned.body);
-            return active === undefined
-              ? tuned
-              : {
-                  ...tuned,
-                  body: placeActiveIds(active, lucideActiveId(name)),
-                };
-          },
-        })),
-      ),
-    ],
-  ]);
+  return buildLucideSprites(
+    await readSet(PACKAGE.lucide),
+    ICON_MANIFEST.symbols,
+  );
 }
 
 /**
@@ -203,3 +154,9 @@ export async function spriteFor(key: SpriteKey): Promise<string> {
   }
   return sprite;
 }
+
+/** The desktop's sprite drawer: every key, from the installed sets. */
+export const installedSetsSpriteDrawer: SpriteDrawerImpl = {
+  manifestHash,
+  draw: async (key) => ({ kind: "drawn", markup: await spriteFor(key) }),
+};

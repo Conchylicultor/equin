@@ -16,7 +16,7 @@ import {
 } from "../../core";
 import { useIconFamilyPreview, useIconScope } from "./icon-scope";
 import { useScopeIconStyle } from "./style-store";
-import { subscribeSprites, wantSprite } from "./sprite-store";
+import { subscribeSprites } from "./sprite-store";
 import {
   useRuntimeSymbolStore,
   type RuntimeSymbolStore,
@@ -88,9 +88,9 @@ export function useSubscribeIconStores(
   );
 }
 
-/** Hand one want to its loader: a sprite's to the page's, a saved icon's to its store's. */
+/** Hand one want to its store's loader: a sprite's, a saved icon's. */
 export function askFor(want: DrawingWant, runtime: RuntimeSymbolStore): void {
-  if (want.kind === "sprite") wantSprite(want.key);
+  if (want.kind === "sprite") runtime.wantSprite(want.key);
   else runtime.want(want.styleKey, want.name);
 }
 

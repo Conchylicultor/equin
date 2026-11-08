@@ -19,6 +19,7 @@ import {
   provideSprite,
   RuntimeSymbolScope,
   RuntimeSymbolSheet,
+  useWantedScopeSprites,
   useWantedSprites,
   useWantedStyleKeys,
   type RuntimeSymbolStore,
@@ -28,6 +29,7 @@ import {
   residentSprites,
   runtimeSymbolsValue,
   savedIconSprites,
+  spriteHash,
   type IconSprites,
   type SavedIconSprites,
 } from "../../core";
@@ -169,9 +171,6 @@ function LoadedSprites({
     iconSprite,
     onDemand.map((key) => ({ hash: resident.manifestHash, key })),
   );
-  // Only reached once the resident sprites loaded, which they only do with the
-  // computer behind the page — so this is a broken assumption, said.
-  if ("status" in reads) throw new Error(reads.message);
   // One result per key, in order.
   const sprites = onDemand.map((key, i) => ({ key, read: reads[i] }));
   for (const { read } of sprites) {
@@ -193,13 +192,15 @@ function LoadedSprites({
 }
 
 /**
- * Gives a plugin scope saved icons of its own: a runtime-symbol store bound to
- * the scope (`RuntimeSymbolScope`), filled from the server the scope reads —
- * its resident `icons.saved-sprites` and every `icons.runtime-symbols` batch
- * its icons want — and drawn in a sheet of its own inside the scope. Mount it
- * INSIDE the scope's `<PluginScope>` and transport (`DemoScope` does): a saved
- * icon in a scope with no store of its own throws, it never reaches the
- * page's store and so the page's server.
+ * Gives a plugin scope icons of its own: a runtime-symbol store bound to the
+ * scope (`RuntimeSymbolScope`), filled from the server the scope reads — its
+ * resident `icons.saved-sprites` and every `icons.runtime-symbols` batch its
+ * icons want — and drawn in a sheet of its own inside the scope; and every
+ * never-resident sprite its icons want (the Seti file-type glyphs, a Lucide
+ * scope's) read as `icons.sprite` from that server too
+ * ({@link ScopeSprites}). Mount it INSIDE the scope's `<PluginScope>` and
+ * transport (`DemoScope` does): a saved icon in a scope with no store of its
+ * own throws, it never reaches the page's store and so the page's server.
  */
 export function ScopeIconSymbols({
   children,
@@ -210,6 +211,7 @@ export function ScopeIconSymbols({
   return (
     <RuntimeSymbolScope store={store}>
       <ScopeSavedSymbols store={store} />
+      <ScopeSprites store={store} />
       {children}
     </RuntimeSymbolScope>
   );
@@ -241,4 +243,56 @@ function LoadedScopeSymbols({
 }) {
   useSavedSymbols(saved, store);
   return <RuntimeSymbolSheet store={store} />;
+}
+
+/**
+ * The sprites a scope's icons asked for, read from the scope's server
+ * (`icons.sprite`, under the hash that server serves) and provided to the
+ * document's sheet — the same ids the page's sprites draw under, so a sprite
+ * either side loaded draws for both. Until the hash or a sprite lands its
+ * icons draw their fallback (a Seti icon an empty box at its final size), as
+ * on the page; a refusal is thrown into the caller's error boundary.
+ */
+function ScopeSprites({ store }: { store: RuntimeSymbolStore }) {
+  const wanted = useWantedScopeSprites(store);
+  // Nothing asked for yet: nothing read (a scope that shows no file pays nothing).
+  if (wanted.length === 0) return null;
+  return <ScopeSpriteHash wanted={wanted} />;
+}
+
+function ScopeSpriteHash({ wanted }: { wanted: readonly SpriteKey[] }) {
+  const hash = useLive(spriteHash);
+  switch (hash.status) {
+    // Until it lands, or on a failed read (reported by live-state's
+    // resource-error sink), the scope's icons draw their fallback.
+    case "loading":
+    case "error":
+      return null;
+    case "ready":
+      return <ScopeSpriteReads hash={hash.data} wanted={wanted} />;
+  }
+}
+
+function ScopeSpriteReads({
+  hash,
+  wanted,
+}: {
+  hash: string;
+  wanted: readonly SpriteKey[];
+}) {
+  const reads = useLive(
+    iconSprite,
+    wanted.map((key) => ({ hash, key })),
+  );
+  const sprites = wanted.map((key, i) => ({ key, read: reads[i] }));
+  for (const { read } of sprites) {
+    if (read?.status === "error" && read.error.kind === "refused")
+      throw read.error;
+  }
+  useLayoutEffect(() => {
+    for (const { key, read } of sprites) {
+      if (read?.status === "ready") provideSprite(key, read.data);
+    }
+  });
+  return null;
 }

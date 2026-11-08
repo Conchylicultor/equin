@@ -117,11 +117,7 @@ import { settleJobQueue } from "@plugins/infra/plugins/jobs/plugins/in-process/s
 import { hostReads } from "../core/browser-host.generated";
 import { conversationTurns } from "@plugins/conversations/plugins/turn-ledger/core";
 import { DEMO_CONVERSATION_ID } from "../core/internal/scenario";
-import {
-  bunHostEntries,
-  diskConfigFiles,
-  diskDemoPrototypes,
-} from "./bun-host";
+import { bunHostEntries, diskConfigFiles, diskDemoData } from "./bun-host";
 import { seed } from "./seed";
 import {
   DEMO_PINNED_PROTOTYPE,
@@ -213,7 +209,7 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
     // portable by construction (derived at build), the resource key set closed.
     host = await bootBrowserHost({
       entries: bunHostEntries(),
-      seed: (h) => seed(diskDemoPrototypes(), h),
+      seed: (h) => seed(diskDemoData(), h),
       onUnmatched: unmatchedApiResponse,
     });
   });
@@ -948,7 +944,7 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
   });
 
   // ── Prototypes: the tree a memory data-files root, seeded ──────────────────
-  const prototypeSeed = parsePrototypeTree(diskDemoPrototypes().tree);
+  const prototypeSeed = parsePrototypeTree(diskDemoData().prototypes.tree);
   /** A seeded prototype split over several scripts of its own (Casino Footwork). */
   const MULTI_FILE_PROTOTYPE = "proto-1792900240-demo05";
   /** The seeded prototype that mocks a route of the real app (Miller pane motion). */

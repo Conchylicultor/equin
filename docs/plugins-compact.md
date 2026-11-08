@@ -18,7 +18,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`deploy`** [test helpers] [exempt] [25 sub-plugins] — The Deploy task category: the category tasks filed from the Deploy app, such as a failed deploy's investigation, are grouped under.
     - **`desktop`** [10 sub-plugins] — Desktop — the floating-window desktop mode as an app: windows over a wallpaper, one bottom shelf (launcher, pinned apps, running windows, tray), virtual desktops, overview and a window switcher.
     - **`events`** [exempt] [22 sub-plugins] — Events — track events from pluggable sources in one database.
-    - **`file-explorer`** [exempt] [7 sub-plugins] — File explorer app.
+    - **`file-explorer`** [exempt] [8 sub-plugins] — File explorer app.
     - **`home`** [5 sub-plugins] — Home — app launcher and entry point. The Apps task category: the category tasks filed from the Home app's cards, such as building a new app, are grouped under.
     - **`keyboard-party`** — Keyboard Party — a keyboard toy for a small child: every key answers with its own animation and sound.
       - Plugins:
@@ -432,6 +432,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`saved-sources`** — The saved-icon source registry: defineSavedIconSource registers a place that stores user-picked icons (its tables, its names, a watch for a non-DB store), and savedIconSources lists them for the…
         - **`sprites`** — Mounts the page's icon sprites inline: the resident default-style sprites from the boot snapshot (present at first paint) plus, on demand, the sprite of every other style a theme scope picks, and…
           - Plugins:
+            - **`bundled-sprites`** (excluded) — The on-demand sprites of a host without the computer's icon sets (the browser composition): provides the SpriteDrawer from the sets bundled with the worker — the vendored Seti file-type set (every…
             - **`bundled-symbols`** (excluded) — The saved-icon drawings of a host without the computer's icon sets (the browser composition): provides the RuntimeSymbolDrawer from the Material Symbols set bundled with the worker (weight 400…
     - **`segmented-progress-bar`** — Pluggable segmented progress bar with switchable visual variants.
       - Plugins:

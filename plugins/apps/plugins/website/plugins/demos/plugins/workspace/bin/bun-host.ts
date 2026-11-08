@@ -6,7 +6,8 @@
 // migration history (`migrations/bundled-source`) and the committed config
 // layer (`config_v2/bundled-layer`). Every other entry is the graph the worker
 // boots. The seed's own bundled input — the demo's prototypes and their
-// thumbnails — is read off disk the same way (`diskDemoPrototypes`).
+// thumbnails, and the user's Documents — is read off disk the same way
+// (`diskDemoData`).
 
 import {
   readdirSync,
@@ -27,22 +28,26 @@ import {
   committedFilesFromMap,
 } from "@plugins/config_v2/core";
 import { ConfigGitLayer } from "@plugins/config_v2/server";
-import {
-  prototypeFixtureDataOf,
-  type PrototypeFixtureData,
-} from "@plugins/apps/plugins/prototypes/plugins/fixtures/core";
+import { prototypeFixtureDataOf } from "@plugins/apps/plugins/prototypes/plugins/fixtures/core";
+import type { DemoSeedData } from "./seed";
 import { hostEntries, hostProviders } from "./browser-host.generated";
 
-/** The demo's `data/` folder off disk, as the seed reads it (the worker has it inlined). */
-export function diskDemoPrototypes(): PrototypeFixtureData {
+const DOCUMENTS = "documents/";
+
+/** The demo's `data/` folder off disk, as the seed reads it. */
+export function diskDemoData(): DemoSeedData {
   const dir = join(import.meta.dir, "..", "data");
-  const files: Record<string, Uint8Array> = {};
-  for (const rel of readdirSync(dir, { recursive: true }) as string[])
-    if (statSync(join(dir, rel)).isFile())
-      files[rel.split(sep).join("/")] = new Uint8Array(
-        readFileSync(join(dir, rel)),
-      );
-  return prototypeFixtureDataOf(files);
+  const prototypes: Record<string, Uint8Array> = {};
+  const documents: Record<string, Uint8Array> = {};
+  for (const rel of readdirSync(dir, { recursive: true }) as string[]) {
+    if (!statSync(join(dir, rel)).isFile()) continue;
+    const path = rel.split(sep).join("/");
+    const bytes = new Uint8Array(readFileSync(join(dir, rel)));
+    if (path.startsWith(DOCUMENTS))
+      documents[path.slice(DOCUMENTS.length)] = bytes;
+    else prototypes[path] = bytes;
+  }
+  return { prototypes: prototypeFixtureDataOf(prototypes), documents };
 }
 
 type Entry = (typeof hostEntries)[number];

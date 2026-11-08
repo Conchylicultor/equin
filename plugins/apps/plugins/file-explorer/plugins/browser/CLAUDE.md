@@ -24,12 +24,13 @@
     - `FieldPresentation.Register` "collection:file-explorer.entry"
     - `FileBrowserSlots.RowActions` "extract" → `ExtractAction`
     - `FileBrowserSlots.RowActions` "copy-path" → `CopyPathAction`
-  - Uses: 69 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 72 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×10
     - `primitives/css/ui-kit` ×8
     - `primitives/file-viewer` ×5
     - `network/live` ×4
     - `primitives/pane` ×4
+    - `apps/file-explorer/shell` ×3
     - `infra/endpoints` ×3
     - `network/live/live-state` ×3
     - `primitives/networking` ×2

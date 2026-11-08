@@ -23,9 +23,8 @@ import {
   useExplorerFolderTarget,
 } from "@plugins/apps/plugins/file-explorer/plugins/browser/web";
 import {
-  FileExplorer,
-  type PlacesSource,
-  type PlacesState,
+  ResolvePlaces,
+  type ResolvedPlaces,
 } from "@plugins/apps/plugins/file-explorer/plugins/shell/web";
 import { pinRowKey, useFavorites } from "../internal/favorites";
 import type { PlaceRow } from "../internal/place-row";
@@ -145,73 +144,33 @@ const SIDEBAR_SELECTION = {
  * the bottom.
  */
 export function PlacesSidebar(): ReactNode {
-  const sources = FileExplorer.Places.useContributions();
   return (
-    <ResolvePlaces sources={sources} index={0} resolved={[]}>
-      {(rows, pending) => <PlacesList rows={rows} pending={pending} />}
+    <ResolvePlaces>
+      {(resolved) => {
+        const { rows, pending } = placeRows(resolved);
+        return <PlacesList rows={rows} pending={pending} />;
+      }}
     </ResolvePlaces>
   );
 }
 
 /**
- * Resolve every source's `usePlaces` hook — one component per source, chained,
- * so each hook has its own component and the call order never changes.
- */
-function ResolvePlaces({
-  sources,
-  index,
-  resolved,
-  children,
-}: {
-  sources: readonly PlacesSource[];
-  index: number;
-  resolved: readonly { source: PlacesSource; state: PlacesState }[];
-  children: (rows: PlaceRow[], pending: boolean) => ReactNode;
-}): ReactNode {
-  const source = sources[index];
-  if (source === undefined) {
-    const { rows, pending } = placeRows(resolved);
-    return children(rows, pending);
-  }
-  return (
-    <ResolveSource key={source.id} source={source}>
-      {(state) => (
-        <ResolvePlaces
-          sources={sources}
-          index={index + 1}
-          resolved={[...resolved, { source, state }]}
-        >
-          {children}
-        </ResolvePlaces>
-      )}
-    </ResolveSource>
-  );
-}
-
-function ResolveSource({
-  source,
-  children,
-}: {
-  source: PlacesSource;
-  children: (state: PlacesState) => ReactNode;
-}): ReactNode {
-  const { usePlaces } = source;
-  return children(usePlaces());
-}
-
-/**
  * Every resolved source's places as rows, in source order; a failed source is
- * one muted row saying why. `pending` while any source has not answered.
+ * one muted row saying why, an unavailable one (this host has no such place)
+ * none. `pending` while any source has not answered.
  */
-function placeRows(
-  resolved: readonly { source: PlacesSource; state: PlacesState }[],
-): { rows: PlaceRow[]; pending: boolean } {
+function placeRows(resolved: readonly ResolvedPlaces[]): {
+  rows: PlaceRow[];
+  pending: boolean;
+} {
   const rows: PlaceRow[] = [];
   let pending = false;
   for (const { source, state } of resolved) {
     switch (state.kind) {
       case "pending":
         pending = true;
+        break;
+      case "unavailable":
         break;
       case "failed":
         rows.push({
@@ -239,7 +198,10 @@ function placeRows(
             ...(place.kind === "folder"
               ? { route: null, path: place.path, open: place.open ?? null }
               : {
-                  route: { target: place.target, active: place.active },
+                  route: {
+                    target: place.to({ replace: false }),
+                    active: place.active,
+                  },
                   path: null,
                   open: null,
                 }),

@@ -284,7 +284,7 @@ the path bar, a search field) follows the scope it is drawn in.
   see "Active forms"), holding
   `<symbol id="lucide-<material name>">` for every mapped manifest symbol.
   Built from `@iconify-json/lucide` (embedded like the Material sets) and
-  **tuned at build** (`plugins/sprites/machine/internal/lucide.ts`): the glyph is
+  **tuned at build** (`plugins/sprites/server/internal/lucide.ts`): the glyph is
   scaled to 7/8 of its box about the centre
   (`translate(1.5 1.5) scale(0.875)` in the 24-unit box) and every stroke is
   `stroke-width="1.2"` with `vector-effect="non-scaling-stroke"` — a ~1.2px
@@ -415,7 +415,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
 
 ## Plugin reference
 
-- Description: Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Icon families beyond Material are contributed to Icons.Family (Lucide is this plugin's own; an app draws its own with defineIconFamily), published to <Icon> by IconFamilyHost. A family states its coverage: fallback (an unmapped symbol draws the next family of its chain, Material last) or strict (its gap glyph, reported through iconFamilyGapReportSink); resolveIconSource answers which, by the same chain. Animated family glyphs (data-motion parts, a closed ICON_MOTIONS vocabulary) are drawn inline and play once on hover inside an IconMotionRegion. Reads glyphs out of the installed Iconify JSON (the pure drawing — resolveIcon, resolveSymbol, buildSymbol — is core's): symbolBody (one Material Symbols glyph in a style, for a consumer with no sprite sheet — the release CLI's app icon); SETI_SET / readSetiSet expose the vendored Seti file-type set (jesseweed/seti-ui, MIT, one colour).
+- Description: Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Icon families beyond Material are contributed to Icons.Family (Lucide is this plugin's own; an app draws its own with defineIconFamily), published to <Icon> by IconFamilyHost. A family states its coverage: fallback (an unmapped symbol draws the next family of its chain, Material last) or strict (its gap glyph, reported through iconFamilyGapReportSink); resolveIconSource answers which, by the same chain. Animated family glyphs (data-motion parts, a closed ICON_MOTIONS vocabulary) are drawn inline and play once on hover inside an IconMotionRegion. The vendored Seti file-type set (jesseweed/seti-ui, MIT, one colour), portable: SETI_SET names it, readSetiSet loads it (a lazy JSON module, so a browser host bundles it too). The pure drawing — resolveIcon, resolveSymbol, buildSymbol — is core's; reading the installed Material sets is the machine half's (symbolBody).
 - Web:
   - Slots:
     - `Icons.Root`
@@ -460,11 +460,12 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `useIconStyle`
     - `usePublishIconStyle`
     - `useScopeIconStyles`
+    - `useWantedScopeSprites`
     - `useWantedSprites`
     - `useWantedStyleKeys`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
-  - Imported by: 543 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 544 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×154
     - `conversations` ×82
     - `page` ×52
@@ -474,7 +475,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `tasks` ×23
     - `plugin-meta` ×16
     - `active-data` ×11
-    - `ui` ×10
+    - `ui` ×11
     - `infra` ×8
     - `apps-core` ×7
     - `auth` ×6
@@ -510,7 +511,8 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
   - Exports (values):
     - `readSetiSet`
     - `SETI_SET`
-    - `symbolBody`
+- Machine:
+  - Exports (values): `symbolBody`
 - Core:
   - Exports (types):
     - `BrandName`

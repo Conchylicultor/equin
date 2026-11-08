@@ -117,6 +117,7 @@ own server half.)
     - `UNREVERTED_WRITE_HEADER`
 - Cross-plugin:
   - Imported by:
+    - `apps/file-explorer/documents`
     - `apps/pages/agent-origin`
     - `apps/prototypes/files`
     - `apps/prototypes/files/snapshot-history`

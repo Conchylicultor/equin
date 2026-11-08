@@ -221,6 +221,7 @@ against both providers; a new provider runs it too.
   - Imported by:
     - `apps/desktop/wallpaper`
     - `apps/file-explorer/app-data`
+    - `apps/file-explorer/documents`
     - `apps/prototypes`
     - `apps/prototypes/files`
     - `apps/prototypes/files/snapshot-history`

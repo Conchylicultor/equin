@@ -1,5 +1,5 @@
 import { HOME } from "@plugins/infra/plugins/host-account/core";
-import { useCallback, useMemo, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, type ReactNode } from "react";
 import {
   Pane,
   defineRoute,
@@ -8,6 +8,12 @@ import {
 import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import { fileExplorerApp } from "@plugins/apps/plugins/file-explorer/plugins/shell/core";
 import {
+  ResolvePlaces,
+  type ResolvedPlaces,
+  type RoutePlace,
+} from "@plugins/apps/plugins/file-explorer/plugins/shell/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
+import {
   baseName,
   decodeOpenParam,
   encodeOpenParam,
@@ -15,10 +21,13 @@ import {
 } from "../core";
 import { FileBrowser } from "./components/file-browser";
 import { useRoutedHistory, type ExplorerNavigator } from "./internal/navigator";
+import { useHomeDir } from "./internal/host-path-source";
 
 /**
  * `/files` — the home folder. The app's index pane: no URL of its own, so the
- * bare app root opens on home. Its `;open` keyed param is the file previewed
+ * bare app root opens on home — or, on a host without a home folder (the
+ * in-browser demo), on the first place the sidebar lists that does not need
+ * one (App data), as a redirect. Its `;open` keyed param is the file previewed
  * beside it (`/files;open=notes.md`, written relative to home as in
  * `/files/at/…`) — a view of this same mounted pane, so opening and closing a
  * file never remounts the listing (its scroll, expansion and the folder sizes
@@ -149,6 +158,53 @@ export function useOpenInFiles(location: ExplorerLocation): LinkTarget {
 const HOME_LOCATION: ExplorerLocation = { dir: HOME, open: null };
 
 function FilesHome(): ReactNode {
+  const home = useHomeDir();
+  if (home.kind === "unavailable") return <FilesLanding />;
+  return <FilesHomeFolder />;
+}
+
+/**
+ * The index of a host without a home folder: the first route place any
+ * source lists, opened in place of `/files` (a history replace, so Back
+ * skips the address that only forwarded). With none, the browser says why
+ * there is nothing to show.
+ */
+function FilesLanding(): ReactNode {
+  return (
+    <ResolvePlaces>
+      {(resolved) => {
+        if (resolved.some((r) => r.state.kind === "pending"))
+          return <Loading variant="text" />;
+        const place = firstRoutePlace(resolved);
+        if (place === null) return <FilesHomeFolder />;
+        return <LandOn place={place} />;
+      }}
+    </ResolvePlaces>
+  );
+}
+
+function firstRoutePlace(
+  resolved: readonly ResolvedPlaces[],
+): RoutePlace | null {
+  for (const { state } of resolved) {
+    if (state.kind !== "ready") continue;
+    for (const place of state.places) if (place.kind === "route") return place;
+  }
+  return null;
+}
+
+function LandOn({ place }: { place: RoutePlace }): ReactNode {
+  // Once: a source answers a fresh place object on every render.
+  const landed = useRef(false);
+  useEffect(() => {
+    if (landed.current) return;
+    landed.current = true;
+    place.to({ replace: true }).open();
+  }, [place]);
+  return <Loading variant="text" />;
+}
+
+function FilesHomeFolder(): ReactNode {
   const { open } = filesHomePane.useParams();
   const setHomeParams = filesHomePane.useSetParams();
   const location = useMemo(() => locationOf({ dir: HOME, open }), [open]);

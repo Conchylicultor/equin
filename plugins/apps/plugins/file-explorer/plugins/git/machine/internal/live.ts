@@ -1,5 +1,5 @@
 import { acquireCheckoutWatch } from "@plugins/infra/plugins/git/plugins/checkout-watch/server";
-import { serveValue } from "@plugins/network/plugins/live/server";
+import { serveValue } from "@plugins/network/plugins/live/machine";
 import { fileExplorerGitStatus, type GitStatus } from "../../shared/resources";
 import { assertCheckoutRoot } from "./checkout";
 import { gitStatusMemo } from "./status";

@@ -8,5 +8,6 @@ export {
   runtimeSymbolsValue,
   savedIconSprites,
   savedIconsChanged,
+  spriteHash,
 } from "./sprites";
 export type { IconSprites, SavedIconSprites } from "./sprites";

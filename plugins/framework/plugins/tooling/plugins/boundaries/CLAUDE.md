@@ -232,7 +232,6 @@ takes a `debt` exemption on the check's id.
     - `apps/events/sources/dmda` (1 debt)
     - `apps/events/sources/salsanueva` (2 debt)
     - `apps/events/sources/url-extract` (1 debt)
-    - `apps/file-explorer/git` (2 debt)
     - `apps/sonata/transcription` (5 debt)
     - `auth/apple-signing` (1 debt)
     - `backup` (2 debt)

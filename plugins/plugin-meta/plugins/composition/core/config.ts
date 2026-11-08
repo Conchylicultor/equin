@@ -437,14 +437,14 @@ export const compositionsConfig = defineConfig({
             // capability ids they define stay.
             "conversations.conversation-view.push-and-exit.capabilities",
             "tasks.outcome-report.capability",
-            // The file explorer is NOT negated, though it browses the disk:
-            // the file-peek pane every transcript path opens (the Read /
-            // Write / Edit cards, file links, compaction, attachments)
-            // imports Files' browser and folder panes, so negating it would
-            // cascade every one of those renderers out of the demo and leave
-            // their cards as the generic tool card, with no path. Only what
-            // the pane imports joins; reading a checkout file says "not
-            // available".
+            // Files, whole: the demo's virtual file system. It opens on App
+            // data — the data-files roots the apps keep (Prototypes, and the
+            // user's Documents the seed fills), memory here — and the places
+            // that need the computer (Home, Downloads, the checkout, the
+            // volume, pins) are left out (their reads are `needsMachine`).
+            // The file-peek pane every transcript path opens imports its
+            // panes too; reading a checkout file there says "not available".
+            "apps.file-explorer.**",
             // The agent's git worktree (DB fork, checkout): the computer's.
             "!conversations.workspace.worktree.**",
             // The get_timeline tool call's renderer: it draws this host's
@@ -499,11 +499,7 @@ export const compositionsConfig = defineConfig({
           excludes: [] as string[],
           serve: "off",
           home: "home",
-          // Files comes in only because the file-peek pane every transcript
-          // path opens imports its panes; on its own it browses the
-          // computer's disk, which says "not available" here — so the
-          // launcher does not offer it.
-          unlisted: ["file-explorer"],
+          unlisted: [] as string[],
         },
 
         // ── Apps: lean baseline (entry only) for every other top-level app ──────

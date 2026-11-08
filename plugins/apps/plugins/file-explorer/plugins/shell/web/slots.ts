@@ -41,7 +41,12 @@ export interface FolderPlace extends PlaceBase {
  */
 export interface RoutePlace extends PlaceBase {
   kind: "route";
-  target: LinkTarget;
+  /**
+   * Where it leads, as a link: a history push from the sidebar, a replace
+   * when the explorer lands on it in place of a home folder this host has
+   * not got (`replace: true`, so Back skips the address that only forwarded).
+   */
+  to: (opts: { replace: boolean }) => LinkTarget;
   /** The surface shows this place now (the sidebar marks it). */
   active: boolean;
 }
@@ -54,11 +59,17 @@ export type Place = FolderPlace | RoutePlace;
  * resource more often than not, so they are `pending` until it answers, and a
  * source that cannot answer is `failed` — still one row, under `label` and
  * `icon`, saying why — never an empty list that looks like "no places".
+ *
+ * `unavailable`: this host has no such place at all — a folder on the
+ * computer's disk, on a host without the computer (the in-browser demo). Its
+ * read said so (`needsMachine`), so the sidebar leaves it out rather than
+ * listing a place that cannot open.
  */
 export type PlacesState =
   | { kind: "pending" }
   | { kind: "ready"; places: readonly Place[] }
-  | { kind: "failed"; label: string; icon: IconRef; message: string };
+  | { kind: "failed"; label: string; icon: IconRef; message: string }
+  | { kind: "unavailable" };
 
 /**
  * One source of Places sidebar entries: a single place (Home) and a set of

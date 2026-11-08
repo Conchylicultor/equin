@@ -22,7 +22,8 @@ export function useAppDataPlace(): PlacesState {
         id: "app-data",
         label: "App data",
         icon: appDataIcon,
-        target: openPane.to(filesDataPane, {}, { mode: "root" }),
+        to: ({ replace }) =>
+          openPane.to(filesDataPane, {}, { mode: "root", replace }),
         active: landing !== null || inRoot !== null,
       },
     ],

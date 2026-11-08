@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-file-explorer-documents",
+  "description": "Documents: the user's files equin keeps itself, as a browsable file root on every host (the computer's disk on the desktop, memory in a browser host), and the writer a demo seeds them through.",
+  "private": true,
+  "version": "0.0.1"
+}

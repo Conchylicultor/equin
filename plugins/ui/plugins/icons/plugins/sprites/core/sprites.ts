@@ -48,22 +48,39 @@ export const residentSprites = liveValue("icons.sprites", {
  * key, `brands`, `seti` or `lucide` — read on demand for a style no resident
  * sprite covers (a scope themed to rounded, say) and for a sprite that is never
  * resident (the Seti file-type glyphs, the Lucide glyphs: wanted the first
- * time one mounts). Content-addressed by `hash`, the manifest hash the tab's
- * resident sprites carry ({@link IconSprites.manifestHash}), so a tuple's
- * answer never changes: `immutable`. Read over HTTP (on demand), as the
- * endpoint it replaces was: a sprite is a whole style's symbols, asked for once
- * per page, so it never rides the socket.
+ * time one mounts). Content-addressed by `hash`, the serving host's
+ * {@link spriteHash} (the page's resident sprites carry the same value as
+ * {@link IconSprites.manifestHash}), so a tuple's answer never changes:
+ * `immutable`. Read over HTTP (on demand), as the endpoint it replaces was: a
+ * sprite is a whole style's symbols, asked for once per page, so it never
+ * rides the socket.
  *
- * Refused `unknown-key` — a key that names no sprite — and `stale-manifest` —
- * `hash` is not the serving process's (the tab predates a restart that changed
- * the manifest; reloading the page is the remedy).
+ * Portable: drawn through the host's `SpriteDrawer` — the icon sets installed
+ * on the computer on the desktop, the sets bundled with a browser host's
+ * worker there — so a plugin scope (the demo) reads its sprites from its own
+ * server (`ScopeIconSymbols`).
+ *
+ * Refused `unknown-key` — a key that names no sprite — `stale-manifest` —
+ * `hash` is not the serving host's (the tab predates a restart that changed
+ * the manifest; reloading the page is the remedy) — and `not-drawn-here` — a
+ * sprite this host's drawer holds no set for (a browser host draws the Seti
+ * and Lucide sprites only).
  */
 export const iconSprite = liveValue("icons.sprite", {
   schema: z.string(),
   params: ["hash", "key"],
   load: "on-demand",
-  refusals: ["unknown-key", "stale-manifest"],
-  needsMachine: SPRITES,
+  refusals: ["unknown-key", "stale-manifest", "not-drawn-here"],
+});
+
+/**
+ * The hash every {@link iconSprite} tuple read from this host carries: what
+ * its drawer's sprites are a function of. Fixed for the host's life. A scope
+ * reads it from its own server before asking for a sprite; the page reads the
+ * same value off its resident sprites.
+ */
+export const spriteHash = liveValue("icons.sprite-hash", {
+  schema: z.string(),
 });
 
 export const SavedIconSpritesSchema = z.object({
