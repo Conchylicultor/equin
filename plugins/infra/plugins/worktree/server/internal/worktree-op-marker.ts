@@ -2,10 +2,17 @@ import {
   type AppPath,
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { mkdirSync, renameSync, rmSync, writeSync } from "node:fs";
+import { linkSync, mkdirSync, renameSync, rmSync, writeSync } from "node:fs";
 import { openOwnedFd } from "@plugins/packages/plugins/owned-fd/core";
 import { flockTry } from "@plugins/packages/plugins/flock/server";
-import { opFile, opsDir, TMP_SUFFIX, type WorktreeOp } from "./worktree-op";
+import { liveOpsDir } from "../../data-dirs";
+import {
+  liveOpLink,
+  opFile,
+  opsDir,
+  TMP_SUFFIX,
+  type WorktreeOp,
+} from "./worktree-op";
 
 // The WRITER half of the per-op liveness marker (`./worktree-op` holds the
 // format and the readers). Apart from them because it runs only in the op's
@@ -30,8 +37,10 @@ export interface WorktreeOpMarker {
  * Publish this process's liveness marker for op `opId` and hold its lock until
  * `release()` (or process death — the kernel releases it either way).
  *
- * Written to a temp file, locked, then renamed into place, so a reader only
- * ever sees a complete file that is already locked. The fd is opened
+ * Written to a temp file, locked, hard-linked into the host-wide `live-ops`
+ * index, then renamed into place, so a reader only ever sees — under either
+ * name — a complete file that is already locked. Both names are one inode,
+ * so one lock answers for both. The fd is opened
  * close-on-exec (Bun/libuv open every fd `O_CLOEXEC`), so a child the op spawns
  * does not inherit it: the lock ends with THIS process, however long a child
  * lingers. (The marker test pins that.)
@@ -47,12 +56,15 @@ export function markWorktreeOpStart(
 ): WorktreeOpMarker {
   const dir = opsDir(slug);
   mkdirSync(dir, { recursive: true });
+  mkdirSync(liveOpsDir.path, { recursive: true });
   const path = opFile(slug, opId);
+  const link = liveOpLink(slug, opId);
   const tmp = joinAppPath(
     opsDir(slug),
     `${opId}.json.${process.pid}${TMP_SUFFIX}`,
   );
   const fd = openOwnedFd(tmp, "w");
+  let linked = false;
   try {
     if (!flockTry(fd.fd))
       throw new Error(
@@ -68,10 +80,15 @@ export function markWorktreeOpStart(
         startedAt: new Date().toISOString(),
       }),
     );
+    // Linked before the rename: once the marker is visible, so is its link.
+    // EEXIST (an op id reused) throws — two ops must never share one name.
+    linkSync(tmp, link);
+    linked = true;
     renameSync(tmp, path);
   } catch (err) {
     fd.close();
     rmSync(tmp, { force: true });
+    if (linked) rmSync(link, { force: true });
     throw err;
   }
   let released = false;
@@ -84,6 +101,7 @@ export function markWorktreeOpStart(
       // unlink and takes the lock after the close only reaps an already-gone
       // path.
       rmSync(path, { force: true });
+      rmSync(link, { force: true });
       fd.close();
     },
   };

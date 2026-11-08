@@ -22,10 +22,11 @@ import {
   CLAUDE_PROJECTS_DIR,
   DataRootSplitError,
   HOME_DIR,
+  listWorktreeDirs,
   readHomeDataRootLayout,
   type DataRootLayout,
 } from "@plugins/infra/plugins/paths/core";
-import { listActiveWorktreeOps } from "@plugins/infra/plugins/worktree/server";
+import { listWorktreeOps } from "@plugins/infra/plugins/worktree/server";
 import {
   pidAlive,
   readPidFile,
@@ -131,8 +132,15 @@ async function liveAgents(): Promise<LiveAgent[]> {
   return live;
 }
 
+// Every worktree's own ops dir, not the host-wide live-ops index
+// (`listActiveWorktreeOps`): the index holds only ops whose CLI links its
+// marker, and a checkout not rebased since runs one that does not. Moving the
+// root under such a build must still be refused, and this runs once per
+// migration — so it reads them all.
 async function liveOps(): Promise<LiveWork[]> {
-  return (await listActiveWorktreeOps()).map((op) => ({
+  const slugs = listWorktreeDirs();
+  const ops = (await Promise.all(slugs.map((s) => listWorktreeOps(s)))).flat();
+  return ops.map((op) => ({
     what: `${op.op} in ${op.slug} (pid ${op.pid})`,
   }));
 }

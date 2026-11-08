@@ -1,9 +1,12 @@
 import { test, expect } from "bun:test";
 import {
   existsSync,
+  linkSync,
   mkdirSync,
   readFileSync,
+  readdirSync,
   rmSync,
+  statSync,
   utimesSync,
   writeFileSync,
 } from "node:fs";
@@ -20,14 +23,17 @@ import {
   isWorktreeOpActive,
   listActiveWorktreeOps,
   listWorktreeOps,
+  liveOpLink,
   probeWorktreeOp,
 } from "./worktree-op";
 import { markWorktreeOpStart } from "./worktree-op-marker";
+import { liveOpsDir } from "../../data-dirs";
 
 // The marker functions resolve their path from the real worktreeDataDir(slug);
 // there is no path injection. So each test uses a throwaway random slug (never
 // a real worktree), writes under the real worktrees dir, and reaps the whole
-// slug dir in a finally.
+// slug dir — and the slug's links in the host-wide live-ops index — in a
+// finally.
 
 const opsDirOf = (slug: Namespace) => joinAppPath(worktreeDataDir(slug), "ops");
 
@@ -39,6 +45,10 @@ async function withTempSlug(
     await fn(slug);
   } finally {
     rmSync(worktreeDataDir(slug), { recursive: true, force: true });
+    if (existsSync(liveOpsDir.path))
+      for (const name of readdirSync(liveOpsDir.path))
+        if (name.startsWith(`${slug}~`))
+          rmSync(join(liveOpsDir.path, name), { force: true });
   }
 }
 
@@ -127,6 +137,89 @@ test("an unlocked v2 marker is a dead op: reported dead once, then reaped", asyn
   });
 });
 
+// --- the host-wide live-ops index ------------------------------------------
+
+test("a held marker is listed host-wide through its link, which is the same file", async () => {
+  await withTempSlug(async (slug) => {
+    const marker = markWorktreeOpStart(slug, "test", "op-host");
+    const link = liveOpLink(slug, "op-host");
+    try {
+      expect(statSync(link).ino).toBe(statSync(marker.path).ino);
+      const here = (await listActiveWorktreeOps()).filter(
+        (m) => m.slug === slug,
+      );
+      expect(here.map((m) => [m.op, m.opId, m.pid])).toEqual([
+        ["test", "op-host", process.pid],
+      ]);
+      expect(existsSync(link)).toBe(true);
+    } finally {
+      marker.release();
+    }
+    expect(existsSync(link)).toBe(false);
+    expect(
+      (await listActiveWorktreeOps()).filter((m) => m.slug === slug),
+    ).toEqual([]);
+  });
+});
+
+test("a dead op found through its link is reaped under both names", async () => {
+  await withTempSlug(async (slug) => {
+    // An unlocked v2 marker and its link: what a killed op leaves behind.
+    const path = writeRaw(slug, "op-gone.json", {
+      v: 2,
+      kind: "build",
+      opId: "op-gone",
+      pid: process.pid,
+      startedAt: "2026-11-08T00:00:00.000Z",
+    });
+    const link = liveOpLink(slug, "op-gone");
+    linkSync(path, link);
+    expect(
+      (await listActiveWorktreeOps()).filter((m) => m.slug === slug),
+    ).toEqual([]);
+    expect(existsSync(link)).toBe(false);
+    expect(existsSync(path)).toBe(false);
+  });
+});
+
+test("a dead op found through its worktree's ops dir loses its link too", async () => {
+  await withTempSlug(async (slug) => {
+    const path = writeRaw(slug, "op-gone2.json", {
+      v: 2,
+      kind: "check",
+      opId: "op-gone2",
+      pid: process.pid,
+      startedAt: "2026-11-08T00:00:00.000Z",
+    });
+    const link = liveOpLink(slug, "op-gone2");
+    linkSync(path, link);
+    expect(await probeWorktreeOp(slug, "op-gone2")).toBe("dead");
+    expect(existsSync(link)).toBe(false);
+  });
+});
+
+test("an op id already live refuses a second marker and leaves the first intact", async () => {
+  await withTempSlug(async (slug) => {
+    const first = markWorktreeOpStart(slug, "build", "op-dup");
+    try {
+      expect(() => markWorktreeOpStart(slug, "build", "op-dup")).toThrow();
+      expect(await probeWorktreeOp(slug, "op-dup")).toBe("live");
+      expect(existsSync(liveOpLink(slug, "op-dup"))).toBe(true);
+    } finally {
+      first.release();
+    }
+  });
+});
+
+test("an op id its link name could not carry is refused at the start", async () => {
+  await withTempSlug(async (slug) => {
+    expect(() => markWorktreeOpStart(slug, "build", "a~b")).toThrow(
+      /no live-op link name/,
+    );
+    expect(await listWorktreeOps(slug)).toEqual([]);
+  });
+});
+
 // --- the transition: legacy per-kind markers ---------------------------------
 
 test("a legacy per-kind marker is live while its pid is, and reaped when not", async () => {
@@ -144,10 +237,13 @@ test("a legacy per-kind marker is live while its pid is, and reaped when not", a
       opId: "legacy-2",
       startedAt: "2026-09-29T00:00:00.000Z",
     });
-    const mine = await listActiveWorktreeOps();
-    const here = mine.filter((m) => m.slug === slug);
+    const here = await listWorktreeOps(slug);
     expect(here.map((m) => [m.op, m.opId])).toEqual([["build", "legacy-1"]]);
     expect(existsSync(dead)).toBe(false);
+    // A legacy marker was never linked into the host-wide index.
+    expect(
+      (await listActiveWorktreeOps()).filter((m) => m.slug === slug),
+    ).toEqual([]);
     // A legacy marker has no per-op file, so a per-op probe says so.
     expect(await probeWorktreeOp(slug, "legacy-1")).toBe("absent");
   });

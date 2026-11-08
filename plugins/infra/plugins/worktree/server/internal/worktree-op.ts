@@ -2,16 +2,16 @@ import {
   type AppPath,
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import type { Dirent } from "node:fs";
 import { type FileHandle, open, rm } from "node:fs/promises";
 import { readdir, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { flockTry } from "@plugins/packages/plugins/flock/server";
+import { worktreeDataDir } from "@plugins/infra/plugins/paths/server";
 import {
-  worktreesDir,
-  worktreeDataDir,
-} from "@plugins/infra/plugins/paths/server";
-import { asNamespace } from "@plugins/infra/plugins/namespace/core";
+  asNamespace,
+  isNamespace,
+} from "@plugins/infra/plugins/namespace/core";
 import { OP_KIND_IDS, type OpKind } from "@plugins/infra/plugins/worktree/core";
+import { liveOpsDir } from "../../data-dirs";
 
 // A per-op, crash-safe liveness marker for a long-running operation (build,
 // push, check, test, e2e — the `OpKind` vocabulary declared once in this
@@ -29,6 +29,12 @@ import { OP_KIND_IDS, type OpKind } from "@plugins/infra/plugins/worktree/core";
 //
 // One file per op (not per (worktree, kind)): two checks in one worktree are two
 // markers, so neither overwrites the other and every reader sees both.
+//
+// Every v2 marker is also hard-linked into the host-wide `locks/live-ops/` as
+// `<slug>~<opId>.json` (the `live-ops` data dir) for as long as it lives. The
+// link is the same inode, so its lock is the marker's lock. "What is running
+// on this host" reads that one directory — O(live ops) — instead of the ops
+// dir of every worktree (~213 of them, all but a handful empty).
 //
 // Consumers: `./equin await`, the stop guard, and the op-store orphan
 // reconciler. Markers are keyed
@@ -61,6 +67,36 @@ export function opsDir(slug: string): AppPath {
 
 export function opFile(slug: string, opId: string): AppPath {
   return joinAppPath(opsDir(slug), `${opId}.json`);
+}
+
+// `~` is in neither a namespace (`[a-z0-9.-]`) nor an op id (a UUID), so the
+// first one splits the name back into both.
+const LIVE_SEP = "~";
+
+/**
+ * The host-wide index entry (a hard link) of op `opId`'s marker. Throws for a
+ * pair its name could not be read back into, so a writer fails at its start
+ * rather than leave a link every host-wide listing then refuses.
+ */
+export function liveOpLink(slug: string, opId: string): AppPath {
+  const name = `${slug}${LIVE_SEP}${opId}.json`;
+  const back = parseLiveOpLink(name);
+  if (back?.slug !== slug || back.opId !== opId)
+    throw new Error(
+      `worktree-op: (${slug}, ${opId}) has no live-op link name — the slug must be a namespace and the op id non-empty without "${LIVE_SEP}"`,
+    );
+  return joinAppPath(liveOpsDir.path, name);
+}
+
+function parseLiveOpLink(name: string): { slug: string; opId: string } | null {
+  if (!name.endsWith(".json")) return null;
+  const at = name.indexOf(LIVE_SEP);
+  if (at <= 0) return null;
+  const slug = name.slice(0, at);
+  const opId = name.slice(at + 1, -".json".length);
+  return isNamespace(slug) && opId && !opId.includes(LIVE_SEP)
+    ? { slug, opId }
+    : null;
 }
 
 // A marker in the making: written, locked, then renamed into place. Readers
@@ -119,10 +155,13 @@ type Probe =
   | { kind: "dead" }
   | { kind: "absent" };
 
-// Probe one marker file, reaping it when its op is gone. v2: the try-lock is
-// the answer. Legacy (`<kind>.json`, written by a CLI from before per-op
-// markers): its pid. ASYNC so a scan yields the event loop (open/read run on the
-// libuv threadpool); the flock itself is a non-blocking syscall.
+// Probe one marker file — its `ops/` name or its `live-ops/` link, the same
+// inode — reaping it when its op is gone. v2: the try-lock is the answer, and a
+// reap unlinks BOTH names, so whichever reader finds the op dead first leaves
+// nothing for the other. Legacy (`<kind>.json`, written by a CLI from before
+// per-op markers; never linked): its pid. ASYNC so a scan yields the event loop
+// (open/read run on the libuv threadpool); the flock itself is a non-blocking
+// syscall.
 async function probeMarker(slug: string, path: AppPath): Promise<Probe> {
   let handle: FileHandle;
   try {
@@ -133,6 +172,8 @@ async function probeMarker(slug: string, path: AppPath): Promise<Probe> {
     throw err;
   }
   let reap = false;
+  // A v2 marker's other name, unlinked with it on a reap.
+  let twin: AppPath | null = null;
   try {
     const text = await handle.readFile("utf8");
     let parsed: MarkerJson;
@@ -146,6 +187,10 @@ async function probeMarker(slug: string, path: AppPath): Promise<Probe> {
       return reap ? { kind: "dead" } : { kind: "absent" };
     }
     if (parsed.v === 2) {
+      if (typeof parsed.opId === "string") {
+        const link = liveOpLink(slug, parsed.opId);
+        twin = path === link ? opFile(slug, parsed.opId) : link;
+      }
       // Taking the lock ⇒ its holder is gone. Keep it until the unlink below,
       // so nothing else can judge the file mid-reap.
       if (flockTry(handle.fd)) {
@@ -160,7 +205,10 @@ async function probeMarker(slug: string, path: AppPath): Promise<Probe> {
     reap = true;
     return { kind: "dead" };
   } finally {
-    if (reap) await rm(path, { force: true });
+    if (reap) {
+      await rm(path, { force: true });
+      if (twin) await rm(twin, { force: true });
+    }
     await handle.close();
   }
 }
@@ -222,24 +270,32 @@ export async function isWorktreeOpActive(slug: string): Promise<boolean> {
   return (await listWorktreeOps(slug)).length > 0;
 }
 
-// Every live op marker across all worktrees. Reaps as it scans, like
-// listWorktreeOps; per-slug scans run in parallel.
+// Every live op on the host: one readdir of the `live-ops` index, one probe per
+// entry — O(live ops), never O(worktrees). Reaps as it scans, like
+// listWorktreeOps (both names of a dead op).
+//
+// It sees the ops of every CLI that links its markers — this one on. An op
+// started by a checkout's older CLI (a worktree not rebased since) has only its
+// per-worktree marker: the per-worktree readers (`listWorktreeOps`,
+// `probeWorktreeOp`) still see it, this listing does not.
 export async function listActiveWorktreeOps(): Promise<WorktreeOpInfo[]> {
-  let entries: Dirent[];
+  const dir = liveOpsDir.path;
+  let names: string[];
   try {
-    entries = await readdir(worktreesDir(), { withFileTypes: true });
+    names = await readdir(dir);
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
     throw err;
   }
-  const perSlug = await Promise.all(
-    entries.map(async (entry): Promise<WorktreeOpInfo[]> => {
-      // worktreesDir() holds both worktree directories AND per-worktree gateway
-      // registration files (`<slug>.json`); only directories carry an ops/
-      // subdir, so descending into a `.json` file would throw ENOTDIR.
-      if (!entry.isDirectory()) return [];
-      return listWorktreeOps(entry.name);
+  const probes = await Promise.all(
+    names.map(async (name): Promise<Probe> => {
+      const key = parseLiveOpLink(name);
+      if (!key)
+        throw new Error(
+          `worktree-op: ${joinAppPath(dir, name)} is not a <slug>~<opId>.json live-op link — nothing else is written there`,
+        );
+      return probeMarker(key.slug, joinAppPath(dir, name));
     }),
   );
-  return perSlug.flat();
+  return probes.flatMap((p) => (p.kind === "live" ? [p.info] : []));
 }

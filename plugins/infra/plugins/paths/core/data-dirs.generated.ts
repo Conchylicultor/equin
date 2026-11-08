@@ -62,6 +62,7 @@ export const dataDirsEntries: CollectedEntry[] = [
   { pluginPath: "infra/plugins/mcp/plugins/browser", id: "infra.mcp.browser", loader: () => import("@plugins/infra/plugins/mcp/plugins/browser/data-dirs"), dependsOn: [] },
   { pluginPath: "infra/plugins/request-origin/plugins/agent-write-ledger", id: "infra.request-origin.agent-write-ledger", loader: () => import("@plugins/infra/plugins/request-origin/plugins/agent-write-ledger/data-dirs"), dependsOn: [] },
   { pluginPath: "infra/plugins/secrets", id: "infra.secrets", loader: () => import("@plugins/infra/plugins/secrets/data-dirs"), dependsOn: [] },
+  { pluginPath: "infra/plugins/worktree", id: "infra.worktree", loader: () => import("@plugins/infra/plugins/worktree/data-dirs"), dependsOn: [] },
   { pluginPath: "integrations/plugins/google-maps", id: "integrations.google-maps", loader: () => import("@plugins/integrations/plugins/google-maps/data-dirs"), dependsOn: [] },
   { pluginPath: "integrations/plugins/youtube/plugins/audio-fetch", id: "integrations.youtube.audio-fetch", loader: () => import("@plugins/integrations/plugins/youtube/plugins/audio-fetch/data-dirs"), dependsOn: [] },
   { pluginPath: "menu-bar", id: "menu-bar", loader: () => import("@plugins/menu-bar/data-dirs"), dependsOn: [] },

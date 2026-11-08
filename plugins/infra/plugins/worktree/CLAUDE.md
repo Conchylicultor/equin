@@ -246,6 +246,20 @@ file: failing ⇒ live; succeeding ⇒ the holder is gone, and the file is reape
 `.tmp` files are never probed (a probe between the writer's create and its
 flock would steal the lock) and are reaped only when a minute stale.
 
+**The host-wide index (`locks/live-ops/`, this plugin's `data-dirs/`).** Each
+v2 marker is also hard-linked as `live-ops/<slug>~<opId>.json` — linked after the
+flock and before the rename into `ops/`, unlinked with it on `release()`. One
+inode, so one lock answers for both names; a reaper that finds the op dead
+unlinks both. `listActiveWorktreeOps` ("what runs on this host": the stop guard,
+the machine-usage attribution every 30 s) reads only that directory — O(live
+ops); a name it cannot read back is refused at the marker's start
+(`liveOpLink`), never left for every listing to trip on. It used to readdir every worktree's `ops/`
+(~213, nearly all empty) on each call (24 h after-audit §2.4). The per-worktree
+readers keep reading `ops/`, so they still see an op of an older CLI that never
+linked; the host-wide listing sees only linked ones (a checkout not yet rebased
+past this change). The data-root migration, which must refuse while ANY op runs
+and runs once, reads every worktree's `ops/` for that reason.
+
 Ordering is the caller's job, and every op command does it the same way:
 publish the marker → append `requested` → … → append `completed` → `release()`.
 So a reader that sees the marker gone always finds the verdict already written.
