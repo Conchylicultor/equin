@@ -71,6 +71,16 @@ mutex the order is load-bearing:
    - **merge commits, but main moved past** → refuse, and say to `git merge main`
      in the worktree. Never fall through to the flattening rebase.
    - **otherwise** → `git rebase main --exec <stamp>`, unchanged.
+
+   Then, **a fix claim must land on a commit** (`cli/fix-claim.ts`). Trailers
+   ride only the commits a push lands, so a push naming a report that lands
+   none — a clean tree already equal to main, or every commit dropped by the
+   rebase — used to print "Done" with the claim silently dropped. Now a
+   `--report-fixed-by`-only push gets an empty commit of its own (its `-m`,
+   every landing trailer; no `-m` is refused), and a `--fixes-report` push is
+   refused (landing nothing, it cannot be the fix). Decided after the rebase,
+   so nothing replays or drops that commit; `--from-main` runs the same step
+   after its own rebase (local mode: only step 1's commit counts).
 4. **hand off to the land phase** — steps 5–8 run in a child on the REBASED
    code (below), inside this mutex and grant
 5. install what the rebase brought in — the land phase's own bootstrap

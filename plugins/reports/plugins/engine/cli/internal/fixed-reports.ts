@@ -12,9 +12,14 @@ import {
   reportIdKind,
 } from "@plugins/reports/core";
 
-/** What `--fixes-report` / `--report-fixed-by` resolved to: the trailers to stamp, or why not. */
+/**
+ * What `--fixes-report` / `--report-fixed-by` resolved to: the trailers to
+ * stamp and the reports each flag named (`fixes`: this push is the fix;
+ * `fixedBy`: an earlier commit is), or why not.
+ */
 export type FixedReports =
-  { ok: true; trailers: string[] } | { ok: false; message: string };
+  | { ok: true; trailers: string[]; fixes: string[]; fixedBy: string[] }
+  | { ok: false; message: string };
 
 /**
  * The `Fixes-report` trailer for a push naming `ids` (null when it names
@@ -84,7 +89,8 @@ export async function resolveFixedReports(input: {
     pairs.push({ reportId: raw.slice(0, at), rev: raw.slice(at + 1) });
   }
   const all = [...ids, ...pairs.map((p) => p.reportId)];
-  if (all.length === 0) return { ok: true, trailers: [] };
+  if (all.length === 0)
+    return { ok: true, trailers: [], fixes: [], fixedBy: [] };
   const malformed = all.filter((id) => !reportIdKind.is(id));
   if (malformed.length > 0) {
     return {
@@ -163,5 +169,7 @@ export async function resolveFixedReports(input: {
     trailers: [fixesReportTrailer(ids), reportFixedByTrailer(claims)].filter(
       (t): t is string => t !== null,
     ),
+    fixes: ids,
+    fixedBy: claims.map((c) => c.reportId),
   };
 }

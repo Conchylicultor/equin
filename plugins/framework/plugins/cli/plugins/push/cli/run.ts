@@ -58,6 +58,7 @@ import {
   run,
   runAllowFail,
 } from "./git";
+import { fixClaimCarrier } from "./fix-claim";
 import { runLandPhase, takeLandPayload } from "./handoff";
 import { resolveFixedReports } from "@plugins/reports/plugins/engine/cli";
 import { landPush } from "./land";
@@ -88,17 +89,50 @@ async function branchContainsMain(): Promise<boolean> {
 
 async function readLandingShape(): Promise<LandingShape> {
   const containsMain = await branchContainsMain();
-  const counted = Number(
-    await run(["git", "rev-list", "--count", "main..HEAD"]),
-  );
-  if (!Number.isInteger(counted)) {
-    console.error("Could not count the commits this push would land.");
-    process.exit(1);
-  }
+  const counted = await countCommits("main..HEAD");
   const merges = (await run(["git", "rev-list", "--merges", "main..HEAD"]))
     .split("\n")
     .filter((line) => line.trim().length > 0).length;
   return { commits: counted, merges, containsMain };
+}
+
+async function countCommits(range: string): Promise<number> {
+  const counted = Number(await run(["git", "rev-list", "--count", range]));
+  if (!Number.isInteger(counted)) {
+    console.error(`Could not count the commits in ${range}.`);
+    process.exit(1);
+  }
+  return counted;
+}
+
+// Acts on `fixClaimCarrier` (./fix-claim.ts): once the branch is in landing
+// shape, a push naming a report but landing no commit makes the claim its own
+// empty commit, or refuses. Called after every rebase this push does, so
+// nothing replays (or drops) that commit after it is made.
+async function ensureFixClaimLands(input: {
+  landed: number;
+  fixed: { fixes: readonly string[]; fixedBy: readonly string[] };
+  message: string | undefined;
+  trailers: readonly string[];
+  profiler: OpProfiler<"push">;
+}): Promise<void> {
+  const carrier = fixClaimCarrier(input);
+  if (carrier.kind === "rides") return;
+  if (carrier.kind === "refuse") {
+    console.error(carrier.message);
+    input.profiler.complete("error");
+    input.profiler.write();
+    process.exit(1);
+  }
+  console.log(carrier.announce);
+  await exec([
+    "git",
+    "commit",
+    "--allow-empty",
+    "-m",
+    carrier.message,
+    ...trailerArgs(input.trailers),
+  ]);
 }
 
 // Env for THIS push's own rebases. The `post-rewrite` hook normalizes generated
@@ -517,6 +551,9 @@ const pushAction: CliAction<
 
   // 1. Commit if -m provided, otherwise require clean tree
   const status = await run(["git", "status", "--porcelain"]);
+  // Whether step 1 made a commit: in `--from-main` local mode it is the only
+  // commit this push can land (local main is already the trunk).
+  let committed = false;
   if (opts.message) {
     if (status) {
       const files = status.split("\n").map((l) => l.trim());
@@ -536,6 +573,7 @@ const pushAction: CliAction<
           ? trailerArgs(landingTrailers)
           : [];
       await exec(["git", "commit", "-m", opts.message, ...trailer]);
+      committed = true;
     } else {
       console.log("No files to commit.");
     }
@@ -606,6 +644,17 @@ const pushAction: CliAction<
             );
             profiler.stepEnd("rebase");
           }
+
+          await ensureFixClaimLands({
+            landed:
+              publish.kind === "publish"
+                ? await countCommits(`${publish.remote}/main..HEAD`)
+                : Number(committed),
+            fixed,
+            message: opts.message,
+            trailers: landingTrailers,
+            profiler,
+          });
 
           // The rest — normalize, checks, push — runs on the rebased code.
           await handOff(mainRoot, opSlug, pushId, "from-main", grant, profiler);
@@ -786,6 +835,16 @@ const pushAction: CliAction<
             process.exit(1);
           }
         }
+
+        // 3b. A fix claim needs a landed commit to ride on (see
+        //     ensureFixClaimLands): made here, after the rebase, or refused.
+        await ensureFixClaimLands({
+          landed: await countCommits("main..HEAD"),
+          fixed,
+          message: opts.message,
+          trailers: landingTrailers,
+          profiler,
+        });
 
         // 4–7. Everything after the rebase — install, normalize, checks,
         //      push the branch, push main, fast-forward local main — runs on

@@ -184,7 +184,9 @@ from forks; `server/internal/fix-ledger.ts`):
   A fix that landed WITHOUT naming its report (history cannot be rewritten) is
   claimed later by a push of its own: `./equin push --report-fixed-by
   <id>@<sha>` stamps `Report-fixed-by: <id>@<full sha>` (the sha must already
-  be on main). The fix is THAT commit — deployed and regressed are judged on
+  be on main). From a clean tree with nothing else to land, push makes that
+  claim an empty commit of its own (`-m` required), rather than landing nothing
+  (`push/cli/fix-claim.ts`). The fix is THAT commit — deployed and regressed are judged on
   it exactly as above — and the claim lands when its push does. Chosen over
   git notes: a claim commit rides the one path that reaches main (validated,
   reviewed, append-only, read by the same `git log` and ref reaction), where a

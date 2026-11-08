@@ -39,7 +39,8 @@ export default defineCliCommand<
       flags: "--report-fixed-by <id@sha...>",
       description:
         "Claim that an EARLIER commit on main fixed a report it did not name (<report-id>@<sha>, the sha on main). Stamps a Report-fixed-by trailer; " +
-        "the ledger judges that commit exactly like a --fixes-report one: Fixed once main runs it, Regressed if the report fired — or fires — from code that has it.",
+        "the ledger judges that commit exactly like a --fixes-report one: Fixed once main runs it, Regressed if the report fired — or fires — from code that has it. " +
+        "From a clean tree with nothing to land, the claim gets an empty commit of its own (needs -m); a --fixes-report push that lands nothing is refused.",
     },
     {
       flags: "--from-main",
