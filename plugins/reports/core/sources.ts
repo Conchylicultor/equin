@@ -90,6 +90,9 @@ export const CLIENT_REPORT_SOURCES = [
   // A popover control panel whose page is wider than the panel
   // (reports/panel-overflow).
   "client-panel-overflow",
+  // An open popover's anchor left the document or went display: none
+  // (reports/popover-anchor-lost).
+  "client-popover-anchor-lost",
   "client-collab-hydration",
   "client-page-undo-conflict",
   "client-theme-resolution",
@@ -147,6 +150,7 @@ export const CLIENT_REPORT_SUBJECT: Record<
   "client-adaptive-bar": "page",
   "client-viewport-escape": "page",
   "client-panel-overflow": "page",
+  "client-popover-anchor-lost": "page",
   "client-collab-hydration": "page",
   "client-page-undo-conflict": "page",
   "client-theme-resolution": "page",

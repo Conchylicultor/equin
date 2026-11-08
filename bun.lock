@@ -6560,6 +6560,10 @@
       "name": "@equin/plugin-reports-plugin-load-errors",
       "version": "0.0.1",
     },
+    "plugins/reports/plugins/popover-anchor-lost": {
+      "name": "@equin/plugin-reports-popover-anchor-lost",
+      "version": "0.0.1",
+    },
     "plugins/reports/plugins/render-loop": {
       "name": "@equin/plugin-reports-render-loop",
       "version": "0.0.1",
@@ -10468,6 +10472,8 @@
     "@equin/plugin-reports-panel-overflow": ["@equin/plugin-reports-panel-overflow@workspace:plugins/reports/plugins/panel-overflow"],
 
     "@equin/plugin-reports-plugin-load-errors": ["@equin/plugin-reports-plugin-load-errors@workspace:plugins/reports/plugins/plugin-load-errors"],
+
+    "@equin/plugin-reports-popover-anchor-lost": ["@equin/plugin-reports-popover-anchor-lost@workspace:plugins/reports/plugins/popover-anchor-lost"],
 
     "@equin/plugin-reports-render-loop": ["@equin/plugin-reports-render-loop@workspace:plugins/reports/plugins/render-loop"],
 

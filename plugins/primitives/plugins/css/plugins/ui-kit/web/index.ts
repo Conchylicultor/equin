@@ -101,6 +101,8 @@ export {
   PopoverContent,
   useHoldPopoverOpen,
 } from "./components/ui/popover";
+export { popoverAnchorLostSink } from "./components/steady-anchor";
+export type { PopoverAnchorLostFault } from "./components/steady-anchor";
 export {
   ResizableHandle,
   ResizablePanel,

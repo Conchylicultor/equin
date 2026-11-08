@@ -51,8 +51,8 @@ host first.
 - Description: Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. The reports table and its live read (reports.list), the ReportKind / ReportNoiseRule slots every kind and rule contributes to, and the fan-out ceiling config; recording is the engine's (reports/plugins/engine).
 - Web:
   - Slots: `Reports.KindView`
-  - Slot contributors: 33 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Reports.KindView` ×33
+  - Slot contributors: 34 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Reports.KindView` ×34
   - Contributes:
     - `IdKinds.Kind` "report"
     - `ConfigV2.WebRegister` "reports"
@@ -148,8 +148,8 @@ host first.
     - `SERVER_REPORT_SOURCES`
     - `submitReport`
 - Cross-plugin:
-  - Imported by: 62 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `reports` ×26
+  - Imported by: 63 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `reports` ×27
     - `debug` ×15
     - `conversations` ×6
     - `database` ×4
@@ -186,6 +186,7 @@ host first.
   - **`page-undo-conflict`** — Page-undo-conflict collector: drains the page editor's undoConflictReportSink into a report whenever a data-based text undo entry meets a second writer — a replay that found text other than what the…
   - **`panel-overflow`** — Panel-overflow collector: drains the control-panel primitive's panelOverflowReportSink into a deduped report whenever a popover panel's showing page is wider than the panel — content needing a width…
   - **`plugin-load-errors`** — Files crash tasks for plugins whose chunk failed to load in the deferred tier.
+  - **`popover-anchor-lost`** — Popover-anchor-lost collector: drains ui-kit's popoverAnchorLostSink into a deduped report whenever an open popover's anchor (its trigger, or the caller's anchor) leaves the document or is hidden…
   - **`render-loop`** — Render-loop detector: a single invisible global controller (mounted via Core.Root) that installs one MutationObserver and files a deduped render-loop report when a subtree is rebuilt/re-mutated at a…
   - **`resource-errors`** — Resource-error collector: drains the live-state primitive's resourceErrorReportSink (one body per failing live read, however many hooks observe it) into a deduped resource-error report for the…
   - **`theme-resolution`** — Theme-resolution collector: drains theme-engine's themeResolutionReportSink into a report whenever a scope's theme cannot be painted as stored (its selected theme does not exist, or a stored theme…

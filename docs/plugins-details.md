@@ -29888,8 +29888,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots:
           - `Core.Root`
           - `Core.Boot`
-        - Slot contributors: 50 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
-          - `Core.Root` ×49
+        - Slot contributors: 51 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+          - `Core.Root` ×50
           - `Core.Boot` ← `network.live.boot-snapshot`
       - Core:
         - Uses:
@@ -29953,9 +29953,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `webCollectedDir`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 112 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+        - Imported by: 113 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
           - `primitives` ×21
-          - `reports` ×18
+          - `reports` ×19
           - `apps` ×17
           - `ui` ×6
           - `apps-core` ×5
@@ -43578,11 +43578,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×6
               - `ui/tokens/shape` ×3
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 172 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 173 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `apps` ×38
               - `debug` ×34
               - `conversations` ×26
-              - `reports` ×14
+              - `reports` ×15
               - `primitives` ×10
               - `tasks` ×10
               - `plugin-meta` ×8
@@ -44010,10 +44010,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 102 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+            - Imported by: 103 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
               - `apps` ×21
+              - `reports` ×16
               - `debug` ×15
-              - `reports` ×15
               - `primitives` ×12
               - `conversations` ×9
               - `page` ×6
@@ -44972,6 +44972,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DensityControlled`
               - `MenuRowAction`
               - `OverlayPanelProps`
+              - `PopoverAnchorLostFault`
               - `PopoverMaxHeight`
               - `PopoverPadding`
               - `PopoverWidth`
@@ -45030,6 +45031,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `POPOVER_MAX_HEIGHT`
               - `POPOVER_PADDING`
               - `POPOVER_WIDTH`
+              - `popoverAnchorLostSink`
               - `PopoverContent`
               - `PopoverTrigger`
               - `PortalForwardProvider`
@@ -45121,7 +45123,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 459 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 460 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×111
               - `apps` ×106
               - `conversations` ×53
@@ -45154,6 +45156,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `media/player`
               - `music/chord-box`
               - `network/live/live-state`
+              - `reports/popover-anchor-lost`
               - `search/quick-find`
               - `stats/commits`
               - `tag-tree/picker`
@@ -49731,8 +49734,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useNow`
     - **`report-sink`** — Web presence for the report-sink primitive; the runtime-agnostic factories live in ./core so both web and server can import them. defineReportSink() is fire-and-forget and holds reports emitted before a handler registers (bounded), replaying them on register; defineRequestSink() returns the handler's answer and never holds. emit() never throws — it is called on error paths.
       - Cross-plugin:
-        - Imported by: 23 plugins — full list in [`plugins/primitives/plugins/report-sink/REFERENCE.md`](../plugins/primitives/plugins/report-sink/REFERENCE.md)
-          - `primitives` ×8
+        - Imported by: 24 plugins — full list in [`plugins/primitives/plugins/report-sink/REFERENCE.md`](../plugins/primitives/plugins/report-sink/REFERENCE.md)
+          - `primitives` ×9
           - `infra` ×4
           - `network` ×2
           - `reports` ×2
@@ -51014,6 +51017,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/ui-context/element-picker`
           - `reports/crash`
           - `reports/launch-fix`
+          - `reports/popover-anchor-lost`
           - `reports/render-loop`
           - `tasks/task-source-url`
           - `wish/element-picker`
@@ -51753,8 +51757,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`reports`** — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. The reports table and its live read (reports.list), the ReportKind / ReportNoiseRule slots every kind and rule contributes to, and the fan-out ceiling config; recording is the engine's (reports/plugins/engine).
   - Web:
     - Slots: `Reports.KindView`
-    - Slot contributors: 33 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `Reports.KindView` ×33
+    - Slot contributors: 34 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+      - `Reports.KindView` ×34
     - Contributes:
       - `IdKinds.Kind` "report"
       - `ConfigV2.WebRegister` "reports"
@@ -51850,8 +51854,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `SERVER_REPORT_SOURCES`
       - `submitReport`
   - Cross-plugin:
-    - Imported by: 62 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `reports` ×26
+    - Imported by: 63 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+      - `reports` ×27
       - `debug` ×15
       - `conversations` ×6
       - `database` ×4
@@ -52335,6 +52339,28 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Contributes: `Core.Root` → `PluginLoadErrorReporter`
         - Uses: `reports.report`
+    - **`popover-anchor-lost`** — Popover-anchor-lost collector: drains ui-kit's popoverAnchorLostSink into a deduped report whenever an open popover's anchor (its trigger, or the caller's anchor) leaves the document or is hidden under display: none — the moment the panel would have jumped to the screen's top-left corner — naming the popover, the anchor and the element that hid it (lineage, source line, owner), plus the Debug → Reports summary view. Popover-anchor-lost report kind: validates ui-kit's lost-anchor fault payloads (an open popover whose anchor left the document or went display: none, which used to throw the panel into the screen's top-left corner), fingerprints by cause + popover lineage + anchor + the element that hid it, and renders a task naming them. Re-arms every 6h.
+      - Web:
+        - Contributes:
+          - `Core.Root` → `PopoverAnchorLostCollector`
+          - `Reports.KindView` → `PopoverAnchorLostKindView`
+        - Uses:
+          - `primitives/css/badge.Badge`
+          - `primitives/css/inline.Inline`
+          - `primitives/css/ui-kit.popoverAnchorLostSink`
+          - `primitives/ui-context.collectMeta`
+          - `reports.report`
+          - `reports.Reports`
+      - Server:
+        - Contributes: `report-kind` "popover-anchor-lost"
+        - Uses: `reports.ReportKind`
+      - Cross-plugin:
+        - Uses tokens: `ui/tokens/color-palette --muted-foreground`
+      - Core:
+        - Exports (types): `PopoverAnchorLostPayload`
+        - Exports (values):
+          - `popoverAnchorLostFingerprint`
+          - `PopoverAnchorLostPayloadSchema`
     - **`render-loop`** — Render-loop detector: a single invisible global controller (mounted via Core.Root) that installs one MutationObserver and files a deduped render-loop report when a subtree is rebuilt/re-mutated at a sustained high rate while idle, visible, and doing no meaningful work (wasted DOM thrash). Render-loop report kind: validates render-loop payloads, fingerprints by signature + mutation class, and renders per-loop perf tasks. Re-arms periodically (6h) since a still-present loop is a warning, not a one-shot crash.
       - Web:
         - Contributes:
@@ -58157,7 +58183,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --space-sm`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 528 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 529 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×118
               - `conversations` ×92
               - `primitives` ×73
@@ -58166,7 +58192,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta` ×28
               - `ui` ×26
               - `tasks` ×17
-              - `reports` ×13
+              - `reports` ×14
               - `fields` ×12
               - `active-data` ×8
               - `apps-core` ×6

@@ -13,6 +13,7 @@ import type {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/popover-width";
 import { usePortalContainer } from "@plugins/primitives/plugins/overlay/plugins/portal-host/web";
 import { usePopupAnchorAtRest } from "@plugins/primitives/plugins/overlay/plugins/popup-open/web";
+import { useSteadyAnchor } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/steady-anchor";
 
 /**
  * Whether this popover has ever been open. Once it has, its content stays
@@ -26,6 +27,16 @@ const PopoverEverOpenedContext = React.createContext(false);
  * is refused. `null` outside a popover.
  */
 const PopoverHoldContext = React.createContext<(() => () => void) | null>(null);
+
+/**
+ * The popover's trigger element, as its `PopoverTrigger` mounted it, and the
+ * setter that trigger reports itself through — what `PopoverContent` anchors
+ * to (through `useSteadyAnchor`) when the caller names no `anchor`.
+ */
+const PopoverTriggerContext = React.createContext<Element | null>(null);
+const SetPopoverTriggerContext = React.createContext<
+  ((el: Element | null) => void) | null
+>(null);
 
 /**
  * Keep the enclosing popover open while `active` — for content that hands the
@@ -91,9 +102,12 @@ function Popover({
     }
     handleOpenChange(next, details);
   };
+  const [trigger, setTrigger] = React.useState<Element | null>(null);
   // Outside the Root: its children may be a payload render function.
   return (
     <PopoverEverOpenedContext.Provider value={everOpened}>
+      <SetPopoverTriggerContext.Provider value={setTrigger}>
+        <PopoverTriggerContext.Provider value={trigger}>
       <PopoverHoldContext.Provider value={hold}>
         {/* Always controlled by `drawn`: the mirror holds the requested
             state (`defaultOpen` included), so base-ui never keeps its own. */}
@@ -104,12 +118,43 @@ function Popover({
           {...props}
         />
       </PopoverHoldContext.Provider>
+        </PopoverTriggerContext.Provider>
+      </SetPopoverTriggerContext.Provider>
     </PopoverEverOpenedContext.Provider>
   );
 }
 
-function PopoverTrigger({ ...props }: PopoverPrimitive.Trigger.Props) {
-  return <PopoverPrimitive.Trigger data-slot="popover-trigger" {...props} />;
+function PopoverTrigger({ ref, ...props }: PopoverPrimitive.Trigger.Props) {
+  // Reports the trigger's element to the Popover, for `PopoverContent`'s
+  // steady anchor; the caller's own `ref` still gets it.
+  const setTrigger = React.useContext(SetPopoverTriggerContext);
+  const triggerRef = React.useCallback(
+    (el: HTMLButtonElement | null) => {
+      setTrigger?.(el);
+      let detach = () => {};
+      if (typeof ref === "function") {
+        const cleanup = ref(el);
+        detach = typeof cleanup === "function" ? cleanup : () => void ref(null);
+      } else if (ref) {
+        ref.current = el;
+        detach = () => {
+          ref.current = null;
+        };
+      }
+      return () => {
+        setTrigger?.(null);
+        detach();
+      };
+    },
+    [ref, setTrigger],
+  );
+  return (
+    <PopoverPrimitive.Trigger
+      data-slot="popover-trigger"
+      {...props}
+      ref={triggerRef}
+    />
+  );
 }
 
 function PopoverContent({
@@ -180,6 +225,14 @@ function PopoverContent({
   // popup would be invisible.
   const container = usePortalContainer();
   const everOpened = React.useContext(PopoverEverOpenedContext);
+  // Never laid out against an anchor that lost its box (left the document, or
+  // hidden under `display: none`): Floating UI would measure it as an empty
+  // rect at the viewport's origin and throw the panel into the screen's
+  // top-left corner. The panel keeps its last place instead, and the loss is
+  // filed — it is the bug of whoever hid the anchor under an open popover.
+  const trigger = React.useContext(PopoverTriggerContext);
+  const positionerRef = React.useRef<HTMLDivElement>(null);
+  const steadyAnchor = useSteadyAnchor(anchor, trigger, positionerRef);
   return (
     <MenuSurfaceProvider value={true}>
       <PopoverPrimitive.Portal
@@ -187,13 +240,14 @@ function PopoverContent({
         keepMounted={everOpened && !resetOnClose}
       >
         <PopoverPrimitive.Positioner
+          ref={positionerRef}
           {...forwarded}
           className="isolate z-popover outline-none"
           align={align}
           alignOffset={alignOffset}
           side={side}
           sideOffset={sideOffset}
-          anchor={anchor}
+          anchor={steadyAnchor}
           // Never fall back to the perpendicular axis. base-ui's default
           // (`fallbackAxisSide: "end"`) re-flips a panel clamped to its
           // `--available-height` whenever its content grows (a row expanding),
