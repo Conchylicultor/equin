@@ -261,6 +261,7 @@ runtimes read, not a slot:
 | `fork-lease` | the session holding a DB fork's temp lease (an advisory lock), from before its temp exists to after the rename; the temp sweep tries it before a drop | `database/admin` `fork-lease.ts` |
 | `change-feed` | the change-feed LISTEN client | this plugin's `listen-session.ts` (`openListenSession`), opened by `database#machine`'s `DatabaseDriver.listen` for `network/live/change-feed`'s `listener.ts` |
 | `events-test` | the events-test harness's stand-in worker sessions | `infra/events-test` `crash-recovery.ts`, `superseded.ts`, `queue-lock-no-steal.ts` |
+| `cluster-start` | the embedded cluster's start script's one session (base database, cluster settings), on every start the gateway's supervisor runs — the bound is what lets a wedged-but-bound postmaster fail the start instead of hanging it | `database/embedded` `scripts/start.ts` `ensureClusterState` |
 
 Whole-database DDL on `admin` (`CREATE` / `DROP` / `RENAME DATABASE`) runs under
 a 10 min bound through `database/admin`'s `runDatabaseDdl`.

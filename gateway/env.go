@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -168,6 +169,14 @@ func (c ChildEnv) With(extra ...string) []string {
 // LookPath), which is fine: that PATH is itself a declared name.
 func (c ChildEnv) Command(name string, args ...string) *exec.Cmd {
 	cmd := exec.Command(name, args...)
+	cmd.Env = c.With()
+	return cmd
+}
+
+// CommandContext is Command bound to ctx: when ctx ends the process is
+// stopped by the caller's cmd.Cancel (exec's default: kill the process alone).
+func (c ChildEnv) CommandContext(ctx context.Context, name string, args ...string) *exec.Cmd {
+	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.Env = c.With()
 	return cmd
 }

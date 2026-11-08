@@ -8,8 +8,10 @@ import (
 	"log/slog"
 	"net"
 	"os"
+	"os/exec"
 	"strconv"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -176,6 +178,9 @@ type Supervisor struct {
 	// outboxDir is the gateway's -report-outbox-dir: a service the watchdog
 	// finds down mid-session is filed there (service_report.go).
 	outboxDir string
+	// startCommandTimeout bounds one run of a start command
+	// (defaultStartCommandTimeout; tests shorten it).
+	startCommandTimeout time.Duration
 }
 
 const (
@@ -183,6 +188,21 @@ const (
 	startReadyTimeout       = 30 * time.Second
 	probeTimeout            = 1500 * time.Millisecond
 	probeInterval           = 500 * time.Millisecond
+
+	// defaultStartCommandTimeout bounds a start command we do not control
+	// (bun, pg_ctl, initdb, whatever a future service runs). It is NOT what
+	// keeps the known start scripts finite — each bounds its own waits (pg_ctl
+	// -t 30, PgBouncer's 30 s readiness loop, the cluster session's 60 s
+	// per-call deadline), and their worst case is well inside it. It catches
+	// the next unbounded wait nobody has found yet, and says so: the error
+	// names the bound and carries the output so far, so the outage is filed
+	// with it (service-down) instead of the watchdog blocking forever.
+	defaultStartCommandTimeout = 5 * time.Minute
+	// startCommandWaitDelay is how long the command's output pipe may stay
+	// open after the command itself exits: a process it started that kept
+	// the pipe as its stdout/stderr (a daemon that never detached its stdio)
+	// would otherwise hold CombinedOutput open for the daemon's whole life.
+	startCommandWaitDelay = 5 * time.Second
 )
 
 // NewSupervisor reads the config file and builds the supervisor. If the file
@@ -249,7 +269,7 @@ func (sup *Supervisor) startService(ctx context.Context, svc *Service) error {
 	svc.setState(ServiceStarting)
 	slog.Info("supervisor: starting service", "name", svc.config.Name)
 
-	if _, err := sup.execStartCommand(svc.config); err != nil {
+	if _, err := sup.execStartCommand(ctx, svc.config); err != nil {
 		svc.setCrashed(err)
 		return err
 	}
@@ -282,7 +302,16 @@ func (sup *Supervisor) startService(ctx context.Context, svc *Service) error {
 //
 // Returns the command's own output (what it did: started the daemon, or found
 // it running and reattached); a failure's error carries it too.
-func (sup *Supervisor) execStartCommand(cfg ServiceConfig) (string, error) {
+//
+// Bounded, because the watchdog and boot both wait on it: a start that never
+// returns leaves its service down and unwatched with nothing filed. The
+// command runs in its own process group, and at startCommandTimeout (or when
+// ctx ends) the whole group is killed — its helpers (pg_ctl, initdb) with it,
+// but never the daemon: a daemon detaches into its own session (pg_ctl and
+// the PgBouncer script both setsid it), which is what makes it a daemon. A
+// command that exits while something it started still holds its output pipe
+// fails too (startCommandWaitDelay), naming that.
+func (sup *Supervisor) execStartCommand(ctx context.Context, cfg ServiceConfig) (string, error) {
 	if len(cfg.Start) == 0 {
 		return "", fmt.Errorf("empty start command")
 	}
@@ -291,11 +320,34 @@ func (sup *Supervisor) execStartCommand(cfg ServiceConfig) (string, error) {
 		return "", err
 	}
 	defer logW.Close()
+	timeout := sup.startCommandTimeout
+	if timeout <= 0 {
+		timeout = defaultStartCommandTimeout
+	}
+	runCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
 	args := append(append([]string{}, cfg.Start[1:]...), serviceLogFdFlag, strconv.Itoa(serviceLogFd))
-	cmd := sup.env.Command(cfg.Start[0], args...)
+	cmd := sup.env.CommandContext(runCtx, cfg.Start[0], args...)
 	cmd.ExtraFiles = []*os.File{logW}
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	cmd.Cancel = func() error {
+		// The group's id is the command's pid (Setpgid). ESRCH: it is gone.
+		if err := syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL); err != nil && !errors.Is(err, syscall.ESRCH) {
+			return err
+		}
+		return nil
+	}
+	cmd.WaitDelay = startCommandWaitDelay
+	started := time.Now()
 	out, err := cmd.CombinedOutput()
-	if err != nil {
+	switch {
+	case errors.Is(runCtx.Err(), context.DeadlineExceeded) && ctx.Err() == nil:
+		return string(out), fmt.Errorf("start command did not exit within %s (ran %s); killed it and every process in its group — a wait inside it has no bound of its own: %s",
+			timeout, time.Since(started).Round(time.Millisecond), string(out))
+	case errors.Is(err, exec.ErrWaitDelay):
+		return string(out), fmt.Errorf("start command exited, but a process it started still held its output pipe %s later (a daemon that did not detach its stdout/stderr): %s",
+			startCommandWaitDelay, string(out))
+	case err != nil:
 		return string(out), fmt.Errorf("start command failed: %w: %s", err, string(out))
 	}
 	return string(out), nil
@@ -416,8 +468,13 @@ func (sup *Supervisor) recoverService(ctx context.Context, svc *Service, probeEr
 	outage := sup.newOutage(svc, probeErr, time.Now())
 	slog.Error("supervisor: watchdog detected service down; attempting re-start", "name", name, "probe", svc.probe.String(), "err", probeErr)
 	svc.setState(ServiceStarting)
-	out, err := sup.execStartCommand(svc.config)
+	out, err := sup.execStartCommand(ctx, svc.config)
 	if err != nil {
+		if ctx.Err() != nil {
+			// The gateway is shutting down and stopped the command: not the
+			// service failing, so nothing settled and there is nothing to file.
+			return false
+		}
 		slog.Error("supervisor: re-start failed; not retrying", "name", name, "err", err)
 		svc.setCrashed(err)
 		sup.reportServiceDown(outage.settle(outcomeCrashed, time.Now(), out, err))

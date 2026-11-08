@@ -32,7 +32,9 @@ import {
 import { join, dirname, basename } from "node:path";
 import { spawnSync } from "node:child_process";
 import { connect } from "node:net";
-import { Client } from "pg";
+import type { Client } from "pg";
+import { buildConnectionString } from "@plugins/database/core";
+import { createDbClient } from "@plugins/database/plugins/connection/server";
 import {
   PG_PORT,
   PG_USER,
@@ -381,11 +383,20 @@ async function ensureBaseDatabase(client: Client): Promise<void> {
  * backend boot). Over the cluster's own socket, as its superuser.
  */
 async function ensureClusterState(): Promise<void> {
-  const client = new Client({
-    host: PG_SOCKET_DIR,
-    port: PG_PORT,
-    user: PG_USER,
-    database: "postgres",
+  // A deadline-bearing client (`database/connection`): its connect and every
+  // query give up after 60 s with no reply, closing the connection, and this
+  // script exits non-zero naming the call. A bare `pg.Client` waits forever,
+  // and the reattach check above only DIALS the socket — which the kernel
+  // completes for a postmaster that is alive but not answering (wedged,
+  // stopped) — so this connect was the start command's one unbounded wait:
+  // the gateway's watchdog runs this script to completion, and a start that
+  // never exits left the service down, unwatched and unreported.
+  const client = createDbClient({
+    name: "cluster-start",
+    connectionString: buildConnectionString(
+      { host: PG_SOCKET_DIR, port: PG_PORT, user: PG_USER },
+      "postgres",
+    ),
   });
   await client.connect();
   try {

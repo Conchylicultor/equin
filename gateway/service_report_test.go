@@ -7,8 +7,10 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"sync/atomic"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -198,5 +200,71 @@ func TestWatchdogFilesNothingWhileTheServiceAnswers(t *testing.T) {
 	time.Sleep(2500 * time.Millisecond)
 	if n := len(readOutbox[serviceDown](t, outbox)); n != 0 {
 		t.Fatalf("outbox holds %d entries, want none", n)
+	}
+}
+
+// A start command that never exits is bounded: at startCommandTimeout it is
+// killed with every process in its group, and the outage is filed as crashed
+// with the bound and the output so far — instead of the watchdog blocking on
+// it forever, the service down and nothing filed.
+func TestWatchdogFilesAHungStartCommand(t *testing.T) {
+	helperPid := filepath.Join(t.TempDir(), "helper.pid")
+	sup, probe, outbox := watchedService(t, `echo "svc: waiting on the cluster"; sleep 600 & echo $! > `+helperPid+`; wait`)
+	sup.startCommandTimeout = time.Second
+	probe.down.Store(true)
+	e := awaitServiceReport(t, outbox)
+	d := e.Data
+	if d.Outcome != outcomeCrashed || d.RestartError == nil || !strings.Contains(*d.RestartError, "did not exit within 1s") {
+		t.Fatalf("entry = %+v", e)
+	}
+	if !reflect.DeepEqual(d.RestartOutput, []string{"svc: waiting on the cluster"}) {
+		t.Fatalf("restart output = %q", d.RestartOutput)
+	}
+	if snap := sup.Get("svc"); snap.State != "crashed" || !strings.Contains(snap.Error, "did not exit within 1s") {
+		t.Fatalf("snapshot = %+v", snap)
+	}
+	// The helper the command started went with it: the group was killed.
+	raw, err := os.ReadFile(helperPid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pid, err := strconv.Atoi(strings.TrimSpace(string(raw)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.Now().Add(5 * time.Second)
+	for syscall.Kill(pid, 0) == nil {
+		if time.Now().After(deadline) {
+			_ = syscall.Kill(pid, syscall.SIGKILL)
+			t.Fatalf("helper %d outlived its start command's group", pid)
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+}
+
+// A start command that exits while something it started keeps its output pipe
+// (a daemon that did not detach its stdio) fails after startCommandWaitDelay,
+// naming that — instead of CombinedOutput waiting out the daemon's life.
+func TestStartCommandFailsWhenAChildKeepsItsOutput(t *testing.T) {
+	logDir := t.TempDir()
+	sup := &Supervisor{env: testChildEnv(t), logDir: logDir}
+	helperPid := filepath.Join(t.TempDir(), "helper.pid")
+	t.Cleanup(func() {
+		if raw, err := os.ReadFile(helperPid); err == nil {
+			if pid, err := strconv.Atoi(strings.TrimSpace(string(raw))); err == nil {
+				_ = syscall.Kill(pid, syscall.SIGKILL)
+			}
+		}
+	})
+	start := time.Now()
+	_, err := sup.execStartCommand(context.Background(), ServiceConfig{
+		Name:  "svc",
+		Start: []string{"/bin/sh", "-c", `sleep 600 & echo $! > ` + helperPid + `; echo "svc: started"`},
+	})
+	if err == nil || !strings.Contains(err.Error(), "still held its output pipe") {
+		t.Fatalf("err = %v", err)
+	}
+	if took := time.Since(start); took > startCommandWaitDelay+5*time.Second {
+		t.Fatalf("took %s", took)
 	}
 }

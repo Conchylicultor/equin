@@ -47,6 +47,12 @@ export const DB_POOL_NAMES = [
    * socket to simulate a crash.
    */
   "events-test",
+  /**
+   * The embedded cluster's start script's one session (`database/embedded`'s
+   * scripts/start.ts): the base database and the cluster-wide settings, on
+   * every start the gateway's supervisor runs, reattach included.
+   */
+  "cluster-start",
 ] as const;
 
 export type DbPoolName = (typeof DB_POOL_NAMES)[number];
