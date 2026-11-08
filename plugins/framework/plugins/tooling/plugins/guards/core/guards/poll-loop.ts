@@ -10,7 +10,11 @@ import {
   type AppPath,
   asAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { worktreeArtifacts } from "@plugins/infra/plugins/paths/core";
+import {
+  RUN_TERMINAL_SUFFIX,
+  worktreeArtifacts,
+} from "@plugins/infra/plugins/paths/core";
+import { expandHome } from "../home-path";
 import { parseArgv } from "../argv";
 import { defineGuard } from "../define-guard";
 import type { Denial, Inform } from "../define-guard";
@@ -18,10 +22,12 @@ import { parseShell } from "../parse-shell";
 import { readTaskReport } from "../task-reports";
 import {
   classify,
+  closedWindowEnd,
   detectPoll,
+  isTimelineSubject,
   pruneWindow,
+  RUN_SUBJECT,
   THRESHOLD,
-  watchesNothing,
   watchSubjects,
   type WatchSubject,
   type WindowEntry,
@@ -246,32 +252,102 @@ function unchangedAcross(
   };
 }
 
-function livenessOf(
-  subjects: WatchSubject[],
+/**
+ * A supervised run's state, from its own terminal marker: the supervisor
+ * writes `<kind>-<run>.exit-code` beside the transcript when the run settles,
+ * and never appends to the transcript after. No marker is not proof of a live
+ * run (a killed supervisor writes none), so it falls back to the mtime answer.
+ */
+function runLiveness(stem: string): Liveness | null {
+  const path = expandHome(stem);
+  if (!path.startsWith("/")) return null; // relative to a cwd we do not resolve
+  let code: string;
+  try {
+    code = readFileSync(`${path}${RUN_TERMINAL_SUFFIX}`, "utf8").trim();
+  } catch (err) {
+    // Not there (or the path is not a directory's): no marker to go by.
+    if ((err as NodeJS.ErrnoException).code == null) throw err;
+    return null;
+  }
+  const name = path.slice(path.lastIndexOf("/") + 1);
+  return {
+    kind: "finished",
+    verdict: `the run ${name} has settled (exit ${code || "unknown"}), so its transcript gets no more lines`,
+  };
+}
+
+/**
+ * One subject's liveness. Every kind of subject answers from what the thing
+ * itself says — a receipt, a pid, the harness transcript, a run's terminal
+ * marker, the closed window a timeline is read over — and falls back to the
+ * mtimes the looks recorded when it has no authority of its own.
+ */
+function subjectLiveness(
+  s: WatchSubject,
   ctx: GuardContext,
   looks: WindowEntry[],
   mtime: number | undefined,
+  closedUntil: number | null,
 ): Liveness {
-  if (watchesNothing(subjects)) return { kind: "nothing-watched" };
-  for (const s of subjects) {
-    if (s.startsWith("task:"))
-      return taskLiveness(ctx, s.slice("task:".length));
+  const ownLooks = looks.filter((e) => e.s.includes(s));
+  if (s.startsWith("time:")) return { kind: "nothing-watched" };
+  if (s.startsWith("task:")) return taskLiveness(ctx, s.slice("task:".length));
+  if (s.startsWith("receipt:build:")) {
+    const wt = s.slice("receipt:build:".length);
+    if (wt !== "self") return receiptLiveness(wt);
   }
-  for (const s of subjects) {
-    if (s.startsWith("receipt:build:")) {
-      const wt = s.slice("receipt:build:".length);
-      if (wt !== "self") return receiptLiveness(wt);
-    }
-    if (s.startsWith("pid:")) {
-      const pid = Number(s.slice("pid:".length));
-      if (Number.isFinite(pid)) {
-        return pidAlive(pid)
-          ? { kind: "running", what: `Process ${pid}`, wakesYou: false }
-          : { kind: "finished", verdict: `pid ${pid} has exited` };
-      }
+  if (s.startsWith("pid:")) {
+    const pid = Number(s.slice("pid:".length));
+    if (Number.isFinite(pid)) {
+      return pidAlive(pid)
+        ? { kind: "running", what: `Process ${pid}`, wakesYou: false }
+        : { kind: "finished", verdict: `pid ${pid} has exited` };
     }
   }
-  return unchangedAcross(looks, mtime);
+  if (s.startsWith(RUN_SUBJECT)) {
+    const settled = runLiveness(s.slice(RUN_SUBJECT.length));
+    if (settled) return settled;
+  }
+  if (isTimelineSubject(s) && closedUntil !== null) {
+    return {
+      kind: "finished",
+      verdict: `you are reading the slice that ended ${new Date(closedUntil).toISOString()}, and an append-only log adds no lines in the past`,
+    };
+  }
+  return unchangedAcross(ownLooks, mtime);
+}
+
+/**
+ * The loop's liveness: each REPEATED subject answers for itself, and the loop
+ * is a wait while any of them may still change. A subject the incoming command
+ * names but the window does not is not part of the loop, so it has no say.
+ *
+ * Which denial a wait gets follows what will end it: a harness task wakes the
+ * agent on its own, so that message wins; then a running op; then not knowing.
+ */
+function livenessOf(
+  repeated: WatchSubject[],
+  ctx: GuardContext,
+  looks: WindowEntry[],
+  mtime: number | undefined,
+  closedUntil: number | null,
+): Liveness {
+  const each = repeated.map((s) =>
+    subjectLiveness(s, ctx, looks, mtime, closedUntil),
+  );
+  const running = each.filter(
+    (l): l is Extract<Liveness, { kind: "running" }> => l.kind === "running",
+  );
+  const waking = running.find((l) => l.wakesYou);
+  if (waking) return waking;
+  if (running[0]) return running[0];
+  if (each.some((l) => l.kind === "unknown")) return { kind: "unknown" };
+  if (each.every((l) => l.kind === "nothing-watched"))
+    return { kind: "nothing-watched" };
+  const verdicts = each.flatMap((l) =>
+    l.kind === "finished" ? [l.verdict] : [],
+  );
+  return { kind: "finished", verdict: [...new Set(verdicts)].join("; ") };
 }
 
 /* -------------------------------------------------------------------- message */
@@ -379,7 +455,13 @@ export const pollLoopGuard = defineGuard<BashInput>({
     const looks = pruneWindow(state.window, now).filter((e) =>
       e.s.some((s) => repeated.includes(s)),
     );
-    const liveness = livenessOf(subjects, ctx, looks, mtime);
+    const liveness = livenessOf(
+      repeated,
+      ctx,
+      looks,
+      mtime,
+      closedWindowEnd(parseShell(cmd), now),
+    );
 
     // Forensics on something already finished is legitimate — answer the
     // question instead of blocking it, and let the window keep filling.

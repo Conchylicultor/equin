@@ -1,11 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import {
   classify,
+  closedWindowEnd,
   detectPoll,
   watchSubjects,
   THRESHOLD,
   type WindowEntry,
 } from "./poll-detect";
+import { parseShell } from "./parse-shell";
 
 const TASK =
   "/private/tmp/claude-501/-Users-epot-repo--worktrees-att-1/abc-def/tasks/bjr1kagwr.output";
@@ -109,6 +111,82 @@ describe("watchSubjects", () => {
     test("an echo beside real work is not a no-op", () => {
       expect(watchSubjects(`echo "=== a ==="; cat src/a.ts`)).toEqual([]);
     });
+  });
+});
+
+describe("log subjects are per file, never per family", () => {
+  // Fake root, deliberately not under /Users or ~ — `paths:no-hardcoded-paths`.
+  const RUN = "/r/data/worktrees/att-1-a/runs/build-build-1794163461-h5cz9l";
+
+  test("a run transcript keeps its path, even through a variable", () => {
+    expect(
+      watchSubjects(`L=${RUN}.log; stat -f '%Sm' $L; rg -n "locked" $L`),
+    ).toEqual([`run:${RUN}`]);
+  });
+
+  test("two builds' logs are two subjects", () => {
+    expect(
+      watchSubjects("cat /r/w/build-build-1-a.log /r/w/check-build-2-b.log"),
+    ).toEqual(["log-file:build-build-1-a", "log-file:check-build-2-b"]);
+  });
+
+  test("the build timeline is its own subject, not a build log", () => {
+    expect(watchSubjects("rg x /r/data/build-progress.jsonl")).toEqual([
+      "log:build-progress",
+    ]);
+  });
+});
+
+describe("closedWindowEnd", () => {
+  const at = (iso: string) => Date.parse(iso);
+  const end = (cmd: string, now: string) =>
+    closedWindowEnd(parseShell(cmd), at(now));
+
+  test("a minute-tens prefix ends at the next ten minutes", () => {
+    expect(end(`rg '"t":"2026-11-08T18:4[67]' f`, "2026-11-08T19:00Z")).toBe(
+      at("2026-11-08T18:50Z"),
+    );
+  });
+
+  test("the incident's pipeline: an rg -v on another call does not count", () => {
+    expect(
+      end(
+        `rg -n '"t":"2026-11-08T18:4[67]' f | rg -v '"phase":"pending"'`,
+        "2026-11-08T19:00Z",
+      ),
+    ).toBe(at("2026-11-08T18:50Z"));
+  });
+
+  test("a window still open names nothing closed", () => {
+    expect(end(`rg '"t":"2026-11-08T18:4' f`, "2026-11-08T18:47Z")).toBeNull();
+  });
+
+  test("every timestamp must be closed — one live alternative keeps it open", () => {
+    expect(
+      end(`rg '2026-11-08T17|2026-11-08T19' f`, "2026-11-08T18:30Z"),
+    ).toBeNull();
+  });
+
+  test("a date the parser cannot read keeps it open", () => {
+    expect(
+      end(`rg '2026-11-07|2026-11-0[89]' f`, "2026-11-08T12:00Z"),
+    ).toBeNull();
+  });
+
+  test("a past date that selects nothing is no window", () => {
+    const now = "2026-11-08T12:00Z";
+    expect(end("tail -50 f | rg -v 2026-11-01", now)).toBeNull();
+    expect(end("echo 2026-11-01; tail -5 f", now)).toBeNull();
+  });
+
+  test("a day prefix spans the whole day", () => {
+    expect(end("rg 2026-11-07 f", "2026-11-08T00:00Z")).toBe(
+      at("2026-11-08T00:00Z"),
+    );
+  });
+
+  test("no timestamp, no window", () => {
+    expect(end("tail -5 f", "2026-11-08T00:00Z")).toBeNull();
   });
 });
 

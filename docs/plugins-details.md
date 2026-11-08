@@ -29622,11 +29622,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `blocking-fs/sync-named` — `core/internal/changed-files.ts` (sanctioned)
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
           - Core:
-            - Uses: 29 symbols — full list in [`plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md)
+            - Uses: 30 symbols — full list in [`plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md)
+              - `infra/paths` ×4
               - `packages/timed-fs` ×4
               - `framework/cli/cli-name` ×3
               - `infra/host-fs/user-path` ×3
-              - `infra/paths` ×3
               - `framework/cli/foreground-handoff` ×2
               - `framework/tooling/collected-dir` ×2
               - `framework/tooling/guards/refusal-format` ×2
@@ -34542,6 +34542,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `releaseIdentity`
           - `repoConfigDir`
           - `resolveCheckoutDeploySync`
+          - `RUN_TERMINAL_SUFFIX`
           - `SERVER_CORE_RELATIVE`
           - `setReleaseIdentity`
           - `stampCheckoutMinterSync`

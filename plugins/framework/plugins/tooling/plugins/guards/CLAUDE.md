@@ -154,6 +154,16 @@ recorded. Adding a subject kind means giving it an answer, not an arm exempting
 it — an exempt category here is what let a finished task be told for an hour
 that it would be "re-invoked when it exits".
 
+Liveness is asked of each REPEATED subject; the loop is a wait while any may
+still change. So a subject names ONE thing, never a family (one `log:build` for
+every build log plus the host timeline made forensics on finished builds
+unanswerable):
+
+- `run:<path>` — a supervised run's transcript; finished once its `.exit-code` exists.
+- `log:<stem>` — one build/check log or timeline. A `log:*` read over a time
+  window that has fully ended (`closedWindowEnd`) is finished however busy its
+  writers are; `tail` of it is still a poll. Gap: `rg -v <ts>` reads as a filter.
+
 A command that watches nothing (bare `sleep`, `echo` of fixed text) is still a
 poll: it gets a `time:*` subject and the `nothing-watched` answer. Don't
 exempt it as harmless — agents told not to `sleep` wait on `echo w1`, `echo w2`,
@@ -267,11 +277,11 @@ can blind or deafen all of them at once.
 
 - Description: Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
 - Core:
-  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra/paths` ×4
     - `packages/timed-fs` ×4
     - `framework/cli/cli-name` ×3
     - `infra/host-fs/user-path` ×3
-    - `infra/paths` ×3
     - `framework/cli/foreground-handoff` ×2
     - `framework/tooling/collected-dir` ×2
     - `framework/tooling/guards/refusal-format` ×2

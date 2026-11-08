@@ -1,5 +1,6 @@
 import {
   parseShell,
+  type ShellCall,
   type ShellParseResult,
   type ShellRedirection,
 } from "./parse-shell";
@@ -243,8 +244,23 @@ export function watchSubjectsFrom(parsed: ShellParseResult): WatchSubject[] {
     const wt = cmd.match(/worktrees\/([A-Za-z0-9_-]+)\/build-status/);
     out.add(`receipt:build:${wt?.[1] ?? "self"}`);
   }
-  if (/build-[A-Za-z0-9_-]*\.log\b|build-progress\.jsonl/.test(cmd))
-    out.add("log:build");
+  // One subject per log FILE, never one per family. A family subject
+  // (`log:build` once stood for every build's log AND the host-wide build
+  // timeline) makes reading three finished builds' logs, one after another,
+  // the same "thing" — and the looks then disagree on mtime, so nothing about
+  // any one of them could ever be answered (task-1794163688-i0vy9o was blocked
+  // twice this way, mid-investigation).
+  //
+  // A supervised run's transcript (`runs/<kind>-<run>.log`) keeps the path as
+  // written: the guard answers it from the run's terminal marker beside it,
+  // and the command often names it through a variable (`L=…/x.log; rg … $L`)
+  // that no operand parse resolves.
+  add(RUN_TRANSCRIPT_RE, (m) => `${RUN_SUBJECT}${m[1]}`);
+  add(
+    /(?<!runs\/)(?<![A-Za-z0-9_-])((?:build|check)-[A-Za-z0-9_-]+)\.log\b/,
+    (m) => `log-file:${m[1]}`,
+  );
+  if (/build-progress\.jsonl/.test(cmd)) out.add("log:build-progress");
   add(/logs\/([a-z0-9-]+)\.jsonl/, (m) => `log:${m[1]}`);
 
   // Process probes read their target off the PARSED call: a pattern is routinely
@@ -303,6 +319,105 @@ export function watchSubjectsFrom(parsed: ShellParseResult): WatchSubject[] {
   return [...out];
 }
 
+/**
+ * A supervised run's transcript as the command spells it: everything up to
+ * `runs/<kind>-<run>`, the `.log` suffix cut off. The path text is the subject
+ * so the guard can find the run's terminal marker beside it.
+ */
+const RUN_TRANSCRIPT_RE =
+  /((?:~|\$\{?HOME\}?)?[^\s"'|;&()<>=$`]*?runs\/[A-Za-z0-9_-]+)\.log\b/;
+
+/** The prefix of a run-transcript subject; what follows it is the path stem. */
+export const RUN_SUBJECT = "run:";
+
+/**
+ * Subjects naming an append-only timeline — a JSONL log whose lines are only
+ * ever added at its end, each stamped with when it was written (the build
+ * timeline, a `logs/<channel>.jsonl`). A flat build log (`log-file:`) is not
+ * one: its lines carry no time to select by. A slice of one that
+ * ended in the past can no longer change, however busy its writers are.
+ */
+export function isTimelineSubject(s: WatchSubject): boolean {
+  return s.startsWith(TIMELINE_SUBJECT);
+}
+
+const TIMELINE_SUBJECT = "log:";
+
+/**
+ * The end of the time window this command pins, when it reads a timeline only
+ * through timestamps that are all in the past: `rg '"t":"2026-11-08T18:4[67]'
+ * build-progress.jsonl` reads the lines written at 18:40–18:49 UTC, a slice an
+ * append-only log can no longer grow, however many builds append to it now.
+ *
+ * Read off the LITERAL prefix of each timestamp — digits up to the first
+ * character that is not part of one (`[`, `.`, `*`). That prefix spans at least
+ * the window the pattern selects (a `[67]` after it only narrows it), so its
+ * end is an upper bound. UTC, as every timeline here writes.
+ *
+ * `null` — the window is open, or not known to be a window — unless every
+ * date-looking word in the command is a parsed timestamp in a positive `rg` /
+ * `grep` pattern, and every one is closed. A date anywhere else (`rg -v`, an
+ * `echo`, a flag of another tool) selects nothing, and one live alternative
+ * still matches new lines.
+ */
+export function closedWindowEnd(
+  parsed: ShellParseResult,
+  now: number,
+): number | null {
+  let latest: number | null = null;
+  for (const call of parsed.calls) {
+    for (const arg of call.args) {
+      const dates = arg.match(DATE_LIKE_RE)?.length ?? 0;
+      if (dates === 0) continue;
+      const stamps = [...arg.matchAll(ISO_PREFIX_RE)];
+      if (stamps.length !== dates || !filtersBy(call)) return null;
+      for (const m of stamps) {
+        const end = windowEnd(m);
+        if (end > now) return null;
+        latest = Math.max(latest ?? 0, end);
+      }
+    }
+  }
+  return latest;
+}
+
+/** A search whose pattern selects the lines it prints. */
+function filtersBy(call: ShellCall): boolean {
+  if (call.name !== "rg" && call.name !== "grep") return false;
+  return !call.args.some(
+    (a) =>
+      a === "--invert-match" || (/^-[A-Za-z]+$/.test(a) && a.includes("v")),
+  );
+}
+
+/** Anything that starts like a date — parsed or not. */
+const DATE_LIKE_RE = /\b\d{4}-\d/g;
+
+const ISO_PREFIX_RE =
+  /\b(\d{4})-(\d{2})-(\d{2})(?:T(\d)(\d)?(?::(\d)(\d)?(?::(\d)(\d)?)?)?)?/g;
+
+/** One past the last instant of the window a timestamp prefix names, in ms. */
+function windowEnd(m: RegExpMatchArray): number {
+  const [, y, mo, d, h1, h2, mi1, mi2, s1, s2] = m;
+  const n = (v: string | undefined) => Number(v ?? 0);
+  const startOf = (h: number, mi: number, s: number) =>
+    Date.UTC(n(y), n(mo) - 1, n(d), h, mi, s);
+  if (h1 === undefined) return startOf(0, 0, 0) + DAY;
+  if (h2 === undefined) return startOf(n(h1) * 10, 0, 0) + 10 * HOUR;
+  const h = n(h1) * 10 + n(h2);
+  if (mi1 === undefined) return startOf(h, 0, 0) + HOUR;
+  if (mi2 === undefined) return startOf(h, n(mi1) * 10, 0) + 10 * MINUTE;
+  const mi = n(mi1) * 10 + n(mi2);
+  if (s1 === undefined) return startOf(h, mi, 0) + MINUTE;
+  if (s2 === undefined) return startOf(h, mi, n(s1) * 10) + 10 * SECOND;
+  return startOf(h, mi, n(s1) * 10 + n(s2)) + SECOND;
+}
+
+const SECOND = 1000;
+const MINUTE = 60 * SECOND;
+const HOUR = 60 * MINUTE;
+const DAY = 24 * HOUR;
+
 function isNoOp(parsed: ShellParseResult): boolean {
   return (
     parsed.calls.length > 0 &&
@@ -310,15 +425,6 @@ function isNoOp(parsed: ShellParseResult): boolean {
       (c) => NO_OPS.has(c.name) && !c.args.some((a) => a.includes("$")),
     )
   );
-}
-
-/**
- * True when every subject names no thing: the command waits on the clock or does
- * nothing. There is no file, process or task to ask "still running?", so no
- * further look can differ from the last one.
- */
-export function watchesNothing(subjects: WatchSubject[]): boolean {
-  return subjects.length > 0 && subjects.every((s) => s.startsWith("time:"));
 }
 
 function normalise(s: string): string {

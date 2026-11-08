@@ -9,6 +9,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { RUN_TERMINAL_SUFFIX } from "@plugins/infra/plugins/paths/core";
 import { createContext } from "../context";
 import type { Verdict } from "../types";
 import { pollLoopGuard } from "./poll-loop";
@@ -287,6 +288,104 @@ describe("poll-loop guard", () => {
         `cat ${path}`,
         `cat ${path}`,
         `cat ${path}`,
+      ]);
+      expect(v.kind).toBe("deny");
+    });
+  });
+
+  /**
+   * The incident (task-1794163688-i0vy9o, 2026-11-08 18:51–18:53): an agent
+   * finding who held a store at 18:47 read the host-wide build timeline for
+   * that minute, then a finished build's transcript. Every look shared one
+   * family subject (`log:build`), the timeline kept growing from OTHER builds,
+   * and the guard denied the 4th look — and the next — as polling.
+   */
+  describe("forensics on settled targets, the incident's shape", () => {
+    /** A run transcript in a `runs/` dir, its terminal marker optional. */
+    function runLog(settled: boolean): string {
+      const dir = join(newDir(), "runs");
+      mkdirSync(dir, { recursive: true });
+      const stem = join(dir, "build-build-1794163461-h5cz9l");
+      writeFileSync(`${stem}.log`, "database is locked\n");
+      if (settled) writeFileSync(`${stem}${RUN_TERMINAL_SUFFIX}`, "1\n");
+      return `${stem}.log`;
+    }
+
+    /** The host timeline, appended to by builds the agent is not waiting on. */
+    function timeline(): string {
+      const path = join(newDir(), "build-progress.jsonl");
+      writeFileSync(path, '{"t":"2026-11-08T18:46:00.000Z"}\n');
+      return path;
+    }
+
+    function grow(path: string, secondsOn: number): void {
+      appendFileSync(path, `{"t":"${new Date().toISOString()}"}\n`);
+      const when = new Date(Date.now() + secondsOn * 1000);
+      utimesSync(path, when, when);
+    }
+
+    /** Runs each look, the timeline growing after each; the last verdict. */
+    function looksWhileGrowing(tl: string, looks: string[]): Verdict {
+      const session = newSession();
+      let last: Verdict = { kind: "allow" };
+      for (const [i, look] of looks.entries()) {
+        last = run(session, look);
+        grow(tl, i + 1);
+      }
+      return last;
+    }
+
+    const earlierLooks = (tl: string) => [
+      `rg -n "build-1794163615-sf434c" ${tl} | head -40`,
+      `rg -n "att-1794161298-ze7avt" ${tl} | tail -20`,
+      `rg -n '"t":"2026-11-08T18:4[5-8]' ${tl} | rg -v '"phase":"pending"' | head -60`,
+    ];
+
+    test("the 4th read of a closed minute of a growing timeline is answered", () => {
+      const tl = timeline();
+      const v = looksWhileGrowing(tl, [
+        ...earlierLooks(tl),
+        `rg -n '"t":"2026-11-08T18:4[67]' ${tl} | rg -v '"phase":"pending"' | cut -c1-300`,
+      ]);
+      expect(v.kind).toBe("inform");
+      expect(v.kind === "inform" && v.context).toContain("append-only");
+    });
+
+    test("tailing the same growing timeline is still a poll", () => {
+      const tl = timeline();
+      const v = looksWhileGrowing(tl, [...earlierLooks(tl), `tail -5 ${tl}`]);
+      expect(v.kind).toBe("deny");
+    });
+
+    test("a finished build's transcript is not the timeline's subject", () => {
+      const tl = timeline();
+      const log = runLog(true);
+      const v = looksWhileGrowing(tl, [
+        ...earlierLooks(tl),
+        `L=${log}; stat -f '%Sm' $L; rg -n "locked|SQLITE" $L | head -20`,
+      ]);
+      expect(v.kind).toBe("allow");
+    });
+
+    test("a settled run's transcript, read four ways through a variable, is answered", () => {
+      const log = runLog(true);
+      const v = runAll([
+        `L=${log}; wc -l $L`,
+        `L=${log}; rg -n "locked" $L`,
+        `L=${log}; head -20 $L`,
+        `L=${log}; tail -20 $L`,
+      ]);
+      expect(v.kind).toBe("inform");
+      expect(v.kind === "inform" && v.context).toContain("has settled");
+    });
+
+    test("the same reads of a run with no terminal marker stay a wait", () => {
+      const log = runLog(false);
+      const v = runAll([
+        `L=${log}; wc -l $L`,
+        `L=${log}; rg -n "locked" $L`,
+        `L=${log}; head -20 $L`,
+        `L=${log}; tail -20 $L`,
       ]);
       expect(v.kind).toBe("deny");
     });

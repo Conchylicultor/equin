@@ -390,6 +390,7 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `releaseIdentity`
     - `repoConfigDir`
     - `resolveCheckoutDeploySync`
+    - `RUN_TERMINAL_SUFFIX`
     - `SERVER_CORE_RELATIVE`
     - `setReleaseIdentity`
     - `stampCheckoutMinterSync`
