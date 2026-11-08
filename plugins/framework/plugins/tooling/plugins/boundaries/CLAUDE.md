@@ -332,7 +332,7 @@ takes a `debt` exemption on the check's id.
     - `infra/runtime-profiler` (1 debt)
     - `infra/safe-fetch` (1 debt)
     - `infra/spawn` (3 debt)
-    - `infra/spawn/daemon` (2 debt)
+    - `infra/spawn/daemon` (1 debt)
     - `infra/ssh` (2 debt)
     - `infra/stack-sampler` (1 debt)
     - `infra/worktree` (9 debt)

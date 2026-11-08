@@ -28796,7 +28796,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/runtime-profiler` (1 debt)
               - `infra/safe-fetch` (1 debt)
               - `infra/spawn` (3 debt)
-              - `infra/spawn/daemon` (2 debt)
+              - `infra/spawn/daemon` (1 debt)
               - `infra/ssh` (2 debt)
               - `infra/stack-sampler` (1 debt)
               - `infra/worktree` (9 debt)
@@ -35089,8 +35089,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`daemon`** — defineDaemon: the one declared long-lived process or thread a backend runs on its own — a named, described declaration (startedBy boot | on-demand, where every-worktree | main | host-singleton, restart never | backoff) whose spawnProcess / spawnWorker supervise a child process or Bun Worker (one respawn loop: doubling backoff, give-up after repeated rapid exits, healthy on survival or a ready signal), and whose launchDetached / attach follow a detached process by its pid file. Records per declaration its instances (pid, since, restarts, last exit) and each incarnation as a run for the Background activity catalog (onDaemonActivity / listDaemons / daemonRecentRuns).
           - Server:
             - Uses:
-              - `infra/file-watcher.acquireDirWatch`
-              - `infra/file-watcher.DirWatchRelease`
+              - `infra/file-watcher.defineFileWatcher`
+              - `infra/file-watcher.FileWatcher`
+              - `infra/file-watcher.WatchedDirGoneError`
             - Exports (types):
               - `AttachOptions`
               - `DaemonArm`
@@ -35126,6 +35127,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `pidAlive`
               - `readPidFile`
               - `stopOnCodeAdopted`
+            - Register: `defineFileWatcher('daemon.pid-files')`
           - Cross-plugin:
             - Imported by:
               - `apps/browser/engine`
@@ -35143,7 +35145,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Exemptions:
             - Exempts itself from:
               - `daemon/no-raw-worker` — `.` (sanctioned)
-              - `boundaries/no-platform-api` — `server/internal/registry.ts`, `server/internal/pid-file-watch.ts` (debt)
+              - `boundaries/no-platform-api` — `server/internal/registry.ts` (debt)
             - Exempted by: `infra/spawn/daemon` (0 debt)
           - Plugins:
             - **`background-arm`** — Long-lived processes in the Background activity catalog: registers the `daemon` background kind — every declaration made with defineDaemon under Long-lived processes, triggered at boot or on demand, its scope from `where`, and its facts (each instance's state, pid, since when, restarts, memory and CPU from one `ps`, the last exit, the restart policy, how liveness is known) — plus each incarnation as a run in this process. Pushes the catalog on every instance transition (start, ready, death, respawn, give-up, stop).

@@ -11,8 +11,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { registerDirWatchHub } from "@plugins/infra/plugins/file-watcher/server/testing";
 import { defineDaemon } from "./define";
+import { pidFileWatcher } from "./pid-file-watch";
 import {
   daemonRecentRuns,
   listDaemons,
@@ -28,7 +28,8 @@ import {
 // with its counters reset; stop() ends it for good; a pid file is followed
 // through its states — each change pushed by its watch, not read on a get.
 
-registerDirWatchHub();
+// Mounted by this plugin's server barrel at boot; registered by hand here.
+pidFileWatcher.register();
 
 const tmpDirs: string[] = [];
 function newTmpDir(): string {

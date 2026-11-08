@@ -79,25 +79,34 @@ declaration (tsc): nothing here can respawn what it is not the parent of.
   adoption (`stopOnCodeAdopted`), and its owner starts it again on next use
   (the faceted-tree worker, `plugin-meta/plugin-tree`).
 - **Pid-file liveness is watched, and a get reads memory**
-  (`server/internal/pid-file-watch.ts`). The pid file's folder gets a
-  children-scope watch through the shared dir hub (`acquireDirWatch`); each
-  change of the file is read async (`readPidFile`, one read at a time,
-  changes landing mid-read folded into one more) and pushed into the follow
-  logic, so `running` / `exited` / a restart fire on the change.
+  (`server/internal/pid-file-watch.ts`). The pid file gets a named-file
+  follow (`daemon.pid-files`, a `writesWhileOpen` declaration: kqueue on
+  darwin, one descriptor per file plus one per folder); each change of the
+  file is read async (`readPidFile`, one read at a time, changes landing
+  mid-read folded into one more) and pushed into the follow logic, so
+  `running` / `exited` / a restart fire on the change.
   `instance.pid` / `.state`, `listDaemons` and `daemonRecentRuns` judge the
   HELD read with a `kill(0)` — never the disk — so a process killed leaving
   its file behind (no file event, nothing polls) is seen at the next get.
   Before the first read the instance stays `starting`, never a stand-in
   "absent".
-- **Arm, then read.** The watch is live when `acquireDirWatch` resolves
-  (`infra/file-watcher`), so the first read, made after it, sees every write
-  the watch does not hear. The folder is never created here: while it is
-  missing, or after it went or its watch lost events (its watch dropped),
-  there is no watch and the read says `absent`. So a get that finds nothing
-  alive (`starting`, or an attached instance `exited`) asks for a fresh
-  async read, which opens the watch again — a folder that came later is
-  caught by the next look, never by a timer. A failure to open it other than a missing folder is reported
-  (`reportServerError`) and retried on the next read, which still runs.
+- **Why a file follow, not a folder watch.** A folder watch rides FSEvents,
+  which `fseventsd` delivers in bursts: under host load (2026-11-08, load
+  average 20–30) a write reached a long-open watch 0.1–3.4 s late (and up
+  to 30 s), however live the watch itself is. kqueue is
+  signalled by the kernel on the write itself and is live once the follow
+  resolves: a removal is pushed in ≤ ~130 ms however loaded the host is.
+- **The follow is not the authority; a get backs it up.** Every follow of
+  one folder shares one subscription, re-opened when a follower joins or
+  leaves, and a removal landing in that re-open is heard by nobody
+  (`infra/file-watcher`, follow-files). So a get that finds nothing alive
+  (`starting`, or an attached instance `exited`) also asks for a fresh
+  async read: a missed change is caught by the next look, never by a timer.
+  The folder is never created here: while it is missing, or after it went
+  (its follow dropped through `onLost`), there is no follow and the read
+  says `absent`; the next read opens it again. A failure to open it other
+  than a missing folder is reported (`reportServerError`) and retried on the
+  next read, which still runs.
 - **A bootstrap's exit is judged by a read that started after it.** Each
   read is numbered when it starts; until one numbered past the bootstrap's
   exit lands, a launch is still booting — an older read may predate the
@@ -123,8 +132,9 @@ declaration (tsc): nothing here can respawn what it is not the parent of.
 - Description: defineDaemon: the one declared long-lived process or thread a backend runs on its own — a named, described declaration (startedBy boot | on-demand, where every-worktree | main | host-singleton, restart never | backoff) whose spawnProcess / spawnWorker supervise a child process or Bun Worker (one respawn loop: doubling backoff, give-up after repeated rapid exits, healthy on survival or a ready signal), and whose launchDetached / attach follow a detached process by its pid file. Records per declaration its instances (pid, since, restarts, last exit) and each incarnation as a run for the Background activity catalog (onDaemonActivity / listDaemons / daemonRecentRuns).
 - Server:
   - Uses:
-    - `infra/file-watcher.acquireDirWatch`
-    - `infra/file-watcher.DirWatchRelease`
+    - `infra/file-watcher.defineFileWatcher`
+    - `infra/file-watcher.FileWatcher`
+    - `infra/file-watcher.WatchedDirGoneError`
   - Exports (types):
     - `AttachOptions`
     - `DaemonArm`
@@ -160,6 +170,7 @@ declaration (tsc): nothing here can respawn what it is not the parent of.
     - `pidAlive`
     - `readPidFile`
     - `stopOnCodeAdopted`
+  - Register: `defineFileWatcher('daemon.pid-files')`
 - Cross-plugin:
   - Imported by:
     - `apps/browser/engine`
@@ -177,7 +188,7 @@ declaration (tsc): nothing here can respawn what it is not the parent of.
 - Exemptions:
   - Exempts itself from:
     - `daemon/no-raw-worker` — `.` (sanctioned)
-    - `boundaries/no-platform-api` — `server/internal/registry.ts`, `server/internal/pid-file-watch.ts` (debt)
+    - `boundaries/no-platform-api` — `server/internal/registry.ts` (debt)
   - Exempted by: `infra/spawn/daemon` (0 debt)
 - Sub-plugins:
   - **`background-arm`** — Long-lived processes in the Background activity catalog: registers the `daemon` background kind — every declaration made with defineDaemon under Long-lived processes, triggered at boot or on demand…
