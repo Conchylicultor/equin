@@ -58,6 +58,7 @@ import {
   socketsDir,
 } from "../../data-dirs";
 import { gatewayLogs } from "@plugins/infra/plugins/launcher/plugins/gateway-logs/data-dirs";
+import { reportOutboxDir } from "@plugins/reports/plugins/outbox/data-dirs";
 import { listenFlag } from "./listen";
 import {
   pickRuntimeEnv,
@@ -552,6 +553,10 @@ export function gatewayLaunchFlags(
     gatewayState.file(CENTRAL_ROUTES_FILENAME),
     "-db-config",
     DATABASE_CONFIG_PATH,
+    // Where the gateway files a backend that died by a signal (its crash
+    // report), for main's backend to drain into the reports table.
+    "-report-outbox-dir",
+    reportOutboxDir.path,
     // The gateway records its own pid: under launchd no launcher sees the
     // spawn, and a generation launchd relaunched would otherwise leave the
     // file naming a dead one.

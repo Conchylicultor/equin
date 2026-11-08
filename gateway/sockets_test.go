@@ -477,7 +477,7 @@ func TestOnBackendExitIgnoresDraining(t *testing.T) {
 	wt.mu.Unlock()
 
 	// Simulate the draining backend exiting — should NOT change state.
-	wt.onBackendExit(drainingBk, nil)
+	wt.onBackendExit(drainingBk, nil, time.Now())
 
 	wt.mu.Lock()
 	state := wt.state

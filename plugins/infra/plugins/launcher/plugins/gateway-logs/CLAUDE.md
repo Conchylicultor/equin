@@ -32,6 +32,7 @@ output: the log relay". The Go constants are pinned here by
   - Imported by:
     - `database/embedded`
     - `database/pgbouncer`
+    - `debug/backend-crash`
     - `debug/logs`
     - `framework/cli/serve-app`
     - `framework/cli/start`

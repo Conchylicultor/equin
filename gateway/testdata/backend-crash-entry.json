@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "kind": "backend-crash",
+  "message": "backend alpha died by SIGSEGV after 1h4m38s — panic: Segmentation fault at address 0x7BC138",
+  "data": {
+    "worktree": "alpha",
+    "pid": 45958,
+    "signal": "SIGSEGV",
+    "signalNumber": 11,
+    "coreDumped": false,
+    "startedAt": 1794150000000,
+    "exitedAt": 1794153877965,
+    "executable": "equin · server · alpha",
+    "stderrTail": [
+      "Bun v1.4.4 (38afee6c8) macOS Silicon",
+      "panic: Segmentation fault at address 0x7BC138",
+      "oh no: Bun has crashed. This indicates a bug in Bun, not your code.",
+      " https://bun.report/1.4.4/Ma138afee6i3FuhooC__________A2AwzgvP"
+    ],
+    "stderrComplete": true
+  },
+  "occurredAt": 1794153877965,
+  "writer": {
+    "pid": 1234,
+    "checkout": "/repo/plugins/framework/plugins/server-core"
+  }
+}

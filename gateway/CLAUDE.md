@@ -158,6 +158,7 @@ gateway/
 ├── encoding.go    # Content-encoding of statics: precompressed-sidecar negotiation, on-the-fly gzip of the spliced shell
 ├── principal.go   # principalOf: owner/anonymous verdict, X-Equin-Principal stamp, cross-site refusal
 ├── content.go     # the content host: <item>.content.localhost/<ns>/api/… stamped `content`, nothing else served
+├── crash_report.go # A backend's signal death filed as a backend-crash report in the report outbox
 └── proxy.go       # http.Handler: routing, static serving, HTTP/WS proxy, /gateway API
 ```
 
@@ -291,6 +292,27 @@ The gateway expects backends to:
 6. Gate routes on `X-Equin-Principal` only when given `--principal-stamped` (see "Principal" → the handshake); without it, serve ungated and say so.
 
 In Bun: `Bun.serve({ unix: readServingSocket(), fetch, websocket })`. There is no standalone dev mode — the backend is always spawned by the gateway.
+
+## A backend that dies by a signal is reported
+
+A process killed by a signal (a segfault inside Bun or a native addon, an
+abort, a kill from outside) runs none of its own handlers, so it cannot report
+itself. The gateway is the one witness — it holds the wait status and the
+process's stderr — so `crash_report.go` files it: `onBackendExit` sees a signal
+death the gateway did not send (`backend.signalled`, set by `signalBackend`
+before every kill it makes) and writes one `backend-crash` entry into the
+report outbox (`-report-outbox-dir`, `reports/outbox`'s `state/report-outbox`),
+which main's backend drains into `reports` — main's own crash on its successor's
+boot. Any backend: worktrees, main, central. Exit-code exits are not filed (the
+process ran its handlers and reported itself).
+
+The entry carries the dead process's own last 60 stderr lines (Bun's panic
+block and `bun.report` link): **stderr is a pipe the gateway owns**
+(`os.Pipe`, not `cmd.StderrPipe`, whose read end `cmd.Wait` closes as soon as
+the process exits — dropping the panic block still buffered in it), read until
+EOF, bounded at 2 s for a grandchild holding it open. The payload is a
+cross-language contract: `testdata/backend-crash-entry.json` is read by this
+writer's test and by `plugins/debug/plugins/backend-crash`'s schema test.
 
 ## Orphan-backend reaping & stale-socket cleanup
 

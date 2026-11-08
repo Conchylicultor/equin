@@ -22081,6 +22081,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Cross-plugin:
     - Imported by: `infra/host/io-health`
   - Plugins:
+    - **`backend-crash`** — Backend-crash report renderer: a one-line Debug → Reports summary for the backend-crash kind (worktree, signal, uptime, Bun's panic line). The backend-crash report kind — filed by the gateway through the report outbox when a backend (central included) dies by a signal it did not send, drained by main: the signal, uptime, Bun's panic line and bun.report link, the macOS crash report's location and the dead process's last stderr lines. Main's own crash is filed by the next main backend.
+      - Web:
+        - Contributes: `Reports.KindView` → `BackendCrashSummary`
+        - Uses:
+          - `primitives/css/badge.Badge`
+          - `primitives/css/inline.Inline`
+          - `reports.Reports`
+      - Server:
+        - Contributes: `report-kind` "backend-crash"
+        - Uses: `reports.ReportKind`
+      - Core:
+        - Uses: `fields/duration.formatDuration`
+        - Exports (types): `BackendCrashPayload`
+        - Exports (values):
+          - `BackendCrashPayloadSchema`
+          - `bunPanicOf`
+          - `describeBackendCrash`
+          - `macCrashReportGlob`
+          - `uptimeOf`
+      - Cross-plugin:
+        - Uses tokens: `ui/tokens/color-palette --muted-foreground`
     - **`backend-liveness`** — Backend-frozen report renderer: a one-line Debug → Reports summary for the backend-frozen kind. The backend-frozen report kind — filed by central's liveness probe through the report outbox, drained by main: every minute while a backend stays frozen, once when the episode ends (main's own freeze is filed as soon as its thread runs again). Plus a debug-only trigger that freezes a worktree backend's JS thread to reproduce it. Backend liveness probe (central): every 15 s asks each running backend for any HTTP answer on its own socket, and appends a frozen episode to the backend-liveness data dir when one stays unanswered for a minute of awake time (machine sleep never counts; a stopped process is paused, not frozen) — from outside the backend, so a frozen JS thread is noticed while it lasts.
       - Web:
         - Contributes: `Reports.KindView` → `BackendFrozenSummary`
@@ -25884,6 +25905,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `parseDuration`
       - Cross-plugin:
         - Imported by:
+          - `debug/backend-crash`
           - `debug/claude-cli-calls`
           - `debug/profiling/runtime`
           - `debug/queue`
@@ -33851,6 +33873,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `database/embedded`
               - `database/pgbouncer`
+              - `debug/backend-crash`
               - `debug/logs`
               - `framework/cli/serve-app`
               - `framework/cli/start`
@@ -43682,9 +43705,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×6
               - `ui/tokens/shape` ×3
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 176 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 177 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `apps` ×38
-              - `debug` ×34
+              - `debug` ×35
               - `conversations` ×27
               - `reports` ×17
               - `primitives` ×10
@@ -44114,10 +44137,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 105 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+            - Imported by: 106 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
               - `apps` ×21
               - `reports` ×18
-              - `debug` ×15
+              - `debug` ×16
               - `primitives` ×12
               - `conversations` ×9
               - `page` ×6
@@ -51849,8 +51872,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`reports`** — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. The reports table and its live read (reports.list), the ReportKind / ReportNoiseRule slots every kind and rule contributes to, and the fan-out ceiling config; recording is the engine's (reports/plugins/engine).
   - Web:
     - Slots: `Reports.KindView`
-    - Slot contributors: 36 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `Reports.KindView` ×36
+    - Slot contributors: 37 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+      - `Reports.KindView` ×37
     - Contributes:
       - `IdKinds.Kind` "report"
       - `ConfigV2.WebRegister` "reports"
@@ -51954,9 +51977,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `SERVER_REPORT_SOURCES`
       - `submitReport`
   - Cross-plugin:
-    - Imported by: 66 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+    - Imported by: 67 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
       - `reports` ×29
-      - `debug` ×15
+      - `debug` ×16
       - `conversations` ×6
       - `database` ×4
       - `infra` ×3
@@ -52407,6 +52430,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/tooling/checks`
           - `framework/tooling/checks/type-check`
           - `framework/tooling/checks/type-check/backstop`
+          - `infra/launcher`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/file-report.ts`, `server/internal/drain.ts` (debt)
     - **`page-doc-rank-drift`** — Page doc-rank drift report kind: files the page editor's docRankDriftSink — a boot reconcile that had to re-mint `page_blocks.doc_rank` the structural-write chokepoint should already have kept in document order (a writer bypassed the doc-order marks, or an old backend wrote during a hot-swap) — deduped on the kind alone, with an investigation task naming the bypass to find.
@@ -58356,11 +58380,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --space-sm`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 531 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 532 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×118
               - `conversations` ×93
               - `primitives` ×73
-              - `debug` ×37
+              - `debug` ×38
               - `page` ×33
               - `plugin-meta` ×28
               - `ui` ×26

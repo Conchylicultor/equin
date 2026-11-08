@@ -201,6 +201,18 @@ type backend struct {
 	proxy      *httputil.ReverseProxy // nil until waitReady succeeds
 	demoted    bool                   // the gateway wants it darwinbg (spawned under taskpolicy -b, not yet promoted); guarded by the owning Worktree's mu
 
+	// What a crash report needs of this process (crash_report.go): its own
+	// stderr tail (the worktree's ring mixes in its successor's lines), when
+	// that stderr reached EOF, the binary it ran and the checkout it ran in.
+	stderrTail *lineTail
+	stderrDone chan struct{} // closed when its stderr pipe reaches EOF
+	executable string
+	checkout   string
+	// signalled: the gateway itself has sent it a signal (a stop, a drain, a
+	// readiness-deadline kill). Its death by that signal is the gateway's own
+	// act, already logged where it was sent — not a crash to report.
+	signalled atomic.Bool
+
 	// connMu guards both connection counters. httpConns tracks in-flight HTTP
 	// requests — bounded, short-lived, and waited on at drain so they finish
 	// cleanly instead of resetting into a 502. wsConns tracks WebSocket
@@ -885,15 +897,25 @@ func (w *Worktree) startBackend(spec *Spec, socketPath string, reason StartReaso
 	if err != nil {
 		return nil, err
 	}
-	stderr, err := cmd.StderrPipe()
+	// stderr is a pipe the gateway owns, not cmd.StderrPipe: cmd.Wait closes
+	// that one's read end as soon as the process exits, dropping whatever is
+	// still buffered in it — and a crashing Bun writes its panic block last.
+	// This read end stays open until the pump reads EOF.
+	stderr, stderrW, err := os.Pipe()
 	if err != nil {
 		return nil, err
 	}
+	cmd.Stderr = stderrW
 	now := time.Now()
 	marker := fmt.Sprintf("--- starting %s ---", w.Name)
 	fmt.Fprintf(w.logFile, "%s [gateway] %s\n", now.Format(time.RFC3339), marker)
 	w.logBuf.Append("gateway", marker, now.UnixMilli())
-	if err := cmd.Start(); err != nil {
+	err = cmd.Start()
+	// The child holds its own copy of the write end; the gateway's would keep
+	// the pipe from ever reaching EOF.
+	_ = stderrW.Close()
+	if err != nil {
+		_ = stderr.Close()
 		return nil, err
 	}
 
@@ -910,13 +932,24 @@ func (w *Worktree) startBackend(spec *Spec, socketPath string, reason StartReaso
 		startedAt:  now.UnixMilli(),
 		socketPath: socketPath,
 		demoted:    demoted,
+		stderrTail: newLineTail(crashTailLines),
+		stderrDone: make(chan struct{}),
+		executable: filepath.Base(argv[0]),
+		checkout:   spec.Server,
+	}
+	if len(spec.Command) > 0 {
+		// The binary the backend runs, not the taskpolicy wrapper in front of it.
+		bk.executable = filepath.Base(spec.Command[0])
 	}
 	log := slog.With("worktree", w.Name, "pid", cmd.Process.Pid, "socket", socketPath)
-	go pumpLog(stdout, "stdout", w.logBuf, w.logFile)
-	go pumpLog(stderr, "stderr", w.logBuf, w.logFile)
+	go pumpLog(stdout, "stdout", w.logBuf, w.logFile, nil)
+	go func() {
+		pumpLog(stderr, "stderr", w.logBuf, w.logFile, bk.stderrTail)
+		close(bk.stderrDone)
+	}()
 	go func() {
 		err := cmd.Wait()
-		w.onBackendExit(bk, err)
+		w.onBackendExit(bk, err, time.Now())
 		close(bk.exitCh)
 	}()
 	log.Info("backend spawned")
@@ -926,7 +959,15 @@ func (w *Worktree) startBackend(spec *Spec, socketPath string, reason StartReaso
 // onBackendExit is invoked from the cmd.Wait goroutine. It only transitions
 // state if the exiting backend is the currently active one — a draining old
 // backend from a hot restart is silently ignored.
-func (w *Worktree) onBackendExit(bk *backend, err error) {
+//
+// A death by a signal the gateway did not send — a segfault, an abort, a kill
+// from outside — is a crash, filed as a report (reportBackendCrash) whichever
+// backend it was: a draining one too.
+func (w *Worktree) onBackendExit(bk *backend, err error, exitedAt time.Time) {
+	if sig, coreDumped, ok := signalDeath(err); ok && !bk.signalled.Load() {
+		go w.reportBackendCrash(bk, sig, coreDumped, exitedAt)
+	}
+
 	w.mu.Lock()
 	isActive := (w.active == bk)
 	state := w.state
@@ -1246,6 +1287,8 @@ func killGroup(cmd *exec.Cmd, sig syscall.Signal) error {
 // other than ESRCH (the process is already gone — a benign no-op). Callers
 // proceed to wait on exitCh regardless.
 func signalBackend(bk *backend, sig syscall.Signal, worktree string) {
+	// Before the kill: the exit it causes must find the mark.
+	bk.signalled.Store(true)
 	if err := killGroup(bk.cmd, sig); err != nil && !errors.Is(err, syscall.ESRCH) {
 		slog.Warn("signal backend failed",
 			"worktree", worktree, "signal", sig.String(), "pid", backendPID(bk), "err", err)
@@ -1406,7 +1449,7 @@ func newReverseProxy(socketPath string) *httputil.ReverseProxy {
 // channel: the durable per-worktree file plus the in-memory ring that feeds the
 // live UI. Backend output stays out of the gateway's own log — each is its own
 // channel.
-func pumpLog(r io.ReadCloser, stream string, ring *logRing, file io.Writer) {
+func pumpLog(r io.ReadCloser, stream string, ring *logRing, file io.Writer, tail *lineTail) {
 	defer r.Close()
 	scanner := bufio.NewScanner(r)
 	scanner.Buffer(make([]byte, 0, 4096), 1024*1024)
@@ -1416,6 +1459,9 @@ func pumpLog(r io.ReadCloser, stream string, ring *logRing, file io.Writer) {
 		fmt.Fprintf(file, "%s [%s] %s\n", now.Format(time.RFC3339), stream, line)
 		if ring != nil {
 			ring.Append(stream, line, now.UnixMilli())
+		}
+		if tail != nil {
+			tail.add(line)
 		}
 	}
 }

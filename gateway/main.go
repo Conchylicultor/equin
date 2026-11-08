@@ -33,6 +33,7 @@ type Config struct {
 	SocketsDir        string
 	CentralRoutesFile string
 	DbConfigFile      string
+	ReportOutboxDir   string
 	DefaultNamespace  string
 	PublicHosts       string
 	PidFile           string
@@ -92,9 +93,9 @@ func parseFlags() (Config, string) {
 	flag.IntVar(&cfg.LogBufferLines, "log-buffer-lines", 1000, "per-worktree backend log ring capacity")
 
 	// These defaults mirror the TypeScript `defineDataDir` declarations that own
-	// each location (`logs/gateway`, `state/gateway`, `state/db-config`, and the
-	// grandfathered-in-place `sockets` and `worktrees`). The launcher passes all
-	// five explicitly, so nothing in the normal path depends on them — they exist
+	// each location (`logs/gateway`, `state/gateway`, `state/db-config`,
+	// `state/report-outbox`, and the grandfathered-in-place `sockets` and
+	// `worktrees`). The launcher passes all six explicitly, so nothing in the normal path depends on them — they exist
 	// for a hand-run gateway, and they must be kept in step with
 	// plugins/infra/plugins/launcher/data-dirs/index.ts.
 	dataDir := dataRoot()
@@ -111,6 +112,10 @@ func parseFlags() (Config, string) {
 	flag.StringVar(&cfg.CentralRoutesFile, "central-routes-file", defaultCentralRoutes, "path to the central routing manifest")
 	defaultDbConfig := filepath.Join(dataDir, "state", "db-config", "database.json")
 	flag.StringVar(&cfg.DbConfigFile, "db-config", defaultDbConfig, "path to the managed-service (database) config the supervisor reads")
+	// The report outbox (reports/outbox data-dirs, `state/report-outbox`): where
+	// the gateway files a backend's crash for main to record (crash_report.go).
+	defaultReportOutbox := filepath.Join(dataDir, "state", "report-outbox")
+	flag.StringVar(&cfg.ReportOutboxDir, "report-outbox-dir", defaultReportOutbox, "the report outbox directory a backend crash is filed into, for main's backend to record")
 	// Fallback namespace for subdomain-less requests. Empty ⇒ such requests 404
 	// (dev/multi-app). A packaged single-app build (desktop/Tauri, single-origin
 	// web) sets it to the app's name so a bare-localhost webview reaches the

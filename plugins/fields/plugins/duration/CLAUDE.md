@@ -21,6 +21,7 @@
     - `parseDuration`
 - Cross-plugin:
   - Imported by:
+    - `debug/backend-crash`
     - `debug/claude-cli-calls`
     - `debug/profiling/runtime`
     - `debug/queue`
