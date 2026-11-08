@@ -18,7 +18,7 @@ export async function runLocalTarget(
 
   let entries: string[];
   try {
-    entries = await readdir(await backupsDir());
+    entries = await readdir(backupsDir());
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
     return { targetId: "local", ok: true, detail: archive.archivePath };
@@ -31,7 +31,7 @@ export async function runLocalTarget(
   const completed: string[] = [];
   for (const e of candidates) {
     try {
-      await stat(`${await backupsDir()}/${e}/archive.tar.gz`);
+      await stat(`${backupsDir()}/${e}/archive.tar.gz`);
       completed.push(e);
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
@@ -43,7 +43,7 @@ export async function runLocalTarget(
   if (keepLast > 0 && dirs.length > keepLast) {
     const toDelete = dirs.slice(keepLast);
     for (const dir of toDelete) {
-      await rm(`${await backupsDir()}/${dir}`, {
+      await rm(`${backupsDir()}/${dir}`, {
         recursive: true,
         force: true,
       });

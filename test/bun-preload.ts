@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
   PLUGINS_DIR,
   checkoutNamespace,
+  declareDataRootLayoutSync,
 } from "@plugins/infra/plugins/paths/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import type { ServerContribution } from "@plugins/framework/plugins/server-core/core";
@@ -30,6 +31,10 @@ import type { ServerContribution } from "@plugins/framework/plugins/server-core/
 // That mint is async, hence the top-level await. A preload is an ES module, so
 // the whole preload is awaited before the first test file is imported — which
 // is the property that matters: no suite can observe an undeclared namespace.
+// The root of a `bun test` process tree: decide the data root before any suite
+// reads a path (infra/paths CLAUDE.md, § The data root). A suite that repoints
+// the root sets EQUIN_DIR, which wins over the declaration.
+declareDataRootLayoutSync();
 declareRuntimeNamespace(await checkoutNamespace(REPO_ROOT));
 
 // A test process is also a HOST that never boots its plugin graph: suites call

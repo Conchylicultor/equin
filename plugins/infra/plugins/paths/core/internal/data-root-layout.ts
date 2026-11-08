@@ -1,7 +1,5 @@
 import {
-  lstat,
   lstatSync,
-  realpath,
   realpathSync,
 } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
@@ -13,6 +11,7 @@ import {
   LEGACY_IDS,
   PRODUCT_NAME,
 } from "@plugins/framework/plugins/product-name/core";
+import { envName } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 
 // Where the data root is when the environment does not say: decided by what is
 // INSTALLED, not by the code's version.
@@ -66,6 +65,9 @@ export type DataRootLayout =
    */
   | { kind: "current"; root: AppPath; legacy: AppPath; legacyLink: boolean };
 
+/** A layout decided from the home dir: every case but `custom`. */
+export type HomeDataRootLayout = Exclude<DataRootLayout, { kind: "custom" }>;
+
 /**
  * Both names hold separate data: a legacy root that is not a link to the
  * current one, and a current root beside it. There is no correct automatic
@@ -98,7 +100,7 @@ export class DataRootSplitError extends Error {
 export function decideDataRootLayout(
   roots: { current: AppPath; legacy: AppPath },
   entries: { current: RootEntry; legacy: RootEntry },
-): DataRootLayout {
+): HomeDataRootLayout {
   const { current, legacy } = entries;
   if (legacy.kind === "absent") {
     return {
@@ -132,6 +134,56 @@ export function decideDataRootLayout(
   return { kind: "legacy", root: roots.legacy, current: roots.current };
 }
 
+/**
+ * A decided home layout as it travels in the environment
+ * (`EQUIN_DATA_ROOT_LAYOUT`): the case only — both roots derive from the home
+ * dir. Spelled by `./equin` (`paths/scripts/declare-data-root.sh`) and the
+ * gateway (`gateway/dataroot.go`) too, so the three values are a contract.
+ */
+export const HOME_LAYOUT_TOKENS = [
+  "current",
+  "current-legacy-link",
+  "legacy",
+] as const;
+export type HomeLayoutToken = (typeof HOME_LAYOUT_TOKENS)[number];
+
+/** The token a decided home layout travels as. */
+export function homeDataRootLayoutToken(
+  layout: HomeDataRootLayout,
+): HomeLayoutToken {
+  if (layout.kind === "legacy") return "legacy";
+  return layout.legacyLink ? "current-legacy-link" : "current";
+}
+
+/**
+ * The home layout a token names, pure. An unknown token throws: the variable
+ * is written only by a process tree's root, so a value it cannot have written
+ * is a bug to surface, never a layout to guess.
+ */
+export function homeDataRootLayoutOf(
+  home: string,
+  token: string,
+): HomeDataRootLayout {
+  const roots = homeDataRoots(home);
+  switch (token) {
+    case "current":
+    case "current-legacy-link":
+      return {
+        kind: "current",
+        root: roots.current,
+        legacy: roots.legacy,
+        legacyLink: token === "current-legacy-link",
+      };
+    case "legacy":
+      return { kind: "legacy", root: roots.legacy, current: roots.current };
+    default:
+      throw new Error(
+        `${envName("DATA_ROOT_LAYOUT")} is ${JSON.stringify(token)}, which no process tree's root writes ` +
+          `(one of ${HOME_LAYOUT_TOKENS.join(", ")}). Unset it and restart from ./equin.`,
+      );
+  }
+}
+
 /** What sits at `path`, read without following a final link. */
 export function readRootEntrySync(path: AppPath): RootEntry {
   let isLink: boolean;
@@ -160,52 +212,10 @@ export function readRootEntrySync(path: AppPath): RootEntry {
 }
 
 /** The home-relative layout as it is on disk now — read fresh, never cached. */
-export function readHomeDataRootLayoutSync(home: string): DataRootLayout {
+export function readHomeDataRootLayoutSync(home: string): HomeDataRootLayout {
   const roots = homeDataRoots(home);
   return decideDataRootLayout(roots, {
     current: readRootEntrySync(roots.current),
     legacy: readRootEntrySync(roots.legacy),
   });
-}
-
-/**
- * {@link readRootEntrySync} without blocking the event loop: the same
- * decision input, read with the async fs calls.
- */
-export async function readRootEntry(path: AppPath): Promise<RootEntry> {
-  let isLink: boolean;
-  try {
-    isLink = (await lstat(path)).isSymbolicLink();
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-      return { kind: "absent" };
-    }
-    throw err;
-  }
-  let resolved: string | null;
-  try {
-    resolved = await realpath(path);
-  } catch (err) {
-    if (isLink && (err as NodeJS.ErrnoException).code === "ENOENT") {
-      resolved = null;
-    } else {
-      throw err;
-    }
-  }
-  if (isLink) return { kind: "link", resolved };
-  if (resolved === null)
-    throw new Error(`unreachable: ${path} has no realpath`);
-  return { kind: "present", resolved };
-}
-
-/** {@link readHomeDataRootLayoutSync}, without blocking the event loop. */
-export async function readHomeDataRootLayout(
-  home: string,
-): Promise<DataRootLayout> {
-  const roots = homeDataRoots(home);
-  const [current, legacy] = await Promise.all([
-    readRootEntry(roots.current),
-    readRootEntry(roots.legacy),
-  ]);
-  return decideDataRootLayout(roots, { current, legacy });
 }

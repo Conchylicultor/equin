@@ -130,6 +130,7 @@ export const LEGACY_ID_NOTES: Readonly<Record<LegacyIdKey, LegacyIdNote>> = {
     mirrors: [
       "gateway/dataroot.go",
       "install.sh",
+      "plugins/infra/plugins/paths/scripts/declare-data-root.sh",
       "sidequests/monitors/fd/fd-monitor.sh",
       "sidequests/clean-install/run.sh",
       "sidequests/clean-install/steps-migrate.sh",

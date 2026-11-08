@@ -1,3 +1,5 @@
+// FIRST, and it must stay first: the data root, which the imports below read.
+import "./declare-data-root";
 import type {
   WsData,
   HttpHandler,

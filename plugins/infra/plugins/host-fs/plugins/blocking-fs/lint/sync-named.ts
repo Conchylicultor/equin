@@ -45,7 +45,15 @@ function ownerOf(node: TSESTree.Node, isReference: boolean): Owner {
       return fn.id === null
         ? { kind: "anonymous" }
         : { kind: "named", name: fn.id.name, node: fn.id };
-    const parent = fn.parent;
+    // Through a type assertion, the binding is the function's
+    // (`const xSync = ((p) => …) as Reader`), as `blocking.ts` reads it.
+    let parent: TSESTree.Node = fn.parent;
+    while (
+      parent.type === "TSAsExpression" ||
+      parent.type === "TSSatisfiesExpression" ||
+      parent.type === "TSTypeAssertion"
+    )
+      parent = parent.parent;
     if (
       (parent.type === "CallExpression" || parent.type === "NewExpression") &&
       parent.arguments.includes(fn)

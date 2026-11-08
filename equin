@@ -7,7 +7,7 @@ cd "$(dirname "$0")"
 # before `exec`, printing nothing — every subcommand then looked like it had
 # failed on its own. Dependencies are now installed INSIDE the CLI, by the
 # bootstrap in bin/index.ts (ensureDeps), which can attribute its own failures.
-# Do not add a step above the exec — except the naming just before it, which
+# Do not add a step above the exec — except the data-root declaration and the naming just before it, which
 # cannot abort (every command in it is a condition; a miss falls through to
 # plain `bun`), and this one guard, which cannot fail silently: with no Bun there is no CLI to report anything, and `exec` would say
 # only "bun: not found". The doctor names everything else that is missing too.
@@ -16,6 +16,11 @@ command -v bun >/dev/null 2>&1 || {
   sh plugins/framework/plugins/cli/plugins/doctor/doctor.sh >&2
   exit 1
 }
+# The data root, decided once for the whole process tree (infra/paths CLAUDE.md,
+# § The data root). Conditionals only, like the naming below: it cannot abort.
+if [ -f plugins/infra/plugins/paths/scripts/declare-data-root.sh ]; then
+  . plugins/infra/plugins/paths/scripts/declare-data-root.sh
+fi
 # The process's name in Activity Monitor: `equin · <verb>`, not `bun`
 # (packages/process-name). Run through an APFS clone of the checkout's Bun in
 # `verbs` — a symlink the CLI points at the machine-wide clones of that Bun

@@ -1,3 +1,5 @@
+// First: the data root, which the imports below may read.
+import "./declare-data-root";
 import { listActiveWorktreeOps } from "@plugins/infra/plugins/worktree/server";
 import {
   decideStop,

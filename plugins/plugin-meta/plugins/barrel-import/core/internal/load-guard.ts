@@ -2,7 +2,7 @@ import { installFsCallGuard } from "@plugins/packages/plugins/timed-fs/core";
 import { dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
-import { dataRootLayoutSync } from "@plugins/infra/plugins/paths/core";
+import { dataRootLayout } from "@plugins/infra/plugins/paths/core";
 import { envName } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 
 /**
@@ -47,8 +47,9 @@ import { envName } from "@plugins/infra/plugins/launcher/plugins/env-names/core"
  * evaluator identity):
  *
  * - `NODE_ENV` — React picks its build by it as it evaluates;
- * - the data root and its override, `EQUIN_DIR` — every data dir's path is
- *   resolved from it, and path constants are frozen at import by design
+ * - the data root, its override `EQUIN_DIR` and its declared home layout
+ *   `EQUIN_DATA_ROOT_LAYOUT` (infra/paths) — every data dir's path is
+ *   resolved from them, and path constants are frozen at import by design
  *   (`database/embedded`'s cluster dir);
  * - `EQUIN_PG_PORT` / `EQUIN_PG_SOCKET_DIR` — the cluster's address, and
  *   `EQUIN_MIGRATIONS_DIR` — a release's vendored migrations: the same kind of
@@ -61,6 +62,7 @@ import { envName } from "@plugins/infra/plugins/launcher/plugins/env-names/core"
 const LOAD_ENV: ReadonlySet<string> = new Set([
   "NODE_ENV",
   envName("DIR"),
+  envName("DATA_ROOT_LAYOUT"),
   envName("PG_PORT"),
   envName("PG_SOCKET_DIR"),
   envName("MIGRATIONS_DIR"),
@@ -69,14 +71,17 @@ const LOAD_ENV: ReadonlySet<string> = new Set([
 /**
  * The values of what a barrel may read as it loads, one `name=value` each —
  * part of every evaluated record's key. Read outside any span: the data root's
- * home layout (a disk read) is decided here, once per process, so a module
+ * home layout (declared for the process tree, data-root-layout) is read here, so a module
  * that resolves a data dir at load reads what this names.
  */
 export function barrelLoadInputs(): string[] {
+  // First: a process its tree's root declared nothing for decides (and
+  // declares) the layout here, so the variable below names the answer.
+  const dataRoot = dataRootLayout().root;
   const env = realEnv ?? process.env;
   return [
     ...[...LOAD_ENV].sort().map((k) => `${k}=${env[k] ?? ""}`),
-    `dataRoot=${dataRootLayoutSync().root}`,
+    `dataRoot=${dataRoot}`,
   ];
 }
 

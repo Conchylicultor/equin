@@ -162,6 +162,13 @@ func (c ChildEnv) With(extra ...string) []string {
 	return append(env, extra...)
 }
 
+// Plus returns a ChildEnv whose base also carries extra (`NAME=value`
+// entries, replacing same-named ones): an addition the gateway makes for
+// EVERY child, rather than one child's own (With).
+func (c ChildEnv) Plus(extra ...string) ChildEnv {
+	return ChildEnv{base: c.With(extra...)}
+}
+
 // Command is exec.Command with Env set to the base environment — never left
 // nil. A caller that needs additions sets `cmd.Env = c.With(…)` afterwards.
 //

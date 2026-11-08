@@ -31,7 +31,8 @@ import {
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import {
-  readHomeDataRootLayout,
+  homeDataRootLayoutOf,
+  homeDataRootLayoutToken,
   readHomeDataRootLayoutSync,
   type DataRootLayout,
 } from "./data-root-layout";
@@ -45,7 +46,7 @@ export const PLUGINS_DIR = joinAppPath(REPO_ROOT, "plugins");
  * binary's virtual FS (un-shipped, unreachable), so `launch.ts` points this at the
  * vendored tree via `EQUIN_REPO_CONFIG_DIR`; in dev it falls back to the repo.
  *
- * A FUNCTION for the same reason as {@link resolveDataRootSync} and
+ * A FUNCTION for the same reason as {@link resolveDataRoot} and
  * {@link worktreesDir}: `launch.ts` sets its env var, and a const would capture
  * whatever the environment said when this module was first imported. With this
  * one converted, NO constant in this module freezes an environment read — which
@@ -249,8 +250,8 @@ export const HOME_DIR = resolve(homedir());
  * A function for that second reason, the same one that makes `webDistDir()` a
  * function and `DataDir.path` a getter. See `webDistDir`'s docblock below.
  */
-export function resolveDataRootSync(): AppPath {
-  return dataRootLayoutSync().root;
+export function resolveDataRoot(): AppPath {
+  return dataRootLayout().root;
 }
 
 /**
@@ -258,30 +259,82 @@ export function resolveDataRootSync(): AppPath {
  * not yet migrated (`legacy`, `LEGACY_IDS.dataDirName`), or the current
  * `~/.equin` (`data-root-layout.ts`).
  *
- * The home-relative half reads the disk, so it is decided once per process:
- * an install changes layout only through `./equin data-dir migrate`, which
- * runs with every other process of the app stopped and starts the gateway it
- * restores as a fresh process. The environment is still read on every call,
- * for the reason in {@link resolveDataRootSync}.
+ * The home-relative half is a fact of the disk, so it is DECLARED once for a
+ * whole process tree, at the tree's root, and carried by the environment
+ * (`EQUIN_DATA_ROOT_LAYOUT`): the `./equin` wrapper, the gateway for every
+ * child it spawns, and each entry point a foreign parent starts (a backend's
+ * `bin/`, the CLI's, a hook's, the test preload) call
+ * {@link declareDataRootLayoutSync} before anything reads a path. Reading it
+ * here is then an environment read, on any thread. An install changes layout
+ * only through `./equin data-dir migrate`, which runs with every other process
+ * of the app stopped and starts the gateway it restores as a fresh process.
+ *
+ * The environment is read on every call, for the reason in
+ * {@link resolveDataRoot}.
  */
-export function dataRootLayoutSync(): DataRootLayout {
+export function dataRootLayout(): DataRootLayout {
   const dir = readEnvPath("DIR");
   if (dir !== undefined) return { kind: "custom", root: dir };
-  homeLayout ??= readHomeDataRootLayoutSync(HOME_DIR);
-  return homeLayout;
+  const declared = readEnv("DATA_ROOT_LAYOUT");
+  if (declared !== undefined) return homeDataRootLayoutOf(HOME_DIR, declared);
+  return undeclaredDataRootLayoutSync();
 }
-let homeLayout: DataRootLayout | undefined;
 
 /**
- * {@link dataRootLayoutSync} for a backend: the same per-process answer, read
- * with the async fs calls when this process has not decided it yet.
+ * Decide the home layout from the disk NOW and declare it for this process
+ * and every process it starts — the one call a process tree's root makes
+ * (see {@link dataRootLayout}). Blocks its thread (2 `lstat` + up to 2
+ * `realpath`), so it belongs in an entry point before anything else runs: a
+ * `bin/` module, before a backend listens. It always reads the disk, even when
+ * the environment already carries a declaration: an entry point's parent can
+ * be a long-lived process (a tmux server, Claude Code) holding one from before
+ * a migration, and the root of a tree is where a stale answer stops.
+ *
+ * When `EQUIN_DIR` names the root there is no home layout to decide: an
+ * inherited declaration is dropped, so nothing below can fall back to it.
+ * Two separate roots (`DataRootSplitError`) drop it too, then throw: an entry
+ * point whose commands must still run on a split install (the CLI —
+ * `data-dir migrate` explains one — and the hooks) catches it and leaves the
+ * process undeclared, so the throw comes on the first path read, as it always
+ * did.
  */
-export async function dataRootLayout(): Promise<DataRootLayout> {
+export function declareDataRootLayoutSync(): DataRootLayout {
   const dir = readEnvPath("DIR");
-  if (dir !== undefined) return { kind: "custom", root: dir };
-  homeLayout ??= await readHomeDataRootLayout(HOME_DIR);
-  return homeLayout;
+  if (dir !== undefined) {
+    unsetEnv("DATA_ROOT_LAYOUT");
+    return { kind: "custom", root: dir };
+  }
+  let layout: DataRootLayout;
+  try {
+    layout = readHomeDataRootLayoutSync(HOME_DIR);
+  } catch (err) {
+    unsetEnv("DATA_ROOT_LAYOUT");
+    throw err;
+  }
+  setEnv("DATA_ROOT_LAYOUT", homeDataRootLayoutToken(layout));
+  return layout;
 }
+
+/**
+ * TRANSITIONAL: a process whose tree's root declared nothing — a child of a
+ * gateway that predates the declaration, or an entry point nobody has listed
+ * yet — decides on its first read, as every process did before, and says so
+ * once on stderr so the missed root can be found (`data root undeclared`).
+ * The next step turns this into a throw (infra/paths CLAUDE.md, § The data
+ * root): until then, this is the one sync read left behind `dataRoot()`.
+ */
+function undeclaredDataRootLayoutSync(): DataRootLayout {
+  if (!warnedUndeclared) {
+    warnedUndeclared = true;
+    console.warn(
+      `[paths] data root undeclared in this process (pid ${process.pid}, ${process.argv.slice(1, 3).join(" ")}): ` +
+        `deciding it from the disk on first read. The root of its process tree should call declareDataRootLayoutSync() ` +
+        `(infra/paths CLAUDE.md, § The data root).`,
+    );
+  }
+  return declareDataRootLayoutSync();
+}
+let warnedUndeclared = false;
 
 /**
  * The local backups' dir — OUTSIDE the data root on purpose (`~/.backups/…`),
@@ -292,19 +345,11 @@ export async function dataRootLayout(): Promise<DataRootLayout> {
  * It follows the root's layout: an install not yet migrated keeps
  * `~/.backups/<LEGACY_IDS.backupsDirName>` (the migration moves it with the root), every other
  * install uses `~/.backups/equin`. A function for the same reason as
- * {@link dataRootLayoutSync}.
+ * {@link dataRootLayout}.
  */
-export function backupsDirSync(): AppPath {
+export function backupsDir(): AppPath {
   const dirs = backupsDirs();
-  return dataRootLayoutSync().kind === "legacy" ? dirs.legacy : dirs.current;
-}
-
-/** {@link backupsDirSync} for a backend: reads the root's layout without blocking. */
-export async function backupsDir(): Promise<AppPath> {
-  const dirs = backupsDirs();
-  return (await dataRootLayout()).kind === "legacy"
-    ? dirs.legacy
-    : dirs.current;
+  return dataRootLayout().kind === "legacy" ? dirs.legacy : dirs.current;
 }
 
 /** Both home-relative backups dirs, current first. */
@@ -336,13 +381,13 @@ export function backupsDirs(): { current: AppPath; legacy: AppPath } {
  * here rather than declared with `defineDataDir`: its children are namespaces
  * minted at runtime, not a fixed set anyone could declare.
  *
- * A FUNCTION, not a const, for the reason in {@link resolveDataRootSync} — a const
+ * A FUNCTION, not a const, for the reason in {@link resolveDataRoot} — a const
  * would freeze the root at whatever the environment said when this module was
  * first imported, which is precisely the bug the eager `EQUIN_DIR` used
  * to carry.
  */
 export function worktreesDir(): AppPath {
-  return joinAppPath(resolveDataRootSync(), "worktrees");
+  return joinAppPath(resolveDataRoot(), "worktrees");
 }
 
 /** The per-worktree data dir: `<worktreesDir()>/<name>/`. */

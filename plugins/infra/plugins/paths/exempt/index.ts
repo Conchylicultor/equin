@@ -56,10 +56,18 @@ export default [
   },
   {
     rule: "blocking-fs/sync-named",
-    paths: ["core/internal/data-dir.ts", "core/internal/paths.ts"],
+    paths: ["core/internal/paths.ts"],
     kind: "debt",
     task: "task-1793991095-ppkf09",
     reason:
-      "dataRoot() / worktreesDir() decide the home data-root layout on first read (2 lstat + realpath, memoized per process), and a DataDir's movedFrom is inspected once until settled: not a recurring cost, but the name is not honest until the root is decided before any read in every realm.",
+      "dataRootLayout() reads the layout each process tree's root declares in the environment, but a process no root declared for still decides it on its first read (2 lstat + realpath, once per process, warned on stderr) until that transitional fallback becomes a throw (infra/paths CLAUDE.md, § The data root).",
+  },
+  {
+    rule: "blocking-fs/sync-named",
+    paths: ["core/internal/data-dir.ts"],
+    kind: "debt",
+    task: "task-1794176984-s6phxk",
+    reason:
+      "Every DataDir getter (.path / .file() / .ensure(), a subdir()'s too) resolves through resolveInSync: a declaration with movedFrom lstat's the move on its first read in each process until it settles, and the host singleton performs a pending move (renameSync / symlinkSync) inside the getter — the moves are to be settled before the backend listens instead.",
   },
 ] satisfies Exemptions;

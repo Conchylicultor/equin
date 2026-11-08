@@ -33,7 +33,11 @@ macOS permission prompt). This rule refuses any.
   (`Bun.Glob#scanSync`);
 - a **`core/`, `shared/` or `data-dirs/` function named `*Sync`** — a helper
   that does one of the above on the backend's behalf (timed-fs's
-  `scanGlobSync`, `openOwnedFdSync`, `readDeploySpecSync`, …).
+  `scanGlobSync`, `openOwnedFdSync`, `readDeploySpecSync`, …). A function
+  bound to a name counts by that name, the same as a declared one:
+  `const readSpecSync = () => …`, a function expression, a property
+  (`{ loadSync: () => … }`), through `as` / `satisfies`, or a binding typed as
+  a function (`const xSync: (p: string) => T`).
 
 Use the async twin: `node:fs/promises` (timed-fs's `readFile`, `readdir`,
 `stat`, …), `spawnCaptured` / `spawnExpectOk` (`infra/spawn`), the helper's

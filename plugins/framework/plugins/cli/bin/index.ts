@@ -9,6 +9,10 @@ import {
   takeReexecBudget,
 } from "@plugins/framework/plugins/cli/plugins/bootstrap/cli";
 import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+import {
+  DataRootSplitError,
+  declareDataRootLayoutSync,
+} from "@plugins/infra/plugins/paths/core";
 
 /**
  * `./equin`'s entrypoint — and deliberately NOT the CLI. Four ordered
@@ -79,6 +83,20 @@ import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core"
 // `detachable` and the mapper disarms it once argv is parsed — see
 // `./orphan-guard.ts`.
 installOrphanGuard(() => process.exit(ORPHAN_EXIT_CODE));
+
+// The CLI is the root of its process tree: decide the data root from the disk
+// before anything reads a path. `./equin` has already put the same answer in
+// the environment every descendant starts from (a Bun child with no explicit
+// `env` gets its parent's STARTING environment, never this process's writes);
+// this covers a CLI started without the wrapper. A split install (two separate
+// roots) stays undeclared: the verb that reads a path throws it, and
+// `data-dir migrate` / `doctor` still run to explain it (infra/paths CLAUDE.md,
+// § The data root).
+try {
+  declareDataRootLayoutSync();
+} catch (err) {
+  if (!(err instanceof DataRootSplitError)) throw err;
+}
 
 // Take this invocation's re-exec budget out of the environment before anything
 // is spawned (the install below included): it counts THIS chain of re-execs, and

@@ -83,28 +83,37 @@ reader `outsideFilesAt(root)` (plugin-records core) replaces the four
 hand-written sync readers (faceted ×2, codegen file-scans, evaluated-barrels,
 and the closure-equivalence script).
 
-## 4. paths dataRoot() / worktreesDir() — not landed: a proposal
+## 4. paths dataRoot() / worktreesDir() — step 1 landed (att-1794175174-tw1uos)
 
-What blocks it: `dataRoot()` is read synchronously from ~60 call sites and every
-`DataDir.path` / `.file()` getter (hundreds), in every kind of process, and
-decides the home layout lazily on first read (2 `lstat` + ≤ 2 `realpath`). The
-`movedFrom` resolution behind the getters is the same shape and can even
-*perform* a move (`renameSync`) on the host singleton. The gateway decides the
-same layout (`gateway/main.go dataRoot`) but does not hand it to its children.
+Landed as step 1 of 3: the layout is **declared at each process tree's root
+and carried by the environment** (`EQUIN_DATA_ROOT_LAYOUT` = `current` |
+`current-legacy-link` | `legacy`); `dataRootLayout()` reads it. Roots: the
+`./equin` wrapper (`paths/scripts/declare-data-root.sh`, held to the TS rule
+on 10 home shapes), the CLI's `bin/index.ts`, the gateway for every child
+(`gateway/dataroot.go`, same shapes in Go), each backend's serving entry
+(first import, before listen), the guard hooks, the `bun test` preload; a
+release sets `EQUIN_DIR`. Table: infra/paths `CLAUDE.md` § The data root.
 
-Proposal (the `runtime-identity` pattern, applied to the root):
-1. **Declared at entry, carried by the environment.** `declareDataRoot(layout)`
-   at a process tree's root writes the decided layout into its own env
-   (`EQUIN_DIR` + the layout kind, so `backupsDir` keeps its legacy answer), so
-   every child and worker inherits a decided root. `dataRoot()` reads only the
-   declaration: pure, and an undeclared read throws loudly.
-2. **Who decides:** the gateway passes it to every backend it spawns (it already
-   computes it); tool roots decide synchronously in their entry (`bin/` /
-   `cli/`: the CLI, the guard hooks, `./equin run` for its child, the bun test
-   preload and the vitest setup, drizzle-kit via the build's spawn env).
-3. **Moves at boot.** `settleDataDirMoves()` awaited by the host singleton
-   before it listens (the sanctioned "before the backend listens" case); a
-   getter that meets an unsettled move in a backend throws.
-The risk is the landing: one missed process root crashes on its first path
-read, main's backend included, so it wants its own task, a list of every
-process root and a boot test per root.
+Measured constraint that shaped it (Bun 1.4.4): a `Bun.spawn` child with no
+explicit `env`, and a `new Worker` without `{ env }`, get the parent's STARTING
+environment, not its `process.env` writes; `node:child_process` and
+`infra/spawn` (which pass `process.env`) do see them. So an in-process
+declaration covers the process itself; the tree's starters (wrapper, gateway)
+must put it in the starting environment.
+
+What is left:
+- **Step 2:** the transitional fallback (an undeclared process decides on its
+  first read and prints `[paths] data root undeclared …` once) becomes a throw,
+  paying `paths.ts`'s debt. Wait until the gateway has been restarted onto this
+  code (`./equin start --force`) and the warning has stopped appearing in the
+  logs; the warning names each missed root's argv.
+- **Step 3** (task-1794176984-s6phxk): `movedFrom` (`data-dir.ts`): the getters
+  inspect a move with `lstat` once per move per process, and the host singleton
+  performs it with `renameSync`. Settle moves before the backend listens. The
+  `blocking-fs/sync-named` rule did not see this: a `const xSync = () =>`
+  helper (an arrow's declaration has no name) was not recognised as blocking
+  where it is called. Fixed in this task: the rule reads a variable-bound
+  function (arrow, function expression, through `as` / `satisfies`, a property,
+  a function-typed binding) by its binding's name. The whole repo was re-linted
+  (15,564 files): 6 new violations, all in `data-dir.ts`'s getters, declared as
+  debt naming that task.

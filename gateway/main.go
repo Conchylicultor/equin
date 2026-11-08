@@ -214,9 +214,11 @@ func main() {
 		fatal(fmt.Sprintf("gateway: fatal: %v", err), "invalid -child-env", err)
 	}
 	childEnv, dropped := captureChildEnv(declared)
-	cfg.ChildEnv = childEnv
+	// Every child starts with the data root's layout decided — the gateway is
+	// the root of the runtime tree (gateway/dataroot.go).
+	cfg.ChildEnv = childEnv.Plus(dataRootLayoutEnv()...)
 	cfg.Taskpolicy = detectTaskpolicy()
-	slog.Info("child environment", "forwarded", childEnv.Names())
+	slog.Info("child environment", "forwarded", cfg.ChildEnv.Names())
 	if len(dropped) > 0 {
 		slog.Warn("child environment: not forwarding undeclared variables from the gateway's own environment", "dropped", dropped)
 	}

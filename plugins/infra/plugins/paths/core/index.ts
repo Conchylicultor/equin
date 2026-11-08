@@ -4,10 +4,10 @@ export {
   SERVER_CORE_RELATIVE,
   backendEntryFor,
   HOME_DIR,
-  backupsDirSync,
   backupsDir,
   backupsDirs,
-  dataRootLayoutSync,
+  dataRootLayout,
+  declareDataRootLayoutSync,
   worktreesDir,
   worktreeDataDir,
   worktreeArtifacts,
@@ -28,7 +28,8 @@ export {
 export type { ReleaseIdentity } from "./internal/paths";
 // Where the root is when the environment does not say — decided by what is
 // installed (`~/.equin`, or the legacy dir until `./equin data-dir migrate`
-// moves it). `dataRootLayoutSync()` (above) is this process's answer; the migration
+// moves it). `dataRootLayout()` (above) is this process's answer, declared at
+// its tree's root by `declareDataRootLayoutSync()`; the migration
 // reads the disk afresh, since it is the one thing that changes it.
 export {
   DATA_DIR_NAME,

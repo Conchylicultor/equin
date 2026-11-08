@@ -96,6 +96,34 @@ export function blockingDeclaration(
 }
 
 function declaredName(n: ts.Node): string | undefined {
+  // A function bound to a name (`const readSpecSync = () => …`,
+  // `{ readSync: function () { … } }`) has none of its own: its call
+  // signature's declaration is the arrow / function expression, and the name
+  // the rule reads is the binding's — through any `(…)`, `as` or `satisfies`,
+  // and for a function TYPE the binding it types (`const xSync: () => T`).
+  if (
+    ts.isArrowFunction(n) ||
+    ts.isFunctionExpression(n) ||
+    ts.isFunctionTypeNode(n)
+  ) {
+    if (ts.isFunctionExpression(n) && n.name !== undefined) return n.name.text;
+    let p: ts.Node = n.parent;
+    while (
+      ts.isParenthesizedExpression(p) ||
+      ts.isAsExpression(p) ||
+      ts.isSatisfiesExpression(p) ||
+      ts.isTypeAssertionExpression(p)
+    )
+      p = p.parent;
+    if (
+      ts.isVariableDeclaration(p) ||
+      ts.isPropertyAssignment(p) ||
+      ts.isPropertyDeclaration(p) ||
+      ts.isPropertySignature(p)
+    )
+      return declaredName(p);
+    return undefined;
+  }
   const name = (n as ts.NamedDeclaration).name;
   if (name === undefined) return undefined;
   if (ts.isIdentifier(name) || ts.isPrivateIdentifier(name)) return name.text;

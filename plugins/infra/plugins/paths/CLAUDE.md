@@ -17,7 +17,7 @@ browser that needs to *name* a directory reads the string literals in the
 
 `EQUIN_DIR` when set (a release bundle, a preview, a VM). Otherwise it is
 decided by what is **installed**, not by the code's version
-(`core/internal/data-root-layout.ts`, `dataRootLayoutSync()`):
+(`core/internal/data-root-layout.ts`, `dataRootLayout()`):
 
 | on disk | root |
 |---|---|
@@ -29,9 +29,51 @@ decided by what is **installed**, not by the code's version
 Deciding by version would point new code at an empty `~/.equin` on every
 machine that has not migrated. The same rule is mirrored in `gateway/dataroot.go`
 (with the same test cases), `install.sh` and the host scripts listed as
-`dataDirName` mirrors. The home layout is read once per process; only
-`./equin data-dir migrate` changes it, with the app stopped. The local
-backups dir (`backupsDirSync()`, outside the root) follows the same layout.
+`dataDirName` mirrors. Only `./equin data-dir migrate` changes it, with the
+app stopped. The local backups dir (`backupsDir()`, outside the root) follows
+the same layout.
+
+## The data root
+
+The home layout is a fact of the disk, and `dataRoot()` / every `DataDir`
+getter is read synchronously, from hundreds of call sites, in every kind of
+process. So the layout is **decided once per process TREE, at its root, and
+carried by the environment** (`EQUIN_DATA_ROOT_LAYOUT`: `current`,
+`current-legacy-link` or `legacy` — `HOME_LAYOUT_TOKENS`; both roots derive
+from the home dir). `dataRootLayout()` is then an environment read on any
+thread: `EQUIN_DIR` → custom; the declaration → its layout; an unknown token
+throws.
+
+A tree's root decides from the disk with `declareDataRootLayoutSync()` (it
+always re-reads the disk — its parent may be a long-lived process holding a
+pre-migration answer) and writes the variable; with `EQUIN_DIR` set, or on a
+split, it removes an inherited one instead. The roots:
+
+| process tree | who declares |
+|---|---|
+| `./equin` and everything it starts | the wrapper sources `scripts/declare-data-root.sh` (the shell twin, held to the TS rule case for case by `declare-data-root-sh.test.ts`); the CLI's `bin/index.ts` decides again in-process (a CLI started without the wrapper); a split install stays undeclared, so the verb that reads a path throws `DataRootSplitError` and `data-dir migrate` still runs to explain it (the hooks do the same) |
+| the gateway's children (every backend, Postgres / PgBouncer start scripts) | `gateway/dataroot.go` adds it to every child's base env (`dataRootLayoutEnv`) |
+| a backend (main, worktree, central) | the first import of its serving entry (`server-core/bin/declare-data-root.ts`, `central-core/bin/declare-data-root.ts`) — before it listens, so a gateway that predates the declaration still leaves the backend's thread decided |
+| a Claude Code hook | `guards/bin/declare-data-root.ts`, first import of `hook.ts` / `stop-hook.ts` |
+| `bun test` | `test/bun-preload.ts` |
+| a release | `EQUIN_DIR`, set by the launcher before anything reads a path |
+
+**Why the environment of the tree, not just of the process.** A Bun child
+spawned with no explicit `env` gets its parent's STARTING environment, never a
+`process.env` write — and so does a `new Worker` without `{ env }` (measured,
+Bun 1.4.4). A declaration made in-process reaches only `infra/spawn` children
+(they pass `process.env`) and `node:child_process` ones. That is why the
+wrapper and the gateway, which start their trees, put it in the starting
+environment, and why an in-process declaration is for the process itself.
+
+**Transitional: an undeclared process still decides on its first read** (a
+child of a gateway started before this landed — until `./equin start --force`
+restarts it — or a root missing from the table). It prints `[paths] data root
+undeclared in this process …` once on stderr, naming its argv: that line is how
+a missed root is found. The next step turns it into a throw, which makes
+`dataRoot()` a pure read and pays the `blocking-fs/sync-named` debt of
+`core/internal/paths.ts`; the `movedFrom` inspection behind the `DataDir`
+getters (`core/internal/data-dir.ts`) is the other half of that debt.
 
 **Moving an install over:** `./equin data-dir migrate` (the `root-migration`
 sub-plugin) — dry run by default, `--apply` executes. It refuses while any
@@ -322,9 +364,9 @@ reaped namespaces' gateway logs were each found by accident, months in.
 - Description: Canonical machine paths, plus the boot-time publication of this namespace's declared data-dir set so an audit running in another checkout can tell one of this branch's directories from an orphan.
 - Core:
   - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `packages/timed-fs` ×11
+    - `packages/timed-fs` ×10
     - `infra/namespace` ×8
-    - `infra/launcher/env-names` ×4
+    - `infra/launcher/env-names` ×5
     - `infra/host-fs/user-path` ×3
     - `framework/product-name` ×2
     - `infra/runtime-identity` ×2
@@ -356,7 +398,6 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `backendEntryFor`
     - `backupsDir`
     - `backupsDirs`
-    - `backupsDirSync`
     - `CHECK_ARTIFACTS_RETENTION`
     - `checkoutNamespace`
     - `checkoutRef`
@@ -370,8 +411,9 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `DATA_DIR_KINDS`
     - `DATA_DIR_NAME`
     - `dataRoot`
-    - `dataRootLayoutSync`
+    - `dataRootLayout`
     - `DataRootSplitError`
+    - `declareDataRootLayoutSync`
     - `defineAppDataDir`
     - `defineDataDir`
     - `deploysForCheckoutSync`
@@ -444,7 +486,8 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `boundaries/no-platform-api` — `core/internal/checkout-deploys.ts`, `core/internal/checkout-minter.ts`, `core/internal/checkout-owner.ts`, `core/internal/checkout-ref.ts`, `core/internal/data-dir.ts`, `core/internal/data-root-layout.ts`, `core/internal/data-dirs-manifest.ts`, `core/internal/paths.ts`, `core/internal/prune-artifacts.ts`, `core/internal/toolchain-pin.ts`, `core/internal/worktree-dirs.ts` (debt)
     - `user-path/no-unproven-claim` — `core/internal/paths.ts`, `core/internal/data-root-layout.ts` (sanctioned)
     - `user-path/no-unproven-claim` — `core/internal/checkout-deploys.ts` (sanctioned)
-    - `blocking-fs/sync-named` — `core/internal/data-dir.ts`, `core/internal/paths.ts` (debt)
+    - `blocking-fs/sync-named` — `core/internal/paths.ts` (debt)
+    - `blocking-fs/sync-named` — `core/internal/data-dir.ts` (debt)
 - Server:
   - Exports (types):
     - `AppIdentity`
@@ -460,7 +503,6 @@ reaped namespaces' gateway logs were each found by accident, months in.
   - Exports (values):
     - `actAsCheckoutNamespace`
     - `backupsDir`
-    - `backupsDirSync`
     - `BUILD_ARTIFACTS_RETENTION`
     - `CHECK_ARTIFACTS_RETENTION`
     - `checkoutNamespace`
@@ -473,7 +515,7 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `claudeTranscriptPath`
     - `DATA_DIR_KINDS`
     - `dataRoot`
-    - `dataRootLayoutSync`
+    - `dataRootLayout`
     - `defineAppDataDir`
     - `defineDataDir`
     - `getDataDirs`

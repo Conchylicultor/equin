@@ -1,3 +1,5 @@
+// First: the data root, which the imports below may read.
+import "./declare-data-root";
 import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { runHook } from "../core/runner";

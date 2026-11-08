@@ -14,7 +14,7 @@ import { dirname, join, relative, sep } from "node:path";
 // `@plugins/infra/plugins/paths/core` alias would cycle back through the barrel
 // that re-exports it.
 import type { LogClaim } from "./log-claims";
-import { isHostSingleton, isRelease, resolveDataRootSync } from "./paths";
+import { isHostSingleton, isRelease, resolveDataRoot } from "./paths";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 
 // The declared-directory registry for `~/.equin/`.
@@ -285,7 +285,7 @@ const APP_DIR_RECLAIM_REASON =
  * still, so freezing here would be strictly worse.
  */
 export function dataRoot(): AppPath {
-  return resolveDataRootSync();
+  return resolveDataRoot();
 }
 
 /**

@@ -1,3 +1,5 @@
+// First of all: the data root, which the imports below may already read.
+import "./declare-data-root";
 import {
   declareRuntimeNamespace,
   readNamespaceArgv,

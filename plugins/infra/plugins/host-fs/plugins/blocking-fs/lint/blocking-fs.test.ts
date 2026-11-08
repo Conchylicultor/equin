@@ -133,6 +133,15 @@ ruleTester.run("sync-named", syncNamed, {
     ),
     valid(`export const readConfigSync = () => readFileSync("/x");`, CORE_CASE),
     valid(
+      `const innerSync = () => readFileSync("/x"); export function outerSync() { return innerSync(); }`,
+      CORE_CASE,
+    ),
+    // A bound function NOT named *Sync is not a blocking helper by name.
+    valid(
+      `const inner = () => 1; export function outer() { return inner(); }`,
+      CORE_CASE,
+    ),
+    valid(
       `export async function readConfig() { return readFile("/x"); }`,
       CORE_CASE,
     ),
@@ -223,6 +232,34 @@ ruleTester.run("sync-named", syncNamed, {
     invalid(
       `export function make() { return () => readFileSync("/x"); }`,
       ["unnamed"],
+      CORE_CASE,
+    ),
+    // A helper bound to a name blocks for its callers like a declared one:
+    // an arrow, a function expression, through `as` / `satisfies`, as a
+    // property — and from inside a getter (data-dir's `resolveInSync`).
+    invalid(
+      `const innerSync = () => readFileSync("/x"); export function outer() { return innerSync(); }`,
+      ["rename"],
+      CORE_CASE,
+    ),
+    invalid(
+      `const innerSync = function () { return readFileSync("/x"); }; export function outer() { return innerSync(); }`,
+      ["rename"],
+      CORE_CASE,
+    ),
+    invalid(
+      `const innerSync = ((p: string) => readFileSync(p)) as (p: string) => Buffer; export function outer() { return innerSync("/x"); }`,
+      ["rename"],
+      CORE_CASE,
+    ),
+    invalid(
+      `const h = { innerSync: () => readFileSync("/x") }; export function outer() { return h.innerSync(); }`,
+      ["rename"],
+      CORE_CASE,
+    ),
+    invalid(
+      `export function make() { const resolveSync = () => readFileSync("/x"); return { get path() { return resolveSync(); } }; }`,
+      ["rename"],
       CORE_CASE,
     ),
   ],

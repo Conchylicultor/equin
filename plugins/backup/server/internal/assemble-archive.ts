@@ -42,7 +42,7 @@ export async function assembleArchive(
   trigger: "manual" | "periodic",
 ): Promise<BackupArchive> {
   const timestamp = formatTimestamp();
-  const runDir = join(await backupsDir(), timestamp);
+  const runDir = join(backupsDir(), timestamp);
   const stagingDir = join(runDir, "staging");
   const archivePath = join(runDir, "archive.tar.gz");
   // Compress into a sidecar first, then atomically rename onto the final path.
@@ -67,7 +67,7 @@ export async function assembleArchive(
   //
   // `recursive: false` makes the kernel answer, so there is no check-then-act
   // window between asking and creating.
-  await mkdir(await backupsDir(), { recursive: true });
+  await mkdir(backupsDir(), { recursive: true });
   try {
     await mkdir(runDir);
   } catch (err) {

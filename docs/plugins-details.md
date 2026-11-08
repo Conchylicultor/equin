@@ -34497,9 +34497,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`paths`** — Canonical machine paths, plus the boot-time publication of this namespace's declared data-dir set so an audit running in another checkout can tell one of this branch's directories from an orphan.
       - Core:
         - Uses: 33 symbols — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
-          - `packages/timed-fs` ×11
+          - `packages/timed-fs` ×10
           - `infra/namespace` ×8
-          - `infra/launcher/env-names` ×4
+          - `infra/launcher/env-names` ×5
           - `infra/host-fs/user-path` ×3
           - `framework/product-name` ×2
           - `infra/runtime-identity` ×2
@@ -34531,7 +34531,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `backendEntryFor`
           - `backupsDir`
           - `backupsDirs`
-          - `backupsDirSync`
           - `CHECK_ARTIFACTS_RETENTION`
           - `checkoutNamespace`
           - `checkoutRef`
@@ -34545,8 +34544,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DATA_DIR_KINDS`
           - `DATA_DIR_NAME`
           - `dataRoot`
-          - `dataRootLayoutSync`
+          - `dataRootLayout`
           - `DataRootSplitError`
+          - `declareDataRootLayoutSync`
           - `defineAppDataDir`
           - `defineDataDir`
           - `deploysForCheckoutSync`
@@ -34619,7 +34619,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `boundaries/no-platform-api` — `core/internal/checkout-deploys.ts`, `core/internal/checkout-minter.ts`, `core/internal/checkout-owner.ts`, `core/internal/checkout-ref.ts`, `core/internal/data-dir.ts`, `core/internal/data-root-layout.ts`, `core/internal/data-dirs-manifest.ts`, `core/internal/paths.ts`, `core/internal/prune-artifacts.ts`, `core/internal/toolchain-pin.ts`, `core/internal/worktree-dirs.ts` (debt)
           - `user-path/no-unproven-claim` — `core/internal/paths.ts`, `core/internal/data-root-layout.ts` (sanctioned)
           - `user-path/no-unproven-claim` — `core/internal/checkout-deploys.ts` (sanctioned)
-          - `blocking-fs/sync-named` — `core/internal/data-dir.ts`, `core/internal/paths.ts` (debt)
+          - `blocking-fs/sync-named` — `core/internal/paths.ts` (debt)
+          - `blocking-fs/sync-named` — `core/internal/data-dir.ts` (debt)
       - Server:
         - Exports (types):
           - `AppIdentity`
@@ -34635,7 +34636,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `actAsCheckoutNamespace`
           - `backupsDir`
-          - `backupsDirSync`
           - `BUILD_ARTIFACTS_RETENTION`
           - `CHECK_ARTIFACTS_RETENTION`
           - `checkoutNamespace`
@@ -34648,7 +34648,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `claudeTranscriptPath`
           - `DATA_DIR_KINDS`
           - `dataRoot`
-          - `dataRootLayoutSync`
+          - `dataRootLayout`
           - `defineAppDataDir`
           - `defineDataDir`
           - `getDataDirs`
@@ -41777,7 +41777,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/slot-declaration.trackSlotSites`
           - `infra/launcher/env-names.envName`
           - `infra/namespace.asNamespace`
-          - `infra/paths.dataRootLayoutSync`
+          - `infra/paths.dataRootLayout`
           - `infra/paths/repo-root.REPO_ROOT`
           - `infra/runtime-identity.declareRuntimeNamespace`
           - `infra/runtime-identity.hasRuntimeNamespace`
