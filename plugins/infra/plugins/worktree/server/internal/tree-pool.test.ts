@@ -206,9 +206,15 @@ describe("a removed checkout's tree goes to the next checkout", () => {
 
   test("an index git would not compare with its files is not trusted", async () => {
     const old = wtFor("att-old");
-    await addCheckout("att-old", repo, old, { kind: "detached", rev: "main" }, {
-      recycle: false,
-    });
+    await addCheckout(
+      "att-old",
+      repo,
+      old,
+      { kind: "detached", rev: "main" },
+      {
+        recycle: false,
+      },
+    );
     await git(old, "update-index", "--skip-worktree", "kept.txt");
     rmSync(join(old, "kept.txt"));
     await harvestTree(repo, await removeLikeTheReaper("att-old", T), T);

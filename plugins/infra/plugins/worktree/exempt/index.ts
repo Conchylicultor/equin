@@ -41,4 +41,11 @@ export default [
     reason:
       "The op marker's writer, called only by the op's own CLI process (./equin build / push / a direct op, and the op-status synthetic script) — never by a backend — and its release() runs in that process's process.on(\"exit\") handler, which cannot await. The readers a backend calls (worktree-op.ts) are async.",
   },
+  {
+    rule: "repo-walk-safety/no-adhoc-repo-listing",
+    paths: ["server/internal/worktree.ts"],
+    kind: "sanctioned",
+    reason:
+      "assertNoTrustFlags reads the index of ANOTHER checkout — a recycled tree about to become a new checkout — for its skip-worktree / assume-unchanged flags, once per checkout made; it is no listing of this checkout and runs in no check pass.",
+  },
 ] satisfies Exemptions;

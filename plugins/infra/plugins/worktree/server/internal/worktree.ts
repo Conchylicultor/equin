@@ -1110,7 +1110,11 @@ async function assertNoTrustFlags(
   wtPath: string,
   signal?: AbortSignal,
 ): Promise<void> {
-  const out = await gitOk([GIT, "-C", wtPath, "ls-files", "-v"], ADD_TIMEOUT_MS, signal);
+  const out = await gitOk(
+    [GIT, "-C", wtPath, "ls-files", "-v"],
+    ADD_TIMEOUT_MS,
+    signal,
+  );
   const flagged = out
     .split("\n")
     .find((l) => l.length > 1 && (l[0] === "S" || /^[a-z] /.test(l)));

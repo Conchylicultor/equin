@@ -394,6 +394,7 @@ pid liveness.
     - `boundaries/no-platform-api` — `server/internal/composition-namespace.ts`, `server/internal/dep-store-pool.ts`, `server/internal/install-checkout.ts`, `server/internal/rename-pool.ts`, `server/internal/spare-name.ts`, `server/internal/spare.ts`, `server/internal/spec.ts`, `server/internal/tree-pool.ts`, `server/internal/worktree-op.ts`, `server/internal/worktree-op-marker.ts`, `server/internal/worktree.ts` (debt)
     - `user-path/no-unproven-claim` — `server/internal/worktree.ts` (sanctioned)
     - `blocking-fs/no-sync-fs` — `server/internal/worktree-op-marker.ts` (sanctioned)
+    - `repo-walk-safety/no-adhoc-repo-listing` — `server/internal/worktree.ts` (sanctioned)
   - Exempted by: `infra/worktree` (0 debt)
 - Core:
   - Exports (types):

@@ -76,6 +76,7 @@ declared in its plugin's `exempt/index.ts` with the reason
     - `infra/deps/npm` (0 debt)
     - `infra/deps/python/uv-updater` (0 debt)
     - `infra/deps/rust/cargo-updater` (0 debt)
+    - `infra/worktree` (0 debt)
     - `infra/worktree/reclaim` (0 debt)
     - `plugin-meta/plugin-tree/faceted` (0 debt)
     - `review/plugin-changes` (0 debt)
