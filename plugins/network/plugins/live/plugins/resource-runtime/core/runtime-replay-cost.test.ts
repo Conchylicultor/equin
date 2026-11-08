@@ -5,6 +5,8 @@
  * - a guarded external with no routing record captures NO commit watermark
  *   while the drift guard is armed (it reads no Postgres; the xmin round trip
  *   inside a read-admission slot bought nothing);
+ * - nor does any external whose last loader run read no table (a routed one
+ *   included: a reach plan routes changes, it does not make the loader read);
  * - concurrent flights share ONE watermark capture;
  * - a `revalidate` resource declared `notified` keeps the same-boot version
  *   short-circuit (its notify stream is its complete change signal) — its ETag
@@ -13,6 +15,7 @@
 
 import { test, expect, describe } from "bun:test";
 import { z } from "zod";
+import { mintReachPlan } from "./routing";
 import { createHarness, tick } from "./test-support";
 
 function countingCapture(): { fn: () => Promise<string>; calls: () => number } {
@@ -45,11 +48,11 @@ describe("watermark capture — only for a flight that may read Postgres", () =>
     expect(cap.calls()).toBe(0);
   });
 
-  test("an external the guard does not cover (snapshot freshness) still captures", async () => {
+  test("an external the guard does not cover (snapshot freshness), with no run captured yet, captures", async () => {
     const cap = countingCapture();
     const h = createHarness({
       captureWatermark: cap.fn,
-      lastReadSet: () => [],
+      lastReadSet: () => undefined,
     });
     h.runtime.defineExternalResource({
       key: "snap",
@@ -77,6 +80,68 @@ describe("watermark capture — only for a flight that may read Postgres", () =>
 
     await h.subscribe("cfg");
     expect(h.frames.find((f) => f.kind === "sub-ack")!.watermark).toBe("100");
+  });
+});
+
+// A routed external — a reach plan routes a write to it — whose loader may or
+// may not read Postgres: `conversations.partial-message`'s shape (a lookup
+// read once by its watcher, every push answered from memory).
+function routedExternal(loaderReads: string[]) {
+  const cap = countingCapture();
+  const h = createHarness({
+    captureWatermark: cap.fn,
+    // The per-run capture: what the loader read, once it has run.
+    lastReadSet: (key) =>
+      key === "msg" && loads > 0 ? loaderReads : undefined,
+  });
+  let loads = 0;
+  const r = h.runtime.defineExternalResource(
+    {
+      key: "msg",
+      schema: z.number(),
+      validateParams: () => {},
+    },
+    {
+      mode: "push",
+      freshness: { kind: "notified" },
+      reach: mintReachPlan({
+        routes: [
+          {
+            id: "c",
+            table: "conversations",
+            map: { kind: "full", reason: "the runtime row" },
+            columns: ["id"],
+          },
+        ],
+        usesOf: () => new Map([["c", { role: "membership" as const }]]),
+      }),
+      loader: async () => ++loads,
+    },
+  );
+  return { h, r, cap };
+}
+
+describe("watermark capture — derived from what an external's loader read", () => {
+  test("a routed external whose loader read nothing captures only before its first run", async () => {
+    const { h, r, cap } = routedExternal([]);
+    await h.subscribe("msg");
+    expect(cap.calls()).toBe(1); // nothing captured yet: it may read
+    for (let i = 0; i < 5; i++) {
+      r.notify();
+      await tick();
+    }
+    expect(h.pushesFor("msg")).toHaveLength(5); // every push still ships …
+    expect(cap.calls()).toBe(1); // … with no xmin round trip
+    expect(h.pushesFor("msg").every((f) => !("watermark" in f))).toBe(true);
+  });
+
+  test("a routed external whose loader reads a table keeps capturing", async () => {
+    const { h, r, cap } = routedExternal(["conversations"]);
+    await h.subscribe("msg");
+    r.notify();
+    await tick();
+    expect(cap.calls()).toBe(2);
+    expect(h.pushesFor("msg")[0]!.watermark).toBeDefined();
   });
 });
 

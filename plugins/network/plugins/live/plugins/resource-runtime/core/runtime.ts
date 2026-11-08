@@ -3760,8 +3760,22 @@ export function createResourceRuntime(
   // never L2-persisted, so no floor is lost there. A `readCost: "memory"`
   // entry reads no Postgres by its declaration: no capture either (it would
   // be the one round trip of a slotless read).
+  //
+  // An external also reads Postgres only when its LOADER does — derived from
+  // what its last run read (the per-run capture), not from a flag: a reach
+  // plan routes a change to it, but says nothing about what the loader reads
+  // (`conversations.partial-message` declares a lookup its `whileSubscribed`
+  // reads once and answers every push from memory — each 50 ms push used to
+  // pay an xmin round trip). A run that read nothing ⇒ no capture. Predicting
+  // from the previous run is safe in both directions: a loader that starts
+  // reading ships one frame with no floor (the safe direction above), and its
+  // capture arms the next flight.
   function readsDb(entry: RegistryEntry): boolean {
     if (entry.readCost === "memory") return false;
+    if (entry.externalSource === true && opts.lastReadSet !== undefined) {
+      const last = opts.lastReadSet(entry.key);
+      if (last !== undefined && last.length === 0) return false;
+    }
     return !(
       opts.lastReadSet !== undefined &&
       guardedExternal(entry) &&

@@ -42,8 +42,10 @@ import {
   setConfig,
   setConfigByPath,
   shutdownRegistry,
+  watchConfig,
   type ConfigDocumentTuple,
 } from "./registry";
+import { configValuesServed } from "./resource";
 import { getConfigScopeIds } from "./resource";
 import { forkDescriptorScope, removeDescriptorScope } from "./scope-fork";
 
@@ -357,6 +359,41 @@ describe("reloadConfigDocument", () => {
       await reloadConfigDocument(ALPHA, "");
       expect(getConfig(alpha).title).toBe("restored");
       expect(changes).toContainEqual({ path: ALPHA });
+    }));
+
+  test("a rewrite that resolves to the same values moves the files' readers only", () =>
+    run(async () => {
+      const heard: unknown[] = [];
+      const watch = watchConfig(alpha, (v) => heard.push(v));
+      const notified: unknown[] = [];
+      const notify = configValuesServed.notify;
+      configValuesServed.notify = (p) => {
+        notified.push(p);
+        notify(p);
+      };
+      try {
+        const same = { ...getConfig(alpha) };
+        heard.length = 0; // watchConfig answers once on subscribe
+        changes.length = 0;
+        // The same document written again: the stamp moves, the values do not.
+        await seed(file(ALPHA, "override"), same, computeHash(ALPHA_ORIGIN));
+        await reloadConfigDocument(ALPHA, "");
+        expect(changes).toContainEqual({ path: ALPHA }); // the raw file moved …
+        expect(heard).toEqual([]); // … no subscriber and no values tuple did
+        expect(notified).toEqual([]);
+
+        await seed(
+          file(ALPHA, "override"),
+          { ...same, title: "moved" },
+          computeHash(ALPHA_ORIGIN),
+        );
+        await reloadConfigDocument(ALPHA, "");
+        expect(heard).toHaveLength(1);
+        expect(notified).toContainEqual({ path: ALPHA });
+      } finally {
+        configValuesServed.notify = notify;
+        watch.dispose();
+      }
     }));
 
   test("a scoped document whose files were removed leaves the registry", () =>

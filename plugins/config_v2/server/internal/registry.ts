@@ -16,6 +16,7 @@ import {
   threeWayMerge,
 } from "../../core";
 import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
+import { diffValue } from "@plugins/packages/plugins/value-patch/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import type { Disposable, JsonValue } from "../../core";
 import { BASE_SCOPE, documentFiles } from "./scope-paths";
@@ -223,12 +224,23 @@ async function refreshEntryNow(
     )[key];
   }
 
+  // The stamp says a FILE moved; the values are what readers hold. A rewrite of
+  // the same bytes, a comment or a reformat, an override restating its origin
+  // moves the stamp and resolves to the same document — no values tuple and no
+  // in-process subscriber moved (a base document's base-tracking scopes resolve
+  // through it, so they did not either). Conflicts, tiers and the raw file are
+  // functions of the files themselves, so they still follow the stamp.
+  const valuesMoved =
+    ownConfig !== entry.ownConfig ||
+    diffValue(entry.values, freshValues)?.length !== 0;
   entry.values = freshValues;
   entry.ownConfig = ownConfig;
 
-  const subs = subscribersByDescriptor.get(descriptor)?.get(entry.scopeId);
-  if (subs) {
-    for (const cb of subs) cb(freshValues);
+  if (valuesMoved) {
+    const subs = subscribersByDescriptor.get(descriptor)?.get(entry.scopeId);
+    if (subs) {
+      for (const cb of subs) cb(freshValues);
+    }
   }
 
   // A scoped origin/override file appearing or disappearing changes the
@@ -236,7 +248,7 @@ async function refreshEntryNow(
   // publishes.
   if (entry.scopeId) await refreshScopeMembers(entry.storePath);
 
-  await notifyDocument(entry.storePath, entry.scopeId);
+  await notifyDocument(entry.storePath, entry.scopeId, { valuesMoved });
 }
 
 /** `refreshEntryNow` taking the document's lock — for a caller outside one. */
@@ -358,6 +370,9 @@ export function onDocumentChange(
 async function notifyDocument(
   storePath: string,
   scopeId: string,
+  // False when the files moved but the resolved values did not
+  // (`refreshEntryNow`): `config-v2.values` is skipped, the rest still move.
+  { valuesMoved = true }: { valuesMoved?: boolean } = {},
 ): Promise<void> {
   // Modified-count is computed off effective BASE values for this descriptor, so
   // recompute just this path (scope-independent).
@@ -374,6 +389,7 @@ async function notifyDocument(
     }
   }
   for (const served of perDocument) {
+    if (served === configValuesServed && !valuesMoved) continue;
     for (const tuple of tuples) served.notify(tuple);
   }
   for (const listener of [...documentListeners]) {

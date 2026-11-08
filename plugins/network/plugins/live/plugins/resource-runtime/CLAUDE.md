@@ -571,8 +571,13 @@ both encoders.
     capture failed captures its own; an older one is superseded, never waited on.
   - **None for a flight that reads no Postgres** (`readsDb`): a guarded external
     (`notified` / undeclared freshness) with no routing record, while a read
-    capture is wired (D5 would have given a DB read a drift record). No
-    watermark = no causal floor — the safe direction.
+    capture is wired (D5 would have given a DB read a drift record); and any
+    external whose LAST loader run read no table (`opts.lastReadSet` → `[]`) —
+    derived from what the loader read, never from a flag: a reach plan routes
+    changes to it but does not make its loader read (`partial-message`
+    answers every 50 ms push from memory). A loader that starts reading ships
+    one floorless frame, then captures again. No watermark = no causal floor —
+    the safe direction.
   - The same per-flight capture is the L2 `replace` floor and base floor — never a
     second capture at the drain (it could be newer than the value and make
     catch-up skip the missing commit).

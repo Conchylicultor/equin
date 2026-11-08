@@ -137,3 +137,41 @@ describe("propagate ancestor capture", () => {
     expect(conflict).toBe(true);
   });
 });
+
+describe("propagate writes only what moved", () => {
+  function counting(initial?: { content: JsonValue; hash: string | null }) {
+    const inner = memProxy(initial);
+    let writes = 0;
+    return {
+      ...inner,
+      write: (content: JsonValue, hash: string | null) => {
+        writes++;
+        inner.write(content, hash);
+      },
+      writes: () => writes,
+    };
+  }
+
+  test("an origin already holding the upstream document is not rewritten", () => {
+    const v1 = { x: 1 };
+    const origin = counting({ content: v1, hash: computeHash(v1) });
+    propagate(readonlyProxy(v1), origin, memProxy());
+    expect(origin.writes()).toBe(0);
+  });
+
+  test("a moved upstream, a missing origin, or a body edited under its header is written", () => {
+    const v1 = { x: 1 };
+    const v2 = { x: 2 };
+    const moved = counting({ content: v1, hash: computeHash(v1) });
+    propagate(readonlyProxy(v2), moved, memProxy());
+    expect(moved.snapshot()).toEqual({ content: v2, hash: computeHash(v2) });
+
+    const missing = counting();
+    propagate(readonlyProxy(v1), missing, memProxy());
+    expect(missing.writes()).toBe(1);
+
+    const edited = counting({ content: { x: 7 }, hash: computeHash(v1) });
+    propagate(readonlyProxy(v1), edited, memProxy());
+    expect(edited.snapshot()).toEqual({ content: v1, hash: computeHash(v1) });
+  });
+});

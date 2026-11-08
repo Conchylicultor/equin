@@ -89,8 +89,8 @@ export function propagate(
   // three-way merge has a real base. Naturally idempotent across repeated
   // builds: once the override is stale, `oldOrigin.hash !== ow.hash`, so we
   // never clobber the true base with an intermediate origin.
+  const oldOrigin = downstreamOrigin.read();
   if (ancestor) {
-    const oldOrigin = downstreamOrigin.read();
     const ow = downstreamOverwrites.exists()
       ? downstreamOverwrites.read()
       : null;
@@ -105,7 +105,18 @@ export function propagate(
     }
   }
 
-  downstreamOrigin.write(up.content, hash);
+  // Write only what moved: every build propagates every config, and a rewrite
+  // of the same document is a file event (a new inode) the running backend
+  // re-reads and fans out. An origin is the same when its header and its body
+  // both match the upstream's hash — a hand-edited body under an old header is
+  // rewritten.
+  if (
+    oldOrigin === null ||
+    oldOrigin.hash !== hash ||
+    computeHash(oldOrigin.content) !== hash
+  ) {
+    downstreamOrigin.write(up.content, hash);
+  }
   if (downstreamOverwrites.exists()) {
     const ow = downstreamOverwrites.read();
     if (ow && ow.hash !== null && ow.hash !== hash) {
