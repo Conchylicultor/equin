@@ -11,6 +11,7 @@ import {
 import { db } from "@plugins/database/server";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { resolveEventFields } from "./event-field";
+import { isOpenTransaction } from "./open-transaction";
 import { triggerTableRegistry } from "./registry";
 
 /** One matched trigger row, and the event payload it matched. */
@@ -116,15 +117,27 @@ export async function deliverToTrigger(d: TriggerDelivery): Promise<void> {
 }
 
 /**
- * Whether a target's row may be inserted on the emitter's own transaction.
- * A keyed or singleton enqueue upserts graphile's `job_key`, which holds that
- * key's row lock until the transaction ends — so two emitters touching the same
- * key would serialize behind each other, and two touching two keys in opposite
- * orders would deadlock, aborting a write that has nothing to do with the
- * subscriber. A `none` row is a plain insert, and locks nothing anyone shares.
+ * Whether a target of an emit on `tx` must go through the outbox
+ * (`events.dispatch`, enqueued after commit) instead of being enqueued inline.
+ *
+ * Only an OPEN TRANSACTION defers, and only a keyed or singleton target: its
+ * enqueue upserts graphile's `job_key`, which holds that key's row lock until
+ * the transaction ends — so two emitters touching the same key would serialize
+ * behind each other, and two touching two keys in opposite orders would
+ * deadlock, aborting a write that has nothing to do with the subscriber. A
+ * `none` row is a plain insert, and locks nothing anyone shares.
+ *
+ * Whether `tx` is a transaction is read off the handle, never off the call: a
+ * database handle (`db`, a test fixture's) autocommits every statement, so its
+ * upsert's lock ends with the statement. (Until 2026-11 any `tx` deferred —
+ * the page editor's post-commit emits passed `db`, so every page edit paid an
+ * `events.dispatch` run for a lock nobody held.)
  */
-export function enqueuesOnCallerTx(target: RegisteredJob): boolean {
-  return target.dedup === "none";
+export function defersToOutbox(
+  target: RegisteredJob,
+  tx: EnqueueTx | undefined,
+): boolean {
+  return isOpenTransaction(tx) && target.dedup !== "none";
 }
 
 function reportDrift(

@@ -10,8 +10,9 @@ import { blocksChanged } from "./tables-events";
 //
 // `executor` rides the emit, as in `notifyStructuralChange`: a caller driving a
 // db-test-fixture DB emits against ITS trigger table (subscriber-less there — a
-// no-op); production passes nothing and the event dispatches on the global
-// handle.
+// no-op); production passes `db` or nothing. A database, never a transaction
+// (the announcement runs after commit), so emit() enqueues every subscriber
+// inline.
 export async function notifyBlockChange(
   args: {
     pageId: string | null;

@@ -56,16 +56,26 @@ self-heal, drift → report and skip) and enqueues its target with
 `target.enqueue(with, { _event, tx })` — the target's own queue row, run id and
 dedup key — right away when it can:
 
-- **No `tx`**: every target is enqueued inline.
-- **With `tx`**: a `dedup: "none"` target is enqueued on the caller's
-  transaction (a plain insert; it commits or rolls back with the emitter's
-  writes). A keyed or singleton target is NOT — its `job_key` upsert would hold
-  that key's row lock until the caller commits, serializing emitters on shared
-  keys and deadlocking two that take two keys in opposite orders. Those go into
-  ONE `events.dispatch` row per emission, inserted on the transaction (the
-  outbox), whose run enqueues each of them after commit (`enqueuesOnCallerTx`).
+- **No `tx`, or a `tx` that is a database** (`db`, a test fixture's — each
+  statement autocommits): every target is enqueued inline, on that handle.
+- **A `tx` that is an open transaction**: a `dedup: "none"` target is enqueued
+  on it (a plain insert; it commits or rolls back with the emitter's writes). A
+  keyed or singleton target is NOT — its `job_key` upsert would hold that key's
+  row lock until the caller commits, serializing emitters on shared keys and
+  deadlocking two that take two keys in opposite orders. Those go into ONE
+  `events.dispatch` row per emission, inserted on the transaction (the outbox),
+  whose run enqueues each of them after commit (`defersToOutbox`).
 
-So an event costs its targets' runs plus at most one dispatch run. Until 2026-11
+Which of the two a `tx` is, is read off the handle (`isOpenTransaction`: a
+drizzle `PgTransaction`), never off whether the caller passed one — so a caller
+threading its executor through cannot buy an outbox run it does not need. Until
+2026-11 any `tx` deferred: the page editor's post-commit emits passed `db` (the
+executor its write functions default to), so every page edit paid one
+`events.dispatch` run carrying its six keyed subscribers, for a lock nobody
+held (21 of the 36 job runs of a 20-keystroke edit burst).
+
+So an event costs its targets' runs plus at most one dispatch run, and the
+dispatch run only when the emit really is inside a transaction. Until 2026-11
 emit enqueued an `events.dispatch` row per matched trigger whose only work was
 the target's enqueue — every event-triggered run cost two queue rows, two runs
 and their bookkeeping (`tasks.statusChanged` matches ~7 triggers: ~14 runs per

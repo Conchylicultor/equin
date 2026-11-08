@@ -11,8 +11,8 @@ import { db } from "@plugins/database/server";
 import type { Registration } from "@plugins/framework/plugins/server-core/core";
 import { eventTriggerColumns } from "./base-columns";
 import {
+  defersToOutbox,
   enqueueDelivery,
-  enqueuesOnCallerTx,
   resolveDelivery,
   type TriggerDelivery,
 } from "./deliver";
@@ -25,7 +25,10 @@ import { _event_emissions } from "./tables";
  * Drizzle node-postgres database/transaction handle, threaded through
  * `emit(payload, { tx })` to make the trigger SELECT, the emission audit
  * insert, and the `graphile_worker.jobs` INSERT all run on the caller's
- * transaction client. Rollback drops all three atomically.
+ * handle. When that handle is an open transaction, rollback drops all three
+ * atomically; when it is a database (`db`, a test fixture's), each statement
+ * autocommits — whether the emit is transactional is read off the handle
+ * (`isOpenTransaction`), never off whether a `tx` was passed.
  */
 export type EmitTx = EnqueueTx;
 
@@ -231,10 +234,11 @@ async function dispatch<T>(
   // Without `tx`, every target is enqueued right here. With one, a target is
   // enqueued on the caller's transaction (so it lives or dies with the
   // emitter's writes) only when that locks nothing other emitters share — a
-  // `dedup: "none"` row. Keyed and singleton targets go into ONE outbox row
-  // (`events.dispatch`) on the transaction, which enqueues them after commit
-  // (see `enqueuesOnCallerTx`). Sequential: on a transaction they share one
-  // connection anyway, and the id order keeps the lock order stable.
+  // `dedup: "none"` row. Keyed and singleton targets of an OPEN transaction go
+  // into ONE outbox row (`events.dispatch`) on it, which enqueues them after
+  // commit; a database handle passed as `tx` is no transaction, and enqueues
+  // them inline (see `defersToOutbox`). Sequential: on a transaction they share
+  // one connection anyway, and the id order keeps the lock order stable.
   const deferred: TriggerDelivery[] = [];
   for (const row of rows) {
     // biome-ignore lint/suspicious/noExplicitAny: row shape is dynamic per table.
@@ -251,7 +255,7 @@ async function dispatch<T>(
       tx,
     );
     if (!resolved) continue;
-    if (tx && !enqueuesOnCallerTx(resolved.target)) {
+    if (defersToOutbox(resolved.target, tx)) {
       deferred.push(resolved.delivery);
     } else {
       await enqueueDelivery(resolved, tx);

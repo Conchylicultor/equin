@@ -39,7 +39,8 @@ export async function notifyStructuralChange(
 ): Promise<void> {
   // `executor` rides the emit so a caller driving a db-test-fixture DB emits
   // against ITS trigger table (subscriber-less there — a no-op); production
-  // passes nothing and the event dispatches on the global handle.
+  // passes `db`. Either way it is a database, not a transaction (this runs
+  // after the write committed), so emit() enqueues every subscriber inline.
   const opts = executor ? { tx: executor } : undefined;
   // Deliberately NOT `notifyBlockChange`: its extra page-block branch needs a
   // `blockId` (a page block's cover attachments are scoped to the page block's

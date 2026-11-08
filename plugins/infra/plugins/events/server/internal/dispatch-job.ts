@@ -4,7 +4,7 @@ import { deliverToTrigger, TriggerDeliverySchema } from "./deliver";
 
 // The outbox of a transactional emit: ONE row per emission, carrying every
 // matched trigger whose target cannot be enqueued on the emitter's own
-// transaction (a keyed or singleton target — see `enqueuesOnCallerTx`). The row
+// transaction (a keyed or singleton target — see `defersToOutbox`). The row
 // commits or rolls back with the emitter's writes; this job then enqueues each
 // target in its own short statement, outside every caller's locks.
 //
