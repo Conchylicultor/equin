@@ -46,21 +46,30 @@ afterEach(() => {
 /** A synchronous stand-in for the browser: runs the update, hands back settled promises. */
 function stubViewTransition(onUpdate: () => void) {
   const calls: { namesBefore: string[] }[] = [];
+  // jsdom runs no animations: the morph pauses / plays none.
+  Object.defineProperty(document, "getAnimations", {
+    configurable: true,
+    value: () => [],
+  });
   Object.defineProperty(document, "startViewTransition", {
     configurable: true,
-    value: (update: () => void) => {
+    value: (update: () => Promise<void> | void) => {
       calls.push({ namesBefore: names("from", "title-a", "side-a") });
-      update();
-      onUpdate();
+      // Like the browser: the transition runs once the (async) update settled.
+      const updated = Promise.resolve(update()).then(onUpdate);
       return {
-        ready: Promise.resolve(),
-        finished: Promise.resolve(),
-        updateCallbackDone: Promise.resolve(),
+        ready: updated,
+        finished: updated,
+        updateCallbackDone: updated,
       };
     },
   });
   return calls;
 }
+
+const flush = async (): Promise<void> => {
+  for (let i = 0; i < 5; i++) await Promise.resolve();
+};
 
 const swapToAppB = (): void => {
   tab.innerHTML = APP_B;
@@ -98,26 +107,49 @@ describe("morphPane", () => {
       "pane-morph-title",
       "pane-morph-sidebar",
     ]);
+    expect(document.documentElement.hasAttribute("data-pane-morph")).toBe(true);
+    await flush();
     expect(namesAfterUpdate).toEqual([
       "pane-morph",
       "pane-morph-title",
       "pane-morph-sidebar",
     ]);
-    expect(document.documentElement.hasAttribute("data-pane-morph")).toBe(true);
 
-    await Promise.resolve();
-    await Promise.resolve();
+    await flush();
     expect(names("to", "title-b", "side-b")).toEqual(["", "", ""]);
     expect(document.documentElement.hasAttribute("data-pane-morph")).toBe(
       false,
     );
   });
 
-  it("still navigates when the new route's leaf is not on screen", () => {
+  it("waits for a leaf that mounts after the commit, then names it", async () => {
+    stubViewTransition(() => {});
+    morphPane(byId("from"), () => {
+      tab.innerHTML = "";
+      setTimeout(swapToAppB, 20);
+    });
+    await new Promise((r) => setTimeout(r, 60));
+    await flush();
+    expect(byId("to").style.viewTransitionName).toBe("");
+  });
+
+  it("centres the pictures of a stamped origin", () => {
+    byId("from").setAttribute("data-morph-origin", "");
+    stubViewTransition(() => {});
+    morphPane(byId("from"), swapToAppB);
+    expect(document.documentElement.getAttribute("data-pane-morph")).toBe(
+      "centred",
+    );
+  });
+
+  it("still navigates when the new route's leaf is not on screen", async () => {
+    vi.useFakeTimers();
     route.leaf = "not-loaded-yet";
     stubViewTransition(() => {});
     const open = vi.fn(swapToAppB);
     morphPane(byId("from"), open);
+    await vi.advanceTimersByTimeAsync(2000);
+    vi.useRealTimers();
     expect(open).toHaveBeenCalledTimes(1);
     expect(byId("to").style.viewTransitionName).toBe("");
     route.leaf = "target";

@@ -42,6 +42,10 @@ The only map-vendor code in the repo. Everything else draws maps through
     that reports `getRenderingType()`.
   - No Advanced Markers either way: they are a DOM element per pin, the cost
     below.
+- **Presentable once tiles are drawn.** Until Google's first `tilesloaded`
+  the canvas holds any view transition it mounts inside
+  (`useTransitionHold`, `primitives/css/motion`), so the pane morph into
+  Places grows a map with its tiles, not a grey box that fills in after.
 - **Pins: one canvas** (`components/pin-canvas.tsx`). A single `OverlayView`
   holds a viewport-sized `<canvas data-map-pin-canvas>` in the `overlayLayer`
   pane and repaints it through `map/pin-layer`'s `PinLayer` on every `draw()`
@@ -127,7 +131,7 @@ The only map-vendor code in the repo. Everything else draws maps through
     - `GeoMap.Renderer` "Google Maps" → `LazyBoundary`
     - `ExternalHosts.Declare` "maps.googleapis.com, maps.gstatic.com, mapsresources-pa.googleapis.com, fonts.googleapis.com, fonts.gstatic.com"
     - `LiveMapSetup.MapIdPreview` → `MapIdPreview`
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `integrations/google-maps` ×6
     - `map` ×4
     - `map/pin-layer` ×3
@@ -135,6 +139,7 @@ The only map-vendor code in the repo. Everything else draws maps through
     - `primitives/css/spacing` ×2
     - `framework/browser-server.ExternalHosts`
     - `primitives/css/center.Center`
+    - `primitives/css/motion.useTransitionHold`
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
     - `primitives/icon-button.IconButton`

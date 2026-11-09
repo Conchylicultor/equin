@@ -21,8 +21,28 @@ Design and prototype: `research/2026-10-29-apps-core-pane-morph.md`
   element mid-flight aborts the transition, so a loading pane must swap its
   content INSIDE its box (it does: `PaneBox` stays, the resolve guard swaps).
 - **The navigation commits inside the transition** (`flushSync`), so the new
-  app is the live new state and the morph starts on the next frame — nothing
-  waits for data; a pane still loading morphs into its loading state.
+  app is the live new state. An app not loaded yet mounts its leaf pane a few
+  frames late: the update waits for the box (`LEAF_WAIT_MS`).
+- **The morph waits for content, bounded.** A surface of the new app that is
+  not presentable yet holds the morph (`useTransitionHold`,
+  `primitives/css/motion`): every `Loading` state while mounted, and the
+  Google map until its first tiles. The holds are taken during the update and
+  waited on once the transition is `ready`, with every view-transition
+  animation **paused on its first frame** — which is the old screen (the new
+  pictures start transparent) — while the new app draws itself live beneath;
+  then they play. Not inside the update: the browser suppresses rendering
+  there, so a map, which draws in animation frames, could never get its tiles.
+  `HOLD_BUDGET_MS` (1.5 s) bounds the wait (data and Google's tiles come over
+  the network); past it the morph runs into whatever is drawn.
+- **A box that is not a pane can be the origin**: `useMorphFromElement`
+  (`primitives/pane`) morphs out of the nearest ancestor stamped
+  `morphOriginProps` — the page map block, whose "Open in Places" grows Places
+  out of the map. Such an origin is morphed **centred**: both pictures sit in
+  the middle of the growing box instead of its top-left corner, so the map card
+  cross-fades into the middle of the big map (the page's framed places) rather
+  than into the app's top-left corner. Its old picture is kept: hiding it (an
+  earlier draft) showed the group's flat background — a blank card — for as
+  long as the update ran.
 - **Plain navigation** without `document.startViewTransition`, under
   `prefers-reduced-motion`, while a morph runs, or outside a tab.
 - **Look** (`web/internal/morph.css`, all scoped to `html[data-pane-morph]`):
@@ -38,7 +58,9 @@ Design and prototype: `research/2026-10-29-apps-core-pane-morph.md`
 - Web:
   - Contributes: `Core.Root` → `PaneMorphHost`
   - Uses:
+    - `primitives/css/motion.openTransitionHolds`
     - `primitives/css/motion.prefersReducedMotion`
+    - `primitives/css/motion.TransitionHolds`
     - `primitives/pane.paneMorphSink`
     - `primitives/pane.peekRoute`
 - Cross-plugin:

@@ -85,7 +85,12 @@ export {
   useAppNavBoundary,
   type AppNavigator,
 } from "./app-nav-sink";
-export { paneMorphSink, type PaneMorph } from "./morph-sink";
+export {
+  paneMorphSink,
+  useMorphFromElement,
+  morphOriginProps,
+  type PaneMorph,
+} from "./morph-sink";
 export type {
   HistoryAdapter,
   LocationChange,

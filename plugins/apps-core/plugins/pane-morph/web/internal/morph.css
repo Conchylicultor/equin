@@ -55,3 +55,13 @@ html[data-pane-morph]::view-transition-new(root) {
     opacity: 0;
   }
 }
+
+/* A stamped origin (`morphOriginProps`: a map block) grows from its middle:
+   both pictures are centred in the growing box, not pinned top-left, so the
+   map card cross-fades into the middle of the new pane (a map's framed
+   places) rather than into the app's top-left corner. Still never stretched. */
+html[data-pane-morph="centred"]::view-transition-old(pane-morph),
+html[data-pane-morph="centred"]::view-transition-new(pane-morph) {
+  inset: 50% auto auto 50%;
+  translate: -50% -50%;
+}

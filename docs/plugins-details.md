@@ -6357,6 +6357,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page/map.PageMap`
               - `primitives/icon-button.IconButton`
               - `primitives/link-gesture.activationProps`
+              - `primitives/pane.useMorphFromElement`
             - Exports (types):
               - `PageOverlay`
               - `PageOverlayPage`
@@ -12348,7 +12349,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Contributes: `Core.Root` → `PaneMorphHost`
         - Uses:
+          - `primitives/css/motion.openTransitionHolds`
           - `primitives/css/motion.prefersReducedMotion`
+          - `primitives/css/motion.TransitionHolds`
           - `primitives/pane.paneMorphSink`
           - `primitives/pane.peekRoute`
       - Cross-plugin:
@@ -36645,7 +36648,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `GeoMap.Renderer` "Google Maps" → `LazyBoundary`
           - `ExternalHosts.Declare` "maps.googleapis.com, maps.gstatic.com, mapsresources-pa.googleapis.com, fonts.googleapis.com, fonts.gstatic.com"
           - `LiveMapSetup.MapIdPreview` → `MapIdPreview`
-        - Uses: 25 symbols — full list in [`plugins/map/plugins/google/REFERENCE.md`](../plugins/map/plugins/google/REFERENCE.md)
+        - Uses: 26 symbols — full list in [`plugins/map/plugins/google/REFERENCE.md`](../plugins/map/plugins/google/REFERENCE.md)
           - `integrations/google-maps` ×6
           - `map` ×4
           - `map/pin-layer` ×3
@@ -36653,6 +36656,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/spacing` ×2
           - `framework/browser-server.ExternalHosts`
           - `primitives/css/center.Center`
+          - `primitives/css/motion.useTransitionHold`
           - `primitives/css/surface.Surface`
           - `primitives/css/text.Text`
           - `primitives/icon-button.IconButton`
@@ -40951,26 +40955,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PageMap.Layer` ← `page.place.map-layer`
           - `PageMap.Action` ← `apps.places.page-overlay`
         - Contributes: `Editor.Block` "map" → `MapBlock`
-        - Uses:
+        - Uses: 21 symbols — full list in [`plugins/page/plugins/map/REFERENCE.md`](../plugins/page/plugins/map/REFERENCE.md)
+          - `page/editor` ×7
+          - `primitives/css/spacing` ×2
+          - `primitives/hover-reveal` ×2
           - `map.MapView`
-          - `page/editor.BLOCK_INSET`
-          - `page/editor.blockContentScope`
-          - `page/editor.BlockRendererProps`
-          - `page/editor.blockRowIn`
-          - `page/editor.Editor`
-          - `page/editor.useBlockEditor`
-          - `page/editor.useSelectionControl`
           - `primitives/css/clip.clipClasses`
           - `primitives/css/pin.Pin`
           - `primitives/css/placeholder.Placeholder`
-          - `primitives/css/spacing.Inset`
-          - `primitives/css/spacing.Stack`
           - `primitives/css/surface.Surface`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.cn`
           - `primitives/dom/scroll-reveal.revealElement`
-          - `primitives/hover-reveal.hoverRevealGroup`
-          - `primitives/hover-reveal.hoverRevealTarget`
+          - `primitives/pane.morphOriginProps`
           - `primitives/slot-render.defineRenderSlot`
         - Exports (types):
           - `PageMapActionProps`
@@ -44968,7 +44965,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/slow-ops/cluster`
               - `debug/timeline`
               - `integrations/google-maps/usage`
-        - **`motion`** — How floating surfaces move: <Presence> keeps a leaving surface drawn until its exit has run (and cross-fades a keyed swap), useSizeMotion tweens a surface's size when its content changes, useFlowMotion fades a newly shown in-flow item in and glides the siblings it displaces, useEnterMotion fades in an element its owner places itself (a canvas frame) when it arrives, prefersReducedMotion, <Arrival> eases a row that arrives while the reader watches into a flow of rows (slot opens, row fades in) — plus the no-unanimated-surface-exit lint rule.
+        - **`motion`** — How floating surfaces move: <Presence> keeps a leaving surface drawn until its exit has run (and cross-fades a keyed swap), useSizeMotion tweens a surface's size when its content changes, useFlowMotion fades a newly shown in-flow item in and glides the siblings it displaces, useEnterMotion fades in an element its owner places itself (a canvas frame) when it arrives, prefersReducedMotion, <Arrival> eases a row that arrives while the reader watches into a flow of rows (slot opens, row fades in), useTransitionHold / openTransitionHolds (a view transition's new picture waits, bounded, until a surface mounted in its update has painted — a map's tiles) — plus the no-unanimated-surface-exit lint rule.
           - Web:
             - Uses:
               - `primitives/dom/auto-scroll.FOLLOW_MOTION_ATTR`
@@ -44979,13 +44976,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ArrivalStep`
               - `PresenceChild`
               - `PresenceProps`
+              - `TransitionHolds`
             - Exports (values):
               - `Arrival`
+              - `openTransitionHolds`
               - `prefersReducedMotion`
               - `Presence`
               - `useEnterMotion`
               - `useFlowMotion`
               - `useSizeMotion`
+              - `useTransitionHold`
           - Cross-plugin:
             - Imported by:
               - `apps-core/pane-morph`
@@ -44997,6 +44997,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `hints/ask`
               - `layouts/miller`
               - `map`
+              - `map/google`
               - `page/editor`
               - `page/place`
               - `primitives/collapsible`
@@ -45004,6 +45005,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/surface`
               - `primitives/data-view/icons`
               - `primitives/detail-sections`
+              - `primitives/loading`
               - `primitives/overlay/image-viewer`
               - `primitives/virtual-rows/row-fold`
         - **`overlay`** — In-flow positioning layout primitive: <Overlay behind above clickThrough> paints full-bleed layers under/over its content within its own box, plus the click-through-toggle idiom.
@@ -48628,6 +48630,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Uses:
           - `primitives/css/grid.Grid`
+          - `primitives/css/motion.useTransitionHold`
           - `primitives/css/placeholder.Placeholder`
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/spacing.Stack`
@@ -50039,6 +50042,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `currentRoutePrefix`
           - `definePaneHeaderSlot`
           - `defineRoute`
+          - `morphOriginProps`
           - `openPane`
           - `Pane`
           - `PaneBasePathContext`
@@ -50076,6 +50080,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useAppNavBoundary`
           - `useCurrentPane`
           - `useIndexMatch`
+          - `useMorphFromElement`
           - `useOpenPane`
           - `usePaneMatch`
           - `usePaneStore`
@@ -50101,7 +50106,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-2xs`
           - `ui/tokens/density --space-md`
           - `ui/tokens/shape --spacing`
-        - Imported by: 195 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Imported by: 196 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `apps` ×71
           - `conversations` ×32
           - `debug` ×27
@@ -50112,6 +50117,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `layouts` ×4
           - `primitives` ×4
           - `infra` ×2
+          - `page` ×2
           - `reports` ×2
           - `stats` ×2
           - `ui` ×2
@@ -50124,7 +50130,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hints/ask`
           - `integrations/google-maps`
           - `menu-bar`
-          - `page/prototype`
           - `review`
           - `runs`
           - `screenshot`

@@ -22,6 +22,7 @@ import {
   hoverRevealGroup,
   hoverRevealTarget,
 } from "@plugins/primitives/plugins/hover-reveal/web";
+import { morphOriginProps } from "@plugins/primitives/plugins/pane/web";
 import { MapView } from "@plugins/map/web";
 import { derivePageMap } from "../../core";
 import { PageMap } from "../slots";
@@ -71,6 +72,7 @@ export function MapBlock({ block }: BlockRendererProps) {
       <Stack gap="2xs">
         <Surface
           level="raised"
+          {...morphOriginProps}
           className={cn(
             clipClasses({ axis: "both", fill: false }),
             hoverRevealGroup,

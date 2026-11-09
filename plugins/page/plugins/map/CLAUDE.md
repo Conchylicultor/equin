@@ -28,6 +28,9 @@ It names no block type and no map vendor.
   owns its reveal (`primitives/hover-reveal`: `hoverRevealGroup` on the map's
   frame, `hoverRevealTarget` on the row) — shown while the map is hovered or
   an action has keyboard focus, so a contribution never hides itself.
+- The map's frame is stamped `morphOriginProps` (`primitives/pane`): an
+  action that opens an app with a morph (`useMorphFromElement`) grows it out
+  of the whole map, not out of its own small button.
 - Read-only surfaces (version-history preview) still render the generic
   placeholder. A read-only map needs a page-forest context that `read-only-view`
   does not provide.
@@ -45,26 +48,19 @@ It names no block type and no map vendor.
     - `PageMap.Layer` ← `page.place.map-layer`
     - `PageMap.Action` ← `apps.places.page-overlay`
   - Contributes: `Editor.Block` "map" → `MapBlock`
-  - Uses:
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `page/editor` ×7
+    - `primitives/css/spacing` ×2
+    - `primitives/hover-reveal` ×2
     - `map.MapView`
-    - `page/editor.BLOCK_INSET`
-    - `page/editor.blockContentScope`
-    - `page/editor.BlockRendererProps`
-    - `page/editor.blockRowIn`
-    - `page/editor.Editor`
-    - `page/editor.useBlockEditor`
-    - `page/editor.useSelectionControl`
     - `primitives/css/clip.clipClasses`
     - `primitives/css/pin.Pin`
     - `primitives/css/placeholder.Placeholder`
-    - `primitives/css/spacing.Inset`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/dom/scroll-reveal.revealElement`
-    - `primitives/hover-reveal.hoverRevealGroup`
-    - `primitives/hover-reveal.hoverRevealTarget`
+    - `primitives/pane.morphOriginProps`
     - `primitives/slot-render.defineRenderSlot`
   - Exports (types):
     - `PageMapActionProps`

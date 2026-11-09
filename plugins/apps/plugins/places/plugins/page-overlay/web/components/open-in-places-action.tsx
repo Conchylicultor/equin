@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { useAppLink } from "@plugins/apps-core/plugins/tabs/web";
 import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { useMorphFromElement } from "@plugins/primitives/plugins/pane/web";
 import { navIcons } from "@plugins/ui/plugins/icons/core";
 import type { PageMapActionProps } from "@plugins/page/plugins/map/web";
 import { placesApp } from "@plugins/apps/plugins/places/plugins/shell/core";
@@ -17,13 +18,16 @@ import { placesMapRoute } from "../../core";
  */
 export function OpenInPlacesAction({ pageId }: PageMapActionProps): ReactNode {
   const inAppLink = useAppLink();
+  // Places grows out of the map block's box (stamped morphOriginProps).
+  const { attach, morph } = useMorphFromElement();
   return (
     <IconButton
+      ref={attach}
       variant="floating"
       icon={navIcons.expand}
       label={`Open in ${placesApp.name}`}
       {...activationProps(
-        inAppLink(placesMapRoute.link(placesApp, { page: pageId })),
+        morph(inAppLink(placesMapRoute.link(placesApp, { page: pageId }))),
         { isolate: true },
       )}
     />

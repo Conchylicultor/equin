@@ -905,6 +905,7 @@ with an empty route.
     - `currentRoutePrefix`
     - `definePaneHeaderSlot`
     - `defineRoute`
+    - `morphOriginProps`
     - `openPane`
     - `Pane`
     - `PaneBasePathContext`
@@ -942,6 +943,7 @@ with an empty route.
     - `useAppNavBoundary`
     - `useCurrentPane`
     - `useIndexMatch`
+    - `useMorphFromElement`
     - `useOpenPane`
     - `usePaneMatch`
     - `usePaneStore`
@@ -967,7 +969,7 @@ with an empty route.
     - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-md`
     - `ui/tokens/shape --spacing`
-  - Imported by: 195 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 196 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×71
     - `conversations` ×32
     - `debug` ×27
@@ -978,6 +980,7 @@ with an empty route.
     - `layouts` ×4
     - `primitives` ×4
     - `infra` ×2
+    - `page` ×2
     - `reports` ×2
     - `stats` ×2
     - `ui` ×2
@@ -990,7 +993,6 @@ with an empty route.
     - `hints/ask`
     - `integrations/google-maps`
     - `menu-bar`
-    - `page/prototype`
     - `review`
     - `runs`
     - `screenshot`

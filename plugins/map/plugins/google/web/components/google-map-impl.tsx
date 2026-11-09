@@ -12,6 +12,7 @@ import {
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { useTransitionHold } from "@plugins/primitives/plugins/css/plugins/motion/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -142,6 +143,12 @@ function GoogleMapCanvas({
   // What the one framing frames: the host's opening set when it names one
   // (where most of the pins are), else what Fit frames.
   const opened = openingFrame(framed, openingIds);
+  // Grey until Google's first tiles land (or the map first settles): a view
+  // transition this map mounts inside (a pane morph into Places) waits for
+  // them, so it never grows a tile-less map. A failed map draws its error
+  // card at once.
+  const [tilesDrawn, setTilesDrawn] = useState(false);
+  useTransitionHold(!tilesDrawn && !refused && loadError === null);
 
   if (refused) return <MapErrorCard reason={{ kind: "refused" }} />;
   if (loadError !== null) {
@@ -172,12 +179,24 @@ function GoogleMapCanvas({
                 headingInteractionEnabled: false,
               })}
           colorScheme={GOOGLE_COLOR_SCHEME[GOOGLE_TILES]}
+          // One Google map instance serves every map surface in turn: a map
+          // that unmounts (a page's map card) hands its instance — its Map ID
+          // style, WebGL context and tiles already loaded — to the next one
+          // that mounts (Places, opened from that card), which then draws at
+          // once instead of starting Google's map up again (~2 s to its first
+          // tiles for a Map ID map).
+          reuseMaps
           defaultCenter={opening.center}
           defaultZoom={opening.zoom}
           // The wheel always zooms the map (no "Use ⌘ + scroll" hint), even
           // when the map sits inside a scrolling page.
           gestureHandling="greedy"
           clickableIcons={false}
+          // A reused instance (`reuseMaps`) whose tiles are already loaded may
+          // never fire `tilesloaded` again; `idle` — the map settled after its
+          // re-layout — says the same.
+          onTilesLoaded={() => setTilesDrawn(true)}
+          onIdle={() => setTilesDrawn(true)}
           streetViewControl={false}
           mapTypeControl={false}
           // The app owns fullscreen (the action bar's view option); Google's
@@ -185,7 +204,10 @@ function GoogleMapCanvas({
           fullscreenControl={false}
           // Pick mode: a crosshair, and a click on the map (a pin is an
           // overlay above it, so its click never lands here) reports where.
-          draggableCursor={pick === undefined ? undefined : "crosshair"}
+          // `null`, not undefined, when not picking: a reused instance (`reuseMaps`)
+          // must lose a previous map's crosshair, and an undefined option is
+          // never set.
+          draggableCursor={pick === undefined ? null : "crosshair"}
           onClick={
             pick === undefined
               ? undefined

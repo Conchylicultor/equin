@@ -59,6 +59,7 @@ result.
 - Web:
   - Uses:
     - `primitives/css/grid.Grid`
+    - `primitives/css/motion.useTransitionHold`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`

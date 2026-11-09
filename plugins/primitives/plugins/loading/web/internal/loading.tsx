@@ -5,6 +5,7 @@ import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
+import { useTransitionHold } from "@plugins/primitives/plugins/css/plugins/motion/web";
 import "./loading.css";
 
 export type LoadingVariant = "text" | "spinner" | "rows" | "cards" | "block";
@@ -35,6 +36,11 @@ function Shimmer({ className }: { className?: string }) {
  * Every variant is `aria-busy`: the standard "this region is still loading",
  * which assistive tech reads and automation waits on (the agent browser's
  * recordings wait for no busy region before filming a call's result).
+ *
+ * A loading state is not a picture worth animating: while one is mounted it
+ * holds an open view transition (`useTransitionHold` — a pane morph), so the
+ * morph grows into the content once it lands, within the morph's budget,
+ * rather than into a box that fills in after.
  */
 export function Loading({
   variant = "text",
@@ -42,6 +48,7 @@ export function Loading({
   count,
   className,
 }: LoadingProps): ReactNode {
+  useTransitionHold(true);
   switch (variant) {
     case "text":
       return (

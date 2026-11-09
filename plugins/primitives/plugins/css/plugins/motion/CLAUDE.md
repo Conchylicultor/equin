@@ -150,6 +150,26 @@ direct child of `<Presence>`. A composite child (`{open && <PlaceCard/>}`) is an
 accepted false negative: its surface still enters and resizes with motion.
 Genuine exceptions are declared in the owning plugin's `exempt/index.ts`.
 
+## Holding a view transition: `useTransitionHold`
+
+A view transition takes its new picture once its update settles; a surface
+mounted inside the update that paints late (a map's tiles, from the network)
+would be captured unpainted. The transition's owner opens a window around its
+update (`openTransitionHolds()`), a surface not yet presentable holds it
+(`useTransitionHold(pending)`, in a layout effect, so a surface mounted inside
+the update's `flushSync` holds before the owner waits), and the owner awaits
+`holds.settled(budgetMs)` — every hold let go, or the budget (the late paint
+comes from a peer we do not control). Outside a window a hold is nothing.
+Wait **after** the update, not in it: the browser suppresses rendering while a
+view transition's update runs, so a surface that paints in animation frames
+(a map) cannot get there — the pane morph pauses its animations on their first
+frame instead. "All let go" is judged after the commit (a microtask), so a
+commit that swaps one holding surface for another (a `Loading` for the map its
+data reveals) keeps the window open. The
+pane morph (`apps-core/pane-morph`) is the owner; every `Loading`
+(`primitives/loading`) holds while mounted, and the Google map
+(`map/google`) until its first `tilesloaded`.
+
 ## Not here
 
 `FoldMotion` / row-fold (content folding inside a box that stays), miller's
@@ -161,7 +181,7 @@ Design: [`research/2026-10-25-global-surface-motion.md`](../../../../../../resea
 
 ## Plugin reference
 
-- Description: How floating surfaces move: <Presence> keeps a leaving surface drawn until its exit has run (and cross-fades a keyed swap), useSizeMotion tweens a surface's size when its content changes, useFlowMotion fades a newly shown in-flow item in and glides the siblings it displaces, useEnterMotion fades in an element its owner places itself (a canvas frame) when it arrives, prefersReducedMotion, <Arrival> eases a row that arrives while the reader watches into a flow of rows (slot opens, row fades in) — plus the no-unanimated-surface-exit lint rule.
+- Description: How floating surfaces move: <Presence> keeps a leaving surface drawn until its exit has run (and cross-fades a keyed swap), useSizeMotion tweens a surface's size when its content changes, useFlowMotion fades a newly shown in-flow item in and glides the siblings it displaces, useEnterMotion fades in an element its owner places itself (a canvas frame) when it arrives, prefersReducedMotion, <Arrival> eases a row that arrives while the reader watches into a flow of rows (slot opens, row fades in), useTransitionHold / openTransitionHolds (a view transition's new picture waits, bounded, until a surface mounted in its update has painted — a map's tiles) — plus the no-unanimated-surface-exit lint rule.
 - Web:
   - Uses:
     - `primitives/dom/auto-scroll.FOLLOW_MOTION_ATTR`
@@ -172,13 +192,16 @@ Design: [`research/2026-10-25-global-surface-motion.md`](../../../../../../resea
     - `ArrivalStep`
     - `PresenceChild`
     - `PresenceProps`
+    - `TransitionHolds`
   - Exports (values):
     - `Arrival`
+    - `openTransitionHolds`
     - `prefersReducedMotion`
     - `Presence`
     - `useEnterMotion`
     - `useFlowMotion`
     - `useSizeMotion`
+    - `useTransitionHold`
 - Cross-plugin:
   - Imported by:
     - `apps-core/pane-morph`
@@ -190,6 +213,7 @@ Design: [`research/2026-10-25-global-surface-motion.md`](../../../../../../resea
     - `hints/ask`
     - `layouts/miller`
     - `map`
+    - `map/google`
     - `page/editor`
     - `page/place`
     - `primitives/collapsible`
@@ -197,6 +221,7 @@ Design: [`research/2026-10-25-global-surface-motion.md`](../../../../../../resea
     - `primitives/css/surface`
     - `primitives/data-view/icons`
     - `primitives/detail-sections`
+    - `primitives/loading`
     - `primitives/overlay/image-viewer`
     - `primitives/virtual-rows/row-fold`
 
