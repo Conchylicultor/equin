@@ -1,6 +1,6 @@
 # improve
 
-The website's **Improve** button, the header's one call to action on every page.
+The website's **Wish** button, the header's one call to action on every page.
 A visitor writes what they would change about the page, can point at the part
 they mean (**Point to it on the page** runs the element picker, and the pick
 lands in the text as a chip), and picks **Auto-deploy** or not. **Show me** (or
@@ -16,7 +16,7 @@ form, prefilled with the idea, its picks, the page and the auto-deploy choice.
 is a script (fixed steps, sped up, and labelled as such), and the idea lands on
 GitHub, the one place it can honestly go. That is why this is not a form that
 posts anywhere: the contact band's rule holds (a form that goes nowhere is worse
-than an address). Improve hands off to a page the visitor opens themselves.
+than an address). Wish hands off to a page the visitor opens themselves.
 
 **Nothing opens GitHub by itself.** "File it" is a real `<a target="_blank">`,
 live from the first frame of the replay so the replay can be skipped. Only the
@@ -26,7 +26,7 @@ draft.
 ## The rules that are easy to break
 
 **Import only `apps/website/shell` and primitives** — `ui-context` and its
-`element-picker` included. Anything from the app's own Improve, tasks,
+`element-picker` included. Anything from the app's own Wish, tasks,
 conversations, active-data, auth or the page editor drags those plugins into the
 `website` build, and `composition-closure` fails. The field is the plain
 `TextEditor` primitive for the same reason. Importing `ElementPicker` is also
@@ -81,7 +81,7 @@ Verify with `e2e/improve-verify.ts` after `./equin build`.
 
 ## Plugin reference
 
-- Description: The website's Improve button: the header's call to action, a popover where a visitor describes a change to the page, watches a scripted replay of what equin would do with it, and files it as a prefilled GitHub issue.
+- Description: The website's Wish button: the header's call to action, a popover where a visitor describes a change to the page, watches a scripted replay of what equin would do with it, and files it as a prefilled GitHub issue.
 - Web:
   - Contributes: `WebsiteHeader` "improve" → `ImproveNavItem`
   - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)

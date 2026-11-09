@@ -1,6 +1,6 @@
-// Verifies the website's Improve button end to end, on the landing page:
+// Verifies the website's Wish button end to end, on the landing page:
 //
-//   - the header shows Improve and no "Get in touch"; the footer carries the
+//   - the header shows Wish and no "Get in touch"; the footer carries the
 //     email and the GitHub link; the contact band is two cards and no link row;
 //   - opening the panel focuses the field, and "Show me" is disabled until
 //     there is text; a closed-and-reopened panel keeps the draft;
@@ -59,17 +59,17 @@ function panel(page: Page): Locator {
 }
 
 /**
- * The site header's Improve: the one in the same row as the site's wordmark.
+ * The site header's Wish: the one in the same row as the site's wordmark.
  * A page-wide lookup is ambiguous on a full deploy, where the app's own
- * floating action bar carries a button named "Improve" too. Anchored on the
+ * floating action bar carries a button named "Wish" too. Anchored on the
  * wordmark, not a nav link: on a narrow screen the nav links move into the
  * header's "⋯" panel, and the wordmark never does.
  */
 function improveButton(page: Page): Locator {
   return page
     .getByRole("button", { name: "equin.", exact: true })
-    .locator('xpath=ancestor::*[.//button[normalize-space()="Improve"]][1]')
-    .getByRole("button", { name: "Improve", exact: true });
+    .locator('xpath=ancestor::*[.//button[normalize-space()="Wish"]][1]')
+    .getByRole("button", { name: "Wish", exact: true });
 }
 
 function field(page: Page): Locator {
@@ -164,7 +164,7 @@ async function expectFinished(
 }
 
 await withBrowser(async (h) => {
-  const r = report("website Improve");
+  const r = report("website Wish");
 
   // --- 1280px -----------------------------------------------------------------
   const { page, context } = await h.session({
@@ -217,8 +217,8 @@ await withBrowser(async (h) => {
   );
   r.ok("the site header is found", chrome.headerFound);
   r.ok(
-    "the header offers Improve",
-    chrome.headerText.includes("Improve"),
+    "the header offers Wish",
+    chrome.headerText.includes("Wish"),
     chrome.headerText,
   );
   r.ok(
@@ -487,7 +487,7 @@ await withBrowser(async (h) => {
     settleMs: 800,
   });
   r.ok(
-    "at 420px the header still offers Improve",
+    "at 420px the header still offers Wish",
     await improveButton(narrow.page).isVisible(),
   );
   await openPanel(narrow.page);

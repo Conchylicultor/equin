@@ -47,7 +47,7 @@ gradient all read as things you can act on.
 - `equinTheme` — the look: palette, chart ramp, font. Contributed through
   `ThemeEngine.Theme` and selected for the website app by
   `config/ui/theme-engine/@app/website/theme.jsonc`. It sets no sizes, so
-  everything outside the pages — the Improve panel and every other popup, the
+  everything outside the pages — the Wish panel and every other popup, the
   tab bar and rail while the site is focused — is ordinary UI at standard sizes.
 - `equinDocumentTheme` — the page sizes: type scale, density, shape. A
   sub-theme (`ThemeEngine.SubTheme`), worn by every page because

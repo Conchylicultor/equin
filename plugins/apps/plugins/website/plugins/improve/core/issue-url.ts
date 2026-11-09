@@ -193,7 +193,7 @@ function issueBody(
     ...(section === "" ? [] : [section, ""]),
     `Page: ${pageUrl}`,
     `Auto-deploy: ${autoDeploy ? "yes" : "no (review first)"}`,
-    "Filed from the Improve button on equin.ai",
+    "Filed from the Wish button on equin.ai",
   ].join("\n");
 }
 

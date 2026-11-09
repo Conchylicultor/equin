@@ -159,10 +159,10 @@ await withBrowser(async (h) => {
   // The pill is a small control: its height is the equin density preset's
   // small-control height (38.4px), and its inline padding that size's 12px plus
   // the shape's 6px pill extra on each rounded end — 18px, not Button's own.
-  // The app's own action bar has an "Improve" button too (a tooltip trigger);
+  // The app's own action bar has a "Wish" button too (a tooltip trigger);
   // the site's is the one that opens its panel (a popover trigger).
   const cta = page
-    .getByRole("button", { name: "Improve", exact: true })
+    .getByRole("button", { name: "Wish", exact: true })
     .and(page.locator('[data-slot="popover-trigger"]'));
   const ctaBox = await cta.evaluate((el) => {
     const s = getComputedStyle(el);

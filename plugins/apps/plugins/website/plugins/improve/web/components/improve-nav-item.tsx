@@ -8,11 +8,11 @@ import { EMPTY_DRAFT, ImprovePanel, type ImproveDraft } from "./improve-panel";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
-const autoAwesomeIcon = symbol("auto-awesome");
+const sparkIcon = symbol("flare");
 
 /**
- * "Improve" in the shared site header — the header's one call to action, so the
- * filled pill, with the same sparkle equin's own Improve button wears.
+ * "Wish" in the shared site header — the header's one call to action, so the
+ * filled pill, with the same name and spark (`flare`) equin's own Wish button wears.
  *
  * It opens a panel hung off its trailing edge (`align="end"`: the button is the
  * last item in the header, so the panel grows back over the page rather than off
@@ -60,9 +60,9 @@ export function ImproveNavItem() {
       contentClassName={picking ? cn("hidden") : undefined}
       trigger={
         <WebsiteNavLink
-          label="Improve"
+          label="Wish"
           emphasis="strong"
-          icon={<Icon icon={autoAwesomeIcon} />}
+          icon={<Icon icon={sparkIcon} />}
         />
       }
     >

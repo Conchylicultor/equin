@@ -466,7 +466,7 @@ export const LAYERS: readonly IcebergLayer[] = [
         kind: "harness",
       },
       {
-        name: "Improve button",
+        name: "Wish button",
         weight: 2,
         desc: "See something to change? Say it right where you are; an agent picks it up.",
         kind: "harness",

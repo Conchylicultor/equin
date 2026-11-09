@@ -122,7 +122,7 @@ describe("buildIssueUrl", () => {
         "---",
         `Page: ${PAGE}`,
         "Auto-deploy: no (review first)",
-        "Filed from the Improve button on equin.ai",
+        "Filed from the Wish button on equin.ai",
       ].join("\n"),
     );
   });
@@ -251,7 +251,7 @@ describe("buildIssueUrl", () => {
         "",
         `Page: ${PAGE}`,
         "Auto-deploy: no (review first)",
-        "Filed from the Improve button on equin.ai",
+        "Filed from the Wish button on equin.ai",
       ].join("\n"),
     );
   });
@@ -326,7 +326,7 @@ describe("buildIssueUrl", () => {
         "",
         `Page: ${PAGE}`,
         "Auto-deploy: no (review first)",
-        "Filed from the Improve button on equin.ai",
+        "Filed from the Wish button on equin.ai",
       ].join("\n"),
     );
   });

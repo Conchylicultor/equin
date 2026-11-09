@@ -18,7 +18,7 @@ the claim, show what it looks like, and then get out of the way:
   (`/website/foundations`), and the vision, story and guide pages
   (`/website/vision`, …), each with its own section slot the page gets written
   into — placeholders for now.
-- [`improve`](plugins/improve/CLAUDE.md) — the header's Improve button: the
+- [`improve`](plugins/improve/CLAUDE.md) — the header's Wish button: the
   visitor describes a change, watches a scripted replay of what an agent would
   do with it, and can file it as a prefilled GitHub issue. No agent runs here.
 - [`shell`](plugins/shell/CLAUDE.md) — the app entry, the shared site header
@@ -76,7 +76,7 @@ everywhere a reader can see it; the old name survives only as an internal identi
   - **`demos`** — The website's live demos, one plugin each: a demo owns its story and its data (pages, prototypes, agent runs) and writes them into its own browser host through each app's fixture writer.
     - Plugins:
       - **`workspace`** — The workspace demo — the website's live demo of the Agent Manager, Pages, Prototypes, Sonata and Keyboard Party on Demo's own equin (core: workspaceDemo — the app, the route…
-  - **`improve`** — The website's Improve button: the header's call to action, a popover where a visitor describes a change to the page, watches a scripted replay of what equin would do with it, and files it as a…
+  - **`improve`** — The website's Wish button: the header's call to action, a popover where a visitor describes a change to the page, watches a scripted replay of what equin would do with it, and files it as a…
   - **`landing`** — Landing-page bands of the public website: the hero, the desktop screenshot, the three layers of equin, the story link, and the contact block.
     - Plugins:
       - **`contact`** — Getting in touch: the homepage's closing band — for anyone who wants to support the vision, the address in the sentence (copy on hover) and a Get in touch button that grows the card into a message…

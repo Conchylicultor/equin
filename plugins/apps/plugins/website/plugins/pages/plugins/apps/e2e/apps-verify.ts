@@ -91,7 +91,7 @@ await withBrowser(async (h) => {
   const edge = (VIEWPORT.width - MEASURE_PX) / 2;
 
   // --- header on the measure -------------------------------------------------
-  const improve = await measure("button", "Improve");
+  const improve = await measure("button", "Wish");
   r.ok(
     "the header's last control ends on the measure's right edge",
     improve !== null && near(improve.right, VIEWPORT.width - edge, 1),
