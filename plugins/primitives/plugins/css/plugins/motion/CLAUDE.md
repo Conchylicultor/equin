@@ -77,17 +77,24 @@ whose geometry something else already animates.
 - **`arrived={true}`** — one row on its own (a transcript line): 180 ms,
   `grid-template-rows` 0fr → 1fr on the wrapper (clipping the row meanwhile),
   opacity 0 → 1 on the row.
-- **`arrived={{ step }}`** (`ArrivalStep`) — one row of a BATCH, the rows one
-  write added together, arriving as ONE gesture. Every row's slot opens at the
-  same moment on the same curve (525 ms, ease-in-out `cubic-bezier(.45,0,.55,1)`),
-  so the batch's room is one continuous push (Σ hᵢ·E(t) = H·E(t)) and what is
-  below moves as one rigid mass. Each row's content then cascades in at its
-  step: opacity + a 10 px rise, 320 ms ease-out `cubic-bezier(.16,1,.3,1)`,
-  starting 175 ms into the open and 70 ms per step — no scale, no overshoot.
-  A row taller than 160 px (a map) rises 14 px over 490 ms. `step: null` (a row
-  with nothing to show) only opens. The caller numbers the steps (document
-  order; rows that belong together share one). Design: prototype
-  `proto-1794145785-ej5bjg`, `?motion=staged`.
+- **`arrived={{ step, steps }}`** (`ArrivalStep`) — one row of a BATCH, the
+  rows one write added together, arriving as ONE gesture. Every row's slot
+  opens at the same moment on the same curve (ease-in-out
+  `cubic-bezier(.45,0,.55,1)`), so the batch's room is one continuous push
+  (Σ hᵢ·E(t) = H·E(t)) and what is below moves as one rigid mass. Each row's
+  content then cascades in at its step, top to bottom: opacity + a 12 px rise,
+  450 ms on a soft ease-out `cubic-bezier(.33,1,.68,1)` (so the fade and rise
+  are seen), starting 150 ms into the open and 150 ms per step — no scale, no
+  overshoot. A batch of more than 7 steps compresses its gaps so the last step
+  starts at most 900 ms after the first. `steps` (the batch's step count, the
+  same on every row) sizes the opening: it lasts until 375 ms after the last
+  step starts, at least 600 ms (3 steps: 825 ms, 4: 975 ms, at most 1425 ms),
+  so no content enters into a slot that has visibly finished opening
+  (`internal/arrival-timing.ts`). A row taller than 160 px (a map) rises 16 px
+  over 600 ms. `step: null` (a row with nothing to show) only opens. The
+  caller numbers the steps (document order; rows that belong together share
+  one). Design: prototype `proto-1794145785-ej5bjg`, `?motion=staged`; timing
+  retuned for a visible cascade.
 - Nothing in it scrolls, focuses or reads the scroller: the camera is the
   viewer's.
 - While entering it carries `FOLLOW_MOTION_ATTR` (`dom/auto-scroll`), so a

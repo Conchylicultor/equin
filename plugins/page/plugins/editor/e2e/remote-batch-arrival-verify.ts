@@ -13,9 +13,15 @@
 // it); the batch's content cascades in document order (a place with its to-do,
 // the empty line with no entry, the map last); a lone block still eases in.
 //
-// Usage: ./equin run plugins/page/plugins/editor/e2e/remote-batch-arrival-verify.ts
+// With `--frames <dir>`, one more identical batch is written and held still:
+// every animation paused and stepped through 0…1500 ms, one screenshot per
+// 100 ms (`<dir>/batch-<ms>.png`) — to judge the cascade by eye.
+//
+// Usage: ./equin run plugins/page/plugins/editor/e2e/remote-batch-arrival-verify.ts [--frames <dir>]
+import { mkdirSync } from "node:fs";
 import {
   agentFetch,
+  arg,
   report,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
@@ -71,6 +77,30 @@ function toDo(label: string, child: ReturnType<typeof place>) {
     expanded: true,
     children: [child],
   };
+}
+
+/** One push: three to-dos with their places, an empty line, a map. */
+function shopsBatch() {
+  const shops = [
+    toDo("Shop one", place("Atelier One", 48.86, 2.35)),
+    toDo("Shop two", place("Atelier Two", 48.861, 2.34)),
+    toDo("Shop three", place("Atelier Three", 48.858, 2.36)),
+  ];
+  const blank = {
+    id: newId(),
+    type: "text",
+    data: { text: [] },
+    expanded: true,
+    children: [],
+  };
+  const map = {
+    id: newId(),
+    type: "map",
+    data: {},
+    expanded: true,
+    children: [],
+  };
+  return { shops, blank, map, forest: [...shops, blank, map] };
 }
 
 async function writeOp(pageId: string, op: unknown): Promise<void> {
@@ -281,26 +311,7 @@ await withBrowser(async (h) => {
   await page.waitForTimeout(500);
 
   // ---- One push: three to-dos with their places, an empty line, a map --------
-  const shops = [
-    toDo("Shop one", place("Atelier One", 48.86, 2.35)),
-    toDo("Shop two", place("Atelier Two", 48.861, 2.34)),
-    toDo("Shop three", place("Atelier Three", 48.858, 2.36)),
-  ];
-  const blank = {
-    id: newId(),
-    type: "text",
-    data: { text: [] },
-    expanded: true,
-    children: [],
-  };
-  const map = {
-    id: newId(),
-    type: "map",
-    data: {},
-    expanded: true,
-    children: [],
-  };
-  const forest = [...shops, blank, map];
+  const { shops, blank, map, forest } = shopsBatch();
   const watched = [
     ...shops.flatMap((s) => [s.id, s.children[0]!.id]),
     blank.id,
@@ -328,7 +339,7 @@ await withBrowser(async (h) => {
       (o) =>
         o !== undefined &&
         Math.abs(o.start - opens[0]!.start) < 1 &&
-        o.duration === 525 &&
+        o.duration === 975 &&
         o.easing === opens[0]!.easing,
     ),
     JSON.stringify(opens.map((o) => o && [o.start.toFixed(0), o.duration])),
@@ -355,29 +366,45 @@ await withBrowser(async (h) => {
       enter(s.id) === enter(s.children[0]!.id),
     );
   r.eq(
-    "batch: the shops then the map cascade 70 ms apart, in document order",
+    "batch: the shops then the map cascade 150 ms apart, in document order",
     [shops[1]!, shops[2]!, map].map((b, i) =>
       Math.round(
         enter(b.id) -
           enter(i === 0 ? shops[0]!.id : [shops[1]!, shops[2]!][i - 1]!.id),
       ),
     ),
-    [70, 70, 70],
+    [150, 150, 150],
   );
   r.eq(
-    "batch: the first entry starts 175 ms into the opening",
+    "batch: the first entry starts 150 ms into the opening",
     anim(shops[0]!.id, "arrival-rise")?.delay,
-    175,
+    150,
   );
   r.eq(
-    "batch: a shop enters over 320 ms",
+    "batch: a shop enters over 450 ms",
     anim(shops[0]!.id, "arrival-rise")?.duration,
-    320,
+    450,
   );
   r.eq(
-    "batch: the map (a large block) enters over 490 ms",
+    "batch: the map (a large block) enters over 600 ms",
     anim(map.id, "arrival-rise")?.duration,
-    490,
+    600,
+  );
+  // The room covers the cascade: when the last step (the map) starts, its
+  // slot is still visibly opening.
+  const lastStart = enter(map.id) - opens[0]!.start - opens[0]!.delay;
+  r.ok(
+    "batch: the room is still opening when the last entry starts",
+    CALM(lastStart / opens[0]!.duration) < 0.85,
+    `last entry at ${lastStart.toFixed(0)}ms of ${opens[0]!.duration}ms (room ${(100 * CALM(lastStart / opens[0]!.duration)).toFixed(0)}% open)`,
+  );
+  r.note(
+    `batch: first shop opacity(t) ${frames
+      .filter((f) => f.opacity[shops[0]!.id] !== undefined)
+      .filter((_, i) => i % 3 === 0)
+      .slice(0, 25)
+      .map((f) => `${f.t.toFixed(0)}:${f.opacity[shops[0]!.id]!.toFixed(2)}`)
+      .join(" ")}`,
   );
   r.ok(
     "batch: the empty line has no entry of its own",
@@ -420,6 +447,47 @@ await withBrowser(async (h) => {
     one.anims[lone.id]?.find((a) => a.name === "arrival-open"),
   );
   r.ok("lone: it enters (not drawn at rest)", everHidden(one.frames, lone.id));
+
+  // ---- Held frames, to judge by eye ---------------------------------------------
+  const framesDir = arg("frames");
+  if (framesDir) {
+    mkdirSync(framesDir, { recursive: true });
+    await page.waitForTimeout(800);
+    const next = shopsBatch();
+    await writeOp(doc.pageId, {
+      kind: "paste",
+      forest: next.forest,
+      afterId: ids[8]!,
+      parentId: doc.pageId,
+    });
+    // Freeze the moment the batch mounts: every entry paused at its start.
+    await page.waitForFunction(
+      (id) => {
+        if (!document.querySelector(`[data-block-id="${id}"]`)) return false;
+        const anims = document
+          .getAnimations()
+          .filter((a) => a instanceof CSSAnimation);
+        if (anims.length === 0) return false;
+        for (const a of anims) a.pause();
+        return true;
+      },
+      next.shops[0]!.id,
+      { polling: "raf" },
+    );
+    for (let t = 0; t <= 1500; t += 100) {
+      await page.evaluate((t) => {
+        for (const a of document.getAnimations())
+          if (a instanceof CSSAnimation) a.currentTime = t;
+      }, t);
+      await page.screenshot({
+        path: `${framesDir}/batch-${String(t).padStart(4, "0")}.png`,
+      });
+    }
+    await page.evaluate(() => {
+      for (const a of document.getAnimations()) a.play();
+    });
+    r.note(`frames: ${framesDir}/batch-*.png (0…1500 ms, every 100 ms)`);
+  }
 });
 
 await r.finish();

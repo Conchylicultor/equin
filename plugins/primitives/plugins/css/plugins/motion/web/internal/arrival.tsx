@@ -8,6 +8,7 @@ import {
 } from "react";
 import { FOLLOW_MOTION_ATTR } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 import { prefersReducedMotion } from "./reduced-motion";
+import { arrivalDelayMs, arrivalOpenMs } from "./arrival-timing";
 import "./arrival.css";
 
 /**
@@ -22,9 +23,14 @@ import "./arrival.css";
  *   with it) share a step.
  * - `{ step: null }` — the row has nothing to show (an empty line): its room
  *   opens with the batch, it has no entry of its own.
+ *
+ * `steps` is the batch's number of steps, the same on every row of it: the
+ * room's opening lasts long enough to cover the whole cascade, so no row's
+ * content enters after its slot has visibly finished opening.
  */
 export interface ArrivalStep {
   step: number | null;
+  steps: number;
 }
 
 export interface ArrivalProps {
@@ -40,11 +46,8 @@ export interface ArrivalProps {
   children: ReactNode;
 }
 
-// The staged batch's content cascade (the open itself is all CSS): the first
-// step starts a third into the room's opening, each next one 70 ms later. A
-// row taller than `LARGE_PX` (a map, an image) rises further and a bit slower.
-const FIRST_STEP_MS = 175;
-const STEP_GAP_MS = 70;
+// A row taller than `LARGE_PX` (a map, an image) rises further and a bit
+// slower (the CSS's `.arrival-large`).
 const LARGE_PX = 160;
 
 /**
@@ -115,9 +118,12 @@ export function Arrival({ arrived, children }: ArrivalProps) {
         : "arrival-batch arrival-cue"
       : "arrival-enter";
   const style: CSSProperties | undefined =
-    active && step !== null
+    active && staged
       ? ({
-          "--arrival-delay": `${FIRST_STEP_MS + step * STEP_GAP_MS}ms`,
+          "--arrival-open": `${arrivalOpenMs(entering.steps)}ms`,
+          ...(step !== null
+            ? { "--arrival-delay": `${arrivalDelayMs(step, entering.steps)}ms` }
+            : {}),
         } as CSSProperties)
       : undefined;
   return (

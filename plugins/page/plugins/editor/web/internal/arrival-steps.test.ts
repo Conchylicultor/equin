@@ -26,16 +26,16 @@ describe("arrivalSteps", () => {
   test("one push cascades in document order; a child enters with its parent; an empty line has no entry", () => {
     const steps = arrivalSteps(rows, arrived, isEmpty);
     expect(steps.has("old")).toBe(false);
-    expect(steps.get("shop1")).toEqual({ step: 0 });
-    expect(steps.get("place1")).toEqual({ step: 0 });
-    expect(steps.get("shop2")).toEqual({ step: 1 });
-    expect(steps.get("blank")).toEqual({ step: null });
-    expect(steps.get("map")).toEqual({ step: 2 });
+    expect(steps.get("shop1")).toEqual({ step: 0, steps: 3 });
+    expect(steps.get("place1")).toEqual({ step: 0, steps: 3 });
+    expect(steps.get("shop2")).toEqual({ step: 1, steps: 3 });
+    expect(steps.get("blank")).toEqual({ step: null, steps: 3 });
+    expect(steps.get("map")).toEqual({ step: 2, steps: 3 });
   });
 
   test("a single arriving row is step 0", () => {
     const steps = arrivalSteps(rows, (b) => b.id === "map", isEmpty);
-    expect([...steps]).toEqual([["map", { step: 0 }]]);
+    expect([...steps]).toEqual([["map", { step: 0, steps: 1 }]]);
   });
 
   test("a row under an arriving empty parent takes its own step", () => {
@@ -44,6 +44,6 @@ describe("arrivalSteps", () => {
       () => true,
       isEmpty,
     );
-    expect(steps.get("kid")).toEqual({ step: 0 });
+    expect(steps.get("kid")).toEqual({ step: 0, steps: 1 });
   });
 });

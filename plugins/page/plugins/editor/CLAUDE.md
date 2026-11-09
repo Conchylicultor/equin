@@ -904,8 +904,10 @@ overhang, no change; rounding stays at the run's ends.
   and `internal/arrival-steps.ts` numbers their cascade in document order — a
   row whose parent arrives with it shares its parent's step (a block's children
   are its content), an empty default-text line gets `step: null` (no entry, its
-  room just opens). Every slot opens together on one curve, so the batch's room
-  is one continuous push (`<Arrival>`'s `ArrivalStep`).
+  room just opens), and every row carries the push's step count. Every slot
+  opens together on one curve sized to cover the cascade, so the batch's room
+  is one continuous push while its content arrives top to bottom, 150 ms per
+  step (`<Arrival>`'s `ArrivalStep`).
 - **Never scrolls**: nothing in the arrival path moves the scroll position or
   the focus — the camera belongs to the viewer.
 - The `Arrival` wrapper sits inside `RowCell` around the row only; feet after

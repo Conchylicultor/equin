@@ -21,16 +21,19 @@ export function arrivalSteps(
   arrived: (block: Block) => boolean,
   isEmpty: (block: Block) => boolean,
 ): ReadonlyMap<string, ArrivalStep> {
-  const steps = new Map<string, ArrivalStep>();
+  const order = new Map<string, number | null>();
   let next = 0;
   for (const { block } of rows) {
     if (!arrived(block)) continue;
     const parent =
-      block.parentId === null ? undefined : steps.get(block.parentId);
-    if (parent !== undefined && parent.step !== null)
-      steps.set(block.id, parent);
-    else if (isEmpty(block)) steps.set(block.id, { step: null });
-    else steps.set(block.id, { step: next++ });
+      block.parentId === null ? undefined : order.get(block.parentId);
+    if (parent !== undefined && parent !== null) order.set(block.id, parent);
+    else if (isEmpty(block)) order.set(block.id, null);
+    else order.set(block.id, next++);
   }
+  // Every row of the push knows its length: the room opens for the whole
+  // cascade.
+  const steps = new Map<string, ArrivalStep>();
+  for (const [id, step] of order) steps.set(id, { step, steps: next });
   return steps;
 }
