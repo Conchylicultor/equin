@@ -224,6 +224,9 @@ export async function installServiceExecutable(
       identity: build.identity,
       main: component.main === true,
       icon: build.icon !== undefined,
+      ...(component.urlSchemes?.length
+        ? { urlSchemes: [...component.urlSchemes] }
+        : {}),
     };
     const current = installed?.find((c) => c.name === component.name);
     if (
@@ -317,7 +320,12 @@ async function sweepOldBundles(
 }
 
 function sameComponent(a: InstalledComponent, b: InstalledComponent): boolean {
-  return a.identity === b.identity && a.main === b.main && a.icon === b.icon;
+  return (
+    a.identity === b.identity &&
+    a.main === b.main &&
+    a.icon === b.icon &&
+    (a.urlSchemes ?? []).join(",") === (b.urlSchemes ?? []).join(",")
+  );
 }
 
 /**

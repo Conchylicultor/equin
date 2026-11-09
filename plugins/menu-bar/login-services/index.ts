@@ -9,6 +9,7 @@ import { GATEWAY_SERVICE } from "@plugins/infra/plugins/launcher/core";
 import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { cargoBinary } from "@plugins/infra/plugins/deps/plugins/rust/deps";
 import { componentIdentity } from "@plugins/infra/plugins/launcher/plugins/login-services/core";
+import { OPEN_LINK_SCHEME } from "../core";
 import { menuBarHelper, menuBarHelperIcon } from "../deps";
 import { menuBarLogs } from "../data-dirs";
 
@@ -54,6 +55,9 @@ export const menuBarService = defineLoginService({
   executable: {
     name: "equin-desktop",
     main: true,
+    // A browser tab's "Open in app window" (`equin://open?url=…`): macOS
+    // hands the link to the running tray (`rust/src/open_link.rs`).
+    urlSchemes: [OPEN_LINK_SCHEME],
     build: (ready) => {
       const icon = menuBarHelperIcon(ready);
       return {

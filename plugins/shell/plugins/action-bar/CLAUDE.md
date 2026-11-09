@@ -38,6 +38,7 @@ inherit whichever the host chose, so every item in a host shares one height.
     - `ActionBar.ViewOption` ← `config_v2.git-defaults-preview`
     - `ActionBar.ViewOption` ← `framework.cli.build.experimental-marks`
     - `ActionBar.ViewOption` ← `fullscreen`
+    - `ActionBar.ViewOption` ← `menu-bar.open-in-window`
     - `ActionBar.Lead` ← `shell.health-report`
     - `ActionBar.Activity` ← `build`
     - `ActionBar.Glance` ← `build`
@@ -55,6 +56,7 @@ inherit whichever the host chose, so every item in a host shares one height.
     - `framework/cli/build/experimental-marks`
     - `fullscreen`
     - `hints/help-menu`
+    - `menu-bar/open-in-window`
     - `screenshot`
     - `screenshot/draw-on-app`
     - `shell/global-action-bar`

@@ -106,7 +106,13 @@ const plist = () =>
 describe("Info.plist", () => {
   const components: InstalledComponent[] = [
     { name: "gateway", identity: "gw@1", main: false, icon: false },
-    { name: "equin-desktop", identity: "mb@1", main: true, icon: true },
+    {
+      name: "equin-desktop",
+      identity: "mb@1",
+      main: true,
+      icon: true,
+      urlSchemes: ["equin"],
+    },
   ];
 
   test("round-trips the components, sorted by name", () => {
@@ -129,6 +135,20 @@ describe("Info.plist", () => {
     );
     expect(text).toContain("<key>CFBundleIconFile</key><string>equin</string>");
     expect(text).toContain("<key>LSUIElement</key><true/>");
+  });
+
+  test("registers every component's URL schemes, and none when none declares one", () => {
+    expect(renderAppInfoPlist(components)).toContain(
+      `<key>CFBundleURLTypes</key><array><dict><key>CFBundleURLName</key><string>${APP_BUNDLE_ID}</string><key>CFBundleURLSchemes</key><array><string>equin</string></array></dict></array>`,
+    );
+    expect(renderAppInfoPlist([components[0]!])).not.toContain(
+      "CFBundleURLTypes",
+    );
+  });
+
+  test("a record from before URL schemes reads back as declaring none", () => {
+    const old = renderAppInfoPlist([components[0]!]);
+    expect(readAppComponents(old)).toEqual([components[0]!]);
   });
 
   test("another component stands in as main until the main one is installed", () => {
@@ -217,6 +237,21 @@ describe("installServiceExecutable", () => {
     signed = false;
     await installServiceExecutable(host(), gateway, build("gw", "1"), () => {});
     expect(calls).toEqual(["lock", "sign", `register ${bundle}`, "lsof"]);
+  });
+
+  test("the same build, a new URL scheme: the plist is rewritten and registered", async () => {
+    await installServiceExecutable(host(), tray, build("mb", "1"), () => {});
+    calls = [];
+    await installServiceExecutable(
+      host(),
+      { ...tray, urlSchemes: ["equin"] },
+      build("mb", "1"),
+      () => {},
+    );
+    expect(calls).toEqual(["lock", "sign", `register ${bundle}`, "lsof"]);
+    expect(plist()).toContain(
+      "<key>CFBundleURLSchemes</key><array><string>equin</string></array>",
+    );
   });
 
   test("a new build replaces the executable", async () => {

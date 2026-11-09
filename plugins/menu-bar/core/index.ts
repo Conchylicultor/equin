@@ -17,3 +17,4 @@ export {
   type CatalogApp,
 } from "./install";
 export { menuBarApp } from "./app";
+export { OPEN_LINK_SCHEME, openLink } from "./open-link";

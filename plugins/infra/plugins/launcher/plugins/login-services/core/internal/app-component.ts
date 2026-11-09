@@ -15,6 +15,13 @@ export interface AppComponent {
    * component is main; while it is not installed yet, another one stands in.
    */
   readonly main?: boolean;
+  /**
+   * The URL schemes whose links the OS hands this component (macOS:
+   * `CFBundleURLTypes` in the bundle's `Info.plist`; LaunchServices delivers
+   * a link to the bundle's running main executable, so only the main
+   * component should declare one). The menu-bar helper's `equin`.
+   */
+  readonly urlSchemes?: readonly string[];
 }
 
 /** One build of an {@link AppComponent}: what installing it copies, and which build that is. */

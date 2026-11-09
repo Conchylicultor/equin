@@ -4,12 +4,16 @@
 
 ## Plugin reference
 
-- Description: An installed app window's bridge to the native helper (window.equinWindow), read once per document: useNativeFileDrag() is the window's native file drag — drag host paths out as real files, the drag Finder starts, so any app or website takes them — or null in a browser tab, on a platform without it, or before the window has answered.
+- Description: An installed app window's bridge to the native helper (window.equinWindow), read once per document: useNativeFileDrag() is the window's native file drag — drag host paths out as real files, the drag Finder starts, so any app or website takes them — or null in a browser tab, on a platform without it, or before the window has answered. inAppWindow() says whether this document is such a window at all.
 - Cross-plugin:
-  - Imported by: `apps/file-explorer/browser`
+  - Imported by:
+    - `apps/file-explorer/browser`
+    - `menu-bar/open-in-window`
 - Web:
   - Exports (types): `NativeFileDrag`
-  - Exports (values): `useNativeFileDrag`
+  - Exports (values):
+    - `inAppWindow`
+    - `useNativeFileDrag`
 - Core:
   - Exports (types):
     - `AppWindowInfo`

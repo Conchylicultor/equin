@@ -1,5 +1,6 @@
 //! Tray mode: the status icon (macOS NSStatusItem through Tauri's tray; Linux a
-//! StatusNotifierItem through ksni), the hidden panel, and the bridge commands.
+//! StatusNotifierItem through ksni), the hidden panel, the bridge commands,
+//! and the `equin://open` links macOS hands the app (`open_link`).
 
 use tauri::{AppHandle, Manager};
 
@@ -155,6 +156,8 @@ pub fn run(namespace: String) {
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
             let handle: AppHandle = app.handle().clone();
+            #[cfg(target_os = "macos")]
+            links::TRAY.set(handle.clone()).expect("one tray per process");
             let icon = match platform::install(&handle) {
                 Ok(icon) => icon,
                 Err(e) => {
@@ -170,10 +173,50 @@ pub fn run(namespace: String) {
         })
         .build(crate::context())
         .expect("equin-desktop: cannot build the Tauri app");
-    app.run(|_, event| {
+    app.run(|_, event| match event {
         // The panel's hide keeps the app alive: no window is ever "the last".
-        if let tauri::RunEvent::ExitRequested { api, code: None, .. } = event {
-            api.prevent_exit();
-        }
+        tauri::RunEvent::ExitRequested { api, code: None, .. } => api.prevent_exit(),
+        // A link to the app (`equin://open?url=…`, CFBundleURLTypes): a
+        // browser tab asking for its page in the installed app's window.
+        #[cfg(target_os = "macos")]
+        tauri::RunEvent::Opened { urls } => urls.iter().for_each(links::open_link),
+        _ => {}
     });
+}
+
+/// The links macOS hands the app (`CFBundleURLTypes`; macOS only for now).
+#[cfg(target_os = "macos")]
+mod links {
+    use std::sync::OnceLock;
+
+    use tauri::AppHandle;
+    use tauri_plugin_notification::NotificationExt;
+    use url::Url;
+
+    use crate::{open_link, scope_gate};
+
+    /// The running tray, for the link sink (a `fn`, the burst gate's sink type).
+    pub static TRAY: OnceLock<AppHandle> = OnceLock::new();
+
+    pub fn open_link(link: &Url) {
+        match open_link::parse(link) {
+            Ok(page) => scope_gate::hand_off(page, open_page),
+            Err(e) => eprintln!("equin-desktop: refused the link: {e}"),
+        }
+    }
+
+    /// On a thread: it reads the shims from disk and waits on `open`. A page that
+    /// did not open says so in a notification — the click came from a browser,
+    /// which shows nothing of what happened here.
+    fn open_page(page: Url) {
+        std::thread::spawn(move || {
+            let outcome = open_link::open_in_owner(&page);
+            eprintln!("equin-desktop: link to {page}: {outcome:?}");
+            let Some(message) = outcome.failure(&page) else { return };
+            let handle = TRAY.get().expect("the tray is set up before any link arrives");
+            if let Err(e) = handle.notification().builder().title("Cannot open in a window").body(message).show() {
+                eprintln!("equin-desktop: cannot notify: {e}");
+            }
+        });
+    }
 }

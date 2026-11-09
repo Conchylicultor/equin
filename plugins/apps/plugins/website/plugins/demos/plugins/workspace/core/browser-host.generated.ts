@@ -889,6 +889,7 @@ export const browserHost = {
     "conversations.menu-bar-status",
     "menu-bar",
     "menu-bar.app-grid",
+    "menu-bar.open-in-window",
     "review.plugin-changes",
     "review.plugin-changes.api-changes",
     "review.plugin-changes.file-changes",

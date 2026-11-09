@@ -1,4 +1,4 @@
-// @hash 5426a6bc509c
+// @hash 4656c5bd440b
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -11,6 +11,7 @@
     "audience.view-option:developer-mode",
     "config_v2.git-defaults-preview:git-defaults-preview",
     "framework.cli.build.experimental-marks:experimental-marks",
-    "fullscreen:fullscreen-toggle"
+    "fullscreen:fullscreen-toggle",
+    "menu-bar.open-in-window:open-in-window"
   ]
 }

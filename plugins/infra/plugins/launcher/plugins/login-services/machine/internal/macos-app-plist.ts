@@ -22,6 +22,8 @@ export interface InstalledComponent {
   main: boolean;
   /** Whether it brought the bundle's icon. */
   icon: boolean;
+  /** The URL schemes it handles (`AppComponent.urlSchemes`); absent: none. */
+  urlSchemes?: string[];
 }
 
 /**
@@ -47,6 +49,8 @@ export function mainComponent(
  *   App Transport Security blocks the helper's webview loading
  *   `http://<ns>.localhost:9000` otherwise (`NSAllowsLocalNetworking` does not
  *   cover `*.localhost`).
+ * - `CFBundleURLTypes` — every component's URL schemes, when one declares
+ *   any: LaunchServices hands such a link to the running app.
  * - `EquinComponents` — which build of which component is inside (JSON), read
  *   back by {@link readAppComponents}: "is this component current?" is a file
  *   read, not a hash of the executables.
@@ -59,6 +63,13 @@ export function renderAppInfoPlist(
   const icon = sorted.some((c) => c.icon)
     ? `  <key>CFBundleIconFile</key>${s(ICON_NAME)}\n`
     : "";
+  const schemes = [
+    ...new Set(sorted.flatMap((c) => c.urlSchemes ?? [])),
+  ].sort();
+  const urlTypes =
+    schemes.length === 0
+      ? ""
+      : `  <key>CFBundleURLTypes</key><array><dict><key>CFBundleURLName</key>${s(APP_BUNDLE_ID)}<key>CFBundleURLSchemes</key><array>${schemes.map(s).join("")}</array></dict></array>\n`;
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -74,7 +85,7 @@ ${icon}  <key>CFBundlePackageType</key>${s("APPL")}
   <key>LSMinimumSystemVersion</key>${s("11.0")}
   <key>LSUIElement</key><true/>
   <key>NSHighResolutionCapable</key><true/>
-  <key>NSAppTransportSecurity</key><dict><key>NSExceptionDomains</key><dict><key>localhost</key><dict><key>NSIncludesSubdomains</key><true/><key>NSExceptionAllowsInsecureHTTPLoads</key><true/></dict></dict></dict>
+${urlTypes}  <key>NSAppTransportSecurity</key><dict><key>NSExceptionDomains</key><dict><key>localhost</key><dict><key>NSIncludesSubdomains</key><true/><key>NSExceptionAllowsInsecureHTTPLoads</key><true/></dict></dict></dict>
   <key>EquinComponents</key>${s(JSON.stringify(sorted))}
 </dict>
 </plist>
@@ -106,7 +117,10 @@ function isInstalledComponent(v: unknown): v is InstalledComponent {
     typeof c.name === "string" &&
     typeof c.identity === "string" &&
     typeof c.main === "boolean" &&
-    typeof c.icon === "boolean"
+    typeof c.icon === "boolean" &&
+    (c.urlSchemes === undefined ||
+      (Array.isArray(c.urlSchemes) &&
+        c.urlSchemes.every((u) => typeof u === "string")))
   );
 }
 

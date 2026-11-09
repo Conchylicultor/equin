@@ -36849,6 +36849,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `menuBarApp`
       - `NativeAppsSchema`
       - `NativeHostInfoSchema`
+      - `OPEN_LINK_SCHEME`
+      - `openLink`
   - Deps:
     - Uses:
       - `infra/deps.defineDep`
@@ -36868,6 +36870,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Imported by:
       - `conversations/menu-bar-status`
       - `menu-bar/app-grid`
+      - `menu-bar/open-in-window`
       - `shell/notifications/native`
       - `tasks/menu-bar-task`
   - Plugins:
@@ -36898,12 +36901,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --primary-foreground`
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --spacing`
-    - **`app-window`** — An installed app window's bridge to the native helper (window.equinWindow), read once per document: useNativeFileDrag() is the window's native file drag — drag host paths out as real files, the drag Finder starts, so any app or website takes them — or null in a browser tab, on a platform without it, or before the window has answered.
+    - **`app-window`** — An installed app window's bridge to the native helper (window.equinWindow), read once per document: useNativeFileDrag() is the window's native file drag — drag host paths out as real files, the drag Finder starts, so any app or website takes them — or null in a browser tab, on a platform without it, or before the window has answered. inAppWindow() says whether this document is such a window at all.
       - Cross-plugin:
-        - Imported by: `apps/file-explorer/browser`
+        - Imported by:
+          - `apps/file-explorer/browser`
+          - `menu-bar/open-in-window`
       - Web:
         - Exports (types): `NativeFileDrag`
-        - Exports (values): `useNativeFileDrag`
+        - Exports (values):
+          - `inAppWindow`
+          - `useNativeFileDrag`
       - Core:
         - Exports (types):
           - `AppWindowInfo`
@@ -36913,6 +36920,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AppWindowInfoSchema`
           - `FileDragOutcomeSchema`
           - `WINDOW_BRIDGE_METHODS`
+    - **`open-in-window`** — Open in app window: a row in the action bar's view-options popover that hands this browser tab's page to the menu-bar helper as an equin://open link, which opens it in the installed app's own macOS window. Shown on macOS only, never inside an app window.
+      - Web:
+        - Contributes: `ActionBar.ViewOption` → `OpenInWindowRow`
+        - Uses:
+          - `menu-bar/app-window.inAppWindow`
+          - `primitives/css/control-panel.ControlPanel`
+          - `shell/action-bar.ActionBar`
+          - `ui/icons.Icon`
 
 - **`music`** — Umbrella for music building blocks shared across apps, knowing pitch classes and strings only: the chord box (a chord's degree colour, numeral and tile).
   - Plugins:
@@ -44614,7 +44629,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette` ×9
               - `ui/tokens/type-scale` ×7
               - `ui/tokens/shape` ×2
-            - Imported by: 47 plugins — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
+            - Imported by: 48 plugins — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
               - `apps` ×15
               - `page` ×6
               - `primitives` ×4
@@ -44628,6 +44643,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core/surface`
               - `framework/cli/build/experimental-marks`
               - `fullscreen`
+              - `menu-bar/open-in-window`
               - `reports/panel-overflow`
               - `shell/global-action-bar`
               - `tag-tree/picker`
@@ -53957,6 +53973,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ActionBar.ViewOption` ← `config_v2.git-defaults-preview`
           - `ActionBar.ViewOption` ← `framework.cli.build.experimental-marks`
           - `ActionBar.ViewOption` ← `fullscreen`
+          - `ActionBar.ViewOption` ← `menu-bar.open-in-window`
           - `ActionBar.Lead` ← `shell.health-report`
           - `ActionBar.Activity` ← `build`
           - `ActionBar.Glance` ← `build`
@@ -53974,6 +53991,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/cli/build/experimental-marks`
           - `fullscreen`
           - `hints/help-menu`
+          - `menu-bar/open-in-window`
           - `screenshot`
           - `screenshot/draw-on-app`
           - `shell/global-action-bar`
@@ -57840,7 +57858,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useWantedStyleKeys`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 542 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 543 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×152
           - `conversations` ×83
           - `primitives` ×53
@@ -57861,12 +57879,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `audience` ×3
           - `framework` ×3
           - `hints` ×3
+          - `menu-bar` ×3
           - `reorder` ×3
           - `reports` ×3
           - `backup` ×2
           - `integrations` ×2
           - `map` ×2
-          - `menu-bar` ×2
           - `screenshot` ×2
           - `fullscreen`
           - `layouts/miller`

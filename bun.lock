@@ -4706,6 +4706,10 @@
       "name": "@equin/plugin-menu-bar-app-window",
       "version": "0.0.1",
     },
+    "plugins/menu-bar/plugins/open-in-window": {
+      "name": "@equin/plugin-menu-bar-open-in-window",
+      "version": "0.0.1",
+    },
     "plugins/music": {
       "name": "@equin/plugin-music",
       "version": "0.0.1",
@@ -9692,6 +9696,8 @@
     "@equin/plugin-menu-bar-app-grid": ["@equin/plugin-menu-bar-app-grid@workspace:plugins/menu-bar/plugins/app-grid"],
 
     "@equin/plugin-menu-bar-app-window": ["@equin/plugin-menu-bar-app-window@workspace:plugins/menu-bar/plugins/app-window"],
+
+    "@equin/plugin-menu-bar-open-in-window": ["@equin/plugin-menu-bar-open-in-window@workspace:plugins/menu-bar/plugins/open-in-window"],
 
     "@equin/plugin-music": ["@equin/plugin-music@workspace:plugins/music"],
 
