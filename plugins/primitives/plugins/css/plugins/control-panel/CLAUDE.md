@@ -506,7 +506,7 @@ surface isn't viewport-capped, it fails loudly.
     - `ui/tokens/type-scale` ×7
     - `ui/tokens/shape` ×2
   - Imported by: 47 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×16
+    - `apps` ×15
     - `page` ×6
     - `primitives` ×4
     - `config_v2` ×3
@@ -521,6 +521,7 @@ surface isn't viewport-capped, it fails loudly.
     - `fullscreen`
     - `reports/panel-overflow`
     - `shell/global-action-bar`
+    - `tag-tree/picker`
 - Exemptions:
   - Exempts itself from:
     - `control-panel/no-adhoc-panel-body` — `web/internal/control-panel-popover.tsx` (sanctioned)

@@ -228,7 +228,6 @@ its own.
     - `apps/places/place-details`
     - `apps/places/places-core/no-icon-picker`
     - `apps/places/places-map`
-    - `apps/places/tag-manager`
     - `apps/website/promo-film/seed`
 - Test helpers:
   - Core: `@plugins/apps/plugins/places/plugins/places-core/core/testing`

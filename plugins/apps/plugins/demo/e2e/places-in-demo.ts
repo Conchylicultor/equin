@@ -22,7 +22,7 @@
  *     to All places;
  *  3. opens a place's card ("Castelo de São Jorge", through the search bar): Google's details and the
  *     icon pick say "not available", never a set-up prompt;
- *  3b. opens Manage tags and the Lisbon tag's icon picker: its grid draws
+ *  3b. opens the Lisbon tag's icon picker (its ⋯ in the sidebar's tag tree): its grid draws
  *     from the demo's own icon sheet (the worker's bundled set), and the
  *     picked icon draws on the tag;
  *  4. types in the search bar: the Google half says searching is not
@@ -322,12 +322,14 @@ await withBrowser(async (h) => {
   await page.keyboard.press("Escape");
 
   // ── 3b. a tag's icon: the picker draws from the worker, and a pick sticks ─
-  await embedRoot(page)
-    .getByRole("button", { name: "Manage tags", exact: true })
-    .click();
-  await embedRoot(page)
-    .getByRole("button", { name: "Icon of Lisbon", exact: true })
-    .click();
+  const lisbon = embedRoot(page)
+    .locator("[data-tag-picker] [data-tree-id]")
+    .filter({ hasText: "Lisbon" })
+    .first();
+  await lisbon.hover();
+  await lisbon.getByRole("button", { name: "More", exact: true }).click();
+  // The menu is portalled out of the embed (still in the scope).
+  await page.getByRole("menuitem", { name: "Icon…" }).click();
   // The picker is a popover, portalled out of the embed (still in the scope).
   const grid = await renders(
     "the icon picker's grid draws its icons from the demo's own sheet",
@@ -342,11 +344,7 @@ await withBrowser(async (h) => {
     .click();
   await renders(
     "the picked icon draws on the tag, from the demo's own sheet",
-    () =>
-      embedRoot(page)
-        .getByRole("button", { name: "Icon of Lisbon", exact: true })
-        .locator("use[href*='msr-'][href$='-sailing']")
-        .count(),
+    () => lisbon.locator("use[href*='msr-'][href$='-sailing']").count(),
     (n) => n > 0,
   );
   await snap(page, OUT, "2b-tag-icon");

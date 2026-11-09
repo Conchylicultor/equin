@@ -465,8 +465,8 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `useWantedStyleKeys`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
-  - Imported by: 542 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×153
+  - Imported by: 541 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×152
     - `conversations` ×83
     - `page` ×52
     - `primitives` ×52

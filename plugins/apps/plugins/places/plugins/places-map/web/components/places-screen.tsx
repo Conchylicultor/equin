@@ -35,7 +35,6 @@ import {
   placeName,
   places as placesCollection,
   placesByGoogleId,
-  placeTagTree,
   type Place,
   type PlaceTag,
 } from "@plugins/apps/plugins/places/plugins/places-core/core";
@@ -44,11 +43,7 @@ import {
   usePageOverlay,
   type PageOverlay,
 } from "@plugins/apps/plugins/places/plugins/page-overlay/web";
-import {
-  freeSiblingName,
-  tagPath,
-} from "@plugins/tag-tree/plugins/engine/core";
-import { useTagTreeActions } from "@plugins/tag-tree/plugins/engine/web";
+import { tagPath } from "@plugins/tag-tree/plugins/engine/core";
 import {
   useCreateCustomPlace,
   useDeletePlace,
@@ -57,7 +52,6 @@ import {
   useSavePlace,
   useUpdatePlace,
 } from "@plugins/apps/plugins/places/plugins/places-core/web";
-import { TagManagerPanel } from "@plugins/apps/plugins/places/plugins/tag-manager/web";
 import {
   PLACE_OVERRIDES,
   placeExtraFields,
@@ -196,7 +190,7 @@ function detailedHit(hit: GoogleHit): DetailedHit | null {
  * moving the camera. Selecting a place (a pin, a row) opens its card — drilled
  * into the side panel while it is shown, else floating on the right — and a
  * click anywhere else on the screen (the map, the sidebar, the toolbar), Back
- * or Esc closes it; Manage tags lays the tag manager over the map. Dropping a
+ * or Esc closes it. Dropping a
  * custom pin (from the search panel) or moving one (from its card) puts the
  * map in pick mode, with a bar at the bottom: the next click on the map is
  * where the pin goes.
@@ -304,11 +298,7 @@ function PlacesSurface({
     setSeenPageId(pageId);
     if (detail?.pageItem != null) setDetail(null);
   }
-  const [manager, setManager] = useState<{ focusTagId: string | null } | null>(
-    null,
-  );
   const [pinPick, setPinPick] = useState<PinPick | null>(null);
-  const { create: createTag } = useTagTreeActions(placeTagTree);
   const { mutateAsync: createCustomPlace } = useCreateCustomPlace();
   const { mutateAsync: updatePlace } = useUpdatePlace();
   const saveMutation = useSavePlace();
@@ -569,13 +559,10 @@ function PlacesSurface({
   const extraFields = useMemo(() => placeExtraFields(tags), [tags]);
   const selected =
     selectedId === null ? undefined : places.find((p) => p.id === selectedId);
-  // The card and the tag manager share the right side: the manager, while
-  // open, hides the card (the selection is kept and comes back on close). So
-  // does pick mode — its click on the map is the answer, not a click away.
-  const showCard =
-    selected !== undefined && manager === null && pinPick === null;
-  const showDetail =
-    detail !== null && !showCard && manager === null && pinPick === null;
+  // Pick mode hides the card (the selection is kept and comes back after):
+  // its click on the map is the answer, not a click away.
+  const showCard = selected !== undefined && pinPick === null;
+  const showDetail = detail !== null && !showCard && pinPick === null;
   // The place card or the detail card: one at a time, in the same spot —
   // drilled into the side panel while it is shown, else floating.
   const cardOpen = showCard || showDetail;
@@ -983,14 +970,6 @@ function PlacesSurface({
       />
     ) : null;
 
-  const newTag = useCallback(async () => {
-    const tag = await createTag({
-      name: freeSiblingName("New tag", null, tags),
-      parentId: null,
-    });
-    setManager({ focusTagId: tag.id });
-  }, [createTag, tags]);
-
   return (
     <div ref={containerRef} className="relative h-full">
       {/* The probe: an invisible box inset exactly as the chrome covers the
@@ -1073,8 +1052,6 @@ function PlacesSurface({
           <TagSidebar
             places={places}
             tags={tags}
-            onNewTag={newTag}
-            onManageTags={() => setManager({ focusTagId: null })}
             open={sidebarOpen}
             onOpenChange={setSidebarOpen}
           />
@@ -1132,30 +1109,6 @@ function PlacesSurface({
           </Placeholder>
         }
       />
-      <Presence>
-        {manager !== null ? (
-          <Pin
-            key="manager"
-            to="right"
-            stretch
-            offset="md"
-            spanOffset="md"
-            layer="float"
-            style={{
-              top: BELOW_TOOLBAR,
-              left: PAST_SIDEBAR,
-              ...(ask.shown ? { right: PAST_THREAD } : {}),
-            }}
-          >
-            <TagManagerPanel
-              places={places}
-              tags={tags}
-              focusTagId={manager.focusTagId}
-              onClose={() => setManager(null)}
-            />
-          </Pin>
-        ) : null}
-      </Presence>
       {/* The floating card's column: it fades in and out as a whole, and a
           card swapped for another (a different place, a Google result saved
           as a place) cross-fades inside it. */}

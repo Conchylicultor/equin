@@ -121,7 +121,6 @@
     - `apps/places/fixtures`
     - `apps/places/places-core`
     - `apps/places/places-map`
-    - `apps/places/tag-manager`
     - `apps/prototypes/gallery`
     - `apps/prototypes/state`
     - `tag-tree/picker`

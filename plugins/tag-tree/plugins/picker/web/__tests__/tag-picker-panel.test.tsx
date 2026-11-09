@@ -170,3 +170,40 @@ describe("a query", () => {
     expect(w.createPath).not.toHaveBeenCalled();
   });
 });
+
+describe("as a filter (checkbox)", () => {
+  it("marks picked, negated (struck) and partial (an ancestor of either)", () => {
+    renderPanel({
+      indicator: "checkbox",
+      selected: ["home"],
+      negated: ["dv"],
+    });
+    const mark = (text: string) =>
+      rowOf(text).querySelector("[data-mark]")?.getAttribute("data-mark");
+    expect(mark("homepage")).toBe("picked");
+    expect(mark("data-view")).toBe("negated");
+    expect(screen.getByText("data-view").getAttribute("class")).toContain(
+      "line-through",
+    );
+    // Ancestors of a picked / negated tag: the partial box.
+    for (const name of ["app", "website", "infra"]) {
+      expect(mark(name)).toBe("partial");
+    }
+    expect(mark("theme")).toBe("off");
+  });
+
+  it("opens the roots alone with defaultExpanded=roots", () => {
+    renderPanel({ defaultExpanded: "roots" });
+    expect(screen.getByText("website")).toBeTruthy();
+    expect(screen.queryByText("homepage")).toBeNull();
+  });
+
+  it("a created path is left unpicked with pickCreated=false", async () => {
+    const { onPick, writes: w } = renderPanel({ pickCreated: false });
+    fireEvent.change(search(), { target: { value: "theme/dark" } });
+    fireEvent.keyDown(search(), { key: "Enter" });
+    expect(w.createPath).toHaveBeenCalledWith(["theme", "dark"]);
+    await vi.waitFor(() => expect(w.createPath).toHaveReturned());
+    expect(onPick).not.toHaveBeenCalled();
+  });
+});

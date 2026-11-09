@@ -79,7 +79,6 @@ appears (YAGNI).
     - `apps/demo/shell`
     - `apps/deploy/deploy-history/rollback`
     - `apps/places/places-map`
-    - `apps/places/tag-manager`
     - `apps/prototypes/canvas`
     - `build/serve-composition`
     - `conversations/conversation-view/rewind`

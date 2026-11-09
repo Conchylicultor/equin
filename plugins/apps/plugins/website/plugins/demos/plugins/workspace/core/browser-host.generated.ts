@@ -97,7 +97,6 @@ export const browserHost = {
     "apps.places.places-core",
     "apps.places.places-map",
     "apps.places.shell",
-    "apps.places.tag-manager",
     "apps.prototypes.canvas",
     "apps.prototypes.compare",
     "apps.prototypes.compare.exhibit",

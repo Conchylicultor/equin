@@ -62,7 +62,7 @@ async function activePreset(page: Page): Promise<string> {
 
 /** A clickable tag row of the tree (a click toggles off ↔ include), by index. */
 const tagRow = (page: Page, i: number): Locator =>
-  page.locator("[data-tag-row]").nth(i);
+  page.locator("[data-tag-picker] [data-tree-id]").nth(i);
 
 const button = (page: Page, name: string): Locator =>
   page.getByRole("button", { name, exact: true });
@@ -239,7 +239,10 @@ await withBrowser(async (h) => {
     "folded: the header's title is the preset dropdown",
   );
   expect(
-    !(await page.locator("[data-tag-row]").first().isVisible()),
+    !(await page
+      .locator("[data-tag-picker] [data-tree-id]")
+      .first()
+      .isVisible()),
     "folded: the tag tree is gone",
   );
   await button(page, "Expand sidebar").click();

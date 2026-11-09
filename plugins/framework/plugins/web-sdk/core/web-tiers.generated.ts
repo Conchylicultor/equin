@@ -131,7 +131,6 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/places/plugins/place-details",
   "apps/plugins/places/plugins/places-core",
   "apps/plugins/places/plugins/places-map",
-  "apps/plugins/places/plugins/tag-manager",
   "apps/plugins/prototypes/plugins/compare",
   "apps/plugins/prototypes/plugins/compare/plugins/exhibit",
   "apps/plugins/prototypes/plugins/compare/plugins/route",

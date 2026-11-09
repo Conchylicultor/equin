@@ -820,10 +820,6 @@
       "name": "@equin/plugin-apps-places-shell",
       "version": "0.0.1",
     },
-    "plugins/apps/plugins/places/plugins/tag-manager": {
-      "name": "@equin/plugin-apps-places-tag-manager",
-      "version": "0.0.1",
-    },
     "plugins/apps/plugins/prototypes": {
       "name": "@equin/plugin-apps-prototypes",
       "version": "0.0.1",
@@ -7854,8 +7850,6 @@
     "@equin/plugin-apps-places-places-map": ["@equin/plugin-apps-places-places-map@workspace:plugins/apps/plugins/places/plugins/places-map"],
 
     "@equin/plugin-apps-places-shell": ["@equin/plugin-apps-places-shell@workspace:plugins/apps/plugins/places/plugins/shell"],
-
-    "@equin/plugin-apps-places-tag-manager": ["@equin/plugin-apps-places-tag-manager@workspace:plugins/apps/plugins/places/plugins/tag-manager"],
 
     "@equin/plugin-apps-prototypes": ["@equin/plugin-apps-prototypes@workspace:plugins/apps/plugins/prototypes"],
 

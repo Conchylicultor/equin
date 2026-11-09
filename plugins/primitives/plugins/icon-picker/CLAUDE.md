@@ -105,11 +105,11 @@ host owns its own inset, through `className`.
     - `ui/tokens/type-scale --font-size-3xs`
     - `ui/tokens/type-scale --line-height-3xs`
   - Imported by:
-    - `apps/places/tag-manager`
     - `fields/avatar/config`
     - `fields/icon/config`
     - `page/callout`
     - `primitives/avatar`
+    - `tag-tree/picker`
 - Exemptions:
   - Exempts itself from:
     - `boundaries/no-platform-api` — `shared/symbols-metadata.ts` (debt)

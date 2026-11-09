@@ -83,7 +83,6 @@ export const dataViews: DataViewEntry[] = [
   { id: "places.page-overlay", pluginId: "apps.places.places-map" },
   { id: "places.panel", pluginId: "apps.places.places-map" },
   { id: "places.presets", pluginId: "apps.places.places-map" },
-  { id: "places.tags", pluginId: "apps.places.tag-manager" },
   { id: "plugin-health.reviews", pluginId: "plugin-meta.plugin-health" },
   { id: "plugin-meta.exhibits.catalog", pluginId: "plugin-meta.exhibits" },
   { id: "prototypes.gallery", pluginId: "apps.prototypes.gallery" },

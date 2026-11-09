@@ -5,7 +5,6 @@ import {
   EMPTY_SIDEBAR_STATE,
   applySidebarClick,
   applySidebarState,
-  hasPickedDescendant,
   includeTag,
   mergeRows,
   moveTag,
@@ -341,14 +340,10 @@ test("withoutSidebarRules keeps the rest, null when nothing is left", () => {
   ).toBeNull();
 });
 
-test("removeTag and the partial mark", () => {
+test("removeTag", () => {
   const s = { rows: [["italian"], ["want"]], exclude: ["been"] };
   expect(removeTag(s, "italian").rows).toEqual([["want"]]);
   expect(removeTag(s, "been").exclude).toEqual([]);
-  expect(hasPickedDescendant(s, "food", TAGS)).toBe(true);
-  expect(hasPickedDescendant(s, "restaurants", TAGS)).toBe(true);
-  expect(hasPickedDescendant(s, "italian", TAGS)).toBe(false);
-  expect(hasPickedDescendant(s, "culture", TAGS)).toBe(false);
 });
 
 test("preset name and icon", () => {

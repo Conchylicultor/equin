@@ -1,6 +1,6 @@
 export {
   applySidebarState,
-  hasPickedDescendant,
+  includedTags,
   mergeRows,
   moveTag,
   presetAutoName,
@@ -8,9 +8,7 @@ export {
   removeTag,
   sidebarState,
   splitRow,
-  tagFilterState,
   toggleTag,
   withoutSidebarRules,
   type SidebarState,
-  type TagFilterState,
 } from "./internal/sidebar-filter";

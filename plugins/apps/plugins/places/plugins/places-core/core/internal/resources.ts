@@ -66,7 +66,7 @@ export const places = liveCollection("places.places.all", {
  */
 export const placeTags = liveCollection("places.tags.all", {
   from: placeTagsEntityRef,
-  // The tag manager lists the name and the Google types; the rest of the row
+  // The name and the Google types are listed fields; the rest of the row
   // (the tree's links, colour, icon, rank, role) is carried.
   pick: ["name", "googleTypes"],
   carry: {

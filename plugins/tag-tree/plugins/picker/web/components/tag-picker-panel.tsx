@@ -20,6 +20,7 @@ import { RankReorderDndContext } from "@plugins/primitives/plugins/rank-reorder/
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   cn,
@@ -36,24 +37,32 @@ import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 
 const addIcon = symbol("add");
 const checkIcon = symbol("check");
+const removeIcon = symbol("remove");
 
-export interface TagPickerPanelProps extends TagPickerOptions {
+export interface TagPickerPanelProps<
+  Row extends TagRow = TagRow,
+> extends TagPickerOptions<Row> {
   /** The tree's rows (any order: the panel walks `parentId` / `rank`). */
-  tags: readonly TagRow[];
+  tags: readonly Row[];
   writes: TagPickerWrites;
+  /** What the tree adds at the foot of a row's ⋯ menu (its own extras, read-only). */
+  rowMenuExtra?: (tag: Row) => ReactNode;
 }
+
+/** How one row is marked: picked, negated, holding either, or none. */
+type Mark = "picked" | "negated" | "partial" | "off";
 
 /** The id of the inline row a new tag is typed into. */
 const DRAFT_ID = "\u0000draft";
 
 /** A tree line the panel paints: a tag adapted to the tree primitive's row. */
-interface PickerRow {
+interface PickerRow<Row extends TagRow> {
   id: string;
   parentId: string | null;
   rank: Rank;
   expanded: boolean;
   /** The tag, or null for the draft row. */
-  tag: TagRow | null;
+  tag: Row | null;
   /** Shown, but not pickable (an excluded tag holding a pickable one). */
   dimmed: boolean;
 }
@@ -64,20 +73,31 @@ interface PickerRow {
  * double-click to rename); a query lists every tag whose path contains it and
  * offers to create the typed path. No instructional text — the mockup's.
  */
-export function TagPickerPanel({
+export function TagPickerPanel<Row extends TagRow>({
   tags,
   writes,
   selected,
+  negated = NONE,
+  indicator = "check",
+  defaultExpanded = "all",
+  autoFocus = true,
+  pickCreated = true,
+  canDelete,
+  rowMenuExtra,
   exclude,
   counts,
   offerNone = false,
   onPick,
-}: TagPickerPanelProps) {
+}: TagPickerPanelProps<Row>) {
   const [query, setQuery] = useState("");
-  // Every tag opens unfolded: the set holds the ones the user folded.
-  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(
-    () => new Set(),
+  // The set holds the folded tags: none at first, or every tag below the
+  // roots (`defaultExpanded: "roots"`).
+  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() =>
+    defaultExpanded === "all"
+      ? new Set()
+      : new Set(tags.filter((t) => t.parentId !== null).map((t) => t.id)),
   );
+  const markOf = useMarks(tags, selected, negated);
   /** The inline new-tag row: under which parent (null = a root). */
   const [draftParent, setDraftParent] = useState<string | null | undefined>(
     undefined,
@@ -124,16 +144,18 @@ export function TagPickerPanel({
   const createPath = useCallback(
     async (segments: readonly string[]) => {
       const { id } = await writes.createPath(segments);
-      onPick(id);
+      if (pickCreated) onPick(id);
     },
-    [writes, onPick],
+    [writes, onPick, pickCreated],
   );
 
   return (
-    <Stack direction="col" gap="none">
+    // `data-tag-picker`: the panel's identity on the DOM (e2e scripts find
+    // its rows as `[data-tag-picker] [data-tree-id]`).
+    <Stack direction="col" gap="none" data-tag-picker>
       <SearchInput
         appearance="menu"
-        autoFocus
+        autoFocus={autoFocus}
         value={query}
         placeholder="Search or create…"
         aria-label="Search or create a tag"
@@ -154,7 +176,8 @@ export function TagPickerPanel({
             query={needle}
             tags={tags}
             pickable={visible.pickable}
-            selected={selected}
+            markOf={markOf}
+            indicator={indicator}
             counts={counts}
             onPick={onPick}
             onCreate={createPath}
@@ -171,9 +194,12 @@ export function TagPickerPanel({
               setCollapsed={setCollapsed}
               draftParent={draftParent}
               renamingId={renamingId}
-              selected={selected}
+              markOf={markOf}
+              indicator={indicator}
               counts={counts}
               writes={writes}
+              canDelete={canDelete}
+              rowMenuExtra={rowMenuExtra}
               onPick={onPick}
               onAddChild={openDraft}
               onRename={setRenamingId}
@@ -195,6 +221,39 @@ export function TagPickerPanel({
   );
 }
 
+// ── Marks ─────────────────────────────────────────────────────────────────
+
+const NONE: readonly string[] = [];
+
+/**
+ * Each tag's mark: picked, negated, else partial while a picked or negated
+ * tag sits under it (derived — every ancestor of one).
+ */
+function useMarks(
+  tags: readonly TagRow[],
+  selected: readonly string[],
+  negated: readonly string[],
+): (tagId: string) => Mark {
+  return useMemo(() => {
+    const picked = new Set(selected);
+    const neg = new Set(negated);
+    const partial = new Set<string>();
+    for (const id of [...selected, ...negated]) {
+      for (const ancestor of tagPath(id, tags).slice(0, -1)) {
+        partial.add(ancestor.id);
+      }
+    }
+    return (id: string) =>
+      picked.has(id)
+        ? "picked"
+        : neg.has(id)
+          ? "negated"
+          : partial.has(id)
+            ? "partial"
+            : "off";
+  }, [tags, selected, negated]);
+}
+
 // ── Visibility ────────────────────────────────────────────────────────────
 
 interface Visible {
@@ -205,9 +264,9 @@ interface Visible {
 }
 
 /** Pickable = not excluded; an excluded tag stays (dimmed) only above a pickable one. */
-function visibleTags(
-  tags: readonly TagRow[],
-  exclude: ((tag: TagRow) => boolean) | undefined,
+function visibleTags<Row extends TagRow>(
+  tags: readonly Row[],
+  exclude: ((tag: Row) => boolean) | undefined,
 ): Visible {
   const pickable = new Set(tags.filter((t) => !exclude?.(t)).map((t) => t.id));
   const shown = new Set(pickable);
@@ -231,8 +290,8 @@ function findByPath(
 
 // ── The tree (empty query) ─────────────────────────────────────────────────
 
-interface TagTreeBodyProps {
-  tags: readonly TagRow[];
+interface TagTreeBodyProps<Row extends TagRow> {
+  tags: readonly Row[];
   visible: Visible;
   collapsed: ReadonlySet<string>;
   setCollapsed: (
@@ -240,9 +299,12 @@ interface TagTreeBodyProps {
   ) => void;
   draftParent: string | null | undefined;
   renamingId: string | null;
-  selected: readonly string[];
+  markOf: (tagId: string) => Mark;
+  indicator: "check" | "checkbox";
   counts: ReadonlyMap<string, number> | undefined;
   writes: TagPickerWrites;
+  canDelete: ((tag: Row) => boolean) | undefined;
+  rowMenuExtra: ((tag: Row) => ReactNode) | undefined;
   onPick(tagId: string): void;
   onAddChild(parentId: string): void;
   onRename(id: string): void;
@@ -250,24 +312,27 @@ interface TagTreeBodyProps {
   onCommitRename(id: string, name: string): void;
 }
 
-function TagTreeBody({
+function TagTreeBody<Row extends TagRow>({
   tags,
   visible,
   collapsed,
   setCollapsed,
   draftParent,
   renamingId,
-  selected,
+  markOf,
+  indicator,
   counts,
   writes,
+  canDelete,
+  rowMenuExtra,
   onPick,
   onAddChild,
   onRename,
   onCommitDraft,
   onCommitRename,
-}: TagTreeBodyProps) {
+}: TagTreeBodyProps<Row>) {
   const rows = useMemo(() => {
-    const out: PickerRow[] = tags
+    const out: PickerRow<Row>[] = tags
       .filter((t) => visible.shown.has(t.id))
       .map((t) => ({
         id: t.id,
@@ -317,7 +382,7 @@ function TagTreeBody({
     [visible, onPick],
   );
 
-  const model = useTreeModel<PickerRow>({
+  const model = useTreeModel<PickerRow<Row>>({
     rows,
     onSelect: pick,
     setExpanded: applyExpanded,
@@ -352,11 +417,14 @@ function TagTreeBody({
                 depth={line.depth}
                 tags={tags}
                 activeId={activeId}
-                selected={selected.includes(line.node.id)}
+                mark={markOf(line.node.id)}
+                indicator={indicator}
                 renaming={renamingId === line.node.id}
                 count={counts?.get(line.node.id)}
                 showCount={counts !== undefined}
                 writes={writes}
+                deletable={canDelete?.(line.node.tag) ?? true}
+                menuExtra={rowMenuExtra?.(line.node.tag)}
                 onAddChild={onAddChild}
                 onRename={onRename}
                 onCommitRename={onCommitRename}
@@ -369,31 +437,37 @@ function TagTreeBody({
   );
 }
 
-function TagTreeRow({
+function TagTreeRow<Row extends TagRow>({
   node,
   tag,
   depth,
   tags,
   activeId,
-  selected,
+  mark,
+  indicator,
   renaming,
   count,
   showCount,
   writes,
+  deletable,
+  menuExtra,
   onAddChild,
   onRename,
   onCommitRename,
 }: {
-  node: Parameters<typeof useTreeRow<PickerRow>>[0];
-  tag: TagRow;
+  node: Parameters<typeof useTreeRow<PickerRow<Row>>>[0];
+  tag: Row;
   depth: number;
-  tags: readonly TagRow[];
+  tags: readonly Row[];
   activeId: string | null;
-  selected: boolean;
+  mark: Mark;
+  indicator: "check" | "checkbox";
   renaming: boolean;
   count: number | undefined;
   showCount: boolean;
   writes: TagPickerWrites;
+  deletable: boolean;
+  menuExtra: ReactNode;
   onAddChild(parentId: string): void;
   onRename(id: string): void;
   onCommitRename(id: string, name: string): void;
@@ -412,6 +486,7 @@ function TagTreeRow({
     [controls],
   );
   const draggable = !renaming;
+  const selected = mark === "picked";
   return (
     <TreeRowChrome
       rowId={tag.id}
@@ -442,6 +517,8 @@ function TagTreeRow({
               tag={tag}
               tags={tags}
               writes={writes}
+              deletable={deletable}
+              extra={menuExtra}
               onRename={() => onRename(tag.id)}
               onAddChild={() => onAddChild(tag.id)}
             />
@@ -457,6 +534,7 @@ function TagTreeRow({
           isOverAfter={controls.isOverAfter}
         />
       ) : null}
+      {indicator === "checkbox" ? <MarkBox mark={mark} /> : null}
       <TagMark tag={tag} tags={tags} />
       <Fill>
         {renaming ? (
@@ -466,7 +544,7 @@ function TagTreeRow({
             onCommit={(name) => onCommitRename(tag.id, name)}
           />
         ) : (
-          <Text>{tag.name}</Text>
+          <TagName name={tag.name} mark={mark} empty={showCount && !count} />
         )}
       </Fill>
       {showCount && !renaming ? (
@@ -474,7 +552,7 @@ function TagTreeRow({
           {count ? String(count) : ""}
         </Text>
       ) : null}
-      {selected && !renaming ? <Check /> : null}
+      {indicator === "check" && selected && !renaming ? <Check /> : null}
     </TreeRowChrome>
   );
 }
@@ -507,7 +585,8 @@ function SearchResults({
   query,
   tags,
   pickable,
-  selected,
+  markOf,
+  indicator,
   counts,
   onPick,
   onCreate,
@@ -515,7 +594,8 @@ function SearchResults({
   query: string;
   tags: readonly TagRow[];
   pickable: ReadonlySet<string>;
-  selected: readonly string[];
+  markOf: (tagId: string) => Mark;
+  indicator: "check" | "checkbox";
   counts: ReadonlyMap<string, number> | undefined;
   onPick(tagId: string): void;
   onCreate(segments: readonly string[]): Promise<void>;
@@ -541,9 +621,10 @@ function SearchResults({
           depth={0}
           hasChildren={false}
           isOpen={false}
-          selected={selected.includes(tag.id)}
+          selected={markOf(tag.id) === "picked"}
           onSelect={() => onPick(tag.id)}
         >
+          {indicator === "checkbox" ? <MarkBox mark={markOf(tag.id)} /> : null}
           <TagMark tag={tag} tags={tags} />
           <Fill>
             <Text>
@@ -555,7 +636,9 @@ function SearchResults({
               {counts.get(tag.id) ? String(counts.get(tag.id)) : ""}
             </Text>
           ) : null}
-          {selected.includes(tag.id) ? <Check /> : null}
+          {indicator === "check" && markOf(tag.id) === "picked" ? (
+            <Check />
+          ) : null}
         </TreeRowChrome>
       ))}
       {exact === undefined ? (
@@ -681,6 +764,52 @@ function TagDot() {
       aria-hidden
       className="inline-block size-2.5 rounded-full border border-dashed border-muted-foreground"
     />
+  );
+}
+
+/** A tag's name: struck in the destructive tone when negated, faint when it counts nothing. */
+function TagName({
+  name,
+  mark,
+  empty,
+}: {
+  name: string;
+  mark: Mark;
+  empty: boolean;
+}) {
+  if (mark === "negated") {
+    return (
+      <Text tone="destructive" className="line-through">
+        {name}
+      </Text>
+    );
+  }
+  return <Text tone={empty ? "faint" : "default"}>{name}</Text>;
+}
+
+/** The leading box of a `checkbox` picker: ✓ picked, − negated, a primary − when a tag under it is either. */
+function MarkBox({ mark }: { mark: Mark }) {
+  return (
+    <Center
+      as="span"
+      aria-hidden
+      data-mark={mark}
+      className={cn(
+        "size-3.5 rounded-sm border",
+        mark === "picked" &&
+          "border-primary bg-primary text-primary-foreground",
+        mark === "negated" &&
+          "border-destructive bg-destructive text-primary-foreground",
+        mark === "partial" && "border-primary text-primary-text",
+        mark === "off" && "border-border",
+      )}
+    >
+      {mark === "picked" ? (
+        <Icon icon={checkIcon} className="size-3" />
+      ) : mark === "negated" || mark === "partial" ? (
+        <Icon icon={removeIcon} className="size-3" />
+      ) : null}
+    </Center>
   );
 }
 

@@ -13,7 +13,7 @@ import { TagPickerPanel } from "./tag-picker-panel";
 
 export interface TagPickerPopoverProps<
   Row extends TagRow = TagRow,
-> extends TagPickerOptions {
+> extends TagPickerOptions<Row> {
   tree: TagTree<Row>;
   /** The element that opens it (a `TagPathChip`, a `＋ Tag` button). */
   trigger: ReactElement;
@@ -57,7 +57,7 @@ export function TagPickerPopover<Row extends TagRow>({
 function PickerBody<Row extends TagRow>({
   tree,
   ...options
-}: TagPickerOptions & { tree: TagTree<Row> }) {
+}: TagPickerOptions<Row> & { tree: TagTree<Row> }) {
   const result = useTagTree(tree);
   const writes = useTagTreeActions(tree);
   if (result.status === "loading") {

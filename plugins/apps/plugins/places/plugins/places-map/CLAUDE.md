@@ -41,11 +41,8 @@ Then `PlacesSurface` renders, inside a `relative h-full` box:
   committed config deleted; its **user layer is orphaned on purpose** — its
   rows (Gallery, List, a filtered All places) would otherwise render as
   presets, and config migrations are shared across view ids.
-- The selected place's `PlaceCard` and the `TagManagerPanel` (from
-  `tag-manager`) as `Pin`ned floating cards on the right, below the toolbar's
-  tools card (`BELOW_TOOLBAR`); the manager starts past the sidebar
-  (`PAST_SIDEBAR`, matching the sidebar's `w-72`, while it is open). The card
-  floats only while the side panel is hidden; while it is shown, the card
+- The selected place's `PlaceCard` as a `Pin`ned floating card on the right,
+  below the toolbar's tools card (`BELOW_TOOLBAR`). The card floats only while the side panel is hidden; while it is shown, the card
   drills into the panel instead (below). Selection is local state:
   `onRowActivate` (a pin, a card, a row) selects; `selectedRowId` makes the
   pin active and pans to it. A click anywhere else on the screen — the map,
@@ -190,13 +187,19 @@ nested tags included. The quick-search text is not applied to the counts.
 While the rest of the filter names a rule that does not resolve, no counts
 are drawn (the DataView shows the rule error).
 
-The tree rows are transient filter chrome (the brief's exemption from
-DataView): a disclosure button beside a `Row` (never nested in it), the
-tri-state box, `TagMark` (`tag-tree/picker`), name, count. Roots start open.
-The tree walks are the tag-tree engine's (`flattenTagTree`, `tagDescendants`);
-"+ New tag" creates a root tag through `useTagTreeActions(placeTagTree)`
-(named by `freeSiblingName`, sibling names being unique) and opens the manager
-on it.
+The tree is the shared tag picker (`TagPickerPanel`, `tag-tree/picker`), so
+the one tree both filters and edits — there is no separate tag manager.
+Places sets it up as a filter: `indicator="checkbox"` (✓ included, − excluded
+and struck through, a primary − on a tag holding either), `selected` /
+`negated` from the sidebar state, the faceted `counts`, roots open
+(`defaultExpanded="roots"`), no focus steal. Its search finds a tag or creates
+the typed path (`Trips/Porto`), left unpicked (`pickCreated={false}`: a new
+tag carries no place yet). Editing is the picker's: hover ＋ (sub-tag) and ⋯
+(rename, icon, move out, shade children, colour, delete), double-click to
+rename, drag to reorder or nest, "New tag" at the foot. Delete is not offered
+on the role tags (`canDelete`; the tree's `refuseDelete` refuses it anyway),
+and the ⋯ menu ends with the tag's Google types, read-only
+(`rowMenuExtra`).
 
 The header folds the sidebar (its chevron, device-local,
 `web/internal/layout-stores.ts`) to the header card alone, at the same width:
@@ -470,7 +473,7 @@ away closes it — a click in the thread is not away (`useClickAway`'s
     - `AgentThreadSlots.StepLabel` "places_search_text" → `SearchStepLabel`
     - `AgentThreadSlots.StepLabel` "places_show_picks" → `PicksStepLabel`
     - `JsonlViewerTool.Renderer` "mcp__equin__places_show_picks" → `PicksToolView`
-  - Uses: 141 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 140 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×15
     - `apps/places/places-core` ×8
     - `conversations/agent-thread` ×8
@@ -483,6 +486,7 @@ away closes it — a click in the thread is not away (`useClickAway`'s
     - `infra/endpoints` ×3
     - `primitives/hover-reveal` ×3
     - `primitives/link-gesture/new-tab` ×3
+    - `tag-tree/picker` ×3
     - `ui/icons` ×3
     - `apps/places/page-overlay` ×2
     - `conversations/conversation-view/jsonl-viewer/tool-call` ×2
@@ -494,10 +498,8 @@ away closes it — a click in the thread is not away (`useClickAway`'s
     - `primitives/css/text` ×2
     - `primitives/persistent-draft` ×2
     - `primitives/relative-time` ×2
-    - `tag-tree/picker` ×2
     - `apps-core/tabs.useAppLinkProps`
     - `apps/places/place-details.usePlaceDetails`
-    - `apps/places/tag-manager.TagManagerPanel`
     - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
     - `integrations/google-maps/usage.useMapsBudget`
     - `page/editor.PageIcon`
@@ -516,7 +518,6 @@ away closes it — a click in the thread is not away (`useClickAway`'s
     - `primitives/css/motion.Presence`
     - `primitives/css/pin.Pin`
     - `primitives/css/placeholder.Placeholder`
-    - `primitives/css/row.Row`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/spinner.Spinner`
@@ -546,12 +547,10 @@ away closes it — a click in the thread is not away (`useClickAway`'s
     - `tag-tree/engine.isTagUnder`
     - `tag-tree/engine.TagNode`
     - `tag-tree/engine.tagPath`
-  - Exports (types):
-    - `SidebarState`
-    - `TagFilterState`
+  - Exports (types): `SidebarState`
   - Exports (values):
     - `applySidebarState`
-    - `hasPickedDescendant`
+    - `includedTags`
     - `mergeRows`
     - `moveTag`
     - `presetAutoName`
@@ -559,7 +558,6 @@ away closes it — a click in the thread is not away (`useClickAway`'s
     - `removeTag`
     - `sidebarState`
     - `splitRow`
-    - `tagFilterState`
     - `toggleTag`
     - `withoutSidebarRules`
 - Cross-plugin:

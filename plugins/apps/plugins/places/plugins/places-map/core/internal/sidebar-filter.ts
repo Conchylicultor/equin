@@ -361,14 +361,3 @@ export function applySidebarClick(
     mintId,
   );
 }
-
-/** Whether any of a tag's descendants is included or excluded (its row's partial mark). */
-export function hasPickedDescendant(
-  state: SidebarState,
-  tagId: string,
-  tags: readonly TagNode[],
-): boolean {
-  return [...includedTags(state), ...state.exclude].some(
-    (t) => t !== tagId && isTagUnder(t, tagId, tags),
-  );
-}

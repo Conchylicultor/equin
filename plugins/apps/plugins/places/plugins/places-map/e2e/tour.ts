@@ -86,14 +86,16 @@ await withBrowser(async (h) => {
   // the sidebar's counts, so a change is visible in the output, not only in
   // the screenshots.
   const restaurants = page
-    .locator("[data-tag-row]")
+    .locator("[data-tag-picker] [data-tree-id]")
     .filter({ hasText: "Restaurants" })
     .first();
   const report = async (step: string) => {
     const marks = (await pinsOnScreen(page, { atLeastOne: false })).map(
       (p) => p.label,
     );
-    const rows = await page.locator("[data-tag-row]").allInnerTexts();
+    const rows = await page
+      .locator("[data-tag-picker] [data-tree-id]")
+      .allInnerTexts();
     console.log(`[${step}] map marks: ${JSON.stringify(marks)}`);
     console.log(
       `[${step}] sidebar: ${rows.map((r) => r.replace(/\s+/g, " ").trim()).join(" | ")}`,
@@ -124,8 +126,4 @@ await withBrowser(async (h) => {
     await page.waitForTimeout(1500);
     await snap(page, out, view.toLowerCase());
   }
-
-  await page.getByRole("button", { name: "Manage tags" }).first().click();
-  await page.waitForTimeout(1500);
-  await snap(page, out, "manage");
 });

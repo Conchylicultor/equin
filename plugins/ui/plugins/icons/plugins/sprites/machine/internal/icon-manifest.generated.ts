@@ -150,7 +150,6 @@ export const ICON_MANIFEST: {
     "format-align-right",
     "format-bold",
     "format-clear",
-    "format-color-reset",
     "format-color-text",
     "format-indent-decrease",
     "format-indent-increase",
