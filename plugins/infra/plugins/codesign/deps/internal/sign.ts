@@ -38,7 +38,12 @@ const IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9.-]*$/;
  * one, `certificate root` for the self-signed local one, where root is leaf).
  */
 export function signedByRequirement(identifier: string, sha1: string): string {
-  return `identifier "${identifier}" and certificate leaf = H"${sha1.toLowerCase()}"`;
+  return `identifier "${identifier}" and ${certificateRequirement(sha1)}`;
+}
+
+/** The certificate half of {@link signedByRequirement}: signed by `sha1`, whatever the identifier. */
+function certificateRequirement(sha1: string): string {
+  return `certificate leaf = H"${sha1.toLowerCase()}"`;
 }
 
 /**
@@ -211,27 +216,12 @@ export async function signBundle(
         join(macos, name),
       ]);
     }
-    await runOk(host, [
-      "/usr/bin/codesign",
-      "--force",
-      "--sign",
-      identity.sha1,
-      bundle,
-    ]);
-  } else {
-    // rcodesign signs the nested executables itself, then the bundle.
-    await runOk(host, [
-      await host.rcodesignPath(opts.tool),
-      "sign",
-      "--pem-file",
-      identity.keyPath,
-      "--pem-file",
-      identity.certPath,
-      "--timestamp-url",
-      "none",
-      bundle,
-    ]);
   }
+  // Then the bundle (rcodesign signs the nested executables itself).
+  await runOk(host, [
+    ...(await bundleSignArgv(identity, opts.tool, host)),
+    bundle,
+  ]);
   if (!(await isSignedBy(bundle, opts.identifier, identity.sha1, host))) {
     throw new Error(
       `signed ${bundle} with ${identity.kind} identity ${identity.sha1} "${identity.label}", but it does not satisfy ${signedByRequirement(opts.identifier, identity.sha1)}`,
@@ -241,6 +231,75 @@ export async function signBundle(
     `signed ${bundle} as ${opts.identifier} with the ${identity.kind} identity "${identity.label}" (${identity.sha1})`,
   );
   return { kind: "signed", identity };
+}
+
+/**
+ * The command that signs a bundle with `identity`, its path appended: the
+ * one spelling of each identity's tool, shared by {@link signBundle} and
+ * {@link bundleSigner}. With a configured identity `codesign` signs no nested
+ * code: the bundle's other executables must be signed first.
+ */
+async function bundleSignArgv(
+  identity: SigningIdentity,
+  tool: RcodesignTool,
+  host: CodesignHost,
+): Promise<string[]> {
+  if (identity.kind === "configured") {
+    return ["/usr/bin/codesign", "--force", "--sign", identity.sha1];
+  }
+  return [
+    await host.rcodesignPath(tool),
+    "sign",
+    "--pem-file",
+    identity.keyPath,
+    "--pem-file",
+    identity.certPath,
+    "--timestamp-url",
+    "none",
+  ];
+}
+
+/**
+ * Signing with this machine's identity, as commands for a process that
+ * cannot resolve the identity itself: the menu-bar helper, which writes a
+ * bundle per installed app (its login service hands it this). Each command
+ * runs with a bundle's path appended.
+ */
+export interface BundleSigner {
+  /** The signing certificate's SHA-1: what a grant is keyed to. */
+  readonly sha1: string;
+  readonly label: string;
+  /**
+   * Signs the bundle as its `CFBundleIdentifier`. For a bundle whose only
+   * executable is its main one (with a configured identity `codesign` signs
+   * no nested code).
+   */
+  readonly sign: readonly string[];
+  /** Exits 0 when the bundle carries this identity's valid signature. */
+  readonly verify: readonly string[];
+}
+
+/**
+ * This machine's {@link BundleSigner}, or null off macOS. Resolves the
+ * identity (creating the local one on first use) — throws as
+ * {@link resolveSigningIdentity} does: never a fallback signer.
+ */
+export async function bundleSigner(
+  tool: RcodesignTool,
+  host: CodesignHost = machineHost(),
+): Promise<BundleSigner | null> {
+  const identity = await resolveSigningIdentity(host);
+  if (identity === null) return null;
+  return {
+    sha1: identity.sha1,
+    label: identity.label,
+    sign: await bundleSignArgv(identity, tool, host),
+    verify: [
+      "/usr/bin/codesign",
+      "-v",
+      `-R=${certificateRequirement(identity.sha1)}`,
+    ],
+  };
 }
 
 /**

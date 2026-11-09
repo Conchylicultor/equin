@@ -66,6 +66,7 @@ describe("defineLoginService", () => {
         ready,
         unbundledExecutable(decl.executable.build(ready)),
         {},
+        null,
       ),
     ).toEqual({
       description: "An example tray helper",
@@ -87,6 +88,7 @@ describe("defineLoginService", () => {
         bundled: true,
       },
       {},
+      null,
     );
     expect(job.argv).toEqual(["/app/equin.app/Contents/MacOS/example", "tray"]);
     expect(job.env).toEqual({
@@ -130,6 +132,7 @@ describe("defineLoginService", () => {
       ready,
       unbundledExecutable(referring.executable.build(ready)),
       labels,
+      null,
     );
     expect(job.env).toEqual({ GATEWAY: "dev.legacy.gateway" });
     // A declaration that refers to nothing gets no labels.

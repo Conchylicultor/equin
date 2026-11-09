@@ -9,6 +9,7 @@ import { GATEWAY_SERVICE } from "@plugins/infra/plugins/launcher/core";
 import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { cargoBinary } from "@plugins/infra/plugins/deps/plugins/rust/deps";
 import { componentIdentity } from "@plugins/infra/plugins/launcher/plugins/login-services/core";
+import type { BundleSigner } from "@plugins/infra/plugins/codesign/deps";
 import { OPEN_LINK_SCHEME } from "../core";
 import { menuBarHelper, menuBarHelperIcon } from "../deps";
 import { menuBarLogs } from "../data-dirs";
@@ -16,9 +17,15 @@ import { menuBarLogs } from "../data-dirs";
 /**
  * The environment the tray runs with — the whole of it (nothing is
  * inherited). `gatewayLabel`: the label the gateway's service is bound to on
- * this machine (`refersTo`).
+ * this machine (`refersTo`). `signer`: how the tray signs the installed apps'
+ * shims (src/apps.rs) — with the machine's identity, the one `equin.app` is
+ * signed with, so a folder grant to an app survives a new helper; null off
+ * macOS, where nothing is signed.
  */
-function trayEnv(gatewayLabel: string): Record<string, string> {
+function trayEnv(
+  gatewayLabel: string,
+  signer: BundleSigner | null,
+): Record<string, string> {
   const env: Record<string, string> = {
     HOME: HOME_DIR,
     USER: userInfo().username,
@@ -28,6 +35,15 @@ function trayEnv(gatewayLabel: string): Record<string, string> {
     // the old one until `./equin data-dir migrate` relabels it — so a
     // relabel rewrites (and reloads) this job too.
     ...envEntries({ GATEWAY_LABEL: gatewayLabel }),
+    ...(signer === null
+      ? {}
+      : envEntries({
+          SHIM_SIGNER: JSON.stringify({
+            sha1: signer.sha1,
+            sign: signer.sign,
+            verify: signer.verify,
+          }),
+        })),
   };
   // A graphical systemd unit inherits the session's display from the user
   // manager's environment; these carry it when `start` itself has them.
@@ -69,12 +85,12 @@ export const menuBarService = defineLoginService({
   },
   // Start kicks the gateway's service: its bound label is part of the job.
   refersTo: { gateway: GATEWAY_SERVICE },
-  spec: (ready, executable, labels) => ({
+  spec: (ready, executable, labels, signer) => ({
     // Inside equin.app on macOS (so notifications carry the app's identity),
     // the bare binary on Linux.
     argv: [executable, "tray"],
     cwd: ready.dir,
-    env: trayEnv(labels.gateway),
+    env: trayEnv(labels.gateway, signer),
     stdioLog: menuBarLogs.file("helper-stdio.log"),
   }),
 });

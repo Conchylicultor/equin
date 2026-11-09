@@ -22,6 +22,15 @@ await signBundle(staging, { identifier: "dev.equin", tool: { exec } /* or { inst
 await registerApp(bundle); // lsregister -f: tccutil and System Settings resolve its bundle id
 ```
 
+`bundleSigner(tool)` hands the same signing to a process that cannot resolve
+the identity itself — the menu-bar helper, which writes a bundle per installed
+app: `{ sha1, label, sign, verify }`, two commands each completed by a bundle's
+path (`sign` is the very command `signBundle` signs the bundle with — one
+spelling per identity, `bundleSignArgv` — for a bundle whose only executable is
+its main one; `verify` checks the certificate). `login-services` resolves it on
+every reconcile and passes it to a service's `spec`, so a new identity is a new
+job.
+
 `signBundle` signs every executable in `Contents/MacOS` (rcodesign does the
 nested ones itself; with a configured identity each is `codesign`ed first, under
 its own name) and verifies the bundle against the requirement; its identifier
@@ -137,6 +146,7 @@ certificate expires within 30 days.
     - `infra/deps/download.downloadedFile`
     - `infra/deps/download.DownloadSource`
   - Exports (types):
+    - `BundleSigner`
     - `CodesignHost`
     - `CommandResult`
     - `ConfiguredValue`
@@ -145,6 +155,7 @@ certificate expires within 30 days.
     - `SigningIdentity`
     - `SignOutcome`
   - Exports (values):
+    - `bundleSigner`
     - `codeSignature`
     - `configuredIdentityFile`
     - `configuredValidTo`

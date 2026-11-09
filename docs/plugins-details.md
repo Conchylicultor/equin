@@ -31700,6 +31700,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/deps/download.downloadedFile`
           - `infra/deps/download.DownloadSource`
         - Exports (types):
+          - `BundleSigner`
           - `CodesignHost`
           - `CommandResult`
           - `ConfiguredValue`
@@ -31708,6 +31709,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SigningIdentity`
           - `SignOutcome`
         - Exports (values):
+          - `bundleSigner`
           - `codeSignature`
           - `configuredIdentityFile`
           - `configuredValidTo`

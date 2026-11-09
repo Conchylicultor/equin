@@ -18,7 +18,11 @@
 //!   `EquinAppId` / `EquinUrl` / `EquinNamespace` / `EquinShimHash` /
 //!   `EquinHelperDigest`, the `localhost` ATS exception, no `LSUIElement`),
 //!   `Resources/app.icns` (every iconset size fetched from the instance's icon
-//!   route, packed by `iconutil`), ad-hoc signed. Assembled in
+//!   route, packed by `iconutil`), signed with this machine's code-signing
+//!   identity (`Signer`) — the one `equin.app` is signed with — so macOS keys
+//!   an app's permission grants (its Downloads folder, …) to a requirement
+//!   that a new helper keeps; ad-hoc, each new helper was a new app to it,
+//!   asking again. Assembled in
 //!   `<bundle>.staging` and swapped in whole, so a running app's executable is
 //!   never overwritten in place.
 //! - Linux — `~/.local/share/applications/equin-<id>.desktop` whose `Exec=`
@@ -140,20 +144,65 @@ impl Host for Device {
     }
 }
 
-/// The helper executable shims are written from, and its digest — recorded
-/// in every shim, so a new helper rewrites them all.
+/// What shims are written from: the helper executable, how they are signed,
+/// and a digest of both — recorded in every shim, so a new helper or a new
+/// signing identity rewrites them all.
 #[derive(Debug, Clone)]
 pub struct Helper {
     pub exe: PathBuf,
     pub digest: String,
+    /// None where nothing is signed (Linux); on macOS a sync without one fails.
+    pub signer: Option<Signer>,
+}
+
+/// The variable the tray's login service hands the signer in
+/// (`menu-bar/login-services`, from infra/codesign's `bundleSigner`).
+pub const SIGNER_ENV: &str = "EQUIN_SHIM_SIGNER";
+
+/// How a shim is signed with this machine's code-signing identity, as
+/// commands each run with the bundle's path appended — the identity resolved
+/// by the instance's code (infra/codesign), never here, so the helper can sign
+/// with neither a different tool nor a different identity than `equin.app`.
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+pub struct Signer {
+    /// The signing certificate's SHA-1.
+    pub sha1: String,
+    /// Signs the bundle as its `CFBundleIdentifier`.
+    pub sign: Vec<String>,
+    /// Succeeds when the bundle carries this identity's valid signature.
+    pub verify: Vec<String>,
+}
+
+impl Signer {
+    /// The signer named by `value` (`SIGNER_ENV`'s JSON).
+    pub fn parse(value: &str) -> Result<Signer, String> {
+        let signer: Signer = serde_json::from_str(value).map_err(|e| format!("${SIGNER_ENV}: {e}"))?;
+        if signer.sha1.is_empty() || signer.sign.is_empty() || signer.verify.is_empty() {
+            return Err(format!("${SIGNER_ENV} names no identity or command: {value}"));
+        }
+        Ok(signer)
+    }
 }
 
 impl Helper {
-    /// This process's own executable.
+    /// This process's own executable, signing as `$EQUIN_SHIM_SIGNER` says.
     pub fn current() -> Result<Helper, String> {
         let exe = std::env::current_exe().map_err(|e| format!("this helper's executable: {e}"))?;
-        let digest = file_digest(&exe)?;
-        Ok(Helper { exe, digest })
+        let signer = match std::env::var(SIGNER_ENV) {
+            Ok(value) => Some(Signer::parse(&value)?),
+            Err(std::env::VarError::NotPresent) => None,
+            Err(e) => return Err(format!("${SIGNER_ENV}: {e}")),
+        };
+        Ok(Helper::new(exe.clone(), &file_digest(&exe)?, signer))
+    }
+
+    /// `exe` (whose bytes digest to `exe_digest`) signing with `signer`.
+    pub fn new(exe: PathBuf, exe_digest: &str, signer: Option<Signer>) -> Helper {
+        let digest = match &signer {
+            Some(s) => format!("{exe_digest}-{}", s.sha1.to_lowercase()),
+            None => exe_digest.to_string(),
+        };
+        Helper { exe, digest, signer }
     }
 }
 
@@ -514,7 +563,7 @@ mod platform {
             host.run(&["cp".into(), "-c".into(), arg(runs), arg(&contents.join("MacOS").join(EXECUTABLE))])?;
             info_plist(app, url, helper).to_file_xml(contents.join("Info.plist")).map_err(|e| e.to_string())?;
             write_icns(host, app, &contents.join("Resources").join("app.icns"))?;
-            host.run(&["codesign".into(), "--force".into(), "--sign".into(), "-".into(), arg(&staging)])?;
+            sign(host, helper, &staging)?;
             if bundle.exists() {
                 std::fs::remove_dir_all(&bundle).map_err(|e| format!("{}: {e}", bundle.display()))?;
             }
@@ -527,6 +576,24 @@ mod platform {
             }
         }
         result
+    }
+
+    /// Sign the staged bundle with this machine's identity, and check it is.
+    fn sign(host: &dyn Host, helper: &Helper, staging: &Path) -> Result<(), String> {
+        let signer = helper.signer.as_ref().ok_or_else(|| {
+            format!(
+                "no code-signing identity to sign {} with: ${} is not set (the tray's login service sets it; run `./equin start --only dev.equin.menu-bar --force`)",
+                staging.display(),
+                super::SIGNER_ENV
+            )
+        })?;
+        let with = |argv: &[String]| -> Vec<String> {
+            argv.iter().cloned().chain(std::iter::once(arg(staging))).collect()
+        };
+        host.run(&with(&signer.sign))?;
+        host.run(&with(&signer.verify))
+            .map_err(|e| format!("signed {} with {}, but it does not verify: {e}", staging.display(), signer.sha1))?;
+        Ok(())
     }
 
     fn write_icns(host: &dyn Host, app: &CatalogApp, icns: &Path) -> Result<(), String> {
@@ -958,8 +1025,12 @@ mod tests {
         (Roots { home: dir }, exe)
     }
 
+    fn signer() -> Signer {
+        Signer { sha1: "AB12".into(), sign: vec!["sign-tool".into()], verify: vec!["verify-tool".into()] }
+    }
+
     fn helper(exe: &Path, digest: &str) -> Helper {
-        Helper { exe: exe.to_path_buf(), digest: digest.into() }
+        Helper { exe: exe.to_path_buf(), digest: digest.into(), signer: Some(signer()) }
     }
 
     fn origin() -> Url {
@@ -1097,7 +1168,11 @@ mod tests {
         let (roots, exe) = home();
         let host = Fake::new();
         sync(&host, &roots, &origin(), &helper(&exe, "d1"), &[app("mail", "Mail", "h1")]).unwrap();
-        assert_eq!(host.programs(), vec!["cp", "iconutil", "codesign"]);
+        assert_eq!(host.programs(), vec!["cp", "iconutil", "sign-tool", "verify-tool"]);
+        // Each command is completed by the staged bundle, the one swapped in.
+        let staged = format!("{}.staging", roots.mac_applications().join("equin Mail.app").display());
+        assert_eq!(host.commands.borrow()[2], vec!["sign-tool".to_string(), staged.clone()]);
+        assert_eq!(host.commands.borrow()[3], vec!["verify-tool".to_string(), staged]);
         assert_eq!(host.commands.borrow()[0][2], exe.display().to_string());
         assert_eq!(host.fetched.borrow().len(), ICONSET.len());
         let bundle = roots.mac_applications().join("equin Mail.app");
@@ -1118,10 +1193,35 @@ mod tests {
     fn a_failed_step_leaves_no_half_written_bundle() {
         let (roots, exe) = home();
         let mut host = Fake::new();
-        host.fail = Some("codesign");
+        host.fail = Some("verify-tool");
         assert!(sync(&host, &roots, &origin(), &helper(&exe, "d1"), &[app("mail", "Mail", "h1")]).is_err());
         let left: Vec<_> = std::fs::read_dir(roots.mac_applications()).unwrap().collect();
         assert!(left.is_empty(), "{left:?}");
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn without_a_signer_no_shim_is_written() {
+        let (roots, exe) = home();
+        let host = Fake::new();
+        let unsigned = Helper { signer: None, ..helper(&exe, "d1") };
+        let err = sync(&host, &roots, &origin(), &unsigned, &[app("mail", "Mail", "h1")]).unwrap_err();
+        assert!(err.contains(SIGNER_ENV), "{err}");
+        let left: Vec<_> = std::fs::read_dir(roots.mac_applications()).unwrap().collect();
+        assert!(left.is_empty(), "{left:?}");
+    }
+
+    #[test]
+    fn the_signer_is_part_of_the_digest_and_parsed_strictly() {
+        let exe = PathBuf::from("/x");
+        let one = Helper::new(exe.clone(), "d1", Some(signer()));
+        let other = Helper::new(exe.clone(), "d1", Some(Signer { sha1: "CD34".into(), ..signer() }));
+        assert_ne!(one.digest, other.digest, "a new identity rewrites every shim");
+        assert_eq!(Helper::new(exe, "d1", None).digest, "d1");
+        let parsed = Signer::parse(r#"{"sha1":"AB12","sign":["s"],"verify":["v"]}"#).unwrap();
+        assert_eq!(parsed.sign, vec!["s"]);
+        assert!(Signer::parse(r#"{"sha1":"","sign":["s"],"verify":["v"]}"#).is_err());
+        assert!(Signer::parse("not json").is_err());
     }
 
     #[test]

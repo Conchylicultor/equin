@@ -76,8 +76,8 @@ namespaces and URLs, never an app.
   (Downloads, Documents, Desktop, volumes): the drag opens every path first,
   which is what asks the user once per folder; the shim's `Info.plist` carries
   the `NS*FolderUsageDescription` / `NS*VolumesUsageDescription` reason).
-  Shims are ad-hoc signed, so a grant is tied to the binary: a new helper
-  (every shim re-cloned) may ask again. Held natively like the panel's: the ACL
+  Shims are signed with the machine's identity (below), so a grant
+  survives a new helper. Held natively like the panel's: the ACL
   grants `APP_WINDOW_COMMANDS` to windows `app` / `app-*` on its origin
   (`window::Scope::capability`), and the command gate checks the shown page
   against that origin. The origin is the owner's instance, whose pages
@@ -193,8 +193,19 @@ cannot be skipped.)
   (`CFBundleIdentifier dev.equin.app.<id>`, `CFBundleExecutable
   equin-desktop`, `CFBundleIconFile app`, `EquinAppId`, `EquinUrl`,
   `EquinNamespace`, `EquinShimHash`, `EquinHelperDigest`, the `localhost` ATS
-  exception; no `LSUIElement`), `Resources/app.icns` (each iconset size
-  fetched from the icon route, packed by `iconutil`), ad-hoc signed.
+  exception, the folder / volume usage descriptions; no `LSUIElement`),
+  `Resources/app.icns` (each iconset size fetched from the icon route, packed
+  by `iconutil`), **signed with this machine's code-signing identity** — the
+  one `equin.app` is signed with — and verified: macOS keys an app's folder
+  grants to its designated requirement, which an ad-hoc signature ties to the
+  binary's hash, so every new helper was a new app that asked again. The tray
+  never resolves the identity: its login service hands it `infra/codesign`'s
+  `bundleSigner` as `EQUIN_SHIM_SIGNER` (JSON: the certificate's SHA-1 and the
+  `sign` / `verify` commands, each run with the staged bundle's path
+  appended); without it a macOS sync fails rather than sign ad hoc. The SHA-1
+  is folded into `EquinHelperDigest`, so a new identity re-signs every shim. A
+  configured keychain identity is used through `/usr/bin/codesign` from the
+  tray's process: the keychain may ask once to let it use the key.
   Assembled in `<bundle>.staging` and swapped in whole, so a running app's
   executable is never overwritten in place.
 - **Linux** — `~/.local/share/applications/equin-<id>.desktop` (`Exec=<stable

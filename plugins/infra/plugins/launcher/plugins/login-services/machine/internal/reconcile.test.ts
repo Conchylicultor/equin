@@ -26,6 +26,7 @@ import type {
   LoginServiceManager,
   LoginServiceState,
 } from "./login-service";
+import type { BundleSigner } from "@plugins/infra/plugins/codesign/deps";
 import type { MacosAppHost } from "./macos-app";
 import {
   reconcileLoginService,
@@ -63,10 +64,13 @@ const decl = defineLoginService({
       identity: componentIdentity(helper.id, ready.identity),
     }),
   },
-  spec: (ready, executable) => ({
+  spec: (ready, executable, _labels, signer) => ({
     argv: [executable, "tray"],
     cwd: ready.dir,
-    env: {},
+    env:
+      signer === null
+        ? {}
+        : ({ SIGNER: signer.sha1 } as Record<string, string>),
     // A folder that does not exist yet: the reconcile creates it.
     stdioLog: joinAppPath(dir, "logs", "example.log"),
   }),
@@ -110,6 +114,7 @@ function fakeService(
             writtenFrom,
             unbundledExecutable(d.executable.build(writtenFrom)),
             {},
+            null,
           ),
         );
   let state: LoginServiceState =
@@ -178,6 +183,7 @@ const unbundled: MacosAppHost = {
   isSigned: () => {
     throw new Error("nothing is signed off macOS");
   },
+  signer: async () => null,
   register: () => {
     throw new Error("nothing is registered off macOS");
   },
@@ -331,12 +337,14 @@ describe("reconcileLoginService — macOS (the equin app bundle)", () => {
     return readyForTests(helper, env, identity);
   };
   const bundle = joinAppPath(dir, "app", "equin.app");
+  let signer: BundleSigner | null = null;
   const host: MacosAppHost = {
     platform: "darwin",
     bundle,
     withLock: (fn) => fn(),
     sign: async () => {},
     isSigned: async () => true,
+    signer: async () => signer,
     register: async () => {},
     executablesInUse: async () => [],
   };
@@ -373,6 +381,24 @@ describe("reconcileLoginService — macOS (the equin app bundle)", () => {
     const job = JSON.parse(fake.definition()!) as LoginServiceJob;
     expect(job.argv[0]).toBe(join(bundle, "Contents", "MacOS", "example"));
     expect(readEnv("APP_COMPONENT", job.env)).toBe("example-helper@two");
+  });
+
+  test("the machine's signer reaches the job: a new identity is a changed job, and reloads", async () => {
+    const one = build("one");
+    const fake = fakeService("loaded", one);
+    signer = { sha1: "aa", label: "A", sign: ["sign"], verify: ["verify"] };
+    await reconcile(fake.manager, one);
+    expect((JSON.parse(fake.definition()!) as LoginServiceJob).env.SIGNER).toBe(
+      "aa",
+    );
+    fake.calls.length = 0;
+    signer = { ...signer, sha1: "bb" };
+    const outcome = await reconcile(fake.manager, one);
+    expect(outcome).toMatchObject({ kind: "started", reloaded: true });
+    expect((JSON.parse(fake.definition()!) as LoginServiceJob).env.SIGNER).toBe(
+      "bb",
+    );
+    signer = null;
   });
 });
 

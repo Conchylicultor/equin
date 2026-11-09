@@ -1,4 +1,5 @@
 import type { Dep, DepSource, Ready } from "@plugins/infra/plugins/deps/deps";
+import type { BundleSigner } from "@plugins/infra/plugins/codesign/deps";
 import {
   executableEnv,
   type AppComponent,
@@ -73,12 +74,16 @@ export interface DefineLoginServiceSpec<
    * never ensured its binary does not compile — `executable`, the path the
    * program runs from (inside the app bundle on macOS): the only spelling of
    * argv[0], so a job cannot run the build from the deps cache by mistake —
-   * and `labels`, the bound label of every service it `refersTo`.
+   * `labels`, the bound label of every service it `refersTo`, and `signer`,
+   * how the service signs bundles of its own with this machine's identity
+   * (null off macOS; resolved before `spec` runs, so a changed identity is a
+   * changed job).
    */
   spec(
     ready: Ready<S>,
     executable: string,
     labels: ReferredLabels<R>,
+    signer: BundleSigner | null,
   ): LoginServiceRun;
 }
 
@@ -96,6 +101,7 @@ export interface LoginServiceDeclaration<
     ready: Ready<S>,
     executable: string,
     labels: ReferredLabels,
+    signer: BundleSigner | null,
   ): LoginServiceRun;
 }
 
@@ -152,8 +158,8 @@ export async function referredLabels(
 
 /**
  * The job to write, from the declaration's installed dependency, where its
- * executable runs from, and the bound labels it refers to
- * ({@link referredLabels}). A bundled executable's build is named in the
+ * executable runs from, the bound labels it refers to
+ * ({@link referredLabels}) and this machine's bundle signer. A bundled executable's build is named in the
  * job's environment ({@link executableEnv}): its path is stable, so that is
  * what makes a rebuilt component a changed job.
  */
@@ -162,8 +168,9 @@ export function loginServiceJob<S extends DepSource>(
   ready: Ready<S>,
   executable: ServiceExecutable,
   labels: ReferredLabels,
+  signer: BundleSigner | null,
 ): LoginServiceJob {
-  const run = decl.spec(ready, executable.path, labels);
+  const run = decl.spec(ready, executable.path, labels, signer);
   return {
     description: decl.description,
     ...run,

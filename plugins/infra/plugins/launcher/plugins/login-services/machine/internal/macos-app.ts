@@ -23,10 +23,12 @@ import {
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
+  bundleSigner,
   codeSignature,
   rcodesign,
   registerApp,
   signBundle,
+  type BundleSigner,
   type RcodesignTool,
 } from "@plugins/infra/plugins/codesign/deps";
 import type { Dep } from "@plugins/infra/plugins/deps/deps";
@@ -92,6 +94,11 @@ export interface MacosAppHost {
   sign(staging: AppPath): Promise<void>;
   /** Whether the installed bundle is signed by this machine's identity. */
   isSigned(bundle: AppPath): Promise<boolean>;
+  /**
+   * How a service signs bundles of its own with this machine's identity
+   * (the menu-bar helper's app shims) — null off macOS.
+   */
+  signer(): Promise<BundleSigner | null>;
   /** Register the bundle with LaunchServices (`tccutil` and Settings resolve it through it). */
   register(bundle: AppPath): Promise<void>;
   /** The real path of every executable a running process of this user was started from. */
@@ -129,6 +136,15 @@ export function machineMacosAppHost(
     },
     async isSigned(path) {
       return (await codeSignature(path, APP_BUNDLE_ID)) === "signed";
+    },
+    async signer() {
+      if (process.platform !== "darwin") return null;
+      if (tool === null) {
+        throw new Error(
+          "a service's bundle signer needs rcodesign, and this caller passed no way to get it",
+        );
+      }
+      return bundleSigner(tool);
     },
     register: (path) => registerApp(path),
     executablesInUse: runningExecutables,

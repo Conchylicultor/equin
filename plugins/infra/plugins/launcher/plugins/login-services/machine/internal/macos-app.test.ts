@@ -66,6 +66,7 @@ function host(): MacosAppHost {
       if (failSign) throw new Error("signing failed");
     },
     isSigned: async () => signed,
+    signer: async () => null,
     register: async (path) => {
       calls.push(`register ${path}`);
     },

@@ -104,6 +104,7 @@ async function reconcileBound<S extends DepSource>(
     ready,
     executable,
     await referredLabels(manager, decl),
+    await app.host.signer(),
   );
   const written = await service.write(job);
   const runningPid = before.kind === "loaded" ? before.pid : null;

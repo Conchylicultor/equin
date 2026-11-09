@@ -140,6 +140,8 @@ export const RUNTIME_WITHHELD_ENV = {
     "the bundled component a login-service job runs as, written into that job's own definition by login-services (app-component.ts); never inherited from a starter",
   GATEWAY_LABEL:
     "the gateway's login-service label, written into the menu-bar helper's own job by its login-service declaration (menu-bar/login-services) for its Start button; never inherited from a starter",
+  SHIM_SIGNER:
+    "how the menu-bar helper signs the installed apps' shims with this machine's code-signing identity (infra/codesign bundleSigner, as JSON), written into the helper's own job by its login-service declaration (menu-bar/login-services); never inherited from a starter",
   PUBLIC_HOSTS:
     "a deployed site's public hostnames, comma-separated, written into the install's env file by `deploy converge`; the release launcher reads it and passes the gateway -public-hosts, so the gateway counts them as its own hosts (gateway/principal.go)",
   RELEASE_DIR:

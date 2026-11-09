@@ -23,13 +23,14 @@ export type {
   SigningIdentity,
 } from "./internal/identity";
 export {
+  bundleSigner,
   codeSignature,
   isSignedBy,
   signBinary,
   signBundle,
   signedByRequirement,
 } from "./internal/sign";
-export type { SignOutcome } from "./internal/sign";
+export type { BundleSigner, SignOutcome } from "./internal/sign";
 export { registerApp } from "./internal/launch-services";
 export { machineHost } from "./internal/host";
 export type {

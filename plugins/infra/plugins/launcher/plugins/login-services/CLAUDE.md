@@ -44,6 +44,11 @@ export default [
   (`referredLabels`) — `spec` is synchronous data in, data out, and never
   looks a binding up itself. A relabel changes those labels, so it renders a
   changed job and reloads the service.
+- `spec`'s fourth argument is this machine's bundle signer
+  (`infra/codesign`'s `bundleSigner`, through `MacosAppHost.signer()`; null
+  off macOS) — for a service that signs bundles of its own with the identity
+  `equin.app` is signed with (the menu-bar helper's app shims). Resolved by the
+  reconcile like the labels, so a new identity renders a changed job.
 - `start` (after the gateway): ensures `dep` from the MAIN checkout (building
   it in the foreground if needed), then reconciles the service under `start`
   (or `force` with `--force`).
