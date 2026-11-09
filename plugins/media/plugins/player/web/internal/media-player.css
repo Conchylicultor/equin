@@ -230,14 +230,28 @@ html[data-pip] .mp-fs {
   position: absolute;
   bottom: 26px;
   transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 0.1s ease;
+  pointer-events: none;
+}
+.mp-bubble-time {
   padding: 3px 8px;
   border-radius: 9999px;
   background: color-mix(in oklab, var(--popover) 88%, transparent);
   border: 1px solid var(--border);
   white-space: nowrap;
-  opacity: 0;
-  transition: opacity 0.1s ease;
-  pointer-events: none;
+}
+/* The frame under the pointer (video only): black until its first seek lands. */
+.mp-preview {
+  display: block;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--background);
+  object-fit: cover;
 }
 .mp-seek:hover .mp-bubble,
 .mp-seek[data-dragging] .mp-bubble {

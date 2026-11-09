@@ -34,6 +34,7 @@ export function Timeline({
         currentTime={currentTime}
         duration={duration}
         buffered={buffered}
+        video={el instanceof HTMLVideoElement ? el : null}
         onSeek={onSeek}
         onDragChange={onSeekDrag}
       />

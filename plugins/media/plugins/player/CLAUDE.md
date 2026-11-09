@@ -29,6 +29,11 @@ measure for measure, animations included. Plan:
   cursor hides with them). A big play button until the first play, and a **centre
   flash** for what a key or click just did (play, pause, skip, volume, speed,
   loop).
+- **Scrub preview** (video): hovering the seek bar shows the frame at the
+  time under the pointer above the time bubble, YouTube style — a second,
+  muted `<video>` on the same file (mounted on the first hover only), seeked
+  one seek at a time to the latest target (`internal/preview-seeker.ts`),
+  sized a quarter of the player (`previewSize`), kept inside the player.
 - **Audio**: the same pill as a static bar in the flow — no idle fade, no
   full screen, no picture in picture; settings = speed + loop. (A small
   extrapolation of the prototype, which designs video only.)

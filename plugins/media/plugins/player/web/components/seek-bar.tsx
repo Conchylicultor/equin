@@ -1,16 +1,23 @@
 import { useRef, useState, type PointerEvent } from "react";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { previewSize } from "../internal/geometry";
 import { clamp, formatTime, fractionAt, seekKeyTarget } from "../internal/math";
+import { SeekPreview } from "./seek-preview";
 
 export interface SeekBarProps {
   currentTime: number;
   duration: number;
   buffered: number;
+  /** The video playing, whose frames the hover bubble previews (none for audio). */
+  video: HTMLVideoElement | null;
   /** Move the playhead (seconds). */
   onSeek(time: number): void;
   /** A drag started (true) or ended (false): playback pauses through it. */
   onDragChange(dragging: boolean): void;
 }
+
+/** How far the preview bubble keeps from the player's edges. */
+const PLAYER_INSET = 8;
 
 function pct(f: number): string {
   return `${f * 100}%`;
@@ -19,7 +26,9 @@ function pct(f: number): string {
 /**
  * The seek bar: a 4px track (6px under the pointer) holding what is buffered,
  * where the pointer is, and what has played; a white thumb that scales in on
- * hover; the time under the pointer in a bubble above it. A primary-button
+ * hover; the time under the pointer in a bubble above it — over a video,
+ * with the frame at that time above it (`SeekPreview`), the bubble then kept
+ * inside the player rather than the bar. A primary-button
  * press seeks at once and drags with the pointer captured; the player pauses
  * through the drag and resumes after (`onDragChange`). The drag ends however
  * the capture ends — release, cancel, or the capture lost to the browser.
@@ -31,6 +40,7 @@ export function SeekBar({
   currentTime,
   duration,
   buffered,
+  video,
   onSeek,
   onDragChange,
 }: SeekBarProps) {
@@ -40,10 +50,13 @@ export function SeekBar({
   // The drag's truth for the handlers: a release fires pointerup then
   // lostpointercapture in one task, before `dragging` re-renders.
   const draggingNow = useRef(false);
-  const [hover, setHover] = useState<{ fraction: number; left: number }>({
-    fraction: 0,
-    left: 0,
-  });
+  const [hover, setHover] = useState<{
+    fraction: number;
+    left: number;
+    frame: { width: number; height: number } | null;
+  }>({ fraction: 0, left: 0, frame: null });
+  // The preview opens the file a second time: only once someone hovers.
+  const [armed, setArmed] = useState(false);
 
   const d = Number.isFinite(duration) ? duration : 0;
   const played = d > 0 ? currentTime / d : 0;
@@ -55,9 +68,24 @@ export function SeekBar({
 
   const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
     const f = fractionOf(e.clientX);
-    const w = e.currentTarget.getBoundingClientRect().width;
+    const bar = e.currentTarget.getBoundingClientRect();
     const bw = bubbleRef.current?.offsetWidth ?? 0;
-    setHover({ fraction: f, left: clamp(f * w, bw / 2, w - bw / 2) });
+    // A preview is wider than a short bar: it stays inside the player instead.
+    const player = video?.closest(".mp")?.getBoundingClientRect();
+    const lo = player ? player.left - bar.left + PLAYER_INSET : 0;
+    const hi = player ? player.right - bar.left - PLAYER_INSET : bar.width;
+    setHover({
+      fraction: f,
+      left: clamp(f * bar.width, lo + bw / 2, hi - bw / 2),
+      frame:
+        video && player
+          ? previewSize(
+              video.videoWidth / video.videoHeight,
+              player.width,
+              player.height,
+            )
+          : null,
+    });
     if (draggingNow.current) onSeek(f * d);
   };
 
@@ -79,6 +107,7 @@ export function SeekBar({
       aria-valuenow={Math.round(currentTime)}
       aria-valuetext={`${formatTime(currentTime)} of ${formatTime(d)}`}
       data-dragging={dragging || undefined}
+      onPointerEnter={() => setArmed(true)}
       onPointerMove={onPointerMove}
       onPointerDown={(e) => {
         if (e.button !== 0) return;
@@ -110,7 +139,15 @@ export function SeekBar({
         <div className="mp-thumb" style={{ left: pct(played) }} />
       </div>
       <div ref={bubbleRef} className="mp-bubble" style={{ left: hover.left }}>
-        <Text variant="caption" className="tabular-nums">
+        {armed && video && hover.frame && (
+          <SeekPreview
+            src={video.currentSrc}
+            time={hover.fraction * d}
+            width={hover.frame.width}
+            height={hover.frame.height}
+          />
+        )}
+        <Text variant="caption" className="mp-bubble-time tabular-nums">
           {formatTime(hover.fraction * d)}
         </Text>
       </div>

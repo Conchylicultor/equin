@@ -29,3 +29,29 @@ export const DIAL_WHEEL_SETTLE_MS = 120;
 export const PIP_WIDTH = 560;
 /** A pill button's tooltip waits this long under the pointer. */
 export const TOOLTIP_DELAY_MS = 350;
+
+/** The preview frame's size: a quarter of the player's width, in bounds. */
+const PREVIEW_MIN_W = 96;
+const PREVIEW_MAX_W = 192;
+/** …and never taller than this share of the player (a short or portrait video). */
+const PREVIEW_MAX_H_SHARE = 0.4;
+
+/**
+ * The preview frame's size inside a `width × height` player for a video of
+ * `aspect` (width over height), or null while the aspect is not known yet.
+ */
+export function previewSize(
+  aspect: number,
+  width: number,
+  height: number,
+): { width: number; height: number } | null {
+  if (!(aspect > 0)) return null;
+  let w = Math.min(PREVIEW_MAX_W, Math.max(PREVIEW_MIN_W, width / 4));
+  let h = w / aspect;
+  const maxH = height * PREVIEW_MAX_H_SHARE;
+  if (h > maxH) {
+    h = maxH;
+    w = h * aspect;
+  }
+  return { width: Math.round(w), height: Math.round(h) };
+}
