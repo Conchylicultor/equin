@@ -58,16 +58,16 @@ const DOUBLE_HINT: Record<Hand, string> = {
 };
 
 /**
- * Whether `pattern` still strikes exactly its rhythm's own necklace — same
- * pulse count, same effective onsets. A bead toggle (no rhythm), a rotation or
- * a step change each make it "Custom".
+ * Whether `pattern` is still its rhythm's own necklace, up to rotation — same
+ * pulse count, same onsets before the rotation. A bead toggle (no rhythm) or a
+ * step change make it "Custom"; a rotation keeps the rhythm ("Son ⟳2").
  */
 function matchesRhythm(pattern: RhythmPattern): boolean {
   if (pattern.presetId === null) return false;
   const native = patternFromPreset(pattern.presetId);
   if (native.subdivisions !== pattern.subdivisions) return false;
   const a = effectiveOnsets(native);
-  const b = effectiveOnsets(pattern);
+  const b = effectiveOnsets({ ...pattern, rotation: 0 });
   return a.length === b.length && a.every((o, i) => o === b[i]);
 }
 
@@ -91,7 +91,8 @@ export interface HandBlockProps {
  * or on), its name and its track's name. Below, while the hand is on: the
  * **Pattern** select (the figuration — *what*) and the **Rhythm** select (the
  * necklace — *when*; it snaps the ring to the rhythm's native length, and
- * reads "Custom" once the necklace no longer matches), then the hand's own
+ * reads "Custom" once the necklace no longer matches; a rotation keeps the
+ * rhythm, named with it — "Son ⟳2"), then the hand's own
  * dials: Octave, Voice-leading, Rotate, Steps and Octave doubling. A hand that
  * is off folds to its header.
  */
@@ -110,10 +111,18 @@ export function HandBlock({
   const rhythmValue =
     !custom && pattern.presetId !== null ? pattern.presetId : CUSTOM;
 
-  // base-ui resolves the collapsed trigger label from `items`, not the option list.
+  // base-ui resolves the collapsed trigger label from `items`, not the option
+  // list — so the selected rhythm's entry carries its rotation ("Son ⟳2").
   const rhythmItems: Record<string, string> = {
     ...(custom ? { [CUSTOM]: "Custom" } : {}),
-    ...Object.fromEntries(RHYTHMS.map((r) => [r.id, r.label])),
+    ...Object.fromEntries(
+      RHYTHMS.map((r) => [
+        r.id,
+        r.id === rhythmValue && pattern.rotation !== 0
+          ? `${r.label} ⟳${pattern.rotation}`
+          : r.label,
+      ]),
+    ),
   };
   const figurations = figurationsForHand(hand);
   const figurationItems: Record<string, string> = Object.fromEntries(

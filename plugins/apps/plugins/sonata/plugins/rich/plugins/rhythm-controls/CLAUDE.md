@@ -57,7 +57,8 @@ and a block chord struck once per cycle, restarting on every chord change.
   engine strikes nothing for it — a preset can be one-handed), the hand's name
   and its track's name. Below: a Pattern select (the figuration — *what*), a
   Rhythm select (the necklace — *when*; "Custom" once the necklace no longer
-  strikes its rhythm's own onsets), then a two-column grid of the hand's dials
+  strikes its rhythm's own onsets — a rotation keeps the rhythm, named with
+  it: "Son ⟳2"), then a two-column grid of the hand's dials
   — Octave, Voice-leading, Rotate, Steps (1–48), Octave doubling.
 - **A hand wears its track's colour.** Each hand plays on a generated track
   (`hands.ts`: right → `CHORD_TRACK` "Chords", left → `CHORD_BASS_TRACK`
