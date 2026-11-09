@@ -7,9 +7,10 @@ import {
   useOpenPane,
   usePaneStore,
 } from "@plugins/primitives/plugins/pane/web";
-import type {
-  Activation,
-  LinkTarget,
+import {
+  PLAIN_GESTURE,
+  type Activation,
+  type LinkTarget,
 } from "@plugins/primitives/plugins/link-gesture/core";
 import { fileExplorerApp } from "@plugins/apps/plugins/file-explorer/plugins/shell/core";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -146,7 +147,9 @@ function LegacyForward({
   const openPane = useOpenPane();
   const { fs, dir, open } = location;
   useEffect(() => {
-    locationTarget(openPane, { fs, dir, open }, { replace: true }).open();
+    locationTarget(openPane, { fs, dir, open }, { replace: true }).open(
+      PLAIN_GESTURE,
+    );
   }, [openPane, fs, dir, open]);
   return <Loading variant="rows" />;
 }
@@ -374,9 +377,9 @@ function FilesFolderBrowser({
       // this folder on its own.
       const here = go({ fs, dir, open: null });
       return {
-        open: () => {
+        open: (gesture) => {
           if (openedId !== undefined) {
-            store.close(filesPreviewPane._internal, openedId);
+            store.close(filesPreviewPane._internal, openedId, gesture);
           }
         },
         href: here.href,
