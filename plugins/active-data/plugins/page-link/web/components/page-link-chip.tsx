@@ -9,8 +9,10 @@ import {
   useBlockTargetLink,
   useBlockTargetTitle,
 } from "@plugins/apps/plugins/pages/plugins/page-tree/web";
-import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
+import {
+  paneTarget,
+  type PaneTarget,
+} from "@plugins/primitives/plugins/pane/web";
 import type { IdReferentState } from "@plugins/ids/web";
 
 /**
@@ -85,16 +87,14 @@ export function useBlockReferent(blockId: string): IdReferentState {
 }
 
 /**
- * The link to what a block id names: a page id its page, a content-block id
- * the block view (that block as a page of its own), as a column beside the
- * surface holding the id. Which one is decided by the id's page row; an id
+ * The pane of what a block id names: a page id its page, a content-block id
+ * the block view (that block as a page of its own). Which one is decided by the id's page row; an id
  * that is no page (or not read yet) is a content block, whose view resolves
  * its own page.
  */
-export function useBlockTargetById(blockId: string): LinkTarget {
+export function useBlockPaneById(blockId: string): PaneTarget {
   const isPage = rowOrStale(useLive(pagesTree, { id: blockId })) !== undefined;
-  const openPane = useOpenPane();
   return isPage
-    ? openPane.to(pageDetailPane, { pageId: blockId }, { mode: "push" })
-    : openPane.to(blockDetailPane, { blockId }, { mode: "push" });
+    ? paneTarget(pageDetailPane, { pageId: blockId })
+    : paneTarget(blockDetailPane, { blockId });
 }

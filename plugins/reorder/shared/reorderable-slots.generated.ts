@@ -120,6 +120,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "apps.sonata.library.notice", pluginId: "apps.sonata.library", configName: "notice" },
   { slotId: "apps.sonata.library.sonata-library.actions", pluginId: "apps.sonata.library", configName: "sonata-library.actions" },
   { slotId: "apps.sonata.library.sonata-player.actions", pluginId: "apps.sonata.library", configName: "sonata-player.actions" },
+  { slotId: "apps.sonata.library.sonata-song-peek.actions", pluginId: "apps.sonata.library", configName: "sonata-song-peek.actions" },
   { slotId: "apps.sonata.library.song-actions", pluginId: "apps.sonata.library", configName: "song-actions" },
   { slotId: "apps.sonata.player.transport", pluginId: "apps.sonata.player", configName: "transport" },
   { slotId: "apps.sonata.progress.scrubber.describe", pluginId: "apps.sonata.progress.scrubber", configName: "describe" },

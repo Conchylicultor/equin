@@ -4,7 +4,7 @@ import { taskIdKind } from "@plugins/tasks/plugins/task-ids/core";
 import { TASK_CHIP_SURFACES } from "../core";
 import {
   TaskLinkChip,
-  useTaskTarget,
+  useTaskPane,
   useTaskReferent,
 } from "./components/task-link-chip";
 
@@ -18,7 +18,7 @@ export default {
       presenter: {
         kind: taskIdKind,
         useReferent: useTaskReferent,
-        useTarget: useTaskTarget,
+        usePane: useTaskPane,
       },
       surfaces: TASK_CHIP_SURFACES,
       component: TaskLinkChip,

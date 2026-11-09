@@ -55,7 +55,8 @@ read-surface chip for a bare id written anywhere active-data renders.
     - `network/live.useLive`
     - `page/editor.PageIcon`
     - `primitives/css/link-chip.LinkChip`
-    - `primitives/pane.useOpenPane`
+    - `primitives/pane.paneTarget`
+    - `primitives/pane.PaneTarget`
   - Exports (values): `PageLinkChip`
 - Server:
   - Contributes:

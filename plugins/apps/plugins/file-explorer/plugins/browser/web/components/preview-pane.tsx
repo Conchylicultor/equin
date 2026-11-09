@@ -23,6 +23,7 @@ import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-
 import { FileTypeIcon } from "@plugins/primitives/plugins/file-type/web";
 import {
   FileContent,
+  FileHeaderActions,
   FileTabs,
   useFileRenderers,
   useArchiveMembership,
@@ -113,6 +114,7 @@ export function PreviewPane({
               <PreviewMeta fs={fs} path={path} home={home} />
             </Stack>
           </Fill>
+          <FileHeaderActions attach={renderers.header.attach} />
           {renderers.resolved.length > 1 && <FileTabs {...renderers} />}
           {/* Only the computer's disk hands a file to its apps. No button for
               an archive member (nothing on disk to open) or when there is no
@@ -146,7 +148,7 @@ export function PreviewPane({
             // The code renderer is its own scroll box, sized to this height.
             className="h-full"
           >
-            <FileContent file={file} active={renderers.active} />
+            <FileContent file={file} renderers={renderers} />
           </Theme>
         </Scroll>
       }

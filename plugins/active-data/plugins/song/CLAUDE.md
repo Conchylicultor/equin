@@ -14,7 +14,7 @@ shape and stay plain text.
 
 ## Plugin reference
 
-- Description: Renders a bare `song-<id>` in a transcript or a page as the generic id chip (the song's title) that opens it in Sonata's player, and presents the song id kind to the id registry. The song id chip's server half (idChipServer): resolves a `song-<id>` to the song's title for the id registry and for model-read text, and registers the page-editor inline token so a page block holding the chip stays agent-readable.
+- Description: Renders a bare `song-<id>` in a transcript or a page as the generic id chip (the song's title) that opens it in a peek beside the text — Sonata's mini player, whose Expand is the full player — and presents the song id kind to the id registry. The song id chip's server half (idChipServer): resolves a `song-<id>` to the song's title for the id registry and for model-read text, and registers the page-editor inline token so a page block holding the chip stays agent-readable.
 - Web:
   - Contributes:
     - `IdKinds.Presenter` "song"
@@ -22,8 +22,10 @@ shape and stay plain text.
   - Uses:
     - `active-data/id-chip.idChip`
     - `active-data/id-chip.rowReferent`
-    - `apps-core/tabs.useAppLink`
+    - `apps/sonata/library.songPeekPane`
     - `network/live.useLive`
+    - `primitives/pane.paneTarget`
+    - `primitives/pane.PaneTarget`
 - Server:
   - Contributes:
     - `resource.declare` "song-chip.referents:rows"

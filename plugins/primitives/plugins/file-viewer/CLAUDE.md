@@ -87,6 +87,8 @@ every file's bytes, so PDF, media and images preview wherever the file lives
     - `ResolvedRenderer`
   - Exports (values):
     - `FileContent`
+    - `FileHeaderAction`
+    - `FileHeaderActions`
     - `FileTabs`
     - `FileView`
     - `FileViewer`

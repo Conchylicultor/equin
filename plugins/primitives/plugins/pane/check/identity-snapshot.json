@@ -691,6 +691,12 @@
       "parent": null
     },
     {
+      "paneId": "sonata-song-peek",
+      "segment": "song-peek/:songId",
+      "appIndex": false,
+      "parent": null
+    },
+    {
       "paneId": "stats",
       "segment": "stats",
       "appIndex": false,

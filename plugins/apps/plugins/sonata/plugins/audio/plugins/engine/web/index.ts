@@ -1,6 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { SonataSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
-import { sonataPlayerPane } from "@plugins/apps/plugins/sonata/plugins/library/web";
+import {
+  sonataPlayerPane,
+  songPeekPane,
+} from "@plugins/apps/plugins/sonata/plugins/library/web";
 import { AudioEngine } from "./components/audio-engine";
 import { AudioProvider } from "./components/audio-provider";
 import { VolumeControl } from "./components/volume-control";
@@ -14,7 +17,7 @@ export { startScheduling, type ScheduleHandle } from "./scheduler";
 
 export default {
   description:
-    "Sonata audio engine: schedules the Score's notes against the Web Audio clock on play, routing each note to its track's resolved instrument, with master volume in the player pane's header.",
+    "Sonata audio engine: schedules the Score's notes against the Web Audio clock on play, routing each note to its track's resolved instrument, with master volume in the player pane's header (and the song peek's).",
   contributions: [
     // Per-session audio store, folded above the whole session subtree so the
     // engine effect and the volume control (different slot branches) share one
@@ -26,5 +29,6 @@ export default {
     // The master-volume slider, pinned into the player pane's header; owns no
     // audio.
     sonataPlayerPane.Actions({ id: "volume", component: VolumeControl }),
+    songPeekPane.Actions({ id: "volume", component: VolumeControl }),
   ],
 } satisfies PluginDefinition;

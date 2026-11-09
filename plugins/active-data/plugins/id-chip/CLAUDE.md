@@ -5,7 +5,7 @@ family spreads into its barrels:
 
 ```ts
 // web/index.ts
-contributions: [...idChip({ presenter: { kind, icon?, useReferent, useTarget }, surfaces, component? })]
+contributions: [...idChip({ presenter: { kind, icon?, useReferent, usePane }, surfaces, component? })]
 // server/index.ts
 contributions: [...idChipServer({ kind, surfaces, resolve })]
 ```
@@ -14,7 +14,9 @@ contributions: [...idChipServer({ kind, surfaces, resolve })]
   — chip id = the kind's prefix, pattern = `idChipPattern(kind)`
   (`inlineBoundary(kind.pattern)`), `modelText: "resolved"`. Without `component`
   the chip is the generic one: the referent's title led by the kind's icon,
-  opening via `useTarget` (a link: ⌘/middle-click opens a browser tab); every not-found arm renders the raw id as written.
+  opening `usePane`'s pane as a column beside the text through
+  `usePaneToggle` (a second click closes it; a link: ⌘/middle-click opens a
+  browser tab); every not-found arm renders the raw id as written.
 - `idChipServer` contributes the kind's `IdKinds.Referent`, the
   `InlineTokenReferentSource` over the same pattern (tag = the kind's label), and
   — when `surfaces` includes `"document"` — the `Editor.InlineToken` (markdown
@@ -53,6 +55,7 @@ derives from the kind; nothing here names a family.
     - `ids.IdKinds`
     - `ids.IdPresenter`
     - `primitives/css/link-chip.LinkChip`
+    - `primitives/pane.usePaneToggle`
     - `primitives/text-editor/inline-chip.inlineChip`
     - `primitives/text-editor/inline-chip.InlineChip`
     - `ui/icons.Icon`

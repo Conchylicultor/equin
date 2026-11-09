@@ -1,6 +1,6 @@
 // Verifies the MIDI file preview's hand-off end to end: the preview renders for
 // a host .mid file (no Code tab) and starts playing on its own, and "Open in
-// Sonata" lands on /sonata/song/<id>/<bar> — the preview playhead's bar — with
+// Sonata" lands on /sonata/song/<id>;bar=<bar> — the preview playhead's bar — with
 // Sonata's playhead parked at that bar's start. A second press from a fresh
 // preview, rewound to the start, lands on the SAME song id (the import is
 // idempotent by content) with no bar, so the library gains no duplicate.
@@ -29,7 +29,7 @@ const OUT = arg("out", "/tmp/midi-open");
 const PREVIEW_PATH = `/files/at/${encodeURIComponent(
   FILE.slice(0, FILE.lastIndexOf("/")),
 )}/${encodeURIComponent(FILE.slice(FILE.lastIndexOf("/") + 1))}`;
-const SONG_URL = /\/sonata\/song\/([^/?#]+)(?:\/(\d+))?$/;
+const SONG_URL = /\/sonata\/song\/([^/?#;]+)(?:;bar=(\d+))?$/;
 // The deferred plugin tier can take a while on a cold page.
 const RENDER_TIMEOUT_MS = 45_000;
 
@@ -44,7 +44,7 @@ async function openFromPreview(
   park: "mid" | "start",
 ): Promise<{ songId: string; bar: number | null; parkedBeat: number }> {
   await boot(page, pathUrl(PREVIEW_PATH), {
-    marker: 'button:has-text("Open in Sonata")',
+    marker: 'button[aria-label="Open in Sonata"]',
     timeoutMs: RENDER_TIMEOUT_MS,
   });
   const slider = page.getByRole("slider", { name: "Song position" });
@@ -78,7 +78,7 @@ await withBrowser(async (h) => {
   const { page } = await h.session();
 
   await boot(page, pathUrl(PREVIEW_PATH), {
-    marker: 'button:has-text("Open in Sonata")',
+    marker: 'button[aria-label="Open in Sonata"]',
     timeoutMs: RENDER_TIMEOUT_MS,
   });
   r.eq(

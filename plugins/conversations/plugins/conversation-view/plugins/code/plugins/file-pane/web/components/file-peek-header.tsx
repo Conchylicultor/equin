@@ -8,6 +8,7 @@ import {
 } from "@plugins/primitives/plugins/path-bar/web";
 import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
 import {
+  FileHeaderActions,
   FileTabs,
   type FileRenderersHandle,
 } from "@plugins/primitives/plugins/file-viewer/web";
@@ -139,9 +140,18 @@ function HostPathBar({
   );
 }
 
-/** The renderer tabs (Diff / Raw / Preview …) as a file-peek header item. */
+/**
+ * The active renderer's own header actions (the MIDI preview's Open in
+ * Sonata), then the renderer tabs (Diff / Raw / Preview …), as a file-peek
+ * header item.
+ */
 export function FilePeekTabs() {
   const { renderers } = useFilePeekHeader();
   if (renderers === null) return null;
-  return <FileTabs {...renderers} />;
+  return (
+    <>
+      <FileHeaderActions attach={renderers.header.attach} />
+      <FileTabs {...renderers} />
+    </>
+  );
 }

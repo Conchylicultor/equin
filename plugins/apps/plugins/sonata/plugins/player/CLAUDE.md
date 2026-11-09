@@ -131,13 +131,13 @@ the scope, so the player cannot import the shell).
     - `apps/sonata/controls`
     - `apps/sonata/library`
     - `apps/sonata/lyrics-hud`
+    - `apps/sonata/mini-player`
     - `apps/sonata/notation`
     - `apps/sonata/piano-roll`
     - `apps/sonata/progress/loop`
     - `apps/sonata/progress/scrubber`
     - `apps/sonata/shell`
     - `apps/sonata/songsheet`
-    - `apps/sonata/sources/midi/file-preview`
     - `apps/sonata/transport-bar`
     - `apps/sonata/view-options`
 

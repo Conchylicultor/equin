@@ -1,7 +1,9 @@
 import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
+import {
+  paneTarget,
+  type PaneTarget,
+} from "@plugins/primitives/plugins/pane/web";
 import { prototypesList } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { prototypeDetailPane } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
 import type { IdReferentState } from "@plugins/ids/web";
@@ -26,10 +28,9 @@ export function usePrototypeReferent(id: string): IdReferentState {
 }
 
 /**
- * The link to the mock: a column to the RIGHT of the surface holding the id
- * (`push`), so the conversation stays beside it: `/agents/c/<convId>/proto/proto-…`.
+ * The mock's pane: a column to the RIGHT of the surface holding the id, so the
+ * conversation stays beside it: `/agents/c/<convId>/proto/proto-…`.
  */
-export function usePrototypeTarget(id: string): LinkTarget {
-  const openPane = useOpenPane();
-  return openPane.to(prototypeDetailPane, { name: id }, { mode: "push" });
+export function usePrototypePane(id: string): PaneTarget {
+  return paneTarget(prototypeDetailPane, { name: id });
 }

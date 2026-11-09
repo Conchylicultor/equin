@@ -31,8 +31,8 @@
     - `conversationPane.Actions` ← `conversations.conversation-view.track`
     - `conversationPane.Actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "conversation"
-  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/pane` ×5
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×7
     - `network/live` ×2
     - `conversations/conversation-view/action-bar.ActionBarView`
     - `conversations/conversation-view/jsonl-viewer.JsonlPane`

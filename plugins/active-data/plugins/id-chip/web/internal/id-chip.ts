@@ -21,7 +21,7 @@ type ChipComponent = ComponentType<{
  *
  * ```ts
  * contributions: [
- *   ...idChip({ presenter: { kind: taskIdKind, useReferent, useTarget }, surfaces: ["transcript", "document"] }),
+ *   ...idChip({ presenter: { kind: taskIdKind, useReferent, usePane }, surfaces: ["transcript", "document"] }),
  * ]
  * ```
  *
@@ -37,8 +37,8 @@ type ChipComponent = ComponentType<{
  * the kind's prefix, and the model reads a resolved id (`modelText:
  * "resolved"`), whose server half is `idChipServer`.
  *
- * `component` overrides the generic chip (title + icon, opening via
- * `useTarget`) for a family with richer chrome (a status dot, a count).
+ * `component` overrides the generic chip (title + icon, opening
+ * `usePane`'s pane) for a family with richer chrome (a status dot, a count).
  *
  * `hint` is a first-meeting tip on the generic chip (its anchor is the
  * chip's own): declared to the hints engine here, and requested by every

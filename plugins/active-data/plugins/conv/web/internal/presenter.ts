@@ -1,8 +1,11 @@
 import { useLive } from "@plugins/network/plugins/live/web";
 import { conversationHistory } from "@plugins/conversations/plugins/all-conversations/core";
-import { useConversationOpener } from "@plugins/conversations/plugins/conversation-view/web";
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import type { IdReferentState } from "@plugins/ids/web";
-import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
+import {
+  paneTarget,
+  type PaneTarget,
+} from "@plugins/primitives/plugins/pane/web";
 
 /** A conversation is called by its own title, else its task's (a fresh one has none yet). */
 function titleOf(row: { id: string; title: string | null; taskTitle: string }) {
@@ -28,8 +31,7 @@ export function useConversationReferent(id: string): IdReferentState {
     : { status: "missing" };
 }
 
-/** The link that toggles a conversation's column beside the surface holding its id. */
-export function useConversationTarget(id: string): LinkTarget {
-  const opener = useConversationOpener();
-  return opener.toggle(id);
+/** A conversation's column. */
+export function useConversationPane(id: string): PaneTarget {
+  return paneTarget(conversationPane, { convId: id });
 }

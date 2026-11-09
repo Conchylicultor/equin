@@ -676,7 +676,7 @@ with an empty route.
   - Slots: `Pane.Register`
   - Slot contributors: 95 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `Pane.Register` ×95
-  - Contributes: 127 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Contributes: 128 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `SlotRender.ListMiddleware`
     - `WebsiteHeader` "title" → `PaneTitleItem`
     - `accountPane.Actions` "title" → `PaneTitleItem`
@@ -792,6 +792,7 @@ with an empty route.
     - `slowEventsPane.Actions` "title" → `PaneTitleItem`
     - `sonataLibraryPane.Actions` "title" → `PaneTitleItem`
     - `sonataPlayerPane.Actions` "title" → `PaneTitleItem`
+    - `songPeekPane.Actions` "title" → `PaneTitleItem`
     - `start.actions` "title" → `PaneTitleItem`
     - `statsPane.Actions` "title" → `PaneTitleItem`
     - `systemAgentDetailPane.Actions` "title" → `PaneTitleItem`
@@ -863,6 +864,7 @@ with an empty route.
     - `PaneScrollProps`
     - `PaneSlot`
     - `PaneStore`
+    - `PaneTarget`
     - `PaneTitleHook`
     - `PaneTitleSpec`
     - `PaneToggleOpts`
@@ -888,6 +890,7 @@ with an empty route.
     - `PaneBasePathContext`
     - `PaneBox`
     - `PaneChrome`
+    - `PaneEndControls`
     - `PaneHeaderCell`
     - `PaneIconAction`
     - `PaneInstanceContext`
@@ -900,6 +903,7 @@ with an empty route.
     - `PaneStoreContext`
     - `PaneSurfaceAppContext`
     - `PaneSurfaceProvider`
+    - `paneTarget`
     - `paneThemeScope`
     - `parseUrl`
     - `peekBasePath`
@@ -922,6 +926,7 @@ with an empty route.
     - `usePaneMatch`
     - `usePaneStore`
     - `usePaneTitle`
+    - `usePaneToggle`
     - `usePaneViewParam`
     - `usePathname`
     - `useRenderSync`
@@ -942,11 +947,11 @@ with an empty route.
     - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-md`
     - `ui/tokens/shape --spacing`
-  - Imported by: 193 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 196 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×71
     - `conversations` ×32
     - `debug` ×27
-    - `active-data` ×10
+    - `active-data` ×13
     - `tasks` ×10
     - `apps-core` ×6
     - `plugin-meta` ×6

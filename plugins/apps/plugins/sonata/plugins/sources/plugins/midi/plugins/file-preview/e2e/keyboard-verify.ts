@@ -25,7 +25,7 @@ const OUT = arg("out", "/tmp/midi-keys");
 const PREVIEW_PATH = `/files/at/${encodeURIComponent(
   FILE.slice(0, FILE.lastIndexOf("/")),
 )}/${encodeURIComponent(FILE.slice(FILE.lastIndexOf("/") + 1))}`;
-const SONG_URL = /\/sonata\/song\/[^/?#]+(?:\/\d+)?$/;
+const SONG_URL = /\/sonata\/song\/[^/?#;]+(?:;bar=\d+)?$/;
 // The deferred plugin tier can take a while on a cold page.
 const RENDER_TIMEOUT_MS = 45_000;
 
@@ -80,7 +80,7 @@ await withBrowser(async (h) => {
   const { page } = await h.session();
 
   await boot(page, pathUrl(PREVIEW_PATH), {
-    marker: 'button:has-text("Open in Sonata")',
+    marker: 'button[aria-label="Open in Sonata"]',
     timeoutMs: RENDER_TIMEOUT_MS,
   });
   // The preview auto-plays once the song composes.

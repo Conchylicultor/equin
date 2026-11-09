@@ -1,7 +1,7 @@
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import type { IconRef } from "@plugins/ui/plugins/icons/core";
-import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
+import type { PaneTarget } from "@plugins/primitives/plugins/pane/web";
 import { kindLabel, type AnyIdKind } from "../core";
 
 /**
@@ -28,12 +28,14 @@ export interface IdPresenter {
   /** The referent's title, or that it does not exist (or is still loading). */
   useReferent: Hook<(id: string) => IdReferentState>;
   /**
-   * The link to the referent (a pane, beside the surface holding the id): its
-   * plain open, and the URL a ⌘/middle-click opens in a new browser tab. Per
-   * id, like `useReferent`, so a target that depends on the referent (an
-   * attempt opens its first conversation) reads that one row.
+   * The pane that shows the referent — always a column beside the surface
+   * holding the id, never another app's full surface or a fresh route: the
+   * chip opens it with `usePaneToggle` (a second click closes it). A referent
+   * with a fuller view elsewhere declares it as its pane's `expand`. Per id,
+   * like `useReferent`, so a pane that depends on the referent (an attempt
+   * opens its first conversation) reads that one row.
    */
-  useTarget: Hook<(id: string) => LinkTarget>;
+  usePane: Hook<(id: string) => PaneTarget>;
 }
 
 /**

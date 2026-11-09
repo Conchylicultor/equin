@@ -1572,7 +1572,7 @@ function useStoreOrLive(): PaneStore {
  * the user has already left. Inside a surface the context store wins and this
  * is identical to reading it directly.
  */
-function useStoreResolver(): () => PaneStore {
+export function useStoreResolver(): () => PaneStore {
   const store = useContext(PaneStoreContext);
   return useCallback(() => store ?? liveStoreSink.peek(), [store]);
 }
@@ -2309,6 +2309,26 @@ export const PaneMatchContext = createContext<PaneMatch | null | undefined>(
 export const PaneInstanceContext = createContext<number | undefined>(undefined);
 
 /**
+ * The first entry for `pane` AFTER the caller's own pane in the chain — what
+ * the caller opened (`pane.useOpenedHere()`'s answer, for a pane known only at
+ * runtime). `null` outside every surface (`match` absent): nothing opened there
+ * is "here". A caller in no pane instance (or one not in the match) reads the
+ * whole chain as after it — right for chrome rendered outside every pane.
+ */
+export function openedHereEntry(
+  match: PaneMatch | null | undefined,
+  selfInstanceId: number | undefined,
+  pane: PaneInternal,
+): MatchEntry | null {
+  if (!match) return null;
+  const selfIndex =
+    selfInstanceId === undefined
+      ? -1
+      : match.panes.findIndex((e) => e.instanceId === selfInstanceId);
+  return match.panes.slice(selfIndex + 1).find((e) => e.pane === pane) ?? null;
+}
+
+/**
  * The read of {@link PaneMatchContext}. Turns "rendered outside every pane
  * surface" into a loud throw and returns the honest `PaneMatch | null` for
  * everything inside one. The one exception is `pane.useOpenedHere()`, which
@@ -2846,19 +2866,11 @@ function makePaneObject(
     // action bar. There it has no route and no position — its opens are
     // caller-less pushes into whichever tab is focused at click time — so
     // nothing it opened is "here": `null` is the true answer, not a stand-in.
-    const match = useContext(PaneMatchContext);
-    const selfInstanceId = useContext(PaneInstanceContext);
-    if (!match) return null;
-    // Where the caller sits in the chain. `-1` — no pane instance around us, or
-    // one that is somehow not in the match — reads the whole chain as "after
-    // me", which is the right answer for chrome rendered outside every pane.
-    const selfIndex =
-      selfInstanceId === undefined
-        ? -1
-        : match.panes.findIndex((e) => e.instanceId === selfInstanceId);
-    const entry = match.panes
-      .slice(selfIndex + 1)
-      .find((e) => e.pane === internal);
+    const entry = openedHereEntry(
+      useContext(PaneMatchContext),
+      useContext(PaneInstanceContext),
+      internal,
+    );
     return entry ? toRouteEntry(entry) : null;
   }
 

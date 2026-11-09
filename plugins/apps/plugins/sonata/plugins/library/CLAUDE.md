@@ -274,10 +274,12 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `Library.Notice`
     - `sonataLibraryPane.Actions`
     - `sonataPlayerPane.Actions`
-  - Slot contributors: 21 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `songPeekPane.Actions`
+  - Slot contributors: 24 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `sonataPlayerPane.Actions` ×7
     - `Library.Cover` ×5
     - `Library.Source` ×5
+    - `songPeekPane.Actions` ×3
     - `sonataLibraryPane.Actions` ×2
     - `Library.Notice` ← `apps.sonata.sources.midi.folders`
     - `Library.SongActions` ← `apps.sonata.library`
@@ -292,8 +294,9 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `Library.SongActions` "delete" → `DeleteSongAction`
     - `Pane.Register` "sonata-library"
     - `Pane.Register` "sonata-player"
-  - Uses: 95 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/pane` ×13
+    - `Pane.Register` "sonata-song-peek"
+  - Uses: 98 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×15
     - `primitives/data-view` ×7
     - `apps/sonata/shell` ×6
     - `network/live/live-state` ×6
@@ -307,6 +310,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `primitives/css/layer` ×2
     - `primitives/css/spacing` ×2
     - `primitives/latest-ref` ×2
+    - `apps/sonata/mini-player.SonataMiniPlayer`
     - `apps/sonata/primitives/glass.Glass`
     - `apps/sonata/session.useSession`
     - `fullscreen.FullscreenButton`
@@ -346,6 +350,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `sonataLibraryPane`
     - `sonataPlayerPane`
     - `sonataSongLink`
+    - `songPeekPane`
     - `useCurrentSong`
     - `useSectionPaneCollapsed`
     - `useSongLink`

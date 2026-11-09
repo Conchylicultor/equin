@@ -1,6 +1,8 @@
 import { useLive } from "@plugins/network/plugins/live/web";
-import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
+import {
+  paneTarget,
+  type PaneTarget,
+} from "@plugins/primitives/plugins/pane/web";
 import { rowReferent } from "@plugins/active-data/plugins/id-chip/web";
 import { reportsList } from "@plugins/reports/core";
 import { reportDetailPane } from "@plugins/debug/plugins/reports/web";
@@ -14,8 +16,7 @@ export function useReportReferent(id: string): IdReferentState {
   );
 }
 
-/** The link to the report's detail pane beside the surface holding the id (`push`). */
-export function useReportTarget(id: string): LinkTarget {
-  const openPane = useOpenPane();
-  return openPane.to(reportDetailPane, { reportId: id }, { mode: "push" });
+/** The report's detail pane. */
+export function useReportPane(id: string): PaneTarget {
+  return paneTarget(reportDetailPane, { reportId: id });
 }

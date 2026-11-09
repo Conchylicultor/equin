@@ -75,6 +75,7 @@ export type {
   PaneStore,
   PaneHeaderItem,
 } from "./pane";
+export { paneTarget, usePaneToggle, type PaneTarget } from "./pane-target";
 export { resolveFrom, resolveRow } from "./resolve";
 export type { ResolveResult } from "./resolve";
 export { setHistoryAdapter } from "./history-sink";
@@ -91,7 +92,7 @@ export type {
   PaneHistoryState,
   SerializedSlot,
 } from "./history-sink";
-export { PaneChrome } from "./components/pane-chrome";
+export { PaneChrome, PaneEndControls } from "./components/pane-chrome";
 export { PaneHeaderCell } from "./components/pane-header-item";
 export type {
   PaneHeaderAction,

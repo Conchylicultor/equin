@@ -4,13 +4,15 @@
 
 ## Plugin reference
 
-- Description: Sonata transport controls: the play/pause button at the head of the player's transport strip (togglePlay, count-in aware) and the playback-speed jog wheel in the player header, folded to its readout at rest.
+- Description: Sonata transport controls: the play/pause button at the head of the player's transport strip (togglePlay, count-in aware) and the playback-speed jog wheel in the player header (and the song peek's), folded to its readout at rest.
 - Web:
   - Contributes:
     - `SonataPlayer.Transport` "play" → `PlayButton`
     - `sonataPlayerPane.Actions` "speed" → `TempoWheel`
+    - `songPeekPane.Actions` "speed" → `TempoWheel`
   - Uses:
     - `apps/sonata/library.sonataPlayerPane`
+    - `apps/sonata/library.songPeekPane`
     - `apps/sonata/player.SonataPlayer`
     - `apps/sonata/primitives/inertial-drag.useInertialDrag`
     - `apps/sonata/primitives/jog-wheel.JogWheel`

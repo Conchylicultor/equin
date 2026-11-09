@@ -1003,6 +1003,10 @@
       "name": "@equin/plugin-apps-sonata-lyrics-hud",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/sonata/plugins/mini-player": {
+      "name": "@equin/plugin-apps-sonata-mini-player",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/sonata/plugins/notation": {
       "name": "@equin/plugin-apps-sonata-notation",
       "version": "0.0.1",
@@ -7938,6 +7942,8 @@
     "@equin/plugin-apps-sonata-lyric-line": ["@equin/plugin-apps-sonata-lyric-line@workspace:plugins/apps/plugins/sonata/plugins/lyric-line"],
 
     "@equin/plugin-apps-sonata-lyrics-hud": ["@equin/plugin-apps-sonata-lyrics-hud@workspace:plugins/apps/plugins/sonata/plugins/lyrics-hud"],
+
+    "@equin/plugin-apps-sonata-mini-player": ["@equin/plugin-apps-sonata-mini-player@workspace:plugins/apps/plugins/sonata/plugins/mini-player"],
 
     "@equin/plugin-apps-sonata-notation": ["@equin/plugin-apps-sonata-notation@workspace:plugins/apps/plugins/sonata/plugins/notation"],
 

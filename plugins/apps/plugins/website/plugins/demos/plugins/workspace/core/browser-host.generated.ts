@@ -125,6 +125,7 @@ export const browserHost = {
     "apps.sonata.look",
     "apps.sonata.lyric-line",
     "apps.sonata.lyrics-hud",
+    "apps.sonata.mini-player",
     "apps.sonata.notation",
     "apps.sonata.pedal.lane",
     "apps.sonata.piano-keyboard",

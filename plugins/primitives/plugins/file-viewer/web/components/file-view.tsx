@@ -8,6 +8,7 @@ import type { FileLocation } from "@plugins/infra/plugins/paths/plugins/file-sys
 import type { FileViewerGit } from "../../core";
 import { FileContent } from "./file-content";
 import { FileTabs } from "./file-tabs";
+import { FileHeaderActions } from "./file-header-actions";
 import { useFileRenderers } from "./use-file-renderers";
 
 /**
@@ -38,12 +39,13 @@ export function FileView({
           <Fill>
             <FilepathBreadcrumb path={file.path} />
           </Fill>
+          <FileHeaderActions attach={renderers.header.attach} />
           <FileTabs {...renderers} />
         </Text>
       }
       body={
         <Scroll axis="both" className="h-full">
-          <FileContent file={file} line={line} active={renderers.active} />
+          <FileContent file={file} line={line} renderers={renderers} />
         </Scroll>
       }
       scrollBody={false}

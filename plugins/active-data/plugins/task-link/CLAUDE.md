@@ -34,7 +34,9 @@ which renders `<task>prompt</task>` *block* tags as editable creation cards.
     - `network/live/live-state.matchResource`
     - `primitives/css/link-chip.LinkChip`
     - `primitives/css/status-dot.StatusDot`
-    - `primitives/pane.useOpenPane`
+    - `primitives/pane.paneTarget`
+    - `primitives/pane.PaneTarget`
+    - `primitives/pane.usePaneToggle`
     - `tasks/task-detail.taskDetailPane`
     - `tasks/task-status.STATUS_META`
   - Exports (values): `TaskLinkChip`

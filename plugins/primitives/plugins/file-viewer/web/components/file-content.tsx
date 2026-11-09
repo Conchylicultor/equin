@@ -3,19 +3,26 @@ import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import type { FileLocation } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
-import { FileViewer, type ResolvedRenderer } from "../slots";
+import { FileViewer } from "../slots";
+import { FileHeaderActionsContext } from "./file-header-actions";
+import type { FileRenderersHandle } from "./use-file-renderers";
 import { ReadGate } from "./unreadable-file";
 
-/** The active renderer's body for one file (no header, no scroll container). */
+/**
+ * The active renderer's body for one file (no header, no scroll container),
+ * off the host's renderers handle — which also says where in the host's header
+ * the renderer's actions go (`FileHeaderActions`).
+ */
 export function FileContent({
   file,
   line,
-  active,
+  renderers,
 }: {
   file: FileLocation;
   line?: number;
-  active: ResolvedRenderer | null;
+  renderers: FileRenderersHandle;
 }) {
+  const { active } = renderers;
   if (!active) {
     return <Placeholder>No renderer available for this file.</Placeholder>;
   }
@@ -24,6 +31,7 @@ export function FileContent({
   // it still routes through the error-boundary middleware chain.
   const body = (
     <ContentScope>
+      <FileHeaderActionsContext.Provider value={renderers.header.element}>
       {renderIsolated(
         FileViewer.Renderer,
         active.contribution as unknown as Contribution,
@@ -35,6 +43,7 @@ export function FileContent({
             : {}),
         },
       )}
+      </FileHeaderActionsContext.Provider>
     </ContentScope>
   );
   // A file that is not there, or that the account cannot read, says why,

@@ -9,7 +9,7 @@ import { DeleteSongAction } from "./components/delete-song-action";
 import { Library } from "./slots";
 import { IdKinds } from "@plugins/ids/web";
 import { songIdKind } from "../core";
-import { sonataLibraryPane, sonataPlayerPane } from "./panes";
+import { sonataLibraryPane, sonataPlayerPane, songPeekPane } from "./panes";
 import { songPresentation } from "./internal/presentation";
 import { BackgroundPlayProvider } from "./use-playback";
 
@@ -23,7 +23,12 @@ export type {
 // The player pane is the OWNER of the player's header slot
 // (`sonataPlayerPane.Actions`), so every plugin contributing a control to that
 // header — transport, volume, metronome, transpose, … — reaches it through here.
-export { sonataLibraryPane, sonataPlayerPane, sonataSongLink } from "./panes";
+export {
+  sonataLibraryPane,
+  sonataPlayerPane,
+  sonataSongLink,
+  songPeekPane,
+} from "./panes";
 export { useSongLink } from "./hooks";
 export { openSongImperative } from "./open-song";
 export { useCurrentSong } from "./use-current-song";
@@ -63,10 +68,12 @@ export default {
     Library.SongActions({ id: "delete", component: DeleteSongAction }),
     Pane.Register({ pane: sonataLibraryPane }),
     Pane.Register({ pane: sonataPlayerPane }),
+    Pane.Register({ pane: songPeekPane }),
   ],
   slots: {
     ...Library,
     "sonata-library": sonataLibraryPane,
     "sonata-player": sonataPlayerPane,
+    "sonata-song-peek": songPeekPane,
   },
 } satisfies PluginDefinition;

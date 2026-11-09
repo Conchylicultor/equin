@@ -146,17 +146,19 @@ notes through the same scheduler against the same store.
 
 ## Plugin reference
 
-- Description: Sonata audio engine: schedules the Score's notes against the Web Audio clock on play, routing each note to its track's resolved instrument, with master volume in the player pane's header.
+- Description: Sonata audio engine: schedules the Score's notes against the Web Audio clock on play, routing each note to its track's resolved instrument, with master volume in the player pane's header (and the song peek's).
 - Web:
   - Contributes:
     - `SonataSession.Provider` → `AudioProvider`
     - `SonataSession.Effect` "audio-engine" → `AudioEngine`
     - `sonataPlayerPane.Actions` "volume" → `VolumeControl`
+    - `songPeekPane.Actions` "volume" → `VolumeControl`
   - Uses:
     - `apps/sonata/audio/instruments.InstrumentVoices`
     - `apps/sonata/audio/instruments.SonataAudio`
     - `apps/sonata/audio/instruments.useInstrumentAssets`
     - `apps/sonata/library.sonataPlayerPane`
+    - `apps/sonata/library.songPeekPane`
     - `apps/sonata/primitives/toolbar-control.hoverExpandHost`
     - `apps/sonata/primitives/toolbar-control.HoverExpandPanel`
     - `apps/sonata/session.SonataSession`

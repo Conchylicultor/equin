@@ -1,40 +1,33 @@
 # file-preview
 
 The file viewer's renderer for a `.mid` / `.midi` file (a host file or a
-workspace file — `useFileBytes` reads both), built from Sonata's
-own parts rather than a second piano roll: it mounts a `SonataPlayerScope` of
-its own (so it never shares a cursor or transport with an open Sonata window)
-and loads the bytes as a **file** document (`{ kind: "file", key: locationKey }`)
-— no library song, so every per-song setting reads its default and nothing is
-written. Wherever a `FileViewer` host shows a MIDI file (the file explorer's
-preview pane, a conversation's file-peek pane), this renderer is the native
-tab.
+workspace file — `useFileBytes` reads both): the file in Sonata's mini player
+(`apps/sonata/mini-player`) — its own player scope (so it never shares a cursor
+or transport with an open Sonata window), in Sonata's theme inside the host's
+body, the bytes loaded as a **file** document (`{ kind: "file", key:
+locationKey }`) — no library song, so every per-song setting reads its default
+and nothing is written. Wherever a `FileViewer` host shows a MIDI file (the file
+explorer's preview pane, a conversation's file-peek pane), this renderer is the
+native tab.
 
-- **Header:** the title and duration from `deriveMidiSongMeta` (the same parse
-  the import uses, run first so a malformed file is an error state rather than
-  a render crash); BPM, meter, bars, tracks · notes and range from the composed
-  score (`facts.ts`); the size from the bytes read.
-- **Body:** `PlayerDisplay displayId="piano-roll"` — the roll mounts its own
-  keyboard through the pitch axis. The renderer sizes itself to its host's body
-  (`h-full`), with a floor for a host whose body has no definite height.
-- **One loading state, then play:** until the player reports `drawn`
-  (`usePlayerView().drawn` — the roll's lazy chunk, its track views and its
-  canvas are all in) the preview shows a single `Loading` over the laid-out but
-  transparent, inert player, so nothing pops in by stages; then everything is revealed
-  at once and the song starts (`play()`, once per file) — never a transport
-  reading Pause over an empty body, nor a lead-in running out behind a
-  spinner.
-- **Footer:** `PlayerTransport` — play / pause, the scrubber and loop (no
-  `PlayerTime`: the scrubber already shows the playhead and duration).
+- **The host's header is the only header.** It already names the file, so the
+  player draws no title, facts, speed or volume: the notes fill the body and the
+  progression capsule (play, the scrubber, loop) floats over them — the mini
+  player's layout. The file is parsed first (`deriveMidiSongMeta`, the import's
+  own parse), so a malformed file is an error state rather than a render crash.
+- **One loading state, then play** — the mini player's: one `Loading` until the
+  display has drawn, then everything at once and the song starts.
 - **Keyboard:** Space plays / pauses and ←/→ jump a bar (hold to scrub). The
   preview wires nothing for this: they are `controls`' `SonataPlayer.Effect`s,
   which every shown player gets (see `player/CLAUDE.md`), focus-scoped to this
   surface and yielding to keys the file tree already handled.
-- **Open in Sonata:** stops the preview, imports the bytes with the MIDI
-  source's `importMidiBytes` (content-hash dedupe on the server, so a second
-  press reuses the first press's song) and navigates the focused tab to
-  `sonataSongLink(songId, bar)` — the player route's `;bar` is the playhead's
-  bar, omitted while the playhead is in the first bar.
+- **Open in Sonata is the host header's Expand** (`FileHeaderAction`: rendered
+  in the preview's player, drawn in the header's `FileHeaderActions`): stops the
+  preview, imports the bytes with the MIDI source's `importMidiBytes`
+  (content-hash dedupe on the server, so a second press reuses the first
+  press's song) and navigates the focused tab to `sonataSongLink(songId, bar)` —
+  the player route's `;bar` is the playhead's bar, omitted while the playhead is
+  in the first bar.
 
 A checkout (`git`) file is not offered: code-api's raw route serves image
 formats only.
@@ -48,40 +41,27 @@ preview, then the same in Sonata after Open in Sonata.
 
 ## Plugin reference
 
-- Description: Sonata's MIDI file preview: a FileViewer renderer (native for .mid/.midi files, host or workspace) showing the file's facts (duration, tempo, meter, bars, tracks and notes, range, size), Sonata's falling-notes piano roll in its own player with a play bar, and Open in Sonata — imported into the library idempotently by content — at the playhead's bar.
+- Description: Sonata's MIDI file preview: a FileViewer renderer (native for .mid/.midi files, host or workspace) showing the file in Sonata's mini player (the falling notes, the progression capsule over them), with Open in Sonata — imported into the library idempotently by content, at the playhead's bar — as the host header's Expand.
 - Web:
   - Contributes: `FileViewer.Renderer` "MIDI" → `MidiFilePreview`
-  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps/sonata/player` ×4
-    - `apps/sonata/sources/midi` ×4
-    - `apps/sonata/document` ×2
-    - `apps/sonata/session` ×2
-    - `infra/paths/file-systems` ×2
-    - `primitives/css/spacing` ×2
-    - `primitives/css/ui-kit` ×2
+  - Uses:
     - `apps-core/tabs.useNavigate`
     - `apps/sonata/library.sonataSongLink`
+    - `apps/sonata/mini-player.SonataMiniPlayer`
+    - `apps/sonata/session.useCursorApi`
+    - `apps/sonata/session.useSession`
+    - `apps/sonata/sources/midi.deriveMidiSongMeta`
+    - `apps/sonata/sources/midi.importMidiBytes`
+    - `apps/sonata/sources/midi.MIDI_SOURCE_ID`
     - `infra/endpoints.useFetchEndpoint`
-    - `primitives/css/center.Center`
-    - `primitives/css/clip.Clip`
-    - `primitives/css/cluster.Cluster`
-    - `primitives/css/column.Column`
-    - `primitives/css/fill.Fill`
-    - `primitives/css/overlay.Overlay`
+    - `infra/paths/file-systems.fileBytesUnavailableMessage`
+    - `infra/paths/file-systems.useFileBytes`
     - `primitives/css/placeholder.Placeholder`
-    - `primitives/css/rigid.rigidClass`
-    - `primitives/css/text.Text`
+    - `primitives/file-viewer.FileHeaderAction`
+    - `primitives/file-viewer.FileRendererProps`
     - `primitives/file-viewer.FileViewer`
+    - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
-    - `primitives/relative-time.formatElapsed`
     - `shell/toast.showToast`
-    - `ui/icons.Icon`
-- Cross-plugin:
-  - Uses tokens:
-    - `ui/tokens/color-palette --border`
-    - `ui/tokens/color-palette --primary`
-    - `ui/tokens/color-palette --primary-foreground`
-    - `ui/tokens/shape --radius`
-    - `ui/tokens/shape --spacing`
 
 <!-- AUTOGENERATED:END -->

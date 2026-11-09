@@ -34,7 +34,7 @@ kind's `IdKinds.Presenter` (`useAttemptReferent` / `useAttemptTarget`).
     - `InlineChip.Tag` "att" → `AttemptChip`
   - Uses:
     - `active-data/id-chip.idChip`
-    - `conversations/conversation-view.useConversationOpener`
+    - `conversations/conversation-view.conversationPane`
     - `network/live.mapRow`
     - `network/live.rowOrStale`
     - `network/live.useLive`
@@ -45,7 +45,9 @@ kind's `IdKinds.Presenter` (`useAttemptReferent` / `useAttemptTarget`).
     - `network/live/live-state.useCombinedResources`
     - `primitives/css/link-chip.LinkChip`
     - `primitives/css/status-dot.StatusDot`
-    - `primitives/pane.useOpenPane`
+    - `primitives/pane.paneTarget`
+    - `primitives/pane.PaneTarget`
+    - `primitives/pane.usePaneToggle`
     - `tasks/attempt-status.ATTEMPT_STATUS_META`
     - `tasks/attempt-status.attemptStatusLabel`
     - `tasks/attempt-view.attemptPane`

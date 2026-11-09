@@ -24,7 +24,8 @@ Transcript-only: a report is not something a page document links to.
     - `active-data/id-chip.rowReferent`
     - `debug/reports.reportDetailPane`
     - `network/live.useLive`
-    - `primitives/pane.useOpenPane`
+    - `primitives/pane.paneTarget`
+    - `primitives/pane.PaneTarget`
 - Server:
   - Contributes:
     - `ids.referent` "report"

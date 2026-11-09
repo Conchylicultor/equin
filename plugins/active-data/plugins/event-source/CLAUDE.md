@@ -22,7 +22,8 @@ through `active-data/id-chip`'s `idChip` / `idChipServer`.
     - `active-data/id-chip.rowReferent`
     - `apps/events/sources.eventSourceDetailPane`
     - `network/live.useLive`
-    - `primitives/pane.useOpenPane`
+    - `primitives/pane.paneTarget`
+    - `primitives/pane.PaneTarget`
 - Server:
   - Contributes:
     - `ids.referent` "evs"

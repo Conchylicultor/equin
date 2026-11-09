@@ -7,9 +7,11 @@ import {
   type Hint,
   defineRoute,
   resolveRow,
+  useOpenPane,
+  type PaneExpandTarget,
   type ResolveResult,
 } from "@plugins/primitives/plugins/pane/web";
-import { mapRow, useLive } from "@plugins/network/plugins/live/web";
+import { mapRow, rowOrStale, useLive } from "@plugins/network/plugins/live/web";
 import {
   foldResource,
   matchResource,
@@ -48,6 +50,7 @@ import { SongTitle } from "./components/song-title-field";
 import { SectionDock } from "./components/section-pane";
 import { useSectionPaneCollapsed } from "./components/panels-toggle";
 import { PlayerHeader } from "./components/player-header";
+import { SongPeek } from "./components/song-peek";
 import { useDockReserve } from "./internal/dock-motion";
 import {
   CAPSULE_MARGIN,
@@ -120,6 +123,47 @@ export const sonataPlayerPane = Pane.define({
   // Main surface: aux panes opened to the right never steal the tab title.
   titleOwner: true,
 });
+
+/**
+ * The song peek: one library song in Sonata's mini player, as a column beside
+ * whatever named it — the pane a transcript's song chip opens, so the
+ * conversation stays on screen. Its Expand is the full player
+ * ({@link sonataPlayerPane}, a fresh route in Sonata): the one way from a peek
+ * to the whole app. The peek draws its own chrome over the notes
+ * ({@link SongPeek}); its header slot holds the playback tools that suit a
+ * column (speed, volume).
+ */
+export const songPeekPane = Pane.define({
+  route: defineRoute({ id: "sonata-song-peek", segment: "song-peek/:songId" }),
+  app: sonataApp,
+  component: SongPeek,
+  title: { useText: useSongPeekTitle, fallback: "Song" },
+  useResolve: useSongPeekResolve,
+  expand: { app: sonataApp, useTarget: useSongPeekExpand },
+  width: 480,
+});
+
+function useSongPeekTitle({ songId }: { songId: string }): string | undefined {
+  return rowOrStale(useLive(songLibrary, { id: songIdKind.key(songId) }))
+    ?.title;
+}
+
+function useSongPeekResolve({ songId }: { songId: string }): ResolveResult {
+  return resolveRow(useLive(songLibrary, { id: songIdKind.key(songId) }));
+}
+
+/** Expand: the song in the full player, a fresh route of its own in Sonata. */
+function useSongPeekExpand({ songId }: { songId: string }): PaneExpandTarget {
+  const openPane = useOpenPane();
+  return {
+    kind: "ready",
+    target: openPane.to(
+      sonataPlayerPane,
+      { songId: songIdKind.key(songId) },
+      { mode: "root" },
+    ),
+  };
+}
 
 /**
  * The app-rooted link to a library song in the player, optionally at a bar —

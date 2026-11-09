@@ -14,6 +14,10 @@ export { UnloadedFile } from "./components/unloaded-file";
 export { FileContent } from "./components/file-content";
 export { FileTabs } from "./components/file-tabs";
 export {
+  FileHeaderAction,
+  FileHeaderActions,
+} from "./components/file-header-actions";
+export {
   NoPreview,
   type PreviewFailure,
   useArchiveMembership,

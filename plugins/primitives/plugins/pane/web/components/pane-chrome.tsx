@@ -193,7 +193,6 @@ export function PaneChrome({
   const layoutCtx = useContext(PaneLayoutContext);
   const { contentOwnsTopChrome, leadingControl } =
     useContext(SurfaceChromeContext);
-  const doClose = pane.useClose();
   // Only the header's own double-click maximizes: not one bubbled through React
   // from a popover opened in it, nor one picking a word in its text entry.
   const onHeaderDoubleClick = (e: MouseEvent) => {
@@ -252,10 +251,7 @@ export function PaneChrome({
           </pane.Actions.Render>
         </PaneTitleContext.Provider>
       </AdaptiveBar>
-      <PromoteControl pane={pane} ancestorsHidden={ancestorsHidden} />
-      {!ancestorsHidden && chrome.close && doClose && (
-        <PaneIconAction label="Close" icon={closeIcon} onClick={doClose} />
-      )}
+      <PaneEndControls pane={pane} />
     </Bar>
   );
   const content = <ContentScope>{children}</ContentScope>;
@@ -317,14 +313,7 @@ export function PaneChrome({
                     </pane.Actions.Render>
                   </SlotItemLayout>
                 </PaneTitleContext.Provider>
-                <PromoteControl pane={pane} ancestorsHidden={ancestorsHidden} />
-                {!ancestorsHidden && chrome.close && doClose && (
-                  <PaneIconAction
-                    label="Close"
-                    icon={closeIcon}
-                    onClick={doClose}
-                  />
-                )}
+                <PaneEndControls pane={pane} />
               </ControlSizeProvider>
             </Line>
           </Surface>
@@ -364,6 +353,30 @@ export function PaneChrome({
         )
       }
     />
+  );
+}
+
+/**
+ * The end of every pane header: Expand (`PromoteControl` — the pane's own
+ * `expand`, else the default promote) and × close (for a pane with a parent,
+ * unless `chrome: { close: false }`). Painted alone (full-pane) the way out is
+ * the leading Back instead, so close is not drawn.
+ *
+ * Exported for a pane that draws its own header band over its body (the Sonata
+ * player and its song peek) instead of `PaneChrome`'s row: it ends that band
+ * with these, so its Expand and close are every other pane's.
+ */
+export function PaneEndControls({ pane }: { pane: AnyPane }): ReactNode {
+  const layoutCtx = useContext(PaneLayoutContext);
+  const doClose = pane.useClose();
+  const ancestorsHidden = layoutCtx?.ancestorsHidden === true;
+  return (
+    <>
+      <PromoteControl pane={pane} ancestorsHidden={ancestorsHidden} />
+      {!ancestorsHidden && pane._internal.chrome.close && doClose && (
+        <PaneIconAction label="Close" icon={closeIcon} onClick={doClose} />
+      )}
+    </>
   );
 }
 

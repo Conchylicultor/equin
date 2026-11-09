@@ -5,7 +5,7 @@ import { ATTEMPT_CHIP_SURFACES } from "../core";
 import {
   AttemptChip,
   useAttemptReferent,
-  useAttemptTarget,
+  useAttemptPane,
 } from "./components/attempt-chip";
 
 export { AttemptChip };
@@ -18,7 +18,7 @@ export default {
       presenter: {
         kind: attemptIdKind,
         useReferent: useAttemptReferent,
-        useTarget: useAttemptTarget,
+        usePane: useAttemptPane,
       },
       surfaces: ATTEMPT_CHIP_SURFACES,
       component: AttemptChip,

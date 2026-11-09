@@ -7,11 +7,14 @@ import {
   type ResourceResult,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { IdReferentState } from "@plugins/ids/web";
-import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
+import {
+  paneTarget,
+  usePaneToggle,
+  type PaneTarget,
+} from "@plugins/primitives/plugins/pane/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
-import { useConversationOpener } from "@plugins/conversations/plugins/conversation-view/web";
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { attemptPane } from "@plugins/tasks/plugins/attempt-view/web";
 import {
   attemptRows,
@@ -74,27 +77,15 @@ export function AttemptChip({
 }) {
   const attemptId = content.trim();
   const result = useAttemptWithTask(attemptId);
-  const openPane = useOpenPane();
-  const opener = useConversationOpener();
+  const activation = usePaneToggle()(useAttemptPane(attemptId));
 
   if (!attemptId) return null;
-
-  // Most attempts hold a single conversation, so the chip goes straight to
-  // the first one instead of stopping at the attempt pane's list of one. The
-  // attempt pane stays the target only when there is no conversation to open.
-  // Either way it is a regular push to the right, like every other chip —
-  // opening the attempt pane on the LEFT of a conversation is the
-  // conversation toolbar's attempt-switch toggle alone.
-  const target = (convId: string | undefined): LinkTarget =>
-    convId
-      ? opener.toggle(convId)
-      : openPane.to(attemptPane, { attemptId }, { mode: "push" });
 
   // The degraded raw-id chip: shown while loading, and for an attempt the
   // index doesn't hold, so the chip never disappears.
   const rawChip = (
     <LinkChip
-      activation={target(undefined)}
+      activation={activation}
       tooltip={attemptId}
       leading={<StatusDot colorClass={UNKNOWN_DOT} />}
       mono
@@ -115,7 +106,7 @@ export function AttemptChip({
       const count = attempt.conversations.length;
       return (
         <LinkChip
-          activation={target(conv?.id)}
+          activation={activation}
           tooltip={[name, attemptStatusLabel(attempt.status), attemptId]
             .filter(Boolean)
             .join(" · ")}
@@ -158,17 +149,18 @@ export function useAttemptReferent(attemptId: string): IdReferentState {
 }
 
 /**
- * The link to an attempt, the way its chip opens it: its first conversation
- * (most attempts hold one), else the attempt pane — a push beside the surface
- * holding the id. Until the attempt is read (or when it is gone) the target is
- * the attempt pane, which answers both itself.
+ * The pane an attempt opens in: its first conversation — most attempts hold a
+ * single one, so the chip goes straight to it instead of stopping at the
+ * attempt pane's list of one — else the attempt pane. Until the attempt is
+ * read (or when it is gone) it is the attempt pane, which answers both itself.
+ * Either way a column to the right, like every other chip: opening the
+ * attempt pane on the LEFT of a conversation is the conversation toolbar's
+ * attempt-switch toggle alone.
  */
-export function useAttemptTarget(attemptId: string): LinkTarget {
+export function useAttemptPane(attemptId: string): PaneTarget {
   const attempt = rowOrStale(useLive(attemptRows, { id: attemptId }));
-  const openPane = useOpenPane();
-  const opener = useConversationOpener();
   const conv = attempt ? firstConversation(attempt) : undefined;
   return conv
-    ? opener.toggle(conv.id)
-    : openPane.to(attemptPane, { attemptId }, { mode: "push" });
+    ? paneTarget(conversationPane, { convId: conv.id })
+    : paneTarget(attemptPane, { attemptId });
 }

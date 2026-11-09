@@ -62,7 +62,8 @@ conversation.
     - `apps/prototypes/canvas.prototypeDetailPane`
     - `network/live.useLive`
     - `network/live/live-state.foldResource`
-    - `primitives/pane.useOpenPane`
+    - `primitives/pane.paneTarget`
+    - `primitives/pane.PaneTarget`
 - Server:
   - Contributes:
     - `ids.referent` "proto"

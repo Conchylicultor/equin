@@ -31,6 +31,7 @@
 //   - apps/plugins/prototypes/plugins/state: dependency closure (imported by an eager plugin)
 //   - apps/plugins/sonata/plugins/document: dependency closure (imported by an eager plugin)
 //   - apps/plugins/sonata/plugins/library: dependency closure (imported by an eager plugin)
+//   - apps/plugins/sonata/plugins/mini-player: dependency closure (imported by an eager plugin)
 //   - apps/plugins/sonata/plugins/player: dependency closure (imported by an eager plugin)
 //   - apps/plugins/sonata/plugins/primitives/plugins/glass: dependency closure (imported by an eager plugin)
 //   - apps/plugins/sonata/plugins/session: dependency closure (imported by an eager plugin)

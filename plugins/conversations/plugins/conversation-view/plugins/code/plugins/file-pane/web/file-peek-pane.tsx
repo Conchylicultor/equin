@@ -265,7 +265,7 @@ function FilePeekPaneContent() {
   return (
     <FilePeekHeaderProvider value={header}>
       <PaneChrome pane={filePeekPane}>
-        <FileContent file={file} line={line} active={renderers.active} />
+        <FileContent file={file} line={line} renderers={renderers} />
       </PaneChrome>
     </FilePeekHeaderProvider>
   );

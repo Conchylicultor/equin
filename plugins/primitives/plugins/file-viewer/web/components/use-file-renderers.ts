@@ -9,6 +9,15 @@ export interface FileRenderersHandle {
   active: ResolvedRenderer | null;
   activeId: string | null;
   setActiveId: (id: string) => void;
+  /**
+   * Where the active renderer's header actions go: `element` is the one the
+   * host's `FileHeaderActions` mounted (`attach` is its ref), handed to the
+   * renderer by `FileContent`.
+   */
+  header: {
+    element: HTMLElement | null;
+    attach: (el: HTMLElement | null) => void;
+  };
 }
 
 /**
@@ -46,9 +55,14 @@ export function useFileRenderers({
   const [activeId, setActiveId] = useState<string | null>(defaultId);
   const active =
     resolved.find((r) => r.contribution.id === activeId) ?? resolved[0] ?? null;
+  const [headerElement, attachHeader] = useState<HTMLElement | null>(null);
+  const header = useMemo(
+    () => ({ element: headerElement, attach: attachHeader }),
+    [headerElement],
+  );
   // Stable identity: a host's header reads this through a context value.
   return useMemo(
-    () => ({ resolved, active, activeId, setActiveId }),
-    [resolved, active, activeId],
+    () => ({ resolved, active, activeId, setActiveId, header }),
+    [resolved, active, activeId, header],
   );
 }

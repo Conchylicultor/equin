@@ -4,8 +4,11 @@ import {
   matchResource,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { IdReferentState } from "@plugins/ids/web";
-import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
+import {
+  paneTarget,
+  usePaneToggle,
+  type PaneTarget,
+} from "@plugins/primitives/plugins/pane/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
@@ -20,11 +23,9 @@ export function TaskLinkChip({
 }) {
   const taskId = content.trim();
   const result = mapRow(useLive(taskRows, { id: taskId }), (task) => task);
-  const openPane = useOpenPane();
+  const target = usePaneToggle()(useTaskPane(taskId));
 
   if (!taskId) return null;
-
-  const target = openPane.to(taskDetailPane, { taskId }, { mode: "push" });
 
   // While pending, render the degraded raw-id chip so it never disappears.
   return matchResource(result, {
@@ -70,8 +71,7 @@ export function useTaskReferent(taskId: string): IdReferentState {
   });
 }
 
-/** The link to a task's detail pane beside the surface holding its id. */
-export function useTaskTarget(taskId: string): LinkTarget {
-  const openPane = useOpenPane();
-  return openPane.to(taskDetailPane, { taskId }, { mode: "push" });
+/** A task's detail pane. */
+export function useTaskPane(taskId: string): PaneTarget {
+  return paneTarget(taskDetailPane, { taskId });
 }

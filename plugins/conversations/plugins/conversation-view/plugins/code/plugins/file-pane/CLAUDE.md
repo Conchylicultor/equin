@@ -13,8 +13,8 @@
   - Contributes:
     - `Pane.Register` "file-peek"
     - `filePeekPane.Actions` "renderer-tabs" → `FilePeekTabs`
-  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/file-viewer` ×5
+  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/file-viewer` ×6
     - `primitives/pane` ×5
     - `apps/file-explorer/browser` ×3
     - `apps/file-explorer/folder-peek` ×2

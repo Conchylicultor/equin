@@ -1,6 +1,10 @@
 import { useMemo } from "react";
 import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
-import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import {
+  paneTarget,
+  useOpenPane,
+  usePaneToggle,
+} from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "./panes";
 
 /**
@@ -35,31 +39,16 @@ export function useConversationOpener(): ConversationOpener {
   // The conversation column THIS surface opened — the pane primitive's own
   // answer, rather than a guess made from the shape of the chain.
   const opened = conversationPane.useOpenedHere();
+  const toggle = usePaneToggle();
 
   return useMemo(() => {
     const openConvId = opened?.params.convId ?? null;
     return {
       openConvId,
       isOpen: (convId) => convId === openConvId,
-      toggle: (convId) => {
-        const push = openPane.to(
-          conversationPane,
-          { convId },
-          { mode: "push" },
-        );
-        return {
-          open: () => {
-            if (opened && convId === openConvId) {
-              conversationPane.close(opened.instanceId);
-            } else {
-              push.open();
-            }
-          },
-          href: push.href,
-        };
-      },
+      toggle: (convId) => toggle(paneTarget(conversationPane, { convId })),
       asPage: (convId) =>
         openPane.to(conversationPane, { convId }, { mode: "root" }),
     } satisfies ConversationOpener;
-  }, [opened, openPane]);
+  }, [opened, openPane, toggle]);
 }

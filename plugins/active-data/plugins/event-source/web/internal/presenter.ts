@@ -1,6 +1,8 @@
 import { useLive } from "@plugins/network/plugins/live/web";
-import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
+import {
+  paneTarget,
+  type PaneTarget,
+} from "@plugins/primitives/plugins/pane/web";
 import { rowReferent } from "@plugins/active-data/plugins/id-chip/web";
 import { eventSources } from "@plugins/apps/plugins/events/plugins/events-core/core";
 import { eventSourceDetailPane } from "@plugins/apps/plugins/events/plugins/sources/web";
@@ -11,8 +13,7 @@ export function useEventSourceReferent(id: string): IdReferentState {
   return rowReferent(useLive(eventSources, { id }), (s) => s.name);
 }
 
-/** The link to the source's detail pane beside the surface holding the id (`push`). */
-export function useEventSourceTarget(id: string): LinkTarget {
-  const openPane = useOpenPane();
-  return openPane.to(eventSourceDetailPane, { sourceId: id }, { mode: "push" });
+/** The source's detail pane. */
+export function useEventSourcePane(id: string): PaneTarget {
+  return paneTarget(eventSourceDetailPane, { sourceId: id });
 }

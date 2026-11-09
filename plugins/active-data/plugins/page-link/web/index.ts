@@ -5,7 +5,7 @@ import { BLOCK_CHIP_SURFACES } from "../core";
 import {
   PageLinkChip,
   useBlockReferent,
-  useBlockTargetById,
+  useBlockPaneById,
 } from "./components/page-link-chip";
 
 export { PageLinkChip };
@@ -18,7 +18,7 @@ export default {
       presenter: {
         kind: blockIdKind,
         useReferent: useBlockReferent,
-        useTarget: useBlockTargetById,
+        usePane: useBlockPaneById,
       },
       surfaces: BLOCK_CHIP_SURFACES,
       component: PageLinkChip,
