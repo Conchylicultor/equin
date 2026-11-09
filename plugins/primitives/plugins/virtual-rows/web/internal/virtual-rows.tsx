@@ -36,8 +36,13 @@ export interface VirtualRowsProps<T> {
   getKey: (item: T, index: number) => string;
   /** Applied to each absolute-positioned row wrapper (e.g. horizontal inset). */
   itemClassName?: ClassName;
-  /** When set, scrolls the virtualizer to this index (align: auto — only when off-screen). For host-driven selection reveal. */
-  scrollToIndex?: number | null;
+  /**
+   * The key of the item to reveal (host-driven selection reveal): scrolled to
+   * (align: auto — only when off-screen) once when it becomes the reveal key,
+   * or once it first appears in `items`. Rows inserted or removed around it
+   * later (a folder expanded above it) never scroll back to it.
+   */
+  revealKey?: string | null;
   /**
    * Item keys that must stay rendered even when scrolled out of the window.
    * They render at their true measured offset (so they're invisible off-screen
@@ -78,8 +83,8 @@ export interface UseVirtualRowsOptions<T> {
   /** Rows rendered beyond the viewport on each side. Default 8. */
   overscan?: number;
   getKey: (item: T, index: number) => string;
-  /** When set, scrolls the virtualizer to this index (align: auto — only when off-screen). */
-  scrollToIndex?: number | null;
+  /** The key of the item to reveal — once per key, never again on an index shift (see `VirtualRowsProps.revealKey`). */
+  revealKey?: string | null;
   /** Item keys that must stay rendered even when scrolled out of the window. */
   keepMounted?: readonly string[];
   /**
@@ -154,7 +159,7 @@ export function useVirtualRows<T>({
   estimateSize,
   overscan = 8,
   getKey,
-  scrollToIndex,
+  revealKey,
   keepMounted,
   drawPastEnd = 0,
 }: UseVirtualRowsOptions<T>): UseVirtualRowsResult {
@@ -321,10 +326,27 @@ export function useVirtualRows<T>({
   virtualizer.shouldAdjustScrollPositionOnItemSizeChange =
     marginItems === items ? undefined : () => false;
 
+  // The reveal is keyed on the item, not its index: an index shift (rows
+  // inserted above it — a folder expanded while the selected row is scrolled
+  // away) is the reader browsing, never a reason to scroll back to it. The key
+  // last revealed is remembered so each one is revealed exactly once — when
+  // it becomes the reveal key, or when it first appears (a selection whose row
+  // loads later).
+  const revealedKey = useRef<string | null>(null);
+  const revealIndex =
+    revealKey == null
+      ? -1
+      : items.findIndex((item, i) => getKey(item, i) === revealKey);
   useEffect(() => {
-    if (scrollEl === null || scrollToIndex == null || scrollToIndex < 0) return;
-    virtualizer.scrollToIndex(scrollToIndex, { align: "auto" });
-  }, [scrollEl, scrollToIndex, virtualizer]);
+    if (revealKey == null) {
+      revealedKey.current = null;
+      return;
+    }
+    if (scrollEl === null || revealIndex < 0) return;
+    if (revealedKey.current === revealKey) return;
+    revealedKey.current = revealKey;
+    virtualizer.scrollToIndex(revealIndex, { align: "auto" });
+  }, [scrollEl, revealKey, revealIndex, virtualizer]);
 
   // While disabled the virtualizer measures nothing (total size 0); hold the
   // sizer at its estimated extent so the content never collapses — a collapse
@@ -369,7 +391,7 @@ export function VirtualRows<T>({
   overscan = 8,
   getKey,
   itemClassName,
-  scrollToIndex,
+  revealKey,
   keepMounted,
   raisedKey,
   openKeys,
@@ -390,7 +412,7 @@ export function VirtualRows<T>({
     estimateSize,
     overscan,
     getKey,
-    scrollToIndex,
+    revealKey,
     keepMounted,
     drawPastEnd: Math.min(fold.inFlight, MAX_DRAW_PAST_END),
   });

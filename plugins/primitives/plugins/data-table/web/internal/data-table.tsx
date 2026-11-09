@@ -1184,11 +1184,6 @@ function VirtualTableBody<TRow>({
   /** Rows the fold in flight moves (`useRowFold().inFlight`). */
   drawPastEnd: number;
 }) {
-  // Reveal the selected row when selection changes off-screen.
-  const selectedIndex = selectedRowId
-    ? lines.findIndex((line) => line.key === selectedRowId)
-    : -1;
-
   const {
     measureRef,
     virtualizer,
@@ -1200,7 +1195,8 @@ function VirtualTableBody<TRow>({
     items: lines,
     estimateSize,
     getKey: lineKeyOf,
-    scrollToIndex: selectedIndex >= 0 ? selectedIndex : null,
+    // Reveal the selected row when the selection changes off-screen.
+    revealKey: selectedRowId ?? null,
     keepMounted,
     drawPastEnd: Math.min(drawPastEnd, MAX_DRAW_PAST_END),
   });
