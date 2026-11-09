@@ -1822,8 +1822,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Slots:
               - `DebugApp.Sidebar`
               - `DebugApp.Toolbar`
-            - Slot contributors: 26 contributors — full list in [`plugins/apps/plugins/debug/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/debug/plugins/shell/REFERENCE.md)
-              - `DebugApp.Sidebar` ×26
+            - Slot contributors: 27 contributors — full list in [`plugins/apps/plugins/debug/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/debug/plugins/shell/REFERENCE.md)
+              - `DebugApp.Sidebar` ×27
             - Contributes: `Apps.App` "Debug" → `DebugLayout`
             - Uses:
               - `apps-core.Apps`
@@ -1837,13 +1837,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/icons.symbol`
             - Exports (values): `debugApp`
           - Cross-plugin:
-            - Imported by: 37 plugins — full list in [`plugins/apps/plugins/debug/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/debug/plugins/shell/REFERENCE.md)
+            - Imported by: 38 plugins — full list in [`plugins/apps/plugins/debug/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/debug/plugins/shell/REFERENCE.md)
               - `debug` ×29
+              - `infra` ×2
               - `backup`
               - `build`
               - `conversations/recover`
               - `database/query-deadline`
-              - `infra/events-test`
               - `plugin-meta/exhibits`
               - `reports/engine`
               - `shell/notifications`
@@ -7650,7 +7650,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Settings.Sidebar` ← `apps.settings.appearance`
               - `Settings.Sidebar` ← `apps.settings.config`
               - `Settings.Sidebar` ← `audience.settings`
-              - `Settings.Sidebar` ← `infra.deps`
               - `Settings.RailBadge` ← `apps.settings.config`
             - Contributes: `Apps.App` "Settings" → `SettingsLayout`
             - Uses:
@@ -7672,7 +7671,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `audience/settings`
               - `auth`
               - `config_v2/settings`
-              - `infra/deps`
               - `ui/theme-engine/theme-customizer`
     - **`sonata`** — Sonata — extensible piano and music app.
       - Cross-plugin:
@@ -31779,7 +31777,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `boundaries/no-platform-api` — `server/internal/corpus-index.ts`, `server/internal/store.ts`, `server/internal/checkpoints.ts` (debt)
           - `sink-safety/no-adhoc-file-sink` — `server/internal/store.ts` (sanctioned)
-    - **`deps`** — Settings → Dependencies: a DataView over every declared optional dependency (state, size, identity, last used, the install's latest log line) with Install / Remove row actions, pushed live from deps.states. The server half of on-demand dependencies: requestDep enqueues the deps.install supervised job (ensureDep in a detached child) from a request. The daily deps.sweep is its sweep sub-plugin.
+    - **`deps`** — Debug → Dependencies: a DataView over every declared optional dependency (state, size, identity, last used, the install's latest log line) with Install / Remove row actions, pushed live from deps.states. The server half of on-demand dependencies: requestDep enqueues the deps.install supervised job (ensureDep in a detached child) from a request. The daily deps.sweep is its sweep sub-plugin.
       - Web:
         - Slots:
           - `item-actions`
@@ -31789,11 +31787,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `dependencies.actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "dependencies"
-          - `Settings.Sidebar` "Dependencies"
+          - `DebugApp.Sidebar` "Dependencies"
           - `item-actions` "install" → `InstallDepAction`
           - `item-actions` "remove" → `RemoveDepAction`
         - Uses:
-          - `apps/settings/shell.Settings`
+          - `apps/debug/shell.DebugApp`
           - `infra/endpoints.useEndpointMutation`
           - `network/live.useLive`
           - `network/live/live-state.foldResource`

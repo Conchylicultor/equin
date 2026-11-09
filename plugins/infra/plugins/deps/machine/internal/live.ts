@@ -24,7 +24,7 @@ async function loadDepRows(): Promise<DepRow[]> {
 export const depsCacheWatcher = defineFileWatcher({
   name: "deps.cache",
   description:
-    "While Settings → Dependencies is open, watches the dependency cache so an install or removal by any process shows up at once.",
+    "While Debug → Dependencies is open, watches the dependency cache so an install or removal by any process shows up at once.",
   // The payloads: a `uv sync` writes thousands of files there, and only the
   // state files beside them matter.
   ignore: ["**/env/**"],

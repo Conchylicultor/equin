@@ -162,7 +162,7 @@ defineDep({ …, source: build({ …, targets: "any" }), bundle: "required" });
 `depState(dep)` reads the files above (safe on the event loop). The
 `deps.states` live value (external source) pushes every declared dep's row; a
 `file-watcher` on `cache/deps` (payloads ignored) notifies while anyone is
-subscribed. Settings → Dependencies (`web/`) is a DataView over it with
+subscribed. Debug → Dependencies (`web/`) is a DataView over it with
 Install / Remove row actions. An identity that cannot be derived (uv missing)
 is `failed`, never `absent`.
 
@@ -298,7 +298,7 @@ torch.
 
 ## Plugin reference
 
-- Description: Settings → Dependencies: a DataView over every declared optional dependency (state, size, identity, last used, the install's latest log line) with Install / Remove row actions, pushed live from deps.states. The server half of on-demand dependencies: requestDep enqueues the deps.install supervised job (ensureDep in a detached child) from a request. The daily deps.sweep is its sweep sub-plugin.
+- Description: Debug → Dependencies: a DataView over every declared optional dependency (state, size, identity, last used, the install's latest log line) with Install / Remove row actions, pushed live from deps.states. The server half of on-demand dependencies: requestDep enqueues the deps.install supervised job (ensureDep in a detached child) from a request. The daily deps.sweep is its sweep sub-plugin.
 - Web:
   - Slots:
     - `item-actions`
@@ -308,11 +308,11 @@ torch.
     - `dependencies.actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "dependencies"
-    - `Settings.Sidebar` "Dependencies"
+    - `DebugApp.Sidebar` "Dependencies"
     - `item-actions` "install" → `InstallDepAction`
     - `item-actions` "remove" → `RemoveDepAction`
   - Uses:
-    - `apps/settings/shell.Settings`
+    - `apps/debug/shell.DebugApp`
     - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`
     - `network/live/live-state.foldResource`

@@ -78,7 +78,7 @@ export function browserInstalling(url: string): BrowserUnavailableError {
   return new BrowserUnavailableError(
     "installing",
     url,
-    `Chromium is being installed (an on-demand dependency, ~280 MB — see Settings → Dependencies), ` +
+    `Chromium is being installed (an on-demand dependency, ~280 MB — see Debug → Dependencies), ` +
       `so ${url} cannot be read in a browser yet. Try again once it is ready.`,
   );
 }
@@ -92,7 +92,7 @@ export function browserInstallFailed(
     "install-failed",
     url,
     `Chromium could not be installed, so ${url} cannot be read in a browser: ${failure} ` +
-      `Retry from Settings → Dependencies, or run \`${INSTALL_BROWSER_COMMAND}\`.`,
+      `Retry from Debug → Dependencies, or run \`${INSTALL_BROWSER_COMMAND}\`.`,
   );
 }
 

@@ -52,7 +52,7 @@ function detailText(row: DepRow): string {
 }
 
 /**
- * Settings → Dependencies: every declared optional dependency with its state
+ * Debug → Dependencies: every declared optional dependency with its state
  * on this machine. Pushed live (`deps.states`), so an install started here or
  * from a terminal shows `installing` → `ready` without a reload.
  */

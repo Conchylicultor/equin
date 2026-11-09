@@ -3,7 +3,7 @@ import {
   PaneChrome,
   defineRoute,
 } from "@plugins/primitives/plugins/pane/web";
-import { settingsApp } from "@plugins/apps/plugins/settings/plugins/shell/core";
+import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { DependenciesView } from "./components/dependencies-view";
 
 export const dependenciesRoute = defineRoute({
@@ -14,7 +14,7 @@ export const dependenciesRoute = defineRoute({
 export const dependenciesPane = Pane.define({
   title: "Dependencies",
   route: dependenciesRoute,
-  app: settingsApp,
+  app: debugApp,
   component: DependenciesBody,
   chrome: { history: true },
 });

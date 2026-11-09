@@ -1,5 +1,5 @@
 // The launcher's dependency: the Go gateway binary, collected into infra/deps'
-// registry through the `default` array (Settings → Dependencies,
+// registry through the `default` array (Debug → Dependencies,
 // `./equin deps install gateway-binary`). `./equin start` and
 // `serve-app` ensure it; a release seals it into the bundle, and the release
 // launcher reads it from there.

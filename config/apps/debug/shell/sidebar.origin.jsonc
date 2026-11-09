@@ -1,4 +1,4 @@
-// @hash 46c0701e7853
+// @hash 8755e6c2dd52
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -31,6 +31,7 @@
     "debug.reports:reports",
     "debug.trace.pane:trace-slow-events",
     "debug.worktree-cleanup:worktree-cleanup",
+    "infra.deps:dependencies",
     "infra.events-test:events-test",
     "plugin-meta.exhibits:exhibits",
     "shell.notifications:notifications"

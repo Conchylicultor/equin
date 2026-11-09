@@ -1,5 +1,5 @@
 // The song index's dependency: Sheet Sage's two dump files, collected into
-// infra/deps' registry through the `default` array (Settings → Dependencies,
+// infra/deps' registry through the `default` array (Debug → Dependencies,
 // `./equin deps install sheetsage-dumps`).
 import { sheetSageDumps } from "./internal/sheetsage";
 

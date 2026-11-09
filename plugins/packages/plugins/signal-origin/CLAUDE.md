@@ -67,7 +67,7 @@ sees a delivery.
   before installing the listeners, then arms synchronously in `afterInstall`.
   An install failure (no compiler, a compile error) is fail-open: it becomes
   the `arm-failed` sink line, and the dependency reads `failed` in
-  `./equin deps list` / Settings → Dependencies instead of being silent.
+  `./equin deps list` / Debug → Dependencies instead of being silent.
   The declaration says `admission: { none }`: one tiny compile, awaited on the
   way INTO an op, must not queue behind the background lane for a host grant
   (see `DepSource.admission`). Parallel worktrees on one identity share one

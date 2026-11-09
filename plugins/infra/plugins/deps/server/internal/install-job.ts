@@ -8,7 +8,7 @@ import { declaredDep, ensureDep, type Dep, type DepSource } from "../../deps";
 const depsInstallLog = defineLogSink({
   id: "deps-install",
   description:
-    "Dependency installs requested from the app (Settings → Dependencies, a feature's first use): each install's progress and its installer's output.",
+    "Dependency installs requested from the app (Debug → Dependencies, a feature's first use): each install's progress and its installer's output.",
 });
 
 /**

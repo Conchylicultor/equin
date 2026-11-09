@@ -1,5 +1,5 @@
 // audio-analysis's dependency: the `audio-python` env, collected into
-// infra/deps' registry through the `default` array (Settings → Dependencies,
+// infra/deps' registry through the `default` array (Debug → Dependencies,
 // `./equin deps install audio-python`).
 import { audioPythonDep } from "./internal/audio-python";
 

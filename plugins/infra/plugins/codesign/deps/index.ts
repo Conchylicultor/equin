@@ -2,7 +2,7 @@
 // bundle), so macOS keys their permission grants to a stable signer instead of
 // a per-build hash, and the bundle's registration with LaunchServices.
 // Host-only, like every `deps/` barrel. `rcodesign` is collected into infra/deps'
-// registry through the `default` array (Settings → Dependencies).
+// registry through the `default` array (Debug → Dependencies).
 import { rcodesign } from "./internal/rcodesign";
 
 export { rcodesign } from "./internal/rcodesign";

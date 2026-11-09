@@ -197,7 +197,7 @@ const check: Check = {
       return {
         ok: false,
         message: `Chromium, which the layout geometry suite runs in, could not be installed: ${(err as Error).message}`,
-        hint: "Run `./equin deps install chromium` to see the install fail in full (its log is also in Settings → Dependencies), then re-run.",
+        hint: "Run `./equin deps install chromium` to see the install fail in full (its log is also in Debug → Dependencies), then re-run.",
       };
     }
 

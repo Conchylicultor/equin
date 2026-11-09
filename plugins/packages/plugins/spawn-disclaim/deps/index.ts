@@ -1,5 +1,5 @@
 // The disclaim helper's dependency: its compiled C program, collected into
-// infra/deps' registry through the `default` array (Settings → Dependencies,
+// infra/deps' registry through the `default` array (Debug → Dependencies,
 // `./equin deps install disclaim-exec`). The sdk runtime requests it at boot
 // and resolves it at every agent launch.
 import { disclaimExec } from "./internal/disclaim-exec";
