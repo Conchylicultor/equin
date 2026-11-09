@@ -88,3 +88,52 @@ below 2^32. What equin controls:
   over bun:ffi, no root) on every tick.
 - The `daemon-cpu` report's what-to-do names the CacheDelete replay check and
   the RSS / event-id reading.
+
+## D12 result (2026-11-09 04:23Z restart): case (b), a one-off
+
+### The sample (pid 71649, 16.3 GB footprint, 10 s at 1 ms)
+
+The notify thread (busy in all 7,926 samples) and the disk logger (46 % busy)
+run one function, fseventsd+0x41a4. Disassembled
+(`otool -tV`, fseventsd 1413.100.6), it is the **path-string intern table**
+(`PathStringZone`):
+
+- CRC32 of the path → one of **4,096 buckets** (`0x1000`, allocated once at
+  startup at +0x10750; the mask is never rewritten — the table never resizes);
+- a linear chain walk with `strncmp`, under one global mutex;
+- a miss mallocs a refcounted node (count at +0x10, string at +0x14); the
+  release (+0x438c) frees at refcount 0.
+
+51 % of the notify thread is `strncmp` in that walk, 23 % waiting on its
+mutex. So the 8.5 GB was interned paths never released — something kept a
+reference — and each lookup cost ~N/4,096 string compares: why throughput fell
+as RSS grew. What held the references needs symbols; the strings
+`historyPruning`, `purge_history_policy` and `last_history_id` fit an
+id-keyed pruning that stopped, unproven. No `string_table_count` state line
+was in the unified log.
+
+### After the restart (pid 80166), 04:23Z → 06:18Z
+
+| | before (pid 71649) | after |
+|---|---|---|
+| `daemon_procs.fseventsd.rss_mb` | 6.2–9.3 GB | 11–15 MB, flat |
+| `daemon_cpu.fseventsd` | ~100 % | 0–9 %, mostly < 2 % |
+| `fsevents_event_id` | 0x10AD3… | 0x10ADB… → 0x10C336D0A (+22.6M, 3.4k ids/s) |
+| ledger `watch-delivery` p50 | 0.5–3.7 s | 114 ms |
+
+The id rate (3.4–3.6k/s, load up to 50) is the rate at which it grew
+0.7 GB/h on 11-08. At that rate it would be ~1.3 GB now; it is 13 MB. The
+ids above 2^32 do not re-trigger it: the crossing (or something at it) started
+a leak in a process that lived through it, and the restart is the fix. The
+installed monitor already wrote `rss_mb` and `fsevents_event_id`.
+
+### The watch-delivery tail was partly made up
+
+p90 sat past the ledger's 140 s top bucket before and after the restart, so it
+was not fseventsd. The kqueue follows (`watch-delivery:kqueue`: `daemon.pid-files`
+up to 13.7 h, `runtime-sdk.events`, `transcript-watcher.followed-files`) timed
+the `update` a follow makes up for each file after every (re)open, reading the
+file's age as lag. Fixed: `followFiles` takes `take` (heard, timed) and `look`
+(made up, untimed); the engine's inotify new-folder walk goes through `look`
+too. FSEvents samples of tens of minutes (`file-watcher.dirs`,
+`corpus-index.stats.cost.usage`) remain and are not explained here.

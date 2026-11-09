@@ -132,6 +132,31 @@ describe("createFileWatcher: writesWhileOpen follows named files", () => {
     expect(heard).toContain("update");
   });
 
+  test("the re-read an open hands over is not timed as a delivery", async () => {
+    // The open's `update` is made up (nothing was heard): timing it read the
+    // file's age as lag — main's daemon.pid-files follow recorded 13.7 h.
+    dir = mkdtempSync(join(tmpdir(), "fw-lag-"));
+    const file = join(dir, "old.log");
+    writeFileSync(file, "");
+    await Bun.sleep(1_500);
+    const lags: number[] = [];
+    let updates = 0;
+    watcher = await createFileWatcher({
+      files: [file],
+      writesWhileOpen: true,
+      debounceMs: 0,
+      onDeliveryLag: (s) => void lags.push(s.lagMs),
+      onChange: (batch) => {
+        updates += batch.filter((e) => e.type === "update").length;
+      },
+    });
+    await until(() => updates >= 1);
+    expect(updates).toBe(1);
+    await Bun.sleep(200); // the probe stats asynchronously
+    // Timed, it would read ~1.5 s: the file's age.
+    expect(lags).toEqual([]);
+  });
+
   test("two follows of one dir share it, and each hears only its files", async () => {
     // parcel caches a dir's listing per path: a second subscription with a
     // different ignore fails outright. One subscription per dir carries both.

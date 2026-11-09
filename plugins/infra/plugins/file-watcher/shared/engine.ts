@@ -327,9 +327,8 @@ export async function createFileWatcher(
     opts.onDeliveryLag === undefined
       ? null
       : createDeliveryLagProbe(DELIVERY_LAG_HOST, opts.onDeliveryLag);
-  const deliver = (events: parcel.Event[]): void => {
+  const enqueue = (events: parcel.Event[]): void => {
     if (stopped || events.length === 0) return;
-    probe?.(events, Date.now());
     if (debounceMs === 0) {
       changes.trigger(events);
     } else {
@@ -337,6 +336,17 @@ export async function createFileWatcher(
       schedule();
     }
   };
+  /** What the native watch reported: its delivery is timed. */
+  const deliver = (events: parcel.Event[]): void => {
+    if (!stopped && events.length > 0) probe?.(events, Date.now());
+    enqueue(events);
+  };
+  /**
+   * What the engine made up itself (a follow's re-read after a reopen, a new
+   * folder's walk): handed over like the rest, never timed — no write was heard,
+   * and the path's ctime may be hours old.
+   */
+  const look = enqueue;
 
   let lossCount = 0;
   const lost = (dir: string, error: unknown): void => {
@@ -368,6 +378,7 @@ export async function createFileWatcher(
     const follow = await followFiles({
       files: opts.files,
       take: deliver,
+      look,
       lost,
       subscribe: (dir, { ignore, onEvents, onGone }) =>
         subscribeRoot(parcelWatcher, dir, {
@@ -403,13 +414,11 @@ export async function createFileWatcher(
     ? { ignore }
     : undefined;
 
-  const take = (events: parcel.Event[]): void => {
-    deliver(
-      extensions
-        ? events.filter((e) => extensions.includes(extname(e.path)))
-        : events,
-    );
-  };
+  const ofInterest = (events: parcel.Event[]): parcel.Event[] =>
+    extensions
+      ? events.filter((e) => extensions.includes(extname(e.path)))
+      : events;
+  const take = (events: parcel.Event[]): void => deliver(ofInterest(events));
 
   const backend = watcherBackend(false, depth);
   const parcelWatcher =
@@ -434,7 +443,7 @@ export async function createFileWatcher(
               ignore: ignoreForSubdir(root, ignore),
             }),
           ignored: (root, path) => ignoredUnder(root)(path),
-          report: (_root, events) => take(events),
+          report: (_root, events) => look(ofInterest(events)),
           fail: lost,
         })
       : null;

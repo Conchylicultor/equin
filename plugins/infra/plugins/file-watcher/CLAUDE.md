@@ -103,6 +103,10 @@ debounce, at most one in flight and one per 5 s per instance) as the changed
 path's **ctime → the batch's arrival**. ctime, not mtime: a moved-in or
 `touch -t`'d file keeps an old mtime. A path changed again since it was heard
 is skipped (never 0); one rewritten before it is heard under-reads.
+Only what the native watch reported is timed. An event the engine makes up — a
+follow's re-read `update` after each (re)open, a new folder's walk on inotify —
+goes through `look`, never the probe (`followFiles` requires both): timed, it
+reads the file's age as lag.
 
 - `recordSpan("bg", "watch-delivery:<backend>", lagMs, { variant: watcher }, { latency: true })`:
   slow-ops holds it to the live-update bar — one row and one report per

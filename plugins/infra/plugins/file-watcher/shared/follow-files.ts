@@ -42,6 +42,7 @@ import { WatchedDirGoneError } from "./dir-gone";
 interface Member {
   readonly names: ReadonlySet<string>;
   readonly take: (events: parcel.Event[]) => void;
+  readonly look: (events: parcel.Event[]) => void;
   readonly lost: (dir: string, error: unknown) => void;
   /** Its names are inside the open subscription. False until the first open that included them. */
   live: boolean;
@@ -115,7 +116,14 @@ export function groupByDir(files: readonly string[]): Map<string, Set<string>> {
 export async function followFiles(opts: {
   files: readonly string[];
   subscribe: SubscribeDir;
+  /** What the OS reported: a write it heard, timed by the delivery-lag probe. */
   take: (events: parcel.Event[]) => void;
+  /**
+   * What the follow made up: an `update` for each followed file after a
+   * (re)open, so the follower re-reads what it may have missed. No write was
+   * heard, so there is no delivery to time — the file's ctime may be hours old.
+   */
+  look: (events: parcel.Event[]) => void;
   lost: (dir: string, error: unknown) => void;
 }): Promise<{ stop(): Promise<void> }> {
   if (opts.files.length === 0) {
@@ -133,6 +141,7 @@ export async function followFiles(opts: {
       const member: Member = {
         names,
         take: opts.take,
+        look: opts.look,
         lost: opts.lost,
         live: false,
       };
@@ -268,7 +277,7 @@ async function reopen(
       if (await exists(path)) present.push({ type: "update", path });
     }
     // Re-checked after the awaits: it may have left meanwhile.
-    if (present.length > 0 && m.live) m.take(present);
+    if (present.length > 0 && m.live) m.look(present);
   }
 }
 
