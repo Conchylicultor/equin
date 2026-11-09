@@ -39,12 +39,12 @@
 // A horizontal pane header, read left to right: what the canvas is OF on the
 // left, what you can do to the canvas on the right.
 //
-// The pane's own title first, then the prototype's tag (`tag`, a chip opening
-// the tag picker — right after the title so its left edge never moves), then
-// two small icons that are facts about the
+// The pane's own title first, then two small icons that are facts about the
 // prototype itself — `copy-id` (copy its id for a prompt or a CLI command)
-// and `done` (the Done checkbox, the same shared flag as the gallery card's). All keep one size
-// in every state, so a click never moves the header. `delete` comes last, after
+// and `done` (the Done checkbox, the same shared flag as the gallery card's) —
+// then the prototype's tag (`tag`, a chip opening the tag picker; after the
+// icons, so the icons sit at a fixed place right after the title). All keep
+// one size in every state, so a click never moves the header. `delete` comes last, after
 // a hairline rule: the one destructive action (a delete with an Undo toast,
 // then back to the gallery; Restore while the prototype is deleted), kept apart
 // from the toggles so it is not hit for one of them.
@@ -55,9 +55,9 @@
 {
   "items": [
     "primitives.pane:title",
-    "apps.prototypes.gallery:tag",
     "apps.prototypes.copy-id:copy-id",
     "apps.prototypes.gallery:done",
+    "apps.prototypes.gallery:tag",
     { "type": "divider", "id": "before-delete" },
     "apps.prototypes.gallery:delete"
   ]
