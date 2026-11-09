@@ -11526,20 +11526,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/shape --spacing`
                   - `ui/tokens/type-scale --font-weight-medium`
                   - `ui/tokens/type-scale --font-weight-semibold`
-            - **`hero`** — Landing hero band: the site's one headline — what equin is — with the lede under it and the three properties the claim rests on (self-evolving, integrated, personal).
+            - **`hero`** — Landing hero band: the site's one headline — what equin is — with the lede under it, the showcase film (its poster and the themed player, from apps/website/media), and the three properties the claim rests on (self-evolving, integrated, personal).
               - Web:
                 - Contributes: `Website.Section` "Hero" → `HeroSection`
                 - Uses:
                   - `apps/website/shell.Website`
                   - `apps/website/shell.WebsiteHero`
+                  - `infra/endpoints.useAssetSrc`
+                  - `media/player.MediaPlayer`
                   - `primitives/css/card.Card`
+                  - `primitives/css/center.Center`
                   - `primitives/css/grid.Grid`
                   - `primitives/css/inline.Inline`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/status-dot.StatusDot`
                   - `primitives/css/text.Text`
+                  - `primitives/loading.Loading`
               - Cross-plugin:
                 - Uses tokens:
+                  - `ui/tokens/color-palette --border`
                   - `ui/tokens/color-palette --card`
                   - `ui/tokens/color-palette --foreground`
                   - `ui/tokens/color-palette --primary`
@@ -11619,6 +11624,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/color-palette --foreground`
                   - `ui/tokens/color-palette --muted-foreground`
                   - `ui/tokens/type-scale --font-weight-normal`
+        - **`media`** — The website's media (the showcase film and its poster), kept out of git: assets of the website-media GitHub release, served same-origin through the asset mirror and bundled into a release by prewarm.
+          - Server:
+            - Uses: `infra/asset-mirror.defineAssetMirror`
+          - Core:
+            - Uses:
+              - `infra/asset-mirror.assetMirrorFile`
+              - `infra/asset-mirror.AssetMirrorPrewarm`
+            - Exports (values):
+              - `showcaseFilm`
+              - `WEBSITE_MEDIA_FILES`
+              - `WEBSITE_MEDIA_MIRROR_ID`
+              - `WEBSITE_MEDIA_REMOTE_BASE`
+          - Cross-plugin:
+            - Imported by: `apps/website/landing/hero`
         - **`pages`** — The inner pages of the public website: the apps gallery, the vision for applications, the technical foundations, the story of how equin came to be, the getting-started guide, and how to install it.
           - Plugins:
             - **`apps`** — The apps gallery of the equin website: the /website/apps pane listing every app equin ships, searchable and grouped by category (harness, daily life, tools, coming next), each card's Install and the 'Missing an app?' band going to the download page, the vision and foundations pages offered at its end, and its Apps nav link.
@@ -30990,6 +31009,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/tooling/collected-dir.defineCollectedDir`
           - `infra/endpoints.assetBase`
           - `infra/endpoints.AssetBase`
+          - `infra/endpoints.assetPath`
+          - `infra/endpoints.AssetPath`
           - `infra/endpoints.blob`
           - `infra/endpoints.defineEndpoint`
         - Exports (types):
@@ -30997,6 +31018,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CollectedEntry`
         - Exports (values):
           - `assetMirrorBase`
+          - `assetMirrorFile`
           - `assetMirrorPrewarmCollectedDir`
           - `defineAssetMirrorPrewarm`
           - `getMirroredFile`
@@ -31006,6 +31028,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/sonata/audio/piano`
           - `apps/sonata/audio/soundfont`
+          - `apps/website/media`
           - `infra/asset-mirror/bundle`
           - `ui/icons/emoji`
       - Plugins:
@@ -32270,6 +32293,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isAgentWriteRefusal`
           - `isCodec`
           - `multipart`
+          - `rangedBlobResponse`
           - `rawEndpointHandler`
           - `readEndpointResponse`
           - `sendEndpointRequest`
@@ -32277,8 +32301,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 246 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
-          - `apps` ×71
+        - Imported by: 247 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+          - `apps` ×72
           - `conversations` ×35
           - `infra` ×23
           - `page` ×19
@@ -36791,6 +36815,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --line-height-2xs`
           - `ui/tokens/type-scale --line-height-tag-compact`
         - Imported by:
+          - `apps/website/landing/hero`
           - `page/audio`
           - `page/video`
           - `primitives/file-viewer/media`
@@ -44435,8 +44460,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CenterProps`
             - Exports (values): `Center`
           - Cross-plugin:
-            - Imported by: 133 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
-              - `apps` ×42
+            - Imported by: 134 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
+              - `apps` ×43
               - `primitives` ×25
               - `page` ×19
               - `conversations` ×9
@@ -48661,8 +48686,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 226 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
-          - `apps` ×69
+        - Imported by: 227 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+          - `apps` ×70
           - `conversations` ×23
           - `ui` ×23
           - `debug` ×19

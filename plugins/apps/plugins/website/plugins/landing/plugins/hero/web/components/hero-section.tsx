@@ -5,6 +5,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { WebsiteHero } from "@plugins/apps/plugins/website/plugins/shell/web";
+import { HeroFilm } from "./hero-film";
 import "./hero-section.css";
 
 const HEADLINE_LEAD = "A personal OS that ";
@@ -34,13 +35,15 @@ const PROPERTIES = [
 
 /**
  * The homepage's opening: one sentence saying what equin is, the paragraph that
- * says what that means, and the three properties it rests on.
+ * says what that means, the showcase film, and the three properties it rests on.
  *
  * The heading, its lede and the glow behind them are the shell's
  * `WebsiteHero` — every page opens the same way. What is the homepage's own is
  * the row of three properties under the lede: small flat tiles, left-aligned
  * inside the centred heading so each reads as a sentence, capped at 860px so
- * the row stays narrower than the reading measure.
+ * the row stays narrower than the reading measure. The film sits between the
+ * lede and that row, so it reads as part of the claim — and the row keeps it
+ * apart from the screenshot band's picture below.
  */
 export function HeroSection() {
   return (
@@ -56,6 +59,7 @@ export function HeroSection() {
         </>
       }
     >
+      <HeroFilm />
       <Grid
         minCellWidth="14rem"
         mode="fit"

@@ -1,14 +1,19 @@
 # hero
 
 The homepage's opening band — the site's one sentence ("A personal OS that
-evolves on request."), the paragraph under it that says what equin is, and the
-three properties the claim rests on.
+evolves on request."), the paragraph under it that says what equin is, the
+showcase film, and the three properties the claim rests on.
 
 The heading, its lede and the glow behind them are the shell's `WebsiteHero`,
 which every page opens with; the gradient and the wash live in the shell's
 `website-hero.css`. What this band owns is the row of property tiles, and their
 only bespoke paint (`hero-section.css`: a see-through card colour and a dot
 glow) is mixed from theme tokens. Never hardcode a colour here.
+
+**The film** (`HeroFilm`) is the media primitive's `MediaPlayer` over
+`apps/website/media`'s `showcaseFilm`: its poster with the player's big play
+button, then the themed controls — no copy around it. Its bytes are never in
+git; swapping the film is that plugin's job, not this band's.
 
 The register is an essay's, not a pricing page's: the headline makes one claim
 and the paragraph says what it means.
@@ -17,20 +22,25 @@ and the paragraph says what it means.
 
 ## Plugin reference
 
-- Description: Landing hero band: the site's one headline — what equin is — with the lede under it and the three properties the claim rests on (self-evolving, integrated, personal).
+- Description: Landing hero band: the site's one headline — what equin is — with the lede under it, the showcase film (its poster and the themed player, from apps/website/media), and the three properties the claim rests on (self-evolving, integrated, personal).
 - Web:
   - Contributes: `Website.Section` "Hero" → `HeroSection`
   - Uses:
     - `apps/website/shell.Website`
     - `apps/website/shell.WebsiteHero`
+    - `infra/endpoints.useAssetSrc`
+    - `media/player.MediaPlayer`
     - `primitives/css/card.Card`
+    - `primitives/css/center.Center`
     - `primitives/css/grid.Grid`
     - `primitives/css/inline.Inline`
     - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
+    - `primitives/loading.Loading`
 - Cross-plugin:
   - Uses tokens:
+    - `ui/tokens/color-palette --border`
     - `ui/tokens/color-palette --card`
     - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --primary`

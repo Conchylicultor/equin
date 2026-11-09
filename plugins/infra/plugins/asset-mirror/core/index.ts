@@ -5,12 +5,14 @@
  * cache and serves it same-origin (offline-capable after one warm-up on the
  * desktop). This barrel exposes the mirror's route declarations and the base
  * web code points a consumer at (`assetMirrorBase`, resolved with
- * `assetFetchOver` or `useAssetUrl`); the server barrel owns
+ * `assetFetchOver` or `useAssetUrl`; `assetMirrorFile`, one file an element
+ * loads, resolved with `useAssetSrc`); the server barrel owns
  * `defineAssetMirror` (the registration token) and the route.
  */
 
 export {
   assetMirrorBase,
+  assetMirrorFile,
   getMirroredFile,
   getMirroredNestedFile,
 } from "./endpoints";

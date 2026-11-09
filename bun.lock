@@ -1439,6 +1439,10 @@
       "name": "@equin/plugin-apps-website-landing-story-link",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/website/plugins/media": {
+      "name": "@equin/plugin-apps-website-media",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/website/plugins/pages": {
       "name": "@equin/plugin-apps-website-pages",
       "version": "0.0.1",
@@ -8137,6 +8141,8 @@
     "@equin/plugin-apps-website-landing-screenshot": ["@equin/plugin-apps-website-landing-screenshot@workspace:plugins/apps/plugins/website/plugins/landing/plugins/screenshot"],
 
     "@equin/plugin-apps-website-landing-story-link": ["@equin/plugin-apps-website-landing-story-link@workspace:plugins/apps/plugins/website/plugins/landing/plugins/story-link"],
+
+    "@equin/plugin-apps-website-media": ["@equin/plugin-apps-website-media@workspace:plugins/apps/plugins/website/plugins/media"],
 
     "@equin/plugin-apps-website-pages": ["@equin/plugin-apps-website-pages@workspace:plugins/apps/plugins/website/plugins/pages"],
 

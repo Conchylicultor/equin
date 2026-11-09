@@ -1,6 +1,6 @@
 # media-player
 
-`<MediaPlayer kind src label autoPlay? onError? className? />` — a themed
+`<MediaPlayer kind src label autoPlay? poster? onError? className? />` — a themed
 video / audio player in place of the browser's native `controls`, which
 cannot be themed, cannot grow a control (a fine speed, loop in the bar) and
 float an unthemable picture in picture. The design is the prototype
@@ -22,7 +22,8 @@ measure for measure, animations included. Plan:
 
 ## What it draws
 
-- **Video**: the picture, and over it a **floating glass pill** — play ·
+- **Video**: the picture (the `poster` until the first play, if given — else
+  the first frame), and over it a **floating glass pill** — play ·
   volume · current time · seek bar · time left (click: the total) · settings ·
   full screen. The controls fade after 2 s once the pointer rests, playing
   or paused (never while a panel is open or the seek bar is dragged; the
@@ -156,6 +157,7 @@ so a size or glass option later is one set switched as a whole.
     - `ui/tokens/type-scale --line-height-2xs`
     - `ui/tokens/type-scale --line-height-tag-compact`
   - Imported by:
+    - `apps/website/landing/hero`
     - `page/audio`
     - `page/video`
     - `primitives/file-viewer/media`

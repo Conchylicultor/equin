@@ -2,47 +2,11 @@ import { constants } from "node:fs";
 import { access, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { basename } from "node:path";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { rangedBlobResponse } from "@plugins/infra/plugins/endpoints/core";
 import { locateHostPath, type HostLocation } from "./archive/locate";
 import { openArchiveMember } from "./archive/read";
 import { classifyFsError, resolveHostPath } from "./path";
 import type { UserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-
-/** One satisfiable byte range, inclusive at both ends (as `Content-Range` spells it). */
-export type ByteRange = { start: number; end: number };
-
-/**
- * Read a `Range` header against a file of `size` bytes.
- *
- * - `none`: no header, or one this server serves whole (several ranges, a unit
- *   other than bytes, malformed) — RFC 9110 lets a server ignore Range.
- * - `unsatisfiable`: a well-formed single range that lies past the end (416).
- */
-export type RangeRequest =
-  | { kind: "none" }
-  | { kind: "range"; range: ByteRange }
-  | { kind: "unsatisfiable" };
-
-export function parseRange(header: string | null, size: number): RangeRequest {
-  if (!header) return { kind: "none" };
-  const m = /^bytes=(\d*)-(\d*)$/.exec(header.trim());
-  if (!m) return { kind: "none" };
-  const [, from, to] = m;
-  if (from === "" && to === "") return { kind: "none" };
-  if (from === "") {
-    // Suffix range: the last N bytes.
-    const n = Number(to);
-    if (n === 0 || size === 0) return { kind: "unsatisfiable" };
-    return {
-      kind: "range",
-      range: { start: Math.max(0, size - n), end: size - 1 },
-    };
-  }
-  const start = Number(from);
-  if (start >= size) return { kind: "unsatisfiable" };
-  const end = to === "" ? size - 1 : Math.min(Number(to), size - 1);
-  if (end < start) return { kind: "none" };
-  return { kind: "range", range: { start, end } };
-}
 
 /**
  * The headers that keep a host file's bytes inert on the app's origin: served
@@ -127,27 +91,11 @@ export async function serveHostFile(
       : new Response(`Permission denied: ${path}`, { status: 403 });
   }
 
-  const file = Bun.file(path);
-  const headers = inertHeaders(path, file.type);
-  const range = parseRange(rangeHeader, size);
-  if (range.kind === "unsatisfiable") {
-    return new Response(null, {
-      status: 416,
-      headers: { ...headers, "Content-Range": `bytes */${size}` },
-    });
-  }
-  if (range.kind === "range") {
-    const { start, end } = range.range;
-    return new Response(file.slice(start, end + 1), {
-      status: 206,
-      headers: {
-        ...headers,
-        "Content-Range": `bytes ${start}-${end}/${size}`,
-        "Content-Length": String(end - start + 1),
-      },
-    });
-  }
-  return new Response(file, { headers });
+  // Sliced to the stat'd size, so the response knows its length without
+  // the file blob stat'ing again (a file growing meanwhile serves what was stat'd).
+  const type = Bun.file(path).type;
+  const file = Bun.file(path).slice(0, size, type);
+  return rangedBlobResponse(file, rangeHeader, inertHeaders(path, type));
 }
 
 /**
@@ -190,23 +138,5 @@ export async function serveArchiveMember(
       },
     });
   }
-  const range = parseRange(rangeHeader, size);
-  if (range.kind === "unsatisfiable") {
-    return new Response(null, {
-      status: 416,
-      headers: { ...headers, "Content-Range": `bytes */${size}` },
-    });
-  }
-  if (range.kind === "range") {
-    const { start, end } = range.range;
-    return new Response(body.slice(start, end + 1), {
-      status: 206,
-      headers: {
-        ...headers,
-        "Content-Range": `bytes ${start}-${end}/${size}`,
-        "Content-Length": String(end - start + 1),
-      },
-    });
-  }
-  return new Response(body, { headers });
+  return rangedBlobResponse(body, rangeHeader, headers);
 }

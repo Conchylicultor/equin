@@ -573,6 +573,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `isAgentWriteRefusal`
     - `isCodec`
     - `multipart`
+    - `rangedBlobResponse`
     - `rawEndpointHandler`
     - `readEndpointResponse`
     - `sendEndpointRequest`
@@ -580,8 +581,8 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `unmatchedApiResponse`
     - `unsupportedEndpointResponse`
 - Cross-plugin:
-  - Imported by: 246 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×71
+  - Imported by: 247 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×72
     - `conversations` ×35
     - `infra` ×23
     - `page` ×19

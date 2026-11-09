@@ -84,6 +84,7 @@ export interface PlayerProps {
   src: string;
   label: string;
   autoPlay: boolean;
+  poster?: string;
   onError?(error: MediaError | null): void;
   className?: string;
   /** Picture in picture, owned by `MediaPlayer` (it moves this whole tree). `null` = not offered. */
@@ -193,6 +194,7 @@ export function Player({
   src,
   label,
   autoPlay,
+  poster,
   onError,
   className,
   pip,
@@ -520,6 +522,7 @@ export function Player({
         {kind === "video" ? (
           <video
             {...common}
+            poster={poster}
             playsInline
             onClick={() => {
               if (settingsOpen) return openSettings(false);

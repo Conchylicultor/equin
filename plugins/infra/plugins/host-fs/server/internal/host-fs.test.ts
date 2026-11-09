@@ -15,7 +15,7 @@ import { listHostDir } from "./list";
 import { openArgv } from "./open";
 import { peekHostDir } from "./peek";
 import { classifyFsError, expandTilde, resolveHostPath } from "./path";
-import { parseRange, serveHostFile } from "./raw";
+import { serveHostFile } from "./raw";
 import { statHostPath } from "./stat";
 import { decodeTextBytes } from "./decode";
 import { readHostText } from "./text";
@@ -325,29 +325,6 @@ describe("text", () => {
 });
 
 describe("raw", () => {
-  test("parseRange", () => {
-    expect(parseRange(null, 100)).toEqual({ kind: "none" });
-    expect(parseRange("bytes=0-9", 100)).toEqual({
-      kind: "range",
-      range: { start: 0, end: 9 },
-    });
-    expect(parseRange("bytes=90-", 100)).toEqual({
-      kind: "range",
-      range: { start: 90, end: 99 },
-    });
-    expect(parseRange("bytes=90-500", 100)).toEqual({
-      kind: "range",
-      range: { start: 90, end: 99 },
-    });
-    expect(parseRange("bytes=-10", 100)).toEqual({
-      kind: "range",
-      range: { start: 90, end: 99 },
-    });
-    expect(parseRange("bytes=100-", 100)).toEqual({ kind: "unsatisfiable" });
-    expect(parseRange("bytes=0-1,5-6", 100)).toEqual({ kind: "none" });
-    expect(parseRange("items=0-1", 100)).toEqual({ kind: "none" });
-  });
-
   test("sandboxes every file but a PDF", async () => {
     writeFileSync(join(root, "page.html"), "<script></script>");
     writeFileSync(join(root, "doc.pdf"), "%PDF-1.4");

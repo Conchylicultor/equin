@@ -31,6 +31,8 @@ export interface MediaPlayerProps {
   label: string;
   /** Start playing on load (a browser that refuses unprompted playback leaves it paused). */
   autoPlay?: boolean;
+  /** Video: the image shown until the first play, under the big play button (else the first frame). */
+  poster?: string;
   /**
    * The media could not be loaded or decoded — the element's `MediaError`.
    * The caller owns what to show instead (and a retry: remount with a new `key`).
@@ -57,6 +59,7 @@ export function MediaPlayer({
   src,
   label,
   autoPlay = false,
+  poster,
   onError,
   className,
 }: MediaPlayerProps) {
@@ -174,6 +177,7 @@ export function MediaPlayer({
           src={src}
           label={label}
           autoPlay={autoPlay}
+          poster={poster}
           onError={onError}
           className={className}
           pip={

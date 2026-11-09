@@ -1,4 +1,5 @@
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
+import { rangedBlobResponse } from "@plugins/infra/plugins/endpoints/core";
 import {
   relPath,
   type RelPath,
@@ -14,6 +15,12 @@ const MIME_BY_EXT: Record<string, string> = {
   ".flac": "audio/flac",
   ".json": "application/json",
   ".js": "text/javascript",
+  ".mp4": "video/mp4",
+  ".webm": "video/webm",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".png": "image/png",
+  ".webp": "image/webp",
 };
 
 function contentType(name: string): string {
@@ -55,10 +62,12 @@ async function download(
  * path params), so it is the canonical flat file name (e.g. `"PP C#1.ogg"`).
  * On a cache miss the file is fetched from the registered remote source and
  * written to the cache (atomically: a reader sees all of it or nothing), then
- * served. On any upstream failure we fail loudly: log + 502, never write.
+ * served — whole, or the one byte range a `Range` header asks for (a
+ * `<video>` seeking). On any upstream failure we fail loudly: log + 502, never
+ * write.
  */
 export async function handleMirror(
-  _req: Request,
+  req: Request,
   params: Record<string, string>,
 ): Promise<Response> {
   const id = params.id;
@@ -112,11 +121,10 @@ export async function handleMirror(
     }
   }
 
-  return new Response(cached.blob, {
-    headers: {
-      "content-type": contentType(name),
-      // Mirrored assets are immutable; let the browser cache them indefinitely.
-      "cache-control": "public, max-age=31536000, immutable",
-    },
+  // Honours `Range`, so a mirrored video seeks (and plays at all in Safari).
+  return rangedBlobResponse(cached.blob, req.headers.get("range"), {
+    "content-type": contentType(name),
+    // Mirrored assets are immutable; let the browser cache them indefinitely.
+    "cache-control": "public, max-age=31536000, immutable",
   });
 }

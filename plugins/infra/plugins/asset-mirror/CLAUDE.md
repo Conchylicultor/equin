@@ -130,6 +130,8 @@ without booting the server.
     - `framework/tooling/collected-dir.defineCollectedDir`
     - `infra/endpoints.assetBase`
     - `infra/endpoints.AssetBase`
+    - `infra/endpoints.assetPath`
+    - `infra/endpoints.AssetPath`
     - `infra/endpoints.blob`
     - `infra/endpoints.defineEndpoint`
   - Exports (types):
@@ -137,6 +139,7 @@ without booting the server.
     - `CollectedEntry`
   - Exports (values):
     - `assetMirrorBase`
+    - `assetMirrorFile`
     - `assetMirrorPrewarmCollectedDir`
     - `defineAssetMirrorPrewarm`
     - `getMirroredFile`
@@ -146,6 +149,7 @@ without booting the server.
   - Imported by:
     - `apps/sonata/audio/piano`
     - `apps/sonata/audio/soundfont`
+    - `apps/website/media`
     - `infra/asset-mirror/bundle`
     - `ui/icons/emoji`
 - Sub-plugins:

@@ -1,8 +1,10 @@
 import {
   assetBase,
+  assetPath,
   blob,
   defineEndpoint,
   type AssetBase,
+  type AssetPath,
 } from "@plugins/infra/plugins/endpoints/core";
 
 /**
@@ -36,4 +38,14 @@ export const getMirroredNestedFile = defineEndpoint({
  */
 export function assetMirrorBase(id: string): AssetBase {
   return assetBase(getMirroredFile, { id });
+}
+
+/**
+ * One file of a registered mirror, for an element that loads it itself — a
+ * `<video>`'s or `<img>`'s source, resolved with `useAssetSrc`
+ * (`endpoints/web`): the path on a server reachable by URL, a blob URL from an
+ * in-browser server.
+ */
+export function assetMirrorFile(id: string, file: string): AssetPath {
+  return assetPath(getMirroredFile, { id, file });
 }

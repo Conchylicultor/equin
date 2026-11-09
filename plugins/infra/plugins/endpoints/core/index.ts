@@ -37,6 +37,7 @@ export { agentWriteRefusedMessage, isAgentWriteRefusal } from "./agent-write";
 export { getRouteSlowThresholdMs } from "./slow-threshold";
 export type { Codec } from "./codec";
 export { blob, multipart, isCodec } from "./codec";
+export { rangedBlobResponse } from "./byte-range";
 export { dateString } from "./schemas";
 export {
   unsupportedEndpointResponse,

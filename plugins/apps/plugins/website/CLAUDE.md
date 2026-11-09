@@ -18,6 +18,9 @@ the claim, show what it looks like, and then get out of the way:
   (`/website/foundations`), and the vision, story and guide pages
   (`/website/vision`, …), each with its own section slot the page gets written
   into — placeholders for now.
+- [`media`](plugins/media/CLAUDE.md) — the site's binary media (the showcase
+  film and its poster), never in git: assets of the `website-media` GitHub
+  release, served through the asset mirror and bundled into a release.
 - [`improve`](plugins/improve/CLAUDE.md) — the header's Wish button: the
   visitor describes a change, watches a scripted replay of what an agent would
   do with it, and can file it as a prefilled GitHub issue. No agent runs here.
@@ -80,10 +83,11 @@ everywhere a reader can see it; the old name survives only as an internal identi
   - **`landing`** — Landing-page bands of the public website: the hero, the desktop screenshot, the three layers of equin, the story link, and the contact block.
     - Plugins:
       - **`contact`** — Getting in touch: the homepage's closing band — for anyone who wants to support the vision, the address in the sentence (copy on hover) and a Get in touch button that grows the card into a message…
-      - **`hero`** — Landing hero band: the site's one headline — what equin is — with the lede under it and the three properties the claim rests on (self-evolving, integrated, personal).
+      - **`hero`** — Landing hero band: the site's one headline — what equin is — with the lede under it, the showcase film (its poster and the themed player, from apps/website/media), and the three properties the claim…
       - **`layers`** — Landing layers band: 'What is equin?' as three stacked, clickable layers — the technical foundations, the applications built on them (by category, future ones dimmed), and the vision of one OS-like…
       - **`screenshot`** — Landing screenshot band: a drawn picture of equin in desktop mode — the agent manager, a Pages document and Sonata breaking a song down into chords as three windows side by side on one surface…
       - **`story-link`** — Landing story-link band: the one quiet line between the layers and the contact block, offering the story page to a reader who wants the context behind the project.
+  - **`media`** — The website's media (the showcase film and its poster), kept out of git: assets of the website-media GitHub release, served same-origin through the asset mirror and bundled into a release by prewarm.
   - **`pages`** — The inner pages of the public website: the apps gallery, the vision for applications, the technical foundations, the story of how equin came to be, the getting-started guide, and how to install it.
     - Plugins:
       - **`apps`** — The apps gallery of the equin website: the /website/apps pane listing every app equin ships, searchable and grouped by category (harness, daily life, tools, coming next), each card's Install and the…
