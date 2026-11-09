@@ -94,17 +94,20 @@ export function galleryFields(
     },
     // A row-state mark on the title line, not a property: the problems
     // themselves are listed in the detail pane, where there is room to read
-    // them. Absent (not 0) for a prototype without any, so the mark is omitted.
+    // them. Absent (not 0) for a prototype without any, so the mark is omitted
+    // — on a card and in a table cell alike (a cell override is drawn even
+    // when the value is absent, so it says "nothing" itself).
     {
       id: "problems",
       label: "Problems",
       type: "number",
       value: (p) => (p.problems.length === 0 ? undefined : p.problems.length),
-      cell: (p) => (
-        <Badge variant="warning" icon={<Icon icon={warningIcon} />}>
-          {p.problems.length}
-        </Badge>
-      ),
+      cell: (p) =>
+        p.problems.length === 0 ? null : (
+          <Badge variant="warning" icon={<Icon icon={warningIcon} />}>
+            {p.problems.length}
+          </Badge>
+        ),
     },
     // "3d ago" / "v12" read the same as a card token and as a table cell (the
     // gallery mock's list draws its tokens' text in its columns), so neither
