@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render } from "@testing-library/react";
+import { InlineFrame } from "@plugins/primitives/plugins/embed/plugins/frame/web";
 import { FloatingAction, FloatingActionFadeIn } from "../index";
 
 /**
@@ -61,6 +62,12 @@ function settle() {
   });
 }
 
+// A preview frame beside the bar (the file viewer's HTML preview).
+function mountFrame() {
+  const { getByTitle } = render(<InlineFrame title="preview" html="" />);
+  return getByTitle("preview");
+}
+
 const isOpen = (el: HTMLElement) => el.hasAttribute("data-open");
 
 describe("FloatingAction reach", () => {
@@ -94,5 +101,25 @@ describe("FloatingAction reach", () => {
     fireEvent.pointerOut(document.body, { relatedTarget: null });
     settle();
     expect(isOpen(wrapper)).toBe(false);
+  });
+
+  // A frame's moves go to its own document: entering one from within reach is
+  // the last this document hears of the pointer until it comes back out.
+  it("closes when the pointer goes on into a frame from within reach", () => {
+    const wrapper = mount();
+    const frame = mountFrame();
+    fireEvent.pointerLeave(wrapper, { clientX: 20, clientY: 52 });
+    fireEvent.pointerOver(frame);
+    settle();
+    expect(isOpen(wrapper)).toBe(false);
+  });
+
+  it("coming back from a frame before the grace ends keeps it open", () => {
+    const wrapper = mount();
+    const frame = mountFrame();
+    fireEvent.pointerOver(frame);
+    fireEvent.pointerMove(document.body, { clientX: 20, clientY: 50 });
+    settle();
+    expect(isOpen(wrapper)).toBe(true);
   });
 });

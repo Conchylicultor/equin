@@ -105,7 +105,10 @@ few px off a thin pill on the way. So leaving the wrapper's DOM box does not
 close the panel by itself: it closes (after the grace delay, 300 ms) only once
 the pointer is out of **reach** — more than `REACH_MARGIN` (24 px) from the
 open panel's drawn box. Moving back within reach before the delay ends cancels
-the close; leaving the window closes it. A box with no area (not laid out, as
+the close; leaving the window closes it, and so does entering an `<iframe>`
+(a file viewer's PDF / HTML preview) — its moves go to the frame's own
+document, so without that the panel stayed open over the frame until the
+pointer came back out. A box with no area (not laid out, as
 in jsdom) reaches nothing, so only DOM containment counts there.
 
 ## Hover is the DOM box, focus is the keyboard

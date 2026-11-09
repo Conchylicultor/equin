@@ -175,7 +175,12 @@ export function useDisclosureIntent(
   // or focus, re-check reach on every move: the first move that lands out of
   // reach starts the close (which ends both), and coming back within reach
   // before it fires cancels it. The pointer leaving the window from within
-  // reach moves nothing more here, so that is out of reach too.
+  // reach moves nothing more here, so that is out of reach too — and so is
+  // the pointer entering a frame (a file viewer's PDF / HTML preview): its
+  // moves go to the frame's own document, never this one, so a pointer that
+  // left the bar within reach and went on into a frame would otherwise keep
+  // the panel open until it came back out. Entering one is seen here only as
+  // the `pointerover` on the frame element.
   useEffect(() => {
     if (!hovered && !focused) return;
     const onDocPointerMove = (e: PointerEvent) => {
@@ -188,11 +193,18 @@ export function useDisclosureIntent(
     const onDocPointerOut = (e: PointerEvent) => {
       if (e.relatedTarget === null) scheduleClose();
     };
+    // `localName`, not `instanceof HTMLIFrameElement`: a frame nested in a
+    // same-origin frame's document belongs to that document's realm.
+    const onDocPointerOver = (e: PointerEvent) => {
+      if ((e.target as Element).localName === "iframe") scheduleClose();
+    };
     document.addEventListener("pointermove", onDocPointerMove);
     document.addEventListener("pointerout", onDocPointerOut);
+    document.addEventListener("pointerover", onDocPointerOver);
     return () => {
       document.removeEventListener("pointermove", onDocPointerMove);
       document.removeEventListener("pointerout", onDocPointerOut);
+      document.removeEventListener("pointerover", onDocPointerOver);
     };
   }, [hovered, focused, rootRef, nearPanel, cancelClose, scheduleClose]);
 
