@@ -8,6 +8,6 @@ export {
 
 export default {
   description:
-    "Folder-picker primitive: browse the host filesystem and pick a directory. FolderPickerPopover pairs a typeable path input with a breadcrumb browser, both reading host-fs's live listing.",
+    "Folder-picker primitive: browse a file system's folders and pick one. FolderPicker / FolderPickerPopover take the file system (`fs`) the picked path is read on; the popover pairs a typeable path input with a breadcrumb browser, both reading that system's live folder listing (file-systems' useFolderListing).",
   contributions: [],
 } satisfies PluginDefinition;

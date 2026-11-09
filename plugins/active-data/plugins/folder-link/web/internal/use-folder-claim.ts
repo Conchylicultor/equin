@@ -4,14 +4,15 @@ import {
   declined,
   type CodeClaim,
 } from "@plugins/active-data/web";
-import { hostFsPathStat } from "@plugins/infra/plugins/host-fs/core";
+import { computerFileStat } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { useFileLinksWorkspace } from "@plugins/primitives/plugins/file-links/web";
 
 /**
  * The semantic gate for `` `~/Downloads/showcase/` ``: stat the path on the
- * host and claim it only when it is a folder, with its resolved absolute path
- * (`~` expanded, no trailing slash) as the value.
+ * computer's disk — a path an agent writes names a folder of the computer it
+ * runs on — and claim it only when it is a folder, with its resolved absolute
+ * path (`~` expanded, no trailing slash) as the value.
  *
  * A relative path is relative to the checkout the content's host declared
  * (`FileLinksWorkspaceProvider`'s `root`); with none, there is nothing it is
@@ -21,7 +22,7 @@ import { useFileLinksWorkspace } from "@plugins/primitives/plugins/file-links/we
 export function useFolderClaim(text: string): CodeClaim<string> {
   const root = useFileLinksWorkspace()?.root;
   const path = absolutePath(text, root);
-  const stat = useLive(hostFsPathStat, path === null ? null : { path });
+  const stat = useLive(computerFileStat, path === null ? null : { path });
   if (path === null) return declined("a relative path with no checkout");
   switch (stat.status) {
     case "loading":

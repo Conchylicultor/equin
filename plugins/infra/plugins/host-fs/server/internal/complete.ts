@@ -2,7 +2,8 @@ import type { Dirent } from "node:fs";
 import { readdir, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { HOST_FS_COMPLETE_LIMIT, type HostFsCompleteResult } from "../../core";
+import { FILE_COMPLETE_LIMIT } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
+import type { HostFsCompleteResult } from "../../shared/results";
 import { followLink } from "./entry";
 import { classifyFsError, isHiddenName, resolveHostPath } from "./path";
 import {
@@ -39,7 +40,7 @@ export function splitPrefix(
 export async function completeHostDir(
   dir: UserPath,
   fragment: string,
-  limit: number = HOST_FS_COMPLETE_LIMIT,
+  limit: number = FILE_COMPLETE_LIMIT,
 ): Promise<HostFsCompleteResult> {
   const needle = fragment.toLowerCase();
   const showHidden = isHiddenName(fragment);

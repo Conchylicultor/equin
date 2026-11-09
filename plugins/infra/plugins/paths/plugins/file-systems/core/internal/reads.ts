@@ -79,6 +79,15 @@ export const FileReadAccessSchema = z.enum([
 export type FileReadAccess = z.infer<typeof FileReadAccessSchema>;
 
 /**
+ * Where macOS keeps equin's per-folder switches (Privacy & Security → Files &
+ * Folders): the equin app bundle gets a switch per protected folder there, a
+ * denied one included, so this is where a `macos-privacy` read access is
+ * undone. A page opens it as a link.
+ */
+export const MACOS_FILES_AND_FOLDERS_SETTINGS =
+  "x-apple.systempreferences:com.apple.preference.security?Privacy_FilesAndFolders";
+
+/**
  * Set on a path that lies INSIDE an archive (`…/photos.zip/2022/a.jpg`): it is
  * virtual, so it cannot be moved, opened with its default app, or have a git
  * status, and it is revealed as the archive file itself.

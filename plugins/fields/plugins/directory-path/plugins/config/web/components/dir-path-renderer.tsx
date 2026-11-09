@@ -10,6 +10,9 @@ const DirPathRenderer = defineFieldShape({
     fit: "field",
     control: (
       <FolderPickerPopover
+        // A directory-path setting is a folder of the computer's disk (a
+        // `UserPath`), read there by whoever reads the setting.
+        fs="computer"
         purpose="edit"
         key={value}
         value={value}

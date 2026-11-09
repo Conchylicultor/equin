@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: A host folder browsed as a side pane through the Files browser (tree, path bar, Up, a file previewed beside it): the folder/<dir>[/<open file>] pane, homed in Files and opened beside any surface — useFolderPeekTarget(dir) is its link — with Expand opening Files at the pane's location.
+- Description: A folder of any browsable file system browsed as a side pane through the Files browser (tree, path bar, Up, a file previewed beside it): the folder/<dir>[/<open file>][;fs=<system>] pane (no ;fs: the computer's disk), homed in Files and opened beside any surface — useFolderPeekTarget()(fs, dir) is its link, folderLocationParams(fs, dir) its params — with Expand opening Files at the pane's location.
 - Web:
   - Slots: `folderPeekPane.Actions`
   - Slot contributors: `folderPeekPane.Actions` ← `primitives.pane`
@@ -16,12 +16,14 @@
     - `apps/file-explorer/browser.LocationParams`
     - `apps/file-explorer/browser.useLocationNavigator`
     - `apps/file-explorer/browser.useOpenInFiles`
+    - `primitives/css/placeholder.Placeholder`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.PaneExpandTarget`
     - `primitives/pane.useOpenPane`
   - Exports (values):
+    - `folderLocationParams`
     - `folderPeekPane`
     - `useFolderPeekTarget`
 - Cross-plugin:

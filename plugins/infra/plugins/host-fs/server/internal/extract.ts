@@ -2,8 +2,10 @@ import { randomUUID } from "node:crypto";
 import { mkdir, rename, rm, utimes } from "node:fs/promises";
 import { stat } from "@plugins/packages/plugins/timed-fs/core";
 import { basename, dirname, extname, join } from "node:path";
-import type { HostFsArchiveReason } from "../../core";
-import type { FileExtractResult } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
+import {
+  type FileArchiveReason,
+  type FileExtractResult,
+} from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { locateHostPath } from "./archive/locate";
 import { isCorruptStream } from "./archive/read";
 import { archiveFormatFor } from "./archive/registry";
@@ -53,7 +55,7 @@ export async function extractHostArchive(
   } catch (err) {
     return { kind: classifyFsError(err), path };
   }
-  const unreadable = (reason: HostFsArchiveReason): FileExtractResult => ({
+  const unreadable = (reason: FileArchiveReason): FileExtractResult => ({
     kind: "unreadable-archive",
     path,
     archive: path,

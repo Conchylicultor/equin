@@ -1,11 +1,11 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState, type ReactNode } from "react";
 import {
-  compareHostFsNames,
-  hostFsListing,
-  type HostFsListingMeta,
-} from "@plugins/infra/plugins/host-fs/core";
-import { useLive } from "@plugins/network/plugins/live/web";
+  compareFileNames,
+  type BrowsableFileSystem,
+  type FileListingMeta,
+} from "@plugins/infra/plugins/paths/plugins/file-systems/core";
+import { useFolderListing } from "@plugins/infra/plugins/paths/plugins/file-systems/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { FilepathBreadcrumb } from "@plugins/primitives/plugins/filepath-breadcrumb/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -20,9 +20,12 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const folderIcon = symbol("folder");
+
+/** How many entries a page of the browser holds before "Show more". */
+const PAGE = 500;
 const moreIcon = symbol("more-horiz");
 
-/** Why a path cannot be browsed, keyed by host-fs's listing refusal code. */
+/** Why a path cannot be browsed, keyed by a folder listing's refusal code. */
 export const UNAVAILABLE_MESSAGE = {
   "invalid-path": "Not a valid path.",
   missing: "This folder does not exist.",
@@ -31,35 +34,40 @@ export const UNAVAILABLE_MESSAGE = {
   "unreadable-archive": "This archive cannot be read.",
 } as const;
 
-/** By name as host-fs shows a folder (`compareHostFsNames`). */
+/** By name as a folder is shown (`compareFileNames`). */
 const byName = (a: { name: string }, b: { name: string }): number =>
-  compareHostFsNames(a.name, b.name);
+  compareFileNames(a.name, b.name);
 
 export interface FolderPickerProps {
-  /** Folder to open the browser at. Falls back to the user's home directory. */
+  /**
+   * The file system whose folders are browsed — the one the picked path is
+   * read on (a setting the computer reads picks on the computer's disk).
+   */
+  fs: BrowsableFileSystem;
+  /** Folder to open the browser at. Falls back to the system's home folder. */
   value?: string;
   /** Called with the absolute path when the user confirms a folder. */
   onSelect: (path: string) => void;
 }
 
 /**
- * Host-filesystem browser block: a breadcrumb of the current directory, a
+ * A file system's folder browser block: a breadcrumb of the current directory, a
  * scrollable list of its subdirectories to drill into, and a confirm action.
  * Presentational shell lives in {@link FolderPickerPopover}.
  */
-export function FolderPicker({ value, onSelect }: FolderPickerProps) {
+export function FolderPicker({ fs, value, onSelect }: FolderPickerProps) {
   const [browsePath, setBrowsePath] = useState<string | undefined>(
     value && value.trim().length > 0 ? value : undefined,
   );
-  // No path = the user's home folder.
-  const query = browsePath === undefined ? {} : { path: browsePath };
   // The folder's own facts (its resolved path) and its entries, a page at a
-  // time — both host-fs live values, pushed while read.
-  const meta = useLive(hostFsListing.meta, query);
-  const entries = useLive(hostFsListing, query);
+  // time ("Show more") — both the system's live listing, pushed while read.
+  // No path = the system's home folder.
+  const { meta, pages: entries } = useFolderListing(fs, browsePath ?? "~", {
+    limit: PAGE,
+  });
   // The folder's resolved facts once known; the breadcrumb falls back to the
   // path asked, the confirm button stays off.
-  let folder: HostFsListingMeta | undefined;
+  let folder: FileListingMeta | undefined;
   switch (meta.status) {
     case "ready":
       folder = meta.data;

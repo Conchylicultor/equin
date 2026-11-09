@@ -1,6 +1,6 @@
 import { constants } from "node:fs";
 import { access, stat } from "@plugins/packages/plugins/timed-fs/core";
-import type { HostFsArchiveReason } from "../../core";
+import { type FileArchiveReason } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { locateHostPath } from "./archive/locate";
 import { openArchiveMember, statArchiveMember } from "./archive/read";
 import { classifyFsError } from "./path";
@@ -28,7 +28,7 @@ export type HostFileOpen =
       kind: "unreadable-archive";
       path: string;
       archive: string;
-      reason: HostFsArchiveReason;
+      reason: FileArchiveReason;
     };
 
 /**

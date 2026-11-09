@@ -34,7 +34,8 @@ import {
 interface FilePeekHeaderValue {
   path: string;
   file: FileLocation;
-  activationFor: (target: PathTarget) => Activation;
+  /** Where a path-bar place goes, in the bar's file system. */
+  activationFor: (target: PathTarget, fs: BrowsableFileSystem) => Activation;
   renderers: FileRenderersHandle | null;
 }
 
@@ -71,9 +72,8 @@ function useFilePeekHeader(): FilePeekHeaderValue {
  * (rooted at its checkout for a workspace file), every folder a link to that
  * folder's listing, then a copy of the path as shown to agents. While the
  * place is read (the checkout's root) a loading block holds the spot —
- * invisible on a fast read; a file with no place on this computer (a host
- * without the computer, a file in the browser's storage) is a plain
- * breadcrumb.
+ * invisible on a fast read; a file with no browsable place (a checkout on a
+ * host without the computer) is a plain breadcrumb.
  */
 export function FilePeekTitle() {
   const { path, file, activationFor } = useFilePeekHeader();
@@ -84,10 +84,7 @@ export function FilePeekTitle() {
     case "none":
       return <FilepathBreadcrumb path={path} />;
     case "ready":
-      // A folder crumb opens the folder pane, which browses the computer's
-      // disk: a file of another system (the browser's storage) keeps the
-      // plain breadcrumb.
-      if (place.fs !== "computer") return <FilepathBreadcrumb path={path} />;
+      // A folder crumb opens the folder pane in the place's own system.
       return (
         <HostPathBar
           fs={place.fs}
@@ -114,7 +111,7 @@ function HostPathBar({
   root: string | undefined;
   path: string;
   copyText: string;
-  activationFor: (target: PathTarget) => Activation;
+  activationFor: (target: PathTarget, fs: BrowsableFileSystem) => Activation;
 }) {
   const system = useMemo(
     () => ({ fs, home, capabilities: FILE_SYSTEMS[fs].capabilities }),
@@ -125,7 +122,7 @@ function HostPathBar({
     <PathBar
       path={path}
       source={source}
-      activationFor={activationFor}
+      activationFor={(target) => activationFor(target, fs)}
       // A side pane beside other surfaces: ⌘L stays the surface's own.
       shortcut={false}
       actions={

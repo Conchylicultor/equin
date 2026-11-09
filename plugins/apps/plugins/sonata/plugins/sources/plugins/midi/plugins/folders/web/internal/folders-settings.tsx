@@ -19,7 +19,7 @@ import {
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
-import { MACOS_FILES_AND_FOLDERS_SETTINGS } from "@plugins/infra/plugins/host-fs/core";
+import { MACOS_FILES_AND_FOLDERS_SETTINGS } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { midiFoldersConfig } from "../../shared/config";
 import {
   midiFolderSongCount,
@@ -108,6 +108,8 @@ function FolderList() {
           ),
       })}
       <FolderPickerPopover
+        // Imported from by the computer: a folder of its disk.
+        fs="computer"
         purpose="add"
         onAdd={add}
         placeholder="Add a folder — type a path or browse"

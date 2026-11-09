@@ -1,31 +1,30 @@
 # host-fs
 
-The one host-filesystem API: every read of an arbitrary path on the user's
-machine (not a git ref, not an app data dir) goes through here. Contracts live
-in `core/` — the live values (`liveValue`, served by `machine/`) and the
-endpoints (`defineEndpoint`, plus one raw byte-stream handler). It is also
-the computer's disk as a FILE SYSTEM: its `machine/` serves file-systems'
-`computer` declarations (`infra/paths/file-systems` — `files.computer.list` /
-`.peek` / `.stat` / `.text` / `.bytes` / `.complete` / `.volume`, the raw
-route and the open / extract / move writes), and contributes
-`FileSystemProvided("computer")`. Files reads the computer only through
-those. There is no web barrel: what is left in `core/` here (`hostFsListing`,
-`hostFsPathStat` — *Live reads* below, and `hostFileUrl(path)`) is read by the
-folder picker, folder links and the image viewer until they move onto
-file-systems too (session 3 of
-research/2026-11-09-global-one-file-system-api.md), then deleted.
+The computer's disk, implemented: every read of an arbitrary path on the
+user's machine (not a git ref, not an app data dir) is served from here. It
+declares NO reads of its own — it has no `core/` and no web barrel. The
+contracts are file-systems' `computer` declarations
+(`infra/paths/file-systems` — `files.computer.list` / `.peek` / `.stat` /
+`.text` / `.bytes` / `.complete` / `.volume`, `GET /api/files/computer/raw`
+and the open / extract / move writes), which its `machine/` serves, and it
+contributes `FileSystemProvided("computer")`. A reader names a location
+(`{ fs: "computer", path }`) and file-systems' reads, never host-fs, so a new
+consumer cannot spell a disk-only read. What its readers answer internally
+(the `HostFs*Result` unions, with their failure kinds) is plugin-private, in
+`shared/results.ts`; an entry is file-systems' `FileEntry`. Design:
+research/2026-11-09-global-one-file-system-api.md.
 
 | Endpoint | Answers |
 |---|---|
-| `GET /api/host-fs/raw?path` (`hostFsRaw`, `hostFileUrl`) | the bytes, streamed; `Range` (one range) → 206 / 416; 404 / 403 / 400 (a directory) / 422 (an unreadable archive member) |
+| `GET /api/files/computer/raw?path` (file-systems' `computerFileRaw`, `fileUrl({ fs: "computer", path })`) | the bytes, streamed; `Range` (one range) → 206 / 416; 404 / 403 / 400 (a directory) / 422 (an unreadable archive member) |
 | `POST /api/files/computer/open {path, reveal?}` (file-systems' `computerFileOpen`) | `opened` · `in-archive` · `missing`; 501 off macOS |
 | `POST /api/files/computer/extract {path}` (`computerFileExtract`) | `extracted {created, layout: single \| folder}` · `not-an-archive` · `missing` · `denied` · `unreadable-archive` |
 | `POST /api/files/computer/move {sources, destDir, resolutions?}` (`computerFileMove`) | `ok {destDir, results}` — one per source: `moved {from, to}` · `exists {from, to}` · `skipped` · `into-self` · `replaces-ancestor` · `same-dir` · `missing` · `denied` · `archive`; or, for the destination, `missing` · `denied` · `not-a-dir` · `archive` |
 
 ## Live reads (the reads above, kept fresh)
 
-The folder, file and volume reads a surface renders are live values in
-`core/` — every read but `raw` has ONLY the live form (their endpoints are
+The folder, file and volume reads a surface renders are file-systems' live
+values — every read but `raw` has ONLY the live form (their endpoints are
 gone; a one-off check is `useLiveReader` over the same value); `raw` is bytes
 behind a URL, so it stays a route —
 served by `machine/` (each `needsMachine`: under a transport with no computer behind
@@ -48,10 +47,10 @@ so no change after the read is missed.
 
 | Value | Question → answer | Bound · freshness |
 |---|---|---|
-| `hostFsListing` (`host-fs.list`), and file-systems' `computerFileListing` (`files.computer.list`, `{ path }`) over the same held listing | `{ path? }` (none = home) → pages of `HostFsEntry`, by name in CODE-POINT order; meta `hostFsListing.meta` → `{ path, parent, total, within? }` | key-range-paged (`limit` 500, `maxLimit` 10 000 without a viewport); `watchHostDir`, throttle 1 s; every page cut from one held listing per folder, which a change patches (one `readdir`, then a `lstat` of only the entries the watch named — O(changed), not O(folder)); entries described ≤ 16 at once process-wide |
-| file-systems' `computerDirPeek` (`files.computer.peek`) | `{ path }` → `ok {children}` · `too-many {total}` · `archive` | ≤ `HOST_FS_PEEK_MAX_NAMES` names; `watchHostDir`, throttle 1 s; many folders: `useLive(v, [...])` |
-| `hostFsPathStat` (`host-fs.stat`), and `computerFileStat` (`files.computer.stat`, the same answer) | `{ path }` → `{ path, parent, entry, within? }` | one entry; `watchHostPath` |
-| file-systems' `computerFileCompletions` (`files.computer.complete`) | `{ prefix }` → `{ dir, matches: {name, path}[], truncated }` — folder-only children of `dirname(prefix)` matching `basename(prefix)`, case-insensitive, natural order; dotfolders only for a `.` fragment; on disk only. Refuses `invalid-path` (empty / relative), `missing`, `denied`, `not-a-dir` | ≤ `HOST_FS_COMPLETE_LIMIT` (50) matches; `watchHostDir` of the folder searched, throttle 1 s; one tuple per text typed (the path bar) |
+| file-systems' `computerFileListing` (`files.computer.list`) | `{ path }` → pages of `FileEntry`, by name in CODE-POINT order; meta `.meta` → `{ path, parent, total, within? }` | key-range-paged (`limit` 500, `maxLimit` 10 000 without a viewport); `watchHostDir`, throttle 1 s; every page cut from one held listing per folder, which a change patches (one `readdir`, then a `lstat` of only the entries the watch named — O(changed), not O(folder)); entries described ≤ 16 at once process-wide |
+| file-systems' `computerDirPeek` (`files.computer.peek`) | `{ path }` → `ok {children}` · `too-many {total}` · `archive` | ≤ `FILE_PEEK_MAX_NAMES` names; `watchHostDir`, throttle 1 s; many folders: `useLive(v, [...])` |
+| file-systems' `computerFileStat` (`files.computer.stat`) | `{ path }` → `{ path, parent, entry, within?, read? }` | one entry; `watchHostPath` |
+| file-systems' `computerFileCompletions` (`files.computer.complete`) | `{ prefix }` → `{ dir, matches: {name, path}[], truncated }` — folder-only children of `dirname(prefix)` matching `basename(prefix)`, case-insensitive, natural order; dotfolders only for a `.` fragment; on disk only. Refuses `invalid-path` (empty / relative), `missing`, `denied`, `not-a-dir` | ≤ `FILE_COMPLETE_LIMIT` (50) matches; `watchHostDir` of the folder searched, throttle 1 s; one tuple per text typed (the path bar) |
 | file-systems' `computerVolume` (`files.computer.volume`) | `{ path? }` → `{ path, name, total, free }` | snapshot (`refresh()`): free space has no change signal |
 
 `watchHostPath(path, onChange)` (machine barrel) watches one path: its entry
@@ -72,15 +71,15 @@ folder's last read. `resolveOrRefuse` /
 `refusalFor` (machine barrel) turn a spelling and an endpoint failure kind
 into a read's refusal, for the sub-plugins serving reads of their own.
 
-**The computer's disk as a file system.** `machine/` also serves
-file-systems' `computer` reads (`files.computer.stat` / `.text` / `.bytes`,
-`GET /api/files/computer/raw`) with these same readers and watches — what a
-file reader (the file viewer) reads a disk file through, by `FileLocation`.
-A file's text is read only there (the old `host-fs.text` is gone).
+**File reads.** `machine/` serves file-systems' file reads too
+(`files.computer.text` / `.bytes`, `GET /api/files/computer/raw`) with these
+same readers and watches — what a file reader (the file viewer) reads a disk
+file through, by `FileLocation`.
 
-Images get two more reads in the `image` sub-plugin: resized copies
-(`GET /api/host-fs/image/resized`) and a folder's pixel sizes (the
-`host-fs.image-sizes` live value). It reads files through `openHostFile`
+Images get two more reads, served by the `image` sub-plugin: file-systems'
+`computerImageResized` (`GET /api/files/computer/image/resized`) and
+`computerImageSizes` (`files.computer.image-sizes`, a folder's pixel sizes) —
+the computer's `images` capability. It reads files through `openHostFile`
 (server barrel), which opens a disk file or an archive member alike.
 
 Rules every endpoint shares:
@@ -117,7 +116,7 @@ computer file system's `text` / `bytes` / `raw` read its members; `complete` and
   nearest claimed ancestor that is a regular file. Archives inside archives
   are not browsed (their members are `missing`).
 - **Marks, not new kinds.** An archive file is a `file` entry carrying
-  `archive: { format }`; `isBrowsable(entry)` (core) is the one "does this
+  `archive: { format }`; file-systems' `isBrowsable(entry)` is the one "does this
   open like a folder?" test — a folder picker still tests `kind === "dir"`.
   A `list` / `stat` answer inside an archive carries `within { archive,
   format }`: the path is virtual, so Open with default app answers
@@ -211,10 +210,6 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
     - `resource.declare` "files.computer.stat"
     - `resource.declare` "files.computer.text"
     - `resource.declare` "files.computer.volume"
-    - `resource.declare` "host-fs.list"
-    - `resource.declare` "host-fs.list:meta"
-    - `resource.declare` "host-fs.stat"
-    - `resource.declare` "host-fs.version"
     - `file-systems.provided` "computer"
   - Uses:
     - `infra/endpoints.HttpError`
@@ -238,16 +233,12 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
   - Resources:
     - `files.computer.bytes` (invalidate, notified)
     - `files.computer.complete` (push, notified, capped: FILE_COMPLETE_LIMIT)
-    - `files.computer.list` (keyed, window)
-    - `files.computer.list:meta` (push)
+    - `files.computer.list` (keyed, window, notified)
+    - `files.computer.list:meta` (push, notified)
     - `files.computer.peek` (push, notified)
     - `files.computer.stat` (push, notified)
     - `files.computer.text` (invalidate, notified)
     - `files.computer.volume` (invalidate, snapshot)
-    - `host-fs.list` (keyed, window)
-    - `host-fs.list:meta` (push)
-    - `host-fs.stat` (push, notified)
-    - `host-fs.version` (push, notified)
 - Machine:
   - Uses:
     - `infra/endpoints.implementMachine`
@@ -262,56 +253,12 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
     - `resolveOrRefuse`
     - `watchHostDir`
     - `watchHostPath`
-  - Routes: `GET /api/host-fs/raw`
-- Core:
-  - Uses:
-    - `infra/endpoints.assetPath`
-    - `infra/endpoints.AssetPath`
-    - `infra/endpoints.blob`
-    - `infra/endpoints.defineEndpoint`
-    - `network/live.liveValue`
-  - Exports (types):
-    - `FileVersion`
-    - `HostFsArchiveReason`
-    - `HostFsCompleteResult`
-    - `HostFsEntry`
-    - `HostFsEntryKind`
-    - `HostFsListingMeta`
-    - `HostFsListResult`
-    - `HostFsPathStat`
-    - `HostFsPeekResult`
-    - `HostFsReadAccess`
-    - `HostFsStatResult`
-    - `HostFsTextResult`
-    - `HostFsVolumeResult`
-    - `HostFsWithin`
-  - Exports (values):
-    - `compareHostFsNames`
-    - `FileVersionSchema`
-    - `HOST_FS_COMPLETE_LIMIT`
-    - `HOST_FS_MACHINE`
-    - `HOST_FS_PEEK_MAX_NAMES`
-    - `HOST_FS_TEXT_MAX_BYTES`
-    - `hostFileUrl`
-    - `hostFsListing`
-    - `HostFsListingQuerySchema`
-    - `hostFsPathStat`
-    - `hostFsRaw`
-    - `hostFsVersion`
-    - `isBrowsable`
-    - `MACOS_FILES_AND_FOLDERS_SETTINGS`
 - Cross-plugin:
   - Imported by:
-    - `active-data/folder-link`
-    - `apps/sonata/sources/midi/folders`
     - `code-explorer`
     - `code-explorer/file-resolve`
-    - `debug/browser-recordings`
     - `infra/host-fs/image`
     - `infra/host-fs/zip`
-    - `primitives/file-viewer`
-    - `primitives/file-viewer/image`
-    - `primitives/folder-picker`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/archive/locate.ts`, `server/internal/archive/tree.ts`, `server/internal/complete.ts`, `server/internal/entry.ts`, `server/internal/extract.ts`, `server/internal/free-path.ts`, `server/internal/list.ts`, `server/internal/move.ts`, `server/internal/open-file.ts`, `server/internal/open.ts`, `server/internal/path.ts`, `server/internal/peek.ts`, `server/internal/raw.ts`, `server/internal/stat.ts`, `server/internal/text.ts`, `server/internal/volume.ts` (debt)
 - Sub-plugins:

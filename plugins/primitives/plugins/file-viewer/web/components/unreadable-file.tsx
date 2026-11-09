@@ -4,8 +4,10 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { MACOS_FILES_AND_FOLDERS_SETTINGS } from "@plugins/infra/plugins/host-fs/core";
-import type { FileLocation } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
+import {
+  MACOS_FILES_AND_FOLDERS_SETTINGS,
+  type FileLocation,
+} from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { useFileStat } from "@plugins/infra/plugins/paths/plugins/file-systems/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";

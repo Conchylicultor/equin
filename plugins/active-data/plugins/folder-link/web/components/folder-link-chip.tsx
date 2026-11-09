@@ -21,7 +21,7 @@ export function FolderLinkChip({
   const folderTarget = useFolderPeekTarget();
   return (
     <LinkChip
-      activation={folderTarget(value)}
+      activation={folderTarget("computer", value)}
       leading={<Icon icon={folderIcon} className="text-muted-foreground" />}
       mono
     >

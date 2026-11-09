@@ -1,26 +1,24 @@
 import { useMemo } from "react";
-import {
-  compareHostFsNames,
-  HOST_FS_PEEK_MAX_NAMES,
-  hostFsListing,
-  type HostFsEntry,
-} from "@plugins/infra/plugins/host-fs/core";
-import {
-  hostFsFolderImageSizes,
-  hostResizedAsset,
-  type FolderImageSize,
-  isResizableName,
-} from "@plugins/infra/plugins/host-fs/plugins/image/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 import {
   codeDir,
   type CodeDirEntry,
 } from "@plugins/code-explorer/plugins/code-api/core";
 import {
+  FILE_PEEK_MAX_NAMES,
+  FILE_SYSTEMS,
+  compareFileNames,
+  computerImageSizes,
+  computerResizedAsset,
   fileUrl,
+  isResizableName,
   locationName,
+  type BrowsableFileSystem,
+  type FileEntry,
   type FileLocation,
+  type FolderImageSize,
 } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
+import { useFolderListing } from "@plugins/infra/plugins/paths/plugins/file-systems/web";
 import type { ViewerImage } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
 import {
   assetUrlOver,
@@ -32,10 +30,14 @@ import {
 } from "@plugins/primitives/plugins/networking/web";
 import { supportsImage } from "./supports";
 
-/** The folder a file sits in, in the same spelling as the file's path. */
+/**
+ * The folder a file sits in, in the same spelling as the file's path: a
+ * browsable system's paths are absolute or `~`-rooted, a checkout's relative
+ * to its root (`""` at the root).
+ */
 function parentDir(file: FileLocation): string {
   const slash = file.path.lastIndexOf("/");
-  if (file.fs === "computer")
+  if (file.fs !== "checkout")
     return slash <= 0 ? "/" : file.path.slice(0, slash);
   return slash < 0 ? "" : file.path.slice(0, slash);
 }
@@ -46,7 +48,7 @@ function siblingRef(
   name: string,
 ): FileLocation {
   const path =
-    file.fs === "computer"
+    file.fs !== "checkout"
       ? `${dir === "/" ? "" : dir}/${name}`
       : dir === ""
         ? name
@@ -54,9 +56,10 @@ function siblingRef(
   return { ...file, path };
 }
 
-/** What a host listing and the sizes read add to one image: the version its
- *  resized copies are named by, and its upright size. */
-interface HostFacts {
+/** What a folder listing and the sizes read add to one image of a system
+ *  with image copies: the version its resized copies are named by, and its
+ *  upright size. */
+interface ImageFacts {
   version: { mtimeMs: number; size: number };
   size: { width: number; height: number } | null;
 }
@@ -64,34 +67,36 @@ interface HostFacts {
 function viewerImage(
   file: FileLocation,
   src: string,
-  host: HostFacts | null,
+  facts: ImageFacts | null,
   transport: Transport,
 ): ViewerImage {
   const image: ViewerImage = { src, name: locationName(file) };
-  if (host === null || file.fs !== "computer") return image;
+  // Only the computer's disk makes image copies (`capabilities.images`):
+  // `facts` is null for every other system.
+  if (facts === null || file.fs !== "computer") return image;
   const { path } = file;
   return {
     ...image,
-    ...(host.size ?? {}),
+    ...(facts.size ?? {}),
     // The viewer loads a copy by URL on its own: where no URL reaches the
     // copy (an in-browser server), it keeps the original it already holds.
     resized: (edge) => {
       const copy = assetUrlOver(
         transport,
-        hostResizedAsset(path, edge, host.version),
+        computerResizedAsset(path, edge, facts.version),
       );
       return copy.kind === "ready" ? copy.url : src;
     },
   };
 }
 
-/** By name as host-fs shows a folder. */
-const byName = compareHostFsNames;
+/** By name as a folder is shown. */
+const byName = compareFileNames;
 
-// A host folder's listing and sizes are read whole, in one page: the viewer
-// steps through every image of the folder. Bounded by the values' `maxLimit`
-// (the same cap past which host-fs's `peek` stops naming children).
-const HOST_READ = { limit: HOST_FS_PEEK_MAX_NAMES };
+// A folder's sizes are read whole, in one page, as its listing is
+// (`useFolderListing`): the viewer steps through every image of the folder.
+// Bounded by the value's `maxLimit`.
+const SIZES_READ = { limit: FILE_PEEK_MAX_NAMES };
 // A workspace folder's listing likewise, bounded by `code.dir`'s `maxLimit`
 // (the same 10 000 entries).
 const WORKSPACE_READ = { limit: 10_000 };
@@ -99,28 +104,37 @@ const WORKSPACE_READ = { limit: 10_000 };
 /**
  * Every image in `file`'s folder, by name — what the viewer steps through
  * with ← / →. Until the folder is listed (or when it cannot be: missing,
- * denied, no computer behind the app), the set is the file alone (`pending`
- * says which); a failed read throws. A workspace folder is code-api's live
- * `code.dir` (on disk now, or as of the file's ref), pushed while read.
+ * denied, a system this host cannot run), the set is the file alone
+ * (`pending` says which); a failed read throws. A browsable system's folder
+ * is its live listing (`useFolderListing`); a checkout folder is code-api's
+ * live `code.dir` (on disk now, or as of the file's ref) — both pushed while
+ * read.
  *
- * A folder on the computer's disk (host-fs's live `host-fs.list` and
- * `host-fs.image-sizes`, pushed while read) gives its raster images resized
- * copies (thumbnails, and a screen-sized stage) and, once their headers are
- * read, their pixel sizes. A file in the browser's storage is the image alone
- * until file-systems serves folder listings (session 2 of
- * research/2026-11-09-global-one-file-system-api.md), which will replace these
- * per-system listings with one.
+ * A folder of a system with image copies (`capabilities.images`: the
+ * computer's disk) gives its raster images resized copies (thumbnails, and a
+ * screen-sized stage) and, once their headers are read, their pixel sizes.
  */
 export function useFolderImages(file: FileLocation): {
   images: readonly ViewerImage[];
-  /** A host folder's listing or sizes are still on their way: the images
-   *  will gain their copies and sizes when they land. */
+  /** A folder's listing or sizes are still on their way: the images will
+   *  gain their siblings, copies and sizes when they land. */
   pending: boolean;
 } {
   const dir = parentDir(file);
-  const hostQuery = file.fs === "computer" ? { path: dir } : null;
-  const host = useLive(hostFsListing, hostQuery, HOST_READ);
-  const sizes = useLive(hostFsFolderImageSizes, hostQuery, HOST_READ);
+  const browsable: BrowsableFileSystem | null =
+    file.fs === "checkout" ? null : file.fs;
+  // The listing hook reads a system every render; a checkout reads none.
+  const listing = useFolderListing(
+    browsable ?? "computer",
+    browsable === null ? null : dir,
+  ).pages;
+  const measured =
+    browsable !== null && FILE_SYSTEMS[browsable].capabilities.images;
+  const sizes = useLive(
+    computerImageSizes,
+    measured && browsable === "computer" ? { path: dir } : null,
+    SIZES_READ,
+  );
   const inWorkspace = useLive(
     codeDir,
     file.fs === "checkout"
@@ -133,18 +147,18 @@ export function useFolderImages(file: FileLocation): {
     WORKSPACE_READ,
   );
 
-  // A host folder's entries, once listed; `null` while they are not known
-  // (`pending` says so), when the folder cannot be listed, or with no computer
-  // behind the app — the set is then the file alone.
-  let hostEntries: readonly HostFsEntry[] | null;
-  switch (host.status) {
+  // A browsable folder's entries, once listed; `null` while they are not
+  // known (`pending` says so), when the folder cannot be listed, or for a
+  // system this host cannot run — the set is then the file alone.
+  let listedEntries: readonly FileEntry[] | null;
+  switch (listing.status) {
     case "ready":
-      hostEntries = host.data;
+      listedEntries = listing.data;
       break;
     case "loading":
     case "error":
     case "unavailable":
-      hostEntries = null;
+      listedEntries = null;
       break;
   }
   // A workspace folder's entries, likewise.
@@ -160,13 +174,13 @@ export function useFolderImages(file: FileLocation): {
       break;
   }
   const names = useMemo((): readonly string[] | null => {
-    const entries = file.fs === "computer" ? hostEntries : workspaceEntries;
+    const entries = browsable !== null ? listedEntries : workspaceEntries;
     if (entries === null) return null;
     return entries
       .filter((e) => e.kind === "file" && supportsImage(e.name) !== false)
       .map((e) => e.name)
       .sort(byName);
-  }, [file.fs, hostEntries, workspaceEntries]);
+  }, [browsable, listedEntries, workspaceEntries]);
 
   // The sizes measured so far; none while they are on their way (`pending`),
   // refused or unreadable here — the images then carry no size.
@@ -181,13 +195,13 @@ export function useFolderImages(file: FileLocation): {
       sizesData = null;
       break;
   }
-  const facts = useMemo((): ReadonlyMap<string, HostFacts> | null => {
-    if (hostEntries === null) return null;
+  const facts = useMemo((): ReadonlyMap<string, ImageFacts> | null => {
+    if (!measured || listedEntries === null) return null;
     const known = new Map<string, { width: number; height: number }>();
     for (const { name, size } of sizesData ?? [])
       if (size.kind === "known") known.set(name, size);
-    const out = new Map<string, HostFacts>();
-    for (const e of hostEntries) {
+    const out = new Map<string, ImageFacts>();
+    for (const e of listedEntries) {
       if (e.kind !== "file" || !isResizableName(e.name)) continue;
       out.set(e.name, {
         version: { mtimeMs: e.mtimeMs, size: e.size },
@@ -195,7 +209,7 @@ export function useFolderImages(file: FileLocation): {
       });
     }
     return out;
-  }, [hostEntries, sizesData]);
+  }, [measured, listedEntries, sizesData]);
 
   // Memoized by the React Compiler (a manual useMemo here cannot be kept).
   const self = locationName(file);
@@ -215,8 +229,8 @@ export function useFolderImages(file: FileLocation): {
   });
   // A refusal (missing, denied, …) is the folder's answer — the file alone;
   // any other failure is a bug to surface.
-  if (host.status === "error" && host.error.kind !== "refused")
-    throw host.error;
+  if (listing.status === "error" && listing.error.kind !== "refused")
+    throw listing.error;
   if (sizes.status === "error" && sizes.error.kind !== "refused")
     throw sizes.error;
   if (inWorkspace.status === "error" && inWorkspace.error.kind !== "refused")
@@ -224,7 +238,8 @@ export function useFolderImages(file: FileLocation): {
   return {
     images,
     pending:
-      file.fs === "computer" &&
-      (host.status === "loading" || sizes.status === "loading"),
+      browsable !== null &&
+      (listing.status === "loading" ||
+        (measured && sizes.status === "loading")),
   };
 }

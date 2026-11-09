@@ -1334,7 +1334,7 @@ const read = useLiveReader();
 <button
   onClick={async () => {
     // or read(v) / read(queryValue, query)
-    const a = await read(hostFsPathStat, { path });
+    const a = await read(computerFileStat, { path });
     if (a.status === "refused") return showError(a.message);
     if (a.status === "unavailable") return; // only with `needsMachine`
     act(a.data);
@@ -1798,7 +1798,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `serveValueOn`
     - `sliceRange`
 - Cross-plugin:
-  - Imported by: 339 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 337 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×85
     - `conversations` ×70
     - `debug` ×33
@@ -1807,7 +1807,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `page` ×16
     - `active-data` ×13
     - `build` ×10
-    - `primitives` ×10
+    - `primitives` ×8
     - `stats` ×5
     - `code-explorer` ×4
     - `plugin-meta` ×4

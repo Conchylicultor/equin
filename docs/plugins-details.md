@@ -4659,7 +4659,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/code/file-pane`
               - `conversations/conversation-view/explorer`
               - `plugin-meta/plugin-view/file-tree`
-        - **`folder-peek`** — A host folder browsed as a side pane through the Files browser (tree, path bar, Up, a file previewed beside it): the folder/<dir>[/<open file>] pane, homed in Files and opened beside any surface — useFolderPeekTarget(dir) is its link — with Expand opening Files at the pane's location.
+        - **`folder-peek`** — A folder of any browsable file system browsed as a side pane through the Files browser (tree, path bar, Up, a file previewed beside it): the folder/<dir>[/<open file>][;fs=<system>] pane (no ;fs: the computer's disk), homed in Files and opened beside any surface — useFolderPeekTarget()(fs, dir) is its link, folderLocationParams(fs, dir) its params — with Expand opening Files at the pane's location.
           - Web:
             - Slots: `folderPeekPane.Actions`
             - Slot contributors: `folderPeekPane.Actions` ← `primitives.pane`
@@ -4671,12 +4671,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/file-explorer/browser.LocationParams`
               - `apps/file-explorer/browser.useLocationNavigator`
               - `apps/file-explorer/browser.useOpenInFiles`
+              - `primitives/css/placeholder.Placeholder`
               - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/pane.PaneExpandTarget`
               - `primitives/pane.useOpenPane`
             - Exports (values):
+              - `folderLocationParams`
               - `folderPeekPane`
               - `useFolderPeekTarget`
           - Cross-plugin:
@@ -16226,11 +16228,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses: 30 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/REFERENCE.md)
                   - `primitives/file-viewer` ×5
                   - `primitives/pane` ×5
-                  - `apps/file-explorer/browser` ×4
+                  - `apps/file-explorer/browser` ×3
+                  - `apps/file-explorer/folder-peek` ×2
                   - `code-explorer/file-resolve` ×2
                   - `network/live/live-state` ×2
                   - `primitives/path-bar` ×2
-                  - `apps/file-explorer/folder-peek.folderPeekPane`
                   - `conversations/conversation-view/code.useEditedFile`
                   - `conversations/conversation-view.conversationPane`
                   - `primitives/copy-to-clipboard.CopyButton`
@@ -33203,10 +33205,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resource.declare` "files.computer.stat"
           - `resource.declare` "files.computer.text"
           - `resource.declare` "files.computer.volume"
-          - `resource.declare` "host-fs.list"
-          - `resource.declare` "host-fs.list:meta"
-          - `resource.declare` "host-fs.stat"
-          - `resource.declare` "host-fs.version"
           - `file-systems.provided` "computer"
         - Uses:
           - `infra/endpoints.HttpError`
@@ -33230,16 +33228,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Resources:
           - `files.computer.bytes` (invalidate, notified)
           - `files.computer.complete` (push, notified, capped: FILE_COMPLETE_LIMIT)
-          - `files.computer.list` (keyed, window)
-          - `files.computer.list:meta` (push)
+          - `files.computer.list` (keyed, window, notified)
+          - `files.computer.list:meta` (push, notified)
           - `files.computer.peek` (push, notified)
           - `files.computer.stat` (push, notified)
           - `files.computer.text` (invalidate, notified)
           - `files.computer.volume` (invalidate, snapshot)
-          - `host-fs.list` (keyed, window)
-          - `host-fs.list:meta` (push)
-          - `host-fs.stat` (push, notified)
-          - `host-fs.version` (push, notified)
       - Machine:
         - Uses:
           - `infra/endpoints.implementMachine`
@@ -33254,56 +33248,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resolveOrRefuse`
           - `watchHostDir`
           - `watchHostPath`
-        - Routes: `GET /api/host-fs/raw`
-      - Core:
-        - Uses:
-          - `infra/endpoints.assetPath`
-          - `infra/endpoints.AssetPath`
-          - `infra/endpoints.blob`
-          - `infra/endpoints.defineEndpoint`
-          - `network/live.liveValue`
-        - Exports (types):
-          - `FileVersion`
-          - `HostFsArchiveReason`
-          - `HostFsCompleteResult`
-          - `HostFsEntry`
-          - `HostFsEntryKind`
-          - `HostFsListingMeta`
-          - `HostFsListResult`
-          - `HostFsPathStat`
-          - `HostFsPeekResult`
-          - `HostFsReadAccess`
-          - `HostFsStatResult`
-          - `HostFsTextResult`
-          - `HostFsVolumeResult`
-          - `HostFsWithin`
-        - Exports (values):
-          - `compareHostFsNames`
-          - `FileVersionSchema`
-          - `HOST_FS_COMPLETE_LIMIT`
-          - `HOST_FS_MACHINE`
-          - `HOST_FS_PEEK_MAX_NAMES`
-          - `HOST_FS_TEXT_MAX_BYTES`
-          - `hostFileUrl`
-          - `hostFsListing`
-          - `HostFsListingQuerySchema`
-          - `hostFsPathStat`
-          - `hostFsRaw`
-          - `hostFsVersion`
-          - `isBrowsable`
-          - `MACOS_FILES_AND_FOLDERS_SETTINGS`
       - Cross-plugin:
         - Imported by:
-          - `active-data/folder-link`
-          - `apps/sonata/sources/midi/folders`
           - `code-explorer`
           - `code-explorer/file-resolve`
-          - `debug/browser-recordings`
           - `infra/host-fs/image`
           - `infra/host-fs/zip`
-          - `primitives/file-viewer`
-          - `primitives/file-viewer/image`
-          - `primitives/folder-picker`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/archive/locate.ts`, `server/internal/archive/tree.ts`, `server/internal/complete.ts`, `server/internal/entry.ts`, `server/internal/extract.ts`, `server/internal/free-path.ts`, `server/internal/list.ts`, `server/internal/move.ts`, `server/internal/open-file.ts`, `server/internal/open.ts`, `server/internal/path.ts`, `server/internal/peek.ts`, `server/internal/raw.ts`, `server/internal/stat.ts`, `server/internal/text.ts`, `server/internal/volume.ts` (debt)
       - Plugins:
@@ -33343,13 +33293,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reports/outbox` (0 debt)
         - **`image`** — Images on the host filesystem: the daily host-fs-image.sweep keeps the resized-copy cache (machine/'s GET resized) within 30 days unused and 1 GB.
           - Server:
-            - Contributes: `resource.declare` "host-fs.image-sizes"
+            - Contributes: `resource.declare` "files.computer.image-sizes"
             - Uses:
               - `infra/host-fs.openHostFile`
               - `infra/jobs.defineJob`
               - `primitives/log-channels.Log`
             - Register: `defineJob('host-fs-image.sweep')`
-            - Resources: `host-fs.image-sizes` (keyed, window, notified)
+            - Resources: `files.computer.image-sizes` (keyed, window, notified)
           - Machine:
             - Uses:
               - `infra/endpoints.machineHandler`
@@ -33359,33 +33309,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/host-fs.resolveOrRefuse`
               - `infra/host-fs.watchHostDir`
               - `network/live.serveValue`
-            - Routes: `GET /api/host-fs/image/resized`
-          - Core:
-            - Uses:
-              - `infra/endpoints.assetPath`
-              - `infra/endpoints.AssetPath`
-              - `infra/endpoints.blob`
-              - `infra/endpoints.defineEndpoint`
-              - `infra/host-fs.HOST_FS_MACHINE`
-              - `infra/host-fs.HOST_FS_PEEK_MAX_NAMES`
-              - `infra/host-fs.HostFsListingQuerySchema`
-              - `network/live.liveValue`
-            - Exports (types):
-              - `FolderImageSize`
-              - `ImageSize`
-              - `ResizedEdge`
-            - Exports (values):
-              - `hostFsFolderImageSizes`
-              - `hostFsImageResized`
-              - `hostResizedAsset`
-              - `isResizableName`
-              - `parseEdge`
-              - `RESIZABLE_EXTENSIONS`
-              - `RESIZED_EDGES`
-              - `resizedVersion`
-              - `snapEdge`
-          - Cross-plugin:
-            - Imported by: `primitives/file-viewer/image`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/sweep.ts` (debt)
         - **`user-path`** — Which host paths a synchronous fs call may touch: AppPath (a path the app owns — its data dirs, its checkout; the only kind a sync fs call in runtime code may take) and UserPath (one the user or their config chose), with the type-aware lint that refuses a sync fs call on any path not proven app-owned — so a macOS Files & Folders prompt can never freeze a backend's JS thread, whether or not anyone marked the user's path.
@@ -34821,7 +34744,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `FileText`
               - `FileVolume`
               - `FileWithin`
+              - `FolderImageSize`
+              - `ImageSize`
               - `ReadFileLocationsResult`
+              - `ResizedEdge`
             - Exports (values):
               - `archiveReasonMessage`
               - `BROWSABLE_FILE_SYSTEMS`
@@ -34846,6 +34772,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `computerFileRaw`
               - `computerFileStat`
               - `computerFileText`
+              - `computerImageResized`
+              - `computerImageSizes`
+              - `computerResizedAsset`
               - `computerVolume`
               - `contentTypeOf`
               - `dirPeekOf`
@@ -34876,36 +34805,34 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fileUrl`
               - `FileVolumeSchema`
               - `FileWithinSchema`
+              - `FolderImageSizeSchema`
               - `handOffComputerFiles`
               - `hasFileLocations`
+              - `ImageSizeSchema`
               - `isBrowsable`
               - `isBrowsableFileSystem`
+              - `isResizableName`
               - `locationKey`
               - `locationName`
+              - `MACOS_FILES_AND_FOLDERS_SETTINGS`
               - `opensNatively`
+              - `parseEdge`
               - `readFileLocations`
+              - `RESIZABLE_EXTENSIONS`
+              - `RESIZED_EDGES`
+              - `resizedVersion`
               - `sameLocation`
+              - `snapEdge`
               - `writeFileLocations`
           - Cross-plugin:
-            - Imported by:
-              - `apps/file-explorer/browser`
-              - `apps/file-explorer/places`
-              - `apps/sonata/sources/midi/file-preview`
+            - Imported by: 24 plugins — full list in [`plugins/infra/plugins/paths/plugins/file-systems/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/file-systems/REFERENCE.md)
+              - `primitives` ×9
+              - `apps` ×5
+              - `conversations` ×4
+              - `infra` ×3
+              - `active-data/folder-link`
               - `code-explorer`
-              - `conversations/conversation-view/artifacts/screenshot`
-              - `conversations/conversation-view/code/file-pane`
-              - `conversations/conversation-view/jsonl-viewer/tool-call/read`
-              - `conversations/conversation-view/markdown-extensions`
-              - `infra/host-fs`
-              - `infra/paths/data-files/memory`
-              - `primitives/diff-view`
-              - `primitives/file-viewer`
-              - `primitives/file-viewer/code`
-              - `primitives/file-viewer/html`
-              - `primitives/file-viewer/image`
-              - `primitives/file-viewer/markdown`
-              - `primitives/file-viewer/media`
-              - `primitives/file-viewer/pdf`
+              - `debug/browser-recordings`
         - **`repo-root`** — REPO_ROOT — the checkout this code runs from, the one place any file gets it. Derived without counting ../ (its own repo-relative dir is a literal `./equin plugin move` rewrites; a stale one throws at load), and the repo-root/no-depth-counted-path lint rejects a ../ chain from a file's own location that leaves its plugin, so moving a plugin cannot silently re-aim a path.
           - Core:
             - Uses:
@@ -37229,7 +37156,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
           - `sliceRange`
       - Cross-plugin:
-        - Imported by: 339 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 337 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×85
           - `conversations` ×70
           - `debug` ×33
@@ -37238,7 +37165,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page` ×16
           - `active-data` ×13
           - `build` ×10
-          - `primitives` ×10
+          - `primitives` ×8
           - `stats` ×5
           - `code-explorer` ×4
           - `plugin-meta` ×4
@@ -44923,8 +44850,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-size-body`
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-body`
-            - Imported by: 91 plugins — full list in [`plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md)
-              - `apps` ×28
+            - Imported by: 92 plugins — full list in [`plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md)
+              - `apps` ×29
               - `debug` ×18
               - `primitives` ×12
               - `page` ×7
@@ -47806,10 +47733,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FileViewer.Renderer` ← `primitives.file-viewer.markdown`
           - `FileViewer.Renderer` ← `primitives.file-viewer.media`
           - `FileViewer.Renderer` ← `primitives.file-viewer.pdf`
-        - Uses: 21 symbols — full list in [`plugins/primitives/plugins/file-viewer/REFERENCE.md`](../plugins/primitives/plugins/file-viewer/REFERENCE.md)
+        - Uses:
           - `infra/endpoints.useEndpointMutation`
           - `infra/paths/file-systems.useFileStat`
-          - `network/live.useLive`
           - `primitives/css/center.Center`
           - `primitives/css/column.Column`
           - `primitives/css/fill.Fill`
@@ -47923,6 +47849,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/endpoints.assetUrlOver`
               - `infra/endpoints.useAssetSrc`
               - `infra/endpoints.useAssetSrcs`
+              - `infra/paths/file-systems.useFolderListing`
               - `network/live.useLive`
               - `primitives/css/center.Center`
               - `primitives/file-viewer.FileRendererProps`
@@ -48024,10 +47951,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/studio/contributions`
           - `apps/website/pages/apps`
-    - **`folder-picker`** — Folder-picker primitive: browse the host filesystem and pick a directory. FolderPickerPopover pairs a typeable path input with a breadcrumb browser, both reading host-fs's live listing.
+    - **`folder-picker`** — Folder-picker primitive: browse a file system's folders and pick one. FolderPicker / FolderPickerPopover take the file system (`fs`) the picked path is read on; the popover pairs a typeable path input with a breadcrumb browser, both reading that system's live folder listing (file-systems' useFolderListing).
       - Web:
         - Uses:
-          - `network/live.useLive`
+          - `infra/paths/file-systems.useFolderListing`
           - `network/live/live-state.ResourceErrorInline`
           - `primitives/css/center.Center`
           - `primitives/css/fill.Fill`

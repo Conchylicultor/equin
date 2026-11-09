@@ -11,6 +11,7 @@
     - `infra/endpoints.assetUrlOver`
     - `infra/endpoints.useAssetSrc`
     - `infra/endpoints.useAssetSrcs`
+    - `infra/paths/file-systems.useFolderListing`
     - `network/live.useLive`
     - `primitives/css/center.Center`
     - `primitives/file-viewer.FileRendererProps`

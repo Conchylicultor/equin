@@ -2,7 +2,7 @@ import type { WriteOrigin } from "@plugins/infra/plugins/request-origin/core";
 import type { RelPath } from "./rel-path";
 
 /**
- * One entry of a file root, with `host-fs`'s field spellings (`HostFsEntry`)
+ * One entry of a file root, with file-systems' field spellings (`FileEntry`)
  * where the two overlap — a root holds only files and directories.
  */
 export interface FileEntry {

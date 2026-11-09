@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { ASSET_PATH } from "@plugins/infra/plugins/endpoints/core";
 import {
-  hostResizedAsset,
+  computerResizedAsset,
   isResizableName,
   parseEdge,
   snapEdge,
-} from "./endpoints";
+} from "./images";
 
 describe("snapEdge", () => {
   test("rounds up to the next edge", () => {
@@ -33,13 +33,13 @@ test("isResizableName", () => {
   expect(isResizableName("jpg")).toBe(false);
 });
 
-test("hostResizedAsset snaps the edge and names the version", () => {
-  const asset = hostResizedAsset("/p/a b.jpg", 300, {
+test("computerResizedAsset snaps the edge and names the version", () => {
+  const asset = computerResizedAsset("/p/a b.jpg", 300, {
     mtimeMs: 12.5,
     size: 99,
   });
   const url = new URL(asset[ASSET_PATH], "http://x");
-  expect(url.pathname).toBe("/api/host-fs/image/resized");
+  expect(url.pathname).toBe("/api/files/computer/image/resized");
   expect(url.searchParams.get("path")).toBe("/p/a b.jpg");
   expect(url.searchParams.get("edge")).toBe("320");
   expect(url.searchParams.get("v")).toBe("12.5-99");

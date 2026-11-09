@@ -1,11 +1,11 @@
 import type { Registration } from "@plugins/framework/plugins/server-core/core";
-import type { HostFsArchiveReason } from "../../../core";
+import { type FileArchiveReason } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import type { UserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /** An archive (or one member of it) that cannot be read, and why. */
 export type ArchiveUnreadable = {
   kind: "unreadable";
-  reason: HostFsArchiveReason;
+  reason: FileArchiveReason;
 };
 
 /**

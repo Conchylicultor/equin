@@ -1,6 +1,6 @@
 {
   "name": "@equin/plugin-infra-host-fs",
-  "description": "The one host-filesystem API: list / stat / complete / text / raw / volume reads of any path the user account can read, with typed missing / denied / not-a-dir results, plus Open with default app / Reveal in Finder.",
+  "description": "The computer's disk, implemented: serves file-systems' computer declarations (list / peek / stat / complete / text / bytes / raw / volume of any path the user account can read, refusing missing / denied / not-a-dir by code, plus Open with default app / Reveal in Finder, extract and move).",
   "private": true,
   "version": "0.0.1"
 }

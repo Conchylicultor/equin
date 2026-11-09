@@ -2,19 +2,19 @@ import { serveValue } from "@plugins/network/plugins/live/machine";
 import { machineHandler } from "@plugins/infra/plugins/endpoints/machine";
 import {
   FILE_BYTES_MAX,
+  FILE_TEXT_MAX_BYTES,
+  type FileStat,
+  type FileText,
+  archiveReasonMessage,
   computerFileBytes,
   computerFileRaw,
   computerFileStat,
   computerFileText,
-  archiveReasonMessage,
-  type FileStat,
-  type FileText,
 } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { openHostFile } from "../../server/internal/open-file";
 import { handleRaw as rawBytes } from "../../server/internal/raw";
 import { statHostOrArchivePath } from "../../server/internal/stat";
 import { readHostPathText } from "../../server/internal/text";
-import { HOST_FS_TEXT_MAX_BYTES } from "../../core";
 import { resolveOrRefuse, resolvedOrNull } from "./refuse";
 import { watchHostPath } from "./version";
 
@@ -84,7 +84,7 @@ export const computerFileTextServed = serveValue(computerFileText, {
       case "too-large":
         throw computerFileText.refuse(
           "too-large",
-          `${text.path} is ${text.size} bytes, over the ${HOST_FS_TEXT_MAX_BYTES}-byte text limit`,
+          `${text.path} is ${text.size} bytes, over the ${FILE_TEXT_MAX_BYTES}-byte text limit`,
         );
       case "binary":
         throw computerFileText.refuse(

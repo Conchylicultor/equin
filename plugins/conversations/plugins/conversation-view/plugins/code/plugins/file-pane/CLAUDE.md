@@ -16,11 +16,11 @@
   - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/file-viewer` ×5
     - `primitives/pane` ×5
-    - `apps/file-explorer/browser` ×4
+    - `apps/file-explorer/browser` ×3
+    - `apps/file-explorer/folder-peek` ×2
     - `code-explorer/file-resolve` ×2
     - `network/live/live-state` ×2
     - `primitives/path-bar` ×2
-    - `apps/file-explorer/folder-peek.folderPeekPane`
     - `conversations/conversation-view/code.useEditedFile`
     - `conversations/conversation-view.conversationPane`
     - `primitives/copy-to-clipboard.CopyButton`

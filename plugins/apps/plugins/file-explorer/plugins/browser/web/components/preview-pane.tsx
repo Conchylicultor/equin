@@ -78,7 +78,7 @@ export function PreviewPane({
     ...(git !== undefined ? { git } : {}),
   });
   const openHostFile = useOpenHostFile();
-  const membership = useArchiveMembership(path);
+  const membership = useArchiveMembership(file);
   const name = displayName ?? baseName(path);
   return (
     <Column

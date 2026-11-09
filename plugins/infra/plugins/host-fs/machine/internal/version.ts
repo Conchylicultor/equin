@@ -1,16 +1,14 @@
 import { stat } from "@plugins/packages/plugins/timed-fs/core";
 import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import { basename, dirname, join } from "node:path";
-import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import {
   acquireDirWatch,
   type DirWatchRelease,
 } from "@plugins/infra/plugins/file-watcher/server";
-import { serveValue } from "@plugins/network/plugins/live/machine";
-import { hostFsVersion, type FileVersion } from "../../core";
+import type { FileVersion } from "../../shared/results";
 import { locateHostPath } from "../../server/internal/archive/locate";
-import { classifyFsError, resolveHostPath } from "../../server/internal/path";
+import { classifyFsError } from "../../server/internal/path";
 import {
   isGone,
   rearmable,
@@ -167,42 +165,3 @@ async function watchEntriesOf(
     return () => {};
   }
 }
-
-/** Whether `resolveHostPath` refused the spelling (a 400), not the disk. */
-function isInvalidPath(err: unknown): err is HttpError {
-  return err instanceof HttpError && err.status === 400;
-}
-
-/**
- * `notified` by a watch of the file's folder for as long as the tuple has a
- * subscriber. The start is awaited on the subscribe path: the version is read
- * beside the file's own content read, never ahead of it, so holding its
- * sub-ack until the watch is live delays nothing on screen.
- */
-export const hostFsVersionServed = serveValue(hostFsVersion, {
-  source: "external",
-  changes: "notified",
-  loader: ({ path }) => {
-    let abs: UserPath;
-    try {
-      abs = resolveHostPath(path);
-    } catch (err) {
-      if (isInvalidPath(err)) {
-        throw hostFsVersion.refuse("invalid-path", err.message);
-      }
-      throw err;
-    }
-    return hostPathVersion(abs);
-  },
-  whileSubscribed: async ({ path }, notify) => {
-    let abs: UserPath;
-    try {
-      abs = resolveHostPath(path);
-    } catch (err) {
-      // The loader refuses it; there is nothing to watch.
-      if (isInvalidPath(err)) return () => {};
-      throw err;
-    }
-    return watchHostPath(abs, () => notify());
-  },
-});

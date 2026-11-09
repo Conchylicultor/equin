@@ -23,7 +23,7 @@ import {
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
-import { MACOS_FILES_AND_FOLDERS_SETTINGS } from "@plugins/infra/plugins/host-fs/core";
+import { MACOS_FILES_AND_FOLDERS_SETTINGS } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { midiFoldersConfig } from "../../shared/config";
 import {
   midiFolderSongCount,
@@ -219,6 +219,8 @@ function ChangeFolder({ path }: { path: string }) {
       }
     >
       <FolderPicker
+        // Imported from by the computer: a folder of its disk.
+        fs="computer"
         onSelect={(next) => {
           setConfig(
             "folders",

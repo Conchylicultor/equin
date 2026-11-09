@@ -3,8 +3,6 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
-import { hostFsPathStat } from "@plugins/infra/plugins/host-fs/core";
-import { useLive } from "@plugins/network/plugins/live/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import { navIcons } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -16,6 +14,7 @@ import {
   opensNatively,
   type FileLocation,
 } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
+import { useFileStat } from "@plugins/infra/plugins/paths/plugins/file-systems/web";
 
 /**
  * The file's kind as "No preview for … files" names it: file-type's label
@@ -93,7 +92,7 @@ export function NoPreview({
               Retry
             </Button>
           )}
-          {opensNatively(file) && <OpenWithDefaultApp path={file.path} />}
+          {opensNatively(file) && <OpenWithDefaultApp file={file} />}
         </Stack>
       </Stack>
     </Center>
@@ -143,34 +142,38 @@ export function useOpenHostFile(): (
 }
 
 /**
- * Whether a host path is a file on disk a default app can open, or a member of
- * an archive (there is no file to open), as its live `host-fs.stat` says.
+ * Whether a file is one of its own a default app can open, or a member of an
+ * archive (there is no file to open), as its live stat says (`useFileStat`).
  * `loading` until the stat lands — never a guess either way; `unknown` when it
- * was refused, failed, or no computer is behind the app.
+ * is missing, was refused, failed, or its file system describes nothing here
+ * (one this host cannot run, a checkout).
  */
 export type ArchiveMembership =
   | { kind: "loading" }
   | { kind: "known"; inArchive: boolean }
   | { kind: "unknown"; message: string };
 
-/** {@link ArchiveMembership} of the host path `path`. */
-export function useArchiveMembership(path: string): ArchiveMembership {
-  const stat = useLive(hostFsPathStat, { path });
-  switch (stat.status) {
+/** {@link ArchiveMembership} of `file`. */
+export function useArchiveMembership(file: FileLocation): ArchiveMembership {
+  const stat = useFileStat(file);
+  switch (stat.kind) {
     case "loading":
       return { kind: "loading" };
-    case "unavailable":
-      return { kind: "unknown", message: stat.message };
-    case "error":
-      return { kind: "unknown", message: stat.error.message };
     case "ready":
-      return { kind: "known", inArchive: stat.data.within !== undefined };
+      return { kind: "known", inArchive: stat.stat.within !== undefined };
+    case "missing":
+      return { kind: "unknown", message: `No such file: ${file.path}` };
+    case "failed":
+      return { kind: "unknown", message: stat.message };
+    case "undescribed":
+      return { kind: "unknown", message: `${file.path} is not described here` };
   }
 }
 
-function OpenWithDefaultApp({ path }: { path: string }) {
+function OpenWithDefaultApp({ file }: { file: FileLocation }) {
   const openHostFile = useOpenHostFile();
-  const membership = useArchiveMembership(path);
+  const membership = useArchiveMembership(file);
+  const { path } = file;
   // Nothing on disk to open (an archive member), or no telling: no button.
   if (membership.kind === "unknown") return null;
   if (membership.kind === "known" && membership.inArchive) return null;

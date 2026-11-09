@@ -1,26 +1,25 @@
 import type { Stats } from "node:fs";
 import { lstat, readlink, stat } from "@plugins/packages/plugins/timed-fs/core";
 import {
-  compareHostFsNames,
-  type HostFsEntry,
-  type HostFsEntryKind,
-} from "../../core";
+  type FileEntry,
+  compareFileNames,
+} from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { archiveFormatFor } from "./archive/registry";
 import { classifyFsError, isHiddenName } from "./path";
 import type { UserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
-/** How every listing orders its entries: `compareHostFsNames` of their names. */
+/** How every listing orders its entries: `compareFileNames` of their names. */
 export const byName = (a: { name: string }, b: { name: string }): number =>
-  compareHostFsNames(a.name, b.name);
+  compareFileNames(a.name, b.name);
 
-function kindOf(st: Stats): HostFsEntryKind {
+function kindOf(st: Stats): FileEntry["kind"] {
   if (st.isDirectory()) return "dir";
   if (st.isFile()) return "file";
   return "other";
 }
 
 /** The entry's creation and access times, from the same `Stats` as its mtime. */
-function times(st: Stats): Pick<HostFsEntry, "birthtimeMs" | "atimeMs"> {
+function times(st: Stats): Pick<FileEntry, "birthtimeMs" | "atimeMs"> {
   // Linux filesystems without statx birth time report 0: not recorded, not 1970.
   return {
     atimeMs: st.atimeMs,
@@ -33,9 +32,9 @@ function times(st: Stats): Pick<HostFsEntry, "birthtimeMs" | "atimeMs"> {
  * claims it. A name check only, so a listing costs no extra I/O.
  */
 function archiveMark(
-  kind: HostFsEntryKind,
+  kind: FileEntry["kind"],
   name: string,
-): Pick<HostFsEntry, "archive"> {
+): Pick<FileEntry, "archive"> {
   if (kind !== "file") return {};
   const format = archiveFormatFor(name);
   return format === undefined ? {} : { archive: { format: format.id } };
@@ -54,7 +53,7 @@ function archiveMark(
 export async function describeEntry(
   path: UserPath,
   name: string,
-): Promise<HostFsEntry> {
+): Promise<FileEntry> {
   const own = await lstat(path);
   const hidden = isHiddenName(name);
   if (!own.isSymbolicLink()) {

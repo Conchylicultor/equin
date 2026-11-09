@@ -10,10 +10,10 @@ import type { LiveKeyRange } from "@plugins/network/plugins/live/core";
 import { serveValue } from "@plugins/network/plugins/live/machine";
 import { sliceRange } from "@plugins/network/plugins/live/server";
 import {
-  hostFsFolderImageSizes,
+  computerImageSizes,
   isResizableName,
   type FolderImageSize,
-} from "../../core";
+} from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { sizeOf } from "../../server/internal/sizes";
 import { asUserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
@@ -23,23 +23,19 @@ import { asUserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/cor
  * only those headers read — the rest of the folder is not opened.
  */
 async function pageOf(
-  path: string | undefined,
+  path: string,
   range: LiveKeyRange,
 ): Promise<FolderImageSize[]> {
   const listed = await listHostPath(
-    resolveOrRefuse(hostFsFolderImageSizes.refuse, path),
+    resolveOrRefuse(computerImageSizes.refuse, path),
   );
   if (listed.kind !== "ok") {
-    throw refusalFor(hostFsFolderImageSizes.refuse, listed);
+    throw refusalFor(computerImageSizes.refuse, listed);
   }
   const names = listed.entries
     .filter((e) => e.kind === "file" && isResizableName(e.name))
     .map((e) => ({ name: e.name }));
-  const page = sliceRange<{ name: string }>(
-    hostFsFolderImageSizes,
-    names,
-    range,
-  );
+  const page = sliceRange<{ name: string }>(computerImageSizes, names, range);
   const sizes = await Promise.all(
     page.map(({ name }) => sizeOf(asUserPath(join(listed.path, name)))),
   );
@@ -55,7 +51,7 @@ async function pageOf(
  * (`watchHostDir`) for as long as a question of it is read; a header already
  * read for a file's current version is not read again (`sizeOf`'s memo).
  */
-export const hostFsFolderImageSizesServed = serveValue(hostFsFolderImageSizes, {
+export const computerImageSizesServed = serveValue(computerImageSizes, {
   source: "external",
   changes: "notified",
   throttleMs: 1_000,

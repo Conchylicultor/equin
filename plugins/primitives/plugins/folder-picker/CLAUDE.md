@@ -1,25 +1,28 @@
 # folder-picker
 
-A reusable widget for picking a directory on the **host filesystem**. Web-only:
-the reads are [`infra/host-fs`](../../../infra/plugins/host-fs/CLAUDE.md)'s
-live listing, `hostFsListing` (`host-fs.list`, the one host-filesystem API — it
-owns the security model), read with `useLive` and pushed while read. A path
-that cannot be listed is a declared refusal (`invalid-path` / `missing` /
-`denied` / `not-a-dir` / `unreadable-archive`, worded by `UNAVAILABLE_MESSAGE`),
-never an empty listing standing in for a failure; where no computer is behind
-the app (the in-browser demo) the read is `unavailable` and says so.
+A reusable widget for picking a folder of a **file system** — the one the
+picked path is read on, named by the caller (`fs`: a setting the computer
+reads is `computer`). Web-only: the reads are
+[`file-systems`](../../../infra/plugins/paths/plugins/file-systems/CLAUDE.md)'
+live folder listing of that system (`files.<fs>.list`), read with
+`useFolderListing(fs, path, { limit })` and pushed while read. A path that cannot be listed is a
+declared refusal (`invalid-path` / `missing` / `denied` / `not-a-dir` /
+`unreadable-archive`, worded by `UNAVAILABLE_MESSAGE`), never an empty listing
+standing in for a failure; a system this host cannot run (the computer's disk
+in the in-browser demo) is `unavailable` and says so.
 
-- `FolderPicker` — the browser block (breadcrumb + subfolder rows + confirm).
-  The breadcrumb and the confirmed path are the listing's meta sibling
-  (`hostFsListing.meta`: the resolved path); the rows are its entries, a page
-  (500) at a time with a "Show more" row while the folder has more. It filters
-  the entries to `kind === "dir"` client-side, so a symlink to a folder is
-  offered as a folder; dotfolders are shown, sorted as people sort (numbers as
-  numbers — the value's pages come in code-point order).
+- `FolderPicker` — the browser block (breadcrumb + subfolder rows + confirm),
+  opening on the system's home (`~`) when given no folder. The breadcrumb and
+  the confirmed path are the listing's meta sibling (`.meta`: the resolved
+  path); the rows are its entries, a page (500) at a time with a "Show more"
+  row while the folder has more. It filters the entries to `kind === "dir"`
+  client-side, so a symlink to a folder is offered as a folder; dotfolders are
+  shown, sorted as people sort (`compareFileNames` — the value's pages come in
+  code-point order).
 - `FolderPickerPopover` — a typeable path input with a live green-check /
-  red-X validity indicator (the path's `hostFsListing.meta` — ready is valid, a
+  red-X validity indicator (the path's listing meta — ready is valid, a
   refusal names why) and a "Browse" popover. The value is an ABSOLUTE
-  path: a `~/…` value is flagged invalid even though host-fs expands it,
+  path: a `~/…` value is flagged invalid even though a listing expands it,
   because the field's readers need not.
 
 It has **no** config_v2 dependency — the `directory-path` config field type
@@ -29,10 +32,10 @@ wraps `FolderPickerPopover`, not the other way around.
 
 ## Plugin reference
 
-- Description: Folder-picker primitive: browse the host filesystem and pick a directory. FolderPickerPopover pairs a typeable path input with a breadcrumb browser, both reading host-fs's live listing.
+- Description: Folder-picker primitive: browse a file system's folders and pick one. FolderPicker / FolderPickerPopover take the file system (`fs`) the picked path is read on; the popover pairs a typeable path input with a breadcrumb browser, both reading that system's live folder listing (file-systems' useFolderListing).
 - Web:
   - Uses:
-    - `network/live.useLive`
+    - `infra/paths/file-systems.useFolderListing`
     - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/center.Center`
     - `primitives/css/fill.Fill`

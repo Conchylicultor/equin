@@ -1,11 +1,13 @@
 import {
-  HOST_FS_TEXT_MAX_BYTES,
-  type HostFsArchiveReason,
-  type HostFsListResult,
-  type HostFsStatResult,
-  type HostFsTextResult,
-  type HostFsWithin,
-} from "../../../core";
+  FILE_TEXT_MAX_BYTES,
+  type FileArchiveReason,
+  type FileWithin,
+} from "@plugins/infra/plugins/paths/plugins/file-systems/core";
+import type {
+  HostFsListResult,
+  HostFsStatResult,
+  HostFsTextResult,
+} from "../../../shared/results";
 import { classifyFsError, parentOf } from "../path";
 import { decodeTextBytes } from "../decode";
 import type { HostLocation } from "./locate";
@@ -16,15 +18,11 @@ import type { UserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/
 type InArchive = Extract<HostLocation, { kind: "archive" }>;
 type OpenedMember = Extract<MemberBytes, { kind: "ok" }>;
 
-function withinOf(at: InArchive): HostFsWithin {
+function withinOf(at: InArchive): FileWithin {
   return { archive: at.file, format: at.format.id };
 }
 
-function unreadable(
-  path: UserPath,
-  at: InArchive,
-  reason: HostFsArchiveReason,
-) {
+function unreadable(path: UserPath, at: InArchive, reason: FileArchiveReason) {
   return {
     kind: "unreadable-archive" as const,
     path,
@@ -151,7 +149,7 @@ export async function readArchiveText(
   const sized = await statArchiveMember(path, at);
   if (sized.kind !== "ok") return sized;
   if (sized.entry.kind !== "file") return { kind: "not-a-file", path };
-  if (sized.entry.size > HOST_FS_TEXT_MAX_BYTES)
+  if (sized.entry.size > FILE_TEXT_MAX_BYTES)
     return { kind: "too-large", path, size: sized.entry.size };
   const opened = await openArchiveMember(path, at);
   if (opened.kind !== "ok") return opened;

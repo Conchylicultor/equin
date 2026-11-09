@@ -1,7 +1,9 @@
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import type { ResourceRefusal } from "@plugins/network/plugins/live/plugins/resource-protocol/core";
-import type { HostFsArchiveReason } from "../../core";
-import { archiveReasonMessage } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
+import {
+  type FileArchiveReason,
+  archiveReasonMessage,
+} from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { resolveHostPath } from "../../server/internal/path";
 import type { UserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
@@ -44,7 +46,7 @@ export type HostFsFailure =
       kind: "unreadable-archive";
       path: string;
       archive: string;
-      reason: HostFsArchiveReason;
+      reason: FileArchiveReason;
     };
 
 /** The refusal a read answers for a failure its endpoint answered as a kind. */

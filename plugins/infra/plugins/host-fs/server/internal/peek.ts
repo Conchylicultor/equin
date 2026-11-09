@@ -1,5 +1,6 @@
 import { readdir } from "@plugins/packages/plugins/timed-fs/core";
-import { HOST_FS_PEEK_MAX_NAMES, type HostFsPeekResult } from "../../core";
+import { FILE_PEEK_MAX_NAMES } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
+import type { HostFsPeekResult } from "../../shared/results";
 import { locateHostDir } from "./archive/locate";
 import { listArchiveDir } from "./archive/read";
 import { classifyFsError, isHiddenName } from "./path";
@@ -8,7 +9,7 @@ import type { UserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/
 type Child = { name: string; hidden: boolean };
 
 function named(path: UserPath, names: readonly string[]): HostFsPeekResult {
-  if (names.length > HOST_FS_PEEK_MAX_NAMES) {
+  if (names.length > FILE_PEEK_MAX_NAMES) {
     return { kind: "too-many", path, total: names.length };
   }
   return {

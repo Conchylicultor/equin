@@ -17,7 +17,11 @@ import {
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
-import { parseEdge, resizedVersion, type ResizedEdge } from "../../core";
+import {
+  parseEdge,
+  resizedVersion,
+  type ResizedEdge,
+} from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { asUserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /** JPEG / WebP quality of a resized copy: invisible loss at thumbnail and screen sizes. */
@@ -118,7 +122,7 @@ async function touch(file: string): Promise<void> {
 }
 
 /**
- * `GET /api/host-fs/image/resized?path&edge&v` — a raw handler: the response is
+ * `GET /api/files/computer/image/resized?path&edge&v` — a raw handler: the response is
  * image bytes with their own status and headers.
  */
 export function makeResizedHandler(dir: () => AppPath) {

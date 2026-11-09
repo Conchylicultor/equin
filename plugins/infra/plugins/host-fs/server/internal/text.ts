@@ -1,5 +1,6 @@
 import { readFile, stat } from "@plugins/packages/plugins/timed-fs/core";
-import { HOST_FS_TEXT_MAX_BYTES, type HostFsTextResult } from "../../core";
+import { FILE_TEXT_MAX_BYTES } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
+import type { HostFsTextResult } from "../../shared/results";
 import { locateHostPath } from "./archive/locate";
 import { readArchiveText } from "./archive/read";
 import { decodeTextBytes } from "./decode";
@@ -11,7 +12,7 @@ export async function readHostText(path: UserPath): Promise<HostFsTextResult> {
   try {
     const st = await stat(path);
     if (!st.isFile()) return { kind: "not-a-file", path };
-    if (st.size > HOST_FS_TEXT_MAX_BYTES)
+    if (st.size > FILE_TEXT_MAX_BYTES)
       return { kind: "too-large", path, size: st.size };
     const bytes = await readFile(path);
     const decoded = decodeTextBytes(bytes);

@@ -1,9 +1,5 @@
 import { HttpError } from "@plugins/infra/plugins/endpoints/core";
-import {
-  implementMachine,
-  machineHandler,
-} from "@plugins/infra/plugins/endpoints/machine";
-import { hostFsRaw } from "../../core";
+import { implementMachine } from "@plugins/infra/plugins/endpoints/machine";
 import {
   computerFileExtract,
   computerFileMove,
@@ -13,20 +9,16 @@ import { extractHostArchive } from "../../server/internal/extract";
 import { moveHostPaths } from "../../server/internal/move";
 import { openHostPath } from "../../server/internal/open";
 import { resolveHostPath } from "../../server/internal/path";
-import { handleRaw as rawBytes } from "../../server/internal/raw";
 
 // host-fs's routes: every one reads or changes the host filesystem, so each
 // endpoint is declared `needsMachine` and served here — a host without the
 // computer (the in-browser demo) answers it unavailable without a request.
 // The writes (open, extract, move) are file-systems' `computer` endpoints; the
 // reads a surface makes (stat, complete, …) are live values (`./reads.ts`,
-// `./complete.ts`); `raw` stays a route because a byte URL is an asset.
+// `./complete.ts`); `raw` (file-systems' `computerFileRaw`, `./file-system.ts`) stays a route because a byte URL is an asset.
 // Who may call them is the socket host's principal gate, not a per-route
 // Origin check: every route here is owner-only (no `access: { public }`), so a
 // foreign site is refused before a handler runs (`framework/principal`).
-
-/** The bytes: a raw handler (its own status and headers — 200 / 206 / 416). */
-export const handleRaw = machineHandler(hostFsRaw, rawBytes);
 
 export const handleOpen = implementMachine(computerFileOpen, ({ body }) => {
   if (process.platform !== "darwin") {

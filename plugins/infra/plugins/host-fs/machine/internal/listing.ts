@@ -3,16 +3,13 @@ import { readdir } from "@plugins/packages/plugins/timed-fs/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { sliceRange } from "@plugins/network/plugins/live/server";
 import type { LiveKeyRange } from "@plugins/network/plugins/live/core";
+import type { HostFsListResult } from "../../shared/results";
 import {
-  hostFsListing,
-  type HostFsEntry,
-  type HostFsListingMeta,
-  type HostFsListResult,
-} from "../../core";
-import {
+  type FileDirPeek,
+  type FileEntry,
+  type FileListingMeta,
   computerDirPeek,
   computerFileListing,
-  type FileDirPeek,
 } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { byName } from "../../server/internal/entry";
 import { describeChildren, listHostPath } from "../../server/internal/list";
@@ -95,7 +92,7 @@ async function patchListing(
       (e) => there.has(e.name) && !described.has(e.name),
     );
     const fresh = [...described.values()]
-      .filter((e): e is HostFsEntry => e.kind !== "vanished")
+      .filter((e): e is FileEntry => e.kind !== "vanished")
       .sort(byName);
     return { ...listed, entries: mergeByName(kept, fresh) };
   } catch (err) {
@@ -104,9 +101,9 @@ async function patchListing(
 }
 
 /** Two lists in name order, merged into one. */
-function mergeByName(a: HostFsEntry[], b: HostFsEntry[]): HostFsEntry[] {
+function mergeByName(a: FileEntry[], b: FileEntry[]): FileEntry[] {
   if (b.length === 0) return a;
-  const out: HostFsEntry[] = [];
+  const out: FileEntry[] = [];
   let i = 0;
   for (const y of b) {
     let x = a[i];
@@ -121,9 +118,12 @@ function mergeByName(a: HostFsEntry[], b: HostFsEntry[]): HostFsEntry[] {
 }
 
 /** The listing `path` asks for, or the refusal saying why there is none. */
-async function listedOrRefuse(path: string | undefined): Promise<Listed> {
-  const listed = await listingOf(resolveOrRefuse(hostFsListing.refuse, path));
-  if (listed.kind !== "ok") throw refusalFor(hostFsListing.refuse, listed);
+async function listedOrRefuse(path: string): Promise<Listed> {
+  const listed = await listingOf(
+    resolveOrRefuse(computerFileListing.refuse, path),
+  );
+  if (listed.kind !== "ok")
+    throw refusalFor(computerFileListing.refuse, listed);
   return listed;
 }
 
@@ -144,11 +144,11 @@ function hold(abs: UserPath): () => void {
 
 /** One page of a folder's entries: its range of the held listing. */
 export async function listingPage(
-  q: { path?: string },
+  q: { path: string },
   range: LiveKeyRange,
-): Promise<HostFsEntry[]> {
+): Promise<FileEntry[]> {
   return sliceRange(
-    hostFsListing,
+    computerFileListing,
     (await listedOrRefuse(q.path)).entries,
     range,
   );
@@ -156,8 +156,8 @@ export async function listingPage(
 
 /** What a folder's listing says about the folder (the meta sibling). */
 export async function listingMeta(q: {
-  path?: string;
-}): Promise<HostFsListingMeta> {
+  path: string;
+}): Promise<FileListingMeta> {
   const listed = await listedOrRefuse(q.path);
   return {
     path: listed.path,
@@ -192,38 +192,27 @@ export async function dirPeek(path: string): Promise<FileDirPeek> {
   }
 }
 
-/** How a folder's listing is served, whichever value names it. */
-const listingServing = {
+/**
+ * The computer's disk's folder listing (file-systems' `files.computer.list`):
+ * a folder's entries, paged by name — every page, and the meta, cut from the
+ * folder's held listing, pushed from a watch of the folder for as long as a
+ * question of it is read (`watchHostDir`: its entries, or its own entry while
+ * it is not there; the archive file, inside one). Throttled: a folder being
+ * written (a download, a build) is re-read at most once a second, and then
+ * only the entries that changed.
+ */
+export const computerFileListingServed = serveValue(computerFileListing, {
   source: "external",
   changes: "notified",
   throttleMs: 1_000,
   loader: listingPage,
   meta: listingMeta,
-  whileSubscribed: async (q: { path?: string }, notify: () => void) => {
-    const abs = resolvedOrNull(q.path);
+  whileSubscribed: async ({ path }, notify) => {
+    const abs = resolvedOrNull(path);
     // The loader refuses the spelling; there is nothing to watch.
     if (abs === null) return () => {};
     return holdListingOver(watchHostDir, abs, notify);
   },
-} as const;
-
-/**
- * A folder's entries, paged by name: every page — and the meta — cut from the
- * folder's held listing, pushed from a watch of the folder for as long as a
- * question of it is read (`watchHostDir`: its entries, or its own entry while
- * it is not there; the archive file, inside one). Throttled: a folder being
- * written (a download, a build) is re-read at most once a second, and then
- * only the entries that changed. Served as host-fs's own `host-fs.list` (the
- * folder picker's, the image viewer's) and as the computer's disk's
- * `files.computer.list` (Files') — one listing held for both.
- */
-export const hostFsListingServed = serveValue(hostFsListing, listingServing);
-
-/** The computer's disk's folder listing (file-systems' `files.computer.list`). */
-export const computerFileListingServed = serveValue(computerFileListing, {
-  ...listingServing,
-  whileSubscribed: (q: { path: string }, notify: () => void) =>
-    listingServing.whileSubscribed(q, notify),
 });
 
 /**

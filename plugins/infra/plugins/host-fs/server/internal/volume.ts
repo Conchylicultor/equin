@@ -5,7 +5,7 @@ import {
   readlink,
 } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
-import type { HostFsVolumeResult } from "../../core";
+import type { HostFsVolumeResult } from "../../shared/results";
 import { classifyFsError } from "./path";
 import type { UserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 

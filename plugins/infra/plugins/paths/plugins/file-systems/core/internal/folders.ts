@@ -55,6 +55,11 @@ export interface FileSystemCapabilities {
   completions: boolean;
   /** How full the system's storage is (the storage meter). */
   volume: boolean;
+  /**
+   * Resized copies of its images and their pixel sizes (thumbnails, a
+   * screen-sized stage) — `./images.ts`.
+   */
+  images: boolean;
 }
 
 export interface FileSystemInfo {
@@ -75,6 +80,7 @@ export const FILE_SYSTEMS: Readonly<
       openNative: true,
       completions: true,
       volume: true,
+      images: true,
     },
   },
   browser: {
@@ -85,6 +91,7 @@ export const FILE_SYSTEMS: Readonly<
       openNative: false,
       completions: false,
       volume: false,
+      images: false,
     },
   },
 };

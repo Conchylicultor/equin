@@ -15,6 +15,7 @@ export {
   FileStatSchema,
   FileTextSchema,
   FileWithinSchema,
+  MACOS_FILES_AND_FOLDERS_SETTINGS,
   browserFileBytes,
   browserFileRaw,
   browserFileStat,
@@ -86,6 +87,24 @@ export type {
   FileSystemInfo,
   FileVolume,
 } from "./internal/folders";
+export {
+  FolderImageSizeSchema,
+  ImageSizeSchema,
+  RESIZABLE_EXTENSIONS,
+  RESIZED_EDGES,
+  computerImageResized,
+  computerImageSizes,
+  computerResizedAsset,
+  isResizableName,
+  parseEdge,
+  resizedVersion,
+  snapEdge,
+} from "./internal/images";
+export type {
+  FolderImageSize,
+  ImageSize,
+  ResizedEdge,
+} from "./internal/images";
 export {
   FILE_LOCATIONS_MIME,
   handOffComputerFiles,

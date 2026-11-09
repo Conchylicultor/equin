@@ -452,7 +452,7 @@
     },
     {
       "paneId": "folder-peek",
-      "segment": "folder/:dir/:open?",
+      "segment": "folder/:dir/:open?;fs",
       "appIndex": false,
       "parent": null
     },

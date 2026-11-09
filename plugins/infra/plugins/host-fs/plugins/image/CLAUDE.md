@@ -10,15 +10,20 @@ Plan: [`research/2026-10-07-primitives-image-viewer-fast-large-folders.md`](../.
 
 | Endpoint | Answers |
 |---|---|
-| `GET /api/host-fs/image/resized?path&edge&v` (`hostFsImageResized`, build its asset with `hostResizedAsset`, resolved by `assetUrlOver`) | the image with a long edge of `edge` (one of `RESIZED_EDGES`: 160 … 2560), never enlarged, EXIF-rotated upright; JPEG q82, WebP when it has transparency. 404 / 403 / 400 (a directory, or an edge outside the set) / 422 (an unreadable archive member) / **415** (sharp cannot decode it — the client shows the original) |
+| `GET /api/files/computer/image/resized?path&edge&v` (file-systems' `computerImageResized`, build its asset with `computerResizedAsset`, resolved by `assetUrlOver`) | the image with a long edge of `edge` (one of `RESIZED_EDGES`: 160 … 2560), never enlarged, EXIF-rotated upright; JPEG q82, WebP when it has transparency. 404 / 403 / 400 (a directory, or an edge outside the set) / 422 (an unreadable archive member) / **415** (sharp cannot decode it — the client shows the original) |
 
-- **Sizes (live only):** `hostFsFolderImageSizes` (`host-fs.image-sizes`,
-  core; served by `machine/`) — the same question as host-fs's
-  `hostFsListing` (`{ path? }`), key-range-paged by name (code-point order,
+- **Sizes (live only):** file-systems' `computerImageSizes`
+  (`files.computer.image-sizes`; served by `machine/`) — the same question as
+  the folder's listing (`{ path }`), key-range-paged by name (code-point order,
   `limit` 200, `maxLimit` 10 000), only the read pages' headers measured,
   pushed from `watchHostDir` while read; failures are refusals (`invalid-path`,
   `missing`, `denied`, `not-a-dir`, `unreadable-archive`).
-- **Which files.** `RESIZABLE_EXTENSIONS` (core): jpg, jpeg, png, webp, avif,
+- **Declared in file-systems.** The route, the value and their shapes
+  (`RESIZABLE_EXTENSIONS`, `RESIZED_EDGES`, `resizedVersion`, `ImageSize`) are
+  file-systems' (`core/internal/images.ts`): images are the computer's disk's
+  `images` capability, so a viewer reads them through file-systems and this
+  plugin has no `core/` of its own.
+- **Which files.** `RESIZABLE_EXTENSIONS`: jpg, jpeg, png, webp, avif,
   tif, tiff. Not SVG (it scales by itself), not GIF (a copy would drop the
   animation).
 - **Versioned URLs.** `v` is `resizedVersion({ mtimeMs, size })` from the
@@ -44,13 +49,13 @@ Plan: [`research/2026-10-07-primitives-image-viewer-fast-large-folders.md`](../.
 
 - Description: Images on the host filesystem: the daily host-fs-image.sweep keeps the resized-copy cache (machine/'s GET resized) within 30 days unused and 1 GB.
 - Server:
-  - Contributes: `resource.declare` "host-fs.image-sizes"
+  - Contributes: `resource.declare` "files.computer.image-sizes"
   - Uses:
     - `infra/host-fs.openHostFile`
     - `infra/jobs.defineJob`
     - `primitives/log-channels.Log`
   - Register: `defineJob('host-fs-image.sweep')`
-  - Resources: `host-fs.image-sizes` (keyed, window, notified)
+  - Resources: `files.computer.image-sizes` (keyed, window, notified)
 - Machine:
   - Uses:
     - `infra/endpoints.machineHandler`
@@ -60,33 +65,6 @@ Plan: [`research/2026-10-07-primitives-image-viewer-fast-large-folders.md`](../.
     - `infra/host-fs.resolveOrRefuse`
     - `infra/host-fs.watchHostDir`
     - `network/live.serveValue`
-  - Routes: `GET /api/host-fs/image/resized`
-- Core:
-  - Uses:
-    - `infra/endpoints.assetPath`
-    - `infra/endpoints.AssetPath`
-    - `infra/endpoints.blob`
-    - `infra/endpoints.defineEndpoint`
-    - `infra/host-fs.HOST_FS_MACHINE`
-    - `infra/host-fs.HOST_FS_PEEK_MAX_NAMES`
-    - `infra/host-fs.HostFsListingQuerySchema`
-    - `network/live.liveValue`
-  - Exports (types):
-    - `FolderImageSize`
-    - `ImageSize`
-    - `ResizedEdge`
-  - Exports (values):
-    - `hostFsFolderImageSizes`
-    - `hostFsImageResized`
-    - `hostResizedAsset`
-    - `isResizableName`
-    - `parseEdge`
-    - `RESIZABLE_EXTENSIONS`
-    - `RESIZED_EDGES`
-    - `resizedVersion`
-    - `snapEdge`
-- Cross-plugin:
-  - Imported by: `primitives/file-viewer/image`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/sweep.ts` (debt)
 

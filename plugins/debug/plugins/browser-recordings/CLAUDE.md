@@ -70,7 +70,7 @@ join the transcript's, so the viewer's ← / → walk from one call's screenshot
 the next (the artifact section is one gallery too). The same strips are gathered as the
 conversation's Browser recordings artifact. Pushed: the server watches the
 recordings root once (`acquireDirWatch`) and notifies the call whose manifest
-landed. Frames are served by host-fs raw.
+landed. Frames are read as files on the computer's disk (file-systems' `fileUrl`, served by host-fs).
 
 Not covered: a context a script creates on `harness.browser` directly (not
 through `session()`), a run killed before its teardown, and per-action frames

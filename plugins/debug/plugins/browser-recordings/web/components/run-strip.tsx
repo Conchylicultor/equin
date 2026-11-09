@@ -1,4 +1,4 @@
-import { hostFileUrl } from "@plugins/infra/plugins/host-fs/core";
+import { fileUrl } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { AssetThumbnail } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
@@ -43,7 +43,8 @@ export function RunStrip({ run }: { run: BrowserRecordingRun }) {
             >
               <AssetThumbnail
                 size="chip"
-                asset={hostFileUrl(frame)}
+                // A frame is a PNG the recorder wrote on the computer's disk.
+                asset={fileUrl({ fs: "computer", path: frame })}
                 image={{
                   name: `${index + 1}/${steps.length} · ${step.title}`,
                   sourceLabel: source,

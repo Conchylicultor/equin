@@ -8,24 +8,25 @@ import {
 
 /**
  * A folder's listing in `fs`, both halves: its entries (every page live, up
- * to {@link FILE_PEEK_MAX_NAMES} — the most a reader with no viewport holds,
- * in code-point name order) and its meta (resolved path, parent, total,
+ * to `limit` — by default {@link FILE_PEEK_MAX_NAMES}, the most a reader with
+ * no viewport holds; a smaller one is a window that grows with `loadMore`, in
+ * code-point name order) and its meta (resolved path, parent, total,
  * `within`), pushed while read. `null` reads nothing. Every system's read is
  * declared every render (hooks cannot be conditional); the others read
  * nothing. A system this host cannot run is `unavailable`, nothing read.
  */
 // The return type is the systems' reads as they are — the computer's adds
 // the `unavailable` arm, which the union carries.
-export function useFolderListing(fs: BrowsableFileSystem, path: string | null) {
+export function useFolderListing(
+  fs: BrowsableFileSystem,
+  path: string | null,
+  { limit = FILE_PEEK_MAX_NAMES }: { limit?: number } = {},
+) {
   const computerQ = fs === "computer" && path !== null ? { path } : null;
   const browserQ = fs === "browser" && path !== null ? { path } : null;
-  const computerPages = useLive(computerFileListing, computerQ, {
-    limit: FILE_PEEK_MAX_NAMES,
-  });
+  const computerPages = useLive(computerFileListing, computerQ, { limit });
   const computerMeta = useLive(computerFileListing.meta, computerQ);
-  const browserPages = useLive(browserFileListing, browserQ, {
-    limit: FILE_PEEK_MAX_NAMES,
-  });
+  const browserPages = useLive(browserFileListing, browserQ, { limit });
   const browserMeta = useLive(browserFileListing.meta, browserQ);
   switch (fs) {
     case "computer":

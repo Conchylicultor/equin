@@ -1,7 +1,10 @@
 import sharp from "sharp";
 import { openHostFile } from "@plugins/infra/plugins/host-fs/server";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
-import { resizedVersion, type ImageSize } from "../../core";
+import {
+  resizedVersion,
+  type ImageSize,
+} from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import type { UserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /** Header reads are a few ms each; bounded so a big folder cannot open hundreds of files at once. */

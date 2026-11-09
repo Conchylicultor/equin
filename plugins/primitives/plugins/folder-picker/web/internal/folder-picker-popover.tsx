@@ -10,8 +10,8 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { FolderPicker, UNAVAILABLE_MESSAGE } from "./folder-picker";
-import { hostFsListing } from "@plugins/infra/plugins/host-fs/core";
-import { useLive } from "@plugins/network/plugins/live/web";
+import type { BrowsableFileSystem } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
+import { useFolderListing } from "@plugins/infra/plugins/paths/plugins/file-systems/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -21,7 +21,13 @@ const folderOpenIcon = symbol("folder-open");
 
 type Verdict = { valid: true } | { valid: false; reason: string };
 
-export type FolderPickerPopoverProps =
+export type FolderPickerPopoverProps = {
+  /**
+   * The file system the folder is on — the one whoever reads the value reads
+   * it on (a setting the computer reads: `computer`).
+   */
+  fs: BrowsableFileSystem;
+} & (
   | {
       /**
        * `edit` — the field HOLDS a folder (a config value): its path, a
@@ -42,19 +48,25 @@ export type FolderPickerPopoverProps =
       purpose: "add";
       onAdd: (path: string) => void;
       placeholder?: string;
-    };
+    }
+);
 
 /**
  * A typeable/pasteable absolute-path input with a live validity indicator
  * (the path exists and is a directory) plus a "Browse" popover that walks the
- * host filesystem. Self-contained — no config_v2 dependency — so any surface
- * can pick a host folder.
+ * file system's folders. Self-contained — no config_v2 dependency — so any
+ * surface can pick a folder.
  */
 export function FolderPickerPopover(props: FolderPickerPopoverProps) {
   return props.purpose === "add" ? (
-    <AddFolderField onAdd={props.onAdd} placeholder={props.placeholder} />
+    <AddFolderField
+      fs={props.fs}
+      onAdd={props.onAdd}
+      placeholder={props.placeholder}
+    />
   ) : (
     <EditFolderField
+      fs={props.fs}
       value={props.value}
       onChange={props.onChange}
       placeholder={props.placeholder}
@@ -63,9 +75,11 @@ export function FolderPickerPopover(props: FolderPickerPopoverProps) {
 }
 
 function AddFolderField({
+  fs,
   onAdd,
   placeholder,
 }: {
+  fs: BrowsableFileSystem;
   onAdd: (path: string) => void;
   placeholder?: string;
 }) {
@@ -106,6 +120,7 @@ function AddFolderField({
         }
       >
         <FolderPicker
+          fs={fs}
           onSelect={(path) => {
             add(path);
             setOpen(false);
@@ -117,10 +132,12 @@ function AddFolderField({
 }
 
 function EditFolderField({
+  fs,
   value,
   onChange,
   placeholder,
 }: {
+  fs: BrowsableFileSystem;
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
@@ -136,15 +153,15 @@ function EditFolderField({
   };
 
   const hasValue = value.trim().length > 0;
-  // The field holds an ABSOLUTE path: host-fs would also accept `~/…`, but
+  // The field holds an ABSOLUTE path: a listing would also accept `~/…`, but
   // whoever reads the value need not expand it, so it is not offered as valid.
   const absolute = value.startsWith("/");
-  // Whether the path is a folder host-fs can list: its listing's meta sibling
-  // (the folder's own facts) is read, never its entries.
-  const validity = useLive(
-    hostFsListing.meta,
-    hasValue && absolute ? { path: value } : null,
-  );
+  // Whether the path is a folder the system can list: its listing's meta
+  // sibling (the folder's own facts) is what is looked at; its entries are
+  // read a page of one.
+  const validity = useFolderListing(fs, hasValue && absolute ? value : null, {
+    limit: 1,
+  }).meta;
   // Listable is valid, a refusal names why; not known yet, no computer behind
   // the app, or a failed read (which the browser below reports): no verdict.
   let listed: Verdict | undefined;
@@ -211,6 +228,7 @@ function EditFolderField({
         trigger={<IconButton icon={folderOpenIcon} label="Browse folders" />}
       >
         <FolderPicker
+          fs={fs}
           value={value}
           onSelect={(path) => {
             setLocal(path);

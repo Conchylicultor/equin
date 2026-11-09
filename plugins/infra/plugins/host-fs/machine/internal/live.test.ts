@@ -1,5 +1,5 @@
 /**
- * host-fs's live values, against a real temp folder: the listing's pages hold
+ * The computer's disk's live values (file-systems' `files.computer.*`), against a real temp folder: the listing's pages hold
  * the paged-source contract over every range (`checkPagedSource`) and its meta
  * says what the endpoint said beside the entries; every failure the endpoints
  * answered as a result kind is the read's declared refusal; and
@@ -22,11 +22,14 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import type { DirWatchRequest } from "@plugins/infra/plugins/file-watcher/server";
 import { checkPagedSource } from "@plugins/network/plugins/live/server/testing";
-import { hostFsListing, type HostFsEntry } from "../../core";
+import {
+  computerFileListing,
+  type FileEntry,
+} from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { listHostDir } from "../../server/internal/list";
 import { dirPeek, holdListingOver, listingMeta, listingPage } from "./listing";
-import { hostFsPathStatServed, computerVolumeServed } from "./reads";
-import { computerFileTextServed } from "./file-system";
+import { computerVolumeServed } from "./reads";
+import { computerFileStatServed, computerFileTextServed } from "./file-system";
 import { completions } from "./complete";
 import { watchHostPathOver } from "./version";
 import {
@@ -52,12 +55,12 @@ afterAll(() => {
   rmSync(root, { recursive: true, force: true });
 });
 
-describe("host-fs.list", () => {
+describe("files.computer.list", () => {
   test("pages hold the paged-source contract over every range", async () => {
     const listed = await listHostDir(asUserPath(root));
     if (listed.kind !== "ok") throw new Error(listed.kind);
-    await checkPagedSource<HostFsEntry, { path?: string }>({
-      value: hostFsListing,
+    await checkPagedSource<FileEntry, { path: string }>({
+      value: computerFileListing,
       query: { path: root },
       loader: listingPage,
       items: listed.entries,
@@ -102,7 +105,7 @@ describe("host-fs.list", () => {
   });
 });
 
-describe("host-fs.peek / stat / text / volume", () => {
+describe("files.computer.peek / stat / text / volume", () => {
   test("peek names the children, and refuses a missing folder", async () => {
     const peek = await dirPeek(root);
     expect(peek.kind).toBe("ok");
@@ -112,10 +115,12 @@ describe("host-fs.peek / stat / text / volume", () => {
   });
 
   test("stat describes a path, and refuses a missing one", async () => {
-    const stat = await hostFsPathStatServed.load({ path: join(root, "b.txt") });
+    const stat = await computerFileStatServed.load({
+      path: join(root, "b.txt"),
+    });
     expect(stat.entry.kind).toBe("file");
     expect(
-      hostFsPathStatServed.load({ path: join(root, "nope") }),
+      computerFileStatServed.load({ path: join(root, "nope") }),
     ).rejects.toMatchObject({ code: "missing" });
   });
 
@@ -338,7 +343,7 @@ describe("watchHostDir", () => {
   });
 });
 
-describe("host-fs.list while held", () => {
+describe("files.computer.list while held", () => {
   test("a change re-describes only the entries it names", async () => {
     const dir = join(root, "held");
     mkdirSync(dir);

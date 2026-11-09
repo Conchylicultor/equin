@@ -1,7 +1,7 @@
 import { stat } from "@plugins/packages/plugins/timed-fs/core";
 import { withHeavyReadSlot } from "@plugins/infra/plugins/host/plugins/host-read-pool/server";
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
-import type { HostFsEntry } from "../../../core";
+import { type FileEntry } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { byName } from "../entry";
 import { isHiddenName } from "../path";
 import type {
@@ -25,8 +25,8 @@ type FileMember = Extract<ArchiveMember, { kind: "file" }>;
  * and each directory's children sorted like a disk listing.
  */
 export interface ArchiveTree {
-  entries: ReadonlyMap<string, HostFsEntry>;
-  children: ReadonlyMap<string, readonly HostFsEntry[]>;
+  entries: ReadonlyMap<string, FileEntry>;
+  children: ReadonlyMap<string, readonly FileEntry[]>;
   files: ReadonlyMap<string, FileMember>;
 }
 
@@ -76,9 +76,9 @@ export function buildArchiveTree(
   members: readonly ArchiveMember[],
   archiveMtimeMs: number,
 ): ArchiveTree {
-  const entries = new Map<string, HostFsEntry>();
+  const entries = new Map<string, FileEntry>();
   const files = new Map<string, FileMember>();
-  const dirEntry = (inner: string, mtimeMs: number): HostFsEntry => ({
+  const dirEntry = (inner: string, mtimeMs: number): FileEntry => ({
     name: baseOf(inner),
     kind: "dir",
     size: 0,
@@ -112,7 +112,7 @@ export function buildArchiveTree(
     if (member.kind === "file") files.set(inner, member);
     else files.delete(inner);
   }
-  const children = new Map<string, HostFsEntry[]>();
+  const children = new Map<string, FileEntry[]>();
   for (const [inner, entry] of entries) {
     if (entry.kind === "dir" && !children.has(inner)) children.set(inner, []);
     if (inner === "") continue;

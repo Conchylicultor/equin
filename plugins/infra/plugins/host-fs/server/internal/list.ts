@@ -1,7 +1,8 @@
 import { readdir, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { join } from "node:path";
-import { type HostFsEntry, type HostFsListResult } from "../../core";
+import { type FileEntry } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
+import type { HostFsListResult } from "../../shared/results";
 import { locateHostDir } from "./archive/locate";
 import { listArchiveDir } from "./archive/read";
 import { byName, describeEntry } from "./entry";
@@ -37,7 +38,7 @@ export async function listHostDir(path: UserPath): Promise<HostFsListResult> {
       path,
       parent: parentOf(path),
       entries: [...described.values()]
-        .filter((e): e is HostFsEntry => e.kind !== "vanished")
+        .filter((e): e is FileEntry => e.kind !== "vanished")
         .sort(byName),
     };
   } catch (err) {
@@ -56,7 +57,7 @@ export type Vanished = { kind: "vanished" };
 export async function describeChildren(
   dir: UserPath,
   names: Iterable<string>,
-): Promise<Map<string, HostFsEntry | Vanished>> {
+): Promise<Map<string, FileEntry | Vanished>> {
   return new Map(
     await Promise.all(
       [...new Set(names)].map(
@@ -70,7 +71,7 @@ export async function describeChildren(
 async function describeChild(
   dir: UserPath,
   name: string,
-): Promise<HostFsEntry | Vanished> {
+): Promise<FileEntry | Vanished> {
   try {
     return await describeEntry(asUserPath(join(dir, name)), name);
   } catch (err) {

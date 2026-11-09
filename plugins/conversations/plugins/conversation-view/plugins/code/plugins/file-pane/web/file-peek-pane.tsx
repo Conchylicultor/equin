@@ -24,14 +24,17 @@ import {
   useFileRenderers,
 } from "@plugins/primitives/plugins/file-viewer/web";
 import { locationForPath } from "@plugins/primitives/plugins/file-viewer/core";
-import type { FileLocation } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
+import type {
+  BrowsableFileSystem,
+  FileLocation,
+} from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { FileLinksWorkspaceProvider } from "@plugins/primitives/plugins/file-links/web";
 import { fileExplorerApp } from "@plugins/apps/plugins/file-explorer/plugins/shell/core";
+import { useExplorerFileTarget } from "@plugins/apps/plugins/file-explorer/plugins/browser/web";
 import {
-  locationParams,
-  useExplorerFileTarget,
-} from "@plugins/apps/plugins/file-explorer/plugins/browser/web";
-import { folderPeekPane } from "@plugins/apps/plugins/file-explorer/plugins/folder-peek/web";
+  folderPeekPane,
+  folderLocationParams,
+} from "@plugins/apps/plugins/file-explorer/plugins/folder-peek/web";
 import type { PathTarget } from "@plugins/primitives/plugins/path-bar/web";
 import {
   FilePeekHeaderProvider,
@@ -167,16 +170,14 @@ function FilePeekPaneContent() {
   });
 
   // Where a place in the header's path bar goes: a folder swaps this pane for
-  // that folder's listing (Up out of a file, to its siblings), a file typed
-  // into the bar swaps in that file's peek.
+  // that folder's listing in the bar's file system (Up out of a file, to its
+  // siblings), a file typed into the bar swaps in that file's peek.
   const activationFor = useCallback(
-    (target: PathTarget) =>
+    (target: PathTarget, fs: BrowsableFileSystem) =>
       target.kind === "dir"
-        ? openPane.to(
-            folderPeekPane,
-            locationParams({ fs: "computer", dir: target.path, open: null }),
-            { mode: "swap" },
-          )
+        ? openPane.to(folderPeekPane, folderLocationParams(fs, target.path), {
+            mode: "swap",
+          })
         : openPane.to(
             filePeekPane,
             { worktree, filePath: target.path },

@@ -1,7 +1,8 @@
 import { constants } from "node:fs";
 import { access } from "@plugins/packages/plugins/timed-fs/core";
 import { basename } from "node:path";
-import type { HostFsReadAccess, HostFsStatResult } from "../../core";
+import { type FileReadAccess } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
+import type { HostFsStatResult } from "../../shared/results";
 import { locateHostPath } from "./archive/locate";
 import { statArchiveMember } from "./archive/read";
 import { describeEntry } from "./entry";
@@ -28,7 +29,7 @@ export async function statHostPath(path: UserPath): Promise<HostFsStatResult> {
  * into), EACCES the path's own permissions. A path gone in between rethrows
  * as `missing` through the caller's classification.
  */
-async function readAccess(path: UserPath): Promise<HostFsReadAccess> {
+async function readAccess(path: UserPath): Promise<FileReadAccess> {
   try {
     await access(path, constants.R_OK);
     return "readable";

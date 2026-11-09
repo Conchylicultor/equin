@@ -13,7 +13,7 @@ in `/` or in a dotless segment that is not a well-known extensionless file name.
 `pattern.test.ts` pins the disjointness.
 
 **Claimed only when it is a folder.** `useFolderClaim` stats the path
-(`host-fs.stat`) and claims only an entry of kind `dir`, its value the resolved
+on the computer's disk (file-systems' `files.computer.stat`) and claims only an entry of kind `dir`, its value the resolved
 absolute path. A relative path is relative to the host's
 `FileLinksWorkspaceProvider` root; with none it declines. Every refusal is a
 settled decline, never pending (a pending claim stops the chain).

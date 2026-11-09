@@ -2,7 +2,7 @@
 
 Task: task-1794184535-l1s405 (attempt att-1794184536-w9oj3z). Track: "apps running in the browser" (wiki block-d04c6c0d-56fd-49f2-88f4-914e059cc83b); the same design is the track's sub-page "Design: one file-system API, many file systems". Session decision: D22 (block-e48cf036-58bd-4faa-802d-40037ef5fe1a).
 
-Status: design approved (D22a–d); sessions 1 and 2 implemented (outcomes at the end), session 3 next.
+Status: design approved (D22a–d); sessions 1, 2 and 3 implemented (outcomes at the end). Done.
 
 ## Context
 
@@ -192,3 +192,26 @@ Files reads any browsable file system through file-systems; App data and the Doc
 - **Cross-system move** (D22c): a drop of another system's files says "Moving files between two file systems is not supported yet".
 - **Not in this session**: Files never had rename / new folder / trash; they are not added (the capability flags have no such entries yet). Checkouts are not browsable in Files (read file by file).
 - **Verified**: build + every check; unit tests of host-fs, file-systems, data-files/memory, Files, host-account; all 11 demo e2e scripts (`file-explorer-in-demo.ts` now opens on Home, `~/Documents`, every viewer, and `~/.equin/apps/prototypes`); desktop Files by hand and by its e2e scripts (listing, Places, storage meter, folder sizes, zips, git dots / Diff, the old-URL redirect, move on disk). Pre-existing failures, identical on main: `explorer-verify` / `folders-on-top-verify` / `item-count-verify` (their cell selectors), git-verify's file badge in a deep folder; select-and-move's 5 s wait for a pushed listing times out on this loaded machine on main too (FSEvents dropping events).
+
+## Session 3 outcome (2026-11-09, att-1794192081-pvvszn)
+
+No reader names host-fs any more: host-fs has no `core/` (and host-fs/image none either), so the old reads cannot be spelled.
+
+- **Deleted**: `hostFsListing` (`host-fs.list`), `hostFsPathStat` (`host-fs.stat`), `hostFsVersion` (`host-fs.version`, read by nobody), `GET /api/host-fs/raw` + `hostFileUrl`, `compareHostFsNames`, `isBrowsable` / `MACOS_FILES_AND_FOLDERS_SETTINGS` (now file-systems'), and the `HostFs*` schemas. host-fs's readers now speak file-systems' `FileEntry` / `FileWithin` / `FileReadAccess` / `FileArchiveReason` and its caps; their result unions (with failure kinds) are plugin-private in `host-fs/shared/results.ts`. One entry schema, not two.
+- **Images are a capability.** `FILE_SYSTEMS[fs].capabilities.images` (the computer: yes; the browser: no). `computerImageSizes` (`files.computer.image-sizes`) and `computerImageResized` (`GET /api/files/computer/image/resized`, asset `computerResizedAsset`) are declared in file-systems (`core/internal/images.ts`), served by host-fs/image's machine half.
+- **Readers moved**:
+  - folder picker: takes `fs` (its callers, the directory-path config field and Sonata's MIDI folders, pass `computer`); reads `useFolderListing(fs, path, { limit })` — the hook gained the `limit` option, so a page of 500 with "Show more" is kept;
+  - folder links: `computerFileStat` (a path an agent writes is on its computer);
+  - browser recordings: `fileUrl({ fs: "computer", path })`;
+  - the image viewer's ← / → set: `useFolderListing` for any browsable system (the browser's storage now has ← / → too), sizes and resized copies only where `capabilities.images`;
+  - `useArchiveMembership(location)` reads `useFileStat` (the Files preview no longer asks the computer about a browser file).
+- **Session 2 leftovers closed**:
+  - `files.systems` is `preload: "boot-and-keep"`;
+  - the folder pane is `folder/:dir/:open?;fs` (no `;fs` = the computer, so every old link opens); `useFolderPeekTarget()(fs, dir)` / `folderLocationParams(fs, dir)`; the file-peek path bar opens a folder in the place's own system;
+  - `~/.equin/apps/file-explorer` (empty, undeclared since session 2) removed by hand on this machine.
+- **Verified**: build + every check; unit tests of host-fs, file-systems, file-viewer, folder-picker, Files, folder-link (330 pass); all 11 demo e2e scripts (no-leak included); the desktop by hand: Files (Home, Places, storage meter), the folder pane from a legacy `folder/<dir>` link, an image's preview, ← / → over its folder's images with their sizes, the grid's thumbnails as resized copies, the folder picker (Sonata → MIDI folders → Browse…), a recording frame through the computer's raw route (and the old route gone).
+- **Leftovers** (not filed as a track task — this was the design's last session):
+  - Files still has no rename / new folder / trash; checkouts are not browsable in Files; moving between systems is refused (D22c).
+  - A folder link in the demo still declines (its path is the computer's, which the demo lacks); nothing produces a browser-storage folder link or file peek yet, so the folder pane's `;fs=browser` is reachable only by URL.
+  - Retiring a declared data dir has no mechanism: a dir an owner stops declaring is left for the host audit to flag and a person to remove (done by hand here).
+  - data-files keeps its own narrower `FileEntry` (an app root's entry, files and folders only) beside file-systems' — same name, different type.

@@ -120,7 +120,7 @@ await withBrowser(async (h) => {
         (img) =>
           // A lazy tile far off screen has not picked a source yet.
           img.currentSrc !== "" &&
-          !img.currentSrc.includes("/api/host-fs/image/resized"),
+          !img.currentSrc.includes("/api/files/computer/image/resized"),
       ).length,
   );
   r.eq("every grid tile draws a resized copy", originals, 0);
@@ -188,7 +188,7 @@ await withBrowser(async (h) => {
       [...el.querySelectorAll("img")].filter(
         (img) =>
           img.currentSrc !== "" &&
-          !img.currentSrc.includes("/api/host-fs/image/resized"),
+          !img.currentSrc.includes("/api/files/computer/image/resized"),
       ).length,
   );
   r.eq("every strip thumbnail draws a resized copy", stripCopies, 0);

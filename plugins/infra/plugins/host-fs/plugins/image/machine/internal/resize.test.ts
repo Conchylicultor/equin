@@ -34,7 +34,9 @@ async function turnedJpeg(): Promise<Buffer> {
 
 function get(path: string, edge: number | string, v = "x") {
   const q = new URLSearchParams({ path, edge: String(edge), v });
-  return handle(new Request(`http://localhost/api/host-fs/image/resized?${q}`));
+  return handle(
+    new Request(`http://localhost/api/files/computer/image/resized?${q}`),
+  );
 }
 
 beforeAll(async () => {
