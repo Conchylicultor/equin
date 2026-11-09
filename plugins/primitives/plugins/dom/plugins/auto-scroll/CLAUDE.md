@@ -8,6 +8,9 @@ plugin's own files, so a new scroll behavior belongs *here*, not in the consumer
 that wants it. Today that is six roles:
 
 - **stick-to-bottom streaming** — `useStickyScroll` + `JumpToBottomButton`, and `announceNavigation` (every navigating scroll writer calls it)
+- **a glide in step with a transition** — `glideScroll(scroller, { left }, { duration, easing })`
+  writes the offset frame by frame on a CSS `cubic-bezier` curve, so a scroll
+  and a width transition beside it (miller's row) move as one motion
 - **container-scoped positioning** — `scrollToBottom`, `scrollChildIntoView`
   (scroll only THIS container; never an ancestor, unlike `scrollIntoView`; it
   honours the child's CSS `scroll-margin` as `scrollIntoView` does, so a
@@ -94,7 +97,7 @@ click on a card) changes nothing.
 
 **Every sanctioned scroll funnel announces a navigation.**
 `announceNavigation(target)` arms the owner of `target` and of every ancestor
-scroller. It is called by `scrollChildIntoView`, `scrollToBottom`/`scrollToTop`,
+scroller. It is called by `scrollChildIntoView`, `glideScroll`, `scrollToBottom`/`scrollToTop`,
 `useEdgeAutoScroll` and scroll-reveal's `revealElement`, so an outline jump or a
 `StickyUserHeader` expand moves the reader and is never undone. A new
 *navigating* scroll writer must call it. A *compensation* that keeps the reader
@@ -230,7 +233,7 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
 
 ## Plugin reference
 
-- Description: The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton; content stamped FOLLOW_MOTION_ATTR is followed frame by frame while it animates), container-scoped scrollToBottom / scrollChildIntoView, gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross, or restoreScrollOffset from a caller's own snapshot), the reader's anchor kept on screen across a commit that resizes content above it (KeepAnchorAcross), an element kept at its screen position across a re-layout (keepInPlace), a deep copy that keeps its scroll offsets (cloneWithScroll, for a stand-in drawn while content leaves), an inner scroller's offset kept across a page reload (useScrollAcrossReload, put back as async content arrives until reached or the reader takes over), and the shared findScrollParent discovery.
+- Description: The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton; content stamped FOLLOW_MOTION_ATTR is followed frame by frame while it animates), container-scoped scrollToBottom / scrollChildIntoView, a scroll glided frame by frame on a given CSS curve so it moves in step with a transition beside it (glideScroll), gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross, or restoreScrollOffset from a caller's own snapshot), the reader's anchor kept on screen across a commit that resizes content above it (KeepAnchorAcross), an element kept at its screen position across a re-layout (keepInPlace), a deep copy that keeps its scroll offsets (cloneWithScroll, for a stand-in drawn while content leaves), an inner scroller's offset kept across a page reload (useScrollAcrossReload, put back as async content arrives until reached or the reader takes over), and the shared findScrollParent discovery.
 - Web:
   - Uses:
     - `primitives/css/ui-kit.Button`
@@ -243,9 +246,11 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
     - `primitives/latest-ref.useLatestRef`
     - `ui/icons.Icon`
   - Exports (types):
+    - `CubicBezier`
     - `EdgeAutoScroll`
     - `EdgeScrollSurface`
     - `FindScrollParentOptions`
+    - `GlideScrollOptions`
     - `JumpToBottomButtonProps`
     - `JumpToBottomView`
     - `KeepAnchorAcrossProps`
@@ -262,6 +267,7 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
     - `cloneWithScroll`
     - `findScrollParent`
     - `FOLLOW_MOTION_ATTR`
+    - `glideScroll`
     - `JumpToBottomButton`
     - `KeepAnchorAcross`
     - `keepInPlace`

@@ -1,153 +1,134 @@
 import { useLayoutEffect, useMemo, useRef } from "react";
-import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   PaneBox,
   PaneLayoutContext,
   type MatchEntry,
 } from "@plugins/primitives/plugins/pane/web";
-import { useSurfaceTabId } from "@plugins/primitives/plugins/scope/plugins/surface-id/web";
-import { useColumnCollapse } from "../hooks/use-column-collapse";
 import {
-  useClearMaximize,
-  useColumnMaximize,
-  useMaximizedId,
-} from "../hooks/use-column-maximize";
-import { useColumnWidth, useHasStoredWidth } from "../hooks/use-column-widths";
+  MOTION_EASING_CSS,
+  MOTION_MS,
+  UNFOLD_FADE_MS,
+  type ColumnBox,
+} from "../layout";
 import { CollapsedBar } from "./collapsed-bar";
 import { ResizeHandle } from "./resize-handle";
 
-const DEFAULT_WIDTH = 400;
-
 interface ColumnProps {
   entry: MatchEntry;
+  /** What the row's layout decided for this column. */
+  box: ColumnBox;
+  /** The pane's width inside the box — `box.inner`, or the wider width it
+   *  had while the box narrows (clipped until the motion ends). */
+  inner: number;
+  /** A motion is running: the box's width transitions. */
+  moving: boolean;
+  /** This motion turned the column into a bar, or back into its pane. */
+  fadeIn: "bar" | "pane" | null;
   isFirst: boolean;
   isLast: boolean;
+  zoomed: boolean;
+  onToggleZoom: (id: string) => void;
+  onBarClick: () => void;
+  onCollapse: () => void;
+  onResize: (dx: number) => void;
   dragHandleProps?: Record<string, unknown>;
 }
 
+/**
+ * One column: ONE box whose width is the layout's, holding either the pane or
+ * its collapsed bar. Collapsing, expanding and zooming change only what the box
+ * holds and how wide it is — so a bar growing back into its pane is this box's
+ * width animating 32 → full, never a second element arriving.
+ */
 export function Column({
   entry,
+  box,
+  inner,
+  moving,
+  fadeIn,
   isFirst,
   isLast,
+  zoomed,
+  onToggleZoom,
+  onBarClick,
+  onCollapse,
+  onResize,
   dragHandleProps,
 }: ColumnProps) {
-  const [collapsed, toggleCollapse] = useColumnCollapse(entry.uuid);
-  const [isMaximized, toggleMaximize] = useColumnMaximize(entry.uuid);
-  const maximizedId = useMaximizedId();
-  const clearMaximize = useClearMaximize();
-  const tabId = useSurfaceTabId();
-  const [width, setWidth] = useColumnWidth(
-    entry.pane.id,
-    entry.pane.width ?? DEFAULT_WIDTH,
-  );
-
-  // `HTMLElement`, not `HTMLDivElement`: `PaneBox` publishes its box as the
-  // generic element (the tag is the theme boundary's to pick), and `offsetWidth`
-  // is all this measurement needs.
-  const divRef = useRef<HTMLElement>(null);
-  // Tracks the actual rendered width while this column has flex-1 (isLast=true).
-  const capturedWidthRef = useRef(0);
-
-  // Keep capturedWidthRef up-to-date on every render while we're the last column.
-  // No deps intentional: we need the latest measurement before the next column opens.
-  useLayoutEffect(() => {
-    if (isLast && divRef.current) {
-      capturedWidthRef.current = divRef.current.offsetWidth;
-    }
-  });
-
-  const setWidthRef = useLatestRef(setWidth);
-  const hasStoredWidth = useHasStoredWidth();
-  const paneId = entry.pane.id;
-
-  useLayoutEffect(() => {
-    if (
-      !isLast &&
-      capturedWidthRef.current > 0 &&
-      !hasStoredWidth(tabId, paneId)
-    ) {
-      // First time a column opens to our right and the user hasn't set a custom
-      // width: split the space 50/50 so both columns start roughly equal.
-      setWidthRef.current(Math.round(capturedWidthRef.current / 2));
-    }
-  }, [isLast, paneId, tabId, hasStoredWidth]);
-
+  const id = entry.uuid;
   const paneLayout = useMemo(
     () => ({
-      onDoubleClickHeader: toggleMaximize,
+      onDoubleClickHeader: () => onToggleZoom(id),
       dragHandleProps,
       atSurfaceStart: isFirst,
-      atSurfaceEnd: isLast || isMaximized,
+      atSurfaceEnd: isLast || zoomed,
     }),
-    [toggleMaximize, dragHandleProps, isFirst, isLast, isMaximized],
+    [onToggleZoom, id, dragHandleProps, isFirst, isLast, zoomed],
   );
 
-  // Some other column in THIS surface is maximized → collapse this one
-  // (overrides isLast guard).
-  const forcedCollapse = !isMaximized && maximizedId !== null;
-  if (forcedCollapse) {
-    return <CollapsedBar entry={entry} onExpand={clearMaximize} />;
-  }
+  // A pane coming back from its bar fades in as its box grows around it.
+  const paneRef = useRef<HTMLElement>(null);
+  useLayoutEffect(() => {
+    if (fadeIn !== "pane") return;
+    paneRef.current?.animate([{ opacity: 0 }, { opacity: 1 }], {
+      duration: UNFOLD_FADE_MS,
+      easing: "ease-out",
+    });
+  }, [fadeIn]);
 
-  const isCollapsed = collapsed && !isLast;
   const keepMounted = entry.pane.chrome.keepMountedWhenCollapsed;
 
-  if (isCollapsed && !keepMounted) {
-    return <CollapsedBar entry={entry} onExpand={toggleCollapse} />;
-  }
-
-  // Maximized column fills all available space regardless of its position.
-  const expandFull = isLast || isMaximized;
-
-  // When keepMounted is true and the column is collapsed, the body div stays
-  // mounted at tree position 0 (hidden via display:none) so the component
-  // subtree is never torn down. The CollapsedBar takes position 1.
   return (
-    <>
-      {/* `PaneBox` is the pane's own box: it stamps the pane id and the home
-          app's theme scope on this element AND forwards both across portals, so
-          popovers opened from this column still report their containing pane and
-          keep its theme. This renderer owns only where the box sits and how wide
-          it is. `PaneLayoutContext` wraps from outside — it is React context, so
-          it reaches the pane regardless of which element it hangs off. */}
-      <PaneLayoutContext.Provider value={paneLayout}>
-        <PaneBox
-          ref={divRef}
-          pane={entry.pane}
-          params={entry.params}
-          style={
-            isCollapsed
-              ? { display: "none" }
-              : expandFull
-                ? undefined
-                : { width }
-          }
-          // The column body is a flex-col clip pane whose row-child role is
-          // JS-measured: the leaf column flex-grows (`flex-1`) while fixed-width
-          // columns stay rigid (`shrink-0`), and `capturedWidthRef` reads
-          // `offsetWidth` to split space 50/50 when a new column opens. The
-          // flex-grow/shrink choice is computed per render, so it stays raw.
-          // eslint-disable-next-line layout/no-adhoc-layout -- JS-measured flex-grow/shrink column body in miller's row
-          className={
-            isCollapsed
-              ? undefined
-              : expandFull
-                ? "flex h-full min-w-[200px] flex-1 flex-col overflow-hidden"
-                : "flex h-full shrink-0 flex-col overflow-hidden"
-          }
-        />
-      </PaneLayoutContext.Provider>
-      {isCollapsed ? (
-        <CollapsedBar entry={entry} onExpand={toggleCollapse} />
-      ) : (
-        !isLast &&
-        !isMaximized && (
-          <ResizeHandle
-            onResize={(dx) => setWidth((w) => w + dx)}
-            onCollapse={toggleCollapse}
+    // The column box: its width is the layout's, transitioned while a motion
+    // runs (a drag or a row resize follows at once). The pane inside keeps its
+    // own pixel width, so a narrowing box clips it rather than re-wrapping it
+    // every frame; the divider sits on the box's right edge, inside its width.
+    <div
+      // eslint-disable-next-line layout/no-adhoc-layout -- JS-sized rigid column box in miller's row (width from the row layout)
+      className="relative flex h-full shrink-0"
+      style={{
+        width: box.width,
+        transition: moving
+          ? `width ${MOTION_MS}ms ${MOTION_EASING_CSS}`
+          : undefined,
+      }}
+    >
+      {/* The clip: what the box does not show of its content. */}
+      {/* eslint-disable-next-line layout/no-adhoc-layout -- clip region filling the column box beside its divider */}
+      <div className="flex h-full min-w-0 flex-1 overflow-hidden">
+        {box.bar && (
+          <CollapsedBar
+            entry={entry}
+            onExpand={onBarClick}
+            fadeIn={fadeIn === "bar"}
           />
-        )
+        )}
+        {/* With keepMounted the pane stays mounted (hidden) while collapsed, at
+            the same child position, so its subtree is never torn down. */}
+        {(!box.bar || keepMounted) && (
+          // `PaneBox` is the pane's own box: it stamps the pane id and the home
+          // app's theme scope on this element AND forwards both across portals,
+          // so popovers opened from this column still report their containing
+          // pane and keep its theme. This renderer owns only its width.
+          // `PaneLayoutContext` wraps from outside — it is React context, so it
+          // reaches the pane regardless of which element it hangs off.
+          <PaneLayoutContext.Provider value={paneLayout}>
+            <PaneBox
+              ref={paneRef}
+              pane={entry.pane}
+              params={entry.params}
+              style={box.bar ? { display: "none" } : { width: inner }}
+              // A rigid flex-col clip pane at the pixel width the layout gives
+              // it (wider than the box while it narrows).
+              // eslint-disable-next-line layout/no-adhoc-layout -- JS-sized rigid pane body inside miller's column clip
+              className="flex h-full shrink-0 flex-col overflow-hidden"
+            />
+          </PaneLayoutContext.Provider>
+        )}
+      </div>
+      {box.handle && (
+        <ResizeHandle onResize={onResize} onCollapse={onCollapse} />
       )}
-    </>
+    </div>
   );
 }

@@ -120,8 +120,8 @@ export const taskDetailPane = Pane.define({
   - The guard paints Loading / error with Retry / Not Found; once `found` it
     stays mounted through later `pending`/`error` (only `missing` unmounts).
   - Never answer `found` or `pending` for a failed read.
-- **`width`** — default Miller column width (px, default 400); the last column
-  flex-grows.
+- **`width`** — the Miller column's own width (px, default 400); the last column
+  also grows to fill the row's spare room (never below it).
 
 ### `usePaneViewParam` — the view on screen, in the URL
 

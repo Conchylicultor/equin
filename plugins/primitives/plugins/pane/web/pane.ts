@@ -3269,8 +3269,9 @@ type RouteDefineArgs<
    */
   expand?: PaneExpand<Closed<OwnRouteParams<Seg>>>;
   /**
-   * Default column width in pixels. Read by layout renderers (e.g. Miller
-   * columns). The leaf column ignores this and flex-grows. Defaults to 400.
+   * The pane's column width in pixels. Read by layout renderers (e.g. Miller
+   * columns, where the leaf also grows to fill spare room, never below it).
+   * Defaults to 400.
    */
   width?: number;
 } & RouteResolveField<Seg> &

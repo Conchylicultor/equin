@@ -93,28 +93,71 @@ Pane.define({
 ```
 
 `width` is the column's default width in pixels (top-level on
-`Pane.define`, separate from the `chrome` config). Defaults to 400. The leaf column ignores its own width and
-flex-grows to fill remaining space. Users can drag the divider between
-columns to resize at runtime. Width state is **per-surface** (keyed by the
-column's `PaneStore` via a `WeakMap`), so two mounted surfaces (desktop
-multi-window / keep-alive tabs) resize independently; persistence is keyed by
-`(tabId, paneId)` in `localStorage`, so a tab keeps its widths across reload
-without bleeding across surfaces.
+`Pane.define`, separate from the `chrome` config). Defaults to 400.
+
+## Sizing: every column has its own width ("scroll", Finder-style)
+
+The whole row is laid out by one pure function, `layoutColumns` in
+[`web/layout.ts`](web/layout.ts) (tested beside it); the components only draw
+what it decides.
+
+- **Every column, the leaf included, has its own width**: the width the user
+  dragged it to ?? `pane.width` ?? 400. A width is a property of the pane, never
+  the space left over — the same pane opens at the same width whatever was
+  on screen before. The width is the whole column, its 4px divider included.
+- **Spare room goes to the leaf.** When the columns are narrower than the row,
+  the leaf grows to fill it (never below its own width). When they are wider,
+  the row overflows and scrolls horizontally.
+- **Nothing automatic is ever stored.** Only a divider drag writes a width
+  (`miller.column-widths.v2`, localStorage, keyed by `(tabId, paneId)`, per
+  surface via a `WeakMap` on the `PaneStore`). The previous owner's entries
+  were mixed with the automatic 50/50 split the leaf used to persist on its
+  first child, so they are dropped (`legacy`), not adopted.
+- **Every change of what the row shows is one motion** — a route change (open,
+  close, swap, reorder, back/forward), a zoom, a collapse. The column boxes
+  transition their width (280ms `cubic-bezier(.33,1,.68,1)`), and the row's
+  scroll glides on the same curve and duration, frame by frame
+  (`glideScroll`, auto-scroll), to `scrollTarget`: the row's end, so the newest
+  column is fully on screen. A column that narrows keeps its old inner width
+  (clipped by its box) until the motion ends, so its content does not re-wrap
+  every frame. A divider drag or a row resize is no motion: it follows at once.
+  `prefers-reduced-motion`: no transition, the scroll lands at once. The first
+  paint lands in place.
+- **Enter / leave / swap** (`ColumnMotion`) ride on top: a newcomer mounts at
+  its final width and only its content slides in; a closed column's ghost
+  fades out over the remaining columns as they grow into its place. The row's
+  scroll is MillerColumns' alone.
 
 ## Collapse
 
-Each non-leaf column has a chevron button on its right edge (the resize
-handle) that collapses it to a 32px-wide vertical bar with the pane
-title rotated 90°. Click the bar to expand. Collapse state is **per-surface**
-(keyed by the column's `PaneStore` via a `WeakMap`), so collapsing a column in
-one mounted surface never collapses it in another; it is persisted to
-sessionStorage keyed by `(tabId, paneId)` (`miller.collapse.${tabId}.${paneId}`),
-so it survives navigation within a tab session and resets on full reload.
+Each non-leaf column has a chevron button on its divider that collapses it
+to a 32px-wide vertical bar with the pane title rotated 90°. Click the bar to
+expand. A bar and its pane are the SAME column box — collapsing narrows the
+box around a bar fading in, expanding grows it back around the pane — never
+two elements. Collapse state is **per-surface** (keyed by the column's
+`PaneStore` via a `WeakMap`) and per column instance (the slot's uuid),
+persisted to sessionStorage (`miller.column-collapse`, keyed by `(tabId,
+uuid)`), so it survives navigation within a tab session and resets on full
+reload.
 
-When a column is collapsed, its component subtree is unmounted. Panes
-that need to stay alive across collapse (e.g. terminal sessions) are
-not yet supported — see the open question in
-`research/2026-04-30-plugins-miller-columns.md`.
+When a column is collapsed, its component subtree is unmounted, unless its
+pane declares `chrome.keepMountedWhenCollapsed` (kept mounted, hidden).
+
+## Zoom (double-click a header)
+
+- Double-click a column's header → that column expands to fill the row and
+  every other one, the leaf included, collapses to a bar (no dividers).
+- While zoomed, clicking a bar moves the zoom to that column.
+- Double-click the zoomed header again, or press Esc (a surface shortcut,
+  registered only while zoomed) → back to the exact layout and the row's
+  scroll offset from before the zoom.
+- **Any route change ends the zoom.** The zoom state remembers the route it
+  was made on (`routeKey`: the pane instances, in order) and `effectiveZoom`
+  honours it only on that route, with its column in it — so a link opened
+  from a zoomed column lands as an ordinary column, and closing the zoomed
+  column never leaves the others collapsed. A stale state is also dropped, so
+  back/forward to the zoomed route does not zoom again.
+- Per surface (per `PaneStore`). The full-pane layout's double-click is a no-op.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./equin build` -->
 
@@ -122,7 +165,7 @@ not yet supported — see the open question in
 
 - Description: Miller-columns layout renderer. Maps the matched pane chain to a horizontal sequence of resizable, collapsible columns.
 - Web:
-  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×12
     - `primitives/dom/auto-scroll` ×3
     - `primitives/dom/web-storage` ×3
@@ -133,9 +176,10 @@ not yet supported — see the open question in
     - `primitives/css/spacing.Stack`
     - `primitives/css/theme-boundary.Theme`
     - `primitives/css/ui-kit.cn`
+    - `primitives/dom/element-size.useResizeObserver`
     - `primitives/error-boundary.PluginErrorBoundary`
-    - `primitives/latest-ref.useLatestRef`
     - `primitives/scope/surface-id.useSurfaceTabId`
+    - `primitives/shortcuts.useSurfaceShortcuts`
     - `primitives/ui-context.UiRegion`
     - `ui/icons.Icon`
   - Exports (values):

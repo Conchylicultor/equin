@@ -3,7 +3,6 @@ import { prefersReducedMotion } from "@plugins/primitives/plugins/css/plugins/mo
 import {
   cloneWithScroll,
   restoreScrollOffset,
-  scrollChildIntoView,
 } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 import type { MatchEntry } from "@plugins/primitives/plugins/pane/web";
 
@@ -49,14 +48,19 @@ interface ColumnMotionProps {
  * `proto-1792836852-pvwo12`, "slide"):
  *
  * - **enter** — a new kind of pane: its content slides in from 36px right while
- *   fading in. The row's widths commit at once (no width transition), so only
- *   the newcomer moves and no column re-wraps frame by frame. When a column
- *   left in the same change, the newcomer waits a beat for it.
+ *   fading in. The newcomer mounts at its final width (it has no old width to
+ *   transition from), so only its content moves; the columns already there
+ *   transition to their new widths underneath (MillerColumns, on the same
+ *   curve and duration), each narrowing one holding its old inner width so
+ *   nothing re-wraps frame by frame. When a column left in the same change,
+ *   the newcomer waits a beat for it.
  * - **leave** — the entrance in reverse: a closed column is lifted out of flow
  *   at its last rect (a copy of its DOM, on top) and its content slides 36px
  *   right while fading out, over the same duration and curve as an entrance;
- *   the remaining columns take their new widths underneath at once, and a row
- *   scrolled to reveal the column glides back as it leaves.
+ *   the remaining columns transition to their new widths underneath (the new
+ *   leaf growing to fill), and the row's scroll glides back with them —
+ *   MillerColumns owns every scroll of the row, this only undoes the clamp
+ *   the commit's removals caused.
  * - **swap** — the same pane showing another entity in the same position, or
  *   a new root column: the old content fades out on top while the new one
  *   fades in with a 4px rise.
@@ -125,15 +129,11 @@ export class ColumnMotion extends Component<
     // The ghosts hold the scroll area open again; undo a clamp the commit's
     // removals caused before they were drawn.
     if (leaving) restoreScrollOffset(row, { left: leaving.scrollLeft });
+    // The row's scroll is not ours: MillerColumns glides it to the row's new
+    // end (in step with the widths) right after this, from the offset just
+    // restored — so a row scrolled to reveal the closed column glides back as
+    // it leaves.
     const left = ghosts.some((g) => g.kind === "leave");
-    if (left && row.scrollLeft > settledLeft(row) + 1) {
-      // The reverse of revealing a newcomer: the row glides back as the
-      // columns past the remaining ones' end leave.
-      scrollChildIntoView(row, lastColumn(row), {
-        inline: "end",
-        behavior: reduced ? "auto" : "smooth",
-      });
-    }
 
     const seen = new Set(prev.panes.map((e) => e.uuid));
     this.props.panes.forEach((entry, i) => {

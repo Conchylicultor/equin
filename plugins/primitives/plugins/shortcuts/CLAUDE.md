@@ -83,11 +83,12 @@ has no other reactive read. Design: `research/2026-11-05-global-ambient-signals-
     - `useSurfaceShortcuts`
     - `useSurfaceSignal`
 - Cross-plugin:
-  - Imported by: 31 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 32 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×15
     - `primitives` ×10
     - `apps-core` ×3
     - `hints`
+    - `layouts/miller`
     - `media/player`
     - `tasks/task-draft-form`
 - Exemptions:

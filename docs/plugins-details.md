@@ -36268,7 +36268,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `PaneLayoutHost`
     - **`miller`** — Miller-columns layout renderer. Maps the matched pane chain to a horizontal sequence of resizable, collapsible columns.
       - Web:
-        - Uses: 32 symbols — full list in [`plugins/layouts/plugins/miller/REFERENCE.md`](../plugins/layouts/plugins/miller/REFERENCE.md)
+        - Uses: 33 symbols — full list in [`plugins/layouts/plugins/miller/REFERENCE.md`](../plugins/layouts/plugins/miller/REFERENCE.md)
           - `primitives/pane` ×12
           - `primitives/dom/auto-scroll` ×3
           - `primitives/dom/web-storage` ×3
@@ -36279,9 +36279,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/spacing.Stack`
           - `primitives/css/theme-boundary.Theme`
           - `primitives/css/ui-kit.cn`
+          - `primitives/dom/element-size.useResizeObserver`
           - `primitives/error-boundary.PluginErrorBoundary`
-          - `primitives/latest-ref.useLatestRef`
           - `primitives/scope/surface-id.useSurfaceTabId`
+          - `primitives/shortcuts.useSurfaceShortcuts`
           - `primitives/ui-context.UiRegion`
           - `ui/icons.Icon`
         - Exports (values):
@@ -47162,7 +47163,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `review/plugin-changes/file-changes`
     - **`dom`** — How do I read and drive the real DOM, and where is the one place allowed to do it? — the guarded selection read (dom-selection), element measurement (element-size), on-screen detection (in-view), scroll ownership (auto-scroll), the wasted-scroll bounce (overscroll-hint), reveal-on-activation (scroll-reveal), and copying what an element stands for (copy-source-text).
       - Plugins:
-        - **`auto-scroll`** — The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton; content stamped FOLLOW_MOTION_ATTR is followed frame by frame while it animates), container-scoped scrollToBottom / scrollChildIntoView, gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross, or restoreScrollOffset from a caller's own snapshot), the reader's anchor kept on screen across a commit that resizes content above it (KeepAnchorAcross), an element kept at its screen position across a re-layout (keepInPlace), a deep copy that keeps its scroll offsets (cloneWithScroll, for a stand-in drawn while content leaves), an inner scroller's offset kept across a page reload (useScrollAcrossReload, put back as async content arrives until reached or the reader takes over), and the shared findScrollParent discovery.
+        - **`auto-scroll`** — The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton; content stamped FOLLOW_MOTION_ATTR is followed frame by frame while it animates), container-scoped scrollToBottom / scrollChildIntoView, a scroll glided frame by frame on a given CSS curve so it moves in step with a transition beside it (glideScroll), gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross, or restoreScrollOffset from a caller's own snapshot), the reader's anchor kept on screen across a commit that resizes content above it (KeepAnchorAcross), an element kept at its screen position across a re-layout (keepInPlace), a deep copy that keeps its scroll offsets (cloneWithScroll, for a stand-in drawn while content leaves), an inner scroller's offset kept across a page reload (useScrollAcrossReload, put back as async content arrives until reached or the reader takes over), and the shared findScrollParent discovery.
           - Web:
             - Uses:
               - `primitives/css/ui-kit.Button`
@@ -47175,9 +47176,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/latest-ref.useLatestRef`
               - `ui/icons.Icon`
             - Exports (types):
+              - `CubicBezier`
               - `EdgeAutoScroll`
               - `EdgeScrollSurface`
               - `FindScrollParentOptions`
+              - `GlideScrollOptions`
               - `JumpToBottomButtonProps`
               - `JumpToBottomView`
               - `KeepAnchorAcrossProps`
@@ -47194,6 +47197,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `cloneWithScroll`
               - `findScrollParent`
               - `FOLLOW_MOTION_ATTR`
+              - `glideScroll`
               - `JumpToBottomButton`
               - `KeepAnchorAcross`
               - `keepInPlace`
@@ -47276,13 +47280,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useResizeObserver`
               - `useResizeObserverSet`
           - Cross-plugin:
-            - Imported by: 42 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
+            - Imported by: 43 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
               - `primitives` ×22
               - `apps` ×10
               - `shell` ×2
               - `active-data/go`
               - `conversations/conversation-view/jsonl-viewer`
               - `hints`
+              - `layouts/miller`
               - `menu-bar`
               - `page/editor`
               - `reorder`
@@ -48205,7 +48210,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `seekPredicate`
     - **`latest-ref`** — Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), and useEventCallback(fn) is the stable-identity callback built on it. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
       - Cross-plugin:
-        - Imported by: 83 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
+        - Imported by: 82 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
           - `primitives` ×33
           - `apps` ×25
           - `page` ×5
@@ -48219,7 +48224,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hints`
           - `infra/claude-cli/sign-in`
           - `integrations/youtube`
-          - `layouts/miller`
           - `media/player`
           - `reorder`
           - `reports/main-thread-stall`
@@ -50643,11 +50647,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSurfaceShortcuts`
           - `useSurfaceSignal`
       - Cross-plugin:
-        - Imported by: 31 plugins — full list in [`plugins/primitives/plugins/shortcuts/REFERENCE.md`](../plugins/primitives/plugins/shortcuts/REFERENCE.md)
+        - Imported by: 32 plugins — full list in [`plugins/primitives/plugins/shortcuts/REFERENCE.md`](../plugins/primitives/plugins/shortcuts/REFERENCE.md)
           - `apps` ×15
           - `primitives` ×10
           - `apps-core` ×3
           - `hints`
+          - `layouts/miller`
           - `media/player`
           - `tasks/task-draft-form`
       - Exemptions:
