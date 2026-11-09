@@ -24,6 +24,7 @@ export type ExpandOp =
   | "create-sequence"
   | "create-domain"
   | "add-column"
+  | "add-generated-column"
   | "set-default"
   | "drop-default"
   | "drop-not-null"
@@ -205,10 +206,16 @@ const ADD_COLUMN = new RegExp(
   String.raw`^ADD\s+COLUMN\s+(?:IF\s+NOT\s+EXISTS\s+)?(${IDENT})\s+[\s\S]+$`,
   "id",
 );
-// Column-definition clauses that add a constraint or a computed value — not a
-// plain column, so neither expand nor safely splittable.
-const ADD_COLUMN_CONSTRAINT =
-  /\b(?:PRIMARY\s+KEY|UNIQUE|REFERENCES|CHECK|GENERATED)\b/i;
+// Column-definition clauses that add a constraint — not a plain column, so
+// neither expand nor safely splittable.
+const ADD_COLUMN_CONSTRAINT = /\b(?:PRIMARY\s+KEY|UNIQUE|REFERENCES|CHECK)\b/i;
+// A STORED generated column: the database computes it for every existing row
+// and no code can write it, so adding one is permissive (expand) — the code
+// already deployed never names it. Any other GENERATED form (an identity
+// column, a VIRTUAL one) stays unknown, and so does one with NOT NULL, whose
+// expression could fail on an existing row.
+const GENERATED_STORED = /\bGENERATED\s+ALWAYS\s+AS\s*\([\s\S]*\)\s*STORED\b/i;
+const GENERATED = /\bGENERATED\b/i;
 const NOT_NULL = /\bNOT\s+NULL\b/i;
 const DEFAULT = /\bDEFAULT\b/i;
 
@@ -258,11 +265,19 @@ export function classifyStatement(stmt: Statement): StatementClass {
     if (ADD_COLUMN_CONSTRAINT.test(action)) {
       return {
         kind: "unknown",
-        reason:
-          "an ADD COLUMN carrying an inline constraint or generated value",
+        reason: "an ADD COLUMN carrying an inline constraint",
       };
     }
     const notNull = NOT_NULL.exec(action);
+    if (GENERATED.test(action)) {
+      return GENERATED_STORED.test(action) && !notNull && !DEFAULT.test(action)
+        ? { kind: "expand", op: "add-generated-column" }
+        : {
+            kind: "unknown",
+            reason:
+              "an ADD COLUMN generated other than a nullable GENERATED ALWAYS AS (…) STORED",
+          };
+    }
     if (!notNull || DEFAULT.test(action))
       return { kind: "expand", op: "add-column" };
 

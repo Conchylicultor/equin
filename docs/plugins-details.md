@@ -54282,9 +54282,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `NotificationCategory`
           - `NotificationId`
           - `NotificationState`
+          - `NotificationStateTone`
         - Exports (values):
           - `NOTIFICATION_CATEGORIES`
           - `NOTIFICATION_CATEGORY_LABELS`
+          - `NOTIFICATION_NO_STATE_LABEL`
+          - `NOTIFICATION_STATE_TONE_LABELS`
           - `NOTIFICATION_STATE_TONES`
           - `NOTIFICATION_VARIANTS`
           - `NotificationActionSchema`

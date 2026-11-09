@@ -26,6 +26,7 @@ vi.mock(
 
 import {
   cleanup,
+  fireEvent,
   render,
   screen,
   waitFor,
@@ -50,11 +51,15 @@ function mount(live: LiveStateHarness) {
   );
 }
 
-const groupsKey = (groupBy: "category" | "variant") =>
+const groupsKey = (
+  groupBy: "category" | "variant" | "stateTone",
+  where?: { category: "reports" },
+) =>
   queryKeyFor(
     `${notifications.key}:groups`,
     notifications.groups.groups.encode({
       groupBy,
+      ...(where && { where }),
       limit: notifications.groups.groups.defaultLimit,
     }),
   );
@@ -96,5 +101,57 @@ describe("NotificationsPanel — chip row", () => {
         "Other 2",
       ]);
     });
+  });
+
+  it("a category whose rows carry states splits by where they stand, with server counts", async () => {
+    const live = createLiveStateHarness();
+    const client = live.queryClient;
+    client.setQueryData(groupsKey("category"), [
+      { value: "reports", count: 10 },
+    ]);
+    client.setQueryData(groupsKey("variant"), [{ value: "error", count: 2 }]);
+    client.setQueryData(groupsKey("stateTone", { category: "reports" }), [
+      { value: null, count: 6 },
+      { value: "resolved", count: 3 },
+      { value: "recurred", count: 1 },
+    ]);
+    mount(live);
+    const reports = await screen.findByRole("button", { name: /Reports/ });
+    expect(screen.queryByTestId("notification-states")).toBeNull();
+    fireEvent.click(reports);
+    await waitFor(() => {
+      const states = screen.getByTestId("notification-states");
+      expect(
+        within(states)
+          .getAllByRole("button")
+          .map((b) => b.textContent),
+      ).toEqual([
+        "Any state",
+        "Open 6",
+        "Pending 0",
+        "Resolved 3",
+        "Came back 1",
+      ]);
+    });
+  });
+
+  it("a category none of whose rows carries a state has no state chips", async () => {
+    const live = createLiveStateHarness();
+    const client = live.queryClient;
+    client.setQueryData(groupsKey("category"), [
+      { value: "reports", count: 4 },
+    ]);
+    client.setQueryData(groupsKey("variant"), [{ value: "error", count: 0 }]);
+    client.setQueryData(groupsKey("stateTone", { category: "reports" }), [
+      { value: null, count: 4 },
+    ]);
+    mount(live);
+    fireEvent.click(await screen.findByRole("button", { name: /Reports/ }));
+    await waitFor(() => {
+      expect(
+        client.getQueryData(groupsKey("stateTone", { category: "reports" })),
+      ).toBeDefined();
+    });
+    expect(screen.queryByTestId("notification-states")).toBeNull();
   });
 });

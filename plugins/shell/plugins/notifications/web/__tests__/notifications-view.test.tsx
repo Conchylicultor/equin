@@ -106,6 +106,7 @@ const note = (over: Partial<Notification> = {}): Notification => ({
   lastSeenAt: new Date("2026-10-13T10:00:00Z"),
   createdAt: new Date("2026-10-13T10:00:00Z"),
   state: null,
+  stateTone: null,
   ...over,
 });
 
@@ -139,6 +140,7 @@ describe("the field schema over the notifications source", () => {
         "createdAt",
         "muted",
         "read",
+        "stateTone",
         "title",
         "type",
         "variant",
@@ -151,6 +153,7 @@ describe("the field schema over the notifications source", () => {
         "category",
         "muted",
         "read",
+        "stateTone",
         "title",
         "type",
         "variant",

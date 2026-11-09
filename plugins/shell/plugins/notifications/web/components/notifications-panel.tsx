@@ -26,13 +26,18 @@ import type { Notification } from "../../shared/resources";
 import {
   useReachingNotificationGroups,
   useReachingNotifications,
+  type NotificationsWhere,
 } from "../internal/use-reaching-notifications";
 import { markAllNotificationsRead } from "../../shared/endpoints";
 import {
   NOTIFICATION_CATEGORIES,
   NOTIFICATION_CATEGORY_LABELS,
+  NOTIFICATION_NO_STATE_LABEL,
+  NOTIFICATION_STATE_TONES,
+  NOTIFICATION_STATE_TONE_LABELS,
   notificationsRoute,
   type NotificationCategory,
+  type NotificationStateTone,
 } from "../../core";
 import { NotificationView } from "./notification-view";
 
@@ -63,11 +68,41 @@ function NotificationRow({
   );
 }
 
+/**
+ * Where a category's rows stand: a state tone, or `open` — no state recorded,
+ * so nothing has resolved it yet.
+ */
+type Standing = NotificationStateTone | "open";
+
 /** Which slice of the collection the list shows. */
 type Filter =
   | { kind: "all" }
   | { kind: "errors" }
-  | { kind: "category"; category: NotificationCategory };
+  | {
+      kind: "category";
+      category: NotificationCategory;
+      /** Narrowed to one standing (the state chips), or every row of it. */
+      standing: Standing | null;
+    };
+
+/** The server-side `where` of a filter's list. */
+function whereOf(filter: Filter): NotificationsWhere | undefined {
+  switch (filter.kind) {
+    case "all":
+      return undefined;
+    case "errors":
+      return { variant: "error" };
+    case "category":
+      return {
+        category: filter.category,
+        ...(filter.standing === "open"
+          ? { stateTone: { isEmpty: true } }
+          : filter.standing !== null
+            ? { stateTone: filter.standing }
+            : {}),
+      };
+  }
+}
 
 /** Always offered, even at 0: the user's own vocabulary for the bell. */
 const PRIMARY_CATEGORIES: readonly NotificationCategory[] = [
@@ -200,7 +235,96 @@ function FilterChips({
               category={c}
               active={filter.kind === "category" && filter.category === c}
               onPick={() => {
-                onPick({ kind: "category", category: c });
+                onPick({ kind: "category", category: c, standing: null });
+              }}
+            />
+          ))}
+        </Stack>
+      </ControlSizeProvider>
+    </Scroll>
+  );
+}
+
+/**
+ * The picked category's rows by where their problem stands — Open · Pending ·
+ * Resolved · Came back — when any of them carries a state (a report's fix
+ * ledger restates its rows in place). The list is newest first, and a
+ * resolved problem stops recurring, so its rows sink below everything still
+ * firing: without this slice a fix is in the bell but out of sight. Counts are
+ * the server's grouping of the whole category, never of the loaded rows.
+ */
+function StateChips({
+  filter,
+  onPick,
+}: {
+  filter: Extract<Filter, { kind: "category" }>;
+  onPick: (next: Filter) => void;
+}) {
+  const groups = useReachingNotificationGroups("stateTone", {
+    category: filter.category,
+  });
+  if (groups.status === "error") {
+    return (
+      <div className="px-md py-xs border-b" data-testid="notification-states">
+        <ResourceErrorInline
+          variant="inline"
+          subject="states"
+          error={groups.error}
+          refetch={groups.refetch}
+        />
+      </div>
+    );
+  }
+  if (groups.status === "loading") {
+    return (
+      <div className="px-md py-xs border-b" data-testid="notification-states">
+        <Loading label="Loading states…" />
+      </div>
+    );
+  }
+  const countOf = (standing: Standing) =>
+    groups.data.find((g) =>
+      standing === "open" ? g.value === null : g.value === standing,
+    )?.count ?? 0;
+  // A category none of whose rows carries a state has nothing to split.
+  if (!NOTIFICATION_STATE_TONES.some((t) => countOf(t) > 0)) return null;
+  const pick = (standing: Standing | null) => {
+    onPick({ ...filter, standing });
+  };
+
+  return (
+    <Scroll
+      axis="x"
+      hideScrollbar
+      className="px-sm py-xs border-b"
+      data-testid="notification-states"
+    >
+      <ControlSizeProvider size="xs">
+        <Stack direction="row" gap="2xs">
+          <Chip
+            label="Any state"
+            active={filter.standing === null}
+            onPick={() => {
+              pick(null);
+            }}
+          />
+          <Chip
+            label={NOTIFICATION_NO_STATE_LABEL}
+            count={countOf("open")}
+            active={filter.standing === "open"}
+            onPick={() => {
+              pick("open");
+            }}
+          />
+          {NOTIFICATION_STATE_TONES.map((tone) => (
+            <Chip
+              key={tone}
+              label={NOTIFICATION_STATE_TONE_LABELS[tone]}
+              count={countOf(tone)}
+              hot={tone === "recurred"}
+              active={filter.standing === tone}
+              onPick={() => {
+                pick(tone);
               }}
             />
           ))}
@@ -256,13 +380,7 @@ function NotificationList({
   filter: Filter;
   onClose: () => void;
 }) {
-  const result = useReachingNotifications(
-    filter.kind === "all"
-      ? undefined
-      : filter.kind === "errors"
-        ? { variant: "error" }
-        : { category: filter.category },
-  );
+  const result = useReachingNotifications(whereOf(filter));
   // Only a ready window has paging handles; the arms below render the rest.
   const settled =
     result.status === "loading" || result.status === "error" ? null : result;
@@ -378,6 +496,9 @@ export function NotificationsPanel({
       ) : (
         <>
           <FilterChips filter={filter} onPick={setFilter} />
+          {filter.kind === "category" && (
+            <StateChips filter={filter} onPick={setFilter} />
+          )}
           <NotificationList filter={filter} onClose={onClose} />
         </>
       )}

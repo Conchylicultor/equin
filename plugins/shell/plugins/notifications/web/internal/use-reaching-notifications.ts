@@ -52,11 +52,14 @@ export function useReachingNotifications(where?: NotificationsWhere) {
   return gate ?? result;
 }
 
-/** {@link useReachingNotifications}, as a grouping on one column. */
+/**
+ * {@link useReachingNotifications}, as a grouping on one column — of the whole
+ * reaching collection, or of the slice `where` picks.
+ */
 export function useReachingNotificationGroups<
-  G extends "type" | "variant" | "category",
->(groupBy: G) {
-  const { where, gate } = useScopedWhere(undefined);
+  G extends "type" | "variant" | "category" | "stateTone",
+>(groupBy: G, slice?: NotificationsWhere) {
+  const { where, gate } = useScopedWhere(slice);
   const result = useLive(
     notifications,
     where === undefined ? { groupBy } : { groupBy, where },

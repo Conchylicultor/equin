@@ -44,6 +44,11 @@ describe("classifyStatement — the closed table", () => {
     ['CREATE DOMAIN rank_text AS TEXT COLLATE "C"', "expand", "create-domain"],
     ['ALTER TABLE "t" ADD COLUMN "c" text', "expand", "add-column"],
     [
+      `ALTER TABLE "t" ADD COLUMN "c" text GENERATED ALWAYS AS (state ->> 'tone') STORED`,
+      "expand",
+      "add-generated-column",
+    ],
+    [
       `ALTER TABLE "t" ADD COLUMN "c" text DEFAULT 'x' NOT NULL`,
       "expand",
       "add-column",
@@ -196,6 +201,10 @@ describe("classifyStatement — rejected and unknown", () => {
     ["DO $$ BEGIN PERFORM 1; END $$"],
     ['ALTER TABLE "t" ADD COLUMN "a" text, ADD COLUMN "b" text'],
     ['ALTER TABLE "t" ADD COLUMN "a" text REFERENCES "u"("id")'],
+    [
+      `ALTER TABLE "t" ADD COLUMN "a" text NOT NULL GENERATED ALWAYS AS (b || 'x') STORED`,
+    ],
+    ['ALTER TABLE "t" ADD COLUMN "a" integer GENERATED ALWAYS AS IDENTITY'],
     ['ALTER TABLE "t" ALTER COLUMN "a" SET STATISTICS 100'],
     ['CREATE INDEX CONCURRENTLY "i" ON "t" ("a")'],
   ])("does not recognise: %s", (sql) => {

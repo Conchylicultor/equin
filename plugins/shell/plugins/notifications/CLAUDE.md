@@ -34,6 +34,7 @@ A notification is **icon · one-line headline · line 2 · at most one action**
 - `action` — `{ kind, payload }`, resolved through the action registry below.
 - `state` — `{ tone, text }`, where the problem now stands (a report's fix):
   one line under line 2, the tone's glyph and tint. Changes in place.
+  `stateTone` is its tone, derived by the database — the bell's state chips.
 - `category` — `conversations | updates | automations | reports | other`
   (`NOTIFICATION_CATEGORIES`, a closed list in `core/`; default `other`). The
   bell's chips.
@@ -111,7 +112,15 @@ it centres on the headline's first line in every row.
   server-filtered window. The popover: header (title · Mark all read · View
   all), chips All · Errors · Conversations · Updates · Automations (Reports /
   Other only while non-empty; counts over the whole collection, Errors' in
-  red), then Today / Earlier by `createdAt`. The popover's infinite scroll pages it (`loadMore`
+  red); under a picked category whose rows carry a `state`, a second row of
+  state chips — Any state · Open (no state) · Pending · Resolved · Came back —
+  grouped and filtered on `stateTone` (`state.tone`, a STORED generated column:
+  derived, never written); then Today / Earlier by `createdAt`. The state
+  chips are how a resolved row is ever seen: a resolved problem stops
+  recurring, so in a newest-first list its row sinks below everything still
+  firing (on 2026-11-09 main's first "Fixed by" row sat at rank 1,070 of
+  2,762 undismissed rows, and 770 under the Reports chip).
+  The popover's infinite scroll pages it (`loadMore`
   splits off the next key-range page, never reloads), and stops at 400 — the
   last step that fits under `maxLimit` 500; "View all" is the way past it.
 - **The unread badge** reads the `notifications.unread` VALUE (`liveValue`,
@@ -337,9 +346,12 @@ DataView (`web/components/notifications-view.tsx`):
     - `NotificationCategory`
     - `NotificationId`
     - `NotificationState`
+    - `NotificationStateTone`
   - Exports (values):
     - `NOTIFICATION_CATEGORIES`
     - `NOTIFICATION_CATEGORY_LABELS`
+    - `NOTIFICATION_NO_STATE_LABEL`
+    - `NOTIFICATION_STATE_TONE_LABELS`
     - `NOTIFICATION_STATE_TONES`
     - `NOTIFICATION_VARIANTS`
     - `NotificationActionSchema`

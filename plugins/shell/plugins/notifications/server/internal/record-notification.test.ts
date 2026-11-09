@@ -215,4 +215,24 @@ describe("writeNotification re-alert (real DB)", () => {
     expect(row.read).toBe(true);
     expect(row.count).toBe(2);
   });
+
+  // The bell's state chips filter on `state_tone`, which the database derives
+  // from `state` — so a write (or restate) of `state` is all it takes, and the
+  // two can never disagree.
+  test("state_tone is derived from state, on insert and on every rewrite", async () => {
+    await writeNotification(notification(), t.db);
+    expect((await only()).stateTone).toBeNull();
+    await t.db
+      .update(_notifications)
+      .set({ state: { tone: "resolved", text: "Fixed by abc123" } })
+      .where(eq(_notifications.dedupKey, DEDUP_KEY));
+    expect((await only()).stateTone).toBe("resolved");
+    await writeNotification(
+      notification({
+        state: { tone: "recurred", text: "Came back after abc123" },
+      }),
+      t.db,
+    );
+    expect((await only()).stateTone).toBe("recurred");
+  });
 });

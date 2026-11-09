@@ -8,6 +8,8 @@ export {
   NotificationIconSchema,
   NotificationStateSchema,
   NOTIFICATION_STATE_TONES,
+  NOTIFICATION_STATE_TONE_LABELS,
+  NOTIFICATION_NO_STATE_LABEL,
   NOTIFICATION_VARIANTS,
   notificationFields,
   notificationsEntityRef,
@@ -16,4 +18,5 @@ export type {
   NotificationAction,
   NotificationCategory,
   NotificationState,
+  NotificationStateTone,
 } from "./entity";

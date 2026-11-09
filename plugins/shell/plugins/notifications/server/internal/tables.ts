@@ -24,6 +24,9 @@ const notificationsEntity = defineEntity(
       count: { default: 1 },
       lastSeenAt: { default: defaultNow() },
       createdAt: { default: defaultNow() },
+      // `state.tone`, derived — so it can never disagree with `state`, which
+      // its writers (`writeNotification`, `restateByMetadata`) set alone.
+      stateTone: { generated: () => sql`state ->> 'tone'` },
     },
     indexes: (t) => [
       index("notifications_dismissed_idx").on(t.dismissed),

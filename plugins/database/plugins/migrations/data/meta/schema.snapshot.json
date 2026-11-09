@@ -1,6 +1,6 @@
 {
-  "id": "5a4fd7d6-7591-4922-acc5-06cf38ad6f70",
-  "prevId": "ec004e9a-f993-422b-9ad4-0c1f7b14556a",
+  "id": "2a8bf372-bcfc-48b7-86e3-06257782d659",
+  "prevId": "5a4fd7d6-7591-4922-acc5-06cf38ad6f70",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -12381,6 +12381,16 @@
           "type": "jsonb",
           "primaryKey": false,
           "notNull": false
+        },
+        "state_tone": {
+          "name": "state_tone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "generated": {
+            "as": "state ->> 'tone'",
+            "type": "stored"
+          }
         },
         "category": {
           "name": "category",

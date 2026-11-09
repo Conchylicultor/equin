@@ -41,6 +41,7 @@ export const notifications = liveCollection("notifications", {
     "muted",
     "audience",
     "category",
+    "stateTone",
     "createdAt",
   ],
   carry: {

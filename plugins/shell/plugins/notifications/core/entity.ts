@@ -95,6 +95,20 @@ export const NotificationStateSchema: z.ZodType<NotificationState> = z.object({
   tone: z.enum(NOTIFICATION_STATE_TONES),
   text: z.string().min(1),
 });
+export type NotificationStateTone = (typeof NOTIFICATION_STATE_TONES)[number];
+
+/**
+ * Each state tone's label as a filter — the bell's state chips, and the
+ * column's options wherever the field is drawn. A row with no state reads as `Open`: within a
+ * slice whose rows carry states (a category of problems), no resolution
+ * recorded means it is still to do.
+ */
+export const NOTIFICATION_STATE_TONE_LABELS = {
+  pending: "Pending",
+  resolved: "Resolved",
+  recurred: "Came back",
+} as const satisfies Record<NotificationStateTone, string>;
+export const NOTIFICATION_NO_STATE_LABEL = "Open";
 
 /**
  * A notification's fields, in column order — the `notifications` table is
@@ -156,6 +170,22 @@ export const notificationFields = {
     jsonField<NotificationState>({
       schema: NotificationStateSchema,
       default: { tone: "pending", text: "pending" },
+    }),
+  ),
+  /**
+   * `state.tone`, DERIVED by the database (a stored generated column, never
+   * written by the app) so the bell can group and filter rows by where their
+   * problem stands — a resolved row stops recurring, so a newest-first list
+   * alone sinks it out of sight.
+   */
+  stateTone: nullable(
+    enumTextField(NOTIFICATION_STATE_TONES, {
+      label: "State",
+      options: {
+        pending: { label: NOTIFICATION_STATE_TONE_LABELS.pending },
+        resolved: { label: NOTIFICATION_STATE_TONE_LABELS.resolved },
+        recurred: { label: NOTIFICATION_STATE_TONE_LABELS.recurred },
+      },
     }),
   ),
   /** What it is about, in the user's words — the bell's chips. */
