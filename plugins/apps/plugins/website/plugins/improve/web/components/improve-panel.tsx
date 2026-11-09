@@ -216,7 +216,7 @@ function ComposeView({
           variant="subheading"
           className="font-semibold tracking-tight"
         >
-          Improve this page
+          Make a wish
         </Text>
         <Text as="p" variant="label" tone="muted">
           Say what you'd change, and an agent builds it in its own copy of the

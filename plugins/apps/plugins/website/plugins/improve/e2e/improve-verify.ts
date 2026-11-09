@@ -55,7 +55,7 @@ const MARKER = "text=Curious how equin came to be?";
 function panel(page: Page): Locator {
   return page
     .getByRole("dialog")
-    .filter({ hasText: /Improve this page|What equin would do now/ });
+    .filter({ hasText: /Make a wish|What equin would do now/ });
 }
 
 /**
