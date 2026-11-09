@@ -1,6 +1,11 @@
 import type * as parcel from "@parcel/watcher";
 import { type FSWatcher, watch as fsWatch } from "node:fs";
-import { lstat, realpath, stat } from "@plugins/packages/plugins/timed-fs/core";
+import {
+  lstat,
+  readdir,
+  realpath,
+  stat,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { basename, dirname, extname, join } from "node:path";
 import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import {
@@ -21,6 +26,11 @@ import { createWrapper } from "@parcel/watcher/wrapper";
 import { WatchedDirGoneError } from "./dir-gone";
 import { followFiles } from "./follow-files";
 import { createStreamPool, type StreamPool } from "./fsevents-pool";
+import {
+  KQUEUE_CHILDREN_IGNORE,
+  watchChildrenOnKqueue,
+  type ChildrenWatchOn,
+} from "./kqueue-children";
 import {
   createDeliveryLagProbe,
   type DeliveryLagHost,
@@ -157,9 +167,9 @@ export interface DirWatchOptions extends WatchOptionsBase {
    * the dir's direct entries created, written, renamed or removed, and the
    * dir itself going (one `delete` of it), never a watch of everything below
    * it — so watching a huge folder (`~`, `/`) stays cheap. Live when `start`
-   * resolves: on macOS a shared FSEvents stream — an open recursive one
-   * covering the dir, else one of the dir with every deeper path ignored
-   * natively (`rideStream`) — elsewhere Bun's single-directory
+   * resolves: on macOS kqueue, a descriptor on the dir and on each entry
+   * (`kqueue-children.ts`; a dir with too many entries rides the FSEvents
+   * pool instead, `rideStream`) — elsewhere Bun's single-directory
    * `fs.watch` of it and of its parent (`watchChildren`). No `ignore` beside
    * it (a throw).
    */
@@ -235,8 +245,10 @@ export function watcherBackend(
   depth: WatchDepth = "subtree",
 ): WatcherBackend {
   const platform = process.platform;
+  // A darwin children watch of a dir past kqueue's entry budget rides
+  // FSEvents instead (`kqueue-children.ts`): the backend named is the default.
   if (depth === "children")
-    return platform === "darwin" ? "fs-events" : "fs-watch";
+    return platform === "darwin" ? "kqueue" : "fs-watch";
   if (platform === "darwin") return writesWhileOpen ? "kqueue" : "fs-events";
   if (platform === "linux") return "inotify";
   if (platform === "win32") return "windows";
@@ -440,24 +452,30 @@ export async function createFileWatcher(
 
   // FSEvents with no native ignore: ride the process's shared streams — one
   // per watched root, whatever declaration or depth asks (`fsevents-pool.ts`).
+  // A darwin children watch is kqueue's, riding the pool only past its budget.
   const pool =
-    parcelWatcher !== null && backend === "fs-events" && ignore === undefined
+    parcelWatcher !== null &&
+    process.platform === "darwin" &&
+    ignore === undefined
       ? fsEventsPool(parcelWatcher)
       : null;
 
   for (const dir of dirs) {
     try {
+      const children: ChildrenWatchOn = {
+        take,
+        lost: (error) => lost(dir, error),
+        gone: () => take([{ type: "delete", path: dir }]),
+      };
       const sub =
-        pool !== null
+        pool !== null && parcelWatcher !== null && depth === "children"
+          ? await watchChildrenOver(parcelWatcher, pool, dir, children)
+          : pool !== null
           ? await rideStream(pool, dir, depth, {
               take,
               lost: (error) => lost(dir, error),
-              gone: (ride) => {
-                if (depth === "children") {
-                  take([{ type: "delete", path: dir }]);
-                  return;
-                }
-                const i = subscriptions.indexOf(ride);
+                gone: (ride) => {
+                  const i = subscriptions.indexOf(ride);
                 if (i >= 0) subscriptions.splice(i, 1);
                 lost(dir, new WatchedDirGoneError(dir));
               },
@@ -563,15 +581,7 @@ function fsEventsPool(parcelWatcher: ParcelWatcherApi): StreamPool {
     open: (real, callback, options) =>
       parcelWatcher.subscribe(real, callback, options),
     realpath: (path) => realpath(path),
-    async inodeOf(path) {
-      try {
-        return (await stat(path)).ino;
-      } catch (err) {
-        const code = (err as NodeJS.ErrnoException).code;
-        if (code === "ENOENT" || code === "ENOTDIR") return null;
-        throw err;
-      }
-    },
+    inodeOf: inodeOrNull,
   });
   return sharedPool;
 }
@@ -585,6 +595,53 @@ export function fsEventsStreams(): {
     open: sharedPool?.streams() ?? [],
     opened: sharedPool?.opened() ?? 0,
   };
+}
+
+/** A darwin `children` watch: kqueue, or the FSEvents pool past its budget. */
+async function watchChildrenOver(
+  parcelWatcher: ParcelWatcherApi,
+  pool: StreamPool,
+  dir: string,
+  on: ChildrenWatchOn,
+): Promise<{ unsubscribe(): Promise<void> }> {
+  const release = await watchChildrenOnKqueue(dir, on, {
+    realpath: (path) => realpath(path),
+    inodeOf: inodeOrNull,
+    async listEntries(real) {
+      try {
+        return await readdir(real);
+      } catch (err) {
+        const code = (err as NodeJS.ErrnoException).code;
+        if (code === "EACCES" || code === "EPERM") return null;
+        throw err;
+      }
+    },
+    openKqueue: (real, callback) =>
+      parcelWatcher.subscribe(real, callback, {
+        backend: "kqueue",
+        ignore: [KQUEUE_CHILDREN_IGNORE],
+      }),
+    fallback: async (d, o) =>
+      (
+        await rideStream(pool, d, "children", {
+          take: o.take,
+          lost: o.lost,
+          gone: () => o.gone(),
+        })
+      ).unsubscribe,
+  });
+  return { unsubscribe: release };
+}
+
+/** The path's inode, or null when it is not there (any other failure throws). */
+async function inodeOrNull(path: string): Promise<number | null> {
+  try {
+    return (await stat(path)).ino;
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === "ENOENT" || code === "ENOTDIR") return null;
+    throw err;
+  }
 }
 
 /**

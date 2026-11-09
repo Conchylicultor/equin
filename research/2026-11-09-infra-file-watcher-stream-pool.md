@@ -159,3 +159,8 @@ has just been replaced hears its dir gone at once (it re-arms).
 - **The hub's absorb hand-over** (`dir-hub.ts`, `absorbBelow`) still releases
   a lower root's watch once a root above it opens — the drop-what-is-queued
   window the pool avoids. Pre-existing, not touched here.
+
+**Follow-up** (research/2026-11-09-infra-file-watcher-kqueue-children.md): a
+`children` watch on macOS is now kqueue's (so `/` and `~` put nothing on
+fseventsd), the known-file watches of §5 are follows, and the hub no longer
+hands live watchers over.

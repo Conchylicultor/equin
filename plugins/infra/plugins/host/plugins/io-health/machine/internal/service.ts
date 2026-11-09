@@ -15,9 +15,10 @@ export const fsLatencyLogWatcher = defineFileWatcher({
   name: "io-health.fs-latency-log",
   description:
     "Reads each tick the fs-latency monitor appends to its log, so host disk health (the Disk I/O health row, host-io-degraded reports) follows the monitor within one tick.",
-  // Only the monitors' directory itself: the probe corpus and incident
-  // captures below it are not ours to hear.
-  depth: "children",
+  // The one known file, followed on kqueue: every append heard in
+  // milliseconds (the monitor's writer may hold it open), where an FSEvents
+  // watch of its folder was 3–14 s late while fseventsd was loaded.
+  writesWhileOpen: true,
 });
 
 const logPath = (): string => monitorLogsDir.file(FS_LATENCY_LOG_NAME);
@@ -52,18 +53,17 @@ let watcher: FileWatcher | null = null;
 
 /**
  * Follow the monitor's log for as long as the backend serves: read its tail
- * now, then once per change of the monitors' directory. No timer — the
+ * now, then once per write to it. No timer — the
  * monitor's own launchd schedule is the clock; the log not moving is what the
  * health row reads as "stopped".
  */
 export async function startIoHealth(): Promise<void> {
   if (watcher) return;
+  // Following a file in a missing directory fails.
+  await monitorLogsDir.ensure();
   watcher = await fsLatencyLogWatcher.start({
-    dirs: [await monitorLogsDir.ensure()],
-    onChange: (events) =>
-      events.some((e) => e.path.endsWith(`/${FS_LATENCY_LOG_NAME}`))
-        ? refreshes.run()
-        : undefined,
+    files: [logPath()],
+    onChange: () => refreshes.run(),
   });
   // After subscribing, so a tick written between the read and the subscription is not missed.
   await refreshes.run();

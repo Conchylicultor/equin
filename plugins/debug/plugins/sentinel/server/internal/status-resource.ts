@@ -133,6 +133,11 @@ export const sentinelStatusWatcher = defineFileWatcher({
   description:
     "Watches the host-global sentinel status, vitals and duress-latch files and pushes the sentinel status and vitals values when one of them is rewritten.",
   extensions: [".json", ".latch"],
+  // Each folder's own entries: on macOS a kqueue watch of the few files they
+  // hold, heard in milliseconds (an FSEvents watch was 3–14 s late while
+  // fseventsd was loaded). Not a follow of named files: a status file is
+  // named by its writer's pid (`status.<pid>.json`), unknown ahead.
+  depth: "children",
 });
 
 let watcher: FileWatcher | null = null;

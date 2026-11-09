@@ -6,6 +6,7 @@ import {
   realpathSync,
   renameSync,
   rmSync,
+  chmodSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -20,6 +21,11 @@ import {
   type FileWatcherOptions,
 } from "./engine";
 import { followedDirs } from "./follow-files";
+import {
+  KQUEUE_CHILDREN_CAP,
+  KQUEUE_CHILDREN_OPEN_BUDGET,
+  kqueueChildrenReserved,
+} from "./kqueue-children";
 import type { FileChangeEvent } from "./registry";
 
 let dir: string | null = null;
@@ -553,12 +559,18 @@ describe.skipIf(process.platform !== "darwin")(
       });
     const streamsUnder = (root: string) =>
       fsEventsStreams().open.filter((s) => s.root.startsWith(root));
+    // A children watch rides the pool only past kqueue's entry budget.
+    const pastBudget = (of: string): void => {
+      for (let i = 0; i <= KQUEUE_CHILDREN_OPEN_BUDGET; i++)
+        writeFileSync(join(of, `pad${i}`), "");
+    };
 
     test("watches under an open recursive stream ride it: one stream, each hears its own scope", async () => {
       dir = realpathSync(mkdtempSync(join(tmpdir(), "fw-pool-")));
       const a = join(dir, "a");
       const b = join(a, "b");
       mkdirSync(join(b, "deep"), { recursive: true });
+      pastBudget(b);
       const top: FileChangeEvent[] = [];
       const kids: FileChangeEvent[] = [];
       const sub: FileChangeEvent[] = [];
@@ -593,6 +605,7 @@ describe.skipIf(process.platform !== "darwin")(
 
     test("children watches of one dir share one stream; the last to stop closes it", async () => {
       dir = realpathSync(mkdtempSync(join(tmpdir(), "fw-pool-")));
+      pastBudget(dir);
       const w1 = await start(dir, "children", []);
       const w2 = await start(dir, "children", []);
       expect(streamsUnder(dir)).toEqual([
@@ -610,6 +623,7 @@ describe.skipIf(process.platform !== "darwin")(
       const listed = join(dir, "listed");
       mkdirSync(join(doomed, "x"), { recursive: true });
       mkdirSync(listed);
+      pastBudget(listed);
       const top: FileChangeEvent[] = [];
       watcher = await start(dir, "subtree", top);
       const lost: unknown[] = [];
@@ -645,7 +659,7 @@ describe.skipIf(process.platform !== "darwin")(
       const low = join(dir, "low");
       mkdirSync(low);
       const kids: FileChangeEvent[] = [];
-      const w1 = await start(low, "children", kids);
+      const w1 = await start(low, "subtree", kids);
       watcher = await start(dir, "subtree", []);
       try {
         expect(streamsUnder(dir)).toHaveLength(2);
@@ -668,6 +682,7 @@ describe.skipIf(process.platform !== "darwin")(
         debounceMs: 0,
         onChange: () => {},
       });
+      pastBudget(dir);
       const w = await start(dir, "children", []);
       try {
         expect(streamsUnder(dir)).toEqual([
@@ -677,5 +692,130 @@ describe.skipIf(process.platform !== "darwin")(
         await w.stop();
       }
     });
+  },
+);
+
+describe.skipIf(process.platform !== "darwin")(
+  "createFileWatcher: children watches on kqueue",
+  () => {
+    const start = (
+      of: string,
+      heard: FileChangeEvent[],
+    ): Promise<FileWatcher> =>
+      createFileWatcher({
+        dirs: [of],
+        depth: "children",
+        debounceMs: 0,
+        onChange: (batch) => void heard.push(...batch),
+      });
+    const streamsUnder = (root: string) =>
+      fsEventsStreams().open.filter((s) => s.root.startsWith(root));
+
+    test("opens no FSEvents stream: a descriptor on the dir and one per entry", async () => {
+      dir = realpathSync(mkdtempSync(join(tmpdir(), "fw-kq-")));
+      for (const name of ["a", "b", "c"]) writeFileSync(join(dir, name), "");
+      mkdirSync(join(dir, "sub", "deep"), { recursive: true });
+      const opened = fsEventsStreams().opened;
+      const heard: FileChangeEvent[] = [];
+      watcher = await start(dir, heard);
+      expect(fsEventsStreams().opened).toBe(opened);
+      expect(streamsUnder(dir)).toEqual([]);
+      // The dir, a, b, c and sub — nothing below sub.
+      expect(descriptorsUnder(dir)).toBe(5);
+      writeFileSync(join(dir, "sub", "deep", "x"), "x");
+      appendFileSync(join(dir, "a"), "more");
+      await until(() => heard.some((e) => e.path === join(dir!, "a")));
+      expect(heard).toContainEqual({ type: "update", path: join(dir, "a") });
+      expect(heard.every((e) => !e.path.includes("/deep"))).toBe(true);
+      await watcher.stop();
+      watcher = null;
+      expect(descriptorsUnder(dir)).toBe(0);
+    });
+
+    test("hears an atomic rename-over write of an entry", async () => {
+      dir = realpathSync(mkdtempSync(join(tmpdir(), "fw-kq-")));
+      const target = join(dir, "status.json");
+      writeFileSync(target, "0");
+      const heard: FileChangeEvent[] = [];
+      watcher = await start(dir, heard);
+      for (let i = 0; i < 20; i++) {
+        const from = heard.length;
+        const staging = join(dir, `.status.${i}.tmp`);
+        writeFileSync(staging, String(i));
+        renameSync(staging, target);
+        await until(() => heard.slice(from).some((e) => e.path === target));
+        expect(heard.slice(from).map((e) => e.path)).toContain(target);
+      }
+    });
+
+    test("an entry it may not list or open is listed, not watched, and the watch opens", async () => {
+      // `~/.Trash` without Full Disk Access: upstream parcel failed the open.
+      dir = realpathSync(mkdtempSync(join(tmpdir(), "fw-kq-")));
+      const locked = join(dir, "locked");
+      mkdirSync(join(locked, "inner"), { recursive: true });
+      chmodSync(locked, 0o000);
+      try {
+        const heard: FileChangeEvent[] = [];
+        watcher = await start(dir, heard);
+        writeFileSync(join(dir, "f.txt"), "x");
+        await until(() => heard.some((e) => e.path === join(dir!, "f.txt")));
+        expect(heard.map((e) => e.path)).toContain(join(dir, "f.txt"));
+      } finally {
+        chmodSync(locked, 0o755);
+      }
+    });
+
+    test("a dir past the open budget rides the FSEvents pool", async () => {
+      dir = realpathSync(mkdtempSync(join(tmpdir(), "fw-kq-")));
+      for (let i = 0; i <= KQUEUE_CHILDREN_OPEN_BUDGET; i++)
+        writeFileSync(join(dir, `f${i}`), "");
+      const reserved = kqueueChildrenReserved();
+      watcher = await start(dir, []);
+      expect(kqueueChildrenReserved()).toBe(reserved);
+      expect(streamsUnder(dir)).toEqual([
+        { root: dir, depth: "children", riders: 1 },
+      ]);
+    });
+
+    test("a dir growing past the cap moves to the FSEvents pool, every entry heard", async () => {
+      dir = realpathSync(mkdtempSync(join(tmpdir(), "fw-kq-")));
+      const heard = new Set<string>();
+      let lost = 0;
+      const reserved = kqueueChildrenReserved();
+      watcher = await createFileWatcher({
+        dirs: [dir],
+        depth: "children",
+        debounceMs: 0,
+        onChange: (batch) => {
+          for (const e of batch) if (e.type !== "delete") heard.add(e.path);
+        },
+        onLost: () => void (lost += 1),
+      });
+      const written: string[] = [];
+      for (let i = 0; i <= KQUEUE_CHILDREN_CAP + 50; i++) {
+        const file = join(dir, `f${i}`);
+        writeFileSync(file, "");
+        written.push(file);
+      }
+      // The pool ride opens first; the kqueue subscription closes after it.
+      await until(
+        () =>
+          streamsUnder(dir!).length === 1 &&
+          kqueueChildrenReserved() === reserved,
+      );
+      expect(streamsUnder(dir)).toEqual([
+        { root: dir, depth: "children", riders: 1 },
+      ]);
+      expect(kqueueChildrenReserved()).toBe(reserved);
+      const after = join(dir, "after");
+      writeFileSync(after, "");
+      written.push(after);
+      // FSEvents may be seconds late under load: wait longer than `until`.
+      // A dropped batch (fseventsd overloaded) is reported, never silent.
+      const missing = () => written.filter((f) => !heard.has(f));
+      for (let i = 0; i < 1500 && lost === 0 && missing().length > 0; i++)
+        await Bun.sleep(20);
+      if (lost === 0) expect(missing()).toEqual([]);
+    }, 60_000);
   },
 );

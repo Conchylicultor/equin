@@ -138,7 +138,9 @@ describe("createDirWatchHub", () => {
     expect(fake.stopped).toEqual(["/w"]);
   });
 
-  test("a root opened above an existing one takes its watchers over, and the old native watch stops", async () => {
+  test("a root opened above an existing one leaves its watchers where they are", async () => {
+    // Moving them would close the lower native watch, and closing an FSEvents
+    // stream drops what fseventsd queued for it and not delivered yet.
     const fake = fakeStart();
     const hub = createDirWatchHub({
       subtree: fake.start,
@@ -157,19 +159,30 @@ describe("createDirWatchHub", () => {
     });
     await Promise.resolve();
     expect(fake.started).toEqual(["/w/a", "/w"]);
-    // The child moved onto /w: its own native watch is gone.
-    expect(fake.stopped).toEqual(["/w/a"]);
-    expect(hub.roots()).toEqual(["/w"]);
-    fake.emit("/w", "/w/a/f", "/w/b/g");
+    expect(fake.stopped).toEqual([]);
+    expect(hub.roots().sort()).toEqual(["/w", "/w/a"]);
+    fake.emit("/w/a", "/w/a/f");
     expect(child).toEqual(["/w/a/f"]);
-    // The child's release follows it onto /w; the last release stops /w.
+    // A later acquire below /w/a rides the nearest root, /w/a.
+    const deeper: string[] = [];
+    const rd = await hub.acquire({
+      dir: "/w/a/b",
+      scope: "subtree",
+      onChange: (e) => void deeper.push(...paths(e)),
+    });
+    expect(fake.started).toEqual(["/w/a", "/w"]);
+    fake.emit("/w/a", "/w/a/b/g");
+    expect(deeper).toEqual(["/w/a/b/g"]);
+    // The lower root stops with its last watcher.
     rc();
+    expect(fake.stopped).toEqual([]);
+    rd();
     expect(fake.stopped).toEqual(["/w/a"]);
     rr();
     expect(fake.stopped).toEqual(["/w/a", "/w"]);
   });
 
-  test("a watcher whose root opens after a root above it opened moves up when it goes live", async () => {
+  test("a watcher whose root opens after a root above it opened stays on its own root", async () => {
     const releases = new Map<string, () => void>();
     const started: string[] = [];
     const stopped: string[] = [];
@@ -177,17 +190,17 @@ describe("createDirWatchHub", () => {
     const hub = createDirWatchHub({
       children: shallowNever,
       subtree: async (root, onChange) => {
-      started.push(root);
-      // /w/a opens only when the test lets it.
-      if (root === "/w/a")
-        await new Promise<void>((r) => releases.set(root, r));
-      emitters.set(root, onChange);
-      return {
-        stop: async () => {
-          stopped.push(root);
-          emitters.delete(root);
-        },
-      };
+        started.push(root);
+        // /w/a opens only when the test lets it.
+        if (root === "/w/a")
+          await new Promise<void>((r) => releases.set(root, r));
+        emitters.set(root, onChange);
+        return {
+          stop: async () => {
+            stopped.push(root);
+            emitters.delete(root);
+          },
+        };
       },
     });
     const child: string[] = [];
@@ -205,13 +218,55 @@ describe("createDirWatchHub", () => {
     releases.get("/w/a")!();
     const rc = await pc;
     await Promise.resolve();
-    expect(stopped).toEqual(["/w/a"]);
-    emitters.get("/w")!([{ type: "update", path: "/w/a/x" }]);
+    expect(stopped).toEqual([]);
+    emitters.get("/w/a")!([{ type: "update", path: "/w/a/x" }]);
     expect(child).toEqual(["/w/a/x"]);
     rc();
+    expect(stopped).toEqual(["/w/a"]);
     rr();
     expect(stopped).toEqual(["/w/a", "/w"]);
     expect(started).toEqual(["/w/a", "/w"]);
+  });
+
+  test("a lower root whose dir goes hands its riders to the live root above it", async () => {
+    // Nothing may ever open a root at /w again (it is open), so the rider of
+    // the dead /w/x moves when /w/x dies, not on a later open.
+    const opened: { root: string; emit: (e: FileChangeEvent[]) => void }[] = [];
+    const losers = new Map<string, (error: unknown) => void>();
+    const stopped: string[] = [];
+    const subtree: StartRootWatch = async (root, onChange, onLost) => {
+      opened.push({ root, emit: onChange });
+      losers.set(root, onLost);
+      return { stop: async () => void stopped.push(root) };
+    };
+    const hub = createDirWatchHub({ subtree, children: shallowNever });
+    const heard: string[] = [];
+    const lost: unknown[] = [];
+    const rider = await hub.acquire({
+      dir: "/w/x",
+      scope: "subtree",
+      onChange: (e) => void heard.push(...paths(e)),
+      onLost: (e) => void lost.push(e),
+    });
+    const top = await hub.acquire({
+      dir: "/w",
+      scope: "subtree",
+      onChange: () => {},
+    });
+    expect(opened.map((o) => o.root)).toEqual(["/w/x", "/w"]);
+    losers.get("/w/x")!(new WatchedDirGoneError("/w/x"));
+    expect(lost).toHaveLength(1);
+    await Promise.resolve();
+    // The dead watch is given back once the rider joined /w.
+    expect(stopped).toEqual(["/w/x"]);
+    opened[1]!.emit([
+      { type: "create", path: "/w/x" },
+      { type: "update", path: "/w/x/f" },
+    ]);
+    expect(heard).toEqual(["/w/x", "/w/x/f"]);
+    rider();
+    top();
+    expect(stopped).toEqual(["/w/x", "/w"]);
   });
 
   test("a children request with no root above it opens a single-directory watch, never a recursive root", async () => {

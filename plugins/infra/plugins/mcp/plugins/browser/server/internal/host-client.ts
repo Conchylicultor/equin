@@ -74,7 +74,9 @@ export const agentBrowserStatusWatcher = defineFileWatcher({
   name: "mcp-browser.host-status",
   description:
     "Watches the agent-browser host's status file and pushes the agent-browser status value (sessions, tabs, deadlines) when the host rewrites it.",
-  extensions: [".json"],
+  // The one known file, followed on kqueue: heard in milliseconds, where an
+  // FSEvents watch of its folder was 3–14 s late while fseventsd was loaded.
+  writesWhileOpen: true,
 });
 
 let codeIdMemo: Promise<string> | null = null;
@@ -172,9 +174,10 @@ async function onStatusChange(): Promise<void> {
  */
 export async function startStatusWatcher(): Promise<void> {
   if (watcher) return;
+  // Following a file in a missing directory fails; it is host-global and tiny.
+  await agentBrowserDir.ensure();
   watcher = await agentBrowserStatusWatcher.start({
-    // Subscribing to a missing directory fails; it is host-global and tiny.
-    dirs: [await agentBrowserDir.ensure()],
+    files: [agentBrowserDir.file(HOST_FILES.status)],
     onChange: () => runTracked("mcp-browser:status-change", onStatusChange),
   });
   if ((await readAgentBrowserStatus()).kind === "running") followHost();

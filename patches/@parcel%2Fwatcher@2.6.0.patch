@@ -23,11 +23,56 @@ index 78ee744d74900c39a839cafa46b295258fc86307..75613c7548f7ad2c38bd5013654fdce6
    } catch (err) {
      handleError(err);
      try {
+diff --git a/src/DirTree.cc b/src/DirTree.cc
+index b7eddd8cd659b7447c37724ec50066e7ef66bc4f..43ef113848982e0f945f0183f8471c8b45211dc9 100644
+--- a/src/DirTree.cc
++++ b/src/DirTree.cc
+@@ -97,7 +97,7 @@ void DirTree::remove(std::string path) {
+ 
+   // Remove all sub-entries if this is a directory
+   if (found && found->isDir) {
+-    std::string pathStart = path + DIR_SEP;
++    std::string pathStart = childPrefix(path);
+     for (auto it = entries.begin(); it != entries.end();) {
+       if (it->first.rfind(pathStart, 0) == 0) {
+         it = entries.erase(it);
+diff --git a/src/DirTree.hh b/src/DirTree.hh
+index 328f469965d3bc248c99e8a50752c549c631e20a..d3d0eb17c52c07e8db400657153e49f94a428f84 100644
+--- a/src/DirTree.hh
++++ b/src/DirTree.hh
+@@ -12,6 +12,14 @@
+ #define DIR_SEP "/"
+ #endif
+ 
++// equin: what every path below `path` starts with. `path + DIR_SEP` is `//`
++// for the root `/`, which no path below it starts with: a watch of `/` then
++// ignored nothing (its kqueue open walked the whole disk) and diffed `/` as
++// entries named `//bin`, never found in its tree.
++inline std::string childPrefix(const std::string &path) {
++  return path.size() > 0 && path.compare(path.size() - 1, 1, DIR_SEP) == 0 ? path : path + DIR_SEP;
++}
++
+ struct DirEntry {
+   std::string path;
+   uint64_t mtime;
+diff --git a/src/Watcher.cc b/src/Watcher.cc
+index a58ff3722d0d4a85dbef822f7cd4a078cb4278ff..7c9fbb9b662004c4d21499d94dad30412170ff88 100644
+--- a/src/Watcher.cc
++++ b/src/Watcher.cc
+@@ -223,7 +223,7 @@ bool Watcher::isIgnored(std::string path) {
+     }
+   }
+ 
+-  auto basePath = mDir + DIR_SEP;
++  auto basePath = childPrefix(mDir);
+ 
+   if (path.rfind(basePath, 0) != 0) {
+     return false;
 diff --git a/src/kqueue/KqueueBackend.cc b/src/kqueue/KqueueBackend.cc
-index 2991c32fa320cd61d5b575a49ace19cb8a940d03..4eb82c8ab4964ba89e9121ed63ae0845a7da7d6e 100644
+index 2991c32fa320cd61d5b575a49ace19cb8a940d03..e6d3c0a3505ff0a61072d4783e2bfec31d31332e 100644
 --- a/src/kqueue/KqueueBackend.cc
 +++ b/src/kqueue/KqueueBackend.cc
-@@ -58,13 +58,27 @@ void KqueueBackend::start() {
+@@ -58,13 +58,39 @@ void KqueueBackend::start() {
  
      // Track all of the watchers that are touched so we can notify them at the end of the events.
      std::unordered_set<WatcherRef> watchers;
@@ -46,6 +91,14 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..4eb82c8ab4964ba89e9121ed63ae0845
 +    // crashed. Watchers are notified after it is released.
 +    {
 +    std::unique_lock<std::mutex> lock(mMutex);
++    // equin: two passes — every delete or rename of the batch first, then the
++    // writes and directory diffs. An atomic rewrite (write a sibling, rename
++    // it over the file) reports the folder's NOTE_WRITE and the old file's
++    // NOTE_DELETE in one batch, in either order; diffing the folder first
++    // found the path still in the tree (no create), then the delete dropped
++    // it — so the new file was never watched nor reported, and neither was
++    // any later rewrite of it until another entry of the folder changed.
++    for (int pass = 0; pass < 2 && !stopping; pass++) {
      for (int i = 0; i < event_count; i++) {
        int flags = events[i].fflags;
        int fd = events[i].ident;
@@ -54,10 +107,14 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..4eb82c8ab4964ba89e9121ed63ae0845
 -        goto done;
 +        stopping = true;
 +        break;
++      }
++      bool removal = flags & (NOTE_DELETE | NOTE_RENAME | NOTE_REVOKE);
++      if (removal != (pass == 0)) {
++        continue;
        }
  
        auto it = mFdToEntry.find(fd);
-@@ -75,21 +89,44 @@ void KqueueBackend::start() {
+@@ -75,21 +101,44 @@ void KqueueBackend::start() {
  
        DirEntry *entry = it->second;
  
@@ -110,10 +167,12 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..4eb82c8ab4964ba89e9121ed63ae0845
              struct stat st;
              lstat(sub->path.c_str(), &st);
              if (entry->mtime != CONVERT_TIME(st.st_mtim)) {
-@@ -101,6 +138,16 @@ void KqueueBackend::start() {
+@@ -100,6 +149,17 @@ void KqueueBackend::start() {
+         }
        }
      }
- 
++    }
++
 +    // Closing a descriptor also removes its kqueue registration.
 +    for (auto it = closing.begin(); it != closing.end(); it++) {
 +      close(*it);
@@ -123,11 +182,22 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..4eb82c8ab4964ba89e9121ed63ae0845
 +    if (stopping) {
 +      goto done;
 +    }
-+
+ 
      for (auto it = watchers.begin(); it != watchers.end(); it++) {
        (*it)->notify();
-     }
-@@ -118,14 +165,63 @@ KqueueBackend::~KqueueBackend() {
+@@ -112,20 +172,82 @@ done:
+   mEndedSignal.notify();
+ }
+ 
++// equin: an entry open(2) refuses for its permissions (EACCES) or macOS
++// privacy protection (EPERM) — listed, never watched.
++static bool unopenable(int err) {
++  return err == EACCES || err == EPERM;
++}
++
+ KqueueBackend::~KqueueBackend() {
+   write(mPipe[1], "X", 1);
+   mEndedSignal.wait();
  }
  
  void KqueueBackend::subscribe(WatcherRef watcher) {
@@ -157,11 +227,18 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..4eb82c8ab4964ba89e9121ed63ae0845
 +    errno = 0;
 +    if (watchDir(watcher, it->second.path, tree)) {
 +      continue;
-+    }
+     }
 +    int err = errno;
 +    if (err == ENOENT && it->second.path != watcher->mDir) {
 +      // Gone since the listing: not in the tree, so a re-creation is a create.
 +      gone.push_back(it->second.path);
++      continue;
++    }
++    if (unopenable(err) && it->second.path != watcher->mDir) {
++      // equin: an entry this account may not open (macOS privacy protection:
++      // ~/.Trash without Full Disk Access) stays in the tree with no
++      // descriptor: its coming and going is still heard by its folder's diff,
++      // its own writes are not. Upstream failed the whole subscription.
 +      continue;
 +    }
 +    // Nothing of a failed subscription stays behind. Upstream left the
@@ -174,7 +251,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..4eb82c8ab4964ba89e9121ed63ae0845
 +    // A directory takes its entries with it, and some may be watched already
 +    // (the tree is unordered): close theirs and drop their subscriptions
 +    // first, so nothing maps to an entry the removal frees.
-+    std::string prefix = *it + DIR_SEP;
++    std::string prefix = childPrefix(*it);
 +    for (auto entry = tree->entries.begin(); entry != tree->entries.end(); entry++) {
 +      if (entry->first.rfind(prefix, 0) != 0) {
 +        continue;
@@ -192,12 +269,12 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..4eb82c8ab4964ba89e9121ed63ae0845
 +          sub++;
 +        }
 +      }
-     }
++    }
 +    tree->remove(*it);
    }
  }
  
-@@ -188,7 +284,7 @@ std::vector<KqueueSubscription *> KqueueBackend::findSubscriptions(std::string &
+@@ -188,7 +310,7 @@ std::vector<KqueueSubscription *> KqueueBackend::findSubscriptions(std::string &
    return subs;
  }
  
@@ -206,7 +283,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..4eb82c8ab4964ba89e9121ed63ae0845
    // macOS doesn't support fdclosedir, so we have to duplicate the file descriptor
    // to ensure the closedir doesn't also stop watching.
    #if __APPLE__
-@@ -197,6 +293,9 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
+@@ -197,6 +319,9 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
  
    DIR *dir = fdopendir(fd);
    if (dir == NULL) {
@@ -216,8 +293,25 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..4eb82c8ab4964ba89e9121ed63ae0845
      return false;
    }
  
-@@ -242,6 +341,11 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
+@@ -204,7 +329,7 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
+   rewinddir(dir);
+ 
+   std::vector<KqueueSubscription *> subs = findSubscriptions(path);
+-  std::string dirStart = path + DIR_SEP;
++  std::string dirStart = childPrefix(path);
+ 
+   std::unordered_set<std::shared_ptr<DirTree>> trees;
+   for (auto it = subs.begin(); it != subs.end(); it++) {
+@@ -239,9 +364,19 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
+             sub->watcher->mEvents.create(fullpath);
+             watchers.emplace(sub->watcher);
+ 
++            errno = 0;
              bool success = watchDir(sub->watcher, fullpath, sub->tree);
++            if (!success && unopenable(errno)) {
++              // equin: listed, not watched — see `subscribe`.
++              continue;
++            }
              if (!success) {
                sub->tree->remove(fullpath);
 +              #if __APPLE__
@@ -228,7 +322,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..4eb82c8ab4964ba89e9121ed63ae0845
                return false;
              }
            }
-@@ -270,7 +374,16 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
+@@ -270,7 +405,16 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
            }
          }
  
@@ -246,7 +340,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..4eb82c8ab4964ba89e9121ed63ae0845
          mSubscriptions.erase(entry->first);
          entry = tree->entries.erase(entry);
        } else {
-@@ -288,13 +401,59 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
+@@ -288,13 +432,59 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
    return true;
  }
  
@@ -256,7 +350,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..4eb82c8ab4964ba89e9121ed63ae0845
 +// a directory recreated under the same name is watched afresh. `subs` are the
 +// subscriptions of the directory's own parent (or of the directory itself).
 +void KqueueBackend::forgetDescendants(std::shared_ptr<DirTree> tree, const std::string &path, std::vector<KqueueSubscription *> &subs, std::unordered_set<WatcherRef> &watchers, std::unordered_set<int> &closing) {
-+  std::string prefix = path + DIR_SEP;
++  std::string prefix = childPrefix(path);
 +  for (auto it = tree->entries.begin(); it != tree->entries.end();) {
 +    if (it->first.rfind(prefix, 0) != 0) {
 +      it++;
@@ -322,6 +416,112 @@ index 3c6a9cdd5c1de26b0eb5c5f2835409098fb601ae..c57769fc94a8a37f20fdcc30254220de
  };
  
  #endif
+diff --git a/src/macos/FSEventsBackend.cc b/src/macos/FSEventsBackend.cc
+index cfda9625fc7d9beb00a0014d87333bf97c130c84..f8bf09e4403c8f82050b6fe874f3eee2664e287e 100644
+--- a/src/macos/FSEventsBackend.cc
++++ b/src/macos/FSEventsBackend.cc
+@@ -246,6 +246,14 @@ void FSEventsBackend::startStream(WatcherRef watcher, FSEventStreamEventId id) {
+ 
+   FSEventStreamSetExclusionPaths(stream, exclusions);
+ 
++  // equin: the state is complete BEFORE the stream starts. Upstream set the
++  // tree and stream after FSEventStreamStart, so a first callback (on the run
++  // loop thread) could read a null tree, and a stop could read no stream.
++  auto stateGuard = watcher->state;
++  State* s = static_cast<State*>(stateGuard.get());
++  s->tree = std::make_shared<DirTree>(watcher->mDir);
++  s->stream = stream;
++
+   FSEventStreamScheduleWithRunLoop(stream, mRunLoop, kCFRunLoopDefaultMode);
+   bool started = FSEventStreamStart(stream);
+ 
+@@ -253,19 +261,30 @@ void FSEventsBackend::startStream(WatcherRef watcher, FSEventStreamEventId id) {
+   CFRelease(fileWatchPath);
+ 
+   if (!started) {
++    FSEventStreamInvalidate(stream);
+     FSEventStreamRelease(stream);
++    s->stream = nullptr;
+     throw WatcherError("Error starting FSEvents stream", watcher);
+   }
+-
+-  auto stateGuard = watcher->state;
+-  State* s = static_cast<State*>(stateGuard.get());
+-  s->tree = std::make_shared<DirTree>(watcher->mDir);
+-  s->stream = stream;
+ }
+ 
+ void FSEventsBackend::start() {
+   mRunLoop = CFRunLoopGetCurrent();
+   CFRetain(mRunLoop);
++  // The destructor releases mRunLoop before this thread leaves CFRunLoopRun:
++  // the teardown below uses the thread's own reference.
++  CFRunLoopRef runLoop = mRunLoop;
++
++  // equin: a source that never fires keeps the run loop running for the
++  // backend's whole life. CFRunLoopRun returns once the loop has no source,
++  // so upstream's thread exited when the last stream was unscheduled (its
++  // callback stops a stream whose root was deleted) while the backend lived
++  // on: a stream scheduled later never delivered, and a block performed on
++  // the loop (unsubscribe's stop) never ran. Only CFRunLoopStop, in the
++  // destructor, ends it now.
++  CFRunLoopSourceContext keepAliveContext = {};
++  CFRunLoopSourceRef keepAlive = CFRunLoopSourceCreate(NULL, 0, &keepAliveContext);
++  CFRunLoopAddSource(runLoop, keepAlive, kCFRunLoopDefaultMode);
+ 
+   // Unlock once run loop has started.
+   CFRunLoopPerformBlock(mRunLoop, kCFRunLoopDefaultMode, ^ {
+@@ -274,6 +293,9 @@ void FSEventsBackend::start() {
+ 
+   CFRunLoopWakeUp(mRunLoop);
+   CFRunLoopRun();
++
++  CFRunLoopRemoveSource(runLoop, keepAlive, kCFRunLoopDefaultMode);
++  CFRelease(keepAlive);
+ }
+ 
+ FSEventsBackend::~FSEventsBackend() {
+@@ -328,11 +350,34 @@ void FSEventsBackend::subscribe(WatcherRef watcher) {
+ }
+ 
+ // This function is called by Backend::unwatch which takes a lock on mMutex
++//
++// equin: the stop runs ON the run loop thread, where every stream callback
++// runs, and this waits for it. Upstream stopped the stream here, on a pool
++// thread, while a callback could be running on the run loop thread — and a
++// callback that sees its root deleted stops the same stream itself
++// (FSEventsCallback), then clears `watcher->state`. That stop is a synchronous
++// RPC to fseventsd (seconds while it is stuck), and the batch naming the
++// deleted root is already delivered, so the engine's unsubscribe (it closes a
++// watch whose root went at once) landed inside it: the stream was stopped and
++// released twice and `watcher->state` (a plain shared_ptr) written from two
++// threads — heap corruption, found later in malloc (2026-11-09: bus errors in
++// FSEventsBackend::startStream; reproduced by delaying that stop 300 ms).
++// Serialized on one thread, whichever stop runs second finds the state
++// cleared and does nothing.
+ void FSEventsBackend::unsubscribe(WatcherRef watcher) {
+-  auto stateGuard = watcher->state;
+-  State* s = static_cast<State*>(stateGuard.get());
+-  if (s != nullptr) {
+-    stopStream(s->stream, mRunLoop);
+-    watcher->state = nullptr;
+-  }
++  dispatch_semaphore_t done = dispatch_semaphore_create(0);
++  CFRunLoopPerformBlock(mRunLoop, kCFRunLoopDefaultMode, ^ {
++    auto stateGuard = watcher->state;
++    State* s = static_cast<State*>(stateGuard.get());
++    if (s != nullptr) {
++      if (s->stream != nullptr) {
++        stopStream(s->stream, mRunLoop);
++      }
++      watcher->state = nullptr;
++    }
++    dispatch_semaphore_signal(done);
++  });
++  CFRunLoopWakeUp(mRunLoop);
++  dispatch_semaphore_wait(done, DISPATCH_TIME_FOREVER);
++  dispatch_release(done);
+ }
 diff --git a/src/shared/BruteForceBackend.hh b/src/shared/BruteForceBackend.hh
 index de7a73d1e9549300408fbb56dec837720eed80d1..46e7462bcdc77891eec59ad80d9fa59d16544083 100644
 --- a/src/shared/BruteForceBackend.hh
@@ -337,10 +537,10 @@ index de7a73d1e9549300408fbb56dec837720eed80d1..46e7462bcdc77891eec59ad80d9fa59d
  };
  
 diff --git a/src/unix/fts.cc b/src/unix/fts.cc
-index d50c3e4931eb29a408ea29c1394a3fc977349455..bcd2eaabc8a92cf5c73e7a203be1d45c0f960bbe 100644
+index d50c3e4931eb29a408ea29c1394a3fc977349455..908ae262b5d775ff665744acc629f4ae0e6f50a8 100644
 --- a/src/unix/fts.cc
 +++ b/src/unix/fts.cc
-@@ -28,6 +28,13 @@ void BruteForceBackend::readTree(WatcherRef watcher, std::shared_ptr<DirTree> tr
+@@ -28,6 +28,21 @@ void BruteForceBackend::readTree(WatcherRef watcher, std::shared_ptr<DirTree> tr
  
    while ((node = fts_read(fts)) != NULL) {
      if (node->fts_errno) {
@@ -349,6 +549,14 @@ index d50c3e4931eb29a408ea29c1394a3fc977349455..bcd2eaabc8a92cf5c73e7a203be1d45c
 +      // ignores, is simply not part of the tree — upstream failed the whole
 +      // subscription on it ("No such file or directory").
 +      if (!isRoot && (node->fts_errno == ENOENT || watcher->isIgnored(std::string(node->fts_path)))) {
++        continue;
++      }
++      // equin: a folder below the root this account may not list (macOS
++      // privacy protection: ~/.Trash without Full Disk Access) is still an
++      // entry — added at its preorder visit — with no entries of its own
++      // known. Upstream failed the whole subscription on it ("Operation not
++      // permitted"), so no watch of `~` could open.
++      if (!isRoot && (node->fts_errno == EACCES || node->fts_errno == EPERM)) {
 +        continue;
 +      }
        fts_close(fts);

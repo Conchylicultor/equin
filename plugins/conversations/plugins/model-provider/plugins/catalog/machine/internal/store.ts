@@ -77,18 +77,21 @@ export const modelCatalogWatcher = defineFileWatcher({
   name: "model-provider.catalog",
   description:
     "Re-reads the model catalog the moment the host's discovery job rewrites it, so every launch and picker on this backend sees a newly discovered model at once.",
-  // The writer's tmp file appears and is renamed away; only the rename matters.
-  ignore: ["**/*.tmp"],
+  // The one known file, followed on kqueue: heard in milliseconds, where an
+  // FSEvents watch of its folder was 3–14 s late while fseventsd was loaded.
+  // The writer's tmp sibling is not followed; its rename over the file is.
+  writesWhileOpen: true,
 });
 
 let watcher: FileWatcher | null = null;
 
-/** Watch the catalog's directory for as long as the backend serves. */
+/** Follow the catalog file for as long as the backend serves. */
 export async function startCatalogWatcher(): Promise<void> {
   if (watcher) return;
+  // Following a file in a missing directory fails; the dir is host-global and cheap.
+  await modelCatalogDir.ensure();
   watcher = await modelCatalogWatcher.start({
-    // Subscribing to a missing directory fails; the dir is host-global and cheap.
-    dirs: [await modelCatalogDir.ensure()],
+    files: [catalogFile()],
     onChange: () => invalidate(),
   });
   // A rewrite between the first read and the subscription would be missed.

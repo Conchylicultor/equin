@@ -44,7 +44,47 @@ plugin ships the fixed build.
   - `src/unix/fts.cc`'s `readTree` skips an entry below the root that went
     between the listing and its stat (another process pruning it), or that
     the watcher ignores — upstream failed the open with `No such file or
-    directory`.
+    directory`;
+  - an entry this account may not list or open (EACCES / EPERM — macOS
+    privacy protection: `~/.Trash` without Full Disk Access) stays in the
+    tree with no descriptor, in `readTree`, `subscribe` and the directory
+    diff: heard coming and going by its folder's diff, never written.
+    Upstream failed the whole subscription, so no kqueue watch of `~` (the
+    engine's `children` depth) could open;
+  - each batch is handled in two passes — every delete / rename first, then
+    the writes and directory diffs. An atomic rewrite (write a sibling,
+    rename it over the file) reports the folder's `NOTE_WRITE` and the old
+    file's `NOTE_DELETE` in one batch in either order; diffing first found
+    the path still in the tree, then the delete dropped it, so the new file
+    was never watched and every later rewrite of it went unheard (measured:
+    rounds 2–5 of five rename-overs reported nothing). Now each rewrite
+    reports the path (a `delete` and a `create` may land in successive
+    batches);
+  - `childPrefix` (`DirTree.hh`): the prefix below a path is `path + "/"`
+    except for `/` itself (upstream built `//`, so a watch of `/` ignored
+    nothing and its diff named entries `//bin`).
+- **`src/macos/FSEventsBackend.cc`** (the FSEvents backend, upstream code
+  otherwise):
+  - `unsubscribe` stops its stream ON the run loop thread (a performed
+    block, waited for), where every stream callback runs. A callback that sees
+    its root deleted stops the stream itself, then clears `watcher->state`;
+    that stop is an fseventsd RPC (seconds while it is stuck), and the batch
+    naming the root is already delivered — so the engine's unsubscribe (it
+    closes a watch whose root went at once) stopped and released the same
+    stream a second time, from a pool thread, and wrote `watcher->state` from
+    two threads: heap corruption, later a bus error in malloc
+    (`FSEventsBackend::startStream`; 2026-11-09, twice, both while fseventsd
+    was stuck). Reproduced with that stop delayed 300 ms
+    (`scripts/stress-root-gone.ts`, malloc checks on: 2 crashes in 3 runs,
+    0 in 2 undelayed); with the fix, 0 in 4 delayed runs;
+  - the run loop holds a source that never fires, so its thread lives as long
+    as the backend: `CFRunLoopRun` returns once the loop has no source, so
+    upstream's thread exited when the last stream was unscheduled while the
+    backend lived on — a stream scheduled later never delivered (and a
+    performed block never ran);
+  - `startStream` completes the state (tree, stream) before
+    `FSEventStreamStart`: upstream set it after, so a first callback could
+    read a null tree.
 - **`index.js` loads `build/Release/watcher.node` first** (same patch), ahead
   of the prebuilt `@parcel/watcher-<platform>` package, which is upstream's
   unpatched code.

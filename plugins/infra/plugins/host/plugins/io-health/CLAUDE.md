@@ -28,8 +28,9 @@ in a file nobody read.
   - `hostIoHealth` — the `host.io-health` live value (`needsMachine`): the
     monitor missing, or its newest tick + root flag + active findings.
   - `HOST_IO_DEGRADED_KIND` — the report kind; its payload is the finding.
-- `machine/` — follows the log: a `depth: "children"` file watcher on the
-  monitors' directory (no timer — the monitor's launchd schedule is the clock),
+- `machine/` — follows the log: a `writesWhileOpen` file watcher on the log
+  file itself (kqueue: every append heard in milliseconds; no timer — the
+  monitor's launchd schedule is the clock),
   `readLogTail` (resumes from a byte cursor; restarts at the last 512 KB at
   boot, on a replaced/truncated file or a gap), the state that feeds the
   detector, and on **main only** files each finding as `host-io-degraded`

@@ -43,8 +43,8 @@ export interface DirWatcherSpec extends FileWatcherSpecBase {
   writesWhileOpen?: false;
   /**
    * How deep each instance hears its dirs: `"subtree"` (default, parcel's
-   * recursive watch) or `"children"` (one single-directory `fs.watch` per
-   * dir — its direct entries only). See the engine's `depth`.
+   * recursive watch) or `"children"` (its direct entries only: kqueue on
+   * macOS, a single-directory `fs.watch` elsewhere). See the engine's `depth`.
    */
   depth?: WatchDepth;
 }

@@ -272,17 +272,29 @@ that re-arm opens a fresh watch of whatever folder now sits at the path rather
 than joining the dead one. **It is live when it resolves**: a write landing
 right after `start` / `acquire` is heard, so "arm, then read" is correct.
 
-- **macOS: a shared FSEvents stream** (see *One FSEvents stream per watched
-  root* below): an open recursive stream covering the dir, when there is
-  one, filtered to the dir's direct entries; else a parcel subscription of
-  the dir with every deeper path ignored natively (a relative path holding a
-  `/`, dropped before parcel stats it), which a second children watch of the
-  same dir joins. FSEvents watches by path prefix — no descriptor per entry,
-  nothing walked — so `~` or `/` costs one stream. parcel starts the stream
-  (`FSEventStreamStart`, since now) before `subscribe` resolves, and no other
-  watch opening or closing restarts it. The dir going is heard on the stream
-  (its own path, or a folder above it moving), reported once. A native error
-  (FSEvents dropped events) reaches `onLost`.
+- **macOS: kqueue** (`shared/kqueue-children.ts`): parcel's kqueue backend on
+  the dir, every deeper path ignored natively — one descriptor on the dir and
+  one on each entry, registered before `subscribe` resolves. Never an
+  FSEvents stream: a stream is delivered every event under its path however
+  deep, so the file explorer's children watches of `/` and `~` made
+  fseventsd deliver every file event of the machine to the process, to hear
+  a few dozen entries; and FSEvents is 3–14 s late while fseventsd is loaded,
+  kqueue milliseconds. kqueue costs what the dir holds, not what happens
+  below it, so its descriptors are bounded: a dir holding more than 256
+  entries at open (`KQUEUE_CHILDREN_OPEN_BUDGET`), or one that would take
+  the process's kqueue children watches past 8,192 descriptors, rides the
+  FSEvents pool instead (below); one that grows past 1,024 while watched
+  moves to it — the pool ride opens first, the kqueue subscription closes,
+  then the dir is listed and diffed against the names the watch knew (new
+  → `create`, gone → `delete`, the rest an `update`, a look): parcel
+  debounces what kqueue reported, so the close drops a batch not yet
+  delivered, which the FSEvents stream (started "since now") never reports.
+  A change around the move may be heard twice, never lost. The dir going is its own descriptor firing,
+  checked against the inode, reported once. An entry this account may not
+  open (macOS privacy protection: `~/.Trash` without Full Disk Access) is
+  listed with no descriptor (the patched addon, `parcel-addon`): heard coming
+  and going, not written. An entry written by a process holding it open is
+  heard on every write, not only at close. A native error reaches `onLost`.
 - **Elsewhere: Bun's single-directory `fs.watch`** of the dir, plus a second
   one of its **parent** filtered to the dir's own name (Bun's watch of a dir
   reports nothing when that dir is removed or moved away); `/` has no parent
@@ -319,8 +331,9 @@ Every FSEvents stream is work fseventsd does on every file event of the
 machine, and every open or close is a synchronous RPC to it — 0.05 s idle,
 20–30 s while it is stuck at one full core (2026-11-09: the
 `file-watcher.dir-entries:stop` spans of a busy worktree). So on macOS every
-watch with no `ignore` — any declaration, either depth — rides the process's
-**stream pool** (`shared/fsevents-pool.ts`) rather than opening its own:
+watch with no `ignore` — any declaration; a `children` one only when it is
+past kqueue's budget (above) — rides the process's **stream pool**
+(`shared/fsevents-pool.ts`) rather than opening its own:
 
 - A watch whose dir is at or below an open (or opening) recursive stream
   rides it, its events filtered in JS to its own scope; joining a started
@@ -380,7 +393,7 @@ re-created is watched again (a `rescan` on each appearing or going).
 
 ## Plugin reference
 
-- Description: defineFileWatcher: the one declared in-process file watcher — a named, described declaration (static policy: extensions, ignore, debounce, ceiling, writesWhileOpen, depth, mainOnly) whose start({dirs, label, onChange, onLost}) — start({files, …}) for a writesWhileOpen one, which follows writes to the named files only (kqueue on darwin, one descriptor per file; every follow of a directory shares one subscription) — opens instances over one @parcel/watcher engine (debounce + ceiling flush; no timer — a dropped event is reported to onLost, the one backstop). Records per declaration its open instances, last change batch and a ring of handler runs for the Background activity catalog (onWatcherActivity / listFileWatchers / fileWatcherRecentRuns). The cli barrel's watchForCommand is the same engine for a foreground command, with no registry. acquireDirWatch({dir, scope, onChange}) is the shared directory-watch hub: one native watch per folder tree, refcounted, a dir under a watched root riding its watch, with subtree or children (depth-1 listing) scope — a children request with no root above it opening only a single-directory watch (depth children), never a recursive one. On macOS every FSEvents watch with no ignore rides the process's stream pool — one stream per watched root, a dir under an open recursive stream riding it, whatever declaration or depth asks (fsEventsStreams reads it).
+- Description: defineFileWatcher: the one declared in-process file watcher — a named, described declaration (static policy: extensions, ignore, debounce, ceiling, writesWhileOpen, depth, mainOnly) whose start({dirs, label, onChange, onLost}) — start({files, …}) for a writesWhileOpen one, which follows writes to the named files only (kqueue on darwin, one descriptor per file; every follow of a directory shares one subscription) — opens instances over one @parcel/watcher engine (debounce + ceiling flush; no timer — a dropped event is reported to onLost, the one backstop). Records per declaration its open instances, last change batch and a ring of handler runs for the Background activity catalog (onWatcherActivity / listFileWatchers / fileWatcherRecentRuns). The cli barrel's watchForCommand is the same engine for a foreground command, with no registry. acquireDirWatch({dir, scope, onChange}) is the shared directory-watch hub: refcounted native watches, a dir under a watched root riding its watch (a watcher never moved off a live root: a root opening above leaves it where it is), with subtree or children (depth-1 listing) scope — a children request with no root above it opening only a single-directory watch (depth children), never a recursive one. On macOS a children watch is kqueue's (a descriptor on the dir and each entry, budgeted — a dir past the budget rides FSEvents), so watching / or ~ puts nothing on fseventsd; every other FSEvents watch with no ignore rides the process's stream pool — one stream per watched root, a dir under an open recursive stream riding it, whatever declaration asks (fsEventsStreams reads it).
 - Cross-plugin:
   - Imported by: 40 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra` ×13

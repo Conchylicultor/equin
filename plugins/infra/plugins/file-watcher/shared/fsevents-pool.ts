@@ -1,7 +1,9 @@
 import type * as parcel from "@parcel/watcher";
 
 // The process's FSEvents streams, shared: one per watched root, however many
-// watches — of any declaration, at either depth — want a dir inside it.
+// watches — of any declaration, at either depth — want a dir inside it. (A
+// `children` watch comes here only past kqueue's entry budget: see
+// `kqueue-children.ts`.)
 //
 // Every stream is work fseventsd does for every file event on the machine (it
 // matches the event against each client's paths), and every open or close is a

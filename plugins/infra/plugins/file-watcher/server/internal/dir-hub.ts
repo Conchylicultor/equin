@@ -127,11 +127,11 @@ interface Holder {
   /** `root`'s generation key — the native watch it rides. */
   rootKey: string;
   hold: HubHold;
-  /** The hold it is leaving, kept until the new root's watch is open. */
+  /** The dead root's hold it is leaving, kept until the new root's watch is open. */
   previous: HubHold | null;
   /** Its own filtered listener — re-attached as is when it moves roots. */
   listener: (signal: RootSignal) => void;
-  /** Set once its first hold is live; only a live holder moves. */
+  /** Set once its first hold is live; only a live holder is rescued. */
   live: boolean;
   released: boolean;
 }
@@ -147,19 +147,28 @@ interface Holder {
  * single-directory watch of its dir (refcounted per dir), so listing `~` or
  * `/` holds one directory handle, not a watch of everything below it. Such a
  * watch is never a root (nothing rides it) and never moves: a recursive root
- * opening above it later leaves it where it is. When a root opens ABOVE roots already
- * open (a checkout watch after a child listing), it takes their watchers over:
- * each is re-attached to the new root, then its old hold is released once that
- * root is open, so the descendant's native watch stops and one tree never
- * holds two native watches for longer than the hand-over. A batch landing during that hand-over can be
- * heard twice (attach-before-release); none is lost. A root stops when its last
- * watcher releases. The release an acquire returns follows its watcher onto
- * whichever root it rides. A watcher whose own root went live after a root
- * above it opened moves up then, so the order the two opened in does not
- * matter. A root whose own dir goes (removed, moved, replaced — the engine's
+ * opening above it later leaves it where it is.
+ *
+ * **A live watcher never moves either.** A root opening ABOVE roots already
+ * open (a checkout watch after a child listing) leaves their watchers where
+ * they are: the lower root keeps its native watch until its last watcher
+ * releases, and later acquires below it ride the nearest root. Moving them
+ * up would release the lower native watch, and closing an FSEvents stream
+ * drops what fseventsd has queued for it and not delivered yet — seconds
+ * while it is loaded (2026-11-09) — so a change made just before the move
+ * went unheard. On macOS the engine's stream pool already shares one stream
+ * per watched root across the process (`fsevents-pool.ts`, where riders never
+ * move for the same reason); here the cost is one more native watch of the
+ * lower tree for as long as it is held (on Linux, its inotify descriptors).
+ * A root stops when its last watcher releases.
+ *
+ * A root whose own dir goes (removed, moved, replaced — the engine's
  * {@link WatchedDirGoneError}) is retired: its riders hear `onLost`, a later
  * acquire of that dir (or one under it) opens a fresh root, and the riders
- * stranded on the dead one move onto whichever root next opens at or above it.
+ * stranded on the dead one move onto a live root already covering it, else
+ * onto whichever root next opens or is acquired at or above it — a dead watch
+ * hears nothing, so there is nothing queued to lose. The
+ * release an acquire returns follows its watcher onto whichever root it rides.
  */
 export function createDirWatchHub(starts: DirWatchStarts): DirWatchHub {
   const hub = createRefcountHub<RootSignal>(async (key, emit) => {
@@ -168,10 +177,15 @@ export function createDirWatchHub(starts: DirWatchStarts): DirWatchHub {
       root,
       (events) => emit({ kind: "changes", events }),
       (error) => {
-        if (error instanceof WatchedDirGoneError && error.dir === root) {
-          rootKeys.retire(key);
-        }
+        const dead = error instanceof WatchedDirGoneError && error.dir === root;
+        if (dead) rootKeys.retire(key);
         emit({ kind: "lost", error });
+        // Its riders move onto a live root covering it, if one is open: no
+        // acquire may ever open a root at that root's own dir again.
+        if (dead && root !== "/") {
+          const above = coveringRoot(dirname(root));
+          if (above !== undefined) rescueStranded(above);
+        }
       },
     );
     return () => {
@@ -245,17 +259,18 @@ export function createDirWatchHub(starts: DirWatchStarts): DirWatchHub {
   }
 
   /**
-   * Gather onto `root` every live watcher riding a root strictly below it, or
-   * a dead root at it (its dir went and came back). Runs once `root` is live,
-   * so each re-attach joins an open watch.
+   * Gather onto `root` every watcher stranded on a dead root at or below it
+   * (its dir went, and came back or is covered again). Runs once `root` is
+   * live, so each re-attach joins an open watch. A watcher on a LIVE root
+   * stays (see the hub's doc).
    */
-  function absorbBelow(root: string): void {
+  function rescueStranded(root: string): void {
     const key = rootKeys.liveKey(root);
     if (key === undefined) return;
     for (const h of holders) {
       if (!h.live || h.released || h.rootKey === key) continue;
-      const stranded = h.root === root && !rootKeys.isLive(h.rootKey);
-      if (stranded || isUnder(root, h.root)) move(h, root);
+      if (rootKeys.isLive(h.rootKey)) continue;
+      if (h.root === root || isUnder(root, h.root)) move(h, root);
     }
   }
 
@@ -311,11 +326,8 @@ export function createDirWatchHub(starts: DirWatchStarts): DirWatchHub {
         throw err;
       }
       h.live = true;
-      // A root opened above this one while it was opening: ride that instead.
-      const above = h.root === "/" ? undefined : coveringRoot(dirname(h.root));
-      if (above !== undefined) move(h, above);
-      // This acquire opened a root: take over the watchers below it.
-      else if (h.root === dir) absorbBelow(dir);
+      // Take in the watchers stranded on a dead root below the one this rides.
+      rescueStranded(h.root);
       return () => {
         if (h.released) return;
         h.released = true;

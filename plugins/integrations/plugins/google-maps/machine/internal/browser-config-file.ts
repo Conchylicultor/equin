@@ -1,4 +1,3 @@
-import { basename } from "node:path";
 import { defineFileWatcher } from "@plugins/infra/plugins/file-watcher/server";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { implementMachine } from "@plugins/infra/plugins/endpoints/machine";
@@ -29,6 +28,9 @@ export const mapsBrowserConfigWatcher = defineFileWatcher({
   name: "google-maps.browser-config",
   description:
     "While a tab shows the Google Maps settings or a map, watches the shared browser-config file so a key saved from another checkout appears at once.",
+  // The one known file, followed on kqueue: heard in milliseconds, where an
+  // FSEvents watch of its folder was 3–14 s late while fseventsd was loaded.
+  writesWhileOpen: true,
 });
 
 /**
@@ -39,17 +41,12 @@ export const mapsBrowserConfigWatcher = defineFileWatcher({
 export const browserConfigFile: MapsBrowserConfigSourceImpl = {
   read: () => readBrowserConfig(),
   async watch(changed) {
-    // Subscribing to a missing directory fails; creating it is free.
-    const dir = await googleMapsDir.ensure();
+    // Following a file in a missing directory fails; creating it is free.
+    // The staging sibling a write renames from is not followed.
+    await googleMapsDir.ensure();
     const watcher = await mapsBrowserConfigWatcher.start({
-      dirs: [dir],
-      onChange: (events) => {
-        // The staging sibling a write renames from shares the directory; only
-        // the target file's own events mean the value moved.
-        if (events.some((e) => basename(e.path) === BROWSER_CONFIG_FILENAME)) {
-          changed();
-        }
-      },
+      files: [googleMapsDir.file(BROWSER_CONFIG_FILENAME)],
+      onChange: () => changed(),
     });
     // The stop hook is synchronous; unsubscribing finishes on its own, tracked
     // so its cost lands in a span, and a failure still surfaces as a rejection.

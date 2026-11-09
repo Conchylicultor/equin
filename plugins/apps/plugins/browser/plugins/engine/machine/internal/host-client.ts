@@ -64,7 +64,9 @@ export const engineStatusWatcher = defineFileWatcher({
   name: "browser-engine.host-status",
   description:
     "Watches the browser-engine host's status file, so a backend waiting for the host's launch or exit hears it the moment the host rewrites it.",
-  extensions: [".json"],
+  // The one known file, followed on kqueue: heard in milliseconds, where an
+  // FSEvents watch of its folder was 3–14 s late while fseventsd was loaded.
+  writesWhileOpen: true,
 });
 
 let codeIdMemo: Promise<string> | null = null;
@@ -155,9 +157,10 @@ async function onStatusChange(): Promise<void> {
 
 async function startStatusWatcher(): Promise<void> {
   if (watcher) return;
+  // Following a file in a missing directory fails; it is host-global and tiny.
+  await browserEngineDir.ensure();
   watcher = await engineStatusWatcher.start({
-    // Subscribing to a missing directory fails; it is host-global and tiny.
-    dirs: [await browserEngineDir.ensure()],
+    files: [browserEngineDir.file(HOST_FILES.status)],
     onChange: () => runTracked("browser-engine:status-change", onStatusChange),
   });
 }
