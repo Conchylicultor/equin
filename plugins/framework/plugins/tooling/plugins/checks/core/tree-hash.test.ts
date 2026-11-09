@@ -283,28 +283,40 @@ describe("computeTreeHash", () => {
 describe("listTreePathspec", () => {
   // What `git grep <tree> -- <pathspecs>` searches. `ls-files` given the same
   // pathspecs keeps a leading-`**` exclude's files when the positives share a
-  // leading directory of 2+ characters (`plugins/`, not `p/`) — the grep index then re-grepped a new test file by its literal
+  // leading directory of 2+ characters (`src/`, not `p/`) — the grep index then re-grepped a new test file by its literal
   // path and counted it (a fixture pane in `pane:identity-manifest`).
   test("drops what a leading-** exclude names beside prefixed positives", async () => {
-    for (const rel of ["plugins/x/a.ts", "plugins/x/__tests__/b.ts", "plugins/y/c.test.ts"]) {
+    for (const rel of [
+      "src/x/a.ts",
+      "src/x/__tests__/b.ts",
+      "src/y/c.test.ts",
+    ]) {
       mkdirSync(join(root, rel, ".."), { recursive: true });
       writeFileSync(join(root, rel), "defineRoute\n");
     }
     await git("add", "-A");
     const tree = await git("write-tree");
     const listed = await listTreePathspec(root, tree, [
-      "plugins/**/*.ts",
+      "src/**/*.ts",
       ":(exclude)**/__tests__/**",
       ":(exclude)**/*.test.ts",
     ]);
-    expect(listed.map((e) => e.path)).toEqual(["plugins/x/a.ts"]);
+    expect(listed.map((e) => e.path)).toEqual(["src/x/a.ts"]);
     const grepped = (
-      await git("grep", "-l", "defineRoute", tree, "--", "plugins/**/*.ts",
-        ":(exclude)**/__tests__/**", ":(exclude)**/*.test.ts")
+      await git(
+        "grep",
+        "-l",
+        "defineRoute",
+        tree,
+        "--",
+        "src/**/*.ts",
+        ":(exclude)**/__tests__/**",
+        ":(exclude)**/*.test.ts",
+      )
     )
       .split("\n")
       .map((l) => l.slice(tree.length + 1));
-    expect(grepped).toEqual(["plugins/x/a.ts"]);
+    expect(grepped).toEqual(["src/x/a.ts"]);
   });
 });
 

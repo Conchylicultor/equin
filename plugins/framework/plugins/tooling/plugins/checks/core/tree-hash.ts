@@ -320,9 +320,7 @@ export async function listTreePathspec(
     }
     const entries = await listFiles(positives);
     if (excludes.length === 0) return entries;
-    const excluded = new Set(
-      (await listFiles(excludes)).map((e) => e.path),
-    );
+    const excluded = new Set((await listFiles(excludes)).map((e) => e.path));
     return entries.filter((e) => !excluded.has(e.path));
   } finally {
     rmSync(scratch, { force: true });
