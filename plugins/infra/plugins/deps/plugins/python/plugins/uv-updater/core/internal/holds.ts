@@ -17,14 +17,4 @@ export const UV_HOLDS_FILE =
  * longer matters; renew it (a new `reviewBy` and a reason saying what was
  * checked) only when it still does.
  */
-export const UV_HOLDS: readonly Hold[] = [
-  {
-    names: ["audio-analysis:cpython"],
-    below: "3.15.0",
-    reason:
-      "torch 2.14 ships no cp315 wheels, so `uv sync` of audio-analysis fails on CPython 3.15; cp315 wheels arrive with torch 2.15 (GA 2026-10-28). Checked 2026-10-26 against 3.15.1: the audio-analysis `uv sync` smoke fails while transcription and youtube (no torch) moved to 3.15.1 cleanly, so the hold covers audio-analysis only. Lift once torch 2.15 is past the uv cooldown.",
-    issue:
-      "https://dev-discuss.pytorch.org/t/notice-python-3-10-support-is-being-removed-from-pytorch-2-15-2-14-is-the-last-release-with-3-10-wheels/3440",
-    reviewBy: "2026-11-15",
-  },
-];
+export const UV_HOLDS: readonly Hold[] = [];

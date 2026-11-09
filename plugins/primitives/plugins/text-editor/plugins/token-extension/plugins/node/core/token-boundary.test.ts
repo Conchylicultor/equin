@@ -119,7 +119,7 @@ describe("token boundaries", () => {
     const editor = boundedEditor();
     seed(editor, () => [idChip.create({ id: A })]);
     update(editor, () => {
-      $getRoot().getFirstChild<LexicalNode>()!.selectEnd();
+      $getRoot().getFirstChild()!.selectEnd();
       const sel = $getSelection();
       if ($isRangeSelection(sel)) sel.insertNodes([idChip.create({ id: B })]);
     });

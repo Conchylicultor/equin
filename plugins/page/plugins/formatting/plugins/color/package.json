@@ -4,7 +4,7 @@
   "private": true,
   "version": "0.0.1",
   "dependencies": {
-    "lexical": "^0.52.0",
-    "@lexical/selection": "^0.52.0"
+    "lexical": "^0.53.0",
+    "@lexical/selection": "^0.53.0"
   }
 }

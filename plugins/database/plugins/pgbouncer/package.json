@@ -4,10 +4,10 @@
   "private": true,
   "version": "0.0.1",
   "optionalDependencies": {
-    "@equin/pgbouncer-darwin-arm64": "^1.25.7",
-    "@equin/pgbouncer-darwin-x64": "^1.25.7",
-    "@equin/pgbouncer-linux-x64": "^1.25.7",
-    "@equin/pgbouncer-linux-arm64": "^1.25.7"
+    "@equin/pgbouncer-darwin-arm64": "^1.26.1",
+    "@equin/pgbouncer-darwin-x64": "^1.26.1",
+    "@equin/pgbouncer-linux-x64": "^1.26.1",
+    "@equin/pgbouncer-linux-arm64": "^1.26.1"
   },
   "dependencyPolicy": {
     "groups": [

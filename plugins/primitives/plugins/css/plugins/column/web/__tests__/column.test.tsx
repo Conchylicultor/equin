@@ -2,6 +2,15 @@ import { describe, it, expect, afterEach } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 import { Column } from "../index";
 
+// What the CSSOM serializes `value` as: browsers (and jsdom since 31) write a
+// declared value back in its canonical form (`minmax(0px, 1fr)`, the shortest
+// `inset(…)`), so an inline style is compared against that, not a spelling.
+function serialized(property: string, value: string): string {
+  const probe = document.createElement("div");
+  probe.style.setProperty(property, value);
+  return probe.style.getPropertyValue(property);
+}
+
 afterEach(cleanup);
 
 describe("Column", () => {
@@ -75,7 +84,11 @@ describe("Column", () => {
     const root = document.querySelector<HTMLElement>('[data-testid="fit"]')!;
     expect(root.classList.contains("grid")).toBe(true);
     expect(root.classList.contains("flex")).toBe(false);
-    expect(root.style.gridTemplateRows).toBe("auto minmax(0, 1fr)");
-    expect(root.style.gridTemplateColumns).toBe("minmax(0, 1fr)");
+    expect(root.style.gridTemplateRows).toBe(
+      serialized("grid-template-rows", "auto minmax(0, 1fr)"),
+    );
+    expect(root.style.gridTemplateColumns).toBe(
+      serialized("grid-template-columns", "minmax(0, 1fr)"),
+    );
   });
 });

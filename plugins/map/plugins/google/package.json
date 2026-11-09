@@ -4,7 +4,7 @@
   "private": true,
   "version": "0.0.1",
   "dependencies": {
-    "@vis.gl/react-google-maps": "^1.10.1",
-    "@types/google.maps": "^3.66.7"
+    "@vis.gl/react-google-maps": "^1.10.2",
+    "@types/google.maps": "^3.66.9"
   }
 }

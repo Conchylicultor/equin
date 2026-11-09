@@ -4,7 +4,7 @@
   "private": true,
   "version": "0.0.1",
   "dependencies": {
-    "mermaid": "^12.2.0",
+    "mermaid": "^12.3.0",
     "dagre": "^0.8.5"
   }
 }

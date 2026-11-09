@@ -2,6 +2,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render } from "@testing-library/react";
 import { useRowFold } from "../internal/use-row-fold";
 
+// What the CSSOM serializes `value` as: browsers (and jsdom since 31) write a
+// declared value back in its canonical form (`minmax(0px, 1fr)`, the shortest
+// `inset(…)`), so an inline style is compared against that, not a spelling.
+function serialized(property: string, value: string): string {
+  const probe = document.createElement("div");
+  probe.style.setProperty(property, value);
+  return probe.style.getPropertyValue(property);
+}
+
 // jsdom has neither the Web Animations API nor layout: stand in for both, and
 // hold animation frames so a test decides when the next one runs. Every row is
 // 20px tall, laid out one under the other in DOM order.
@@ -119,9 +128,13 @@ describe("useRowFold", () => {
     );
     rerender(<List items={expanded} openKeys={new Set(["a"])} />);
     // The commit: revealed rows clipped shut, the row below held where it was.
-    expect(row("a1")!.style.clipPath).toBe("inset(0px 0px 20px 0px)");
+    expect(row("a1")!.style.clipPath).toBe(
+      serialized("clip-path", "inset(0px 0px 20px 0px)"),
+    );
     expect(row("a1")!.style.opacity).toBe("0");
-    expect(row("a2")!.style.clipPath).toBe("inset(0px 0px 40px 0px)");
+    expect(row("a2")!.style.clipPath).toBe(
+      serialized("clip-path", "inset(0px 0px 40px 0px)"),
+    );
     expect(row("b")!.style.transform).toBe("translateY(-40px)");
     expect(row("a")!.style.transform).toBe("");
     expect(animations).toHaveLength(0);

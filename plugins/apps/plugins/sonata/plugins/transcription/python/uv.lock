@@ -3,7 +3,7 @@ revision = 5
 requires-python = ">=3.12"
 
 [options]
-exclude-newer = "2026-10-23T00:00:00Z"
+exclude-newer = "2026-11-06T00:00:00Z"
 
 [[package]]
 name = "av"
@@ -292,23 +292,23 @@ requires-dist = [
 
 [[package]]
 name = "verovio"
-version = "6.3.0"
+version = "6.4.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/d8/07/63fe55a328593336a66750de517a8ab6ebe7c0ad1b7e168d98d79d8503fc/verovio-6.3.0.tar.gz", hash = "sha256:33dc3b6816896a649198acd7cce291f54636fbfffa893dd78d84c3073b40d87c", size = 6158246, upload-time = "2026-08-19T16:02:34.855Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/17/9e/e10d52df1fdd5f075f22ebed3ec687696e21247cdf9331cdae552ab70d75/verovio-6.4.1.tar.gz", hash = "sha256:101f8a984ce9edf27fb876075a12555cae4387776809daf84094fdba16a6a65e", size = 6238088, upload-time = "2026-11-03T18:27:07.008Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6b/0b/42e560df4051b8c05407162ba117eb14b44f011e84818acc4c2065161d87/verovio-6.3.0-cp310-abi3-macosx_13_0_arm64.whl", hash = "sha256:c842f5d21d31c3d47e835e07565a9b8623b78feef527affe149ceadd9ecaa55a", size = 7239518, upload-time = "2026-08-19T16:02:22.879Z" },
-    { url = "https://files.pythonhosted.org/packages/35/31/b56f05c859f709597edd987e80a0bc3873e7359330b22b415602f4fde922/verovio-6.3.0-cp310-abi3-macosx_13_0_x86_64.whl", hash = "sha256:92f1b3065db2e4e2e6717eafe2d010aa53a194c9547249aa5b5a64f51fc099f2", size = 7516636, upload-time = "2026-08-19T16:02:25.258Z" },
-    { url = "https://files.pythonhosted.org/packages/a5/a6/5aa26c766d67b0c61356aed76c09820d502e825e35707aba86c6cc78d65d/verovio-6.3.0-cp310-abi3-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:c3a608b590fe3ca625eba29b547be8727063f47feb10bd5e42c548f87aeb331e", size = 8031357, upload-time = "2026-08-19T16:02:27.288Z" },
-    { url = "https://files.pythonhosted.org/packages/a7/23/25d6a382968815baf686099d519064c3444aaad7297b6e6c507c5608f225/verovio-6.3.0-cp310-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:0896a708a5b130cc5bab3a168d70435ad8b3e54692088e7e5e281fef11c0b05d", size = 8420029, upload-time = "2026-08-19T16:02:29.401Z" },
-    { url = "https://files.pythonhosted.org/packages/b8/23/56bf43146452bf2c920f6dc69fbeaf5119336b1ceb25898c6fa28587936e/verovio-6.3.0-cp310-abi3-win32.whl", hash = "sha256:654a96990d0ab49cd805d6c39e2c313c640a117a761a07f6a6320d82af94c53a", size = 5359176, upload-time = "2026-08-19T16:02:33.159Z" },
-    { url = "https://files.pythonhosted.org/packages/d7/60/79588e400482320e0eb5a9a7501ab03132a5831a976e6bc5551019295c96/verovio-6.3.0-cp310-abi3-win_amd64.whl", hash = "sha256:cc8bab65570ccb38d6a440fa13d3e4820df34ee9ca483decdbe8371c4291b1a8", size = 5741661, upload-time = "2026-08-19T16:02:31.35Z" },
+    { url = "https://files.pythonhosted.org/packages/f4/dd/4a5f771772cafc05f899a5d8bdded89075d0b35d152d70b4f15a5a62fcd8/verovio-6.4.1-cp310-abi3-macosx_13_0_arm64.whl", hash = "sha256:d24cc20f7d24bfaeea75f6977ec8ebf11435db61a1d06f4d3765c642c0b7f4de", size = 7419449, upload-time = "2026-11-03T18:26:51.556Z" },
+    { url = "https://files.pythonhosted.org/packages/48/09/55ce8797027f234fd9e040189fd45507d96b66c5a51c086915b8d2ca1f58/verovio-6.4.1-cp310-abi3-macosx_13_0_x86_64.whl", hash = "sha256:c3a2a70758ff472da85278558c2c2bf38a22db957f61c5418aea14255d4293f7", size = 7700085, upload-time = "2026-11-03T18:26:54.522Z" },
+    { url = "https://files.pythonhosted.org/packages/ff/a1/f1286d09050e659111c0f524da5543bd05fb2b8adf51dc08f9f2508e84d6/verovio-6.4.1-cp310-abi3-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:544cce948eef0b288079a343ad56a50b8707ad90b3969fb868524ee0bcf722eb", size = 8215444, upload-time = "2026-11-03T18:26:56.677Z" },
+    { url = "https://files.pythonhosted.org/packages/03/22/c98513dfe1d31681080ea742d8a9a8e7dc83e68d9528b35913298687824e/verovio-6.4.1-cp310-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:c19311ec28b113e179b547792b608b901509bbd065615d85bf38b2ad31146e12", size = 8614166, upload-time = "2026-11-03T18:26:59.278Z" },
+    { url = "https://files.pythonhosted.org/packages/86/6a/d7091634068bf57a9d35d7ffc561fbba2166a44c3b219e36e4bcd4359696/verovio-6.4.1-cp310-abi3-win32.whl", hash = "sha256:033eab9ec7a04539cd85a3267f03d4841747de27a42cbd1c0e2bb7145dbfd731", size = 5467033, upload-time = "2026-11-03T18:27:01.829Z" },
+    { url = "https://files.pythonhosted.org/packages/b9/f0/7fb3b1b26ca40b9354b9260ebf6bec0f49aa506b5d07fb8b6cd5dd3e4e6a/verovio-6.4.1-cp310-abi3-win_amd64.whl", hash = "sha256:01f283a1327c93e8b00daab74bed5eadc234343e67eb050155dceb7751d0ce8c", size = 5862882, upload-time = "2026-11-03T18:27:05.055Z" },
 ]
 
 [[package]]
 name = "yt-dlp"
-version = "2026.10.21"
+version = "2026.10.26"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/06/13/d2ea252871826205dc4965cb70e6037ab93697fcabf4feda49fe981f6da0/yt_dlp-2026.10.21.tar.gz", hash = "sha256:cbf748d7d17cd37647c4b9f07b6c25f24384bfd4361407ee5ec519e753d22539", size = 3057326, upload-time = "2026-10-21T21:54:53.563Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/83/31/4be3987022a6244550ab6a3afe45ad10ac10b5e5ab8874bd8eecc7f8b937/yt_dlp-2026.10.26.tar.gz", hash = "sha256:abe5c6b94c3b2f0560500add1c42e0a97641752743a5b65588ac2007a6e23eb6", size = 3048880, upload-time = "2026-10-26T22:25:26.931Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b7/75/ae700ddc7e0b1095fd06cf7e251627dcf4cafcaff460cce92cdc08023b13/yt_dlp-2026.10.21-py3-none-any.whl", hash = "sha256:94a3a3e2c423129d0bbd2f1be000c4171fa1226c29e251c84aff868f2851c247", size = 3188012, upload-time = "2026-10-21T21:54:50.808Z" },
+    { url = "https://files.pythonhosted.org/packages/7f/3d/16ea7d5638cf585991f2c5705e8083688dde633d32d0871f2404e0f4d827/yt_dlp-2026.10.26-py3-none-any.whl", hash = "sha256:a05c5b5d8562f7e8a62f5334348b406af4930d56d3a65f8021d14af0e22339ae", size = 3186201, upload-time = "2026-10-26T22:25:24.877Z" },
 ]

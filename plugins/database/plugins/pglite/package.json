@@ -5,5 +5,18 @@
   "description": "The PGlite database driver: provides the DatabaseDriver host service with Postgres compiled to WASM (in memory, or in IndexedDB when the host declared a persistent storage), for a host without the computer's Postgres cluster — the browser composition and the portable boot test. Never booted by the desktop.",
   "dependencies": {
     "@electric-sql/pglite": "^0.5.11"
+  },
+  "dependencyPolicy": {
+    "holds": [
+      {
+        "names": [
+          "@electric-sql/pglite"
+        ],
+        "below": "0.5.13",
+        "reason": "From 0.5.13 (checked 0.5.13, 0.5.14 and 0.5.15 on 2026-11-09) the Emscripten glue in dist/ loads Node's require with `await import(\"node:module\")` (0.5.12 and earlier: `import(\"module\")`), but the package.json `browser` field still maps only the bare `module` to false. A browser bundler therefore cannot drop it: the web build's vendor set (esbuild, platform browser) fails `Could not resolve \"node:module\"` in chunk-N66TTF7B.js / chunk-O74Z5DUS.js, so `./equin build` publishes nothing. The deps-upgrade gates (checks, tests) do not build the web bundle, so only `./equin build` catches it. Upstream fix: add `\"node:module\": false` to `browser` (as PR #372 did for util). No issue filed yet: filing is outward-facing and waits for the user's go (tracked on the Backlog page). Lift once a release maps it, after a successful `./equin build`.",
+        "issue": "https://github.com/electric-sql/pglite/pull/372",
+        "reviewBy": "2027-02-07"
+      }
+    ]
   }
 }
