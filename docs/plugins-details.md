@@ -47438,8 +47438,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useResizeObserver`
               - `useResizeObserverSet`
           - Cross-plugin:
-            - Imported by: 43 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
-              - `primitives` ×22
+            - Imported by: 44 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
+              - `primitives` ×23
               - `apps` ×10
               - `shell` ×2
               - `active-data/go`
@@ -49682,10 +49682,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlinePopoverProps`
             - Exports (values): `InlinePopover`
           - Cross-plugin:
-            - Imported by: 33 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/popover/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/popover/REFERENCE.md)
+            - Imported by: 34 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/popover/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/popover/REFERENCE.md)
               - `page` ×7
+              - `primitives` ×7
               - `apps` ×6
-              - `primitives` ×6
               - `conversations` ×5
               - `fields` ×2
               - `shell` ×2
@@ -50486,11 +50486,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/pin.PinAnchor`
           - `primitives/css/spacing.insetClass`
           - `primitives/css/spacing.Stack`
+          - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/css/ui-kit.SURFACE_LEVELS`
+          - `primitives/dom/element-size.useResizeObserver`
           - `primitives/dom/scroll-reveal.focusElement`
+          - `primitives/overlay/popover.InlinePopover`
           - `primitives/overlay/popup-open.PopupOpenScope`
+          - `ui/icons.Icon`
         - Exports (types): `RowActionsProps`
         - Exports (values):
           - `RowActions`
@@ -57811,11 +57815,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useWantedStyleKeys`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 541 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 542 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×152
           - `conversations` ×83
+          - `primitives` ×53
           - `page` ×52
-          - `primitives` ×52
           - `fields` ×41
           - `debug` ×28
           - `tasks` ×23

@@ -244,3 +244,70 @@ describe('RowActions chrome="float" — a chip over a picture', () => {
     expect(screen.getByTestId("act")).toBeTruthy();
   });
 });
+
+describe("RowActions — a pinned cluster folds rather than cover its row", () => {
+  const CLUSTER_WIDTH = 152;
+  const offsetWidth = Object.getOwnPropertyDescriptor(
+    HTMLElement.prototype,
+    "offsetWidth",
+  )!;
+  // jsdom lays nothing out: the anchor row is `rowWidth` wide, every other
+  // box (the cluster) the width its buttons would take side by side.
+  const layOut = (rowWidth: number) =>
+    Object.defineProperty(HTMLElement.prototype, "offsetWidth", {
+      configurable: true,
+      get(this: HTMLElement) {
+        return this.classList.contains("group/row-actions")
+          ? rowWidth
+          : CLUSTER_WIDTH;
+      },
+    });
+  afterEach(() =>
+    Object.defineProperty(HTMLElement.prototype, "offsetWidth", offsetWidth),
+  );
+
+  const row = (
+    <div className={rowActionsAnchor}>
+      <span>label</span>
+      <RowActions>{action}</RowActions>
+    </div>
+  );
+
+  it("shows its buttons on a row with room for them", () => {
+    layOut(600);
+    render(row);
+    expect(screen.getByTestId("act")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Actions" })).toBeNull();
+  });
+
+  it("folds into one trigger on a narrow row, opening the same buttons", () => {
+    layOut(284);
+    render(row);
+    expect(screen.queryByTestId("act")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Actions" }));
+    expect(screen.getByTestId("act")).toBeTruthy();
+  });
+
+  it("never folds a float chip", () => {
+    layOut(100);
+    render(
+      <div className={rowActionsAnchor}>
+        <span>label</span>
+        <RowActions chrome="float">{action}</RowActions>
+      </div>,
+    );
+    fireEvent.pointerOver(screen.getByText("label"));
+    expect(screen.getByTestId("act")).toBeTruthy();
+  });
+
+  it("never folds an in-flow cluster", () => {
+    layOut(100);
+    render(
+      <div className={rowActionsAnchor}>
+        <span>label</span>
+        <RowActions pin={null}>{action}</RowActions>
+      </div>,
+    );
+    expect(screen.getByTestId("act")).toBeTruthy();
+  });
+});

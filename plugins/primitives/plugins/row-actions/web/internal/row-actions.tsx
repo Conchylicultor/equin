@@ -7,6 +7,7 @@ import {
   type RefObject,
 } from "react";
 import {
+  Button,
   cn,
   ControlSizeProvider,
   SURFACE_LEVELS,
@@ -21,6 +22,21 @@ import {
   Stack,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
+import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
+import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const foldedIcon = symbol("more-vert");
+
+/**
+ * The largest share of its row a pinned cluster may cover. A pinned cluster
+ * overlays the row's trailing edge, so on a narrow row its buttons would sit
+ * over the row's own content — the label the user clicks, double-clicks to
+ * rename, drags by. Past this share it folds into one trigger opening the
+ * same buttons in a popover, so the row keeps the rest whatever its width.
+ */
+const FOLD_SHARE = 0.4;
 
 /**
  * Apply to the row element whose **hover** should reveal its {@link RowActions}.
@@ -290,6 +306,78 @@ function ReservedPlaceholder({
 }
 
 /**
+ * Whether a pinned cluster must fold: its buttons, side by side, would cover
+ * more than {@link FOLD_SHARE} of its row. Measured before paint on every
+ * resize of the cluster or its row (a narrowing column, a contribution that
+ * renders late), so the frame that narrows a row is the one that folds it.
+ * The buttons' width is read while they are unfolded and kept while folded —
+ * folded, the cluster is one trigger wide, so a button that appears in the
+ * popover is not counted until the next unfold — and it unfolds once the row
+ * has room for them again. `offsetWidth`, not the bounding box: a row mid-fold
+ * motion is transformed, and both boxes are laid-out widths either way.
+ */
+function useFoldsToFit(
+  clusterRef: RefObject<HTMLElement | null>,
+  enabled: boolean,
+): boolean {
+  const [folded, setFolded] = useState(false);
+  const unfoldedWidth = useRef(0);
+  const measure = () => {
+    const cluster = clusterRef.current;
+    const anchor = cluster?.closest(ANCHOR_SELECTOR);
+    if (!cluster || !(anchor instanceof HTMLElement)) return;
+    if (!folded) unfoldedWidth.current = cluster.offsetWidth;
+    const fold = unfoldedWidth.current > anchor.offsetWidth * FOLD_SHARE;
+    if (fold !== folded) setFolded(fold);
+  };
+  useResizeObserver(
+    () => {
+      const cluster = enabled ? clusterRef.current : null;
+      const anchor = cluster?.closest(ANCHOR_SELECTOR);
+      return cluster && anchor ? [cluster, anchor] : null;
+    },
+    measure,
+    { beforePaint: true, deps: [enabled, folded] },
+  );
+  return enabled && folded;
+}
+
+/**
+ * A folded cluster: one trigger in the cluster's place, opening the same
+ * buttons in a popover — ONE instance of each, moved, never drawn twice. The
+ * popover's content is a portal, but React events still bubble to the row
+ * through it, so it stops a press exactly as the cluster does. An open
+ * popover holds the cluster revealed (`PopupOpenScope`), and so does any
+ * popup an action opens from inside it.
+ */
+function FoldedActions({ children }: { children: ReactNode }) {
+  return (
+    <InlinePopover
+      trigger={
+        <Button variant="ghost" aspect="icon" aria-label="Actions">
+          <Icon icon={foldedIcon} />
+        </Button>
+      }
+      tooltip="Actions"
+      side="bottom"
+      align="end"
+      width="snug"
+      padding="2xs"
+    >
+      <Stack
+        direction="row"
+        gap="none"
+        align="center"
+        onClick={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        <ControlSizeProvider size="xs">{children}</ControlSizeProvider>
+      </Stack>
+    </InlinePopover>
+  );
+}
+
+/**
  * Has the user reached for the row this cluster sits in? A hover-revealed
  * cluster is invisible and inert until then, so mounting its buttons is
  * deferred to that moment: a list mounts N rows at once (a group unfolding, a
@@ -363,6 +451,9 @@ function RowActionsCluster(
       if (document.activeElement === stop) return;
     }
   }, [handoffRef]);
+  // Only a pinned, scrimmed cluster overlays its row's content: an in-flow
+  // one has its own box, and a float chip sits over a picture.
+  const folded = useFoldsToFit(clusterRef, pin !== null && chrome !== "float");
   const cluster = (className?: string, style?: CSSProperties) => (
     <Stack
       ref={clusterRef}
@@ -381,7 +472,9 @@ function RowActionsCluster(
       onPointerDown={(e) => e.stopPropagation()}
       className={cn(chrome === "float" && FLOAT_CHIP, className)}
     >
-      <ControlSizeProvider size="xs">{children}</ControlSizeProvider>
+      <ControlSizeProvider size="xs">
+        {folded ? <FoldedActions>{children}</FoldedActions> : children}
+      </ControlSizeProvider>
     </Stack>
   );
   // `mask` paints the row's own `--scrim` under the cluster with a gradient ramp
