@@ -986,4 +986,5 @@ export const pgDriver: DatabaseDriverImpl = {
   holdSchemaGeneration: (generation) => generationLocks.hold(generation),
   awaitGenerationsGone: (knowing) =>
     generationLocks.awaitGenerationsGone(knowing),
+  awaitOlderProcessesGone: () => generationLocks.awaitOlderProcessesGone(),
 };

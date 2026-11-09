@@ -487,7 +487,11 @@ describe("define-rollup oracle — the installed trigger set", () => {
     expect(
       await installDbTriggers(t.db, [], { sweep: { schema: "public" } }),
     ).toEqual([
-      { id: `rollup.${TASK_LATEST_CONVERSATION_TABLE}`, outcome: "dropped" },
+      {
+        id: `rollup.${TASK_LATEST_CONVERSATION_TABLE}`,
+        outcome: "dropped",
+        kept: 0,
+      },
     ]);
     const left = await executeRows(t.db, {
       query: sql.raw(

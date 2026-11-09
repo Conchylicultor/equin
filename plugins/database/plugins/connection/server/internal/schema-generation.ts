@@ -22,6 +22,15 @@ import { BOOT_DDL_QUERY_DEADLINE_MS, withQueryDeadline } from "./deadline";
 // only ever share generations inside `knowing`, so the wait never stalls a
 // newer deploy's boot; an old-code process starting meanwhile queues behind it.
 //
+// The same session also holds an EXCLUSIVE lock `(PROCESS_CLASS, its backend
+// pid)` that no one else ever asks for exclusively: this process's own presence.
+// `awaitOlderProcessesGone()` waits on it (a shared request on each older
+// process's key, granted once that process is gone) — for a removal that
+// breaks any code that booted before this process, whatever its generation:
+// the change feed's trigger on a table the new code no longer feeds, which the
+// previous backend still reads (it may keep serving for good if this deploy
+// is abandoned after it booted).
+//
 // The connection is a dedicated one on the DIRECT socket: pgbouncer's
 // transaction pooling breaks a session-held lock.
 // See research/2026-10-28-database-deferred-contract-phase.md.
@@ -30,6 +39,9 @@ import { BOOT_DDL_QUERY_DEADLINE_MS, withQueryDeadline } from "./deadline";
 // key is shared with the jobs plugin's bigint job locks). Distinct from the
 // runner's transaction-scoped schema-layer lock class.
 const GENERATION_CLASS = 1835103860;
+// The advisory-lock class of each process's presence lock, keyed by its
+// session's backend pid (unique among live sessions).
+const PROCESS_CLASS = 1835103861;
 
 // The Postgres-side bound on one exclusive wait. Each statement on this
 // connection also carries the client deadline (60 s), so a wait must end on
@@ -46,6 +58,7 @@ export interface SchemaGenerationLocks {
   awaitGenerationsGone(
     knowing: readonly number[],
   ): Promise<() => Promise<void>>;
+  awaitOlderProcessesGone(): Promise<void>;
 }
 
 export interface SchemaGenerationLocksOptions {
@@ -55,7 +68,7 @@ export interface SchemaGenerationLocksOptions {
    * must not be asked at module load.
    */
   connectionString: () => string;
-  /** Told each time a wait finds older generations still connected. */
+  /** Told each time a wait finds older generations or processes still connected. */
   log: (line: string) => void;
 }
 
@@ -115,6 +128,77 @@ export function createSchemaGenerationLocks({
             asInt4(generation),
           ]),
       );
+      // This process's presence, on the same session (so it lives exactly as
+      // long as the generation it holds). Nobody else takes this key
+      // exclusively, so it is granted at once.
+      await c.query("SELECT pg_advisory_lock($1, pg_backend_pid())", [
+        PROCESS_CLASS,
+      ]);
+    },
+
+    async awaitOlderProcessesGone() {
+      const c = await client();
+      await c.query(`SET lock_timeout = '${LOCK_WAIT}'`);
+      let unwaitable = new Set<number>();
+      for (;;) {
+        // Every other session holding a generation on this database that
+        // started before this one — a process that booted earlier — and
+        // whether it holds a presence lock (code from before it existed
+        // holds none).
+        const rows = await queryRows(c, {
+          sql: `SELECT g.pid, EXISTS (
+              SELECT 1 FROM pg_locks p
+              WHERE p.locktype = 'advisory' AND p.objsubid = 2 AND p.classid = $2
+                AND p.granted AND p.pid = g.pid AND p.objid::int = g.pid
+                AND p.database = g.database
+            ) AS present
+            FROM pg_locks g
+            JOIN pg_stat_activity a ON a.pid = g.pid
+            WHERE g.locktype = 'advisory' AND g.objsubid = 2 AND g.classid = $1
+              AND g.granted AND g.pid <> pg_backend_pid()
+              AND g.database = (SELECT oid FROM pg_database WHERE datname = current_database())
+              AND a.backend_start < (SELECT backend_start FROM pg_stat_activity WHERE pid = pg_backend_pid())
+            GROUP BY g.pid, g.database`,
+          params: [GENERATION_CLASS, PROCESS_CLASS],
+          row: z.object({ pid: z.number(), present: z.boolean() }),
+        });
+        const legacy = new Set(
+          rows.filter((r) => !r.present).map((r) => r.pid),
+        );
+        const fresh = [...legacy].filter((pid) => !unwaitable.has(pid));
+        if (fresh.length > 0) {
+          // A process from before presence locks: nothing to wait on. Loud,
+          // since what waits here then runs while it is still connected.
+          reportServerError({
+            message: `[database] ${fresh.length} older process(es) predate presence locks (pids ${fresh.join(", ")}): awaitOlderProcessesGone cannot wait for them`,
+            stack: null,
+            errorType: "OlderProcessUnwaitable",
+          });
+        }
+        unwaitable = legacy;
+        const older = rows.filter((r) => r.present).map((r) => r.pid);
+        if (older.length === 0) return;
+        log(
+          `[database] waiting on ${older.length} older process(es) still connected`,
+        );
+        for (const pid of older) {
+          try {
+            await c.query("SELECT pg_advisory_lock_shared($1, $2)", [
+              PROCESS_CLASS,
+              pid,
+            ]);
+            await c.query("SELECT pg_advisory_unlock_shared($1, $2)", [
+              PROCESS_CLASS,
+              pid,
+            ]);
+          } catch (err) {
+            if ((err as { code?: string }).code !== LOCK_NOT_AVAILABLE) {
+              throw err;
+            }
+            // Still connected after LOCK_WAIT: scan again and keep waiting.
+          }
+        }
+      }
     },
 
     async awaitGenerationsGone(knowing) {

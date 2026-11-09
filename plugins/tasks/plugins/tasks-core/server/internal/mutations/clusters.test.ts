@@ -173,7 +173,7 @@ describe("the cluster triggers", () => {
 
   test("a second install of the same set is a no-op", async () => {
     expect(await installDbTriggers(t.db, [taskClusterTriggers])).toEqual([
-      { id: taskClusterTriggers.id, outcome: "unchanged" },
+      { id: taskClusterTriggers.id, outcome: "unchanged", kept: 0 },
     ]);
   });
 

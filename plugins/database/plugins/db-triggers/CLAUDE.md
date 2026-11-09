@@ -50,7 +50,11 @@ export const clusterTriggers = defineDbTriggers({
   functions. With `{ sweep: { schema } }` the caller declares EVERY set living
   in that schema, and a set stamped there that nobody declares any more (a
   removed rollup, a removed table's `updatedAt`) is dropped whole and reported
-  `dropped`. A set its plugin installs by its own call is claimed with
+  `dropped`. `keep` (a predicate over `{ schema, table, name }`) leaves an
+  owned-but-undeclared trigger in place instead — the expand half of a removal
+  that earlier-booted code still relies on — reported as the set's `kept`
+  count; while one is kept no function is dropped, and a later install without
+  `keep` drops it (the change feed's deferred removal). A set its plugin installs by its own call is claimed with
   `DbTriggerClaim({ id, reason })` and passed as `sweep.installedElsewhere`,
   which the sweep spares (a claimed id also declared in the call throws). Only
   the boot schema layer passes a sweep (`public`): its list is
@@ -131,6 +135,7 @@ export const clusterTriggers = defineDbTriggers({
     - `DbTriggerInstall`
     - `DbTriggerSet`
     - `InstallDbTriggersOptions`
+    - `KeepTrigger`
   - Exports (values):
     - `DbTrigger`
     - `DbTriggerClaim`

@@ -77,7 +77,18 @@ rebuild) has already committed.
     SHARE ROW EXCLUSIVE, never a DROP's ACCESS EXCLUSIVE, so the old backend's
     readers never wait on it.
   - **Ownership by function.** A `live_state_*` trigger left on a table now
-    excluded (opt-out, rollup, produced) calls a feed function and is dropped.
+    excluded (opt-out, rollup, produced) calls a feed function and is dropped
+    — on a produced table at once (its producer routes the same writes, A2′);
+    on any other, only once every process that booted before this one is gone.
+  - **Removal is deferred** (`keepUnfed`, `internal/unfed-removal.ts`). The
+    boot install keeps such a trigger (`installDbTriggers`' `keep`): the
+    previous backend may still route that table, and it still serves — briefly
+    during a hot swap, for good when the deploy is abandoned after this backend
+    booted (2026-11-08: a failed main build dropped
+    `conversations_ext_sdk_agent`'s triggers under the old backend, whose stop
+    banner then never moved). `onReady` waits on the driver's
+    `awaitOlderProcessesGone()` and installs again without keeping, which
+    drops them. A kept trigger only writes changelog rows nothing routes.
   - **Asserted after.** Boot never proceeds on a half-installed feed.
 - **One transaction per table.** The old design DROP+CREATEd every table in
   ONE transaction: it held exclusive locks on an alphabetical prefix while

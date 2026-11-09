@@ -21586,6 +21586,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DbTriggerInstall`
           - `DbTriggerSet`
           - `InstallDbTriggersOptions`
+          - `KeepTrigger`
         - Exports (values):
           - `DbTrigger`
           - `DbTriggerClaim`

@@ -15,6 +15,7 @@ export {
   installDbTriggers,
   type DbTriggerInstall,
   type InstallDbTriggersOptions,
+  type KeepTrigger,
 } from "./internal/install";
 
 export default {

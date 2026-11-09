@@ -91,6 +91,17 @@ export interface DatabaseDriverImpl {
   awaitGenerationsGone(
     knowing: readonly number[],
   ): Promise<() => Promise<void>>;
+  /**
+   * Resolves once every process that booted on this database before this
+   * one (held its schema generation earlier) is gone — whatever its code. A
+   * wait, never a poll. For a removal any earlier-booted code may still rely
+   * on, migration or not: the previous backend of a hot swap — or one that
+   * keeps serving because the deploy was abandoned after this process booted.
+   *
+   * The desktop waits on each older process's presence lock (held with its
+   * generation); PGlite, one process, resolves at once.
+   */
+  awaitOlderProcessesGone(): Promise<void>;
 }
 
 /** What a LISTEN session (`DatabaseDriverImpl.listen`) reports to its opener. */

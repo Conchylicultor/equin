@@ -74,7 +74,11 @@ describe("sweep", () => {
     const swept = await installDbTriggers(testDb.db, [layer], {
       sweep: { schema: "public" },
     });
-    expect(swept).toContainEqual({ id: "elsewhere.b", outcome: "dropped" });
+    expect(swept).toContainEqual({
+      id: "elsewhere.b",
+      outcome: "dropped",
+      kept: 0,
+    });
     expect(await triggerNames()).toEqual(["layer_a_fn_t"]);
   });
 
@@ -145,7 +149,9 @@ describe('commit: "per-table"', () => {
       expect(names).toContain("pt_ab_t_a");
       expect(names).not.toContain("pt_ab_t_b");
       await writer.query("ROLLBACK");
-      expect(await install).toEqual([{ id: "pt.ab", outcome: "installed" }]);
+      expect(await install).toEqual([
+        { id: "pt.ab", outcome: "installed", kept: 0 },
+      ]);
     } finally {
       await writer.end();
       await observer.end();
@@ -182,10 +188,10 @@ describe('commit: "per-table"', () => {
     });
     expect(
       await installDbTriggers(testDb.db, [both], { commit: "per-table" }),
-    ).toEqual([{ id: "pt.mixed", outcome: "installed" }]);
+    ).toEqual([{ id: "pt.mixed", outcome: "installed", kept: 0 }]);
     expect(
       await installDbTriggers(testDb.db, [both], { commit: "per-table" }),
-    ).toEqual([{ id: "pt.mixed", outcome: "unchanged" }]);
+    ).toEqual([{ id: "pt.mixed", outcome: "unchanged", kept: 0 }]);
 
     const fewer = defineDbTriggers({
       id: "pt.mixed",
@@ -197,10 +203,54 @@ describe('commit: "per-table"', () => {
     });
     expect(
       await installDbTriggers(testDb.db, [fewer], { commit: "per-table" }),
-    ).toEqual([{ id: "pt.mixed", outcome: "installed" }]);
+    ).toEqual([{ id: "pt.mixed", outcome: "installed", kept: 0 }]);
     const names = await triggerNames();
     expect(names).toContain("pt_mixed_keep");
     expect(names).toContain("pt_mixed_a");
     expect(names).not.toContain("pt_mixed_gone");
+  });
+});
+
+describe("keep", () => {
+  test("leaves an owned-but-undeclared trigger in place until an install without it", async () => {
+    await testDb.db.execute(
+      sql.raw(`CREATE TABLE t_keep (id text PRIMARY KEY)`),
+    );
+    const fn = {
+      name: "keep_fn",
+      args: "",
+      ddl: `CREATE OR REPLACE FUNCTION keep_fn() RETURNS trigger AS $f$ BEGIN RETURN NULL; END; $f$ LANGUAGE plpgsql`,
+    };
+    const trigger = (table: string) => ({
+      name: `keep_${table}`,
+      table,
+      ddl: `CREATE OR REPLACE TRIGGER keep_${table} AFTER INSERT ON ${table} FOR EACH STATEMENT EXECUTE FUNCTION keep_fn()`,
+    });
+    const both = defineDbTriggers({
+      id: "keep.set",
+      functions: [fn],
+      triggers: [trigger("t_a"), trigger("t_keep")],
+    });
+    await installDbTriggers(testDb.db, [both], { commit: "per-table" });
+
+    // `t_keep` no longer declared: the earlier-booted code still relies on it.
+    const fewer = defineDbTriggers({
+      id: "keep.set",
+      functions: [fn],
+      triggers: [trigger("t_a")],
+    });
+    const keep = (t: { table: string }) => t.table === "t_keep";
+    expect(
+      await installDbTriggers(testDb.db, [fewer], {
+        commit: "per-table",
+        keep,
+      }),
+    ).toEqual([{ id: "keep.set", outcome: "unchanged", kept: 1 }]);
+    expect(await triggerNames()).toContain("keep_t_keep");
+
+    expect(
+      await installDbTriggers(testDb.db, [fewer], { commit: "per-table" }),
+    ).toEqual([{ id: "keep.set", outcome: "installed", kept: 0 }]);
+    expect(await triggerNames()).not.toContain("keep_t_keep");
   });
 });

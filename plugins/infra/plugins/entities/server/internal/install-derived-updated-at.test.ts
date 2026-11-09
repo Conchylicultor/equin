@@ -173,10 +173,10 @@ afterAll(async () => {
 describe("installing the derived-updatedAt set", () => {
   test("installs once, then is a catalog-only no-op", async () => {
     expect(await installDbTriggers(t.db, [spec.triggerSet])).toEqual([
-      { id: "updated-at.dua_items", outcome: "installed" },
+      { id: "updated-at.dua_items", outcome: "installed", kept: 0 },
     ]);
     expect(await installDbTriggers(t.db, [spec.triggerSet])).toEqual([
-      { id: "updated-at.dua_items", outcome: "unchanged" },
+      { id: "updated-at.dua_items", outcome: "unchanged", kept: 0 },
     ]);
   });
 
@@ -185,7 +185,7 @@ describe("installing the derived-updatedAt set", () => {
       sql`DROP TRIGGER "dua_items_derive_updated_at" ON dua_items`,
     );
     expect(await installDbTriggers(t.db, [spec.triggerSet])).toEqual([
-      { id: "updated-at.dua_items", outcome: "installed" },
+      { id: "updated-at.dua_items", outcome: "installed", kept: 0 },
     ]);
   });
 
@@ -204,11 +204,11 @@ describe("installing the derived-updatedAt set", () => {
       ).x;
     const before = await xmin();
     expect(await installDbTriggers(t.db, [spec.triggerSet])).toEqual([
-      { id: "updated-at.dua_items", outcome: "installed" },
+      { id: "updated-at.dua_items", outcome: "installed", kept: 0 },
     ]);
     expect(await xmin()).toBe(before);
     expect(await installDbTriggers(t.db, [spec.triggerSet])).toEqual([
-      { id: "updated-at.dua_items", outcome: "unchanged" },
+      { id: "updated-at.dua_items", outcome: "unchanged", kept: 0 },
     ]);
   });
 

@@ -29,7 +29,12 @@ let sessions: ReturnType<typeof createDbClient>[] = [];
 
 // Another process of generation `g`: a session holding its shared lock, the
 // way `holdSchemaGeneration` takes it.
-async function processOf(g: number): Promise<() => Promise<void>> {
+// `present`: it also holds its presence lock, as `hold` takes it (code from
+// before presence locks holds none).
+async function processOf(
+  g: number,
+  { present = true }: { present?: boolean } = {},
+): Promise<() => Promise<void>> {
   const c = createDbClient({
     name: "schema-generation",
     connectionString: t.connectionString,
@@ -37,6 +42,9 @@ async function processOf(g: number): Promise<() => Promise<void>> {
   sessions.push(c);
   await c.connect();
   await c.query("SELECT pg_advisory_lock_shared(1835103860, $1)", [g | 0]);
+  if (present) {
+    await c.query("SELECT pg_advisory_lock(1835103861, pg_backend_pid())");
+  }
   return async () => {
     sessions = sessions.filter((s) => s !== c);
     await c.end();
@@ -117,4 +125,41 @@ test("holding twice is a bug, refused", async () => {
     error = e;
   }
   expect(String(error)).toContain("called twice");
+});
+
+test("awaitOlderProcessesGone ends when the last process booted earlier goes, whatever its generation", async () => {
+  // Same generation as the waiter: an abandoned deploy's previous backend
+  // runs the same migrations, and is still older code.
+  const exitOld = await processOf(NEW);
+  const exitOlder = await processOf(OLD);
+  const locks = createSchemaGenerationLocks({
+    connectionString: () => t.connectionString,
+    log: () => {},
+  });
+  await locks.hold(NEW);
+  // Booted after the waiter: never waited on.
+  await processOf(NEWER);
+  let done = false;
+  const waiting = locks.awaitOlderProcessesGone().then(() => {
+    done = true;
+  });
+
+  await Bun.sleep(300);
+  expect(done).toBe(false);
+  await exitOld();
+  await Bun.sleep(300);
+  expect(done).toBe(false);
+  await exitOlder();
+  await waiting;
+  expect(done).toBe(true);
+});
+
+test("awaitOlderProcessesGone: nothing older connected resolves at once", async () => {
+  const locks = createSchemaGenerationLocks({
+    connectionString: () => t.connectionString,
+    log: () => {},
+  });
+  await locks.hold(NEW);
+  await processOf(NEW);
+  await locks.awaitOlderProcessesGone();
 });

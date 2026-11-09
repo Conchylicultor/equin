@@ -20,6 +20,11 @@ import { excludedTableNames } from "./internal/exclusion";
 import { CHANGE_FEED_TRIGGER_SET } from "./internal/triggers";
 import { installFeed } from "./internal/install-feed";
 import {
+  removeUnfedTriggers,
+  setPendingUnfedRemoval,
+} from "./internal/unfed-removal";
+import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
+import {
   dropPendingProducerChanges,
   producedTableNames,
 } from "./internal/producer";
@@ -136,9 +141,17 @@ export default {
     // TRIGGER can wait on the previous backend's readers during a hot-swap:
     // the driver's boot DDL bound widens the query deadline for the install's
     // own queries (the desktop's; PGlite adds none).
-    await DatabaseDriver.get().bootDdl(
+    // A trigger on a table this code no longer feeds is KEPT here — the
+    // previous backend may still route it — and dropped in `onReady` once
+    // every older process is gone (./internal/unfed-removal).
+    const { kept } = await DatabaseDriver.get().bootDdl(
       () => installFeed(db, inputs),
       "boot: change-feed trigger rebuild",
+    );
+    setPendingUnfedRemoval(
+      kept > 0
+        ? { exclusions: inputs.exclusions, layouts: inputs.layouts }
+        : null,
     );
     // `installFeed` above creates `live_state_changelog`, which did not exist
     // yet when the database plugin took its own snapshot of the public relations.
@@ -169,9 +182,15 @@ export default {
   // engine ships its contributor wherever this plugin ships). Asserted after
   // the listener starts, so a graph lacking one still recomputes its readers
   // while the failure is reported.
+  //
+  // The kept triggers' removal waits here, off the barrier: it is what the
+  // previous backend's exit (after the swap) unblocks.
   onReady() {
     startListener();
     assertChangelogRetained(ChangelogRetention.getContributions());
+    void runTracked("change-feed:remove-unfed-triggers", () =>
+      removeUnfedTriggers(),
+    );
   },
   async onShutdown() {
     // A producer's pending window must not fire into a runtime tearing down.

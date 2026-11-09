@@ -790,6 +790,18 @@ export function getCoveredTables(): readonly string[] {
 // The notify functions are committed first, so every trigger, old or new, calls
 // the current function; each table's three triggers are replaced together.
 //
+// REMOVAL IS DEFERRED at boot (`keepUnfed`): a trigger left on a table this
+// code no longer feeds (newly `ExcludeFromChangeFeed`, now feed-exempt) stays
+// until every process that booted before this one is gone — the previous
+// backend's code may still route that table, and it is still serving: briefly
+// during a hot swap, for good when the deploy is abandoned after this backend
+// booted (2026-11-08: a failed main build dropped `conversations_ext_sdk_agent`'s
+// triggers under the old backend, whose stop banner then never moved). The
+// change feed's `onReady` then installs again without it (`removeUnfedTriggers`).
+// A kept trigger costs only its changelog rows; nothing routes them. A
+// produced table's trigger is the exception — dropped at once, since its
+// producer routes the same writes (A2′).
+//
 // `db` is passed in (like rebuildDerivedViews / runMigrations) so this module
 // never imports @plugins/database/server — that would cycle (database/server
 // calls into the change-feed plugin's onReadyBlocking).
@@ -803,7 +815,8 @@ export async function rebuildTriggers(
    * assertion that follows reports it.
    */
   requirements: readonly TableLayoutRequirement[],
-): Promise<void> {
+  { keepUnfed = false }: { keepUnfed?: boolean } = {},
+): Promise<{ kept: number }> {
   const exclude = buildDenylist(exclusions);
   const optedOut = exclusions.optedOut;
   if (optedOut.size > 0) {
@@ -860,12 +873,24 @@ export async function rebuildTriggers(
     // A set is functions and the triggers calling them: with no table to feed
     // there is nothing to install (a throwaway database with no tables).
     log.publish(`[change-feed] no table to feed — nothing installed`);
-    return;
+    return { kept: 0 };
   }
   const set = feedTriggerSet(triggers, await adoptableTables(db, triggers));
   const [install] = await installDbTriggers(db, [set], {
     commit: "per-table",
+    ...(keepUnfed
+      ? {
+          keep: (t) =>
+            t.schema === "public" && !exclusions.produced.has(t.table),
+        }
+      : {}),
   });
+  const kept = install?.kept ?? 0;
+  if (kept > 0) {
+    log.publish(
+      `[change-feed] kept ${kept} trigger(s) on tables no longer fed until every older process is gone`,
+    );
+  }
   await db.execute(
     drizzleSql.raw(
       `DROP TABLE IF EXISTS "public"."${LIVE_STATE_TRIGGER_STATE_TABLE}"`,
@@ -875,12 +900,13 @@ export async function rebuildTriggers(
     log.publish(
       `[change-feed] up to date (${coveredTables.length} table(s)) — nothing re-run`,
     );
-    return;
+    return { kept };
   }
   log.publish(
     `[change-feed] installed the live_state trigger set over ${coveredTables.length} table(s) (the db-triggers log names each table re-run)`,
   );
   await warnOnCoverageGaps(db, exclude);
+  return { kept };
 }
 
 const TriggerNameRowSchema = z.object({ tgname: z.string() });

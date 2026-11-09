@@ -54,7 +54,9 @@ export interface FeedInstallInputs {
  *  0. D6: every DB-backed resource declares its reads (none is unrouted).
  *  1. A2′ (declarations) + A3p: a produced table is neither opted out nor a
  *     rollup, and no route on it needs a carried column.
- *  2. The trigger rebuild (`rebuildTriggers`), produced tables denylisted.
+ *  2. The trigger rebuild (`rebuildTriggers`), produced tables denylisted,
+ *     a trigger on a table no longer fed kept (`keepUnfed`) — the count is
+ *     returned, for `onReady` to remove once older processes are gone.
  *  3. A2′ (catalog): no `live_state_*` trigger survived on a produced table;
  *     no deferred trigger but the end marker sits on a triggered table or on
  *     the changelog (it would NOTIFY after the marker).
@@ -69,7 +71,7 @@ export interface FeedInstallInputs {
 export async function installFeed(
   db: NodePgDatabase,
   inputs: FeedInstallInputs,
-): Promise<void> {
+): Promise<{ kept: number }> {
   const {
     exclusions,
     layouts,
@@ -86,7 +88,9 @@ export async function installFeed(
     exclusions.feedExempt,
     layouts,
   );
-  await rebuildTriggers(db, exclusions, layouts);
+  const { kept } = await rebuildTriggers(db, exclusions, layouts, {
+    keepUnfed: true,
+  });
   await assertNoTriggerOnProduced(db, exclusions.produced);
   // The end marker must be the transaction's last NOTIFY: a deferred trigger
   // writing at commit would emit after it (./txn-end).
@@ -132,4 +136,5 @@ export async function installFeed(
   // table has no trigger to read, and A3p above already refused a carried
   // column on one.
   await assertRouteLayoutsInstalled(db, layouts);
+  return { kept };
 }

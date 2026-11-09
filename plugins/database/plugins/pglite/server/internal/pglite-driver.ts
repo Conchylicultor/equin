@@ -202,6 +202,7 @@ export function createPgliteDriver(
     // session, so there is nothing to hold and nothing to wait for.
     holdSchemaGeneration: () => Promise.resolve(),
     awaitGenerationsGone: () => Promise.resolve(() => Promise.resolve()),
+    awaitOlderProcessesGone: () => Promise.resolve(),
     // LISTEN on the one in-process connection: every NOTIFY a commit sends
     // reaches the root client's `onNotification` (channel and payload, one
     // queue, so the order holds across channels), filtered to this session's

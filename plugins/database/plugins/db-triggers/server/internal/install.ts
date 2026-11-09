@@ -279,6 +279,11 @@ interface Plan {
   }[];
   readonly dropTriggers: readonly DropTrigger[];
   readonly dropFunctions: readonly DropFunction[];
+  /**
+   * Owned but undeclared, and left in place (`InstallDbTriggersOptions.keep`):
+   * never applied, and no part of whether the plan is empty.
+   */
+  readonly kept: readonly DropTrigger[];
 }
 
 function isEmpty(p: Plan): boolean {
@@ -309,12 +314,14 @@ function plan(
   catalog: Catalog,
   sets: readonly DbTriggerSet[],
   sweep: Sweep | undefined,
+  keep: KeepTrigger | undefined,
 ): Plan {
   const functions: { set: DbTriggerSet; f: DbFunctionDdl }[] = [];
   const triggers: { set: DbTriggerSet; t: DbTriggerDdl }[] = [];
   const restamps: { set: DbTriggerSet; t: DbTriggerDdl; def: string }[] = [];
   const dropTriggers: DropTrigger[] = [];
   const dropFunctions: DropFunction[] = [];
+  const kept: DropTrigger[] = [];
 
   const declaredIds = new Set(sets.map((s) => s.id));
   // A set stamped in the swept schema is removed only when nobody declares
@@ -368,15 +375,15 @@ function plan(
       fnOwner.get(r.fn) ??
       (stamped !== null && swept(stamped, r.schema) ? stamped : null);
     if (owner === null) continue;
-    dropTriggers.push({
-      owner,
-      schema: r.schema,
-      table: r.table,
-      name: r.name,
-    });
+    const drop = { owner, schema: r.schema, table: r.table, name: r.name };
+    if (keep?.(drop) === true) kept.push(drop);
+    else dropTriggers.push(drop);
   }
 
   for (const f of catalog.stampedFunctions) {
+    // A kept trigger may call any function its set ever owned: none goes
+    // while one is kept.
+    if (kept.length > 0) break;
     if (declaredOids.has(f.oid)) continue;
     const stamped = stampOwner(f.comment);
     if (stamped === null) continue;
@@ -385,7 +392,7 @@ function plan(
     }
   }
 
-  return { functions, triggers, restamps, dropTriggers, dropFunctions };
+  return { functions, triggers, restamps, dropTriggers, dropFunctions, kept };
 }
 
 // The stamp the installer's first version left on every trigger of a set: the
@@ -426,6 +433,7 @@ function tableSlice(p: Plan, table: string): Plan {
       (d) => `${d.schema}.${d.table}` === table,
     ),
     dropFunctions: [],
+    kept: [],
   };
 }
 
@@ -560,7 +568,16 @@ export interface DbTriggerInstall {
   readonly id: string;
   /** `dropped`: a set nobody declares any more, removed by a sweep. */
   readonly outcome: "installed" | "unchanged" | "dropped";
+  /** How many of its owned-but-undeclared triggers `keep` left in place. */
+  readonly kept: number;
 }
+
+/** Which owned-but-undeclared trigger to leave in place (`InstallDbTriggersOptions.keep`). */
+export type KeepTrigger = (trigger: {
+  readonly schema: string;
+  readonly table: string;
+  readonly name: string;
+}) => boolean;
 
 interface Sweep {
   readonly schema: string;
@@ -578,6 +595,14 @@ export interface InstallDbTriggersOptions {
    * Only the boot schema layer, which holds the complete list, passes it.
    */
   readonly sweep?: Sweep;
+  /**
+   * An owned-but-undeclared trigger this answers true for is left in place
+   * rather than dropped — the expand half of a removal that code which booted
+   * earlier still relies on (the change feed's trigger on a table its new
+   * code no longer feeds, read by the previous backend). A later install
+   * without it drops it. While any trigger is kept, no function is dropped.
+   */
+  readonly keep?: KeepTrigger;
 }
 
 /**
@@ -604,6 +629,7 @@ async function lockAndPlan(
   first: Plan,
   select: (p: Plan) => Plan,
   read: (tx: DbTriggerExec) => Promise<Catalog>,
+  keep: KeepTrigger | undefined,
 ): Promise<Plan> {
   const locked = new Set<string>();
   let p = select(first);
@@ -616,7 +642,7 @@ async function lockAndPlan(
       );
       locked.add(id);
     }
-    p = select(plan(await read(tx), sets, sweep));
+    p = select(plan(await read(tx), sets, sweep, keep));
   }
 }
 
@@ -652,8 +678,8 @@ export async function installDbTriggers(
       `db-triggers: commit "per-table" commits each table on its own, so it takes the pool, never a transaction.`,
     );
   }
-  const sweep = options.sweep;
-  const first = plan(await readCatalog(db, sets), sets, sweep);
+  const { sweep, keep } = options;
+  const first = plan(await readCatalog(db, sets), sets, sweep, keep);
   const done = new Set<string>();
   const run = async (
     select: (p: Plan) => Plan,
@@ -662,7 +688,7 @@ export async function installDbTriggers(
       readCatalog(tx, sets),
   ) => {
     await db.transaction(async (tx) => {
-      const p = await lockAndPlan(tx, sets, sweep, first, select, read);
+      const p = await lockAndPlan(tx, sets, sweep, first, select, read, keep);
       await body(tx, p);
       for (const id of touched(p)) done.add(id);
     });
@@ -692,22 +718,25 @@ export async function installDbTriggers(
       await run(dropSlice, (tx, p) => applyFunctionDrops(tx, p));
     }
   }
-  const after = plan(await readCatalog(db, sets), sets, sweep);
+  const after = plan(await readCatalog(db, sets), sets, sweep, keep);
   if (!isEmpty(after)) {
     throw new Error(
       `db-triggers: trigger set missing or out of date after install: ${touched(after).join(", ")}.`,
     );
   }
   const declared = new Set(sets.map((s) => s.id));
+  const keptOf = (id: string) =>
+    after.kept.filter((k) => k.owner === id).length;
   return [
     ...sets.map((s) => ({
       id: s.id,
       outcome: done.has(s.id) ? ("installed" as const) : ("unchanged" as const),
+      kept: keptOf(s.id),
     })),
     ...[...done]
       .filter((id) => !declared.has(id))
       .sort()
-      .map((id) => ({ id, outcome: "dropped" as const })),
+      .map((id) => ({ id, outcome: "dropped" as const, kept: 0 })),
   ];
 }
 
