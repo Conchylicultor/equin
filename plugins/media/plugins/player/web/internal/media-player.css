@@ -31,7 +31,7 @@
 .mp[data-kind="video"] {
   overflow: hidden;
 }
-.mp[data-kind="video"] video {
+.mp[data-kind="video"] .mp-media {
   display: block;
   width: 100%;
   max-height: inherit;
@@ -46,7 +46,7 @@
   align-items: center;
   justify-content: center;
 }
-.mp:fullscreen video {
+.mp:fullscreen .mp-media {
   max-height: 100vh;
 }
 
@@ -65,7 +65,7 @@ html[data-pip] .mp {
   display: flex;
   align-items: center;
 }
-html[data-pip] .mp video {
+html[data-pip] .mp .mp-media {
   height: 100%;
   max-height: 100vh;
 }
@@ -229,6 +229,8 @@ html[data-pip] .mp-fs {
 .mp-bubble {
   position: absolute;
   bottom: 26px;
+  /* Its own size wherever it sits: not shrunk to the bar's room right of it. */
+  width: max-content;
   transform: translateX(-50%);
   display: flex;
   flex-direction: column;
@@ -248,6 +250,7 @@ html[data-pip] .mp-fs {
 /* The frame under the pointer (video only): black until its first seek lands. */
 .mp-preview {
   display: block;
+  max-width: none;
   border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--background);

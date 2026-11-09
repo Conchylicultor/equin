@@ -478,6 +478,7 @@ export function Player({
 
   const common = {
     ref: setMediaRef,
+    className: "mp-media",
     src,
     autoPlay,
     preload: autoPlay || played ? "auto" : "metadata",
