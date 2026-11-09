@@ -108,7 +108,7 @@ describe("edit_task", () => {
       editTask({ task_id: "R", title: "x" }, SUP, s.ports),
       editTask({ task_id: "M", title: "x" }, SUP, s.ports),
       editTask({ task_id: "A", add_after: ["Y"] }, SUP, s.ports),
-      editTask({ task_id: "A", remove_after: ["R"] }, SUP, s.ports),
+      editTask({ task_id: "R", remove_after: ["A"] }, SUP, s.ports),
       editTask({ task_id: "nope", title: "x" }, SUP, s.ports),
     ]);
     expect(cases.map((c) => c.kind === "refused" && c.reason)).toEqual([
@@ -120,6 +120,22 @@ describe("edit_task", () => {
       "not-found",
     ]);
     expect(s.applied).toEqual([]);
+  });
+
+  test("the root as the other end of a dependency: a task below it stops (or starts) waiting on it", async () => {
+    // add_task once wired a supervisor's task after the root by default; the
+    // root stays in progress all session, so only this edit frees the task.
+    const s = store();
+    expect(
+      await editTask({ task_id: "A", remove_after: ["R"] }, SUP, s.ports),
+    ).toEqual({ kind: "edited", taskId: "A", changed: ["remove_after"] });
+    expect(
+      await editTask({ task_id: "B", add_after: ["R"] }, SUP, s.ports),
+    ).toEqual({ kind: "edited", taskId: "B", changed: ["add_after"] });
+    expect(s.applied).toEqual([
+      { taskId: "A", addAfter: [], removeAfter: ["R"] },
+      { taskId: "B", addAfter: ["R"], removeAfter: [] },
+    ]);
   });
 
   test("no tree, nothing to change, self-dependency, add+remove the same id, a cycle", async () => {

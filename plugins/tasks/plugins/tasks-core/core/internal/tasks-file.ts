@@ -24,16 +24,31 @@ export const TrackFilingGrantSchema = z
 export type TrackFilingGrant = z.infer<typeof TrackFilingGrantSchema>;
 
 /**
+ * What an `after` / `manual` task filed with no `after` runs after:
+ *
+ * - `caller` — the caller's own task: the new task follows its work, and
+ *   launches once that task is done.
+ * - `none` — nothing. For a caller whose task stays in progress while the
+ *   tasks it files run — a supervisor's root — a task waiting on it could
+ *   never launch during the session.
+ */
+export const DEFAULT_AFTERS = ["caller", "none"] as const;
+export const DefaultAfterSchema = z.enum(DEFAULT_AFTERS);
+export type DefaultAfter = z.infer<typeof DefaultAfterSchema>;
+
+/**
  * The `tasks.file` grant: per track, how the agent may file tasks into its
- * subtree. A track absent from the grant is refused. The keys are the task
- * tracks (`tasks/task-track`'s `TASK_TRACKS`, which this leaf cannot import:
- * task-track imports tasks-core) — `tasks`' describe pins them equal at
- * compile time.
+ * subtree. A track absent from the grant is refused. The track keys are the
+ * task tracks (`tasks/task-track`'s `TASK_TRACKS`, which this leaf cannot
+ * import: task-track imports tasks-core) — `tasks`' describe pins them equal
+ * at compile time. `defaultAfter` (absent = `caller`) is what a task filed
+ * with no `after` waits on.
  */
 export const TasksFileGrantSchema = z
   .object({
     main: TrackFilingGrantSchema.optional(),
     sidequest: TrackFilingGrantSchema.optional(),
+    defaultAfter: DefaultAfterSchema.optional(),
   })
   .strict();
 export type TasksFileGrant = z.infer<typeof TasksFileGrantSchema>;

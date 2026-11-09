@@ -5,11 +5,14 @@
  * in-memory store (`manage-tasks.test.ts`).
  *
  * "Its tree" is every task whose nearest mandate is the caller's: a task
- * elsewhere, the mandate's own root (the caller's task), or a nested subtree
- * that names a mandate of its own is refused. Every id an edit names — the
- * task and both ends of each dependency — is checked before anything is
- * written, and the write is one transaction, so a refused edit changes
- * nothing.
+ * elsewhere, or a nested subtree that names a mandate of its own, is refused.
+ * The mandate's own root (the caller's task) is never the task edited or
+ * dropped, but it may be the other end of a dependency: removing the root
+ * from a child's `after` edits only the child (`add_task` once wired a child
+ * after the root by default, and the root stays in progress all session, so
+ * the child could never launch). Every id an edit names — the task and both
+ * ends of each dependency — is checked before anything is written, and the
+ * write is one transaction, so a refused edit changes nothing.
  *
  * `start` decides how the task launches: `armed` queues it for auto-start
  * (it launches once nothing it runs after is unresolved), whatever its track
@@ -117,21 +120,26 @@ function refused(reason: ManageRefusal, message: string): ManageOutcome {
   return { kind: "refused", reason, message };
 }
 
-/** Every id must be a task of the caller's tree, below its root. */
+/** Every id must be a task of the caller's tree: each of `targets` (the task
+ * written) below its root, each of `refs` (the other end of a dependency) the
+ * root included. */
 async function checkInTree(
   conversationId: string,
-  ids: string[],
+  targets: string[],
+  refs: string[],
   ports: ManageTasksPorts,
 ): Promise<ManageOutcome | null> {
   const root = await ports.callerRoot(conversationId);
   if (root === null)
     return refused("no-tree", "Your conversation has no task tree.");
-  for (const id of new Set(ids)) {
+  for (const id of targets)
     if (id === root)
       return refused(
         "root",
-        `${id} is your tree's root (your own task) — only the tasks below it can be edited or dropped.`,
+        `${id} is your tree's root (your own task) — only the tasks below it can be edited or dropped (naming it in another task's add_after / remove_after is fine).`,
       );
+  for (const id of new Set([...targets, ...refs])) {
+    if (id === root) continue;
     const of = await ports.rootOf(id);
     if (of.kind === "not-found") return refused("not-found", `No task ${id}.`);
     if (of.kind === "none" || of.rootTaskId !== root)
@@ -182,7 +190,8 @@ export async function editTask(
 
   const scope = await checkInTree(
     conversationId,
-    [taskId, ...addAfter, ...removeAfter],
+    [taskId],
+    [...addAfter, ...removeAfter],
     ports,
   );
   if (scope) return scope;
@@ -226,7 +235,7 @@ export async function dropTask(
   ports: ManageTasksPorts,
 ): Promise<ManageOutcome> {
   const taskId = input.task_id.trim();
-  const scope = await checkInTree(conversationId, [taskId], ports);
+  const scope = await checkInTree(conversationId, [taskId], [], ports);
   if (scope) return scope;
   await ports.drop(taskId);
   return { kind: "dropped", taskId };

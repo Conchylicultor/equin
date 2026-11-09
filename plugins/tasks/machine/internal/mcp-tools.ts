@@ -123,8 +123,9 @@ sidequest.
 
 - \`now\` — filed under your task with no dependency, and armed: an agent
   launches on it right away. \`after\` is an error.
-- \`after\` — runs after the tasks in \`after\` (default: your current task),
-  armed: an agent launches on it once they are done.
+- \`after\` — runs after the tasks in \`after\` (default: your current task,
+  unless your mandate says otherwise — see "No \`after\`" below), armed: an
+  agent launches on it once they are done.
 - \`manual\` — wired after the same way, but never armed: it waits for a
   person to start it. \`model\` is an error.
 
@@ -134,7 +135,7 @@ agent on its own, a misfiled sidequest just waits for a human.
 
 ## after / relation — the dependency wiring
 
-- One \`after\` task (or none: your current task) — \`relation\` says how
+- One \`after\` task (or none: your current task — see "No \`after\`" below) — \`relation\` says how
   the new task connects to it:
   - \`followup\` (default): the new task depends on it AND (main track) its
     existing dependents are rewired to wait on the new task instead — the new
@@ -144,6 +145,15 @@ agent on its own, a misfiled sidequest just waits for a human.
     something must happen before the current work.
 - Several \`after\` tasks — a join: the new task waits on all of them and is
   spliced into no chain. \`relation\` is an error.
+
+**No \`after\`.** Normally it means your current task: the new task is
+blocked until your task is done, and the result's \`after_default\` says so.
+A supervisor's root files differently (its mandate, listed below, says
+"depends on nothing"): its own task stays in progress while the tasks it files
+run, so a task waiting on it could never launch — with no \`after\` the task
+depends on nothing (\`after\` arms it at once), and a \`relation\` needs an
+explicit \`after\`. A task already wired to wait on your task is freed with
+\`edit_task\`'s \`remove_after\`.
 
 ## Examples
 
@@ -189,12 +199,15 @@ then pass the previous call's returned \`task_id\` as \`after\` on each
 subsequent call. The whole chain then hangs off your current (still-open)
 task, so nothing launches until your work here completes — file them
 straight away with start \`after\`; there is no need to ask the user first or
-to file them \`manual\` to avoid launching agents prematurely.
+to file them \`manual\` to avoid launching agents prematurely. (A
+supervisor's root, whose tasks depend on nothing by default, runs the first
+step at once; chain the rest off it with explicit \`after\` ids.)
 
 **Filing a mix?** File the sidequests (no \`after\`) and the main-track chain
 (first call without \`after\`, then chained) from the same task: the
 sidequests hang off your task in parallel, and the main chain takes over its
-place in the dependency graph.`,
+place in the dependency graph (from a supervisor's root, both depend on
+nothing unless you name an \`after\`).`,
   inputSchema: {
     title: z.string().min(1).describe("Short title for the task."),
     description: z
@@ -211,7 +224,7 @@ place in the dependency graph.`,
     ),
     start: TaskFilingStartSchema.describe(
       "`now`: under your task, no dependency, launched right away. " +
-        "`after`: launched once the `after` tasks (default: your task) are done. " +
+        "`after`: launched once the `after` tasks (default: your task, or none for a supervisor's root) are done. " +
         "`manual`: wired the same way, never launched — a person starts it. " +
         "Your mandate lists which modes each track allows.",
     ),
@@ -220,7 +233,7 @@ place in the dependency graph.`,
       .min(1)
       .optional()
       .describe(
-        "With start `after` / `manual`: the task ids it runs after. Defaults to the current conversation's task. " +
+        "With start `after` / `manual`: the task ids it runs after. Defaults to the current conversation's task — or to none when your mandate says so (a supervisor's root); the result's `after_default` says which. " +
           "One id: wired per `relation` (use a previous call's task_id to chain main-track steps linearly). " +
           "Several: a join — waits on all, spliced into no chain. An error with start `now`.",
       ),

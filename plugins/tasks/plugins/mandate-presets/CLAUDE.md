@@ -9,7 +9,9 @@ The named mandates for the code that creates a root task
   on-request`, `exit.clean: on-request`, `flag.raise`.
 - `supervisorMandate` (`supervisor`) — a supervisor's root (the Supervisor
   launch option, `tasks/supervisor-run`). Whole tree: `tasks.file` (`main:
-  now/after/manual`, `sidequest: manual`), `watch.children`, `message.tree`,
+  now/after/manual`, `sidequest: manual` — granted per scope: at the root with
+  `defaultAfter: none`, since the root stays in progress all session and a task
+  waiting on it could never launch), `watch.children`, `message.tree`,
   `flag.raise`, `context.compact`. Root only: `push.policy: on-request`,
   `exit.clean: on-request`, `watch.tree`, `tasks.manage` (edit and drop the
   tree's tasks — the supervisor only, never its workers). Below the root (the workers):

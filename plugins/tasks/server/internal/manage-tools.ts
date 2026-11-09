@@ -127,7 +127,7 @@ const ports: ManageTasksPorts = {
   },
 };
 
-const SCOPE = `Only the tasks of your own task tree (those under your mandate's root, as \`task_tree\` lists them) — never a task elsewhere, nor your tree's root (your own task); anything else is refused.`;
+const SCOPE = `Only the tasks of your own task tree (those under your mandate's root, as \`task_tree\` lists them) — never a task elsewhere, nor your tree's root (your own task) itself; anything else is refused.`;
 
 export const editTaskTool = Mcp.tool({
   name: "edit_task",
@@ -139,7 +139,7 @@ export const editTaskTool = Mcp.tool({
 
 Arming does not change the track: when you turn a sidequest into work on the critical path, also pass \`track: "main"\` (and \`track: "sidequest"\` for the reverse).
 
-${SCOPE} Every id named (the task and each \`add_after\` / \`remove_after\` id) must be in your tree; a refused edit (or one closing a dependency cycle) changes nothing.
+${SCOPE} Every id named (the task and each \`add_after\` / \`remove_after\` id) must be in your tree — the root may be an \`add_after\` / \`remove_after\` id (\`remove_after: [<your task>]\` frees a task wired to wait on yours); a refused edit (or one closing a dependency cycle) changes nothing.
 
 Editing a task whose agent already launched does not reach that agent — message it with \`message_agent\`.`,
   inputSchema: {

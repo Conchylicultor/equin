@@ -300,6 +300,52 @@ describe("add_task start modes", () => {
     expect(s.tasks.size).toBe(2);
   });
 
+  test("no `after`, default grant: runs after the caller's task, and the result says so", async () => {
+    const s = makeStore();
+    const r = await s.file({ title: "M", track: "main" });
+    expect(r.after).toEqual([T]);
+    expect(r.after_default).toContain(`your own task ${T}`);
+    const named = await s.file({ title: "N", track: "main", after: [T] });
+    expect(named.after_default).toBeUndefined();
+  });
+
+  test("defaultAfter none (a supervisor's root): no `after` depends on nothing", async () => {
+    // 2026-11-09: a supervisor's manual tasks were wired after its root, which
+    // stays in progress all session — they could never launch.
+    const s = makeStore(BASELINE_MODELS, { ...ALL, defaultAfter: "none" });
+    const a = await s.file({ title: "A", track: "main", start: "after" });
+    const m = await s.file({ title: "M", track: "main", start: "manual" });
+    const q = await s.file({ title: "Q", track: "sidequest" });
+    // T's own dependent is untouched: nothing spliced, no edge to T.
+    expect(s.edges).toEqual(new Set([`${D}->${T}`]));
+    expect([a.after, m.after, q.after]).toEqual([[], [], []]);
+    // An `after` task with nothing to wait on is armed at once.
+    expect(s.armed.get(a.task_id)).toBe(DEFAULT_MODEL_CHOICE);
+    expect(s.armed.has(m.task_id)).toBe(false);
+    expect(a.after_default).toContain("depends on nothing");
+    // Naming the root explicitly still wires it.
+    const e = await s.file({
+      title: "E",
+      track: "main",
+      start: "manual",
+      after: [T],
+    });
+    expect(s.edges.has(`${e.task_id}->${T}`)).toBe(true);
+  });
+
+  test("defaultAfter none: a relation with no `after` is refused before anything is written", async () => {
+    const s = makeStore(BASELINE_MODELS, { ...ALL, defaultAfter: "none" });
+    expect(
+      s.file({
+        title: "P",
+        track: "main",
+        start: "after",
+        relation: "prerequisite",
+      }),
+    ).rejects.toThrow(/`relation` needs an `after`/);
+    expect(s.tasks.size).toBe(2);
+  });
+
   test("the grant's model is the default; an explicit one wins", async () => {
     const s = makeStore(BASELINE_MODELS, {
       main: { start: ["after"], model: "sonnet" },

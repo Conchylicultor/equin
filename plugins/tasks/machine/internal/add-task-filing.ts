@@ -25,7 +25,7 @@ export interface AddTaskInput {
   track: TaskTrack;
   start: TaskFilingStart;
   /** The tasks the new one runs after (`after` / `manual`); absent = the
-   * caller's task. An error with `now`. */
+   * grant's `defaultAfter` (the caller's task, or none). An error with `now`. */
   after?: string[];
   /** Single `after` only; absent = `followup`. */
   relation?: AddTaskRelation;
@@ -76,6 +76,9 @@ export interface AddTaskResult {
   group_id: string;
   /** The armed model, or null — a `manual` task is never armed. */
   model: ModelChoice | null;
+  /** Set when `after` was omitted: what the task was wired to instead, in
+   * words — so the caller sees a dependency it did not name. */
+  after_default?: string;
 }
 
 /** The tracks and start modes a grant allows, as the agent reads them (the
@@ -89,7 +92,12 @@ export function describeFilingGrant(grant: TasksFileGrant): string {
       `track "${track}": start ${g.start.map((s) => `"${s}"`).join(" | ")}${model}`,
     ];
   });
-  return tracks.length > 0 ? tracks.join("; ") : "no track";
+  if (tracks.length === 0) return "no track";
+  const after =
+    grant.defaultAfter === "none"
+      ? '; with no `after`, an "after" / "manual" task depends on nothing (not on your own task, which stays in progress while the tasks you file run)'
+      : "";
+  return `${tracks.join("; ")}${after}`;
 }
 
 /** Refuse, before anything is written, a filing the grant or the parameters
@@ -116,7 +124,15 @@ function checkFiling(
     throw new Error('`relation` is meaningless with start "now": drop it.');
   if (input.after !== undefined && input.after.length === 0)
     throw new Error(
-      "`after` is empty: omit it to run after your task, or name the tasks.",
+      "`after` is empty: omit it for your mandate's default (your own task, or nothing for a supervisor's root), or name the tasks.",
+    );
+  if (
+    input.relation !== undefined &&
+    input.after === undefined &&
+    grant.defaultAfter === "none"
+  )
+    throw new Error(
+      "`relation` needs an `after`: with none, your task is filed depending on nothing (your own task stays in progress while it runs). Name the task it relates to.",
     );
   if (
     input.relation !== undefined &&
@@ -150,18 +166,26 @@ export async function fileAddTask(
   conversationId: string,
   ports: AddTaskPorts,
 ): Promise<AddTaskResult> {
-  const model = checkFiling(
-    input,
-    await ports.grant(conversationId),
-    ports.modelCatalog(),
-  );
+  const grant = await ports.grant(conversationId);
+  const model = checkFiling(input, grant, ports.modelCatalog());
 
   const conv = await ports.getConversation(conversationId);
   if (!conv) throw new Error(`Unknown conversation "${conversationId}"`);
   const currentTaskId = conv.taskId;
 
+  // No `after`: the grant says whether the task follows the caller's own
+  // (`caller`, the default) or depends on nothing (`none` — a caller whose
+  // task stays in progress while what it files runs, a supervisor's root).
+  const defaultAfter = grant?.defaultAfter ?? "caller";
+  const afterOmitted = input.start !== "now" && input.after === undefined;
   const after =
-    input.start === "now" ? [] : [...new Set(input.after ?? [currentTaskId])];
+    input.start === "now"
+      ? []
+      : [
+          ...new Set(
+            input.after ?? (defaultAfter === "caller" ? [currentTaskId] : []),
+          ),
+        ];
   for (const id of after) {
     if (!(await ports.getTask(id)))
       throw new Error(`\`after\` task "${id}" not found`);
@@ -234,5 +258,13 @@ export async function fileAddTask(
     relation,
     group_id: currentTaskId,
     model,
+    ...(afterOmitted
+      ? {
+          after_default:
+            defaultAfter === "caller"
+              ? `No \`after\`: it runs after your own task ${currentTaskId} — blocked until that task is done. To have it wait on something else, name it in \`after\`.`
+              : `No \`after\`: it depends on nothing — not on your own task ${currentTaskId}, which stays in progress while the tasks you file run${model === null ? "" : ", so it launches now"}.`,
+        }
+      : {}),
   };
 }

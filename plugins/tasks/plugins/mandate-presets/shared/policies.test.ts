@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { scopeKey } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
 import { exitClean } from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities/core";
-import { tasksManage } from "@plugins/tasks/plugins/tasks-core/core";
+import { tasksFile, tasksManage } from "@plugins/tasks/plugins/tasks-core/core";
 import { interactivePolicy, supervisorPolicy } from "./policies";
 
 describe("exit.clean in the presets", () => {
@@ -28,5 +28,21 @@ describe("tasks.manage in the presets", () => {
     expect(policy[tasksManage.id]).toBeUndefined();
     expect(policy[scopeKey("root")]).toMatchObject({ [tasksManage.id]: true });
     expect(policy[scopeKey("below")]).not.toHaveProperty(tasksManage.id);
+  });
+});
+
+describe("tasks.file in the presets", () => {
+  test("a supervisor's root files with no default dependency, its workers after their own task", () => {
+    expect(interactivePolicy()[tasksFile.id]).not.toHaveProperty(
+      "defaultAfter",
+    );
+    const policy = supervisorPolicy() as Record<string, unknown>;
+    expect(policy[tasksFile.id]).toBeUndefined();
+    expect(policy[scopeKey("root")]).toMatchObject({
+      [tasksFile.id]: { defaultAfter: "none" },
+    });
+    expect(
+      (policy[scopeKey("below")] as Record<string, unknown>)[tasksFile.id],
+    ).not.toHaveProperty("defaultAfter");
   });
 });
