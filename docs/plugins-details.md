@@ -48535,7 +48535,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `activationProps`
           - `browserTabAddressSink`
-          - `clickProps`
           - `keepsOthers`
           - `linkGestureProps`
           - `linkProps`
@@ -49928,11 +49927,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `welcomePane.Actions` "title" → `PaneTitleItem`
           - `workflow-node.actions` "title" → `PaneTitleItem`
           - `worktreeCleanupPane.Actions` "title" → `PaneTitleItem`
-        - Uses: 44 symbols — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Uses: 43 symbols — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `primitives/css/ui-kit` ×4
-          - `primitives/link-gesture` ×4
           - `primitives/slot-render` ×4
           - `network/live/live-state` ×3
+          - `primitives/link-gesture` ×3
           - `primitives/css/scroll` ×2
           - `primitives/adaptive-bar.AdaptiveBar`
           - `primitives/bar.Bar`

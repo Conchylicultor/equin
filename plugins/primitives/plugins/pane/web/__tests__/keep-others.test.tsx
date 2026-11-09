@@ -13,7 +13,6 @@ import {
   useSyncPaneRegistry,
   type PaneStore,
 } from "@plugins/primitives/plugins/pane/web";
-import { clickProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { createTestSurfaceStore, TestSurface, defaultStore } from "../testing";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -78,6 +77,17 @@ function OpenE() {
   );
 }
 
+// A bare `onClick={toggle}` — no link-gesture props anywhere — as the
+// conversation's File explorer button is.
+function ToggleE() {
+  const { toggle } = ePane.useToggle({});
+  return (
+    <button type="button" onClick={toggle}>
+      toggle
+    </button>
+  );
+}
+
 let store: PaneStore;
 
 beforeAll(() => {
@@ -124,13 +134,25 @@ function openFrom(callerIndex: number, alt: boolean) {
   fireEvent.click(view.getByRole("button"), { altKey: alt });
 }
 
+function toggleFrom(callerIndex: number, alt: boolean) {
+  const caller = store.getRoute()[callerIndex]!.instanceId;
+  const view = render(
+    <TestSurface store={store} plugins={plugins} basePath="/keep">
+      <PaneInstanceContext.Provider value={caller}>
+        <ToggleE />
+      </PaneInstanceContext.Provider>
+    </TestSurface>,
+  );
+  fireEvent.click(view.getByRole("button"), { altKey: alt });
+}
+
 function closeAt(index: number, alt: boolean) {
   const slot = store.getRoute()[index]!;
   const pane = all.find((p) => p._internal.id === slot.paneId)!;
   const view = render(
     <button
       type="button"
-      {...clickProps(() => store.close(pane._internal, slot.instanceId))}
+      onClick={() => store.close(pane._internal, slot.instanceId)}
     >
       close
     </button>,
@@ -181,5 +203,27 @@ describe("⌥-close removes only that pane", () => {
     seed(["a", "parent", "child", "d"], { parent: { pid: "1" } });
     closeAt(1, true);
     expect(ids()).toEqual(["a", "d"]);
+  });
+});
+
+describe("⌥ reaches a bare onClick toggle", () => {
+  it("⌥-click on a toggle inserts", () => {
+    seed(["a", "b", "c", "d"]);
+    toggleFrom(1, true);
+    expect(ids()).toEqual(["a", "b", "e", "c", "d"]);
+  });
+
+  it("plain click on a toggle replaces", () => {
+    seed(["a", "b", "c", "d"]);
+    toggleFrom(1, false);
+    expect(ids()).toEqual(["a", "b", "e"]);
+  });
+
+  it("an open after the click (no event dispatching) does not insert", () => {
+    seed(["a", "b", "c", "d"]);
+    const route = store.getRoute();
+    expect(window.event).toBeUndefined();
+    store.close(cPane._internal, route[2]!.instanceId);
+    expect(ids()).toEqual(["a", "b"]);
   });
 });

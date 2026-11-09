@@ -63,54 +63,27 @@ export function linkProps({ open, href }: LinkTarget): LinkGestureProps {
 // of the closed one). ⌥-click is the same action with the others kept: an open
 // inserts the new pane beside the caller, a close removes only that pane.
 //
-// It is ambient — scoped to the synchronous run of the click's handler — rather
-// than a field of `LinkTarget`, because a link passes through many hands before
-// it is clicked (a toggle wrapping a push, `afterOpen`, a row's activation):
-// a field every wrapper had to forward would be dropped by the first one that
-// did not know about it, silently. Ambient, the gesture reaches the one place
-// that acts on it (the pane store's open and close) through any wrapping.
+// It is read off the event the browser is dispatching right now
+// (`window.event`), not handed down: a navigation passes through many hands
+// before it acts (a toggle's `onClick={toggle}`, a toggle wrapping a push,
+// `afterOpen`, a row's activation), and a gesture every one of them had to
+// forward would be dropped by the first that did not know about it — silently,
+// which is exactly how a bare `onClick` button lost it. The browser sets
+// `window.event` for the whole synchronous dispatch of any handler (React's
+// root listener included) and clears it after, so an open run later (after a
+// mutation settles, from a timer) correctly sees no gesture.
 // ---------------------------------------------------------------------------
 
-let keepOthersActive = false;
-
 /**
- * Whether the click being handled right now asked to keep the others (⌥/Alt).
- * Read by whatever ACTS on a navigation (the pane store), synchronously inside
- * the click — outside a click handler run through this module it is `false`.
+ * Whether the click being handled right now is an ⌥/Alt-click — the
+ * keep-others gesture. Read by whatever ACTS on a navigation (the pane store),
+ * synchronously inside the click; outside any event dispatch it is `false`.
  */
 export function keepsOthers(): boolean {
-  return keepOthersActive;
-}
-
-/**
- * Run `fn` as the response to the click `e`: inside it, {@link keepsOthers}
- * answers whether `e` was an ⌥/Alt-click. Every handler this module builds runs
- * through it; a control whose click is not one of them (a pane's × close) wraps
- * its own handler with {@link clickProps}.
- */
-function runClick(e: Pick<MouseEvent, "altKey">, fn: () => void): void {
-  const prev = keepOthersActive;
-  keepOthersActive = e.altKey;
-  try {
-    fn();
-  } finally {
-    keepOthersActive = prev;
-  }
-}
-
-/**
- * The `onClick` of a plain action that navigates without being a link (a
- * pane's × close): it runs `action` with the click's ⌥ gesture readable
- * through {@link keepsOthers}.
- */
-export function clickProps(action: () => void): {
-  onClick(e: MouseEvent): void;
-} {
-  return {
-    onClick(e) {
-      runClick(e, action);
-    },
-  };
+  if (typeof window === "undefined") return false;
+  // `window.event`: the event being dispatched (see the section comment).
+  const event = window.event;
+  return event instanceof window.MouseEvent && event.altKey;
 }
 
 /**
@@ -133,12 +106,11 @@ export function activationProps(
   if (activation === undefined) return {};
   const isolate = opts?.isolate === true;
   if (typeof activation === "function") {
-    const props = clickProps(activation);
-    if (!isolate) return props;
+    if (!isolate) return { onClick: activation };
     return {
       onClick(e) {
         e.stopPropagation();
-        props.onClick(e);
+        activation();
       },
     };
   }
@@ -209,7 +181,7 @@ export function linkGestureProps(
 ): LinkGestureProps {
   return {
     onClick(e) {
-      runClick(e, () => open({ elsewhere: e.metaKey || e.ctrlKey }));
+      open({ elsewhere: e.metaKey || e.ctrlKey });
     },
     onAuxClick(e) {
       if (e.button !== 1) return;

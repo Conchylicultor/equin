@@ -29,14 +29,15 @@ is what keeps every such control agreeing on what a ⌘-click means.
 
 ## ⌥/Alt-click: keep the others
 
-`keepsOthers()` answers, synchronously inside a click run through this module
-(`linkProps`, `activationProps`, `linkGestureProps`, or `clickProps(action)` for
-a plain navigating action such as a pane's × close), whether it was an
-⌥/Alt-click. The pane store reads it: an open inserts beside the caller instead
-of replacing what is right of it, a close removes only that pane. It is ambient
-rather than a `LinkTarget` field on purpose — a target passes through wrappers
-(a toggle, `afterOpen`, a row activation) that would each have to forward a
-field, and the first one that did not would drop the gesture silently.
+`keepsOthers()` answers whether the event being dispatched right now
+(`window.event`) is an ⌥/Alt-click — so EVERY click handler carries it, a bare
+`onClick={toggle}` as much as `linkProps`. The pane store reads it: an open
+inserts beside the caller instead of replacing what is right of it, a close
+removes only that pane. Read off the dispatch rather than forwarded on purpose:
+a navigation passes through wrappers (a toggle, `afterOpen`, a row activation)
+that would each have to forward a flag, and the first one that did not would
+drop the gesture silently. An open run after the dispatch (a mutation settling)
+sees no gesture.
 
 A new in-app (equin) tab is not a link gesture: it is reachable only from
 an explicit menu entry (`navigate(url, { newTab: true })`).
@@ -118,7 +119,6 @@ resolver returning one. Fix: spread `openPane.link(…)`, or pass `openPane.to(�
   - Exports (values):
     - `activationProps`
     - `browserTabAddressSink`
-    - `clickProps`
     - `keepsOthers`
     - `linkGestureProps`
     - `linkProps`
