@@ -6,7 +6,8 @@ import { CRON_RESOLUTION_MS } from "../../core/cron";
 // The queue's work comes in waves, one a minute: graphile's cron ticks on the
 // minute, and a tick's jobs are fetched, locked, run and completed at once — the
 // runners' workers each check out their own `jobs-runner` connection for the
-// fetch and the completion, and every running job holds a `job-lock` one. So the
+// fetch and the completion, and the tick's running jobs hold their locks on one
+// `job-lock` session (job-lock.ts). So the
 // connections one tick used are the ones the next tick needs.
 //
 // These pools dial Postgres directly (no PgBouncer: graphile LISTENs, the job
@@ -23,5 +24,5 @@ import { CRON_RESOLUTION_MS } from "../../core/cron";
 // exactly the connections it uses warm, and one no tick has needed for two
 // minutes — the extra a burst opened (boot, a backlog) — still closes. The pools'
 // `max` (`2 × RUNNERS.length`, `TOTAL_JOB_SLOTS`, 10) still bounds what can be
-// held.
+// held; `job-lock` uses one of its `TOTAL_JOB_SLOTS` in steady state.
 export const JOBS_POOL_IDLE_TIMEOUT_MS = 2 * CRON_RESOLUTION_MS;

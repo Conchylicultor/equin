@@ -706,7 +706,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
 | `jobs-runner` | `worker.ts` `getRunnerPool` | the three runners' fetches, completions and LISTEN connections (shared, `2 × RUNNERS.length`: one LISTEN + one statement at a time per runner) |
 | `jobs-enqueue` | `worker.ts` `getEnqueuePool` | `WorkerUtils` — `addJob`, reschedule, complete (max 10, graphile's old default) |
 | `jobs-schema` | `queue-schema.ts` `installQueueSchema` | graphile's migrations + the superseded trigger, under `BOOT_DDL_QUERY_DEADLINE_MS` (15 min) |
-| `job-lock` | `job-lock.ts` `lockPool` | the advisory lock / unlock around each handler |
+| `job-lock` | `job-lock.ts` `createJobLocks` | the one session holding every running job's advisory lock (`max: TOTAL_JOB_SLOTS`, one in steady state) |
 
 - **`jobs-runner`, `jobs-enqueue` and `job-lock` keep an idle connection for
   two cron ticks** (`JOBS_POOL_IDLE_TIMEOUT_MS`, `machine/internal/pool-idle.ts`,
@@ -720,12 +720,25 @@ connection and every statement on it gives up after 60 s with no reply, and the
 - **A failed `makeWorkerUtils` is not cached.** Its migration check can now fail
   on a missed deadline; the next enqueue builds again instead of every enqueue
   failing until restart.
+- **`job-lock` is ONE session per backend, not one per running job.** An
+  advisory lock belongs to its session, which holds any number of them, so
+  every running job's lock sits on one checked-out connection: taken when the
+  first job starts, back to the pool when the last one ends. One connection
+  per job kept a backend at its busiest minute's job count of idle sessions
+  (54 cluster-wide, 2026-11-08). Because one session grants a key it already
+  holds, the one-holder-per-job-id check is in process before the statement
+  (same `LOCK_HELD`). A throwing handler is unlocked like any other; a session
+  we stop trusting (an unlock that failed or found no lock) is **retired** —
+  never handed a new lock, destroyed once its last job ends — so a lock still
+  can never leak into a reused session. A session that dies takes every lock
+  on it, and every job holding one is told (`onLost`, reported). The why and
+  what it costs: `job-lock.ts`, `job-lock.test.ts`.
 - **A job's lock is never bounded by the deadline.** The handler runs on other
-  connections while the lock connection sits idle with nothing pending. Only the
-  two short lock statements are. If one of those gets no reply, its connection
-  is abandoned, not destroyed (`release(true)` is a no-op on it), so a lock
-  Postgres did grant stays held until this backend exits. That fails safe: a
-  re-dispatch reads `LOCK_HELD`, never a double run.
+  connections while the lock session sits idle with nothing pending. Only the
+  short lock / unlock statements are (one at a time per session). If one of
+  those gets no reply, its connection is closed (`database/connection`), which
+  releases every lock on it: each running job holding one is reported as
+  possibly double-running, never re-taken behind its back.
 - **A silent LISTEN socket is not covered.** A runner's LISTEN connection with no
   call pending has nothing waiting for a reply; that needs a heartbeat.
 
