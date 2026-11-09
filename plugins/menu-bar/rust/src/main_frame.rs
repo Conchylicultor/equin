@@ -127,8 +127,8 @@ mod platform {
     }
 
     thread_local! {
-        /// The webview holds its navigation delegate weakly: the gate lives here,
-        /// as long as the process (one window per process).
+        /// The webview holds its navigation delegate weakly: each window's gate
+        /// lives here, as long as the process (a closed window's stays — small).
         static GATES: RefCell<Vec<Retained<MainFrameGate>>> = const { RefCell::new(Vec::new()) };
     }
 

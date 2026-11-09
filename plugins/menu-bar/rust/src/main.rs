@@ -62,8 +62,9 @@ fn window_launch(app_id: String, url: url::Url) -> window::Launch {
     }
 }
 
-/// `open-link <link>`: what the tray does with a link macOS hands it, from a
-/// shell (no burst gate, no notification: the outcome is printed).
+/// `open-link <link>`: the page a link names, in its installed app's window —
+/// Linux's handler of `equin:` links (a failure is a desktop notification),
+/// and on macOS the tray's path from a shell (the outcome printed).
 fn open_link_once(link: &url::Url) {
     let page = open_link::parse(link).unwrap_or_else(|e| {
         eprintln!("equin-desktop: {e}");
@@ -73,6 +74,12 @@ fn open_link_once(link: &url::Url) {
     println!("{outcome:?}");
     if let Some(message) = outcome.failure(&page) {
         eprintln!("equin-desktop: {message}");
+        // Linux runs this as the scheme's handler (`dev.equin.open-link.desktop`),
+        // from a browser that shows nothing of what happened here.
+        #[cfg(target_os = "linux")]
+        if let Err(e) = std::process::Command::new("notify-send").args(["Cannot open in a window", &message]).status() {
+            eprintln!("equin-desktop: cannot notify: {e}");
+        }
         std::process::exit(1);
     }
 }

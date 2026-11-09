@@ -25,6 +25,13 @@
 //!   runs the helper's own stable copy (`~/.local/share/equin/equin-desktop`:
 //!   the deps cache it is built into may be swept), and the 512 px icon under
 //!   the hicolor theme.
+//!
+//! Beside the shims, the handler of `equin:` links (a browser tab's "Open in
+//! app window", src/open_link.rs): macOS — `equin.app` declares the scheme
+//! (the login service's `urlSchemes`), nothing to write here; Linux — a hidden
+//! `dev.equin.open-link.desktop` (`Exec=<stable helper> open-link %u`,
+//! `MimeType=x-scheme-handler/equin;`), made the scheme's default handler
+//! with `xdg-mime default` whenever it is (re)written.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -219,6 +226,7 @@ pub fn sync(
     catalog: &[CatalogApp],
 ) -> Result<Report, String> {
     let runs = platform::prepare_helper(roots, helper)?;
+    platform::ensure_link_handler(host, roots, &runs)?;
     let on_disk = shim::installed_in(roots);
     let mut wanted: Vec<&CatalogApp> = Vec::new();
     for app in catalog {
@@ -427,6 +435,11 @@ mod platform {
         Ok(helper.exe.clone())
     }
 
+    /// Nothing to write: `equin.app` itself declares the `equin` scheme.
+    pub fn ensure_link_handler(_host: &dyn Host, _roots: &Roots, _runs: &Path) -> Result<(), String> {
+        Ok(())
+    }
+
     pub fn shim_path(roots: &Roots, app: &CatalogApp) -> PathBuf {
         roots.mac_applications().join(format!("equin {}.app", safe_name(app)))
     }
@@ -569,6 +582,7 @@ mod platform {
     use url::Url;
 
     use super::{desktop_file_id, gnome_pin_plan, gnome_read_argv, parse_strv, safe_name, CatalogApp, Helper, Host, EXECUTABLE};
+    use crate::open_link;
     use crate::shim::{wm_class, Roots, Shim};
 
     /// The helper's own stable copy, which every desktop entry runs: the deps
@@ -597,6 +611,36 @@ mod platform {
 
     pub fn shim_path(roots: &Roots, app: &CatalogApp) -> PathBuf {
         roots.shim_dir().join(desktop_file_id(&app.id))
+    }
+
+    /// The `equin:` link handler's desktop-file id. Not `equin-*`: that names
+    /// an app's shim (and carries no `X-Equin-AppId`, so it is never read as one).
+    pub const LINK_HANDLER: &str = "dev.equin.open-link.desktop";
+
+    pub fn link_handler_file(runs: &Path) -> String {
+        format!(
+            "[Desktop Entry]\nType=Application\nVersion=1.0\nName=equin\nComment=Open an equin page in its app's own window\nExec={} open-link %u\nNoDisplay=true\nTerminal=false\nMimeType=x-scheme-handler/{};\n",
+            value(&exec_arg(&runs.display().to_string())),
+            open_link::SCHEME,
+        )
+    }
+
+    /// Write the handler when it is missing or stale, and only then make it
+    /// the scheme's default (a current one runs no command).
+    pub fn ensure_link_handler(host: &dyn Host, roots: &Roots, runs: &Path) -> Result<(), String> {
+        let path = roots.shim_dir().join(LINK_HANDLER);
+        let want = link_handler_file(runs);
+        if std::fs::read_to_string(&path).is_ok_and(|have| have == want) {
+            return Ok(());
+        }
+        write_atomic(&path, want.as_bytes())?;
+        host.run(&[
+            "xdg-mime".to_string(),
+            "default".to_string(),
+            LINK_HANDLER.to_string(),
+            format!("x-scheme-handler/{}", open_link::SCHEME),
+        ])?;
+        Ok(())
     }
 
     fn icon_path(roots: &Roots, app_id: &str) -> PathBuf {
@@ -924,6 +968,26 @@ mod tests {
 
     fn ids(roots: &Roots) -> Vec<String> {
         sorted_ids(&shim::installed_in(roots))
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn handles_equin_links_once_written() {
+        let (roots, exe) = home();
+        let host = Fake::new();
+        sync(&host, &roots, &origin(), &helper(&exe, "d1"), &[]).unwrap();
+        let file = std::fs::read_to_string(roots.shim_dir().join(platform::LINK_HANDLER)).unwrap();
+        assert!(file.contains(" open-link %u\n"), "{file}");
+        assert!(file.contains("MimeType=x-scheme-handler/equin;\n"), "{file}");
+        assert!(file.contains("NoDisplay=true\n"), "{file}");
+        assert_eq!(
+            host.commands.borrow().last().unwrap(),
+            &["xdg-mime", "default", platform::LINK_HANDLER, "x-scheme-handler/equin"].map(String::from).to_vec()
+        );
+        assert!(ids(&roots).is_empty(), "the handler is not an app's shim");
+        let before = host.commands.borrow().len();
+        sync(&host, &roots, &origin(), &helper(&exe, "d1"), &[]).unwrap();
+        assert_eq!(host.commands.borrow().len(), before, "a current handler runs no command");
     }
 
     #[test]

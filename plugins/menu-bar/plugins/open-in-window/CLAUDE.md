@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Open in app window: a row in the action bar's view-options popover that hands this browser tab's page to the menu-bar helper as an equin://open link, which opens it in the installed app's own macOS window. Shown on macOS only, never inside an app window.
+- Description: Open in app window: a row in the action bar's view-options popover that hands this browser tab's page to the menu-bar helper as an equin://open link, which opens it in a new window of the installed app (macOS and desktop Linux). Never shown inside an app window.
 - Web:
   - Contributes: `ActionBar.ViewOption` → `OpenInWindowRow`
   - Uses:

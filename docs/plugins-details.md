@@ -36922,7 +36922,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AppWindowInfoSchema`
           - `FileDragOutcomeSchema`
           - `WINDOW_BRIDGE_METHODS`
-    - **`open-in-window`** — Open in app window: a row in the action bar's view-options popover that hands this browser tab's page to the menu-bar helper as an equin://open link, which opens it in the installed app's own macOS window. Shown on macOS only, never inside an app window.
+    - **`open-in-window`** — Open in app window: a row in the action bar's view-options popover that hands this browser tab's page to the menu-bar helper as an equin://open link, which opens it in a new window of the installed app (macOS and desktop Linux). Never shown inside an app window.
       - Web:
         - Contributes: `ActionBar.ViewOption` → `OpenInWindowRow`
         - Uses:

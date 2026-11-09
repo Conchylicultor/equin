@@ -251,7 +251,7 @@ pub fn handler() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
         let scope = app.try_state::<window::Scope>();
         let caller = match webview.label() {
             panel::LABEL => panel.as_ref().map_or(Caller::Other, |p| Caller::Panel(p.pin())),
-            window::LABEL => scope.as_ref().map_or(Caller::Other, |s| Caller::AppWindow(s)),
+            l if window::is_app_label(l) => scope.as_ref().map_or(Caller::Other, |s| Caller::AppWindow(s)),
             _ => Caller::Other,
         };
         let verdict = match webview.url() {

@@ -237,6 +237,7 @@ pub fn run(namespace: String) {
             let handle: AppHandle = app.handle().clone();
             window::build_window(
                 &handle,
+                window::LABEL,
                 &launch,
                 Hooks {
                     hand_off: record_hand_off,
@@ -245,6 +246,7 @@ pub fn run(namespace: String) {
                     title: Some(on_title),
                     visible: false,
                 },
+                None,
             )?;
             let deadline = handle.clone();
             std::thread::spawn(move || {
