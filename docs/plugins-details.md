@@ -29029,6 +29029,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/file-watcher` (5 debt)
               - `infra/file-watcher/background-arm` (1 debt)
               - `infra/git/checkout-watch` (1 debt)
+              - `infra/git/git-watcher` (1 debt)
               - `infra/git/remotes` (2 debt)
               - `infra/git/tree-lock` (1 debt)
               - `infra/host-fs` (16 debt)
@@ -32894,6 +32895,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/events.defineTriggerEvent`
               - `infra/file-watcher.defineFileWatcher`
               - `infra/file-watcher.FileWatcher`
+              - `infra/file-watcher.WatchedDirGoneError`
               - `infra/paths.GIT`
               - `infra/worktree.ensureMainWorktreeRoot`
               - `network/live.serveValue`
@@ -32935,7 +32937,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/attempt-work`
               - `tasks/tasks-core`
           - Exemptions:
-            - Exempts itself from: `ids:pk-declared` — `server/internal/tables-ref-advanced.ts` (debt)
+            - Exempts itself from:
+              - `ids:pk-declared` — `server/internal/tables-ref-advanced.ts` (debt)
+              - `boundaries/no-platform-api` — `server/internal/is-dir.ts` (debt)
         - **`remotes`** — May this checkout publish, and where does it receive from? — the write-access probe (`git push --dry-run`, classified into denied / no-credentials / unreachable rather than one 'no'), its `.git/config` cache of that measurement, the upstream resolution built from the same facts, and who signs the commits push makes (a local placeholder where they cannot leave the machine, a real identity required where they will be public).
           - Core:
             - Uses:
@@ -38868,8 +38872,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/ticket-line.ts` (debt)
     - **`timed-fs`** — The file reads, listings, stats and glob scans every non-browser process makes, timed: node:fs's read calls under their own names and types (readFile / readdir / stat / lstat / access / realpath / readlink and their *Sync twins, existsSync) plus scanGlob / scanGlobSync over a Bun.Glob, each call metered while it runs (installFsWaitMeter — the backend's profiler shows one past FS_WAIT_FLOOR_MS in progress and charges it) and, once it returns past the floor, handed to onSlowFsCall subscribers, under a named wait layer (fs-read / fs-readdir / fs-stat / fs-glob) — so a disk stall names itself instead of reading as the caller's own work. A leaf (node builtins only), enforced by the timed-fs/no-untimed-fs-read lint.
       - Cross-plugin:
-        - Imported by: 160 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
-          - `infra` ×46
+        - Imported by: 161 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+          - `infra` ×47
           - `framework` ×24
           - `apps` ×15
           - `debug` ×14

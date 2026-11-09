@@ -1,6 +1,7 @@
 import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import {
   defineFileWatcher,
+  WatchedDirGoneError,
   type FileWatcher,
 } from "@plugins/infra/plugins/file-watcher/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
@@ -8,6 +9,8 @@ import { createCoalescer } from "@plugins/packages/plugins/coalesce/core";
 import { currentBranchRef } from "./current-branch-ref";
 import { gitCommonDir } from "./git-common-dir";
 import { readSha } from "./read-sha";
+import { isDirOnDisk as isDir } from "./is-dir";
+import { planRefFollow, samePlan, type RefFollowPlan } from "./ref-files";
 import { refAdvanced } from "./tables-ref-advanced";
 import { refHeadServed } from "./ref-head-resource";
 import { runRefReactions } from "./reactions";
@@ -26,28 +29,42 @@ async function computeTrackedRefs(): Promise<string[]> {
   return refs;
 }
 
-// No timer. A ref ADVANCE always writes its loose ref under refs/ (the files
-// backend updates a ref by lockfile + rename, even one that is packed), so the
-// watch hears it; packed-refs alone is rewritten only by `pack-refs` (same sha)
-// and deletions. A dropped event is reported by the watch (`onLost`). The 30 s
-// tick this replaced cost two `git rev-parse` per backend, i.e. ~4 spawns a
-// second across the host.
+// No timer, and no tree watch. The tracked refs are a handful of KNOWN files,
+// so they are followed on kqueue (`writesWhileOpen`: milliseconds) rather than
+// heard through a recursive FSEvents watch of `<common>/refs`, which is as late
+// as fseventsd's queue — 25 s seen on main on 2026-11-09, leaving
+// `lastKnownMainSha()` stale that long. What is followed and why: ./ref-files.ts.
+// A ref advance is a lockfile renamed over the loose ref, which the patched
+// kqueue backend reports as the ref file changing. A dropped event is reported
+// by the watch (`onLost`).
 export const gitRefsWatcher = defineFileWatcher({
   name: "git-watcher.refs",
   description:
-    "Watches the repository's loose git refs and, when main or this worktree's branch moves, re-reads its sha and announces the advance.",
+    "Follows the loose ref files of main and this worktree's branch, and packed-refs; when one moves, re-reads its sha and announces the advance.",
+  writesWhileOpen: true,
 });
 
 const lastKnownSha = new Map<string, string | null>();
-let watcher: FileWatcher | null = null;
+let commonDir: string | null = null;
+// The open follow; `gone` once one of its dirs went (it hears nothing there).
+let followed: {
+  plan: RefFollowPlan;
+  watcher: FileWatcher;
+  gone: boolean;
+} | null = null;
 let started = false;
 
-// One recompute at a time — a change and a lost-events report included — with the
-// triggers landing mid-run folded into one trailing recompute. Each re-reads
-// every tracked ref's current sha, so overlapping runs would only interleave
-// on `lastKnownSha` (and double-announce an advance).
-const recomputes = createCoalescer({
-  run: () => runTracked("git-watcher:recompute", () => recompute()),
+// One recompute at a time — a change, a re-plan and a lost-events report
+// included — with the triggers landing mid-run folded into one trailing run.
+// Each re-reads every tracked ref's current sha, so overlapping runs would only
+// interleave on `lastKnownSha` (and double-announce an advance). A "replan"
+// item first brings the follow in line with the refs dirs as they are now.
+const recomputes = createCoalescer<"replan">({
+  run: (items) =>
+    runTracked("git-watcher:recompute", async () => {
+      if (items.length > 0) await follow();
+      await recompute();
+    }),
 });
 
 // The last `refs/heads/main` sha the watcher has observed, or null if not yet
@@ -59,11 +76,67 @@ export function lastKnownMainSha(): string | null {
   return lastKnownSha.get("refs/heads/main") ?? null;
 }
 
+/**
+ * Open the follow the refs dirs call for now, then close the one it replaces
+ * (opened first: both share each dir's subscription, so nothing goes unheard
+ * between them). A no-op while the plan is unchanged and its watch is open.
+ */
+async function follow(): Promise<void> {
+  if (!started || commonDir === null) return;
+  const dir = commonDir;
+  const refs = [...lastKnownSha.keys()];
+  let plan = await planRefFollow(dir, refs, isDir);
+  if (followed !== null && samePlan(followed.plan, plan) && !followed.gone) {
+    return;
+  }
+  let watcher: FileWatcher;
+  for (;;) {
+    try {
+      watcher = await openFollow(plan);
+      break;
+    } catch (err) {
+      // A dir of the plan went while it opened (a nesting dir removed by a
+      // pack): open what the dirs call for now. Anything else — or the same
+      // plan failing again — is a real failure.
+      const now = await planRefFollow(dir, refs, isDir);
+      if (samePlan(now, plan)) throw err;
+      plan = now;
+    }
+  }
+  if (!started) {
+    await watcher.stop(); // stopped while it opened
+    return;
+  }
+  const previous = followed;
+  followed = { plan, watcher, gone: false };
+  await previous?.watcher.stop();
+}
+
+function openFollow(plan: RefFollowPlan): Promise<FileWatcher> {
+  const watcher = gitRefsWatcher.start({
+    files: [...plan.files],
+    // A structural entry appearing (a branch's nesting dir created) re-plans;
+    // a ref file or packed-refs changing re-reads the shas.
+    onChange: (events) =>
+      recomputes.run(
+        events.some((e) => plan.structural.has(e.path)) ? ["replan"] : [],
+      ),
+    // A followed dir going (a nesting dir removed once its last loose ref was
+    // packed) re-plans from the dirs that are left; any other loss re-reads.
+    onLost: async (_dir, err) => {
+      if (!(err instanceof WatchedDirGoneError)) return recomputes.run();
+      const self = await watcher;
+      if (followed?.watcher === self) followed.gone = true;
+      return recomputes.run(["replan"]);
+    },
+  });
+  return watcher;
+}
+
 export async function startGitWatcher(): Promise<void> {
   if (started) return;
   started = true;
 
-  let commonDir: string;
   try {
     commonDir = await gitCommonDir();
   } catch (err) {
@@ -83,44 +156,19 @@ export async function startGitWatcher(): Promise<void> {
     }
   }
 
-  // Watch ONLY `${commonDir}/refs` — the loose-ref tree (incl. refs/heads).
-  //
-  // We deliberately do NOT watch the whole `.git` common dir. That dir is
-  // SHARED by every linked worktree (1000+ here) and its object store is
-  // high-churn: every fetch / commit / gc across all of them writes under
-  // `objects/`, and each worktree's gitdir churns HEAD/logs/index. Watching it
-  // fires a `recompute()` (which spawns `git rev-parse` per tracked ref) on
-  // thousands of changes that can never move a ref — pure wasted event +
-  // subprocess churn on every backend. `refs/` is a handful of small text
-  // files that only change on an actual ref advance.
-  //
-  // A normal commit/fetch/rebase writes the loose ref under refs/heads/ (or
-  // deletes it when packing) → we get the event and re-read the true sha via
-  // `git rev-parse` (which also resolves packed-refs). A dropped event is
-  // reported by the watch (`onLost`), which re-reads every tracked ref.
-  //
-  // The refs dir is shared by every worktree, so a change is only worth a
-  // recompute when it writes a tracked ref (its loose file or its lock).
-  const tracked = new Set(
-    [...lastKnownSha.keys()].map((ref) => `${commonDir}/${ref}`),
-  );
-  const writesTracked = (path: string) =>
-    tracked.has(path.endsWith(".lock") ? path.slice(0, -".lock".length) : path);
-  watcher = await gitRefsWatcher.start({
-    dirs: [`${commonDir}/refs`],
-    onChange: (events) =>
-      events.some((e) => writesTracked(e.path)) ? recomputes.run() : undefined,
-    onLost: () => recomputes.run(),
-  });
+  // The follow's first open hands an `update` for every followed file present
+  // (it heard nothing before it opened), so a ref moved since the seed above
+  // is re-read and announced. Through the coalescer, like every re-plan, so no
+  // two follow() runs ever overlap (one would overwrite the other's plan).
+  await recomputes.run(["replan"]);
 }
 
 export async function stopGitWatcher(): Promise<void> {
   if (!started) return;
   started = false;
-  if (watcher) {
-    await watcher.stop();
-    watcher = null;
-  }
+  const current = followed;
+  followed = null;
+  await current?.watcher.stop();
 }
 
 async function recompute(): Promise<void> {
