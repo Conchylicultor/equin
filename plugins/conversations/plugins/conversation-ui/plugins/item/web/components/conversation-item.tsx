@@ -21,6 +21,7 @@ import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import type { RelativeTimeFormat } from "@plugins/primitives/plugins/relative-time/web";
 import type { Ref } from "react";
 import { Item } from "../slots";
@@ -220,9 +221,16 @@ export function ConversationItem({
       // `h-lh`: the row is exactly one text line tall. The chips (a badge, the
       // pie) centre on that line and may bleed into the row's padding, so a row
       // carrying one is as tall as a row without — the list's height estimate.
+      // `yieldClass`: inside an interactive Row this line is a flex item beside
+      // the row's icon, and `w-full` alone floors it at min(100%, its content)
+      // — a long unbroken title then pushes the time past the row's edge.
       <Line
         ref={ref}
-        className={cn("h-lh w-full gap-sm", active && "opacity-60")}
+        className={cn(
+          "h-lh w-full gap-sm",
+          yieldClass("x"),
+          active && "opacity-60",
+        )}
       >
         {/* The lead and the title sit on the SIDEBAR NAV's columns: the lead
             box is the nav icon's size and the title follows it by the nav's

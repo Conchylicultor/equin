@@ -15767,6 +15767,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.ControlSizeProvider`
               - `primitives/css/ui-kit.SingleLineProvider`
+              - `primitives/css/yield.yieldClass`
               - `primitives/relative-time.RelativeTime`
               - `primitives/slot-render.defineDispatchSlot`
               - `primitives/slot-render.defineRenderSlot`
@@ -45808,10 +45809,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/pending-turn`
         - **`yield`** — Yielding-cell layout primitive: yieldClass(axis) is the flex child that falls below its own content width (min-w-0) but never takes slack. The half of <Fill> that gives, without the half that grows.
           - Cross-plugin:
-            - Imported by: 36 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)
+            - Imported by: 37 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)
               - `apps` ×10
               - `primitives` ×9
-              - `conversations` ×6
+              - `conversations` ×7
               - `debug` ×3
               - `ui` ×3
               - `fields` ×2
