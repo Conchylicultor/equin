@@ -6,8 +6,7 @@ in `core/` — the live values (`liveValue`, served by `machine/`) and the
 endpoints (`defineEndpoint`, handled in `server/` by `implement()`, plus one
 raw byte-stream handler). There is no web barrel: a surface reads the live
 values with `useLive` (`hostFsListing`, `hostFsDirPeek`, `hostFsPathStat`,
-`hostFsCompletions`, `hostFsFileText`, `hostFsVolumeInfo` — *Live reads*
-below), and an event that needs one answer (validate a typed path, then go)
+`hostFsCompletions`, `hostFsVolumeInfo` — *Live reads* below), and an event that needs one answer (validate a typed path, then go)
 with `useLiveReader`; `fetchEndpoint` (`infra/endpoints`) is only for the
 open / extract / move actions, and `hostFileUrl(path)` builds byte URLs.
 
@@ -48,7 +47,6 @@ so no change after the read is missed.
 | `hostFsDirPeek` (`host-fs.peek`) | `{ path }` → `ok {children}` · `too-many {total}` · `archive` | ≤ `HOST_FS_PEEK_MAX_NAMES` names; `watchHostDir`, throttle 1 s; many folders: `useLive(v, [...])` |
 | `hostFsPathStat` (`host-fs.stat`) | `{ path }` → `{ path, parent, entry, within? }` | one entry; `watchHostPath` |
 | `hostFsCompletions` (`host-fs.complete`) | `{ prefix }` → `{ dir, matches: {name, path}[], truncated }` — folder-only children of `dirname(prefix)` matching `basename(prefix)`, case-insensitive, natural order; dotfolders only for a `.` fragment; on disk only. Refuses `invalid-path` (empty / relative), `missing`, `denied`, `not-a-dir` | ≤ `HOST_FS_COMPLETE_LIMIT` (50) matches; `watchHostDir` of the folder searched, throttle 1 s; one tuple per text typed (the path bar) |
-| `hostFsFileText` (`host-fs.text`) | `{ path }` → `{ path, content, size }`; also refuses `too-large`, `binary` | ≤ 2 MiB, on demand; `watchHostPath` |
 | `hostFsVolumeInfo` (`host-fs.volume`) | `{ path? }` → `{ path, name, total, free }` | snapshot (`refresh()`): free space has no change signal |
 
 `watchHostPath(path, onChange)` (machine barrel) watches one path: its entry
@@ -68,6 +66,12 @@ and a symlinked child's target — the listing row keeps the values of the
 folder's last read. `resolveOrRefuse` /
 `refusalFor` (machine barrel) turn a spelling and an endpoint failure kind
 into a read's refusal, for the sub-plugins serving reads of their own.
+
+**The computer's disk as a file system.** `machine/` also serves
+file-systems' `computer` reads (`files.computer.stat` / `.text` / `.bytes`,
+`GET /api/files/computer/raw`) with these same readers and watches — what a
+file reader (the file viewer) reads a disk file through, by `FileLocation`.
+A file's text is read only there (the old `host-fs.text` is gone).
 
 Images get two more reads in the `image` sub-plugin: resized copies
 (`GET /api/host-fs/image/resized`) and a folder's pixel sizes (the
@@ -95,8 +99,8 @@ Rules every endpoint shares:
 ## Archives browse like folders
 
 A path may cross into an archive file: `~/Downloads/photos.zip/2022/a.jpg`.
-`list` of the archive file lists its root, and `list` / `stat` / `text` /
-`raw` read its members; `complete` and `volume` stay on disk. Plan:
+`list` of the archive file lists its root, and `list` / `stat` / the
+computer file system's `text` / `bytes` / `raw` read its members; `complete` and `volume` stay on disk. Plan:
 [`research/2026-10-06-infra-host-fs-archive-browsing.md`](../../../../research/2026-10-06-infra-host-fs-archive-browsing.md).
 
 - **Formats are plugins.** `defineArchiveFormat({ id, claims, index })`
@@ -197,12 +201,14 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
 - Description: The host-filesystem readers other plugins build on: resolveHostPath, openHostFile (a disk file or an archive member), serveHostPath (the one byte server), readHostPathText / decodeTextBytes (the size + binary gate) and the archive-format registry (defineArchiveFormat). Its live reads (list, peek, stat, complete, text, volume, version) and routes — raw bytes of any path the user account can read, POST open / extract / move — are the machine half's, each needsMachine.
 - Server:
   - Contributes:
+    - `resource.declare` "files.computer.bytes"
+    - `resource.declare` "files.computer.stat"
+    - `resource.declare` "files.computer.text"
     - `resource.declare` "host-fs.complete"
     - `resource.declare` "host-fs.list"
     - `resource.declare` "host-fs.list:meta"
     - `resource.declare` "host-fs.peek"
     - `resource.declare` "host-fs.stat"
-    - `resource.declare` "host-fs.text"
     - `resource.declare` "host-fs.version"
     - `resource.declare` "host-fs.volume"
   - Uses:
@@ -225,12 +231,14 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
     - `resolveHostPath`
     - `serveHostPath`
   - Resources:
+    - `files.computer.bytes` (invalidate, notified)
+    - `files.computer.stat` (push, notified)
+    - `files.computer.text` (invalidate, notified)
     - `host-fs.complete` (push, notified, capped: HOST_FS_COMPLETE_LIMIT)
     - `host-fs.list` (keyed, window, notified)
     - `host-fs.list:meta` (push, notified)
     - `host-fs.peek` (push, notified)
     - `host-fs.stat` (push, notified)
-    - `host-fs.text` (invalidate, notified)
     - `host-fs.version` (push, notified)
     - `host-fs.volume` (invalidate, snapshot)
 - Machine:
@@ -271,7 +279,6 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
     - `HostFsEntry`
     - `HostFsEntryKind`
     - `HostFsExtractResult`
-    - `HostFsFileText`
     - `HostFsListingMeta`
     - `HostFsListResult`
     - `HostFsMoveOutcome`
@@ -303,7 +310,6 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
     - `hostFsCompletions`
     - `hostFsDirPeek`
     - `hostFsExtract`
-    - `hostFsFileText`
     - `hostFsListing`
     - `HostFsListingQuerySchema`
     - `hostFsMove`

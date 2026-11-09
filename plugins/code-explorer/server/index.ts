@@ -10,6 +10,6 @@ export {
 
 export default {
   description:
-    "Worktree-scoped checkout reads by attempt id or the reserved `main` sentinel: push-files — one push's files, its range read from its ledger rows by ancestry. The raw image route is the machine half's.",
+    "Worktree-scoped checkout reads by attempt id or the reserved `main` sentinel: push-files — one push's files, its range read from its ledger rows by ancestry. A checkout's raw bytes (file-systems' checkout raw route) are the machine half's.",
   contributions: [...pushFilesServed.declare],
 } satisfies ServerPluginDefinition;

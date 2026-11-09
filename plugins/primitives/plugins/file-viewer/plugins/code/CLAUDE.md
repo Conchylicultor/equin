@@ -8,12 +8,12 @@
 - Web:
   - Contributes: `FileViewer.Renderer` "Code" → `CodeView`
   - Uses:
+    - `infra/paths/file-systems.fileTextUnavailableMessage`
+    - `infra/paths/file-systems.useFileText`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/file-viewer.FileRendererProps`
-    - `primitives/file-viewer.fileTextUnavailableMessage`
     - `primitives/file-viewer.FileViewer`
     - `primitives/file-viewer.NoPreview`
-    - `primitives/file-viewer.useFileText`
     - `primitives/loading.Loading`
     - `primitives/syntax-highlight.CodeListing`
     - `primitives/syntax-highlight.CodePaneSurface`

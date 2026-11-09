@@ -11,7 +11,7 @@ import {
   FileTabs,
   type FileRenderersHandle,
 } from "@plugins/primitives/plugins/file-viewer/web";
-import type { FileRef } from "@plugins/primitives/plugins/file-viewer/core";
+import type { FileLocation } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   useFileHostPath,
@@ -29,7 +29,7 @@ import {
  */
 interface FilePeekHeaderValue {
   path: string;
-  file: FileRef;
+  file: FileLocation;
   activationFor: (target: PathTarget) => Activation;
   renderers: FileRenderersHandle | null;
 }

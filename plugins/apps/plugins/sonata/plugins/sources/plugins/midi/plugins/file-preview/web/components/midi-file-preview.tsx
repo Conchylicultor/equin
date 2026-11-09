@@ -5,16 +5,16 @@ import {
   useRef,
   type ReactNode,
 } from "react";
+import type { FileRendererProps } from "@plugins/primitives/plugins/file-viewer/web";
+import {
+  locationKey,
+  locationName,
+  type FileLocation,
+} from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import {
   fileBytesUnavailableMessage,
   useFileBytes,
-  type FileRendererProps,
-} from "@plugins/primitives/plugins/file-viewer/web";
-import {
-  fileRefKey,
-  fileRefName,
-  type FileRef,
-} from "@plugins/primitives/plugins/file-viewer/core";
+} from "@plugins/infra/plugins/paths/plugins/file-systems/web";
 import {
   PlayerDisplay,
   PlayerTransport,
@@ -81,7 +81,7 @@ export function MidiFilePreview({ file }: FileRendererProps): ReactNode {
     case "unavailable":
       return (
         <Placeholder tone="error">
-          {fileBytesUnavailableMessage(state.reason)}
+          {fileBytesUnavailableMessage(state)}
         </Placeholder>
       );
     case "error":
@@ -98,8 +98,14 @@ export function MidiFilePreview({ file }: FileRendererProps): ReactNode {
 type Parsed =
   { kind: "ok"; meta: MidiSongMeta } | { kind: "error"; message: string };
 
-function ParsedPreview({ file, bytes }: { file: FileRef; bytes: ArrayBuffer }) {
-  const name = fileRefName(file);
+function ParsedPreview({
+  file,
+  bytes,
+}: {
+  file: FileLocation;
+  bytes: ArrayBuffer;
+}) {
+  const name = locationName(file);
   const parsed = useMemo<Parsed>(() => {
     try {
       return { kind: "ok", meta: deriveMidiSongMeta(bytes, name) };
@@ -122,7 +128,7 @@ function ParsedPreview({ file, bytes }: { file: FileRef; bytes: ArrayBuffer }) {
   return (
     // One player per file: another file is a fresh player — drawn, played
     // and loading afresh — never this one's state carried over the switch.
-    <SonataPlayerScope key={fileRefKey(file)}>
+    <SonataPlayerScope key={locationKey(file)}>
       <PlayerPreview file={file} bytes={bytes} meta={parsed.meta} />
     </SonataPlayerScope>
   );
@@ -140,14 +146,14 @@ function PlayerPreview({
   bytes,
   meta,
 }: {
-  file: FileRef;
+  file: FileLocation;
   bytes: ArrayBuffer;
   meta: MidiSongMeta;
 }) {
   const loadDocument = useLoadDocument();
   const { play } = useSession();
   const { drawn } = usePlayerView();
-  const key = fileRefKey(file);
+  const key = locationKey(file);
   useEffect(() => {
     // A file document: no library song, so no persisted settings — every
     // setting reads its default and nothing can be written for it.
@@ -284,7 +290,13 @@ function Facts({
  * Put the file in the Sonata library (idempotent by content) and open it in
  * Sonata at the preview's playhead bar (the URL carries it; the label does not).
  */
-function OpenInSonata({ file, bytes }: { file: FileRef; bytes: ArrayBuffer }) {
+function OpenInSonata({
+  file,
+  bytes,
+}: {
+  file: FileLocation;
+  bytes: ArrayBuffer;
+}) {
   const goToApp = useNavigate();
   const { score, stop } = useSession();
   const cursor = useCursorApi();
@@ -298,7 +310,7 @@ function OpenInSonata({ file, bytes }: { file: FileRef; bytes: ArrayBuffer }) {
       const song = await importMidiBytes(
         fetchEndpoint,
         bytes,
-        fileRefName(file),
+        locationName(file),
       );
       goToApp(sonataSongLink(song.id, bar));
     } catch (err) {

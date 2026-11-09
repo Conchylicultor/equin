@@ -26,7 +26,12 @@ describe("imageCapabilities", () => {
       copy: true,
       download: true,
     });
-    expect(imageCapabilities("/api/code/wt/image?path=a.png", ORIGIN)).toEqual({
+    expect(
+      imageCapabilities(
+        "/api/files/checkout/raw?checkout=wt&path=a.png",
+        ORIGIN,
+      ),
+    ).toEqual({
       open: "url",
       copy: true,
       download: true,

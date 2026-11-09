@@ -65,7 +65,7 @@ export function PreviewPane({
   endSafeArea: boolean;
 }): ReactNode {
   const renderers = useFileRenderers({
-    file: { source: "host", path },
+    file: { fs: "computer", path },
     ...(git !== undefined ? { git } : {}),
   });
   const openHostFile = useOpenHostFile();
@@ -136,7 +136,7 @@ export function PreviewPane({
             className="h-full"
           >
             <FileContent
-              file={{ source: "host", path }}
+              file={{ fs: "computer", path }}
               active={renderers.active}
             />
           </Theme>

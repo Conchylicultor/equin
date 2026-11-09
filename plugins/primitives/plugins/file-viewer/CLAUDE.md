@@ -1,84 +1,46 @@
 # file-viewer
 
-A file viewer that knows nothing about where its file comes from. The target is a
-`FileRef` (core): `{ source: "host", path }` for any file on the machine, or
-`{ source: "workspace", workspace, ref?, path }` for a file relative to a
-workspace's root (an attempt id of any workspace kind, `main`, `self`). Without
-`ref` it is read as it is on disk now — code-api resolves the root and hands the
-file to host-fs's readers, so a scratch workspace reads like a worktree; with
-`ref` it is a git read, which only a checkout answers. Renderers
-receive the `FileRef` and read it through `useFileText(file)` /
-`useFileBytes(file)` (the raw bytes, for a renderer that decodes its format
-itself) / `fileUrl(file)` — a renderer never branches on the source to read.
-`useFileText` and `fileUrl` dispatch to infra/host-fs or code-api;
-`useFileBytes` reads both through `file-viewer.bytes` (below).
+A file viewer that knows nothing about where its file comes from. The target is
+a `FileLocation` (`infra/paths/file-systems`): a path in the computer's disk,
+the browser's storage, or a checkout (on disk now, or as of a git `version`).
+Renderers read it through file-systems' `useFileText` / `useFileBytes` /
+`fileUrl` — a renderer never branches on the file system. Every system serves
+every file's bytes, so PDF, media and images preview wherever the file lives
+(the in-browser demo's storage included).
 
-- **The reads.** `useFileBytes` is one `useLive(fileBytes, file)` (below).
-  `useFileText` reads a host file through host-fs's live
-  `hostFsFileText` (`host-fs.text`, invalidated from a watch of the file's
-  folder while read) and a workspace file through code-api's live `codeFile`
-  (`code.file`, on demand: invalidated from a watch of the file on disk, or the
-  checkout's HEAD and refs for a named ref; a sha never moves; revalidated
-  against the file's revision) — the text on screen
-  stays until the re-read lands. Both hooks keep their
-  own state shape (`loading` / `ok` / `unavailable` with a reason / `error`):
-  a refusal that is an answer about the file (`missing`, `denied`, `too-large`,
-  `binary`, `unsupported`) is `unavailable`, worded by
-  `fileTextUnavailableMessage` / `fileBytesUnavailableMessage`; a read where no
-  computer is behind the app (the in-browser demo — both values are
-  `needsMachine`) is `unavailable` with reason `needs-machine`; any other
-  refusal (`invalid-path`, `not-a-file`, `unreadable-archive`, `invalid-ref`,
-  `not-a-checkout`) or failure is `error` with the server's message. A
-  workspace that is not there (`code.file`'s `no-workspace`) reads as
-  `missing`, as the old route's 404 did.
-
-- **`fileBytes` (`file-viewer.bytes`, core; served by `machine/`)** is the live
-  form of `useFileBytes`' read: `useLive(fileBytes, file)` →
-  `ResourceResult<ArrayBuffer>` (a `bytes` value, on demand, `needsMachine`),
-  the question being the `FileRef` itself. A host file is read through
-  host-fs (`openHostFile`: a disk file or an archive member), capped at
-  `FILE_BYTES_MAX` (64 MiB) before the read, and invalidated from a watch of
-  its folder while read. A workspace file is read through code-explorer's
-  machine half (`readWorkspaceBytes`: on disk through the same host-fs opener,
-  or as of a ref from the checkout's blob, its size gated before the read) and
-  invalidated from `watchWorkspaceFile` (the file's entry; the checkout's HEAD
-  and refs for a named ref; nothing for a sha); an attempt-id workspace's
-  root is its attempt row, FOLLOWED (tasks-core's `attemptWorkspaces` by
-  code-explorer's `workspaceAttemptIds`, resolved by `workspaceRootFrom`), so
-  only a write to that attempt's workspace reaches the tuple and re-points
-  its watch. Its ETag (`revalidate`) is the file's revision —
-  host-fs's `hostPathVersion` stamp, or code-explorer's
-  `workspaceFileSignature` — probed before the read, so an invalidation that
-  moved nothing is a 304, not a re-read. Refused: `missing` (the workspace too), `denied`,
-  `too-large`, `unsupported` (a folder, an unreadable archive member, a
-  revision of a workspace that is not a checkout), `invalid-path` (a malformed
-  path or ref).
-- `FileViewer.Renderer` is the tiered registry: each renderer's `supports({ file,
-  gitStatus? })` answers `native` / `contextual` / `fallback` / `last-resort` / `false`, and every
-  offered renderer is a tab, best tier first. Each renderer is one sub-plugin
-  under `plugins/` (code, markdown, html, image, media, pdf, diff, fallback); a domain renderer
-  lives with its domain (Sonata's MIDI preview under
-  `apps/sonata/plugins/sources/plugins/midi/plugins/file-preview`).
+- `locationForPath(checkout, path, { root? })` (core) turns a path as a
+  conversation spells it into a location: relative (or absolute inside `root`)
+  → the checkout, any other absolute or `~` path → the computer.
+- `FileViewer.Renderer` is the tiered registry: each renderer's
+  `supports({ file, git? })` answers `native` / `contextual` / `fallback` /
+  `last-resort` / `false`, and every offered renderer is a tab, best tier first.
+  Each renderer is one sub-plugin under `plugins/` (code, markdown, html, image,
+  media, pdf, diff, fallback); a domain renderer lives with its domain (Sonata's
+  MIDI preview under `apps/sonata/plugins/sources/plugins/midi/plugins/file-preview`).
 - `FileView` is the self-contained viewer (breadcrumb + tabs over the body).
   Hosts that put the tabs in their own chrome (the conversation file-peek pane)
   compose `useFileRenderers` + `FileTabs` + `FileContent`.
-- **An unreadable host file says why.** `FileContent` reads the file's live
-  `host-fs.stat`; when its `read` is `macos-privacy` (macOS keeps the equin
-  app out of a protected folder such as ~/Downloads) or `permissions`, the body
-  is "equin can't read this file" with Allow access (System Settings → Files &
-  Folders) and Check again, whichever renderer is selected — never a
-  renderer's own reading of the failed load ("No preview", an empty image).
-  A host file that is not there (stat refused `missing`) is "File not found"
-  with its path, the same way; the stat is watched, so the renderer comes back
-  once the file appears.
-- `gitStatus` is context the host supplies; the diff renderer is offered only
-  for a changed checkout file.
+- **An unreadable file says why.** `FileContent` reads the file's live stat
+  (`useFileStat`): when its `read` is `macos-privacy` (macOS keeps the equin app
+  out of a protected folder such as ~/Downloads) or `permissions`, the body is
+  "equin can't read this file" with Allow access and Check again, whichever
+  renderer is selected; a file that is not there is "File not found". Where
+  nothing describes the file (a checkout, no computer behind the app) the
+  renderer's own states cover it.
+- "Open with default app" is offered only where the file system hands files to
+  the computer's apps (`opensNatively`: the computer's disk), and not for an
+  archive member.
+- `git` is context the host supplies; the diff renderer is offered only for a
+  changed checkout file.
+- The image viewer's ← / → set still reads the computer's and a checkout's
+  folder listings directly (host-fs, code-api) — a browser file is the image
+  alone — until file-systems serves listings (session 2 of the design).
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./equin build` -->
 
 ## Plugin reference
 
-- Description: Domain-neutral file viewer: the tiered FileViewer.Renderer registry (native / contextual / fallback / last-resort, offered as tabs), the FileView / FileContent / FileTabs hosts, useFileText reading a FileRef's text from the host (infra/host-fs) or a git checkout (code-api), and useFileBytes its raw bytes (a host file through host-fs, a workspace file through code-explorer).
+- Description: Domain-neutral file viewer: the tiered FileViewer.Renderer registry (native / contextual / fallback / last-resort, offered as tabs), the FileView / FileContent / FileTabs hosts, over a FileLocation in any file system (infra/paths/file-systems' reads: the computer's disk, the browser's storage, a checkout) — a renderer never asks which.
 - Web:
   - Slots: `FileViewer.Renderer`
   - Slot contributors:
@@ -91,8 +53,9 @@ itself) / `fileUrl(file)` — a renderer never branches on the source to read.
     - `FileViewer.Renderer` ← `primitives.file-viewer.markdown`
     - `FileViewer.Renderer` ← `primitives.file-viewer.media`
     - `FileViewer.Renderer` ← `primitives.file-viewer.pdf`
-  - Uses:
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/endpoints.useEndpointMutation`
+    - `infra/paths/file-systems.useFileStat`
     - `network/live.useLive`
     - `primitives/css/center.Center`
     - `primitives/css/column.Column`
@@ -113,68 +76,24 @@ itself) / `fileUrl(file)` — a renderer never branches on the source to read.
     - `shell/toast.showToast`
     - `ui/icons.Icon`
   - Exports (types):
-    - `FileBytesState`
-    - `FileBytesUnavailable`
     - `FileRendererContribution`
     - `FileRendererProps`
     - `FileRenderersHandle`
     - `FileRendererTarget`
-    - `FileTextState`
-    - `FileTextUnavailable`
     - `PreviewFailure`
     - `RendererMatch`
     - `ResolvedRenderer`
   - Exports (values):
-    - `fileBytesUnavailableMessage`
     - `FileContent`
     - `FileTabs`
-    - `fileTextUnavailableMessage`
     - `FileView`
     - `FileViewer`
     - `NoPreview`
     - `resolveRenderers`
     - `UnloadedFile`
     - `useArchiveMembership`
-    - `useFileBytes`
     - `useFileRenderers`
-    - `useFileText`
     - `useOpenHostFile`
-- Server:
-  - Contributes: `resource.declare` "file-viewer.bytes"
-  - Resources: `file-viewer.bytes` (invalidate, notified)
-- Machine:
-  - Uses:
-    - `code-explorer.readWorkspaceBytes`
-    - `code-explorer.watchWorkspaceFile`
-    - `code-explorer.workspaceAttemptIds`
-    - `code-explorer.WorkspaceFile`
-    - `code-explorer.workspaceFileSignature`
-    - `code-explorer.WorkspaceRoot`
-    - `code-explorer.workspaceRootFrom`
-    - `infra/host-fs.hostPathVersion`
-    - `infra/host-fs.resolvedOrNull`
-    - `infra/host-fs.resolveOrRefuse`
-    - `infra/host-fs.watchHostPath`
-    - `network/live.serveValue`
-- Core:
-  - Uses:
-    - `code-explorer/code-api.codeImageUrl`
-    - `infra/host-fs.hostFileUrl`
-    - `infra/paths/data-files.dataFileUrl`
-    - `network/live.liveValue`
-  - Exports (types):
-    - `FileGitStatus`
-    - `FileRef`
-    - `FileViewerGit`
-  - Exports (values):
-    - `FILE_BYTES_MAX`
-    - `fileBytes`
-    - `fileExtension`
-    - `fileRefForPath`
-    - `fileRefKey`
-    - `fileRefName`
-    - `fileUrl`
-    - `isBinaryPath`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --foreground`
@@ -200,6 +119,14 @@ itself) / `fileUrl(file)` — a renderer never branches on the source to read.
     - `primitives/file-viewer/markdown`
     - `primitives/file-viewer/media`
     - `primitives/file-viewer/pdf`
+- Core:
+  - Exports (types):
+    - `FileGitStatus`
+    - `FileViewerGit`
+  - Exports (values):
+    - `fileExtension`
+    - `isBinaryPath`
+    - `locationForPath`
 - Sub-plugins:
   - **`code`** — Code renderer: the file's text as a syntax-highlighted, line-numbered listing. The fallback tab for any file not known to be binary.
   - **`diff`** — Side-by-side diff of a changed file vs its checkout's base — a contextual tab, offered only when the host passes git context (checkout, path, status) with a non-clean status, wherever the file's…
@@ -207,7 +134,7 @@ itself) / `fileUrl(file)` — a renderer never branches on the source to read.
   - **`html`** — Rendered page preview for .html and .htm files, in a sandboxed frame that can neither read nor reach the app; the Code tab is its source.
   - **`image`** — Image preview for .png, .jpg, .gif, .webp, .svg, and similar files.
   - **`markdown`** — Rendered markdown preview for .md and .mdx files.
-  - **`media`** — Video and audio player for host media files (.mp4, .mov, .webm, .mp3, .wav, .flac, …): the themed media player (media/player), auto-playing on open, its keyboard (Space to play / pause) on the file…
-  - **`pdf`** — PDF preview for host .pdf files, in the browser's own PDF viewer (pages, zoom, search, print).
+  - **`media`** — Video and audio player for media files in any file system (.mp4, .mov, .webm, .mp3, .wav, .flac, …): the themed media player (media/player), auto-playing on open, its keyboard (Space to play /…
+  - **`pdf`** — PDF preview for .pdf files in any file system, in the browser's own PDF viewer (pages, zoom, search, print).
 
 <!-- AUTOGENERATED:END -->

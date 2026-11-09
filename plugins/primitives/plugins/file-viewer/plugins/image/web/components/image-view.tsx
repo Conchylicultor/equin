@@ -2,9 +2,9 @@ import { useState } from "react";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
-  fileRefName,
   fileUrl,
-} from "@plugins/primitives/plugins/file-viewer/core";
+  locationName,
+} from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import {
   UnloadedFile,
   type FileRendererProps,
@@ -47,7 +47,7 @@ function LoadedImageView({
   file,
   src,
 }: Pick<FileRendererProps, "file"> & { src: string }) {
-  const name = fileRefName(file);
+  const name = locationName(file);
   const { images, pending } = useFolderImages(file);
   const [img, setImg] = useState<HTMLImageElement | null>(null);
   // The image on screen, by address: the folder listing can change under an

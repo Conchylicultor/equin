@@ -29,22 +29,16 @@ export { copyTree, readText, stageThenRename } from "./internal/helpers";
 export type { ReadTextResult } from "./internal/helpers";
 export {
   BrowsableRootSchema,
-  DATA_FILE_TEXT_MAX_BYTES,
   DataFileEntrySchema,
   DataFileStatSchema,
-  DataFileTextSchema,
   DataFolderMetaSchema,
   DataFolderQuerySchema,
   dataFileRoots,
   dataFileStat,
-  dataFileText,
-  dataFileUrl,
-  dataFilesRaw,
   dataFolderListing,
 } from "./internal/browse";
 export type {
   BrowsableRoot,
   DataFileStat,
-  DataFileText,
   DataFolderMeta,
 } from "./internal/browse";

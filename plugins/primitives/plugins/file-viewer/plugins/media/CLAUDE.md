@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Video and audio player for host media files (.mp4, .mov, .webm, .mp3, .wav, .flac, …): the themed media player (media/player), auto-playing on open, its keyboard (Space to play / pause) on the file pane, seeking over byte ranges; a file the player cannot open (damaged or incomplete, unreadable, an unsupported codec) says why, with Retry and Open with default app.
+- Description: Video and audio player for media files in any file system (.mp4, .mov, .webm, .mp3, .wav, .flac, …): the themed media player (media/player), auto-playing on open, its keyboard (Space to play / pause) on the file pane, seeking over byte ranges; a file the player cannot open (damaged or incomplete, unreadable, an unsupported codec) says why, with Retry and Open with default app.
 - Web:
   - Contributes:
     - `FileViewer.Renderer` "Video" → `VideoView`

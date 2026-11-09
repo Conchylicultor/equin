@@ -13,8 +13,9 @@
  *  3. opens Documents: the seeded folders are listed, and each kind of file
  *     the seed wrote opens in its viewer beside its folder — markdown
  *     rendered, plain text and code as listings, the picture drawn, the HTML
- *     page in its sandboxed frame, the PDF and the recording each in their
- *     viewer or saying they are not available — never an error;
+ *     page in its sandboxed frame, the PDF in the browser's viewer and the
+ *     recording loaded in the player (both from the worker's storage, as
+ *     blobs the transport fetched) — never an error;
  *  4. opens Prototypes: the gallery's folders are files here too.
  *
  * Every file-type and Lucide icon is drawn from the demo's own server
@@ -264,20 +265,45 @@ await withBrowser(async (h) => {
     "the page is rendered in its frame",
     async (p) => (await p.locator("iframe").count()) > 0,
   );
+  // Every file system serves every file's bytes (file-systems' `fileUrl`), so
+  // the PDF and the recording preview from the worker's storage — a blob the
+  // transport fetched, never "No preview".
   await view(
     "Lisbon trip",
     "boarding pass.pdf",
-    "the PDF is shown, or says it is not available",
-    async (p, text) =>
-      (await p.locator("iframe, embed, object").count()) > 0 ||
-      NOT_AVAILABLE.test(text),
+    "the PDF is shown in the browser's viewer, from the worker",
+    async (p, text) => {
+      if (NOT_AVAILABLE.test(text)) return false;
+      const frame = p.locator("iframe, embed, object").first();
+      if ((await frame.count()) === 0) return false;
+      // Headless Chromium has no PDF viewer (the frame stays blank, on the
+      // desktop's disk too): what is checked is that the frame holds the
+      // worker's bytes as a PDF, which a real browser's viewer renders.
+      const src =
+        (await frame.getAttribute("src")) ?? (await frame.getAttribute("data"));
+      if (!(src?.startsWith("blob:") ?? false)) return false;
+      const type = await page.evaluate(
+        async (url) => (await (await fetch(url)).blob()).type,
+        src!,
+      );
+      return type === "application/pdf";
+    },
   );
   await view(
     "Piano",
     "C major arpeggio.wav",
-    "the recording plays, or says it is not available",
-    async (p, text) =>
-      (await p.locator("audio, video").count()) > 0 || NOT_AVAILABLE.test(text),
+    "the recording is loaded in the player, from the worker",
+    async (p, text) => {
+      if (NOT_AVAILABLE.test(text)) return false;
+      const media = p.locator("audio, video").first();
+      if ((await media.count()) === 0) return false;
+      return media.evaluate(
+        (el: HTMLMediaElement) =>
+          el.currentSrc.startsWith("blob:") &&
+          el.readyState >= HTMLMediaElement.HAVE_METADATA &&
+          el.duration > 0,
+      );
+    },
   );
 
   // ── 4. Prototypes: the gallery's folders are files here too ─────────────

@@ -12,7 +12,7 @@ import {
   type ImageLoad,
   type ImageProbeState,
 } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
-import { codeImageUrl } from "@plugins/code-explorer/plugins/code-api/core";
+import { fileUrl } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { useAssetSrc } from "@plugins/infra/plugins/endpoints/web";
 
 /** Still finding out: not loaded yet, or failed and asking the server why. */
@@ -119,8 +119,12 @@ export function ImageDiffView({
 }) {
   const ref = base ?? "HEAD";
   // Both sides' bytes over the subtree's transport (`useAssetSrc`).
-  const oldAsset = useAssetSrc(codeImageUrl(worktree, path, { ref }));
-  const newAsset = useAssetSrc(codeImageUrl(worktree, path));
+  const oldAsset = useAssetSrc(
+    fileUrl({ fs: "checkout", checkout: worktree, path, version: ref }),
+  );
+  const newAsset = useAssetSrc(
+    fileUrl({ fs: "checkout", checkout: worktree, path }),
+  );
   if (oldAsset.kind === "ready" && newAsset.kind === "ready") {
     return (
       <ImageDiffSides

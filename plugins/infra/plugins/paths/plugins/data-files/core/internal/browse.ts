@@ -1,17 +1,13 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
-import {
-  assetPath,
-  blob,
-  defineEndpoint,
-  type AssetPath,
-} from "@plugins/infra/plugins/endpoints/core";
+import { FileLocationSchema } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 
 // The read surface a generic browser (the file explorer's "App data" place)
-// reads a file root through, on every host: the roots that opt in
-// (`browse` on `defineFileRoot`), and each one's folders, entries and files —
-// named by the root's id and a path relative to it, never a host path.
+// lists a file root through, on every host: the roots that opt in (`browse`
+// on `defineFileRoot`), and each one's folders and entries — named by the
+// root's id and a path relative to it. A file's contents are read where the
+// root's folder IS (`BrowsableRoot.location`), through file-systems' reads.
 // Served by this plugin's portable `server/`, pushed from the root's own watch.
 
 /** One root a browser may show: its id, the words for it, and the data dir it is. */
@@ -20,6 +16,12 @@ export const BrowsableRootSchema = z.object({
   label: z.string(),
   /** The data dir, `${kind}/${name}` (`apps/prototypes`). */
   dir: z.string(),
+  /**
+   * Where the root's folder is in this host's file system — what a reader
+   * names its files by (file-systems' reads, the file viewer): the data dir on
+   * the computer's disk, or under the browser storage's `~/.equin/`.
+   */
+  location: FileLocationSchema,
 });
 export type BrowsableRoot = z.infer<typeof BrowsableRootSchema>;
 
@@ -68,8 +70,7 @@ export type DataFolderMeta = z.infer<typeof DataFolderMetaSchema>;
 // - `unknown-root` — no root of that id is declared `browse` on this host;
 // - `invalid-path` — the path is not one inside a root (`..`, `/x`, NUL, …);
 // - `missing` — nothing there;
-// - `not-a-dir` / `not-a-file` — the wrong kind of entry for the read;
-// - `too-large` / `binary` — a file `text` will not decode.
+// - `not-a-dir` — a file where a folder is listed.
 
 /**
  * A root folder's entries, key-range-PAGED by name in code-point order (as
@@ -105,54 +106,3 @@ export const dataFileStat = liveValue("data-files.stat", {
   params: ["root", "path"],
   refusals: ["unknown-root", "invalid-path", "missing"],
 });
-
-/** The largest file `data-files.text` decodes (2 MiB, as `host-fs.text`). */
-export const DATA_FILE_TEXT_MAX_BYTES = 2 * 1024 * 1024;
-
-export const DataFileTextSchema = z.object({
-  root: z.string(),
-  path: z.string(),
-  content: z.string(),
-  /** Bytes read. */
-  size: z.number(),
-});
-export type DataFileText = z.infer<typeof DataFileTextSchema>;
-
-/**
- * A root's file as UTF-8 text, capped at {@link DATA_FILE_TEXT_MAX_BYTES} and
- * binary-sniffed (a NUL in the first 8 KB). On demand, invalidated while read
- * from the root's watch.
- */
-export const dataFileText = liveValue("data-files.text", {
-  schema: DataFileTextSchema,
-  params: ["root", "path"],
-  load: "on-demand",
-  refusals: [
-    "unknown-root",
-    "invalid-path",
-    "missing",
-    "not-a-file",
-    "too-large",
-    "binary",
-  ],
-});
-
-/**
- * `GET /api/data-files/:root/raw?path=` — a browsable root's file, its bytes
- * verbatim with a Content-Type by extension. 404 for an unknown root, nothing
- * there or a folder; 400 for a path that is not one inside a root.
- */
-export const dataFilesRaw = defineEndpoint({
-  route: "GET /api/data-files/:root/raw",
-  query: z.object({ path: z.string() }),
-  response: blob(),
-});
-
-/**
- * A root's file as an asset an element loads (`<img src>`, an iframe, a
- * download) — through `useAssetSrc` (`endpoints/web`), over the subtree's
- * transport.
- */
-export function dataFileUrl(root: string, path: string): AssetPath {
-  return assetPath(dataFilesRaw, { root }, { path });
-}

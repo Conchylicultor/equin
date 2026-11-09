@@ -10,7 +10,11 @@ dirs, read-only, on every host — the second user of
 - This plugin names no root: the landing (`/files/data`) lists
   `data-files.roots`; `/files/data/<root>[/<path>]` lists a folder
   (`data-files.list`, paged) or previews a file beside its folder through the
-  file viewer, as a `{ source: "data", root, path }` `FileRef`.
+  file viewer, at the root's `location` (its folder in this host's file
+  system: the computer's disk, or the browser's storage).
+- To be deleted (session 2 of
+  `research/2026-11-09-global-one-file-system-api.md`): a root is a folder of
+  the host's file system, which Files will browse like any other.
 - The desktop explorer's own browser stays on `infra/host-fs`; this is a
   separate, simpler surface because a root path is not a host path.
 
@@ -18,7 +22,7 @@ dirs, read-only, on every host — the second user of
 
 ## Plugin reference
 
-- Description: The file explorer's App data place: a Locations entry leading to every file root an app declares browsable (data-files.roots — the root ids are the server's, the explorer names none), each browsed read-only at /files/data/<root>[/<path>] — a folder's entries as a paged live DataView list, a file previewed beside its folder through the file viewer (a data FileRef) — on every host: the computer's disk on the desktop, memory in a browser host.
+- Description: The file explorer's App data place: a Locations entry leading to every file root an app declares browsable (data-files.roots — the root ids are the server's, the explorer names none), each browsed read-only at /files/data/<root>[/<path>] — a folder's entries as a paged live DataView list, a file previewed beside its folder through the file viewer, at the root's location in this host's file system — on every host: the computer's disk on the desktop, memory in a browser host.
 - Web:
   - Slots:
     - `files-data.actions`

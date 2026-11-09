@@ -1,9 +1,9 @@
+import { type FileRendererProps } from "@plugins/primitives/plugins/file-viewer/web";
+import { locationName } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import {
-  useFileText,
   fileTextUnavailableMessage,
-  type FileRendererProps,
-} from "@plugins/primitives/plugins/file-viewer/web";
-import { fileRefName } from "@plugins/primitives/plugins/file-viewer/core";
+  useFileText,
+} from "@plugins/infra/plugins/paths/plugins/file-systems/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { InlineFrame } from "@plugins/primitives/plugins/embed/plugins/frame/web";
@@ -23,7 +23,7 @@ export function HtmlView({ file }: FileRendererProps) {
   if (state.kind === "unavailable") {
     return (
       <Placeholder tone="error">
-        {fileTextUnavailableMessage(state.reason)}
+        {fileTextUnavailableMessage(state)}
       </Placeholder>
     );
   }
@@ -37,7 +37,7 @@ export function HtmlView({ file }: FileRendererProps) {
 
   return (
     <InlineFrame
-      title={fileRefName(file)}
+      title={locationName(file)}
       html={isolateHtml(state.content)}
       allow={["scripts", "popups", "forms", "modals"]}
       className="block h-full w-full border-0 bg-white"

@@ -1,10 +1,13 @@
 import type { MachinePluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { hostFsDirPeekServed, hostFsListingServed } from "./internal/listing";
+import { hostFsPathStatServed, hostFsVolumeInfoServed } from "./internal/reads";
 import {
-  hostFsFileTextServed,
-  hostFsPathStatServed,
-  hostFsVolumeInfoServed,
-} from "./internal/reads";
+  computerFileBytesServed,
+  computerFileStatServed,
+  computerFileTextServed,
+  handleComputerFileRaw,
+} from "./internal/file-system";
+import { computerFileRaw } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { hostFsVersionServed } from "./internal/version";
 import { hostFsCompletionsServed } from "./internal/complete";
 import { hostFsExtract, hostFsMove, hostFsOpen, hostFsRaw } from "../core";
@@ -27,12 +30,13 @@ export {
 
 export default {
   description:
-    "host-fs's desktop half: the host filesystem as live values — host-fs.list (a folder's entries, key-range-paged by name, its path / parent / total / within as the meta sibling), host-fs.peek (a folder's child names, capped), host-fs.stat, host-fs.complete (a typed path's folder completions, capped), host-fs.text (on demand), host-fs.volume (a snapshot) and host-fs.version (a host file's on-disk revision), each pushed from the shared dir hub while read and refusing missing / denied / … paths by code — plus hostPathVersion / watchHostPath / watchHostDir, which stamp and watch any absolute host path or folder (an archive member through its archive file). And the routes, each needsMachine: raw bytes of any path the user account can read (filesystem permissions are the boundary), POST open (Open with default app, Reveal in Finder), POST extract (an archive beside itself) and POST move (paths into a folder, a taken name answered `exists` until the caller resolves it) — the three POSTs refused unless the Origin is the app's own *.localhost.",
+    "host-fs's desktop half: the host filesystem as live values — host-fs.list (a folder's entries, key-range-paged by name, its path / parent / total / within as the meta sibling), host-fs.peek (a folder's child names, capped), host-fs.stat, host-fs.complete (a typed path's folder completions, capped), host-fs.volume (a snapshot) and host-fs.version (a host file's on-disk revision), each pushed from the shared dir hub while read and refusing missing / denied / … paths by code; the computer's disk as a file system (file-systems' `computer` reads: files.computer.stat / .text / .bytes and GET /api/files/computer/raw) — plus hostPathVersion / watchHostPath / watchHostDir, which stamp and watch any absolute host path or folder (an archive member through its archive file). And the routes, each needsMachine: raw bytes of any path the user account can read (filesystem permissions are the boundary), POST open (Open with default app, Reveal in Finder), POST extract (an archive beside itself) and POST move (paths into a folder, a taken name answered `exists` until the caller resolves it) — the three POSTs refused unless the Origin is the app's own *.localhost.",
   httpRoutes: {
     [hostFsRaw.route]: handleRaw,
     [hostFsOpen.route]: handleOpen,
     [hostFsExtract.route]: handleExtract,
     [hostFsMove.route]: handleMove,
+    [computerFileRaw.route]: handleComputerFileRaw,
   },
   contributions: [
     ...hostFsVersionServed.declare,
@@ -40,7 +44,9 @@ export default {
     ...hostFsDirPeekServed.declare,
     ...hostFsPathStatServed.declare,
     ...hostFsCompletionsServed.declare,
-    ...hostFsFileTextServed.declare,
+    ...computerFileStatServed.declare,
+    ...computerFileTextServed.declare,
+    ...computerFileBytesServed.declare,
     ...hostFsVolumeInfoServed.declare,
   ],
 } satisfies MachinePluginDefinition;

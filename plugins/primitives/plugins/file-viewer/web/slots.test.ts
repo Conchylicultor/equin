@@ -40,7 +40,7 @@ describe("resolveRenderers", () => {
     expect(
       ids(
         {
-          file: { source: "workspace", workspace: "w", path: "a.ts" },
+          file: { fs: "checkout", checkout: "w", path: "a.ts" },
           git: { checkout: "w", path: "a.ts", status: "modified" },
         },
         registry,
@@ -49,14 +49,14 @@ describe("resolveRenderers", () => {
   });
 
   it("drops a last-resort renderer beside any other", () => {
-    expect(ids({ file: { source: "host", path: "/a.png" } }, registry)).toEqual(
+    expect(ids({ file: { fs: "computer", path: "/a.png" } }, registry)).toEqual(
       ["image"],
     );
   });
 
   it("offers the last-resort renderer when nothing else matches", () => {
     const noCode = registry.filter((r) => r.id !== "code");
-    expect(ids({ file: { source: "host", path: "/a.zip" } }, noCode)).toEqual([
+    expect(ids({ file: { fs: "computer", path: "/a.zip" } }, noCode)).toEqual([
       "fallback",
     ]);
   });

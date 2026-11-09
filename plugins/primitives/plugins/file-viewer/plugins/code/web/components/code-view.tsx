@@ -1,9 +1,11 @@
 import {
-  useFileText,
-  fileTextUnavailableMessage,
   NoPreview,
   type FileRendererProps,
 } from "@plugins/primitives/plugins/file-viewer/web";
+import {
+  fileTextUnavailableMessage,
+  useFileText,
+} from "@plugins/infra/plugins/paths/plugins/file-systems/web";
 import {
   CodeListing,
   CodePaneSurface,
@@ -28,7 +30,7 @@ export function CodeView({ file, line }: FileRendererProps) {
     if (state.reason === "binary") return <NoPreview file={file} />;
     return (
       <Placeholder tone="error">
-        {fileTextUnavailableMessage(state.reason)}
+        {fileTextUnavailableMessage(state)}
       </Placeholder>
     );
   }

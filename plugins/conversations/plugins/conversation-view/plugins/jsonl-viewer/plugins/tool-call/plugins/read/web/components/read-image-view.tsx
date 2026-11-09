@@ -1,13 +1,11 @@
 import { AssetThumbnail } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
-import {
-  fileRefForPath,
-  fileUrl,
-} from "@plugins/primitives/plugins/file-viewer/core";
+import { locationForPath } from "@plugins/primitives/plugins/file-viewer/core";
+import { fileUrl } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 
 /**
  * The picture a Read call opened. Its path is as the tool got it — relative to
  * the worktree, or absolute anywhere on the host (a screenshot in a temp dir) —
- * so the bytes come from the checkout or from host-fs accordingly.
+ * so the bytes come from the checkout or from the computer's disk accordingly.
  */
 export function ReadImageView({
   worktree,
@@ -24,7 +22,7 @@ export function ReadImageView({
   size?: { width: number; height: number };
 }) {
   const asset = fileUrl(
-    fileRefForPath(worktree, filePath, { root: worktreePath }),
+    locationForPath(worktree, filePath, { root: worktreePath }),
   );
   const name = filePath.slice(filePath.lastIndexOf("/") + 1);
 

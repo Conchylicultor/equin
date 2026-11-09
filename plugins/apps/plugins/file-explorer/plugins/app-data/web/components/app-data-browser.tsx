@@ -30,7 +30,6 @@ import {
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { FileTypeIcon } from "@plugins/primitives/plugins/file-type/web";
 import { FileView } from "@plugins/primitives/plugins/file-viewer/web";
-import type { FileRef } from "@plugins/primitives/plugins/file-viewer/core";
 import {
   formatModified,
   formatSize,
@@ -107,10 +106,6 @@ function Split({
   dir: string;
   open: string | null;
 }): ReactNode {
-  const file = useMemo<FileRef | null>(
-    () => (open === null ? null : { source: "data", root, path: open }),
-    [root, open],
-  );
   return (
     <Column
       fill
@@ -125,11 +120,11 @@ function Split({
           <ResizablePanel id="listing" minSize="280px">
             <Folder root={root} dir={dir} open={open} />
           </ResizablePanel>
-          {file !== null && (
+          {open !== null && (
             <>
               <ResizableHandle />
               <ResizablePanel id="preview" minSize="320px" defaultSize="55%">
-                <FileView file={file} />
+                <RootFilePreview root={root} path={open} />
               </ResizablePanel>
             </>
           )}
@@ -137,6 +132,43 @@ function Split({
       }
     />
   );
+}
+
+/**
+ * One file of a root, previewed where the root's folder IS in this host's file
+ * system (its `location`: the computer's disk, or the browser's storage) — the
+ * file viewer reads it like any other file.
+ */
+function RootFilePreview({
+  root,
+  path,
+}: {
+  root: string;
+  path: string;
+}): ReactNode {
+  const roots = useLive(dataFileRoots);
+  switch (roots.status) {
+    case "loading":
+      return <Loading />;
+    case "error":
+      return (
+        <Placeholder>
+          <ResourceErrorInline
+            variant="block"
+            error={roots.error}
+            refetch={roots.refetch}
+            subject={root}
+          />
+        </Placeholder>
+      );
+    case "ready": {
+      const folder = roots.data.find((r) => r.id === root)?.location;
+      if (folder === undefined) {
+        return <Placeholder>No browsable file root {root}.</Placeholder>;
+      }
+      return <FileView file={{ ...folder, path: `${folder.path}/${path}` }} />;
+    }
+  }
 }
 
 /** App data › the root's label › each folder down to `dir`, every crumb a link. */

@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: PDF preview for host .pdf files, in the browser's own PDF viewer (pages, zoom, search, print).
+- Description: PDF preview for .pdf files in any file system, in the browser's own PDF viewer (pages, zoom, search, print).
 - Web:
   - Contributes: `FileViewer.Renderer` "PDF" → `PdfView`
   - Uses:

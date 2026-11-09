@@ -51,7 +51,7 @@ export async function getFileContent(
 ): Promise<FileReadResult> {
   // The file as it is on disk right now — inside the workspace only, read by
   // host-fs's one text gate. A file elsewhere on the host is host-fs's to
-  // address too (file-viewer's `host` FileRef).
+  // address too (the computer's file system).
   const absTarget = resolveInsideRoot(worktreePath, relPath);
   if (absTarget === null) return { kind: "invalid-path" };
 

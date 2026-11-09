@@ -151,6 +151,9 @@ export function createDiskDataFiles(opts: DiskDataFilesOptions): DataFilesImpl {
   }
 
   return {
+    location(spec) {
+      return { fs: "computer", path: opts.bound(spec).dir() };
+    },
     root(spec) {
       let store = stores.get(spec.id);
       if (store === undefined) {

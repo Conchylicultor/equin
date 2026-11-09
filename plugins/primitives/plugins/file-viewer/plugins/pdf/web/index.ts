@@ -5,17 +5,14 @@ import { PdfView } from "./components/pdf-view";
 
 export default {
   description:
-    "PDF preview for host .pdf files, in the browser's own PDF viewer (pages, zoom, search, print).",
+    "PDF preview for .pdf files in any file system, in the browser's own PDF viewer (pages, zoom, search, print).",
   contributions: [
     FileViewer.Renderer({
       id: "pdf",
       label: "PDF",
-      // A checkout's raw route serves image formats only, so a git file has
-      // no URL the viewer could load.
+      // Every file system serves a PDF's bytes (`fileUrl`).
       supports: ({ file }) =>
-        file.source === "host" && fileExtension(file.path) === "pdf"
-          ? "native"
-          : false,
+        fileExtension(file.path) === "pdf" ? "native" : false,
       component: PdfView,
     }),
   ],

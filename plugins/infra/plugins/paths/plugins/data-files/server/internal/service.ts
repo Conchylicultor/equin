@@ -1,6 +1,7 @@
 import { defineHostService } from "@plugins/framework/plugins/server-core/core";
 import type { DataDirRef } from "@plugins/infra/plugins/paths/core";
 import type { DataChangeHandler, DataWatch, Mount, RelPath } from "../../core";
+import type { FileLocation } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 
 /**
  * How a root's changes are heard on the desktop: the static policy of the
@@ -79,6 +80,13 @@ export interface FileRootStore extends Mount {
  */
 export interface DataFilesImpl {
   root(spec: FileRootSpec): FileRootStore;
+  /**
+   * Where the root's folder is in this host's file system — a reader names
+   * its files by that location, never by the root: on the desktop the data
+   * dir on the computer's disk, in a browser host the same dir under the
+   * browser storage's hidden `~/.equin/`.
+   */
+  location(spec: FileRootSpec): FileLocation;
 }
 
 /**

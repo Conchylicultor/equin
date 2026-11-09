@@ -4,7 +4,7 @@ The file viewer's renderer for a `.mid` / `.midi` file (a host file or a
 workspace file — `useFileBytes` reads both), built from Sonata's
 own parts rather than a second piano roll: it mounts a `SonataPlayerScope` of
 its own (so it never shares a cursor or transport with an open Sonata window)
-and loads the bytes as a **file** document (`{ kind: "file", key: fileRefKey }`)
+and loads the bytes as a **file** document (`{ kind: "file", key: locationKey }`)
 — no library song, so every per-song setting reads its default and nothing is
 written. Wherever a `FileViewer` host shows a MIDI file (the file explorer's
 preview pane, a conversation's file-peek pane), this renderer is the native
@@ -51,12 +51,12 @@ preview, then the same in Sonata after Open in Sonata.
 - Description: Sonata's MIDI file preview: a FileViewer renderer (native for .mid/.midi files, host or workspace) showing the file's facts (duration, tempo, meter, bars, tracks and notes, range, size), Sonata's falling-notes piano roll in its own player with a play bar, and Open in Sonata — imported into the library idempotently by content — at the playhead's bar.
 - Web:
   - Contributes: `FileViewer.Renderer` "MIDI" → `MidiFilePreview`
-  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/sonata/player` ×4
     - `apps/sonata/sources/midi` ×4
-    - `primitives/file-viewer` ×4
     - `apps/sonata/document` ×2
     - `apps/sonata/session` ×2
+    - `infra/paths/file-systems` ×2
     - `primitives/css/spacing` ×2
     - `primitives/css/ui-kit` ×2
     - `apps-core/tabs.useNavigate`
@@ -71,6 +71,7 @@ preview, then the same in Sonata after Open in Sonata.
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/text.Text`
+    - `primitives/file-viewer.FileViewer`
     - `primitives/loading.Loading`
     - `primitives/relative-time.formatElapsed`
     - `shell/toast.showToast`

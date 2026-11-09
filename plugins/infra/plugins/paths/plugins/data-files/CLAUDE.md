@@ -57,35 +57,33 @@ param before parsing it (`%2e%2e` decoded is `..`, refused).
 - Helpers over any `Mount`: `readText`, `copyTree`, `stageThenRename` (build a
   directory out of sight, rename it into place, never over another).
 
+## Where a root's files are read
+
+A root is a folder of the host's file system (`infra/paths/file-systems`):
+`DataFiles.get().location(spec)` is the data dir on the computer's disk on the
+desktop, `~/.equin/<dir>` in the browser's storage in a browser host (served by
+`plugins/memory`, which lays the host's roots out as that home folder). A
+reader (the file viewer) names a root's file by that location — never by root
+id.
+
 ## Browsing a root (`browse`)
 
 A root declared `browse: { label }` (it must also declare `watch` — tsc and a
-throw) is readable by a generic browser on every host, by root id and a path
-relative to it, never a host path. Served by the portable `server/`:
-
-- `data-files.roots` — every browsable root (`id`, `label`, `dir`), fixed per build;
-- `data-files.list` — a folder's entries, key-range-paged by name, its total
-  as the meta sibling;
-- `data-files.stat` and `data-files.text` (on demand, 2 MiB, binary-sniffed);
-- `GET /api/data-files/:root/raw?path=` (`dataFileUrl`) — a file, served
-  inert (`nosniff`, `sandbox` CSP but for a PDF, same-site only).
-
-Each read refuses by code (`unknown-root`, `invalid-path`, `missing`,
-`not-a-dir` / `not-a-file`, `too-large`, `binary`) and is pushed while read
-from the root's watch — one subscription per root (a refcount hub), each read
-notified by a change at, below or above its path. A change the root's
-`watch.extensions` drops reaches a listing only with the next change that
-passes it, or a dropped-events `rescan`. `readBrowsableFile` / `browsableFileRevision` / `watchBrowsableFile`
-(server barrel) let another file reader serve a root's bytes (file-viewer's
-`file-viewer.bytes`, the `{ source: "data" }` `FileRef`). The file explorer's
-App data place (`apps/file-explorer/app-data`) is the browser.
+throw) is listed by the App data place (`apps/file-explorer/app-data`) on every
+host, served by the portable `server/`: `data-files.roots` (`id`, `label`,
+`dir`, `location`, fixed per build), `data-files.list` (a folder's entries,
+key-range-paged by name, its total as the meta sibling) and `data-files.stat`.
+Each refuses by code (`unknown-root`, `invalid-path`, `missing`, `not-a-dir`)
+and is pushed while read from the root's watch — one subscription per root (a
+refcount hub). To be deleted with App data (session 2 of
+`research/2026-11-09-global-one-file-system-api.md`).
 
 ## Providers
 
 | host | provider | notes |
 |---|---|---|
 | desktop | `data-files#machine` | single-descriptor reads (a racing remove is `missing`, never ENOENT), temp+rename writes, flock, one `defineFileWatcher` per watching root (named by the root, so the Background catalog lists it; declared in data-files), opened with `startEventualFileWatcher` so it follows the root's dir through a removal and re-creation or a replace (a `rescan` each time; the dir is made only on the first open), one ledger per ledgered root |
-| browser | `plugins/memory` (base-excluded) | in-process tree, monotonic clock, keyed-mutex locks, one `changed` per microtask, never `rescan` |
+| browser | `plugins/memory` (base-excluded) | in-process tree, monotonic clock, keyed-mutex locks, one `changed` per microtask, never `rescan`; also serves file-systems' `browser` reads over every root |
 
 `diskMount(dataDir)` (machine barrel) is the disk operations for a `cli/`
 process, which boots no graph — no watch, no ledger. `diskDirMount(dir)` is the
@@ -117,21 +115,18 @@ against both providers; a new provider runs it too.
 
 ## Plugin reference
 
-- Description: Data files: the files app-owned data dirs hold, on whatever host runs — the DataFiles host service (the computer's disk on the desktop, memory in a browser host) behind defineFileRoot, a root declared by the plugin owning the data dir: list / stat / read / write (atomic) / remove / rename (never replacing) / withLock / watch over validated relative paths, every miss a typed result and every mutation naming its writer. A root declared `browse` (and watched) is readable by a generic browser on every host: data-files.roots, data-files.list (a folder's entries, paged by name), data-files.stat, data-files.text (on demand), each pushed from the root's watch while read, and GET /api/data-files/:root/raw (a file, inert).
+- Description: Data files: the files app-owned data dirs hold, on whatever host runs — the DataFiles host service (the computer's disk on the desktop, memory in a browser host) behind defineFileRoot, a root declared by the plugin owning the data dir: list / stat / read / write (atomic) / remove / rename (never replacing) / withLock / watch over validated relative paths, every miss a typed result and every mutation naming its writer. Each root's folder is a location in this host's file system (DataFilesImpl.location: the data dir on the computer's disk, or the same dir in the browser storage's hidden data folder), where file-systems' reads read its files. A root declared `browse` (and watched) is listed by a generic browser on every host: data-files.roots (each with its location), data-files.list (a folder's entries, paged by name) and data-files.stat, each pushed from the root's watch while read.
 - Server:
   - Contributes:
     - `resource.declare` "data-files.list"
     - `resource.declare` "data-files.list:meta"
     - `resource.declare` "data-files.roots"
     - `resource.declare` "data-files.stat"
-    - `resource.declare` "data-files.text"
     - `host-service:data-files.store` "data-files.store"
   - Uses:
-    - `infra/endpoints.rawEndpointHandler`
     - `network/live.serveValue`
     - `network/live.sliceRange`
   - Exports (types):
-    - `BrowsableFileBytes`
     - `DataFilesImpl`
     - `FileRoot`
     - `FileRootBrowseSpec`
@@ -142,21 +137,16 @@ against both providers; a new provider runs it too.
     - `WatchedFileRoot`
   - Exports (values):
     - `assertNotRoot`
-    - `browsableFileRevision`
     - `DataFiles`
     - `defineFileRoot`
     - `listFileRoots`
-    - `readBrowsableFile`
     - `requireWatchSpec`
-    - `watchBrowsableFile`
     - `watchedPaths`
   - Resources:
     - `data-files.list` (keyed, window, notified)
     - `data-files.list:meta` (push, notified)
     - `data-files.roots` (push, fixed, whole: the file roots declared in code that opt in to browsing — a handful, fixed per build)
     - `data-files.stat` (push, notified)
-    - `data-files.text` (invalidate, notified)
-  - Routes: `GET /api/data-files/:root/raw`
 - Machine:
   - Uses: `infra/file-watcher.startEventualFileWatcher`
   - Exports (values):
@@ -165,10 +155,7 @@ against both providers; a new provider runs it too.
     - `FileRootLocation`
 - Core:
   - Uses:
-    - `infra/endpoints.assetPath`
-    - `infra/endpoints.AssetPath`
-    - `infra/endpoints.blob`
-    - `infra/endpoints.defineEndpoint`
+    - `infra/paths/file-systems.FileLocationSchema`
     - `network/live.liveValue`
     - `packages/list-bound.wholeList`
   - Exports (types):
@@ -176,7 +163,6 @@ against both providers; a new provider runs it too.
     - `DataChange`
     - `DataChangeHandler`
     - `DataFileStat`
-    - `DataFileText`
     - `DataFolderMeta`
     - `DataWatch`
     - `FileData`
@@ -194,15 +180,10 @@ against both providers; a new provider runs it too.
   - Exports (values):
     - `BrowsableRootSchema`
     - `copyTree`
-    - `DATA_FILE_TEXT_MAX_BYTES`
     - `DataFileEntrySchema`
     - `dataFileRoots`
-    - `dataFilesRaw`
     - `dataFileStat`
     - `DataFileStatSchema`
-    - `dataFileText`
-    - `DataFileTextSchema`
-    - `dataFileUrl`
     - `dataFolderListing`
     - `DataFolderMetaSchema`
     - `DataFolderQuerySchema`
@@ -230,7 +211,6 @@ against both providers; a new provider runs it too.
     - `apps/sonata/covers`
     - `infra/asset-mirror`
     - `infra/paths/data-files/memory`
-    - `primitives/file-viewer`
 - Exemptions:
   - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/roots.ts` (debt)
 - Test helpers:

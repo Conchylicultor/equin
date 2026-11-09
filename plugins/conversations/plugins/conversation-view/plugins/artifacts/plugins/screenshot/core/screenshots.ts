@@ -5,14 +5,12 @@ import type { ArtifactHit } from "@plugins/conversations/plugins/conversation-vi
 export const SCREENSHOT_KIND = "screenshot";
 
 /**
- * The extensions the worktree image endpoint can serve.
+ * The extensions a screenshot artifact is drawn as an image for.
  *
- * This is the THIRD copy of this set — the endpoint's own `EXT_TO_MIME`
- * (`code-explorer/server/internal/image-handler.ts`) and the Read tool row's
- * `IMAGE_EXTS` are the other two, and neither is reachable from here: the first
- * is server-side, the second is a local const inside a component file. It
- * belongs beside `codeImageUrl` in `code-explorer/plugins/code-api/core`, which
- * is where the address of an image already lives; see this plugin's CLAUDE.md.
+ * One of several copies of this set — the Read tool row's `IMAGE_EXTS` is
+ * another, a local const inside a component file. It belongs beside the file
+ * viewer's image renderer (`file-viewer/image`'s `supportsImage`); see this
+ * plugin's CLAUDE.md.
  */
 const IMAGE_EXTS = new Set([
   "png",
@@ -40,7 +38,7 @@ export function isImagePath(filePath: string): boolean {
  * taking it — a screenshot of the app it just changed, a diff sheet — so the
  * picture exists *because* of this conversation even though the tool that
  * brought it here is a read. The key is the path exactly as the tool got it,
- * which is what file-viewer's `fileRefForPath` takes: screenshots usually land
+ * which is what file-viewer's `locationForPath` takes: screenshots usually land
  * in a temp directory, outside any worktree, and are then read from the host.
  */
 export function extractScreenshots(event: JsonlEvent): ArtifactHit[] {

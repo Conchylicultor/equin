@@ -3,7 +3,8 @@ import {
   type SealContributions,
 } from "@plugins/framework/plugins/web-sdk/core";
 import type { ComponentType } from "react";
-import type { FileRef, FileViewerGit } from "../core";
+import type { FileLocation } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
+import type { FileViewerGit } from "../core";
 
 /**
  * How well a renderer fits a file:
@@ -20,7 +21,7 @@ export type RendererMatch =
 
 /** What a renderer's `supports()` decides on: the file, plus its context. */
 export interface FileRendererTarget {
-  file: FileRef;
+  file: FileLocation;
   /**
    * The file's git context (its checkout, its path there, and its status vs
    * the checkout's base), when the host knows it — independent of where
@@ -31,7 +32,7 @@ export interface FileRendererTarget {
 
 /** What a renderer's component is handed. */
 export interface FileRendererProps {
-  file: FileRef;
+  file: FileLocation;
   /** The git context the renderer was offered on (see FileRendererTarget). */
   git?: FileViewerGit;
   /** A 1-based line to reveal and highlight, for renderers that show lines. */

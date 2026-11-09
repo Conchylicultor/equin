@@ -15,15 +15,15 @@ host threads a renderer-specific option through `FileContent`.
 - Web:
   - Contributes: `FileViewer.Renderer` "Markdown" → `MarkdownView`
   - Uses:
+    - `infra/paths/file-systems.fileTextUnavailableMessage`
+    - `infra/paths/file-systems.useFileText`
     - `primitives/css/card.Card`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/spacing.Inset`
     - `primitives/css/text.SectionLabel`
     - `primitives/css/text.Text`
     - `primitives/file-viewer.FileRendererProps`
-    - `primitives/file-viewer.fileTextUnavailableMessage`
     - `primitives/file-viewer.FileViewer`
-    - `primitives/file-viewer.useFileText`
     - `primitives/loading.Loading`
     - `primitives/markdown.Markdown`
 - Cross-plugin:

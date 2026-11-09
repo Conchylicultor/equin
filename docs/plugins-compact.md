@@ -70,9 +70,9 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`build`** [exempt] [14 sub-plugins] — Trigger `./equin build` from the toolbar. Build, portable half: the build-run id kind, the build config, the Build task category and the build.history collection over build_runs — what a host…
 
-- **`code-explorer`** [exempt] — Worktree-scoped checkout reads by attempt id or the reserved `main` sentinel: push-files — one push's files, its range read from its ledger rows by ancestry. The raw image route is the machine half's.
+- **`code-explorer`** [exempt] — Worktree-scoped checkout reads by attempt id or the reserved `main` sentinel: push-files — one push's files, its range read from its ledger rows by ancestry. A checkout's raw bytes (file-systems'…
   - Plugins:
-    - **`code-api`** — Typed contracts for the worktree code reads: the /api/code/:worktree/image route and the code.* live values (file, file-diff, dir, commit-info, commit-files, push-files). A leaf library so both…
+    - **`code-api`** — Typed contracts for the worktree code reads: the code.* live values (file, file-diff, dir, commit-info, commit-files, push-files). A leaf library so both code-explorer (routes, handlers, explorer…
     - **`commit-detail`** — The one commit-diff pane, parameterized by worktree (commit/:worktree/:sha) rather than derived from an ancestor conversation, so any surface that can name a (worktree, sha) pair opens it. Also…
     - **`file-resolve`** [exempt] — Fuzzy file path resolution via segment-subsequence matching against git ls-files.
 
@@ -181,7 +181,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`ids`** — The id-kind registry, web half: IdKinds.Kind registers a declared kind and IdKinds.Presenter how its ids render and open (icon, useReferent, useTarget); useIdKinds() / useIdPresenters() read them at…
 
-- **`infra`** [test helpers] [exempt] [105 sub-plugins] — Umbrella for cross-cutting server-side primitives used by feature plugins: jobs, events, secrets, mcp, attachments.
+- **`infra`** [test helpers] [exempt] [106 sub-plugins] — Umbrella for cross-cutting server-side primitives used by feature plugins: jobs, events, secrets, mcp, attachments.
 
 - **`integrations`** — Umbrella for third-party service integrations that consume an auth connection (Gmail, …).
   - Plugins:

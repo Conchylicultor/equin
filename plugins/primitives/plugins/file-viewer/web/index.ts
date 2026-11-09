@@ -23,22 +23,9 @@ export {
   useFileRenderers,
   type FileRenderersHandle,
 } from "./components/use-file-renderers";
-export {
-  useFileText,
-  fileTextUnavailableMessage,
-  type FileTextState,
-  type FileTextUnavailable,
-} from "./internal/use-file-text";
-export {
-  useFileBytes,
-  fileBytesUnavailableMessage,
-  type FileBytesState,
-  type FileBytesUnavailable,
-} from "./internal/use-file-bytes";
-
 export default {
   description:
-    "Domain-neutral file viewer: the tiered FileViewer.Renderer registry (native / contextual / fallback / last-resort, offered as tabs), the FileView / FileContent / FileTabs hosts, useFileText reading a FileRef's text from the host (infra/host-fs) or a git checkout (code-api), and useFileBytes its raw bytes (a host file through host-fs, a workspace file through code-explorer).",
+    "Domain-neutral file viewer: the tiered FileViewer.Renderer registry (native / contextual / fallback / last-resort, offered as tabs), the FileView / FileContent / FileTabs hosts, over a FileLocation in any file system (infra/paths/file-systems' reads: the computer's disk, the browser's storage, a checkout) — a renderer never asks which.",
   contributions: [],
   slots: { ...FileViewerSlots },
 } satisfies PluginDefinition;

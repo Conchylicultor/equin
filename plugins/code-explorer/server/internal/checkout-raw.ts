@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 import { GIT } from "@plugins/infra/plugins/paths/server";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
-import { ALLOWED_REFS, resolveRef } from "./resolve-ref";
+import { isAllowedRef, resolveRef } from "./resolve-ref";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import {
   inertHeaders,
@@ -13,6 +13,10 @@ import {
 } from "./resolve-worktree-path";
 import { resolveInsideRoot } from "./contained-path";
 import { asUserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
+  FILE_BYTES_MAX,
+  contentTypeOf,
+} from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 
 // Every git read in this file serves an open HTTP request from the code
 // explorer: a local, metadata-or-blob read that finishes in milliseconds. The
@@ -21,37 +25,15 @@ import { asUserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/cor
 // reaches it, and it fails as a named error instead of holding the request open
 // forever.
 const GIT_TIMEOUT_MS = 30_000;
-// A ref read buffers `git show`'s output; the on-disk read streams, uncapped.
-const MAX_BYTES = 20 * 1024 * 1024;
 
-const EXT_TO_MIME: Record<string, string> = {
-  png: "image/png",
-  jpg: "image/jpeg",
-  jpeg: "image/jpeg",
-  gif: "image/gif",
-  webp: "image/webp",
-  svg: "image/svg+xml",
-  ico: "image/x-icon",
-  bmp: "image/bmp",
-  avif: "image/avif",
-};
-
-function extForPath(path: string): string {
-  const base = path.slice(path.lastIndexOf("/") + 1).toLowerCase();
-  const dot = base.lastIndexOf(".");
-  return dot < 0 ? "" : base.slice(dot + 1);
-}
-
-function mimeForPath(path: string): string | null {
-  return EXT_TO_MIME[extForPath(path)] ?? null;
-}
-
-export async function handleImageContent(
-  req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
+/**
+ * `GET /api/files/checkout/raw?checkout=&path=&version=` (file-systems'
+ * `checkoutFileRaw`): one checkout file's bytes — on disk now, or as of
+ * `version` (the blob that ref names).
+ */
+export async function handleCheckoutFileRaw(req: Request): Promise<Response> {
   try {
-    return await serveImage(req, params);
+    return await serveCheckoutFile(req);
   } catch (err) {
     if (err instanceof HttpError)
       return new Response(err.message, { status: err.status });
@@ -59,29 +41,20 @@ export async function handleImageContent(
   }
 }
 
-async function serveImage(
-  req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
-  const worktree = params.worktree;
-  if (!worktree) return new Response("Missing worktree", { status: 400 });
-
-  const url = new URL(req.url);
+async function serveCheckoutFile(req: Request): Promise<Response> {
+  const url = new URL(req.url, "http://localhost");
+  const checkout = url.searchParams.get("checkout");
+  if (!checkout) return new Response("Missing checkout", { status: 400 });
   const path = url.searchParams.get("path");
   if (!path || path.includes("\0"))
     return new Response("Invalid path", { status: 400 });
-
-  const ref = url.searchParams.get("ref");
-
-  const mime = mimeForPath(path);
-  if (!mime) return new Response("Unsupported media type", { status: 415 });
+  const ref = url.searchParams.get("version");
 
   // The file as it is on disk now: any workspace kind, served by host-fs's
   // byte server (inert headers, `Range`) once the path is known to sit inside
-  // the workspace. An image elsewhere on the host is host-fs's to address too
-  // (file-viewer's `host` FileRef).
+  // the workspace.
   if (!ref) {
-    const root = await resolveWorkspacePath(worktree);
+    const root = await resolveWorkspacePath(checkout);
     if (!root) return new Response("Not found", { status: 404 });
     const absTarget = resolveInsideRoot(root, path);
     if (absTarget === null)
@@ -90,29 +63,35 @@ async function serveImage(
   }
 
   // As of a revision: a git read, so the workspace must be a checkout.
-  const wtPath = await resolveWorktreePath(worktree);
+  const wtPath = await resolveWorktreePath(checkout);
   if (!wtPath) return new Response("Not found", { status: 404 });
   if (resolveInsideRoot(wtPath, path) === null)
     return new Response("Invalid path", { status: 400 });
-  if (!ALLOWED_REFS.has(ref))
-    return new Response("Invalid ref", { status: 400 });
-  const resolvedRef = await resolveRef(wtPath, ref);
-  const result = await spawnCaptured(
-    [
-      GIT,
-      "--no-optional-locks",
-      "-C",
-      resolve(wtPath),
-      "show",
-      `${resolvedRef}:${path}`,
-    ],
-    { timeoutMs: GIT_TIMEOUT_MS },
-  );
-  if (result.exitCode !== 0)
+  if (!isAllowedRef(ref)) return new Response("Invalid ref", { status: 400 });
+  const object = `${await resolveRef(wtPath, ref)}:${path}`;
+  const git = (args: string[]) =>
+    spawnCaptured(
+      [GIT, "--no-optional-locks", "-C", resolve(wtPath), ...args],
+      {
+        timeoutMs: GIT_TIMEOUT_MS,
+      },
+    );
+  // A blob only (a folder at that version is a tree), its size gated before
+  // it is buffered — the bytes read's own limit.
+  const kind = await git(["cat-file", "-t", object]);
+  if (kind.exitCode !== 0 || kind.stdout.trim() !== "blob")
     return new Response("File not found", { status: 404 });
-  const bytes = new Uint8Array(result.stdoutBytes);
-  if (bytes.length > MAX_BYTES)
+  const size = await git(["cat-file", "-s", object]);
+  if (size.exitCode !== 0) {
+    throw new Error(`git cat-file -s ${object} failed: ${size.stderr}`);
+  }
+  if (Number(size.stdout.trim()) > FILE_BYTES_MAX)
     return new Response("File too large", { status: 413 });
-
-  return new Response(bytes, { headers: inertHeaders(asUserPath(path), mime) });
+  const blob = await git(["cat-file", "blob", object]);
+  if (blob.exitCode !== 0) {
+    throw new Error(`git cat-file blob ${object} failed: ${blob.stderr}`);
+  }
+  return new Response(new Uint8Array(blob.stdoutBytes), {
+    headers: inertHeaders(asUserPath(path), contentTypeOf(path)),
+  });
 }

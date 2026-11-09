@@ -1,4 +1,4 @@
-import { fileExtension } from "./file-ref";
+import { fileExtension } from "./file-git";
 
 // Extensions whose bytes are not text a code listing could show. Decided by
 // name alone, so `supports()` can answer synchronously: the code renderer

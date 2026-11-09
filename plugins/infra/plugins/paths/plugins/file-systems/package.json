@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-infra-paths-file-systems",
+  "private": true,
+  "version": "0.0.1",
+  "description": "One file-system API: a file is a location in a named file system (the computer's disk, the browser's storage, a checkout), read through one set of declarations every system serves."
+}

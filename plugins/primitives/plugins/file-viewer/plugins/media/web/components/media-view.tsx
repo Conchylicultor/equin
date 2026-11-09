@@ -3,9 +3,9 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
-  fileRefName,
   fileUrl,
-} from "@plugins/primitives/plugins/file-viewer/core";
+  locationName,
+} from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import {
   NoPreview,
   UnloadedFile,
@@ -39,7 +39,7 @@ function LoadedMediaView({
   kind,
   src,
 }: FileRendererProps & { kind: MediaKind; src: string }) {
-  const name = fileRefName(file);
+  const name = locationName(file);
   // Keyed by address so a failure on one file never sticks to the next.
   const [failed, setFailed] = useState<{
     src: string;

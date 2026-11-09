@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
-import type { FileRef, FileViewerGit } from "../../core";
+import type { FileLocation } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
+import type { FileViewerGit } from "../../core";
 import { FileViewer, resolveRenderers, type ResolvedRenderer } from "../slots";
-import { useStableFileRef } from "../internal/use-stable-file-ref";
+import { useStableLocation } from "../internal/use-stable-location";
 
 export interface FileRenderersHandle {
   resolved: ResolvedRenderer[];
@@ -19,11 +20,11 @@ export function useFileRenderers({
   file,
   git,
 }: {
-  file: FileRef;
+  file: FileLocation;
   git?: FileViewerGit;
 }): FileRenderersHandle {
   const contributions = FileViewer.Renderer.useContributions();
-  const stableFile = useStableFileRef(file);
+  const stableFile = useStableLocation(file);
   // Keyed on the fields, so a host building `git` inline each render does not
   // re-resolve the renderers.
   const checkout = git?.checkout;

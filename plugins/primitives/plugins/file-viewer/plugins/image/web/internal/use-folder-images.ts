@@ -17,10 +17,10 @@ import {
   type CodeDirEntry,
 } from "@plugins/code-explorer/plugins/code-api/core";
 import {
-  fileRefName,
   fileUrl,
-  type FileRef,
-} from "@plugins/primitives/plugins/file-viewer/core";
+  locationName,
+  type FileLocation,
+} from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import type { ViewerImage } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
 import {
   assetUrlOver,
@@ -33,16 +33,20 @@ import {
 import { supportsImage } from "./supports";
 
 /** The folder a file sits in, in the same spelling as the file's path. */
-function parentDir(file: FileRef): string {
+function parentDir(file: FileLocation): string {
   const slash = file.path.lastIndexOf("/");
-  if (file.source === "host")
+  if (file.fs === "computer")
     return slash <= 0 ? "/" : file.path.slice(0, slash);
   return slash < 0 ? "" : file.path.slice(0, slash);
 }
 
-function siblingRef(file: FileRef, dir: string, name: string): FileRef {
+function siblingRef(
+  file: FileLocation,
+  dir: string,
+  name: string,
+): FileLocation {
   const path =
-    file.source === "host"
+    file.fs === "computer"
       ? `${dir === "/" ? "" : dir}/${name}`
       : dir === ""
         ? name
@@ -58,13 +62,13 @@ interface HostFacts {
 }
 
 function viewerImage(
-  file: FileRef,
+  file: FileLocation,
   src: string,
   host: HostFacts | null,
   transport: Transport,
 ): ViewerImage {
-  const image: ViewerImage = { src, name: fileRefName(file) };
-  if (host === null || file.source !== "host") return image;
+  const image: ViewerImage = { src, name: locationName(file) };
+  if (host === null || file.fs !== "computer") return image;
   const { path } = file;
   return {
     ...image,
@@ -99,27 +103,31 @@ const WORKSPACE_READ = { limit: 10_000 };
  * says which); a failed read throws. A workspace folder is code-api's live
  * `code.dir` (on disk now, or as of the file's ref), pushed while read.
  *
- * A host folder (host-fs's live `host-fs.list` and `host-fs.image-sizes`,
- * pushed while read) gives its raster images resized copies (thumbnails, and
- * a screen-sized stage) and, once their headers are read, their pixel sizes.
+ * A folder on the computer's disk (host-fs's live `host-fs.list` and
+ * `host-fs.image-sizes`, pushed while read) gives its raster images resized
+ * copies (thumbnails, and a screen-sized stage) and, once their headers are
+ * read, their pixel sizes. A file in the browser's storage is the image alone
+ * until file-systems serves folder listings (session 2 of
+ * research/2026-11-09-global-one-file-system-api.md), which will replace these
+ * per-system listings with one.
  */
-export function useFolderImages(file: FileRef): {
+export function useFolderImages(file: FileLocation): {
   images: readonly ViewerImage[];
   /** A host folder's listing or sizes are still on their way: the images
    *  will gain their copies and sizes when they land. */
   pending: boolean;
 } {
   const dir = parentDir(file);
-  const hostQuery = file.source === "host" ? { path: dir } : null;
+  const hostQuery = file.fs === "computer" ? { path: dir } : null;
   const host = useLive(hostFsListing, hostQuery, HOST_READ);
   const sizes = useLive(hostFsFolderImageSizes, hostQuery, HOST_READ);
   const inWorkspace = useLive(
     codeDir,
-    file.source === "workspace"
+    file.fs === "checkout"
       ? {
-          worktree: file.workspace,
+          worktree: file.checkout,
           dir,
-          ...(file.ref !== undefined ? { ref: file.ref } : {}),
+          ...(file.version !== undefined ? { ref: file.version } : {}),
         }
       : null,
     WORKSPACE_READ,
@@ -152,13 +160,13 @@ export function useFolderImages(file: FileRef): {
       break;
   }
   const names = useMemo((): readonly string[] | null => {
-    const entries = file.source === "host" ? hostEntries : workspaceEntries;
+    const entries = file.fs === "computer" ? hostEntries : workspaceEntries;
     if (entries === null) return null;
     return entries
       .filter((e) => e.kind === "file" && supportsImage(e.name) !== false)
       .map((e) => e.name)
       .sort(byName);
-  }, [file.source, hostEntries, workspaceEntries]);
+  }, [file.fs, hostEntries, workspaceEntries]);
 
   // The sizes measured so far; none while they are on their way (`pending`),
   // refused or unreadable here — the images then carry no size.
@@ -190,8 +198,8 @@ export function useFolderImages(file: FileRef): {
   }, [hostEntries, sizesData]);
 
   // Memoized by the React Compiler (a manual useMemo here cannot be kept).
-  const self = fileRefName(file);
-  const members: readonly { ref: FileRef; name: string }[] =
+  const self = locationName(file);
+  const members: readonly { ref: FileLocation; name: string }[] =
     names === null || !names.includes(self)
       ? [{ ref: file, name: self }]
       : names.map((name) => ({ ref: siblingRef(file, dir, name), name }));
@@ -216,7 +224,7 @@ export function useFolderImages(file: FileRef): {
   return {
     images,
     pending:
-      file.source === "host" &&
+      file.fs === "computer" &&
       (host.status === "loading" || sizes.status === "loading"),
   };
 }

@@ -1,5 +1,4 @@
-export { CODE_MACHINE, getImageContent, type CodeDirEntry } from "./endpoints";
-export { codeImageUrl } from "./image-url";
+export { CODE_MACHINE, type CodeDirEntry } from "./endpoints";
 export {
   COMMIT_FILES_MAX,
   commitInfo,

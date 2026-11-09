@@ -5,10 +5,8 @@ import {
   AssetThumbnail,
   ImageGallery,
 } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
-import {
-  fileRefForPath,
-  fileUrl,
-} from "@plugins/primitives/plugins/file-viewer/core";
+import { locationForPath } from "@plugins/primitives/plugins/file-viewer/core";
+import { fileUrl } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { useConversationById } from "@plugins/conversations/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import type { ArtifactItem } from "@plugins/conversations/plugins/conversation-view/plugins/artifacts/core";
@@ -56,7 +54,7 @@ export function ScreenshotSection({ items }: { items: ArtifactItem[] }) {
             <span key={item.key} title={item.key} className="block">
               <AssetThumbnail
                 asset={fileUrl(
-                  fileRefForPath(conversation.attemptId, item.key, {
+                  locationForPath(conversation.attemptId, item.key, {
                     root: conversation.worktreePath,
                   }),
                 )}

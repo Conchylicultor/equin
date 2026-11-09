@@ -2,9 +2,9 @@ import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
-import type { FileRef } from "../../core";
+import type { FileLocation } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { FileViewer, type ResolvedRenderer } from "../slots";
-import { HostReadGate } from "./unreadable-host-file";
+import { ReadGate } from "./unreadable-file";
 
 /** The active renderer's body for one file (no header, no scroll container). */
 export function FileContent({
@@ -12,7 +12,7 @@ export function FileContent({
   line,
   active,
 }: {
-  file: FileRef;
+  file: FileLocation;
   line?: number;
   active: ResolvedRenderer | null;
 }) {
@@ -37,10 +37,7 @@ export function FileContent({
       )}
     </ContentScope>
   );
-  // A host file the account cannot read says why, whichever renderer is on.
-  return file.source === "host" ? (
-    <HostReadGate path={file.path}>{body}</HostReadGate>
-  ) : (
-    body
-  );
+  // A file that is not there, or that the account cannot read, says why,
+  // whichever renderer is on.
+  return <ReadGate file={file}>{body}</ReadGate>;
 }

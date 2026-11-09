@@ -215,40 +215,6 @@ export const hostFsCompletions = liveValue("host-fs.complete", {
   needsMachine: MACHINE,
 });
 
-// ── text ─────────────────────────────────────────────────────────────────────
-
-export const HostFsFileTextSchema = z.object({
-  path: z.string(),
-  content: z.string(),
-  /** Bytes read. */
-  size: z.number(),
-});
-export type HostFsFileText = z.infer<typeof HostFsFileTextSchema>;
-
-/**
- * A host file as UTF-8 text (`text`), capped at `HOST_FS_TEXT_MAX_BYTES`
- * and binary-sniffed. On demand — up to 2 MiB, so each tab reads it over
- * HTTP — and invalidated while read from a watch of the folder holding it.
- * Refused: `invalid-path`, `missing`, `denied`, `not-a-file`,
- * `unreadable-archive`, `too-large` (past the cap), `binary` (a NUL byte in the
- * first 8 KB).
- */
-export const hostFsFileText = liveValue("host-fs.text", {
-  schema: HostFsFileTextSchema,
-  params: ["path"],
-  load: "on-demand",
-  refusals: [
-    "invalid-path",
-    "missing",
-    "denied",
-    "not-a-file",
-    "unreadable-archive",
-    "too-large",
-    "binary",
-  ],
-  needsMachine: MACHINE,
-});
-
 // ── volume ───────────────────────────────────────────────────────────────────
 
 export const HostFsVolumeInfoSchema = z.object({

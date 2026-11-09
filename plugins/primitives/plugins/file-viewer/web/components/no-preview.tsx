@@ -13,7 +13,11 @@ import { navIcons } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { fileTypeOf } from "@plugins/primitives/plugins/file-type/core";
 import { FileTypeIcon } from "@plugins/primitives/plugins/file-type/web";
-import { fileRefName, type FileRef } from "../../core";
+import {
+  locationName,
+  opensNatively,
+  type FileLocation,
+} from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 
 /**
  * The file's kind as "No preview for … files" names it: file-type's label
@@ -40,7 +44,7 @@ export interface PreviewFailure {
 /**
  * The fallback body for a file no renderer can show: a large file icon, "No
  * preview for <kind> files" — or, given a `failure`, what went wrong with this
- * file — and, for a file on the host, which has a default app, an Open with
+ * file — and, for a file on the computer's disk, which has a default app, an Open with
  * default app button (not for a file inside an archive, which has no file of
  * its own to hand an app), after a Retry button when `onRetry` is given. The fallback
  * renderer shows it when no other renderer is offered; the code renderer
@@ -52,11 +56,11 @@ export function NoPreview({
   failure,
   onRetry,
 }: {
-  file: FileRef;
+  file: FileLocation;
   failure?: PreviewFailure;
   onRetry?: () => void;
 }) {
-  const name = fileRefName(file);
+  const name = locationName(file);
   return (
     <Center axis="both" className="h-full p-lg">
       <Stack direction="col" align="center" gap="md" className="max-w-md">
@@ -91,7 +95,7 @@ export function NoPreview({
               Retry
             </Button>
           )}
-          {file.source === "host" && <OpenWithDefaultApp path={file.path} />}
+          {opensNatively(file) && <OpenWithDefaultApp path={file.path} />}
         </Stack>
       </Stack>
     </Center>

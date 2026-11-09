@@ -4,7 +4,7 @@ Fuzzy file path resolution for partial file links. When a file-peek pane receive
 
 Example: clicking `task-detail/panes.tsx` resolves to `plugins/tasks/plugins/task-detail/web/panes.tsx` because the query segments appear in order within the full path's segments.
 
-A path that names an existing file answers `exact` with where its bytes live: `git` with a worktree-relative path when the file is inside the worktree (an absolute or `~` path there comes back relativized), `host` with the absolute path otherwise. `useResolvedFile` hands back the matching file-viewer `FileRef`, so a peek of a file outside the worktree reads through host-fs — `code.file` / `file-viewer.bytes`' workspace arm and the `/image` route read only checkout-relative paths.
+A path that names an existing file answers `exact` with where its bytes live: `git` with a worktree-relative path when the file is inside the worktree (an absolute or `~` path there comes back relativized), `host` with the absolute path otherwise. `useResolvedFile` hands back the matching `FileLocation` (file-systems): the `checkout` for a worktree file, the `computer` otherwise — a checkout's reads take only checkout-relative paths.
 
 The answer is the live value `code.resolve-file` (`resolvedFile`,
 `shared/resolved-file.ts`; served by `machine/`, `needsMachine`; there is no

@@ -81,7 +81,7 @@ the user explicitly approved that specific placement.
   - **`expandable`** — Clamps tall content to a max height and reveals a Show more/less toggle only when the rendered content actually overflows (measured via ResizeObserver, not char/line heuristics).
   - **`file-links`** — Parses inline file paths (e.g. `research/foo.md`) in plain text and renders them as clickable chips activating fileTarget(path, line) (a LinkTarget, so ⌘/middle-click opens a browser tab). Exposes…
   - **`file-type`** — <FileTypeIcon name isDir? open?/>: a directory as the Material folder in the --folder colour, a file as its Seti glyph tinted by its file-type tone.
-  - **`file-viewer`** — Domain-neutral file viewer: the tiered FileViewer.Renderer registry (native / contextual / fallback / last-resort, offered as tabs), the FileView / FileContent / FileTabs hosts, useFileText reading…
+  - **`file-viewer`** — Domain-neutral file viewer: the tiered FileViewer.Renderer registry (native / contextual / fallback / last-resort, offered as tabs), the FileView / FileContent / FileTabs hosts, over a FileLocation…
     - Plugins:
       - **`code`** — Code renderer: the file's text as a syntax-highlighted, line-numbered listing. The fallback tab for any file not known to be binary.
       - **`diff`** — Side-by-side diff of a changed file vs its checkout's base — a contextual tab, offered only when the host passes git context (checkout, path, status) with a non-clean status, wherever the file's…
@@ -89,8 +89,8 @@ the user explicitly approved that specific placement.
       - **`html`** — Rendered page preview for .html and .htm files, in a sandboxed frame that can neither read nor reach the app; the Code tab is its source.
       - **`image`** — Image preview for .png, .jpg, .gif, .webp, .svg, and similar files.
       - **`markdown`** — Rendered markdown preview for .md and .mdx files.
-      - **`media`** — Video and audio player for host media files (.mp4, .mov, .webm, .mp3, .wav, .flac, …): the themed media player (media/player), auto-playing on open, its keyboard (Space to play / pause) on the file…
-      - **`pdf`** — PDF preview for host .pdf files, in the browser's own PDF viewer (pages, zoom, search, print).
+      - **`media`** — Video and audio player for media files in any file system (.mp4, .mov, .webm, .mp3, .wav, .flac, …): the themed media player (media/player), auto-playing on open, its keyboard (Space to play /…
+      - **`pdf`** — PDF preview for .pdf files in any file system, in the browser's own PDF viewer (pages, zoom, search, print).
   - **`filepath-breadcrumb`** — File-path breadcrumb with copy-to-clipboard and directory navigation. Wraps the generic Breadcrumb with filepath-specific behavior.
   - **`filter-chips`** — Toggle-chip filter primitive: FilterChip, FilterGroup, and useChipFilter hook for single-select enum filtering.
   - **`folder-picker`** — Folder-picker primitive: browse the host filesystem and pick a directory. FolderPickerPopover pairs a typeable path input with a breadcrumb browser, both reading host-fs's live listing.

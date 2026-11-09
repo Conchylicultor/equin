@@ -1,7 +1,5 @@
-import {
-  fileExtension,
-  type FileRef,
-} from "@plugins/primitives/plugins/file-viewer/core";
+import { fileExtension } from "@plugins/primitives/plugins/file-viewer/core";
+import type { FileLocation } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 
 export type MediaKind = "video" | "audio";
 
@@ -14,15 +12,10 @@ const EXTS: Record<MediaKind, ReadonlySet<string>> = {
   audio: new Set(["mp3", "wav", "flac", "ogg", "oga", "opus", "m4a", "aac"]),
 };
 
-/**
- * Host files only: the checkout raw route serves image formats alone, so a
- * media file in a checkout would 415 — it stays with the last-resort fallback.
- */
+/** By extension, in any file system: every one serves the bytes (`fileUrl`). */
 export function supportsMedia(
   kind: MediaKind,
-  file: FileRef,
+  file: FileLocation,
 ): "native" | false {
-  return file.source === "host" && EXTS[kind].has(fileExtension(file.path))
-    ? "native"
-    : false;
+  return EXTS[kind].has(fileExtension(file.path)) ? "native" : false;
 }

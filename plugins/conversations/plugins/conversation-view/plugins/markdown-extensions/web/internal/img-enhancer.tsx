@@ -14,10 +14,8 @@ import {
   type MarkdownEnhancement,
 } from "@plugins/primitives/plugins/markdown/web";
 import { useFileLinksWorkspace } from "@plugins/primitives/plugins/file-links/web";
-import {
-  fileRefForPath,
-  fileUrl,
-} from "@plugins/primitives/plugins/file-viewer/core";
+import { locationForPath } from "@plugins/primitives/plugins/file-viewer/core";
+import { fileUrl } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { useFileTarget } from "./use-file-target";
 
 const IMG_HREF_RE = /\.(png|jpe?g|gif|webp|svg|bmp|avif|ico)(?:[?#].*)?$/i;
@@ -85,7 +83,7 @@ export function ImgEnhancer({ children }: { children: ReactNode }) {
             return (
               <AssetThumbnail
                 asset={fileUrl(
-                  fileRefForPath(
+                  locationForPath(
                     worktree,
                     src,
                     worktreePath !== undefined ? { root: worktreePath } : {},

@@ -23,10 +23,8 @@ import {
   FileContent,
   useFileRenderers,
 } from "@plugins/primitives/plugins/file-viewer/web";
-import {
-  fileRefForPath,
-  type FileRef,
-} from "@plugins/primitives/plugins/file-viewer/core";
+import { locationForPath } from "@plugins/primitives/plugins/file-viewer/core";
+import type { FileLocation } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { FileLinksWorkspaceProvider } from "@plugins/primitives/plugins/file-links/web";
 import { fileExplorerApp } from "@plugins/apps/plugins/file-explorer/plugins/shell/core";
 import {
@@ -54,15 +52,15 @@ function splitLine(rawFilePath: string): { filePath: string; line?: number } {
 /**
  * The path's resolution, and the file the pane reads: the resolved one, else
  * the path as requested (a relative one from the checkout, an absolute or `~`
- * one from the host).
+ * one from the computer).
  */
 function usePeekedFile(worktree: string, filePath: string) {
   const resolved = useResolvedFile(worktree, filePath);
   const requested = useMemo(
-    () => fileRefForPath(worktree, filePath),
+    () => locationForPath(worktree, filePath),
     [worktree, filePath],
   );
-  const file: FileRef =
+  const file: FileLocation =
     resolved.status === "resolved" || resolved.status === "exact"
       ? resolved.file
       : requested;
@@ -137,15 +135,15 @@ function FilePeekPaneContent() {
   // re-mounts the component (new URL → new params → new fetches), which
   // destroys in-progress text selection. Until (or unless) it resolves, the
   // path as requested: a relative one from the checkout, an absolute or `~`
-  // one from the host, so a miss is reported by whichever source owns it.
+  // one from the computer, so a miss is reported by whichever source owns it.
   const { resolved, file } = usePeekedFile(worktree, filePath);
   const effectivePath = file.path;
 
   // This one file's entry in the edited set (`null`: clean), wherever in the
-  // set it falls. Only a workspace file has one: a host file sits outside the
+  // set it falls. Only a checkout file has one: a file on the computer sits outside the
   // worktree, so it reads nothing.
   const fileResult = useEditedFile(
-    file.source === "workspace" ? (convId ?? null) : null,
+    file.fs === "checkout" ? (convId ?? null) : null,
     file.path,
   );
   // `status` is a derived renderer hint, so an unknown file set (loading, a
@@ -157,14 +155,14 @@ function FilePeekPaneContent() {
     error: () => "clean" as const,
     unavailable: () => "clean" as const,
     ready: (entry) =>
-      entry.resolved && file.source === "workspace"
+      entry.resolved && file.fs === "checkout"
         ? (entry.value?.status ?? "clean")
         : "clean",
   });
   const renderers = useFileRenderers({
     file,
-    ...(file.source === "workspace"
-      ? { git: { checkout: file.workspace, path: file.path, status } }
+    ...(file.fs === "checkout"
+      ? { git: { checkout: file.checkout, path: file.path, status } }
       : {}),
   });
 

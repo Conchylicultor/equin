@@ -1,15 +1,11 @@
 import { serveValue } from "@plugins/network/plugins/live/machine";
 import {
-  HOST_FS_TEXT_MAX_BYTES,
-  hostFsFileText,
   hostFsPathStat,
   hostFsVolumeInfo,
-  type HostFsFileText,
   type HostFsPathStat,
   type HostFsVolumeInfo,
 } from "../../core";
 import { statHostOrArchivePath } from "../../server/internal/stat";
-import { readHostPathText } from "../../server/internal/text";
 import { hostVolume } from "../../server/internal/volume";
 import { refusalFor, resolveOrRefuse, resolvedOrNull } from "./refuse";
 import { watchHostPath } from "./version";
@@ -41,37 +37,6 @@ export const hostFsPathStatServed = serveValue(hostFsPathStat, {
       ...(stat.within !== undefined ? { within: stat.within } : {}),
       ...(stat.read !== undefined ? { read: stat.read } : {}),
     };
-  },
-  whileSubscribed: ({ path }, notify) => watchPath(path, () => notify()),
-});
-
-/**
- * A host file's text, on demand: re-read over HTTP by each tab after the
- * watch of its folder invalidates it.
- */
-export const hostFsFileTextServed = serveValue(hostFsFileText, {
-  source: "external",
-  changes: "notified",
-  loader: async ({ path }): Promise<HostFsFileText> => {
-    const text = await readHostPathText(
-      resolveOrRefuse(hostFsFileText.refuse, path),
-    );
-    switch (text.kind) {
-      case "ok":
-        return { path: text.path, content: text.content, size: text.size };
-      case "too-large":
-        throw hostFsFileText.refuse(
-          "too-large",
-          `${text.path} is ${text.size} bytes, over the ${HOST_FS_TEXT_MAX_BYTES}-byte text limit`,
-        );
-      case "binary":
-        throw hostFsFileText.refuse("binary", `${text.path} is a binary file`);
-      case "missing":
-      case "denied":
-      case "not-a-file":
-      case "unreadable-archive":
-        throw refusalFor(hostFsFileText.refuse, text);
-    }
   },
   whileSubscribed: ({ path }, notify) => watchPath(path, () => notify()),
 });

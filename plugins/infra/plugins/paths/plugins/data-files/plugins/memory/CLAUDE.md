@@ -20,18 +20,31 @@ one service fail boot; `plugin-meta/closure`'s `hostProviders`).
 
 ## Plugin reference
 
-- Description: Data files in memory: provides the DataFiles host service for a host without the computer's disk (the browser composition), every root's tree kept in this process and written through to the host's declared storage (read back after a reload when it is persistent) — directories made as a write's parents, one monotonic clock, in-process locks, and a watch that hears every mutation as one change per microtask. Never booted by the desktop.
+- Description: Data files in memory: provides the DataFiles host service for a host without the computer's disk (the browser composition), every root's tree kept in this process and written through to the host's declared storage (read back after a reload when it is persistent) — directories made as a write's parents, one monotonic clock, in-process locks, and a watch that hears every mutation as one change per microtask. And the browser's file system (file-systems' `browser` reads: files.browser.stat / .text / .bytes and GET /api/files/browser/raw): this storage laid out like a home folder, each root at its data dir under the hidden data folder the desktop keeps them in. Never booted by the desktop.
 - Excluded: yes
 - Server:
-  - Contributes: `host-service:data-files.store` "data-files.store"
+  - Contributes:
+    - `host-service:data-files.store` "data-files.store"
+    - `resource.declare` "files.browser.bytes"
+    - `resource.declare` "files.browser.stat"
+    - `resource.declare` "files.browser.text"
   - Uses:
+    - `infra/endpoints.rawEndpointHandler`
     - `infra/paths/data-files.assertNotRoot`
     - `infra/paths/data-files.DataFiles`
     - `infra/paths/data-files.DataFilesImpl`
+    - `infra/paths/data-files.FileRoot`
     - `infra/paths/data-files.FileRootSpec`
     - `infra/paths/data-files.FileRootStore`
+    - `infra/paths/data-files.listFileRoots`
     - `infra/paths/data-files.requireWatchSpec`
+    - `infra/paths/data-files.WatchedFileRoot`
     - `infra/paths/data-files.watchedPaths`
+    - `network/live.serveValue`
+  - Resources:
+    - `files.browser.bytes` (invalidate, notified)
+    - `files.browser.stat` (push, notified)
+    - `files.browser.text` (invalidate, notified)
 - Test helpers:
   - Server: `@plugins/infra/plugins/paths/plugins/data-files/plugins/memory/server/testing`
     - `createMemoryDataFiles` — Files in memory: a browser host's store.

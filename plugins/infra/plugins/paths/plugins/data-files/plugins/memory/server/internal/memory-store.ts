@@ -21,6 +21,7 @@ import {
 } from "@plugins/framework/plugins/browser-server/plugins/host-storage/core";
 import { createCoalescer } from "@plugins/packages/plugins/coalesce/core";
 import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
+import { browserLocationOf } from "./home-layout";
 
 type Node =
   | { kind: "file"; blob: Blob; mtimeMs: number; birthtimeMs: number }
@@ -284,6 +285,9 @@ export function createMemoryDataFiles(opts?: {
   }
 
   return {
+    location(spec) {
+      return browserLocationOf(spec.dir);
+    },
     root(spec) {
       let store = stores.get(spec.id);
       if (store === undefined) {

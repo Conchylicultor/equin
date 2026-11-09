@@ -1,8 +1,8 @@
+import { type FileRendererProps } from "@plugins/primitives/plugins/file-viewer/web";
 import {
-  useFileText,
   fileTextUnavailableMessage,
-  type FileRendererProps,
-} from "@plugins/primitives/plugins/file-viewer/web";
+  useFileText,
+} from "@plugins/infra/plugins/paths/plugins/file-systems/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
@@ -31,7 +31,7 @@ export function MarkdownView({ file }: FileRendererProps) {
   if (state.kind === "unavailable") {
     return (
       <Placeholder tone="error">
-        {fileTextUnavailableMessage(state.reason)}
+        {fileTextUnavailableMessage(state)}
       </Placeholder>
     );
   }

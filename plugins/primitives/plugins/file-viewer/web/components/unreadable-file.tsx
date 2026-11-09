@@ -4,11 +4,9 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import {
-  hostFsPathStat,
-  MACOS_FILES_AND_FOLDERS_SETTINGS,
-} from "@plugins/infra/plugins/host-fs/core";
-import { useLive } from "@plugins/network/plugins/live/web";
+import { MACOS_FILES_AND_FOLDERS_SETTINGS } from "@plugins/infra/plugins/host-fs/core";
+import type { FileLocation } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
+import { useFileStat } from "@plugins/infra/plugins/paths/plugins/file-systems/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -17,37 +15,35 @@ const missingIcon = symbol("draft");
 const refreshIcon = symbol("refresh");
 
 /**
- * A host file's renderer, unless the file is not there or its contents cannot
- * be read — then why, in place of whatever the renderer would make of the
- * failed read (a player's "No preview", an empty image). Its live
- * `host-fs.stat` says so (refused `missing`, or `read`); until it lands, or
- * with no computer behind the app, the renderer shows as is: it has its own
- * loading and failure states. The stat is watched, so a file that appears (or
- * becomes readable) swaps the renderer in.
+ * A file's renderer, unless the file is not there or its contents cannot be
+ * read — then why, in place of whatever the renderer would make of the failed
+ * read (a player's "No preview", an empty image). Its live stat says so
+ * (`missing`, or its `read` access); until it lands, or where nothing
+ * describes the file (no computer behind the app, a checkout), the renderer
+ * shows as is: it has its own loading and failure states. The stat is
+ * watched, so a file that appears (or becomes readable) swaps the renderer in.
  */
-export function HostReadGate({
-  path,
+export function ReadGate({
+  file,
   children,
 }: {
-  path: string;
+  file: FileLocation;
   children: ReactNode;
 }) {
-  const stat = useLive(hostFsPathStat, { path });
-  switch (stat.status) {
-    case "error":
-      if (stat.error.kind === "refused" && stat.error.code === "missing")
-        return <MissingHostFile path={path} />;
-      // Refused otherwise, or failed: the renderer's own read meets the same
-      // answer and shows it.
-      return children;
-    // Not known yet, or no computer: the renderer's own states cover it.
+  const stat = useFileStat(file);
+  switch (stat.kind) {
+    case "missing":
+      return <MissingFile path={file.path} />;
+    // Refused otherwise or failed — the renderer's own read meets the same
+    // answer and shows it — or not known yet, or nothing describes it.
+    case "failed":
     case "loading":
-    case "unavailable":
+    case "undescribed":
       return children;
     case "ready": {
-      const read = stat.data.read;
+      const read = stat.stat.read;
       return read === "macos-privacy" || read === "permissions" ? (
-        <UnreadableHostFile read={read} recheck={stat.refetch} />
+        <UnreadableFile read={read} recheck={stat.recheck} />
       ) : (
         children
       );
@@ -56,7 +52,7 @@ export function HostReadGate({
 }
 
 /** "File not found", and the path that was looked for. */
-function MissingHostFile({ path }: { path: string }) {
+function MissingFile({ path }: { path: string }) {
   return (
     <Center axis="both" className="h-full p-lg">
       <Stack direction="col" align="center" gap="md" className="max-w-md">
@@ -83,7 +79,7 @@ function MissingHostFile({ path }: { path: string }) {
  * switch in System Settings) or the file's own permissions. Check again
  * re-reads the stat: granting access changes no file, so no watch would.
  */
-function UnreadableHostFile({
+function UnreadableFile({
   read,
   recheck,
 }: {

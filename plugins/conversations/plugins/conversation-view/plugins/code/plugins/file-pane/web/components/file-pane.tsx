@@ -3,7 +3,7 @@ import { FileView } from "@plugins/primitives/plugins/file-viewer/web";
 
 /**
  * A checkout file with its renderer tabs — `primitives/file-viewer`'s
- * `FileView` over a `git` file ref, with the edited-file status as the context
+ * `FileView` over a checkout file, with the edited-file status as the context
  * that offers the Diff tab.
  */
 export function FilePaneView({
@@ -19,7 +19,7 @@ export function FilePaneView({
 }) {
   return (
     <FileView
-      file={{ source: "workspace", workspace: worktree, path }}
+      file={{ fs: "checkout", checkout: worktree, path }}
       git={{ checkout: worktree, path, status }}
       line={line}
     />

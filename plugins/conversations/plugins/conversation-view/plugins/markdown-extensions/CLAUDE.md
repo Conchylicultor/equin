@@ -14,7 +14,7 @@ one path → file-peek target builder.
    local file-path links.
 2. **code-inline** — Enhanced inline `<code>` with active-data chips,
    URL detection, and file-path buttons.
-3. **img-proxy** — Proxies local images via `/api/code/<worktree>/image`,
+3. **img-proxy** — Loads local images through file-systems' `fileUrl` (the checkout or the computer's disk, by `locationForPath`),
    and renders every markdown image (local or external) as a capped
    `ViewerThumbnail` (`primitives/overlay/image-viewer`) that opens the
    full-window viewer. In a transcript it joins the pane's gallery; elsewhere

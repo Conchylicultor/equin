@@ -6,7 +6,7 @@ import { useAppDataPlace } from "./internal/place";
 
 export default {
   description:
-    "The file explorer's App data place: a Locations entry leading to every file root an app declares browsable (data-files.roots — the root ids are the server's, the explorer names none), each browsed read-only at /files/data/<root>[/<path>] — a folder's entries as a paged live DataView list, a file previewed beside its folder through the file viewer (a data FileRef) — on every host: the computer's disk on the desktop, memory in a browser host.",
+    "The file explorer's App data place: a Locations entry leading to every file root an app declares browsable (data-files.roots — the root ids are the server's, the explorer names none), each browsed read-only at /files/data/<root>[/<path>] — a folder's entries as a paged live DataView list, a file previewed beside its folder through the file viewer, at the root's location in this host's file system — on every host: the computer's disk on the desktop, memory in a browser host.",
   slots: {
     "files-data": filesDataPane,
     "files-data-at": filesDataAtPane,

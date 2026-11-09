@@ -7,7 +7,7 @@ export default [
       "server/internal/checkout-root.ts",
       "server/internal/commit-values.ts",
       "server/internal/contained-path.ts",
-      "server/internal/image-handler.ts",
+      "server/internal/checkout-raw.ts",
       "server/internal/resolve-worktree-path.ts",
     ],
     kind: "debt",

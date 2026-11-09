@@ -11,7 +11,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { resolveCheckoutRoot } from "./checkout-root";
 import { resolveInsideRoot } from "./contained-path";
-import { handleImageContent } from "./image-handler";
+import { handleCheckoutFileRaw } from "./checkout-raw";
 
 // Fixture:
 //   base/
@@ -84,17 +84,24 @@ describe("resolveInsideRoot", () => {
   });
 });
 
-describe("GET /image reads", () => {
-  const image = (path: string) => {
-    const query = new URLSearchParams({ path }).toString();
-    const url = `http://x/api/code/${encodeURIComponent(repo)}/image?${query}`;
-    return handleImageContent(new Request(url), { worktree: repo });
+describe("GET /api/files/checkout/raw reads", () => {
+  const image = (path: string, checkout = repo) => {
+    const query = new URLSearchParams({ checkout, path }).toString();
+    return handleCheckoutFileRaw(
+      new Request(`http://x/api/files/checkout/raw?${query}`),
+    );
   };
 
   test("serves a relative path in a checkout addressed by its root", async () => {
     const res = await image("pic.png");
     expect(res.status).toBe(200);
     expect(await res.text()).toBe("png-bytes");
+  });
+
+  test("serves any file, not only images", async () => {
+    const res = await image("a.txt");
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe("inside");
   });
 
   test("rejects an absolute path without a ref", async () => {
@@ -106,10 +113,7 @@ describe("GET /image reads", () => {
   });
 
   test("404s a worktree path that is not a checkout root", async () => {
-    const res = await handleImageContent(
-      new Request("http://x/image?path=b.png"),
-      { worktree: join(repo, "sub") },
-    );
+    const res = await image("b.png", join(repo, "sub"));
     expect(res.status).toBe(404);
   });
 });

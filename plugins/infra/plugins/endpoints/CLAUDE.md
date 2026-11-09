@@ -583,7 +583,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
   - Imported by: 246 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×71
     - `conversations` ×35
-    - `infra` ×22
+    - `infra` ×23
     - `page` ×19
     - `debug` ×18
     - `tasks` ×18
@@ -596,13 +596,13 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `network` ×3
     - `active-data` ×2
     - `apps-core` ×2
-    - `code-explorer` ×2
     - `config_v2` ×2
     - `history` ×2
     - `integrations` ×2
     - `screenshot` ×2
     - `tag-tree` ×2
     - `backup`
+    - `code-explorer`
     - `hints`
     - `menu-bar`
     - `release`

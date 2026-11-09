@@ -4485,7 +4485,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by: `apps/file-explorer/documents`
       - Plugins:
-        - **`app-data`** — The file explorer's App data place: a Locations entry leading to every file root an app declares browsable (data-files.roots — the root ids are the server's, the explorer names none), each browsed read-only at /files/data/<root>[/<path>] — a folder's entries as a paged live DataView list, a file previewed beside its folder through the file viewer (a data FileRef) — on every host: the computer's disk on the desktop, memory in a browser host.
+        - **`app-data`** — The file explorer's App data place: a Locations entry leading to every file root an app declares browsable (data-files.roots — the root ids are the server's, the explorer names none), each browsed read-only at /files/data/<root>[/<path>] — a folder's entries as a paged live DataView list, a file previewed beside its folder through the file viewer, at the root's location in this host's file system — on every host: the computer's disk on the desktop, memory in a browser host.
           - Web:
             - Slots:
               - `files-data.actions`
@@ -9859,12 +9859,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - **`file-preview`** — Sonata's MIDI file preview: a FileViewer renderer (native for .mid/.midi files, host or workspace) showing the file's facts (duration, tempo, meter, bars, tracks and notes, range, size), Sonata's falling-notes piano roll in its own player with a play bar, and Open in Sonata — imported into the library idempotently by content — at the playhead's bar.
                   - Web:
                     - Contributes: `FileViewer.Renderer` "MIDI" → `MidiFilePreview`
-                    - Uses: 36 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/midi/plugins/file-preview/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/midi/plugins/file-preview/REFERENCE.md)
+                    - Uses: 35 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/midi/plugins/file-preview/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/midi/plugins/file-preview/REFERENCE.md)
                       - `apps/sonata/player` ×4
                       - `apps/sonata/sources/midi` ×4
-                      - `primitives/file-viewer` ×4
                       - `apps/sonata/document` ×2
                       - `apps/sonata/session` ×2
+                      - `infra/paths/file-systems` ×2
                       - `primitives/css/spacing` ×2
                       - `primitives/css/ui-kit` ×2
                       - `apps-core/tabs.useNavigate`
@@ -9879,6 +9879,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `primitives/css/placeholder.Placeholder`
                       - `primitives/css/rigid.rigidClass`
                       - `primitives/css/text.Text`
+                      - `primitives/file-viewer.FileViewer`
                       - `primitives/loading.Loading`
                       - `primitives/relative-time.formatElapsed`
                       - `shell/toast.showToast`
@@ -14003,7 +14004,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `boundaries/no-platform-api` — `server/internal/get-server-commit.ts`, `server/internal/get-server-graph-hash.ts` (debt)
           - `blocking-fs/no-sync-fs` — `server/internal/server-pin.ts` (sanctioned)
 
-- **`code-explorer`** — Worktree-scoped checkout reads by attempt id or the reserved `main` sentinel: push-files — one push's files, its range read from its ledger rows by ancestry. The raw image route is the machine half's.
+- **`code-explorer`** — Worktree-scoped checkout reads by attempt id or the reserved `main` sentinel: push-files — one push's files, its range read from its ledger rows by ancestry. A checkout's raw bytes (file-systems' checkout raw route) are the machine half's.
   - Server:
     - Contributes:
       - `resource.declare` "code.commit-files"
@@ -14014,6 +14015,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `resource.declare` "code.file-diff"
       - `resource.declare` "code.push-files"
       - `resource.declare` "code.workspace-root"
+      - `resource.declare` "files.checkout.bytes"
+      - `resource.declare` "files.checkout.text"
     - Uses:
       - `database.db`
       - `infra/endpoints.HttpError`
@@ -14042,6 +14045,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `code.file-diff` (invalidate, notified)
       - `code.push-files` (push, notified, capped: COMMIT_FILES_MAX)
       - `code.workspace-root` (push, notified)
+      - `files.checkout.bytes` (invalidate, notified)
+      - `files.checkout.text` (invalidate, notified)
   - Machine:
     - Uses:
       - `infra/endpoints.machineHandler`
@@ -14049,32 +14054,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `infra/host-fs.watchHostDir`
       - `infra/host-fs.watchHostPath`
       - `network/live.serveValue`
-    - Exports (types):
-      - `WorkspaceFile`
-      - `WorkspaceRoot`
+    - Exports (types): `WorkspaceRoot`
     - Exports (values):
-      - `readWorkspaceBytes`
       - `watchCheckout`
-      - `watchWorkspaceFile`
       - `workspaceAttemptIds`
-      - `workspaceFileSignature`
       - `workspaceRootFrom`
   - Cross-plugin:
     - Imported by:
       - `code-explorer/file-resolve`
-      - `primitives/file-viewer`
       - `review/plugin-changes`
   - Exemptions:
-    - Exempts itself from: `boundaries/no-platform-api` — `server/internal/checkout-root.ts`, `server/internal/commit-values.ts`, `server/internal/contained-path.ts`, `server/internal/image-handler.ts`, `server/internal/resolve-worktree-path.ts` (debt)
+    - Exempts itself from: `boundaries/no-platform-api` — `server/internal/checkout-root.ts`, `server/internal/commit-values.ts`, `server/internal/contained-path.ts`, `server/internal/checkout-raw.ts`, `server/internal/resolve-worktree-path.ts` (debt)
   - Plugins:
-    - **`code-api`** — Typed contracts for the worktree code reads: the /api/code/:worktree/image route and the code.* live values (file, file-diff, dir, commit-info, commit-files, push-files). A leaf library so both code-explorer (routes, handlers, explorer UI) and the conversation file-pane/commits-graph/docs-button consumers import the contracts without forming a code-explorer ⇄ file-pane import cycle.
+    - **`code-api`** — Typed contracts for the worktree code reads: the code.* live values (file, file-diff, dir, commit-info, commit-files, push-files). A leaf library so both code-explorer (routes, handlers, explorer UI) and the conversation file-pane/commits-graph/docs-button consumers import the contracts without forming a code-explorer ⇄ file-pane import cycle.
       - Core:
         - Uses:
           - `conversations/conversation-view/code.EditedFileSchema`
-          - `infra/endpoints.assetPath`
-          - `infra/endpoints.AssetPath`
-          - `infra/endpoints.blob`
-          - `infra/endpoints.defineEndpoint`
           - `network/live.liveValue`
           - `packages/list-bound.cappedList`
           - `primitives/commit-list.CommitRowSchema`
@@ -14089,12 +14084,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `codeDir`
           - `codeFile`
           - `codeFileDiff`
-          - `codeImageUrl`
           - `COMMIT_FILES_MAX`
           - `commitFiles`
           - `CommitFilesSchema`
           - `commitInfo`
-          - `getImageContent`
           - `pushFiles`
           - `workspaceRoot`
           - `WorkspaceRootSchema`
@@ -14105,7 +14098,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `code-explorer/commit-detail`
           - `code-explorer/file-resolve`
           - `primitives/diff-view`
-          - `primitives/file-viewer`
           - `primitives/file-viewer/image`
           - `review/code-review`
     - **`commit-detail`** — The one commit-diff pane, parameterized by worktree (commit/:worktree/:sha) rather than derived from an ancestor conversation, so any surface that can name a (worktree, sha) pair opens it. Also exposes useCommitInfo, the four-armed loading / found / not-found / error commit-metadata lookup.
@@ -28385,8 +28377,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `UNSTAMPED_GATEWAY_WARNING`
     - **`product-name`** — The product's own name, as data: PRODUCT_NAME (`equin`, always lowercase — what every person and agent reads) and LEGACY_PRODUCT_NAMES (the names it went by before, never written again), enforced by the product-name:legacy check over every tracked file; and LEGACY_IDS, the identifiers built from the old name that are kept for good (stored state, cross-version contracts), the one place they are spelled — enforced by product-name:legacy-id (and its mirrors by product-name:legacy-ids-in-sync). A dependency-free leaf, so a browser bundle, a server or a script can import it.
       - Cross-plugin:
-        - Imported by: 64 plugins — full list in [`plugins/framework/plugins/product-name/REFERENCE.md`](../plugins/framework/plugins/product-name/REFERENCE.md)
-          - `infra` ×14
+        - Imported by: 65 plugins — full list in [`plugins/framework/plugins/product-name/REFERENCE.md`](../plugins/framework/plugins/product-name/REFERENCE.md)
+          - `infra` ×15
           - `framework` ×11
           - `apps` ×10
           - `conversations` ×4
@@ -32100,7 +32092,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by: 246 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×71
           - `conversations` ×35
-          - `infra` ×22
+          - `infra` ×23
           - `page` ×19
           - `debug` ×18
           - `tasks` ×18
@@ -32113,13 +32105,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network` ×3
           - `active-data` ×2
           - `apps-core` ×2
-          - `code-explorer` ×2
           - `config_v2` ×2
           - `history` ×2
           - `integrations` ×2
           - `screenshot` ×2
           - `tag-tree` ×2
           - `backup`
+          - `code-explorer`
           - `hints`
           - `menu-bar`
           - `release`
@@ -33223,12 +33215,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`host-fs`** — The host-filesystem readers other plugins build on: resolveHostPath, openHostFile (a disk file or an archive member), serveHostPath (the one byte server), readHostPathText / decodeTextBytes (the size + binary gate) and the archive-format registry (defineArchiveFormat). Its live reads (list, peek, stat, complete, text, volume, version) and routes — raw bytes of any path the user account can read, POST open / extract / move — are the machine half's, each needsMachine.
       - Server:
         - Contributes:
+          - `resource.declare` "files.computer.bytes"
+          - `resource.declare` "files.computer.stat"
+          - `resource.declare` "files.computer.text"
           - `resource.declare` "host-fs.complete"
           - `resource.declare` "host-fs.list"
           - `resource.declare` "host-fs.list:meta"
           - `resource.declare` "host-fs.peek"
           - `resource.declare` "host-fs.stat"
-          - `resource.declare` "host-fs.text"
           - `resource.declare` "host-fs.version"
           - `resource.declare` "host-fs.volume"
         - Uses:
@@ -33251,12 +33245,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resolveHostPath`
           - `serveHostPath`
         - Resources:
+          - `files.computer.bytes` (invalidate, notified)
+          - `files.computer.stat` (push, notified)
+          - `files.computer.text` (invalidate, notified)
           - `host-fs.complete` (push, notified, capped: HOST_FS_COMPLETE_LIMIT)
           - `host-fs.list` (keyed, window, notified)
           - `host-fs.list:meta` (push, notified)
           - `host-fs.peek` (push, notified)
           - `host-fs.stat` (push, notified)
-          - `host-fs.text` (invalidate, notified)
           - `host-fs.version` (push, notified)
           - `host-fs.volume` (invalidate, snapshot)
       - Machine:
@@ -33297,7 +33293,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HostFsEntry`
           - `HostFsEntryKind`
           - `HostFsExtractResult`
-          - `HostFsFileText`
           - `HostFsListingMeta`
           - `HostFsListResult`
           - `HostFsMoveOutcome`
@@ -33329,7 +33324,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hostFsCompletions`
           - `hostFsDirPeek`
           - `hostFsExtract`
-          - `hostFsFileText`
           - `hostFsListing`
           - `HostFsListingQuerySchema`
           - `hostFsMove`
@@ -34681,21 +34675,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Plugins:
-        - **`data-files`** — Data files: the files app-owned data dirs hold, on whatever host runs — the DataFiles host service (the computer's disk on the desktop, memory in a browser host) behind defineFileRoot, a root declared by the plugin owning the data dir: list / stat / read / write (atomic) / remove / rename (never replacing) / withLock / watch over validated relative paths, every miss a typed result and every mutation naming its writer. A root declared `browse` (and watched) is readable by a generic browser on every host: data-files.roots, data-files.list (a folder's entries, paged by name), data-files.stat, data-files.text (on demand), each pushed from the root's watch while read, and GET /api/data-files/:root/raw (a file, inert).
+        - **`data-files`** — Data files: the files app-owned data dirs hold, on whatever host runs — the DataFiles host service (the computer's disk on the desktop, memory in a browser host) behind defineFileRoot, a root declared by the plugin owning the data dir: list / stat / read / write (atomic) / remove / rename (never replacing) / withLock / watch over validated relative paths, every miss a typed result and every mutation naming its writer. Each root's folder is a location in this host's file system (DataFilesImpl.location: the data dir on the computer's disk, or the same dir in the browser storage's hidden data folder), where file-systems' reads read its files. A root declared `browse` (and watched) is listed by a generic browser on every host: data-files.roots (each with its location), data-files.list (a folder's entries, paged by name) and data-files.stat, each pushed from the root's watch while read.
           - Server:
             - Contributes:
               - `resource.declare` "data-files.list"
               - `resource.declare` "data-files.list:meta"
               - `resource.declare` "data-files.roots"
               - `resource.declare` "data-files.stat"
-              - `resource.declare` "data-files.text"
               - `host-service:data-files.store` "data-files.store"
             - Uses:
-              - `infra/endpoints.rawEndpointHandler`
               - `network/live.serveValue`
               - `network/live.sliceRange`
             - Exports (types):
-              - `BrowsableFileBytes`
               - `DataFilesImpl`
               - `FileRoot`
               - `FileRootBrowseSpec`
@@ -34706,21 +34697,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `WatchedFileRoot`
             - Exports (values):
               - `assertNotRoot`
-              - `browsableFileRevision`
               - `DataFiles`
               - `defineFileRoot`
               - `listFileRoots`
-              - `readBrowsableFile`
               - `requireWatchSpec`
-              - `watchBrowsableFile`
               - `watchedPaths`
             - Resources:
               - `data-files.list` (keyed, window, notified)
               - `data-files.list:meta` (push, notified)
               - `data-files.roots` (push, fixed, whole: the file roots declared in code that opt in to browsing — a handful, fixed per build)
               - `data-files.stat` (push, notified)
-              - `data-files.text` (invalidate, notified)
-            - Routes: `GET /api/data-files/:root/raw`
           - Machine:
             - Uses: `infra/file-watcher.startEventualFileWatcher`
             - Exports (values):
@@ -34729,10 +34715,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `FileRootLocation`
           - Core:
             - Uses:
-              - `infra/endpoints.assetPath`
-              - `infra/endpoints.AssetPath`
-              - `infra/endpoints.blob`
-              - `infra/endpoints.defineEndpoint`
+              - `infra/paths/file-systems.FileLocationSchema`
               - `network/live.liveValue`
               - `packages/list-bound.wholeList`
             - Exports (types):
@@ -34740,7 +34723,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DataChange`
               - `DataChangeHandler`
               - `DataFileStat`
-              - `DataFileText`
               - `DataFolderMeta`
               - `DataWatch`
               - `FileData`
@@ -34758,15 +34740,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `BrowsableRootSchema`
               - `copyTree`
-              - `DATA_FILE_TEXT_MAX_BYTES`
               - `DataFileEntrySchema`
               - `dataFileRoots`
-              - `dataFilesRaw`
               - `dataFileStat`
               - `DataFileStatSchema`
-              - `dataFileText`
-              - `DataFileTextSchema`
-              - `dataFileUrl`
               - `dataFolderListing`
               - `DataFolderMetaSchema`
               - `DataFolderQuerySchema`
@@ -34794,7 +34771,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/covers`
               - `infra/asset-mirror`
               - `infra/paths/data-files/memory`
-              - `primitives/file-viewer`
           - Exemptions:
             - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/roots.ts` (debt)
           - Test helpers:
@@ -34805,17 +34781,30 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `describeDataFilesConformance` — Register the conformance suite for one provider. `makeHarness` is called once per test.
               - Types: `ConformanceHarness`
           - Plugins:
-            - **`memory`** (excluded) — Data files in memory: provides the DataFiles host service for a host without the computer's disk (the browser composition), every root's tree kept in this process and written through to the host's declared storage (read back after a reload when it is persistent) — directories made as a write's parents, one monotonic clock, in-process locks, and a watch that hears every mutation as one change per microtask. Never booted by the desktop.
+            - **`memory`** (excluded) — Data files in memory: provides the DataFiles host service for a host without the computer's disk (the browser composition), every root's tree kept in this process and written through to the host's declared storage (read back after a reload when it is persistent) — directories made as a write's parents, one monotonic clock, in-process locks, and a watch that hears every mutation as one change per microtask. And the browser's file system (file-systems' `browser` reads: files.browser.stat / .text / .bytes and GET /api/files/browser/raw): this storage laid out like a home folder, each root at its data dir under the hidden data folder the desktop keeps them in. Never booted by the desktop.
               - Server:
-                - Contributes: `host-service:data-files.store` "data-files.store"
+                - Contributes:
+                  - `host-service:data-files.store` "data-files.store"
+                  - `resource.declare` "files.browser.bytes"
+                  - `resource.declare` "files.browser.stat"
+                  - `resource.declare` "files.browser.text"
                 - Uses:
+                  - `infra/endpoints.rawEndpointHandler`
                   - `infra/paths/data-files.assertNotRoot`
                   - `infra/paths/data-files.DataFiles`
                   - `infra/paths/data-files.DataFilesImpl`
+                  - `infra/paths/data-files.FileRoot`
                   - `infra/paths/data-files.FileRootSpec`
                   - `infra/paths/data-files.FileRootStore`
+                  - `infra/paths/data-files.listFileRoots`
                   - `infra/paths/data-files.requireWatchSpec`
+                  - `infra/paths/data-files.WatchedFileRoot`
                   - `infra/paths/data-files.watchedPaths`
+                  - `network/live.serveValue`
+                - Resources:
+                  - `files.browser.bytes` (invalidate, notified)
+                  - `files.browser.stat` (push, notified)
+                  - `files.browser.text` (invalidate, notified)
               - Test helpers:
                 - Server: `@plugins/infra/plugins/paths/plugins/data-files/plugins/memory/server/testing`
                   - `createMemoryDataFiles` — Files in memory: a browser host's store.
@@ -34836,6 +34825,78 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SECRETS_DIR_DISPLAY`
               - `USER_CONFIG_DIR_DISPLAY`
               - `WORKTREES_DIR_DISPLAY`
+        - **`file-systems`** — One read of a file in any file system: useFileText, useFileBytes and useFileStat take a FileLocation and read that system's live value (the computer's disk, the browser's storage, a checkout), so a reader never branches on where a file lives; a system this host cannot run is `unavailable`, nothing read.
+          - Web:
+            - Uses: `network/live.useLive`
+            - Exports (types):
+              - `FileBytesState`
+              - `FileBytesUnavailable`
+              - `FileStatState`
+              - `FileTextState`
+              - `FileTextUnavailable`
+            - Exports (values):
+              - `fileBytesUnavailableMessage`
+              - `fileTextUnavailableMessage`
+              - `useFileBytes`
+              - `useFileStat`
+              - `useFileText`
+          - Core:
+            - Uses:
+              - `infra/endpoints.assetPath`
+              - `infra/endpoints.AssetPath`
+              - `infra/endpoints.blob`
+              - `infra/endpoints.defineEndpoint`
+              - `network/live.liveValue`
+            - Exports (types):
+              - `FileEntry`
+              - `FileLocation`
+              - `FileReadAccess`
+              - `FileStat`
+              - `FileSystemKind`
+              - `FileText`
+            - Exports (values):
+              - `browserFileBytes`
+              - `browserFileRaw`
+              - `browserFileStat`
+              - `browserFileText`
+              - `checkoutFileBytes`
+              - `checkoutFileRaw`
+              - `checkoutFileText`
+              - `computerFileBytes`
+              - `computerFileRaw`
+              - `computerFileStat`
+              - `computerFileText`
+              - `contentTypeOf`
+              - `FILE_BYTES_MAX`
+              - `FILE_TEXT_MAX_BYTES`
+              - `FileEntrySchema`
+              - `FileLocationSchema`
+              - `FileReadAccessSchema`
+              - `FileStatSchema`
+              - `FileTextSchema`
+              - `fileUrl`
+              - `locationKey`
+              - `locationName`
+              - `opensNatively`
+              - `sameLocation`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/sonata/sources/midi/file-preview`
+              - `code-explorer`
+              - `conversations/conversation-view/artifacts/screenshot`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/read`
+              - `conversations/conversation-view/markdown-extensions`
+              - `infra/host-fs`
+              - `infra/paths/data-files`
+              - `infra/paths/data-files/memory`
+              - `primitives/diff-view`
+              - `primitives/file-viewer`
+              - `primitives/file-viewer/code`
+              - `primitives/file-viewer/html`
+              - `primitives/file-viewer/image`
+              - `primitives/file-viewer/markdown`
+              - `primitives/file-viewer/media`
+              - `primitives/file-viewer/pdf`
         - **`repo-root`** — REPO_ROOT — the checkout this code runs from, the one place any file gets it. Derived without counting ../ (its own repo-relative dir is a literal `./equin plugin move` rewrites; a stale one throws at load), and the repo-root/no-depth-counted-path lint rejects a ../ chain from a file's own location that leaves its plugin, so moving a plugin cannot silently re-aim a path.
           - Core:
             - Uses:
@@ -37167,12 +37228,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
           - `sliceRange`
       - Cross-plugin:
-        - Imported by: 339 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 341 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×86
           - `conversations` ×70
           - `debug` ×33
           - `tasks` ×28
-          - `infra` ×22
+          - `infra` ×24
           - `page` ×16
           - `active-data` ×13
           - `build` ×10
@@ -38393,6 +38454,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/file-watcher`
           - `infra/git/checkout-watch`
           - `infra/paths/data-files`
+          - `infra/paths/data-files/memory`
           - `packages/watched-memo`
           - `primitives/metrics`
       - Core:
@@ -47726,7 +47788,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/file-viewer`
           - `primitives/file-viewer/media`
           - `primitives/text-editor/paste-images`
-    - **`file-viewer`** — Domain-neutral file viewer: the tiered FileViewer.Renderer registry (native / contextual / fallback / last-resort, offered as tabs), the FileView / FileContent / FileTabs hosts, useFileText reading a FileRef's text from the host (infra/host-fs) or a git checkout (code-api), and useFileBytes its raw bytes (a host file through host-fs, a workspace file through code-explorer).
+    - **`file-viewer`** — Domain-neutral file viewer: the tiered FileViewer.Renderer registry (native / contextual / fallback / last-resort, offered as tabs), the FileView / FileContent / FileTabs hosts, over a FileLocation in any file system (infra/paths/file-systems' reads: the computer's disk, the browser's storage, a checkout) — a renderer never asks which.
       - Web:
         - Slots: `FileViewer.Renderer`
         - Slot contributors:
@@ -47739,8 +47801,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FileViewer.Renderer` ← `primitives.file-viewer.markdown`
           - `FileViewer.Renderer` ← `primitives.file-viewer.media`
           - `FileViewer.Renderer` ← `primitives.file-viewer.pdf`
-        - Uses:
+        - Uses: 21 symbols — full list in [`plugins/primitives/plugins/file-viewer/REFERENCE.md`](../plugins/primitives/plugins/file-viewer/REFERENCE.md)
           - `infra/endpoints.useEndpointMutation`
+          - `infra/paths/file-systems.useFileStat`
           - `network/live.useLive`
           - `primitives/css/center.Center`
           - `primitives/css/column.Column`
@@ -47761,68 +47824,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `shell/toast.showToast`
           - `ui/icons.Icon`
         - Exports (types):
-          - `FileBytesState`
-          - `FileBytesUnavailable`
           - `FileRendererContribution`
           - `FileRendererProps`
           - `FileRenderersHandle`
           - `FileRendererTarget`
-          - `FileTextState`
-          - `FileTextUnavailable`
           - `PreviewFailure`
           - `RendererMatch`
           - `ResolvedRenderer`
         - Exports (values):
-          - `fileBytesUnavailableMessage`
           - `FileContent`
           - `FileTabs`
-          - `fileTextUnavailableMessage`
           - `FileView`
           - `FileViewer`
           - `NoPreview`
           - `resolveRenderers`
           - `UnloadedFile`
           - `useArchiveMembership`
-          - `useFileBytes`
           - `useFileRenderers`
-          - `useFileText`
           - `useOpenHostFile`
-      - Server:
-        - Contributes: `resource.declare` "file-viewer.bytes"
-        - Resources: `file-viewer.bytes` (invalidate, notified)
-      - Machine:
-        - Uses:
-          - `code-explorer.readWorkspaceBytes`
-          - `code-explorer.watchWorkspaceFile`
-          - `code-explorer.workspaceAttemptIds`
-          - `code-explorer.WorkspaceFile`
-          - `code-explorer.workspaceFileSignature`
-          - `code-explorer.WorkspaceRoot`
-          - `code-explorer.workspaceRootFrom`
-          - `infra/host-fs.hostPathVersion`
-          - `infra/host-fs.resolvedOrNull`
-          - `infra/host-fs.resolveOrRefuse`
-          - `infra/host-fs.watchHostPath`
-          - `network/live.serveValue`
-      - Core:
-        - Uses:
-          - `code-explorer/code-api.codeImageUrl`
-          - `infra/host-fs.hostFileUrl`
-          - `infra/paths/data-files.dataFileUrl`
-          - `network/live.liveValue`
-        - Exports (types):
-          - `FileGitStatus`
-          - `FileRef`
-          - `FileViewerGit`
-        - Exports (values):
-          - `FILE_BYTES_MAX`
-          - `fileBytes`
-          - `fileExtension`
-          - `fileRefForPath`
-          - `fileRefKey`
-          - `fileRefName`
-          - `fileUrl`
-          - `isBinaryPath`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --foreground`
@@ -47848,17 +47867,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/file-viewer/markdown`
           - `primitives/file-viewer/media`
           - `primitives/file-viewer/pdf`
+      - Core:
+        - Exports (types):
+          - `FileGitStatus`
+          - `FileViewerGit`
+        - Exports (values):
+          - `fileExtension`
+          - `isBinaryPath`
+          - `locationForPath`
       - Plugins:
         - **`code`** — Code renderer: the file's text as a syntax-highlighted, line-numbered listing. The fallback tab for any file not known to be binary.
           - Web:
             - Contributes: `FileViewer.Renderer` "Code" → `CodeView`
             - Uses:
+              - `infra/paths/file-systems.fileTextUnavailableMessage`
+              - `infra/paths/file-systems.useFileText`
               - `primitives/css/placeholder.Placeholder`
               - `primitives/file-viewer.FileRendererProps`
-              - `primitives/file-viewer.fileTextUnavailableMessage`
               - `primitives/file-viewer.FileViewer`
               - `primitives/file-viewer.NoPreview`
-              - `primitives/file-viewer.useFileText`
               - `primitives/loading.Loading`
               - `primitives/syntax-highlight.CodeListing`
               - `primitives/syntax-highlight.CodePaneSurface`
@@ -47878,12 +47905,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Web:
             - Contributes: `FileViewer.Renderer` "Page" → `HtmlView`
             - Uses:
+              - `infra/paths/file-systems.fileTextUnavailableMessage`
+              - `infra/paths/file-systems.useFileText`
               - `primitives/css/placeholder.Placeholder`
               - `primitives/embed/frame.InlineFrame`
               - `primitives/file-viewer.FileRendererProps`
-              - `primitives/file-viewer.fileTextUnavailableMessage`
               - `primitives/file-viewer.FileViewer`
-              - `primitives/file-viewer.useFileText`
               - `primitives/loading.Loading`
         - **`image`** — Image preview for .png, .jpg, .gif, .webp, .svg, and similar files.
           - Web:
@@ -47910,15 +47937,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Web:
             - Contributes: `FileViewer.Renderer` "Markdown" → `MarkdownView`
             - Uses:
+              - `infra/paths/file-systems.fileTextUnavailableMessage`
+              - `infra/paths/file-systems.useFileText`
               - `primitives/css/card.Card`
               - `primitives/css/placeholder.Placeholder`
               - `primitives/css/spacing.Inset`
               - `primitives/css/text.SectionLabel`
               - `primitives/css/text.Text`
               - `primitives/file-viewer.FileRendererProps`
-              - `primitives/file-viewer.fileTextUnavailableMessage`
               - `primitives/file-viewer.FileViewer`
-              - `primitives/file-viewer.useFileText`
               - `primitives/loading.Loading`
               - `primitives/markdown.Markdown`
           - Cross-plugin:
@@ -47929,7 +47956,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --space-2xs`
               - `ui/tokens/density --space-lg`
               - `ui/tokens/density --space-xs`
-        - **`media`** — Video and audio player for host media files (.mp4, .mov, .webm, .mp3, .wav, .flac, …): the themed media player (media/player), auto-playing on open, its keyboard (Space to play / pause) on the file pane, seeking over byte ranges; a file the player cannot open (damaged or incomplete, unreadable, an unsupported codec) says why, with Retry and Open with default app.
+        - **`media`** — Video and audio player for media files in any file system (.mp4, .mov, .webm, .mp3, .wav, .flac, …): the themed media player (media/player), auto-playing on open, its keyboard (Space to play / pause) on the file pane, seeking over byte ranges; a file the player cannot open (damaged or incomplete, unreadable, an unsupported codec) says why, with Retry and Open with default app.
           - Web:
             - Contributes:
               - `FileViewer.Renderer` "Video" → `VideoView`
@@ -47950,7 +47977,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --space-lg`
               - `ui/tokens/shape --spacing`
-        - **`pdf`** — PDF preview for host .pdf files, in the browser's own PDF viewer (pages, zoom, search, print).
+        - **`pdf`** — PDF preview for .pdf files in any file system, in the browser's own PDF viewer (pages, zoom, search, print).
           - Web:
             - Contributes: `FileViewer.Renderer` "PDF" → `PdfView`
             - Uses:
@@ -57407,17 +57434,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TRAILER_LOG_FORMAT`
           - `UNATTRIBUTED_TRAILER_KEY`
       - Cross-plugin:
-        - Imported by: 118 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+        - Imported by: 117 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
           - `conversations` ×47
           - `tasks` ×36
           - `debug` ×6
           - `active-data` ×5
           - `apps` ×3
           - `page` ×3
-          - `primitives` ×3
           - `review` ×3
           - `code-explorer` ×2
           - `infra` ×2
+          - `primitives` ×2
           - `stats` ×2
           - `backup/sources/transcripts`
           - `database/query`

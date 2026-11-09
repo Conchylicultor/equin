@@ -25,11 +25,8 @@ import { checkPagedSource } from "@plugins/network/plugins/live/server/testing";
 import { hostFsListing, type HostFsEntry } from "../../core";
 import { listHostDir } from "../../server/internal/list";
 import { dirPeek, holdListingOver, listingMeta, listingPage } from "./listing";
-import {
-  hostFsFileTextServed,
-  hostFsPathStatServed,
-  hostFsVolumeInfoServed,
-} from "./reads";
+import { hostFsPathStatServed, hostFsVolumeInfoServed } from "./reads";
+import { computerFileTextServed } from "./file-system";
 import { completions } from "./complete";
 import { watchHostPathOver } from "./version";
 import {
@@ -123,13 +120,15 @@ describe("host-fs.peek / stat / text / volume", () => {
   });
 
   test("text reads a file, and refuses a binary one or a folder", async () => {
-    const text = await hostFsFileTextServed.load({ path: join(root, "b.txt") });
+    const text = await computerFileTextServed.load({
+      path: join(root, "b.txt"),
+    });
     expect(text.content).toBe("b.txt");
     expect(
-      hostFsFileTextServed.load({ path: join(root, "binary.bin") }),
+      computerFileTextServed.load({ path: join(root, "binary.bin") }),
     ).rejects.toMatchObject({ code: "binary" });
     expect(
-      hostFsFileTextServed.load({ path: join(root, "sub") }),
+      computerFileTextServed.load({ path: join(root, "sub") }),
     ).rejects.toMatchObject({ code: "not-a-file" });
   });
 

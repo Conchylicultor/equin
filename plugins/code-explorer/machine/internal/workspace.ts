@@ -27,7 +27,7 @@ import type { WorkspaceRoot } from "../../server/internal/resolve-worktree-path"
 // root that appears (the row inserted) or moves re-points the watch (the
 // runtime's follow re-point), never a waiter parked beside it.
 
-/** One file of a workspace, as a read names it — a workspace `FileRef`'s shape. */
+/** One file of a workspace, as a read names it — a checkout `FileLocation`, as the code reads spell it. */
 export interface WorkspaceFile {
   workspace: string;
   path: string;
