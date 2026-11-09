@@ -70,7 +70,14 @@ namespaces and URLs, never an app.
   macOS: an `NSDraggingSession` of file URLs from under the pointer, drawn
   as Finder's list view drags — per file a row of its small icon and name; copy-only outside the app, every operation over its own
   window; refused for a relative or missing path; resolves `"dropped"` /
-  `"cancelled"` when the drag ends). Held natively like the panel's: the ACL
+  `"cancelled"` when the drag ends, or `"denied"` without starting when macOS
+  does not let the app read a path — a receiver gets only files the dragging
+  app can read, and each shim is its own app to macOS's folder privacy
+  (Downloads, Documents, Desktop, volumes): the drag opens every path first,
+  which is what asks the user once per folder; the shim's `Info.plist` carries
+  the `NS*FolderUsageDescription` / `NS*VolumesUsageDescription` reason).
+  Shims are ad-hoc signed, so a grant is tied to the binary: a new helper
+  (every shim re-cloned) may ask again. Held natively like the panel's: the ACL
   grants `APP_WINDOW_COMMANDS` to window `app` on its origin
   (`window::Scope::capability`), and the command gate checks the shown page
   against that origin. The origin is the owner's instance, whose pages

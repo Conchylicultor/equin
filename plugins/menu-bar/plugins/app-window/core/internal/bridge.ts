@@ -18,10 +18,16 @@ export type AppWindowInfo = z.infer<typeof AppWindowInfoSchema>;
 
 /**
  * How a native file drag ended: something took the drop (a copy — the drag
- * never moves the user's file away), or nothing did (released elsewhere, Esc,
- * or the button was already up when the drag would have started).
+ * never moves the user's file away), nothing did (released elsewhere, Esc,
+ * or the button was already up when the drag would have started), or it
+ * never started because macOS does not let the app read a path — a protected
+ * folder (Downloads, Documents, Desktop, a removable or network volume) the
+ * user has refused this app. No target can take a file the dragging app
+ * cannot read, so such a drag would only be refused everywhere. (The first
+ * drag out of such a folder asks; it waits for the answer, so it ends
+ * `cancelled` after an allow — the button is up by then.)
  */
-export const FileDragOutcomeSchema = z.enum(["dropped", "cancelled"]);
+export const FileDragOutcomeSchema = z.enum(["dropped", "cancelled", "denied"]);
 
 export type FileDragOutcome = z.infer<typeof FileDragOutcomeSchema>;
 

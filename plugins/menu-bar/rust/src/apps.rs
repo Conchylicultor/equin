@@ -450,6 +450,18 @@ mod platform {
         d.insert("EquinNamespace".into(), s(url.host_str().and_then(|h| h.strip_suffix(".localhost")).unwrap_or("")));
         d.insert("EquinShimHash".into(), s(&app.hash));
         d.insert("EquinHelperDigest".into(), s(&helper.digest));
+        // What macOS says when it asks for a protected folder: an app window
+        // reads a file only to drag it out (src/file_drag.rs `readable`).
+        let why = s("Lets you drag files from this folder out of the app — to Finder, Mail or a website — which macOS allows only for files the app can read.");
+        for key in [
+            "NSDesktopFolderUsageDescription",
+            "NSDocumentsFolderUsageDescription",
+            "NSDownloadsFolderUsageDescription",
+            "NSRemovableVolumesUsageDescription",
+            "NSNetworkVolumesUsageDescription",
+        ] {
+            d.insert(key.into(), why.clone());
+        }
         // Without it the bundle's WKWebView never loads http://*.localhost
         // (`NSAllowsLocalNetworking` does not cover it).
         let mut localhost = Dictionary::new();
@@ -1033,6 +1045,7 @@ mod tests {
         assert_eq!(get("EquinNamespace"), "main");
         assert!(d.get("LSUIElement").is_none());
         assert!(d.get("NSAppTransportSecurity").is_some());
+        assert!(d.get("NSDownloadsFolderUsageDescription").is_some());
         assert!(!PathBuf::from(format!("{}.staging", bundle.display())).exists());
     }
 

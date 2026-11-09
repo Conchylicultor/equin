@@ -61,11 +61,24 @@ import {
   type ListedFolder,
 } from "../../core";
 import { isOnDisk, type Listing, type Listings } from "../internal/listings";
+import { showToast } from "@plugins/shell/plugins/toast/web";
 import { FileBrowserSlots } from "../slots";
 import { ExplorerControlsSlot } from "../internal/controls-slot";
 import type { ExplorerSystem } from "../internal/explorer-system";
 
 const FILE_TREE_VIEW = defineDataView("file-explorer.tree");
+
+/**
+ * A native drag out of a folder macOS does not let this app read: no target
+ * can take such a file, so the drag never starts. (The first drag out of a
+ * protected folder asks the user; after a no, this is what every drag says.)
+ */
+const DRAG_DENIED_TOAST = {
+  variant: "error",
+  title: "Can't drag files out of this folder",
+  description:
+    "macOS hasn't allowed this app to read it. Allow it in System Settings › Privacy & Security › Files and Folders, then drag again.",
+} as const;
 
 /** What a folder's refused listing says, in the user's terms. */
 function refusalMessage(refusal: FolderRefusal): string {
@@ -503,7 +516,12 @@ export function FileTree({
         )
           return null;
         const entries = entriesOf(dragged);
-        const ended = handOffComputerFiles(entries, fileDrag);
+        const ended = handOffComputerFiles(entries, fileDrag).then(
+          (outcome) => {
+            if (outcome === "denied") showToast(DRAG_DENIED_TOAST);
+            return outcome;
+          },
+        );
         onDragPaths(
           entries.map((e) => e.path),
           ended,

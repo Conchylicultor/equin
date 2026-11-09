@@ -11,6 +11,16 @@
 //! dropped somewhere, or cancelled — so the page knows its drag is over (no
 //! `dragend` reaches it: the browser drag never started).
 //!
+//! A file the helper itself may not read never drops anywhere: macOS hands a
+//! receiver a dragged file only when the dragging app can read it, and an
+//! app's access to the folders macOS protects (Downloads, Documents, Desktop,
+//! removable and network volumes) is the user's grant to that app — each
+//! installed app's shim is an app of its own. So the drag reads every path
+//! first (`readable`): that read is what makes macOS ask the user once per
+//! folder (the read waits for the answer, so that first drag ends cancelled —
+//! the button is up by then), and a refusal ends the drag as `Denied`, which
+//! the page says, instead of a drag every target silently refuses.
+//!
 //! macOS only (`AVAILABLE`); elsewhere the capability is off and the page
 //! keeps its browser drag.
 
@@ -33,6 +43,24 @@ pub enum Outcome {
     Dropped,
     /// Released where nothing took it, Esc, or the button was already up.
     Cancelled,
+    /// Not started: macOS does not let this app read a path (a protected
+    /// folder the user has not allowed, or has refused), so no target could
+    /// take it.
+    Denied,
+}
+
+/// `EPERM`: what macOS answers a read the user's privacy settings refuse
+/// (a plain Unix permission refusal is `EACCES`).
+const EPERM: i32 = 1;
+
+/// Whether this process may read every path — asking the user first for a
+/// protected folder they have not decided on. Only a privacy refusal counts:
+/// any other failure to open (a dangling link) is not the drag's concern.
+fn readable(paths: &[String]) -> bool {
+    paths.iter().all(|p| match std::fs::File::open(p) {
+        Ok(_) => true,
+        Err(e) => e.raw_os_error() != Some(EPERM),
+    })
 }
 
 /// The paths a page may drag: absolute, existing (a file, a folder, a link),
@@ -58,6 +86,12 @@ pub fn validate(paths: &[String]) -> Result<(), String> {
 /// Resolves when the drag ends.
 pub async fn start(window: WebviewWindow, paths: Vec<String>) -> Result<Outcome, String> {
     validate(&paths)?;
+    let (ok, paths) = tauri::async_runtime::spawn_blocking(move || (readable(&paths), paths))
+        .await
+        .map_err(|e| e.to_string())?;
+    if !ok {
+        return Ok(Outcome::Denied);
+    }
     platform::start(window, paths).await
 }
 
@@ -295,5 +329,23 @@ mod tests {
         assert!(validate(&["Cargo.toml".into()]).is_err());
         assert!(validate(&["/no/such/equin/path".into()]).is_err());
         assert!(validate(&vec![here.to_string_lossy().into_owned(); MAX_PATHS + 1]).is_err());
+    }
+
+    #[test]
+    fn a_path_this_process_reads_is_readable() {
+        let here = std::env::current_dir().unwrap();
+        let file = here.join("Cargo.toml").to_string_lossy().into_owned();
+        let dir = here.to_string_lossy().into_owned();
+        assert!(readable(&[file, dir]));
+        // Not a privacy refusal: not the drag's concern.
+        assert!(readable(&["/no/such/equin/path".into()]));
+    }
+
+    #[test]
+    fn outcomes_serialize_as_the_page_reads_them() {
+        let json = |o| serde_json::to_string(&o).unwrap();
+        assert_eq!(json(Outcome::Dropped), "\"dropped\"");
+        assert_eq!(json(Outcome::Cancelled), "\"cancelled\"");
+        assert_eq!(json(Outcome::Denied), "\"denied\"");
     }
 }
