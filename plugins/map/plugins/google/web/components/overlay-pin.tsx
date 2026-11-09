@@ -8,6 +8,7 @@ import {
 import { createPortal } from "react-dom";
 import { useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
 import type { LatLng } from "@plugins/map/core";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 
 /**
  * Where the content sits on its point: the point's place in the content's box,
@@ -38,6 +39,13 @@ interface OverlayPinProps {
   /** The pointer entered (`true`) or left (`false`) the pin. */
   onHoverChange?: (hovered: boolean) => void;
   /**
+   * The container was first placed on the map — called inside Google's
+   * `draw()`, so whatever the caller paints in it lands in the same frame as
+   * the pin (the canvas leaves its sprite off only from here: before, the
+   * pin is on neither surface).
+   */
+  onPlaced?: () => void;
+  /**
    * The content, given whether it has ENTERED: `false` from its mount until it
    * has been on the map and painted once, then `true`. Draw the rest look (the
    * canvas sprite it replaces) until then and the lifted look after, so the
@@ -66,9 +74,11 @@ export function OverlayPin({
   zIndex,
   onActivate,
   onHoverChange,
+  onPlaced,
   children,
 }: OverlayPinProps) {
   const map = useMap();
+  const placedRef = useLatestRef(onPlaced);
   const [hovered, setHovered] = useState(false);
   const [entered, setEntered] = useState(false);
   const maps = useMapsLibrary("maps");
@@ -94,6 +104,7 @@ export function OverlayPin({
     if (overlay === null) return;
     let frame: number | null = null;
     const offPlaced = overlay.whenPlaced(() => {
+      placedRef.current?.();
       frame = requestAnimationFrame(() => {
         frame = requestAnimationFrame(() => setEntered(true));
       });
@@ -102,7 +113,7 @@ export function OverlayPin({
       offPlaced();
       if (frame !== null) cancelAnimationFrame(frame);
     };
-  }, [overlay]);
+  }, [overlay, placedRef]);
 
   useEffect(() => {
     overlay?.stackAt(hovered ? HOVERED_Z_INDEX : zIndex);
@@ -224,8 +235,8 @@ function createPinOverlay(maps: google.maps.MapsLibrary): PinOverlay {
     }
 
     override draw() {
-      // Before onAdd there is no projection (null, despite the typings); Google
-      // calls draw again once the overlay is on the map.
+      // The projection can be null (despite the typings) until the overlay is
+      // on the map; Google calls draw again once it is.
       const projection: google.maps.MapCanvasProjection | null =
         this.getProjection();
       if (this.position === null || projection == null) return;
@@ -233,7 +244,9 @@ function createPinOverlay(maps: google.maps.MapsLibrary): PinOverlay {
       if (point === null) return;
       this.container.style.left = `${point.x}px`;
       this.container.style.top = `${point.y}px`;
-      if (this.placed) return;
+      // Placed means on screen: `moveTo` draws as soon as there is a
+      // projection, which can be before `onAdd` put the container in a pane.
+      if (this.placed || !this.container.isConnected) return;
       this.placed = true;
       for (const listener of this.placedListeners) listener();
       this.placedListeners.clear();

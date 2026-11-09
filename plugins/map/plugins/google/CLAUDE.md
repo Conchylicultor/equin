@@ -53,7 +53,12 @@ The only map-vendor code in the repo. Everything else draws maps through
   fractional zoom re-plans once per level crossed, never per frame or pan; marks are cached per (pin, scale). **Lifting**: a `pointermove` on the
   map div hit-tests the canvas; the hovered item and the active pin render as
   `OverlayPin`s (`renderPin` / `renderCluster`) at their mark's anchor and are
-  left off the canvas — so a click always lands on a real button. A tap with
+  left off the canvas — so a click always lands on a real button. The canvas
+  leaves a lifted pin off only once its `OverlayPin` is placed (`onPlaced`,
+  inside Google's `draw()`, repainting in that same call): Google adds an
+  overlay a frame or more after React mounts it, and dropping the sprite
+  earlier showed the pin nowhere for that frame. Setting a pin down repaints
+  in a layout effect, in the commit that removes its DOM pin. A tap with
   no hover (touch) is hit-tested on the map's own `click` (not in pick mode).
   The pins on screen are listed in a visually hidden `[data-map-pins]` list of
   buttons (`aria-label`, `data-x` / `data-y` = the point in map px), rebuilt on

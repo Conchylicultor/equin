@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
 import {
   cameraFor,
@@ -179,7 +179,28 @@ export function PinCanvas({
   const lifted = (item: Marked) =>
     item.id === hoveredId || item.id === activeId;
 
-  useEffect(() => {
+  // A pin hands over from the canvas to the DOM only once its `OverlayPin`
+  // is on the map: Google adds and places the overlay a frame or more after
+  // React mounts it, and leaving the sprite off before then showed the pin
+  // on neither surface for that frame — a blink on every hover and selection.
+  // `placed` holds the lifted ids whose DOM pin is placed; the canvas leaves
+  // off only those, repainting in the same `draw()` that placed the pin.
+  const placed = useRef(new Set<string>());
+  const wanted = useRef<readonly SceneItem[] | null>(null);
+  const pushScene = useLatestRef(() => {
+    if (host === null || wanted.current === null) return;
+    host.setScene(
+      wanted.current.map((item) =>
+        item.lifted && !placed.current.has(item.id)
+          ? { ...item, lifted: false }
+          : item,
+      ),
+      window.devicePixelRatio,
+    );
+  });
+  // A layout effect: a pin set down leaves the DOM in this commit, so the
+  // canvas must draw it again before the browser paints.
+  useLayoutEffect(() => {
     if (host === null || marked === null) return;
     const scene: SceneItem[] = marked.map((item) => ({
       id: item.id,
@@ -192,8 +213,12 @@ export function PinCanvas({
           : [],
       lifted: item.id === hoveredId || item.id === activeId,
     }));
-    host.setScene(scene, window.devicePixelRatio);
-  }, [host, marked, hoveredId, activeId]);
+    for (const id of placed.current) {
+      if (id !== hoveredId && id !== activeId) placed.current.delete(id);
+    }
+    wanted.current = scene;
+    pushScene.current();
+  }, [host, marked, hoveredId, activeId, pushScene]);
 
   useEffect(() => {
     if (host === null || text === null) return;
@@ -331,6 +356,10 @@ export function PinCanvas({
           }
           zIndex={item.id === hoveredId ? HOVERED_Z_INDEX : item.z}
           onActivate={() => activateItem(item)}
+          onPlaced={() => {
+            placed.current.add(item.id);
+            pushScene.current();
+          }}
         >
           {(entered) =>
             item.kind === "pin"
