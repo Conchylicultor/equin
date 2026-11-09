@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { layerClasses } from "@plugins/primitives/plugins/css/plugins/layer/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   useEventCallback,
   useLatestRef,
@@ -15,6 +16,7 @@ import {
   probePageExtent,
   type PageExtent,
 } from "../internal/page-extent";
+import { PAGE_MOTION } from "../internal/geometry-motion";
 
 /**
  * A prototype document in a content frame — on its own origin on the content
@@ -166,8 +168,10 @@ export function PrototypeFrame({
   return (
     <div
       // The positioning context the incoming frame's layer covers; sized to
-      // the scaled document so the scroll box around it knows its extent.
-      className="relative"
+      // the scaled document so the scroll box around it knows its extent. It
+      // and the frames in it follow a layout change with the screen
+      // (`PAGE_MOTION`), so the page resizes with its box instead of jumping.
+      className={cn("relative", PAGE_MOTION)}
       style={{
         width: width * scale,
         height: docHeight * scale,
@@ -193,7 +197,7 @@ export function PrototypeFrame({
             }
             // The incoming frame is a layer over the one on screen, and drops
             // back into flow when promoted — a class change, never a remount.
-            className={loading ? layerClasses() : undefined}
+            className={cn(PAGE_MOTION, loading && layerClasses())}
             style={{
               border: "0",
               display: "block",

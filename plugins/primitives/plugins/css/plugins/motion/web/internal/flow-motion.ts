@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, type RefObject } from "react";
 import { useResizeObserverSet } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
-import { overlayTiming } from "./overlay-timing";
+import { playOverlayEnter } from "./enter";
 import { prefersReducedMotion } from "./reduced-motion";
 import { SIZE_EASING, SIZE_MS } from "./size-motion";
 
@@ -99,20 +99,6 @@ function glide(el: HTMLElement, dx: number, dy: number): void {
   });
 }
 
-/** Fades and scales a newly shown item in — the overlay token group's enter,
- *  the one `Presence` plays. */
-function enter(el: HTMLElement, container: HTMLElement): void {
-  const timing = overlayTiming(container);
-  if (timing.enterMs === 0) return;
-  el.animate(
-    [
-      { opacity: 0, scale: timing.scale },
-      { opacity: 1, scale: "1" },
-    ],
-    { duration: timing.enterMs, easing: timing.easing },
-  );
-}
-
 /** Records every item's layout position, moving nothing — the flow's resting
  *  state (a first attach, a resize). */
 function record(f: Flow, el: HTMLElement): void {
@@ -173,7 +159,8 @@ function onFlowChange(f: Flow): void {
     for (const { item, now, before } of moves) {
       if (!canAnimate(item)) continue;
       if (before === undefined) {
-        enter(item, el);
+        // The overlay enter, `Presence`'s, read in the container's scope.
+        playOverlayEnter(item, el);
         continue;
       }
       if (reflowed) continue;

@@ -26,7 +26,7 @@ import { FrameSource, type FrameResolution } from "../slots";
 import { useFrameColorVars, useFrameSrc, usePrototypeDetail } from "../context";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { CanvasSize } from "../internal/canvas-model";
-import { GEOMETRY_MOTION } from "../internal/geometry-motion";
+import { GEOMETRY_MOTION, PAGE_MOTION } from "../internal/geometry-motion";
 import { PrototypeFrame } from "./prototype-frame";
 
 /** Everything the frame view is sized by, and the letter it publishes. */
@@ -185,8 +185,9 @@ function SourceBody({
           label={resolution.tag}
         >
           <div
-            // Laid out at the logical size, then scaled like a prototype frame.
-            className="relative"
+            // Laid out at the logical size, then scaled like a prototype frame
+            // (following a layout change with it).
+            className={cn("relative", PAGE_MOTION)}
             style={{
               width: layout.width,
               height: layout.height,

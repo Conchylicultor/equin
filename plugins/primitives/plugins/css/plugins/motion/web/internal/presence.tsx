@@ -9,6 +9,7 @@ import {
 } from "react";
 import { EXIT_RATIO, overlayTiming } from "./overlay-timing";
 import { prefersReducedMotion } from "./reduced-motion";
+import { playOverlayEnter } from "./enter";
 
 export type PresenceChild = ReactElement | null | false | undefined;
 
@@ -293,10 +294,6 @@ function playEnter(el: HTMLElement): void {
     .getAnimations({ subtree: true })
     .some((a) => a.playState === "running");
   if (arriving) return;
-  const timing = overlayTiming(el);
-  if (timing.enterMs <= 0 || prefersReducedMotion()) return;
-  el.animate([{ opacity: 0, scale: timing.scale, offset: 0 }], {
-    duration: timing.enterMs,
-    easing: timing.easing,
-  });
+  if (prefersReducedMotion()) return;
+  playOverlayEnter(el);
 }

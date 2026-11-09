@@ -53,7 +53,9 @@ interface ColumnMotionProps {
  *   transition to their new widths underneath (MillerColumns, on the same
  *   curve and duration), each narrowing one holding its old inner width so
  *   nothing re-wraps frame by frame. When a column left in the same change,
- *   the newcomer waits a beat for it.
+ *   the newcomer waits a beat for it. Content that replaces the pane's first
+ *   render while it slides (a loading block giving way) joins the entrance
+ *   where it stands (`playEntrance`).
  * - **leave** — the entrance in reverse: a closed column is lifted out of flow
  *   at its last rect (a copy of its DOM, on top) and its content slides 36px
  *   right while fading out, over the same duration and curve as an entrance;
@@ -150,26 +152,59 @@ export class ColumnMotion extends Component<
         : swap
           ? "translateY(4px)"
           : "translateX(36px)";
-      for (const child of box.children) {
-        child.animate(
-          [
-            { opacity: 0, transform: from },
-            { opacity: 1, transform: "none" },
-          ],
-          {
-            duration: DURATION,
-            delay: DURATION * (swap ? 0.15 : left ? 0.25 : 0),
-            easing: EASE_OUT,
-            fill: "backwards",
-          },
-        );
-      }
+      playEntrance(
+        box,
+        [
+          { opacity: 0, transform: from },
+          { opacity: 1, transform: "none" },
+        ],
+        {
+          duration: DURATION,
+          delay: DURATION * (swap ? 0.15 : left ? 0.25 : 0),
+          easing: EASE_OUT,
+          fill: "backwards",
+        },
+      );
     });
   }
 
   override render(): ReactNode {
     return this.props.children;
   }
+}
+
+/**
+ * Plays a newcomer's entrance on its pane box's content — including content
+ * that arrives while it plays. A pane whose first render is a placeholder (a
+ * loading block until its data is known, as the prototype canvas's is)
+ * replaces the very element the entrance started on a moment later; without
+ * this, the real content would land whole, in one frame, beside a column that
+ * is still opening. So the entrance runs on a clock (an effect-less animation
+ * on the box), and every element added to the box before it ends joins the
+ * entrance at the clock's time.
+ */
+function playEntrance(
+  box: Element,
+  keyframes: Keyframe[],
+  timing: KeyframeAnimationOptions,
+): void {
+  const clock = box.animate([], timing);
+  const join = (el: Element): void => {
+    const anim = el.animate(keyframes, timing);
+    anim.currentTime = clock.currentTime;
+  };
+  for (const child of box.children) join(child);
+  const arrivals = new MutationObserver((records) => {
+    for (const record of records) {
+      for (const node of record.addedNodes) {
+        if (node instanceof Element) join(node);
+      }
+    }
+  });
+  arrivals.observe(box, { childList: true });
+  const stop = (): void => arrivals.disconnect();
+  clock.onfinish = stop;
+  clock.oncancel = stop;
 }
 
 /**

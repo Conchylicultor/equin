@@ -6803,7 +6803,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PrototypeFrameActions` "close" → `CloseFrameAction`
               - `PrototypeVersionActions` "compare" → `CompareVersionAction`
               - `PrototypeVersionActions` "open-conversation" → `OpenVersionConversation`
-            - Uses: 93 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md)
+            - Uses: 94 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md)
               - `primitives/css/ui-kit` ×9
               - `primitives/data-view` ×6
               - `infra/endpoints` ×5
@@ -6834,6 +6834,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/fill.Fill`
               - `primitives/css/layer.layerClasses`
               - `primitives/css/line.Line`
+              - `primitives/css/motion.useEnterMotion`
               - `primitives/css/pin.Pin`
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/row.Row`
@@ -36733,7 +36734,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `mouseSounds`
           - `resolveMouseSounds`
       - Cross-plugin:
-        - Imported by: `apps/website/promo-film`
+        - Imported by:
+          - `apps/prototypes/canvas`
+          - `apps/website/promo-film`
     - **`player`** — Themed video / audio player in place of the browser's native controls: a floating glass control pill (play, volume, time, seek, settings, full screen) that fades while playing, a vertical volume capsule, a settings panel with a fine speed dial (0.25–3×), presets, loop and picture in picture (a Document Picture-in-Picture window holding the whole player, falling back to the video's own), centre feedback and the YouTube-style keyboard. Audio draws the same controls as a static bar.
       - Web:
         - Contributes:
@@ -44949,7 +44952,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/slow-ops/cluster`
               - `debug/timeline`
               - `integrations/google-maps/usage`
-        - **`motion`** — How floating surfaces move: <Presence> keeps a leaving surface drawn until its exit has run (and cross-fades a keyed swap), useSizeMotion tweens a surface's size when its content changes, useFlowMotion fades a newly shown in-flow item in and glides the siblings it displaces, prefersReducedMotion, <Arrival> eases a row that arrives while the reader watches into a flow of rows (slot opens, row fades in) — plus the no-unanimated-surface-exit lint rule.
+        - **`motion`** — How floating surfaces move: <Presence> keeps a leaving surface drawn until its exit has run (and cross-fades a keyed swap), useSizeMotion tweens a surface's size when its content changes, useFlowMotion fades a newly shown in-flow item in and glides the siblings it displaces, useEnterMotion fades in an element its owner places itself (a canvas frame) when it arrives, prefersReducedMotion, <Arrival> eases a row that arrives while the reader watches into a flow of rows (slot opens, row fades in) — plus the no-unanimated-surface-exit lint rule.
           - Web:
             - Uses:
               - `primitives/dom/auto-scroll.FOLLOW_MOTION_ATTR`
@@ -44964,6 +44967,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Arrival`
               - `prefersReducedMotion`
               - `Presence`
+              - `useEnterMotion`
               - `useFlowMotion`
               - `useSizeMotion`
           - Cross-plugin:
@@ -44971,6 +44975,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core/pane-morph`
               - `apps/desktop/launcher`
               - `apps/places/places-map`
+              - `apps/prototypes/canvas`
               - `apps/sonata/library`
               - `conversations/conversation-view/jsonl-viewer`
               - `hints/ask`

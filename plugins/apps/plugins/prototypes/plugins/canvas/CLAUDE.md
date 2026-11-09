@@ -308,7 +308,13 @@ centred in its equal share. A frame bigger than its share (a zoom past Fit,
 Whole page) widens every share instead, and the board grows past the viewport,
 so the canvas scrolls. Each box and its screen glide to a new layout
 (`GEOMETRY_MOTION`: left/top/width/height and the corners, .35s, none under
-reduced motion); scrolling moves nothing. A screen is `rounded-xl`, a phone's
+reduced motion), and the page inside follows on the same curve
+(`PAGE_MOTION`: the iframe's logical width/height and its zoom, and its clip),
+so it resizes with its box like a window being resized rather than re-laying
+out at the new size in one frame; scrolling moves nothing. A frame new to the
+board (added, spread, put back by Undo — not the first draw, a reload or a
+swipe → side switch) eases in where it lands (`useEnterMotion`, motion's
+overlay fade and scale) while the others glide. A screen is `rounded-xl`, a phone's
 `rounded-4xl`, a tablet's `rounded-3xl`, ringed in the border hairline over
 the deep `shadow-2xl`; `CanvasFrameView bare` (Present) draws it unframed.
 
@@ -458,7 +464,7 @@ navigation, so it starts from nothing remembered.
     - `PrototypeFrameActions` "close" → `CloseFrameAction`
     - `PrototypeVersionActions` "compare" → `CompareVersionAction`
     - `PrototypeVersionActions` "open-conversation" → `OpenVersionConversation`
-  - Uses: 93 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 94 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×9
     - `primitives/data-view` ×6
     - `infra/endpoints` ×5
@@ -489,6 +495,7 @@ navigation, so it starts from nothing remembered.
     - `primitives/css/fill.Fill`
     - `primitives/css/layer.layerClasses`
     - `primitives/css/line.Line`
+    - `primitives/css/motion.useEnterMotion`
     - `primitives/css/pin.Pin`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`

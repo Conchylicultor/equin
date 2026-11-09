@@ -1,7 +1,7 @@
 # motion
 
 How floating surfaces move — by default, so nobody has to remember to animate
-one. Five mechanisms, each owned where it can be automatic:
+one. Six mechanisms, each owned where it can be automatic:
 
 | Moment | Who owns it | How |
 |---|---|---|
@@ -9,6 +9,7 @@ one. Five mechanisms, each owned where it can be automatic:
 | **Size** | the surface | `useSizeMotion` (attached by `Surface` overlay / float): when the surface's **content** changes its size — a card becoming a pill, a list drilling into a detail, a thread growing — it tweens width / height / corner radius instead of jumping. |
 | **Arrive** | `<Arrival>` | A row added to a flow of rows while the reader watches (a transcript line written live, a block another writer added to an open page) eases in: its slot opens from zero height while the row fades in, so the rows after it glide instead of jumping; the rows of one write arrive as one staged gesture (one push, content cascading in). In-flow, unlike Enter. |
 | **In-flow change** | the container | `useFlowMotion` (attached by `detail-sections`' `SectionStack` and the `data-view` icons grid): when the SET of a container's laid-out children changes — a section shown, a tile added, one removed or moved — a new child fades and scales in and every displaced sibling glides from its old place (FLIP). |
+| **Placed enter** | `useEnterMotion` | An element its owner places itself (absolutely, by runtime numbers: a prototype canvas frame), which `useFlowMotion` cannot see, plays the same fade-and-scale when the owner says it arrived. |
 | **Exit** | `<Presence>` | A surface cannot animate its own unmount, so the conditional goes inside `<Presence>`, which keeps the leaving element drawn until its exit has run. Popovers exit by themselves (`OverlayPanel`'s `data-ending-style:overlay-exit`; base-ui waits for it). |
 
 `Surface motion={false}` opts a surface out of enter and size motion, for one
@@ -120,6 +121,26 @@ whose geometry something else already animates.
   slot by height; `useFlowMotion` is the container's, for any child set change
   (shown, hidden, added, moved), and moves the siblings by FLIP.
 
+## `useEnterMotion`
+
+```tsx
+useEnterMotion(ref, () => !drawnBefore.current.has(id)); // asked once, at mount
+```
+
+- For an element whose container places it itself — an absolutely positioned
+  frame on a board (the prototype canvas's `FrameCard`), whose siblings glide
+  by their own geometry transition — so `useFlowMotion` (in-flow only) cannot
+  see it arrive.
+- **`arrived` is the caller's judgement, asked once, in the mount's layout
+  effect** — as `<Arrival>`'s `arrived` is read at mount only: only the owner
+  can tell an element added while the reader watches from one drawn with the
+  first render. A function, so the owner can answer from a record of its
+  previous commit (a ref written in its own layout effect, which runs after
+  the child's) without reading a ref during render.
+- Plays `playOverlayEnter` — the overlay token group's fade and scale, the one
+  `Presence` and `useFlowMotion` play — on the element itself. Never under
+  reduced motion.
+
 ## Lint: `motion/no-unanimated-surface-exit`
 
 Flags a floating surface — `Pin` / `Placed` / `Layer` with `layer="float"` or
@@ -140,7 +161,7 @@ Design: [`research/2026-10-25-global-surface-motion.md`](../../../../../../resea
 
 ## Plugin reference
 
-- Description: How floating surfaces move: <Presence> keeps a leaving surface drawn until its exit has run (and cross-fades a keyed swap), useSizeMotion tweens a surface's size when its content changes, useFlowMotion fades a newly shown in-flow item in and glides the siblings it displaces, prefersReducedMotion, <Arrival> eases a row that arrives while the reader watches into a flow of rows (slot opens, row fades in) — plus the no-unanimated-surface-exit lint rule.
+- Description: How floating surfaces move: <Presence> keeps a leaving surface drawn until its exit has run (and cross-fades a keyed swap), useSizeMotion tweens a surface's size when its content changes, useFlowMotion fades a newly shown in-flow item in and glides the siblings it displaces, useEnterMotion fades in an element its owner places itself (a canvas frame) when it arrives, prefersReducedMotion, <Arrival> eases a row that arrives while the reader watches into a flow of rows (slot opens, row fades in) — plus the no-unanimated-surface-exit lint rule.
 - Web:
   - Uses:
     - `primitives/dom/auto-scroll.FOLLOW_MOTION_ATTR`
@@ -155,6 +176,7 @@ Design: [`research/2026-10-25-global-surface-motion.md`](../../../../../../resea
     - `Arrival`
     - `prefersReducedMotion`
     - `Presence`
+    - `useEnterMotion`
     - `useFlowMotion`
     - `useSizeMotion`
 - Cross-plugin:
@@ -162,6 +184,7 @@ Design: [`research/2026-10-25-global-surface-motion.md`](../../../../../../resea
     - `apps-core/pane-morph`
     - `apps/desktop/launcher`
     - `apps/places/places-map`
+    - `apps/prototypes/canvas`
     - `apps/sonata/library`
     - `conversations/conversation-view/jsonl-viewer`
     - `hints/ask`

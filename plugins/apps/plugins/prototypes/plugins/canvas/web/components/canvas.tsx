@@ -1,4 +1,10 @@
-import { useState, type ReactElement, type ReactNode } from "react";
+import {
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -10,6 +16,7 @@ import {
   hoverRevealTarget,
 } from "@plugins/primitives/plugins/hover-reveal/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { useEnterMotion } from "@plugins/primitives/plugins/css/plugins/motion/web";
 import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import {
   CANVAS_CARD_ATTR,
@@ -55,7 +62,8 @@ import { CANVAS_GROUND } from "./canvas-ground";
  * the floating chrome leaves (scrolling when they are bigger than it), all at
  * one size and zoom — or, with exactly two frames and the Swipe layout, one
  * swiped over the other. Frames are placed by runtime numbers (`placeFrames`),
- * so a layout change glides each one to its new box (`GEOMETRY_MOTION`). The
+ * so a layout change glides each one to its new box (`GEOMETRY_MOTION`), and a
+ * frame new to the board eases in where it lands (`useEnterMotion`). The
  * size & zoom chip floats over the bottom, the add rail (`+`, Compare) sits on
  * the last frame's right edge, revealed by hovering it — the same chrome a
  * presentation shows.
@@ -105,6 +113,15 @@ export function Canvas({ meta }: { meta: PrototypeMeta }): ReactElement {
   });
   const names = useFrameNames(meta);
   const measured = room.width > 0 && room.height > 0;
+  // The frames the board has drawn: one that is not among them arrived while
+  // the reader watches (added, spread, put back by Undo) and eases in; the
+  // first draw, a reload and a swipe → side switch bring none.
+  // Recorded after every commit; a card asks as it mounts, before this
+  // commit's record (a child's layout effect runs first).
+  const drawnIds = useRef<ReadonlySet<FrameId> | null>(null);
+  useLayoutEffect(() => {
+    if (measured) drawnIds.current = new Set(canvas.frames.map((f) => f.id));
+  });
   // The layout drawn, not the one asked for: Swipe needs exactly two frames.
   const drawn: CanvasLayout = swipe ? "swipe" : "side";
   const [first, second] = boxes;
@@ -136,6 +153,10 @@ export function Canvas({ meta }: { meta: PrototypeMeta }): ReactElement {
                   <FrameCard
                     key={frame.id}
                     frame={frame}
+                    arrived={() =>
+                      drawnIds.current !== null &&
+                      !drawnIds.current.has(frame.id)
+                    }
                     index={index}
                     last={index === canvas.frames.length - 1}
                     meta={meta}
@@ -203,6 +224,7 @@ export function useFrameNames(
  */
 function FrameCard({
   frame,
+  arrived,
   index,
   last,
   meta,
@@ -213,6 +235,12 @@ function FrameCard({
   onPageExtent,
 }: {
   frame: CanvasFrame;
+  /**
+   * Whether it was not on the board until now — asked once, as it mounts: it
+   * then eases in where it lands while the frames already there glide to
+   * their new boxes.
+   */
+  arrived: () => boolean;
   index: number;
   last: boolean;
   meta: PrototypeMeta;
@@ -225,9 +253,12 @@ function FrameCard({
 }): ReactElement {
   const { canvas, dispatch } = usePrototypeDetail();
   const selected = canvas.selected === frame.id;
+  const cardRef = useRef<HTMLElement>(null);
+  useEnterMotion(cardRef, arrived);
 
   return (
     <Placed
+      ref={cardRef}
       x={{ start: box.x, size: box.w }}
       y={{ start: box.y, size: box.h }}
       className={cn(hoverRevealGroup, GEOMETRY_MOTION)}

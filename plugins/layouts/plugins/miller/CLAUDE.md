@@ -150,7 +150,9 @@ what it decides.
 - `prefers-reduced-motion`: no transition, the scroll lands at once. The first
   paint lands in place.
 - **Enter / leave / swap** (`ColumnMotion`) ride on top: a newcomer mounts at
-  its final width and only its content slides in; a closed column's ghost
+  its final width and only its content slides in (content that replaces the
+  pane's first render mid-slide — a loading block giving way — joins the slide
+  where it stands, never landing whole); a closed column's ghost
   fades out over the remaining columns as they grow into its place. The row's
   scroll is MillerColumns' alone.
 
