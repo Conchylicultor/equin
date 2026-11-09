@@ -1,254 +1,408 @@
 <!doctype html>
-<html lang="en" data-style="split" data-screen="conversation">
+<html lang="en" data-icons="material" data-density="compact" data-check="trailing" data-highlight="neutral" style="--accent: oklch(0.78 0.10 208)">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Selection quick actions</title>
-<meta name="description" content="Selecting agent text in a transcript pops a toolbar: Quote into the prompt, or use a configurable quick answer (Go, Explain) as a split chip: label fills the prompt to edit, ➤ sends right away." />
-<meta name="prototype-option" content="style: split | compact" />
-<meta name="prototype-option" content="screen: conversation | settings" />
+<title>Menu</title>
+<meta name="description" content="One design for every dropdown menu in the app, in the Mist theme: snug width under any trigger, one icon column of equal weight, quiet section labels, a check that sits with its row, shortcuts, submenus and a destructive item." />
+<meta name="mocks" content="exhibit:ui-kit/menu-sheet@/agents" />
+<meta name="prototype-option" content="icons: material | lucide" />
+<meta name="prototype-option" content="density: compact | cozy" />
+<meta name="prototype-option" content="check: trailing | leading" />
+<meta name="prototype-option" content="highlight: neutral | tint" />
+<meta name="prototype-option" content="accent: color teal=oklch(0.78 0.10 208) | periwinkle=oklch(0.76 0.10 244) | violet=oklch(0.76 0.11 286) | green=oklch(0.80 0.11 158)" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..24,300..500,0,0&display=block" rel="stylesheet" />
 
 <style>
+  /* ---------- Mist palette: cool lifted slate ---------- */
   :root {
-    --bg: #fbfbfa; --panel: #ffffff; --ink: #1d1d1b; --muted: #75736e; --line: #e7e5e0;
-    --accent: #5b5bd6; --accent-ink: #fff; --quote: #eeeef9; --chip: #f2f1ee;
-    --bar: #1f1f22; --bar-ink: #f4f4f5; --bar-muted: #a1a1aa; --bar-hover: #34343a;
-    --sel: rgba(91, 91, 214, .22);
+    --bg-0: oklch(0.195 0.012 248);
+    --bg-1: oklch(0.225 0.013 246);
+    --bg-2: oklch(0.265 0.015 244);
+    --bg-3: oklch(0.305 0.017 242);
+    --line: oklch(0.35 0.02 244 / 0.7);
+    --line-soft: oklch(0.33 0.018 244 / 0.45);
+    --text: oklch(0.95 0.008 240);
+    --text-2: oklch(0.80 0.012 238);
+    --muted: oklch(0.66 0.014 238);
+    --faint: oklch(0.52 0.014 240);
+    --coral: oklch(0.74 0.11 28);
+    --radius: 12px;
+    --radius-sm: 9px;
+
+    --accent-soft: color-mix(in oklch, var(--accent) 14%, transparent);
+    --hover: var(--bg-3);
+    --danger: var(--coral);
+    --danger-hover: color-mix(in oklch, var(--coral) 14%, transparent);
   }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #161618; --panel: #1d1d20; --ink: #ececee; --muted: #9a9aa3; --line: #2c2c31;
-      --accent: #8b8bf0; --accent-ink: #111; --quote: #26263a; --chip: #26262b;
-      --bar: #f4f4f5; --bar-ink: #18181b; --bar-muted: #71717a; --bar-hover: #e4e4e7;
-      --sel: rgba(139, 139, 240, .3);
-    }
+  :root[data-highlight="tint"] { --hover: var(--accent-soft); }
+
+  /* density: one row height drives everything else */
+  :root {
+    --row-h: 28px;
+    --row-px: 8px;
+    --row-gap: 8px;
+    --font: 12.5px;
+    --icon: 15px;
+    --pad: 5px;
+    --r-panel: var(--radius);
+    --r-row: 7px;
   }
+  :root[data-density="cozy"] {
+    --row-h: 32px;
+    --row-px: 10px;
+    --row-gap: 10px;
+    --font: 13px;
+    --icon: 16px;
+    --pad: 6px;
+    --r-panel: 14px;
+    --r-row: 8px;
+  }
+  /* Material glyphs sit a touch smaller in their box than Lucide outlines */
+  :root[data-icons="material"] { --icon-scale: 1.1; }
+  :root[data-icons="lucide"] { --icon-scale: 1; }
+
+  /* ---------- page ---------- */
   * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; height: 100%; }
-  body { font: 14px/1.55 system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--ink); }
-  ::selection { background: var(--sel); }
-  #root { height: 100%; display: flex; flex-direction: column; }
+  html, body { margin: 0; padding: 0; min-height: 100%; }
+  body {
+    background: var(--bg-0);
+    color: var(--text);
+    font-family: Inter, system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  #root { padding: 24px; }
 
-  /* ---------- conversation ---------- */
-  .convo { flex: 1; display: flex; flex-direction: column; min-height: 0; }
-  header.top { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--line); font-weight: 600; }
-  header.top .dot { width: 8px; height: 8px; border-radius: 50%; background: #3fb46b; }
-  header.top small { color: var(--muted); font-weight: 400; }
-  .transcript { flex: 1; overflow: auto; padding: 24px 16px 40px; }
-  .col { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
-  .msg.user { align-self: flex-end; background: var(--chip); padding: 8px 12px; border-radius: 12px; max-width: 80%; }
-  .msg.agent p { margin: 0 0 10px; }
-  .msg.agent code { font: 12.5px ui-monospace, Menlo, monospace; background: var(--chip); padding: 1px 5px; border-radius: 4px; }
-  .msg.agent ul { margin: 0 0 10px; padding-left: 20px; }
-  .meta { color: var(--muted); font-size: 12px; margin-bottom: 4px; }
+  .sheet {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+    gap: 14px;
+  }
+  .specimen {
+    background: var(--bg-1);
+    box-shadow: inset 0 0 0 1px var(--line-soft);
+    border-radius: 16px;
+    padding: 16px 16px 28px;
+    min-height: 380px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .caption { font-size: 12px; color: var(--faint); display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .caption b { color: var(--text-2); font-weight: 600; }
 
-  /* ---------- prompt ---------- */
-  .prompt-wrap { padding: 12px 16px 16px; }
-  .prompt { max-width: 760px; margin: 0 auto; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px 8px; box-shadow: 0 1px 2px rgba(0,0,0,.04); transition: box-shadow .2s, border-color .2s; }
-  .prompt.flash { border-color: var(--accent); box-shadow: 0 0 0 3px var(--sel); }
-  .quotes { display: flex; flex-direction: column; gap: 6px; }
-  .quotes:not(:empty) { margin-bottom: 6px; }
-  .q { position: relative; border-left: 3px solid var(--accent); background: var(--quote); border-radius: 0 8px 8px 0; padding: 6px 28px 6px 10px; color: var(--ink); font-size: 13px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-  .q button { position: absolute; top: 4px; right: 4px; border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 13px; line-height: 1; padding: 2px 4px; border-radius: 4px; }
-  .q button:hover { background: var(--line); }
-  .input { min-height: 22px; outline: none; color: var(--ink); }
-  .input:empty::before { content: attr(data-ph); color: var(--muted); }
-  .prompt-foot { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
-  .tpl { border: 1px solid var(--line); background: none; color: var(--ink); border-radius: 999px; padding: 2px 10px; font-size: 12px; cursor: pointer; }
-  .spacer { flex: 1; }
-  .send { width: 28px; height: 28px; border-radius: 50%; border: 0; background: var(--accent); color: var(--accent-ink); cursor: pointer; display: grid; place-items: center; }
+  /* ---------- icons: one element, sized by font-size ---------- */
+  svg.ico { width: 1em; height: 1em; flex: none; }
+  .ms.ico {
+    font-family: "Material Symbols Outlined";
+    font-weight: normal; font-style: normal;
+    font-size: calc(1em * var(--icon-scale));
+    line-height: 1; letter-spacing: normal; text-transform: none;
+    white-space: nowrap; direction: ltr;
+    font-feature-settings: "liga"; -webkit-font-feature-settings: "liga";
+    font-variation-settings: "opsz" 20, "wght" 400;
+    display: inline-block; width: 1em; height: 1em; overflow: hidden;
+    flex: none;
+  }
 
-  /* ---------- selection toolbar ---------- */
-  .selbar { position: fixed; z-index: 10; display: none; transform: translate(-50%, calc(-100% - 8px)); background: var(--bar); color: var(--bar-ink); border-radius: 10px; padding: 3px; box-shadow: 0 6px 20px rgba(0,0,0,.22), 0 1px 3px rgba(0,0,0,.2); align-items: center; gap: 2px; white-space: nowrap; animation: pop .12s ease-out; }
-  .selbar.show { display: flex; }
-  .selbar::after { content: ""; position: absolute; left: 50%; bottom: -4px; width: 10px; height: 10px; background: var(--bar); transform: translateX(-50%) rotate(45deg); border-radius: 2px; }
-  @keyframes pop { from { opacity: 0; transform: translate(-50%, calc(-100% - 4px)) scale(.97); } }
-  .selbar button { border: 0; background: none; color: inherit; font: 500 12.5px system-ui, sans-serif; padding: 5px 9px; border-radius: 7px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; position: relative; z-index: 1; }
-  .selbar button:hover { background: var(--bar-hover); }
-  .selbar svg { width: 14px; height: 14px; flex: none; }
-  .chip { display: inline-flex; align-items: stretch; border: 1px solid color-mix(in srgb, var(--bar-muted) 45%, transparent); border-radius: 7px; margin: 0 1px; overflow: hidden; }
-  .selbar .chip button { border-radius: 0; padding: 3px 8px; }
-  .selbar .chip .go { padding: 3px 6px; color: var(--bar-muted); border-left: 1px solid color-mix(in srgb, var(--bar-muted) 45%, transparent); }
-  .selbar .chip .go:hover { color: var(--bar-ink); }
-  .selbar .chip svg { width: 12px; height: 12px; }
-  :root[data-style="compact"] .selbar .chip .ed svg { display: none; }
-  .selbar .sep { width: 1px; align-self: stretch; margin: 4px 2px; background: var(--bar-muted); opacity: .4; }
-  .selbar .gear { color: var(--bar-muted); padding: 5px 6px; }
-  :root[data-style="compact"] .selbar .quote-label,
-  :root[data-style="compact"] .selbar .gear { display: none; }
-  :root[data-style="compact"] .selbar button { padding: 5px 7px; }
+  /* ---------- triggers ---------- */
+  .anchor { position: relative; align-self: flex-start; }
+  .trigger {
+    display: inline-flex; align-items: center; gap: 7px;
+    height: 30px; padding: 0 9px;
+    border-radius: var(--radius-sm);
+    font-family: inherit; font-size: 13px; font-weight: 500; line-height: 1;
+    color: var(--text);
+    background: var(--bg-2);
+    border: 0;
+  }
+  .trigger .ico { font-size: 15px; color: var(--muted); }
+  .trigger .value { color: var(--muted); font-weight: 500; }
+  .trigger.icon-only { width: 30px; padding: 0; justify-content: center; }
+  .trigger.icon-only .ico { font-size: 16px; }
+  @keyframes blink { 50% { opacity: 0; } }
 
-  .pending .typing { color: var(--muted); font-style: italic; }
+  /* ---------- the menu ---------- */
+  .menu {
+    position: relative;
+    margin-top: 5px;
+    width: max-content;
+    min-width: 200px;
+    max-width: 300px;
+    padding: var(--pad);
+    border-radius: var(--r-panel);
+    background: var(--bg-2);
+    box-shadow: 0 14px 34px -12px rgba(0, 0, 0, 0.6), inset 0 0 0 1px var(--line);
+    font-size: var(--font);
+    line-height: 1;
+    animation: pop 140ms cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
+    transform-origin: top left;
+  }
+  @keyframes pop { from { opacity: 0; transform: scale(0.97) translateY(-2px); } }
+  .menu.sub {
+    position: absolute;
+    left: calc(100% + var(--pad) + 4px);
+    top: calc(var(--pad) * -1);
+    margin-top: 0;
+    min-width: 180px;
+    animation-delay: 60ms;
+  }
 
-  /* ---------- settings screen ---------- */
-  .settings { display: none; padding: 32px 16px; overflow: auto; }
-  :root[data-screen="settings"] .settings { display: block; }
-  :root[data-screen="settings"] .convo { display: none; }
-  .settings .wrap { max-width: 640px; margin: 0 auto; }
-  .settings h1 { font-size: 20px; margin: 0 0 4px; }
-  .settings .sub { color: var(--muted); margin: 0 0 24px; }
-  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
-  .row { display: grid; grid-template-columns: 18px minmax(80px, 120px) 1fr 28px; gap: 10px; align-items: start; padding: 12px 14px; border-top: 1px solid var(--line); }
-  .row:first-child { border-top: 0; }
-  .grip { color: var(--muted); cursor: grab; padding-top: 6px; }
-  .row input, .row textarea { width: 100%; font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 7px; padding: 5px 8px; }
-  .row textarea { resize: vertical; min-height: 54px; font-size: 13px; }
-  .row .del { border: 0; background: none; color: var(--muted); cursor: pointer; padding-top: 6px; }
-  .card-foot { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-top: 1px solid var(--line); flex-wrap: wrap; }
-  .add { border: 1px dashed var(--line); background: none; color: var(--ink); border-radius: 8px; padding: 5px 10px; cursor: pointer; }
-  .note { color: var(--muted); font-size: 12.5px; margin-top: 14px; }
-  .preview { margin-top: 24px; }
-  .preview h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 8px; }
-  .preview .box { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
-  .preview .q { -webkit-line-clamp: unset; }
+  .label {
+    padding: 7px var(--row-px) 5px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--faint);
+  }
+  .menu > .label:first-child { padding-top: 5px; }
+
+  .item {
+    position: relative;
+    display: flex; align-items: center; gap: var(--row-gap);
+    height: var(--row-h);
+    padding: 0 var(--row-px);
+    border-radius: var(--r-row);
+    color: var(--text-2);
+    font-weight: 500;
+    cursor: default;
+    user-select: none;
+    white-space: nowrap;
+  }
+  .item[data-focus], .item.open { background: var(--hover); color: var(--text); }
+  .item[data-focus] > .lead, .item.open > .lead { color: var(--text-2); }
+  .item .lead {
+    width: var(--icon); height: var(--icon);
+    flex: none;
+    color: var(--muted);
+    display: grid; place-items: center;
+    font-size: var(--icon);
+  }
+  .item .text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .item .hint { color: var(--faint); font-size: 12px; margin-left: 2px; font-weight: 500; }
+  .item .trail { margin-left: auto; padding-left: 16px; display: flex; align-items: center; gap: 4px; color: var(--faint); }
+  .item .trail .ico { font-size: 14px; margin-right: -2px; }
+  /* shortcuts are quiet text, not keycaps: the theme has no sunken fill for a badge */
+  kbd {
+    font: 500 12px/1 Inter, system-ui, sans-serif;
+    color: var(--faint);
+    letter-spacing: 0.04em;
+  }
+  .item.danger, .item.danger .lead { color: var(--danger); }
+  .item.danger[data-focus] { background: var(--danger-hover); color: var(--danger); }
+  .item.danger[data-focus] > .lead { color: var(--danger); }
+  .item[aria-disabled] { opacity: 0.4; }
+  .item[aria-disabled][data-focus] { background: none; }
+
+  .sep { height: 1px; background: var(--line-soft); margin: var(--pad) 4px; }
+
+
+  /* a search field that belongs to the menu: its first row, not a separate control */
+  .menu .search {
+    display: flex; align-items: center; gap: var(--row-gap);
+    height: calc(var(--row-h) + 2px); padding: 0 var(--row-px);
+    margin-bottom: 1px;
+    border-radius: var(--r-row);
+    background: var(--bg-1);
+    box-shadow: inset 0 0 0 1px var(--line-soft);
+    color: var(--faint);
+  }
+  .menu .search .ico { font-size: var(--icon); color: var(--muted); }
+  .menu .search .caret { width: 1px; height: 14px; background: var(--text); margin-right: calc(var(--row-gap) * -1 + 1px); animation: blink 1.1s steps(1) infinite; }
+  .item .trail .value { color: var(--muted); font-size: 12px; font-weight: 500; margin-right: 2px; }
+
+  /* the check: a quiet accent mark, never a second icon column fighting the first */
+  .check { font-size: 14px; color: var(--accent); visibility: hidden; }
+  .item[aria-checked="true"] { color: var(--text); }
+  .item[aria-checked="true"] .check { visibility: visible; }
+  .item[aria-checked="true"] .text { font-weight: 600; }
+  .item .check-lead { display: none; }
+  .check-trail { margin-left: auto; }
+  .item .text + .check-trail { margin-left: 16px; }
+  :root[data-check="leading"] .item .check-lead { display: inline-block; }
+  :root[data-check="leading"] .item .check-trail { display: none; }
+  :root[data-check="leading"] .item:has(> .check-lead) { padding-left: calc(var(--row-px) - 2px); gap: calc(var(--row-gap) - 2px); }
+  /* rows without a check (actions in a pick menu) keep the check column, so every label lines up */
+  :root[data-check="leading"] .menu:has(> .item > .check-lead) > .item:not(:has(> .check-lead)) {
+    padding-left: calc(var(--row-px) - 2px + 14px + var(--row-gap) - 2px);
+  }
+
+  .described .item { height: auto; padding-top: 7px; padding-bottom: 7px; align-items: flex-start; }
+  .described .item .lead, .described .item .check { margin-top: 1px; }
+  .described .item .text { white-space: normal; line-height: 1.3; }
+  .described .item .text small { display: block; color: var(--faint); font-size: 12px; margin-top: 2px; font-weight: 400; }
+
+  @media (max-width: 720px) {
+    .menu.sub { left: 24px; top: calc(100% - 2px); z-index: 1; }
+    .specimen { min-height: 460px; }
+  }
 </style>
 </head>
 <body>
 <div id="root">
-  <section class="convo">
-    <header class="top"><span class="dot"></span> Fix flaky tab-bar drag test <small>· waiting for you</small></header>
-    <div class="transcript" id="transcript">
-      <div class="col" id="col">
-        <div class="msg user">Why does the drag test fail on CI but not locally?</div>
-        <div class="msg agent">
-          <div class="meta">Agent · 6m ago</div>
-          <div class="agent-text">
-            <p>I traced it to a timing issue. The test dispatches <code>pointerdown</code> and immediately reads the tab order, but <code>useRankSortableItem</code> only commits the new rank after the drop animation settles — about 150 ms on CI, where the runner is slower.</p>
-            <p>There are two ways to fix this:</p>
-            <ul>
-              <li>Wait for the <code>reorder.committed</code> event in the test instead of reading the DOM right away.</li>
-              <li>Commit the rank optimistically on drop and let the animation play over the already-reordered list.</li>
-            </ul>
-            <p id="pre">The second option is cleaner: it removes the window entirely, so no other caller can observe the stale order either. It touches the shared reorder primitive though, so every sortable list in the app would pick it up.</p>
-            <p>Want me to go with the optimistic commit?</p>
+
+  <div class="sheet">
+
+    <!-- A: view options — the search field lives inside the panel -->
+    <section class="specimen">
+      <div class="caption"><b>View options</b> the search field inside the panel, then one row per control</div>
+      <div class="anchor">
+        <button class="trigger icon-only" aria-label="View options"><i data-icon="sliders"></i></button>
+        <div class="menu" role="menu">
+          <div class="search"><i data-icon="search"></i><span class="caret"></span>Search…</div>
+          <div class="sep"></div>
+          <div class="item"><span class="lead"><i data-icon="filter"></i></span><span class="text">Filter</span><span class="trail"><i data-icon="chevron-right"></i></span></div>
+          <div class="item" data-focus><span class="lead"><i data-icon="sort"></i></span><span class="text">Sort</span><span class="trail"><span class="value">Last updated</span><i data-icon="chevron-right"></i></span></div>
+          <div class="item"><span class="lead"><i data-icon="sliders"></i></span><span class="text">View settings</span><span class="trail"><i data-icon="chevron-right"></i></span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- B: picker -->
+    <section class="specimen">
+      <div class="caption"><b>Picker</b> one labelled group, the choice checked</div>
+      <div class="anchor">
+        <button class="trigger">Preprompt <span class="value">None</span><i data-icon="chevron-down"></i></button>
+        <div class="menu" role="menu" data-pick>
+          <div class="label">Preprompt</div>
+          <div class="item" aria-checked="true"><i data-icon="check" class="check check-lead"></i><span class="lead"><i data-icon="none"></i></span><span class="text">None</span><i data-icon="check" class="check check-trail"></i></div>
+          <div class="item" data-focus><i data-icon="check" class="check check-lead"></i><span class="lead"><i data-icon="code"></i></span><span class="text">Auto-implement</span><i data-icon="check" class="check check-trail"></i></div>
+          <div class="item"><i data-icon="check" class="check check-lead"></i><span class="lead"><i data-icon="push"></i></span><span class="text">Auto-push</span><i data-icon="check" class="check check-trail"></i></div>
+          <div class="item"><i data-icon="check" class="check check-lead"></i><span class="lead"><i data-icon="zap"></i></span><span class="text">Auto-push <span class="hint">no human</span></span><i data-icon="check" class="check check-trail"></i></div>
+          <div class="item"><i data-icon="check" class="check check-lead"></i><span class="lead"><i data-icon="eye"></i></span><span class="text">Auto-push <span class="hint">check</span></span><i data-icon="check" class="check check-trail"></i></div>
+          <div class="item"><i data-icon="check" class="check check-lead"></i><span class="lead"><i data-icon="infinity"></i></span><span class="text">Autonomous</span><i data-icon="check" class="check check-trail"></i></div>
+          <div class="item"><i data-icon="check" class="check check-lead"></i><span class="lead"><i data-icon="timer"></i></span><span class="text">Perf</span><i data-icon="check" class="check check-trail"></i></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- C: views + submenu -->
+    <section class="specimen">
+      <div class="caption"><b>Views</b> the current view checked, a submenu open</div>
+      <div class="anchor">
+        <button class="trigger"><i data-icon="list"></i>Queue<i data-icon="chevron-down"></i></button>
+        <div class="menu" role="menu" data-pick>
+          <div class="label">Views</div>
+          <div class="item" aria-checked="true"><i data-icon="check" class="check check-lead"></i><span class="lead"><i data-icon="list"></i></span><span class="text">Queue</span><i data-icon="check" class="check check-trail"></i></div>
+          <div class="item"><i data-icon="check" class="check check-lead"></i><span class="lead"><i data-icon="table"></i></span><span class="text">Models</span><i data-icon="check" class="check check-trail"></i></div>
+          <div class="item"><i data-icon="check" class="check check-lead"></i><span class="lead"><i data-icon="board"></i></span><span class="text">History</span><i data-icon="check" class="check check-trail"></i></div>
+          <div class="sep"></div>
+          <div class="item open" data-focus>
+            <span class="lead"><i data-icon="plus"></i></span><span class="text">Add view</span><span class="trail"><i data-icon="chevron-right"></i></span>
+            <div class="menu sub" role="menu">
+              <div class="item" data-focus><span class="lead"><i data-icon="list"></i></span><span class="text">List</span></div>
+              <div class="item"><span class="lead"><i data-icon="table"></i></span><span class="text">Table</span></div>
+              <div class="item"><span class="lead"><i data-icon="board"></i></span><span class="text">Board</span></div>
+              <div class="item"><span class="lead"><i data-icon="gallery"></i></span><span class="text">Gallery</span></div>
+            </div>
           </div>
+          <div class="item"><span class="lead"><i data-icon="settings"></i></span><span class="text">View settings…</span></div>
         </div>
       </div>
-    </div>
-    <div class="prompt-wrap">
-      <div class="prompt" id="prompt">
-        <div class="quotes" id="quotes"></div>
-        <div class="input" id="input" contenteditable="true" data-ph="Reply to the agent…"></div>
-        <div class="prompt-foot">
-          <button class="tpl">Go</button><button class="tpl">Explain</button><button class="tpl">Plan</button>
-          <span class="spacer"></span>
-          <button class="send" aria-label="Send"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
-        </div>
-      </div>
-    </div>
-  </section>
+    </section>
 
-  <section class="settings">
-    <div class="wrap">
-      <h1>Selection quick answers</h1>
-      <p class="sub">Shown when you select text in an agent's reply. Each one quotes the selection: click its name to put the quote and prompt in the prompt field to edit, or ➤ to send them right away.</p>
-      <div class="card">
-        <div class="row"><span class="grip">⋮⋮</span><input value="Go" /><textarea>Go ahead with this.</textarea><button class="del">✕</button></div>
-        <div class="row"><span class="grip">⋮⋮</span><input value="Explain" /><textarea>Explain this in more detail — what it means, and why.</textarea><button class="del">✕</button></div>
-        <div class="card-foot"><button class="add">+ Add quick answer</button></div>
-      </div>
-            <div class="preview">
-        <h2>Sent as</h2>
-        <div class="box">
-          <div class="q">The second option is cleaner: it removes the window entirely, so no other caller can observe the stale order either.</div>
-          <div style="margin-top:8px">Explain this in more detail — what it means, and why.</div>
+    <!-- D: row actions -->
+    <section class="specimen">
+      <div class="caption"><b>Row actions</b> shortcuts, a disabled row, a destructive one</div>
+      <div class="anchor">
+        <button class="trigger icon-only" aria-label="More"><i data-icon="more"></i></button>
+        <div class="menu" role="menu">
+          <div class="item" data-focus><span class="lead"><i data-icon="pencil"></i></span><span class="text">Rename</span><span class="trail"><kbd>R</kbd></span></div>
+          <div class="item"><span class="lead"><i data-icon="external"></i></span><span class="text">Open in new tab</span><span class="trail"><kbd>⌘↵</kbd></span></div>
+          <div class="item"><span class="lead"><i data-icon="link"></i></span><span class="text">Copy link</span><span class="trail"><kbd>⌘L</kbd></span></div>
+          <div class="item"><span class="lead"><i data-icon="copy"></i></span><span class="text">Duplicate</span><span class="trail"><kbd>⌘D</kbd></span></div>
+          <div class="item" aria-disabled="true"><span class="lead"><i data-icon="archive"></i></span><span class="text">Archive</span></div>
+          <div class="sep"></div>
+          <div class="item danger"><span class="lead"><i data-icon="trash"></i></span><span class="text">Delete</span><span class="trail"><kbd>⌫</kbd></span></div>
         </div>
       </div>
-    </div>
-  </section>
-</div>
+    </section>
 
-<div class="selbar" id="selbar" role="toolbar" aria-label="Selection actions">
-  <button data-act="quote" title="Quote in prompt">
-    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7.2 17c-1.9 0-3.2-1.5-3.2-3.6C4 9.9 6.4 7.2 9.6 6l.7 1.3C8.3 8.2 7.1 9.6 6.9 11.1c.2-.1.5-.1.8-.1 1.6 0 2.9 1.2 2.9 2.9 0 1.8-1.4 3.1-3.4 3.1zm9.3 0c-1.9 0-3.2-1.5-3.2-3.6 0-3.5 2.4-6.2 5.6-7.4l.7 1.3c-2 .9-3.2 2.3-3.4 3.8.2-.1.5-.1.8-.1 1.6 0 2.9 1.2 2.9 2.9 0 1.8-1.4 3.1-3.4 3.1z"/></svg>
-    <span class="quote-label">Quote</span>
-  </button>
-  <span class="sep"></span>
-  <span id="answers" style="display:contents"></span>
-    <button class="gear" title="Edit quick answers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+    <!-- E: described -->
+    <section class="specimen">
+      <div class="caption"><b>Described</b> when a label alone does not say enough</div>
+      <div class="anchor">
+        <button class="trigger">Push <span class="value">Ask first</span><i data-icon="chevron-down"></i></button>
+        <div class="menu described" role="menu" data-pick style="max-width: 280px">
+          <div class="item" aria-checked="true"><i data-icon="check" class="check check-lead"></i><span class="lead"><i data-icon="hand"></i></span><span class="text">Ask first<small>The agent stops and waits for your review.</small></span><i data-icon="check" class="check check-trail"></i></div>
+          <div class="item" data-focus><i data-icon="check" class="check check-lead"></i><span class="lead"><i data-icon="push"></i></span><span class="text">Push when checks pass<small>Lands on main after a green build.</small></span><i data-icon="check" class="check check-trail"></i></div>
+          <div class="item"><i data-icon="check" class="check check-lead"></i><span class="lead"><i data-icon="none"></i></span><span class="text">Never push<small>Keep the work on its branch.</small></span><i data-icon="check" class="check check-trail"></i></div>
+        </div>
+      </div>
+    </section>
+
+  </div>
 </div>
 
 <script>
-  const opts = document.documentElement.dataset;
-  const ANSWERS = [
-    { label: "Go", prompt: "Go ahead with this." },
-    { label: "Explain", prompt: "Explain this in more detail — what it means, and why." },
-  ];
-  const $ = (id) => document.getElementById(id);
-  const bar = $("selbar"), quotesEl = $("quotes"), input = $("input");
-
-  const EDIT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
-  const SEND = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.4 20.4 21 12 3.4 3.6 3.4 10l12.6 2-12.6 2z"/></svg>';
-  for (const a of ANSWERS) {
-    const chip = document.createElement("span");
-    chip.className = "chip";
-    chip.innerHTML = `<button class="ed" title="Quote and edit: ${a.prompt}">${EDIT}<span></span></button><button class="go" title="Quote and send: ${a.prompt}">${SEND}</button>`;
-    chip.querySelector(".ed span").textContent = a.label;
-    chip.querySelector(".ed").onclick = () => answer(a, false);
-    chip.querySelector(".go").onclick = () => answer(a, true);
-    $("answers").appendChild(chip);
-  }
-  // Keep the selection alive while clicking the toolbar.
-  bar.addEventListener("mousedown", (e) => e.preventDefault());
-  bar.querySelector('[data-act="quote"]').onclick = () => { addQuote(currentText()); clearSel(); input.focus(); flash(); };
-
-  function currentSelection() {
-    const s = window.getSelection();
-    if (!s || s.isCollapsed || !s.rangeCount) return null;
-    const r = s.getRangeAt(0);
-    const n = r.commonAncestorContainer;
-    const host = n.nodeType === 1 ? n : n.parentElement;
-    return host.closest(".agent-text") ? r : null;
-  }
-  function currentText() { return window.getSelection().toString().trim(); }
-  function place() {
-    const r = currentSelection();
-    if (!r) { bar.classList.remove("show"); return; }
-    const first = r.getClientRects()[0] || r.getBoundingClientRect();
-    const box = r.getBoundingClientRect();
-    bar.style.left = Math.max(130, Math.min(window.innerWidth - 130, (box.left + box.right) / 2)) + "px";
-    bar.style.top = first.top + "px";
-    bar.classList.add("show");
-  }
-  function clearSel() { window.getSelection().removeAllRanges(); bar.classList.remove("show"); }
-  document.addEventListener("selectionchange", () => requestAnimationFrame(place));
-  $("transcript").addEventListener("scroll", place);
-  window.addEventListener("resize", place);
-
-  function addQuote(text) {
-    const q = document.createElement("div");
-    q.className = "q";
-    q.textContent = text;
-    const x = document.createElement("button");
-    x.textContent = "✕"; x.title = "Remove quote"; x.onclick = () => q.remove();
-    q.appendChild(x);
-    quotesEl.appendChild(q);
-  }
-  function flash() { const p = $("prompt"); p.classList.add("flash"); setTimeout(() => p.classList.remove("flash"), 600); }
-  function answer(a, sendMode) {
-    const text = currentText();
-    clearSel();
-    if (!sendMode) { addQuote(text); input.textContent = a.prompt; input.focus(); flash(); return; }
-    const m = document.createElement("div");
-    m.className = "msg user";
-    m.innerHTML = '<div class="q" style="margin-bottom:6px;-webkit-line-clamp:2"></div><div></div>';
-    m.children[0].textContent = text; m.children[1].textContent = a.prompt;
-    $("col").appendChild(m);
-    const p = document.createElement("div");
-    p.className = "msg agent pending";
-    p.innerHTML = '<div class="meta">Agent</div><div class="typing">Working…</div>';
-    $("col").appendChild(p);
-    $("transcript").scrollTop = 1e6;
+  // One icon family at a time, one weight, one box: Material Symbols (the
+  // app's set) or Lucide outlines — the `icons` option.
+  const MATERIAL = {
+    search: "search", filter: "filter_list", sort: "swap_vert", sliders: "tune", settings: "settings",
+    check: "check", "chevron-right": "chevron_right", "chevron-down": "keyboard_arrow_down",
+    list: "list", table: "table", board: "view_column", gallery: "grid_view", plus: "add",
+    none: "block", code: "code", push: "arrow_circle_up", zap: "bolt", eye: "visibility",
+    infinity: "all_inclusive", timer: "timer", more: "more_horiz", pencil: "edit",
+    external: "open_in_new", link: "link", copy: "content_copy", archive: "archive",
+    trash: "delete", hand: "back_hand",
+  };
+  const LUCIDE = {
+    search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+    filter: '<path d="M4 6h16M7 12h10M10 18h4"/>',
+    sort: '<path d="m21 16-4 4-4-4M17 20V4M3 8l4-4 4 4M7 4v16"/>',
+    sliders: '<path d="M20 7h-9M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/>',
+    settings: '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
+    check: '<path d="M20 6 9 17l-5-5"/>',
+    "chevron-right": '<path d="m9 18 6-6-6-6"/>',
+    "chevron-down": '<path d="m6 9 6 6 6-6"/>',
+    list: '<path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/>',
+    table: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 10v10"/>',
+    board: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/>',
+    gallery: '<rect x="3" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5"/>',
+    plus: '<path d="M5 12h14M12 5v14"/>',
+    none: '<circle cx="12" cy="12" r="9"/><path d="m5.7 5.7 12.6 12.6"/>',
+    code: '<path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/>',
+    push: '<circle cx="12" cy="12" r="9"/><path d="m16 12-4-4-4 4M12 16V8"/>',
+    zap: '<path d="M13 2 4 14h8l-1 8 9-12h-8z"/>',
+    eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+    infinity: '<path d="M12 12c-2-2.67-4-4-6-4a4 4 0 1 0 0 8c2 0 4-1.33 6-4Zm0 0c2 2.67 4 4 6 4a4 4 0 0 0 0-8c-2 0-4 1.33-6 4Z"/>',
+    timer: '<path d="M10 2h4M12 14l3-3"/><circle cx="12" cy="14" r="8"/>',
+    more: '<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
+    pencil: '<path d="M17 3a2.85 2.85 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5z"/>',
+    external: '<path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
+    link: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+    copy: '<rect width="13" height="13" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
+    archive: '<rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8M10 12h4"/>',
+    trash: '<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2"/>',
+    hand: '<path d="M18 11V6a2 2 0 0 0-4 0M14 10V4a2 2 0 0 0-4 0v2M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>',
+  };
+  const material = document.documentElement.dataset.icons === "material";
+  for (const el of document.querySelectorAll("i[data-icon]")) {
+    const name = el.dataset.icon;
+    const cls = `ico ${el.className}`.trim();
+    el.outerHTML = material
+      ? `<span class="ms ${cls}" aria-hidden="true">${MATERIAL[name]}</span>`
+      : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="${cls}" aria-hidden="true">${LUCIDE[name]}</svg>`;
   }
 
-  // Start with a selection so the toolbar shows on load and in the thumbnail.
-  if (opts.screen === "conversation") {
-    const t = $("pre").firstChild;
-    const r = document.createRange();
-    r.setStart(t, 0);
-    r.setEnd(t, t.textContent.indexOf("entirely") + "entirely".length);
-    window.getSelection().addRange(r);
-    requestAnimationFrame(place);
+  // Hover moves the one highlighted row in its menu, as a real menu does.
+  for (const item of document.querySelectorAll(".item")) {
+    item.addEventListener("mouseenter", () => {
+      const menu = item.closest(".menu");
+      for (const sib of menu.querySelectorAll(":scope > .item")) delete sib.dataset.focus;
+      item.dataset.focus = "";
+    });
+  }
+  // A click in a pick list moves the check.
+  for (const menu of document.querySelectorAll(".menu[data-pick]")) {
+    menu.addEventListener("click", (e) => {
+      const item = e.target.closest(".item");
+      if (!item || item.closest(".menu") !== menu || !item.querySelector(".check")) return;
+      for (const sib of menu.querySelectorAll(":scope > .item")) sib.removeAttribute("aria-checked");
+      item.setAttribute("aria-checked", "true");
+    });
   }
 </script>
 </body>

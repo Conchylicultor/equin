@@ -1,4 +1,7 @@
 {
-  "screen": "conversation",
-  "style": "split"
+  "accent": "teal",
+  "check": "trailing",
+  "density": "compact",
+  "highlight": "neutral",
+  "icons": "material"
 }

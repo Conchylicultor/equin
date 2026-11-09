@@ -19,9 +19,10 @@
  *  5. makes `v0` the latest (restore): a new version is recorded, the live
  *     frame shows it, and back in the gallery its card's thumbnail still loads
  *     (the restored folder has `v0`'s fingerprint: a cache hit);
- *  6. opens the route-mocking prototype (Miller pane motion): its counterpart
+ *  6. opens the app-mocking prototype (Miller columns): its counterpart
  *     answers `unresolved` (the app needs serving by URL), so the canvas
- *     offers no Real app frame;
+ *     offers no Real app frame; the exhibit-mocking one's (Menu) Real app
+ *     frame renders the exhibit in-process;
  *  7. a frame URL the Service Worker does not answer is a 404 at the gateway,
  *     never the app's shell.
  *
@@ -45,9 +46,11 @@ import {
   type Settled,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import {
+  addSource,
   card,
   dismiss,
   frameColor,
+  listFrames,
   openOptions,
   pickValue,
   screen,
@@ -76,15 +79,16 @@ const SANCTIONED: readonly RegExp[] = [
 
 /** The seeded prototypes (`website/demos/workspace`'s `data/prototypes/`). */
 const RECIPES = { id: "proto-1792900000-demo01", title: "Family Recipes" };
-/** The one that mocks a route of the real app. */
-const MILLER = { title: "Miller pane motion" };
+/** The one that mocks the real app at a route, and the one that mocks an exhibit. */
+const MILLER = { title: "Miller columns" };
+const MENU = { title: "Menu" };
 const TITLES = [
   RECIPES.title,
-  "Selection quick actions",
-  MILLER.title,
   "Bridge Trainer",
-  "Casino Footwork",
-  "Map pins",
+  "Circle — P2P friends",
+  MENU.title,
+  "Tree table",
+  MILLER.title,
 ];
 /** The seeded pick, and the value the flow picks instead. */
 const SEEDED_ACCENT = "#c8553d";
@@ -332,10 +336,10 @@ await withBrowser(async (h) => {
     0,
   );
 
-  // ── 6. compare: a route counterpart is unresolved here ──────────────────
+  // ── 6. compare: an app counterpart unresolved, an exhibit in-process ────
   await galleryCard(page, MILLER.title).click();
   await renders(
-    "the route-mocking prototype's canvas opens",
+    "the app-mocking prototype's canvas opens",
     () =>
       page
         .locator(canvasFrameSelector({ letter: "A", status: "found" }))
@@ -347,10 +351,10 @@ await withBrowser(async (h) => {
     exact: true,
   });
   // The rail offers a source only once it resolves; give it the time a
-  // resolving one takes.
+  // resolving one takes (Menu's, below, shows within it).
   await page.waitForTimeout(3_000);
   r.eq(
-    "its route: counterpart answers unresolved here (the app needs serving by URL), so the rail offers no Real app frame",
+    "its app: counterpart answers unresolved here (the app needs serving by URL), so the rail offers no Real app frame",
     await compareButton.count(),
     0,
   );
@@ -360,7 +364,19 @@ await withBrowser(async (h) => {
     1,
   );
   await noteFrames();
-  await snap(page, OUT, "6-compare-route");
+  await snap(page, OUT, "6-compare-app");
+
+  await pickFromLauncher(embedRoot(page), /Prototypes/);
+  await galleryCard(page, MENU.title).click();
+  await addSource(page, REAL_APP_LABEL);
+  await renders(
+    "the exhibit-mocking prototype's Real app frame renders the exhibit in-process",
+    async () =>
+      (await listFrames(page)).map((f) => `${f.letter}:${f.kind}:${f.status}`),
+    (frames) => frames.some((f) => f === "B:real-app:found"),
+  );
+  await noteFrames();
+  await snap(page, OUT, "6-compare-exhibit");
 
   // ── 7. a frame URL nothing serves is a 404, not the app ─────────────────
   const [anySrc] = [...frameSrcs];

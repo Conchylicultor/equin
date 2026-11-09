@@ -1,387 +1,542 @@
 <!doctype html>
-<html lang="en" data-motion="slide" data-speed="smooth" data-cascade="off">
+<html lang="en" data-columns="all" data-disclosure="chevron" data-guides="lines" data-density="cozy" style="--accent: #6d5efc">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Miller pane motion</title>
-<meta name="description" content="How a Miller column enters, leaves and swaps: slide, cover, grow, fade or none, at three speeds, with an optional content cascade. Click through tasks → conversation → file." />
-<meta name="mocks" content="route:/agents" />
-<meta name="prototype-option" content="motion: slide | cover | grow | fade | none" />
-<meta name="prototype-option" content="speed: smooth | snappy | slow" />
-<meta name="prototype-option" content="cascade: off | on" />
+<title>Tree table</title>
+<meta name="description" content="Notion-style tree table: one surface that is both a table (columns, sortable headers) and a tree (expandable rows). Sorting is per sibling group, search keeps ancestors, parents roll up their children. 'Columns: name only' shows that a sidebar tree is the same component with no extra columns." />
+<meta name="prototype-option" content="columns: all | name-only" />
+<meta name="prototype-option" content="disclosure: chevron | merged" />
+<meta name="prototype-option" content="guides: lines | none" />
+<meta name="prototype-option" content="density: cozy | compact" />
+<meta name="prototype-option" content="accent: color violet=#6d5efc | azure=#2f7bf6 | teal=#0f9f8f | amber=#d98a0b" />
 
 <style>
-  * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; height: 100%; }
   :root {
-    --bg: #fafaf9; --panel: #ffffff; --border: #e7e5e4; --fg: #1c1917; --muted: #78716c;
-    --hover: #f5f5f4; --active: #eef2ff; --active-fg: #3730a3; --accent: #6366f1;
-    --ease-out: cubic-bezier(.33, 1, .68, 1); --ease-in: cubic-bezier(.5, 0, .75, 0);
+    --bg: #fbfbfa;
+    --surface: #ffffff;
+    --text: #1f1f1d;
+    --muted: #77756f;
+    --faint: #a9a7a1;
+    --line: #ecebe8;
+    --line-strong: #dedcd7;
+    --hover: #f4f3f1;
+    --selected: color-mix(in oklch, var(--accent) 10%, var(--surface));
+    --guide: #e3e1dc;
+    --row-h: 36px;
+    --indent: 22px;
+    --font: 13.5px;
   }
+  :root[data-density="compact"] { --row-h: 29px; --indent: 18px; --font: 13px; }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #141414; --panel: #1b1b1b; --border: #2a2a2a; --fg: #e7e5e4; --muted: #8a8580;
-      --hover: #232323; --active: #262a45; --active-fg: #c7d2fe;
+      --bg: #191919;
+      --surface: #1f1f1f;
+      --text: #e9e8e5;
+      --muted: #9b9a96;
+      --faint: #6b6a66;
+      --line: #2a2a29;
+      --line-strong: #353533;
+      --hover: #262625;
+      --selected: color-mix(in oklch, var(--accent) 18%, var(--surface));
+      --guide: #333331;
     }
   }
-  body { font: 13px/1.45 system-ui, -apple-system, sans-serif; color: var(--fg); background: var(--bg); }
-  #app { display: flex; height: var(--prototype-screen-height, 100vh); }
 
-  .rail { width: 44px; flex: none; border-right: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px 0; background: var(--bg); }
-  .rail i { width: 26px; height: 26px; border-radius: 7px; background: var(--border); display: block; }
-  .rail i.on { background: var(--accent); }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body {
+    font: var(--font)/1.4 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+  #root { min-height: 100%; padding: 28px 16px 48px; }
+  .page { max-width: 1180px; margin: 0 auto; }
+  :root[data-columns="name-only"] .page { max-width: 340px; margin: 0; }
 
-  .cols { position: relative; flex: 1; min-width: 0; display: flex; overflow-x: auto; overflow-y: hidden; }
-  .col { position: relative; flex: none; height: 100%; overflow: hidden; border-right: 1px solid var(--border); background: var(--panel); }
-  .col:last-child, .col.leaf { border-right: 0; }
-  .cols.anim-width .col { transition: width var(--dur) var(--ease-out); }
-  .col.exiting { position: absolute; top: 0; bottom: 0; z-index: 2; pointer-events: none; }
-  .col.entering { z-index: 3; }
-  .inner { position: absolute; inset: 0 auto 0 0; width: 100%; display: flex; flex-direction: column; background: var(--panel); }
-  .inner.swap-out { z-index: 1; pointer-events: none; }
-  .col.cover-edge .inner { box-shadow: -14px 0 28px -16px rgba(0,0,0,.35); }
+  /* ---------- toolbar ---------- */
+  .head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+  h1 { font-size: 22px; font-weight: 650; letter-spacing: -0.01em; margin: 0; margin-right: auto; }
+  .tools { display: flex; gap: 6px; align-items: center; }
+  .search {
+    display: flex; align-items: center; gap: 6px;
+    height: 30px; padding: 0 10px; border-radius: 7px;
+    border: 1px solid var(--line-strong); background: var(--surface);
+    color: var(--muted); width: 200px;
+  }
+  .search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in oklch, var(--accent) 18%, transparent); }
+  .search input { border: 0; outline: 0; background: none; color: var(--text); font: inherit; width: 100%; }
+  .btn {
+    height: 30px; padding: 0 10px; border-radius: 7px; border: 1px solid transparent;
+    background: none; color: var(--muted); font: inherit; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  }
+  .btn:hover { background: var(--hover); color: var(--text); }
+  :root[data-columns="name-only"] h1 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+  :root[data-columns="name-only"] .search { flex: 1; width: auto; }
+  :root[data-columns="name-only"] .tools { width: 100%; }
 
-  header { height: 44px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 8px 0 14px; border-bottom: 1px solid var(--border); }
-  header h2 { margin: 0; font-size: 13px; font-weight: 600; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  header .x { width: 26px; height: 26px; border: 0; border-radius: 6px; background: none; color: var(--muted); cursor: pointer; font-size: 16px; line-height: 1; }
-  header .x:hover { background: var(--hover); color: var(--fg); }
-  .body { flex: 1; overflow-y: auto; padding: 8px; }
+  /* ---------- grid ---------- */
+  .scroller {
+    overflow-x: auto;
+    border-top: 1px solid var(--line);
+  }
+  :root[data-columns="name-only"] .scroller { border-top: 0; }
+  .grid { min-width: max-content; width: 100%; outline: none; }
+  .row {
+    display: grid;
+    grid-template-columns: var(--cols);
+    min-height: var(--row-h);
+    border-bottom: 1px solid var(--line);
+    position: relative;
+  }
+  :root[data-columns="name-only"] .row { border-bottom: 0; border-radius: 6px; }
+  .row.body:hover { background: var(--hover); }
+  .row.body.focused { background: var(--selected); }
+  .grid:focus-visible .row.focused { box-shadow: inset 2px 0 0 var(--accent); }
+  .cell {
+    display: flex; align-items: center; min-width: 0;
+    padding: 0 10px;
+    border-right: 1px solid var(--line);
+    background: inherit;
+  }
+  .cell:last-child { border-right: 0; }
+  :root[data-columns="name-only"] .cell { border-right: 0; padding: 0 6px; }
 
-  .row { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 7px; cursor: pointer; white-space: nowrap; }
-  .row:hover { background: var(--hover); }
-  .row.active { background: var(--active); color: var(--active-fg); }
-  .row .t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-  .row .m { color: var(--muted); font-size: 12px; }
-  .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
-  .s-running { background: #3b82f6; } .s-done { background: #22c55e; } .s-action { background: #f59e0b; } .s-todo { background: transparent; border: 1.5px solid var(--muted); }
-  .group { padding: 10px 8px 4px; font-size: 11px; font-weight: 600; letter-spacing: .02em; text-transform: uppercase; color: var(--muted); }
+  .row.header {
+    position: sticky; top: 0; z-index: 3;
+    background: var(--bg);
+    color: var(--muted); font-size: 12.5px; min-height: 32px;
+  }
+  :root[data-columns="name-only"] .row.header { display: none; }
+  .row.header .cell { gap: 6px; cursor: pointer; user-select: none; }
+  .row.header .cell:hover { background: var(--hover); color: var(--text); }
+  .row.header .sort { margin-left: auto; color: var(--accent); font-size: 11px; }
+  .row.header .hint { font-size: 11px; color: var(--faint); margin-left: 4px; font-weight: 400; }
 
-  .sec { padding: 6px 8px 12px; }
-  .sec h3 { margin: 0 0 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .02em; color: var(--muted); }
-  .title { font-size: 17px; font-weight: 600; margin: 6px 8px 4px; }
-  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); font-size: 12px; color: var(--muted); margin: 0 8px 8px; }
-  .desc { padding: 10px 12px; border: 1px solid var(--border); border-radius: 9px; color: var(--fg); }
+  /* sticky name column so the tree stays visible while columns scroll */
+  .cell.name { position: sticky; left: 0; z-index: 1; background: var(--bg); padding-left: 4px; }
+  .row.body:hover .cell.name { background: var(--hover); }
+  .row.body.focused .cell.name { background: var(--selected); }
+  .row.header .cell.name { z-index: 4; padding-left: 10px; }
 
-  .msg { margin: 6px 4px 14px; }
-  .msg .who { font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 3px; }
-  .msg.user .text { background: var(--hover); border-radius: 10px; padding: 8px 11px; display: inline-block; }
-  .ref { display: inline-flex; align-items: center; gap: 4px; padding: 0 6px; border-radius: 5px; background: var(--hover); font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; cursor: pointer; border: 1px solid transparent; }
-  .ref:hover { border-color: var(--border); }
-  .ref.active { background: var(--active); color: var(--active-fg); }
-  .tool { font: 12px ui-monospace, Menlo, monospace; color: var(--muted); padding: 5px 9px; border-left: 2px solid var(--border); margin: 4px 0; }
+  /* ---------- tree column ---------- */
+  .indent { display: flex; align-self: stretch; flex: none; }
+  .indent i { width: var(--indent); flex: none; position: relative; }
+  :root[data-guides="lines"] .indent i::before {
+    content: ""; position: absolute; top: 0; bottom: 0; left: calc(var(--indent) / 2 + 1px);
+    border-left: 1px solid var(--guide);
+  }
+  .twisty {
+    width: 20px; height: 20px; flex: none; border-radius: 4px;
+    display: grid; place-items: center; color: var(--faint);
+    border: 0; background: none; padding: 0; cursor: pointer;
+  }
+  .twisty:hover { background: var(--line-strong); color: var(--text); }
+  .twisty svg { transition: transform .12s ease; }
+  .twisty.open svg { transform: rotate(90deg); }
+  .twisty.leaf { visibility: hidden; cursor: default; }
+  .glyph { width: 20px; height: 20px; flex: none; display: grid; place-items: center; color: var(--muted); }
 
-  pre { margin: 0; font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; }
-  .ln { display: flex; gap: 14px; padding: 0 8px; white-space: pre; }
-  .ln b { width: 22px; flex: none; text-align: right; color: var(--muted); font-weight: 400; opacity: .6; }
-  .k { color: #a21caf; } .str { color: #15803d; } .cm { color: var(--muted); }
-  @media (prefers-color-scheme: dark) { .k { color: #e879f9; } .str { color: #86efac; } }
+  /* merged: icon at rest, chevron on hover (only on rows with children) */
+  :root[data-disclosure="merged"] .twisty.leaf { display: none; }
+  :root[data-disclosure="merged"] .slot { position: relative; width: 20px; height: 20px; flex: none; }
+  :root[data-disclosure="merged"] .slot > * { position: absolute; inset: 0; }
+  :root[data-disclosure="merged"] .slot .twisty:not(.leaf) { opacity: 0; }
+  :root[data-disclosure="merged"] .row:hover .slot .twisty:not(.leaf) { opacity: 1; background: var(--hover); }
+  :root[data-disclosure="merged"] .row:hover .slot:has(.twisty:not(.leaf)) .glyph { opacity: 0; }
+  :root[data-disclosure="chevron"] .slot { display: contents; }
+
+  .title { margin-left: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; outline: none; }
+  .title[contenteditable="true"] { background: var(--surface); box-shadow: 0 0 0 1px var(--accent); border-radius: 3px; padding: 0 3px; text-overflow: clip; }
+  .row.ancestor-only .title { color: var(--faint); }
+  mark { background: color-mix(in oklch, var(--accent) 24%, transparent); color: inherit; border-radius: 2px; }
+  .count { font-size: 11.5px; color: var(--faint); margin-left: 6px; flex: none; }
+  .row-actions { display: flex; gap: 2px; margin-left: 6px; opacity: 0; flex: none; }
+  .row.body:hover .row-actions, .row.focused .row-actions { opacity: 1; }
+  .icon-btn {
+    width: 22px; height: 22px; border-radius: 4px; border: 0; background: none; color: var(--faint);
+    display: grid; place-items: center; cursor: pointer; padding: 0;
+  }
+  .icon-btn:hover { background: var(--line-strong); color: var(--text); }
+
+  /* ---------- value cells ---------- */
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 1px 8px 1px 7px; border-radius: 999px; font-size: 12px; white-space: nowrap;
+    background: var(--c-bg); color: var(--c-fg);
+  }
+  .chip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--c-fg); }
+  .s-todo    { --c-bg: color-mix(in oklch, #8a8780 14%, transparent); --c-fg: #6f6c66; }
+  .s-running { --c-bg: color-mix(in oklch, #2f7bf6 14%, transparent); --c-fg: #2f6fd8; }
+  .s-review  { --c-bg: color-mix(in oklch, #b46be0 15%, transparent); --c-fg: #9a4fc8; }
+  .s-blocked { --c-bg: color-mix(in oklch, #e05a4f 14%, transparent); --c-fg: #c8443a; }
+  .s-done    { --c-bg: color-mix(in oklch, #2a9d6a 14%, transparent); --c-fg: #22875a; }
+  @media (prefers-color-scheme: dark) {
+    .s-todo { --c-fg: #b3b0a9; } .s-running { --c-fg: #79a8fb; } .s-review { --c-fg: #cf9bf0; }
+    .s-blocked { --c-fg: #f08a80; } .s-done { --c-fg: #5fca98; }
+  }
+  .agent { display: flex; align-items: center; gap: 7px; white-space: nowrap; color: var(--muted); }
+  .avatar {
+    width: 18px; height: 18px; border-radius: 50%; flex: none;
+    display: grid; place-items: center; font-size: 10px; font-weight: 650; color: #fff;
+  }
+  .progress { display: flex; align-items: center; gap: 8px; width: 100%; }
+  .bar { flex: 1; height: 5px; border-radius: 3px; background: var(--line-strong); overflow: hidden; }
+  .bar > span { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+  .progress small { color: var(--muted); font-size: 11.5px; font-variant-numeric: tabular-nums; min-width: 30px; text-align: right; }
+  .dash { color: var(--faint); }
+  .prio { font-size: 12.5px; color: var(--muted); display: flex; gap: 1px; align-items: flex-end; }
+  .prio b { width: 3px; border-radius: 1px; background: var(--line-strong); }
+  .prio b:nth-child(1) { height: 5px; } .prio b:nth-child(2) { height: 8px; } .prio b:nth-child(3) { height: 11px; }
+  .prio[data-p="1"] b:nth-child(-n+1), .prio[data-p="2"] b:nth-child(-n+2), .prio[data-p="3"] b:nth-child(-n+3) { background: var(--muted); }
+  .prio[data-p="3"] b { background: #d9534a !important; }
+  .prio span { margin-left: 7px; }
+  .time { color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+  .footer { display: flex; gap: 14px; color: var(--faint); font-size: 12px; margin-top: 12px; flex-wrap: wrap; }
+  .footer kbd {
+    font: 11px ui-monospace, SFMono-Regular, Menlo, monospace; padding: 1px 5px; border-radius: 4px;
+    border: 1px solid var(--line-strong); color: var(--muted); background: var(--surface);
+  }
+  .add-row { color: var(--faint); cursor: pointer; }
+  .add-row:hover { color: var(--text); background: var(--hover); }
+  .add-row .cell.name { padding-left: 10px; gap: 6px; background: transparent; }
+  .empty { padding: 28px 10px; color: var(--muted); }
 </style>
 </head>
 <body>
-<div id="app">
-  <nav class="rail"><i class="on"></i><i></i><i></i><i></i></nav>
-  <div class="cols" id="cols"></div>
+<div id="root">
+  <div class="page">
+    <div class="head">
+      <h1>Tasks</h1>
+      <div class="tools">
+        <label class="search">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg>
+          <input id="q" placeholder="Search" autocomplete="off" />
+        </label>
+        <button class="btn" id="toggle-all"></button>
+      </div>
+    </div>
+    <div class="scroller" id="scroller">
+      <div class="grid" id="grid" role="treegrid" tabindex="0" aria-label="Tasks"></div>
+    </div>
+    <div class="footer">
+      <span><kbd>↑</kbd> <kbd>↓</kbd> move</span>
+      <span><kbd>→</kbd> expand / first child</span>
+      <span><kbd>←</kbd> collapse / parent</span>
+      <span><kbd>⇧</kbd>+click chevron: expand subtree</span>
+    </div>
+  </div>
 </div>
 
 <script>
-/* ---------- data ---------- */
-const TASKS = [
-  { id: "t1", title: "Animate miller pane entrance", status: "running", desc: "When a pane opens on the right, it should arrive rather than pop. Keep the layout honest: no reflow jank, no motion on resize.", convs: ["c1", "c2"], subs: ["t3"] },
-  { id: "t2", title: "Fix flaky push check", status: "done", desc: "plugins-doc-in-sync sometimes fails on a fresh worktree because the doc generator races the registry codegen.", convs: ["c3"], subs: [] },
-  { id: "t3", title: "Tasks panel badge count", status: "action", desc: "The Tasks button shows 'Need action' but not how many. Add the count and keep it live.", convs: ["c4"], subs: [] },
-  { id: "t4", title: "Theme gallery search", status: "todo", desc: "Search across saved, curated and community themes in one box.", convs: [], subs: [] },
-  { id: "t5", title: "Backup retention policy", status: "running", desc: "Keep 7 daily, 4 weekly and 12 monthly archives; prune the rest after a successful run.", convs: ["c5"], subs: ["t7"] },
-  { id: "t6", title: "Keyboard Party sounds", status: "done", desc: "Every key answers with its own sound; letters say their word.", convs: ["c6"], subs: [] },
-  { id: "t7", title: "Mail thread grouping", status: "todo", desc: "Group messages by thread id, fall back to subject + participants.", convs: [], subs: [] },
+// ---------- data ----------
+const T = (title, status, agent, priority, updated, children = []) =>
+  ({ title, status, agent, priority, updated, children });
+
+const DATA = [
+  T("Tree table view", "running", "opus", 3, 12, [
+    T("Prototype the merged tree + table", "running", "opus", 3, 12, [
+      T("Sibling-scoped sort", "done", "sonnet", 2, 40),
+      T("Search keeps ancestors visible", "done", "sonnet", 2, 55),
+      T("Roll-up progress on parent rows", "review", "opus", 2, 18),
+      T("Sticky name column on horizontal scroll", "todo", null, 1, 300),
+    ]),
+    T("Audit tree and table surfaces", "running", "sonnet", 2, 25),
+    T("Migrate task list to tree table", "todo", null, 3, 1440, [
+      T("Map existing fields to columns", "todo", null, 2, 1440),
+      T("Keep drag-to-reparent", "blocked", null, 2, 2880),
+    ]),
+  ]),
+  T("Live paging follow-ups", "review", "opus", 2, 95, [
+    T("Window-as-set readers on every collection", "done", "opus", 2, 200),
+    T("no-grow-in-effect lint", "done", "sonnet", 1, 260),
+    T("Protocol id from one frame vocabulary", "review", "opus", 2, 95),
+  ]),
+  T("Places", "running", "sonnet", 2, 6, [
+    T("Esc closes the place card", "done", "sonnet", 1, 180),
+    T("Wheel over a pin zooms the map", "done", "sonnet", 2, 6),
+    T("Tag tree colours on pins", "todo", null, 1, 4320, [
+      T("Pick the nearest tagged ancestor", "todo", null, 1, 4320),
+      T("Legend in the side panel", "todo", null, 0, 4320),
+    ]),
+  ]),
+  T("Backup to a second disk", "blocked", null, 1, 10080, [
+    T("Grant access repair flow", "blocked", null, 2, 10080),
+    T("Retention policy", "todo", null, 0, 10080),
+  ]),
+  T("Upgrade toolchain", "done", "sonnet", 0, 2880),
 ];
-const CONVS = {
-  c1: { task: "t1", model: "Opus", status: "running", files: ["miller-columns.tsx", "column.tsx"] },
-  c2: { task: "t1", model: "Sonnet", status: "done", files: ["use-column-widths.ts"] },
-  c3: { task: "t2", model: "Sonnet", status: "done", files: ["plugins-doc-in-sync.ts"] },
-  c4: { task: "t3", model: "Opus", status: "action", files: ["tasks-button.tsx"] },
-  c5: { task: "t5", model: "Opus", status: "running", files: ["retention.ts", "schedule.ts"] },
-  c6: { task: "t6", model: "Sonnet", status: "done", files: ["party.tsx"] },
-};
-const FILES = {
-  "miller-columns.tsx": `import { Column } from "./column";\n\n// Maps the pane chain to a row of columns.\nexport function MillerColumns({ match }) {\n  const panes = match.panes;\n  return (\n    <Row>\n      {panes.map((entry, i) => (\n        <Column\n          key={entry.key}\n          entry={entry}\n          isLast={i === panes.length - 1}\n        />\n      ))}\n    </Row>\n  );\n}`,
-  "column.tsx": `export function Column({ entry, isLast }) {\n  const [width] = useColumnWidth(entry.pane.width ?? 400);\n  // The leaf flex-grows; the rest keep their width.\n  const style = isLast ? undefined : { width };\n  return (\n    <section style={style} className="column">\n      <Header title={entry.title} />\n      <entry.pane.component {...entry.params} />\n    </section>\n  );\n}`,
-  "use-column-widths.ts": `const store = defineStore("miller.widths");\n\nexport function useColumnWidth(fallback: number) {\n  const tab = useSurfaceTabId();\n  const [w, setW] = useState(() => store.get(tab) ?? fallback);\n  return [w, (next: number) => {\n    store.set(tab, next);\n    setW(next);\n  }] as const;\n}`,
-  "plugins-doc-in-sync.ts": `// Fails when a plugin's CLAUDE.md autogen block drifts.\nexport const check: Check = {\n  id: "plugins-doc-in-sync",\n  async run() {\n    await registry.ready;   // the race lived here\n    const drift = await diffDocs();\n    return drift.length ? fail(drift) : ok();\n  },\n};`,
-  "tasks-button.tsx": `export function TasksButton() {\n  const tasks = useLive(needActionTasks);\n  if (tasks.state !== "ready") return <Pending />;\n  return (\n    <Button icon="checklist">\n      Tasks <Badge>{tasks.rows.length}</Badge>\n    </Button>\n  );\n}`,
-  "retention.ts": `// 7 daily, 4 weekly, 12 monthly.\nexport function keep(runs: Run[]): Set<string> {\n  const keepIds = new Set<string>();\n  for (const bucket of ["day", "week", "month"]) {\n    for (const r of newestPer(runs, bucket)) keepIds.add(r.id);\n  }\n  return keepIds;\n}`,
-  "schedule.ts": `export const backupJob = defineJob({\n  id: "backup.nightly",\n  schedule: "0 3 * * *",\n  async run() {\n    const run = await backup();\n    if (run.ok) await prune(keep(await listRuns()));\n  },\n});`,
-  "party.tsx": `export function Party() {\n  const play = useSounds();\n  useKey((key) => {\n    play(key);\n    burst(key);\n  });\n  return <Stage />;\n}`,
-};
-const task = (id) => TASKS.find((t) => t.id === id);
-const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-const statusLabel = { running: "Running", done: "Done", action: "Needs action", todo: "To do" };
 
-/* ---------- panes ---------- */
-const PANES = {
-  tasks: {
-    width: 290,
-    title: () => "Tasks",
-    render() {
-      const groups = [["Needs action", ["action"]], ["In progress", ["running"]], ["To do", ["todo"]], ["Done", ["done"]]];
-      return groups.map(([label, st]) => {
-        const rows = TASKS.filter((t) => st.includes(t.status));
-        if (!rows.length) return "";
-        return `<div class="c group">${label}</div>` + rows.map((t) =>
-          `<div class="c row" data-open="task:${t.id}"><span class="dot s-${t.status}"></span><span class="t">${esc(t.title)}</span></div>`).join("");
-      }).join("");
-    },
-  },
-  task: {
-    width: 380,
-    title: (id) => task(id).title,
-    render(id) {
-      const t = task(id);
-      return `
-        <div class="c title">${esc(t.title)}</div>
-        <div class="c"><span class="chip"><span class="dot s-${t.status}"></span>${statusLabel[t.status]}</span></div>
-        <div class="c sec"><h3>Prompt</h3><div class="desc">${esc(t.desc)}</div></div>
-        <div class="c sec"><h3>Conversations</h3>${t.convs.length ? t.convs.map((c) =>
-          `<div class="row" data-open="conv:${c}"><span class="dot s-${CONVS[c].status}"></span><span class="t">${CONVS[c].model} · attempt ${c.slice(1)}</span><span class="m">${statusLabel[CONVS[c].status]}</span></div>`).join("")
-          : `<div class="m" style="padding:6px 8px;color:var(--muted)">Not launched yet</div>`}</div>
-        ${t.subs.length ? `<div class="c sec"><h3>Subtasks</h3>${t.subs.map((s) =>
-          `<div class="row" data-open="task:${s}"><span class="dot s-${task(s).status}"></span><span class="t">${esc(task(s).title)}</span></div>`).join("")}</div>` : ""}`;
-    },
-  },
-  conv: {
-    width: 500,
-    title: (id) => `${CONVS[id].model} · ${task(CONVS[id].task).title}`,
-    render(id) {
-      const c = CONVS[id], t = task(c.task);
-      const fileRefs = c.files.map((f) => `<span class="ref" data-open="file:${f}">${f}</span>`);
-      return `
-        <div class="c msg user"><div class="who">You</div><div class="text">${esc(t.desc)}</div></div>
-        <div class="c msg"><div class="who">${c.model}</div>Let me look at where this lives first.
-          <div class="tool">Read ${c.files[0]}</div>${c.files[1] ? `<div class="tool">Read ${c.files[1]}</div>` : ""}</div>
-        <div class="c msg"><div class="who">${c.model}</div>The behaviour is decided in ${fileRefs.join(" and ")}. I'll keep the change inside that boundary and leave the callers untouched.</div>
-        <div class="c msg"><div class="who">${c.model}</div>Related: <span class="ref" data-open="task:${t.subs[0] || t.id}">${esc(task(t.subs[0] || t.id).title)}</span> touches the same code path, so I checked it still behaves.</div>
-        <div class="c msg"><div class="who">${c.model}</div>${c.status === "running" ? "Building now — I'll report once the deploy is up." : "Done. Built and deployed; ready for review."}</div>`;
-    },
-  },
-  file: {
-    width: 440,
-    title: (path) => path,
-    render(path) {
-      const hl = (l) => esc(l)
-        .replace(/(\/\/.*)$/, '<span class="cm">$1</span>')
-        .replace(/("[^"]*"|`[^`]*`)/g, '<span class="str">$1</span>')
-        .replace(/\b(import|from|export|function|const|return|async|await|if|for|of|new)\b/g, '<span class="k">$1</span>');
-      return `<pre>${FILES[path].split("\n").map((l, i) => `<div class="c ln"><b>${i + 1}</b><span>${hl(l)}</span></div>`).join("")}</pre>`;
-    },
-  },
-};
-
-/* ---------- motion settings (read once; a pick reloads the frame) ---------- */
-const ds = document.documentElement.dataset;
-const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
-const MOTION = reduced && ds.motion !== "none" ? "fade" : ds.motion;
-const DUR = { snappy: 170, smooth: 280, slow: 480 }[ds.speed] ?? 280;
-const CASCADE = ds.cascade === "on";
-const EASE_OUT = "cubic-bezier(.33, 1, .68, 1)";
-const colsEl = document.getElementById("cols");
-colsEl.style.setProperty("--dur", DUR + "ms");
-
-/* ---------- chain + columns ---------- */
-let chain = []; // [{ kind, id, key, el, inner }]
-const keyOf = (s) => `${s.kind}:${s.id ?? ""}`;
-
-function buildInner(spec, index) {
-  const p = PANES[spec.kind];
-  const inner = document.createElement("div");
-  inner.className = "inner";
-  inner.innerHTML = `<header><h2>${esc(p.title(spec.id))}</h2>${index > 0 ? `<button class="x" title="Close (Esc)" data-close>×</button>` : ""}</header><div class="body">${p.render(spec.id)}</div>`;
-  return inner;
-}
-
-function targetWidths(entries) {
-  const W = colsEl.clientWidth;
-  const ws = entries.map((e) => PANES[e.kind].width);
-  const rest = ws.slice(0, -1).reduce((a, b) => a + b, 0);
-  if (ws.length) ws[ws.length - 1] = Math.max(ws[ws.length - 1], W - rest);
-  return ws;
-}
-
-function cascade(inner, delay = 0) {
-  if (!CASCADE || MOTION === "none") return;
-  [...inner.querySelectorAll(".c")].slice(0, 14).forEach((n, i) => {
-    n.animate([{ opacity: 0, transform: "translateY(6px)" }, { opacity: 1, transform: "none" }],
-      { duration: DUR * 1.1, delay: delay + i * 22, easing: EASE_OUT, fill: "backwards" });
-  });
-}
-
-function animateEnter(entry, width, delay) {
-  const { el, inner } = entry;
-  el.classList.add("entering");
-  const done = () => el.classList.remove("entering", "cover-edge");
-  const opts = { duration: DUR, delay, easing: EASE_OUT, fill: "backwards" };
-  if (MOTION === "none") return done();
-  if (MOTION === "grow") {
-    // Width opens from 0 while the content stays laid out at its final width.
-    inner.style.width = width + "px";
-    el.style.width = "0px";
-    el.getBoundingClientRect();
-    el.style.width = width + "px";
-    inner.animate([{ opacity: 0 }, { opacity: 1 }], { ...opts, duration: DUR * .8, delay: delay + DUR * .2 });
-    setTimeout(() => { inner.style.width = ""; done(); }, DUR + delay);
-  } else if (MOTION === "slide") {
-    inner.animate([{ opacity: 0, transform: "translateX(36px)" }, { opacity: 1, transform: "none" }], opts).finished.then(done);
-  } else if (MOTION === "cover") {
-    el.classList.add("cover-edge");
-    inner.animate([{ transform: "translateX(100%)" }, { transform: "none" }], { ...opts, duration: DUR * 1.15 }).finished.then(done);
-  } else if (MOTION === "fade") {
-    inner.animate([{ opacity: 0, transform: "scale(.985)", transformOrigin: "left center" }, { opacity: 1, transform: "none" }], opts).finished.then(done);
+let seq = 0;
+const byId = new Map();
+const parentOf = new Map();
+(function index(nodes, parent) {
+  for (const n of nodes) {
+    n.id = "t" + (++seq);
+    byId.set(n.id, n);
+    parentOf.set(n.id, parent);
+    index(n.children, n);
   }
-  cascade(inner, delay + DUR * .15);
+})(DATA, null);
+
+// ---------- columns ----------
+const STATUS_ORDER = { blocked: 0, running: 1, review: 2, todo: 3, done: 4 };
+const STATUS_LABEL = { todo: "Todo", running: "Running", review: "In review", blocked: "Blocked", done: "Done" };
+const AGENTS = { opus: ["Opus", "#6d5efc"], sonnet: ["Sonnet", "#0f9f8f"] };
+const PRIO = ["None", "Low", "Medium", "High"];
+
+function leafStats(n) {
+  if (!n.children.length) return { done: n.status === "done" ? 1 : 0, total: 1 };
+  return n.children.map(leafStats).reduce((a, b) => ({ done: a.done + b.done, total: a.total + b.total }));
+}
+function ago(m) {
+  if (m < 60) return m + "m ago";
+  if (m < 1440) return Math.round(m / 60) + "h ago";
+  return Math.round(m / 1440) + "d ago";
 }
 
-// The row's scroll offset once the leaving columns are gone: as far right as
-// the remaining columns reach, no further.
-function settledLeft() {
-  const content = chain.reduce((sum, e) => sum + e.el.offsetWidth, 0);
-  return Math.max(0, content - colsEl.clientWidth);
+const COLUMNS = [
+  { key: "title", label: "Name", width: "minmax(300px, 1fr)", sort: (a, b) => a.title.localeCompare(b.title) },
+  { key: "status", label: "Status", width: "128px", minViewport: 560,
+    sort: (a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status],
+    render: n => `<span class="chip s-${n.status}">${STATUS_LABEL[n.status]}</span>` },
+  { key: "progress", label: "Progress", hint: "roll-up", width: "150px", minViewport: 720,
+    sort: (a, b) => { const x = leafStats(a), y = leafStats(b); return x.done / x.total - y.done / y.total; },
+    render: n => {
+      if (!n.children.length) return `<span class="dash">—</span>`;
+      const s = leafStats(n);
+      return `<div class="progress"><div class="bar"><span style="width:${(100 * s.done / s.total).toFixed(0)}%"></span></div><small>${s.done}/${s.total}</small></div>`;
+    } },
+  { key: "agent", label: "Agent", width: "130px", minViewport: 880,
+    sort: (a, b) => (a.agent || "~").localeCompare(b.agent || "~"),
+    render: n => {
+      if (!n.agent) return `<span class="dash">—</span>`;
+      const [name, color] = AGENTS[n.agent];
+      return `<span class="agent"><span class="avatar" style="background:${color}">${name[0]}</span>${name}</span>`;
+    } },
+  { key: "priority", label: "Priority", width: "110px", minViewport: 980,
+    sort: (a, b) => b.priority - a.priority,
+    render: n => `<span class="prio" data-p="${n.priority}"><b></b><b></b><b></b><span>${PRIO[n.priority]}</span></span>` },
+  { key: "updated", label: "Updated", width: "100px", minViewport: 640,
+    sort: (a, b) => a.updated - b.updated,
+    render: n => `<span class="time">${ago(n.updated)}</span>` },
+];
+
+// ---------- state ----------
+const nameOnly = document.documentElement.dataset.columns === "name-only";
+const expanded = new Set(["t1", "t2", "t12"]);
+let sort = null;            // { key, dir: 1 | -1 }
+let query = "";
+let focusedId = "t3";
+let editingId = null;
+let viewportW = window.innerWidth;
+
+const grid = document.getElementById("grid");
+const scroller = document.getElementById("scroller");
+
+function visibleColumns() {
+  if (nameOnly) return [{ ...COLUMNS[0], width: "minmax(0, 1fr)" }];
+  return COLUMNS.filter(c => !c.minViewport || viewportW >= c.minViewport);
 }
 
-// A leaving column keeps the row's scroll area open while it animates; taking
-// it out while the row is still scrolled past where the remaining columns
-// reach would snap the scroll. So it waits, invisible, for the scroll-back.
-function removeWhenSettled(el) {
-  if (colsEl.scrollLeft <= settledLeft() + 1) return el.remove();
-  el.style.visibility = "hidden";
-  const onScroll = () => {
-    if (colsEl.scrollLeft > settledLeft() + 1) return;
-    colsEl.removeEventListener("scroll", onScroll);
-    el.remove();
-  };
-  colsEl.addEventListener("scroll", onScroll);
+// Sorting a tree table sorts each sibling group in place — a child never
+// leaves its parent, so the hierarchy survives every column sort.
+function sorted(nodes) {
+  if (!sort) return nodes;
+  const col = COLUMNS.find(c => c.key === sort.key);
+  return [...nodes].sort((a, b) => col.sort(a, b) * sort.dir);
 }
 
-function animateExit(entry) {
-  const { el, inner } = entry;
-  const remove = () => removeWhenSettled(el);
-  if (MOTION === "none") return remove();
-  if (MOTION === "grow") {
-    // Stays in flow; width closes to 0 while the neighbour grows into it.
-    inner.style.width = el.offsetWidth + "px";
-    el.classList.add("exiting-flow");
-    el.style.width = "0px";
-    setTimeout(remove, DUR);
+// Search keeps the path to every match: ancestors render (muted) and open.
+function matchSets() {
+  if (!query) return null;
+  const q = query.toLowerCase();
+  const hit = new Set(), keep = new Set();
+  for (const [id, n] of byId) {
+    if (n.title.toLowerCase().includes(q)) {
+      hit.add(id);
+      for (let p = n; p; p = parentOf.get(p.id)) keep.add(p.id);
+    }
+  }
+  return { hit, keep };
+}
+
+function flatten() {
+  const m = matchSets();
+  const rows = [];
+  (function walk(nodes, depth) {
+    for (const n of sorted(nodes)) {
+      if (m && !m.keep.has(n.id)) continue;
+      const hasKids = n.children.length > 0;
+      const open = hasKids && (m ? n.children.some(c => m.keep.has(c.id)) || expanded.has(n.id) : expanded.has(n.id));
+      rows.push({ n, depth, hasKids, open, ancestorOnly: m && !m.hit.has(n.id) });
+      if (open) walk(n.children, depth + 1);
+    }
+  })(DATA, 0);
+  return rows;
+}
+
+// ---------- render ----------
+const esc = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+function highlight(title) {
+  if (!query) return esc(title);
+  const i = title.toLowerCase().indexOf(query.toLowerCase());
+  if (i < 0) return esc(title);
+  return esc(title.slice(0, i)) + "<mark>" + esc(title.slice(i, i + query.length)) + "</mark>" + esc(title.slice(i + query.length));
+}
+const CHEVRON = `<svg width="10" height="10" viewBox="0 0 10 10"><path d="M3.5 2 7 5 3.5 8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const ICON_PARENT = `<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2.5" y="2.5" width="11" height="11" rx="2.5"/><path d="M5.5 6h5M5.5 8.5h5M5.5 11h3"/></svg>`;
+const ICON_LEAF = `<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2.5" y="2.5" width="11" height="11" rx="2.5"/></svg>`;
+const ICON_DONE = `<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2.5" y="2.5" width="11" height="11" rx="2.5"/><path d="m5.5 8.2 1.8 1.8 3.4-3.6"/></svg>`;
+const PLUS = `<svg width="12" height="12" viewBox="0 0 12 12"><path d="M6 2v8M2 6h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+
+function render() {
+  const cols = visibleColumns();
+  grid.style.setProperty("--cols", cols.map(c => c.width).join(" "));
+  const rows = flatten();
+  if (!rows.some(r => r.n.id === focusedId)) focusedId = rows[0]?.n.id ?? null;
+
+  let html = `<div class="row header" role="row">` + cols.map(c => {
+    const s = sort && sort.key === c.key ? (sort.dir === 1 ? "▲" : "▼") : "";
+    return `<div class="cell ${c.key === "title" ? "name" : ""}" role="columnheader" data-sort="${c.key}">${c.label}${c.hint ? `<span class="hint">${c.hint}</span>` : ""}<span class="sort">${s}</span></div>`;
+  }).join("") + `</div>`;
+
+  if (!rows.length) html += `<div class="empty">No tasks match “${esc(query)}”.</div>`;
+
+  for (const r of rows) {
+    const { n } = r;
+    const glyph = r.hasKids ? ICON_PARENT : n.status === "done" ? ICON_DONE : ICON_LEAF;
+    const name = `<div class="cell name" role="gridcell">
+        <span class="indent">${"<i></i>".repeat(r.depth)}</span>
+        <span class="slot">
+          <button class="twisty ${r.hasKids ? "" : "leaf"} ${r.open ? "open" : ""}" data-toggle="${n.id}" tabindex="-1" aria-label="${r.open ? "Collapse" : "Expand"}">${CHEVRON}</button>
+          <span class="glyph">${glyph}</span>
+        </span>
+        <span class="title" data-title="${n.id}" ${editingId === n.id ? 'contenteditable="true"' : ""}>${editingId === n.id ? esc(n.title) : highlight(n.title)}</span>
+        ${r.hasKids && (!r.open || nameOnly) ? `<span class="count">${n.children.length}</span>` : ""}
+        <span class="row-actions"><button class="icon-btn" data-add="${n.id}" tabindex="-1" title="Add sub-item">${PLUS}</button></span>
+      </div>`;
+    const rest = cols.slice(1).map(c => `<div class="cell" role="gridcell">${c.render(n)}</div>`).join("");
+    html += `<div class="row body ${n.id === focusedId ? "focused" : ""} ${r.ancestorOnly ? "ancestor-only" : ""}"
+      role="row" data-id="${n.id}" aria-level="${r.depth + 1}" ${r.hasKids ? `aria-expanded="${r.open}"` : ""}>${name}${rest}</div>`;
+  }
+  if (!query) {
+    html += `<div class="row add-row" data-add-root><div class="cell name">${PLUS} New task</div>${cols.slice(1).map(() => `<div class="cell"></div>`).join("")}</div>`;
+  }
+  grid.innerHTML = html;
+
+  const anyOpen = [...byId.values()].some(n => n.children.length && expanded.has(n.id));
+  document.getElementById("toggle-all").textContent = anyOpen ? "Collapse all" : "Expand all";
+
+  if (editingId) {
+    const el = grid.querySelector(`[data-title="${editingId}"]`);
+    el.focus();
+    const range = document.createRange(); range.selectNodeContents(el);
+    const sel = getSelection(); sel.removeAllRanges(); sel.addRange(range);
+  }
+}
+
+// ---------- behaviour ----------
+function setSubtree(n, open) {
+  if (n.children.length) open ? expanded.add(n.id) : expanded.delete(n.id);
+  n.children.forEach(c => setSubtree(c, open));
+}
+function toggle(id, deep) {
+  const n = byId.get(id);
+  const open = !expanded.has(id);
+  if (deep) setSubtree(n, open); else open ? expanded.add(id) : expanded.delete(id);
+  render();
+}
+function addChild(parent) {
+  const n = T("Untitled", "todo", null, 0, 0);
+  n.id = "t" + (++seq);
+  byId.set(n.id, n);
+  parentOf.set(n.id, parent);
+  (parent ? parent.children : DATA).push(n);
+  if (parent) expanded.add(parent.id);
+  focusedId = editingId = n.id;
+  render();
+}
+function commitEdit() {
+  if (!editingId) return;
+  const el = grid.querySelector(`[data-title="${editingId}"]`);
+  const text = el.textContent.trim();
+  byId.get(editingId).title = text || "Untitled";
+  editingId = null;
+  render();
+  grid.focus();
+}
+
+grid.addEventListener("click", e => {
+  const t = e.target.closest("[data-toggle]");
+  if (t && !t.classList.contains("leaf")) { toggle(t.dataset.toggle, e.shiftKey); return; }
+  const a = e.target.closest("[data-add]");
+  if (a) { addChild(byId.get(a.dataset.add)); return; }
+  if (e.target.closest("[data-add-root]")) { addChild(null); return; }
+  const h = e.target.closest("[data-sort]");
+  if (h) {
+    const key = h.dataset.sort;
+    sort = !sort || sort.key !== key ? { key, dir: 1 } : sort.dir === 1 ? { key, dir: -1 } : null;
+    render(); return;
+  }
+  const row = e.target.closest(".row.body");
+  if (row && !editingId) { focusedId = row.dataset.id; render(); grid.focus(); }
+});
+grid.addEventListener("dblclick", e => {
+  const title = e.target.closest("[data-title]");
+  if (title) { editingId = title.dataset.title; render(); }
+});
+grid.addEventListener("focusout", e => {
+  if (editingId && e.target.matches("[contenteditable]")) commitEdit();
+});
+
+grid.addEventListener("keydown", e => {
+  if (editingId) {
+    if (e.key === "Enter") { e.preventDefault(); commitEdit(); }
+    if (e.key === "Escape") { editingId = null; render(); grid.focus(); }
     return;
   }
-  // Lift out of flow at its current rect so the layout settles underneath it.
-  el.style.left = el.offsetLeft + "px";
-  el.style.width = el.offsetWidth + "px";
-  el.classList.add("exiting");
-  // The opening animation played back the way it came: same frames reversed,
-  // same duration and curve, so the pane visibly leaves from the first frame.
-  const exit = {
-    slide: [[{ opacity: 1, transform: "none" }, { opacity: 0, transform: "translateX(36px)" }], DUR],
-    cover: [[{ transform: "none" }, { transform: "translateX(100%)" }], DUR * 1.15],
-    fade: [[{ opacity: 1, transform: "none", transformOrigin: "left center" }, { opacity: 0, transform: "scale(.985)", transformOrigin: "left center" }], DUR],
-  }[MOTION];
-  if (MOTION === "cover") el.classList.add("cover-edge");
-  inner.animate(exit[0], { duration: exit[1], easing: EASE_OUT, fill: "forwards" }).finished.then(remove);
-}
-
-function swapContent(entry, spec, index) {
-  const old = entry.inner;
-  const next = buildInner(spec, index);
-  entry.el.appendChild(next);
-  Object.assign(entry, { kind: spec.kind, id: spec.id, key: keyOf(spec), inner: next });
-  if (MOTION === "none") return old.remove();
-  // Old content fades quickly on top; new content settles in underneath.
-  old.classList.add("swap-out");
-  old.animate([{ opacity: 1 }, { opacity: 0 }], { duration: DUR * .45, easing: "linear", fill: "forwards" }).finished.then(() => old.remove());
-  next.animate([{ opacity: 0, transform: "translateY(4px)" }, { opacity: 1, transform: "none" }],
-    { duration: DUR, delay: DUR * .15, easing: EASE_OUT, fill: "backwards" });
-  cascade(next, DUR * .15);
-}
-
-function setChain(specs, { instant = false } = {}) {
-  let p = 0;
-  while (p < chain.length && p < specs.length && chain[p].key === keyOf(specs[p])) p++;
-  const removed = chain.slice(p);
-  const added = specs.slice(p);
-  const kept = chain.slice(0, p);
-
-  if (!instant && removed.length && added.length && removed[0].kind === added[0].kind) {
-    const entry = removed.shift();
-    swapContent(entry, added.shift(), p);
-    kept.push(entry);
+  const rows = flatten();
+  const i = rows.findIndex(r => r.n.id === focusedId);
+  const r = rows[i];
+  if (!r) return;
+  const go = j => { if (rows[j]) { focusedId = rows[j].n.id; render(); scrollFocused(); } };
+  switch (e.key) {
+    case "ArrowDown": e.preventDefault(); go(i + 1); break;
+    case "ArrowUp": e.preventDefault(); go(i - 1); break;
+    case "ArrowRight":
+      e.preventDefault();
+      if (r.hasKids && !r.open) toggle(r.n.id, false);
+      else if (r.open) go(i + 1);
+      break;
+    case "ArrowLeft":
+      e.preventDefault();
+      if (r.open && !query) toggle(r.n.id, false);
+      else { const p = parentOf.get(r.n.id); if (p) { focusedId = p.id; render(); scrollFocused(); } }
+      break;
+    case "Enter": e.preventDefault(); editingId = r.n.id; render(); break;
   }
-
-  const created = added.map((spec, j) => {
-    const el = document.createElement("section");
-    el.className = "col";
-    const inner = buildInner(spec, kept.length + j);
-    el.appendChild(inner);
-    colsEl.appendChild(el);
-    return { kind: spec.kind, id: spec.id, key: keyOf(spec), el, inner };
-  });
-
-  removed.forEach((e) => (instant ? e.el.remove() : animateExit(e)));
-  chain = kept.concat(created);
-
-  // Width transitions only exist in "grow"; other motions commit layout at once.
-  colsEl.classList.toggle("anim-width", MOTION === "grow" && !instant);
-  const ws = targetWidths(chain);
-  chain.forEach((e, i) => {
-    e.el.dataset.index = i;
-    e.el.classList.toggle("leaf", i === chain.length - 1);
-    if (!created.includes(e)) e.el.style.width = ws[i] + "px";
-  });
-  const enterDelay = removed.length && !instant ? DUR * .25 : 0;
-  created.forEach((e) => {
-    const w = ws[chain.indexOf(e)];
-    e.el.style.width = w + "px";
-    if (!instant) animateEnter(e, w, enterDelay);
-  });
-
-  markActive();
-  const behavior = instant || MOTION === "none" ? "auto" : "smooth";
-  if (colsEl.scrollWidth > colsEl.clientWidth + 1 && created.length) {
-    colsEl.scrollTo({ left: colsEl.scrollWidth, behavior });
-  } else if (removed.length && colsEl.scrollLeft > settledLeft() + 1) {
-    // The reverse of revealing a new column: glide back as it leaves.
-    colsEl.scrollTo({ left: settledLeft(), behavior });
-  }
+});
+function scrollFocused() {
+  grid.querySelector(".row.focused")?.scrollIntoView({ block: "nearest" });
 }
 
-function markActive() {
-  chain.forEach((e, i) => {
-    const nextKey = chain[i + 1]?.key;
-    e.inner.querySelectorAll("[data-open]").forEach((n) => n.classList.toggle("active", n.dataset.open === nextKey));
-  });
-}
-
-const specsUpTo = (i) => chain.slice(0, i + 1).map(({ kind, id }) => ({ kind, id }));
-
-colsEl.addEventListener("click", (ev) => {
-  const col = ev.target.closest(".col");
-  if (!col || col.classList.contains("exiting")) return;
-  const i = +col.dataset.index;
-  if (ev.target.closest("[data-close]")) return setChain(specsUpTo(i - 1));
-  const open = ev.target.closest("[data-open]");
-  if (!open) return;
-  const [kind, id] = open.dataset.open.split(":");
-  if (chain[i + 1]?.key === open.dataset.open) return;
-  setChain([...specsUpTo(i), { kind, id }]);
+document.getElementById("q").addEventListener("input", e => { query = e.target.value.trim(); render(); });
+document.getElementById("toggle-all").addEventListener("click", () => {
+  const anyOpen = [...byId.values()].some(n => n.children.length && expanded.has(n.id));
+  DATA.forEach(n => setSubtree(n, !anyOpen));
+  render();
 });
-
-addEventListener("keydown", (ev) => {
-  if (ev.key === "Escape" && chain.length > 1) setChain(specsUpTo(chain.length - 2));
-});
-
 new ResizeObserver(() => {
-  colsEl.classList.remove("anim-width");
-  const ws = targetWidths(chain);
-  chain.forEach((e, i) => (e.el.style.width = ws[i] + "px"));
-}).observe(colsEl);
+  const w = scroller.clientWidth;
+  if (Math.abs(w - viewportW) > 1) { viewportW = w; render(); }
+}).observe(scroller);
 
-setChain([{ kind: "tasks" }, { kind: "task", id: "t1" }], { instant: true });
+viewportW = scroller.clientWidth || window.innerWidth;
+render();
 </script>
 </body>
 </html>

@@ -23,7 +23,7 @@ export const DEMO_PROTOTYPE_TAGS: readonly PrototypeFixtureTag[] = [
       "proto-1792900240-demo05",
     ],
   },
-  // …or one effect or interaction, studied in its variants.
+  // …or one piece of UI or one behaviour, studied in its variants.
   {
     id: "prtag-1792900000-demo02",
     name: "UI/UX",

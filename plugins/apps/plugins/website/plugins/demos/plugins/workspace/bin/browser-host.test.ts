@@ -945,10 +945,11 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
 
   // ── Prototypes: the tree a memory data-files root, seeded ──────────────────
   const prototypeSeed = parsePrototypeTree(diskDemoData().prototypes.tree);
-  /** A seeded prototype split over several scripts of its own (Casino Footwork). */
-  const MULTI_FILE_PROTOTYPE = "proto-1792900240-demo05";
-  /** The seeded prototype that mocks a route of the real app (Miller pane motion). */
-  const ROUTE_MOCKING_PROTOTYPE = "proto-1792900120-demo03";
+  /** The seeded prototypes that mock a real app surface (Menu, Miller columns). */
+  const MOCKING_PROTOTYPES = [
+    "proto-1792900060-demo02",
+    "proto-1792900300-demo06",
+  ];
   const request = (method: string, path: string, body?: unknown) =>
     host.request(
       new Request(`http://demo.invalid${path}`, {
@@ -973,11 +974,14 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
     for (const meta of list) expect(meta.problems).toEqual([]);
     const pinned = list.find((m) => m.name === DEMO_PINNED_PROTOTYPE)!;
     expect(pinned.options.map((o) => o.name)).toEqual(["accent"]);
-    // One mocks a route of the real app (compare's `unresolved` arm here); the
-    // others stand on their own.
+    // Menu mocks an exhibit, Miller columns the app at a route (compare's
+    // `unresolved` arm here); the others stand on their own.
     expect(
-      list.filter((m) => m.mocks.kind !== "none").map((m) => m.name),
-    ).toEqual([ROUTE_MOCKING_PROTOTYPE]);
+      list
+        .filter((m) => m.mocks.kind !== "none")
+        .map((m) => m.name)
+        .sort(),
+    ).toEqual(MOCKING_PROTOTYPES);
   });
 
   test("a prototype's sibling files are served with their own types", async () => {
@@ -988,12 +992,6 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
     expect(photos.status).toBe(200);
     expect(photos.headers.get("content-type")).toContain("javascript");
     expect(await photos.text()).toStartWith("window.PHOTOS = {");
-    const script = await request(
-      "GET",
-      `/api/prototypes/${MULTI_FILE_PROTOTYPE}/engine.js`,
-    );
-    expect(script.status).toBe(200);
-    expect(script.headers.get("content-type")).toContain("javascript");
     // The document carries the user's pick, stamped onto its <html>.
     const doc = await request(
       "GET",
