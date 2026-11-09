@@ -80,6 +80,7 @@ const HOME_ENTRIES = [
   "~/This week.md",
   "~/Alfama at dusk.png",
   "~/Fado night ticket.pdf",
+  "~/Twinkle Twinkle Little Star.mid",
 ] as const;
 /** How long an app swap, a worker read or a viewer gets. */
 const RENDER_TIMEOUT_MS = 30_000;
@@ -313,8 +314,14 @@ await withBrowser(async (h) => {
           m.duration > 0,
       );
     };
+  // A MIDI file shows Sonata's own preview, settled.
+  const midi = async (p: Locator, text: string) =>
+    !/Loading/.test(text) &&
+    (await p.locator("[inert]").count()) === 0 &&
+    (await p.getByRole("slider", { name: "Song position" }).count()) > 0 &&
+    (await p.getByRole("button", { name: "Open in Sonata" }).count()) > 0;
 
-  // Home's loose files: a video, a note, a picture, a ticket.
+  // Home's loose files: a video, a note, a picture, a ticket, a MIDI tune.
   await view(
     "~/Tram 28 ride.webm",
     "the video is loaded in the player, from the worker",
@@ -331,15 +338,16 @@ await withBrowser(async (h) => {
     "the PDF is shown in the browser's viewer, from the worker",
     pdf,
   );
+  await view(
+    "~/Twinkle Twinkle Little Star.mid",
+    "the MIDI is drawn in Sonata's preview (song position, Open in Sonata, no loading veil)",
+    midi,
+  );
   // Music: the MIDI in Sonata's own preview, the recording in the player.
   await view(
     "~/Music/Ode to Joy.mid",
     "the MIDI is drawn in Sonata's preview (song position, Open in Sonata, no loading veil)",
-    async (p, text) =>
-      !/Loading/.test(text) &&
-      (await p.locator("[inert]").count()) === 0 &&
-      (await p.getByRole("slider", { name: "Song position" }).count()) > 0 &&
-      (await p.getByRole("button", { name: "Open in Sonata" }).count()) > 0,
+    midi,
   );
   await view(
     "~/Music/C major arpeggio.wav",

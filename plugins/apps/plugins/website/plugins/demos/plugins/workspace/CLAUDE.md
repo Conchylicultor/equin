@@ -58,7 +58,7 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
   `~` of the browser's file system: Documents — notes, code, an HTML recipe,
   the Lisbon trip's papers —, Music — a recording, a MIDI piece, the practice
   log —, Pictures, and loose files — a short video clip, a note, a picture, a
-  ticket; real files, path → bytes, kept tiny). How each app's data is written is that
+  ticket, a MIDI tune; real files, path → bytes, kept tiny). How each app's data is written is that
   app's fixture writer: `apps/pages/fixtures`' `writePageTree`,
   `apps/prototypes/fixtures`' `writePrototypeFixture`,
   `apps/sonata/fixtures`' `writeSongFixtures` and `apps/places/fixtures`'

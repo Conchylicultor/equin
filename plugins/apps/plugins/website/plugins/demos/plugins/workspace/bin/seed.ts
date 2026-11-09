@@ -102,7 +102,7 @@ import {
  *    (`writeBrowserHomeFiles`): Documents (notes, code, a recipe page, the
  *    Lisbon trip's papers), Music (a recording, a MIDI piece, the practice
  *    log), Pictures, and a few loose files (a video clip, a note, a picture,
- *    a ticket).
+ *    a ticket, a MIDI tune).
  */
 /** The seed's input: the demo's `data/` folder, split by what each writer takes. */
 export interface DemoSeedData {
