@@ -11,7 +11,12 @@ export const FS_LATENCY_LOG_NAME = "fs-latency.jsonl";
 /** How often the monitor ticks (its login service's schedule, launchd's `StartInterval`). */
 export const MONITOR_INTERVAL_MS = 30_000;
 
-const ProcSchema = z.object({ pid: z.number(), age_s: z.number() });
+const ProcSchema = z.object({
+  pid: z.number(),
+  age_s: z.number(),
+  /** Resident size (MB, from ps), from 2026-11-09. */
+  rss_mb: z.number().optional(),
+});
 
 /**
  * Why a root daemon whose plist is installed is not the monitor: its plist is
@@ -134,7 +139,9 @@ export interface WrittenTick {
   disk_read_ms_per_op?: number | null;
   load1: number;
   daemon_cpu: Record<string, number>;
-  daemon_procs: Record<string, DaemonProc>;
+  daemon_procs: Record<string, Required<DaemonProc>>;
+  /** The current FSEvents event id (FSEventsGetCurrentEventId), from 2026-11-09. */
+  fsevents_event_id: number;
   /** Root only (absent otherwise); null on the first root tick (no delta yet). */
   disk_readers_mb_s?: Record<string, number> | null;
   disk_read_attributed_mb_s?: number | null;

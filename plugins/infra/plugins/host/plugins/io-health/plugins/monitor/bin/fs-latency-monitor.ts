@@ -33,8 +33,13 @@
  *              file cache's lifetime.
  *   kernel     vnode counters, disk ops / bytes / device time per op
  *              (IOBlockStorageDriver statistics), load average.
- *   daemons    %CPU, pid and age of the watched system daemons: a pid that
- *              changes tick after tick is a relaunch loop.
+ *   daemons    %CPU, pid, age and resident size of the watched system
+ *              daemons: a pid that changes tick after tick is a relaunch
+ *              loop; a resident size that only grows is state a daemon
+ *              accumulates (fseventsd: 13 MB healthy, 8.5 GB wedged on
+ *              2026-11-09). Beside them the system's current FSEvents
+ *              event id, which dates a wedge against the id's history
+ *              (the 2026-11-08 one began as it crossed 2^32).
  *   readers    root only: the processes reading the most from disk since the
  *              last tick, and the fseventsd log files fseventsd holds open.
  *
@@ -67,7 +72,12 @@ import type {
   ProbeReading,
   WrittenTick,
 } from "@plugins/infra/plugins/host/plugins/io-health/core";
-import { diskBytesRead, residentFraction, setDarwinbg } from "./native";
+import {
+  currentFsEventId,
+  diskBytesRead,
+  residentFraction,
+  setDarwinbg,
+} from "./native";
 import { ARCHIVE_DIR, rotateLog } from "./rotate";
 import {
   diagnoseRootDaemon,
@@ -341,15 +351,20 @@ function daemonCpu(): Record<string, number> {
   return want;
 }
 
-/** pid and age of each watched daemon that is running (its oldest process). */
+/** pid, age and resident size of each watched daemon that is running (its oldest process). */
 function daemonProcs(): WrittenTick["daemon_procs"] {
   const procs: WrittenTick["daemon_procs"] = {};
-  for (const line of run(["ps", "-Ao", "pid=,etime=,comm="]).split("\n")) {
-    const m = /^\s*(\d+)\s+(\S+)\s+(.+)$/.exec(line);
+  for (const line of run(["ps", "-Ao", "pid=,etime=,rss=,comm="]).split("\n")) {
+    const m = /^\s*(\d+)\s+(\S+)\s+(\d+)\s+(.+)$/.exec(line);
     if (m === null) continue;
-    const name = basename(m[3]!);
+    const name = basename(m[4]!);
     if (!isDaemon(name)) continue;
-    const p = { pid: Number(m[1]), age_s: etimeS(m[2]!) };
+    const p = {
+      pid: Number(m[1]),
+      age_s: etimeS(m[2]!),
+      // ps reports KiB.
+      rss_mb: Math.round(Number(m[3]) / 1024),
+    };
     if (procs[name] === undefined || p.age_s > procs[name].age_s)
       procs[name] = p;
   }
@@ -579,6 +594,7 @@ function runTick(spec: RootDaemonSpec): void {
     load1,
     daemon_cpu: daemonCpu(),
     daemon_procs: daemonProcs(),
+    fsevents_event_id: currentFsEventId(),
     uninterruptible: blocked,
   };
   if (rootDaemon !== undefined) rec.root_daemon = rootDaemon;

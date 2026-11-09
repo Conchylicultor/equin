@@ -1,7 +1,7 @@
-// The three kernel calls the monitor makes that no command line exposes, over
-// bun:ffi into libSystem (macOS only): darwinbg on this process, page
-// residency of a file (mincore over a read-only mapping), and a process's
-// disk bytes read (proc_pid_rusage).
+// The calls the monitor makes that no command line exposes, over bun:ffi
+// (macOS only): into libSystem, darwinbg on this process, page residency of a
+// file (mincore over a read-only mapping) and a process's disk bytes read
+// (proc_pid_rusage); into CoreServices, the current FSEvents event id.
 import { dlopen, FFIType } from "bun:ffi";
 import { closeSync, openSync } from "node:fs";
 
@@ -32,6 +32,11 @@ const lib = dlopen("/usr/lib/libSystem.B.dylib", {
     returns: FFIType.i32,
   },
 });
+
+const coreServices = dlopen(
+  "/System/Library/Frameworks/CoreServices.framework/CoreServices",
+  { FSEventsGetCurrentEventId: { args: [], returns: FFIType.u64 } },
+);
 
 const PRIO_DARWIN_PROCESS = 4;
 const PRIO_DARWIN_BG = 0x1000;
@@ -94,4 +99,12 @@ export function diskBytesRead(pid: number): number | null {
   return Number(
     new DataView(buf.buffer).getBigUint64(DISKIO_READ_OFFSET, true),
   );
+}
+
+/**
+ * The most recent FSEvents event id on the system (every volume shares one
+ * counter). Needs no root and no stream. Below 2^53, so a number is exact.
+ */
+export function currentFsEventId(): number {
+  return Number(coreServices.symbols.FSEventsGetCurrentEventId());
 }
