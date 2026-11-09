@@ -105,4 +105,4 @@ warm subscription, so the backend's own are not counted):
 - `start()` reads and writes `mSubscriptions` / `mFdToEntry` without the
   backend's mutex while `subscribe` / `unsubscribe` hold it — upstream's race,
   unchanged.
-- Upstream report: not filed yet (tracked on the Backlog page).
+- Upstream report: filed 2026-11-09 as https://github.com/parcel-bundler/watcher/issues/278 (minimal repro: 200 files created and deleted under one kqueue subscription, 16 → 216 → 216 descriptors on upstream 2.6.0).

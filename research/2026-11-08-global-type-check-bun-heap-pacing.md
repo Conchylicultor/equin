@@ -43,9 +43,10 @@ Open bun issues on exactly this:
 We run bun 1.4.4 (2026-10-22), the newest release. Its notes change nothing
 here: a JSC upgrade, and a cgroup heap-sizing fix that is Linux only.
 
-**No new upstream report is needed**: #39424 is this case. The comment we
-could add is the real-workload data below, but it has not been posted (that
-needs the user's go-ahead):
+**No new upstream report is needed**: #39424 is this case. The real-workload
+data was posted there on 2026-11-09, shortened:
+https://github.com/oven-sh/bun/issues/39424#issuecomment-6729911920. The full
+draft:
 
 > Data point from a real workload (bun 1.4.4, macOS arm64, 64 GB): a
 > TypeScript 6 program of 2,000 sources plus ~20k `.d.ts`, checked and then
