@@ -7648,7 +7648,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Settings.Sidebar` ← `apps.settings.accounts`
               - `Settings.Sidebar` ← `apps.settings.appearance`
               - `Settings.Sidebar` ← `apps.settings.config`
-              - `Settings.Sidebar` ← `audience.settings`
               - `Settings.RailBadge` ← `apps.settings.config`
             - Contributes: `Apps.App` "Settings" → `SettingsLayout`
             - Uses:
@@ -7667,7 +7666,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/settings/accounts`
               - `apps/settings/appearance`
               - `apps/settings/config`
-              - `audience/settings`
               - `auth`
               - `config_v2/settings`
               - `ui/theme-engine/theme-customizer`
@@ -12599,7 +12597,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `apps-core`
       - `apps-core/app-launcher`
       - `audience/developer-mark`
-      - `audience/settings`
       - `audience/view-option`
       - `shell/notifications`
       - `shell/toast`
@@ -12633,26 +12630,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `shell/global-action-bar`
           - `shell/notifications`
           - `shell/toast`
-    - **`settings`** — The Developer mode switch in Settings: a Profile sidebar entry opening a pane that switches the user's audience (user | developer).
-      - Web:
-        - Slots: `settings-profile.actions`
-        - Slot contributors: `settings-profile.actions` ← `primitives.pane`
-        - Contributes:
-          - `Pane.Register` "settings-profile"
-          - `Settings.Sidebar` "Profile"
-        - Uses:
-          - `apps/settings/shell.Settings`
-          - `audience.useAudience`
-          - `audience.useSetDeveloperMode`
-          - `network/live/live-state.ResourceErrorInline`
-          - `primitives/css/control-panel.ControlPanel`
-          - `primitives/css/control-panel.ControlPanelPane`
-          - `primitives/loading.Loading`
-          - `primitives/pane.defineRoute`
-          - `primitives/pane.Pane`
-          - `primitives/pane.PaneChrome`
-          - `ui/icons.Icon`
-    - **`view-option`** — The Developer mode switch in the action bar's view-options popover — the same setting as Settings → Profile.
+    - **`view-option`** — The Developer mode switch in the action bar's view-options popover — the same setting as Settings → Config → Developer mode.
       - Web:
         - Contributes: `ActionBar.ViewOption` → `DeveloperModeSwitch`
         - Uses:
@@ -37766,7 +37744,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `unresolved`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --destructive`
-            - Imported by: 299 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
+            - Imported by: 298 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
               - `apps` ×82
               - `conversations` ×48
               - `debug` ×29
@@ -37783,13 +37761,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `integrations` ×3
               - `network` ×3
               - `review` ×3
-              - `audience` ×2
               - `config_v2` ×2
               - `framework` ×2
               - `hints` ×2
               - `reports` ×2
               - `shell` ×2
               - `stats` ×2
+              - `audience`
               - `code-explorer/commit-detail`
               - `fields/secret/config`
               - `history/dialog`
@@ -44631,13 +44609,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette` ×9
               - `ui/tokens/type-scale` ×7
               - `ui/tokens/shape` ×2
-            - Imported by: 48 plugins — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
+            - Imported by: 47 plugins — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
               - `apps` ×16
               - `page` ×6
               - `primitives` ×4
-              - `audience` ×3
               - `config_v2` ×3
               - `tasks` ×3
+              - `audience` ×2
               - `conversations` ×2
               - `fields` ×2
               - `hints` ×2
@@ -48630,7 +48608,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 227 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+        - Imported by: 226 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
           - `apps` ×69
           - `conversations` ×23
           - `ui` ×23
@@ -48645,12 +48623,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `auth` ×3
           - `infra` ×3
           - `active-data` ×2
-          - `audience` ×2
           - `integrations` ×2
           - `map` ×2
           - `menu-bar` ×2
           - `network` ×2
           - `shell` ×2
+          - `audience/view-option`
           - `backup`
           - `code-explorer/commit-detail`
           - `config_v2/settings`
@@ -49808,9 +49786,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
         - Slots: `Pane.Register`
-        - Slot contributors: 95 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `Pane.Register` ×95
-        - Contributes: 128 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Slot contributors: 94 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `Pane.Register` ×94
+        - Contributes: 127 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `SlotRender.ListMiddleware`
           - `WebsiteHeader` "title" → `PaneTitleItem`
           - `accountPane.Actions` "title" → `PaneTitleItem`
@@ -49918,7 +49896,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serverDetailPane.Actions` "title" → `PaneTitleItem`
           - `serversRootPane.Actions` "title" → `PaneTitleItem`
           - `settings-config-index.actions` "title" → `PaneTitleItem`
-          - `settings-profile.actions` "title" → `PaneTitleItem`
           - `shellOutputPane.Actions` "title" → `PaneTitleItem`
           - `sitePane.Actions` "title" → `PaneTitleItem`
           - `sitesIndexPane.Actions` "title" → `PaneTitleItem`
@@ -50081,7 +50058,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-2xs`
           - `ui/tokens/density --space-md`
           - `ui/tokens/shape --spacing`
-        - Imported by: 196 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Imported by: 195 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `apps` ×71
           - `conversations` ×32
           - `debug` ×27
@@ -50095,7 +50072,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reports` ×2
           - `stats` ×2
           - `ui` ×2
-          - `audience/settings`
           - `auth`
           - `backup`
           - `build`
@@ -52293,8 +52269,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. Applies each slot's committed layout (order, hidden items, spacers, dividers, groups) everywhere slots render; a layout is edited in its config file or the Config pane's reorder-tree field. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 284 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×284
+    - Contributes: 283 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×283
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfigResult`
@@ -52319,8 +52295,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useLayoutOrder`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 283 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×283
+    - Contributes: 282 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×282
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:
@@ -57841,7 +57817,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useWantedStyleKeys`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 543 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 542 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×153
           - `conversations` ×83
           - `page` ×52
@@ -57857,9 +57833,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `auth` ×6
           - `config_v2` ×5
           - `shell` ×5
-          - `audience` ×4
           - `build` ×4
           - `review` ×4
+          - `audience` ×3
           - `framework` ×3
           - `hints` ×3
           - `reorder` ×3

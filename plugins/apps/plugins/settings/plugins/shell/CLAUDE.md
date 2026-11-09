@@ -13,7 +13,6 @@
     - `Settings.Sidebar` ← `apps.settings.accounts`
     - `Settings.Sidebar` ← `apps.settings.appearance`
     - `Settings.Sidebar` ← `apps.settings.config`
-    - `Settings.Sidebar` ← `audience.settings`
     - `Settings.RailBadge` ← `apps.settings.config`
   - Contributes: `Apps.App` "Settings" → `SettingsLayout`
   - Uses:
@@ -32,7 +31,6 @@
     - `apps/settings/accounts`
     - `apps/settings/appearance`
     - `apps/settings/config`
-    - `audience/settings`
     - `auth`
     - `config_v2/settings`
     - `ui/theme-engine/theme-customizer`
