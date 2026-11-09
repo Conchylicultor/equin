@@ -1230,8 +1230,14 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
         .map((t) => t.role)
         .sort(),
     ).toEqual(["been", "want"]);
-    // Every place is on Demo's trip.
-    expect(places.rows.every((r) => r.tags.includes(lisbon.id))).toBe(true);
+    // The Lisbon trip's places are on it; most of the map is Demo's Paris.
+    const onTrip = DEMO_PLACES.places.filter((p) =>
+      p.tags.some((t) => t.join("/") === "Trips/Lisbon"),
+    );
+    expect(
+      places.rows.filter((r) => r.tags.includes(lisbon.id)).map((r) => r.id),
+    ).toEqual(onTrip.map((p) => p.id));
+    expect(onTrip.length).toBeLessThan(DEMO_PLACES.places.length / 10);
   });
 
   test("the map's browser key comes from the page: with no page, it reads unset", async () => {
@@ -1243,7 +1249,7 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
   test("Google's half of Places needs the computer: declared needsMachine, refused here", async () => {
     for (const [method, path] of [
       ["POST", "/api/places/places"],
-      ["POST", "/api/places/places/place-1792900000-demo01/icon"],
+      ["POST", "/api/places/places/place-1792900000-demo001/icon"],
       ["GET", "/api/places/photo?name=places%2Fx%2Fphotos%2Fy"],
       ["GET", "/api/places/thumbnail?id=ChIJ"],
       ["POST", "/api/google-maps/browser-config"],

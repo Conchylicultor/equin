@@ -16,7 +16,7 @@ export default defineCliCommand({
     defineCliCommand<[string], ImportMapstrOptions>({
       name: "import-mapstr",
       description:
-        "Match a Mapstr export (mapstr.zip, or its extracted folder) to Google places and write mapstr-matches.json for review; with --apply, REPLACE every place and tag with the seed tree and the matched places",
+        "Match a Mapstr export (mapstr.zip, or its extracted folder) to Google places and write mapstr-matches.json for review; with --apply, REPLACE every place and tag with the Mapstr tag tree and the matched places",
       arguments: [
         {
           name: "<path>",

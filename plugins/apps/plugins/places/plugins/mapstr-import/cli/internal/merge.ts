@@ -3,6 +3,7 @@ import type { PlaceSnapshot } from "@plugins/integrations/plugins/google-maps/pl
 import type { MapstrPlace } from "./export";
 import { nameSimilarity } from "./match";
 import { mapMapstrTags } from "./tag-map";
+import type { MapstrTagKey } from "./mapstr-tree";
 
 /** Below this, the Google name no longer says which place the user saved. */
 const SAME_NAME_SIMILARITY = 0.5;
@@ -31,8 +32,10 @@ export interface ResolvedRow {
  * since the place's name comes from Google. A custom place is its own name
  * and never merges.
  */
-export function mergeImports(rows: readonly ResolvedRow[]): ImportedPlace[] {
-  const out: ImportedPlace[] = [];
+export function mergeImports(
+  rows: readonly ResolvedRow[],
+): ImportedPlace<MapstrTagKey>[] {
+  const out: ImportedPlace<MapstrTagKey>[] = [];
   /** Index into `out` of each Google place's first row. */
   const byGoogleId = new Map<string, number>();
   for (const { place, source } of [...rows].sort(

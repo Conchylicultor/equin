@@ -1,20 +1,30 @@
 import type { ChildColorMode } from "@plugins/tag-tree/plugins/engine/core";
 import type { TagRole } from "../../core";
 
-// The tag tree a new Places install starts from: the two role tags (Want to
-// go, Been — independent, found by role), then the categories with their
-// colours, Material Symbols icons and the Google place types (Table A) that
-// auto-tag a saved place. `key` is local to the seed — it wires `parent` —
-// while each row's id is minted when seeded. Parents precede children; `rank`
-// is the order among siblings, taken from the order here. A child with no
-// colour inherits its parent's (Price shades its children instead: a ramp).
+// The tag tree a new Places install starts from: small and standard — the two
+// role tags (Want to go, Been — independent, found by role), Favorites, a few
+// broad categories with their colours, Material Symbols icons and the Google
+// place types (Table A) that auto-tag a saved place, and a Price ramp. `key`
+// is local to the seed — it wires `parent`, and names a seed tag to code that
+// must not match a display name the user may rename — while each row's id is
+// minted when seeded. Parents precede children; `rank` is the order among
+// siblings, taken from the order here. A child with no colour inherits its
+// parent's (Price shades its children instead: a ramp).
+//
+// A key is an identifier, not a name: it outlives a rename of its tag (the
+// Café tag's key is `snacks`, Sights' `attraction`, Nature's `outdoors`), so
+// code that names a seed tag by key (the promo film's seed) keeps working.
+//
+// Seeded only on an empty `place_tags` (`seedStarterPlaceTags`): changing it
+// never touches an install that already has tags. A bulk import that brings
+// its own categories brings its own tree (`replaceAllPlaces`' `tree`).
 
-export interface SeedTag {
-  key: string;
+export interface SeedTag<K extends string = string> {
+  key: K;
   role?: TagRole;
   name: string;
   icon: string;
-  parent?: string;
+  parent?: K;
   color?: string;
   childColors?: ChildColorMode;
   googleTypes?: readonly string[];
@@ -35,6 +45,7 @@ const SEED = [
     name: "Been",
     color: "#22c55e",
   },
+  { key: "favorite", icon: "favorite", name: "Favorites", color: "#e11d48" },
 
   { key: "food", icon: "restaurant", name: "Food", color: "#f97316" },
   {
@@ -45,25 +56,18 @@ const SEED = [
     googleTypes: ["restaurant"],
   },
   {
+    key: "snacks",
+    icon: "local-cafe",
+    name: "Café",
+    parent: "food",
+    googleTypes: ["cafe", "coffee_shop", "bakery", "ice_cream_shop"],
+  },
+  {
     key: "bar",
     icon: "local-bar",
     name: "Bar",
     parent: "food",
     googleTypes: ["bar", "pub", "wine_bar"],
-  },
-  {
-    key: "fast-food",
-    icon: "fastfood",
-    name: "Fast-food",
-    parent: "food",
-    googleTypes: ["fast_food_restaurant"],
-  },
-  {
-    key: "snacks",
-    icon: "local-cafe",
-    name: "Snacks",
-    parent: "food",
-    googleTypes: ["cafe", "coffee_shop", "bakery", "ice_cream_shop"],
   },
 
   {
@@ -80,58 +84,40 @@ const SEED = [
     parent: "museum",
     googleTypes: ["art_gallery", "art_museum"],
   },
-  {
-    key: "history",
-    icon: "history-edu",
-    name: "History",
-    parent: "museum",
-    googleTypes: ["history_museum"],
-  },
-  { key: "science", icon: "science", name: "Science", parent: "museum" },
-  { key: "museum-other", icon: "category", name: "Autre", parent: "museum" },
 
   {
     key: "attraction",
     icon: "attractions",
-    name: "Attraction",
+    name: "Sights",
     color: "#14b8a6",
-    googleTypes: ["tourist_attraction", "amusement_park"],
+    googleTypes: ["tourist_attraction", "historical_landmark"],
   },
   {
     key: "outdoors",
     icon: "forest",
-    name: "Extérieur",
+    name: "Nature",
     color: "#16a34a",
     googleTypes: ["park", "hiking_area", "national_park", "beach"],
   },
   {
     key: "shows",
     icon: "theater-comedy",
-    name: "Jeux/Shows/Events",
+    name: "Nightlife & shows",
     color: "#6366f1",
     googleTypes: [
       "performing_arts_theater",
       "concert_hall",
       "movie_theater",
-      "bowling_alley",
+      "night_club",
     ],
-  },
-  {
-    key: "club",
-    icon: "nightlife",
-    name: "Club",
-    color: "#ec4899",
-    googleTypes: ["night_club"],
   },
   {
     key: "shop",
     icon: "shopping-bag",
-    name: "Shop",
+    name: "Shopping",
     color: "#a16207",
     googleTypes: ["store", "book_store", "shopping_mall"],
   },
-  { key: "area", icon: "explore", name: "Area", color: "#84cc16" },
-  { key: "plan", icon: "event", name: "Planifier", color: "#a855f7" },
 
   {
     key: "price",
@@ -140,18 +126,9 @@ const SEED = [
     color: "#eab308",
     childColors: "ramp",
   },
-  { key: "price-40", icon: "euro-symbol", name: "40€", parent: "price" },
-  { key: "price-100", icon: "diamond", name: "100+€", parent: "price" },
-
-  {
-    key: "closed",
-    icon: "block",
-    name: "Permanently closed",
-    color: "#78716c",
-  },
-  { key: "track", icon: "directions-run", name: "Track", color: "#1e293b" },
-  { key: "home", icon: "home", name: "Home", color: "#e11d48" },
-  { key: "social", icon: "groups", name: "Social", color: "#0ea5e9" },
+  { key: "price-1", icon: "euro-symbol", name: "€", parent: "price" },
+  { key: "price-2", icon: "euro-symbol", name: "€€", parent: "price" },
+  { key: "price-3", icon: "diamond", name: "€€€", parent: "price" },
 ] as const satisfies readonly SeedTag[];
 
 export const SEED_TAGS: readonly SeedTag[] = SEED;

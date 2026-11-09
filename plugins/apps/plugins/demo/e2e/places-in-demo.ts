@@ -5,9 +5,10 @@
  * In `/demo`, it:
  *
  *  1. opens the launcher inside the embed and picks Places: the embed switches
- *     to Places, whose header counts the demo's 15 places and whose tag
- *     sidebar holds Demo's own "Lisbon" tag (`website/demos/workspace`'s
- *     `core/internal/places.ts`), read from the worker; the place and tag
+ *     to Places, whose header counts the demo's few hundred places (Demo's
+ *     Paris and their trips) and whose tag sidebar holds Demo's own "Lisbon"
+ *     tag (`website/demos/workspace`'s `core/internal/places.ts`), read from
+ *     the worker; the place and tag
  *     icons are the demo's own saved icons, in its own sheet;
  *  2. draws the map: when this instance has a Maps browser key, Google's map
  *     draws in the embed (its script and tiles loaded from Google, with the
@@ -35,7 +36,10 @@
  */
 import type { Locator, Page, Request, WebSocket } from "playwright";
 import { pickFromLauncher } from "@plugins/apps-core/plugins/app-launcher/e2e";
-import { externalHosts } from "@plugins/apps/plugins/website/plugins/demos/plugins/workspace/core";
+import {
+  DEMO_PLACES,
+  externalHosts,
+} from "@plugins/apps/plugins/website/plugins/demos/plugins/workspace/core";
 import {
   arg,
   boot,
@@ -63,7 +67,7 @@ const SANCTIONED: readonly RegExp[] = [
 ];
 
 /** The demo's places (`core/internal/places.ts`). */
-const PLACE_COUNT = 15;
+const PLACE_COUNT = DEMO_PLACES.places.length;
 const PLACE = "Castelo de São Jorge";
 /** How long an app swap, a worker read or the map gets. */
 const RENDER_TIMEOUT_MS = 30_000;

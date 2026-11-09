@@ -72,15 +72,18 @@ command boots this checkout's backend in `exec` mode, so it reads and writes
    Custom places never merge and get no such line (their name is the user's);
    they keep the Mapstr address. Fetches every matched place's details FIRST
    (an override's are stored already), then `replaceAllPlaces` (places-core)
-   wipes places and tags, seeds the tag tree and inserts every place — Google
+   wipes places and tags, seeds the Mapstr tag tree (`MAPSTR_TREE`) and inserts every place — Google
    or custom (`ImportedPlace.place` is places-core's `NewPlace`) — in ONE
    transaction, icon jobs enqueued on the same transaction, so a failure
    anywhere leaves the old data untouched.
 
 ## Tags
 
-`MAPSTR_TAGS` (`cli/internal/tag-map.ts`) maps every Mapstr tag name onto a
-**seed key** (`SeedTagKey`, places-core), never a display name: `.Done` → Been,
+The import seeds its own tag tree, `MAPSTR_TREE` (`cli/internal/mapstr-tree.ts`):
+the Mapstr categories (Food › Snacks, Museum › Autre, Extérieur, Planifier, 40€, …),
+not the app's small starter tree (`SEED_TAGS`, places-core), so a re-import keeps
+them. `MAPSTR_TAGS` (`cli/internal/tag-map.ts`) maps every Mapstr tag name onto a
+**key of that tree** (`MapstrTagKey`), never a display name: `.Done` → Been,
 `.Todo` → Want to go, `To Try` dropped, `Food/Bar` → the Bar child only. A tag
 the table does not know fails the import before any Google call. Mapstr's icon,
 rating and photos are not carried over; its comment becomes the note and its

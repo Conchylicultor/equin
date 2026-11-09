@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { mapMapstrTags, unknownMapstrTags } from "./tag-map";
 
-test("maps roles, child paths and plain names onto seed keys, deduped", () => {
+test("maps roles, child paths and plain names onto Mapstr tree keys, deduped", () => {
   expect(
     mapMapstrTags([
       "Food/Bar",

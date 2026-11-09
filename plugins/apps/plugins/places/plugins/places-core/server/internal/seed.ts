@@ -5,23 +5,30 @@ import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { parseSavedSymbolName } from "@plugins/ui/plugins/icons/plugins/saved-names/core";
 import { placeTagIdKind, type PlaceTagId } from "../../core";
 import { _placeTags } from "./tables";
-import { SEED_TAGS, type SeedTagKey } from "./seed-tags";
+import { SEED_TAGS, type SeedTag, type SeedTagKey } from "./seed-tags";
 
 /** The seed as rows to insert, and the id each seed key was minted. */
-export interface SeedTagTree {
+export interface SeedTagTree<K extends string = SeedTagKey> {
   rows: (typeof _placeTags.$inferInsert)[];
-  idByKey: ReadonlyMap<SeedTagKey, PlaceTagId>;
+  idByKey: ReadonlyMap<K, PlaceTagId>;
 }
 
 /**
- * The seed as `place_tags` rows: each id minted, `parent` keys resolved to the
- * minted ids, each rank a fractional key appended after its previous sibling
- * in `SEED_TAGS` (a fresh table: these are the complete sibling sets).
+ * A seed tree (`SEED_TAGS` unless the caller brings its own) as `place_tags`
+ * rows: each id minted, `parent` keys resolved to the minted ids, each rank a
+ * fractional key appended after its previous sibling in the tree (a fresh
+ * table: these are the complete sibling sets).
  */
-export function seedTagTree(): SeedTagTree {
+export function seedTagTree(): SeedTagTree;
+export function seedTagTree<K extends string>(
+  tree: readonly SeedTag<K>[],
+): SeedTagTree<K>;
+export function seedTagTree(
+  tree: readonly SeedTag[] = SEED_TAGS,
+): SeedTagTree<string> {
   const ids = new Map<string, PlaceTagId>();
   const lastRank = new Map<string | null, Rank>();
-  const rows = SEED_TAGS.map((tag) => {
+  const rows = tree.map((tag) => {
     const id = placeTagIdKind.mint();
     ids.set(tag.key, id);
     let parentId: string | null = null;
@@ -48,8 +55,7 @@ export function seedTagTree(): SeedTagTree {
       rank: rank.toString(),
     };
   });
-  // Every SEED_TAGS key is a SeedTagKey: the map was filled from exactly them.
-  return { rows, idByKey: ids as ReadonlyMap<SeedTagKey, PlaceTagId> };
+  return { rows, idByKey: ids };
 }
 
 /**

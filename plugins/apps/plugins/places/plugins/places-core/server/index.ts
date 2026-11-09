@@ -34,7 +34,7 @@ export {
 } from "./internal/places-repo";
 export { PlaceIconPicker } from "./internal/place-icon";
 export { replaceAllPlaces, type ImportedPlace } from "./internal/replace-all";
-export type { SeedTagKey } from "./internal/seed-tags";
+export type { SeedTag, SeedTagKey } from "./internal/seed-tags";
 
 export default {
   description:

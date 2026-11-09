@@ -1,8 +1,8 @@
 import { db } from "@plugins/database/server";
 import type { Place } from "../../core";
 import { _places, _placeTags } from "./tables";
-import { seedTagTree } from "./seed";
-import type { SeedTagKey } from "./seed-tags";
+import { seedTagTree, type SeedTagTree } from "./seed";
+import type { SeedTag, SeedTagKey } from "./seed-tags";
 import { insertPlace, type NewPlace } from "./places-repo";
 import { placeIconJob } from "./place-icon";
 import type { SavedSymbolName } from "@plugins/ui/plugins/icons/core";
@@ -12,10 +12,10 @@ import type { SavedSymbolName } from "@plugins/ui/plugins/icons/core";
  * the user's title, when they gave one) or a custom place — plus what the user
  * had on it.
  */
-export interface ImportedPlace {
+export interface ImportedPlace<K extends string = SeedTagKey> {
   place: NewPlace;
   /** Seed tags it carries, by key — resolved to the freshly seeded tree's ids. */
-  tags: readonly SeedTagKey[];
+  tags: readonly K[];
   note: string;
   createdAt: Date;
   /**
@@ -27,7 +27,9 @@ export interface ImportedPlace {
 
 /**
  * Replaces EVERY place and tag with a fresh seed tree and `imported` — the Mapstr
- * import's write. All of it is one transaction, icon jobs included (enqueued on
+ * import's write. The tree is the starter one a fresh install gets, unless the
+ * import brings its own (the Mapstr import seeds the Mapstr categories its tags
+ * map onto); `imported`'s tags are that tree's keys. All of it is one transaction, icon jobs included (enqueued on
  * the same connection), so a failure part-way leaves the old places and tags
  * untouched and queues nothing. The caller fetches every snapshot BEFORE calling
  * this: no network call happens while the tables are wiped.
@@ -36,13 +38,22 @@ export interface ImportedPlace {
  * one Google id are a caller bug (it dedupes) and throw, rolling back; custom
  * places never conflict.
  */
-export async function replaceAllPlaces(
+export function replaceAllPlaces(
   imported: readonly ImportedPlace[],
+): Promise<Place[]>;
+export function replaceAllPlaces<K extends string>(
+  imported: readonly ImportedPlace<K>[],
+  tree: readonly SeedTag<K>[],
+): Promise<Place[]>;
+export async function replaceAllPlaces(
+  imported: readonly ImportedPlace<string>[],
+  tree?: readonly SeedTag[],
 ): Promise<Place[]> {
   return db.transaction(async (tx) => {
     await tx.delete(_places);
     await tx.delete(_placeTags);
-    const seed = seedTagTree();
+    const seed: SeedTagTree<string> =
+      tree === undefined ? seedTagTree() : seedTagTree(tree);
     await tx.insert(_placeTags).values(seed.rows);
 
     const inserted: Place[] = [];

@@ -34,6 +34,7 @@ import {
 import type { ImportMapstrOptions } from "./options";
 import { mergeImports, type ResolvedRow } from "./merge";
 import { unknownMapstrTags } from "./tag-map";
+import { MAPSTR_TREE } from "./mapstr-tree";
 
 /** Google calls in flight at once — polite to the quota, ~4x a serial run. */
 const CONCURRENCY = 4;
@@ -543,9 +544,9 @@ async function apply(
   const imported = mergeImports([...fetched, ...customs]);
 
   console.log(
-    `Replacing every place and tag in ${namespace}'s database with the seed tree and ${imported.length} places…`,
+    `Replacing every place and tag in ${namespace}'s database with the Mapstr tag tree and ${imported.length} places…`,
   );
-  const inserted = await replaceAllPlaces(imported);
+  const inserted = await replaceAllPlaces(imported, MAPSTR_TREE);
   console.log(
     `\nImported ${inserted.length} places from ${fetched.length + customs.length} Mapstr rows: ${fetched.length} on Google (rows sharing a Google place merged), ${customs.length} custom; an icon job queued for each`,
   );

@@ -49,9 +49,12 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
   practice-timer agent wrote (`PRACTICE_TIMER_PAGE_WORK`), the transcripts, the
   prototypes (`data/`, a Prototypes fixture) and their tags and pin
   (`core/internal/prototypes.ts`), the Sonata songs (`core/internal/songs.ts`,
-  a Sonata fixture), Demo's Places map — a trip to Lisbon, 15 places on the
-  starter tag tree plus Demo's "Trips › Lisbon" (`core/internal/places.ts`, a
-  Places fixture), and Demo's Documents in Files (`data/documents/`: notes,
+  a Sonata fixture), Demo's Places map — a real user's: ~350 well-known public places,
+  most of them in Paris (Demo's city, across the arrondissements), plus the
+  trips (Lisbon being planned, Tokyo next, Rome and New York been), on the
+  starter tag tree plus Demo's "Trips › <city>", "Friends' tips" and "Home"
+  (`core/internal/places.ts`, a Places fixture; never a real user's saved
+  places), and Demo's Documents in Files (`data/documents/`: notes,
   markdown, code, a picture, an HTML recipe, a PDF and a recording — real
   files, path → bytes). How each app's data is written is that
   app's fixture writer: `apps/pages/fixtures`' `writePageTree`,
