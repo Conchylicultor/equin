@@ -445,20 +445,21 @@ function followRoom(room: Room, paths: readonly string[]): void {
     // Superseded while queued: a later call holds the room's files now.
     if (room.followed !== files) return;
     const previous = room.follow;
-    room.follow = null;
+    let opened: FileWatcher | null = null;
     if (files.length > 0 && rooms.get(room.key) === room) {
-      await reportingFollowFailure(room, "open", async () => {
-        room.follow = await transcriptFollowsWatcher.start({
+      const step = await reportingFollowFailure(room, "open", () =>
+        transcriptFollowsWatcher.start({
           files,
           label: room.key,
           onChange: () => roomRuns.trigger(room, ["read"]),
-        });
-      });
+        }),
+      );
+      if (step.ok) opened = step.value;
     }
+    room.follow = opened;
     if (previous)
       await reportingFollowFailure(room, "close", () => previous.stop());
     // Closed (or re-pointed) while opening: the follow just opened is not wanted.
-    const opened = room.follow;
     if (opened !== null && room.followed !== files) {
       room.follow = null;
       await reportingFollowFailure(room, "close", () => opened.stop());
@@ -472,18 +473,19 @@ function followRoom(room: Room, paths: readonly string[]): void {
  * of its follow would run. The room still hears its files through the tree
  * watch, only later.
  */
-async function reportingFollowFailure(
+async function reportingFollowFailure<T>(
   room: Room,
   step: "open" | "close",
-  run: () => Promise<void>,
-): Promise<void> {
+  run: () => Promise<T>,
+): Promise<{ ok: true; value: T } | { ok: false }> {
   try {
-    await run();
+    return { ok: true, value: await run() };
   } catch (err) {
     reportServerError({
       message: `[transcript-watcher] could not ${step} the kqueue follow of ${room.key}'s files: ${err instanceof Error ? err.message : String(err)}`,
       ...crashFieldsOf(err, "transcript-watcher.followed-files"),
     });
+    return { ok: false };
   }
 }
 
