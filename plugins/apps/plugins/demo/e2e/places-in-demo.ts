@@ -15,7 +15,12 @@
  *     key the page's chrome handed the worker — the demo's code never reads
  *     the page's server); without one, the map's set-up state says setting it
  *     up is not available here;
- *  3. opens a place's card ("Castelo de São Jorge"): Google's details and the
+ *  2b. opens on Paris, where most of the places are (the map's densest-area
+ *     opening), not on the world its trips span;
+ *  2c. picks each of Demo's saved presets (Want to go in Paris, Favorites,
+ *     Cheap eats): the side panel counts the places it shows ("All N"); back
+ *     to All places;
+ *  3. opens a place's card ("Castelo de São Jorge", through the search bar): Google's details and the
  *     icon pick say "not available", never a set-up prompt;
  *  3b. opens Manage tags and the Lisbon tag's icon picker: its grid draws
  *     from the demo's own icon sheet (the worker's bundled set), and the
@@ -73,6 +78,26 @@ const SANCTIONED: readonly RegExp[] = [
 
 /** The demo's places (`core/internal/places.ts`). */
 const PLACE_COUNT = DEMO_PLACES.places.length;
+/** Whether `p` carries `path` or a tag nested under it (the sidebar's `has-nested`). */
+const taggedUnder = (
+  p: (typeof DEMO_PLACES.places)[number],
+  path: readonly string[],
+) => p.tags.some((t) => path.every((segment, k) => t[k] === segment));
+/** The trips' places, which a map opened on Paris leaves off screen. */
+const TRIP_NAMES = new Set(
+  DEMO_PLACES.places
+    .filter((p) => p.tags.some((t) => t[0] === "Trips"))
+    .map((p) => p.place.name),
+);
+/** Demo's saved presets, with how many places each shows (its tag filter: has-nested rows, lacks-nested). */
+const PRESETS = (DEMO_PLACES.presets ?? []).map((preset) => ({
+  name: preset.name,
+  count: DEMO_PLACES.places.filter(
+    (p) =>
+      preset.tagged.every((row) => row.some((path) => taggedUnder(p, path))) &&
+      !(preset.notTagged ?? []).some((path) => taggedUnder(p, path)),
+  ).length,
+}));
 const PLACE = "Castelo de São Jorge";
 /** How long an app swap, a worker read or the map gets. */
 const RENDER_TIMEOUT_MS = 30_000;
@@ -213,8 +238,58 @@ await withBrowser(async (h) => {
   await page.waitForTimeout(3_000);
   await snap(page, OUT, "1-map");
 
+  // ── 2b. it opens on Paris, where most of Demo's places are ──────────────
+  // A first visit frames the densest area (the map's `opening: "densest"`),
+  // not every place: Demo's trips span the world, Paris is where they live.
+  if (map.value === "google") {
+    // The side panel's "In view" counts the places the camera shows: every
+    // place but the trips'.
+    await renders(
+      `the map opens on Paris: ${PLACE_COUNT - TRIP_NAMES.size} places in view, no trip's`,
+      () =>
+        embedRoot(page)
+          .getByText(`In view ${PLACE_COUNT - TRIP_NAMES.size}`, {
+            exact: true,
+          })
+          .count(),
+      (n) => n > 0,
+    );
+  }
+
+  // ── 2c. Demo's saved presets: each narrows the map ──────────────────────
+  for (const preset of PRESETS) {
+    await embedRoot(page)
+      .getByText(preset.name, { exact: true })
+      .first()
+      .click();
+    await renders(
+      `the "${preset.name}" preset shows its ${preset.count} of ${PLACE_COUNT} places`,
+      () =>
+        embedRoot(page)
+          .getByText(`All ${preset.count}`, { exact: true })
+          .count(),
+      (n) => n > 0,
+    );
+  }
+  await snap(page, OUT, "1b-preset");
+  await embedRoot(page)
+    .getByText("All places", { exact: true })
+    .first()
+    .click();
+  await renders(
+    "All places shows every place again",
+    () =>
+      embedRoot(page).getByText(`All ${PLACE_COUNT}`, { exact: true }).count(),
+    (n) => n > 0,
+  );
+
   // ── 3. a place's card: details and the icon pick are not available ─────
-  await embedRoot(page).getByText(PLACE, { exact: true }).first().click();
+  // Through the search bar's "Your places": the side panel lists what is in
+  // view, and the map opened on Paris.
+  const find = embedRoot(page).getByPlaceholder("Search or add places");
+  await find.click();
+  await find.fill(PLACE);
+  await page.getByText(PLACE, { exact: true }).first().click();
   await renders(
     `the card opens on "${PLACE}"`,
     () => embedRoot(page).getByLabel("Note", { exact: true }).count(),

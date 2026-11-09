@@ -1,6 +1,7 @@
 export type {
   PlaceFixture,
   PlaceFixtureSource,
+  PlacePresetFixture,
   PlacesFixture,
   PlaceTagFixture,
   PlaceTagPath,

@@ -1,0 +1,16 @@
+export {
+  applySidebarState,
+  hasPickedDescendant,
+  mergeRows,
+  moveTag,
+  presetAutoName,
+  presetIcon,
+  removeTag,
+  sidebarState,
+  splitRow,
+  tagFilterState,
+  toggleTag,
+  withoutSidebarRules,
+  type SidebarState,
+  type TagFilterState,
+} from "./internal/sidebar-filter";

@@ -53,7 +53,7 @@ import {
   withoutSidebarRules,
   type SidebarState,
   type TagFilterState,
-} from "../internal/sidebar-filter";
+} from "../../core";
 import { AppShellBrand } from "@plugins/primitives/plugins/app-shell/web";
 import { placeSearchText } from "../internal/fields";
 import { TagFilterBox } from "./tag-filter-box";

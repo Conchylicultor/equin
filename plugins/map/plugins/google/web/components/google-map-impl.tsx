@@ -127,6 +127,7 @@ function GoogleMapCanvas({
   onCameraRest,
   fitRequest,
   focusIds,
+  openingIds,
 }: MapRendererProps & { browserKey: string; mapId: string | null }) {
   // Held in state, not a ref: the tone colours are read off this element, and
   // a ref cannot trigger the render that reads them.
@@ -138,13 +139,16 @@ function GoogleMapCanvas({
   // What the camera frames — never a `frame: false` overlay (a proposal),
   // and only the caller's `focusIds` when it names some.
   const framed = framingOverlays(overlays, focusIds);
+  // What the one framing frames: the host's opening set when it names one
+  // (where most of the pins are), else what Fit frames.
+  const opened = openingFrame(framed, openingIds);
 
   if (refused) return <MapErrorCard reason={{ kind: "refused" }} />;
   if (loadError !== null) {
     return <MapErrorCard reason={{ kind: "load", detail: loadError }} />;
   }
 
-  const opening = initialCamera ?? roughView(framed);
+  const opening = initialCamera ?? roughView(opened);
 
   return (
     <div ref={setHost} className="size-full">
@@ -194,7 +198,7 @@ function GoogleMapCanvas({
         >
           {/* A restored camera is where the user left the map: no framing. */}
           {initialCamera === undefined ? (
-            <FitCamera overlays={framed} fitPadding={fitPadding} />
+            <FitCamera overlays={opened} fitPadding={fitPadding} />
           ) : null}
           {onCameraRest === undefined ? null : (
             <ReportCameraRest
@@ -238,6 +242,16 @@ function GoogleMapCanvas({
       </APIProvider>
     </div>
   );
+}
+
+/** `framed` narrowed to the host's opening ids, when it names some. */
+function openingFrame(
+  framed: readonly MapOverlay[],
+  openingIds: readonly string[] | undefined,
+): readonly MapOverlay[] {
+  if (openingIds === undefined) return framed;
+  const ids = new Set(openingIds);
+  return framed.filter((o) => ids.has(o.id));
 }
 
 /**

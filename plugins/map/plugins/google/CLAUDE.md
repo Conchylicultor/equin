@@ -90,6 +90,8 @@ The only map-vendor code in the repo. Everything else draws maps through
   for the flight and put back as it was (a raster map snaps to whole zooms, a
   vector map stays fractional); a
   press, wheel or drag stops it). Both target `frameView` → core `viewFor`.
+  `FitCamera` and the opening view frame `openingIds` when the host names
+  them (its `opening: "densest"`), else what Fit frames.
   With an `initialCamera` (a remembered view) the map opens there and
   `FitCamera` is not mounted; `ReportCameraRest` reports Google's `idle`
   (the camera at rest) through `onCameraRest`, with `getBounds()` and

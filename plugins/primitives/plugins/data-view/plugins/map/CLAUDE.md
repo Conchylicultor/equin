@@ -86,6 +86,9 @@ which decides which one draws on top).
 - `cameraOpen?` — the map primitive's: `"framed"` opens framed on the pins
   (`focusIds` included) while still remembering each rest under `cameraKey`
   (Places' page overlay, which hands its camera back to the plain map).
+- `opening?` — the map primitive's: `"densest"` makes the first framing
+  frame the area holding the most pins rather than every pin (Places: a
+  first visit opens on the user's city, not the world their trips span).
 - `rank?(row)` — the row's importance (`MapPin.rank`): draws above lower ranks
   where pins overlap and leads its spot. Default 0.
 - `keep?` — row keys drawn even where the search or filter hides them (a

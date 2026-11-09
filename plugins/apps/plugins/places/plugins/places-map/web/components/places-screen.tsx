@@ -718,13 +718,16 @@ function PlacesSurface({
         rank: (p) =>
           pageNumberOf.has(p.id) ? 2 : placeFlags(p, tags).want ? 1 : 0,
         fitPadding,
-        // The map opens where the user left it, as Google Maps does; only a
-        // first visit frames every place (which, worldwide, is the globe).
+        // The map opens where the user left it, as Google Maps does. A first
+        // visit opens on where most of the places are — the user's own city,
+        // not the globe their trips span (`opening: "densest"`); Fit frames
+        // them all.
         // Opened on a page (`;page`), it opens framed on the page's places —
         // and still remembers where it rests, so closing it leaves the camera
         // there. A page laid over a map already open frames through
         // `fitRequest` (above).
         cameraKey: "places.map",
+        opening: "densest",
         ...(openedOnPage ? { cameraOpen: "framed" as const } : {}),
         ...(layered ? { focusIds } : {}),
         ...(pick === undefined ? {} : { pick }),

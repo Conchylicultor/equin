@@ -3504,4 +3504,27 @@ export const DEMO_PLACES: PlacesFixture = {
     { path: ["Home"], color: "#0f172a", icon: "home" },
   ],
   places: [...LISBON_PLACES, ...fromRows(LISBON_PLACES.length + 1)],
+  // Demo's saved presets, after All places — what the tag sidebar's "Save as
+  // preset" leaves: one excluding a tag, one a single tag, one two rows and-ed (€ and Restaurant).
+  presets: [
+    {
+      id: "want-paris",
+      name: "Want to go in Paris",
+      icon: "bookmark",
+      tagged: [[WANT]],
+      notTagged: [["Trips"]],
+    },
+    {
+      id: "favorites",
+      name: "Favorites",
+      icon: "favorite",
+      tagged: [[FAVORITE]],
+    },
+    {
+      id: "cheap-eats",
+      name: "Cheap eats",
+      icon: "euro-symbol",
+      tagged: [[PRICE[1]], [RESTAURANT]],
+    },
+  ],
 };

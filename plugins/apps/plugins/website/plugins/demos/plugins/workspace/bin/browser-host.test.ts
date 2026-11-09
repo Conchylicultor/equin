@@ -80,6 +80,7 @@ import {
 } from "@plugins/config_v2/server";
 import { systemOrigin } from "@plugins/infra/plugins/request-origin/core";
 import { sql } from "drizzle-orm";
+import { dataViewStorePath } from "@plugins/primitives/plugins/data-view/server";
 import { db } from "@plugins/database/server";
 import { pruneChangelog } from "@plugins/network/plugins/live/plugins/live-state-snapshot/server/testing";
 import {
@@ -1233,6 +1234,18 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
       places.rows.filter((r) => r.tags.includes(lisbon.id)).map((r) => r.id),
     ).toEqual(onTrip.map((p) => p.id));
     expect(onTrip.length).toBeLessThan(DEMO_PLACES.places.length / 10);
+  });
+
+  test("the map's presets: All places, then Demo's saved ones, each a tag filter", async () => {
+    const doc = (await loadResourceByKey(configValues.key, {
+      path: dataViewStorePath("places.presets"),
+    })) as { views: { id: string; view: { filter?: unknown } }[] };
+    expect(doc.views.map((v) => v.id)).toEqual([
+      "all",
+      ...(DEMO_PLACES.presets ?? []).map((p) => p.id),
+    ]);
+    for (const view of doc.views.slice(1))
+      expect(JSON.stringify(view.view.filter)).toContain("has-nested");
   });
 
   test("the map's browser key comes from the page: with no page, it reads unset", async () => {

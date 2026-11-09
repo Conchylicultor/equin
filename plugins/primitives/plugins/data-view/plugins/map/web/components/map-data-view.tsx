@@ -184,6 +184,7 @@ export function MapDataView(props: DataViewRenderProps<unknown>): ReactNode {
         {...(options.cameraOpen === undefined
           ? {}
           : { cameraOpen: options.cameraOpen })}
+        {...(options.opening === undefined ? {} : { opening: options.opening })}
         onActivate={onActivate}
         {...(onHoverChange === undefined ? {} : { onHoverChange })}
         {...(options.onCameraRest === undefined

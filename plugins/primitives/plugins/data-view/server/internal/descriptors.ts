@@ -1,6 +1,10 @@
 import { viewsDescriptor } from "@plugins/primitives/plugins/data-view/plugins/view-core/server";
 import type { ConfigDescriptor, Disposable } from "@plugins/config_v2/core";
-import { getConfig, watchConfig } from "@plugins/config_v2/server";
+import {
+  getAllDescriptors,
+  getConfig,
+  watchConfig,
+} from "@plugins/config_v2/server";
 import { dataViews } from "../../shared/data-views.generated";
 import { presetsExtraFields } from "../../shared/sort-presets-field";
 import { customColumnsExtraFields } from "../../shared/custom-columns-field";
@@ -51,6 +55,29 @@ export function readDataViewConfigDoc(
 ): Record<string, unknown> {
   const descriptor = dataViewDescriptors.get(dataViewId);
   return descriptor ? (getConfig(descriptor) as Record<string, unknown>) : {};
+}
+
+/**
+ * The config store path of one DataView surface's doc — what config-v2's
+ * `set-field` endpoint names, so a writer outside the browser (a fixture
+ * writer saving a view the way the view switcher does) reaches the exact doc
+ * the surface reads. Throws for an unregistered id, and before the config
+ * registry has registered it.
+ */
+export function dataViewStorePath(dataViewId: string): string {
+  const descriptor = dataViewDescriptors.get(dataViewId);
+  if (!descriptor) {
+    throw new Error(
+      `dataViewStorePath: no DataView "${dataViewId}" is registered (defineDataView).`,
+    );
+  }
+  const entry = getAllDescriptors().find(([, d]) => d === descriptor);
+  if (entry === undefined) {
+    throw new Error(
+      `dataViewStorePath: DataView "${dataViewId}"'s config doc is not registered yet.`,
+    );
+  }
+  return entry[0];
 }
 
 /**

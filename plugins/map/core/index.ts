@@ -20,6 +20,7 @@ export {
   type MapCamera,
   type MapPadding,
 } from "./camera";
+export { densestPinIds } from "./densest";
 export {
   flyPath,
   uncoveredBounds,

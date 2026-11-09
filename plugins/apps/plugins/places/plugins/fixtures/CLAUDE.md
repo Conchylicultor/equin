@@ -10,11 +10,14 @@
     - `apps/places/places-core.insertPlace`
     - `apps/places/places-core.NewPlace`
     - `apps/places/places-core.seedStarterPlaceTags`
+    - `primitives/data-view.dataViewStorePath`
+    - `primitives/data-view.readDataViewConfigDoc`
   - Exports (values): `writePlacesFixture`
 - Core:
   - Exports (types):
     - `PlaceFixture`
     - `PlaceFixtureSource`
+    - `PlacePresetFixture`
     - `PlacesFixture`
     - `PlaceTagFixture`
     - `PlaceTagPath`

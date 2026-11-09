@@ -11,7 +11,7 @@ import {
   removeTag,
   splitRow,
   type SidebarState,
-} from "../internal/sidebar-filter";
+} from "../../core";
 import { TagChip } from "./tag-chip";
 
 /** Where a dragged chip can land: an include row, or "and …" (a row of its own). */

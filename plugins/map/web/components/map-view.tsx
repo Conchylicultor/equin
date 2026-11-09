@@ -23,6 +23,7 @@ import type { LinkedHoverChange } from "@plugins/primitives/plugins/data-view/co
 import {
   MARK_PENDING,
   NO_MAP_PADDING,
+  densestPinIds,
   framingOverlays,
   resolveCrowd,
   type CameraRest,
@@ -126,6 +127,15 @@ export interface MapViewProps {
    */
   cameraOpen?: "remembered" | "framed";
   /**
+   * What the map's first framing frames (not the Fit control, which always
+   * frames every overlay): every overlay (`"all"`, the default), or
+   * `"densest"` — the area holding the most pins (`densestPinIds`: a fixed
+   * ~50 km grid, the densest 3×3 block), so a set spread over a home city and
+   * a few trips opens on the city, not on the world. The user zooms out or
+   * presses Fit for the rest. With `focusIds`, those are framed instead.
+   */
+  opening?: "all" | "densest";
+  /**
    * The host's own words for "nothing to show", floated on a card over the
    * map while there are no overlays — or `null` for a bare map (a host that
    * already says the count elsewhere). The map itself stays mounted either
@@ -221,6 +231,7 @@ export function MapView({
   pick,
   cameraKey,
   cameraOpen = "remembered",
+  opening = "all",
   fitRequest,
   focusIds,
   empty,
@@ -231,6 +242,15 @@ export function MapView({
     cameraKey,
     cameraOpen,
     framingOverlays(overlays).length > 0,
+  );
+  // The first framing's set, when it narrows: read by the renderer once, so
+  // computing it for each overlay set is O(pins) and nothing more.
+  const openingIds = useMemo(
+    () =>
+      opening === "densest" && (focusIds === undefined || focusIds.length === 0)
+        ? densestPinIds(framingOverlays(overlays))
+        : null,
+    [opening, focusIds, overlays],
   );
   // The caller's report through a ref, keyed on its presence only: a new
   // closure each render must not re-subscribe the renderer.
@@ -281,6 +301,7 @@ export function MapView({
     ...(onCameraRest === undefined ? {} : { onCameraRest }),
     ...(fitRequest === undefined ? {} : { fitRequest }),
     ...(focusIds === undefined ? {} : { focusIds }),
+    ...(openingIds === null ? {} : { openingIds }),
   };
   // Drawn over the tiles, so in the map's chrome theme, not the app's.
   const notice = (

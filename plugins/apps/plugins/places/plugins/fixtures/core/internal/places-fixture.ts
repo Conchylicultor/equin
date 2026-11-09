@@ -41,11 +41,29 @@ export interface PlaceFixture {
 }
 
 /**
- * Some saved places and the tags they need, in the app's own terms. Written
- * by `writePlacesFixture` (server) on top of the starter tag tree a fresh
- * install has.
+ * A saved filter preset of the Places map (the tag sidebar's "Save as
+ * preset"), by tag path: a place shows when it carries a tag of EVERY row of
+ * `tagged` (or one nested under it — a row's tags are or-ed, the rows and-ed)
+ * and none of `notTagged`.
+ */
+export interface PlacePresetFixture {
+  /** The preset's id in the presets doc (a bare slug). */
+  id: string;
+  name: string;
+  /** A Material Symbols name (`favorite`). */
+  icon: string;
+  tagged: readonly (readonly PlaceTagPath[])[];
+  notTagged?: readonly PlaceTagPath[];
+}
+
+/**
+ * Some saved places, the tags they need and the map's saved presets, in the
+ * app's own terms. Written by `writePlacesFixture` (server) on top of the
+ * starter tag tree a fresh install has.
  */
 export interface PlacesFixture {
   tags: readonly PlaceTagFixture[];
   places: readonly PlaceFixture[];
+  /** Saved after "All places", in this order. */
+  presets?: readonly PlacePresetFixture[];
 }

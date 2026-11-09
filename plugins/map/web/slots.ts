@@ -112,6 +112,14 @@ export interface MapRendererProps {
    * Absent or empty: every framed overlay.
    */
   focusIds?: readonly string[];
+  /**
+   * The overlay ids the camera's ONE framing frames, when set (the host's
+   * `opening: "densest"`): the map opens on these — where most of the pins
+   * are — rather than on every overlay. The Fit control and {@link fitRequest}
+   * still frame everything (`focusIds` aside). Ignored with an
+   * {@link initialCamera}. Absent: the first framing frames what Fit does.
+   */
+  openingIds?: readonly string[];
 }
 
 /**

@@ -72,6 +72,13 @@ export interface MapViewOptions<TRow> {
    */
   cameraOpen?: "remembered" | "framed";
   /**
+   * What the map's first framing frames (the map primitive's `opening`):
+   * every pin (default), or `"densest"` — the area holding the most pins, so
+   * a set spread over a home city and a few trips opens on the city. The Fit
+   * control still frames every pin.
+   */
+  opening?: "all" | "densest";
+  /**
    * Row keys drawn even where the view's search or filter hides them — rows
    * something beside the map stands for (a search's hits that are rows). The
    * selected row is always drawn; it needs no entry here.

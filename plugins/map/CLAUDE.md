@@ -95,6 +95,15 @@ Plain data, no React:
   (`focusIds` included) as a first visit does, yet still remembers each rest
   under the key — a view opened for one thing (a page's places) that hands
   its camera back to the map it was opened over.
+- `opening` (optional, `"all"` default | `"densest"`) — what the map's first
+  framing frames (never the Fit control, which frames every overlay):
+  `"densest"` frames the area holding the most pins (core `densestPinIds`:
+  pins bucketed on a fixed zoom-9 Mercator grid, the densest 3×3 block — ~150
+  km at Paris — ties broken by position; O(pins), order-independent; `null`,
+  so every overlay, when that block holds a single pin or every pin). A set
+  spread over a home city and a few trips opens on the city, not the world.
+  Ignored with `focusIds` (those are framed) and with a remembered camera.
+  The renderer gets the narrowed set as `openingIds`.
 - `onCameraRest` (optional) — the caller's: each time the camera rests (and
   once when the map first settles), a `CameraRest` (`center`, `zoom`,
   `bounds`, and `visible` — the part of `bounds` the `fitPadding` chrome
@@ -299,6 +308,7 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
     - `DEFAULT_CLUSTER_RADIUS_PX`
     - `DEFAULT_SPOT_NEAR_ZOOM`
     - `DEFAULT_SPOT_RADIUS_PX`
+    - `densestPinIds`
     - `dropHeadSvg`
     - `dropTipPx`
     - `escapeSvg`

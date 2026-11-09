@@ -6321,11 +6321,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/places/places-core.insertPlace`
               - `apps/places/places-core.NewPlace`
               - `apps/places/places-core.seedStarterPlaceTags`
+              - `primitives/data-view.dataViewStorePath`
+              - `primitives/data-view.readDataViewConfigDoc`
             - Exports (values): `writePlacesFixture`
           - Core:
             - Exports (types):
               - `PlaceFixture`
               - `PlaceFixtureSource`
+              - `PlacePresetFixture`
               - `PlacesFixture`
               - `PlaceTagFixture`
               - `PlaceTagPath`
@@ -6681,6 +6684,31 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/shortcuts.useSurfaceShortcuts`
               - `shell/toast.showToast`
               - `tag-tree/engine.useTagTreeActions`
+          - Core:
+            - Uses:
+              - `primitives/data-view.FilterGroup`
+              - `primitives/data-view.FilterNode`
+              - `primitives/data-view.filterNodeIdKind`
+              - `primitives/data-view.FilterRule`
+              - `tag-tree/engine.isTagUnder`
+              - `tag-tree/engine.TagNode`
+              - `tag-tree/engine.tagPath`
+            - Exports (types):
+              - `SidebarState`
+              - `TagFilterState`
+            - Exports (values):
+              - `applySidebarState`
+              - `hasPickedDescendant`
+              - `mergeRows`
+              - `moveTag`
+              - `presetAutoName`
+              - `presetIcon`
+              - `removeTag`
+              - `sidebarState`
+              - `splitRow`
+              - `tagFilterState`
+              - `toggleTag`
+              - `withoutSidebarRules`
           - Cross-plugin:
             - Uses tokens: 31 vars — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
               - `ui/tokens/color-palette` ×12
@@ -6690,6 +6718,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/categorical --categorical-foreground`
               - `ui/tokens/place-palette --place-overlay`
               - `ui/tokens/shadow --shadow`
+            - Imported by: `apps/places/fixtures`
         - **`shell`** — The Places app's rail entry and frame: the standard sidebar-less app shell around the full-pane renderer, where the map's index pane is shown, and the app's own light-only theme, which the places app selects.
           - Web:
             - Contributes:
@@ -14415,8 +14444,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `validationIssues`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Imported by: 138 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `apps` ×38
+    - Imported by: 139 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `apps` ×39
       - `conversations` ×14
       - `backup` ×13
       - `debug` ×13
@@ -36585,6 +36614,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `DEFAULT_CLUSTER_RADIUS_PX`
       - `DEFAULT_SPOT_NEAR_ZOOM`
       - `DEFAULT_SPOT_RADIUS_PX`
+      - `densestPinIds`
       - `dropHeadSvg`
       - `dropTipPx`
       - `escapeSvg`
@@ -46445,6 +46475,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ConfigV2.Register` ×92
           - `ids.kind` ×2
         - Uses:
+          - `config_v2.getAllDescriptors`
           - `config_v2.getConfig`
           - `config_v2.watchConfig`
           - `ids.IdKinds`
@@ -46452,6 +46483,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/data-view/view-core.viewsDescriptor`
           - `ui/icons/saved-sources.defineSavedIconSource`
         - Exports (values):
+          - `dataViewStorePath`
           - `isDataViewId`
           - `readDataViewConfigDoc`
           - `watchDataViewConfigDoc`
@@ -46634,9 +46666,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale` ×6
           - `ui/tokens/shadow` ×3
           - `ui/tokens/shape` ×3
-        - Imported by: 122 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Imported by: 123 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `fields` ×39
-          - `apps` ×28
+          - `apps` ×29
           - `debug` ×15
           - `primitives` ×10
           - `conversations` ×8
