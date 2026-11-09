@@ -93,6 +93,19 @@ could not show instances. Closed in the recorder (below), test-held.
 5. **Own-time hole**: a closing entry is judged on own + residue no gate
    report took (`SlowSpan.residueMs`); filed, it consumes it.
 
+## The kqueue follow: bound, and what it is
+
+- **Bound:** one descriptor per chain file + one per project directory, per
+  open room; a room is open while subscribed — every active conversation (the
+  turn-emitter) and any viewed one (one room however many tabs), plus one
+  file per open sub-agent pane. Measured on
+  main: 45 active conversations, 1 session each → 89 descriptors under
+  `~/.claude/projects`; opening a finished conversation added 2 (89 → 91),
+  released ~24 s after its tab closed. (The runs/ watch held 1,138.)
+- **What it is:** the right primitive for a named, appended file — and a way
+  around fseventsd for transcripts only. Every other FSEvents watch still
+  lags; the root cause stays with task-1794188988-ixjuwm.
+
 ## Not done
 
 - fseventsd's stuck state: needs root to sample, or a restart

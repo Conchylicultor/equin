@@ -23,10 +23,22 @@ One `parcel.subscribe(CLAUDE_PROJECTS_DIR)` covers all active conversations. A p
 transcript are named, so each write is heard in milliseconds. The tree watch
 (FSEvents) stays for what has no path yet — a discovered room's new files, a
 session's birth — and as a second trigger (an unmoved signature returns at
-once). FSEvents alone delivered a transcript line ~60 s late on 2026-11-09
-(fseventsd stuck at one core; see file-watcher's *Delivery lag*). A follow
-that fails to open is reported; the room then hears its files through the tree
-watch only.
+once). A follow that fails to open is reported; the room then hears its files
+through the tree watch only.
+
+- **Why.** A named, appended file is what a follow is for (file-watcher's
+  `writesWhileOpen`), and it takes the transcript off fseventsd, one daemon
+  whose queue every stream on the machine shares. It does NOT fix fseventsd:
+  stuck at one core since 2026-11-08 (a line ~60 s late on 2026-11-09), it
+  still delays every other FSEvents watch — task-1794188988-ixjuwm.
+- **Bound.** One descriptor per chain file plus one per project directory, for
+  each OPEN room. A room is open while anyone subscribes: every active
+  conversation this database owns (the turn-emitter follows each), any one a
+  tab views (tabs share one room), and each open sub-agent pane once its file
+  exists (one file). A directory is counted once, however many rooms follow
+  files in it. Main, 2026-11-09: 45 active conversations, one
+  session each → 89 descriptors; a viewed finished one adds 2, released
+  ~25 s after its tab closed (the client keep-alive, then the room's close).
 
 **A snapshot carries when the files changed** (`changedAt`: their newest
 mtime), except on a room's first read. Values notified from it pass it on
