@@ -1,4 +1,4 @@
-import type { ToolRendererProps } from "../../core";
+import { inputSummary, type ToolRendererProps } from "../../core";
 import { ToolCallCard } from "./tool-call-card";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
@@ -12,16 +12,9 @@ function formatJson(value: unknown): string {
   }
 }
 
-function inputDescription(input: unknown): string | undefined {
-  if (typeof input !== "object" || input === null || !("description" in input))
-    return undefined;
-  const desc = (input as Record<string, unknown>).description;
-  return typeof desc === "string" ? desc : undefined;
-}
-
 export function GenericToolView({ event }: ToolRendererProps) {
   return (
-    <ToolCallCard event={event} summary={inputDescription(event.input)}>
+    <ToolCallCard event={event} summary={inputSummary(event.input)}>
       {event.input != null && (
         <Scroll axis="both" className="max-h-96 rounded-md bg-muted/60">
           <Text as="pre" variant="caption" className="p-sm">

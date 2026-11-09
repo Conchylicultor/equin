@@ -9,18 +9,18 @@
   - Slots:
     - `JsonlViewerTool.Renderer`
     - `JsonlViewerTool.Footer`
-  - Slot contributors: 23 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `JsonlViewerTool.Renderer` ×22
+  - Slot contributors: 30 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `JsonlViewerTool.Renderer` ×29
     - `JsonlViewerTool.Footer` ← `debug.browser-recordings`
   - Contributes:
     - `JsonlViewer.EventRenderer` "tool-call" → `ToolCallRow`
     - `JsonlRowActions.Item` "copy-tool-result" → `CopyToolResultAction`
-  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/collapsible` ×4
+    - `conversations/conversation-view/jsonl-viewer` ×3
     - `primitives/slot-render` ×3
     - `conversations/conversation-view/jsonl-viewer/collapsible-card` ×2
     - `conversations/conversation-view/jsonl-viewer/row-actions` ×2
-    - `conversations/conversation-view/jsonl-viewer` ×2
     - `primitives/css/ui-kit` ×2
     - `primitives/css/badge.Badge`
     - `primitives/css/bouncing-dots.BouncingDots`
@@ -28,6 +28,7 @@
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/relative-time.ElapsedTime`
     - `ui/icons.Icon`
   - Exports (types):
     - `ToolFooterContribution`
@@ -47,6 +48,7 @@
   - Exports (values):
     - `blockingHook`
     - `hookSummary`
+    - `inputSummary`
     - `isLoudHook`
     - `toolName`
 - Cross-plugin:
@@ -56,8 +58,8 @@
     - `ui/tokens/density` ×4
     - `ui/tokens/shape` ×4
     - `ui/tokens/font-family --font-mono`
-  - Imported by: 24 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×22
+  - Imported by: 31 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×29
     - `apps/places/places-map`
     - `debug/browser-recordings`
 - Sub-plugins:
@@ -65,18 +67,25 @@
   - **`agent`** — Renders Agent tool calls with subagent type, model badge, prompt (markdown), and report (markdown).
   - **`ask-user-question`** [exempt] — Renders AskUserQuestion tool calls with question headers, option lists, and answer highlights.
   - **`bash`** — Renders Bash tool calls with a syntax-highlighted command, optional description label, and ANSI-stripped output.
+  - **`browser-tools`** — Renders the agent browser's browser_* MCP calls as the salient input (URL, first line of the script, action and target, query, viewport) with the call's code or action list and its result text…
   - **`edit`** — Renders Edit and MultiEdit tool calls as side-by-side syntax-highlighted diffs.
   - **`exit-clean`** — Renders exit_clean MCP tool calls as one quiet line — the agent closing its conversation as all-smooth; a refusal opens with the tool's reason.
   - **`flag-raise`** — Renders flag_raise MCP tool calls with the flagged reason displayed as a warning banner.
   - **`orchestration-tools`** — Renders the task-orchestration MCP tool calls an agent manages its task tree with: edit_task (the task's chip and the edit in words — renamed, prerequisites added or removed, armed or disarmed; the…
+  - **`outcome-report`** — Renders submit_outcome_report MCP tool calls: the report's headline as the summary, the markdown body collapsed under it, and the question it asks as a note.
   - **`page-tools`** [3 sub-plugins] — Shared appearance for the equin page MCP tool rows (read_page / write_agent_note / edit_page): the page-identity chip, the apply-report chips, the markdown body, and the refusal block. Contributes…
   - **`query-db`** — Renders query_db MCP tool calls: the SQL on one line (highlighted inside), the database when one was named, the row count in the note, and the rows as a compact table; a failed query turns the card…
   - **`read`** — Renders Read tool calls with syntax-highlighted file content, line-number gutter, and image thumbnails.
+  - **`runtime-profile`** — Renders get_runtime_profile MCP tool calls: the target worktree, kind and limit in the summary, and the slowest routes, queries and loaders as one compact table per span kind.
+  - **`scheduling-tools`** — Renders the scheduling built-ins: ScheduleWakeup as 'in 20m — reason' (or 'stop loop') with its prompt inside, and Monitor as its description with the watched command and time limit.
+  - **`search-tools`** — Renders Grep and Glob calls as the pattern with its filters and the result count; opened, the matched files as clickable paths, or the matching lines.
   - **`send-message`** — Renders SendMessage tool calls: the recipient (a sub-agent by name or by its launch description, main, or another session), the caller's summary or the message's first line, and whether it was…
   - **`skill`** — Renders Skill tool calls with skill name, args preview, and injected context.
   - **`task-tools`** — Renders TaskCreate/Update/Get/List/Output/Stop tool calls with a sticky progress overlay. Serves a conversation's task list folded from its Task* tool calls over the whole transcript…
+  - **`task-triage`** — Renders task_submit_triage MCP tool calls: the verdict, priority, type and risk as chips in the header, the context as markdown, and the question with its one-click answers.
   - **`timeline`** — Renders get_timeline MCP tool calls: the window and filters asked for in the summary, the events found in the note, and the report as sections inside — events as a compact table, duress, host…
   - **`tool-search`** — Renders ToolSearch calls as the deferred tools they loaded: the tool names in the row, a select's not-found names flagged, a keyword search's query and match count.
+  - **`web-fetch`** — Renders WebFetch calls as the page's host and path; opened, the prompt asked of it and the answer as markdown.
   - **`web-search`** — Renders WebSearch calls as the query and its source count; opened, the model-written summary in full and the sources grouped by site, folded beneath it.
   - **`workflow`** — Renders Workflow tool calls as a swimlane DAG of agent nodes (recovered by trace-executing the script), with per-node prompts in a side pane, a collapsible script, and the launched run/task ids.
   - **`write`** — Renders Write tool calls with syntax-highlighted file content and clickable path affordances.

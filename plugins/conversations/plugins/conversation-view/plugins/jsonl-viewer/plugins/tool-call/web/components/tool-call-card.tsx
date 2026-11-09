@@ -11,6 +11,10 @@ import { HookBand, HookIndicator } from "./hook-band";
 import type { HookRecord } from "@plugins/conversations/plugins/transcript-source/core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { BouncingDots } from "@plugins/primitives/plugins/css/plugins/bouncing-dots/web";
+import { ElapsedTime } from "@plugins/primitives/plugins/relative-time/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { useBlockWriting } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
@@ -55,6 +59,12 @@ interface ToolCallFrameProps {
    * says so here, and the card believes it.
    */
   running?: boolean;
+  /** When the call began (ISO): while it runs, the header counts the time
+   *  since. `ToolCallCard` passes the event's `at`. */
+  startedAt?: string;
+  /** What the open body says in place of the result while the call runs
+   *  (`Waiting for result…`). `ToolCallCard` derives it from the event. */
+  pendingLabel?: string;
   /** The hooks that ran on the call: a shield beside the tool badge (coloured
    *  by the worst outcome) on the closed card, and what the loud ones said (a
    *  block, a failure, added context) at the top of the opened body. */
@@ -79,10 +89,19 @@ export function ToolCallFrame({
   defaultOpen = false,
   isError,
   running,
+  startedAt,
+  pendingLabel,
   hooks,
   footer,
 }: ToolCallFrameProps) {
   const tool = toolName(name);
+  // A running call is never an empty card: the header counts the time since
+  // it began, and the open body says what it waits on where the result goes.
+  const pending = running && pendingLabel !== undefined && (
+    <Text variant="caption" className="text-muted-foreground">
+      {pendingLabel}
+    </Text>
+  );
   return (
     <CollapsibleCard
       error={isError}
@@ -90,7 +109,19 @@ export function ToolCallFrame({
       summary={summary}
       note={note}
       aside={aside}
-      trailing={running ? <BouncingDots /> : undefined}
+      trailing={
+        running ? (
+          <Stack as="span" direction="row" align="center" gap="xs">
+            <BouncingDots />
+            {startedAt && (
+              <ElapsedTime
+                since={new Date(startedAt)}
+                className="tabular-nums text-muted-foreground"
+              />
+            )}
+          </Stack>
+        ) : undefined
+      }
       footer={footer}
       label={
         // Rigid identity only: the tool-name badge + an optional leading chip.
@@ -134,14 +165,9 @@ export function ToolCallFrame({
         </>
       }
     >
-      {hooks?.some(isLoudHook) ? (
-        <>
-          <HookBand hooks={hooks} />
-          {children}
-        </>
-      ) : (
-        children
-      )}
+      {hooks?.some(isLoudHook) && <HookBand hooks={hooks} />}
+      {children}
+      {pending}
     </CollapsibleCard>
   );
 }
@@ -170,6 +196,8 @@ export function ToolCallCard({
   const unknown = outcomeUnknown ?? event.result?.outcomeUnknown === true;
   const footer = use(ToolFooterContext);
   const blocked = blockingHook(event) !== undefined;
+  // A stand-in the model is still writing has not been sent yet.
+  const writing = useBlockWriting();
   return (
     <ToolCallFrame
       {...frame}
@@ -184,6 +212,14 @@ export function ToolCallCard({
             : undefined)
       }
       running={running ?? !event.result}
+      startedAt={event.at}
+      pendingLabel={
+        writing
+          ? "Writing the call…"
+          : event.result
+            ? "Running…"
+            : "Waiting for result…"
+      }
       hooks={event.hooks}
       footer={footer?.toolUseId === event.toolUseId ? footer.footer : undefined}
     />

@@ -101,7 +101,31 @@ describe("the partial message", () => {
           toolUseId: "toolu_1",
           name: "Write",
           inputJson: '{"file_path":"a"}',
+          closed: true,
         },
+      ],
+    });
+  });
+
+  test("a block closes when the model finishes it; a block never drawn closes as nothing", () => {
+    expect(
+      fold([
+        ev({ type: "message_start", message: { id: "msg_1" } }),
+        ev({
+          type: "content_block_start",
+          index: 0,
+          content_block: { type: "text", text: "" },
+        }),
+        ev({ type: "content_block_stop", index: 0 }),
+        text(1, "Hi"),
+        ev({ type: "content_block_stop", index: 1 }),
+        text(2, "Still"),
+      ]),
+    ).toEqual({
+      messageId: "msg_1",
+      blocks: [
+        { kind: "text", index: 1, text: "Hi", closed: true },
+        { kind: "text", index: 2, text: "Still" },
       ],
     });
   });

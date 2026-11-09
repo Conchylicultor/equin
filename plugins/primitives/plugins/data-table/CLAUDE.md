@@ -322,6 +322,7 @@ Verified in Chromium only (the e2e harness drives Chromium).
     - `apps/studio/contributions/tables/indexes`
     - `apps/studio/contributions/tables/sample-rows`
     - `conversations/conversation-view/jsonl-viewer/tool-call/query-db`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/runtime-profile`
     - `conversations/conversation-view/jsonl-viewer/tool-call/timeline`
     - `debug/boot-profile`
     - `debug/heap-snapshot`

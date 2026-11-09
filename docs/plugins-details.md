@@ -17493,6 +17493,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/conversation-view/jsonl-viewer/task-notification`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/edit`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/read`
+                  - `conversations/conversation-view/jsonl-viewer/tool-call/search-tools`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/write`
             - **`investigate-event`** — Contributes the add-a-renderer row action to every JSONL transcript row whose nearest dispatch fell back (unhandled event kind, tool name, or attachment subtype), launching an agent briefed to implement the missing renderer for that dispatch key.
               - Web:
@@ -17855,18 +17856,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Slots:
                   - `JsonlViewerTool.Renderer`
                   - `JsonlViewerTool.Footer`
-                - Slot contributors: 23 contributors — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md)
-                  - `JsonlViewerTool.Renderer` ×22
+                - Slot contributors: 30 contributors — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md)
+                  - `JsonlViewerTool.Renderer` ×29
                   - `JsonlViewerTool.Footer` ← `debug.browser-recordings`
                 - Contributes:
                   - `JsonlViewer.EventRenderer` "tool-call" → `ToolCallRow`
                   - `JsonlRowActions.Item` "copy-tool-result" → `CopyToolResultAction`
-                - Uses: 22 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md)
+                - Uses: 24 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md)
                   - `primitives/collapsible` ×4
+                  - `conversations/conversation-view/jsonl-viewer` ×3
                   - `primitives/slot-render` ×3
                   - `conversations/conversation-view/jsonl-viewer/collapsible-card` ×2
                   - `conversations/conversation-view/jsonl-viewer/row-actions` ×2
-                  - `conversations/conversation-view/jsonl-viewer` ×2
                   - `primitives/css/ui-kit` ×2
                   - `primitives/css/badge.Badge`
                   - `primitives/css/bouncing-dots.BouncingDots`
@@ -17874,6 +17875,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/scroll.Scroll`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
+                  - `primitives/relative-time.ElapsedTime`
                   - `ui/icons.Icon`
                 - Exports (types):
                   - `ToolFooterContribution`
@@ -17893,6 +17895,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values):
                   - `blockingHook`
                   - `hookSummary`
+                  - `inputSummary`
                   - `isLoudHook`
                   - `toolName`
               - Cross-plugin:
@@ -17902,8 +17905,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/density` ×4
                   - `ui/tokens/shape` ×4
                   - `ui/tokens/font-family --font-mono`
-                - Imported by: 24 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md)
-                  - `conversations` ×22
+                - Imported by: 31 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md)
+                  - `conversations` ×29
                   - `apps/places/places-map`
                   - `debug/browser-recordings`
               - Plugins:
@@ -18093,6 +18096,29 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/font-family --font-mono`
                       - `ui/tokens/shape --radius`
                       - `ui/tokens/shape --spacing`
+                - **`browser-tools`** — Renders the agent browser's browser_* MCP calls as the salient input (URL, first line of the script, action and target, query, viewport) with the call's code or action list and its result text folded beneath; a screenshot's frame is the browser-recording footer's.
+                  - Web:
+                    - Contributes: `JsonlViewerTool.Renderer` "browser_(javascript|navigate|screenshot|act|find|get_page_text|console|close|viewport|tabs|attach|read_page|network|batch)$" → `BrowserToolView`
+                    - Uses:
+                      - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
+                      - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
+                      - `primitives/css/clip.Clip`
+                      - `primitives/css/scroll.Scroll`
+                      - `primitives/css/spacing.Stack`
+                      - `primitives/css/text.Text`
+                      - `primitives/select-scope.ContentScope`
+                      - `primitives/syntax-highlight.HighlightedCode`
+                  - Cross-plugin:
+                    - Uses tokens:
+                      - `ui/tokens/color-palette --border`
+                      - `ui/tokens/color-palette --destructive`
+                      - `ui/tokens/color-palette --muted`
+                      - `ui/tokens/color-palette --muted-foreground`
+                      - `ui/tokens/density --space-md`
+                      - `ui/tokens/density --space-sm`
+                      - `ui/tokens/font-family --font-mono`
+                      - `ui/tokens/shape --radius`
+                      - `ui/tokens/shape --spacing`
                 - **`edit`** — Renders Edit and MultiEdit tool calls as side-by-side syntax-highlighted diffs.
                   - Web:
                     - Contributes:
@@ -18180,6 +18206,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/color-palette --muted-foreground`
                       - `ui/tokens/color-palette --warning`
                       - `ui/tokens/density --pad-row-x`
+                      - `ui/tokens/type-scale --font-scale`
+                      - `ui/tokens/type-scale --font-size-caption`
+                      - `ui/tokens/type-scale --font-weight-normal`
+                      - `ui/tokens/type-scale --line-height-caption`
+                - **`outcome-report`** — Renders submit_outcome_report MCP tool calls: the report's headline as the summary, the markdown body collapsed under it, and the question it asks as a note.
+                  - Web:
+                    - Contributes: `JsonlViewerTool.Renderer` "submit_outcome_report$" → `SubmitOutcomeReportToolView`
+                    - Uses:
+                      - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
+                      - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
+                      - `primitives/css/spacing.Stack`
+                      - `primitives/css/text.Text`
+                      - `primitives/markdown.Markdown`
+                  - Cross-plugin:
+                    - Uses tokens:
+                      - `ui/tokens/color-palette --destructive`
+                      - `ui/tokens/color-palette --muted-foreground`
                       - `ui/tokens/type-scale --font-scale`
                       - `ui/tokens/type-scale --font-size-caption`
                       - `ui/tokens/type-scale --font-weight-normal`
@@ -18290,6 +18333,58 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/color-palette --destructive`
                       - `ui/tokens/density --space-sm`
                       - `ui/tokens/font-family --font-mono`
+                - **`runtime-profile`** — Renders get_runtime_profile MCP tool calls: the target worktree, kind and limit in the summary, and the slowest routes, queries and loaders as one compact table per span kind.
+                  - Web:
+                    - Contributes: `JsonlViewerTool.Renderer` "get_runtime_profile$" → `RuntimeProfileToolView`
+                    - Uses:
+                      - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
+                      - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
+                      - `primitives/css/scroll.Scroll`
+                      - `primitives/css/spacing.Stack`
+                      - `primitives/css/text.Text`
+                      - `primitives/data-table.ColumnDef`
+                      - `primitives/data-table.DataTable`
+                  - Cross-plugin:
+                    - Uses tokens:
+                      - `ui/tokens/font-family --font-mono`
+                      - `ui/tokens/shape --spacing`
+                - **`scheduling-tools`** — Renders the scheduling built-ins: ScheduleWakeup as 'in 20m — reason' (or 'stop loop') with its prompt inside, and Monitor as its description with the watched command and time limit.
+                  - Web:
+                    - Contributes:
+                      - `JsonlViewerTool.Renderer` "ScheduleWakeup" → `ScheduleWakeupToolView`
+                      - `JsonlViewerTool.Renderer` "Monitor" → `MonitorToolView`
+                    - Uses:
+                      - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
+                      - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
+                      - `primitives/css/spacing.Stack`
+                      - `primitives/css/text.Text`
+                  - Cross-plugin:
+                    - Uses tokens: `ui/tokens/font-family --font-mono`
+                - **`search-tools`** — Renders Grep and Glob calls as the pattern with its filters and the result count; opened, the matched files as clickable paths, or the matching lines.
+                  - Web:
+                    - Contributes:
+                      - `JsonlViewerTool.Renderer` "Grep" → `SearchToolView`
+                      - `JsonlViewerTool.Renderer` "Glob" → `SearchToolView`
+                    - Uses:
+                      - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
+                      - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
+                      - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
+                      - `primitives/css/clip.Clip`
+                      - `primitives/css/scroll.Scroll`
+                      - `primitives/css/spacing.Stack`
+                      - `primitives/css/text.Text`
+                      - `primitives/select-scope.ContentScope`
+                  - Cross-plugin:
+                    - Uses tokens:
+                      - `ui/tokens/color-palette --border`
+                      - `ui/tokens/color-palette --destructive`
+                      - `ui/tokens/color-palette --muted`
+                      - `ui/tokens/color-palette --muted-foreground`
+                      - `ui/tokens/density --space-md`
+                      - `ui/tokens/density --space-sm`
+                      - `ui/tokens/font-family --font-mono`
+                      - `ui/tokens/shape --radius`
+                      - `ui/tokens/shape --spacing`
                 - **`send-message`** — Renders SendMessage tool calls: the recipient (a sub-agent by name or by its launch description, main, or another session), the caller's summary or the message's first line, and whether it was queued, resumed a stopped sub-agent or failed; opened, the message as markdown (or a protocol reply in words) and how it was delivered, with a button onto the recipient sub-agent's pane.
                   - Web:
                     - Contributes: `JsonlViewerTool.Renderer` "SendMessage" → `SendMessageView`
@@ -18408,6 +18503,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/shape` ×2
                       - `ui/tokens/font-family --font-mono`
                       - `ui/tokens/shadow --shadow-sm`
+                - **`task-triage`** — Renders task_submit_triage MCP tool calls: the verdict, priority, type and risk as chips in the header, the context as markdown, and the question with its one-click answers.
+                  - Web:
+                    - Contributes: `JsonlViewerTool.Renderer` "task_submit_triage$" → `TaskSubmitTriageToolView`
+                    - Uses:
+                      - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
+                      - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
+                      - `primitives/css/badge.Badge`
+                      - `primitives/css/rigid.rigidClass`
+                      - `primitives/css/spacing.Stack`
+                      - `primitives/css/text.Text`
+                      - `primitives/markdown.Markdown`
+                  - Cross-plugin:
+                    - Uses tokens:
+                      - `ui/tokens/color-palette --destructive`
+                      - `ui/tokens/color-palette --muted-foreground`
+                      - `ui/tokens/type-scale --font-scale`
+                      - `ui/tokens/type-scale --font-size-caption`
+                      - `ui/tokens/type-scale --font-weight-normal`
+                      - `ui/tokens/type-scale --line-height-caption`
                 - **`timeline`** — Renders get_timeline MCP tool calls: the window and filters asked for in the summary, the events found in the note, and the report as sections inside — events as a compact table, duress, host pressure and backend health as lines.
                   - Web:
                     - Contributes: `JsonlViewerTool.Renderer` "get_timeline$" → `TimelineToolView`
@@ -18442,6 +18556,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/color-palette --foreground`
                       - `ui/tokens/color-palette --muted-foreground`
                       - `ui/tokens/font-family --font-mono`
+                - **`web-fetch`** — Renders WebFetch calls as the page's host and path; opened, the prompt asked of it and the answer as markdown.
+                  - Web:
+                    - Contributes: `JsonlViewerTool.Renderer` "WebFetch" → `WebFetchToolView`
+                    - Uses:
+                      - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
+                      - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
+                      - `primitives/css/spacing.Stack`
+                      - `primitives/css/text.Text`
+                      - `primitives/markdown.Markdown`
+                  - Cross-plugin:
+                    - Uses tokens:
+                      - `ui/tokens/color-palette --destructive`
+                      - `ui/tokens/color-palette --muted-foreground`
+                      - `ui/tokens/color-palette --primary-text`
+                      - `ui/tokens/type-scale --font-scale`
+                      - `ui/tokens/type-scale --font-size-caption`
+                      - `ui/tokens/type-scale --font-weight-normal`
+                      - `ui/tokens/type-scale --line-height-caption`
                 - **`web-search`** — Renders WebSearch calls as the query and its source count; opened, the model-written summary in full and the sources grouped by site, folded beneath it.
                   - Web:
                     - Contributes: `JsonlViewerTool.Renderer` "WebSearch" → `WebSearchToolView`
@@ -44159,10 +44291,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×6
               - `ui/tokens/shape` ×3
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 179 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 180 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `apps` ×38
               - `debug` ×37
-              - `conversations` ×27
+              - `conversations` ×28
               - `reports` ×17
               - `primitives` ×10
               - `tasks` ×10
@@ -44269,10 +44401,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Clip`
               - `clipClasses`
           - Cross-plugin:
-            - Imported by: 60 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
+            - Imported by: 62 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
               - `apps` ×19
+              - `conversations` ×10
               - `primitives` ×10
-              - `conversations` ×8
               - `page` ×6
               - `debug` ×4
               - `fields` ×2
@@ -44946,9 +45078,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Rigid`
               - `rigidClass`
           - Cross-plugin:
-            - Imported by: 144 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
+            - Imported by: 145 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
               - `apps` ×36
-              - `conversations` ×27
+              - `conversations` ×28
               - `primitives` ×20
               - `debug` ×13
               - `page` ×8
@@ -45035,8 +45167,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `scrollClasses`
               - `useScrollsSideways`
           - Cross-plugin:
-            - Imported by: 100 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
-              - `conversations` ×30
+            - Imported by: 103 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
+              - `conversations` ×33
               - `apps` ×21
               - `primitives` ×15
               - `debug` ×13
@@ -45163,9 +45295,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 436 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 443 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×109
-              - `conversations` ×73
+              - `conversations` ×80
               - `primitives` ×54
               - `debug` ×38
               - `ui` ×31
@@ -45403,9 +45535,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 418 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 425 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×110
-              - `conversations` ×80
+              - `conversations` ×87
               - `primitives` ×47
               - `debug` ×37
               - `page` ×24
@@ -45953,6 +46085,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/studio/contributions/tables/indexes`
           - `apps/studio/contributions/tables/sample-rows`
           - `conversations/conversation-view/jsonl-viewer/tool-call/query-db`
+          - `conversations/conversation-view/jsonl-viewer/tool-call/runtime-profile`
           - `conversations/conversation-view/jsonl-viewer/tool-call/timeline`
           - `debug/boot-profile`
           - `debug/heap-snapshot`
@@ -48646,8 +48779,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale` ×4
           - `ui/tokens/shape` ×3
           - `ui/tokens/font-family --font-mono`
-        - Imported by: 21 plugins — full list in [`plugins/primitives/plugins/markdown/REFERENCE.md`](../plugins/primitives/plugins/markdown/REFERENCE.md)
-          - `conversations` ×13
+        - Imported by: 24 plugins — full list in [`plugins/primitives/plugins/markdown/REFERENCE.md`](../plugins/primitives/plugins/markdown/REFERENCE.md)
+          - `conversations` ×16
           - `tasks` ×3
           - `active-data` ×2
           - `debug` ×2
@@ -50273,10 +50406,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago — or the short now / Nm / Nh / Nd), and a running duration as a clock (m:ss). Exposes formatRelativeTime(), <RelativeTime date={…} />, formatElapsed(), useNow() and <ElapsedTime since={…} />.
       - Cross-plugin:
-        - Imported by: 67 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
+        - Imported by: 68 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
           - `apps` ×25
           - `debug` ×13
-          - `conversations` ×9
+          - `conversations` ×10
           - `infra` ×4
           - `tasks` ×4
           - `build` ×3
@@ -50555,6 +50688,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-view/jsonl-viewer/compaction`
           - `conversations/conversation-view/jsonl-viewer/request-shape`
           - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
+          - `conversations/conversation-view/jsonl-viewer/tool-call/browser-tools`
+          - `conversations/conversation-view/jsonl-viewer/tool-call/search-tools`
           - `conversations/conversation-view/user-message`
           - `page/editor`
           - `primitives/css/surface`
@@ -50881,6 +51016,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `config_v2/settings`
           - `conversations/conversation-view/jsonl-viewer/attachment/attached-file`
           - `conversations/conversation-view/jsonl-viewer/code-listing`
+          - `conversations/conversation-view/jsonl-viewer/tool-call/browser-tools`
           - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
           - `conversations/conversation-view/jsonl-viewer/tool-call/query-db`
           - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
@@ -57044,7 +57180,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-md`
           - `ui/tokens/density --space-sm`
           - `ui/tokens/shape --radius`
-        - Imported by: `tasks/sidequest-autopilot`
+        - Imported by:
+          - `conversations/conversation-view/jsonl-viewer/tool-call/task-triage`
+          - `tasks/sidequest-autopilot`
     - **`tasks-core`** — tasks-core web presence: eagerly registers the boot-critical conversations-* / tasks.v2 resource descriptors so boot-snapshot can hydrate them before first paint, and owns the client-side reads of them (useTaskAttempts / useTaskConversations, the one join from a task to the attempts and runs it produced, each a read of the task's own scope; useTaskCluster, a task's dependency cluster — its row, then its cluster's rows — with the dependency graph over them). Schema + repository layer for the tasks/attempts/conversations FK cluster.
       - Web:
         - Contributes:
@@ -58896,9 +59034,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --space-sm`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 534 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 539 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×118
-              - `conversations` ×93
+              - `conversations` ×98
               - `primitives` ×73
               - `debug` ×40
               - `page` ×33
@@ -59058,10 +59196,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `densityGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --radius`
-            - Tokens used by: 345 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 347 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
               - `apps` ×71
               - `primitives` ×70
-              - `conversations` ×51
+              - `conversations` ×53
               - `debug` ×28
               - `ui` ×24
               - `page` ×21
@@ -59155,8 +59293,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `fontFamilyGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --space-sm`
-            - Tokens used by: 151 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
-              - `conversations` ×38
+            - Tokens used by: 155 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
+              - `conversations` ×42
               - `plugin-meta` ×23
               - `apps` ×21
               - `debug` ×19
@@ -59484,8 +59622,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --radius-chip-compact`
               - `ui/tokens/density --space-sm`
-            - Tokens used by: 391 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
-              - `conversations` ×84
+            - Tokens used by: 394 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+              - `conversations` ×87
               - `apps` ×81
               - `primitives` ×60
               - `page` ×35
@@ -59639,9 +59777,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `typeScaleGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --space-sm`
-            - Tokens used by: 230 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
+            - Tokens used by: 233 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
               - `apps` ×59
-              - `conversations` ×39
+              - `conversations` ×42
               - `primitives` ×38
               - `debug` ×15
               - `plugin-meta` ×14

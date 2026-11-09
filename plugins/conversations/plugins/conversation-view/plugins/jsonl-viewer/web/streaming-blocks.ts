@@ -8,10 +8,10 @@ export interface StandIn {
   key: string;
   event: JsonlEvent;
   /**
-   * The model may still be writing this block: it is the message's newest.
-   * Blocks stream in order, so once a later one has begun — its first token,
-   * or a tool call opening — this one is finished, though the transcript may
-   * not hold it for a while yet.
+   * The model may still be writing this block: it is the message's newest and
+   * not closed. Blocks stream in order, so once a later one has begun — its
+   * first token, or a tool call opening — this one is finished too, though the
+   * transcript may not hold it for a while yet (a tool call: until its result).
    */
   writing: boolean;
 }
@@ -76,7 +76,7 @@ export function standInsOf(
     out.push({
       key: `${messageId}:${block.index}`,
       event: eventOf(block, messageId, at),
-      writing: block === newest,
+      writing: block === newest && block.closed !== true,
     });
   }
   return out.reverse();

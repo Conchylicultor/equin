@@ -1,4 +1,4 @@
-// @hash 3c4b0ed39bd8
+// @hash b3f781485c3f
 {
   "manifests": [
     {
@@ -188,6 +188,7 @@
         "!tasks.sidequest-autopilot.**",
         "!tasks.outcome-report.**",
         "!tasks.task-triage",
+        "!conversations.conversation-view.jsonl-viewer.tool-call.task-triage",
         "conversations.conversation-view.push-and-exit.capabilities",
         "tasks.outcome-report.capability",
         "apps.file-explorer.**",

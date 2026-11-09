@@ -12,15 +12,24 @@ import { z } from "zod";
 // start. The machine half hands this to the runtime contract, so tsc holds the
 // two shapes together.
 
+/**
+ * `closed`: the model finished the block (its `content_block_stop`) — it will
+ * not grow, though the transcript may not hold it yet. Absent while it is
+ * written, and on a snapshot from an agent started before blocks closed.
+ */
+const ClosedSchema = z.literal(true).optional();
+
 const TextBlockSchema = z.object({
   kind: z.literal("text"),
   index: z.number().int(),
   text: z.string(),
+  closed: ClosedSchema,
 });
 const ThinkingBlockSchema = z.object({
   kind: z.literal("thinking"),
   index: z.number().int(),
   text: z.string(),
+  closed: ClosedSchema,
 });
 const ToolUseBlockSchema = z.object({
   kind: z.literal("tool_use"),
@@ -29,6 +38,7 @@ const ToolUseBlockSchema = z.object({
   name: z.string(),
   /** The tool input's JSON as written so far — a prefix, not a document. */
   inputJson: z.string(),
+  closed: ClosedSchema,
 });
 
 /**
@@ -71,6 +81,7 @@ const OpenedBlockSchema = z.discriminatedUnion("kind", [
  *   delta for a block never opened is text, which is all an agent started
  *   before blocks had kinds ever sends);
  * - `delta` — text appended to one block (its text, or its tool input's JSON);
+ * - `close` — one block is finished: the model wrote all of it;
  * - `clear` — the message will never land (interrupted, failed): drop it.
  */
 export const PartialFrameSchema = z.discriminatedUnion("type", [
@@ -85,6 +96,7 @@ export const PartialFrameSchema = z.discriminatedUnion("type", [
     index: z.number().int(),
     text: z.string(),
   }),
+  z.object({ type: z.literal("close"), index: z.number().int() }),
   z.object({ type: z.literal("clear") }),
 ]);
 export type PartialFrame = z.infer<typeof PartialFrameSchema>;
@@ -114,6 +126,18 @@ export function applyPartialFrame(
       return { messageId: frame.messageId, blocks: [] };
     case "clear":
       return null;
+    case "close": {
+      if (!state)
+        throw new Error("partial message: a block closed before any message");
+      // A block the page never drew (an empty text block, redacted thinking,
+      // a server tool's) closes too: nothing to mark.
+      return {
+        messageId: state.messageId,
+        blocks: state.blocks.map((b) =>
+          b.index === frame.index ? { ...b, closed: true } : b,
+        ),
+      };
+    }
     case "open": {
       if (!state)
         throw new Error("partial message: a block opened before any message");
@@ -179,7 +203,7 @@ function deltaFrameOf(index: number, d: BlockDelta): PartialFrame | null {
 
 /**
  * The frame one SDK stream event makes, or null when it changes nothing the
- * page draws (a signature, citations, a block closing, a server tool's block,
+ * page draws (a signature, citations, a server tool's block,
  * a sub-agent's stream). Typed by the pinned SDK, so an upgrade that changes
  * the stream fails here.
  */
@@ -231,9 +255,10 @@ export function partialFrameOf(
     }
     case "content_block_delta":
       return deltaFrameOf(e.index, e.delta);
-    // The message ending, its usage, a block closing: nothing to draw. Named,
-    // not defaulted, so a new event kind in an SDK upgrade is a decision here.
     case "content_block_stop":
+      return { type: "close", index: e.index };
+    // The message ending, its usage: nothing to draw. Named, not defaulted,
+    // so a new event kind in an SDK upgrade is a decision here.
     case "message_delta":
     case "message_stop":
       return null;

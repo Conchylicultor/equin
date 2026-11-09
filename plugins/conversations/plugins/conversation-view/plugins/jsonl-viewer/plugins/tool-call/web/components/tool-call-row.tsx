@@ -1,14 +1,18 @@
 import { useMemo } from "react";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
-import { useStreamingRow } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
+import {
+  useBlockWriting,
+  useStreamingRow,
+} from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { JsonlViewerTool } from "../slots";
-import type { ToolCallEvent } from "../../core";
+import { inputSummary, type ToolCallEvent } from "../../core";
 import { ToolCallCard } from "./tool-call-card";
 import { ToolFooterContext } from "../internal/footer-context";
 
 export function ToolCallRow({ event }: { event: JsonlEvent }) {
   const e = event as ToolCallEvent;
   const streaming = useStreamingRow();
+  const writing = useBlockWriting();
   const match = JsonlViewerTool.Renderer.useMatch();
   const footer = useMemo(
     () => ({
@@ -22,13 +26,16 @@ export function ToolCallRow({ event }: { event: JsonlEvent }) {
     [e],
   );
   if (streaming) {
-    // The model is still writing the call: only a renderer that draws a
-    // partial input gets it; any other would meet fields that are not there
-    // yet. Nothing has run, so there is no footer.
-    return match({ event: e })?.partialInput ? (
-      <JsonlViewerTool.Renderer.Dispatch event={e} />
+    // A stand-in: the transcript does not hold the call yet (it lands with its
+    // result). While the model still writes it, only a renderer that draws a
+    // partial input gets it — any other would meet fields that are not there
+    // yet — and the rest show the bare card, its summary read from what is
+    // written so far. Once written, the input is whole: its own renderer draws
+    // it while it runs. The footer is what the call left behind; nothing has.
+    return writing && !match({ event: e })?.partialInput ? (
+      <ToolCallCard event={e} summary={inputSummary(e.input)} />
     ) : (
-      <ToolCallCard event={e} />
+      <JsonlViewerTool.Renderer.Dispatch event={e} />
     );
   }
   // The footer is drawn inside whichever renderer's card — `ToolCallCard`

@@ -9,17 +9,25 @@ import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 // Held in memory only: a backend restart mid-message loses it, the finished
 // message still arrives.
 
+/**
+ * `closed`: the model finished the block — it will not grow, though the
+ * transcript may not hold it yet. Absent while it is written.
+ */
+const ClosedSchema = z.literal(true).optional();
+
 /** One block of the streaming message, by its content-block index. */
 export const PartialBlockSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("text"),
     index: z.number().int(),
     text: z.string(),
+    closed: ClosedSchema,
   }),
   z.object({
     kind: z.literal("thinking"),
     index: z.number().int(),
     text: z.string(),
+    closed: ClosedSchema,
   }),
   z.object({
     kind: z.literal("tool_use"),
@@ -29,6 +37,7 @@ export const PartialBlockSchema = z.discriminatedUnion("kind", [
     name: z.string(),
     /** The input's JSON as written so far: a prefix, not a document. */
     inputJson: z.string(),
+    closed: ClosedSchema,
   }),
 ]);
 export type PartialBlock = z.infer<typeof PartialBlockSchema>;

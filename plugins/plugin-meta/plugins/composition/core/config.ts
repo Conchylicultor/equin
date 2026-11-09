@@ -431,6 +431,10 @@ export const compositionsConfig = defineConfig({
             // leaves with them. Written here because the cascade took it out
             // of `tasks.**` without a word until `cascadeLosses` said so.
             "!tasks.task-triage",
+            // The task_submit_triage tool call's renderer draws its verdict
+            // with the Triage card's labels (task-triage/core), so it leaves
+            // with it.
+            "!conversations.conversation-view.jsonl-viewer.tool-call.task-triage",
             // Kept under those negatives: the mandate capabilities as plain
             // data. `tasks.mandate-presets` (which every task runs with)
             // grants them from its `shared/`, so the features leave and the
