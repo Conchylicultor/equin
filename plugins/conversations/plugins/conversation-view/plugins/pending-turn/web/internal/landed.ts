@@ -78,11 +78,34 @@ export function transcriptShows(
 
 /** Whether a turn's transcript line — under `uuid`, or merged into another's — is in `events`. */
 function holdsLine(events: readonly JsonlEvent[], uuid: string): boolean {
-  return events.some((event) =>
+  return lineOf(events, uuid) !== undefined;
+}
+
+/** The event holding a turn's line — under `uuid`, or merged into another's. */
+function lineOf(
+  events: readonly JsonlEvent[],
+  uuid: string,
+): JsonlEvent | undefined {
+  return events.find((event) =>
     event.kind === "compaction"
       ? event.requestUuid === uuid
       : (event.kind === "user-text" || event.kind === "event-turn") &&
         (event.uuid === uuid || event.mergedSendUuids?.includes(uuid) === true),
+  );
+}
+
+/**
+ * The event in `events` holding `row`'s own line — by its id's uuid, or the
+ * uuid the agent confirmed it as — or undefined when the window does not
+ * hold it (not landed yet, or above the window).
+ */
+export function turnLineIn(
+  row: Pick<LedgerTurn, "id" | "promptUuid">,
+  events: readonly JsonlEvent[],
+): JsonlEvent | undefined {
+  return (
+    lineOf(events, transcriptUuidOfTurn(row.id)) ??
+    (row.promptUuid === null ? undefined : lineOf(events, row.promptUuid))
   );
 }
 

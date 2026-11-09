@@ -6,6 +6,14 @@ import type { TranscriptImageRead } from "./image-key";
 export interface TranscriptSnapshot {
   events: JsonlEvent[];
   signature: string;
+  /**
+   * When the transcript changed (wall-clock epoch ms — on the desktop, its
+   * files' newest mtime), present when this snapshot follows a change the
+   * watch saw; absent on its first read, which is a seed, not a change. A
+   * value notified from the snapshot passes it on (`notify({ changedAt })`),
+   * so its update latency starts at the write, not when the watch heard it.
+   */
+  changedAt?: number;
 }
 
 /**

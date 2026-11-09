@@ -39,7 +39,12 @@ void mock.module("./parse-jsonl", () => ({
   },
 }));
 
-const { watchTranscript, refreshConversationChain } = await import("./watcher");
+const {
+  watchTranscript,
+  refreshConversationChain,
+  stopTranscriptWatcher,
+  transcriptFollowsWatcher,
+} = await import("./watcher");
 const { transcriptChainSignature } = await import("./chain-signature");
 
 let seq = 0;
@@ -226,5 +231,54 @@ describe("processRoom", () => {
 
     expect(late.snapshots[0]).toEqual(first.snapshots[0]!);
     expect(late.snapshots[0]!.signature).toBe(await transcriptChainSignature(chainPaths));
+  });
+});
+
+// LAST in the file: registering the follow declaration is process-wide, and
+// the suites above exercise rooms with no follow at all.
+describe("a fixed room follows its files over kqueue", () => {
+  let dir: string;
+  let transcript: string;
+
+  beforeEach(async () => {
+    dir = await mkdtemp(join(tmpdir(), "transcript-follow-"));
+    transcript = join(dir, "session-a.jsonl");
+    chainPaths = [transcript];
+    duringRead = null;
+    seq = 0;
+  });
+
+  afterEach(async () => {
+    await stopTranscriptWatcher();
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  test("an append is heard with no tree watch and no refresh, stamped with its write time", async () => {
+    transcriptFollowsWatcher.register();
+    await writeFile(transcript, line("first"));
+    const c = collector();
+    const first = c.next();
+    const un = watchTranscript(`conv-${seq}-follow`, c.listen);
+    await first;
+    // The seed is not a change: no time to measure from.
+    expect(c.snapshots[0]!.changedAt).toBeUndefined();
+
+    // Nothing but the kqueue follow can hear this (the FSEvents tree watch was
+    // never started); the follow opens a moment after the first read.
+    let heard = c.next();
+    for (let i = 0; i < 50 && c.snapshots.length < 2; i++) {
+      await appendFile(transcript, line(`more ${i}`));
+      await Promise.race([heard, new Promise((r) => setTimeout(r, 100))]);
+      heard = c.next();
+    }
+    expect(c.snapshots.length).toBeGreaterThanOrEqual(2);
+    const changed = c.snapshots[1]!;
+    const { mtimeMs } = await import("node:fs/promises").then((fs) =>
+      fs.stat(transcript),
+    );
+    expect(changed.changedAt).toBeDefined();
+    expect(changed.changedAt!).toBeLessThanOrEqual(mtimeMs);
+    expect(Date.now() - changed.changedAt!).toBeLessThan(5000);
+    un();
   });
 });

@@ -197,6 +197,17 @@ one report about the gate, not one per waiting resource. `Aggregate.totalMs`
 stays the WALL sum: a view, never a cost to judge. See
 `research/2026-07-02-global-profiler-wait-propagation.md`.
 
+### Unfiled residue is the entry's own (`residueMs`)
+
+A closing entry offers each gate's residue (its unfiled queue/io waits,
+summed) to `onSlowWait` FIRST; what no subscriber filed comes off
+`excludedMs` (`SlowSpan.residueMs`), so the entry is judged on own +
+unreported waits against its own bar. Filed, it takes the residue (not handed
+on); unfiled, the residue climbs to the nearest open ancestor, then the
+gate's window. Without it, 0.6 s own + a 1.5 s wait at a 2 s bar filed
+nothing: each part was judged alone. Invariant: a wait taken off one report is
+reported somewhere at the same bar.
+
 ### Claims — one slow op, filed once (`excludedMs` / `claims`)
 
 An `onSlowSpan` handler gets `(span, claim)`. Calling `claim()` says "I filed

@@ -7,6 +7,8 @@ export const LATENCY_METRICS = [
   "navigate",
   "update-e2e",
   "deliver-server",
+  "watch-delivery",
+  "turn-echo",
   "thread-lag",
 ] as const;
 export type LatencyMetric = (typeof LATENCY_METRICS)[number];
@@ -31,14 +33,27 @@ export const METRIC_LABELS: Record<
     label: "Delivery (server side)",
     what: "From the server noticing a change to sending it. Blind to a stalled server: its clock starts when the server gets round to reading the change.",
   },
+  "watch-delivery": {
+    label: "File change heard",
+    what: "A write to a watched file, until the app's watch hears it — the operating system's delay, before anything of the app's runs. A value read from files is that much late before its update even starts.",
+  },
+  "turn-echo": {
+    label: "Message shown",
+    what: "The agent taking a sent message, until the transcript line it wrote is on screen in an open tab.",
+  },
   "thread-lag": {
     label: "Server thread lag",
     what: "The worst delay of the serving thread in each 10-second window.",
   },
 };
 
-/** Metrics the browser reports (the server records the other two itself). */
-export const CLIENT_METRICS = ["page-load", "navigate", "update-e2e"] as const;
+/** Metrics the browser reports (the server records the others itself). */
+export const CLIENT_METRICS = [
+  "page-load",
+  "navigate",
+  "update-e2e",
+  "turn-echo",
+] as const;
 export type ClientLatencyMetric = (typeof CLIENT_METRICS)[number];
 
 // A minute is "under pressure" when the machine was short of memory in it, or the

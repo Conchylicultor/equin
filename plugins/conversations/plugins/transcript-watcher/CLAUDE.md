@@ -18,6 +18,21 @@ One `parcel.subscribe(CLAUDE_PROJECTS_DIR)` covers all active conversations. A p
 
 **A room with nothing on disk yet is pending, not polled.** When `resolve` finds no files and no directory (Claude has not written the transcript, no session recorded), the room registers nowhere and waits for a push: its `refreshOn` tag (`refreshConversationChain`, fired by the status reconciler only once the session's file exists). Never re-add a timer loop here — the old 1 s `retryUntil` ran one chain lookup per second per pending room, for as long as Claude took to start, and for hours on a conversation whose transcript never lands. A room that can resolve empty must carry a `refreshOn` tag.
 
+**A fixed room follows its files over kqueue** (`transcript-watcher.followed-files`,
+`writesWhileOpen`): the files of a conversation's chain or one sub-agent
+transcript are named, so each write is heard in milliseconds. The tree watch
+(FSEvents) stays for what has no path yet — a discovered room's new files, a
+session's birth — and as a second trigger (an unmoved signature returns at
+once). FSEvents alone delivered a transcript line ~60 s late on 2026-11-09
+(fseventsd stuck at one core; see file-watcher's *Delivery lag*). A follow
+that fails to open is reported; the room then hears its files through the tree
+watch only.
+
+**A snapshot carries when the files changed** (`changedAt`: their newest
+mtime), except on a room's first read. Values notified from it pass it on
+(`notify({ changedAt })`, network/live), so their update latency starts at the
+write.
+
 **Restart recovery**: room creation triggers an immediate seed read, so any events that landed during server downtime are delivered to subscribers on reconnect. `turn-emitter`'s `hasPendingTrigger` logic hooks into this seed callback.
 
 ## One conversation, one projects directory — looked up, never searched
@@ -132,7 +147,9 @@ memo degrades to a full chain re-read on every push.
     - `watchPaths`
     - `watchTranscript`
     - `watchTranscriptFile`
-  - Register: `defineFileWatcher('transcript-watcher.transcripts')`
+  - Register:
+    - `defineFileWatcher('transcript-watcher.transcripts')`
+    - `defineFileWatcher('transcript-watcher.followed-files')`
 - Cross-plugin:
   - Imported by:
     - `apps/prototypes/checkpoints`

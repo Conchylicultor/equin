@@ -12,7 +12,9 @@ catalog's server barrel.
 - **Facts.** `Open` (instance count), `Backend` (FSEvents, or kqueue for a
   `writesWhileOpen` watcher on darwin — one descriptor per file), one `Watching`
   fact per open instance (label, dirs, since when; at most 10, then a count),
-  `Last change` (event count, time, sample paths), `Reconcile` when declared.
+  `Last change` (event count, time, sample paths), `Heard after` (the last
+  delivery-lag sample: how long after a write the watch reported it — see
+  the file-watcher's *Delivery lag*), `Reconcile` when declared.
 - **Runs.** Each `onChange` / `onLost` dispatch is a run, kept in memory by
   the file-watcher registry (a ring of the last 20 plus counters). No Run now:
   a watcher reacts to the disk, it is not a task.

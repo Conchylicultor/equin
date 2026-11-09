@@ -24,6 +24,12 @@ import { defineObservationSink } from "@plugins/primitives/plugins/report-sink/c
  *   request could not be timed so, all of it in `ack-unsplit` (the split
  *   phases then 0, and `ack-unsplit` 0 whenever the split exists). Then
  *   `confirm-frame` (ack → confirmation).
+ * - `turn-echo`: the agent took a sent message (its ledger row's
+ *   `submittedAt`) → the transcript line it wrote is in this tab's window,
+ *   so its "Sending…" echo is gone. `agent-write` (taken → the line's own
+ *   timestamp: the agent's CLI writing it), `delivery` (the line written →
+ *   on screen: the host's watch hearing the file, the server and the push —
+ *   the `update` sample of the same frame splits it further).
  */
 export const CLIENT_LATENCY_SIGNALS = {
   update: [
@@ -44,6 +50,7 @@ export const CLIENT_LATENCY_SIGNALS = {
     "ack-unsplit",
     "confirm-frame",
   ],
+  "turn-echo": ["agent-write", "delivery"],
 } as const;
 
 export type ClientLatencySignal = keyof typeof CLIENT_LATENCY_SIGNALS;
@@ -78,6 +85,8 @@ export const EXCLUDED_PHASES: {
   update: { "throttle-hold": "declared", "server-deliver": "server" },
   // The handler's own time: the server files its route span when slow.
   confirm: { server: "server" },
+  // Both are what the user waits on; neither is judged anywhere else.
+  "turn-echo": {},
 };
 
 /**

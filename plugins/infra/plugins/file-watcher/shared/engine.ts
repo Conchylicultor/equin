@@ -1,6 +1,6 @@
 import type * as parcel from "@parcel/watcher";
 import { type FSWatcher, watch as fsWatch } from "node:fs";
-import { realpath, stat } from "@plugins/packages/plugins/timed-fs/core";
+import { lstat, realpath, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { basename, dirname, extname, join } from "node:path";
 import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import {
@@ -20,6 +20,12 @@ import {
 import { createWrapper } from "@parcel/watcher/wrapper";
 import { WatchedDirGoneError } from "./dir-gone";
 import { followFiles } from "./follow-files";
+import {
+  createDeliveryLagProbe,
+  type DeliveryLagHost,
+  type DeliveryLagSample,
+} from "./delivery-lag";
+import { readSleepClock } from "@plugins/packages/plugins/sleep-clock/core";
 
 export { WatchedDirGoneError } from "./dir-gone";
 
@@ -128,6 +134,13 @@ interface WatchOptionsBase {
    * watched path's basename.
    */
   name?: string;
+  /**
+   * How late the OS reported a write: the instance samples its batches as the
+   * native watch delivers them — before the debounce, so a declared hold is
+   * not in it — at most one every few seconds (see `delivery-lag.ts`), and
+   * hands each sample here. Absent: nothing is measured.
+   */
+  onDeliveryLag?: (sample: DeliveryLagSample) => void;
 }
 
 /** A watch of directories: every change of what they hold. */
@@ -296,8 +309,13 @@ export async function createFileWatcher(
 
   /** Hand events to the reaction: at once, or batched by the debounce. */
   let stopped = false;
+  const probe =
+    opts.onDeliveryLag === undefined
+      ? null
+      : createDeliveryLagProbe(DELIVERY_LAG_HOST, opts.onDeliveryLag);
   const deliver = (events: parcel.Event[]): void => {
     if (stopped || events.length === 0) return;
+    probe?.(events, Date.now());
     if (debounceMs === 0) {
       changes.trigger(events);
     } else {
@@ -586,6 +604,29 @@ export function parcelBatchHandler(
 }
 
 /** Whether `path` is there now; a missing (or no longer a dir's) entry is not. */
+// A path that went, or that this account may not stat, between its event and
+// the delivery-lag probe: nothing to read the lag on. Anything else throws.
+const NOT_READABLE = new Set(["ENOENT", "ENOTDIR", "EACCES", "EPERM"]);
+
+const DELIVERY_LAG_HOST: DeliveryLagHost = {
+  async ctimeOf(path) {
+    try {
+      return (await lstat(path)).ctimeMs;
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code !== undefined && NOT_READABLE.has(code)) return null;
+      throw err;
+    }
+  },
+  // Only the last wake is placed on the wall clock (`kern.waketime`); an
+  // earlier sleep inside a lag of hours is not seen.
+  wokeBetween(from, to) {
+    const clock = readSleepClock();
+    if (!clock.supported || clock.wakeAtMs === null) return false;
+    return clock.wakeAtMs > from && clock.wakeAtMs <= to;
+  },
+};
+
 async function entryExists(path: string): Promise<boolean> {
   try {
     await stat(path);

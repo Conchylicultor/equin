@@ -687,6 +687,94 @@ describe("queue residue — many small waits are reported against the gate", () 
     expect(filed).toEqual([]);
   });
 
+  // The own-time hole: a 0.6 s op that queued 1.5 s at a 2 s bar was judged
+  // in two halves — its own time (0.6 s) and its residue (1.5 s) — neither
+  // reaching the bar, so the 2.1 s op filed nothing anywhere.
+  describe("residue no gate report took is the entry's own", () => {
+    // Files every span whose own time (`durationMs − excludedMs`) reaches
+    // `bar`, the way slow-ops' install hook does.
+    function fileSpansOver(bar: number, filed: string[]) {
+      return onSlowSpan(
+        (span, claim) => {
+          const own = span.durationMs - span.excludedMs;
+          if (own < bar) return;
+          claim();
+          filed.push(
+            `${span.kind}:${span.label} own ${own} residue ${span.residueMs ?? 0}`,
+          );
+        },
+        { thresholdMs: 0 },
+      );
+    }
+
+    test("0.6 s own + a 1.5 s wait at a 2 s bar files the op once", async () => {
+      const spans: string[] = [];
+      const waits: string[] = [];
+      const s = fileSpansOver(2000, spans);
+      const w = fileWaitsOver(2000, waits);
+      try {
+        await recordEntrySpan("sub", "s", async () => {
+          await recordEntrySpan("loader", "l", () => {
+            waitsInARow("read-admit", 1, 1500);
+            fakeNow += 600; // own work
+          });
+        });
+        // The residue the loader's report took is not offered again: not by
+        // `s`, and not by the gate's window, however much more queues.
+        await recordEntrySpan("sub", "t", () => {
+          waitsInARow("read-admit", 1, 1900);
+        });
+      } finally {
+        s.dispose();
+        w.dispose();
+      }
+      expect(spans).toEqual(["loader:l own 2100 residue 1500"]);
+      // `t`'s 1.9 s alone is under the bar, in the window alone.
+      expect(waits).toEqual([]);
+    });
+
+    test("a residue filed by its gate is not counted as the op's too", async () => {
+      const spans: string[] = [];
+      const waits: string[] = [];
+      const s = fileSpansOver(2000, spans);
+      const w = fileWaitsOver(2000, waits);
+      try {
+        await recordEntrySpan("loader", "l", () => {
+          waitsInARow("db-acquire", 25, 100); // 2.5 s, filed against the gate
+          fakeNow += 600;
+        });
+      } finally {
+        s.dispose();
+        w.dispose();
+      }
+      expect(waits).toEqual(["db-acquire 2500 loader:l ×25"]);
+      expect(spans).toEqual([]);
+    });
+
+    test("unfiled, the residue still climbs to the ancestor", async () => {
+      const spans: string[] = [];
+      const waits: string[] = [];
+      const s = fileSpansOver(2000, spans);
+      const w = fileWaitsOver(2000, waits);
+      try {
+        await recordEntrySpan("flush", "f", async () => {
+          for (const key of ["a", "b"])
+            await recordEntrySpan("loader", key, () => {
+              waitsInARow("read-admit", 1, 900);
+              fakeNow += 100;
+            });
+        });
+      } finally {
+        s.dispose();
+        w.dispose();
+      }
+      // Each loader: 1 s unreported. The flush: 1.8 s residue + 0.2 s own
+      // = 2 s, at the bar — filed by the flush, the gate's sum inside it.
+      expect(spans).toEqual(["flush:f own 2000 residue 1800"]);
+      expect(waits).toEqual([]);
+    });
+  });
+
   test("a join wait is never residue", async () => {
     const filed: string[] = [];
     const sub = fileWaitsOver(1000, filed);

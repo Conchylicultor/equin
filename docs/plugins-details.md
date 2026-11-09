@@ -20829,7 +20829,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `watchPaths`
           - `watchTranscript`
           - `watchTranscriptFile`
-        - Register: `defineFileWatcher('transcript-watcher.transcripts')`
+        - Register:
+          - `defineFileWatcher('transcript-watcher.transcripts')`
+          - `defineFileWatcher('transcript-watcher.followed-files')`
       - Cross-plugin:
         - Imported by:
           - `apps/prototypes/checkpoints`
@@ -22982,6 +22984,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/health-monitor.onHostSample`
           - `debug/health-monitor.onStackSamples`
           - `infra/endpoints.implement`
+          - `infra/file-watcher.onWatchDelivery`
           - `infra/host/duress/latch.isUnderDuress`
           - `infra/host/duress/shed.createShedBuffer`
           - `infra/retention.defineRetention`
@@ -28575,10 +28578,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `validatePersistedValue`
           - `withNotifyBatch`
       - Cross-plugin:
-        - Imported by: 107 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
+        - Imported by: 108 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
           - `infra` ×26
           - `debug` ×13
-          - `conversations` ×10
+          - `conversations` ×11
           - `tasks` ×10
           - `database` ×9
           - `apps` ×6
@@ -32589,9 +32592,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Register: `file-sink-exit-flush`
     - **`file-watcher`** — defineFileWatcher: the one declared in-process file watcher — a named, described declaration (static policy: extensions, ignore, debounce, ceiling, writesWhileOpen, depth, mainOnly) whose start({dirs, label, onChange, onLost}) — start({files, …}) for a writesWhileOpen one, which follows writes to the named files only (kqueue on darwin, one descriptor per file; every follow of a directory shares one subscription) — opens instances over one @parcel/watcher engine (debounce + ceiling flush; no timer — a dropped event is reported to onLost, the one backstop). Records per declaration its open instances, last change batch and a ring of handler runs for the Background activity catalog (onWatcherActivity / listFileWatchers / fileWatcherRecentRuns). The cli barrel's watchForCommand is the same engine for a foreground command, with no registry. acquireDirWatch({dir, scope, onChange}) is the shared directory-watch hub: one native watch per folder tree, refcounted, a dir under a watched root riding its watch, with subtree or children (depth-1 listing) scope — a children request with no root above it opening only a single-directory watch (depth children, fs.watch), never a recursive one.
       - Cross-plugin:
-        - Imported by: 39 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
+        - Imported by: 40 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
           - `infra` ×13
-          - `debug` ×7
+          - `debug` ×8
           - `build` ×5
           - `conversations` ×5
           - `apps` ×2
@@ -32609,6 +32612,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `boundaries/no-platform-api` — `server/internal/dir-hub.ts`, `shared/engine.ts`, `shared/follow-files.ts`, `shared/journal.ts`, `shared/new-dirs.ts` (debt)
       - Server:
         - Exports (types):
+          - `DeliveryLagSample`
           - `DirWatchRelease`
           - `DirWatchRequest`
           - `DirWatchScope`
@@ -32625,6 +32629,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `JournalCursorResult`
           - `JournalReplay`
           - `ServerFileWatcherSpec`
+          - `WatchDelivery`
           - `WatcherBackend`
           - `WatchLost`
           - `WatchReaction`
@@ -32636,6 +32641,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `journalChangesSince`
           - `journalCursor`
           - `listFileWatchers`
+          - `onWatchDelivery`
           - `onWatcherActivity`
           - `WatchedDirGoneError`
         - Register:
@@ -37148,6 +37154,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LiveWindowParams`
           - `NoFollows`
           - `NotCollectionRow`
+          - `NotifyValue`
           - `PagedChanges`
           - `RequireLabel`
           - `RowFieldState`
@@ -37169,6 +37176,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ServeValueOptions`
           - `SnapshotPairing`
           - `TreeRow`
+          - `ValueChange`
           - `WithContributedColumns`
         - Exports (values):
           - `clientFields`
@@ -38138,10 +38146,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `withDeadline`
     - **`error-subject`** — What an error is about, carried by the error: SubjectError (a shared throw site — the migration runner, the trigger installer — names the one subject it failed for), errorSubject(err) (the subjects along the cause chain plus the innermost class code, ENOENT / SQLSTATE) and crashFieldsOf(err, scope?) — the errorType / stack / scope every crash filer derives from an error, so a shared throw site's failures land on one report row per cause instead of one for all. Enforced by error-subject/crash-fields-of.
       - Cross-plugin:
-        - Imported by: 26 plugins — full list in [`plugins/packages/plugins/error-subject/REFERENCE.md`](../plugins/packages/plugins/error-subject/REFERENCE.md)
+        - Imported by: 27 plugins — full list in [`plugins/packages/plugins/error-subject/REFERENCE.md`](../plugins/packages/plugins/error-subject/REFERENCE.md)
           - `infra` ×8
+          - `conversations` ×5
           - `database` ×5
-          - `conversations` ×4
           - `reports` ×3
           - `debug` ×2
           - `network` ×2
@@ -38575,6 +38583,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `debug/health-monitor`
           - `debug/profiling/op-log`
+          - `infra/file-watcher`
           - `infra/host/machine-sleep`
           - `infra/spawn`
       - Exemptions:
@@ -50123,6 +50132,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `splitReachedPhases`
           - Cross-plugin:
             - Imported by:
+              - `conversations/conversation-view/pending-turn`
               - `debug/latency-ledger`
               - `debug/slow-ops`
               - `network/live`

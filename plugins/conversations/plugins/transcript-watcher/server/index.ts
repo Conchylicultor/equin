@@ -2,6 +2,7 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import {
   startTranscriptWatcher,
   stopTranscriptWatcher,
+  transcriptFollowsWatcher,
   transcriptsWatcher,
 } from "./internal/watcher";
 import { foreignSessionKind } from "./internal/foreign-session-kind";
@@ -57,7 +58,7 @@ export default {
   description:
     "Single @parcel/watcher-based JSONL transcript watcher. Replaces two independent 500ms pollers with one fan-out subscription.",
   contributions: [foreignSessionKind],
-  register: [transcriptsWatcher],
+  register: [transcriptsWatcher, transcriptFollowsWatcher],
   onReady: async () => {
     await startTranscriptWatcher();
   },

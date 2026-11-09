@@ -113,6 +113,7 @@ Consumers never name a signal: they read `signal` / `phases` generically.
     - `splitReachedPhases`
 - Cross-plugin:
   - Imported by:
+    - `conversations/conversation-view/pending-turn`
     - `debug/latency-ledger`
     - `debug/slow-ops`
     - `network/live`

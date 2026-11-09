@@ -229,13 +229,28 @@ interface FollowsOption<S, F> {
 }
 
 /**
+ * What a notifier may say about its change: when its source changed
+ * (`changedAt`, wall-clock epoch ms) — a file's write, the moment a watch
+ * heard of it later. Absent, the notify IS the change (`Date.now()`). It rides
+ * the pushed frame's `timing`, so the tab's `update` sample and the ledger's
+ * update delay start at the source, and a late watch shows as `server-notice`
+ * instead of happening before every clock.
+ */
+export interface ValueChange {
+  changedAt?: number;
+}
+
+/** A `"notified"` value's `notify`, as its hooks are handed it. */
+export type NotifyValue = (change?: ValueChange) => void;
+
+/**
  * `whileSubscribed`'s arguments beside its subject, per arm: none on a db
  * value (driven by the change feed alone), `notify` on a `"notified"` one.
  * The same with or without follows — the rows are `whileFollowing`'s.
  */
 type StartArgs<Src extends LiveValueSource> = Src extends "db"
   ? []
-  : [notify: () => void];
+  : [notify: NotifyValue];
 
 /**
  * `whileFollowing`'s `over` argument: the followed rows (`Followed<F>`) — and,
@@ -254,7 +269,7 @@ type OverArgs<F> =
  */
 type FollowingArgs<Src extends LiveValueSource, W> = Src extends "db"
   ? [ctx: { readonly over: W }]
-  : [ctx: { readonly over: W; readonly notify: () => void }];
+  : [ctx: { readonly over: W; readonly notify: NotifyValue }];
 
 /**
  * What `whileFollowing.start` returns: its stop — and, for a value with no
@@ -499,7 +514,7 @@ export interface CompiledValue<T, P extends Record<string, string>, S = P> {
    * external arm's second argument). Called once, right after registration; a
    * start that runs before it throws.
    */
-  bindNotify(notify: (params: P) => void): void;
+  bindNotify(notify: (params: P, change?: ValueChange) => void): void;
 }
 
 /**
@@ -1211,10 +1226,12 @@ function compilePagedOf(
   const held = (q: string) =>
     (pages.get(q)?.size ?? 0) + (metaHeld.has(q) ? 1 : 0);
 
-  let notifyPage: ((params: LivePagedParams) => void) | undefined;
-  let notifyMeta: ((params: LiveQueryParams) => void) | undefined;
+  let notifyPage:
+    ((params: LivePagedParams, change?: ValueChange) => void) | undefined;
+  let notifyMeta:
+    ((params: LiveQueryParams, change?: ValueChange) => void) | undefined;
   /** Every subscribed page of `q`, and its meta — what `notify(q)` reaches. */
-  const notifyQuestion = (q: string) => {
+  const notifyQuestion = (q: string, change?: ValueChange) => {
     if (
       notifyPage === undefined ||
       (metaValue !== undefined && notifyMeta === undefined)
@@ -1223,8 +1240,8 @@ function compilePagedOf(
         `serveValue("${value.key}"): notify used before the value was registered.`,
       );
     }
-    for (const tuple of pages.get(q)?.values() ?? []) notifyPage(tuple);
-    if (metaHeld.has(q)) notifyMeta!(metaKey(q));
+    for (const tuple of pages.get(q)?.values() ?? []) notifyPage(tuple, change);
+    if (metaHeld.has(q)) notifyMeta!(metaKey(q), change);
   };
 
   const follows = followsOf(value.key, opts.follows);
@@ -1240,14 +1257,16 @@ function compilePagedOf(
     );
   }
   const whileSubscribed = opts.whileSubscribed as
-    | ((query: unknown, notify: () => void) => StopFn | Promise<StopFn>)
+    | ((query: unknown, notify: NotifyValue) => StopFn | Promise<StopFn>)
     | undefined;
   const whileFollowing = followingHook(value.key, opts, follows);
   const questions = bothLifecycles<LiveQueryParams>(
     whileSubscribed === undefined
       ? undefined
       : pairLifecycle<LiveQueryParams>(({ q }) =>
-          whileSubscribed(codec.decodeQuery(q), () => notifyQuestion(q)),
+          whileSubscribed(codec.decodeQuery(q), (change) =>
+            notifyQuestion(q, change),
+          ),
         ),
     whileFollowing === undefined
       ? undefined
@@ -1255,7 +1274,7 @@ function compilePagedOf(
           ({ q }, over) =>
             whileFollowing.start(codec.decodeQuery(q), {
               over,
-              notify: () => notifyQuestion(q),
+              notify: (change?: ValueChange) => notifyQuestion(q, change),
             }),
           ({ q }, held) => whileFollowing.read(codec.decodeQuery(q), held),
         ),
@@ -1455,14 +1474,14 @@ export function compileValueOf<T, P extends Record<string, string>, S>(
   const subjects = subjectsOf<P, S>(value);
   const follows = followsOf(value.key, opts.follows);
 
-  let notify: ((params: P) => void) | undefined;
-  const notifyFor = (params: P) => () => {
+  let notify: ((params: P, change?: ValueChange) => void) | undefined;
+  const notifyFor = (params: P) => (change?: ValueChange) => {
     if (notify === undefined) {
       throw new Error(
         `serveValue("${value.key}"): notify used before the value was registered.`,
       );
     }
-    notify(params);
+    notify(params, change);
   };
   const whileSubscribed = opts.whileSubscribed as
     ((subject: S, ...rest: unknown[]) => StopFn | Promise<StopFn>) | undefined;
@@ -1829,7 +1848,7 @@ export function registerPagedOf(
     value as unknown as KeyedResourceContract<unknown[], LivePagedParams>,
     compiled.options,
   );
-  compiled.bindNotify((params) => pages.notify(params));
+  compiled.bindNotify((params, change) => pages.notify(params, change));
   const metaValue = value.meta as
     LiveQueryValue<unknown, unknown, unknown, LiveValueOrigin> | undefined;
   let meta: RegisteredPaged<unknown, unknown, unknown>["meta"] = null;
@@ -1840,7 +1859,9 @@ export function registerPagedOf(
       },
       compiled.meta.options,
     );
-    compiled.meta.bindNotify((params) => resource.notify(params));
+    compiled.meta.bindNotify((params, change) =>
+      resource.notify(params, change),
+    );
     meta = { resource, compiled: compiled.meta };
   }
   return { resource: pages, compiled, meta };
@@ -1867,7 +1888,7 @@ export function registerValueOf<T, P extends Record<string, string>, S>(
   const contract = value as ResourceContract<T, P> & { keyed?: never };
   if (compiled.external) {
     const resource = runtime.defineExternalResource(contract, compiled.options);
-    compiled.bindNotify((params) => resource.notify(params));
+    compiled.bindNotify((params, change) => resource.notify(params, change));
     return { resource, compiled };
   }
   const resource = runtime.defineResource(contract, compiled.options);

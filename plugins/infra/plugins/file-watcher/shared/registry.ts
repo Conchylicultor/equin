@@ -14,6 +14,10 @@ import {
   type WatchLost,
   type WatcherBackend,
 } from "./engine";
+import { recordSpan } from "@plugins/infra/plugins/runtime-profiler/core";
+import type { DeliveryLagSample } from "./delivery-lag";
+
+export type { DeliveryLagSample } from "./delivery-lag";
 
 /** One filesystem change, as the engine delivers it. */
 export type FileChangeEvent = parcel.Event;
@@ -166,6 +170,11 @@ export interface FileWatcherSnapshot {
   backend: WatcherBackend;
   instances: FileWatcherInstanceInfo[];
   lastBatch: FileWatcherBatch | null;
+  /**
+   * How late this declaration's watch last reported a write (see
+   * {@link onWatchDelivery}); null before its first sample.
+   */
+  lastDelivery: DeliveryLagSample | null;
   /** Newest first, at most RECENT_RUNS_MAX. */
   recentRuns: BackgroundRun[];
   runs: number;
@@ -181,6 +190,7 @@ interface DeclState {
   declaredIn: string | null;
   instances: Map<number, FileWatcherInstanceInfo>;
   lastBatch: FileWatcherBatch | null;
+  lastDelivery: DeliveryLagSample | null;
   ring: BackgroundRun[];
   runs: number;
   failures: number;
@@ -217,6 +227,60 @@ function announce(name: string): void {
   for (const l of listeners) l(name);
 }
 
+/** One delivery-lag sample of one declaration, as {@link onWatchDelivery} hands it. */
+export interface WatchDelivery extends DeliveryLagSample {
+  /** The declaration's name. */
+  watcher: string;
+  backend: WatcherBackend;
+}
+
+const deliveryListeners = new Set<(delivery: WatchDelivery) => void>();
+
+/**
+ * Subscribe to every declared watcher's delivery-lag samples: how late the
+ * OS reported a write to it (the changed path's ctime → the batch's arrival,
+ * before any debounce), at most one per watcher instance every few seconds. The
+ * latency ledger keeps their distribution; each is also recorded as a latency
+ * leaf `bg watch-delivery:<backend>` (variant: the watcher), which slow-ops
+ * holds to the live-update bar — a write the app hears late is a tab that
+ * shows it late. Returns the unsubscribe.
+ */
+export function onWatchDelivery(
+  listener: (delivery: WatchDelivery) => void,
+): () => void {
+  deliveryListeners.add(listener);
+  return () => {
+    deliveryListeners.delete(listener);
+  };
+}
+
+function noteDelivery(state: DeclState, sample: DeliveryLagSample): void {
+  state.lastDelivery = sample;
+  const backend = backendOf(state.spec);
+  // Labelled by backend, the watcher its variant: the lag is the OS's queue
+  // (fseventsd holds every stream at once), so one slow backend is ONE row
+  // and one report, every watcher it delayed among its variants.
+  recordSpan(
+    "bg",
+    `watch-delivery:${backend}`,
+    sample.lagMs,
+    { variant: state.spec.name },
+    { latency: true },
+  );
+  const delivery: WatchDelivery = {
+    ...sample,
+    watcher: state.spec.name,
+    backend,
+  };
+  for (const l of deliveryListeners) l(delivery);
+}
+
+function backendOf(spec: FileWatcherSpec): WatcherBackend {
+  return spec.writesWhileOpen === true
+    ? watcherBackend(true)
+    : watcherBackend(false, spec.depth);
+}
+
 export function defineFileWatcherIn<S extends FileWatcherSpec>(
   spec: S,
   runtime: FileWatcherRuntime,
@@ -236,6 +300,7 @@ export function defineFileWatcherIn(
     declaredIn: null,
     instances: new Map(),
     lastBatch: null,
+    lastDelivery: null,
     ring: [],
     runs: 0,
     failures: 0,
@@ -271,6 +336,8 @@ export function defineFileWatcherIn(
         name: spec.name,
         debounceMs: spec.debounceMs,
         ceilingMs: spec.ceilingMs,
+        onDeliveryLag: (sample: DeliveryLagSample) =>
+          noteDelivery(state, sample),
         onLost:
           onLost === undefined
             ? undefined
@@ -446,13 +513,11 @@ export function listFileWatchers(): FileWatcherSnapshot[] {
     declaredIn: s.declaredIn,
     scope: s.runtime.scope,
     runsHere: s.runtime.runsHere,
-    backend:
-      s.spec.writesWhileOpen === true
-        ? watcherBackend(true)
-        : watcherBackend(false, s.spec.depth),
+    backend: backendOf(s.spec),
     // Spread: a snapshot reads each instance's live fold count now.
     instances: [...s.instances.values()].map((i) => ({ ...i })),
     lastBatch: s.lastBatch,
+    lastDelivery: s.lastDelivery,
     recentRuns: [...s.ring],
     runs: s.runs,
     failures: s.failures,

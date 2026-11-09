@@ -13,6 +13,7 @@ export {
   BATCH_SAMPLE_MAX,
   fileWatcherRecentRuns,
   listFileWatchers,
+  onWatchDelivery,
   onWatcherActivity,
 } from "../shared/registry";
 export type {
@@ -24,6 +25,8 @@ export type {
   FileWatcherSpec,
   FileWatcherStartOptions,
   FileFollowStartOptions,
+  DeliveryLagSample,
+  WatchDelivery,
 } from "../shared/registry";
 export { WatchedDirGoneError } from "../shared/engine";
 export { journalChangesSince, journalCursor } from "../shared/journal";

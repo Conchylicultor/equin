@@ -1,5 +1,6 @@
 import { onResourceDelivery } from "@plugins/framework/plugins/server-core/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
+import { onWatchDelivery } from "@plugins/infra/plugins/file-watcher/server";
 import { createShedBuffer } from "@plugins/infra/plugins/host/plugins/duress/plugins/shed/server";
 import { isUnderDuress } from "@plugins/infra/plugins/host/plugins/duress/plugins/latch/server";
 import {
@@ -171,6 +172,9 @@ export function startLatencyRecorder(): void {
   stops = [
     onResourceDelivery((_key, { latencyMs }) => {
       addSample(accFor(current(Date.now()), "deliver-server"), latencyMs);
+    }),
+    onWatchDelivery(({ lagMs, arrivedAt }) => {
+      addSample(accFor(current(arrivedAt), "watch-delivery"), lagMs);
     }),
     onHealthSample((sample) => {
       const s = current(sample.sampledAt);

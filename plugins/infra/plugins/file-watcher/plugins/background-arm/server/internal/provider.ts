@@ -31,6 +31,11 @@ function clock(d: Date, seconds: boolean): string {
   });
 }
 
+/** A delivery lag in words: ms under a second, else seconds. */
+function formatLag(ms: number): string {
+  return ms < 1000 ? `${Math.round(ms)} ms` : `${(ms / 1000).toFixed(1)} s`;
+}
+
 function facts(w: FileWatcherSnapshot): BackgroundFact[] {
   const out: BackgroundFact[] = [
     {
@@ -62,6 +67,13 @@ function facts(w: FileWatcherSnapshot): BackgroundFact[] {
     out.push({
       label: "Last change",
       value: `${b.eventCount} ${b.eventCount === 1 ? "event" : "events"} · ${clock(b.at, true)} · ${names}${more}`,
+    });
+  }
+  if (w.lastDelivery !== null) {
+    const d = w.lastDelivery;
+    out.push({
+      label: "Heard after",
+      value: `${formatLag(d.lagMs)} — a write to ${basename(d.path)} reached the watch that long after it happened · ${clock(new Date(d.arrivedAt), true)}`,
     });
   }
   const folded = w.instances.reduce((n, i) => n + i.foldedBatches, 0);

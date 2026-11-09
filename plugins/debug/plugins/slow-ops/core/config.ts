@@ -86,4 +86,6 @@ export const CLIENT_SIGNAL_THRESHOLD: Record<
 > = {
   update: "updateMs",
   confirm: "confirmMs",
+  // A message shown is a change reaching a tab: the live-update bar.
+  "turn-echo": "updateMs",
 };

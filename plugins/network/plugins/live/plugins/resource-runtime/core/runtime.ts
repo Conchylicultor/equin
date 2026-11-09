@@ -1104,8 +1104,13 @@ export interface ExternalResource<
    * parameterless resource. (An external resource is never routed, so there
    * are no row ids to scope a recompute to: a keyed external window re-reads
    * the tuple whole and ships its keyed diff.)
+   *
+   * `change.changedAt` (wall-clock epoch ms): when the external source itself
+   * changed, if the notifier knows — a file's write, heard later by a watch.
+   * It becomes the pending's `changedAt` (the frame's `timing`), so the tab's
+   * update latency starts there. Absent: the call is the change.
    */
-  notify(params?: P): void;
+  notify(params?: P, change?: { changedAt?: number }): void;
 }
 
 /**
@@ -5393,13 +5398,20 @@ export function createResourceRuntime(
           await entry.loader(canonicalTuple(entry, params)),
         );
       },
-      notify(params?: P): void {
+      notify(params?: P, change?: { changedAt?: number }): void {
         // A deferred placeholder not bound yet (a deferred external whose
         // watcher fired during the register phase) has nothing to recompute:
         // nothing can be served — so nobody holds a value — before its bind,
         // and its loader refuses until then.
         if (deferred.has(entry.key)) return;
-        scheduleNotify(entry, (params ?? {}) as ResourceParams, null);
+        scheduleNotify(
+          entry,
+          (params ?? {}) as ResourceParams,
+          null,
+          change?.changedAt === undefined
+            ? undefined
+            : { changedAt: change.changedAt },
+        );
       },
     };
   }

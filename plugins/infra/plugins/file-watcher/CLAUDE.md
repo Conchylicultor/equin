@@ -95,6 +95,28 @@ Linux) the upstream prebuild loads.
 A child, not this plugin's own `deps/`: the deps engine and the CLI exec
 context both import this plugin.
 
+## Delivery lag: how late the OS reported a write
+
+Every declared watcher measures it, on every backend: the engine samples the
+batches its native watch delivers (`shared/delivery-lag.ts`; before any
+debounce, at most one in flight and one per 5 s per instance) as the changed
+path's **ctime → the batch's arrival**. ctime, not mtime: a moved-in or
+`touch -t`'d file keeps an old mtime. A path changed again since it was heard
+is skipped (never 0); one rewritten before it is heard under-reads.
+
+- `recordSpan("bg", "watch-delivery:<backend>", lagMs, { variant: watcher }, { latency: true })`:
+  slow-ops holds it to the live-update bar — one row and one report per
+  backend (`watch-delivery:fs-events`), every watcher it delayed a variant.
+- `onWatchDelivery(listener)`: the latency ledger's `watch-delivery` metric.
+- The catalog's `Heard after` fact (`FileWatcherSnapshot.lastDelivery`).
+
+FSEvents' lag is fseventsd's queue, shared by every stream on the machine:
+measured 2026-11-09 with fseventsd stuck at one full core, p50 3–10 s,
+p90 13–14 s, in a fresh tmp dir as in `~/.claude/projects`; kqueue on the same
+files p50 0 ms, max 2 ms. A value a user waits on whose files are KNOWN
+follows them (`writesWhileOpen`) rather than riding a tree watch
+(`conversations/transcript-watcher`).
+
 ## Reactions are coalesced: return the work
 
 A reaction (`onChange`, `onLost` — the `WatchReaction` / `WatchLost`
@@ -321,9 +343,9 @@ re-created is watched again (a `rescan` on each appearing or going).
 
 - Description: defineFileWatcher: the one declared in-process file watcher — a named, described declaration (static policy: extensions, ignore, debounce, ceiling, writesWhileOpen, depth, mainOnly) whose start({dirs, label, onChange, onLost}) — start({files, …}) for a writesWhileOpen one, which follows writes to the named files only (kqueue on darwin, one descriptor per file; every follow of a directory shares one subscription) — opens instances over one @parcel/watcher engine (debounce + ceiling flush; no timer — a dropped event is reported to onLost, the one backstop). Records per declaration its open instances, last change batch and a ring of handler runs for the Background activity catalog (onWatcherActivity / listFileWatchers / fileWatcherRecentRuns). The cli barrel's watchForCommand is the same engine for a foreground command, with no registry. acquireDirWatch({dir, scope, onChange}) is the shared directory-watch hub: one native watch per folder tree, refcounted, a dir under a watched root riding its watch, with subtree or children (depth-1 listing) scope — a children request with no root above it opening only a single-directory watch (depth children, fs.watch), never a recursive one.
 - Cross-plugin:
-  - Imported by: 39 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 40 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra` ×13
-    - `debug` ×7
+    - `debug` ×8
     - `build` ×5
     - `conversations` ×5
     - `apps` ×2
@@ -341,6 +363,7 @@ re-created is watched again (a `rescan` on each appearing or going).
     - `boundaries/no-platform-api` — `server/internal/dir-hub.ts`, `shared/engine.ts`, `shared/follow-files.ts`, `shared/journal.ts`, `shared/new-dirs.ts` (debt)
 - Server:
   - Exports (types):
+    - `DeliveryLagSample`
     - `DirWatchRelease`
     - `DirWatchRequest`
     - `DirWatchScope`
@@ -357,6 +380,7 @@ re-created is watched again (a `rescan` on each appearing or going).
     - `JournalCursorResult`
     - `JournalReplay`
     - `ServerFileWatcherSpec`
+    - `WatchDelivery`
     - `WatcherBackend`
     - `WatchLost`
     - `WatchReaction`
@@ -368,6 +392,7 @@ re-created is watched again (a `rescan` on each appearing or going).
     - `journalChangesSince`
     - `journalCursor`
     - `listFileWatchers`
+    - `onWatchDelivery`
     - `onWatcherActivity`
     - `WatchedDirGoneError`
   - Register:

@@ -1,4 +1,5 @@
 import { createRefcountHub } from "@plugins/packages/plugins/refcount-hub/core";
+import type { ValueChange } from "@plugins/network/plugins/live/core";
 import { TranscriptSource } from "@plugins/conversations/plugins/transcript-source/server";
 import type {
   JsonlEvent,
@@ -19,12 +20,19 @@ import {
 // of them is told, so their recomputes all read the snapshot the watch just
 // read. The memo entry is evicted with the last holder — never by one value
 // leaving while another still reads it.
-const hub = createRefcountHub<readonly JsonlEvent[]>((conversationId, emit) => {
+// Each emit carries when the transcript changed (`ValueChange`), which every
+// value notified from it passes on — their update latency starts at the write.
+interface EventsChange {
+  events: readonly JsonlEvent[];
+  change: ValueChange;
+}
+
+const hub = createRefcountHub<EventsChange>((conversationId, emit) => {
   const unsub = TranscriptSource.get().watch(
     conversationId,
-    ({ events, signature }) => {
+    ({ events, signature, changedAt }) => {
       primeJsonlEvents(conversationId, signature, events);
-      emit(events);
+      emit({ events, change: changedAt === undefined ? {} : { changedAt } });
     },
   );
   return () => {
@@ -42,9 +50,9 @@ const hub = createRefcountHub<readonly JsonlEvent[]>((conversationId, emit) => {
  */
 export function watchConversationEvents(
   conversationId: string,
-  onChange: () => void,
+  onChange: (change: ValueChange) => void,
 ): () => void {
-  const hold = hub.acquire(conversationId, () => onChange());
+  const hold = hub.acquire(conversationId, ({ change }) => onChange(change));
   return () => hold.release();
 }
 
@@ -71,7 +79,7 @@ export function derivedFromEvents<P extends { id: string }, T>(
   /** The value for `params` over `events` — the loader's half. */
   load: (params: P, events: readonly JsonlEvent[]) => T;
   /** Watch conversation `params.id`, notifying when the value moved — a `whileSubscribed` body. */
-  watch: (params: P, notify: () => void) => () => void;
+  watch: (params: P, notify: (change: ValueChange) => void) => () => void;
 } {
   const last = new Map<string, { json: string; value: T }>();
   return {
@@ -86,7 +94,7 @@ export function derivedFromEvents<P extends { id: string }, T>(
     },
     watch: (params, notify) => {
       const k = key(params);
-      const hold = hub.acquire(params.id, (events) => {
+      const hold = hub.acquire(params.id, ({ events, change }) => {
         const previous = last.get(k);
         if (
           previous !== undefined &&
@@ -94,7 +102,7 @@ export function derivedFromEvents<P extends { id: string }, T>(
         ) {
           return;
         }
-        notify();
+        notify(change);
       });
       return () => {
         hold.release();

@@ -240,6 +240,8 @@ export type {
   ServedFor,
   ServedValueBase,
   SnapshotPairing,
+  NotifyValue,
+  ValueChange,
 } from "./internal/compile-value";
 export {
   FOLLOW_SOURCE,

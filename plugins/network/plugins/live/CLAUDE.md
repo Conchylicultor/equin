@@ -1222,6 +1222,10 @@ useLive(folderListing, expanded.map((dir) => ({ dir })));
   fan-out for values that move together.
 - **`whileSubscribed(params, notify?) → stop | Promise<stop>`** — start/stop
   as one function, refcounted per tuple; db arm gets `params` only.
+  `notify({ changedAt })` (`ValueChange`, epoch ms) says when the source
+  itself changed — a file's write, heard later by a watch — so the frame's
+  `timing` and the tab's `update` / `update-e2e` start there (a late watch
+  shows as `server-notice`). Omitted, the notify is the change.
 - **`revalidate`** — ETag signature (not on snapshot), e.g. `createSignedMemo`.
 - **`readCost: "memory"`** (external, non-paged) — the loader and
   `revalidate` answer from memory this process holds (a constant, a memo
@@ -1723,6 +1727,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `LiveWindowParams`
     - `NoFollows`
     - `NotCollectionRow`
+    - `NotifyValue`
     - `PagedChanges`
     - `RequireLabel`
     - `RowFieldState`
@@ -1744,6 +1749,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `ServeValueOptions`
     - `SnapshotPairing`
     - `TreeRow`
+    - `ValueChange`
     - `WithContributedColumns`
   - Exports (values):
     - `clientFields`

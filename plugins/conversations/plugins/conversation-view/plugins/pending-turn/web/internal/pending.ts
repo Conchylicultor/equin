@@ -20,6 +20,7 @@ import type {
 import { isTurnRunning } from "@plugins/conversations/core";
 import { transcriptHoldsTurn, transcriptShows } from "./landed";
 import { useSentTurns, useSettleSentTurns, type SentTurn } from "./send";
+import { useTurnEchoLatency } from "./turn-echo";
 
 /**
  * Where a turn the transcript should show a card for stands: a ledger state,
@@ -155,6 +156,16 @@ export function usePendingTurns(
   useEffect(() => {
     if (rows) settleSentTurns(conversationId, new Set(rows.map((r) => r.id)));
   }, [conversationId, rows, settleSentTurns]);
+  // How long each taken turn's line took to reach this tab (`turn-echo`).
+  useTurnEchoLatency(
+    conversationId,
+    rows,
+    foldResource(events, {
+      loading: () => undefined,
+      error: (_error, stale) => stale,
+      ready: (data) => data,
+    }),
+  );
   const both = useCombinedResources({ ledger, events });
   return useMemo(
     () =>

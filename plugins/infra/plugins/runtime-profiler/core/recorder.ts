@@ -81,10 +81,14 @@ import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core"
 // reported against its gate somewhere. One wait past a bar is filed where it
 // happens (`chargeWait`). One a subscriber did not file is RESIDUE, carried
 // upward like a child's execution interval: kept on the innermost open entry,
-// offered as one wait (its sum, the entry its caller) when that entry closes,
-// and — still unfiled — handed to the nearest open ancestor
-// (`fileQueueResidue`). So 40 queries × 150 ms is one 6 s wait, filed once,
-// by the innermost entry it is slow for. Residue that leaves the top of its
+// offered as one wait (its sum, the entry its caller) when that entry closes
+// (`offerQueueResidue`). So 40 queries × 150 ms is one 6 s wait, filed once,
+// by the innermost entry it is slow for. Still unfiled, it is the ENTRY's
+// again: judged with its own time against its bar (`SlowSpan.residueMs`), so
+// a 0.6 s op that queued 1.5 s at a 2 s bar is filed as the 2.1 s op it was —
+// a wait taken off one report is always reported somewhere at the same bar.
+// Only when that files nothing too is it handed to the nearest open ancestor
+// (`handResidueOn`), which judges it the same way. Residue that leaves the top of its
 // chain unfiled (each request waited a little) lands in the gate's window
 // (`addGateWindow`): summed across independent ops for `GATE_WINDOW_MS` and
 // filed as the gate's own when the sum reaches a bar — a pool saturated by
@@ -273,9 +277,19 @@ export interface SlowSpan {
    * Union of the time that is not this span's own: its gate waits ∪ the
    * intervals of enclosed spans already filed as slow ops of their own
    * (`claims`). `≤ durationMs`. What a monitor judges is `durationMs −
-   * excludedMs` (see `onSlowSpan`'s `claim`).
+   * excludedMs` (see `onSlowSpan`'s `claim`) — less any {@link residueMs}.
    */
   excludedMs: number;
+  /**
+   * Gate waits inside this span that no gate report covered: its queue
+   * residue left unfiled once offered to `onSlowWait` (`offerQueueResidue`).
+   * Already taken OFF `excludedMs` — a wait no report holds stays this span's
+   * to report, so time subtracted from it is always reported somewhere at the
+   * same bar. Filed, the span takes it (the residue goes no further); unfiled,
+   * it moves on to the nearest open ancestor, then the gate's window. Absent
+   * when none.
+   */
+  residueMs?: number;
   /**
    * Time this span spent inside enclosed ops that were filed as their own slow
    * op, by claimant (`<kind> <label>` → ms, a union per claimant). For a
@@ -573,7 +587,7 @@ export { pushBand as __pushBand };
 /**
  * One `queue` layer's unfiled residue on one entry (`EntryContext.queueTallies`):
  * the summed waiter time of the waits it holds. Offered capped at the entry's
- * union on the layer (`fileQueueResidue`): concurrent waiters overlap, and the
+ * union on the layer (`offerQueueResidue`): concurrent waiters overlap, and the
  * entry was judged net of the union, never of more than its wall-clock.
  */
 interface QueueTally {
@@ -675,7 +689,7 @@ export interface EntryContext {
   /**
    * Per `queue` layer: the unfiled queue waits charged while this entry was
    * the innermost open one, plus the unfiled residue of entries that closed
-   * inside it. Lazily created. Offered by `fileQueueResidue` as it closes.
+   * inside it. Lazily created. Offered by `offerQueueResidue` as it closes.
    */
   queueTallies?: Map<string, QueueTally>;
   /**
@@ -988,7 +1002,7 @@ export type WaitKind = "queue" | "join" | "io";
 /**
  * One `queue` wait at or past an `onSlowWait` floor — or a sum of waits no
  * subscriber filed one by one: an entry's queue RESIDUE on one gate (see
- * `fileQueueResidue`), or a gate's WINDOW across independent ops (`window`),
+ * `offerQueueResidue`), or a gate's WINDOW across independent ops (`window`),
  * so congestion made of many small waits is reported against the gate even
  * when no single wait reaches a bar.
  */
@@ -1063,7 +1077,7 @@ function withHolders(wait: SlowWait): SlowWait {
  * op: a span is judged on its own time (its waits excluded), so the time it
  * queued is reported here, against the gate, instead. Called synchronously from
  * `chargeWait` (one wait), as an entry closes (its residue — see
- * `fileQueueResidue`) and from the gate's window (`addGateWindow`); the
+ * `offerQueueResidue`) and from the gate's window (`addGateWindow`); the
  * handler must only schedule. Returns a disposer.
  */
 export function onSlowWait(
@@ -1773,6 +1787,8 @@ function record(
   /** The innermost open entry a filed claim starts at (see `claimEnclosing`). */
   claimFrom?: EntryContext,
   latency?: boolean,
+  /** Unfiled queue residue, already off `excludedMs` (see `SlowSpan.residueMs`). */
+  residueMs?: number,
 ): boolean {
   if (profilingDisabled()) return false;
   // Drop spans produced inside a runWithoutProfiling scope before any aggregate,
@@ -1935,6 +1951,7 @@ function record(
       selfMs,
       excludedMs,
       ...(claims && { claims }),
+      ...(residueMs !== undefined && residueMs > 0 && { residueMs }),
       ...(latency && { latency: true as const }),
       detail,
       ...(budgetMs !== undefined && { budgetMs }),
@@ -2228,7 +2245,10 @@ export function recordSpan(
 
 /**
  * Offer a closing entry's queue residue on each gate — the unfiled waits it
- * holds, summed — to `onSlowWait`, the entry its caller. The entry was judged
+ * holds, summed — to `onSlowWait`, the entry its caller, and return what no
+ * subscriber filed: the entry is then judged on it with its own time
+ * (`SlowSpan.residueMs`), and only when that files nothing is it handed on
+ * (`handResidueOn`). The entry was judged
  * without that time, so it must be reported against the gate even when it is
  * made of many waits each under every bar: 40 queries waiting 150 ms each on
  * `db-acquire` are one 6 s `wait db-acquire`. Unfiled, the residue moves to
@@ -2237,11 +2257,11 @@ export function recordSpan(
  * parent hands its own on, never the parent's), and from the top of the chain
  * to the gate's window. Filed by the innermost entry it is slow for, once.
  */
-function fileQueueResidue(ctx: EntryContext): void {
+function offerQueueResidue(ctx: EntryContext): Map<string, QueueTally> {
   const tallies = ctx.queueTallies!;
   ctx.queueTallies = undefined;
   const caller: SpanRef = { kind: ctx.kind, label: ctx.label };
-  const outer = nearestOpen(ctx.parent);
+  const unfiled = new Map<string, QueueTally>();
   for (const [layer, tally] of tallies) {
     const { waits } = tally;
     // Waits the entry overlapped (a fan-out's parallel loaders) cost it their
@@ -2250,6 +2270,30 @@ function fileQueueResidue(ctx: EntryContext): void {
     const ms = Math.min(tally.ms, ctx.layerUnions.get(layer)?.unionMs ?? 0);
     if (ms <= 0) continue;
     if (notifySlowWait({ layer, ms, caller, waits })) continue;
+    unfiled.set(layer, { ms, waits });
+  }
+  return unfiled;
+}
+
+/** What a residue left unfiled after its offer adds up to, across layers. */
+function sumResidue(residue: Map<string, QueueTally>): number {
+  let ms = 0;
+  for (const tally of residue.values()) ms += tally.ms;
+  return ms;
+}
+
+/**
+ * Hand an entry's unfiled residue to the nearest open ancestor — or, from the
+ * top of the chain, to each gate's window. Only when the entry did not file:
+ * a filed entry's report already holds it.
+ */
+function handResidueOn(
+  ctx: EntryContext,
+  residue: Map<string, QueueTally>,
+): void {
+  const caller: SpanRef = { kind: ctx.kind, label: ctx.label };
+  const outer = nearestOpen(ctx.parent);
+  for (const [layer, { ms, waits }] of residue) {
     if (outer) addResidue(outer, layer, ms, waits);
     else addGateWindow(layer, ms, waits, caller);
   }
@@ -2367,7 +2411,7 @@ function capDetail(detail: SpanDetail | undefined): SpanDetail | undefined {
  * GATE's slowness, charged where it happens (once per wait — the per-ancestor
  * unions above would count it once per level). A queue wait no subscriber
  * filed is residue, kept on the innermost open entry and offered again, summed,
- * as it closes (`fileQueueResidue`).
+ * as it closes (`offerQueueResidue`).
  *
  * If no entry is active (context-less: jobs, pollers, migrations), fall back
  * to a standalone `db [layer]` span so the wait is never silently lost.
@@ -2898,6 +2942,17 @@ export async function recordEntrySpan<T>(
       for (const [name, track] of ctx.claimUnions) claims[name] = track.unionMs;
     }
     const parentId = ctx.parent ? ctx.parent.id : null;
+    // The gates first: each layer's residue is offered to `onSlowWait` on its
+    // own, and what no subscriber filed stays this entry's — judged with its
+    // own time, against its bar (see `SlowSpan.residueMs`). Judging the two
+    // apart let a 0.6 s op that queued 1.5 s on a gate file nothing at a 2 s
+    // bar: neither part reached it, and the residue only met the gate's
+    // per-window sum.
+    const residue = ctx.queueTallies ? offerQueueResidue(ctx) : undefined;
+    const residueMs = Math.min(
+      ctx.excludedUnion.unionMs,
+      residue === undefined ? 0 : sumResidue(residue),
+    );
     const filed = record(
       kind,
       label,
@@ -2912,9 +2967,11 @@ export async function recordEntrySpan<T>(
       waitBands,
       detail,
       opts?.budgetMs,
-      ctx.excludedUnion.unionMs,
+      ctx.excludedUnion.unionMs - residueMs,
       claims,
       ctx.parent,
+      undefined,
+      residueMs,
     );
     // A root entry filed as its own slow op is a claim on its lane: a later
     // run of the lane queued behind it waited on an op already filed.
@@ -2931,8 +2988,8 @@ export async function recordEntrySpan<T>(
       onReads?.(ctx.tables ?? NO_TABLES, ctx.tags);
     }
     if (ctx.joinBands) handJoinsUp(ctx, ctx.joinBands);
-    // Last: a subscriber it reaches can never cost the read-set handoff.
-    if (ctx.queueTallies) fileQueueResidue(ctx);
+    // Filed, the entry's report holds its residue; unfiled, it moves on.
+    if (residue !== undefined && !filed) handResidueOn(ctx, residue);
     // After everything the recorder owes: the caller's callback cannot cost it.
     opts?.onJoined?.(
       ctx.joinBands ? bandsWithin(ctx.joinBands, t0, t1).unionMs : 0,

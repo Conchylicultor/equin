@@ -5,10 +5,12 @@ import {
 } from "@plugins/infra/plugins/file-watcher/server";
 import { createKeyedCoalescer } from "@plugins/packages/plugins/coalesce/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
+import { reportServerError } from "@plugins/framework/plugins/server-core/core";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import { CLAUDE_PROJECTS_DIR } from "@plugins/infra/plugins/paths/server";
 import { resolveConversationTranscriptPaths } from "./resolve-chain";
 import { readChain, type ChainRead } from "./parse-jsonl";
-import { transcriptChainSignature } from "./chain-signature";
+import { transcriptChainState } from "./chain-signature";
 import { notifySessionTranscriptWrites } from "./session-writes";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 
@@ -26,6 +28,11 @@ import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-sourc
 export interface PathsSnapshot<T> {
   value: T;
   signature: string;
+  /**
+   * When the files last changed (their newest mtime) — present when this read
+   * followed one before it (a change the room saw), absent on its first read.
+   */
+  changedAt?: number;
 }
 
 /**
@@ -88,6 +95,14 @@ interface Room {
   lastSignature: string;
   lastValue: unknown;
   subscribers: Set<Listener>;
+  /** The newest mtime `lastValue` was read at — a later read's `changedAt` must pass it. */
+  lastChangedAt: number | undefined;
+  /** The files a fixed-membership room follows over kqueue (see `followRoom`); empty when none. */
+  followed: string[];
+  /** The open follow of `followed`, once started. */
+  follow: FileWatcher | null;
+  /** Follow (re)starts and stops, one after another. */
+  following: Promise<void>;
 }
 
 const rooms = new Map<string, Room>();
@@ -98,6 +113,24 @@ const rooms = new Map<string, Room>();
  * registers its directories) share one map and one lookup.
  */
 const watchIndex = new Map<string, Set<string>>();
+
+// The FILES of a fixed-membership room (a conversation's session chain, one
+// sub-agent's transcript), followed per write over kqueue — milliseconds,
+// whatever fseventsd is doing. The tree watch below rides FSEvents, which a
+// loaded fseventsd delivers seconds to minutes late (2026-11-09: 0.5–14 s, and
+// one transcript line ~60 s): a transcript line is the thing a user waits on,
+// and its path is known. The tree watch stays for what has no path yet — a
+// discovered room's new files, a session's birth (`notifySessionTranscriptWrites`)
+// — and as a second trigger (a room whose signature has not moved returns at
+// once). Cost: one descriptor per followed file + one per directory, for rooms
+// someone is subscribed to.
+export const transcriptFollowsWatcher = defineFileWatcher({
+  name: "transcript-watcher.followed-files",
+  description:
+    "Follows every write to the transcript files a watched conversation or sub-agent is read from, so a new line is heard in milliseconds rather than when the folder watch's FSEvents stream gets to it.",
+  writesWhileOpen: true,
+  debounceMs: 0,
+});
 
 // Every event is dispatched at once (debounceMs: 0) — a transcript line is
 // something a subscriber is waiting to render.
@@ -158,6 +191,9 @@ export async function startTranscriptWatcher(): Promise<void> {
 }
 
 export async function stopTranscriptWatcher(): Promise<void> {
+  const open = [...rooms.values()];
+  for (const room of open) closeRoom(room);
+  await Promise.all(open.map((room) => room.following));
   rooms.clear();
   watchIndex.clear();
   if (watcher) {
@@ -213,6 +249,10 @@ export function watchPaths<T>(
       lastSignature: "",
       lastValue: undefined,
       subscribers: new Set(),
+      lastChangedAt: undefined,
+      followed: [],
+      follow: null,
+      following: Promise.resolve(),
     };
     rooms.set(spec.key, room);
     const created = room;
@@ -310,6 +350,9 @@ function registerTargets(room: Room, targets: WatchTargets): void {
   room.paths = targets.paths;
   room.watchKeys = watchKeys;
   room.discovered = targets.dirs !== undefined;
+  // A discovered room's files come and go inside its dirs: the tree watch is
+  // what hears them. A fixed room's are named — follow them.
+  followRoom(room, room.discovered ? [] : targets.paths);
   for (const key of watchKeys) {
     let set = watchIndex.get(key);
     if (!set) {
@@ -335,18 +378,27 @@ async function processRoom(room: Room): Promise<void> {
     // The signature is also the room's SOLE change-detector, replacing the old
     // per-path `Bun.file().lastModified` map. Strictly more sensitive (it also moves
     // on a size-only change and on set growth), and over-firing is safe.
-    const signature = await transcriptChainSignature(room.paths);
+    const { signature, changedAt } = await transcriptChainState(room.paths);
     if (signature === room.lastSignature) return;
+    const seed = room.lastSignature === "";
     const value = await room.spec.read(
       room.paths,
-      room.lastSignature === "" ? undefined : room.lastValue,
+      seed ? undefined : room.lastValue,
     );
     // Assigned together, AFTER a successful read. The old code stored the mtimes
     // before reading, so a transient read failure permanently dropped those events
     // until the next mtime change.
+    // A write moves the newest mtime past the last read's; a signature that
+    // moved otherwise (a re-resolved chain, a file gone) carries no write
+    // time — its newest mtime may be hours old — so it says none.
+    const wrote =
+      !seed &&
+      changedAt !== undefined &&
+      (room.lastChangedAt === undefined || changedAt > room.lastChangedAt);
     room.lastValue = value;
     room.lastSignature = signature;
-    fanOut(room, { value, signature });
+    room.lastChangedAt = changedAt;
+    fanOut(room, { value, signature, ...(wrote ? { changedAt } : {}) });
     // eslint-disable-next-line promise-safety/no-bare-catch
   } catch (err) {
     console.error(
@@ -375,6 +427,68 @@ function closeRoom(room: Room): void {
     if (set.size === 0) watchIndex.delete(key);
   }
   rooms.delete(room.key);
+  followRoom(room, []);
+}
+
+/**
+ * Point a room's kqueue follow at `paths` (none: stop it). Runs after every
+ * earlier (re)start of the room's follow; the new follow opens before the old
+ * one stops, so no write between them goes unheard. A follow that fails to
+ * open is reported — the room still hears its files through the tree watch,
+ * only later.
+ */
+function followRoom(room: Room, paths: readonly string[]): void {
+  if (sameFiles(room.followed, paths)) return;
+  const files = [...paths];
+  room.followed = files;
+  room.following = room.following.then(async () => {
+    // Superseded while queued: a later call holds the room's files now.
+    if (room.followed !== files) return;
+    const previous = room.follow;
+    room.follow = null;
+    if (files.length > 0 && rooms.get(room.key) === room) {
+      await reportingFollowFailure(room, "open", async () => {
+        room.follow = await transcriptFollowsWatcher.start({
+          files,
+          label: room.key,
+          onChange: () => roomRuns.trigger(room, ["read"]),
+        });
+      });
+    }
+    if (previous)
+      await reportingFollowFailure(room, "close", () => previous.stop());
+    // Closed (or re-pointed) while opening: the follow just opened is not wanted.
+    const opened = room.follow;
+    if (opened !== null && room.followed !== files) {
+      room.follow = null;
+      await reportingFollowFailure(room, "close", () => opened.stop());
+    }
+  });
+}
+
+/**
+ * Run one step of a room's follow, reporting a failure instead of rejecting:
+ * a rejected step would end the room's chain, so no later re-point or close
+ * of its follow would run. The room still hears its files through the tree
+ * watch, only later.
+ */
+async function reportingFollowFailure(
+  room: Room,
+  step: "open" | "close",
+  run: () => Promise<void>,
+): Promise<void> {
+  try {
+    await run();
+  } catch (err) {
+    reportServerError({
+      message: `[transcript-watcher] could not ${step} the kqueue follow of ${room.key}'s files: ${err instanceof Error ? err.message : String(err)}`,
+      ...crashFieldsOf(err, "transcript-watcher.followed-files"),
+    });
+  }
+}
+
+function sameFiles(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((p, i) => p === b[i]);
 }
 
 // ---------------------------------------------------------------------------
@@ -391,6 +505,8 @@ function closeRoom(room: Room): void {
 export interface TranscriptSnapshot {
   events: JsonlEvent[];
   signature: string;
+  /** When the files changed — absent on the first read (see `PathsSnapshot.changedAt`). */
+  changedAt?: number;
 }
 
 /**
@@ -435,7 +551,12 @@ export function watchTranscript(
       }),
       read: readTranscript,
     },
-    ({ value, signature }) => onChange({ events: value.events, signature }),
+    ({ value, signature, changedAt }) =>
+      onChange({
+        events: value.events,
+        signature,
+        ...(changedAt === undefined ? {} : { changedAt }),
+      }),
   );
 }
 
@@ -457,7 +578,12 @@ export function watchTranscriptFile(
       resolve: () => Promise.resolve({ paths: [path] }),
       read: readTranscript,
     },
-    ({ value, signature }) => onChange({ events: value.events, signature }),
+    ({ value, signature, changedAt }) =>
+      onChange({
+        events: value.events,
+        signature,
+        ...(changedAt === undefined ? {} : { changedAt }),
+      }),
   );
 }
 

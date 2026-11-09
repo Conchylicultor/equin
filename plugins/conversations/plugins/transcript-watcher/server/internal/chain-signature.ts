@@ -73,9 +73,23 @@ export async function statChain(paths: readonly string[]): Promise<ChainStat[]> 
   return files;
 }
 
+/**
+ * A resolved chain's signature, and when its files last changed (the newest
+ * mtime among them; undefined when none exists) — read from one stat pass.
+ */
+export async function transcriptChainState(
+  paths: readonly string[],
+): Promise<{ signature: string; changedAt: number | undefined }> {
+  const files = await statChain(paths);
+  let changedAt: number | undefined;
+  for (const f of files)
+    if (changedAt === undefined || f.mtimeMs > changedAt) changedAt = f.mtimeMs;
+  return { signature: chainEtag(paths.length, files), changedAt };
+}
+
 /** The bound signature of a resolved chain: the two halves above, never apart. */
 export async function transcriptChainSignature(
   paths: readonly string[],
 ): Promise<string> {
-  return chainEtag(paths.length, await statChain(paths));
+  return (await transcriptChainState(paths)).signature;
 }

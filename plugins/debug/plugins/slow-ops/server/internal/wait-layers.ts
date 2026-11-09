@@ -56,6 +56,11 @@ const WAIT_LAYER_HINTS: Readonly<Record<string, string>> = {
     "The write's round trip (last send → ack) could not be split into page, network and server: its request was not sent through the fetcher `mutate` is handed, it made several requests, or the browser recorded no Resource Timing entry for it.",
   "confirm-frame":
     "The confirming push frame arrived long after the ack: the same path as a slow live update.",
+  // perfs/latency-signal `turn-echo` phases.
+  "agent-write":
+    "The agent took the message but its CLI was slow to write the line to its transcript.",
+  delivery:
+    "The transcript line was written but reached the tab late: the host's file watch hearing it (the `watch-delivery` ledger metric and `bg watch-delivery:<backend>` slow op), then the server and the push (the same frame's `update` slow op splits that part).",
 };
 
 /** The largest layer of the trip's `waits` and its share of the duration, when any. */
