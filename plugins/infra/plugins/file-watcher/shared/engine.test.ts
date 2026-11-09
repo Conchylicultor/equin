@@ -13,6 +13,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   createFileWatcher,
+  fsEventsStreams,
   parcelBatchHandler,
   WatchedDirGoneError,
   type FileWatcher,
@@ -533,3 +534,148 @@ describe("parcelBatchHandler", () => {
     ]);
   });
 });
+
+describe.skipIf(process.platform !== "darwin")(
+  "createFileWatcher: shared FSEvents streams",
+  () => {
+    const start = (
+      of: string,
+      depth: "subtree" | "children",
+      heard: FileChangeEvent[],
+      onLost?: (error: unknown) => void,
+    ): Promise<FileWatcher> =>
+      createFileWatcher({
+        dirs: [of],
+        depth,
+        debounceMs: 0,
+        onChange: (batch) => void heard.push(...batch),
+        ...(onLost ? { onLost: (_d: string, e: unknown) => onLost(e) } : {}),
+      });
+    const streamsUnder = (root: string) =>
+      fsEventsStreams().open.filter((s) => s.root.startsWith(root));
+
+    test("watches under an open recursive stream ride it: one stream, each hears its own scope", async () => {
+      dir = realpathSync(mkdtempSync(join(tmpdir(), "fw-pool-")));
+      const a = join(dir, "a");
+      const b = join(a, "b");
+      mkdirSync(join(b, "deep"), { recursive: true });
+      const top: FileChangeEvent[] = [];
+      const kids: FileChangeEvent[] = [];
+      const sub: FileChangeEvent[] = [];
+      watcher = await start(dir, "subtree", top);
+      const opened = fsEventsStreams().opened;
+      const w1 = await start(b, "children", kids);
+      const w2 = await start(a, "subtree", sub);
+      try {
+        expect(fsEventsStreams().opened).toBe(opened);
+        expect(streamsUnder(dir)).toEqual([
+          { root: dir, depth: "subtree", riders: 3 },
+        ]);
+        // Live at resolve, with nothing opened: written at once.
+        writeFileSync(join(b, "f.txt"), "x");
+        writeFileSync(join(b, "deep", "g.txt"), "x");
+        await until(
+          () =>
+            kids.some((e) => e.path === join(b, "f.txt")) &&
+            sub.some((e) => e.path === join(b, "deep", "g.txt")),
+        );
+        expect(kids.map((e) => e.path)).toContain(join(b, "f.txt"));
+        expect(kids.map((e) => e.path)).not.toContain(join(b, "deep", "g.txt"));
+        expect(sub.every((e) => e.path.startsWith(a))).toBe(true);
+      } finally {
+        await w1.stop();
+        await w2.stop();
+      }
+      expect(streamsUnder(dir)).toEqual([
+        { root: dir, depth: "subtree", riders: 1 },
+      ]);
+    });
+
+    test("children watches of one dir share one stream; the last to stop closes it", async () => {
+      dir = realpathSync(mkdtempSync(join(tmpdir(), "fw-pool-")));
+      const w1 = await start(dir, "children", []);
+      const w2 = await start(dir, "children", []);
+      expect(streamsUnder(dir)).toEqual([
+        { root: dir, depth: "children", riders: 2 },
+      ]);
+      await w1.stop();
+      expect(streamsUnder(dir)).toHaveLength(1);
+      await w2.stop();
+      expect(streamsUnder(dir)).toEqual([]);
+    });
+
+    test("a rider's dir going is reported to it alone; the stream and its other riders keep hearing", async () => {
+      dir = realpathSync(mkdtempSync(join(tmpdir(), "fw-pool-")));
+      const doomed = join(dir, "doomed");
+      const listed = join(dir, "listed");
+      mkdirSync(join(doomed, "x"), { recursive: true });
+      mkdirSync(listed);
+      const top: FileChangeEvent[] = [];
+      watcher = await start(dir, "subtree", top);
+      const lost: unknown[] = [];
+      const kids: FileChangeEvent[] = [];
+      const deep = await start(doomed, "subtree", [], (e) => lost.push(e));
+      const entries = await start(listed, "children", kids);
+      try {
+        // Moved away whole: FSEvents names only the folder that moved.
+        renameSync(doomed, join(tmpdir(), `fw-pool-moved-${Date.now()}`));
+        rmSync(listed, { recursive: true });
+        await until(
+          () => lost.length > 0 && kids.some((e) => e.path === listed),
+        );
+        expect(lost[0]).toBeInstanceOf(WatchedDirGoneError);
+        expect(kids.filter((e) => e.path === listed)).toEqual([
+          { type: "delete", path: listed },
+        ]);
+        expect(streamsUnder(dir)).toEqual([
+          { root: dir, depth: "subtree", riders: 1 },
+        ]);
+        writeFileSync(join(dir, "after.txt"), "x");
+        await until(() => top.some((e) => e.path === join(dir!, "after.txt")));
+        expect(top.map((e) => e.path)).toContain(join(dir, "after.txt"));
+      } finally {
+        await deep.stop();
+        await entries.stop();
+      }
+    });
+
+    test("a stream opening above an open one leaves its riders where they are", async () => {
+      // Moving them would drop what fseventsd queued for the lower stream.
+      dir = realpathSync(mkdtempSync(join(tmpdir(), "fw-pool-")));
+      const low = join(dir, "low");
+      mkdirSync(low);
+      const kids: FileChangeEvent[] = [];
+      const w1 = await start(low, "children", kids);
+      watcher = await start(dir, "subtree", []);
+      try {
+        expect(streamsUnder(dir)).toHaveLength(2);
+        writeFileSync(join(low, "f.txt"), "x");
+        await until(() => kids.some((e) => e.path === join(low, "f.txt")));
+        expect(kids.map((e) => e.path)).toContain(join(low, "f.txt"));
+      } finally {
+        await w1.stop();
+      }
+      expect(streamsUnder(dir)).toEqual([
+        { root: dir, depth: "subtree", riders: 1 },
+      ]);
+    });
+
+    test("a watch with an ignore neither rides nor carries others", async () => {
+      dir = realpathSync(mkdtempSync(join(tmpdir(), "fw-pool-")));
+      watcher = await createFileWatcher({
+        dirs: [dir],
+        ignore: ["**/skip/**"],
+        debounceMs: 0,
+        onChange: () => {},
+      });
+      const w = await start(dir, "children", []);
+      try {
+        expect(streamsUnder(dir)).toEqual([
+          { root: dir, depth: "children", riders: 1 },
+        ]);
+      } finally {
+        await w.stop();
+      }
+    });
+  },
+);

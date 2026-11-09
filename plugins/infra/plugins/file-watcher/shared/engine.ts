@@ -20,6 +20,7 @@ import {
 import { createWrapper } from "@parcel/watcher/wrapper";
 import { WatchedDirGoneError } from "./dir-gone";
 import { followFiles } from "./follow-files";
+import { createStreamPool, type StreamPool } from "./fsevents-pool";
 import {
   createDeliveryLagProbe,
   type DeliveryLagHost,
@@ -156,8 +157,9 @@ export interface DirWatchOptions extends WatchOptionsBase {
    * the dir's direct entries created, written, renamed or removed, and the
    * dir itself going (one `delete` of it), never a watch of everything below
    * it — so watching a huge folder (`~`, `/`) stays cheap. Live when `start`
-   * resolves: on macOS its own FSEvents stream with every deeper path ignored
-   * natively (`subscribeChildren`), elsewhere Bun's single-directory
+   * resolves: on macOS a shared FSEvents stream — an open recursive one
+   * covering the dir, else one of the dir with every deeper path ignored
+   * natively (`rideStream`) — elsewhere Bun's single-directory
    * `fs.watch` of it and of its parent (`watchChildren`). No `ignore` beside
    * it (a throw).
    */
@@ -436,15 +438,32 @@ export async function createFileWatcher(
     );
   }
 
+  // FSEvents with no native ignore: ride the process's shared streams — one
+  // per watched root, whatever declaration or depth asks (`fsevents-pool.ts`).
+  const pool =
+    parcelWatcher !== null && backend === "fs-events" && ignore === undefined
+      ? fsEventsPool(parcelWatcher)
+      : null;
+
   for (const dir of dirs) {
     try {
       const sub =
-        parcelWatcher === null
-          ? await watchChildren(dir, take)
-          : depth === "children"
-            ? await subscribeChildren(parcelWatcher, dir, take, (error) =>
-                lost(dir, error),
-              )
+        pool !== null
+          ? await rideStream(pool, dir, depth, {
+              take,
+              lost: (error) => lost(dir, error),
+              gone: (ride) => {
+                if (depth === "children") {
+                  take([{ type: "delete", path: dir }]);
+                  return;
+                }
+                const i = subscriptions.indexOf(ride);
+                if (i >= 0) subscriptions.splice(i, 1);
+                lost(dir, new WatchedDirGoneError(dir));
+              },
+            })
+          : parcelWatcher === null
+            ? await watchChildren(dir, take)
             : await subscribeRoot(parcelWatcher, dir, {
               onEvents: handlerFor(dir),
               options: parcelOptions,
@@ -537,54 +556,75 @@ async function subscribeRoot(
   return handle;
 }
 
-/**
- * The `"children"` depth on macOS: an FSEvents stream of `dir` alone, every
- * path below its direct entries ignored inside parcel (a relative path with a
- * `/` in it — dropped before parcel stats anything), its events at `dir`
- * itself withheld. FSEvents watches by path prefix, so this holds no
- * descriptor per entry and walks nothing, however big the folder.
- *
- * Why not Bun's `fs.watch` (what the other platforms use): it opens the
- * native watch on its own thread after returning, so a change landing just
- * after `start` resolved was never reported; and every directory watch of the
- * process shares ONE FSEvents stream that Bun restarts from "now" whenever
- * any of them opens or closes, so a live watch missed changes landing during
- * another's churn (measured, Bun 1.4.3: 72 of 300 writes missed). parcel
- * gives each subscription its own stream, started (`FSEventStreamStart`,
- * since now) before `subscribe` resolves: live at resolve, and no other
- * watch's open or close touches it.
- *
- * The dir going — removed, moved away, replaced (its inode changed) — is
- * reported once, as a `delete` of `dir` (the children contract), and its
- * stream closed at once (see `subscribeRoot`: a dead root deafens every other
- * parcel subscription). A native error (FSEvents dropped events) is a loss,
- * not the dir going: `lost`.
- */
-async function subscribeChildren(
-  parcelWatcher: ParcelWatcherApi,
-  dir: string,
-  onEvents: (events: parcel.Event[]) => void,
-  lost: (error: Error) => void,
-): Promise<{ unsubscribe(): Promise<void> }> {
-  // FSEvents names real paths, and parcel matches its ignore against the dir
-  // it was given: subscribe the real one, and name entries under `dir` as the
-  // caller spelled it (a dir reached through a symlink included).
-  const real = await realpath(dir);
-  const entry = (e: parcel.Event): parcel.Event | null => {
-    if (!e.path.startsWith(`${real}/`)) return null;
-    const name = e.path.slice(real.length + 1);
-    return name.includes("/") ? null : { ...e, path: join(dir, name) };
-  };
-  return subscribeRoot(parcelWatcher, real, {
-    onEvents: parcelBatchHandler((events) => {
-      const entries = events
-        .map(entry)
-        .filter((e): e is parcel.Event => e !== null);
-      if (entries.length > 0) onEvents(entries);
-    }, lost),
-    options: { ignore: [/\//] },
-    onGone: () => onEvents([{ type: "delete", path: dir }]),
+/** The process's one stream pool, bound to the parcel binding on first use. */
+let sharedPool: StreamPool | null = null;
+function fsEventsPool(parcelWatcher: ParcelWatcherApi): StreamPool {
+  sharedPool ??= createStreamPool({
+    open: (real, callback, options) =>
+      parcelWatcher.subscribe(real, callback, options),
+    realpath: (path) => realpath(path),
+    async inodeOf(path) {
+      try {
+        return (await stat(path)).ino;
+      } catch (err) {
+        const code = (err as NodeJS.ErrnoException).code;
+        if (code === "ENOENT" || code === "ENOTDIR") return null;
+        throw err;
+      }
+    },
   });
+  return sharedPool;
+}
+
+/** The FSEvents streams this process holds open now, and how many it has opened. */
+export function fsEventsStreams(): {
+  open: { root: string; depth: WatchDepth; riders: number }[];
+  opened: number;
+} {
+  return {
+    open: sharedPool?.streams() ?? [],
+    opened: sharedPool?.opened() ?? 0,
+  };
+}
+
+/**
+ * One watched dir on a shared FSEvents stream (`fsevents-pool.ts`): a
+ * `subtree` watch hears everything below `dir`, its dir going closing it
+ * (`gone`, as `subscribeRoot` does); a `children` watch hears its direct
+ * entries named under `dir` as the caller spelled it (a dir reached through
+ * a symlink included), and its dir going — removed, moved away, replaced —
+ * once, through `gone`. A native error (FSEvents dropped events) is `lost`.
+ *
+ * Why the children depth is not Bun's `fs.watch` on macOS (what the other
+ * platforms use): it opens the native watch on its own thread after
+ * returning, so a change landing just after `start` resolved was never
+ * reported; and every directory watch of the process shares ONE FSEvents
+ * stream that Bun restarts from "now" whenever any of them opens or closes,
+ * so a live watch missed changes landing during another's churn (measured,
+ * Bun 1.4.3: 72 of 300 writes missed). A pooled stream is started
+ * (`FSEventStreamStart`, since now) before the ride resolves, and no other
+ * watch's open or close restarts it.
+ */
+async function rideStream(
+  pool: StreamPool,
+  dir: string,
+  depth: WatchDepth,
+  on: {
+    take: (events: parcel.Event[]) => void;
+    lost: (error: Error) => void;
+    gone: (sub: { unsubscribe(): Promise<void> }) => void;
+  },
+): Promise<{ unsubscribe(): Promise<void> }> {
+  const handle = { unsubscribe: async (): Promise<void> => {} };
+  const release = await pool.ride({
+    dir,
+    depth,
+    onEvents: on.take,
+    onLost: on.lost,
+    onGone: () => on.gone(handle),
+  });
+  handle.unsubscribe = release;
+  return handle;
 }
 
 /**
