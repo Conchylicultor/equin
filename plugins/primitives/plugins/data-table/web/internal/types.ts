@@ -75,6 +75,12 @@ export interface DataTableGroup<TRow> {
    * line here. A group with a footer is not empty even when `rows` is.
    */
   footer?: ReactNode;
+  /**
+   * The key of the group this one nests under (a forest-shaped grouping); it
+   * must come earlier in `groups`. Past the sticky stack's cap a nested
+   * group's header pins below its whole parent chain.
+   */
+  parentKey?: string;
 }
 
 /**

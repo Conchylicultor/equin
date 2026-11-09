@@ -11,6 +11,7 @@ import {
   useLayoutEffect,
   useMemo,
   useState,
+  type ComponentProps,
   type ReactNode,
 } from "react";
 
@@ -35,6 +36,10 @@ interface StickyStackCtx {
 
 const StickyStackContext = createContext<StickyStackCtx | null>(null);
 
+/** The keys of the {@link StickyStackBranch}es enclosing a point, outermost
+ *  first — an item's ancestor chain. */
+const BranchChainContext = createContext<readonly string[]>([]);
+
 function useCtx(): StickyStackCtx {
   const ctx = useContext(StickyStackContext);
   if (!ctx)
@@ -52,6 +57,10 @@ function useCtx(): StickyStackCtx {
  * key contributes 0; element-size measures synchronously in a layout effect, so
  * that gap closes before paint rather than as a visible jump.
  *
+ * Not stacked but nested (`ancestors`, the keys of the enclosing branches) →
+ * the item pins below its ancestor chain only, `base + Σ(ancestor heights)`:
+ * siblings still swap, while the parents they belong to stay pinned above them.
+ *
  * An `itemKey` absent from `keys` is a wiring bug (the provider's key list and
  * its children disagree), never a transient state — so it throws rather than
  * silently pinning at the wrong offset.
@@ -62,15 +71,20 @@ export function stickyStackTop(opts: {
   itemKey: string;
   base: string;
   stacked: boolean;
+  /** The item's enclosing branch keys, outermost first. Default: none. */
+  ancestors?: readonly string[];
 }): string {
   const index = opts.keys.indexOf(opts.itemKey);
   if (index < 0)
     throw new Error(
       `<StickyStackItem itemKey="${opts.itemKey}"> is not present in its <StickyStack keys={…}> (${opts.keys.join(", ")})`,
     );
-  if (!opts.stacked || index === 0) return opts.base;
+  const above = opts.stacked
+    ? opts.keys.slice(0, index)
+    : (opts.ancestors ?? []);
+  if (above.length === 0) return opts.base;
   let sum = 0;
-  for (let i = 0; i < index; i++) sum += opts.heights.get(opts.keys[i]!) ?? 0;
+  for (const key of above) sum += opts.heights.get(key) ?? 0;
   return `calc(${opts.base} + ${sum}px)`;
 }
 
@@ -161,6 +175,10 @@ export function StickyStackItem({
   ...rest
 }: StickyStackItemProps): ReactNode {
   const { keys, base, stacked, heights, reportHeight } = useCtx();
+  const chain = useContext(BranchChainContext);
+  // The item heads its own branch (when it has one): that key is not its
+  // ancestor.
+  const ancestors = chain.at(-1) === itemKey ? chain.slice(0, -1) : chain;
   const [measureRef, { height }] = useElementSize();
 
   // The item is both the stack's measurement target and (possibly) a caller's ref
@@ -189,11 +207,65 @@ export function StickyStackItem({
     return () => reportHeight(itemKey, null);
   }, [itemKey, reportHeight]);
 
-  const top = stickyStackTop({ keys, heights, itemKey, base, stacked });
+  const top = stickyStackTop({
+    keys,
+    heights,
+    itemKey,
+    base,
+    stacked,
+    ancestors,
+  });
 
   return (
     <Sticky ref={composedRef} edge="top" {...rest} style={{ ...style, top }}>
       {children}
     </Sticky>
+  );
+}
+
+export interface StickyStackBranchProps extends Omit<
+  ComponentProps<"div">,
+  "children"
+> {
+  /** The key of the item heading this branch; must be present in the
+   *  provider's `keys`. */
+  itemKey: string;
+  /** The heading item, its content, and the branches nested under it. */
+  children: ReactNode;
+}
+
+/**
+ * One item's subtree — its heading `StickyStackItem`, what it heads, and the
+ * branches nested below it — for a stack whose items form a tree (nested
+ * section headers). Past the cap it keeps the **parent chain** pinned: an item
+ * pins below its ancestors' items, so you always see which parent the pinned
+ * header belongs to, while siblings at each level still swap.
+ *
+ * Stacked, it renders no DOM (every item already stays pinned, all sharing the
+ * caller's one containing block). Past the cap it renders a plain block box,
+ * and that box is load-bearing: it is the subtree's sticky containing block, so
+ * once the branch scrolls away its items leave with it — without it a finished
+ * branch's child header would stay pinned under the next parent. A plain
+ * block box lays its children out like the caller's gapless column, so the
+ * switch does not move anything; a caller laying its items out otherwise (the
+ * subgrid table: `col-span-full grid grid-cols-subgrid`) passes the box's
+ * `className`, and any other attribute (a `role`), which apply to that box only.
+ */
+export function StickyStackBranch({
+  itemKey,
+  children,
+  ...box
+}: StickyStackBranchProps): ReactNode {
+  const { keys, stacked } = useCtx();
+  if (!keys.includes(itemKey))
+    throw new Error(
+      `<StickyStackBranch itemKey="${itemKey}"> is not present in its <StickyStack keys={…}> (${keys.join(", ")})`,
+    );
+  const parent = useContext(BranchChainContext);
+  const chain = useMemo(() => [...parent, itemKey], [parent, itemKey]);
+  return (
+    <BranchChainContext value={chain}>
+      {stacked ? children : <div {...box}>{children}</div>}
+    </BranchChainContext>
   );
 }

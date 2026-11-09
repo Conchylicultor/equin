@@ -69,6 +69,19 @@ the primitive degrades to plain sticky's swap hand-off. The threshold is a prop
 (`maxStacked`) because the right number depends on the item's height and the
 surface's viewport.
 
+## Nested items: `StickyStackBranch` keeps the parent chain pinned
+
+When the items form a tree (nested section headers), wrap each item that has
+children in `<StickyStackBranch itemKey>` together with its content and its
+child branches. Past the cap an item then pins at `base + Σ(its ancestors'
+heights)`: siblings still swap, but the full parent chain stays pinned above
+them. While the stack is stacked, a branch renders no DOM, so every item still
+shares the caller's one containing block. Past the cap it renders a plain block
+box. That box is the subtree's containing block, so a finished branch's headers
+scroll away with it. Without it, a child header would stay pinned under the next
+parent. The subgrid table passes `className="col-span-full grid grid-cols-subgrid"`
+so its branch boxes keep the column tracks; the row fold finds rows inside them.
+
 ## Props
 
 - **`StickyStack`** — `keys` (ordered, top→bottom in DOM order; its **length**
@@ -92,11 +105,13 @@ surface's viewport.
     - `primitives/css/sticky.StickyProps`
     - `primitives/dom/element-size.useElementSize`
   - Exports (types):
+    - `StickyStackBranchProps`
     - `StickyStackItemProps`
     - `StickyStackProps`
   - Exports (values):
     - `DEFAULT_MAX_STACKED`
     - `StickyStack`
+    - `StickyStackBranch`
     - `StickyStackItem`
     - `stickyStackTop`
 - Cross-plugin:

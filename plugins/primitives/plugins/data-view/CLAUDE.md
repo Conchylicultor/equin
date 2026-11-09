@@ -2208,7 +2208,7 @@ list, table and `primitives/tree` share it.
     - `DataViewSlots.Control` ×4
     - `DataViewSlots.Setting` ×4
     - `IdKinds.Kind` ×2
-  - Uses: 140 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 141 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live` ×23
     - `primitives/css/ui-kit` ×17
     - `primitives/data-view/view-core` ×11
@@ -2216,6 +2216,7 @@ list, table and `primitives/tree` share it.
     - `primitives/slot-render` ×5
     - `primitives/css/control-panel` ×4
     - `primitives/collapsible` ×3
+    - `primitives/css/sticky/stack` ×3
     - `primitives/css/text` ×3
     - `primitives/css/toggle-chip` ×3
     - `primitives/dom/web-storage` ×3
@@ -2225,7 +2226,6 @@ list, table and `primitives/tree` share it.
     - `primitives/css/overlay` ×2
     - `primitives/css/row` ×2
     - `primitives/css/spacing` ×2
-    - `primitives/css/sticky/stack` ×2
     - `primitives/css/sticky` ×2
     - `primitives/cursor-pagination` ×2
     - `primitives/dom/element-size` ×2

@@ -280,11 +280,11 @@ Verified in Chromium only (the e2e harness drives Chromium).
 
 - Description: Sortable/filterable flex-layout data table primitive.
 - Web:
-  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×4
+    - `primitives/css/sticky/stack` ×3
     - `primitives/css/text` ×3
     - `primitives/multi-select` ×3
-    - `primitives/css/sticky/stack` ×2
     - `primitives/css/sticky` ×2
     - `primitives/dom/element-size` ×2
     - `primitives/row-actions` ×2

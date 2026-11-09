@@ -42,8 +42,9 @@ inserted anywhere else are live data as ever.
   every row below moves by the runs above it (`transform: translateY`).
   Offsets and insets are linear in progress, so one easing keeps them in step
   (`fold-plan.ts`). The host carries `hostProps` (an id, not a ref — the
-  hosts already hold refs of their own); rows are its direct children carrying
-  `data-row-fold` (`rowProps(key)`); rows whose path never crosses the
+  hosts already hold refs of their own); rows are its elements carrying
+  `data-row-fold` (`rowProps(key)`), in document order — direct children, or
+  inside a box laying them out in the same column (a nested group's branch); rows whose path never crosses the
   viewport are not animated.
 - **Clock**: the commit pins the first frame in inline style; the tween starts
   on the next animation frame, re-measured there, with `startTime =

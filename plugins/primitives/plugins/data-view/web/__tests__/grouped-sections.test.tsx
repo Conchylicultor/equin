@@ -254,6 +254,50 @@ describe("GroupedSections — nested sections", () => {
     expect(screen.queryByText("rows of homepage")).toBeNull();
     expect(screen.getByText("rows of chord")).toBeTruthy();
   });
+
+  // Past the stack's cap (more sections than DEFAULT_MAX_STACKED), siblings
+  // swap but each header pins below its whole parent chain, and each branch
+  // is its own box so a finished branch takes its pinned headers with it.
+  it("past the cap, a nested header pins below its parent chain", () => {
+    const many = [
+      ...NESTED,
+      ...["x", "y"].map((key) => ({
+        key,
+        label: key,
+        count: exact(1),
+        entries: [{ key: `r${key}`, row: {} }],
+        nesting: { depth: 0, parentKey: null },
+      })),
+    ] as unknown as DataViewSection<unknown>[];
+    render(
+      <GroupedSections sections={many}>
+        {(section) => <div>rows of {section.key}</div>}
+      </GroupedSections>,
+    );
+    const band = (label: string) =>
+      screen
+        .getByRole("button", { name: new RegExp(`^${label}\\d`) })
+        .closest<HTMLElement>(".sticky") ??
+      (() => {
+        throw new Error(`no sticky band for ${label}`);
+      })();
+    const tops = ["app", "website", "homepage", "chord", "x"].map(
+      (label) => band(label).style.top,
+    );
+    // Roots pin at the base; every nested header below its ancestors (their
+    // heights are 0 under jsdom, so the chain shows as a calc over them).
+    expect(tops[0]).toBe("var(--dv-header-offset, 0px)");
+    expect(tops[1]).toBe("calc(var(--dv-header-offset, 0px) + 0px)");
+    expect(tops[2]).toBe("calc(var(--dv-header-offset, 0px) + 0px)");
+    expect(tops[3]).toBe("calc(var(--dv-header-offset, 0px) + 0px)");
+    expect(tops[4]).toBe("var(--dv-header-offset, 0px)");
+    // Each branch is a box: website's band and homepage's share one, inside
+    // app's, which x is outside of.
+    const app = band("app").parentElement!;
+    expect(app.contains(band("homepage"))).toBe(true);
+    expect(band("homepage").parentElement).toBe(band("website").parentElement);
+    expect(app.contains(band("x"))).toBe(false);
+  });
 });
 
 describe("GroupedSections — identity chip", () => {

@@ -45469,11 +45469,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/sticky.StickyProps`
                   - `primitives/dom/element-size.useElementSize`
                 - Exports (types):
+                  - `StickyStackBranchProps`
                   - `StickyStackItemProps`
                   - `StickyStackProps`
                 - Exports (values):
                   - `DEFAULT_MAX_STACKED`
                   - `StickyStack`
+                  - `StickyStackBranch`
                   - `StickyStackItem`
                   - `stickyStackTop`
               - Cross-plugin:
@@ -46081,11 +46083,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `shell/notifications`
     - **`data-table`** — Sortable/filterable flex-layout data table primitive.
       - Web:
-        - Uses: 26 symbols — full list in [`plugins/primitives/plugins/data-table/REFERENCE.md`](../plugins/primitives/plugins/data-table/REFERENCE.md)
+        - Uses: 27 symbols — full list in [`plugins/primitives/plugins/data-table/REFERENCE.md`](../plugins/primitives/plugins/data-table/REFERENCE.md)
           - `primitives/css/ui-kit` ×4
+          - `primitives/css/sticky/stack` ×3
           - `primitives/css/text` ×3
           - `primitives/multi-select` ×3
-          - `primitives/css/sticky/stack` ×2
           - `primitives/css/sticky` ×2
           - `primitives/dom/element-size` ×2
           - `primitives/row-actions` ×2
@@ -46174,7 +46176,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ×4
           - `DataViewSlots.Setting` ×4
           - `IdKinds.Kind` ×2
-        - Uses: 140 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Uses: 141 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `network/live` ×23
           - `primitives/css/ui-kit` ×17
           - `primitives/data-view/view-core` ×11
@@ -46182,6 +46184,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/slot-render` ×5
           - `primitives/css/control-panel` ×4
           - `primitives/collapsible` ×3
+          - `primitives/css/sticky/stack` ×3
           - `primitives/css/text` ×3
           - `primitives/css/toggle-chip` ×3
           - `primitives/dom/web-storage` ×3
@@ -46191,7 +46194,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/overlay` ×2
           - `primitives/css/row` ×2
           - `primitives/css/spacing` ×2
-          - `primitives/css/sticky/stack` ×2
           - `primitives/css/sticky` ×2
           - `primitives/cursor-pagination` ×2
           - `primitives/dom/element-size` ×2

@@ -2,6 +2,7 @@ import { type CSSProperties, type ReactNode } from "react";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
   StickyStack,
+  StickyStackBranch,
   StickyStackItem,
 } from "@plugins/primitives/plugins/css/plugins/sticky/plugins/stack/web";
 import {
@@ -103,6 +104,9 @@ export interface GroupedSectionsProps {
  * independently; a nested section's header and body are indented `depth` tree
  * steps with a guide per ancestor level (`NestedSectionIndent`); and a section
  * holding no rows of its own (an ancestor of rows only) draws its header alone.
+ * Each section with sub-sections is a `StickyStackBranch`, so past the stack's
+ * cap the full parent chain stays pinned: a nested header pins below its
+ * ancestors' headers, and a finished branch takes its headers away with it.
  */
 export function GroupedSections({
   sections,
@@ -112,73 +116,91 @@ export function GroupedSections({
   children,
 }: GroupedSectionsProps): ReactNode {
   const shown = visibleSections(sections, collapsedSections);
+  // The sections under each parent, in tree order (a parent precedes its
+  // descendants, so each branch draws after its own header and body).
+  const childrenOf = new Map<string | null, DataViewSection<unknown>[]>();
+  const shownKeys = new Set(shown.map((section) => section.key));
+  for (const section of shown) {
+    const parentKey = section.nesting?.parentKey ?? null;
+    if (parentKey !== null && !shownKeys.has(parentKey))
+      throw new Error(
+        `Section "${section.key}" names parent "${parentKey}", which is not drawn`,
+      );
+    const siblings = childrenOf.get(parentKey);
+    if (siblings) siblings.push(section);
+    else childrenOf.set(parentKey, [section]);
+  }
+  const renderSection = (section: DataViewSection<unknown>): ReactNode => {
+    const key = section.key!;
+    const depth = section.nesting?.depth ?? 0;
+    const collapsed = collapsedSections?.has(key) ?? false;
+    const action = headerActions?.(section);
+    const header = <DataViewGroupHeader section={section} action={action} />;
+    // An ancestor of rows only — a nested section with nothing of its own to
+    // draw — is its header alone: an empty band would open a gap between it
+    // and its first child.
+    const ownBody =
+      section.nesting === undefined ||
+      section.entries.length > 0 ||
+      section.fold !== undefined ||
+      section.paging !== undefined;
+    const subSections = childrenOf.get(key);
+    const own = (
+      <CollapsibleProvider
+        key={key}
+        open={!collapsed}
+        onOpenChange={(open) => setSectionCollapsed?.(key, !open)}
+      >
+        <StickyStackItem
+          itemKey={key}
+          mask
+          layer="raised"
+          // The header pays the rail on its BAND and keeps the row's own
+          // `p-row` inside it, so its label lands on the rows' TEXT column
+          // (rail + row pad) — a caption over the rows. A nested header pays
+          // it inside its indent instead, so the indent (and its guides) sit
+          // outside the rail like the body's.
+          className={depth === 0 ? "rail-follow" : undefined}
+          // The room between two groups (`groupGap`, default 0) opens above
+          // every header but the first. A margin on the header, not a gap on
+          // the Stack: header and body are both its children, and a gap would
+          // also part each header from its own rows.
+          style={section === shown[0] ? undefined : GROUP_GAP_STYLE}
+        >
+          <NestedSectionIndent depth={depth}>
+            {depth > 0 ? <div className="rail-follow">{header}</div> : header}
+          </NestedSectionIndent>
+        </StickyStackItem>
+        {/* `isolate`: the body seals whatever stacking its rows open (a
+            card's cover pins, a row's actions — `raised`, like the headers)
+            so none of it paints over a pinned header as it scrolls under it. */}
+        <CollapsibleContent className="isolate" {...dataPart("dv.group")}>
+          {ownBody && (
+            <NestedSectionIndent depth={depth}>
+              {children(section)}
+            </NestedSectionIndent>
+          )}
+        </CollapsibleContent>
+      </CollapsibleProvider>
+    );
+    // A section with sub-sections heads a branch: its header, its body, then
+    // its sub-sections, so past the cap they pin below it and leave with it.
+    return subSections ? (
+      <StickyStackBranch key={key} itemKey={key}>
+        {own}
+        {subSections.map(renderSection)}
+      </StickyStackBranch>
+    ) : (
+      own
+    );
+  };
   return (
     <Stack gap="none">
       <StickyStack
         keys={shown.map((section) => section.key!)}
         base={`var(${DATA_VIEW_HEADER_OFFSET_VAR}, 0px)`}
       >
-        {shown.map((section, index) => {
-          const key = section.key!;
-          const depth = section.nesting?.depth ?? 0;
-          const collapsed = collapsedSections?.has(key) ?? false;
-          const action = headerActions?.(section);
-          const header = (
-            <DataViewGroupHeader section={section} action={action} />
-          );
-          // An ancestor of rows only — a nested section with nothing of its
-          // own to draw — is its header alone: an empty band would open a gap
-          // between it and its first child.
-          const ownBody =
-            section.nesting === undefined ||
-            section.entries.length > 0 ||
-            section.fold !== undefined ||
-            section.paging !== undefined;
-          return (
-            <CollapsibleProvider
-              key={key}
-              open={!collapsed}
-              onOpenChange={(open) => setSectionCollapsed?.(key, !open)}
-            >
-              <StickyStackItem
-                itemKey={key}
-                mask
-                layer="raised"
-                // The header pays the rail on its BAND and keeps the row's own
-                // `p-row` inside it, so its label lands on the rows' TEXT
-                // column (rail + row pad) — a caption over the rows. A nested
-                // header pays it inside its indent instead, so the indent (and
-                // its guides) sit outside the rail like the body's.
-                className={depth === 0 ? "rail-follow" : undefined}
-                // The room between two groups (`groupGap`, default 0) opens
-                // above every header but the first. A margin on the header,
-                // not a gap on the Stack: header and body are both its
-                // children, and a gap would also part each header from its
-                // own rows.
-                style={index === 0 ? undefined : GROUP_GAP_STYLE}
-              >
-                <NestedSectionIndent depth={depth}>
-                  {depth > 0 ? (
-                    <div className="rail-follow">{header}</div>
-                  ) : (
-                    header
-                  )}
-                </NestedSectionIndent>
-              </StickyStackItem>
-              {/* `isolate`: the body seals whatever stacking its rows open (a
-                  card's cover pins, a row's actions — `raised`, like the
-                  headers) so none of it paints over a pinned header as it
-                  scrolls under it. */}
-              <CollapsibleContent className="isolate" {...dataPart("dv.group")}>
-                {ownBody && (
-                  <NestedSectionIndent depth={depth}>
-                    {children(section)}
-                  </NestedSectionIndent>
-                )}
-              </CollapsibleContent>
-            </CollapsibleProvider>
-          );
-        })}
+        {(childrenOf.get(null) ?? []).map(renderSection)}
       </StickyStack>
     </Stack>
   );

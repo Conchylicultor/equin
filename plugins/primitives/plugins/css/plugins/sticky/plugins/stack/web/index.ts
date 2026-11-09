@@ -3,10 +3,12 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 export {
   StickyStack,
   StickyStackItem,
+  StickyStackBranch,
   stickyStackTop,
   DEFAULT_MAX_STACKED,
   type StickyStackProps,
   type StickyStackItemProps,
+  type StickyStackBranchProps,
 } from "./internal/sticky-stack";
 
 export default {

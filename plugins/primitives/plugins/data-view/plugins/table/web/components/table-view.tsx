@@ -413,6 +413,8 @@ function FlatTableView(props: DataViewRenderProps<unknown>): ReactNode {
               key,
               collapsed,
               rows: section.entries.map((e) => e.row),
+              // Past the stack's cap a nested header pins below its parents.
+              parentKey: section.nesting?.parentKey ?? undefined,
               // Hidden with the group's rows when collapsed, like GroupedSections:
               // the fold line, and a declared section's own paging footer.
               footer:

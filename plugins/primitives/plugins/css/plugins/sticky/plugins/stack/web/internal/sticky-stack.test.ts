@@ -63,3 +63,54 @@ describe("stickyStackTop", () => {
     ).toThrow(/not present in its <StickyStack/);
   });
 });
+
+describe("stickyStackTop — nested (ancestors)", () => {
+  test("past the cap an item pins below its ancestor chain only", () => {
+    expect(
+      stickyStackTop({
+        keys,
+        heights,
+        itemKey: "c",
+        base: "0px",
+        stacked: false,
+        ancestors: ["a"],
+      }),
+    ).toBe("calc(0px + 28px)");
+    expect(
+      stickyStackTop({
+        keys,
+        heights,
+        itemKey: "c",
+        base: "0px",
+        stacked: false,
+        ancestors: ["a", "b"],
+      }),
+    ).toBe("calc(0px + 58px)");
+  });
+
+  test("a root item past the cap pins at the base", () => {
+    expect(
+      stickyStackTop({
+        keys,
+        heights,
+        itemKey: "b",
+        base: "4px",
+        stacked: false,
+        ancestors: [],
+      }),
+    ).toBe("4px");
+  });
+
+  test("stacked ignores the chain: every preceding item is above", () => {
+    expect(
+      stickyStackTop({
+        keys,
+        heights,
+        itemKey: "c",
+        base: "0px",
+        stacked: true,
+        ancestors: ["a"],
+      }),
+    ).toBe("calc(0px + 58px)");
+  });
+});

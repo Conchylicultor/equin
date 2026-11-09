@@ -29,8 +29,10 @@ type Kind = "reveal" | "hide" | "stay";
  * hidden runs above). Offsets and clips are all linear in the tween's
  * progress, so one easing on every row keeps them in step.
  *
- * Rows are the host's direct children carrying `data-row-fold` (their key);
- * other children (a windowed body's spacers) are skipped. A row's share of a
+ * Rows are the host's elements carrying `data-row-fold` (their key), in
+ * document order — its direct children, or inside a box that lays them out in
+ * the same one column (a sticky stack's branch around a nested group); other
+ * elements (a windowed body's spacers) are skipped. A row's share of a
  * run is its height plus the host's `row-gap` (a flex column's gap) — never
  * the distance to the next row, which a pinned sticky header misreports. Rows
  * whose path never crosses the viewport are left alone.
@@ -44,10 +46,10 @@ export function planRowFold(
   const gap = parseFloat(getComputedStyle(host).rowGap) || 0;
   const rows: { el: HTMLElement; kind: Kind; top: number; height: number }[] =
     [];
-  for (const child of host.children) {
-    if (!(child instanceof HTMLElement)) continue;
-    const key = child.dataset.rowFold;
-    if (key === undefined) continue;
+  for (const child of host.querySelectorAll<HTMLElement>("[data-row-fold]")) {
+    // A row of a fold host nested inside this one is that host's.
+    if (child.closest("[data-row-fold-host]") !== host) continue;
+    const key = child.dataset.rowFold!;
     const rect = child.getBoundingClientRect();
     rows.push({
       el: child,

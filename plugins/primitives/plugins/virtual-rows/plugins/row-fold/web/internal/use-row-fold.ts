@@ -39,7 +39,7 @@ export interface RowFoldHostProps {
   "data-row-fold-host": string;
 }
 
-/** Spread on each row's outermost element (a direct child of the host). */
+/** Spread on each row's outermost element (in the host's one column). */
 export interface RowFoldProps {
   "data-row-fold": string;
   /** A hidden row folding away: still painted, no longer there for focus or
@@ -51,7 +51,7 @@ export interface RowFold<T> {
   /** What to draw: `items`, plus the hidden rows still folding away, in
    *  their old places. */
   items: readonly T[];
-  /** Spread on the element whose direct children are the rows. Props, not a
+  /** Spread on the element whose column the rows are laid out in. Props, not a
    *  ref: the host already has its own refs, and nothing needs composing. */
   hostProps: RowFoldHostProps;
   rowProps: (key: string) => RowFoldProps;

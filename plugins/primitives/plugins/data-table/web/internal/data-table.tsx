@@ -27,6 +27,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import {
   StickyStack,
+  StickyStackBranch,
   StickyStackItem,
 } from "@plugins/primitives/plugins/css/plugins/sticky/plugins/stack/web";
 import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
@@ -751,28 +752,40 @@ export function DataTable<TRow>({
             // the `col-span-full` lines stay direct grid children: the tracks
             // line up, and the fold finds them.
             //
+            // Nested groups (`parentKey`) draw as sticky-stack branches, each
+            // a subgrid box spanning the tracks, so past the cap a nested
+            // header pins below its parent chain and a finished branch takes
+            // its headers with it (the fold reads rows inside the boxes too).
+            //
             // Each group's rows window on their own, like the ungrouped body,
             // once the group holds more than `VIRTUALIZE_THRESHOLD` of them:
             // grouping is the outer structure, windowing the inner one, so
             // every header (and footer) stays mounted for the stack to measure.
             <StickyStack
-              keys={groups.map((group) => group.key)}
+              // Every header drawn — a group folding away (a collapsed
+              // parent's sub-group) included, until its fold ends.
+              keys={fold.items.flatMap((line) =>
+                line.kind === "header" ? [line.group.key] : [],
+              )}
               base={groupHeaderTop}
             >
-              {bodySegments(fold.items).map((segment) =>
-                segment.kind === "line" ? (
-                  renderLine(segment.line)
-                ) : (
-                  <VirtualTableBody
-                    key={segment.key}
-                    lines={segment.lines}
-                    estimateSize={ROW_ESTIMATE[presentation]}
-                    selectedRowId={selectedRowId}
-                    renderLine={renderLine}
-                    keepMounted={keepMountedRowKeys}
-                    drawPastEnd={fold.inFlight}
-                  />
-                ),
+              {renderBranchParts(
+                groupBranches(bodySegments(fold.items)),
+                (segment) =>
+                  segment.kind === "line" ? (
+                    renderLine(segment.line)
+                  ) : (
+                    <VirtualTableBody
+                      key={segment.key}
+                      lines={segment.lines}
+                      estimateSize={ROW_ESTIMATE[presentation]}
+                      selectedRowId={selectedRowId}
+                      renderLine={renderLine}
+                      keepMounted={keepMountedRowKeys}
+                      drawPastEnd={fold.inFlight}
+                    />
+                  ),
+                tree ? "rowgroup" : undefined,
               )}
             </StickyStack>
           ) : rows.length > VIRTUALIZE_THRESHOLD ? (
@@ -1460,6 +1473,79 @@ function bodySegments<TRow>(
   }
   flush();
   return out;
+}
+
+/**
+ * A grouped body as a tree of sticky-stack branches: each part is a segment
+ * (drawn as-is) or a nested group's branch — its header, rows, footer and the
+ * groups nested under it. A group with no sub-groups stays flat in its
+ * parent's parts, so a grouping without nesting draws exactly as before.
+ */
+type BranchPart<TRow> =
+  | { kind: "segment"; segment: BodySegment<TRow> }
+  | { kind: "branch"; key: string; parts: BranchPart<TRow>[] };
+
+function groupBranches<TRow>(
+  segments: readonly BodySegment<TRow>[],
+): BranchPart<TRow>[] {
+  interface Open {
+    key: string | null;
+    parts: BranchPart<TRow>[];
+  }
+  const root: Open = { key: null, parts: [] };
+  // The open groups, outermost first: a header closes every group it does
+  // not nest under, and the lines after it belong to it.
+  const stack: Open[] = [root];
+  for (const segment of segments) {
+    if (segment.kind === "line" && segment.line.kind === "header") {
+      const group = segment.line.group;
+      const parentKey = group.parentKey ?? null;
+      while (stack.length > 1 && stack.at(-1)!.key !== parentKey) stack.pop();
+      const parent = stack.at(-1)!;
+      if (parent.key !== parentKey)
+        throw new Error(
+          `Table group "${group.key}" names parent "${parentKey}", which does not precede it`,
+        );
+      const open: Open = { key: group.key, parts: [] };
+      parent.parts.push({ kind: "branch", key: group.key, parts: open.parts });
+      stack.push(open);
+    }
+    stack.at(-1)!.parts.push({ kind: "segment", segment });
+  }
+  return flattenLeaves(root.parts);
+}
+
+/** A branch with no sub-branch is its parts inline — no box. */
+function flattenLeaves<TRow>(parts: BranchPart<TRow>[]): BranchPart<TRow>[] {
+  return parts.flatMap((part) => {
+    if (part.kind === "segment") return [part];
+    // Whether it has sub-groups, read before they flatten themselves.
+    const nests = part.parts.some((p) => p.kind === "branch");
+    const inner = flattenLeaves(part.parts);
+    return nests ? [{ ...part, parts: inner }] : inner;
+  });
+}
+
+function renderBranchParts<TRow>(
+  parts: readonly BranchPart<TRow>[],
+  renderSegment: (segment: BodySegment<TRow>) => ReactNode,
+  role: "rowgroup" | undefined,
+): ReactNode[] {
+  return parts.map((part) =>
+    part.kind === "segment" ? (
+      renderSegment(part.segment)
+    ) : (
+      <StickyStackBranch
+        key={`\u0000branch:${part.key}`}
+        itemKey={part.key}
+        role={role}
+        // eslint-disable-next-line layout/no-adhoc-layout -- a nested group's branch box spans the subgrid table's column tracks and lays its lines out in them
+        className="col-span-full grid grid-cols-subgrid"
+      >
+        {renderBranchParts(part.parts, renderSegment, role)}
+      </StickyStackBranch>
+    ),
+  );
 }
 
 /** A group band pinned to the left edge, as wide as the scroller shows. */
