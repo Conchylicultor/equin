@@ -101,9 +101,13 @@ what it decides. Prototype: `proto-1794189254-saewzy` (`open=balanced`).
   `SHARE_MIN`, two still share the row down to `PAIR_MIN` (300px) each, so an
   open keeps the column it came from beside it. Only below 600px does one
   column take the row.
-- **A column the user dragged keeps that width** (counted at it when deciding
-  what fits); the others share what it leaves. Double-click the divider to
-  forget it. Every shown column dragged: the leaf shares instead.
+- **How many columns show depends on the row width alone** — a drag never
+  changes it, so two drags that overshoot the row cannot push the column a
+  pane was opened from off screen.
+- **A column the user dragged keeps that width**; the others share what it
+  leaves — and when that would leave them under the minimum, the dragged
+  widths scale down in proportion. Double-click the divider to forget it.
+  Every shown column dragged: the leaf shares instead.
 - **A collapsed bar** is 32 fixed and leaves the rest to share.
 - **A window resize re-balances live**, unanimated; a row sitting at its end
   stays at its end.

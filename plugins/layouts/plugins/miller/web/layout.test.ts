@@ -69,11 +69,20 @@ describe("layoutColumns — balanced", () => {
     expect(widths(l.columns)).toEqual([300, 500, 500]);
   });
 
-  it("a dragged column counts at its width when deciding what fits", () => {
-    // a (700) + b + c at 420 = 1540 > 1300: b and c share, a scrolls off.
+  it("a drag never changes how many columns show; drags that overshoot scale down", () => {
+    // 1300 / 420 → 3 shown whatever was dragged. a (700) leaves b and c
+    // 300 each < 420: a scales to 460 so they keep 420.
     const l = layoutColumns([col("a", 700), col("b"), col("c")], 1300, null);
-    expect(widths(l.columns)).toEqual([700, 650, 650]);
-    expect(scrollTarget(l, 1300)).toBe(700);
+    expect(widths(l.columns)).toEqual([460, 420, 420]);
+    expect(scrollTarget(l, 1300)).toBe(0);
+  });
+
+  it("regression: two dragged columns overshooting the row still both show", () => {
+    // The conversation dragged to 692 and the prototype opened from it to
+    // 630 (Σ 1322 > 1292) used to leave the prototype alone on screen.
+    const l = layoutColumns([col("conv", 692), col("proto", 630)], 1292, null);
+    expect(widths(l.columns)).toEqual([692, 600]);
+    expect(scrollTarget(l, 1292)).toBe(0);
   });
 
   it("all shown columns dragged: the leaf shares", () => {

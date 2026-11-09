@@ -79,13 +79,16 @@ const sum = (xs: readonly number[]) => xs.reduce((s, x) => s + x, 0);
  * column's dragged width or null, bars already taken out (`space` is the row
  * less them):
  *
- * - `k` = the most trailing columns (the leaf and its left neighbours) that
- *   fit the row at {@link SHARE_MIN} each, a dragged one counting at its
- *   width. Fewer than two fit but two at {@link PAIR_MIN} do: `k` = 2.
- * - Those `k` share the row equally (50/50, 33/33/33), a dragged one at its
- *   width, the rest sharing what it leaves. The leaf gets no bonus, so
- *   nothing snaps back when the next column opens. All of them dragged: the
- *   leaf shares instead.
+ * - `k`, how many trailing columns (the leaf and its left neighbours) are
+ *   shown, depends on the row width alone: as many as fit at
+ *   {@link SHARE_MIN} each; fewer than two but two at {@link PAIR_MIN} do:
+ *   2. A drag never changes it — two drags that together overshoot the row
+ *   must not push the column a pane was opened from off screen.
+ * - Those `k` share the row equally (50/50, 33/33/33). A dragged one keeps
+ *   its width, the rest sharing what it leaves — scaled down, all dragged
+ *   ones in proportion, when the rest would get less than the minimum. The
+ *   leaf gets no bonus, so nothing snaps back when the next column opens.
+ *   All of them dragged: the leaf shares instead.
  * - The columns left of them keep that same share (or their dragged width)
  *   and sit scrolled off to the left: the row's end puts the window's left
  *   edge on the viewport's — no column half-cut.
@@ -99,19 +102,26 @@ function balancedWidths(
   const n = dragged.length;
   if (n === 0) return [];
   if (space <= 0) return dragged.map((d) => d ?? SHARE_MIN);
-  const fits = (k: number, min: number) =>
-    sum(dragged.slice(n - k).map((d) => d ?? min)) <= space;
-  let k = n;
-  while (k > 1 && !fits(k, SHARE_MIN)) k--;
-  if (k === 1 && n >= 2 && fits(2, PAIR_MIN)) k = 2;
+  let k = Math.max(1, Math.min(n, Math.floor(space / SHARE_MIN)));
+  if (k === 1 && n >= 2 && 2 * PAIR_MIN <= space) k = 2;
+  const floor = k * SHARE_MIN <= space ? SHARE_MIN : PAIR_MIN;
   const start = n - k;
   const sharing = new Set<number>();
   for (let i = start; i < n; i++) if (dragged[i] === null) sharing.add(i);
   if (sharing.size === 0) sharing.add(n - 1);
   let kept = 0;
   for (let i = start; i < n; i++) if (!sharing.has(i)) kept += dragged[i]!;
-  const share = Math.max(MIN_COLUMN_WIDTH, (space - kept) / sharing.size);
-  return dragged.map((d, i) => (sharing.has(i) ? share : (d ?? share)));
+  const room = space - sharing.size * floor;
+  const scale = kept > room ? Math.max(0, room) / kept : 1;
+  const share = Math.max(
+    MIN_COLUMN_WIDTH,
+    (space - kept * scale) / sharing.size,
+  );
+  return dragged.map((d, i) => {
+    if (sharing.has(i)) return share;
+    if (i >= start) return d! * scale;
+    return d ?? share;
+  });
 }
 
 /**
