@@ -57,6 +57,13 @@ const LITERAL_LIMIT = 256;
 type DomainEntry = TreePathspecEntry;
 
 /**
+ * Bumped when a recorded answer may be wrong. 2: domains listed excluded files
+ * (`listTreePathspec` let a leading-`**` exclude through), and a whole-tree
+ * grep then recorded "no match" for a matching blob it was told to skip.
+ */
+const ANSWERS_VERSION = 2;
+
+/**
  * The index of one run: `tree` (the run's tree hash, what every check scans) in
  * the checkout at `root`.
  */
@@ -90,7 +97,12 @@ export function createGrepIndex(opts: {
     async select(grepArg, fixed, pathspecs) {
       version ??= gitVersion(root);
       const query = sha256Hex(
-        JSON.stringify([await version, fixed ? "-F" : "-E", grepArg]),
+        JSON.stringify([
+          ANSWERS_VERSION,
+          await version,
+          fixed ? "-F" : "-E",
+          grepArg,
+        ]),
       );
       const domain = await domainOf(pathspecs);
       const blobs = [...new Set(domain.map((e) => e.blob))];

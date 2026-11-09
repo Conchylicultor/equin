@@ -281,28 +281,71 @@ export async function listTreePathspec(
       throw new Error(
         `listTreePathspec: git read-tree ${tree} failed (exit ${read.code})`,
       );
-    const listed = await git(
-      root,
-      ["ls-files", "-s", "-z", "--", ...pathspecs],
-      env,
-    );
-    if (listed.code !== 0)
-      throw new Error(
-        `listTreePathspec: git ls-files failed (exit ${listed.code})`,
+    const listFiles = async (
+      specs: readonly string[],
+    ): Promise<TreePathspecEntry[]> => {
+      const listed = await git(
+        root,
+        ["ls-files", "-s", "-z", "--", ...specs],
+        env,
       );
-    const entries: TreePathspecEntry[] = [];
-    for (const record of listed.stdout.split("\0")) {
-      if (record === "") continue;
-      // `<mode> <blob> <stage>\t<path>`; a gitlink (160000) has no bytes to grep.
-      const tab = record.indexOf("\t");
-      const [mode, blob] = record.slice(0, tab).split(" ");
-      if (mode === "160000" || blob === undefined) continue;
-      entries.push({ path: record.slice(tab + 1), blob });
+      if (listed.code !== 0)
+        throw new Error(
+          `listTreePathspec: git ls-files failed (exit ${listed.code})`,
+        );
+      const entries: TreePathspecEntry[] = [];
+      for (const record of listed.stdout.split("\0")) {
+        if (record === "") continue;
+        // `<mode> <blob> <stage>\t<path>`; a gitlink (160000) has no bytes to grep.
+        const tab = record.indexOf("\t");
+        const [mode, blob] = record.slice(0, tab).split(" ");
+        if (mode === "160000" || blob === undefined) continue;
+        entries.push({ path: record.slice(tab + 1), blob });
+      }
+      return entries;
+    };
+    // The excludes are applied here, each listed as a positive of its own, and
+    // never handed to `ls-files` beside the positives. With positives that
+    // share a leading directory, `ls-files` (git 2.50) matches an exclude only
+    // after that prefix, so a leading `**/` exclude (`:(exclude)**/__tests__/**`
+    // beside `plugins/**/*.tsx`) drops nothing — while `git grep` drops it. The
+    // domain then held files the grep never searches, and a NEW one among them,
+    // re-grepped by its literal path, read as a match.
+    const positives: string[] = [];
+    const excludes: string[] = [];
+    for (const spec of pathspecs) {
+      const positive = excludeAsPositive(spec);
+      if (positive === null) positives.push(spec);
+      else excludes.push(positive);
     }
-    return entries;
+    const entries = await listFiles(positives);
+    if (excludes.length === 0) return entries;
+    const excluded = new Set(
+      (await listFiles(excludes)).map((e) => e.path),
+    );
+    return entries.filter((e) => !excluded.has(e.path));
   } finally {
     rmSync(scratch, { force: true });
   }
+}
+
+/**
+ * An exclude pathspec as the positive pathspec naming what it excludes
+ * (`:(exclude,glob)x` → `:(glob)x`, `:!x` / `:^x` → `x`), or null for a
+ * positive one. Its other magic is kept, so it names exactly what it excluded.
+ */
+export function excludeAsPositive(spec: string): string | null {
+  if (spec.startsWith(":!") || spec.startsWith(":^")) {
+    const rest = spec.slice(2);
+    // More short magic may follow (`:!/x`); keep it as its own short form.
+    return /^[/!^]/.test(rest) ? `:${rest}` : rest;
+  }
+  const long = /^:\(([^)]*)\)(.*)$/s.exec(spec);
+  if (long === null) return null;
+  const words = long[1]!.split(",").map((w) => w.trim());
+  if (!words.includes("exclude")) return null;
+  const kept = words.filter((w) => w !== "exclude" && w !== "");
+  return kept.length > 0 ? `:(${kept.join(",")})${long[2]}` : long[2]!;
 }
 
 /** `<index>.<suffix>`, in the index's own directory (git's lock spelling). */

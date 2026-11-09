@@ -22,7 +22,11 @@ import {
   type AppPath,
   asAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { computeTreeHash } from "./tree-hash";
+import {
+  computeTreeHash,
+  excludeAsPositive,
+  listTreePathspec,
+} from "./tree-hash";
 
 let root!: AppPath;
 let index!: string;
@@ -273,5 +277,49 @@ describe("computeTreeHash", () => {
     const opened = /opendir:(\d+)/.exec(trace);
     expect(opened).not.toBeNull();
     expect(Number(opened![1])).toBe(0);
+  });
+});
+
+describe("listTreePathspec", () => {
+  // What `git grep <tree> -- <pathspecs>` searches. `ls-files` given the same
+  // pathspecs keeps a leading-`**` exclude's files when the positives share a
+  // leading directory of 2+ characters (`plugins/`, not `p/`) — the grep index then re-grepped a new test file by its literal
+  // path and counted it (a fixture pane in `pane:identity-manifest`).
+  test("drops what a leading-** exclude names beside prefixed positives", async () => {
+    for (const rel of ["plugins/x/a.ts", "plugins/x/__tests__/b.ts", "plugins/y/c.test.ts"]) {
+      mkdirSync(join(root, rel, ".."), { recursive: true });
+      writeFileSync(join(root, rel), "defineRoute\n");
+    }
+    await git("add", "-A");
+    const tree = await git("write-tree");
+    const listed = await listTreePathspec(root, tree, [
+      "plugins/**/*.ts",
+      ":(exclude)**/__tests__/**",
+      ":(exclude)**/*.test.ts",
+    ]);
+    expect(listed.map((e) => e.path)).toEqual(["plugins/x/a.ts"]);
+    const grepped = (
+      await git("grep", "-l", "defineRoute", tree, "--", "plugins/**/*.ts",
+        ":(exclude)**/__tests__/**", ":(exclude)**/*.test.ts")
+    )
+      .split("\n")
+      .map((l) => l.slice(tree.length + 1));
+    expect(grepped).toEqual(["plugins/x/a.ts"]);
+  });
+});
+
+describe("excludeAsPositive", () => {
+  test("turns every exclude spelling into the positive it names", () => {
+    expect(excludeAsPositive(":(exclude)**/x")).toBe("**/x");
+    expect(excludeAsPositive(":(exclude,glob)**/x")).toBe(":(glob)**/x");
+    expect(excludeAsPositive(":!x")).toBe("x");
+    expect(excludeAsPositive(":^x")).toBe("x");
+    expect(excludeAsPositive(":!/x")).toBe(":/x");
+  });
+
+  test("leaves a positive alone", () => {
+    expect(excludeAsPositive("p/**/*.ts")).toBeNull();
+    expect(excludeAsPositive(":(glob)p/**")).toBeNull();
+    expect(excludeAsPositive(":(literal)p/a.ts")).toBeNull();
   });
 });

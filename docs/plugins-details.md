@@ -114,7 +114,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `InlineChip.Tag` "att" → `AttemptChip`
         - Uses:
           - `active-data/id-chip.idChip`
-          - `conversations/conversation-view.useConversationOpener`
+          - `conversations/conversation-view.conversationPane`
           - `network/live.mapRow`
           - `network/live.rowOrStale`
           - `network/live.useLive`
@@ -125,7 +125,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live/live-state.useCombinedResources`
           - `primitives/css/link-chip.LinkChip`
           - `primitives/css/status-dot.StatusDot`
-          - `primitives/pane.useOpenPane`
+          - `primitives/pane.paneTarget`
+          - `primitives/pane.PaneTarget`
+          - `primitives/pane.usePaneToggle`
           - `tasks/attempt-status.ATTEMPT_STATUS_META`
           - `tasks/attempt-status.attemptStatusLabel`
           - `tasks/attempt-view.attemptPane`
@@ -164,7 +166,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `active-data/id-chip.rowReferent`
           - `build.buildDetailPane`
           - `network/live.useLive`
-          - `primitives/pane.useOpenPane`
+          - `primitives/pane.paneTarget`
+          - `primitives/pane.PaneTarget`
       - Server:
         - Contributes:
           - `ids.referent` "build"
@@ -206,11 +209,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations.useConversationById`
           - `conversations/conversation-ui/item.ConversationItem`
           - `conversations/conversation-ui/item.convStatusDot`
+          - `conversations/conversation-view.conversationPane`
           - `conversations/conversation-view.useConversationOpener`
           - `network/live.rowOrStale`
           - `network/live.useLive`
           - `primitives/css/link-chip.LinkChip`
           - `primitives/css/status-dot.StatusDot`
+          - `primitives/pane.paneTarget`
+          - `primitives/pane.PaneTarget`
         - Exports (values): `ConvChip`
       - Server:
         - Contributes:
@@ -248,7 +254,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `active-data/id-chip.rowReferent`
           - `apps/events/sources.eventSourceDetailPane`
           - `network/live.useLive`
-          - `primitives/pane.useOpenPane`
+          - `primitives/pane.paneTarget`
+          - `primitives/pane.PaneTarget`
       - Server:
         - Contributes:
           - `ids.referent` "evs"
@@ -333,6 +340,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ids.IdKinds`
           - `ids.IdPresenter`
           - `primitives/css/link-chip.LinkChip`
+          - `primitives/pane.usePaneToggle`
           - `primitives/text-editor/inline-chip.inlineChip`
           - `primitives/text-editor/inline-chip.InlineChip`
           - `ui/icons.Icon`
@@ -382,7 +390,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.useLive`
           - `page/editor.PageIcon`
           - `primitives/css/link-chip.LinkChip`
-          - `primitives/pane.useOpenPane`
+          - `primitives/pane.paneTarget`
+          - `primitives/pane.PaneTarget`
         - Exports (values): `PageLinkChip`
       - Server:
         - Contributes:
@@ -432,7 +441,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/prototypes/canvas.prototypeDetailPane`
           - `network/live.useLive`
           - `network/live/live-state.foldResource`
-          - `primitives/pane.useOpenPane`
+          - `primitives/pane.paneTarget`
+          - `primitives/pane.PaneTarget`
       - Server:
         - Contributes:
           - `ids.referent` "proto"
@@ -459,7 +469,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `active-data/id-chip.rowReferent`
           - `debug/reports.reportDetailPane`
           - `network/live.useLive`
-          - `primitives/pane.useOpenPane`
+          - `primitives/pane.paneTarget`
+          - `primitives/pane.PaneTarget`
       - Server:
         - Contributes:
           - `ids.referent` "report"
@@ -486,7 +497,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/shape --spacing`
-    - **`song`** — Renders a bare `song-<id>` in a transcript or a page as the generic id chip (the song's title) that opens it in Sonata's player, and presents the song id kind to the id registry. The song id chip's server half (idChipServer): resolves a `song-<id>` to the song's title for the id registry and for model-read text, and registers the page-editor inline token so a page block holding the chip stays agent-readable.
+    - **`song`** — Renders a bare `song-<id>` in a transcript or a page as the generic id chip (the song's title) that opens it in a peek beside the text — Sonata's mini player, whose Expand is the full player — and presents the song id kind to the id registry. The song id chip's server half (idChipServer): resolves a `song-<id>` to the song's title for the id registry and for model-read text, and registers the page-editor inline token so a page block holding the chip stays agent-readable.
       - Web:
         - Contributes:
           - `IdKinds.Presenter` "song"
@@ -494,8 +505,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `active-data/id-chip.idChip`
           - `active-data/id-chip.rowReferent`
-          - `apps-core/tabs.useAppLink`
+          - `apps/sonata/library.songPeekPane`
           - `network/live.useLive`
+          - `primitives/pane.paneTarget`
+          - `primitives/pane.PaneTarget`
       - Server:
         - Contributes:
           - `resource.declare` "song-chip.referents:rows"
@@ -559,7 +572,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live/live-state.matchResource`
           - `primitives/css/link-chip.LinkChip`
           - `primitives/css/status-dot.StatusDot`
-          - `primitives/pane.useOpenPane`
+          - `primitives/pane.paneTarget`
+          - `primitives/pane.PaneTarget`
+          - `primitives/pane.usePaneToggle`
           - `tasks/task-detail.taskDetailPane`
           - `tasks/task-status.STATUS_META`
         - Exports (values): `TaskLinkChip`
@@ -4555,10 +4570,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `FieldPresentation.Register` "collection:file-explorer.entry"
               - `FileBrowserSlots.RowActions` "extract" → `ExtractAction`
               - `FileBrowserSlots.RowActions` "copy-path" → `CopyPathAction`
-            - Uses: 73 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
+            - Uses: 74 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
               - `primitives/data-view` ×10
               - `primitives/css/ui-kit` ×8
-              - `primitives/file-viewer` ×5
+              - `primitives/file-viewer` ×6
               - `primitives/pane` ×5
               - `network/live` ×4
               - `infra/endpoints` ×3
@@ -7664,17 +7679,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`audio`** — Audio playback umbrella for Sonata: engine + instruments.
           - Plugins:
-            - **`engine`** — Sonata audio engine: schedules the Score's notes against the Web Audio clock on play, routing each note to its track's resolved instrument, with master volume in the player pane's header.
+            - **`engine`** — Sonata audio engine: schedules the Score's notes against the Web Audio clock on play, routing each note to its track's resolved instrument, with master volume in the player pane's header (and the song peek's).
               - Web:
                 - Contributes:
                   - `SonataSession.Provider` → `AudioProvider`
                   - `SonataSession.Effect` "audio-engine" → `AudioEngine`
                   - `sonataPlayerPane.Actions` "volume" → `VolumeControl`
+                  - `songPeekPane.Actions` "volume" → `VolumeControl`
                 - Uses:
                   - `apps/sonata/audio/instruments.InstrumentVoices`
                   - `apps/sonata/audio/instruments.SonataAudio`
                   - `apps/sonata/audio/instruments.useInstrumentAssets`
                   - `apps/sonata/library.sonataPlayerPane`
+                  - `apps/sonata/library.songPeekPane`
                   - `apps/sonata/primitives/toolbar-control.hoverExpandHost`
                   - `apps/sonata/primitives/toolbar-control.HoverExpandPanel`
                   - `apps/sonata/session.SonataSession`
@@ -7969,10 +7986,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Library.Notice`
               - `sonataLibraryPane.Actions`
               - `sonataPlayerPane.Actions`
-            - Slot contributors: 21 contributors — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
+              - `songPeekPane.Actions`
+            - Slot contributors: 24 contributors — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
               - `sonataPlayerPane.Actions` ×7
               - `Library.Cover` ×5
               - `Library.Source` ×5
+              - `songPeekPane.Actions` ×3
               - `sonataLibraryPane.Actions` ×2
               - `Library.Notice` ← `apps.sonata.sources.midi.folders`
               - `Library.SongActions` ← `apps.sonata.library`
@@ -7987,8 +8006,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Library.SongActions` "delete" → `DeleteSongAction`
               - `Pane.Register` "sonata-library"
               - `Pane.Register` "sonata-player"
-            - Uses: 95 symbols — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
-              - `primitives/pane` ×13
+              - `Pane.Register` "sonata-song-peek"
+            - Uses: 98 symbols — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
+              - `primitives/pane` ×15
               - `primitives/data-view` ×7
               - `apps/sonata/shell` ×6
               - `network/live/live-state` ×6
@@ -8002,6 +8022,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/layer` ×2
               - `primitives/css/spacing` ×2
               - `primitives/latest-ref` ×2
+              - `apps/sonata/mini-player.SonataMiniPlayer`
               - `apps/sonata/primitives/glass.Glass`
               - `apps/sonata/session.useSession`
               - `fullscreen.FullscreenButton`
@@ -8041,6 +8062,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `sonataLibraryPane`
               - `sonataPlayerPane`
               - `sonataSongLink`
+              - `songPeekPane`
               - `useCurrentSong`
               - `useSectionPaneCollapsed`
               - `useSongLink`
@@ -8251,6 +8273,38 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chord-palette --chord-outside`
               - `ui/tokens/color-palette --primary`
               - `ui/tokens/color-palette --ring`
+        - **`mini-player`** — Sonata's mini player: <SonataMiniPlayer> — one song (a library song or a file's bytes) in a player of its own, drawn as the immersive player scaled down and wearing Sonata's theme wherever it is hosted: the falling notes fill the box, an optional header band floats over their top, and the progression capsule (play, the timeline, loop) floats in glass. One loading state until the display has drawn, then everything at once and it plays. Shared by the file viewer's MIDI preview and the song peek pane.
+          - Web:
+            - Uses:
+              - `apps/sonata/document.SongIdentity`
+              - `apps/sonata/document.useLoadDocument`
+              - `apps/sonata/document.useSongDocument`
+              - `apps/sonata/player.PlayerDisplay`
+              - `apps/sonata/player.PlayerTransport`
+              - `apps/sonata/player.SonataPlayerScope`
+              - `apps/sonata/player.usePlayerView`
+              - `apps/sonata/primitives/glass.Glass`
+              - `apps/sonata/session.useSession`
+              - `primitives/css/center.Center`
+              - `primitives/css/clip.Clip`
+              - `primitives/css/coords.Placed`
+              - `primitives/css/overlay.Overlay`
+              - `primitives/css/placeholder.Placeholder`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/theme-boundary.Theme`
+              - `primitives/css/ui-kit.cn`
+              - `primitives/loading.Loading`
+            - Exports (values):
+              - `MINI_PLAYER_HEADER_HEIGHT`
+              - `SonataMiniPlayer`
+          - Cross-plugin:
+            - Uses tokens:
+              - `ui/tokens/color-palette --background`
+              - `ui/tokens/color-palette --foreground`
+              - `ui/tokens/shape --spacing`
+            - Imported by:
+              - `apps/sonata/library`
+              - `apps/sonata/sources/midi/file-preview`
         - **`notation`** — Sonata Display: standard staff notation. Engraves the score as a grand staff (treble + bass) with clefs, key/time signatures, barlines, accidentals and rests, following playback with a moving playhead, active-note highlight and auto-scroll. A reading view (no time-axis / pitch-plane capabilities); click a note to seek. Server registration of the notation config (chord-symbol toggle + treble/bass split pitch).
           - Web:
             - Contributes:
@@ -8581,13 +8635,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/controls`
               - `apps/sonata/library`
               - `apps/sonata/lyrics-hud`
+              - `apps/sonata/mini-player`
               - `apps/sonata/notation`
               - `apps/sonata/piano-roll`
               - `apps/sonata/progress/loop`
               - `apps/sonata/progress/scrubber`
               - `apps/sonata/shell`
               - `apps/sonata/songsheet`
-              - `apps/sonata/sources/midi/file-preview`
               - `apps/sonata/transport-bar`
               - `apps/sonata/view-options`
         - **`primitives`** — Umbrella for Sonata-local client primitives.
@@ -8602,7 +8656,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values): `Glass`
               - Cross-plugin:
                 - Uses tokens: `ui/tokens/color-palette --border`
-                - Imported by: `apps/sonata/library`
+                - Imported by:
+                  - `apps/sonata/library`
+                  - `apps/sonata/mini-player`
             - **`icons`** — Contributes the sonata icon family (sonataIcons) to Icons.Family, so a scope whose iconFamily is sonata — the Sonata theme's — draws its glyphs.
               - Web:
                 - Contributes: `Icons.Family` "Sonata"
@@ -9572,8 +9628,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useCursorSelector`
               - `useSession`
           - Cross-plugin:
-            - Imported by: 33 plugins — full list in [`plugins/apps/plugins/sonata/plugins/session/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/session/REFERENCE.md)
-              - `apps` ×33
+            - Imported by: 34 plugins — full list in [`plugins/apps/plugins/sonata/plugins/session/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/session/REFERENCE.md)
+              - `apps` ×34
         - **`shell`** — App shell for Sonata. Registers the /sonata app entry (SonataLayout: one SonataPlayerScope around the pane router), derives the app's song — the one loaded in the player (useSonataApp) — and defines the app-level Sonata.{Overlay,TransportOverlay,TransportEdge,PitchAxis,Home,Provider,Effect,Hud,ViewOption,Section} slots, and the app's own dark-only theme (the immersive player's blue-black night, sky accent, the chord colours, Manrope), which the sonata app selects.
           - Web:
             - Slots:
@@ -9644,8 +9700,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shadow --shadow-float`
               - `ui/tokens/shadow --shadow-popover`
             - Imported by: 33 plugins — full list in [`plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md)
-              - `apps` ×32
-              - `active-data/song`
+              - `apps` ×33
         - **`songsheet`** — Sonata Display: a chord-over-lyrics songsheet. Renders the score's lyric lines with chords printed over each column, grouped by section, highlighting and auto-scrolling the line under the playback cursor. A reading view (no time-axis / pitch-plane capabilities); click a line to seek.
           - Web:
             - Contributes: `SonataPlayer.Display` "Songsheet" → `Songsheet`
@@ -9855,41 +9910,28 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/sonata/sources/midi/file-preview`
                   - `apps/sonata/sources/midi/folders`
               - Plugins:
-                - **`file-preview`** — Sonata's MIDI file preview: a FileViewer renderer (native for .mid/.midi files, host or workspace) showing the file's facts (duration, tempo, meter, bars, tracks and notes, range, size), Sonata's falling-notes piano roll in its own player with a play bar, and Open in Sonata — imported into the library idempotently by content — at the playhead's bar.
+                - **`file-preview`** — Sonata's MIDI file preview: a FileViewer renderer (native for .mid/.midi files, host or workspace) showing the file in Sonata's mini player (the falling notes, the progression capsule over them), with Open in Sonata — imported into the library idempotently by content, at the playhead's bar — as the host header's Expand.
                   - Web:
                     - Contributes: `FileViewer.Renderer` "MIDI" → `MidiFilePreview`
-                    - Uses: 35 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/midi/plugins/file-preview/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/midi/plugins/file-preview/REFERENCE.md)
-                      - `apps/sonata/player` ×4
-                      - `apps/sonata/sources/midi` ×4
-                      - `apps/sonata/document` ×2
-                      - `apps/sonata/session` ×2
-                      - `infra/paths/file-systems` ×2
-                      - `primitives/css/spacing` ×2
-                      - `primitives/css/ui-kit` ×2
+                    - Uses:
                       - `apps-core/tabs.useNavigate`
                       - `apps/sonata/library.sonataSongLink`
+                      - `apps/sonata/mini-player.SonataMiniPlayer`
+                      - `apps/sonata/session.useCursorApi`
+                      - `apps/sonata/session.useSession`
+                      - `apps/sonata/sources/midi.deriveMidiSongMeta`
+                      - `apps/sonata/sources/midi.importMidiBytes`
+                      - `apps/sonata/sources/midi.MIDI_SOURCE_ID`
                       - `infra/endpoints.useFetchEndpoint`
-                      - `primitives/css/center.Center`
-                      - `primitives/css/clip.Clip`
-                      - `primitives/css/cluster.Cluster`
-                      - `primitives/css/column.Column`
-                      - `primitives/css/fill.Fill`
-                      - `primitives/css/overlay.Overlay`
+                      - `infra/paths/file-systems.fileBytesUnavailableMessage`
+                      - `infra/paths/file-systems.useFileBytes`
                       - `primitives/css/placeholder.Placeholder`
-                      - `primitives/css/rigid.rigidClass`
-                      - `primitives/css/text.Text`
+                      - `primitives/file-viewer.FileHeaderAction`
+                      - `primitives/file-viewer.FileRendererProps`
                       - `primitives/file-viewer.FileViewer`
+                      - `primitives/icon-button.IconButton`
                       - `primitives/loading.Loading`
-                      - `primitives/relative-time.formatElapsed`
                       - `shell/toast.showToast`
-                      - `ui/icons.Icon`
-                  - Cross-plugin:
-                    - Uses tokens:
-                      - `ui/tokens/color-palette --border`
-                      - `ui/tokens/color-palette --primary`
-                      - `ui/tokens/color-palette --primary-foreground`
-                      - `ui/tokens/shape --radius`
-                      - `ui/tokens/shape --spacing`
                 - **`folders`** — Watched-folder UI for the MIDI source: registers the midi-folders config and presents the File field (the MIDI exposure's `sourceMissing`) that flags — and lets you filter for — folder-imported songs whose file has been deleted from disk. Shows every watched folder that cannot be read (denied by macOS, missing, not a folder) as a notice on the library — which folder, why, and Allow access / Check again / Change folder / Remove — and puts the folder list itself, with each folder's status, under a Sonata settings gear in the library header. Watched MIDI folders, every host's half: registers the watched-folder list (a config_v2 listField) and serves each folder's imported-song count (sonata.midi-folders.song-count, a count over the MIDI side-table). Watching, importing and probing the folders is the machine/ half's.
                   - Web:
                     - Contributes:
@@ -10508,13 +10550,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shape --spacing`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/launch.ts`, `server/internal/profile-input.ts`, `server/internal/profile.ts`, `server/internal/submit.ts`, `server/internal/workspace-file.ts` (debt)
-        - **`transport-bar`** — Sonata transport controls: the play/pause button at the head of the player's transport strip (togglePlay, count-in aware) and the playback-speed jog wheel in the player header, folded to its readout at rest.
+        - **`transport-bar`** — Sonata transport controls: the play/pause button at the head of the player's transport strip (togglePlay, count-in aware) and the playback-speed jog wheel in the player header (and the song peek's), folded to its readout at rest.
           - Web:
             - Contributes:
               - `SonataPlayer.Transport` "play" → `PlayButton`
               - `sonataPlayerPane.Actions` "speed" → `TempoWheel`
+              - `songPeekPane.Actions` "speed" → `TempoWheel`
             - Uses:
               - `apps/sonata/library.sonataPlayerPane`
+              - `apps/sonata/library.songPeekPane`
               - `apps/sonata/player.SonataPlayer`
               - `apps/sonata/primitives/inertial-drag.useInertialDrag`
               - `apps/sonata/primitives/jog-wheel.JogWheel`
@@ -12494,7 +12538,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSurfaceMode`
           - `useTabs`
       - Cross-plugin:
-        - Imported by: 39 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
+        - Imported by: 38 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
           - `apps` ×13
           - `apps-core` ×9
           - `debug` ×3
@@ -12502,7 +12546,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives` ×2
           - `shell` ×2
           - `tasks` ×2
-          - `active-data/song`
           - `build`
           - `config_v2/config-link`
           - `conversations/runtime-sdk`
@@ -15862,8 +15905,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversationPane.Actions` ← `conversations.conversation-view.track`
           - `conversationPane.Actions` ← `primitives.pane`
         - Contributes: `Pane.Register` "conversation"
-        - Uses: 22 symbols — full list in [`plugins/conversations/plugins/conversation-view/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/REFERENCE.md)
-          - `primitives/pane` ×5
+        - Uses: 24 symbols — full list in [`plugins/conversations/plugins/conversation-view/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/REFERENCE.md)
+          - `primitives/pane` ×7
           - `network/live` ×2
           - `conversations/conversation-view/action-bar.ActionBarView`
           - `conversations/conversation-view/jsonl-viewer.JsonlPane`
@@ -16254,8 +16297,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Contributes:
                   - `Pane.Register` "file-peek"
                   - `filePeekPane.Actions` "renderer-tabs" → `FilePeekTabs`
-                - Uses: 30 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/REFERENCE.md)
-                  - `primitives/file-viewer` ×5
+                - Uses: 31 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/REFERENCE.md)
+                  - `primitives/file-viewer` ×6
                   - `primitives/pane` ×5
                   - `apps/file-explorer/browser` ×3
                   - `apps/file-explorer/folder-peek` ×2
@@ -30846,7 +30889,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/read-set`
           - `history/dialog`
 
-- **`ids`** — The id-kind registry, web half: IdKinds.Kind registers a declared kind and IdKinds.Presenter how its ids render and open (icon, useReferent, useTarget); useIdKinds() / useIdPresenters() read them at render time. The id-kind registry, server half: IdKinds.Kind registers a declared kind and IdKinds.Referent resolves a kind's id to its title; getIdKinds() reads them at call time. idColumn / idRef are a kind's drizzle primary-key and foreign-key columns (typed Id<P>; idRef cascades on update).
+- **`ids`** — The id-kind registry, web half: IdKinds.Kind registers a declared kind and IdKinds.Presenter how its ids render and open (icon, useReferent, usePane); useIdKinds() / useIdPresenters() read them at render time. The id-kind registry, server half: IdKinds.Kind registers a declared kind and IdKinds.Referent resolves a kind's id to its title; getIdKinds() reads them at call time. idColumn / idRef are a kind's drizzle primary-key and foreign-key columns (typed Id<P>; idRef cascades on update).
   - Web:
     - Slots:
       - `IdKinds.Kind`
@@ -44428,8 +44471,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ClusterProps`
             - Exports (values): `Cluster`
           - Cross-plugin:
-            - Imported by: 67 plugins — full list in [`plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md)
-              - `apps` ×25
+            - Imported by: 66 plugins — full list in [`plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md)
+              - `apps` ×24
               - `debug` ×12
               - `conversations` ×8
               - `plugin-meta` ×6
@@ -44513,8 +44556,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ColumnProps`
             - Exports (values): `Column`
           - Cross-plugin:
-            - Imported by: 26 plugins — full list in [`plugins/primitives/plugins/css/plugins/column/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/column/REFERENCE.md)
-              - `apps` ×11
+            - Imported by: 25 plugins — full list in [`plugins/primitives/plugins/css/plugins/column/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/column/REFERENCE.md)
+              - `apps` ×10
               - `primitives` ×5
               - `debug` ×4
               - `conversations` ×2
@@ -44619,8 +44662,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `placedClasses`
               - `placedStyle`
           - Cross-plugin:
-            - Imported by: 43 plugins — full list in [`plugins/primitives/plugins/css/plugins/coords/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/coords/REFERENCE.md)
-              - `apps` ×19
+            - Imported by: 44 plugins — full list in [`plugins/primitives/plugins/css/plugins/coords/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/coords/REFERENCE.md)
+              - `apps` ×20
               - `primitives` ×11
               - `debug` ×3
               - `page` ×3
@@ -44642,8 +44685,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Fill`
               - `fillClasses`
           - Cross-plugin:
-            - Imported by: 179 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
-              - `apps` ×52
+            - Imported by: 178 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
+              - `apps` ×51
               - `primitives` ×31
               - `conversations` ×26
               - `debug` ×17
@@ -44958,8 +45001,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/browser/webview`
               - `apps/chord/trainer`
               - `apps/prototypes/thumbnails`
+              - `apps/sonata/mini-player`
               - `apps/sonata/rich/readout-keyboard`
-              - `apps/sonata/sources/midi/file-preview`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
               - `debug/timeline`
               - `music/chord-box`
@@ -45013,8 +45056,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-size-body`
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-body`
-            - Imported by: 92 plugins — full list in [`plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md)
-              - `apps` ×29
+            - Imported by: 93 plugins — full list in [`plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md)
+              - `apps` ×30
               - `debug` ×18
               - `primitives` ×12
               - `page` ×7
@@ -45079,8 +45122,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Rigid`
               - `rigidClass`
           - Cross-plugin:
-            - Imported by: 145 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
-              - `apps` ×36
+            - Imported by: 144 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
+              - `apps` ×35
               - `conversations` ×28
               - `primitives` ×20
               - `debug` ×13
@@ -45536,8 +45579,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 425 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
-              - `apps` ×110
+            - Imported by: 424 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+              - `apps` ×109
               - `conversations` ×87
               - `primitives` ×47
               - `debug` ×37
@@ -45609,9 +45652,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/sidebar-palette --sidebar`
               - `ui/tokens/sidebar-palette --sidebar-accent`
-            - Imported by: 23 plugins — full list in [`plugins/primitives/plugins/css/plugins/theme-boundary/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/theme-boundary/REFERENCE.md)
+            - Imported by: 24 plugins — full list in [`plugins/primitives/plugins/css/plugins/theme-boundary/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/theme-boundary/REFERENCE.md)
+              - `apps` ×8
               - `apps-core` ×7
-              - `apps` ×7
               - `hints` ×2
               - `shell` ×2
               - `layouts/miller`
@@ -47932,6 +47975,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ResolvedRenderer`
         - Exports (values):
           - `FileContent`
+          - `FileHeaderAction`
+          - `FileHeaderActions`
           - `FileTabs`
           - `FileView`
           - `FileViewer`
@@ -48240,8 +48285,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 132 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
-          - `apps` ×46
+        - Imported by: 133 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+          - `apps` ×47
           - `conversations` ×21
           - `primitives` ×20
           - `tasks` ×8
@@ -48575,8 +48620,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 226 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
-          - `apps` ×68
+        - Imported by: 227 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+          - `apps` ×69
           - `conversations` ×23
           - `ui` ×23
           - `debug` ×19
@@ -49755,7 +49800,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots: `Pane.Register`
         - Slot contributors: 95 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `Pane.Register` ×95
-        - Contributes: 127 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Contributes: 128 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `SlotRender.ListMiddleware`
           - `WebsiteHeader` "title" → `PaneTitleItem`
           - `accountPane.Actions` "title" → `PaneTitleItem`
@@ -49871,6 +49916,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `slowEventsPane.Actions` "title" → `PaneTitleItem`
           - `sonataLibraryPane.Actions` "title" → `PaneTitleItem`
           - `sonataPlayerPane.Actions` "title" → `PaneTitleItem`
+          - `songPeekPane.Actions` "title" → `PaneTitleItem`
           - `start.actions` "title" → `PaneTitleItem`
           - `statsPane.Actions` "title" → `PaneTitleItem`
           - `systemAgentDetailPane.Actions` "title" → `PaneTitleItem`
@@ -49942,6 +49988,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PaneScrollProps`
           - `PaneSlot`
           - `PaneStore`
+          - `PaneTarget`
           - `PaneTitleHook`
           - `PaneTitleSpec`
           - `PaneToggleOpts`
@@ -49967,6 +50014,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PaneBasePathContext`
           - `PaneBox`
           - `PaneChrome`
+          - `PaneEndControls`
           - `PaneHeaderCell`
           - `PaneIconAction`
           - `PaneInstanceContext`
@@ -49979,6 +50027,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PaneStoreContext`
           - `PaneSurfaceAppContext`
           - `PaneSurfaceProvider`
+          - `paneTarget`
           - `paneThemeScope`
           - `parseUrl`
           - `peekBasePath`
@@ -50001,6 +50050,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `usePaneMatch`
           - `usePaneStore`
           - `usePaneTitle`
+          - `usePaneToggle`
           - `usePaneViewParam`
           - `usePathname`
           - `useRenderSync`
@@ -50021,11 +50071,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-2xs`
           - `ui/tokens/density --space-md`
           - `ui/tokens/shape --spacing`
-        - Imported by: 193 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Imported by: 196 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `apps` ×71
           - `conversations` ×32
           - `debug` ×27
-          - `active-data` ×10
+          - `active-data` ×13
           - `tasks` ×10
           - `apps-core` ×6
           - `plugin-meta` ×6
@@ -50407,8 +50457,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago — or the short now / Nm / Nh / Nd), and a running duration as a clock (m:ss). Exposes formatRelativeTime(), <RelativeTime date={…} />, formatElapsed(), useNow() and <ElapsedTime since={…} />.
       - Cross-plugin:
-        - Imported by: 68 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
-          - `apps` ×25
+        - Imported by: 67 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
+          - `apps` ×24
           - `debug` ×13
           - `conversations` ×10
           - `infra` ×4
@@ -52233,8 +52283,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. Applies each slot's committed layout (order, hidden items, spacers, dividers, groups) everywhere slots render; a layout is edited in its config file or the Config pane's reorder-tree field. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 283 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×283
+    - Contributes: 284 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×284
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfigResult`
@@ -52259,8 +52309,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useLayoutOrder`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 282 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×282
+    - Contributes: 283 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×283
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:
