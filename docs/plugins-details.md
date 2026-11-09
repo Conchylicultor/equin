@@ -21850,7 +21850,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Exports (values): `FORKED_AT_SETTING`
     - **`lane-isolation`** — The end-to-end proof that the app's connection lanes are isolated all the way down to PgBouncer: with every background server slot of a throwaway database held idle in a transaction (the 2026-11-03 shape), interactive queries still answer. Test only — a child of database so it can use the throwaway-database fixture, which itself depends on database.
-    - **`lock-watch`** — Database lock watch: a per-worktree job that looks at pg_stat_activity + pg_blocking_pids once a minute (Postgres has no change signal for lock waits), on a held direct session that neither a saturated pgbouncer nor a stall of new connections can starve, and names every session holding others back or idle inside a transaction past 60 s by the origin its statement's comment carries — a db-lock-holder report (one row per origin) and the db-lock-watch push value behind the health report's Database row. Each look also probes a new connection; one still unanswered after 5 s gets a snapshot of every busy backend on the cluster, read on the held session, in db.jsonl. It never ends a session. Every session the cluster's idle-in-transaction timeout ends is reported (db-idle-transaction-ended, one row per origin): from the session's own client (database/connection's idleTransactionEndedSink, SQLSTATE 25P03) or, for a session no app client owns, from the watch seeing it gone between two looks with pg_stat_database.sessions_fatal up.
+    - **`lock-watch`** — Database lock watch: a per-worktree job that looks at pg_stat_activity + pg_blocking_pids once a minute (Postgres has no change signal for lock waits), on a held direct session that neither a saturated pgbouncer nor a stall of new connections can starve, and names every session holding others back or idle inside a transaction past 60 s by the origin its statement's comment carries — a db-lock-holder report (one row per origin) and the db-lock-watch push value behind the health report's Database row. Each look also probes a new connection; one still unanswered after 5 s gets a snapshot of every busy backend on the cluster, read on the held session, in db.jsonl. Its first look is enqueued at boot by a warm-up, so a restarted backend does not wait for the next minute. It never ends a session. Every session the cluster's idle-in-transaction timeout ends is reported (db-idle-transaction-ended, one row per origin): from the session's own client (database/connection's idleTransactionEndedSink, SQLSTATE 25P03) or, for a session no app client owns, from the watch seeing it gone between two looks with pg_stat_database.sessions_fatal up.
       - Server:
         - Contributes:
           - `report-kind` "db-idle-transaction-ended"
@@ -21864,11 +21864,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database/connection.IdleTransactionEndedEvent`
           - `database/connection.idleTransactionEndedSink`
           - `infra/jobs.defineJob`
+          - `infra/warmup.defineWarmup`
           - `network/live.serveValue`
           - `reports.ReportKind`
           - `reports.ReportRow`
           - `reports/engine.recordReport`
-        - Register: `defineJob('database.lock-watch')`
+        - Register:
+          - `defineJob('database.lock-watch')`
+          - `defineWarmup('database.lock-watch.first-look')`
         - Resources: `db-lock-watch` (push, notified)
       - Core:
         - Uses:
@@ -35722,12 +35725,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `WarmupHost`
           - `warmupRunOf`
       - Cross-plugin:
-        - Imported by: 26 plugins — full list in [`plugins/infra/plugins/warmup/REFERENCE.md`](../plugins/infra/plugins/warmup/REFERENCE.md)
+        - Imported by: 27 plugins — full list in [`plugins/infra/plugins/warmup/REFERENCE.md`](../plugins/infra/plugins/warmup/REFERENCE.md)
           - `tasks` ×7
           - `apps` ×6
           - `infra` ×4
           - `conversations` ×2
           - `build/restart-skip`
+          - `database/lock-watch`
           - `debug/config-orphans`
           - `page/links`
           - `plugin-meta/plugin-tree`
