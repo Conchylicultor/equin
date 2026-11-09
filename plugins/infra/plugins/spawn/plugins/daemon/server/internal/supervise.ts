@@ -303,9 +303,14 @@ export function spawnWorkerIn(
     rec,
     opts,
     ({ onExit, ready }) => {
+      // The environment AS IT IS NOW, unless the launch names one: a Bun
+      // Worker given none sees only the environment this process STARTED with
+      // (measured, Bun 1.4.4), never what its entry point declared since — the
+      // data root's layout, which a backend's `bin/` declares in-process
+      // (infra/paths CLAUDE.md, § The data root).
       const w = new Worker(opts.url, {
         ...(opts.argv ? { argv: opts.argv } : {}),
-        ...(opts.env ? { env: opts.env } : {}),
+        env: opts.env ?? currentEnv(),
       });
       worker = w;
       let lastError: string | null = null;
@@ -591,4 +596,12 @@ function instanceHandle(
     },
     stop,
   };
+}
+
+function currentEnv(): Record<string, string> {
+  const env: Record<string, string> = {};
+  for (const [name, value] of Object.entries(process.env)) {
+    if (value !== undefined) env[name] = value;
+  }
+  return env;
 }

@@ -1,5 +1,6 @@
 import { homedir } from "node:os";
 import {
+  envName,
   readEnv,
   readEnvPath,
   setEnv,
@@ -31,6 +32,7 @@ import {
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import {
+  DataRootSplitError,
   homeDataRootLayoutOf,
   homeDataRootLayoutToken,
   readHomeDataRootLayoutSync,
@@ -277,7 +279,31 @@ export function dataRootLayout(): DataRootLayout {
   if (dir !== undefined) return { kind: "custom", root: dir };
   const declared = readEnv("DATA_ROOT_LAYOUT");
   if (declared !== undefined) return homeDataRootLayoutOf(HOME_DIR, declared);
-  return undeclaredDataRootLayoutSync();
+  // A root that found two data roots left the process undeclared on purpose
+  // (the CLI, the hooks): its path reads explain the split, not a missed root.
+  if (splitAtDeclaration !== null) throw splitAtDeclaration;
+  throw new DataRootUndeclaredError();
+}
+
+/**
+ * A process read a path before the root of its process tree declared the data
+ * root's layout (`EQUIN_DATA_ROOT_LAYOUT`) — a missed root, never something to
+ * decide on the spot: deciding reads the disk on whatever thread asked, a
+ * backend's included. The fix is at the entry point that started the process
+ * (the table in infra/paths CLAUDE.md, § The data root), or at the spawner that
+ * dropped the variable from its child's environment.
+ */
+export class DataRootUndeclaredError extends Error {
+  constructor() {
+    super(
+      `[paths] data root undeclared in this process (pid ${process.pid}, ${process.argv.slice(1, 3).join(" ")}): ` +
+        `nothing at the root of its process tree called declareDataRootLayoutSync(), and its environment carries no ` +
+        `${envName("DATA_ROOT_LAYOUT")}. Declare it at the process's entry point, or pass the spawner's environment on ` +
+        `(infra/paths CLAUDE.md, § The data root). A child of a root that found two data roots is left undeclared ` +
+        `too: \`./equin data-dir migrate\` explains the split.`,
+    );
+    this.name = "DataRootUndeclaredError";
+  }
 }
 
 /**
@@ -309,32 +335,16 @@ export function declareDataRootLayoutSync(): DataRootLayout {
     layout = readHomeDataRootLayoutSync(HOME_DIR);
   } catch (err) {
     unsetEnv("DATA_ROOT_LAYOUT");
+    if (err instanceof DataRootSplitError) splitAtDeclaration = err;
     throw err;
   }
+  splitAtDeclaration = null;
   setEnv("DATA_ROOT_LAYOUT", homeDataRootLayoutToken(layout));
   return layout;
 }
 
-/**
- * TRANSITIONAL: a process whose tree's root declared nothing — a child of a
- * gateway that predates the declaration, or an entry point nobody has listed
- * yet — decides on its first read, as every process did before, and says so
- * once on stderr so the missed root can be found (`data root undeclared`).
- * The next step turns this into a throw (infra/paths CLAUDE.md, § The data
- * root): until then, this is the one sync read left behind `dataRoot()`.
- */
-function undeclaredDataRootLayoutSync(): DataRootLayout {
-  if (!warnedUndeclared) {
-    warnedUndeclared = true;
-    console.warn(
-      `[paths] data root undeclared in this process (pid ${process.pid}, ${process.argv.slice(1, 3).join(" ")}): ` +
-        `deciding it from the disk on first read. The root of its process tree should call declareDataRootLayoutSync() ` +
-        `(infra/paths CLAUDE.md, § The data root).`,
-    );
-  }
-  return declareDataRootLayoutSync();
-}
-let warnedUndeclared = false;
+/** The split this process's own declaration found, rethrown by every path read. */
+let splitAtDeclaration: DataRootSplitError | null = null;
 
 /**
  * The local backups' dir — OUTSIDE the data root on purpose (`~/.backups/…`),

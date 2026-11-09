@@ -1,4 +1,6 @@
 #!/usr/bin/env bun
+// First: the data root is declared before any import below can read a path.
+import "./declare-data-root";
 import {
   asAppPath,
   joinAppPath,

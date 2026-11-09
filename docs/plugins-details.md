@@ -33384,7 +33384,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/file-sink` (0 debt)
               - `infra/git/tree-lock` (0 debt)
               - `infra/launcher` (0 debt)
-              - `infra/paths` (2 debt)
+              - `infra/paths` (1 debt)
               - `infra/worktree` (0 debt)
               - `packages/signal-origin` (0 debt)
               - `packages/single-flight` (0 debt)
@@ -34620,7 +34620,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `boundaries/no-platform-api` — `core/internal/checkout-deploys.ts`, `core/internal/checkout-minter.ts`, `core/internal/checkout-owner.ts`, `core/internal/checkout-ref.ts`, `core/internal/data-dir.ts`, `core/internal/data-root-layout.ts`, `core/internal/data-dirs-manifest.ts`, `core/internal/paths.ts`, `core/internal/prune-artifacts.ts`, `core/internal/toolchain-pin.ts`, `core/internal/worktree-dirs.ts` (debt)
           - `user-path/no-unproven-claim` — `core/internal/paths.ts`, `core/internal/data-root-layout.ts` (sanctioned)
           - `user-path/no-unproven-claim` — `core/internal/checkout-deploys.ts` (sanctioned)
-          - `blocking-fs/sync-named` — `core/internal/paths.ts` (debt)
           - `blocking-fs/sync-named` — `core/internal/data-dir.ts` (debt)
       - Server:
         - Exports (types):

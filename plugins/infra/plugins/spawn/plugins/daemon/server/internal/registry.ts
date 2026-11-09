@@ -130,6 +130,7 @@ export interface WorkerLaunchContext {
 export interface WorkerLaunch extends DaemonStartCommon {
   url: URL;
   argv?: string[];
+  /** The worker's environment; absent = this process's, as it is at each spawn. */
   env?: Record<string, string>;
   /** Right after each spawn (respawns included): post the init frame here. */
   onSpawn?: (worker: Worker) => void;

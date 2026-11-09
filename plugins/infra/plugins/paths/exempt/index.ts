@@ -56,14 +56,6 @@ export default [
   },
   {
     rule: "blocking-fs/sync-named",
-    paths: ["core/internal/paths.ts"],
-    kind: "debt",
-    task: "task-1793991095-ppkf09",
-    reason:
-      "dataRootLayout() reads the layout each process tree's root declares in the environment, but a process no root declared for still decides it on its first read (2 lstat + realpath, once per process, warned on stderr) until that transitional fallback becomes a throw (infra/paths CLAUDE.md, § The data root).",
-  },
-  {
-    rule: "blocking-fs/sync-named",
     paths: ["core/internal/data-dir.ts"],
     kind: "debt",
     task: "task-1794176984-s6phxk",

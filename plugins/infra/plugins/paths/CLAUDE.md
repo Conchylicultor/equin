@@ -55,6 +55,7 @@ split, it removes an inherited one instead. The roots:
 | the gateway's children (every backend, Postgres / PgBouncer start scripts) | `gateway/dataroot.go` adds it to every child's base env (`dataRootLayoutEnv`) |
 | a backend (main, worktree, central) | the first import of its serving entry (`server-core/bin/declare-data-root.ts`, `central-core/bin/declare-data-root.ts`) — before it listens, so a gateway that predates the declaration still leaves the backend's thread decided |
 | a Claude Code hook | `guards/bin/declare-data-root.ts`, first import of `hook.ts` / `stop-hook.ts` |
+| an SDK agent (and the claude it runs) | `runtime-sdk/bin/declare-data-root.ts`, first import of `agent.ts` — the backend starts it under `env -i` with the agent session's allowlist, so nothing reaches it from the gateway |
 | `bun test` | `test/bun-preload.ts` |
 | a release | `EQUIN_DIR`, set by the launcher before anything reads a path |
 
@@ -64,16 +65,20 @@ spawned with no explicit `env` gets its parent's STARTING environment, never a
 Bun 1.4.4). A declaration made in-process reaches only `infra/spawn` children
 (they pass `process.env`) and `node:child_process` ones. That is why the
 wrapper and the gateway, which start their trees, put it in the starting
-environment, and why an in-process declaration is for the process itself.
+environment, and why an in-process declaration is for the process itself. A
+backend's workers get it anyway: `defineDaemon`'s `spawnWorker` hands a
+worker the environment as it is at the spawn (`node:worker_threads` already
+does).
 
-**Transitional: an undeclared process still decides on its first read** (a
-child of a gateway started before this landed — until `./equin start --force`
-restarts it — or a root missing from the table). It prints `[paths] data root
-undeclared in this process …` once on stderr, naming its argv: that line is how
-a missed root is found. The next step turns it into a throw, which makes
-`dataRoot()` a pure read and pays the `blocking-fs/sync-named` debt of
-`core/internal/paths.ts`; the `movedFrom` inspection behind the `DataDir`
-getters (`core/internal/data-dir.ts`) is the other half of that debt.
+**An undeclared process throws on its first path read**
+(`DataRootUndeclaredError`, naming its pid and argv): `dataRoot()` is a pure
+environment read, and a missed root is fixed at that root — its entry point, or
+the spawner that dropped the variable from its child's environment — never by
+deciding on the spot, on whatever thread asked. The one sanctioned undeclared
+process is a root that found a split install (the CLI, the hooks): there every
+path read rethrows the `DataRootSplitError` its declaration found. The
+`movedFrom` inspection behind the `DataDir` getters (`core/internal/data-dir.ts`)
+is the remaining `blocking-fs/sync-named` debt.
 
 **Moving an install over:** `./equin data-dir migrate` (the `root-migration`
 sub-plugin) — dry run by default, `--apply` executes. It refuses while any
@@ -486,7 +491,6 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `boundaries/no-platform-api` — `core/internal/checkout-deploys.ts`, `core/internal/checkout-minter.ts`, `core/internal/checkout-owner.ts`, `core/internal/checkout-ref.ts`, `core/internal/data-dir.ts`, `core/internal/data-root-layout.ts`, `core/internal/data-dirs-manifest.ts`, `core/internal/paths.ts`, `core/internal/prune-artifacts.ts`, `core/internal/toolchain-pin.ts`, `core/internal/worktree-dirs.ts` (debt)
     - `user-path/no-unproven-claim` — `core/internal/paths.ts`, `core/internal/data-root-layout.ts` (sanctioned)
     - `user-path/no-unproven-claim` — `core/internal/checkout-deploys.ts` (sanctioned)
-    - `blocking-fs/sync-named` — `core/internal/paths.ts` (debt)
     - `blocking-fs/sync-named` — `core/internal/data-dir.ts` (debt)
 - Server:
   - Exports (types):
