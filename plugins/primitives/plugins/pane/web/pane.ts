@@ -753,12 +753,30 @@ function indexPaneFor(basePath: string): PaneInternal | undefined {
  * an open ({@link strandedRouteUrl}) and a URL (apps-core's resolver) — send
  * the route to that app.
  *
+ * Unless the route still holds one of the CURRENT app's own panes (`isHere`):
+ * then a guest heads it only because the user put it there — a Miller column
+ * reordered in front of its host — and the route stays (that app is returned).
+ * Without `isHere` it is the head's app alone.
+ *
  * A COMPANION head names no app either ({@link PaneInternal.companion}): it is
  * a guest beside the surface's index pane, not a destination — an attachment
  * preview opened from the agent manager's home (`/agents/attachment/…`) stays
  * beside that home rather than being sent to Files.
  */
-export function routeHomeApp(route: readonly PaneSlot[]): AppRef | undefined {
+export function routeHomeApp(
+  route: readonly PaneSlot[],
+  isHere?: (app: AppRef) => boolean,
+): AppRef | undefined {
+  // A route still holding one of this app's own panes is this app's: the
+  // guest ahead of it was put there by the user (a Miller column dragged in
+  // front of its host), not stranded — sending the route away would close
+  // the host's surface around it.
+  if (isHere) {
+    for (const slot of route) {
+      const app = registry.get(slot.paneId)?.app;
+      if (app && isHere(app)) return app;
+    }
+  }
   const head = route[0];
   if (!head) return undefined;
   const pane = registry.get(head.paneId);
@@ -774,10 +792,14 @@ export function routeHomeApp(route: readonly PaneSlot[]): AppRef | undefined {
  * already hold.
  */
 function strandedRouteUrl(basePath: string, route: PaneSlot[]): string | null {
-  const home = routeHomeApp(route);
+  const here = normalizeAppPath(basePath);
+  const home = routeHomeApp(
+    route,
+    (app) => normalizeAppPath(app.basePath) === here,
+  );
   if (!home) return null;
   const homeBase = normalizeAppPath(home.basePath);
-  if (homeBase === normalizeAppPath(basePath)) return null;
+  if (homeBase === here) return null;
   return homeBase + buildRouteUrl(route);
 }
 

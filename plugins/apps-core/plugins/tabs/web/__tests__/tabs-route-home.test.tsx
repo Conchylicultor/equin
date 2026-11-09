@@ -67,6 +67,13 @@ const storyPane = Pane.define({
   component: () => null,
 });
 
+const pagesPane = Pane.define({
+  route: defineRoute({ id: "route-home-pages", segment: "p/:id" }),
+  app: pagesApp,
+  useResolve: false,
+  component: () => null,
+});
+
 const plugin = {
   id: "tabs-route-home-test",
   description: "fake apps + a Story pane for the route-home suite",
@@ -74,6 +81,7 @@ const plugin = {
     Apps.App({ app: pagesApp, component: () => null }),
     Apps.App({ app: storyApp, component: () => null }),
     Pane.Register({ pane: storyPane }),
+    Pane.Register({ pane: pagesPane }),
   ],
 } as unknown as LoadedPlugin;
 
@@ -147,6 +155,14 @@ describe("a URL whose route belongs to another app", () => {
 
     expect(focusedApp()).toBe("story");
     expect(window.location.pathname).toBe("/story/s/2");
+  });
+
+  it("leaves a route holding one of the app's own panes, a guest at its head", async () => {
+    // A Miller column reordered in front of its host: still Pages' surface.
+    window.history.replaceState(null, "", "/pages/s/4/p/1");
+    await mount();
+    expect(focusedApp()).toBe("pages");
+    expect(window.location.pathname).toBe("/pages/s/4/p/1");
   });
 
   it("leaves a route of the URL's own app where it is", async () => {

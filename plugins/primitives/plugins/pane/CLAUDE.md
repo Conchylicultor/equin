@@ -619,6 +619,11 @@ enforces it:
 - **Arriving by URL** — the tab manager moves the focused tab to the route's
   app, replacing the entry (`apps-core/tabs`).
 
+The one exception: a route that still holds one of the current app's own
+panes stays (`routeHomeApp(route, isHere)` answers the current app). A guest
+heads it only because the user put it there — a Miller column dragged in
+front of its host — and moving the tab would close the host's surface.
+
 Expand's re-root obeys it too (in place only for this app's panes).
 
 **Navigation sink**: `apps-core/tabs` imports this primitive, so it installs

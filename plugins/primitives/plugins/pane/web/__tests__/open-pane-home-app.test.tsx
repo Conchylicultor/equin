@@ -187,6 +187,24 @@ describe("routeHomeApp", () => {
     expect(routeHomeApp(store.getRoute())?.id).toBe("home-host");
   });
 
+  it("stays this app's while it holds one of this app's panes, whoever heads it", () => {
+    // A Miller column dragged in front of its host: the guest heads the route.
+    store.restoreRoute([
+      { paneId: "home-guest-setup", params: { step: "1" } },
+      { paneId: "home-host-list", params: {} },
+    ]);
+    const isHost = (app: { id: string }) => app.id === "home-host";
+    expect(routeHomeApp(store.getRoute(), isHost)?.id).toBe("home-host");
+    // Seen from elsewhere, it is still its head's.
+    expect(routeHomeApp(store.getRoute())?.id).toBe("home-guest");
+  });
+
+  it("a route of only another app's panes is that app's, even from here", () => {
+    store.restoreRoute([{ paneId: "home-guest-setup", params: { step: "1" } }]);
+    const isHost = (app: { id: string }) => app.id === "home-host";
+    expect(routeHomeApp(store.getRoute(), isHost)?.id).toBe("home-guest");
+  });
+
   it("names no app for the empty route", () => {
     expect(routeHomeApp([])).toBeUndefined();
   });

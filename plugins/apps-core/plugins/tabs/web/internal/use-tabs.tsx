@@ -1253,8 +1253,8 @@ export function TabsProvider({
       if (disposed) return;
       const state = focusedStore.getRouteState();
       if (state.kind !== "resolved") return;
-      const home = routeHomeApp(state.slots);
       const tab = tabsRef.current.find((t) => t.store === focusedStore);
+      const home = routeHomeApp(state.slots, (app) => app.id === tab?.appId);
       if (!home || !tab || home.id === tab.appId) return;
       // A composition without the route's app has nowhere to send it.
       if (!appsRef.current.some((a) => a.id === home.id)) return;
