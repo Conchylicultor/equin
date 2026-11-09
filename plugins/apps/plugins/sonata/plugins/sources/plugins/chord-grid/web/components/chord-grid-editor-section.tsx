@@ -1,5 +1,8 @@
 import { useSongDocument } from "@plugins/apps/plugins/sonata/plugins/document/web";
-import { useCursorSelector } from "@plugins/apps/plugins/sonata/plugins/session/web";
+import {
+  useCursorSelector,
+  useSession,
+} from "@plugins/apps/plugins/sonata/plugins/session/web";
 import { slotAt, type GridSlot } from "../../core";
 import { ChordGridLoader } from "../loader";
 import { CHORD_GRID_SOURCE_ID } from "../constants";
@@ -35,6 +38,7 @@ function usePlayheadSlot(slots: readonly GridSlot[]): GridSlot | null {
  */
 export function ChordGridEditorSection() {
   const { sourceRaw, editSourceRaw } = useSongDocument();
+  const { seekTo } = useSession();
 
   const rawValue = sourceRaw(CHORD_GRID_SOURCE_ID);
   if (rawValue === undefined) {
@@ -48,6 +52,7 @@ export function ChordGridEditorSection() {
       raw={rawValue}
       onRaw={(r) => editSourceRaw(CHORD_GRID_SOURCE_ID, () => r)}
       usePlayingSlot={usePlayheadSlot}
+      onSlotClick={(slot) => seekTo(slot.start)}
     />
   );
 }

@@ -7,7 +7,8 @@
  * shell, which compiles it. The field colours the parse's token spans in place;
  * typos are underlined there AND listed in a "Skipped" chip — never swallowed.
  * A host that plays the song passes `usePlayingSlot`, and the slot under the
- * playhead is lit in place (with the chord a `.` there sustains).
+ * playhead is lit in place (with the chord a `.` there sustains), and a click
+ * on a slot seeks there (`onSlotClick`).
  * How chords become notes is the global voicing config's concern, not this
  * per-song editor's.
  */
@@ -62,6 +63,8 @@ interface Props {
   /** The slot under the playhead among the parse's `slots` (`null`: none) —
    *  absent where nothing plays the song. */
   usePlayingSlot?: Hook<(slots: readonly GridSlot[]) => GridSlot | null>;
+  /** A click on a slot's text — absent where nothing plays the song. */
+  onSlotClick?: (slot: GridSlot) => void;
 }
 
 const useNoPlayingSlot = (): GridSlot | null => null;
@@ -118,6 +121,7 @@ export function ChordGridLoader({
   raw,
   onRaw,
   usePlayingSlot = useNoPlayingSlot,
+  onSlotClick,
 }: Props) {
   const current = asChordGridRaw(raw);
   const { text } = current;
@@ -142,6 +146,12 @@ export function ChordGridLoader({
         value={text}
         onChange={(next) => update({ text: next })}
         decorate={(value) => decorateGrid(value, tokens, playing)}
+        onCaretClick={(offset) => {
+          // The caret lands between characters: a click on a chord's glyphs
+          // or just past its last one.
+          const slot = slots.find((s) => offset >= s.from && offset <= s.to);
+          if (slot) onSlotClick?.(slot);
+        }}
         placeholder={PLACEHOLDER_TEXT}
         ariaLabel="Chord grid"
         className="chord-grid-tokens rounded-md border border-border bg-background focus-within:border-primary"

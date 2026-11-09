@@ -31,18 +31,22 @@
   text-underline-offset: 3px;
 }
 
-/* The slot under the playhead, and the chord a hold there sustains. A
- * background and a spread shadow only — paint, never metrics, so the caret
- * stays on its glyph. */
+/* The slot under the playhead, and the chord a hold there sustains: the
+ * glyphs themselves turn primary and bold, over a faint wash. Colour, weight
+ * and paint only — the code role's font is monospaced, so the bold glyphs keep
+ * their cell width and nothing after them moves (and the caret stays put). */
 .chord-grid-tokens [data-now] {
   border-radius: var(--radius-sm);
-  background: color-mix(in oklab, var(--primary) 24%, transparent);
-  box-shadow: 0 0 0 2px color-mix(in oklab, var(--primary) 24%, transparent);
+  color: var(--primary);
+  font-weight: 700;
+  background: color-mix(in oklab, var(--primary) 14%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--primary) 14%, transparent);
 }
 .chord-grid-tokens [data-sounding] {
   border-radius: var(--radius-sm);
-  background: color-mix(in oklab, var(--primary) 10%, transparent);
-  box-shadow: 0 0 0 2px color-mix(in oklab, var(--primary) 10%, transparent);
+  color: color-mix(in oklab, var(--primary) 70%, var(--foreground));
+  background: color-mix(in oklab, var(--primary) 8%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--primary) 8%, transparent);
 }
 
 /* The syntax legend: each example beside what it means. */

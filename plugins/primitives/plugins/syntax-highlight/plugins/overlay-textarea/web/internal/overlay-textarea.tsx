@@ -23,6 +23,11 @@ export interface OverlayTextareaProps {
   ariaLabel: string;
   /** Box chrome (border, background, radius, focus ring) — never metrics. */
   className?: string;
+  /**
+   * A click that placed the caret (no selection): its offset in `value`. For
+   * a field whose text maps to something else — a position to jump to.
+   */
+  onCaretClick?: (offset: number) => void;
 }
 
 /**
@@ -72,6 +77,7 @@ export function OverlayTextarea({
   placeholder,
   ariaLabel,
   className,
+  onCaretClick,
 }: OverlayTextareaProps) {
   return (
     <Clip className={cn("relative", className)}>
@@ -89,6 +95,10 @@ export function OverlayTextarea({
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onClick={(e) => {
+          const { selectionStart, selectionEnd } = e.currentTarget;
+          if (selectionStart === selectionEnd) onCaretClick?.(selectionStart);
+        }}
         placeholder={placeholder}
         aria-label={ariaLabel}
         spellCheck={false}
