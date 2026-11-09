@@ -377,12 +377,20 @@ await withBrowser(async (h) => {
         (type) => type !== "bookmark",
         { timeoutMs: 10_000 },
       );
-      r.eq("F: one Cmd+Z turns the bookmark back into text", undone.value, "text");
+      r.eq(
+        "F: one Cmd+Z turns the bookmark back into text",
+        undone.value,
+        "text",
+      );
       if (!undone.ok) await snap(page, OUT, "f-undo-kept-bookmark");
-      r.eq("F: …holding the pasted link again", await linkOf(blockEl(page, blockOf(which))), {
-        href: URL,
-        text: URL,
-      });
+      r.eq(
+        "F: …holding the pasted link again",
+        await linkOf(blockEl(page, blockOf(which))),
+        {
+          href: URL,
+          text: URL,
+        },
+      );
     }
 
     await snap(page, OUT, "final");
