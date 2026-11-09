@@ -47,6 +47,13 @@ export interface PathBarSource {
    * appends the separator itself when one is completed.
    */
   useComplete: Hook<(prefix: string | null) => Suggestions>;
+  /**
+   * How the field spells `path` when editing starts — a source whose crumbs
+   * walk an abbreviated path (`~/…`) spells it in full here, so the field
+   * shows the whole place. The completions should be in the same spelling.
+   * Default: `path` itself.
+   */
+  fieldText?: (path: string) => string;
   /** Resolve a typed path before navigating to it. */
   validate: (path: string) => Promise<PathResolution>;
   /** The path separator. Default `"/"`. */

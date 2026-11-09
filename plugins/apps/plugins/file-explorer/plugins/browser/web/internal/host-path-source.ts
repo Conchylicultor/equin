@@ -142,8 +142,10 @@ function splitPrefix(
  * the computer's `files.computer.complete` — else the typed folder's listing,
  * its folders matched by name), and validation one stat answer to the commit
  * (`read`, the subtree's `useLiveReader()` — a file resolves to itself, so
- * the explorer opens its folder and previews it). Paths come back in display
- * form (`~/…` under the system's home).
+ * the explorer opens its folder and previews it). The field spells paths in
+ * full — the text it starts from and every completion are absolute — while a
+ * resolved path comes back in display form (`~/…` under the system's home),
+ * the form the explorer's addresses use.
  *
  * With a `root` (an embedded browser), the bar never leads above it: the
  * crumbs start at the root, completions outside it are dropped, and a typed
@@ -169,6 +171,7 @@ export function folderPathSource(
           label: crumbLabel(p, rootName),
           path: p,
         })),
+    fieldText: (path) => absolutePath(path, home),
     useComplete: (prefix): Suggestions => {
       const answer = useLive(
         computerFileCompletions,
@@ -207,10 +210,7 @@ export function folderPathSource(
                 )
                 .slice(0, FILE_COMPLETE_LIMIT)
                 .map((e) =>
-                  displayPath(
-                    split.dir === "/" ? `/${e.name}` : `${split.dir}/${e.name}`,
-                    home,
-                  ),
+                  split.dir === "/" ? `/${e.name}` : `${split.dir}/${e.name}`,
                 )
                 .filter(inRoot),
             };
@@ -229,7 +229,7 @@ export function folderPathSource(
             kind: "ready",
             items: answer.data.matches
               .filter((m) => inRoot(m.path))
-              .map((m) => displayPath(m.path, home)),
+              .map((m) => absolutePath(m.path, home)),
           };
         case "error":
           // Typed into a folder that is not there (or into a file): no folder

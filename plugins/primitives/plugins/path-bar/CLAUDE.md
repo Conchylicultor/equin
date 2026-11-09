@@ -19,7 +19,10 @@ reading the containers completing the typed text, as full paths without a
 trailing separator: `Suggestions` = `pending` · `ready {items}` · `failed
 {message}`; `null` while the crumbs show, so nothing is read) and
 `validate(path)` (`dir` / `file` / `invalid` with a reason — one answer to the
-commit, awaited), plus an optional `separator` (default `/`). A source backed
+commit, awaited), plus an optional `separator` (default `/`) and an optional
+`fieldText(path)` — how the field spells the path when editing starts (the
+file explorer's crumbs walk `~/…`, its field shows the absolute path; its
+completions use the same spelling). A source backed
 by server data reads completions with `useLive` and validates with
 `useLiveReader` (the file explorer's `hostPathSource`). The bar imports no
 filesystem — a git-ref tree or a page hierarchy is a second source, not a

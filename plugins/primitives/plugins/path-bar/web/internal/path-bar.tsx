@@ -130,7 +130,10 @@ export function PathBar({
 
   const start = useEventCallback(() => {
     session.current += 1;
-    dispatch({ type: "start", text: editText(path, separator) });
+    dispatch({
+      type: "start",
+      text: editText(source.fieldText?.(path) ?? path, separator),
+    });
   });
   const cancel = useEventCallback(() => {
     session.current += 1;
