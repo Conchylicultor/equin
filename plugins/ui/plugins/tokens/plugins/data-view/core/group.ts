@@ -374,6 +374,14 @@ export const dataViewGroup = defineTokenGroup("data-view", {
     default: "calc(var(--sticky-fade-tail) - var(--space-sm))",
     label: "Space below toolbar",
   },
+  // The height of the toolbar's `sm` controls (view chips, icon triggers,
+  // search, Create) — the toolbar re-states `--control-height-sm` from it, so
+  // a theme sizes its toolbar pills without resizing every `sm` control of
+  // the app. Unset = the density's own `sm`.
+  toolbarControlH: {
+    default: "var(--control-height-sm)",
+    label: "Toolbar control height",
+  },
   // A pill's padding (`p-2xs`) and the gap between its items (`gap-2xs`).
   pillPadX: { default: "var(--space-2xs)", label: "Pill inline padding" },
   pillPadY: { default: "var(--space-2xs)", label: "Pill block padding" },

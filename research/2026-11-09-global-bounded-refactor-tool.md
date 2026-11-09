@@ -111,7 +111,7 @@ Examples: `saveClaudeAccountToken` → `saveClaudeAccountCredential`;
 `interactiveMandate()` → `interactiveMandate`; the import specifier
 `@plugins/apps/plugins/desktop/(web|core|server)` → `…/desktop/plugins/windows/…`;
 check / lint ids (`no-hook-sink-register`, `server-core:boot-closure-…`);
-the product rename (`./singularity` → `./equin`, `@singularity/` → `@equin/`);
+the product rename (the old CLI name and package scope → `./equin`, `@equin/`);
 and a reverse loop, `perl -pi -e 's/\b${n}Sync\b/${n}/g'`.
 
 - **Engine:** `rg -lw` + `sed -i` / `perl -pi`, at a cost of milliseconds and

@@ -2667,8 +2667,8 @@ list, table and `primitives/tree` share it.
     - `valuePosition`
     - `visibleSections`
 - Cross-plugin:
-  - Uses tokens: 90 vars — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ui/tokens/data-view` ×52
+  - Uses tokens: 91 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/data-view` ×53
     - `ui/tokens/color-palette` ×13
     - `ui/tokens/density` ×13
     - `ui/tokens/type-scale` ×6

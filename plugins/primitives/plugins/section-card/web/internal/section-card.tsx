@@ -27,6 +27,15 @@ import {
  */
 export type SectionCardVariant = "card" | "inspector";
 
+/**
+ * The header's one height: an `sm` control (what its `actions` are drawn at)
+ * plus `py-sm` above and below, as a floor on the padded row (border-box) —
+ * so a title-only header is exactly as tall as one holding a button, a chip
+ * or a switch, in every app's density.
+ */
+const HEADER_HEIGHT =
+  "py-sm min-h-[calc(var(--control-height-sm)+2*var(--space-sm))]";
+
 export interface SectionCardProps {
   /** The chrome — see {@link SectionCardVariant}. Default `"card"`. */
   variant?: SectionCardVariant;
@@ -108,10 +117,13 @@ export function SectionCard({
       variant="title"
       // Inspector: square corners so the hover fill runs edge to edge, and a
       // tighter trailing pad so the header actions sit near the panel edge.
-      // `py-md` over a body-text line is the same ~44px row the card has.
-      className={
-        inspector ? "rounded-none pl-lg pr-sm py-md" : "rounded-lg px-lg py-md"
-      }
+      // Every header is ONE height, whatever it holds: its line reserves an
+      // `sm` control (what its `actions` are drawn at) under `py-sm` — so a
+      // row with a button and a row with only its title cannot differ.
+      className={cn(
+        HEADER_HEIGHT,
+        inspector ? "rounded-none pl-lg pr-sm" : "rounded-lg px-lg",
+      )}
       disclosure={inspector ? "end" : "lead"}
       collapsible={children !== undefined}
       actions={

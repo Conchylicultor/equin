@@ -209,8 +209,6 @@ const density = densityGroup.fragment(
     chromePaneTitleRole: "subheading",
     chromePaneTitleEmphasis: "bold",
     contentInset: "max(clamp(16px, 3cqi, 40px), calc((100cqi - 1520px) / 2))",
-    // The toolbar's pill items (view chips, icon triggers, search, Add): 32px.
-    controlHeightSm: "2rem",
     // The Sonata settings card (proto-1792907625-p861lr, `.sheet`): 440px
     // wide, its content 18px in — this inset plus the 8px row pad.
     popoverWidthSettings: "27.5rem",
@@ -304,6 +302,8 @@ const dataView = dataViewGroup.fragment(
     searchShortcutHint: "hide",
     toolbarPadY: "0.75rem",
     toolbarGap: "0.625rem",
+    // The pills' items (view chips, icon triggers, search, Add): 32px.
+    toolbarControlH: "2rem",
     toolbarSpaceBelow: "1rem",
     pillPadX: "0.1875rem",
     pillPadY: "0.1875rem",

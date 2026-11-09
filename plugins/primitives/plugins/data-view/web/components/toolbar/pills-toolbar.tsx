@@ -108,10 +108,19 @@ export function ToolbarPill(props: {
 }
 
 /**
+ * The toolbar's `sm` rung, re-stated from the data-view token group's
+ * `toolbarControlH` (the density's own `sm` by default): a theme sizes its
+ * toolbar pills here, never by resizing every `sm` control of the app.
+ */
+const toolbarControlSize = {
+  "--control-height-sm": "var(--toolbar-control-h)",
+} as CSSProperties;
+
+/**
  * The two-pill row every DataView toolbar is drawn as — wide and in the
  * compact fold alike: `[lead] [views pill] [fill] [tools pill]`. Both pills
- * (flat by default, see {@link ToolbarPill}) sit at ONE control size (`sm`),
- * so they are the same height and centred on one line at every width; the
+ * (flat by default, see {@link ToolbarPill}) sit at ONE control size (`sm`,
+ * its height the `toolbarControlH` token), so they are the same height and centred on one line at every width; the
  * views pill is the one cell that gives (it scrolls sideways), the row never
  * wraps.
  *
@@ -138,7 +147,10 @@ export function PillsRow(
   } = props;
   return (
     <ControlSizeProvider size="sm">
-      <Line className={cn("gap-toolbar", className)} style={style}>
+      <Line
+        className={cn("gap-toolbar", className)}
+        style={{ ...toolbarControlSize, ...style }}
+      >
         {/* Over a click-through band there is no band surface for a bare
             title to sit on (a map shows through), so it rides the views
             pill; in flow it reads on the band, before the pill. */}

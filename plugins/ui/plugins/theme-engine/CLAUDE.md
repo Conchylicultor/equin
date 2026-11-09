@@ -382,8 +382,8 @@ exactly.
     - `tokenGroupMatchesSearch`
     - `transformValues`
 - Cross-plugin:
-  - Uses tokens: 68 vars — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ui/tokens/density` ×28
+  - Uses tokens: 69 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/density` ×29
     - `ui/tokens/color-palette` ×26
     - `ui/tokens/shadow` ×4
     - `ui/tokens/shape` ×4

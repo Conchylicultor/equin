@@ -46595,8 +46595,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `valuePosition`
           - `visibleSections`
       - Cross-plugin:
-        - Uses tokens: 90 vars — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ui/tokens/data-view` ×52
+        - Uses tokens: 91 vars — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ui/tokens/data-view` ×53
           - `ui/tokens/color-palette` ×13
           - `ui/tokens/density` ×13
           - `ui/tokens/type-scale` ×6
@@ -50673,8 +50673,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --border`
           - `ui/tokens/color-palette --primary-text`
+          - `ui/tokens/density --control-height-sm`
           - `ui/tokens/density --space-lg`
-          - `ui/tokens/density --space-md`
           - `ui/tokens/density --space-sm`
           - `ui/tokens/shape --radius`
         - Imported by:
@@ -58639,8 +58639,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tokenGroupMatchesSearch`
           - `transformValues`
       - Cross-plugin:
-        - Uses tokens: 68 vars — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
-          - `ui/tokens/density` ×28
+        - Uses tokens: 69 vars — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
+          - `ui/tokens/density` ×29
           - `ui/tokens/color-palette` ×26
           - `ui/tokens/shadow` ×4
           - `ui/tokens/shape` ×4
@@ -59130,27 +59130,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DATA_VIEW_PICKS`
               - `dataViewGroup`
           - Cross-plugin:
-            - Uses tokens:
-              - `ui/tokens/color-palette --accent`
-              - `ui/tokens/color-palette --border`
-              - `ui/tokens/color-palette --faint-foreground`
-              - `ui/tokens/color-palette --foreground`
-              - `ui/tokens/color-palette --muted`
-              - `ui/tokens/color-palette --muted-foreground`
-              - `ui/tokens/density --control-gap-sm`
-              - `ui/tokens/density --cover-thumb-h`
-              - `ui/tokens/density --cover-thumb-w`
-              - `ui/tokens/density --pad-row-x`
-              - `ui/tokens/density --pad-row-y`
-              - `ui/tokens/density --space-2xs`
-              - `ui/tokens/density --space-md`
-              - `ui/tokens/density --space-sm`
-              - `ui/tokens/density --space-xl`
-              - `ui/tokens/density --space-xs`
-              - `ui/tokens/density --sticky-fade-tail`
+            - Uses tokens: 21 vars — full list in [`plugins/ui/plugins/tokens/plugins/data-view/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/data-view/REFERENCE.md)
+              - `ui/tokens/density` ×12
+              - `ui/tokens/color-palette` ×6
+              - `ui/tokens/shape` ×2
               - `ui/tokens/shadow --shadow`
-              - `ui/tokens/shape --radius`
-              - `ui/tokens/shape --spacing`
             - Tokens used by:
               - `primitives/css/row`
               - `primitives/css/ui-kit`

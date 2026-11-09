@@ -38,8 +38,8 @@ for the pane's declared `chrome`. Exhibits: `section-card/region`,
   - Uses tokens:
     - `ui/tokens/color-palette --border`
     - `ui/tokens/color-palette --primary-text`
+    - `ui/tokens/density --control-height-sm`
     - `ui/tokens/density --space-lg`
-    - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --radius`
   - Imported by:
