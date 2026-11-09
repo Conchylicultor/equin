@@ -2,6 +2,7 @@ import { createInViewWatcher } from "@plugins/primitives/plugins/dom/plugins/in-
 import { clamp01, latch, smooth, type Pt } from "./kit/math";
 import { disc } from "./kit/night";
 import { C } from "./kit/palette";
+import { mountSurface, type SurfaceHost } from "./kit/surface";
 import { all, circ, one } from "./kit/svg";
 import { mountApart } from "./chapters/apart";
 import { appFrame } from "./chapters/app";
@@ -76,11 +77,9 @@ function frames(prefix: string): Frame[] {
       ),
       front: '<g class="zb-shared"></g>',
     },
-    // 5 — every app: the earth by night (globe.ts). Its grid and lights are on the back, beneath frame 4.
-    {
-      back: disc(`${prefix}g5`, '<g class="zb-shared-back"></g>'),
-      front: '<g class="zb-shared"></g>',
-    },
+    // 5 — every app: the earth by night (globe.ts), drawn on the frame's two surfaces: its grid and
+    // lights over its disc, beneath frame 4; its people and arcs over everything
+    { back: disc(`${prefix}g5`, ""), front: "" },
   ];
 }
 
@@ -120,6 +119,13 @@ export function mountZoom(
   const fronts = all<HTMLElement>(stage, ".z-front");
   const bg = all<HTMLElement>(stage, ".z-bg i");
   const front = (k: number) => fronts[k]!;
+  // a frame layer drawn on a canvas: stacked as that layer (its z-index, after it), placed and faded with it
+  const surfaces: { k: number; back: boolean; host: SurfaceHost }[] = [];
+  const surface = (k: number, back: boolean) => {
+    const host = mountSurface(stage, back ? 20 - k : 30 + k);
+    surfaces.push({ k, back, host });
+    return host;
+  };
   const wish = mountWishes(front(0));
 
   // each frame's size and centre in units of the biggest frame
@@ -165,16 +171,12 @@ export function mountZoom(
       (c) => [r4.o[0] + c[0] / r4.r, r4.o[1] + c[1] / r4.r],
       prefix,
     ),
-    mountGlobe(
-      one(front(5), ".zb-shared"),
-      one(backs[5]!, ".zb-shared-back"),
-      { at: r4.o },
-      r4.r,
-      world,
-    ),
+    mountGlobe(surface(5, false), surface(5, true), { at: r4.o }, r4.r, world),
   ];
 
   let u = 1;
+  let cx = 0;
+  let cy = 0;
   let readAt = 0;
   let last = 0;
   let lastP = -1;
@@ -191,8 +193,6 @@ export function mountZoom(
     const w = stage.clientWidth;
     const h = stage.clientHeight;
     let U: number;
-    let cx: number;
-    let cy: number;
     if (w >= 1000) {
       const avail = w - 560;
       U = Math.min(h * 0.8, avail * 0.96);
@@ -210,6 +210,19 @@ export function mountZoom(
     u = U / 1000;
     scene.style.left = `${cx}px`;
     scene.style.top = `${cy}px`;
+    for (const sf of surfaces) sf.host.resize(w, h);
+  }
+
+  // A hidden layer is also skipped by the style engine (content-visibility): its CSS animations (the
+  // idea's pulses, chapter 2's falling notes, …) are otherwise re-sampled, and their elements restyled,
+  // on every frame of every chapter. Their clock keeps running, so one shows again in phase.
+  function show(layer: HTMLElement, on: boolean, opacity: number) {
+    const v = on ? "visible" : "hidden";
+    if (layer.style.visibility !== v) {
+      layer.style.visibility = v;
+      layer.style.contentVisibility = v;
+    }
+    layer.style.opacity = opacity.toFixed(3);
   }
 
   // opacities: scroll sets the base; once chapter 2 has come apart, its pieces stand in for it
@@ -219,13 +232,12 @@ export function mountZoom(
       let fo = baseFront[k]!;
       if (k === 2 && split) fo = 0;
       if (k === 1) fo *= 1 - smooth(sep / 0.3);
-      const b = backs[k]!;
-      const f = fronts[k]!;
-      b.style.visibility =
-        vis[k] && baseBack[k]! > 0.002 ? "visible" : "hidden";
-      f.style.visibility = vis[k] && fo > 0.002 ? "visible" : "hidden";
-      b.style.opacity = baseBack[k]!.toFixed(3);
-      f.style.opacity = fo.toFixed(3);
+      show(backs[k]!, vis[k]! && baseBack[k]! > 0.002, baseBack[k]!);
+      show(fronts[k]!, vis[k]! && fo > 0.002, fo);
+    }
+    for (const { k, back, host } of surfaces) {
+      const layer = back ? backs[k]! : fronts[k]!;
+      host.show(layer.style.opacity, layer.style.visibility === "visible");
     }
   }
 
@@ -254,9 +266,13 @@ export function mountZoom(
         (k === 0 ? 1 - smooth((p - 0.55) / 0.4) : 1);
       vis[k] = s < 8 && s > 0.002;
       if (!vis[k]) continue;
-      const tr = `translate(${(((W[k]![0] - cxw) / Cam) * u).toFixed(2)}px,${(((W[k]![1] - cyw) / Cam) * u).toFixed(2)}px) scale(${(s * u).toPrecision(6)})`;
+      const tx = ((W[k]![0] - cxw) / Cam) * u;
+      const ty = ((W[k]![1] - cyw) / Cam) * u;
+      const tr = `translate(${tx.toFixed(2)}px,${ty.toFixed(2)}px) scale(${(s * u).toPrecision(6)})`;
       backs[k]!.style.transform = tr;
       fronts[k]!.style.transform = tr;
+      for (const sf of surfaces)
+        if (sf.k === k) sf.host.place(cx + tx, cy + ty, s * u);
     }
     // 2 → 3: past SPLIT, chapter 2 is frozen as it is and taken apart; back before SPLIT_BACK, it plays on
     const apart = splitAt(p);
@@ -273,8 +289,9 @@ export function mountZoom(
     sep = split ? clamp01((p - SPLIT) / SPLIT_LEN) : 0;
     if (split) pieces.pose(sep);
     os.update(p, sep);
-    for (const l of lives) l?.update(p);
     paint();
+    // after paint: a frame drawn on surfaces repaints with this placement and visibility
+    for (const l of lives) l?.update(p);
     // a chapter's loop starts over while it is still hidden, so it is seen from its beginning, and
     // rests at its start once the next chapter covers it (chapter 2's is frozen by the split before)
     timelines.forEach((sc, k) => {

@@ -51,16 +51,31 @@ ladder.
   screen and the tab visible, and only for the frames that are visible. The
   engine sees a frame, not its layers: a chapter that fades its own layers
   out (chapter 4's orbits and nodes, at opacity 0 on chapter 5) stops posing
-  them there and only moves their state on. Every attribute written is a
-  style recalc of that element; `e2e/vision-frames.ts` prints, per chapter
-  and per frame, the CPU, the DOM writes and the elements restyled.
+  them there and only moves their state on. A hidden layer is also
+  `content-visibility: hidden`, so the CSS animations inside it (the idea's
+  pulses, chapter 2's falling notes) are not restyled every frame. Every
+  attribute written is a style recalc of that element; `e2e/vision-frames.ts`
+  prints, per chapter and per frame, the CPU, the DOM writes and the elements
+  restyled (`--gpu` to render as a visitor's browser does: in the default
+  software raster a canvas's pixels are copied on the main thread, `Commit`).
+- A drawing whose many marks ALL move every frame is drawn on a canvas
+  instead of as SVG nodes (`kit/surface.ts`): the globe (chapter 5) — its grid
+  and lights over its disc, its people, arcs and packets over everything — on
+  two screen-space canvases the engine places, fades and stacks exactly as the
+  frame's SVG layers (same transform, opacity, z-index), repainted whole on
+  every tick and on every placement. Its strokes keep the old
+  `non-scaling-stroke` widths: SVG-viewport units, which the frame's CSS
+  scale still scales, so in a surface they are frame units like the rest.
+  `e2e/vision-globe-shots.ts` photographs the globe at fixed p and fixed
+  animation times (Playwright's fake clock) and diffs two runs — the parity
+  check for a change to how it is drawn.
 - `internal/chapters/` — one module per chapter (`idea`, `app`, `integrate` +
   its apps `integrate-apps`, `desktop`, `apart` (2 → 3), `os-orbit`,
   `shared`, `globe`), and `orbit-kit` (the sphere projection, an app as a
   plain shape, the person node) shared by chapters 3–5.
 - `internal/kit/` — the drawing kit: `math.ts` (easing, a seeded generator —
   generated shapes are the same on every visit — polyline geometry),
-  `svg.ts` (markup strings), `night.ts` (the night-orbs vocabulary: glowing
+  `svg.ts` (markup strings), `surface.ts` (a frame layer as a canvas), `night.ts` (the night-orbs vocabulary: glowing
   lines, windows, beads, chips, icons, the OS's abstract windows),
   `timeline.ts` (a frame's looping animation as a pure function of loop
   time: parts tweened by `at(t, part, to, dur)`), `palette.ts`.

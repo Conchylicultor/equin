@@ -11,7 +11,11 @@
 //
 // Usage:
 //   ./equin run plugins/apps/plugins/website/plugins/pages/plugins/vision/e2e/vision-frames.ts \
-//     [--seconds 3] [--width 1400] [--height 900] [--headed]
+//     [--seconds 3] [--width 1400] [--height 900] [--gpu] [--headed]
+//
+// --gpu renders with the machine's GPU, as a visitor's browser does: a canvas
+// is then drawn and handed to the compositor on the GPU, where the default
+// software rasterizer copies its pixels on the main thread (`Commit`).
 //
 // Manual only — nothing runs this automatically.
 
@@ -19,6 +23,7 @@ import type { CDPSession, Page } from "playwright";
 import { z } from "zod";
 import {
   boot,
+  flag,
   numArg,
   pathUrl,
   withBrowser,
@@ -27,6 +32,7 @@ import {
 const seconds = numArg("seconds", 3);
 const width = numArg("width", 1400);
 const height = numArg("height", 900);
+const gpu = flag("gpu");
 
 interface FrameStats {
   fps: number;
@@ -250,25 +256,28 @@ const measure = (page: Page, ms: number): Promise<FrameStats> =>
     };
   }, ms);
 
-await withBrowser(async (h) => {
-  const { page } = await h.session({ viewport: { width, height } });
-  const cdp = await page.context().newCDPSession(page);
-  await boot(page, pathUrl("/website/vision"), {
-    marker: "text=A vision for",
-    settleMs: 1500,
-  });
-  for (let k = 0; k < 6; k++) {
-    await readChapter(page, k);
-    const [s, cpu] = await traceCpu(cdp, seconds * 1000, () =>
-      measure(page, seconds * 1000),
-    );
-    console.log(`chapter ${k}: ${JSON.stringify(s)}`);
-    // per frame: the host's load changes the frame rate, not what one frame costs
-    const perFrame = (n: number) => (s.fps ? (n / s.fps).toFixed(1) : "-");
-    console.log(
-      `  per frame: ${perFrame(cpu.cpuMsPerSec)} ms CPU, ${perFrame(s.writesPerSec)} DOM writes, ${perFrame(cpu.restyledPerSec)} elements restyled`,
-    );
-    console.log(`  cpu: ${JSON.stringify(cpu)}`);
-  }
-  return true;
-});
+await withBrowser(
+  async (h) => {
+    const { page } = await h.session({ viewport: { width, height } });
+    const cdp = await page.context().newCDPSession(page);
+    await boot(page, pathUrl("/website/vision"), {
+      marker: "text=A vision for",
+      settleMs: 1500,
+    });
+    for (let k = 0; k < 6; k++) {
+      await readChapter(page, k);
+      const [s, cpu] = await traceCpu(cdp, seconds * 1000, () =>
+        measure(page, seconds * 1000),
+      );
+      console.log(`chapter ${k}: ${JSON.stringify(s)}`);
+      // per frame: the host's load changes the frame rate, not what one frame costs
+      const perFrame = (n: number) => (s.fps ? (n / s.fps).toFixed(1) : "-");
+      console.log(
+        `  per frame: ${perFrame(cpu.cpuMsPerSec)} ms CPU, ${perFrame(s.writesPerSec)} DOM writes, ${perFrame(cpu.restyledPerSec)} elements restyled`,
+      );
+      console.log(`  cpu: ${JSON.stringify(cpu)}`);
+    }
+    return true;
+  },
+  { gpu },
+);

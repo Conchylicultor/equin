@@ -325,6 +325,13 @@
   height: 1000px;
   transform-origin: 50% 50%;
 }
+/* a frame layer drawn on a canvas (internal/kit/surface.ts): the stage's size, placed by its drawing */
+.vision-zoom .z-surface {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+}
 .vision-zoom .z-frame svg {
   display: block;
   overflow: visible;
@@ -590,15 +597,6 @@
 }
 .vision-zoom .zb-shared .zb-g {
   stroke-width: calc(2.5px * var(--zo4-k, 1));
-}
-.vision-zoom .zo5-arc {
-  fill: none;
-  stroke-width: calc(1.3px * var(--zo5-k, 1));
-  stroke-linecap: round;
-  vector-effect: non-scaling-stroke;
-}
-.vision-zoom .zb-shared-back .zb-ring {
-  stroke-width: calc(1px * var(--zo5-k, 1));
 }
 
 @keyframes vz-breath {

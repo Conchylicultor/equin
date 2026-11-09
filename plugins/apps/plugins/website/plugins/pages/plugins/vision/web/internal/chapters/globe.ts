@@ -1,14 +1,6 @@
-import {
-  alongPath,
-  n1,
-  polyline,
-  random,
-  smooth,
-  travel,
-  type Pt,
-} from "../kit/math";
-import { C, OS_COL } from "../kit/palette";
-import { circ, setAttr, svgEl } from "../kit/svg";
+import { alongPath, random, smooth, travel, type Pt } from "../kit/math";
+import { C, OS_COL, type Colour } from "../kit/palette";
+import type { Surface } from "../kit/surface";
 import type { LiveFrame } from "./frame";
 import { NODE } from "./orbit-kit";
 import type { World } from "./shared";
@@ -21,6 +13,9 @@ import type { World } from "./shared";
  * Lights and people rise over the globe's edge and set behind it as it turns.
  * In frame 5 units: `front` holds the people and arcs; `under` (on the back
  * layer, beneath frame 4) the globe's grid and lights.
+ *
+ * Every mark moves every frame, so both layers are canvases ({@link Surface}),
+ * repainted whole — not ~200 SVG nodes re-posed (each write a style recalc).
  */
 
 const GR = 470;
@@ -29,16 +24,21 @@ const TILT5 = 0.38;
 const ARC_EVERY = 0.3;
 const ARC_DUR = 2.4;
 const PEOPLE = 44;
-/** Lights: drawn as a few paths — one per size and brightness step — not one element each. */
+/** Lights: two sizes (diameters), and six brightness steps — one fill per size and step. */
 const SIZES = [2.6, 4.6];
 const LEVELS = 6;
+/** The grid's dashes, and its line and the arcs' widths (thinned by the zoom's k), in frame units. */
+const GRID_DASH = [3, 6];
+const GRID_W = 1;
+const ARC_W = 1.3;
+/** A person's halo at rest, and a packet's. */
+const HALO = 0.14;
+const PACKET_HALO = 0.35;
 
 type V3 = [number, number, number];
 interface Person {
   v: V3;
-  g: SVGGElement;
-  halo: SVGCircleElement;
-  dots: SVGCircleElement[];
+  dots: string[];
   spin: number;
   ph: number;
   flare: number;
@@ -47,8 +47,7 @@ interface Arc {
   A: Person;
   B: Person;
   t0: number;
-  path: SVGPathElement;
-  pk: SVGGElement;
+  col: string;
 }
 
 /**
@@ -58,14 +57,18 @@ interface Arc {
  * as much).
  */
 export function mountGlobe(
-  front: SVGGElement,
-  under: SVGGElement,
+  front: Surface,
+  under: Surface,
   you: { at: Pt },
   r: number,
   world: World,
 ): LiveFrame {
   const rnd = random(23);
+  const hue = (c: Colour) => front.colour(c);
   const HUE = OS_COL;
+  const ring = under.colour(C.ring);
+  const glow = under.colour(C.glow);
+  const frost = front.colour(C.frost);
   const ct = Math.cos(TILT5);
   const st = Math.sin(TILT5);
   // a point of the globe (unit vector, turned by rot) → screen; z > 0 faces us
@@ -88,44 +91,25 @@ export function mountGlobe(
   // how much a point faces us (fades out towards the edge)
   const seen = (q: { z: number }) => smooth((q.z - 0.02) / 0.3);
 
-  // the grid: meridians and parallels, drawn on the side facing us
-  const gridEls: SVGPathElement[] = [];
-  for (let i = 0; i < 11; i++) {
-    const gp = svgEl("path", {
-      class: "zb-ring",
-      opacity: i < 6 ? ".7" : ".5",
-    });
-    under.appendChild(gp);
-    gridEls.push(gp);
-  }
-  const gridPath = (fn: (u: number) => V3, rot: number) => {
-    let d = "";
+  // the grid: meridians and parallels, traced on the side facing us
+  const gridLine = (
+    g: CanvasRenderingContext2D,
+    fn: (u: number) => V3,
+    rot: number,
+  ) => {
     let on = false;
     for (let k = 0; k <= 128; k++) {
       const q = place(fn(k / 128), rot);
       if (q.z > 0) {
-        d += `${on ? "L" : "M"}${n1(q.x)} ${n1(q.y)}`;
+        if (on) g.lineTo(q.x, q.y);
+        else g.moveTo(q.x, q.y);
         on = true;
       } else on = false;
     }
-    return d;
   };
   // the lights: towns around a few hubs
   const hubs: Pt[] = [];
   for (let i = 0; i < 16; i++) hubs.push([rnd() * 6.283, (rnd() - 0.5) * 2.2]);
-  const buckets: SVGPathElement[] = [];
-  for (const w of SIZES)
-    for (let lv = 1; lv <= LEVELS; lv++) {
-      const bp = svgEl("path", {
-        fill: "none",
-        stroke: C.glow,
-        "stroke-linecap": "round",
-        "stroke-width": w,
-        opacity: (lv / LEVELS).toFixed(2),
-      });
-      under.appendChild(bp);
-      buckets.push(bp);
-    }
   // (most in towns around the hubs, the rest scattered: the globe has no dark half)
   const lights: {
     v: V3;
@@ -149,39 +133,22 @@ export function mountGlobe(
       ph: rnd() * 6.283,
     });
   }
+  // a light's (size, brightness) bucket, reused every paint
+  const buckets: Pt[][] = SIZES.flatMap(() =>
+    Array.from({ length: LEVELS }, () => [] as Pt[]),
+  );
   // the people
-  const gArcs = svgEl("g");
-  const gPeople = svgEl("g");
-  const gPk = svgEl("g");
-  front.append(gArcs, gPeople, gPk);
   const people: Person[] = [];
   for (let i = 0; i < PEOPLE; i++) {
     // spread evenly over the globe (a Fibonacci sphere), a little off the grid
     const fz = 1 - (2 * (i + 0.5)) / PEOPLE;
     const hub: Pt = [i * 2.39996 + (rnd() - 0.5) * 0.3, Math.asin(fz) * 0.92];
-    const g = svgEl("g");
-    const halo = svgEl("circle", {
-      class: "zb-halo",
-      r: NODE.halo,
-      fill: C.glow,
-    });
-    const dots: SVGCircleElement[] = [];
-    g.appendChild(halo);
-    for (let j = 0; j < 3; j++) {
-      const d = svgEl("circle", {
-        class: "zb-dot",
-        r: NODE.dot,
-        fill: HUE[Math.floor(rnd() * HUE.length)]!,
-      });
-      g.appendChild(d);
-      dots.push(d);
-    }
-    gPeople.appendChild(g);
+    const dots: string[] = [];
+    for (let j = 0; j < 3; j++)
+      dots.push(hue(HUE[Math.floor(rnd() * HUE.length)]!));
     const spin = (0.5 + rnd() * 0.7) * (rnd() < 0.5 ? -1 : 1);
     people.push({
       v: unit(hub[0], hub[1]),
-      g,
-      halo,
       dots,
       spin,
       ph: rnd() * 6.283,
@@ -190,6 +157,7 @@ export function mountGlobe(
   }
 
   let t = 0;
+  let k = 1;
   let nextArc = 0;
   let arcs: Arc[] = [];
   let claims: ReturnType<NonNullable<World["claim"]>> | null = null;
@@ -248,22 +216,8 @@ export function mountGlobe(
       .slice(0, 4);
     const A = near[Math.floor(rnd() * near.length)];
     if (!A) return;
-    const col = HUE[Math.floor(rnd() * HUE.length)]!;
-    const path = svgEl("path", {
-      class: "zo5-arc",
-      stroke: col,
-      pathLength: "1",
-      "stroke-dasharray": "1 1",
-    });
-    const pk = svgEl(
-      "g",
-      {},
-      circ(0, 0, 9, "zb-halo", `fill="${col}" style="opacity:.35"`) +
-        circ(0, 0, 3.2, "zb-dot", `fill="${C.frost}"`),
-    );
-    gArcs.appendChild(path);
-    gPk.appendChild(pk);
-    arcs.push({ A, B, t0: t, path, pk });
+    const col = hue(HUE[Math.floor(rnd() * HUE.length)]!);
+    arcs.push({ A, B, t0: t, col });
   }
   // the arc's points now: over the surface, lifted midway
   function arcPts(F: Arc, rot: number): Pt[] {
@@ -291,27 +245,56 @@ export function mountGlobe(
     }
     return pts;
   }
+  // the first m (0…1) of a polyline's length, as a path (an arc drawn out from its tail)
+  function tracePart(g: CanvasRenderingContext2D, pts: Pt[], m: number) {
+    let len = 0;
+    for (let i = 1; i < pts.length; i++)
+      len += Math.hypot(
+        pts[i]![0] - pts[i - 1]![0],
+        pts[i]![1] - pts[i - 1]![1],
+      );
+    let left = m * len;
+    if (left <= 0) return;
+    g.moveTo(pts[0]![0], pts[0]![1]);
+    for (let i = 1; i < pts.length; i++) {
+      const a = pts[i - 1]!;
+      const b = pts[i]!;
+      const d = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      if (d >= left) {
+        const f = d ? left / d : 0;
+        g.lineTo(a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f);
+        return;
+      }
+      g.lineTo(b[0], b[1]);
+      left -= d;
+    }
+  }
 
-  function render() {
-    const rot = (t * 2 * Math.PI) / TURN;
-    // grid: each meridian path is a whole great circle (lon and lon + 180°), so the 6 cover the globe every 30°
+  // the globe's grid and lights, beneath frame 4
+  function drawUnder(rot: number) {
+    const g = under.begin();
+    if (!g) return;
+    // grid: each meridian is a whole great circle (lon and lon + 180°), so the 6 cover the globe every 30°
+    g.strokeStyle = ring;
+    g.lineWidth = GRID_W * k;
+    g.setLineDash(GRID_DASH);
+    // one stroke per line, as each was its own SVG path: where two cross they add up
+    const line = (fn: (u: number) => V3) => {
+      g.beginPath();
+      gridLine(g, fn, rot);
+      g.stroke();
+    };
+    g.globalAlpha = 0.7;
     for (let m = 0; m < 6; m++) {
       const lon = (m * Math.PI) / 6;
-      setAttr(
-        gridEls[m]!,
-        "d",
-        gridPath((u) => unit(lon, (u - 0.5) * 2 * Math.PI), rot),
-      );
+      line((u) => unit(lon, (u - 0.5) * 2 * Math.PI));
     }
-    [-1.0, -0.5, 0, 0.5, 1.0].forEach((lat, j) => {
-      setAttr(
-        gridEls[6 + j]!,
-        "d",
-        gridPath((u) => unit(u * 2 * Math.PI, lat), rot),
-      );
-    });
-    // lights
-    const ds = buckets.map(() => "");
+    g.globalAlpha = 0.5;
+    for (const lat of [-1.0, -0.5, 0, 0.5, 1.0])
+      line((u) => unit(u * 2 * Math.PI, lat));
+    g.setLineDash([]);
+    // lights: one fill per size and brightness step (overlapping lights of one step do not add up)
+    for (const b of buckets) b.length = 0;
     for (const L of lights) {
       const q = place(L.v, rot);
       const a = smooth((q.z - 0.02) / 0.3);
@@ -319,68 +302,105 @@ export function mountGlobe(
       const tw = L.tw ? 0.55 + 0.45 * Math.sin(t * L.tw + L.ph) : 1;
       const lv = Math.round(L.base * a * tw * LEVELS);
       if (lv < 1) continue;
-      ds[L.size * LEVELS + lv - 1] += `M${n1(q.x)} ${n1(q.y)}h0`;
+      buckets[L.size * LEVELS + lv - 1]!.push([q.x, q.y]);
     }
-    buckets.forEach((bp, j) => setAttr(bp, "d", ds[j]!));
-    // people: their dots go round them, and they flare when something reaches them
-    for (const P of people) {
-      const q = place(P.v, rot);
-      const a = seen(q);
-      setAttr(P.g, "opacity", a.toFixed(3));
-      if (a < 0.01) continue;
-      const fl = Math.exp(-Math.max(0, t - P.flare) * 2.2);
-      setAttr(
-        P.g,
-        "transform",
-        `translate(${n1(q.x)} ${n1(q.y)}) scale(${(0.85 + 0.15 * q.z + 0.25 * fl + 0.05 * Math.sin(t * 0.9 + P.ph)).toFixed(3)})`,
-      );
-      P.halo.style.opacity = (0.14 + 0.4 * fl).toFixed(3);
-      P.dots.forEach((d, j) => {
-        const an = P.ph + t * P.spin + j * 2.094;
-        setAttr(d, "cx", String(n1(Math.cos(an) * NODE.orbit)));
-        setAttr(d, "cy", String(n1(Math.sin(an) * NODE.orbit * 0.83)));
-      });
-    }
+    g.fillStyle = glow;
+    buckets.forEach((b, j) => {
+      if (!b.length) return;
+      const rad = SIZES[Math.floor(j / LEVELS)]! / 2;
+      g.globalAlpha = ((j % LEVELS) + 1) / LEVELS;
+      g.beginPath();
+      for (const [x, y] of b) {
+        g.moveTo(x + rad, y);
+        g.arc(x, y, rad, 0, 2 * Math.PI);
+      }
+      g.fill();
+    });
+    g.globalAlpha = 1;
+  }
+
+  // the arcs, the people and the packets, over everything
+  function drawFront(rot: number) {
+    const g = front.begin();
+    if (!g) return;
     // arcs: drawn out, a packet riding their head, then fading from the tail
-    arcs = arcs.filter((F) => {
+    const heads: { at: Pt; o: number; col: string }[] = [];
+    g.lineWidth = ARC_W * k;
+    g.lineCap = "round";
+    g.lineJoin = "miter";
+    for (const F of arcs) {
       const age = t - F.t0;
       const m = travel(age / ARC_DUR);
       const pts = arcPts(F, rot);
       const vis = Math.min(seen(place(F.A.v, rot)), seen(place(F.B.v, rot)));
-      setAttr(F.path, "d", polyline(pts));
-      setAttr(F.path, "stroke-dashoffset", (1 - m).toFixed(3));
-      setAttr(
-        F.path,
-        "opacity",
-        (0.5 * vis * (1 - smooth((age - ARC_DUR) / 0.8))).toFixed(3),
-      );
-      const at = alongPath(pts, m);
-      setAttr(F.pk, "transform", `translate(${n1(at[0])} ${n1(at[1])})`);
-      setAttr(
-        F.pk,
-        "opacity",
-        (
-          vis *
-          smooth(age / 0.25) *
-          (1 - smooth((age - ARC_DUR + 0.2) / 0.2))
-        ).toFixed(3),
-      );
-      if (age >= ARC_DUR - 0.1 && F.B.flare < F.t0) F.B.flare = t;
-      if (age > ARC_DUR + 0.8) {
-        gArcs.removeChild(F.path);
-        gPk.removeChild(F.pk);
-        return false;
-      }
-      return true;
-    });
+      g.globalAlpha = 0.5 * vis * (1 - smooth((age - ARC_DUR) / 0.8));
+      g.strokeStyle = F.col;
+      g.beginPath();
+      tracePart(g, pts, m);
+      g.stroke();
+      heads.push({
+        at: alongPath(pts, m),
+        o: vis * smooth(age / 0.25) * (1 - smooth((age - ARC_DUR + 0.2) / 0.2)),
+        col: F.col,
+      });
+    }
+    // people: their dots go round them, and they flare when something reaches them
+    for (const P of people) {
+      const q = place(P.v, rot);
+      const a = seen(q);
+      if (a < 0.01) continue;
+      const fl = Math.exp(-Math.max(0, t - P.flare) * 2.2);
+      const sc =
+        0.85 + 0.15 * q.z + 0.25 * fl + 0.05 * Math.sin(t * 0.9 + P.ph);
+      g.globalAlpha = a * (HALO + 0.4 * fl);
+      g.fillStyle = glow;
+      g.beginPath();
+      g.arc(q.x, q.y, NODE.halo * sc, 0, 2 * Math.PI);
+      g.fill();
+      g.globalAlpha = a;
+      P.dots.forEach((col, j) => {
+        const an = P.ph + t * P.spin + j * 2.094;
+        g.fillStyle = col;
+        g.beginPath();
+        g.arc(
+          q.x + Math.cos(an) * NODE.orbit * sc,
+          q.y + Math.sin(an) * NODE.orbit * 0.83 * sc,
+          NODE.dot * sc,
+          0,
+          2 * Math.PI,
+        );
+        g.fill();
+      });
+    }
+    // packets, over the people
+    for (const h of heads) {
+      if (h.o <= 0) continue;
+      g.globalAlpha = h.o * PACKET_HALO;
+      g.fillStyle = h.col;
+      g.beginPath();
+      g.arc(h.at[0], h.at[1], 9, 0, 2 * Math.PI);
+      g.fill();
+      g.globalAlpha = h.o;
+      g.fillStyle = frost;
+      g.beginPath();
+      g.arc(h.at[0], h.at[1], 3.2, 0, 2 * Math.PI);
+      g.fill();
+    }
+    g.globalAlpha = 1;
   }
 
-  render();
+  function draw() {
+    const rot = (t * 2 * Math.PI) / TURN;
+    drawUnder(rot);
+    drawFront(rot);
+  }
+
   return {
     update(p) {
-      const k = Math.pow(r, Math.min(0, p - 5)).toFixed(3);
-      front.style.setProperty("--zo5-k", k);
-      under.style.setProperty("--zo5-k", k);
+      // the lines are thinned back by as much as the frame is magnified
+      k = Math.pow(r, Math.min(0, p - 5));
+      // the engine has just placed the surfaces: repaint now, not a frame late beside the SVG frames
+      draw();
     },
     tick(dt) {
       t += dt;
@@ -389,7 +409,13 @@ export function mountGlobe(
         launch(rot);
         nextArc += ARC_EVERY;
       }
-      render();
+      draw();
+      // an arc's receiver flares as its packet lands (seen from the next frame on); a faded arc is gone
+      arcs = arcs.filter((F) => {
+        const age = t - F.t0;
+        if (age >= ARC_DUR - 0.1 && F.B.flare < F.t0) F.B.flare = t;
+        return age <= ARC_DUR + 0.8;
+      });
     },
   };
 }
