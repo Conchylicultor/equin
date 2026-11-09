@@ -153,22 +153,26 @@ export function TagPickerPanel<Row extends TagRow>({
     // `data-tag-picker`: the panel's identity on the DOM (e2e scripts find
     // its rows as `[data-tag-picker] [data-tree-id]`).
     <Stack direction="col" gap="none" data-tag-picker>
-      <SearchInput
-        appearance="menu"
-        autoFocus={autoFocus}
-        value={query}
-        placeholder="Search or create…"
-        aria-label="Search or create a tag"
-        onChange={(e) => setQuery(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key !== "Enter" || !searching) return;
-          e.preventDefault();
-          const segments = parseTagPath(needle);
-          const exact = findByPath(segments, tags);
-          if (exact === undefined) fireWrite(createPath(segments));
-          else if (visible.pickable.has(exact.id)) onPick(exact.id);
-        }}
-      />
+      {/* The search is the panel's first row, inset from its edge as a padded
+          popover insets every other menu search — never flush with it. */}
+      <Stack direction="col" gap="none" className="p-sm">
+        <SearchInput
+          appearance="menu"
+          autoFocus={autoFocus}
+          value={query}
+          placeholder="Search or create…"
+          aria-label="Search or create a tag"
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key !== "Enter" || !searching) return;
+            e.preventDefault();
+            const segments = parseTagPath(needle);
+            const exact = findByPath(segments, tags);
+            if (exact === undefined) fireWrite(createPath(segments));
+            else if (visible.pickable.has(exact.id)) onPick(exact.id);
+          }}
+        />
+      </Stack>
       <Separator />
       <Stack direction="col" gap="none" className="p-2xs">
         {searching ? (
