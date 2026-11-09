@@ -86,6 +86,7 @@ Design: `research/2026-10-19-global-demo-story-from-browser-worker.md` §3.
     - `packages/list-bound.wholeList`
     - `packages/list-bound.wholeRecord`
   - Exports (types):
+    - `CrossSessionMessage`
     - `ForeignSessionPayload`
     - `HookOutcome`
     - `HookRecord`
@@ -105,6 +106,7 @@ Design: `research/2026-10-19-global-demo-story-from-browser-worker.md` §3.
     - `UserTextSegment`
   - Exports (values):
     - `activeLineUuids`
+    - `crossSessionMessageOf`
     - `extractPreprompt`
     - `extractTeammateMessages`
     - `ForeignSessionPayloadSchema`

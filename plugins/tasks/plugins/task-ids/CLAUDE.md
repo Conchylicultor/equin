@@ -47,6 +47,7 @@ recognition against real mints.
     - `apps/website/promo-film/seed`
     - `build`
     - `conversations`
+    - `conversations/conversation-view/jsonl-viewer/teammate-message`
     - `debug/read-set`
     - `hints/ask`
     - `infra/worktree`

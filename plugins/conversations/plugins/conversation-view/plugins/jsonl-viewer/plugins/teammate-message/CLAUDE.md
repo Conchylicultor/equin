@@ -24,10 +24,11 @@ normal user message.
 
 ## Plugin reference
 
-- Description: Renders messages relayed from other Claude sessions (<teammate-message> blocks) distinctly from human user messages.
+- Description: Renders messages from other Claude sessions (<teammate-message> blocks, and cross-session messages: the sender's task as a chip opening its conversation, the message open) distinctly from human user messages.
 - Web:
   - Contributes: `JsonlViewer.EventRenderer` "teammate-message" → `TeammateMessageRow`
   - Uses:
+    - `active-data/attempt.AttemptChip`
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
     - `primitives/avatar.Avatar`

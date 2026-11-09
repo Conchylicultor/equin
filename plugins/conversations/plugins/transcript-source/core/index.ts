@@ -25,11 +25,12 @@ export { turnLineKind } from "./turn-line";
 export type { TurnLineKind } from "./turn-line";
 export { activeLineUuids } from "./branch-filter";
 export { mergedSendUuids } from "./merged-sends";
-export type { TeammateMessage } from "./relay";
+export type { CrossSessionMessage, TeammateMessage } from "./relay";
 export {
   unwrapRelayEnvelopes,
   extractTeammateMessages,
   stripRelayBoilerplate,
+  crossSessionMessageOf,
 } from "./relay";
 export { ForeignSessionPayloadSchema } from "./foreign-session";
 export type { ForeignSessionPayload } from "./foreign-session";

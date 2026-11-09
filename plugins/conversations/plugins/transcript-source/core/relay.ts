@@ -174,3 +174,60 @@ export function stripRelayBoilerplate(text: string): string {
 
   return result.trim();
 }
+
+/** A message another Claude session sent this one over the cross-session
+ *  channel (`SendMessage` to a session found with `ListAgents`). */
+export interface CrossSessionMessage {
+  /** The sending session's name, as `ListAgents` lists it. */
+  name: string | undefined;
+  /** The sender's permission mode (`bypass`, `default`, …). */
+  mode: string | undefined;
+  /** How many sessions relayed it (1 = sent directly). */
+  hops: number;
+  /** What the peer wrote — without the harness's preamble and safety notice. */
+  body: string;
+}
+
+const CROSS_SESSION_RE =
+  /<cross-session-message\b([^>]*)>([\s\S]*?)<\/cross-session-message>/;
+
+function optionalString(value: unknown): string | undefined {
+  return typeof value === "string" && value !== "" ? value : undefined;
+}
+
+/**
+ * The cross-session message a transcript line delivers, or null when it
+ * delivers none. The CLI writes it as an `isMeta` user turn whose `origin` is
+ * `{ kind: "peer", name, fromMode, hopChain, body }` — read from there; a line
+ * from a CLI that did not record `origin` falls back to the
+ * `<cross-session-message from-name=… from-mode=…>` block in its text.
+ */
+export function crossSessionMessageOf(
+  line: Record<string, unknown>,
+  text: string,
+): CrossSessionMessage | null {
+  const origin = line.origin as Record<string, unknown> | undefined;
+  if (origin?.kind === "peer" && typeof origin.body === "string") {
+    return {
+      name: optionalString(origin.name),
+      mode: optionalString(origin.fromMode),
+      hops: Array.isArray(origin.hopChain)
+        ? Math.max(1, origin.hopChain.length)
+        : 1,
+      body: origin.body.trim(),
+    };
+  }
+  const block = CROSS_SESSION_RE.exec(text);
+  if (!block) return null;
+  const attrs: Record<string, string> = {};
+  for (const a of block[1]!.matchAll(/([\w-]+)\s*=\s*"([^"]*)"/g)) {
+    attrs[a[1]!] = a[2]!;
+  }
+  const hopChain = attrs["hop-chain"];
+  return {
+    name: optionalString(attrs["from-name"]),
+    mode: optionalString(attrs["from-mode"]),
+    hops: hopChain ? hopChain.split(/[\s,]+/).filter(Boolean).length : 1,
+    body: block[2]!.trim(),
+  };
+}

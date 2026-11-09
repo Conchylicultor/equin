@@ -156,6 +156,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `attemptChipReferents`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/color-palette --muted-foreground`
+        - Imported by: `conversations/conversation-view/jsonl-viewer/teammate-message`
     - **`build-run`** — Renders a bare `build-<id>` in a transcript as the generic id chip (`Build <short commit>`) that opens the build's run-detail pane, and presents the build-run id kind to the id registry. The build-run id chip's server half (idChipServer): resolves a `build-<id>` to `Build <short commit>` for the id registry and for model-read text.
       - Web:
         - Contributes:
@@ -17886,10 +17887,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by:
                   - `conversations/conversation-view/jsonl-viewer/background-shells`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
-            - **`teammate-message`** — Renders messages relayed from other Claude sessions (<teammate-message> blocks) distinctly from human user messages.
+            - **`teammate-message`** — Renders messages from other Claude sessions (<teammate-message> blocks, and cross-session messages: the sender's task as a chip opening its conversation, the message open) distinctly from human user messages.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "teammate-message" → `TeammateMessageRow`
                 - Uses:
+                  - `active-data/attempt.AttemptChip`
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
                   - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
                   - `primitives/avatar.Avatar`
@@ -20899,6 +20901,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages/list-bound.wholeList`
           - `packages/list-bound.wholeRecord`
         - Exports (types):
+          - `CrossSessionMessage`
           - `ForeignSessionPayload`
           - `HookOutcome`
           - `HookRecord`
@@ -20918,6 +20921,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `UserTextSegment`
         - Exports (values):
           - `activeLineUuids`
+          - `crossSessionMessageOf`
           - `extractPreprompt`
           - `extractTeammateMessages`
           - `ForeignSessionPayloadSchema`
@@ -56760,6 +56764,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/website/promo-film/seed`
           - `build`
           - `conversations`
+          - `conversations/conversation-view/jsonl-viewer/teammate-message`
           - `debug/read-set`
           - `hints/ask`
           - `infra/worktree`

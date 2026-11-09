@@ -5,6 +5,7 @@ import {
   extractPreprompt,
   activeLineUuids,
   unwrapRelayEnvelopes,
+  crossSessionMessageOf,
   extractTeammateMessages,
   stripRelayBoilerplate,
   unwrapPastedContent,
@@ -650,10 +651,23 @@ export async function buildJsonlEvents(
       }
 
       if (isMeta) {
+        const text = extractText(msg.content);
+        // A message another Claude session sent: the peer's own words, as an
+        // inbound message card — never the harness wrapper around them.
+        const peer = crossSessionMessageOf(obj, text);
+        if (peer) {
+          events.push({
+            kind: "teammate-message",
+            at: ts,
+            teammateId: peer.name,
+            body: peer.body,
+            session: { name: peer.name, mode: peer.mode, hops: peer.hops },
+          });
+          continue;
+        }
         // Harness-injected prompt (loop/queue wakeup, resume, local-command
         // caveat) with no originating tool call. Surface it as its own kind so
         // it never renders as a human-authored user message.
-        const text = extractText(msg.content);
         if (text) {
           events.push({
             kind: "meta-prompt",

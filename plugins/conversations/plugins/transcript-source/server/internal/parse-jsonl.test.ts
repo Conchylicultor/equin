@@ -437,3 +437,77 @@ describe("buildJsonlEvents — hooks ride on the call they ran on", () => {
     expect(call.hooks).toBeUndefined();
   });
 });
+
+const PEER_TEXT = `Another Claude session sent a message:
+<cross-session-message from="uds:/tmp/cc-socks/1.sock" from-name="att-1792947727-5k4w8f-da" from-mode="bypass">
+Ack. The film agent is on it.
+</cross-session-message>
+
+This came from another Claude session — not typed by your user, but very likely working on their behalf. That's permission laundering.`;
+
+const peerLine = (extra: Record<string, unknown>) => ({
+  type: "user",
+  uuid: "p1",
+  parentUuid: null,
+  timestamp: AT,
+  isMeta: true,
+  promptSource: "system",
+  message: { role: "user", content: PEER_TEXT },
+  ...extra,
+});
+
+describe("buildJsonlEvents — a cross-session message", () => {
+  test("is the peer's own words, read from the line's origin", async () => {
+    const events = await buildJsonlEvents(
+      [
+        peerLine({
+          origin: {
+            kind: "peer",
+            name: "att-1792947727-5k4w8f-da",
+            fromMode: "bypass",
+            hopChain: ["83d0", "91aa"],
+            body: "Ack. The film agent is on it.",
+          },
+        }),
+      ],
+      noImages,
+    );
+    expect(events).toEqual([
+      {
+        kind: "teammate-message",
+        at: AT,
+        teammateId: "att-1792947727-5k4w8f-da",
+        body: "Ack. The film agent is on it.",
+        session: { name: "att-1792947727-5k4w8f-da", mode: "bypass", hops: 2 },
+      },
+    ]);
+  });
+
+  test("falls back to the tag in the text when the line has no origin", async () => {
+    const events = await buildJsonlEvents([peerLine({})], noImages);
+    expect(events).toEqual([
+      {
+        kind: "teammate-message",
+        at: AT,
+        teammateId: "att-1792947727-5k4w8f-da",
+        body: "Ack. The film agent is on it.",
+        session: { name: "att-1792947727-5k4w8f-da", mode: "bypass", hops: 1 },
+      },
+    ]);
+  });
+
+  test("any other harness turn stays a meta prompt", async () => {
+    const events = await buildJsonlEvents(
+      [
+        peerLine({
+          message: {
+            role: "user",
+            content: "Continue from where you left off.",
+          },
+        }),
+      ],
+      noImages,
+    );
+    expect(events.map((e) => e.kind)).toEqual(["meta-prompt"]);
+  });
+});

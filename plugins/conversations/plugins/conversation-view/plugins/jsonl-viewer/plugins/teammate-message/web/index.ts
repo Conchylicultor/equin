@@ -4,7 +4,7 @@ import { TeammateMessageRow } from "./components/teammate-message-row";
 
 export default {
   description:
-    "Renders messages relayed from other Claude sessions (<teammate-message> blocks) distinctly from human user messages.",
+    "Renders messages from other Claude sessions (<teammate-message> blocks, and cross-session messages: the sender's task as a chip opening its conversation, the message open) distinctly from human user messages.",
   contributions: [
     JsonlViewer.EventRenderer({ match: "teammate-message", component: TeammateMessageRow }),
   ],
