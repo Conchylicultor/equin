@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: The Developer mode switch in the action bar's view-options popover — the same setting as Settings → Profile.
+- Description: The Developer mode switch in the action bar's view-options popover — the same setting as Settings → Config → Developer mode.
 - Web:
   - Contributes: `ActionBar.ViewOption` → `DeveloperModeSwitch`
   - Uses:

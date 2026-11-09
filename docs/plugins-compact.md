@@ -61,8 +61,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 - **`audience`** — Who the user is (user | developer), read live as useAudience() from the Developer mode config; registers that config. Registers the Developer mode config and reads the user's audience on the server…
   - Plugins:
     - **`developer-mark`** — The developer-only gate and mark: ForAudience (renders its children only for the audience a feature declares, and draws the developer mark on what it shows a developer only, in the form its required…
-    - **`settings`** — The Developer mode switch in Settings: a Profile sidebar entry opening a pane that switches the user's audience (user | developer).
-    - **`view-option`** — The Developer mode switch in the action bar's view-options popover — the same setting as Settings → Profile.
+    - **`view-option`** — The Developer mode switch in the action bar's view-options popover — the same setting as Settings → Config → Developer mode.
 
 - **`auth`** [load-bearing] [exempt] [8 sub-plugins] — Shared authentication infrastructure (OAuth 2.0, API keys, password sign-in). Exposes the Accounts pane — a DataView of every provider (Auth.Provider) and non-provider setup surface…
 

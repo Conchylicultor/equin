@@ -1494,10 +1494,6 @@
       "name": "@equin/plugin-audience-developer-mark",
       "version": "0.0.1",
     },
-    "plugins/audience/plugins/settings": {
-      "name": "@equin/plugin-audience-settings",
-      "version": "0.0.1",
-    },
     "plugins/audience/plugins/view-option": {
       "name": "@equin/plugin-audience-view-option",
       "version": "0.0.1",
@@ -8174,8 +8170,6 @@
     "@equin/plugin-audience": ["@equin/plugin-audience@workspace:plugins/audience"],
 
     "@equin/plugin-audience-developer-mark": ["@equin/plugin-audience-developer-mark@workspace:plugins/audience/plugins/developer-mark"],
-
-    "@equin/plugin-audience-settings": ["@equin/plugin-audience-settings@workspace:plugins/audience/plugins/settings"],
 
     "@equin/plugin-audience-view-option": ["@equin/plugin-audience-view-option@workspace:plugins/audience/plugins/view-option"],
 

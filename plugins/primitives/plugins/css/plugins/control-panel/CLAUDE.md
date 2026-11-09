@@ -505,13 +505,13 @@ surface isn't viewport-capped, it fails loudly.
     - `ui/tokens/color-palette` ×9
     - `ui/tokens/type-scale` ×7
     - `ui/tokens/shape` ×2
-  - Imported by: 48 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 47 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×16
     - `page` ×6
     - `primitives` ×4
-    - `audience` ×3
     - `config_v2` ×3
     - `tasks` ×3
+    - `audience` ×2
     - `conversations` ×2
     - `fields` ×2
     - `hints` ×2

@@ -674,9 +674,9 @@ with an empty route.
 - Load-bearing: yes
 - Web:
   - Slots: `Pane.Register`
-  - Slot contributors: 95 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Pane.Register` ×95
-  - Contributes: 128 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 94 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Pane.Register` ×94
+  - Contributes: 127 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `SlotRender.ListMiddleware`
     - `WebsiteHeader` "title" → `PaneTitleItem`
     - `accountPane.Actions` "title" → `PaneTitleItem`
@@ -784,7 +784,6 @@ with an empty route.
     - `serverDetailPane.Actions` "title" → `PaneTitleItem`
     - `serversRootPane.Actions` "title" → `PaneTitleItem`
     - `settings-config-index.actions` "title" → `PaneTitleItem`
-    - `settings-profile.actions` "title" → `PaneTitleItem`
     - `shellOutputPane.Actions` "title" → `PaneTitleItem`
     - `sitePane.Actions` "title" → `PaneTitleItem`
     - `sitesIndexPane.Actions` "title" → `PaneTitleItem`
@@ -947,7 +946,7 @@ with an empty route.
     - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-md`
     - `ui/tokens/shape --spacing`
-  - Imported by: 196 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 195 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×71
     - `conversations` ×32
     - `debug` ×27
@@ -961,7 +960,6 @@ with an empty route.
     - `reports` ×2
     - `stats` ×2
     - `ui` ×2
-    - `audience/settings`
     - `auth`
     - `backup`
     - `build`

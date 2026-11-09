@@ -5,7 +5,7 @@ import { runsInBrowserRealm, webLoadViolations } from "./web-loads-portable";
 describe("runsInBrowserRealm", () => {
   test.each([
     ["plugins/audience/web/index.ts", true],
-    ["plugins/audience/plugins/settings/web/components/x.tsx", true],
+    ["plugins/audience/plugins/view-option/web/components/x.tsx", true],
     ["plugins/audience/exhibits/index.tsx", true],
     // A jsdom suite runs without the computer.
     ["plugins/audience/web/__tests__/x.test.tsx", true],

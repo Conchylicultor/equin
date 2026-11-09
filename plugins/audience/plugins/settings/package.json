@@ -1,6 +1,0 @@
-{
-  "name": "@equin/plugin-audience-settings",
-  "description": "The Developer mode switch in Settings (its Profile entry).",
-  "private": true,
-  "version": "0.0.1"
-}
