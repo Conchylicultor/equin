@@ -2,11 +2,11 @@
 // The gallery is grouped by `tag`: sections NEST along the prototypes' tag
 // tree (app ▸ website ▸ homepage), each header counting its whole subtree, a
 // parent's own cards above its child sections, the untagged ones last
-// ("None"). Within a section the cards sort by `status` — the pinned ones
-// first, then the ones still being worked on, the finished ones last (Done
-// cards also read muted). DESCENDING because an enum sorts by its VALUE, not
-// its options order: "pinned" > "in-progress" > "done". Group by Status
-// instead for the old Pinned / In progress / Done sections. Every view binds
+// ("None"). Within a section the cards sort by `status` — the ones still
+// being worked on first, the finished ones last (Done cards also read muted).
+// DESCENDING because an enum sorts by its VALUE, not its options order:
+// "in-progress" > "done". Group by Status instead for In progress / Done
+// sections. Every view binds
 // to a source: `gallery` (the live
 // prototypes) or `trash` (the deleted ones, Restore on each card).
 {

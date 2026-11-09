@@ -1,4 +1,4 @@
-// @hash 958dc4f768f5
+// @hash b21ab19277c4
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -7,7 +7,7 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
-    "apps.prototypes.gallery:pin",
+    "apps.prototypes.gallery:tag",
     "apps.prototypes.gallery:done",
     "apps.prototypes.gallery:delete",
     "apps.prototypes.present:open-new-tab"

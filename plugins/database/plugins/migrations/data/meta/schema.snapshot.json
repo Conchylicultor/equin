@@ -1,6 +1,6 @@
 {
-  "id": "ec004e9a-f993-422b-9ad4-0c1f7b14556a",
-  "prevId": "c187774b-eb1e-4898-8d7f-02c93c1f1062",
+  "id": "5a4fd7d6-7591-4922-acc5-06cf38ad6f70",
+  "prevId": "ec004e9a-f993-422b-9ad4-0c1f7b14556a",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -4555,13 +4555,6 @@
           "type": "text",
           "primaryKey": true,
           "notNull": true
-        },
-        "pinned": {
-          "name": "pinned",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
         },
         "done": {
           "name": "done",

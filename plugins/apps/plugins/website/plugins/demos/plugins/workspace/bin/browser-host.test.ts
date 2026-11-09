@@ -120,7 +120,7 @@ import { DEMO_CONVERSATION_ID } from "../core/internal/scenario";
 import { bunHostEntries, diskConfigFiles, diskDemoData } from "./bun-host";
 import { seed } from "./seed";
 import {
-  DEMO_PINNED_PROTOTYPE,
+  DEMO_FEATURED_PROTOTYPE,
   DEMO_PROTOTYPE_TAGS,
 } from "../core/internal/prototypes";
 import {
@@ -972,8 +972,8 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
       prototypeSeed.prototypes.map((p) => p.id).sort(),
     );
     for (const meta of list) expect(meta.problems).toEqual([]);
-    const pinned = list.find((m) => m.name === DEMO_PINNED_PROTOTYPE)!;
-    expect(pinned.options.map((o) => o.name)).toEqual(["accent"]);
+    const featured = list.find((m) => m.name === DEMO_FEATURED_PROTOTYPE)!;
+    expect(featured.options.map((o) => o.name)).toEqual(["accent"]);
     // Menu mocks an exhibit, Miller columns the app at a route (compare's
     // `unresolved` arm here); the others stand on their own.
     expect(
@@ -987,7 +987,7 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
   test("a prototype's sibling files are served with their own types", async () => {
     const photos = await request(
       "GET",
-      `/api/prototypes/${DEMO_PINNED_PROTOTYPE}/photos.js`,
+      `/api/prototypes/${DEMO_FEATURED_PROTOTYPE}/photos.js`,
     );
     expect(photos.status).toBe(200);
     expect(photos.headers.get("content-type")).toContain("javascript");
@@ -995,7 +995,7 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
     // The document carries the user's pick, stamped onto its <html>.
     const doc = await request(
       "GET",
-      `/api/prototypes/${DEMO_PINNED_PROTOTYPE}/index.html?accent=%232f6f8f`,
+      `/api/prototypes/${DEMO_FEATURED_PROTOTYPE}/index.html?accent=%232f6f8f`,
     );
     expect(doc.status).toBe(200);
     expect(await doc.text()).toContain("--accent: #2f6f8f");
@@ -1033,19 +1033,14 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
     );
   });
 
-  test("the gallery's rows: the tags, each prototype's tag, the pin", async () => {
+  test("the gallery's rows: the tags, each prototype's tag", async () => {
     const rows = await db.execute<{
       id: string;
       tag_id: string | null;
-      pinned: boolean;
-    }>(sql`SELECT id, tag_id, pinned FROM prototype_state ORDER BY id`);
+    }>(sql`SELECT id, tag_id FROM prototype_state ORDER BY id`);
     expect(rows.rows).toEqual(
       DEMO_PROTOTYPE_TAGS.flatMap((t) =>
-        t.carriers.map((id) => ({
-          id,
-          tag_id: t.id,
-          pinned: id === DEMO_PINNED_PROTOTYPE,
-        })),
+        t.carriers.map((id) => ({ id, tag_id: t.id })),
       ).sort((a, b) => (a.id < b.id ? -1 : 1)),
     );
   });
@@ -1096,7 +1091,7 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
       close(ws: unknown, code: number, reason: string): void;
     };
     ws.open(socket);
-    const params = { name: DEMO_PINNED_PROTOTYPE };
+    const params = { name: DEMO_FEATURED_PROTOTYPE };
     try {
       ws.message(
         socket,
@@ -1114,7 +1109,7 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
       });
       const res = await request(
         "PUT",
-        `/api/prototypes/${DEMO_PINNED_PROTOTYPE}/picks`,
+        `/api/prototypes/${DEMO_FEATURED_PROTOTYPE}/picks`,
         { kind: "set", option: "accent", value: "#2f6f8f" },
       );
       expect(res.status).toBeLessThan(300);

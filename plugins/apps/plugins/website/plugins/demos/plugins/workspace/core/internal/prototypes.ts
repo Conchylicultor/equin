@@ -36,11 +36,11 @@ export const DEMO_PROTOTYPE_TAGS: readonly PrototypeFixtureTag[] = [
   },
 ];
 
-/** The prototype pinned to the top of the gallery. */
-export const DEMO_PINNED_PROTOTYPE = "proto-1792900000-demo01";
+/** The prototype the demo's pages and transcripts point at (the photo grid). */
+export const DEMO_FEATURED_PROTOTYPE = "proto-1792900000-demo01";
 
 /**
- * The fixture the seed writes: `data`'s files with the demo's tags and pin.
+ * The fixture the seed writes: `data`'s files with the demo's tags.
  * Loud on a prototype folder whose id does not carry `demo` — every demo id
  * does, so a request that leaked to the real server is findable in its logs.
  */
@@ -57,6 +57,5 @@ export function demoPrototypeFixture(
   return {
     ...data,
     tags: DEMO_PROTOTYPE_TAGS,
-    pinned: [DEMO_PINNED_PROTOTYPE],
   };
 }

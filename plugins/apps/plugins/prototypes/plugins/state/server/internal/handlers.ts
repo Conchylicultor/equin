@@ -12,8 +12,8 @@ import {
 import { _prototypeState, _prototypeTags } from "./tables";
 
 /**
- * `PATCH /api/prototypes/:name/state` — apply one change (`{ done?, pinned?,
- * tagId? }`): an upsert that sets only the given fields, so a change never
+ * `PATCH /api/prototypes/:name/state` — apply one change (`{ done?, tagId?
+ * }`): an upsert that sets only the given fields, so a change never
  * clobbers another field set elsewhere. 404 unless the prototype folder
  * exists; 400 for a `tagId` that names no prototype tag.
  */
@@ -26,7 +26,6 @@ export const handleSetPrototypeState = implement(
     }
     const set: Partial<typeof _prototypeState.$inferInsert> = {};
     if (body.done !== undefined) set.done = body.done;
-    if (body.pinned !== undefined) set.pinned = body.pinned;
     if (body.tagId !== undefined) set.tagId = body.tagId;
     await db.transaction(async (tx) => {
       const { tagId } = body;

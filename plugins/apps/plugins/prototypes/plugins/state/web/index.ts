@@ -10,6 +10,6 @@ export {
 
 export default {
   description:
-    "Per-instance prototype state, web half: registers the prototype tag id kind (`prtag-…`), and the hooks reading and writing a prototype's pinned / Done / tag state (usePrototypeStates, usePrototypeState, useSetPrototypeState).",
+    "Per-instance prototype state, web half: registers the prototype tag id kind (`prtag-…`), and the hooks reading and writing a prototype's Done / tag state (usePrototypeStates, usePrototypeState, useSetPrototypeState).",
   contributions: [IdKinds.Kind({ kind: prototypeTagIdKind })],
 } satisfies PluginDefinition;

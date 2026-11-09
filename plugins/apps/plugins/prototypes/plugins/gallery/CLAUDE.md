@@ -41,36 +41,38 @@ The Prototypes app's gallery: the list of every prototype, and New prototype.
   late paint on every load. Side by side they are answered in parallel, and the
   card is right the first time it is painted. `joinGalleryRows` maps the
   states (per-instance DB rows; no row = `NO_PROTOTYPE_STATE`) and counts onto
-  the rows (`PrototypeGalleryRow = PrototypeMeta & { done, pinned, tagId,
+  the rows (`PrototypeGalleryRow = PrototypeMeta & { done, tagId,
   deletedAt, versions }`), so everything reads one value:
   - a hidden `tag` field (`type: "tag"`, options `tagFieldOptions(tags)`) — the
     DEFAULT grouping, `tree` (nested sections along the tag tree, rolled-up
     counts, untagged under None last);
-  - a hidden `status` enum ("Pinned" / "In progress" / "Done", not the two
-    bools: it reads as section headings and filter values, where "No" / "Yes"
-    say nothing). The default view SORTS by it, so pinned cards head each tag
-    section and Done ones close it; group by it for the old three sections. A
-    pin outranks Done;
+  - a hidden `status` enum ("In progress" / "Done", not a bool: it reads as
+    section headings and filter values, where "No" / "Yes" say nothing). The
+    default view SORTS by it, so Done cards close each tag section; group by
+    it for two sections;
   - a muted title on Done cards (`rowTone`);
   - the card actions.
 
-  **Pin / Done / Open in a new tab — the card actions** (`PrototypeCardActions`,
-  the same set on a gallery card and a list row). Pin (`PinCardAction`) and the
-  Done circle (`DoneCardAction`) are `revealed` (hover) actions with
-  `useActive` (`usePinnedActive` / `useDoneActive`, a plain read of the joined
-  row): a set state stays painted at rest, the rest appear on hover. Both
-  write through `state`'s `useSetPrototypeState` (`PATCH …/state`, the fields
-  it sets — a change never clobbers another field) and their click never opens
-  the card. Open in a new tab is contributed by `present` (the live present
+  **Edit tag / Done / Open in a new tab — the card actions**
+  (`PrototypeCardActions`, the same set on a gallery card and a list row).
+  Edit tag (`TagCardAction`, `tag-chip.tsx`) and the Done circle
+  (`DoneCardAction`) are `revealed` (hover) actions. Edit tag is the label
+  glyph opening the same `TagPickerPopover` as the header's chip, on the
+  row's `tagId` (the cluster stays shown while the picker is open — `RowActions`'
+  `PopupOpenScope`). The Done circle has `useActive` (`useDoneActive`, a plain
+  read of the joined row), so a Done card says so at rest. Both write through
+  `state`'s `useSetPrototypeState` (`PATCH …/state`, the fields it sets — a
+  change never clobbers another field) and their click never opens the card
+  (`RowActions` stops it, the picker's portaled clicks included). Open in a new tab is contributed by `present` (the live present
   page).
 
   The canvas's header (`prototypeDetailPane.Actions`, order in
   `config/apps/prototypes/canvas/prototypes-detail.actions.jsonc`) gets, right
   after the title, `TagHeaderAction` (`tag-chip.tsx`: `TagPickerPopover` +
   `TagPathChip`, `offerNone`, counts = `rolledUpTagCounts` over the listed
-  prototypes' tags), then `PinHeaderAction` and `DoneHeaderAction` — each
-  reading `usePrototypeState(name)` and pending until it is known, with fixed
-  labels so toggling never changes the header's width — and, after a rule,
+  prototypes' tags), then `DoneHeaderAction` — reading
+  `usePrototypeState(name)` and pending until it is known, with a fixed
+  label so toggling never changes the header's width — and, after a rule,
   `DeleteHeaderAction`.
 
 - **Delete and the Trash.** Delete (a card action, and the detail header's —
@@ -90,7 +92,7 @@ The Prototypes app's gallery: the list of every prototype, and New prototype.
 
 The detail pane itself — the canvas of frames, its version steppers, option
 picks, size and zoom — is the sibling `canvas` plugin. The gallery depends on
-it to put its tag chip, pin, Done and Delete in the canvas's header and for
+it to put its tag chip, Done and Delete in the canvas's header and for
 the ground it sits on (`CanvasGround`); the routes of both panes
 live in `shell/core/routes.ts`.
 
@@ -143,7 +145,7 @@ honest — the prototype does exist — and it self-corrects.
 
 ## Plugin reference
 
-- Description: Prototypes gallery list pane — one card per prototype over its rendered preview, on the prototype viewer's grid, with a Recently edited list; grouped by its tag as nested sections along the prototypes' tag tree (or by status: Pinned / In progress / Done), with a pin and a Done circle on every card and row (hover actions that stay shown while set; also in the detail pane's header, beside the tag chip opening the shared tag picker), an undoable Delete on every card and in the detail header (deletedAt in the prototype's state — the folder stays), and a Trash view (its own source in the same view bar) listing the deleted ones with Restore — plus New prototype, which mints the folder before launching the agent that designs it.
+- Description: Prototypes gallery list pane — one card per prototype over its rendered preview, on the prototype viewer's grid, with a Recently edited list; grouped by its tag as nested sections along the prototypes' tag tree (or by status: In progress / Done), with an Edit tag action (the shared tag picker) and a Done circle on every card and row (hover actions; the Done circle stays shown while set; both also in the detail pane's header, as the tag chip and the Done toggle), an undoable Delete on every card and in the detail header (deletedAt in the prototype's state — the folder stays), and a Trash view (its own source in the same view bar) listing the deleted ones with Restore — plus New prototype, which mints the folder before launching the agent that designs it.
 - Web:
   - Slots:
     - `prototypesGalleryPane.Actions`
@@ -161,10 +163,9 @@ honest — the prototype does exist — and it self-corrects.
     - `sources` "Prototypes" → `GallerySource`
     - `sources` "Trash" → `TrashSource`
     - `prototypeDetailPane.Actions` "tag" → `TagHeaderAction`
-    - `prototypeDetailPane.Actions` "pin" → `PinHeaderAction`
     - `prototypeDetailPane.Actions` "done" → `DoneHeaderAction`
     - `prototypeDetailPane.Actions` "delete" → `DeleteHeaderAction`
-    - `PrototypeCardActions` "pin" → `PinCardAction`
+    - `PrototypeCardActions` "tag" → `TagCardAction`
     - `PrototypeCardActions` "done" → `DoneCardAction`
     - `PrototypeCardActions` "delete" → `DeleteCardAction`
     - `trash-actions` "restore" → `RestoreCardAction`

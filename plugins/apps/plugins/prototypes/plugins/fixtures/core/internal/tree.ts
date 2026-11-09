@@ -63,15 +63,12 @@ export interface PrototypeFixtureTag {
 export interface PrototypeFixture extends PrototypeFixtureData {
   /** In gallery order. */
   tags?: readonly PrototypeFixtureTag[];
-  /** The prototypes pinned to the top of the gallery. */
-  pinned?: readonly string[];
 }
 
 /** One `prototype_state` row a fixture asks for. */
 export interface PrototypeFixtureState {
   id: string;
   tagId: string | null;
-  pinned: boolean;
 }
 
 const STEP_MESSAGE_RE = /^v([1-9]\d*)\.txt$/;
@@ -231,14 +228,14 @@ export function auditPrototypeFixtureThumbnails(
 }
 
 /**
- * The `prototype_state` rows the fixture's tags and pins ask for, one per
- * prototype that carries a tag or is pinned. Loud on a tag id that is not a
- * prototype tag id, a carrier or pin naming a prototype the tree does not
+ * The `prototype_state` rows the fixture's tags ask for, one per
+ * prototype that carries a tag. Loud on a tag id that is not a
+ * prototype tag id, a carrier naming a prototype the tree does not
  * hold, and a prototype carrying two tags.
  */
 export function prototypeFixtureStates(
   parsed: ParsedPrototypeTree,
-  fixture: Pick<PrototypeFixture, "tags" | "pinned">,
+  fixture: Pick<PrototypeFixture, "tags">,
 ): PrototypeFixtureState[] {
   const ids = new Set(parsed.prototypes.map((p) => p.id));
   const states = new Map<string, PrototypeFixtureState>();
@@ -249,7 +246,7 @@ export function prototypeFixtureStates(
       );
     let state = states.get(id);
     if (state === undefined) {
-      state = { id, tagId: null, pinned: false };
+      state = { id, tagId: null };
       states.set(id, state);
     }
     return state;
@@ -268,7 +265,6 @@ export function prototypeFixtureStates(
       state.tagId = tag.id;
     }
   }
-  for (const id of fixture.pinned ?? []) stateOf(id, "pinned").pinned = true;
   return [...states.values()].sort((a, b) => (a.id < b.id ? -1 : 1));
 }
 

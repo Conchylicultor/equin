@@ -194,7 +194,7 @@ function PrototypeShelf({
   const result = useCombinedResources({
     prototypes: useLive(prototypesList),
     thumbnails: usePrototypeThumbnails(),
-    // Whether each prototype is pinned / marked Done / deleted, and its tag —
+    // Whether each prototype is marked Done / deleted, and its tag —
     // joined onto the rows below, and awaited with the list so a Done card
     // never paints as not done first.
     states: usePrototypeStates(),

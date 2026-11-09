@@ -80,7 +80,7 @@ export function DeleteCardAction({
 }
 
 /**
- * The detail pane header's Delete, after the pin and the Done toggle. Once
+ * The detail pane header's Delete, after the Done toggle. Once
  * deleted the pane goes back to the gallery it came from (the toast's Undo
  * still restores it). On a prototype already deleted — opened from the Trash,
  * or a link — it is Restore instead. Disabled until the list and its state

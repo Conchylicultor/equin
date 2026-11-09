@@ -7288,7 +7288,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `prototypeFixtureThumbnailsCheck`
               - `readPrototypeFixtureDir`
-        - **`gallery`** — Prototypes gallery list pane — one card per prototype over its rendered preview, on the prototype viewer's grid, with a Recently edited list; grouped by its tag as nested sections along the prototypes' tag tree (or by status: Pinned / In progress / Done), with a pin and a Done circle on every card and row (hover actions that stay shown while set; also in the detail pane's header, beside the tag chip opening the shared tag picker), an undoable Delete on every card and in the detail header (deletedAt in the prototype's state — the folder stays), and a Trash view (its own source in the same view bar) listing the deleted ones with Restore — plus New prototype, which mints the folder before launching the agent that designs it.
+        - **`gallery`** — Prototypes gallery list pane — one card per prototype over its rendered preview, on the prototype viewer's grid, with a Recently edited list; grouped by its tag as nested sections along the prototypes' tag tree (or by status: In progress / Done), with an Edit tag action (the shared tag picker) and a Done circle on every card and row (hover actions; the Done circle stays shown while set; both also in the detail pane's header, as the tag chip and the Done toggle), an undoable Delete on every card and in the detail header (deletedAt in the prototype's state — the folder stays), and a Trash view (its own source in the same view bar) listing the deleted ones with Restore — plus New prototype, which mints the folder before launching the agent that designs it.
           - Web:
             - Slots:
               - `prototypesGalleryPane.Actions`
@@ -7306,10 +7306,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `sources` "Prototypes" → `GallerySource`
               - `sources` "Trash" → `TrashSource`
               - `prototypeDetailPane.Actions` "tag" → `TagHeaderAction`
-              - `prototypeDetailPane.Actions` "pin" → `PinHeaderAction`
               - `prototypeDetailPane.Actions` "done" → `DoneHeaderAction`
               - `prototypeDetailPane.Actions` "delete" → `DeleteHeaderAction`
-              - `PrototypeCardActions` "pin" → `PinCardAction`
+              - `PrototypeCardActions` "tag" → `TagCardAction`
               - `PrototypeCardActions` "done" → `DoneCardAction`
               - `PrototypeCardActions` "delete" → `DeleteCardAction`
               - `trash-actions` "restore" → `RestoreCardAction`
@@ -7440,7 +7439,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/website`
               - `conversations/conversation-view/artifacts/prototype`
               - `page/prototype`
-        - **`state`** — Per-instance prototype state, web half: registers the prototype tag id kind (`prtag-…`), and the hooks reading and writing a prototype's pinned / Done / tag state (usePrototypeStates, usePrototypeState, useSetPrototypeState). Per-instance prototype state in the DB: the prototype_state table (pinned, Done, one tag per prototype, deletedAt) and its PATCH, the delete / restore endpoints (deleted is a field — the folder stays), the prototypes' tag tree (prototype_tags, served through the tag-tree engine; a deleted tag's prototypes move to its parent) and both live collections, on every host. The adoption of the old _trash/<id>/ folders is the machine/ half's.
+        - **`state`** — Per-instance prototype state, web half: registers the prototype tag id kind (`prtag-…`), and the hooks reading and writing a prototype's Done / tag state (usePrototypeStates, usePrototypeState, useSetPrototypeState). Per-instance prototype state in the DB: the prototype_state table (Done, one tag per prototype, deletedAt) and its PATCH, the delete / restore endpoints (deleted is a field — the folder stays), the prototypes' tag tree (prototype_tags, served through the tag-tree engine; a deleted tag's prototypes move to its parent) and both live collections, on every host. The adoption of the old _trash/<id>/ folders is the machine/ half's.
           - Web:
             - Contributes: `IdKinds.Kind` "prtag"
             - Uses:

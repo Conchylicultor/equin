@@ -28,7 +28,7 @@ export { _prototypeState, _prototypeTags } from "./internal/tables";
 
 export default {
   description:
-    "Per-instance prototype state in the DB: the prototype_state table (pinned, Done, one tag per prototype, deletedAt) and its PATCH, the delete / restore endpoints (deleted is a field — the folder stays), the prototypes' tag tree (prototype_tags, served through the tag-tree engine; a deleted tag's prototypes move to its parent) and both live collections, on every host. The adoption of the old _trash/<id>/ folders is the machine/ half's.",
+    "Per-instance prototype state in the DB: the prototype_state table (Done, one tag per prototype, deletedAt) and its PATCH, the delete / restore endpoints (deleted is a field — the folder stays), the prototypes' tag tree (prototype_tags, served through the tag-tree engine; a deleted tag's prototypes move to its parent) and both live collections, on every host. The adoption of the old _trash/<id>/ folders is the machine/ half's.",
   httpRoutes: {
     [setPrototypeState.route]: handleSetPrototypeState,
     [deletePrototype.route]: handleDeletePrototype,

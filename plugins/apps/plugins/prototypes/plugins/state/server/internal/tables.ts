@@ -16,7 +16,6 @@ const prototypeState = defineEntity(prototypeStateEntityRef, {
   updatedAt: {
     touchedBy: {
       id: false,
-      pinned: true,
       done: true,
       tagId: true,
       deletedAt: true,
@@ -24,7 +23,6 @@ const prototypeState = defineEntity(prototypeStateEntityRef, {
     },
   },
   columns: {
-    pinned: { default: false },
     done: { default: false },
     // A deleted tag's carriers get its parent first (the tree's carrier, in
     // the delete's transaction); the FK's SET NULL is the backstop.

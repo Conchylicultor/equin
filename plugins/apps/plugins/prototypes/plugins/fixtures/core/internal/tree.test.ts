@@ -89,21 +89,26 @@ describe("auditPrototypeFixtureThumbnails", () => {
 describe("prototypeFixtureStates", () => {
   const parsed = parsePrototypeTree(TREE);
 
-  test("one row per tagged or pinned prototype", () => {
+  test("one row per tagged prototype", () => {
     expect(
       prototypeFixtureStates(parsed, {
         tags: [{ id: TAG, name: "T", color: null, carriers: [B] }],
-        pinned: [A],
       }),
-    ).toEqual([
-      { id: A, tagId: null, pinned: true },
-      { id: B, tagId: TAG, pinned: false },
-    ]);
+    ).toEqual([{ id: B, tagId: TAG }]);
   });
 
   test("loud on a stranger, a second tag, a malformed tag id", () => {
     expect(() =>
-      prototypeFixtureStates(parsed, { pinned: ["proto-1792900120-zzz999"] }),
+      prototypeFixtureStates(parsed, {
+        tags: [
+          {
+            id: TAG,
+            name: "T",
+            color: null,
+            carriers: ["proto-1792900120-zzz999"],
+          },
+        ],
+      }),
     ).toThrow(/does not hold/);
     expect(() =>
       prototypeFixtureStates(parsed, {

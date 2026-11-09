@@ -48,7 +48,7 @@ const writer = systemOrigin("prototype fixture");
  *    version through the host's `PrototypeHistoryStore`;
  * 5. the record files (`_picks/<id>.json`), and the watcher settled again;
  * 6. the gallery's rows: the tags (in the order given), each prototype's
- *    tag and pin.
+ *    tag.
  *
  * Through the roots' own writes on any host: memory in a browser host, the
  * computer's disk on the desktop. Loud on a tree the layout does not allow, a
@@ -136,7 +136,6 @@ export async function writePrototypeFixture(
       id: protoIdKind.parse(state.id),
       tagId:
         state.tagId === null ? null : prototypeTagIdKind.parse(state.tagId),
-      pinned: state.pinned,
     });
 
   return parsed;

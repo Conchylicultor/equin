@@ -33,12 +33,10 @@ export function joinGalleryRows(
 ): PrototypeGalleryRow[] {
   const byId = new Map<string, PrototypeState>(states.map((s) => [s.id, s]));
   return prototypes.map((p) => {
-    const { done, pinned, tagId, deletedAt } =
-      byId.get(p.name) ?? NO_PROTOTYPE_STATE;
+    const { done, tagId, deletedAt } = byId.get(p.name) ?? NO_PROTOTYPE_STATE;
     return {
       ...p,
       done,
-      pinned,
       tagId,
       deletedAt,
       versions: versionCounts[p.name],
@@ -142,24 +140,21 @@ export function galleryFields(
       cell: (p) => <RelativeTime date={new Date(p.createdAt)} />,
       visible: false,
     },
-    // Filter / group-by only — the card already shows it, as its pin and
-    // Done circle. An enum rather than two bools, because this field is READ as
-    // section headings (when grouped by it, in this options order) and as filter
-    // values, where "Pinned" / "In progress" / "Done" say what "No" / "Yes"
-    // cannot. A pin outranks Done: pinning a finished prototype is asking to
-    // keep it in view. The values sort (by value, not options order) pinned >
-    // in-progress > done: the default view sorts by it DESCENDING
+    // Filter / group-by only — the card already shows it, as its Done circle.
+    // An enum rather than a bool, because this field is READ as section
+    // headings (when grouped by it, in this options order) and as filter
+    // values, where "In progress" / "Done" say what "No" / "Yes" cannot. The
+    // values sort (by value, not options order) in-progress > done: the default view sorts by it DESCENDING
     // (`prototypes.gallery.jsonc`) — keep that true on a rename.
     {
       id: "status",
       label: "Status",
       type: "enum",
       options: [
-        { value: "pinned", label: "Pinned" },
         { value: "in-progress", label: "In progress" },
         { value: "done", label: "Done" },
       ],
-      value: (p) => (p.pinned ? "pinned" : p.done ? "done" : "in-progress"),
+      value: (p) => (p.done ? "done" : "in-progress"),
       visible: false,
     },
     // The prototype's one tag. Its options are the tag tree (pre-order, each

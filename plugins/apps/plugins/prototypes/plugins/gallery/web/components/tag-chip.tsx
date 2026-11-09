@@ -1,4 +1,7 @@
 import { useMemo } from "react";
+import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -17,6 +20,7 @@ import {
 } from "@plugins/apps/plugins/prototypes/plugins/state/web";
 import { usePrototypeDetail } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
+import type { PrototypeGalleryRow } from "../slots";
 
 const labelIcon = symbol("label");
 
@@ -56,6 +60,37 @@ export function TagHeaderAction() {
       onPick={(id) => setState(name, { tagId: id })}
       trigger={<TagPathChip tree={prototypeTagTree} tagId={tagId} />}
     />
+  );
+}
+
+/**
+ * The card's Edit tag (a revealed item action): the label glyph opening the
+ * same tag picker as the detail header's chip, on the card's own tag. The row
+ * already carries `tagId` — the gallery joins the states onto the list before
+ * it renders. The click never opens the card (its `RowActions` cluster stops
+ * it, the picker's portaled clicks included).
+ */
+export function TagCardAction({ row }: ItemActionProps<PrototypeGalleryRow>) {
+  const { pending, setState } = useSetPrototypeState();
+  const counts = useTagCounts();
+  return (
+    <ControlSizeProvider size="sm">
+      <TagPickerPopover
+        tree={prototypeTagTree}
+        selected={row.tagId === null ? [] : [row.tagId]}
+        offerNone
+        counts={counts}
+        onPick={(id) => setState(row.name, { tagId: id })}
+        trigger={
+          <IconButton
+            icon={labelIcon}
+            label="Edit tag"
+            variant="ghost"
+            loading={pending}
+          />
+        }
+      />
+    </ControlSizeProvider>
   );
 }
 

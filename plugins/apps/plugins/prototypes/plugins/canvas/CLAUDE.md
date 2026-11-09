@@ -368,7 +368,7 @@ other.
   launcher, Back, the `Prototypes / <title>` trail, then these) IS the action
   bar. The canvas contributes nothing there (its controls are drawn on the
   canvas, so every canvas has them); `copy-id` the copy button; `gallery` the
-  pin and Done toggles — each drawn as a `TitleActionButton` (compact, a step
+  tag chip and the Done toggle — drawn as a `TitleActionButton` (compact, a step
   quieter, the accent while on, hidden under 900px). Order:
   `config/apps/prototypes/canvas/`.
 - **`PrototypeFrameActions`** — a frame's header actions, handed

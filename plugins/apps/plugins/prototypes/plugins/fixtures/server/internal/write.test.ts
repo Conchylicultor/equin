@@ -6,11 +6,10 @@
  * renderer — chosen, never listed), PAST its post-ready phases — so the files watcher, its history adoption and the
  * thumbnails sync are live, as they are when a demo's seed runs — then
  * written, and read back through the served resources and routes: each
- * history's steps, the picks, the tags and pin, and every version's
+ * history's steps, the picks, the tags, and every version's
  * thumbnail.
  *
- * The fixture is this test's own (`testFixture`), with a tag per prototype
- * and a pin.
+ * The fixture is this test's own (`testFixture`), with a tag per prototype.
  *
  * Boots in a FRESH bun process (this file re-run as a child with
  * `PROTOTYPE_FIXTURE_BOOT_CHILD` set): a boot collects its own host-service
@@ -108,7 +107,6 @@ function testFixture(): PrototypeFixtureData {
   return { tree, thumbnails };
 }
 
-const PINNED = "proto-1792900000-fixt01";
 const TAGS: PrototypeFixture["tags"] = [
   {
     id: "prtag-1792900000-fixt01",
@@ -181,7 +179,6 @@ describe.if(IN_CHILD)("writePrototypeFixture, after the host is up", () => {
     parsed = await writePrototypeFixture({
       ...fixture!,
       tags: TAGS,
-      pinned: [PINNED],
     });
   });
 
@@ -239,7 +236,7 @@ describe.if(IN_CHILD)("writePrototypeFixture, after the host is up", () => {
     }
   });
 
-  test("the tags in order, each prototype's tag and the pin", async () => {
+  test("the tags in order and each prototype's tag", async () => {
     const tags = await db.execute<{
       id: string;
       name: string;
@@ -251,13 +248,10 @@ describe.if(IN_CHILD)("writePrototypeFixture, after the host is up", () => {
     const states = await db.execute<{
       id: string;
       tag_id: string | null;
-      pinned: boolean;
-    }>(sql`SELECT id, tag_id, pinned FROM prototype_state ORDER BY id`);
+    }>(sql`SELECT id, tag_id FROM prototype_state ORDER BY id`);
     expect(states.rows).toEqual(
       TAGS!
-        .flatMap((t) =>
-          t.carriers.map((id) => ({ id, tag_id: t.id, pinned: id === PINNED })),
-        )
+        .flatMap((t) => t.carriers.map((id) => ({ id, tag_id: t.id })))
         .sort((a, b) => (a.id < b.id ? -1 : 1)),
     );
   });

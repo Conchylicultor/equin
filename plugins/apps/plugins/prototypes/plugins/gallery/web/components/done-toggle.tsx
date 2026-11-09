@@ -55,8 +55,8 @@ export function DoneCardAction({ row }: ItemActionProps<PrototypeGalleryRow>) {
 }
 
 /**
- * The detail pane header's Done toggle, beside the pin: the done circle in both
- * states — the accent ink once done, as the pin is once pinned — so ticking it
+ * The detail pane header's Done toggle: the done circle in both
+ * states — the accent ink once done — so ticking it
  * never moves the header. Disabled until the state is known, rather than
  * claiming "not done"; a failed read is the error icon, whose click retries.
  */

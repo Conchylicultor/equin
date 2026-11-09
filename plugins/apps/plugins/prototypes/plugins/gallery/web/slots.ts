@@ -6,7 +6,7 @@ import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/fil
 
 /**
  * One gallery card: the prototype as listed, joined with its state — whether
- * the user has marked it Done, pinned or deleted it, and its one tag
+ * the user has marked it Done or deleted it, and its one tag
  * (`state`'s `prototypes.state.all`, per-instance DB rows) — and its version
  * count (`prototypes.versionCounts`). Joined once, in the gallery, so the
  * `status` and `tag` fields, the muted tone and every card action read the
@@ -14,7 +14,6 @@ import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/fil
  */
 export type PrototypeGalleryRow = PrototypeMeta & {
   done: boolean;
-  pinned: boolean;
   tagId: string | null;
   /** When it was deleted — `null` for a live prototype. */
   deletedAt: Date | null;
@@ -24,7 +23,7 @@ export type PrototypeGalleryRow = PrototypeMeta & {
 
 /**
  * Per-card actions in the gallery (cards and list rows alike). The gallery
- * ships two — the pin and the Done circle, hover actions that rest while set —
+ * ships Edit tag and the Done circle (hover actions; Done rests while set) —
  * and anything else a card grows is a contribution (`present`'s Open in a new
  * tab).
  */

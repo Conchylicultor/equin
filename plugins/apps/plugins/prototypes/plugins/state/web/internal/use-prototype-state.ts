@@ -28,7 +28,7 @@ export function usePrototypeState(
 }
 
 /**
- * Apply one change (`{ done }`, `{ pinned }`, `{ tagId }`) to a prototype's
+ * Apply one change (`{ done }`, `{ tagId }`) to a prototype's
  * state. A failed write surfaces through the endpoint layer's global error
  * toast; every surface keeps showing the stored value (the live rows).
  */

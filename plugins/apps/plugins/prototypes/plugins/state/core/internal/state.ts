@@ -10,7 +10,7 @@ import { liveCollection } from "@plugins/network/plugins/live/core";
 import { protoIdKind } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 
 // A prototype's state — what the user said about it, as opposed to what it is:
-// pinned (sorted first in its gallery section), Done, its one tag, and whether
+// Done, its one tag, and whether
 // it is deleted. A delete is a field here, not a move of the folder: a deleted
 // prototype stays a prototype — its folder, history and picks stay where they
 // are, every link to it keeps resolving, and the gallery lists it in its Trash
@@ -22,7 +22,6 @@ import { protoIdKind } from "@plugins/apps/plugins/prototypes/plugins/files/core
 export const prototypeStateFields = {
   /** The prototype folder's id. Hand-made folders with another name have no state. */
   id: idKindField(protoIdKind),
-  pinned: boolField({ label: "Pinned" }),
   done: boolField({ label: "Done" }),
   /** One tag of `prototypeTagTree`, or none. */
   tagId: nullable(textField({ label: "Tag" })),
@@ -44,15 +43,7 @@ export const prototypeStateEntityRef = entityRef(
 export const prototypeStates = liveCollection("prototypes.state.all", {
   from: prototypeStateEntityRef,
   carry: {
-    pick: [
-      "id",
-      "pinned",
-      "done",
-      "tagId",
-      "deletedAt",
-      "createdAt",
-      "updatedAt",
-    ],
+    pick: ["id", "done", "tagId", "deletedAt", "createdAt", "updatedAt"],
   },
   id: "id",
   all: {
@@ -68,16 +59,14 @@ export const prototypeStates = liveCollection("prototypes.state.all", {
 
 /** What the user said about one prototype. */
 export interface PrototypeState {
-  readonly pinned: boolean;
   readonly done: boolean;
   readonly tagId: string | null;
   /** When the user deleted it — `null` while it is not deleted. */
   readonly deletedAt: Date | null;
 }
 
-/** The state of a prototype with no row: neither pinned nor Done, untagged, not deleted. */
+/** The state of a prototype with no row: not Done, untagged, not deleted. */
 export const NO_PROTOTYPE_STATE: PrototypeState = Object.freeze({
-  pinned: false,
   done: false,
   tagId: null,
   deletedAt: null,
@@ -85,22 +74,19 @@ export const NO_PROTOTYPE_STATE: PrototypeState = Object.freeze({
 
 /**
  * One change to a prototype's state: the fields it sets, never the whole
- * record, so ticking Done cannot clobber a pin or a tag set elsewhere.
+ * record, so ticking Done cannot clobber a tag set elsewhere.
  * `deletedAt` is never in it — only the delete and restore endpoints write it,
  * the server stamping the instant.
  */
 export const PrototypeStateChangeSchema = z
   .object({
     done: z.boolean().optional(),
-    pinned: z.boolean().optional(),
     tagId: z.string().min(1).nullable().optional(),
   })
   .strict()
-  .refine(
-    (c) =>
-      c.done !== undefined || c.pinned !== undefined || c.tagId !== undefined,
-    { message: "a state change sets `done`, `pinned`, `tagId`, or several" },
-  );
+  .refine((c) => c.done !== undefined || c.tagId !== undefined, {
+    message: "a state change sets `done`, `tagId`, or both",
+  });
 export type PrototypeStateChange = z.infer<typeof PrototypeStateChangeSchema>;
 
 /**

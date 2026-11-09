@@ -4,7 +4,7 @@ import {
   namespaceUrl,
 } from "@plugins/infra/plugins/namespace/core";
 import { DEMO_PAGE_IDS } from "./pages";
-import { DEMO_PINNED_PROTOTYPE } from "./prototypes";
+import { DEMO_FEATURED_PROTOTYPE } from "./prototypes";
 import { DEMO_SONG_ID } from "./songs";
 import {
   attemptId,
@@ -580,7 +580,7 @@ const PHOTOS_FILE = "photos.js";
  * versions' own, so the session cannot drift from the prototype it shows.
  */
 function recipes(story: Story, _s: PageSession, ctx: SessionContext): Turn[] {
-  const id = DEMO_PINNED_PROTOTYPE;
+  const id = DEMO_FEATURED_PROTOTYPE;
   const dir = `/home/demo/.equin/apps/prototypes/${id}`;
   const folder = ctx.prototypes.prototypes.find((p) => p.id === id);
   if (folder === undefined)

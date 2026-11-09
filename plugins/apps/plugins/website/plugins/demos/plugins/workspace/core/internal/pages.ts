@@ -6,7 +6,7 @@ import type {
   PageFixtureNode,
   PageTreeFixture,
 } from "@plugins/apps/plugins/pages/plugins/fixtures/core";
-import { DEMO_PINNED_PROTOTYPE } from "./prototypes";
+import { DEMO_FEATURED_PROTOTYPE } from "./prototypes";
 import { promptOf, storyByKey } from "./stories";
 
 // Demo's workspace, as a pure tree: a welcome page (what to try in this
@@ -173,7 +173,7 @@ export const DEMO_PAGES: PageTreeFixture = [
         "$$e^{i\\pi} + 1 = 0",
         "---",
         "A prototype from the Prototypes app, live inside the page:",
-        `<prototype id="${DEMO_PINNED_PROTOTYPE}"/>`,
+        `<prototype id="${DEMO_FEATURED_PROTOTYPE}"/>`,
         "Another page, shown inside this one:",
         link(DEMO_PAGE_IDS.journal),
       ),

@@ -45,7 +45,6 @@ describe("joinGalleryRows", () => {
         {
           id: META.name,
           done: true,
-          pinned: false,
           tagId: "prtag-1789000000-abcd",
           deletedAt,
         },
@@ -54,7 +53,6 @@ describe("joinGalleryRows", () => {
     );
     expect(row).toMatchObject({
       done: true,
-      pinned: false,
       tagId: "prtag-1789000000-abcd",
       deletedAt,
       versions: 12,
@@ -65,7 +63,6 @@ describe("joinGalleryRows", () => {
     const [row] = joinGalleryRows([META], [], {});
     expect(row).toMatchObject({
       done: false,
-      pinned: false,
       tagId: null,
       deletedAt: null,
     });
@@ -129,9 +126,8 @@ describe("galleryFields — values", () => {
     expect(cellText("problems", broken)).toBe("2");
   });
 
-  it("status groups pinned above done", () => {
+  it("status reads in progress or done", () => {
     const status = field("status").value!;
-    expect(status({ ...row!, pinned: true, done: true })).toBe("pinned");
     expect(status({ ...row!, done: true })).toBe("done");
     expect(status(row!)).toBe("in-progress");
   });

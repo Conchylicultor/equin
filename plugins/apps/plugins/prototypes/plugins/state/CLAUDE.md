@@ -1,6 +1,6 @@
 # state
 
-What the user says ABOUT a prototype — pinned, Done, its one tag, deleted —
+What the user says ABOUT a prototype — Done, its one tag, deleted —
 and the prototypes' tag tree, as rows in the instance's DB. Design:
 `research/2026-10-21-global-tag-tree.md` §6.1.
 
@@ -12,7 +12,7 @@ and the prototypes' tag tree, as rows in the instance's DB. Design:
   the instance's own DB, so a worktree (or an E2E run in it) changes them in
   its DB fork without touching main's. Intended — no agent-write ledger.
 - **One row per prototype the user marked** (`prototype_state`, keyed by the
-  folder's `proto-…` id). No row = `NO_PROTOTYPE_STATE` (not pinned, not Done,
+  folder's `proto-…` id). No row = `NO_PROTOTYPE_STATE` (not Done,
   untagged, not deleted). A removed folder's row stays (every consumer joins from
   `prototypesList`; a restored folder regains its state) — no cleanup job.
 - **Deleted is a field, not a move** (`deletedAt`, `null` while live). The
@@ -46,15 +46,15 @@ for the memory tree of a browser host too. Only the old `_trash/` adoption
   `prototypeStates` (`prototypes.state.all`, the whole set), `PrototypeState`,
   `NO_PROTOTYPE_STATE`, `PrototypeStateChangeSchema`, `setPrototypeState`
   (`PATCH /api/prototypes/:name/state`, body: the fields it sets of `{ done,
-  pinned, tagId }`; 404 unless the folder exists — `files`' `prototypeExists`;
+  tagId }`; 404 unless the folder exists — `files`' `prototypeExists`;
   400 for an unknown tag; an upsert of only the given fields);
   `deletePrototype` (`DELETE /api/prototypes/:name`) and `restorePrototype`
   (`POST /api/prototypes/:name/restore`), both 404 unless the folder exists.
 - web: `usePrototypeStates()` (`useLive`), `usePrototypeState(name)` (a
   `ResourceResult<PrototypeState>` — pending stays pending, no row reads
   `NO_PROTOTYPE_STATE`), `useSetPrototypeState()`.
-- The UI is `gallery`'s (the cards' pin / Done / Delete, the Tag field
-  (grouped nested), the Trash pane, the detail header's tag chip, pin, Done and
+- The UI is `gallery`'s (the cards' Edit tag / Done / Delete, the Tag field
+  (grouped nested), the Trash pane, the detail header's tag chip, Done and
   Delete / Restore) and `canvas`' deleted notice.
 - cli: `readDeletedPrototypes(namespace)` — the deleted ids in that
   instance's DB, for a CLI process with no backend (`read`, or `unavailable`
@@ -82,7 +82,7 @@ move-to-trash delete may still run against the shared tree.
 
 ## Plugin reference
 
-- Description: Per-instance prototype state, web half: registers the prototype tag id kind (`prtag-…`), and the hooks reading and writing a prototype's pinned / Done / tag state (usePrototypeStates, usePrototypeState, useSetPrototypeState). Per-instance prototype state in the DB: the prototype_state table (pinned, Done, one tag per prototype, deletedAt) and its PATCH, the delete / restore endpoints (deleted is a field — the folder stays), the prototypes' tag tree (prototype_tags, served through the tag-tree engine; a deleted tag's prototypes move to its parent) and both live collections, on every host. The adoption of the old _trash/<id>/ folders is the machine/ half's.
+- Description: Per-instance prototype state, web half: registers the prototype tag id kind (`prtag-…`), and the hooks reading and writing a prototype's Done / tag state (usePrototypeStates, usePrototypeState, useSetPrototypeState). Per-instance prototype state in the DB: the prototype_state table (Done, one tag per prototype, deletedAt) and its PATCH, the delete / restore endpoints (deleted is a field — the folder stays), the prototypes' tag tree (prototype_tags, served through the tag-tree engine; a deleted tag's prototypes move to its parent) and both live collections, on every host. The adoption of the old _trash/<id>/ folders is the machine/ half's.
 - Web:
   - Contributes: `IdKinds.Kind` "prtag"
   - Uses:

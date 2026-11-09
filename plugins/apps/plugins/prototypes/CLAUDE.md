@@ -13,7 +13,7 @@ contract; **do not edit a prototype from here without reading it.**
 
 **Files are host-global; state is per-instance.** The folders (and their
 `_history/`, `_picks/`) are shared by main and every worktree. What the user
-says ABOUT a prototype — pinned, Done, its one tag, deleted — and the tag tree itself
+says ABOUT a prototype — Done, its one tag, deleted — and the tag tree itself
 are rows in the instance's own DB (`state`): a worktree changes them in its DB
 fork without touching main's. Intended.
 
@@ -54,14 +54,14 @@ content. All other content lives in sub-plugins:
 - **`icons`** — the app's icon family (`prototypesIcons`): the viewer mockup's
   line glyphs, drawn for the Material names the app writes in its scope, plus
   app-only glyphs (`prototypesIcons.icon("compare")`).
-- **`state`** — the per-instance DB state: `prototype_state` (pinned, Done,
+- **`state`** — the per-instance DB state: `prototype_state` (Done,
   one tag per prototype, `deletedAt`) with its PATCH, delete / restore and
   live rows, the prototypes' tag tree
   (`prototype_tags`, a `tag-tree` declaration), and (main only) the adoption
   of the old `_trash/`.
-- **`gallery`** — the gallery list pane (a card per prototype, pin, Done and
+- **`gallery`** — the gallery list pane (a card per prototype, Edit tag, Done and
   Delete on each, grouped by tag as nested sections), its Trash pane, the
-  detail header's tag chip, pin, Done and Delete / Restore, and New prototype. Also owns the launch prompt — the
+  detail header's tag chip, Done and Delete / Restore, and New prototype. Also owns the launch prompt — the
   always-taken path by which prototype agents are launched, and therefore where
   "start from the blank template, never read a sibling" has to be said.
 - **`canvas`** — the detail pane: the prototype as a canvas of lettered
@@ -133,7 +133,7 @@ whose app surface still stands).
   - **`icons`** — Contributes the prototypes icon family (prototypesIcons) to Icons.Family, so a scope whose iconFamily is prototypes — the Prototypes theme's — draws its glyphs.
   - **`present`** — Open in a new tab on every gallery card (its live present page) and two frame actions on every prototype canvas frame: Open in a new tab (the frame's chromeless present page at the Responsive size…
   - **`shell`** — App shell for Prototypes. Registers the /prototypes app entry and renders the gallery + detail panes (the gallery, and the canvas of frames) full-surface: opening a prototype replaces the gallery…
-  - **`state`** — Per-instance prototype state, web half: registers the prototype tag id kind (`prtag-…`), and the hooks reading and writing a prototype's pinned / Done / tag state (usePrototypeStates…
+  - **`state`** — Per-instance prototype state, web half: registers the prototype tag id kind (`prtag-…`), and the hooks reading and writing a prototype's Done / tag state (usePrototypeStates, usePrototypeState…
   - **`thumbnails`** — The rendered-preview cover for a prototype card: the cached PNG, the caller's fallback while it renders, and a visible 'Preview failed' marker carrying the reason. Rendered PNG previews for the…
     - Plugins:
       - **`no-renderer`** (excluded) — The prototype thumbnails of a host without a browser to render with: provides the ThumbnailRenderer host service as unavailable, so a cache miss is the card's muted 'Preview unavailable' marker and…
