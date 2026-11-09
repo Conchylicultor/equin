@@ -16,7 +16,7 @@ export const LOGO = {
   /** How far the bowls' centre line sits above the circle's centre. */
   lift: 4,
   masters: {
-    full: { bowls: [29, 20, 11], stroke: 6.72 },
+    full: { bowls: [29, 20, 11], stroke: 7.8 },
     small: { bowls: [27, 16], stroke: 9 },
   },
   /** Drawn smaller than this many px, the logo uses its small master. */
