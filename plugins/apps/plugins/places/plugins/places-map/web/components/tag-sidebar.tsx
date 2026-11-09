@@ -32,6 +32,7 @@ import {
   type PlaceTag,
 } from "@plugins/apps/plugins/places/plugins/places-core/core";
 import { TagPickerPanel } from "@plugins/tag-tree/plugins/picker/web";
+import { KeepAnchorAcross } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 import { useTagTreeActions } from "@plugins/tag-tree/plugins/engine/web";
 import {
   applySidebarState,
@@ -245,28 +246,38 @@ export function TagSidebar({
         }
         body={
           <CollapsibleContent>
-            {/* The shared tag tree, both the filter and the editor: a click
+            {/* The header grows and shrinks with the filter (the tag box gains a
+                row on a pick, loses it on a ×, goes on Clear): keep the row the
+                reader is on — the one just clicked — where it is on screen, by
+                scrolling the tree by however far the header moved it. */}
+            <KeepAnchorAcross
+              changeKey={filter}
+              anchorAttr="data-tree-id"
+              browserAnchoring
+            >
+              {/* The shared tag tree, both the filter and the editor: a click
                 includes or drops a tag, ＋ / ⋯ / double-click / drag edit the
                 tree, and the search finds a tag or creates the typed path
                 (left unpicked: a new tag carries no place yet). */}
-            <TagPickerPanel
-              tags={tags}
-              writes={writes}
-              indicator="checkbox"
-              selected={includedTags(state)}
-              negated={state.exclude}
-              counts={counts ?? undefined}
-              defaultExpanded="roots"
-              autoFocus={false}
-              pickCreated={false}
-              // Been / Want to go are how the app finds them (the tree's
-              // `refuseDelete` refuses it too).
-              canDelete={(t) => t.role === null}
-              rowMenuExtra={(t) => <GoogleTypes types={t.googleTypes} />}
-              onPick={(id) => {
-                if (id !== null) write(toggleTag(state, id, tags));
-              }}
-            />
+              <TagPickerPanel
+                tags={tags}
+                writes={writes}
+                indicator="checkbox"
+                selected={includedTags(state)}
+                negated={state.exclude}
+                counts={counts ?? undefined}
+                defaultExpanded="roots"
+                autoFocus={false}
+                pickCreated={false}
+                // Been / Want to go are how the app finds them (the tree's
+                // `refuseDelete` refuses it too).
+                canDelete={(t) => t.role === null}
+                rowMenuExtra={(t) => <GoogleTypes types={t.googleTypes} />}
+                onPick={(id) => {
+                  if (id !== null) write(toggleTag(state, id, tags));
+                }}
+              />
+            </KeepAnchorAcross>
           </CollapsibleContent>
         }
       />

@@ -287,6 +287,7 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
     - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --spacing`
   - Imported by:
+    - `apps/places/places-map`
     - `apps/sonata/progress/loop`
     - `apps/sonata/rich/chord-progression`
     - `apps/website/pages/foundations`

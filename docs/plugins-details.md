@@ -6616,7 +6616,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `AgentThreadSlots.StepLabel` "places_search_text" → `SearchStepLabel`
               - `AgentThreadSlots.StepLabel` "places_show_picks" → `PicksStepLabel`
               - `JsonlViewerTool.Renderer` "mcp__equin__places_show_picks" → `PicksToolView`
-            - Uses: 140 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
+            - Uses: 141 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
               - `primitives/data-view` ×15
               - `apps/places/places-core` ×8
               - `conversations/agent-thread` ×8
@@ -6669,6 +6669,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/toggle-chip.SegmentedControl`
               - `primitives/css/yield.yieldClass`
               - `primitives/data-view/floating-toolbar.floatingToolbar`
+              - `primitives/dom/auto-scroll.KeepAnchorAcross`
               - `primitives/dom/element-size.useResizeObserver`
               - `primitives/dom/scroll-reveal.revealElement`
               - `primitives/dom/web-storage.defineStore`
@@ -47372,6 +47373,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --space-xs`
               - `ui/tokens/shape --spacing`
             - Imported by:
+              - `apps/places/places-map`
               - `apps/sonata/progress/loop`
               - `apps/sonata/rich/chord-progression`
               - `apps/website/pages/foundations`
