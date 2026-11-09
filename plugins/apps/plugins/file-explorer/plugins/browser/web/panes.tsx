@@ -59,9 +59,6 @@ export const filesFolderPane = Pane.define({
   title: { useText: useFolderTitle },
   useResolve: false,
   component: FilesFolder,
-  // The mockup's 1 : 1.1 split beside an open file; alone, the leaf column
-  // fills the row.
-  width: 560,
 });
 
 /** `…/preview/<open file>` — the file open in the folder, previewed beside it. */
@@ -75,7 +72,6 @@ export const filesPreviewPane = Pane.define({
   title: { useText: usePreviewTitle },
   useResolve: false,
   component: FilesPreview,
-  width: 600,
 });
 
 /**
