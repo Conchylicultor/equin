@@ -139,7 +139,7 @@ try {
     });
 
     // 1. Counts without expanding.
-    await boot(page, pathUrl(`/files/at/${encodeURIComponent(fixture)}`), {
+    await boot(page, pathUrl(`/files/browse/${encodeURIComponent(fixture)}`), {
       marker: "[data-tree-row]",
     });
     for (const [name, text] of [
@@ -206,7 +206,7 @@ try {
     r.ok("an expanded folder keeps its count", expanded.ok, expanded.got);
     // The zip sits in its own folder (here it would sort after the 300).
     await page.goto(
-      pathUrl(`/files/at/${encodeURIComponent(join(fixture, "z-zip"))}`),
+      pathUrl(`/files/browse/${encodeURIComponent(join(fixture, "z-zip"))}`),
     );
     await row(page, "archive.zip").waitFor({
       state: "visible",

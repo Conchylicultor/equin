@@ -45,8 +45,8 @@ const MODIFIED_DIR =
 const MODIFIED_FILE = "file-browser.tsx";
 
 function filesAt(dir: string, open?: string): string {
-  const tail = open === undefined ? "" : `/${encodeURIComponent(open)}`;
-  return pathUrl(`/files/at/${encodeURIComponent(dir)}${tail}`);
+  const tail = open === undefined ? "" : `/preview/${encodeURIComponent(open)}`;
+  return pathUrl(`/files/browse/${encodeURIComponent(dir)}${tail}`);
 }
 
 /** A tree row by its entry name (its id is its path, so the last segment). */

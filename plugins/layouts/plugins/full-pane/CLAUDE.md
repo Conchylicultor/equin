@@ -55,7 +55,6 @@ declared on the pane.**
     - `apps/chord/shell`
     - `apps/demo/shell`
     - `apps/deploy/shell`
-    - `apps/file-explorer/shell`
     - `apps/home/shell`
     - `apps/places/shell`
     - `apps/prototypes/shell`

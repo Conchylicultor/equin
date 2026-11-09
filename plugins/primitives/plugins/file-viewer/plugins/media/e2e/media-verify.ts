@@ -16,10 +16,11 @@ import {
 const file = arg("file");
 if (!file) throw new Error("--file <host path> is required");
 const out = arg("out", "/tmp/media-verify");
-// The explorer's route: the folder as one encoded segment, then the name.
+// The explorer's route: the folder as one encoded segment, then the file's
+// preview column.
 const slash = file.lastIndexOf("/");
 const url = pathUrl(
-  `/files/at/${encodeURIComponent(file.slice(0, slash))}/${encodeURIComponent(file.slice(slash + 1))}`,
+  `/files/browse/${encodeURIComponent(file.slice(0, slash))}/preview/${encodeURIComponent(file.slice(slash + 1))}`,
 );
 
 await withBrowser(async (h) => {

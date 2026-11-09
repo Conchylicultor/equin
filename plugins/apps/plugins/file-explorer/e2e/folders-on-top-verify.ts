@@ -82,7 +82,7 @@ try {
     const { page } = await h.session({
       viewport: { width: 1440, height: 900 },
     });
-    await boot(page, pathUrl(`/files/at/${encodeURIComponent(fixture)}`), {
+    await boot(page, pathUrl(`/files/browse/${encodeURIComponent(fixture)}`), {
       marker: "[data-tree-row]",
     });
     await page

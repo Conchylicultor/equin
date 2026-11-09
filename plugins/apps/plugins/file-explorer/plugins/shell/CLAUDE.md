@@ -18,7 +18,7 @@
     - `ThemeEngine.Theme` "Files"
   - Uses:
     - `apps-core.Apps`
-    - `layouts/full-pane.FullPane`
+    - `layouts/miller.MillerColumns`
     - `primitives/app-shell.AppShellLayout`
     - `primitives/slot-render.defineRenderSlot`
     - `ui/icons.Icon`

@@ -17,7 +17,7 @@ import { ConvExplorerBody } from "./components/conv-explorer-body";
 
 export const convFileTreePane = Pane.define({
   title: "Files",
-  // The explorer's location rides the route like `/files/at/…` does — the
+  // The explorer's location rides the route like `/files/browse/…` does — the
   // folder (`;dir`, absent = the checkout) and the file open beside it
   // (`;open`) — so every folder is a link, back / forward are the browser
   // history, and Open in Files lands where the user is.

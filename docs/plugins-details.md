@@ -4549,20 +4549,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/pane.useReservesFloatingBar`
               - `primitives/text-editor/paste-images.AttachmentSlots`
             - Exports (values): `attachmentPreviewPane`
-        - **`browser`** — The file explorer's browser over any file system this host serves (the computer's disk, the browser's storage; useExplorerSystem says what `~` is there and what it can do, useHomeSystem which one Files opens on): <FileBrowser/> (toolbar with back / forward / up, the system's path bar and a filter; the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to fileTarget; its FileBrowserSlots seams — RowActions, a row's hover actions (its own: Extract here on an archive, Copy path in the ⋯ menu), and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — the home index (the home system's home) and /files/<fs>/at/<folder>[/<open file>] per file system (the old /files/at/… forwards to the computer's disk), so every location is a link and back / forward are the browser history; moves (drag onto a folder) and the other operations are offered only where the system has them; useExplorerFileTarget names any file's place there (its folder, the file previewed) as a pane's Expand target; useFileHostPath + useHostPathSource let any surface draw a file's place as the same host path bar. Contributes the files-document sub-theme the preview's page wears (28/32/48px inset, 14px on 1.6, a 24px heading).
+        - **`browser`** — The file explorer's browser over any file system this host serves (the computer's disk, the browser's storage; useExplorerSystem says what `~` is there and what it can do, useHomeSystem which one Files opens on): <FileBrowser/> (toolbar with back / forward / up, the system's path bar and a filter; the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to fileTarget; its FileBrowserSlots seams — RowActions, a row's hover actions (its own: Extract here on an archive, Copy path in the ⋯ menu), and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — a Miller row of a folder column (/files/browse/<folder>[;fs=<system>], the bare /files forwarding to the home system's home) and the open file's preview column beside it (…/preview/<open file>, pushed and closed so it slides in and out while the listing stays mounted; the old /files/<fs>/at/<folder>[/<open file>] forwards), so every location is a link and back / forward are the browser history; moves (drag onto a folder) and the other operations are offered only where the system has them; useExplorerFileTarget names any file's place there (its folder, the file previewed) as a pane's Expand target; useFileHostPath + useHostPathSource let any surface draw a file's place as the same host path bar. Contributes the files-document sub-theme the preview's page wears (28/32/48px inset, 14px on 1.6, a 24px heading).
           - Web:
             - Slots:
               - `filesHomePane.Actions`
-              - `filesComputerAtPane.Actions`
-              - `filesBrowserAtPane.Actions`
-              - `files-at.actions`
+              - `filesFolderPane.Actions`
+              - `filesPreviewPane.Actions`
+              - `files-computer-at.actions`
+              - `files-browser-at.actions`
               - `FileBrowserSlots.Lens`
               - `FileBrowserSlots.RowActions`
             - Slot contributors:
               - `filesHomePane.Actions` ← `primitives.pane`
-              - `filesComputerAtPane.Actions` ← `primitives.pane`
-              - `filesBrowserAtPane.Actions` ← `primitives.pane`
-              - `files-at.actions` ← `primitives.pane`
+              - `filesFolderPane.Actions` ← `primitives.pane`
+              - `filesPreviewPane.Actions` ← `primitives.pane`
+              - `files-computer-at.actions` ← `primitives.pane`
+              - `files-browser-at.actions` ← `primitives.pane`
               - `FileBrowserSlots.Lens` ← `apps.file-explorer.git`
               - `FileBrowserSlots.RowActions` ← `apps.file-explorer.browser`
               - `FileBrowserSlots.RowActions` ← `apps.file-explorer.places`
@@ -4571,15 +4573,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pane.Register` "files-browser-at"
               - `Pane.Register` "files-computer-at"
               - `Pane.Register` "files-home"
+              - `Pane.Register` "files-preview"
               - `ThemeEngine.SubTheme` "Files document"
               - `FieldPresentation.Register` "collection:file-explorer.entry"
               - `FileBrowserSlots.RowActions` "extract" → `ExtractAction`
               - `FileBrowserSlots.RowActions` "copy-path" → `CopyPathAction`
-            - Uses: 74 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
+            - Uses: 76 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
               - `primitives/data-view` ×10
               - `primitives/css/ui-kit` ×8
+              - `primitives/pane` ×7
               - `primitives/file-viewer` ×6
-              - `primitives/pane` ×5
               - `network/live` ×4
               - `infra/endpoints` ×3
               - `infra/paths/file-systems` ×3
@@ -4627,10 +4630,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `FileBrowser`
               - `FileBrowserSlots`
-              - `filesAtPaneOf`
-              - `filesBrowserAtPane`
-              - `filesComputerAtPane`
+              - `filesFolderPane`
               - `filesHomePane`
+              - `filesPreviewPane`
               - `locationOf`
               - `locationParams`
               - `PreviewPane`
@@ -4846,7 +4848,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ThemeEngine.Theme` "Files"
             - Uses:
               - `apps-core.Apps`
-              - `layouts/full-pane.FullPane`
+              - `layouts/miller.MillerColumns`
               - `primitives/app-shell.AppShellLayout`
               - `primitives/slot-render.defineRenderSlot`
               - `ui/icons.Icon`
@@ -36415,7 +36417,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/chord/shell`
           - `apps/demo/shell`
           - `apps/deploy/shell`
-          - `apps/file-explorer/shell`
           - `apps/home/shell`
           - `apps/places/shell`
           - `apps/prototypes/shell`
@@ -36471,6 +36472,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/agent-manager/shell`
           - `apps/debug/shell`
           - `apps/events/shell`
+          - `apps/file-explorer/shell`
           - `apps/keyboard-party/shell`
           - `apps/mail/shell`
           - `apps/pages/shell`
@@ -49815,7 +49817,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots: `Pane.Register`
         - Slot contributors: 94 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `Pane.Register` ×94
-        - Contributes: 127 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Contributes: 128 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `SlotRender.ListMiddleware`
           - `WebsiteHeader` "title" → `PaneTitleItem`
           - `accountPane.Actions` "title" → `PaneTitleItem`
@@ -49874,10 +49876,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `exhibits.actions` "title" → `PaneTitleItem`
           - `explorerPane.Actions` "title" → `PaneTitleItem`
           - `filePeekPane.Actions` "title" → `PaneTitleItem`
-          - `files-at.actions` "title" → `PaneTitleItem`
-          - `filesBrowserAtPane.Actions` "title" → `PaneTitleItem`
-          - `filesComputerAtPane.Actions` "title" → `PaneTitleItem`
+          - `files-browser-at.actions` "title" → `PaneTitleItem`
+          - `files-computer-at.actions` "title" → `PaneTitleItem`
+          - `filesFolderPane.Actions` "title" → `PaneTitleItem`
           - `filesHomePane.Actions` "title" → `PaneTitleItem`
+          - `filesPreviewPane.Actions` "title" → `PaneTitleItem`
           - `folderPeekPane.Actions` "title" → `PaneTitleItem`
           - `graphCanvasPane.Actions` "title" → `PaneTitleItem`
           - `healthMonitorPane.Actions` "title" → `PaneTitleItem`
@@ -52301,8 +52304,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. Applies each slot's committed layout (order, hidden items, spacers, dividers, groups) everywhere slots render; a layout is edited in its config file or the Config pane's reorder-tree field. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 283 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×283
+    - Contributes: 284 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×284
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfigResult`
@@ -52327,8 +52330,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useLayoutOrder`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 282 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×282
+    - Contributes: 283 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×283
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:

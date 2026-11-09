@@ -4,20 +4,22 @@
 
 ## Plugin reference
 
-- Description: The file explorer's browser over any file system this host serves (the computer's disk, the browser's storage; useExplorerSystem says what `~` is there and what it can do, useHomeSystem which one Files opens on): <FileBrowser/> (toolbar with back / forward / up, the system's path bar and a filter; the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to fileTarget; its FileBrowserSlots seams — RowActions, a row's hover actions (its own: Extract here on an archive, Copy path in the ⋯ menu), and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — the home index (the home system's home) and /files/<fs>/at/<folder>[/<open file>] per file system (the old /files/at/… forwards to the computer's disk), so every location is a link and back / forward are the browser history; moves (drag onto a folder) and the other operations are offered only where the system has them; useExplorerFileTarget names any file's place there (its folder, the file previewed) as a pane's Expand target; useFileHostPath + useHostPathSource let any surface draw a file's place as the same host path bar. Contributes the files-document sub-theme the preview's page wears (28/32/48px inset, 14px on 1.6, a 24px heading).
+- Description: The file explorer's browser over any file system this host serves (the computer's disk, the browser's storage; useExplorerSystem says what `~` is there and what it can do, useHomeSystem which one Files opens on): <FileBrowser/> (toolbar with back / forward / up, the system's path bar and a filter; the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to fileTarget; its FileBrowserSlots seams — RowActions, a row's hover actions (its own: Extract here on an archive, Copy path in the ⋯ menu), and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — a Miller row of a folder column (/files/browse/<folder>[;fs=<system>], the bare /files forwarding to the home system's home) and the open file's preview column beside it (…/preview/<open file>, pushed and closed so it slides in and out while the listing stays mounted; the old /files/<fs>/at/<folder>[/<open file>] forwards), so every location is a link and back / forward are the browser history; moves (drag onto a folder) and the other operations are offered only where the system has them; useExplorerFileTarget names any file's place there (its folder, the file previewed) as a pane's Expand target; useFileHostPath + useHostPathSource let any surface draw a file's place as the same host path bar. Contributes the files-document sub-theme the preview's page wears (28/32/48px inset, 14px on 1.6, a 24px heading).
 - Web:
   - Slots:
     - `filesHomePane.Actions`
-    - `filesComputerAtPane.Actions`
-    - `filesBrowserAtPane.Actions`
-    - `files-at.actions`
+    - `filesFolderPane.Actions`
+    - `filesPreviewPane.Actions`
+    - `files-computer-at.actions`
+    - `files-browser-at.actions`
     - `FileBrowserSlots.Lens`
     - `FileBrowserSlots.RowActions`
   - Slot contributors:
     - `filesHomePane.Actions` ← `primitives.pane`
-    - `filesComputerAtPane.Actions` ← `primitives.pane`
-    - `filesBrowserAtPane.Actions` ← `primitives.pane`
-    - `files-at.actions` ← `primitives.pane`
+    - `filesFolderPane.Actions` ← `primitives.pane`
+    - `filesPreviewPane.Actions` ← `primitives.pane`
+    - `files-computer-at.actions` ← `primitives.pane`
+    - `files-browser-at.actions` ← `primitives.pane`
     - `FileBrowserSlots.Lens` ← `apps.file-explorer.git`
     - `FileBrowserSlots.RowActions` ← `apps.file-explorer.browser`
     - `FileBrowserSlots.RowActions` ← `apps.file-explorer.places`
@@ -26,15 +28,16 @@
     - `Pane.Register` "files-browser-at"
     - `Pane.Register` "files-computer-at"
     - `Pane.Register` "files-home"
+    - `Pane.Register` "files-preview"
     - `ThemeEngine.SubTheme` "Files document"
     - `FieldPresentation.Register` "collection:file-explorer.entry"
     - `FileBrowserSlots.RowActions` "extract" → `ExtractAction`
     - `FileBrowserSlots.RowActions` "copy-path" → `CopyPathAction`
-  - Uses: 74 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 76 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×10
     - `primitives/css/ui-kit` ×8
+    - `primitives/pane` ×7
     - `primitives/file-viewer` ×6
-    - `primitives/pane` ×5
     - `network/live` ×4
     - `infra/endpoints` ×3
     - `infra/paths/file-systems` ×3
@@ -82,10 +85,9 @@
   - Exports (values):
     - `FileBrowser`
     - `FileBrowserSlots`
-    - `filesAtPaneOf`
-    - `filesBrowserAtPane`
-    - `filesComputerAtPane`
+    - `filesFolderPane`
     - `filesHomePane`
+    - `filesPreviewPane`
     - `locationOf`
     - `locationParams`
     - `PreviewPane`

@@ -51,7 +51,10 @@ await withBrowser(async (h) => {
     // Files → the MIDI preview → "Open in Sonata" (the import), as a user does.
     const { page, context } = await h.session({ capture: false });
     const dir = encodeURIComponent(folder.replace(HOME_DIR, "~"));
-    await open(page, `/files/at/${dir}/${encodeURIComponent(name)}`);
+    await open(
+      page,
+      `/files/browse/${dir}/preview/${encodeURIComponent(name)}`,
+    );
     const toSonata = page.getByRole("button", { name: "Open in Sonata" });
     await visible(toSonata, 60_000);
     await toSonata.first().click();

@@ -689,7 +689,7 @@ with an empty route.
   - Slots: `Pane.Register`
   - Slot contributors: 94 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `Pane.Register` ×94
-  - Contributes: 127 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Contributes: 128 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `SlotRender.ListMiddleware`
     - `WebsiteHeader` "title" → `PaneTitleItem`
     - `accountPane.Actions` "title" → `PaneTitleItem`
@@ -748,10 +748,11 @@ with an empty route.
     - `exhibits.actions` "title" → `PaneTitleItem`
     - `explorerPane.Actions` "title" → `PaneTitleItem`
     - `filePeekPane.Actions` "title" → `PaneTitleItem`
-    - `files-at.actions` "title" → `PaneTitleItem`
-    - `filesBrowserAtPane.Actions` "title" → `PaneTitleItem`
-    - `filesComputerAtPane.Actions` "title" → `PaneTitleItem`
+    - `files-browser-at.actions` "title" → `PaneTitleItem`
+    - `files-computer-at.actions` "title" → `PaneTitleItem`
+    - `filesFolderPane.Actions` "title" → `PaneTitleItem`
     - `filesHomePane.Actions` "title" → `PaneTitleItem`
+    - `filesPreviewPane.Actions` "title" → `PaneTitleItem`
     - `folderPeekPane.Actions` "title" → `PaneTitleItem`
     - `graphCanvasPane.Actions` "title" → `PaneTitleItem`
     - `healthMonitorPane.Actions` "title" → `PaneTitleItem`

@@ -26,9 +26,9 @@ import {
 const FILE = arg("file", "~/Downloads/sunny-roberto-piano-notation-v2.mid");
 const PLAY_MS = numArg("play-ms", 3500);
 const OUT = arg("out", "/tmp/midi-open");
-const PREVIEW_PATH = `/files/at/${encodeURIComponent(
+const PREVIEW_PATH = `/files/browse/${encodeURIComponent(
   FILE.slice(0, FILE.lastIndexOf("/")),
-)}/${encodeURIComponent(FILE.slice(FILE.lastIndexOf("/") + 1))}`;
+)}/preview/${encodeURIComponent(FILE.slice(FILE.lastIndexOf("/") + 1))}`;
 const SONG_URL = /\/sonata\/song\/([^/?#;]+)(?:;bar=(\d+))?$/;
 // The deferred plugin tier can take a while on a cold page.
 const RENDER_TIMEOUT_MS = 45_000;

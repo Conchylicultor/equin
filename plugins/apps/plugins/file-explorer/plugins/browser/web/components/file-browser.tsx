@@ -38,7 +38,10 @@ import {
   PathBar,
   type PathTarget,
 } from "@plugins/primitives/plugins/path-bar/web";
-import { SurfaceChromeContext } from "@plugins/primitives/plugins/pane/web";
+import {
+  SurfaceChromeContext,
+  useReservesFloatingBar,
+} from "@plugins/primitives/plugins/pane/web";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { fileExplorerApp } from "@plugins/apps/plugins/file-explorer/plugins/shell/core";
@@ -162,6 +165,15 @@ export interface FileBrowserProps {
    * pane that wraps the browser in its own header passes `false`.
    */
   atSurfaceEdge?: boolean;
+  /**
+   * Where the open file is previewed:
+   * - `"split"` (default) — beside the listing, in a resizable split this
+   *   browser draws (a browser hosted inside one pane);
+   * - `"pane"` — in a pane of its own beside this one, which the navigator
+   *   opens and closes (`/files`, whose preview is a Miller column): the
+   *   browser draws the listing only, marking the open file.
+   */
+  preview?: "split" | "pane";
 }
 
 /**
@@ -211,6 +223,7 @@ function FileBrowserReady({
   root,
   fileTarget,
   atSurfaceEdge = navigator !== undefined,
+  preview: previewMode = "split",
   system,
 }: FileBrowserProps & { system: ExplorerSystem }): ReactNode {
   const { home } = system;
@@ -224,6 +237,11 @@ function FileBrowserReady({
   const { contentOwnsTopChrome, leadingControl } =
     useContext(SurfaceChromeContext);
   const atTopEdge = atSurfaceEdge && contentOwnsTopChrome;
+  // The listing's column is the surface's end edge unless a preview stands
+  // beside it — in this browser's split, or as the next column.
+  const reservesFloatingBar = useReservesFloatingBar();
+  const listingAtEnd =
+    previewMode === "pane" ? reservesFloatingBar : atTopEdge && open === null;
   const phone = useViewportAtMost(640);
   const narrow = useViewportAtMost(900);
 
@@ -248,34 +266,26 @@ function FileBrowserReady({
               setLensShown({ ...lensShown, [id]: lensShown[id] !== true })
             }
             leading={atTopEdge ? leadingControl : undefined}
-            endSafeArea={atTopEdge && open === null}
+            endSafeArea={listingAtEnd}
           />
         </ExplorerControlsSlot.Provider>
       )}
     </WithLenses>
   );
 
-  // A consumer bringing its own preview gets the listing alone.
-  if (fileTarget !== undefined) return listing;
+  // A consumer bringing its own preview, or a preview pane beside this one,
+  // gets the listing alone.
+  if (fileTarget !== undefined || previewMode === "pane") return listing;
 
   const preview =
     open === null ? null : (
-      <WithLenses
-        fs={system.fs}
-        dir={absolutePath(parentPath(open, home) ?? "/", home)}
-      >
-        {(lens) => (
-          <PreviewPane
-            key={open}
-            fs={system.fs}
-            path={open}
-            home={home}
-            git={lens.fileGit(absolutePath(open, home))}
-            onClose={() => runActivation(nav.fileTo(null))}
-            endSafeArea={atTopEdge}
-          />
-        )}
-      </WithLenses>
+      <ExplorerPreview
+        key={open}
+        system={system}
+        path={open}
+        onClose={() => runActivation(nav.fileTo(null))}
+        endSafeArea={atTopEdge}
+      />
     );
 
   // At 640px and under an open file replaces the listing.
@@ -306,6 +316,84 @@ function FileBrowserReady({
         </>
       )}
     </ResizablePanelGroup>
+  );
+}
+
+/**
+ * The open file of a browser over `system`, previewed: the Files preview
+ * with the file's git context, when a lens knows it.
+ */
+function ExplorerPreview({
+  system,
+  path,
+  onClose,
+  endSafeArea,
+}: {
+  system: ExplorerSystem;
+  /** The file, in display form (`~/…`). */
+  path: string;
+  /** Absent where there is nothing to close to. */
+  onClose: (() => void) | undefined;
+  endSafeArea: boolean;
+}): ReactNode {
+  const { home } = system;
+  return (
+    <WithLenses
+      fs={system.fs}
+      dir={absolutePath(parentPath(path, home) ?? "/", home)}
+    >
+      {(lens) => (
+        <PreviewPane
+          fs={system.fs}
+          path={path}
+          home={home}
+          git={lens.fileGit(absolutePath(path, home))}
+          {...(onClose !== undefined ? { onClose } : {})}
+          endSafeArea={endSafeArea}
+        />
+      )}
+    </WithLenses>
+  );
+}
+
+/**
+ * A file of `fs` previewed in a pane of its own — the column beside a
+ * `preview: "pane"` browser — in Files' theme, as the browser is.
+ */
+export function FilePreview({
+  fs,
+  path,
+  onClose,
+}: {
+  fs: BrowsableFileSystem;
+  /** The file, in display form (`~/…`). */
+  path: string;
+  onClose: (() => void) | null;
+}): ReactNode {
+  const state = useExplorerSystem(fs);
+  const endSafeArea = useReservesFloatingBar();
+  return (
+    <Theme name={FILES_SCOPE} surface="canvas" className="h-full">
+      {state.kind === "pending" ? (
+        <Loading variant="rows" />
+      ) : state.kind === "failed" ? (
+        <ResourceErrorInline
+          variant="block"
+          subject="this file system"
+          error={state.error}
+          refetch={state.refetch}
+        />
+      ) : state.kind === "unavailable" ? (
+        <Placeholder>{state.message}</Placeholder>
+      ) : (
+        <ExplorerPreview
+          system={state.system}
+          path={path}
+          onClose={onClose ?? undefined}
+          endSafeArea={endSafeArea}
+        />
+      )}
+    </Theme>
   );
 }
 

@@ -440,7 +440,7 @@
     },
     {
       "paneId": "files-at",
-      "segment": "at/:dir/:open?",
+      "segment": "browse/:dir;fs",
       "appIndex": false,
       "parent": null
     },
@@ -458,9 +458,15 @@
     },
     {
       "paneId": "files-home",
-      "segment": ";open",
+      "segment": "",
       "appIndex": true,
       "parent": null
+    },
+    {
+      "paneId": "files-preview",
+      "segment": "preview/:open",
+      "appIndex": false,
+      "parent": "files-at"
     },
     {
       "paneId": "folder-peek",

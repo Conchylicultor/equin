@@ -1,11 +1,12 @@
-import { FullPane } from "@plugins/layouts/plugins/full-pane/web";
+import { MillerColumns } from "@plugins/layouts/plugins/miller/web";
 import { AppShellLayout } from "@plugins/primitives/plugins/app-shell/web";
 import { FileExplorer } from "../slots";
 
 /**
- * The file explorer: the Places sidebar beside one full-surface browser pane.
- * Every location is its own route (`FullPane` paints the current one), so back
- * and forward are the browser history.
+ * The file explorer: the Places sidebar beside a Miller row — the folder's
+ * column, and the open file's preview column beside it, sliding in and out
+ * with the row's column motion. Every location is its own route, so back and
+ * forward are the browser history.
  *
  * No app toolbar contributes today, so the browser's own toolbar is the
  * surface's top edge and hosts the sidebar toggle.
@@ -20,7 +21,7 @@ export function FileExplorerLayout() {
         sidebarSlot={FileExplorer.Sidebar}
         toolbarSlot={FileExplorer.Toolbar}
       >
-        <FullPane />
+        <MillerColumns />
       </AppShellLayout>
     </div>
   );

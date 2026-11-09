@@ -18,7 +18,7 @@ const USAGE =
 const dir = requireArg("dir", USAGE);
 const name = requireArg("name", USAGE);
 const out = arg("out", "/tmp/file-explorer-row-actions");
-const url = pathUrl(`/files/at/${encodeURIComponent(dir)}`);
+const url = pathUrl(`/files/browse/${encodeURIComponent(dir)}`);
 
 await withBrowser(async (h) => {
   const r = report("File explorer row actions");

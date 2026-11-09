@@ -94,7 +94,7 @@ onBeforeFinish(async () => {
   await db.close();
 });
 
-const listingUrl = pathUrl(`/files/at/${encodeURIComponent(root)}`);
+const listingUrl = pathUrl(`/files/browse/${encodeURIComponent(root)}`);
 
 /** A tree row by its path (the listing is absolute, so are its ids). */
 function row(page: Page, ...parts: string[]): Locator {
