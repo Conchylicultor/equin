@@ -28,7 +28,9 @@ export async function runGoogleDriveTarget(
         targetId: "google-drive",
         ok: false,
         needsConsent: true,
-        detail: `Google account not connected or missing Drive scope (${tokenResult.reason})`,
+        detail:
+          `Google account not connected or missing Drive scope (${tokenResult.reason})` +
+          (tokenResult.hint !== undefined ? `. ${tokenResult.hint}` : ""),
         consent: { providerId: "google", scopes: [...GOOGLE_DRIVE_SCOPES] },
       };
     }

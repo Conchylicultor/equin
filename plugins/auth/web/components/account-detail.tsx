@@ -387,6 +387,11 @@ function AccountDetails({
           <span className="font-mono">{status.lastRefreshError.message}</span>
         </Text>
       ) : null}
+      {status.lastRefreshError?.hint !== undefined ? (
+        <Text as="p" variant="caption" className="text-warning">
+          {status.lastRefreshError.hint}
+        </Text>
+      ) : null}
     </>
   );
 }

@@ -51,6 +51,19 @@ export interface OAuth2Config {
     refreshToken?: string;
   }) => Promise<void>;
   resolveCredentials: (env: AuthEnvAccessor) => Promise<ResolvedCredentials>;
+  /**
+   * Explains a refused refresh in the provider's own terms, when its shape
+   * says why (Google: a Testing-mode app's 7-day refresh-token expiry). The
+   * answer rides the account's refresh error and every needs-reconsent
+   * answer, so the place the user repairs from tells them how to stop it
+   * recurring. Undefined when the failure carries no known cause.
+   */
+  diagnoseRefreshFailure?: (failure: {
+    /** The token endpoint's response body. */
+    responseText: string;
+    /** How long ago the refused grant was issued (the account's connectedAt). */
+    grantAgeMs: number;
+  }) => string | undefined;
 }
 
 export interface ApiKeyConfig {
@@ -133,7 +146,14 @@ export interface AuthAccountState {
   scopes?: string[];
   needsReconsent?: boolean;
   connectedAt?: number;
-  lastRefreshError?: { message: string; at: number };
+  lastRefreshError?: RefreshError;
+}
+
+/** The last refused refresh of an account, and the provider's diagnosis of it. */
+export interface RefreshError {
+  message: string;
+  at: number;
+  hint?: string;
 }
 
 export interface AuthStateValue {

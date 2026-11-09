@@ -14,6 +14,30 @@ interface GoogleUserInfo {
   picture?: string;
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Google expires every refresh token of an app whose consent screen is in
+ * "Testing" 7 days after the grant, answering `invalid_grant`. A refusal in
+ * the days right after that mark is almost always it — and the repair is
+ * publishing the app, not reconnecting (which buys another 7 days). Later,
+ * the grant was more likely revoked, so no claim is made.
+ */
+export function diagnoseGoogleRefreshFailure(failure: {
+  responseText: string;
+  grantAgeMs: number;
+}): string | undefined {
+  if (!failure.responseText.includes("invalid_grant")) return undefined;
+  if (failure.grantAgeMs < 7 * DAY_MS - 60 * 60 * 1000) return undefined;
+  if (failure.grantAgeMs > 9 * DAY_MS) return undefined;
+  return (
+    "Google refused the refresh 7 days after access was granted — your OAuth " +
+    'app is probably in "Testing" mode, whose tokens expire after 7 days. ' +
+    "Publish it (Google Auth Platform → Audience → Publish app) to keep the " +
+    "connection, then reconnect once."
+  );
+}
+
 async function fetchGoogleIdentity(accessToken: string): Promise<AuthIdentity> {
   const res = await fetch("https://openidconnect.googleapis.com/v1/userinfo", {
     headers: { Authorization: `Bearer ${accessToken}` },
@@ -50,6 +74,7 @@ export const googleDescriptor: AuthProviderDescriptor = defineAuthProvider({
       include_granted_scopes: "true",
     }),
     fetchIdentity: fetchGoogleIdentity,
+    diagnoseRefreshFailure: diagnoseGoogleRefreshFailure,
     resolveCredentials: async (env) => {
       const idFromEnv = env.get("AUTH_GOOGLE_CLIENT_ID");
       const secretFromEnv = env.get("AUTH_GOOGLE_CLIENT_SECRET");

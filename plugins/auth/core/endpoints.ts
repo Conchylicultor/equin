@@ -25,6 +25,7 @@ const TokenResponseSchema = z.union([
     needsConsent: z.literal(true),
     reason: z.enum(["no-account", "needs-reconsent", "missing-scopes"]),
     missingScopes: z.array(z.string()).optional(),
+    hint: z.string().optional(),
   }),
   z.object({
     ok: z.literal(false),

@@ -1,4 +1,8 @@
-import type { AuthIdentity, AuthProviderKind } from "@plugins/auth/core";
+import type {
+  AuthIdentity,
+  AuthProviderKind,
+  RefreshError,
+} from "@plugins/auth/core";
 import { AuthKeychainLockedError } from "@plugins/auth/core";
 import {
   getSecret,
@@ -20,7 +24,7 @@ export interface StoredAccount {
   connectedAt: number;
   lastRefreshedAt?: number;
   needsReconsent?: boolean;
-  lastRefreshError?: { message: string; at: number };
+  lastRefreshError?: RefreshError;
 }
 
 export interface TokenStoreBlob {

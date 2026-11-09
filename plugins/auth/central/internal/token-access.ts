@@ -56,18 +56,25 @@ async function refreshAccount(
     } catch (err) {
       const status = (err as { status?: number }).status;
       if (status === 400 || status === 401) {
+        const at = Date.now();
+        const hint = descriptor.oauth.diagnoseRefreshFailure?.({
+          responseText: (err as { responseText?: string }).responseText ?? "",
+          grantAgeMs: at - account.connectedAt,
+        });
         await patchAccount(descriptor.id, accountId, {
           needsReconsent: true,
           accessToken: undefined,
           expiresAt: undefined,
           lastRefreshError: {
             message: err instanceof Error ? err.message : String(err),
-            at: Date.now(),
+            at,
+            hint,
           },
         });
         throw new AuthNeedsConsentError({
           providerId: descriptor.id,
           reason: "needs-reconsent",
+          hint,
         });
       }
       await patchAccount(descriptor.id, accountId, {
@@ -122,6 +129,7 @@ export async function getAccessTokenInternal(
       ok: false,
       needsConsent: true,
       reason: "needs-reconsent",
+      hint: account.lastRefreshError?.hint,
     };
   }
 
@@ -201,6 +209,7 @@ export async function getAccessTokenInternal(
         needsConsent: true,
         reason: err.reason,
         missingScopes: err.missingScopes,
+        hint: err.hint,
       };
     }
     return {
@@ -236,6 +245,7 @@ export async function getAccessToken(args: GetAccessTokenArgs): Promise<{
       providerId: args.providerId,
       reason: result.reason,
       missingScopes: result.missingScopes,
+      hint: result.hint,
     });
   }
   throw new Error(result.message);

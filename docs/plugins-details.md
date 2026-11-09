@@ -12761,6 +12761,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `OAuth2Config`
       - `ParsedTokenResponse`
       - `PasswordConfig`
+      - `RefreshError`
       - `ResolvedCredentials`
       - `SetApiKeyBody`
       - `SignInBody`

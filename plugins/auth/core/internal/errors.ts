@@ -9,11 +9,13 @@ export class AuthNeedsConsentError extends AuthError {
   readonly providerId: string;
   readonly reason: "no-account" | "needs-reconsent" | "missing-scopes";
   readonly missingScopes?: string[];
+  readonly hint?: string;
 
   constructor(args: {
     providerId: string;
     reason: "no-account" | "needs-reconsent" | "missing-scopes";
     missingScopes?: string[];
+    hint?: string;
   }) {
     super(
       `Auth: ${args.providerId} needs consent (${args.reason})${
@@ -24,6 +26,7 @@ export class AuthNeedsConsentError extends AuthError {
     this.providerId = args.providerId;
     this.reason = args.reason;
     this.missingScopes = args.missingScopes;
+    this.hint = args.hint;
   }
 }
 

@@ -26,6 +26,7 @@ export type {
   PasswordConfig,
   AuthIdentity,
   AuthAccountState,
+  RefreshError,
   AuthStateValue,
   AuthEnvAccessor,
   ResolvedCredentials,

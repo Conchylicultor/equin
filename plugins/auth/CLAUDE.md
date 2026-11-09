@@ -245,6 +245,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `OAuth2Config`
     - `ParsedTokenResponse`
     - `PasswordConfig`
+    - `RefreshError`
     - `ResolvedCredentials`
     - `SetApiKeyBody`
     - `SignInBody`

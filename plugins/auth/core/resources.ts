@@ -29,7 +29,11 @@ const AuthAccountStateSchema = z.object({
   needsReconsent: z.boolean().optional(),
   connectedAt: z.number().optional(),
   lastRefreshError: z
-    .object({ message: z.string(), at: z.number() })
+    .object({
+      message: z.string(),
+      at: z.number(),
+      hint: z.string().optional(),
+    })
     .optional(),
 }) satisfies z.ZodType<AuthAccountState>;
 

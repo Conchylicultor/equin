@@ -19,6 +19,8 @@ export interface TokenNeedsConsent {
   needsConsent: true;
   reason: "no-account" | "needs-reconsent" | "missing-scopes";
   missingScopes?: string[];
+  /** The provider's diagnosis of the refused refresh behind a needs-reconsent. */
+  hint?: string;
 }
 
 export interface TokenFailure {

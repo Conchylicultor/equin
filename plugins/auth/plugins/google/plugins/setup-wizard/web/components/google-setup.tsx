@@ -178,6 +178,35 @@ export function GoogleSetup() {
         </Step>
 
         <Step
+          title="Publish the app"
+          state={hasProject ? "active" : "upcoming"}
+        >
+          <Stack gap="sm">
+            <StepNote>
+              While the app is in <span className="font-medium">Testing</span>,
+              Google expires its access 7 days after you connect, and backups
+              stop until you reconnect. Publishing keeps the connection; a
+              personal app needs no Google review for it.
+            </StepNote>
+            <StepNote>
+              First fill Branding: app name, support email, a home page and a
+              privacy policy link (any page you control), and add their domain
+              under Authorized domains.
+            </StepNote>
+            <StepLink
+              href={`https://console.cloud.google.com/auth/branding?project=${projectId}`}
+            />
+            <StepNote>
+              Then on Audience, click{" "}
+              <span className="font-medium">Publish app</span>.
+            </StepNote>
+            <StepLink
+              href={`https://console.cloud.google.com/auth/audience?project=${projectId}`}
+            />
+          </Stack>
+        </Step>
+
+        <Step
           title="Create OAuth 2.0 credentials"
           state={hasProject ? "active" : "upcoming"}
         >
