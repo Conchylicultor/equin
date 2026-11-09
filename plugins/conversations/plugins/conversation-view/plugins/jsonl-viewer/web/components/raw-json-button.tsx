@@ -1,7 +1,7 @@
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { JsonCode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
@@ -21,10 +21,8 @@ export function RawJsonAction({ event }: { event: JsonlEvent }) {
       width="4xl"
       padding="none"
     >
-      <Scroll axis="both" className="max-h-[60vh] rounded-md bg-muted/40 p-md">
-        <Text as="pre" variant="caption">
-          {JSON.stringify(event, null, 2)}
-        </Text>
+      <Scroll axis="y" className="max-h-[60vh] rounded-md">
+        <JsonCode value={event} />
       </Scroll>
     </InlinePopover>
   );

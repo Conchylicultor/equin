@@ -16603,7 +16603,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
               - `JsonlRowActions.Item` "raw-json" → `RawJsonAction`
-            - Uses: 59 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+            - Uses: 60 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
               - `network/live/live-state` ×9
               - `conversations/conversation-view/pending-turn` ×6
               - `primitives/dom/auto-scroll` ×5
@@ -16636,6 +16636,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/row-actions.rowActionsAnchor`
               - `primitives/scope/dom-scope.defineDomScope`
               - `primitives/scope/surface-id.useSurfaceTabId`
+              - `primitives/syntax-highlight.JsonCode`
               - `ui/icons.Icon`
             - Exports (types):
               - `ContextMember`
@@ -16730,9 +16731,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `transcriptPrompts`
               - `transcriptToolCall`
           - Cross-plugin:
-            - Uses tokens: 23 vars — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+            - Uses tokens: 22 vars — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
               - `ui/tokens/type-scale` ×8
-              - `ui/tokens/color-palette` ×7
+              - `ui/tokens/color-palette` ×6
               - `ui/tokens/density` ×5
               - `ui/tokens/shape` ×2
               - `ui/tokens/font-family --font-mono`
@@ -51094,7 +51095,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live/optimistic-mutation`
           - `page/editor`
           - `primitives/editable-field`
-    - **`syntax-highlight`** — Shared shiki-based syntax highlighter primitive. Exposes getHighlighter, themeForMode, languageForPath, useDarkMode, a <HighlightedCode> component for plugins rendering code, and <CodeListing> — the line-numbered listing (block or full-pane, optional highlighted line) behind transcript Read results and the file viewer's Code tab.
+    - **`syntax-highlight`** — Shared shiki-based syntax highlighter primitive. Exposes getHighlighter, themeForMode, languageForPath, useDarkMode, a <HighlightedCode> component for plugins rendering code, <JsonCode> (a JSON value pretty-printed and coloured, multi-line strings written across lines), and <CodeListing> — the line-numbered listing (block or full-pane, optional highlighted line) behind transcript Read results and the file viewer's Code tab.
       - Web:
         - Uses:
           - `primitives/css/scroll.Scroll`
@@ -51112,6 +51113,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CodePaneSurface`
           - `getHighlighter`
           - `HighlightedCode`
+          - `JsonCode`
           - `languageForPath`
           - `resolveLang`
           - `SHIKI_LANGS`
@@ -51136,6 +51138,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --line-height-code`
         - Imported by:
           - `config_v2/settings`
+          - `conversations/conversation-view/jsonl-viewer`
           - `conversations/conversation-view/jsonl-viewer/attachment/attached-file`
           - `conversations/conversation-view/jsonl-viewer/code-listing`
           - `conversations/conversation-view/jsonl-viewer/tool-call/browser-tools`

@@ -180,7 +180,7 @@ back.
   - Contributes:
     - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
     - `JsonlRowActions.Item` "raw-json" → `RawJsonAction`
-  - Uses: 59 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 60 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live/live-state` ×9
     - `conversations/conversation-view/pending-turn` ×6
     - `primitives/dom/auto-scroll` ×5
@@ -213,6 +213,7 @@ back.
     - `primitives/row-actions.rowActionsAnchor`
     - `primitives/scope/dom-scope.defineDomScope`
     - `primitives/scope/surface-id.useSurfaceTabId`
+    - `primitives/syntax-highlight.JsonCode`
     - `ui/icons.Icon`
   - Exports (types):
     - `ContextMember`
@@ -307,9 +308,9 @@ back.
     - `transcriptPrompts`
     - `transcriptToolCall`
 - Cross-plugin:
-  - Uses tokens: 23 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 22 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/type-scale` ×8
-    - `ui/tokens/color-palette` ×7
+    - `ui/tokens/color-palette` ×6
     - `ui/tokens/density` ×5
     - `ui/tokens/shape` ×2
     - `ui/tokens/font-family --font-mono`

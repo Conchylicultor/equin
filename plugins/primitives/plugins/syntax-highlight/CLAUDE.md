@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Shared shiki-based syntax highlighter primitive. Exposes getHighlighter, themeForMode, languageForPath, useDarkMode, a <HighlightedCode> component for plugins rendering code, and <CodeListing> — the line-numbered listing (block or full-pane, optional highlighted line) behind transcript Read results and the file viewer's Code tab.
+- Description: Shared shiki-based syntax highlighter primitive. Exposes getHighlighter, themeForMode, languageForPath, useDarkMode, a <HighlightedCode> component for plugins rendering code, <JsonCode> (a JSON value pretty-printed and coloured, multi-line strings written across lines), and <CodeListing> — the line-numbered listing (block or full-pane, optional highlighted line) behind transcript Read results and the file viewer's Code tab.
 - Web:
   - Uses:
     - `primitives/css/scroll.Scroll`
@@ -22,6 +22,7 @@
     - `CodePaneSurface`
     - `getHighlighter`
     - `HighlightedCode`
+    - `JsonCode`
     - `languageForPath`
     - `resolveLang`
     - `SHIKI_LANGS`
@@ -46,6 +47,7 @@
     - `ui/tokens/type-scale --line-height-code`
   - Imported by:
     - `config_v2/settings`
+    - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/attachment/attached-file`
     - `conversations/conversation-view/jsonl-viewer/code-listing`
     - `conversations/conversation-view/jsonl-viewer/tool-call/browser-tools`
