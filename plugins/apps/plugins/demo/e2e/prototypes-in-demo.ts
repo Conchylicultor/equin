@@ -26,7 +26,7 @@
  *  7. a frame URL the Service Worker does not answer is a 404 at the gateway,
  *     never the app's shell.
  *
- * And throughout: the page URL stays `/demo`, no `/api/…` request left for the
+ * And throughout: the page stays on the demo, no `/api/…` request left for the
  * page's origin (sanctioned telemetry aside — `no-leak.ts`'s list), every
  * frame `src` is under `/artifacts/*\/frames/`, no page or console error.
  *
@@ -62,6 +62,11 @@ import {
 } from "@plugins/apps/plugins/prototypes/plugins/canvas/core";
 import { REAL_APP_LABEL } from "@plugins/apps/plugins/prototypes/plugins/compare/core";
 import { pickFromLauncher } from "@plugins/apps-core/plugins/app-launcher/e2e";
+import {
+  AGENT_MANAGER_LOCATION,
+  demoPath,
+  onDemoPage,
+} from "./internal/demo-pages";
 
 const OUT = arg("out") ?? "/tmp/demo-prototypes";
 
@@ -170,7 +175,7 @@ await withBrowser(async (h) => {
     viewport: { width: 1600, height: 1000 },
   });
 
-  await boot(page, pathUrl("/demo"), {
+  await boot(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
     marker: 'button:has-text("Conversations")',
   });
   await page
@@ -398,7 +403,7 @@ await withBrowser(async (h) => {
   page.off("request", onRequest);
 
   // ── assertions ──────────────────────────────────────────────────────────
-  r.eq("the page URL stays /demo", new URL(page.url()).pathname, "/demo");
+  r.ok("the page stays on the demo", onDemoPage(page.url()), page.url());
   r.eq(
     "no /api request left for the page's origin (sanctioned telemetry aside)",
     leaked,

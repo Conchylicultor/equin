@@ -159,7 +159,6 @@ not yet supported — see the open question in
   - Imported by:
     - `apps/agent-manager/shell`
     - `apps/debug/shell`
-    - `apps/demo/shell`
     - `apps/events/shell`
     - `apps/keyboard-party/shell`
     - `apps/mail/shell`

@@ -27,6 +27,7 @@ function fakeSet(id: string, initial: string) {
       tabSetModeChanged();
     }),
     exitToPreviousMode: vi.fn(),
+    browserTabUrl: (path: string) => path,
   };
   return { state, handle };
 }

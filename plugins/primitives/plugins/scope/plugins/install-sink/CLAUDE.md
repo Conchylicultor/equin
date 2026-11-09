@@ -122,6 +122,7 @@ would empty a slot somebody had just filled.
   - Imported by:
     - `apps-core/tabs`
     - `apps/desktop/windows`
+    - `primitives/link-gesture`
     - `primitives/overlay/overlay-boundary`
     - `primitives/pane`
 - Web:

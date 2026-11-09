@@ -42,7 +42,11 @@ import {
   setFocusedApp,
   surfaceModeForPrefix,
 } from "@plugins/apps-core/web";
-import { setActiveRoutePrefix } from "@plugins/primitives/plugins/pane/plugins/route-prefix/web";
+import {
+  setActiveRoutePrefix,
+  withActiveRoutePrefix,
+} from "@plugins/primitives/plugins/pane/plugins/route-prefix/web";
+import { browserTabAddressSink } from "@plugins/primitives/plugins/link-gesture/web";
 import {
   makeShellHistoryAdapter,
   serializePaneState,
@@ -548,12 +552,27 @@ export function bootTabs(
  * mode first, and anything else is `onLeave(url)`.
  */
 export interface EmbeddedTabSet {
-  /** The app the first tab shows. */
-  app: string;
-  /** Its app-relative route (`/c/<id>`; `/` or `""` for the app's index). */
-  route: string;
+  /** Where the first tab opens (read once, at the set's first render). */
+  at: EmbeddedAt;
   /** An app-rooted URL no app in scope owns. */
   onLeave: (url: string) => void;
+  /**
+   * Told the set's location — the focused tab's app-rooted URL under the
+   * surface mode's route prefix (`/agents/c/x`, `/desktop/sonata`), the same
+   * spelling {@link EmbeddedAt}'s `url` takes back — whenever it may have
+   * changed (a repeat is possible: compare before writing it anywhere). What a
+   * host page keeps it in (its own URL, so a reload comes back to it) is the
+   * host's.
+   */
+  onLocationChange?: (url: string) => void;
+  /**
+   * How an in-app path opened in a NEW browser tab from inside the set (a
+   * ⌘-click, a middle-click, an Open in a new tab) is addressed: given the
+   * set's location there (prefixed as {@link onLocationChange}'s), the URL of
+   * this origin to open. Omitted: the path itself, on the host's origin —
+   * the real app at that place.
+   */
+  browserTabUrl?: (url: string) => string;
   /**
    * The set is the page's whole surface (the page shows nothing but it): it
    * takes the keyboard when it mounts, as the page's own set does at boot.
@@ -563,16 +582,88 @@ export interface EmbeddedTabSet {
   fillsPage: boolean;
 }
 
+/**
+ * Where an embedded set's first tab opens: one app at its app-relative route
+ * (`/c/<id>`; `/` or `""` for its index), or an app-rooted URL — resolved
+ * as the set's navigation boundary resolves one, a surface-mode prefix
+ * (`/desktop/sonata`) opening that mode — which is what
+ * {@link EmbeddedTabSet.onLocationChange} reports, so a location handed back
+ * reopens the set where it was. A URL no app in scope owns (a stale one), and
+ * `undefined`, open the composition's home app.
+ */
+export type EmbeddedAt =
+  { app: string; route: string } | { url: string | undefined };
+
 /** The embedded boot: one tab of the seed app, its route pending until resolved. */
-function bootEmbedded(apps: AppList, seed: EmbeddedTabSet): BootState {
+function bootEmbedded(
+  apps: AppList,
+  at: EmbeddedAt,
+  homeId: string | null,
+): BootState {
+  const { appId, route, mode } = embeddedSeed(apps, at, homeId);
   const tab: Tab = {
     tabId: crypto.randomUUID(),
-    appId: seed.app,
-    store: makeBackgroundStore(seed.app, apps),
+    appId,
+    store: makeBackgroundStore(appId, apps),
   };
-  const rawPath = normalizeRawPath(seed.route);
+  const rawPath = normalizeRawPath(route);
   if (rawPath !== "") tab.store.seedPending(rawPath);
-  return { tabs: [tab], focusedTabId: tab.tabId, mode: "" };
+  return { tabs: [tab], focusedTabId: tab.tabId, mode };
+}
+
+/** {@link EmbeddedAt} resolved against the apps in scope. */
+function embeddedSeed(
+  apps: AppList,
+  at: EmbeddedAt,
+  homeId: string | null,
+): { appId: string; route: string; mode: Placement } {
+  if ("app" in at) return { appId: at.app, route: at.route, mode: "" };
+  let path = at.url ?? "/";
+  let mode: Placement = "";
+  const prefixed = splitSurfacePrefix(path, apps);
+  if (prefixed !== undefined) {
+    mode = prefixed.mode;
+    path = prefixed.rest;
+  }
+  const resolved = path === "/" ? undefined : resolveAppForPath(path, apps);
+  if (resolved !== undefined) {
+    return { appId: resolved.app.id, route: resolved.routePath, mode };
+  }
+  const home = registeredHome(apps, homeId);
+  if (home === undefined) {
+    throw new Error(
+      `An embedded tab set opened at ${at.url ?? "its home"} has no app to show: no app in scope owns that URL, and the composition's home app ("${homeId ?? "none"}") is not registered.`,
+    );
+  }
+  return { appId: home.id, route: "/", mode };
+}
+
+/**
+ * An embedded set's location: the focused tab's app-rooted URL (its route as
+ * the address bar would write it, or the raw path it is still resolving)
+ * under the requested mode's route prefix — the bare prefix (or `/`) on an
+ * empty surface.
+ */
+function embeddedLocation(
+  tab: Tab | undefined,
+  mode: Placement,
+  apps: AppList,
+): string {
+  const prefix = routePrefixForMode(mode, apps) ?? "";
+  if (tab === undefined) return prefix === "" ? "/" : prefix;
+  const state = tab.store.getRouteState();
+  const path =
+    state.kind === "unresolved"
+      ? `${appPathFor(tab.appId, apps)}/${state.rawPath}`
+      : tab.store.routeUrl(state.slots, tab.store.getIndexParams());
+  return prefix + (path === "" ? "/" : path);
+}
+
+/** `path` under `mode`'s route prefix, unless it already carries one. */
+function withModePrefix(path: string, mode: Placement, apps: AppList): string {
+  if (splitSurfacePrefix(path, apps) !== undefined) return path;
+  const prefix = routePrefixForMode(mode, apps);
+  return prefix === undefined ? path : prefix + (path === "/" ? "" : path);
 }
 
 /**
@@ -628,7 +719,7 @@ export function TabsProvider({
   const [{ tabs: initialTabs, focusedTabId: initialFocus, mode: initialMode }] =
     useState(() =>
       embedded !== undefined
-        ? bootEmbedded(apps, embedded)
+        ? bootEmbedded(apps, embedded.at, homeId)
         : bootTabs(
             apps,
             initialApp?.id ?? registeredHome(apps, homeId)?.id ?? "",
@@ -1519,6 +1610,7 @@ export function TabsProvider({
   const modeForHandle = useLatestRef(mode);
   const setModeForHandle = useLatestRef(setMode);
   const exitForHandle = useLatestRef(exitToPreviousMode);
+  const browserTabUrlRef = useLatestRef(embedded?.browserTabUrl);
   useEffect(
     () =>
       registerTabSet({
@@ -1529,9 +1621,56 @@ export function TabsProvider({
         focusedTabId: () => focusedRef.current,
         setMode: (next) => setModeForHandle.current(next),
         exitToPreviousMode: () => exitForHandle.current(),
+        browserTabUrl: (path) => {
+          const address = browserTabUrlRef.current;
+          // The page's set, and an embed that addresses nothing of its own:
+          // the path on this origin, under the page's route prefix.
+          if (address === undefined) return withActiveRoutePrefix(path);
+          return address(
+            withModePrefix(path, modeRef.current, appsRef.current),
+          );
+        },
       }),
-    [id, page, modeForHandle, setModeForHandle, exitForHandle],
+    [
+      id,
+      page,
+      modeForHandle,
+      setModeForHandle,
+      exitForHandle,
+      browserTabUrlRef,
+      appsRef,
+    ],
   );
+
+  // A new browser tab opened from anywhere on the page (a ⌘-click, an Open in
+  // a new tab) is addressed by the tab set the user is in — the one they
+  // pointed at to click. Installed once, by the page's set.
+  useEffect(() => {
+    if (!page) return;
+    return browserTabAddressSink.install((path) => {
+      const set = peekFocusedTabSet();
+      return set === undefined
+        ? withActiveRoutePrefix(path)
+        : set.browserTabUrl(path);
+    });
+  }, [page]);
+
+  // An embedded set's location, told to its host on every change of the
+  // focused tab, its route or the surface mode (the page's own is the URL).
+  const locationRef = useLatestRef(embedded?.onLocationChange);
+  useEffect(() => {
+    if (page) return;
+    const report = () =>
+      locationRef.current?.(
+        embeddedLocation(
+          tabsRef.current.find((t) => t.tabId === focusedRef.current),
+          rawMode,
+          appsRef.current,
+        ),
+      );
+    report();
+    return focusedStore?.subscribeRoute(report);
+  }, [page, focusedStore, focusedTabId, rawMode, locationRef, appsRef]);
   useEffect(() => tabSetModeChanged(), [mode]);
 
   // An embedded set's navigation boundary: every cross-app hop read through it

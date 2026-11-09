@@ -1,4 +1,4 @@
-import { Fragment, useMemo, type ReactNode } from "react";
+import { Fragment, useMemo, useState, type ReactNode } from "react";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
@@ -11,6 +11,7 @@ import { Apps } from "@plugins/apps-core/web";
 import {
   TabsProvider,
   useTabs,
+  type EmbeddedAt,
   type EmbeddedTabSet,
 } from "@plugins/apps-core/plugins/tabs/web";
 import { AppTabsBody } from "@plugins/apps-core/plugins/tab-surface/web";
@@ -60,40 +61,83 @@ const refuseLeave: AppEmbedLeave = () => {
  *
  * - **The keyboard, when it is the page.** An embed inside a bigger page does
  *   not take the keyboard when it mounts — the user moves into it by pointing
- *   at it. One that `fillsPage` (the page shows nothing but it) takes it at
- *   mount, as the app's own surface does, so its shortcuts answer at once.
+ *   at it. One that `fills` the page (the page shows nothing but it) takes it
+ *   at mount, as the app's own surface does, so its shortcuts answer at once.
+ * - **Its location, for the host to keep.** `onLocationChange` is told the
+ *   focused tab's app-rooted URL (under the surface mode's prefix) as it
+ *   moves; handed back as `url`, it reopens the embed there — a host page
+ *   keeps it in its own URL, so a reload comes back to it.
+ * - **Its new browser tabs.** A ⌘-click or an Open in a new tab inside opens
+ *   `browserTabUrl(location there)` when given (the host's page showing the
+ *   embed at that place), else the path on the host's origin (the real app).
  *
- * Size it with `className` (it fills its box). `app` / `route` seed the first
- * tab only.
+ * Size it with `className` (it fills its box). `app` / `route` (or `url`)
+ * seed the first tab only.
  */
 export function AppEmbed({
-  app,
-  route,
   onLeave = refuseLeave,
-  fillsPage = false,
+  fills,
+  onLocationChange,
+  browserTabUrl,
   className,
-}: {
-  app: string;
-  route: string;
+  ...at
+}: AppEmbedAt & {
   onLeave?: AppEmbedLeave;
-  /** The embed is the page's whole surface: it takes the keyboard when it mounts. */
-  fillsPage?: boolean;
+  /**
+   * The embed is all the page shows — it takes the keyboard when it mounts:
+   * `"page"` in the page's own frame (a caption, a border: its top-right
+   * corner is not the viewport's, so it hosts no floating action bar), or the
+   * whole `"viewport"`, where its headers make room for and anchor the page's
+   * floating action bar as the app's own surface does. Omitted: a box inside
+   * a bigger page.
+   */
+  fills?: "page" | "viewport";
+  /** See {@link EmbeddedTabSet.onLocationChange}. */
+  onLocationChange?: (url: string) => void;
+  /** See {@link EmbeddedTabSet.browserTabUrl}. */
+  browserTabUrl?: (url: string) => string;
   className?: string;
 }): ReactNode {
+  const fillsPage = fills !== undefined;
   // The seed is read once, at the tab set's first render.
+  const seed: EmbeddedAt =
+    at.app !== undefined ? { app: at.app, route: at.route } : { url: at.url };
+  const [embeddedAt] = useState(seed);
   const embedded = useMemo<EmbeddedTabSet>(
-    () => ({ app, route, onLeave, fillsPage }),
-    [app, route, onLeave, fillsPage],
+    () => ({
+      at: embeddedAt,
+      onLeave,
+      fillsPage,
+      onLocationChange,
+      browserTabUrl,
+    }),
+    [embeddedAt, onLeave, fillsPage, onLocationChange, browserTabUrl],
   );
   return (
     <TabsProvider embedded={embedded}>
-      <EmbedFrame className={className} />
+      <EmbedFrame className={className} viewport={fills === "viewport"} />
     </TabsProvider>
   );
 }
 
+/**
+ * Where the embed opens: an app at its app-relative route (`/c/<id>`), or an
+ * app-rooted URL as `onLocationChange` reports one (`/agents/c/x`,
+ * `/desktop/sonata`) — `undefined`, or one no app in scope owns, opens the
+ * composition's home app.
+ */
+export type AppEmbedAt =
+  | { app: string; route: string; url?: never }
+  | { url: string | undefined; app?: never; route?: never };
+
 /** The embed's box, themed by the focused tab's app, holding the surface. */
-function EmbedFrame({ className }: { className: string | undefined }) {
+function EmbedFrame({
+  className,
+  viewport,
+}: {
+  className: string | undefined;
+  viewport: boolean;
+}) {
   const { tabs, focusedTabId } = useTabs();
   const surface = Apps.Surface.useContributions()[0];
   const focusedApp = tabs.find((t) => t.tabId === focusedTabId)?.appId;
@@ -105,10 +149,12 @@ function EmbedFrame({ className }: { className: string | undefined }) {
       data-app-embed={focusedApp ?? ""}
       // `floating-bar-boundary`: the embed is a box on its host's page, not
       // the viewport's top-right corner — its headers must not reserve or
-      // anchor the global floating action bar.
+      // anchor the global floating action bar. One filling the viewport is
+      // that corner: its headers host the bar, as the app's own surface does.
       // eslint-disable-next-line layout/no-adhoc-layout -- the embed's own box: `relative isolate` contains its overlays and stacking, `transform-gpu` makes it the containing block for the app shell's fixed sidebar
       className={cn(
-        "floating-bar-boundary relative isolate size-full transform-gpu overflow-hidden",
+        "relative isolate size-full transform-gpu overflow-hidden",
+        !viewport && "floating-bar-boundary",
         className,
       )}
     >

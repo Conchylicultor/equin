@@ -30,9 +30,15 @@ is what keeps every such control agreeing on what a ⌘-click means.
 A new in-app (equin) tab is not a link gesture: it is reachable only from
 an explicit menu entry (`navigate(url, { newTab: true })`).
 
-A leaf on purpose (imports only React's `MouseEvent` type and the
-`pane/route-prefix` leaf, which `openInBrowserTab` puts in front of an in-app
-path so a desktop's link opens a desktop), so both the pane
+- `browserTabAddressSink` decides how `openInBrowserTab` writes an in-app
+  path: `apps-core/tabs` installs the tab set the user is in's address (the
+  page's: under its route prefix; an app embed's: its host's, `/demo`'s
+  full-screen demo at that place). Until installed, the page's route prefix.
+
+A leaf on purpose (imports only React's `MouseEvent` type, the
+`scope/install-sink` leaf, and the `pane/route-prefix` leaf, whose prefix
+`openInBrowserTab` puts in front of an in-app path by default so a desktop's
+link opens a desktop), so both the pane
 primitive (`useOpenPane().link`, Promote) and `apps-core/tabs`' `appLinkProps`
 compose it without either depending on the other.
 
@@ -94,10 +100,13 @@ resolver returning one. Fix: spread `openPane.link(…)`, or pass `openPane.to(�
 
 - Description: The browser's link gestures as spreadable handler props: plain click opens here, ⌘/Ctrl- and middle-click open the destination's URL in a new browser tab. A <button> gets none of this for free, so every navigating control reads it from one place.
 - Web:
-  - Uses: `primitives/pane/route-prefix.withActiveRoutePrefix`
+  - Uses:
+    - `primitives/pane/route-prefix.withActiveRoutePrefix`
+    - `primitives/scope/install-sink.defineInstallSink`
   - Exports (types): `LinkGestureProps`
   - Exports (values):
     - `activationProps`
+    - `browserTabAddressSink`
     - `linkGestureProps`
     - `linkProps`
     - `openInBrowserTab`

@@ -52,6 +52,11 @@ import {
   withBrowser,
   type Settled,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import {
+  AGENT_MANAGER_LOCATION,
+  demoPath,
+  onDemoPage,
+} from "./internal/demo-pages";
 
 const OUT = arg("out") ?? "/tmp/demo-places";
 
@@ -104,7 +109,7 @@ await withBrowser(async (h) => {
     viewport: { width: 1440, height: 900 },
   });
 
-  await boot(page, pathUrl("/demo"), {
+  await boot(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
     marker: 'button:has-text("Conversations")',
   });
   await waitForNetworkIdle(page);
@@ -166,7 +171,7 @@ await withBrowser(async (h) => {
     () => embedRoot(page).getByText("Lisbon", { exact: true }).count(),
     (n) => n > 0,
   );
-  r.eq("the page URL stays /demo", new URL(page.url()).pathname, "/demo");
+  r.ok("the page stays on the demo", onDemoPage(page.url()), page.url());
 
   // ── 1b. saved icons: the demo's own, drawn from the worker ──────────────
   // A place's icon (Demo's castle) and a tag's are saved icons: the scope's
@@ -337,7 +342,7 @@ await withBrowser(async (h) => {
     () => windowIds(embedRoot(page)),
     (ids) => ids.length >= 1,
   );
-  r.eq("the page URL stays /demo", new URL(page.url()).pathname, "/demo");
+  r.ok("the page stays on the demo", onDemoPage(page.url()), page.url());
 
   page.off("request", onRequest);
   page.off("websocket", onSocket);

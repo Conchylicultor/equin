@@ -100,6 +100,7 @@ import {
   withBrowser,
   type Settled,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { AGENT_MANAGER_LOCATION, demoPath } from "./internal/demo-pages";
 
 const OUT = arg("out") ?? "/tmp/demo-no-leak";
 
@@ -369,7 +370,7 @@ await withBrowser(async (h) => {
   await tapWorkerResponses(page);
   const socketTap = await tapSharedSocket(page);
 
-  await boot(page, pathUrl("/demo"), {
+  await boot(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
     marker: 'button:has-text("Conversations")',
   });
   // The scope renders its sidebar once the worker answered the first reads.

@@ -319,6 +319,18 @@
       "parent": null
     },
     {
+      "paneId": "demo-at",
+      "segment": "at/:url*;full",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "demo-start",
+      "segment": "",
+      "appIndex": true,
+      "parent": null
+    },
+    {
       "paneId": "dependencies",
       "segment": "dependencies",
       "appIndex": false,

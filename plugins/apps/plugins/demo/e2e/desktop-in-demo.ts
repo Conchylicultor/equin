@@ -7,7 +7,7 @@
  *  1. opens the launcher inside the embed and picks Desktop: the embed's own
  *     tab set switches to the desktop — the Agent Manager it showed becomes a
  *     window, and the shelf appears — while the page around it stays as it
- *     was (no window outside the embed, the page URL still `/demo`);
+ *     was (no window outside the embed, the page still the demo);
  *  2. opens Pages from the shelf: a second window, beside the Agent Manager's,
  *     showing the demo's workspace ("Welcome to equin");
  *  3. takes a window full screen from its titlebar's Full screen
@@ -41,6 +41,11 @@ import {
   withBrowser,
   type Settled,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import {
+  AGENT_MANAGER_LOCATION,
+  demoPath,
+  onDemoPage,
+} from "./internal/demo-pages";
 
 const OUT = arg("out") ?? "/tmp/demo-desktop";
 
@@ -83,9 +88,11 @@ async function windowIds(root: Locator): Promise<string[]> {
 
 /**
  * The page's own persisted tab set and window layout (sessionStorage): each
- * entry's tabs and focus (a tab set's `mode` may resolve from its unregistered
- * `""` to the default on a later write, and every write restamps `ts`), and
- * whether any window layout was stored at all.
+ * entry's tabs (their ids and apps — the demo tab's route carries the demo's
+ * location, which moves with the embed by design) and focus (a tab set's
+ * `mode` may resolve from its unregistered `""` to the default on a later
+ * write, and every write restamps `ts`), and whether any window layout was
+ * stored at all.
  */
 async function pageShellStorage(page: Page): Promise<unknown> {
   return page.evaluate(() => {
@@ -96,10 +103,14 @@ async function pageShellStorage(page: Page): Promise<unknown> {
       if (key.includes("desktop.windows")) windowKeys.push(key);
       if (!key.includes("apps-core.tabs")) continue;
       const entry = JSON.parse(sessionStorage.getItem(key) ?? "null") as {
-        v?: { tabs?: unknown; focusedTabId?: unknown; mode?: unknown };
+        v?: {
+          tabs?: { tabId: string; appId: string }[];
+          focusedTabId?: unknown;
+          mode?: unknown;
+        };
       } | null;
       tabSets[key] = {
-        tabs: entry?.v?.tabs,
+        tabs: entry?.v?.tabs?.map(({ tabId, appId }) => ({ tabId, appId })),
         focusedTabId: entry?.v?.focusedTabId,
         desktop: entry?.v?.mode === "floating",
       };
@@ -166,7 +177,7 @@ await withBrowser(async (h) => {
   const r = report("demo: the Desktop inside the embed");
   const { page, captured } = await h.session();
 
-  await boot(page, pathUrl("/demo"), {
+  await boot(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
     marker: 'button:has-text("Conversations")',
   });
 
@@ -223,7 +234,7 @@ await withBrowser(async (h) => {
     await page.locator("[data-floating-window-id]").count(),
     await embedRoot(page).locator("[data-floating-window-id]").count(),
   );
-  r.eq("the page URL stays /demo", new URL(page.url()).pathname, "/demo");
+  r.ok("the page stays on the demo", onDemoPage(page.url()), page.url());
   await snap(page, OUT, "1-desktop");
 
   // ── 2. Pages from the shelf: a second window ────────────────────────────
@@ -244,7 +255,7 @@ await withBrowser(async (h) => {
       embedRoot(page).getByText("Welcome to equin", { exact: true }).count(),
     (n) => n > 0,
   );
-  r.eq("the page URL stays /demo", new URL(page.url()).pathname, "/demo");
+  r.ok("the page stays on the demo", onDemoPage(page.url()), page.url());
   await snap(page, OUT, "2-two-windows");
 
   // ── 3. Full screen from a window's titlebar, Esc back ───────────────────
@@ -287,7 +298,7 @@ await withBrowser(async (h) => {
     filled.value?.scope,
     `app:${await embedRoot(page).getAttribute("data-app-embed")}`,
   );
-  r.eq("the page URL stays /demo", new URL(page.url()).pathname, "/demo");
+  r.ok("the page stays on the demo", onDemoPage(page.url()), page.url());
   await snap(page, OUT, "3-full-screen");
   await page.keyboard.press("Escape");
   await renders(

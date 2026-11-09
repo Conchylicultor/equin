@@ -1834,31 +1834,55 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `shell/notifications`
     - **`demo`** — Demo — a temporary sandbox app hosting the in-app demo (the Agent Manager on made-up data) while it is prototyped, before it ships on the website.
       - Plugins:
-        - **`shell`** — App shell for the Demo sandbox: registers the /demo app entry, whose one page is the Agent Manager rendered in-process on made-up data (DemoScope + AppEmbed over the agent manager's demo scenario).
+        - **`shell`** — App shell for the Demo sandbox: registers the /demo app entry — equin rendered in-process on made-up data (DemoScope + AppEmbed over the workspace demo's browser host), starting on its home app (the app gallery). Where the visitor is inside the demo is the page's URL (/demo/at/<location>, e.g. /demo/at/agents/c/<id>), so a reload comes back to it; ;full=1 shows it full screen instead of framed under the caption bar (its Full screen button; a hover strip at the top edge exits), and a new browser tab opened from inside the demo opens it there, full screen, on the same data.
           - Web:
-            - Contributes: `Apps.App` "Demo" → `DemoLayout`
-            - Uses:
-              - `apps-core.Apps`
+            - Slots:
+              - `start.actions`
+              - `at.actions`
+            - Slot contributors:
+              - `start.actions` ← `primitives.pane`
+              - `at.actions` ← `primitives.pane`
+            - Contributes:
+              - `Apps.App` "Demo" → `DemoLayout`
+              - `Pane.Register` "demo-at"
+              - `Pane.Register` "demo-start"
+            - Uses: 23 symbols — full list in [`plugins/apps/plugins/demo/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/demo/plugins/shell/REFERENCE.md)
+              - `apps-core` ×3
+              - `framework/browser-server/demo/scope` ×2
+              - `primitives/css/ui-kit` ×2
+              - `primitives/hover-reveal` ×2
+              - `primitives/pane` ×2
               - `apps-core/app-embed.AppEmbed`
-              - `framework/browser-server/demo/scope.DemoScope`
-              - `framework/browser-server/demo/scope.useDemoHostControl`
-              - `layouts/miller.PaneOverlayHost`
+              - `layouts/full-pane.FullPane`
               - `primitives/bar.Bar`
               - `primitives/css/center.Center`
+              - `primitives/css/inline.Inline`
+              - `primitives/css/pin.Pin`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
-              - `primitives/css/ui-kit.Button`
+              - `primitives/latest-ref.useLatestRef`
+              - `primitives/loading.Loading`
               - `primitives/overlay/imperative-dialog/confirm.useConfirmDialog`
+              - `ui/icons.Icon`
           - Core:
             - Uses:
               - `primitives/pane.defineApp`
+              - `primitives/pane.defineRoute`
               - `ui/icons.symbol`
-            - Exports (values): `demoApp`
+            - Exports (values):
+              - `DEMO_FULL`
+              - `demoApp`
+              - `demoAtRoute`
+              - `demoStartRoute`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --background`
               - `ui/tokens/density --space-lg`
+              - `ui/tokens/density --space-sm`
+              - `ui/tokens/density --space-xl`
               - `ui/tokens/shape --radius`
+              - `ui/tokens/shape --spacing`
+            - Imported by: `apps/demo`
     - **`deploy`** — The Deploy task category: the category tasks filed from the Deploy app, such as a failed deploy's investigation, are grouped under.
       - Server:
         - Contributes: `taskCategory` "deploy"
@@ -11968,11 +11992,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Web: `@plugins/apps-core/web/testing`
       - `getFocusedAppId`
   - Plugins:
-    - **`app-embed`** — <AppEmbed app route onLeave? />: the app rendered in-process inside its own box — an embedded tab set (TabsProvider embedded: seeded with app + route, non-live stores never touching the page URL, history or storage, none of the page's signals) and the same surface body the app's layout renders, so pane opens, app switches and the Desktop (its windows the embed's own tabs) work as in the app. Its navigation boundary resolves URLs against the apps in scope: an app's URL moves the embed, a surface-mode app's base path switches its mode, anything else is onLeave (default: a toast). Its theme scope is the focused tab's app's (transform-gpu, so fixed chrome stays in the embed); solo fills the embed box, and it opens docked. Knows nothing about demos or where data comes from.
+    - **`app-embed`** — <AppEmbed app route | url onLeave? fills? onLocationChange? browserTabUrl? />: the app rendered in-process inside its own box — an embedded tab set (TabsProvider embedded: seeded with app + route or an app-rooted URL — undefined: the composition's home app — non-live stores never touching the page URL, history or storage, none of the page's signals) and the same surface body the app's layout renders, so pane opens, app switches and the Desktop (its windows the embed's own tabs) work as in the app. Its navigation boundary resolves URLs against the apps in scope: an app's URL moves the embed, a surface-mode app's base path switches its mode, anything else is onLeave (default: a toast). Its theme scope is the focused tab's app's (transform-gpu, so fixed chrome stays in the embed); solo fills the embed box, and it opens docked. It tells its host its location (the focused tab's app-rooted URL, mode prefix included) so the host can keep it and reopen there, and a new browser tab opened inside it is addressed by the host (browserTabUrl) when given. fills: page | viewport: it is all the page shows (takes the keyboard at mount); a viewport-filling one hosts the page's floating action bar. Knows nothing about demos or where data comes from.
       - Web:
         - Uses:
           - `apps-core.Apps`
           - `apps-core/tab-surface.AppTabsBody`
+          - `apps-core/tabs.EmbeddedAt`
           - `apps-core/tabs.EmbeddedTabSet`
           - `apps-core/tabs.TabsProvider`
           - `apps-core/tabs.useTabs`
@@ -11982,7 +12007,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/scope/render-origin.RenderOrigin`
           - `primitives/slot-render.renderIsolated`
           - `shell/toast.showToast`
-        - Exports (types): `AppEmbedLeave`
+        - Exports (types):
+          - `AppEmbedAt`
+          - `AppEmbedLeave`
         - Exports (values): `AppEmbed`
       - Cross-plugin:
         - Imported by: `apps/demo/shell`
@@ -12413,14 +12440,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/app-embed`
           - `apps-core/layout`
           - `apps-core/surface`
-    - **`tabs`** — Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, the focused tab's title as a module signal (useFocusedTabTitle, readable outside TabsProvider), and the surface-written placement-capabilities registry — one per tab set: the page's own, or an embedded one (TabsProvider embedded={{ app, route, onLeave }}, an AppEmbed's: seeded, never live, persisting nothing, publishing no page-global signal, behind its own navigation boundary), found from outside React by peekFocusedTabSet().
+    - **`tabs`** — Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, the focused tab's title as a module signal (useFocusedTabTitle, readable outside TabsProvider), and the surface-written placement-capabilities registry — one per tab set: the page's own, or an embedded one (TabsProvider embedded={{ at, onLeave, onLocationChange?, browserTabUrl? }}, an AppEmbed's: seeded, never live, persisting nothing, publishing no page-global signal, behind its own navigation boundary), found from outside React by peekFocusedTabSet().
       - Web:
-        - Uses: 48 symbols — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
+        - Uses: 49 symbols — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
           - `primitives/pane` ×20
           - `apps-core` ×9
           - `primitives/scope/app-instance` ×5
           - `primitives/embed` ×3
-          - `primitives/link-gesture` ×2
+          - `primitives/link-gesture` ×3
           - `primitives/pane/route-prefix` ×2
           - `primitives/scope/install-sink` ×2
           - `primitives/shortcuts` ×2
@@ -12428,6 +12455,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/latest-ref.useLatestRef`
           - `primitives/scope/surface-id.useSurfaceTabId`
         - Exports (types):
+          - `EmbeddedAt`
           - `EmbeddedTabSet`
           - `NavigateOptions`
           - `PlacementCapabilities`
@@ -30221,10 +30249,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `webCollectedDir`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 114 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+        - Imported by: 115 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
           - `primitives` ×21
           - `reports` ×20
-          - `apps` ×17
+          - `apps` ×18
           - `ui` ×6
           - `apps-core` ×5
           - `debug` ×5
@@ -36221,6 +36249,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `apps/chord/shell`
+          - `apps/demo/shell`
           - `apps/deploy/shell`
           - `apps/file-explorer/shell`
           - `apps/home/shell`
@@ -36276,7 +36305,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/agent-manager/shell`
           - `apps/debug/shell`
-          - `apps/demo/shell`
           - `apps/events/shell`
           - `apps/keyboard-party/shell`
           - `apps/mail/shell`
@@ -44561,8 +44589,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 108 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
-              - `apps` ×21
+            - Imported by: 109 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+              - `apps` ×22
               - `debug` ×18
               - `reports` ×18
               - `primitives` ×12
@@ -44820,9 +44848,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pin`
               - `pinClasses`
           - Cross-plugin:
-            - Imported by: 59 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
+            - Imported by: 60 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
               - `primitives` ×19
-              - `apps` ×16
+              - `apps` ×17
               - `page` ×9
               - `conversations` ×4
               - `tasks` ×2
@@ -48046,8 +48074,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hoverRevealTargetWithGroupFocus`
           - `useHoverReveal`
       - Cross-plugin:
-        - Imported by: 40 plugins — full list in [`plugins/primitives/plugins/hover-reveal/REFERENCE.md`](../plugins/primitives/plugins/hover-reveal/REFERENCE.md)
-          - `apps` ×12
+        - Imported by: 41 plugins — full list in [`plugins/primitives/plugins/hover-reveal/REFERENCE.md`](../plugins/primitives/plugins/hover-reveal/REFERENCE.md)
+          - `apps` ×13
           - `page` ×9
           - `primitives` ×8
           - `ui` ×4
@@ -48177,9 +48205,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `seekPredicate`
     - **`latest-ref`** — Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), and useEventCallback(fn) is the stable-identity callback built on it. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
       - Cross-plugin:
-        - Imported by: 82 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
+        - Imported by: 83 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
           - `primitives` ×33
-          - `apps` ×24
+          - `apps` ×25
           - `page` ×5
           - `conversations` ×3
           - `map` ×2
@@ -48317,10 +48345,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `loadLazyComponents` — Load every lazy component's chunk declared so far — call it in a suite's `beforeAll`, after the imports that declare them.
     - **`link-gesture`** — The browser's link gestures as spreadable handler props: plain click opens here, ⌘/Ctrl- and middle-click open the destination's URL in a new browser tab. A <button> gets none of this for free, so every navigating control reads it from one place.
       - Web:
-        - Uses: `primitives/pane/route-prefix.withActiveRoutePrefix`
+        - Uses:
+          - `primitives/pane/route-prefix.withActiveRoutePrefix`
+          - `primitives/scope/install-sink.defineInstallSink`
         - Exports (types): `LinkGestureProps`
         - Exports (values):
           - `activationProps`
+          - `browserTabAddressSink`
           - `linkGestureProps`
           - `linkProps`
           - `openInBrowserTab`
@@ -48405,8 +48436,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 225 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
-          - `apps` ×67
+        - Imported by: 226 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+          - `apps` ×68
           - `conversations` ×23
           - `ui` ×23
           - `debug` ×19
@@ -49583,9 +49614,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
         - Slots: `Pane.Register`
-        - Slot contributors: 94 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `Pane.Register` ×94
-        - Contributes: 125 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Slot contributors: 95 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `Pane.Register` ×95
+        - Contributes: 127 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `SlotRender.ListMiddleware`
           - `WebsiteHeader` "title" → `PaneTitleItem`
           - `accountPane.Actions` "title" → `PaneTitleItem`
@@ -49596,6 +49627,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `agentsRootPane.Actions` "title" → `PaneTitleItem`
           - `allConversationsPane.Actions` "title" → `PaneTitleItem`
           - `app-preview.actions` "title" → `PaneTitleItem`
+          - `at.actions` "title" → `PaneTitleItem`
           - `attachmentPreviewPane.Actions` "title" → `PaneTitleItem`
           - `attemptPane.Actions` "title" → `PaneTitleItem`
           - `automation-detail.actions` "title" → `PaneTitleItem`
@@ -49700,6 +49732,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `slowEventsPane.Actions` "title" → `PaneTitleItem`
           - `sonataLibraryPane.Actions` "title" → `PaneTitleItem`
           - `sonataPlayerPane.Actions` "title" → `PaneTitleItem`
+          - `start.actions` "title" → `PaneTitleItem`
           - `statsPane.Actions` "title" → `PaneTitleItem`
           - `systemAgentDetailPane.Actions` "title" → `PaneTitleItem`
           - `tableDetailPane.Actions` "title" → `PaneTitleItem`
@@ -50356,6 +50389,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps-core/tabs`
               - `apps/desktop/windows`
+              - `primitives/link-gesture`
               - `primitives/overlay/overlay-boundary`
               - `primitives/pane`
           - Web:
@@ -52056,8 +52090,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. Applies each slot's committed layout (order, hidden items, spacers, dividers, groups) everywhere slots render; a layout is edited in its config file or the Config pane's reorder-tree field. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 281 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×281
+    - Contributes: 283 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×283
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfigResult`
@@ -52082,8 +52116,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useLayoutOrder`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 280 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×280
+    - Contributes: 282 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×282
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:

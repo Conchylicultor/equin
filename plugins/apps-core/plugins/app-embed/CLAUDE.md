@@ -1,6 +1,6 @@
 # app-embed
 
-`<AppEmbed app route onLeave? className? />` renders the app in-process, inside
+`<AppEmbed app route | url onLeave? fills? onLocationChange? browserTabUrl? className? />` renders the app in-process, inside
 its own box: an **embedded tab set** (`apps-core/tabs`'s `TabsProvider
 embedded={{ app, route, onLeave }}`) and the same surface body the app's own
 layout renders (`Apps.Surface`, else the docked-only `AppTabsBody`). It knows
@@ -9,8 +9,10 @@ around nothing the real instance. Designs:
 `research/2026-10-15-global-app-embed-and-agent-manager-demo.md` §2–§3,
 `research/2026-11-04-global-desktop-mode-in-browser-demo.md`.
 
-- **Its own tab set.** One tab of `app` at `route` (app-relative, `/c/<id>`),
-  in non-live pane stores: nothing inside reads or writes the page URL,
+- **Its own tab set.** One tab of `app` at `route` (app-relative, `/c/<id>`)
+  — or at `url`, an app-rooted URL resolved as its boundary resolves one (a
+  surface-mode prefix, `/desktop/sonata`, opens that mode; `undefined`, or a
+  URL no app in scope owns, opens the composition's home app) — in non-live pane stores: nothing inside reads or writes the page URL,
   history or sessionStorage, or publishes the page's signals (its surface
   mode, focused app and title, the live-store pointer, the navigator sink).
   The page's own tabs are untouched.
@@ -44,11 +46,26 @@ around nothing the real instance. Designs:
   (`claimTabSet`), so shortcuts — the desktop's included — act on it.
   Mounting does not claim it: an embed inside a bigger page must not steal
   the keyboard from the page around it. An embed that is the page's whole
-  surface says so — `fillsPage` (`/demo`) — and takes the keyboard at mount,
-  as the app's own surface does at boot, so Space reaches Sonata with no
-  click first.
-- **Accepted leaks.** Modifier-click hrefs open on the host origin; DataView
-  view state in `localStorage` is shared with the real app.
+  surface says so — `fills="page"` (`/demo`, framed) or `fills="viewport"`
+  (`/demo` full screen) — and takes the keyboard at mount, as the app's own
+  surface does at boot, so Space reaches Sonata with no click first. A
+  `viewport` one is no `floating-bar-boundary`: it is the viewport's
+  top-right corner, so its headers make room for and anchor the page's
+  floating action bar, as the app's own surface does.
+- **Its location, kept by the host.** `onLocationChange(url)` is told the
+  focused tab's app-rooted URL under the mode's prefix (`/agents/c/x`,
+  `/desktop/sonata`) whenever it may have changed (compare before writing);
+  handed back as `url` it reopens the embed there. `/demo` keeps it in its own
+  URL, so a reload comes back to where the visitor was.
+- **Its new browser tabs.** A ⌘/middle-click or an Open in a new tab inside
+  goes through `link-gesture`'s `openInBrowserTab`, whose address is the tab
+  set the user is in's (`browserTabAddressSink`, installed by the page's tab
+  set; an embed claims the set on pointer-down): `browserTabUrl(location
+  there)` when the host gives one (`/demo`: itself, full screen, at that
+  place), else the path on the host's origin (the real app).
+- **Accepted leaks.** A native `<a href>` to an app path inside opens it on
+  the host origin; DataView view state in `localStorage` is shared with the
+  real app.
 
 Tests: `web/__tests__/app-embed.test.tsx`.
 
@@ -56,11 +73,12 @@ Tests: `web/__tests__/app-embed.test.tsx`.
 
 ## Plugin reference
 
-- Description: <AppEmbed app route onLeave? />: the app rendered in-process inside its own box — an embedded tab set (TabsProvider embedded: seeded with app + route, non-live stores never touching the page URL, history or storage, none of the page's signals) and the same surface body the app's layout renders, so pane opens, app switches and the Desktop (its windows the embed's own tabs) work as in the app. Its navigation boundary resolves URLs against the apps in scope: an app's URL moves the embed, a surface-mode app's base path switches its mode, anything else is onLeave (default: a toast). Its theme scope is the focused tab's app's (transform-gpu, so fixed chrome stays in the embed); solo fills the embed box, and it opens docked. Knows nothing about demos or where data comes from.
+- Description: <AppEmbed app route | url onLeave? fills? onLocationChange? browserTabUrl? />: the app rendered in-process inside its own box — an embedded tab set (TabsProvider embedded: seeded with app + route or an app-rooted URL — undefined: the composition's home app — non-live stores never touching the page URL, history or storage, none of the page's signals) and the same surface body the app's layout renders, so pane opens, app switches and the Desktop (its windows the embed's own tabs) work as in the app. Its navigation boundary resolves URLs against the apps in scope: an app's URL moves the embed, a surface-mode app's base path switches its mode, anything else is onLeave (default: a toast). Its theme scope is the focused tab's app's (transform-gpu, so fixed chrome stays in the embed); solo fills the embed box, and it opens docked. It tells its host its location (the focused tab's app-rooted URL, mode prefix included) so the host can keep it and reopen there, and a new browser tab opened inside it is addressed by the host (browserTabUrl) when given. fills: page | viewport: it is all the page shows (takes the keyboard at mount); a viewport-filling one hosts the page's floating action bar. Knows nothing about demos or where data comes from.
 - Web:
   - Uses:
     - `apps-core.Apps`
     - `apps-core/tab-surface.AppTabsBody`
+    - `apps-core/tabs.EmbeddedAt`
     - `apps-core/tabs.EmbeddedTabSet`
     - `apps-core/tabs.TabsProvider`
     - `apps-core/tabs.useTabs`
@@ -70,7 +88,9 @@ Tests: `web/__tests__/app-embed.test.tsx`.
     - `primitives/scope/render-origin.RenderOrigin`
     - `primitives/slot-render.renderIsolated`
     - `shell/toast.showToast`
-  - Exports (types): `AppEmbedLeave`
+  - Exports (types):
+    - `AppEmbedAt`
+    - `AppEmbedLeave`
   - Exports (values): `AppEmbed`
 - Cross-plugin:
   - Imported by: `apps/demo/shell`

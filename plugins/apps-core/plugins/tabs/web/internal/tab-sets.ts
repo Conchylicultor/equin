@@ -30,6 +30,12 @@ export interface TabSetHandle {
   setMode(mode: Placement): void;
   /** Return it to the mode before the current one (solo's exit). */
   exitToPreviousMode(): void;
+  /**
+   * The URL a new browser tab opened from inside it at in-app `path` loads:
+   * the page's set writes it under its route prefix; an embed, as its host
+   * addresses it (`EmbeddedTabSet.browserTabUrl`).
+   */
+  browserTabUrl(path: string): string;
 }
 
 // Keyed by tab-set id: every mounted `TabsProvider` (the page's, and each

@@ -14,7 +14,7 @@
  *     demo again: the data is reset to this build's snapshot — the created
  *     page is gone, the seeded ones are back — and the page says why.
  *
- * And, throughout: the page URL stays `/demo`, no page error, no console error.
+ * And, throughout: the page stays on the demo, no page error, no console error.
  *
  * Manual only — nothing runs this automatically.
  *   ./equin run plugins/apps/plugins/demo/e2e/snapshot.ts [--out /tmp/demo-snapshot] [--headed]
@@ -31,10 +31,13 @@ import {
   type Report,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import {
+  AGENT_MANAGER_LOCATION,
   backdateStoredSnapshot,
   createPage,
+  demoPath,
   listed,
   MARKER,
+  onDemoPage,
   openPages,
   RENDER_TIMEOUT_MS,
   ROOT_PAGES,
@@ -65,7 +68,9 @@ async function openDemo(
     if (m.text().startsWith("[demo-scope]")) lines.push(m.text());
   };
   page.on("console", onConsole);
-  await boot(page, pathUrl("/demo"), { marker: MARKER });
+  await boot(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
+    marker: MARKER,
+  });
   const settled = await waitFor(
     async () => lines.at(-1) ?? null,
     (line) => line !== null,
@@ -193,6 +198,6 @@ await withBrowser(async (h) => {
   );
   r.ok("Dismiss hides the notice", gone.ok, `${gone.value} notice(s)`);
 
-  r.eq("the page URL stays /demo", new URL(third.url()).pathname, "/demo");
+  r.ok("the page stays on the demo", onDemoPage(third.url()), third.url());
   await r.finish();
 });

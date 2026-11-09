@@ -428,10 +428,10 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
     - `webCollectedDir`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
-  - Imported by: 114 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 115 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×21
     - `reports` ×20
-    - `apps` ×17
+    - `apps` ×18
     - `ui` ×6
     - `apps-core` ×5
     - `debug` ×5

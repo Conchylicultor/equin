@@ -63,6 +63,11 @@ import {
   withBrowser,
   type Settled,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import {
+  AGENT_MANAGER_LOCATION,
+  demoPath,
+  onDemoPage,
+} from "./internal/demo-pages";
 
 const OUT = arg("out") ?? "/tmp/demo-sonata";
 
@@ -238,7 +243,7 @@ await withBrowser(async (h) => {
     pass: string,
     { spaceFirst }: { spaceFirst: boolean },
   ): Promise<void> => {
-    await boot(page, pathUrl("/demo"), {
+    await boot(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
       marker: 'button:has-text("Conversations")',
     });
     await waitForNetworkIdle(page);
@@ -274,10 +279,10 @@ await withBrowser(async (h) => {
       () => embedRoot(page).locator('img[src^="blob:"]').count(),
       (n) => n > 0,
     );
-    r.eq(
-      `${pass}: the page URL stays /demo`,
-      new URL(page.url()).pathname,
-      "/demo",
+    r.ok(
+      `${pass}: the page stays on the demo`,
+      onDemoPage(page.url()),
+      page.url(),
     );
     await snap(page, OUT, `${pass}-1-library`);
 

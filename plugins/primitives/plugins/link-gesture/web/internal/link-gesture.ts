@@ -1,4 +1,5 @@
 import { withActiveRoutePrefix } from "@plugins/primitives/plugins/pane/plugins/route-prefix/web";
+import { defineInstallSink } from "@plugins/primitives/plugins/scope/plugins/install-sink/web";
 import type { MouseEvent } from "react";
 import type { Activation, LinkTarget } from "../../core";
 
@@ -96,18 +97,38 @@ export function activationProps(
 }
 
 /**
+ * How an in-app path (`/agents/c/42`) is written as the URL of a new browser
+ * tab — decided by the tab set the user is in, which `apps-core/tabs` installs
+ * here (this leaf cannot import it): the page's own writes it under its surface
+ * mode's route prefix (`/desktop/agents/c/42`); an app embed may address its
+ * own location on the page that hosts it (`/demo` opens its demo, full screen,
+ * at that place). Until anything is installed, the page's route prefix.
+ */
+export const browserTabAddressSink = defineInstallSink<
+  (path: string) => string
+>({
+  name: "link-gesture.browser-tab-address",
+  what: "how an in-app path is written as a new browser tab's URL (installed by apps-core/tabs: the tab set the user is in decides)",
+  fallback: withActiveRoutePrefix,
+});
+
+/**
  * Open a URL in a new browser tab — the one place that is spelled. Takes an
- * app path of THIS origin (`/agents/c/42`, opened under the active route
- * prefix — `pane/plugins/route-prefix`) or an absolute URL (another
+ * app path of THIS origin (`/agents/c/42`, addressed by
+ * {@link browserTabAddressSink} — by default under the active route prefix,
+ * `pane/plugins/route-prefix`) or an absolute URL (another
  * worktree's origin, an external site). Always `noopener`, so the new tab
  * cannot reach back into this one through `window.opener`; `noreferrer` too
  * when it leaves this origin, so an external site is not told where it was
  * opened from.
  */
 export function openInBrowserTab(url: string): void {
-  // An in-app path opens the way this page shows it: under the surface mode's
-  // route prefix (the desktop's `/desktop`), so the new tab comes up the same.
-  const target = new URL(withActiveRoutePrefix(url), window.location.origin);
+  // An in-app path opens the way the tab set the user is in shows it (the
+  // page's: under its surface mode's route prefix, the desktop's `/desktop`),
+  // so the new tab comes up the same.
+  const inApp = url.startsWith("/") && !url.startsWith("//");
+  const address = inApp ? browserTabAddressSink.peek()(url) : url;
+  const target = new URL(address, window.location.origin);
   const features =
     target.origin === window.location.origin
       ? "noopener"

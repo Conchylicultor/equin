@@ -674,9 +674,9 @@ with an empty route.
 - Load-bearing: yes
 - Web:
   - Slots: `Pane.Register`
-  - Slot contributors: 94 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Pane.Register` ×94
-  - Contributes: 125 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 95 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Pane.Register` ×95
+  - Contributes: 127 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `SlotRender.ListMiddleware`
     - `WebsiteHeader` "title" → `PaneTitleItem`
     - `accountPane.Actions` "title" → `PaneTitleItem`
@@ -687,6 +687,7 @@ with an empty route.
     - `agentsRootPane.Actions` "title" → `PaneTitleItem`
     - `allConversationsPane.Actions` "title" → `PaneTitleItem`
     - `app-preview.actions` "title" → `PaneTitleItem`
+    - `at.actions` "title" → `PaneTitleItem`
     - `attachmentPreviewPane.Actions` "title" → `PaneTitleItem`
     - `attemptPane.Actions` "title" → `PaneTitleItem`
     - `automation-detail.actions` "title" → `PaneTitleItem`
@@ -791,6 +792,7 @@ with an empty route.
     - `slowEventsPane.Actions` "title" → `PaneTitleItem`
     - `sonataLibraryPane.Actions` "title" → `PaneTitleItem`
     - `sonataPlayerPane.Actions` "title" → `PaneTitleItem`
+    - `start.actions` "title" → `PaneTitleItem`
     - `statsPane.Actions` "title" → `PaneTitleItem`
     - `systemAgentDetailPane.Actions` "title" → `PaneTitleItem`
     - `tableDetailPane.Actions` "title" → `PaneTitleItem`

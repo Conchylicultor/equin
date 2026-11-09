@@ -14,7 +14,7 @@
  *  4. Reset demo (in the first tab): both tabs come back on the seed alone —
  *     neither created page is listed, the seeded pages are.
  *
- * And, throughout: the page URL stays `/demo`, no page error, no console error.
+ * And, throughout: the page stays on the demo, no page error, no console error.
  *
  * Manual only — nothing runs this automatically.
  *   ./equin run plugins/apps/plugins/demo/e2e/persistence.ts [--out /tmp/demo-persistence] [--headed]
@@ -31,10 +31,13 @@ import {
   type Report,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import {
+  AGENT_MANAGER_LOCATION,
   createPage,
+  demoPath,
   embedRoot,
   listed,
   MARKER,
+  onDemoPage,
   openPages,
   RENDER_TIMEOUT_MS,
   ROOT_PAGES,
@@ -95,7 +98,9 @@ await withBrowser(async (h) => {
   const SECOND = `Shared ${stamp}`;
 
   // ── 1. a write ──────────────────────────────────────────────────────────
-  await boot(page, pathUrl("/demo"), { marker: MARKER });
+  await boot(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
+    marker: MARKER,
+  });
   await openPages(r, page, "first boot");
   const seeded = new Map<string, number>();
   // The baseline is the settled sidebar: its sections load one by one, so
@@ -146,8 +151,13 @@ await withBrowser(async (h) => {
 
   // ── 2. it survives a reload; the seed does not run again ────────────────
   await page.reload();
-  await page.locator(MARKER).first().waitFor({ timeout: RENDER_TIMEOUT_MS });
-  await openPages(r, page, "after a reload");
+  // The page's URL kept where the visitor was: the reload reopens Pages.
+  await showsApp(
+    r,
+    page,
+    "after a reload, the demo reopens on Pages, where it was",
+    "pages",
+  );
   await listed(
     r,
     page,
@@ -175,7 +185,7 @@ await withBrowser(async (h) => {
 
   // ── 3. a second tab shares the data, live ───────────────────────────────
   const second = await context.newPage();
-  await second.goto(pathUrl("/demo"));
+  await second.goto(pathUrl(demoPath(AGENT_MANAGER_LOCATION)));
   await second.locator(MARKER).first().waitFor({ timeout: RENDER_TIMEOUT_MS });
   await openPages(r, second, "second tab");
   await listed(
@@ -202,20 +212,25 @@ await withBrowser(async (h) => {
     .getByRole("dialog")
     .getByRole("button", { name: "Reset demo" })
     .click();
-  for (const [tab, label] of [
-    [page, "first tab"],
-    [second, "second tab"],
+  for (const [tab, label, reopensOn] of [
+    // The tab that reset starts again at the demo's start (Home): where it
+    // was may be something the reset erased.
+    [page, "first tab", "home"],
+    // The other tab was on Pages: its remounted demo reopens there.
+    [second, "second tab", "pages"],
   ] as const) {
-    // Both tabs were on Pages: a remounted demo opens on the Agent Manager.
     await snap(tab, OUT, `4-resetting-${label.replace(" ", "-")}`);
     await showsApp(
       r,
       tab,
-      `after Reset, the ${label} boots the demo again`,
-      "agent-manager",
+      `after Reset, the ${label} boots the demo again (on ${reopensOn})`,
+      reopensOn,
     );
-    await tab.locator(MARKER).first().waitFor({ timeout: RENDER_TIMEOUT_MS });
-    await openPages(r, tab, `after Reset (${label})`);
+    if (reopensOn === "home") {
+      // Home IS the app gallery: Pages is one of its tiles.
+      await embedRoot(tab).getByText("Pages", { exact: true }).first().click();
+      await showsApp(r, tab, `after Reset, the ${label} opens Pages`, "pages");
+    }
     // The seeded pages first: once they are listed, the sidebar has loaded.
     for (const title of ROOT_PAGES) {
       await listed(
@@ -243,6 +258,6 @@ await withBrowser(async (h) => {
   }
   await snap(page, OUT, "4-reset");
 
-  r.eq("the page URL stays /demo", new URL(page.url()).pathname, "/demo");
+  r.ok("the page stays on the demo", onDemoPage(page.url()), page.url());
   await r.finish();
 });

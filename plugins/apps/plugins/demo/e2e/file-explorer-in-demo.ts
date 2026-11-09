@@ -43,6 +43,11 @@ import {
   withBrowser,
   type Settled,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import {
+  AGENT_MANAGER_LOCATION,
+  demoPath,
+  onDemoPage,
+} from "./internal/demo-pages";
 
 const OUT = arg("out") ?? "/tmp/demo-files";
 
@@ -149,7 +154,7 @@ await withBrowser(async (h) => {
     (await embedRoot(page).innerText()).replace(/\s+/g, " ");
 
   // ── 1. launcher → Files, opening on Home ────────────────────────────────
-  await boot(page, pathUrl("/demo"), {
+  await boot(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
     marker: 'button:has-text("Conversations")',
   });
   demoUp = true;
@@ -344,7 +349,7 @@ await withBrowser(async (h) => {
   );
   await snap(page, OUT, "4-prototypes");
 
-  r.eq("the page URL stays /demo", new URL(page.url()).pathname, "/demo");
+  r.ok("the page stays on the demo", onDemoPage(page.url()), page.url());
 
   page.off("request", onRequest);
   page.off("websocket", onSocket);

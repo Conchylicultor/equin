@@ -21,7 +21,7 @@
  *
  * And asserts, throughout, that the page itself never moved:
  *
- *  - the page URL's path stays `/demo` (the embed's stores are non-live);
+ *  - the page stays on the demo (its URL follows the embed, never the app);
  *  - no request for `/api/…` left for the page's origin during the steps,
  *    except the sanctioned telemetry routes — the list `no-leak.ts` checks
  *    against (D3) — and no page socket was opened, and the page's own
@@ -44,6 +44,11 @@ import {
   withBrowser,
   type Settled,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import {
+  AGENT_MANAGER_LOCATION,
+  demoPath,
+  onDemoPage,
+} from "./internal/demo-pages";
 
 const OUT = arg("out") ?? "/tmp/demo-app-switch";
 
@@ -97,7 +102,7 @@ await withBrowser(async (h) => {
   const { page, captured } = await h.session();
   const socketTap = await tapSharedSocket(page);
 
-  await boot(page, pathUrl("/demo"), {
+  await boot(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
     marker: 'button:has-text("Conversations")',
   });
   await page
@@ -136,10 +141,10 @@ await withBrowser(async (h) => {
     return settled;
   };
   const pathStays = (step: string): void => {
-    r.eq(
-      `${step}: the page URL stays /demo`,
-      new URL(page.url()).pathname,
-      "/demo",
+    r.ok(
+      `${step}: the page stays on the demo`,
+      onDemoPage(page.url()),
+      page.url(),
     );
   };
   const noLeaveToast = async (step: string): Promise<void> => {

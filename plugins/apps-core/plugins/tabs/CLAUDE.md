@@ -219,14 +219,14 @@ same browser tab from finding the blob. Both call sites are marked for removal.
 
 ## Plugin reference
 
-- Description: Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, the focused tab's title as a module signal (useFocusedTabTitle, readable outside TabsProvider), and the surface-written placement-capabilities registry — one per tab set: the page's own, or an embedded one (TabsProvider embedded={{ app, route, onLeave }}, an AppEmbed's: seeded, never live, persisting nothing, publishing no page-global signal, behind its own navigation boundary), found from outside React by peekFocusedTabSet().
+- Description: Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, the focused tab's title as a module signal (useFocusedTabTitle, readable outside TabsProvider), and the surface-written placement-capabilities registry — one per tab set: the page's own, or an embedded one (TabsProvider embedded={{ at, onLeave, onLocationChange?, browserTabUrl? }}, an AppEmbed's: seeded, never live, persisting nothing, publishing no page-global signal, behind its own navigation boundary), found from outside React by peekFocusedTabSet().
 - Web:
-  - Uses: 48 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 49 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×20
     - `apps-core` ×9
     - `primitives/scope/app-instance` ×5
     - `primitives/embed` ×3
-    - `primitives/link-gesture` ×2
+    - `primitives/link-gesture` ×3
     - `primitives/pane/route-prefix` ×2
     - `primitives/scope/install-sink` ×2
     - `primitives/shortcuts` ×2
@@ -234,6 +234,7 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `primitives/latest-ref.useLatestRef`
     - `primitives/scope/surface-id.useSurfaceTabId`
   - Exports (types):
+    - `EmbeddedAt`
     - `EmbeddedTabSet`
     - `NavigateOptions`
     - `PlacementCapabilities`

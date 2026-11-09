@@ -8,14 +8,18 @@ import {
   type LoadedPlugin,
 } from "@plugins/framework/plugins/web-sdk/core";
 import { Apps } from "@plugins/apps-core/web";
-import { useNavigate, useTabs } from "@plugins/apps-core/plugins/tabs/web";
+import {
+  peekFocusedTabSet,
+  useNavigate,
+  useTabs,
+} from "@plugins/apps-core/plugins/tabs/web";
 import { useRouteState } from "@plugins/primitives/plugins/pane/web";
 import { ErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import {
   getFocusedSurfaceId,
   setFocusedSurfaceId,
 } from "@plugins/primitives/plugins/shortcuts/web";
-import { AppEmbed } from "../components/app-embed";
+import { AppEmbed, type AppEmbedAt } from "../components/app-embed";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 
@@ -126,7 +130,7 @@ function mount({
       app="emb"
       route="/c/one"
       onLeave={onLeave}
-      fillsPage={fillsPage}
+      fills={fillsPage ? "page" : undefined}
     />
   );
   const inScope = (children: ReactNode) =>
@@ -252,5 +256,70 @@ describe("<AppEmbed>", () => {
     const focused = getFocusedSurfaceId();
     expect(focused).not.toBe("host-tab");
     expect(focused).toBeDefined();
+  });
+
+  describe("its location", () => {
+    function mountAt(
+      at: AppEmbedAt,
+      opts: { browserTabUrl?: (url: string) => string } = {},
+    ) {
+      const onLocationChange = vi.fn();
+      window.history.replaceState(null, "", "/host/page");
+      render(
+        <PluginProvider
+          plugins={[slotsPlugin, appsPlugin, otherPlugin]}
+          composition={{ id: "app-embed-test", home: "emb" }}
+        >
+          <AppEmbed
+            {...at}
+            fills="page"
+            onLocationChange={onLocationChange}
+            browserTabUrl={opts.browserTabUrl}
+          />
+        </PluginProvider>,
+      );
+      return onLocationChange;
+    }
+    const last = (fn: ReturnType<typeof vi.fn>) => fn.mock.calls.at(-1)?.[0];
+
+    it("opens at an app-rooted URL, resolved to its app", () => {
+      mountAt({ url: "/other/c/x" });
+      expect(screen.getByTestId("app").textContent).toBe("other");
+      expect(screen.getByTestId("route").textContent).toBe("pending:c/x");
+    });
+
+    it("opens on the composition's home app without one, or with a URL no app owns", () => {
+      mountAt({ url: undefined });
+      expect(screen.getByTestId("app").textContent).toBe("emb");
+      expect(screen.getByTestId("route").textContent).toBe("resolved");
+      cleanup();
+      mountAt({ url: "/nowhere/x" });
+      expect(screen.getByTestId("app").textContent).toBe("emb");
+    });
+
+    it("tells the host where it is, as the URL that reopens it there", () => {
+      const onLocationChange = mountAt({ url: "/emb/c/one" });
+      expect(last(onLocationChange)).toBe("/emb/c/one");
+      goTo("/other/c/x");
+      expect(last(onLocationChange)).toBe("/other/c/x");
+      expect(window.location.pathname).toBe("/host/page");
+    });
+
+    it("addresses a new browser tab opened inside it as its host says", () => {
+      mountAt(
+        { url: "/emb/c/one" },
+        { browserTabUrl: (url) => `/host/page/at${url}` },
+      );
+      expect(peekFocusedTabSet()?.browserTabUrl("/other/c/x")).toBe(
+        "/host/page/at/other/c/x",
+      );
+    });
+
+    it("without an address of its own, a new tab is the path on this origin", () => {
+      mountAt({ url: "/emb/c/one" });
+      expect(peekFocusedTabSet()?.browserTabUrl("/other/c/x")).toBe(
+        "/other/c/x",
+      );
+    });
   });
 });

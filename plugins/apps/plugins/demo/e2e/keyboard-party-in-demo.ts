@@ -41,6 +41,11 @@ import {
   withBrowser,
   type Settled,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import {
+  AGENT_MANAGER_LOCATION,
+  demoPath,
+  onDemoPage,
+} from "./internal/demo-pages";
 
 const OUT = arg("out") ?? "/tmp/demo-keyboard-party";
 
@@ -180,7 +185,7 @@ await withBrowser(async (h) => {
 
   /** /demo → launcher → Tap Tap Party; `pass` names the run. */
   const openParty = async (pass: string): Promise<void> => {
-    await boot(page, pathUrl("/demo"), {
+    await boot(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
       marker: 'button:has-text("Conversations")',
     });
     demoUp = true;
@@ -240,7 +245,7 @@ await withBrowser(async (h) => {
     async () => (await sound(page)).spoken,
     (spoken) => spoken.some((text) => /\bApple\b/.test(text)),
   );
-  r.eq("the page URL stays /demo", new URL(page.url()).pathname, "/demo");
+  r.ok("the page stays on the demo", onDemoPage(page.url()), page.url());
   await snap(page, OUT, "2-played");
 
   // ── 3. settings: the scene, written to the worker's config ──────────────
@@ -295,7 +300,7 @@ await withBrowser(async (h) => {
   );
   await stage(page).focus();
   await pressAll("full screen", [KEYS[2], KEYS[3]]);
-  r.eq("the page URL stays /demo", new URL(page.url()).pathname, "/demo");
+  r.ok("the page stays on the demo", onDemoPage(page.url()), page.url());
   await snap(page, OUT, "4-full-screen");
 
   page.off("request", onRequest);

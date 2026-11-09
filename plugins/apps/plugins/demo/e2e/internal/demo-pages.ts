@@ -3,6 +3,11 @@
 import type { Locator, Page } from "playwright";
 import { pickFromLauncher } from "@plugins/apps-core/plugins/app-launcher/e2e";
 import {
+  DEMO_FULL,
+  demoApp,
+  demoAtRoute,
+} from "@plugins/apps/plugins/demo/plugins/shell/core";
+import {
   waitFor,
   type Report,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
@@ -18,6 +23,34 @@ export const ROOT_PAGES = [
   "Piano practice",
   "Ideas",
 ] as const;
+
+/**
+ * The Agent Manager at the practice-timer conversation — where the demo used
+ * to open, and where the scripts driving the Agent Manager start (the
+ * workspace scenario's route, `website/demos/workspace`'s `scenario.ts`).
+ */
+export const AGENT_MANAGER_LOCATION = "/agents/c/conv-demo-practice-timer";
+
+/**
+ * The demo page at `location` inside the demo (an app-rooted URL,
+ * `/agents/c/x`), framed — or `full` screen — as the demo writes it.
+ */
+export function demoPath(location: string, opts?: { full?: boolean }): string {
+  return demoAtRoute.link(demoApp, {
+    url: location.replace(/^\/+/, ""),
+    full: opts?.full === true ? DEMO_FULL : undefined,
+  });
+}
+
+/**
+ * Whether `url` is still the demo page (`/demo`, `/demo/at/…`): a move
+ * inside the demo rewrites the page's URL, but never leaves it for the app it
+ * shows.
+ */
+export function onDemoPage(url: string): boolean {
+  const { pathname } = new URL(url);
+  return pathname === "/demo" || pathname.startsWith("/demo/");
+}
 
 export function embedRoot(page: Page): Locator {
   return page.locator("[data-app-embed]").first();
