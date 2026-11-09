@@ -473,6 +473,7 @@ export async function createFileWatcher(
     try {
       const children: ChildrenWatchOn = {
         take,
+        look: (events) => look(ofInterest(events)),
         lost: (error) => lost(dir, error),
         gone: () => take([{ type: "delete", path: dir }]),
       };

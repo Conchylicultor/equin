@@ -75,6 +75,8 @@ export const KQUEUE_CHILDREN_IGNORE = /[/]/;
 export interface ChildrenWatchOn {
   /** Direct entries, named under the dir as the caller spelled it. */
   take: (events: parcel.Event[]) => void;
+  /** Direct entries the watch made up (a listing diffed on a move): never timed as a delivery. */
+  look: (events: parcel.Event[]) => void;
   /** The native watch reported an error: events may have been dropped. */
   lost: (error: Error) => void;
   /** The dir went (removed, moved away, replaced). Once; the watch is closed. */
@@ -179,6 +181,9 @@ export async function watchChildrenOnKqueue(
         take: (events) => {
           if (!stopped) on.take(events);
         },
+        look: (events) => {
+          if (!stopped) on.look(events);
+        },
         lost: (error) => {
           if (!stopped) on.lost(error);
         },
@@ -228,7 +233,7 @@ export async function watchChildrenOnKqueue(
       if (!present.has(name))
         look.push({ type: "delete", path: spelled(name) });
     }
-    if (look.length > 0) on.take(look);
+    if (look.length > 0) on.look(look);
   };
 
   const native = host.openKqueue(real, (err, events) => {
