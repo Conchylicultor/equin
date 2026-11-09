@@ -605,3 +605,26 @@ describe("review fixes", () => {
     expect(root.hasAttribute("data-settings-open")).toBe(false);
   });
 });
+
+describe("a live playhead (WebKit)", () => {
+  it("renders without looping when currentTime advances on every read", () => {
+    // WKWebView's currentTime is a live clock, not a value held between
+    // `timeupdate`s: reading it during render must not count as a change.
+    let t = 0;
+    Object.defineProperty(HTMLMediaElement.prototype, "currentTime", {
+      configurable: true,
+      get: () => (t += 0.001),
+      set: () => undefined,
+    });
+    const { video, q, rerender } = setup();
+    rerender(
+      <WithShortcuts>
+        <MediaPlayer kind="video" src="clip.mp4" label="Clip" />
+      </WithShortcuts>,
+    );
+    act(() => {
+      video.dispatchEvent(new Event("timeupdate"));
+    });
+    expect(q(".mp-time").textContent).toBe("0:00");
+  });
+});

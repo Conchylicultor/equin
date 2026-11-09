@@ -76,31 +76,52 @@ function sameValues<T extends object>(a: T, b: T): boolean {
   return true;
 }
 
-/** A snapshot of the element re-read on `events`, stable while its values are. */
+/**
+ * A snapshot of the element re-read on `events` only, stable while its values
+ * are.
+ *
+ * `getSnapshot` never reads the element itself: WebKit's `currentTime` is a
+ * live clock that advances between two reads in the same render (Chromium's
+ * holds still until the next `timeupdate`), so reading it there hands React a
+ * new value every call — a store that "changed" during render, re-rendered
+ * until React gives up (#185, in the Tauri app's WKWebView). The element is
+ * read once when it appears, then only by the event that says it changed.
+ */
 function useElementSnapshot<T extends object>(
   el: HTMLMediaElement | null,
   events: readonly string[],
   read: (el: HTMLMediaElement) => T,
   initial: T,
 ): T {
-  const cache = useRef(initial);
+  const cache = useRef<{ el: HTMLMediaElement | null; value: T }>({
+    el: null,
+    value: initial,
+  });
+  const current = useCallback((): T => {
+    if (el === null) return initial;
+    if (cache.current.el !== el) cache.current = { el, value: read(el) };
+    return cache.current.value;
+  }, [el, read, initial]);
   const subscribe = useCallback(
     (notify: () => void) => {
       if (el === null) return () => undefined;
-      for (const e of events) el.addEventListener(e, notify);
+      const onEvent = () => {
+        const next = read(el);
+        const prev = current();
+        if (sameValues(prev, next)) return;
+        cache.current = { el, value: next };
+        notify();
+      };
+      for (const e of events) el.addEventListener(e, onEvent);
+      // Catch up on what changed between the render's read and now.
+      onEvent();
       return () => {
-        for (const e of events) el.removeEventListener(e, notify);
+        for (const e of events) el.removeEventListener(e, onEvent);
       };
     },
-    [el, events],
+    [el, events, read, current],
   );
-  const snapshot = useCallback(() => {
-    if (el === null) return initial;
-    const next = read(el);
-    if (!sameValues(cache.current, next)) cache.current = next;
-    return cache.current;
-  }, [el, read, initial]);
-  return useSyncExternalStore(subscribe, snapshot);
+  return useSyncExternalStore(subscribe, current);
 }
 
 /** Playing, length and level. */
