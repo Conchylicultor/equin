@@ -9576,8 +9576,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useCursorSelector`
               - `useSession`
           - Cross-plugin:
-            - Imported by: 32 plugins — full list in [`plugins/apps/plugins/sonata/plugins/session/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/session/REFERENCE.md)
-              - `apps` ×32
+            - Imported by: 33 plugins — full list in [`plugins/apps/plugins/sonata/plugins/session/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/session/REFERENCE.md)
+              - `apps` ×33
         - **`shell`** — App shell for Sonata. Registers the /sonata app entry (SonataLayout: one SonataPlayerScope around the pane router), derives the app's song — the one loaded in the player (useSonataApp) — and defines the app-level Sonata.{Overlay,TransportOverlay,TransportEdge,PitchAxis,Home,Provider,Effect,Hud,ViewOption,Section} slots, and the app's own dark-only theme (the immersive player's blue-black night, sky accent, the chord colours, Manrope), which the sonata app selects.
           - Web:
             - Slots:
@@ -9691,7 +9691,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `Sonata.Effect` "chord-grid-persist" → `ChordGridPersistObserver`
                   - `FieldPresentation.Register` "exposure:sonata_songs_ext_chord_grid"
                   - `Library.Cover` "chord-grid"
-                - Uses: 27 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/REFERENCE.md)
+                - Uses: 28 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/REFERENCE.md)
                   - `apps/sonata/document` ×3
                   - `apps/sonata/library` ×3
                   - `network/live` ×3
@@ -9699,6 +9699,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `music/chord-box` ×2
                   - `primitives/collapsible` ×2
                   - `primitives/css/ui-kit` ×2
+                  - `apps/sonata/session.useCursorSelector`
                   - `apps/sonata/shell.Sonata`
                   - `infra/endpoints.useEndpointMutation`
                   - `primitives/css/badge.Badge`
@@ -9737,12 +9738,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `infra/entity-extensions.defineExtensionShape`
                 - Exports (types):
                   - `ChordGridRaw`
+                  - `GridSlot`
                   - `GridToken`
                   - `KeyChange`
                 - Exports (values):
                   - `asChordGridRaw`
                   - `compile`
                   - `parseGrid`
+                  - `slotAt`
                   - `songChordGridShape`
               - Cross-plugin:
                 - Uses tokens:

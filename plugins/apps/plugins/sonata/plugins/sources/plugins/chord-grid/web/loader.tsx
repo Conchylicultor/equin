@@ -6,6 +6,8 @@
  * source and back never loses what was typed. Every edit emits `{ text }` to the
  * shell, which compiles it. The field colours the parse's token spans in place;
  * typos are underlined there AND listed in a "Skipped" chip — never swallowed.
+ * A host that plays the song passes `usePlayingSlot`, and the slot under the
+ * playhead is lit in place (with the chord a `.` there sustains).
  * How chords become notes is the global voicing config's concern, not this
  * per-song editor's.
  */
@@ -29,11 +31,13 @@ import { z } from "zod";
 import { OverlayTextarea } from "@plugins/primitives/plugins/syntax-highlight/plugins/overlay-textarea/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import { Fragment, useMemo, type ReactNode } from "react";
 import {
   asChordGridRaw,
   parseGrid,
   type ChordGridRaw,
+  type GridSlot,
   type GridToken,
 } from "../core";
 import { PLACEHOLDER_TEXT } from "./examples";
@@ -55,7 +59,12 @@ const arrowDownIcon = symbol("keyboard-arrow-down");
 interface Props {
   raw?: unknown;
   onRaw: (raw: unknown) => void;
+  /** The slot under the playhead among the parse's `slots` (`null`: none) —
+   *  absent where nothing plays the song. */
+  usePlayingSlot?: Hook<(slots: readonly GridSlot[]) => GridSlot | null>;
 }
+
+const useNoPlayingSlot = (): GridSlot | null => null;
 
 /** The syntax legend: each example beside what it means. */
 const LEGEND: readonly (readonly [example: string, meaning: string])[] = [
@@ -71,16 +80,31 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 /**
  * The grid text cut along its token spans: each span a `data-tk` span (coloured
- * by chord-grid.css), the gaps between them plain. Every character of `text`
- * is emitted once, in order — the OverlayTextarea decorate contract.
+ * by chord-grid.css), the gaps between them plain. The token the `playing`
+ * slot was written at is marked `data-now`, and — when that slot is a hold —
+ * the chord it sustains `data-sounding`. Every character of `text` is emitted
+ * once, in order — the OverlayTextarea decorate contract.
  */
-function decorateGrid(text: string, tokens: readonly GridToken[]) {
+function decorateGrid(
+  text: string,
+  tokens: readonly GridToken[],
+  playing: GridSlot | null,
+) {
+  const sounding =
+    playing?.sounding && playing.sounding.from !== playing.from
+      ? playing.sounding.from
+      : null;
   const out: ReactNode[] = [];
   let at = 0;
   for (const t of tokens) {
     if (t.from > at) out.push(text.slice(at, t.from));
     out.push(
-      <span key={t.from} data-tk={t.kind}>
+      <span
+        key={t.from}
+        data-tk={t.kind}
+        data-now={t.from === playing?.from || undefined}
+        data-sounding={t.from === sounding || undefined}
+      >
         {text.slice(t.from, t.to)}
       </span>,
     );
@@ -90,14 +114,19 @@ function decorateGrid(text: string, tokens: readonly GridToken[]) {
   return out;
 }
 
-export function ChordGridLoader({ raw, onRaw }: Props) {
+export function ChordGridLoader({
+  raw,
+  onRaw,
+  usePlayingSlot = useNoPlayingSlot,
+}: Props) {
   const current = asChordGridRaw(raw);
   const { text } = current;
 
-  const { events, skipped, tokens, bars } = useMemo(
+  const { events, skipped, tokens, bars, slots } = useMemo(
     () => parseGrid(text),
     [text],
   );
+  const playing = usePlayingSlot(slots);
   const [legendOpen, setLegendOpen] = useDraft(legendOpenStore, false);
   const legend = useCollapsible({
     open: legendOpen,
@@ -112,7 +141,7 @@ export function ChordGridLoader({ raw, onRaw }: Props) {
       <OverlayTextarea
         value={text}
         onChange={(next) => update({ text: next })}
-        decorate={(value) => decorateGrid(value, tokens)}
+        decorate={(value) => decorateGrid(value, tokens, playing)}
         placeholder={PLACEHOLDER_TEXT}
         ariaLabel="Chord grid"
         className="chord-grid-tokens rounded-md border border-border bg-background focus-within:border-primary"

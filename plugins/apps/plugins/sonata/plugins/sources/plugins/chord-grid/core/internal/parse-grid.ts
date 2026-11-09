@@ -103,6 +103,22 @@ export interface GridToken {
   kind: GridTokenKind;
 }
 
+/**
+ * One timed slot of the grid — a top-level cell's bar, or one item's share of a
+ * group's bar — with the span it was written at: what the playhead points at.
+ * `sounding` is the span of the chord heard during the slot: the slot's own
+ * span for a chord, the struck chord's for a hold, `null` for silence (a hold
+ * with nothing before it, a rejected token, or a hold after one).
+ */
+export interface GridSlot {
+  from: number;
+  to: number;
+  /** Beats `[start, end)` the slot covers — its own share, not a hold's tail. */
+  start: number;
+  end: number;
+  sounding: Span | null;
+}
+
 /** The result of parsing a grid. */
 export interface ParsedGrid {
   events: ChordEvent[];
@@ -113,6 +129,8 @@ export interface ParsedGrid {
   tokens: GridToken[];
   /** Bars the grid occupies — one per top-level cell. */
   bars: number;
+  /** Every timed slot, in beat (and source) order, non-overlapping. */
+  slots: GridSlot[];
 }
 
 interface Span {
@@ -356,12 +374,20 @@ function tokenize(text: string, marks: Marks): Cell[] {
 function expand(
   cells: Cell[],
   marks: Marks,
-): { events: ChordEvent[]; keys: KeyChange[]; bars: number } {
+): {
+  events: ChordEvent[];
+  keys: KeyChange[];
+  bars: number;
+  slots: GridSlot[];
+} {
   const events: ChordEvent[] = [];
+  const slots: GridSlot[] = [];
   const keys: KeyChange[] = [];
   let beat = 0;
   // The event a hold extends — null at the start or after a silent slot.
   let lastEvent: ChordEvent | null = null;
+  // The span of the chord `lastEvent` was struck from — what a hold sounds.
+  let lastSpan: Span | null = null;
   // The key Roman numerals resolve against; a `key:` directive moves it.
   let key = DEFAULT_KEY;
 
@@ -380,20 +406,30 @@ function expand(
     const data = letter ?? parseRomanNumeral(token, key);
     if (!data) {
       marks.reject(token, span);
+      lastSpan = null;
+      slots.push({ ...span, start, end: start + len, sounding: null });
       return null;
     }
     marks.mark(span, letter ? "chord" : "degree");
     const ev: ChordEvent = { data, start, end: start + len };
     events.push(ev);
+    lastSpan = span;
+    slots.push({ ...span, start, end: start + len, sounding: span });
     return ev;
+  };
+
+  // Sustain the last chord over `[start, start+len)`, written at `span`.
+  const hold = (span: Span, start: number, len: number) => {
+    marks.mark(span, "hold");
+    if (lastEvent) lastEvent.end += len;
+    slots.push({ ...span, start, end: start + len, sounding: lastSpan });
   };
 
   for (const cell of cells) {
     if (cell.kind === "chord") {
       lastEvent = strike(cell.item, beat, BEATS_PER_BAR);
     } else if (cell.kind === "hold") {
-      marks.mark(cell.span, "hold");
-      if (lastEvent) lastEvent.end += BEATS_PER_BAR;
+      hold(cell.span, beat, BEATS_PER_BAR);
     } else if (cell.kind === "key") {
       // Trivia, like a comment: a key directive establishes context, not a bar.
       const parsed = parseKeySignature(cell.arg);
@@ -421,8 +457,7 @@ function expand(
         let subBeat = beat;
         for (const item of items) {
           if (item.token === HOLD) {
-            marks.mark(item.span, "hold");
-            if (lastEvent) lastEvent.end += sub;
+            hold(item.span, subBeat, sub);
           } else {
             lastEvent = strike(item, subBeat, sub);
           }
@@ -433,7 +468,7 @@ function expand(
     beat += BEATS_PER_BAR;
   }
 
-  return { events, keys, bars: beat / BEATS_PER_BAR };
+  return { events, keys, bars: beat / BEATS_PER_BAR, slots };
 }
 
 /**
@@ -444,7 +479,19 @@ function expand(
 export function parseGrid(text: string): ParsedGrid {
   const marks = new Marks();
   const cells = tokenize(blankComments(text, marks), marks);
-  const { events, keys, bars } = expand(cells, marks);
+  const { events, keys, bars, slots } = expand(cells, marks);
   const tokens = marks.tokens.toSorted((a, b) => a.from - b.from);
-  return { events, skipped: marks.skipped, keys, tokens, bars };
+  return { events, skipped: marks.skipped, keys, tokens, bars, slots };
+}
+
+/**
+ * The slot under the playhead at `beat`, or `null` past the grid's end (or
+ * before its start). Slots are contiguous from beat 0 except an empty group's
+ * bar, which leaves a gap — silence with nothing written to point at.
+ */
+export function slotAt(
+  slots: readonly GridSlot[],
+  beat: number,
+): GridSlot | null {
+  return slots.find((s) => beat >= s.start && beat < s.end) ?? null;
 }

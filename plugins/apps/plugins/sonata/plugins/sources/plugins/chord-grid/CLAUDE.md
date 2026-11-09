@@ -129,7 +129,7 @@ directives establish); the selected voicing strategy from the shared
     - `Sonata.Effect` "chord-grid-persist" → `ChordGridPersistObserver`
     - `FieldPresentation.Register` "exposure:sonata_songs_ext_chord_grid"
     - `Library.Cover` "chord-grid"
-  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/sonata/document` ×3
     - `apps/sonata/library` ×3
     - `network/live` ×3
@@ -137,6 +137,7 @@ directives establish); the selected voicing strategy from the shared
     - `music/chord-box` ×2
     - `primitives/collapsible` ×2
     - `primitives/css/ui-kit` ×2
+    - `apps/sonata/session.useCursorSelector`
     - `apps/sonata/shell.Sonata`
     - `infra/endpoints.useEndpointMutation`
     - `primitives/css/badge.Badge`
@@ -175,12 +176,14 @@ directives establish); the selected voicing strategy from the shared
     - `infra/entity-extensions.defineExtensionShape`
   - Exports (types):
     - `ChordGridRaw`
+    - `GridSlot`
     - `GridToken`
     - `KeyChange`
   - Exports (values):
     - `asChordGridRaw`
     - `compile`
     - `parseGrid`
+    - `slotAt`
     - `songChordGridShape`
 - Cross-plugin:
   - Uses tokens:

@@ -1,6 +1,20 @@
 import { useSongDocument } from "@plugins/apps/plugins/sonata/plugins/document/web";
+import { useCursorSelector } from "@plugins/apps/plugins/sonata/plugins/session/web";
+import { slotAt, type GridSlot } from "../../core";
 import { ChordGridLoader } from "../loader";
 import { CHORD_GRID_SOURCE_ID } from "../constants";
+
+/**
+ * The grid slot under the session's playhead — none while an A–B loop's rest
+ * runs (nothing sounds yet). Returns the slot's stable reference from the
+ * parse, so the editor re-renders only when the playhead crosses a slot.
+ */
+function usePlayheadSlot(slots: readonly GridSlot[]): GridSlot | null {
+  return useCursorSelector(
+    (beat, position) => (position.rest > 0 ? null : slotAt(slots, beat)),
+    [slots],
+  );
+}
 
 /**
  * In-player editor for a chord-grid song, contributed to `Sonata.Section`
@@ -33,6 +47,7 @@ export function ChordGridEditorSection() {
     <ChordGridLoader
       raw={rawValue}
       onRaw={(r) => editSourceRaw(CHORD_GRID_SOURCE_ID, () => r)}
+      usePlayingSlot={usePlayheadSlot}
     />
   );
 }

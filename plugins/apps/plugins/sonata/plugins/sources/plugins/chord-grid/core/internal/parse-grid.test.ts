@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { parseGrid } from "./parse-grid";
+import { parseGrid, slotAt } from "./parse-grid";
 
 /** Symbols of the parsed chord events, in order. */
 const symbols = (text: string) =>
@@ -326,5 +326,59 @@ describe("parseGrid — bars", () => {
 
   it("is zero for an empty grid", () => {
     expect(parseGrid("").bars).toBe(0);
+  });
+});
+
+describe("parseGrid — slots", () => {
+  /** Each slot as [its text, start, end, the text it sounds]. */
+  const slots = (text: string) =>
+    parseGrid(text).slots.map((s) => [
+      text.slice(s.from, s.to),
+      s.start,
+      s.end,
+      s.sounding ? text.slice(s.sounding.from, s.sounding.to) : null,
+    ]);
+
+  it("gives a bar to each cell and a share of it to each group item", () => {
+    expect(slots("C (D . E F)")).toEqual([
+      ["C", 0, 4, "C"],
+      ["D", 4, 5, "D"],
+      [".", 5, 6, "D"],
+      ["E", 6, 7, "E"],
+      ["F", 7, 8, "F"],
+    ]);
+  });
+
+  it("sounds the struck chord through a hold, across bars", () => {
+    expect(slots("Am7 . .")).toEqual([
+      ["Am7", 0, 4, "Am7"],
+      [".", 4, 8, "Am7"],
+      [".", 8, 12, "Am7"],
+    ]);
+  });
+
+  it("is silent for a rejected token and a hold after it, or with nothing before", () => {
+    expect(slots(". Zx . G")).toEqual([
+      [".", 0, 4, null],
+      ["Zx", 4, 8, null],
+      [".", 8, 12, null],
+      ["G", 12, 16, "G"],
+    ]);
+  });
+
+  it("takes no slot for comments and key directives", () => {
+    expect(slots("key: G ; intro\nI V")).toEqual([
+      ["I", 0, 4, "I"],
+      ["V", 4, 8, "V"],
+    ]);
+  });
+
+  it("finds the slot under a beat, null in an empty group's bar and past the end", () => {
+    const grid = parseGrid("C () D").slots;
+    expect(slotAt(grid, 0)?.start).toBe(0);
+    expect(slotAt(grid, 3.99)?.start).toBe(0);
+    expect(slotAt(grid, 5)).toBeNull();
+    expect(slotAt(grid, 8)?.start).toBe(8);
+    expect(slotAt(grid, 12)).toBeNull();
   });
 });

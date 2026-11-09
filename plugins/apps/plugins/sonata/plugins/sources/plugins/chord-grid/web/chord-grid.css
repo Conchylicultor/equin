@@ -31,6 +31,20 @@
   text-underline-offset: 3px;
 }
 
+/* The slot under the playhead, and the chord a hold there sustains. A
+ * background and a spread shadow only — paint, never metrics, so the caret
+ * stays on its glyph. */
+.chord-grid-tokens [data-now] {
+  border-radius: var(--radius-sm);
+  background: color-mix(in oklab, var(--primary) 24%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--primary) 24%, transparent);
+}
+.chord-grid-tokens [data-sounding] {
+  border-radius: var(--radius-sm);
+  background: color-mix(in oklab, var(--primary) 10%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--primary) 10%, transparent);
+}
+
 /* The syntax legend: each example beside what it means. */
 .chord-grid-legend {
   display: grid;
