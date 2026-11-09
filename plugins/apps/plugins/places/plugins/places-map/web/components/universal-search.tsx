@@ -1,4 +1,4 @@
-import type { LinkedHover } from "@plugins/map/core";
+import type { LinkedHover } from "@plugins/primitives/plugins/data-view/core";
 import { useState, type ReactNode } from "react";
 import {
   useDataViewControls,

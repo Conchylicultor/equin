@@ -78,8 +78,8 @@ import {
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import { VirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
-import { useIsHovered } from "@plugins/map/web";
-import type { LinkedHover } from "@plugins/map/core";
+import { useIsHovered } from "@plugins/primitives/plugins/data-view/web";
+import type { LinkedHover } from "@plugins/primitives/plugins/data-view/core";
 import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import {
   activationHref,

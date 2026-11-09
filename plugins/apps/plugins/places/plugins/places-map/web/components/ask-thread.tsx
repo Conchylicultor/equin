@@ -1,4 +1,4 @@
-import type { LinkedHover } from "@plugins/map/core";
+import type { LinkedHover } from "@plugins/primitives/plugins/data-view/core";
 import type { ReactNode } from "react";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { clipClasses } from "@plugins/primitives/plugins/css/plugins/clip/web";

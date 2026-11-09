@@ -176,11 +176,10 @@ taking `{song, onOpen}` never trips it.
 - Web:
   - Contributes: `DataViewSlots.View` "Gallery" → `GalleryView`
   - Uses: 49 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/data-view` ×27
+    - `primitives/data-view` ×28
     - `primitives/css/ui-kit` ×3
     - `primitives/css/spacing` ×2
     - `primitives/row-actions` ×2
-    - `map.useIsHovered`
     - `primitives/avatar.Avatar`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`

@@ -19,6 +19,7 @@ import { z } from "zod";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
+import type { LinkedHoverChange } from "@plugins/primitives/plugins/data-view/core";
 import {
   MARK_PENDING,
   NO_MAP_PADDING,
@@ -27,7 +28,6 @@ import {
   type CameraRest,
   type CameraView,
   type LatLng,
-  type LinkedHoverChange,
   type MapCrowdRequest,
   type MapOverlay,
   type MapPadding,
@@ -63,7 +63,7 @@ export interface MapViewProps {
   hoveredId?: string | null;
   /**
    * The pointer entered (`true`) or left (`false`) a pin — to link it back.
-   * Reported as claims and releases (`nextLinkedHover`; `useLinkedHover`
+   * Reported as claims and releases (`nextLinkedHover`; data-view's `useLinkedHover`
    * holds the shared state), never a bare "none".
    */
   onHoverChange?: LinkedHoverChange;

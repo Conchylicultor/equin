@@ -32,7 +32,7 @@ Then `PlacesSurface` renders, inside a `relative h-full` box:
   Want to go place above the rest (`rank`), reports each camera rest
   (`bounds` for the Google search, `visible` for the panel's In view) and
   carries the panel's `fitRequest`. One place hover (`useLinkedHover`,
-  `map` — a store, never screen state: a pin, row or card reads its own part,
+  `primitives/data-view` — a store, never screen state: a pin, row or card reads its own part,
   so gliding over the pins re-renders what they light, never the screen) is
   shared by the map (the presets DataView's `rowHover`) and the
   panel's list or gallery, so a row and its pin light together — a hovered row
@@ -468,10 +468,10 @@ away closes it — a click in the thread is not away (`useClickAway`'s
     - `AgentThreadSlots.StepLabel` "places_show_picks" → `PicksStepLabel`
     - `JsonlViewerTool.Renderer` "mcp__equin__places_show_picks" → `PicksToolView`
   - Uses: 141 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/data-view` ×12
-    - `map` ×11
+    - `primitives/data-view` ×15
     - `apps/places/places-core` ×8
     - `conversations/agent-thread` ×8
+    - `map` ×8
     - `network/live/live-state` ×7
     - `primitives/collapsible` ×6
     - `network/live` ×5

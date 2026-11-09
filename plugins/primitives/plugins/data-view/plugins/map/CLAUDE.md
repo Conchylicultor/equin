@@ -95,7 +95,7 @@ which decides which one draws on top).
   not rows (search hits proposed on the map), drawn with the rows' pins; a
   click on one goes to its `onActivate`, never to the row activation. Mark
   them `frame: false` to keep the camera off them (Places' ghost pins).
-- `hover?` — a `LinkedHover` store (the map primitive's), over row pins and
+- `hover?` — a `LinkedHover` store (data-view's row-hover store), over row pins and
   extra overlays alike: its id wins over the surface's `rowHover` while
   non-null, and every pin's enter / leave is reported to it.
 - `onCameraRest?` — the map primitive's: where the camera rested, the area it
@@ -134,7 +134,6 @@ map draws every loaded row; it is meant for in-memory or bounded sets.
   - Uses:
     - `map.MapView`
     - `map.MapViewProps`
-    - `map.useHoveredId`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/pin.Pin`
@@ -145,6 +144,7 @@ map draws every loaded row; it is meant for in-memory or bounded sets.
     - `primitives/data-view.pickPrimaryField`
     - `primitives/data-view.useFieldIdentities`
     - `primitives/data-view.useFlatRows`
+    - `primitives/data-view.useHoveredId`
     - `primitives/data-view.useResolveOperatorSet`
   - Exports (types): `MapViewOptions`
 - Core:

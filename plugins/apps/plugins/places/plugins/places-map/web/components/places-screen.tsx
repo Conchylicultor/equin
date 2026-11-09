@@ -26,13 +26,9 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
-import {
-  deriveLinkedHover,
-  type LatLng,
-  type MapBounds,
-  type MapPin,
-} from "@plugins/map/core";
-import { useLinkedHover } from "@plugins/map/web";
+import { type LatLng, type MapBounds, type MapPin } from "@plugins/map/core";
+import { deriveLinkedHover } from "@plugins/primitives/plugins/data-view/core";
+import { useLinkedHover } from "@plugins/primitives/plugins/data-view/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import {
   placeFlags,

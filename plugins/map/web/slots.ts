@@ -3,12 +3,12 @@ import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import { defineDispatchSlot } from "@plugins/primitives/plugins/slot-render/web";
 import type { IconMarkupReader } from "@plugins/ui/plugins/icons/web";
+import type { LinkedHoverChange } from "@plugins/primitives/plugins/data-view/core";
 import {
   clusterPinType,
   type CameraRest,
   type CameraView,
   type LatLng,
-  type LinkedHoverChange,
   type MapCrowd,
   type MapMarkResult,
   type MapOverlay,

@@ -1123,9 +1123,15 @@ surface lists views itself).
 
 ### Row hover: `rowHover`
 
-For the same rows shown twice (list + map). `rowHover` is the map primitive's
-`LinkedHover` store (`useLinkedHover()`, or one `deriveLinkedHover` reads
-through others), threaded to the views as `DataViewRenderProps.rowHover`.
+For the same rows shown twice (list + map). `rowHover` is a `LinkedHover`
+store, owned here: core has the store (`createLinkedHover`; `nextLinkedHover`,
+a leave clearing only the id it names; `deriveLinkedHover`, one read through
+others that routes its reports to them), web the hooks — `useLinkedHover()`
+holds one for a component's lifetime, `useHoveredId(hover)` /
+`useIsHovered(hover, id)` read it where it is drawn. The map primitive's
+`MapView` reports into it (`onHoverChange: LinkedHoverChange`), so it imports
+this core, never the reverse. Threaded to the views as
+`DataViewRenderProps.rowHover`.
 
 - Views report enter/leave through `rowHover.report`, and each ROW reads
   whether it is hovered where it is drawn (`useIsHovered(rowHover, key)`) — a
@@ -2451,9 +2457,12 @@ list, table and `primitives/tree` share it.
     - `useGroupingClock`
     - `useGroupingRegistry`
     - `useHierarchyTree`
+    - `useHoveredId`
     - `useIsBackgroundDropTarget`
     - `useIsChipField`
+    - `useIsHovered`
     - `useItemActionZones`
+    - `useLinkedHover`
     - `useLivePagedValuePaging`
     - `useLivePagesPaging`
     - `usePlacement`
@@ -2573,6 +2582,8 @@ list, table and `primitives/tree` share it.
     - `ItemActionsDescriptor`
     - `ItemActionTarget`
     - `ItemActionZone`
+    - `LinkedHover`
+    - `LinkedHoverChange`
     - `LiveCustomColumns`
     - `LiveDataSource`
     - `LiveDataSourceOf`
@@ -2623,10 +2634,12 @@ list, table and `primitives/tree` share it.
   - Exports (values):
     - `atLeastCount`
     - `compareValues`
+    - `createLinkedHover`
     - `DATA_VIEW_HEADER_OFFSET_VAR`
     - `DATA_VIEW_PARTS`
     - `dataPart`
     - `defineDataView`
+    - `deriveLinkedHover`
     - `exactCount`
     - `fieldOverrides`
     - `FilterGroupSchema`
@@ -2638,6 +2651,7 @@ list, table and `primitives/tree` share it.
     - `isFoldLimit`
     - `isHostedToolbar`
     - `isSectionsToolbar`
+    - `nextLinkedHover`
     - `optionDescendants`
     - `orderFieldsBySection`
     - `PARENT_FIELD_ID`

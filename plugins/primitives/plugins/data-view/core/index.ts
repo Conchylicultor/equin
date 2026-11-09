@@ -49,6 +49,14 @@ export { compareValues } from "./internal/grouping";
 export { valuePosition } from "./internal/value-order";
 export { optionDescendants } from "./internal/option-tree";
 
+export {
+  createLinkedHover,
+  deriveLinkedHover,
+  nextLinkedHover,
+  type LinkedHover,
+  type LinkedHoverChange,
+} from "./internal/linked-hover";
+
 export { scopeFilterRows } from "./internal/filter-scope";
 export { fieldOverrides } from "./internal/field-overrides";
 export type {

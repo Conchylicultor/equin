@@ -6604,10 +6604,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `AgentThreadSlots.StepLabel` "places_show_picks" → `PicksStepLabel`
               - `JsonlViewerTool.Renderer` "mcp__equin__places_show_picks" → `PicksToolView`
             - Uses: 141 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
-              - `primitives/data-view` ×12
-              - `map` ×11
+              - `primitives/data-view` ×15
               - `apps/places/places-core` ×8
               - `conversations/agent-thread` ×8
+              - `map` ×8
               - `network/live/live-state` ×7
               - `primitives/collapsible` ×6
               - `network/live` ×5
@@ -36418,9 +36418,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `MapLabel`
       - `MapMarkImage`
       - `MapView`
-      - `useHoveredId`
-      - `useIsHovered`
-      - `useLinkedHover`
       - `useMapMarkEnv`
       - `useMapTextStyle`
   - Core:
@@ -36434,8 +36431,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `DropShape`
       - `FlyPath`
       - `LatLng`
-      - `LinkedHover`
-      - `LinkedHoverChange`
       - `MapArea`
       - `MapBounds`
       - `MapCamera`
@@ -36461,11 +36456,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `cameraFor`
       - `clusterPins`
       - `clusterPinType`
-      - `createLinkedHover`
       - `DEFAULT_CLUSTER_RADIUS_PX`
       - `DEFAULT_SPOT_NEAR_ZOOM`
       - `DEFAULT_SPOT_RADIUS_PX`
-      - `deriveLinkedHover`
       - `dropHeadSvg`
       - `dropTipPx`
       - `escapeSvg`
@@ -36480,7 +36473,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `markSvg`
       - `markSvgProblem`
       - `MIXED_PIN_TYPE`
-      - `nextLinkedHover`
       - `NO_MAP_PADDING`
       - `overlayPositions`
       - `pinStackOrder`
@@ -36502,8 +36494,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `map/pin-layer`
       - `page/map`
       - `page/place/map-layer`
-      - `primitives/data-view/gallery`
-      - `primitives/data-view/list`
       - `primitives/data-view/map`
   - Plugins:
     - **`google`** — Google Maps JavaScript API as the map renderer: draws GeoMap overlays (pins as overlays holding each pin's contributed content, Google's own places hidden, paths as polylines, areas as polygons, strokes in resolved theme tones), frames them once and then only from its Fit control, zooms the vector map on the wheel at the user's Scroll zoom speed setting, shows the live-map set-up action until a browser key is set, and replaces Google's silent grey map with an error card when the key is refused. Draws the Live map setup's Map ID preview map. Lazily loaded off the boot wave. Stores the Google map's settings (Scroll zoom speed) so Settings can edit them.
@@ -46294,9 +46284,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useGroupingClock`
           - `useGroupingRegistry`
           - `useHierarchyTree`
+          - `useHoveredId`
           - `useIsBackgroundDropTarget`
           - `useIsChipField`
+          - `useIsHovered`
           - `useItemActionZones`
+          - `useLinkedHover`
           - `useLivePagedValuePaging`
           - `useLivePagesPaging`
           - `usePlacement`
@@ -46416,6 +46409,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ItemActionsDescriptor`
           - `ItemActionTarget`
           - `ItemActionZone`
+          - `LinkedHover`
+          - `LinkedHoverChange`
           - `LiveCustomColumns`
           - `LiveDataSource`
           - `LiveDataSourceOf`
@@ -46466,10 +46461,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `atLeastCount`
           - `compareValues`
+          - `createLinkedHover`
           - `DATA_VIEW_HEADER_OFFSET_VAR`
           - `DATA_VIEW_PARTS`
           - `dataPart`
           - `defineDataView`
+          - `deriveLinkedHover`
           - `exactCount`
           - `fieldOverrides`
           - `FilterGroupSchema`
@@ -46481,6 +46478,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isFoldLimit`
           - `isHostedToolbar`
           - `isSectionsToolbar`
+          - `nextLinkedHover`
           - `optionDescendants`
           - `orderFieldsBySection`
           - `PARENT_FIELD_ID`
@@ -46689,11 +46687,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Web:
             - Contributes: `DataViewSlots.View` "Gallery" → `GalleryView`
             - Uses: 49 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/gallery/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/gallery/REFERENCE.md)
-              - `primitives/data-view` ×27
+              - `primitives/data-view` ×28
               - `primitives/css/ui-kit` ×3
               - `primitives/css/spacing` ×2
               - `primitives/row-actions` ×2
-              - `map.useIsHovered`
               - `primitives/avatar.Avatar`
               - `primitives/css/badge.Badge`
               - `primitives/css/center.Center`
@@ -46778,12 +46775,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Web:
             - Contributes: `DataViewSlots.View` "List" → `ListView`
             - Uses: 74 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md)
-              - `primitives/data-view` ×48
+              - `primitives/data-view` ×49
               - `primitives/rank-reorder` ×3
               - `primitives/tree` ×3
               - `primitives/css/spacing` ×2
               - `primitives/latest-ref` ×2
-              - `map.useIsHovered`
               - `primitives/collapsible.FoldMotion`
               - `primitives/css/badge.Badge`
               - `primitives/css/center.Center`
@@ -46821,7 +46817,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `map.MapView`
               - `map.MapViewProps`
-              - `map.useHoveredId`
               - `primitives/css/badge.Badge`
               - `primitives/css/center.Center`
               - `primitives/css/pin.Pin`
@@ -46832,6 +46827,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/data-view.pickPrimaryField`
               - `primitives/data-view.useFieldIdentities`
               - `primitives/data-view.useFlatRows`
+              - `primitives/data-view.useHoveredId`
               - `primitives/data-view.useResolveOperatorSet`
             - Exports (types): `MapViewOptions`
           - Core:

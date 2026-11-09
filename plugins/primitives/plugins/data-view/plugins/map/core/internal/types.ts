@@ -1,11 +1,11 @@
 import type {
   CameraRest,
   LatLng,
-  LinkedHover,
   MapCrowdRequest,
   MapOverlay,
   MapPadding,
 } from "@plugins/map/core";
+import type { LinkedHover } from "@plugins/primitives/plugins/data-view/core";
 
 /**
  * Overlays the map draws beside the rows' pins — things that are not rows
@@ -81,7 +81,7 @@ export interface MapViewOptions<TRow> {
   overlays?: MapExtraOverlays;
   /**
    * A linked hover over row pins and extra overlays alike (the map
-   * primitive's `useLinkedHover()`, or one derived from it): its id draws
+   * `useLinkedHover()`, or one derived from it): its id draws
    * hovered though the pointer is not on it — a row's key, or an extra
    * overlay's id: the hover of whatever beside the map stands for it — and
    * wins over the surface's `rowHover` while non-null; every pin's enter /

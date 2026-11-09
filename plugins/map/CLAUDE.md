@@ -118,12 +118,11 @@ Plain data, no React:
   entering / leaving a pin as a claim / release (`LinkedHoverChange`), never a
   bare "none": the map's leave and a linked surface's enter for one pointer
   move arrive in no fixed order, and a "none" would erase the other's claim.
-  The shared state every surface reports into is a STORE (`LinkedHover`,
-  core: `createLinkedHover`, a leave clearing only the id it names —
-  `nextLinkedHover`; `deriveLinkedHover` reads one through others and routes
-  its reports), held with `useLinkedHover()` (web) and read where it is
-  drawn — `useHoveredId(hover)` (a map), `useIsHovered(hover, id)` (a row, a
-  card: re-renders only when that row's answer flips). Never hold the hover
+  The shared state every surface reports into is DataView's row-hover STORE
+  (`LinkedHover`, `primitives/data-view` — owned there, since a row hover is
+  a DataView concept and the list and gallery views read it without a map;
+  see its *Row hover* section), read where it is drawn — `useHoveredId(hover)`
+  (a map), `useIsHovered(hover, id)` (a row, a card). Never hold the hover
   as state in the component owning the surfaces: each pin the pointer
   crosses then re-renders it and everything under it (the Places screen
   re-rendered whole, 5–80×/s while the pointer glided over its pins).
@@ -259,9 +258,6 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
     - `MapLabel`
     - `MapMarkImage`
     - `MapView`
-    - `useHoveredId`
-    - `useIsHovered`
-    - `useLinkedHover`
     - `useMapMarkEnv`
     - `useMapTextStyle`
 - Core:
@@ -275,8 +271,6 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
     - `DropShape`
     - `FlyPath`
     - `LatLng`
-    - `LinkedHover`
-    - `LinkedHoverChange`
     - `MapArea`
     - `MapBounds`
     - `MapCamera`
@@ -302,11 +296,9 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
     - `cameraFor`
     - `clusterPins`
     - `clusterPinType`
-    - `createLinkedHover`
     - `DEFAULT_CLUSTER_RADIUS_PX`
     - `DEFAULT_SPOT_NEAR_ZOOM`
     - `DEFAULT_SPOT_RADIUS_PX`
-    - `deriveLinkedHover`
     - `dropHeadSvg`
     - `dropTipPx`
     - `escapeSvg`
@@ -321,7 +313,6 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
     - `markSvg`
     - `markSvgProblem`
     - `MIXED_PIN_TYPE`
-    - `nextLinkedHover`
     - `NO_MAP_PADDING`
     - `overlayPositions`
     - `pinStackOrder`
@@ -343,8 +334,6 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
     - `map/pin-layer`
     - `page/map`
     - `page/place/map-layer`
-    - `primitives/data-view/gallery`
-    - `primitives/data-view/list`
     - `primitives/data-view/map`
 - Sub-plugins:
   - **`google`** — Google Maps JavaScript API as the map renderer: draws GeoMap overlays (pins as overlays holding each pin's contributed content, Google's own places hidden, paths as polylines, areas as polygons…

@@ -1,7 +1,8 @@
 import { useMemo, type ReactNode } from "react";
 import { resolveTypeChain } from "@plugins/fields/core";
-import { MapView, useHoveredId, type MapViewProps } from "@plugins/map/web";
-import type { LinkedHover } from "@plugins/map/core";
+import { MapView, type MapViewProps } from "@plugins/map/web";
+import { useHoveredId } from "@plugins/primitives/plugins/data-view/web";
+import type { LinkedHover } from "@plugins/primitives/plugins/data-view/core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";

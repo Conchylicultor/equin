@@ -252,12 +252,11 @@ conditional hook.
 - Web:
   - Contributes: `DataViewSlots.View` "List" → `ListView`
   - Uses: 74 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/data-view` ×48
+    - `primitives/data-view` ×49
     - `primitives/rank-reorder` ×3
     - `primitives/tree` ×3
     - `primitives/css/spacing` ×2
     - `primitives/latest-ref` ×2
-    - `map.useIsHovered`
     - `primitives/collapsible.FoldMotion`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`

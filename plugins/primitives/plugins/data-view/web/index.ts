@@ -20,6 +20,11 @@ import { presetIdKind, filterNodeIdKind } from "../core";
 export { DataView } from "./components/data-view";
 export { DataViewSwitcher } from "./components/data-view-switcher";
 export type { DataViewSwitcherProps } from "./components/data-view-switcher";
+export {
+  useHoveredId,
+  useIsHovered,
+  useLinkedHover,
+} from "./internal/use-linked-hover";
 export { defineDataViewSources } from "./internal/define-data-view-sources";
 export type {
   DataViewSources,

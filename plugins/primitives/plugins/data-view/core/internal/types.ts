@@ -15,7 +15,7 @@ import type {
   NotCollectionRow,
   RowFieldState,
 } from "@plugins/network/plugins/live/core";
-import type { LinkedHover } from "@plugins/map/core";
+import type { LinkedHover } from "./linked-hover";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import type {
   ResourceReadiness,
@@ -2444,7 +2444,7 @@ export interface DataViewBaseProps<TRow> extends PlacementSpec {
   viewShortcuts?: true;
   /**
    * The row hover, linked with another surface showing the same rows (a map
-   * pin) — the map primitive's `useLinkedHover()` store. Threaded to the
+   * pin) — DataView's row-hover store (`LinkedHover`, held by `useLinkedHover()`). Threaded to the
    * views as `DataViewRenderProps.rowHover`: each reports its rows' enter /
    * leave to it, and each row reads whether IT is hovered, so a hover never
    * re-renders the surface.

@@ -12,8 +12,8 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { VirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
-import { useIsHovered } from "@plugins/map/web";
-import type { LinkedHover } from "@plugins/map/core";
+import { useIsHovered } from "@plugins/primitives/plugins/data-view/web";
+import type { LinkedHover } from "@plugins/primitives/plugins/data-view/core";
 import {
   CardMeta,
   CardTokens,
