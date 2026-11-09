@@ -33,6 +33,9 @@ import {
   getDataDirs,
   isDataDir,
   mayMoveSharedData,
+  settleDataDirMoves,
+  DataDirMovesUndeclaredError,
+  type DataDir,
 } from "./data-dir";
 
 // `defineDataDir`'s registry is module-global and never cleared — that is the
@@ -46,7 +49,7 @@ import {
 // `EQUIN_RELEASE`. The `bun test` preload declared this process's
 // namespace as the checkout it runs from, so each test puts that exact
 // declaration back rather than merely dropping it.
-const ENV_KEYS: readonly EnvKey[] = ["DIR", "RELEASE"];
+const ENV_KEYS: readonly EnvKey[] = ["DIR", "RELEASE", "DATA_DIR_MOVES"];
 const ORIGINAL_ENV = new Map<EnvKey, string | undefined>(
   ENV_KEYS.map((k) => [k, readEnv(k)] as const),
 );
@@ -328,7 +331,39 @@ function freshRoot(label: string): AppPath {
   return root;
 }
 
-test("movedFrom on a fresh root (neither location exists) resolves to the new location", () => {
+/** Settle `dirs`' moves as a backend's boot does (`perform: true`); whether it moves is the process's to say. */
+function settle(...dirs: DataDir[]): Promise<void> {
+  return settleDataDirMoves(dirs, { perform: true });
+}
+
+test("a moved dir read before its tree settled the moves throws, naming the fix", async () => {
+  freshRoot("undeclared");
+  const dir = defineDataDir({
+    ...spec("move-undeclared"),
+    kind: "state",
+    reclaim: { kind: "never", reason: "test" },
+    movedFrom: [{ from: "apps/move-undeclared-old" }],
+  });
+  unsetEnv("DATA_DIR_MOVES");
+  expect(() => dir.path).toThrow(DataDirMovesUndeclaredError);
+  expect(() => dir.file("x")).toThrow(/settleDeclaredDataDirMoves/);
+
+  // A declaration answers for the root it inspected only: repointing the root
+  // leaves the process undeclared there, rather than trusting the old answer.
+  await settle(dir);
+  expect(dir.path).toBe(joinAppPath(dataRoot(), "state", "move-undeclared"));
+  freshRoot("undeclared-elsewhere");
+  expect(() => dir.path).toThrow(DataDirMovesUndeclaredError);
+
+  // A dir with no move never needs one.
+  unsetEnv("DATA_DIR_MOVES");
+  const plain = defineDataDir(spec("move-undeclared-plain"));
+  expect(plain.path).toBe(
+    joinAppPath(dataRoot(), "cache", "move-undeclared-plain"),
+  );
+});
+
+test("movedFrom on a fresh root (neither location exists) resolves to the new location", async () => {
   const root = freshRoot("fresh");
   asMover();
   const dir = defineDataDir({
@@ -337,11 +372,12 @@ test("movedFrom on a fresh root (neither location exists) resolves to the new lo
     reclaim: { kind: "never", reason: "test" },
     movedFrom: [{ from: "apps/move-fresh-old" }],
   });
+  await settle(dir);
   expect(dir.path).toBe(joinAppPath(root, "state", "move-fresh"));
   expect(existsSync(joinAppPath(root, "apps", "move-fresh-old"))).toBe(false);
 });
 
-test("a pending move, in a process that may not move, resolves to the OLD location and moves nothing", () => {
+test("a pending move, in a process that may not move, resolves to the OLD location and moves nothing — and still reaches the bytes once the mover has moved them", async () => {
   const root = freshRoot("pending-ordinary");
   const old = joinAppPath(root, "apps", "move-pending-old");
   mkdirSync(old, { recursive: true });
@@ -354,6 +390,7 @@ test("a pending move, in a process that may not move, resolves to the OLD locati
     reclaim: { kind: "never", reason: "test" },
     movedFrom: [{ from: "apps/move-pending-old" }],
   });
+  await settle(dir);
   expect(dir.path).toBe(old);
   expect(dir.file("a.bin")).toBe(joinAppPath(old, "a.bin"));
   expect(dir.ensureSync()).toBe(old);
@@ -362,12 +399,18 @@ test("a pending move, in a process that may not move, resolves to the OLD locati
   expect(lstatSync(old).isDirectory()).toBe(true);
   expect(existsSync(joinAppPath(root, "state", "move-pending"))).toBe(false);
 
-  // Not memoized: the moment the move happens elsewhere, reads follow it.
+  // Main moves the bytes while this process runs on its declaration: the old
+  // path it keeps resolving is now the shim, so it reads the same bytes.
+  const ours = readEnv("DATA_DIR_MOVES")!;
   asMover();
-  expect(dir.path).toBe(joinAppPath(root, "state", "move-pending"));
+  await settle(dir);
+  setEnv("DATA_DIR_MOVES", ours);
+  expect(dir.path).toBe(old);
+  expect(lstatSync(old).isSymbolicLink()).toBe(true);
+  expect(readFileSync(dir.file("a.bin"), "utf8")).toBe("bytes");
 });
 
-test("a pending move, in the process that may move, renames and plants a relative symlink — once", () => {
+test("a pending move, settled by the process that may move, renames and plants a relative symlink — once", async () => {
   const root = freshRoot("pending-mover");
   const old = joinAppPath(root, "apps", "move-mover-old");
   mkdirSync(old, { recursive: true });
@@ -380,6 +423,12 @@ test("a pending move, in the process that may move, renames and plants a relativ
     reclaim: { kind: "never", reason: "test" },
     movedFrom: [{ from: "apps/move-mover-old" }],
   });
+  // Inspecting alone never moves, even in the mover.
+  await settleDataDirMoves([dir], { perform: false });
+  expect(dir.path).toBe(old);
+  expect(lstatSync(old).isDirectory()).toBe(true);
+
+  await settle(dir);
   const dest = joinAppPath(root, "state", "move-mover");
   expect(dir.path).toBe(dest);
   expect(readFileSync(joinAppPath(dest, "a.bin"), "utf8")).toBe("bytes");
@@ -388,13 +437,15 @@ test("a pending move, in the process that may move, renames and plants a relativ
   // The old path now reaches the same bytes — what an older checkout reads.
   expect(readFileSync(joinAppPath(old, "a.bin"), "utf8")).toBe("bytes");
 
-  // A second resolution is a no-op, in this process or any other.
+  // Settling again is a no-op, in this process or any other.
+  await settle(dir);
   expect(dir.file("a.bin")).toBe(joinAppPath(dest, "a.bin"));
   asOrdinaryProcess();
+  await settle(dir);
   expect(dir.path).toBe(dest);
 });
 
-test("a split copy (old is a real dir AND the destination exists) throws, for every process", () => {
+test("a split copy (old is a real dir AND the destination exists) fails every read of that dir, for every process", async () => {
   const root = freshRoot("conflict");
   mkdirSync(joinAppPath(root, "apps", "move-conflict-old"), {
     recursive: true,
@@ -406,18 +457,30 @@ test("a split copy (old is a real dir AND the destination exists) throws, for ev
     reclaim: { kind: "never", reason: "test" },
     movedFrom: [{ from: "apps/move-conflict-old" }],
   });
+  const bystander = defineDataDir({
+    ...spec("move-conflict-bystander"),
+    kind: "state",
+    reclaim: { kind: "never", reason: "test" },
+    movedFrom: [{ from: "apps/move-conflict-bystander-old" }],
+  });
   asOrdinaryProcess();
+  await settle(dir, bystander);
   expect(() => dir.path).toThrow(/SPLIT COPY/);
   asMover();
+  await settle(dir, bystander);
   expect(() => dir.ensureSync()).toThrow(/SPLIT COPY/);
   expect(dir.ensure()).rejects.toThrow(/SPLIT COPY/);
+  // Only that dir: another move settled in the same pass reads fine.
+  expect(bystander.path).toBe(
+    joinAppPath(root, "state", "move-conflict-bystander"),
+  );
   // And nothing was touched trying.
   expect(
     lstatSync(joinAppPath(root, "apps", "move-conflict-old")).isDirectory(),
   ).toBe(true);
 });
 
-test("an area move (`to`) redirects only that area, and creates the destination's parent", () => {
+test("an area move (`to`) redirects only that area, and creates the destination's parent", async () => {
   const root = freshRoot("area");
   const old = joinAppPath(root, "apps", "fixture-old-wallpaper");
   mkdirSync(old, { recursive: true });
@@ -432,6 +495,7 @@ test("an area move (`to`) redirects only that area, and creates the destination'
   const home = joinAppPath(root, "apps", "fixture-area-desktop");
 
   asOrdinaryProcess();
+  await settle(desktop);
   // The dir itself and every OTHER area are the new location from day one…
   expect(desktop.path).toBe(home);
   expect(desktop.file("other", "x")).toBe(joinAppPath(home, "other", "x"));
@@ -442,6 +506,7 @@ test("an area move (`to`) redirects only that area, and creates the destination'
   expect(existsSync(home)).toBe(false);
 
   asMover();
+  await settle(desktop);
   const area = desktop.subdir("wallpaper");
   expect(area.file("w.jpg")).toBe(joinAppPath(home, "wallpaper", "w.jpg"));
   expect(readFileSync(joinAppPath(home, "wallpaper", "w.jpg"), "utf8")).toBe(
@@ -450,30 +515,25 @@ test("an area move (`to`) redirects only that area, and creates the destination'
   expect(readlinkSync(old)).toBe(join("fixture-area-desktop", "wallpaper"));
 });
 
-test("a settled move is memoized per data root; a different root is inspected afresh", () => {
-  const first = freshRoot("memo-a");
+test("a read resolves from the declaration alone — the disk changing under it is not re-inspected", async () => {
+  const root = freshRoot("declared");
   asMover();
   const dir = defineDataDir({
-    ...spec("move-memo"),
+    ...spec("move-declared"),
     kind: "state",
     reclaim: { kind: "never", reason: "test" },
-    movedFrom: [{ from: "apps/move-memo-old" }],
+    movedFrom: [{ from: "apps/move-declared-old" }],
   });
-  expect(dir.path).toBe(joinAppPath(first, "state", "move-memo")); // fresh ⇒ settled
+  await settle(dir); // fresh ⇒ settled
+  expect(dir.path).toBe(joinAppPath(root, "state", "move-declared"));
 
-  // Once settled on this root, reads no longer stat the old location at all —
-  // even a split copy appearing later is not re-inspected here (the audit and a
-  // restart see it; the steady-state read path pays nothing).
-  mkdirSync(joinAppPath(first, "apps", "move-memo-old"), { recursive: true });
-  mkdirSync(joinAppPath(first, "state", "move-memo"), { recursive: true });
-  expect(dir.path).toBe(joinAppPath(first, "state", "move-memo"));
-
-  // A different root has its own answer: pending there, so an ordinary process
-  // reads the old location.
-  const second = freshRoot("memo-b");
-  mkdirSync(joinAppPath(second, "apps", "move-memo-old"), { recursive: true });
-  asOrdinaryProcess();
-  expect(dir.path).toBe(joinAppPath(second, "apps", "move-memo-old"));
+  // A split copy appearing later is not seen by reads here (the audit and the
+  // next boot see it): the read path touches no disk.
+  mkdirSync(joinAppPath(root, "apps", "move-declared-old"), {
+    recursive: true,
+  });
+  mkdirSync(joinAppPath(root, "state", "move-declared"), { recursive: true });
+  expect(dir.path).toBe(joinAppPath(root, "state", "move-declared"));
 });
 
 test("only the host singleton running merged code may move shared data", () => {

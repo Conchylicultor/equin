@@ -19,7 +19,7 @@ import { defineDataDir } from "@plugins/infra/plugins/paths/core";
  * primitive performs the move itself, and only in the host's singleton process
  * (main): it renames the tree into `state/attachments` and leaves a symlink at
  * the old name, so an older checkout still reads and writes the same bytes.
- * Every other process — a worktree backend, the CLI, a test — resolves to the
+ * Every other process — a worktree backend, an exec child — resolves to the
  * old location until that has happened, so no reader ever looks at the new
  * spot before the bytes are there.
  */

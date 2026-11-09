@@ -99,6 +99,11 @@ export {
   getDataDirs,
   relativeToDataRoot,
 } from "./internal/data-dir";
+// A directory's declared moves (`movedFrom`) are settled once per process tree,
+// at its entry point, before anything reads a path: a backend's boot performs a
+// pending one (main only), every other entry inspects. The getters then read
+// the declaration, never the disk.
+export { settleDeclaredDataDirMoves } from "./internal/settle-declared-moves";
 export type {
   AppIdentity,
   DataDir,

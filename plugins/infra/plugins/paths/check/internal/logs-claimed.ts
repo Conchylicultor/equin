@@ -5,12 +5,12 @@ import type {
   CheckContext,
   CheckResult,
 } from "@plugins/framework/plugins/tooling/core";
-import { loadCollectedDir } from "@plugins/framework/plugins/tooling/plugins/collected-dir/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 // Own plugin, so relative (see ../index.ts).
 import { checkoutWorktreeName } from "../../core/internal/paths";
-import { getDataDirs, isDataDir } from "../../core/internal/data-dir";
-import type { DataDir, DataDirKind } from "../../core/internal/data-dir";
+import { getDataDirs } from "../../core/internal/data-dir";
+import type { DataDirKind } from "../../core/internal/data-dir";
+import { settleDeclaredDataDirMoves } from "../../core/internal/settle-declared-moves";
 import {
   readForeignManifestsSync,
   type DataDirsManifest,
@@ -164,12 +164,9 @@ export const logsClaimedCheck: Check = {
   scope: "host",
   cacheSignature: () => null,
   async run(ctx: CheckContext): Promise<CheckResult> {
-    const { dataDirsEntries } = await import("../../core/data-dirs.generated");
-    await loadCollectedDir<DataDir>(dataDirsEntries, {
-      isItem: isDataDir,
-      dedupeKey: (d) => `${d.spec.kind}/${d.spec.name}`,
-      label: "data-dir",
-    });
+    // Loads every declaration, and settles their moves (inspecting only) so
+    // the `.path` reads below can resolve a moved dir.
+    await settleDeclaredDataDirMoves({ perform: false });
     const declared = getDataDirs();
     const roots = new Set([...declared.values()].map((d) => d.path));
     const scanned = await Promise.all(

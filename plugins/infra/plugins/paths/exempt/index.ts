@@ -54,12 +54,4 @@ export default [
     reason:
       "A namespace's spec.json (written by `./equin build`) names the checkout that published it: a checkout of this repo, which the app runs from.",
   },
-  {
-    rule: "blocking-fs/sync-named",
-    paths: ["core/internal/data-dir.ts"],
-    kind: "debt",
-    task: "task-1794176984-s6phxk",
-    reason:
-      "Every DataDir getter (.path / .file() / .ensure(), a subdir()'s too) resolves through resolveInSync: a declaration with movedFrom lstat's the move on its first read in each process until it settles, and the host singleton performs a pending move (renameSync / symlinkSync) inside the getter — the moves are to be settled before the backend listens instead.",
-  },
 ] satisfies Exemptions;

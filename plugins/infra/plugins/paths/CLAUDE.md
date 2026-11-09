@@ -77,8 +77,7 @@ the spawner that dropped the variable from its child's environment — never by
 deciding on the spot, on whatever thread asked. The one sanctioned undeclared
 process is a root that found a split install (the CLI, the hooks): there every
 path read rethrows the `DataRootSplitError` its declaration found. The
-`movedFrom` inspection behind the `DataDir` getters (`core/internal/data-dir.ts`)
-is the remaining `blocking-fs/sync-named` debt.
+declared `movedFrom` moves follow the same model (§ Moving a declared dir).
 
 **Moving an install over:** `./equin data-dir migrate` (the `root-migration`
 sub-plugin) — dry run by default, `--apply` executes. It refuses while any
@@ -163,8 +162,8 @@ checkCache.file("abc123.json");      // a path INSIDE it
 `ensure()` is asynchronous (`fs/promises` mkdir, the stat only to explain a
 failure), so a backend can call it on every write; `ensureSync()` is its
 blocking twin, refused on a backend by `blocking-fs/no-sync-fs` like any
-`*Sync`. `.path` and `.file()` touch no disk once a process has resolved its
-data root and its declared moves (both memoized per process).
+`*Sync`. `.path` and `.file()` never touch the disk: the data root and the
+declared moves are both read from what the process's tree declared.
 
 ### The kinds are a closed set
 
@@ -247,8 +246,8 @@ returns `{ path, file(…), ensure(), ensureSync() }` — one lowercase segment,
 
 ### Moving a declared dir: `movedFrom`
 
-A declaration records where its bytes used to live, and **resolution performs
-the move** — no script:
+A declaration records where its bytes used to live, and **main's backend
+performs the move at its boot** — no script:
 
 ```ts
 defineDataDir({ kind: "state", name: "attachments", …, movedFrom: [{ from: "apps/attachments" }] });
@@ -256,14 +255,33 @@ defineAppDataDir(desktopApp, { …, movedFrom: [{ from: "apps/wallpaper", to: "w
 ```
 
 `from` is the old `<kind>/<name>`; `to` is the area the bytes land in (absent =
-the whole dir). Every read (`.path`, `.file()`, `.ensure()`, a `subdir()`) goes
-through the move first, so nothing reads the new spot before the bytes are there:
+the whole dir). The moves are **settled once per process tree, at its entry,
+before anything reads a path** — `await settleDeclaredDataDirMoves({ perform })`
+loads every declaration, inspects both locations of each move (async) and
+declares the outcome for the process and everything it starts
+(`EQUIN_DATA_DIR_MOVES`: the root it inspected and each move's state). Every
+read (`.path`, `.file()`, `.ensure()`, a `subdir()`) then resolves from that
+declaration alone — no disk, on any thread — so nothing reads the new spot
+before the bytes are there:
 
 | on this root | resolves to |
 |---|---|
-| `from` absent, or a symlink (**settled**) | new location — memoized per root |
-| `from` a real dir, destination absent (**pending**) | the mover `rename`s + plants a relative symlink at `from`, then new; every other process: OLD |
-| `from` a real dir AND destination exists (**split copy**) | throws on every read — a human merges |
+| `from` absent, or a symlink (**settled**) | new location |
+| `from` a real dir, destination absent (**pending**) | the mover, settling with `perform: true`, `rename`s + plants a relative symlink at `from`, then new; every other process: OLD — still the same bytes once main moves them, through the symlink |
+| `from` a real dir AND destination exists (**split copy**) | every read of that dir throws — a human merges; the rest of the process is unaffected |
+
+| entry | settles |
+|---|---|
+| a backend's `serve` (`server-core/bin/serve.ts`) | `perform: true`, before the socket binds — main's backend is where a move happens |
+| an `exec` boot (`server-core/cli/run-exec.ts`) | `perform: false`, before the graph loads |
+| `paths:logs-claimed` (reads every dir's `.path`) | `perform: false` |
+| a backend's workers and `infra/spawn` children | inherit the declaration through the environment |
+
+A process whose tree declared nothing for its data root (a CLI verb, a hook,
+a test that reads a moved dir, or a declaration made for another root) throws
+`DataDirMovesUndeclaredError` on its first read of a moved dir — never a
+decision on the spot. Fix it at that entry point (await the settle), or at the
+spawner that dropped the environment. A dir with no `movedFrom` needs nothing.
 
 **Only the host singleton running merged code moves**: the main backend from
 the main checkout, or a release's backend on its own root. Not
@@ -368,14 +386,14 @@ reaped namespaces' gateway logs were each found by accident, months in.
 
 - Description: Canonical machine paths, plus the boot-time publication of this namespace's declared data-dir set so an audit running in another checkout can tell one of this branch's directories from an orphan.
 - Core:
-  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `packages/timed-fs` ×10
+  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `packages/timed-fs` ×11
     - `infra/namespace` ×8
     - `infra/launcher/env-names` ×5
     - `infra/host-fs/user-path` ×3
     - `framework/product-name` ×2
+    - `framework/tooling/collected-dir` ×2
     - `infra/runtime-identity` ×2
-    - `framework/tooling/collected-dir.defineCollectedDir`
     - `infra/paths/repo-root.REPO_ROOT`
     - `infra/spawn.getMainRepoRoot`
   - Exports (types):
@@ -451,6 +469,7 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `RUN_TERMINAL_SUFFIX`
     - `SERVER_CORE_RELATIVE`
     - `setReleaseIdentity`
+    - `settleDeclaredDataDirMoves`
     - `stampCheckoutMinter`
     - `stampCheckoutMinterSync`
     - `toolchainPin`
@@ -459,10 +478,10 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `worktreeDataDir`
     - `worktreesDir`
 - Cross-plugin:
-  - Imported by: 127 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 128 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra` ×31
     - `apps` ×20
-    - `framework` ×18
+    - `framework` ×19
     - `debug` ×13
     - `conversations` ×7
     - `build` ×5
@@ -491,7 +510,6 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `boundaries/no-platform-api` — `core/internal/checkout-deploys.ts`, `core/internal/checkout-minter.ts`, `core/internal/checkout-owner.ts`, `core/internal/checkout-ref.ts`, `core/internal/data-dir.ts`, `core/internal/data-root-layout.ts`, `core/internal/data-dirs-manifest.ts`, `core/internal/paths.ts`, `core/internal/prune-artifacts.ts`, `core/internal/toolchain-pin.ts`, `core/internal/worktree-dirs.ts` (debt)
     - `user-path/no-unproven-claim` — `core/internal/paths.ts`, `core/internal/data-root-layout.ts` (sanctioned)
     - `user-path/no-unproven-claim` — `core/internal/checkout-deploys.ts` (sanctioned)
-    - `blocking-fs/sync-named` — `core/internal/data-dir.ts` (debt)
 - Server:
   - Exports (types):
     - `AppIdentity`

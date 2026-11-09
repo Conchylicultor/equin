@@ -85,6 +85,8 @@ export const RUNTIME_WITHHELD_ENV = {
     "agent-session identity; the agent launcher delivers it into that agent's own process environment, where the commit hook and op-log read it",
   DATA_ROOT_LAYOUT:
     "the home data root's layout (current | current-legacy-link | legacy), decided from the disk once at the root of each process tree and inherited by its descendants (paths/core dataRootLayout); the gateway decides its own and sets it for every child (gateway/dataroot.go), so a starter's value never reaches it",
+  DATA_DIR_MOVES:
+    "where each declared data-dir move (movedFrom) stands on the data root, settled by a backend's boot before it listens and inherited by its workers and children (paths/core settleDataDirMoves); each backend settles its own, so a starter's value never reaches it",
   TOOL_USE_ID:
     "the Bash tool call an e2e script was launched by; a PreToolUse guard exports it into that one command, never a backend's",
   PARENT_URL:

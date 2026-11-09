@@ -144,7 +144,6 @@ task that removes it: `./equin exempt list --rule blocking-fs/no-sync-fs
     - `infra/file-sink` (0 debt)
     - `infra/git/tree-lock` (0 debt)
     - `infra/launcher` (0 debt)
-    - `infra/paths` (1 debt)
     - `infra/worktree` (0 debt)
     - `packages/signal-origin` (0 debt)
     - `packages/single-flight` (0 debt)

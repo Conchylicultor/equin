@@ -2,6 +2,7 @@ import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import { declareRuntimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { holdTreeRead } from "@plugins/infra/plugins/git/plugins/tree-lock/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
+import { settleDeclaredDataDirMoves } from "@plugins/infra/plugins/paths/core";
 import { recordMemoryCheckpoint } from "../core/profiler";
 import { bootPluginGraph, runShutdownHooks } from "../core/boot-stages";
 import { installProcessCrashListeners } from "../core/process-crash-listeners";
@@ -145,6 +146,10 @@ export async function runExec(
     // the future `supervised-exec` declaration that imports this barrel keeps a
     // trivial static closure, and neither the registry nor `spec.json` is read
     // by a `./equin` invocation that is not this one.
+    // The declared data-dir moves, before the graph reads a path — inspected
+    // only: an exec child never moves shared data (infra/paths CLAUDE.md,
+    // § Moving a declared dir).
+    await settleDeclaredDataDirMoves({ perform: false });
     const { serverEntries, machineEntries } =
       await import("../bin/active-runtime");
     ordered = await bootPluginGraph({

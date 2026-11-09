@@ -38,7 +38,10 @@ import { installProcessCrashListeners } from "../core/process-crash-listeners";
 // The desktop's native probes (memory, snapshot hash), installed into `core`
 // before the graph loads — see `./host-probes`.
 import "./host-probes";
-import { worktreesDir } from "@plugins/infra/plugins/paths/core";
+import {
+  settleDeclaredDataDirMoves,
+  worktreesDir,
+} from "@plugins/infra/plugins/paths/core";
 import {
   assertServesComposition,
   readSpecComposition,
@@ -162,6 +165,15 @@ export async function serve({
   // boots darwinbg (gateway `taskpolicy -b`) until the gateway's probe says
   // otherwise (`left-darwinbg` below) or it is ready — so a slow boot's journal
   // says how much of it ran demoted.
+  // ── Declared data-dir moves, before anything reads a path ──────
+  // Each `movedFrom` is settled once, here, off the thread: main's backend
+  // performs a pending move, every other backend inspects. The answer is
+  // declared for this process and every worker and child it starts, so a
+  // `DataDir` getter reads no disk on any thread (infra/paths CLAUDE.md,
+  // § Moving a declared dir). Before the socket binds: no request — and no
+  // plugin's boot — can read a moved dir first.
+  await settleDeclaredDataDirMoves({ perform: true });
+
   if (readDarwinBackground().kind === "darwinbg") {
     recordMemoryCheckpoint("darwinbg-at-start");
   }

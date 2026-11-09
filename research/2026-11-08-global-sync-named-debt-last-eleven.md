@@ -107,7 +107,15 @@ What is left:
   paying `paths.ts`'s debt. Wait until the gateway has been restarted onto this
   code (`./equin start --force`) and the warning has stopped appearing in the
   logs; the warning names each missed root's argv.
-- **Step 3** (task-1794176984-s6phxk): `movedFrom` (`data-dir.ts`): the getters
+- **Step 3 — landed** (att-1794187184-wd4npx): the moves are settled at each
+  process tree's entry (`settleDeclaredDataDirMoves`, async — a backend's
+  `serve` before the socket binds, the only place a move is performed; an
+  `exec` boot; `paths:logs-claimed`) and declared through the environment
+  (`EQUIN_DATA_DIR_MOVES`: the root inspected + each move's state). The getters
+  read the declaration only; an undeclared read of a moved dir throws
+  `DataDirMovesUndeclaredError`. A non-mover's pending answer (OLD) stays
+  right after main moves, through the shim. The debt entry is gone.
+  Original statement — `movedFrom` (`data-dir.ts`): the getters
   inspect a move with `lstat` once per move per process, and the host singleton
   performs it with `renameSync`. Settle moves before the backend listens. The
   `blocking-fs/sync-named` rule did not see this: a `const xSync = () =>`

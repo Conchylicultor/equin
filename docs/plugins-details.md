@@ -33378,7 +33378,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/file-sink` (0 debt)
               - `infra/git/tree-lock` (0 debt)
               - `infra/launcher` (0 debt)
-              - `infra/paths` (1 debt)
               - `infra/worktree` (0 debt)
               - `packages/signal-origin` (0 debt)
               - `packages/single-flight` (0 debt)
@@ -34491,14 +34490,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `ndjsonResponse`
     - **`paths`** — Canonical machine paths, plus the boot-time publication of this namespace's declared data-dir set so an audit running in another checkout can tell one of this branch's directories from an orphan.
       - Core:
-        - Uses: 33 symbols — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
-          - `packages/timed-fs` ×10
+        - Uses: 35 symbols — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+          - `packages/timed-fs` ×11
           - `infra/namespace` ×8
           - `infra/launcher/env-names` ×5
           - `infra/host-fs/user-path` ×3
           - `framework/product-name` ×2
+          - `framework/tooling/collected-dir` ×2
           - `infra/runtime-identity` ×2
-          - `framework/tooling/collected-dir.defineCollectedDir`
           - `infra/paths/repo-root.REPO_ROOT`
           - `infra/spawn.getMainRepoRoot`
         - Exports (types):
@@ -34574,6 +34573,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RUN_TERMINAL_SUFFIX`
           - `SERVER_CORE_RELATIVE`
           - `setReleaseIdentity`
+          - `settleDeclaredDataDirMoves`
           - `stampCheckoutMinter`
           - `stampCheckoutMinterSync`
           - `toolchainPin`
@@ -34582,10 +34582,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 127 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Imported by: 128 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `infra` ×31
           - `apps` ×20
-          - `framework` ×18
+          - `framework` ×19
           - `debug` ×13
           - `conversations` ×7
           - `build` ×5
@@ -34614,7 +34614,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `boundaries/no-platform-api` — `core/internal/checkout-deploys.ts`, `core/internal/checkout-minter.ts`, `core/internal/checkout-owner.ts`, `core/internal/checkout-ref.ts`, `core/internal/data-dir.ts`, `core/internal/data-root-layout.ts`, `core/internal/data-dirs-manifest.ts`, `core/internal/paths.ts`, `core/internal/prune-artifacts.ts`, `core/internal/toolchain-pin.ts`, `core/internal/worktree-dirs.ts` (debt)
           - `user-path/no-unproven-claim` — `core/internal/paths.ts`, `core/internal/data-root-layout.ts` (sanctioned)
           - `user-path/no-unproven-claim` — `core/internal/checkout-deploys.ts` (sanctioned)
-          - `blocking-fs/sync-named` — `core/internal/data-dir.ts` (debt)
       - Server:
         - Exports (types):
           - `AppIdentity`

@@ -2,13 +2,14 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { mkdirSync, renameSync, symlinkSync } from "node:fs";
-import { mkdir } from "node:fs/promises";
+import { mkdirSync, type Stats } from "node:fs";
+import { mkdir, rename, symlink } from "node:fs/promises";
 import {
-  lstatSync,
-  stat,
-  statSync,
-} from "@plugins/packages/plugins/timed-fs/core";
+  envName,
+  readEnv,
+  setEnv,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+import { lstat, stat, statSync } from "@plugins/packages/plugins/timed-fs/core";
 import { dirname, join, relative, sep } from "node:path";
 // Relative sibling import: this file lives INSIDE the `paths` plugin, so the
 // `@plugins/infra/plugins/paths/core` alias would cycle back through the barrel
@@ -146,20 +147,28 @@ export type DataDirRef = `${DataDirKind}/${string}`;
  * moved, and `{ from: "apps/wallpaper", to: "wallpaper" }` on `apps/desktop`
  * says the old dir became the `wallpaper` area of the new one.
  *
- * **Resolution does the move, not a script.** Every read of `.path`, `.file()`,
- * `.ensure()` and a `subdir()` handle resolves through the move first, so no
- * consumer can ever read the new location while the bytes still sit at the old
- * one:
+ * **The declaration does the move, not a script.** Each process tree settles
+ * every declared move at its entry point, before anything reads a path
+ * (`settleDeclaredDataDirMoves`: a backend's boot, before it listens; an `exec`
+ * boot; a check that reads every dir), and every read of `.path`, `.file()`,
+ * `.ensure()` and a `subdir()` handle resolves through what it found — no
+ * disk, on any thread — so no consumer can read the new location while the
+ * bytes still sit at the old one:
  *
  * - **Settled** — `from` is absent or is a symlink: the new location.
- *   Memoized per (data root, move), so steady state costs nothing.
  * - **Pending** — `from` is a real directory and the destination is absent. The
  *   host singleton running merged code (see `mayMoveSharedData`) performs the
- *   move once: `rename` (atomic), then a relative symlink at `from`. Every other
- *   process resolves to the OLD location and moves nothing.
+ *   move at its boot: `rename` (atomic), then a relative symlink at `from`.
+ *   Every other process resolves to the OLD location and moves nothing — and
+ *   keeps reaching the bytes once main moves them, through that symlink.
  * - **Conflict** — `from` is a real directory AND the destination exists: a
- *   split copy. Throws, naming both paths. Either side may hold the only copy of
- *   something, and there is no automatic merge that could be right.
+ *   split copy. Every read of that directory throws, naming both paths. Either
+ *   side may hold the only copy of something, and there is no automatic merge
+ *   that could be right.
+ *
+ * A process whose tree settled nothing throws on its first read of a moved
+ * dir (`DataDirMovesUndeclaredError`), rather than decide on whatever thread
+ * asked.
  *
  * Why a declaration and not another `LEGACY_LAYOUT` row: that table is
  * top-level only, self-liquidating ("nothing may be added"), and its script
@@ -390,8 +399,9 @@ function makeDataDir(spec: DataDirSpec): DataDir {
 
   // Every path this declaration hands out goes through here, so a move is
   // honoured by `.path`, `.file()`, `.ensure()` and every `subdir()` handle
-  // alike — there is no accessor that could read the new location early.
-  const resolveInSync = (segments: readonly string[]): AppPath => {
+  // alike — there is no accessor that could read the new location early. It
+  // reads the moves' DECLARATION, never the disk (see `settleDataDirMoves`).
+  const resolveIn = (segments: readonly string[]): AppPath => {
     const base = home();
     if (moves.length === 0) return joinAppPath(base, ...segments);
 
@@ -406,7 +416,7 @@ function makeDataDir(spec: DataDirSpec): DataDir {
 
     const dest = move.to === undefined ? base : joinAppPath(base, move.to);
     const from = joinAppPath(dataRoot(), move.from);
-    if (resolveMoveSync(key, move, from, dest) === "new")
+    if (declaredMoveSide(key, move, from, dest) === "new")
       return joinAppPath(base, ...segments);
     // Still at the old location: re-base what lies below the moved area.
     const below = move.to === undefined ? parts : parts.slice(1);
@@ -421,16 +431,16 @@ function makeDataDir(spec: DataDirSpec): DataDir {
     assertAreaName(name, `${key}.subdir() name`);
     return {
       get path(): AppPath {
-        return resolveInSync([name]);
+        return resolveIn([name]);
       },
       file(...segments: string[]): AppPath {
-        return resolveInSync([name, ...segments]);
+        return resolveIn([name, ...segments]);
       },
       async ensure(): Promise<AppPath> {
-        return ensureDirectory(resolveInSync([name]), areaWhat(name));
+        return ensureDirectory(resolveIn([name]), areaWhat(name));
       },
       ensureSync(): AppPath {
-        return ensureDirectorySync(resolveInSync([name]), areaWhat(name));
+        return ensureDirectorySync(resolveIn([name]), areaWhat(name));
       },
     };
   };
@@ -438,16 +448,16 @@ function makeDataDir(spec: DataDirSpec): DataDir {
   return {
     spec,
     get path(): AppPath {
-      return resolveInSync([]);
+      return resolveIn([]);
     },
     file(...segments: string[]): AppPath {
-      return resolveInSync(segments);
+      return resolveIn(segments);
     },
     async ensure(): Promise<AppPath> {
-      return ensureDirectory(resolveInSync([]), what);
+      return ensureDirectory(resolveIn([]), what);
     },
     ensureSync(): AppPath {
-      return ensureDirectorySync(resolveInSync([]), what);
+      return ensureDirectorySync(resolveIn([]), what);
     },
     subdir: area,
   };
@@ -456,26 +466,129 @@ function makeDataDir(spec: DataDirSpec): DataDir {
 // ── movedFrom: moving a declared directory ──────────────────────────────────
 //
 // See `MovedFrom` for what a move means and why it is a declaration. What
-// follows is the mechanism: inspect the two locations, and — only in the one
-// process allowed to — perform the rename.
+// follows is the mechanism, in two halves that never meet on one thread:
+//
+// - SETTLING (`settleDataDirMoves`, async) inspects both locations of every
+//   declared move and — only in the one process allowed to, a backend's boot
+//   before it listens — performs a pending one. It DECLARES what it found, for
+//   this process and every process it starts (`EQUIN_DATA_DIR_MOVES`), the way
+//   a tree's root declares the data root's layout.
+// - RESOLVING (every getter) reads that declaration and nothing else: no disk,
+//   on any thread. A process whose tree declared nothing throws
+//   (`DataDirMovesUndeclaredError`) rather than decide on the spot.
 
 /** Where a move stands on one data root. Never a boolean: "pending" and "conflict" demand opposite things. */
 type MoveState = "settled" | "pending" | "conflict";
 
-/**
- * Moves already known settled, keyed by the ABSOLUTE `from` — which carries
- * the data root in it, so a process that repoints `EQUIN_DIR` (tests, the
- * release launcher) re-inspects on the new root instead of trusting the old
- * one's answer.
- *
- * Only "settled" is memoized. A pending move is re-inspected on every read in a
- * process that may not perform it, because main may perform it at any moment
- * and that process must follow the bytes the instant it does.
- */
-const settledMoves = new Set<string>();
+const MOVE_STATES: ReadonlySet<string> = new Set<MoveState>([
+  "settled",
+  "pending",
+  "conflict",
+]);
 
-function inspectMoveSync(from: AppPath, dest: AppPath, key: string): MoveState {
-  const old = lstatSync(from, { throwIfNoEntry: false });
+/**
+ * What a process's tree found about the declared moves: the data root it
+ * inspected, and each move's state there, keyed by its `from` ref. Carried in
+ * the environment as JSON, so a backend's workers and the children it spawns
+ * resolve without reading the disk either.
+ *
+ * Keyed by ROOT: a process that repoints `EQUIN_DIR` (a test, the release
+ * launcher) holds no declaration for the new root, rather than trusting the old
+ * one's answer.
+ */
+interface MovesDeclaration {
+  readonly root: string;
+  readonly moves: Readonly<Record<string, MoveState>>;
+}
+
+function parseMovesDeclaration(raw: string): MovesDeclaration {
+  const malformed = (): Error =>
+    new Error(
+      `[data-dir] ${envName("DATA_DIR_MOVES")} is not a moves declaration: ${raw}. ` +
+        `It is written only by settleDataDirMoves(); something else set it.`,
+    );
+  const value: unknown = JSON.parse(raw);
+  if (typeof value !== "object" || value === null) throw malformed();
+  const { root, moves } = value as { root?: unknown; moves?: unknown };
+  if (typeof root !== "string" || typeof moves !== "object" || moves === null)
+    throw malformed();
+  for (const state of Object.values(moves))
+    if (typeof state !== "string" || !MOVE_STATES.has(state)) throw malformed();
+  return { root, moves: moves as Record<string, MoveState> };
+}
+
+/** The last declaration parsed, by its raw text: the environment is read on every resolution, parsed once. */
+let parsedDeclaration: { raw: string; value: MovesDeclaration } | undefined;
+
+/** This process's declared move states for the CURRENT data root, or undefined when its tree declared none for it. */
+function declaredMoves(): Readonly<Record<string, MoveState>> | undefined {
+  const raw = readEnv("DATA_DIR_MOVES");
+  if (raw === undefined) return undefined;
+  if (parsedDeclaration?.raw !== raw)
+    parsedDeclaration = { raw, value: parseMovesDeclaration(raw) };
+  const { root, moves } = parsedDeclaration.value;
+  return root === dataRoot() ? moves : undefined;
+}
+
+/**
+ * A process read a directory that carries a `movedFrom` before anything in its
+ * tree settled the moves on its data root. Never decided on the spot: that
+ * reads the disk on whatever thread asked, a backend's included. The fix is at
+ * the entry point that started the process (`settleDeclaredDataDirMoves()`
+ * before it reads), or at the spawner that dropped the variable from its
+ * child's environment.
+ */
+export class DataDirMovesUndeclaredError extends Error {
+  constructor(key: string, from: string) {
+    super(
+      `[data-dir] ${key} records that it moved from ${from}, and nothing in this process's tree settled that move on ` +
+        `its data root (pid ${process.pid}, ${process.argv.slice(1, 3).join(" ")}; ${envName("DATA_DIR_MOVES")} ` +
+        `carries no answer for ${dataRoot()}). Await settleDeclaredDataDirMoves() at the process's entry point before ` +
+        `it reads a path, or pass the spawner's environment on (infra/paths CLAUDE.md, § Moving a declared dir).`,
+    );
+    this.name = "DataDirMovesUndeclaredError";
+  }
+}
+
+/**
+ * Which side of a move a read lands on, from the declaration alone. Pending
+ * reads the OLD location — and keeps reading it once the mover has moved the
+ * bytes, through the symlink the move leaves there, so a process that settled
+ * before main moved still reads the same bytes.
+ */
+function declaredMoveSide(
+  key: string,
+  move: MovedFrom,
+  from: AppPath,
+  dest: AppPath,
+): "new" | "old" {
+  const state = declaredMoves()?.[move.from];
+  if (state === undefined)
+    throw new DataDirMovesUndeclaredError(key, move.from);
+  if (state === "conflict") throw splitCopyError(key, from, dest);
+  return state === "settled" ? "new" : "old";
+}
+
+function errnoCode(err: unknown): string | undefined {
+  return err instanceof Error ? (err as NodeJS.ErrnoException).code : undefined;
+}
+
+/** `lstat`, absent as undefined; any other failure propagates. */
+async function lstatOrAbsent(path: AppPath): Promise<Stats | undefined> {
+  try {
+    return await lstat(path);
+  } catch (err) {
+    if (errnoCode(err) === "ENOENT") return undefined;
+    throw err;
+  }
+}
+
+async function inspectMove(
+  from: AppPath,
+  dest: AppPath,
+  key: string,
+): Promise<MoveState> {
+  const old = await lstatOrAbsent(from);
   // Absent: moved already (or a fresh root that never had it). A symlink: the
   // shim a previous move planted — the bytes are behind it, at the new spot.
   if (!old || old.isSymbolicLink()) return "settled";
@@ -484,7 +597,7 @@ function inspectMoveSync(from: AppPath, dest: AppPath, key: string): MoveState {
       `[data-dir] ${key} records that it moved from ${from}, but that path is a FILE, not a directory. ` +
         `A movedFrom names a directory whose bytes moved; something else has taken its name. Inspect it by hand.`,
     );
-  return lstatSync(dest, { throwIfNoEntry: false }) ? "conflict" : "pending";
+  return (await lstatOrAbsent(dest)) ? "conflict" : "pending";
 }
 
 function splitCopyError(key: string, from: AppPath, dest: AppPath): Error {
@@ -497,25 +610,46 @@ function splitCopyError(key: string, from: AppPath, dest: AppPath): Error {
 }
 
 /**
- * Settle one move on the current root, and say which side the bytes are on.
- * Performs the move when it is pending and THIS process is the one allowed to.
+ * Settle every move the given declarations carry on the current data root, and
+ * declare the outcome for this process and everything it starts — the one call
+ * that touches the disk for a move. Asynchronous, so a backend runs it at boot
+ * without holding its thread.
+ *
+ * `perform: true` only from a backend's boot, before it listens: a pending move
+ * is then performed — when this process is the one allowed to
+ * (`mayMoveSharedData`). Every other caller (a worktree's backend, an `exec`
+ * child, a check, a test) only inspects, and resolves a pending move to the old
+ * location.
+ *
+ * A split copy is declared, not thrown: every read of THAT directory fails,
+ * naming both paths, and nothing else in the process is held hostage to it.
  */
-function resolveMoveSync(
-  key: string,
-  move: MovedFrom,
-  from: AppPath,
-  dest: AppPath,
-): "new" | "old" {
-  if (settledMoves.has(from)) return "new";
-
-  const state = inspectMoveSync(from, dest, key);
-  if (state === "conflict") throw splitCopyError(key, from, dest);
-  if (state === "pending") {
-    if (!thisProcessMayMoveSharedDataSync()) return "old";
-    performMoveSync(key, move, from, dest);
+export async function settleDataDirMoves(
+  dirs: Iterable<DataDir>,
+  opts: { perform: boolean },
+): Promise<void> {
+  const root = dataRoot();
+  const moves: Record<string, MoveState> = {};
+  let mover: boolean | undefined;
+  for (const dir of dirs) {
+    const key = `${dir.spec.kind}/${dir.spec.name}`;
+    for (const move of dir.spec.movedFrom ?? []) {
+      const from = joinAppPath(root, move.from);
+      const dest = joinAppPath(root, moveDestination(dir.spec, move));
+      let state = await inspectMove(from, dest, key);
+      if (state === "pending" && opts.perform) {
+        mover ??= await thisProcessMayMoveSharedData();
+        if (mover) state = await performMove(key, move, from, dest);
+      }
+      if (state === "conflict")
+        console.error(splitCopyError(key, from, dest).message);
+      moves[move.from] = state;
+    }
   }
-  settledMoves.add(from);
-  return "new";
+  setEnv(
+    "DATA_DIR_MOVES",
+    JSON.stringify({ root, moves } satisfies MovesDeclaration),
+  );
 }
 
 /**
@@ -533,28 +667,24 @@ const RACE_CODES: ReadonlySet<string> = new Set([
   "EISDIR",
 ]);
 
-function errnoCode(err: unknown): string | undefined {
-  return err instanceof Error ? (err as NodeJS.ErrnoException).code : undefined;
-}
-
-function performMoveSync(
+/** Perform one pending move; answers where it stands afterwards (settled, or a split copy it found). */
+async function performMove(
   key: string,
   move: MovedFrom,
   from: AppPath,
   dest: AppPath,
-): void {
+): Promise<"settled" | "conflict"> {
   // The destination's parent may not exist yet — `apps/desktop` on a root where
   // only `apps/wallpaper` ever did.
-  mkdirSync(dirname(dest), { recursive: true });
+  await mkdir(dirname(dest), { recursive: true });
   try {
     // Atomic: at every instant the bytes are at exactly one of the two paths.
-    renameSync(from, dest);
+    await rename(from, dest);
   } catch (err) {
     const code = errnoCode(err);
     if (code === undefined || !RACE_CODES.has(code)) throw err;
-    const now = inspectMoveSync(from, dest, key);
-    if (now === "settled") return; // another mover won; it plants the shim
-    if (now === "conflict") throw splitCopyError(key, from, dest);
+    const now = await inspectMove(from, dest, key);
+    if (now !== "pending") return now; // settled: another mover won, it plants the shim
     throw err; // still pending — the error was not a race after all
   }
 
@@ -562,20 +692,20 @@ function performMoveSync(
   // elsewhere (a backup extracted onto another machine, a release root).
   const target = relative(dirname(from), dest);
   try {
-    symlinkSync(target, from);
+    await symlink(target, from);
   } catch (err) {
     if (errnoCode(err) !== "EEXIST") throw err;
     // Between the rename and here, something put a name back at `from`. A
     // symlink is a concurrent mover's shim and fine; a real directory is
     // pre-move code re-creating the old dir — a split copy in the making.
-    if (!lstatSync(from).isSymbolicLink())
-      throw splitCopyError(key, from, dest);
+    if (!(await lstat(from)).isSymbolicLink()) return "conflict";
   }
 
   console.warn(
     `[data-dir] moved ${move.from} → ${relative(dataRoot(), dest)} (declared movedFrom of ${key}); ` +
       `left a symlink at ${move.from} → ${target} so older checkouts keep reading and writing the same bytes.`,
   );
+  return "settled";
 }
 
 /**
@@ -609,28 +739,22 @@ export function mayMoveSharedData(facts: MoverFacts): boolean {
   return facts.hostSingleton && (facts.release || facts.mainCheckout);
 }
 
-let mainCheckoutMemo: boolean | undefined;
-
 /**
  * Is the code in this process the main checkout? A git linked worktree's `.git`
- * is a FILE (`gitdir: …`); the main checkout's is the repository DIRECTORY. A
- * git fact read synchronously — resolution is synchronous, so the async
- * `getMainRepoRoot` is not available here. Memoized: `REPO_ROOT` is where this
- * module's own source sits, which cannot change for the life of the process.
+ * is a FILE (`gitdir: …`); the main checkout's is the repository DIRECTORY.
  */
-function runsFromMainCheckoutSync(): boolean {
-  mainCheckoutMemo ??=
-    lstatSync(join(REPO_ROOT, ".git"), {
-      throwIfNoEntry: false,
-    })?.isDirectory() === true;
-  return mainCheckoutMemo;
+async function runsFromMainCheckout(): Promise<boolean> {
+  return (
+    (await lstatOrAbsent(joinAppPath(REPO_ROOT, ".git")))?.isDirectory() ===
+    true
+  );
 }
 
-function thisProcessMayMoveSharedDataSync(): boolean {
+async function thisProcessMayMoveSharedData(): Promise<boolean> {
   return mayMoveSharedData({
     hostSingleton: isHostSingleton(),
     release: isRelease(),
-    mainCheckout: runsFromMainCheckoutSync(),
+    mainCheckout: await runsFromMainCheckout(),
   });
 }
 
