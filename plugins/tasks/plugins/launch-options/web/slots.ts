@@ -75,7 +75,7 @@ export interface LaunchOptionPill<V> {
    * "Renders nothing when unset" is therefore one rule in one place rather than
    * a convention each option re-implements — and an option that tried to would
    * not type-check. What the host paints instead is
-   * {@link LaunchOptionPill.unsetLabel} / the pill's placeholder.
+   * {@link LaunchOptionPill.unsetLabel} / the pill's bare icon.
    */
   Value: ComponentType<{ value: NonNullable<V> }>;
   /**

@@ -31,17 +31,12 @@ export interface PickerPillProps {
   /** Leading glyph, always shown — it is what the pill is recognised by. */
   icon: IconRef;
   /**
-   * What the trigger reads while NOTHING is picked, in muted text. Also the
-   * accessible name when `ariaLabel` is omitted.
+   * What the pill is, in words: its accessible name when `ariaLabel` is
+   * omitted. Never drawn — while nothing is picked the trigger is the bare
+   * icon (an unset setting takes no room on the bar); the tooltip says what it
+   * is.
    */
   placeholder: string;
-  /**
-   * How the trigger reads while nothing is picked: `placeholder` (default) —
-   * icon, muted placeholder, chevron — or `icon`: the bare icon alone, for a
-   * crowded bar where an unset setting should take no room. The tooltip and
-   * accessible name still say what it is.
-   */
-  unset?: "placeholder" | "icon";
   /**
    * Paint the accent-tinted "this is set" state. One pill, one highlight —
    * a fused pill (several groups) deliberately never tints, because "set"
@@ -115,9 +110,10 @@ export interface PickerPillCheckProps {
  * row. Nothing about that is a special case: a pill with one group is the same
  * component with one child.
  *
- * With no `Value` children the trigger shows `placeholder` in muted text — the
- * unset look, which is how "Preprompt" and "Dependency" read before you pick
- * anything.
+ * With no `Value` children the trigger is the bare icon — the unset look, the
+ * same on every composer bar, so "Preprompt" and "Dependency" take no room
+ * until you pick something (the tooltip and accessible name still say what
+ * they are).
  *
  * The trigger never wraps and never grows beyond what its own text needs, so a
  * pill on a single-line bar does not move its neighbours when you open it.
@@ -125,7 +121,6 @@ export interface PickerPillCheckProps {
 export function PickerPill({
   icon,
   placeholder,
-  unset = "placeholder",
   highlight,
   disabled,
   ariaLabel,
@@ -133,7 +128,7 @@ export function PickerPill({
   children,
 }: PickerPillProps) {
   const { values, groups } = partition(children);
-  const bare = values.length === 0 && unset === "icon";
+  const bare = values.length === 0;
 
   return (
     <DropdownMenu>
@@ -151,14 +146,8 @@ export function PickerPill({
           }
         >
           <Icon icon={icon} aria-hidden className="size-3.5" />
-          {values.length > 0 ? (
-            values.map((value, i) =>
-              cloneElement(value, { key: value.key ?? i }),
-            )
-          ) : bare ? null : (
-            <Text variant="control" tone="muted">
-              {placeholder}
-            </Text>
+          {values.map((value, i) =>
+            cloneElement(value, { key: value.key ?? i }),
           )}
           {!bare && (
             <Icon

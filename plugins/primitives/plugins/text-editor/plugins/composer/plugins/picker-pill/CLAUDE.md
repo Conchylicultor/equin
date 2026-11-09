@@ -19,9 +19,10 @@ hand-rolled its own checkmarks.
 - **Several `Group`s in one pill IS the fused control** — one trigger, one menu,
   one heading and one checked row per group. A pill with one group is the same
   component with one child, not a different case.
-- **No `Value` children ⇒ the muted `placeholder`.** That is the unset look.
-  `unset="icon"` makes it the bare icon instead (a crowded bar, e.g. the
-  task-draft card): the tooltip and accessible name still say what it is.
+- **No `Value` children ⇒ the bare icon.** That is the unset look, on every
+  bar alike (the Wish card, Home's prompt, the launch popover): an unset
+  setting takes no room. `placeholder` is only the accessible name; the
+  tooltip says what the pill is.
 - **`Item`'s `info`** is a hover card beside the menu, for rows that need more
   than a label (the workspace menu). It hangs off a wrapper, not the row, so a
   disabled row — which takes no pointer events — still shows it.

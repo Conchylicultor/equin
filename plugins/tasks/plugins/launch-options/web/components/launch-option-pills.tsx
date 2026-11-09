@@ -37,11 +37,6 @@ export interface LaunchOptionPillsProps {
   /** Which half of the bar to draw — the leading one, or the trailing one. */
   side: BarSide;
   /**
-   * How a pill reads while its option is on its default — the word, or the
-   * bare icon (a crowded bar). See `PickerPill`'s `unset`.
-   */
-  unset?: "placeholder" | "icon";
-  /**
    * Ids of options the HOST decides for this launch (e.g. a flow that always
    * runs in its own workspace): their pills are not drawn, so the user is never
    * offered a choice the host will not honour.
@@ -69,7 +64,6 @@ export function LaunchOptionPills({
   onChange,
   disabled,
   side,
-  unset,
   omit,
 }: LaunchOptionPillsProps) {
   const options = TaskLaunch.Option.useContributions();
@@ -91,7 +85,6 @@ export function LaunchOptionPills({
             values={values}
             onChange={onChange}
             disabled={disabled}
-            unset={unset}
           />
         ))}
     </>
@@ -135,13 +128,11 @@ function LaunchOptionGroup({
   values,
   onChange,
   disabled,
-  unset,
 }: {
   group: PillGroup;
   values: LaunchOptionValues;
   onChange: (next: LaunchOptionValues) => void;
   disabled: boolean;
-  unset: "placeholder" | "icon" | undefined;
 }) {
   const configLink = useConfigLink();
   const members = group.members;
@@ -172,7 +163,6 @@ function LaunchOptionGroup({
     <PickerPill
       icon={pill.icon}
       placeholder={lead.label}
-      unset={unset}
       highlight={isChanged(members, values)}
       disabled={disabled}
       tooltip={<PillTooltip members={members} />}
@@ -273,8 +263,8 @@ type ShownValue =
  * only if it lent none.
  *
  * A **solo** pill keeps the older rule — its one unset value shows nothing, so
- * the pill falls back to its placeholder, which is the right reading for a pill
- * that holds one thing and is holding nothing.
+ * the pill rests as its bare icon, which is the right reading for a pill that
+ * holds one thing and is holding nothing.
  *
  * Either way the muting downstream reads "first value strong, the rest dim"
  * over what is on screen rather than over what was registered.

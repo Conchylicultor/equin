@@ -82,7 +82,7 @@ interface ExpectedOption {
   /**
    * What this option's value prints on the trigger of a FRESH draft card.
    * `null` means it prints nothing there, which is what a solo pill holding
-   * nothing looks like — it falls back to its placeholder instead.
+   * nothing looks like — it rests as its bare icon instead.
    */
   value: string | null;
 }
@@ -131,14 +131,13 @@ function expectedPills(options: ExpectedOption[]): ExpectedPill[] {
 
 /**
  * What a pill's trigger prints, left to right, on a fresh draft card. A pill
- * holding nothing prints its placeholder — the lead option's label, which is
- * also the trigger's accessible name.
+ * holding nothing prints no text — it is its bare icon, named (accessible name
+ * and tooltip) by the lead option's label.
  */
 function expectedTriggerText(pill: ExpectedPill): string[] {
-  const values = pill.members
+  return pill.members
     .map((member) => member.value)
     .filter((value): value is string => value !== null);
-  return values.length > 0 ? values : [pill.name];
 }
 
 /** The pieces of text on a pill's trigger: its own element children, in order. */
