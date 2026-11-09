@@ -42,12 +42,20 @@ const SOURCES = [
   "src/kqueue/KqueueBackend.cc",
 ];
 
-/** binding.gyp's darwin defines and flags (node-gyp's own: C++17, exceptions on). */
+/**
+ * binding.gyp's darwin defines and flags (node-gyp's own: C++17, exceptions
+ * on, symbols hidden). Hidden is load-bearing: beside upstream's prebuild in
+ * one process, default visibility let dyld bind one image's async work to the
+ * other's weak `PromiseRunner::onExecute`, and a failed subscribe aborted the
+ * process instead of rejecting (the parcel-addon CLAUDE.md).
+ */
 const COMPILE_FLAGS = [
   "-std=c++17",
   "-O2",
   "-fPIC",
   "-fexceptions",
+  "-fvisibility=hidden",
+  "-fvisibility-inlines-hidden",
   "-fstack-protector-strong",
   "-DNAPI_DISABLE_CPP_EXCEPTIONS",
   "-DWATCHMAN",

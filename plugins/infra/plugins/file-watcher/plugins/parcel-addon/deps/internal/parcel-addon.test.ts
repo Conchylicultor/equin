@@ -339,5 +339,55 @@ describe.skipIf(process.platform !== "darwin")(
       await expectHeld(base, 0);
       expect(watchErrors).toEqual([]);
     }, 60_000);
+
+    test("beside upstream's prebuild in one process, a subscribe that fails rejects in either load order", async () => {
+      // A test run that covers the engine and this file loads both: the
+      // engine's `@parcel/watcher` (the prebuild, in a checkout `./equin
+      // build` never linked) and the built file above. Built with default
+      // visibility, the two exported the same weak C++ definitions and dyld
+      // bound one image's async work to the other's `PromiseRunner::onExecute`:
+      // the failed subscribe's rethrow found no handler and the process died
+      // of SIGABRT. In a child, since that kills whoever runs it.
+      const ready = await ensureDep(parcelWatcherAddon, execContextForTests());
+      const prebuild = createRequire(
+        createRequire(import.meta.url).resolve("@parcel/watcher/package.json"),
+      ).resolve(`@parcel/watcher-darwin-${process.arch}`);
+      const missing = join(tempDir("two-images"), "missing");
+      const script = `
+        const [first, second, dir] = process.argv.slice(-3);
+        require(first);
+        const addon = require(second);
+        for (const backend of ["kqueue", "fs-events"]) {
+          await addon.subscribe(dir, () => {}, { backend }).then(
+            () => console.log(backend, "resolved"),
+            () => console.log(backend, "rejected"),
+          );
+        }`;
+      for (const [first, second] of [
+        [prebuild, builtFile(ready)],
+        [builtFile(ready), prebuild],
+      ]) {
+        const child = spawn(
+          process.execPath,
+          ["-e", script, first!, second!, missing],
+          { stdio: ["ignore", "pipe", "pipe"] },
+        );
+        let out = "";
+        let err = "";
+        child.stdout.on("data", (chunk: Buffer) => (out += chunk.toString()));
+        child.stderr.on("data", (chunk: Buffer) => (err += chunk.toString()));
+        const exit = await new Promise<{
+          code: number | null;
+          signal: string | null;
+        }>((resolve) =>
+          child.on("exit", (code, signal) => resolve({ code, signal })),
+        );
+        expect({ exit, out, err }).toEqual({
+          exit: { code: 0, signal: null },
+          out: "kqueue rejected\nfs-events rejected\n",
+          err: "",
+        });
+      }
+    }, 60_000);
   },
 );
