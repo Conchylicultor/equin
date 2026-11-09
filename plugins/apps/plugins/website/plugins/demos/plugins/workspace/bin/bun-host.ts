@@ -32,22 +32,21 @@ import { prototypeFixtureDataOf } from "@plugins/apps/plugins/prototypes/plugins
 import type { DemoSeedData } from "./seed";
 import { hostEntries, hostProviders } from "./browser-host.generated";
 
-const DOCUMENTS = "documents/";
+const HOME = "home/";
 
 /** The demo's `data/` folder off disk, as the seed reads it. */
 export function diskDemoData(): DemoSeedData {
   const dir = join(import.meta.dir, "..", "data");
   const prototypes: Record<string, Uint8Array> = {};
-  const documents: Record<string, Uint8Array> = {};
+  const home: Record<string, Uint8Array> = {};
   for (const rel of readdirSync(dir, { recursive: true }) as string[]) {
     if (!statSync(join(dir, rel)).isFile()) continue;
     const path = rel.split(sep).join("/");
     const bytes = new Uint8Array(readFileSync(join(dir, rel)));
-    if (path.startsWith(DOCUMENTS))
-      documents[path.slice(DOCUMENTS.length)] = bytes;
+    if (path.startsWith(HOME)) home[path.slice(HOME.length)] = bytes;
     else prototypes[path] = bytes;
   }
-  return { prototypes: prototypeFixtureDataOf(prototypes), documents };
+  return { prototypes: prototypeFixtureDataOf(prototypes), home };
 }
 
 type Entry = (typeof hostEntries)[number];

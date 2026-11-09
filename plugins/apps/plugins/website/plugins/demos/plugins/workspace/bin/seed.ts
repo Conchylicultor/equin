@@ -97,17 +97,19 @@ import {
  * 7. Demo's Places map (`../core`'s), through Places' fixture writer
  *    (`writePlacesFixture`): its tags through the tag tree's endpoints on the
  *    host, its places through the app's one insert, icons given;
- * 8. Demo's Documents (`../data/documents/`), at `~/Documents` of the
- *    browser's own home folder — what Files opens on — through the browser
- *    file system's own writes (`writeBrowserHomeFiles`): notes, a markdown
- *    doc, code, a picture, a page, a PDF and a recording.
+ * 8. Demo's home folder (`../data/home/`), at `~` of the browser's own file
+ *    system — what Files opens on — through its own writes
+ *    (`writeBrowserHomeFiles`): Documents (notes, code, a recipe page, the
+ *    Lisbon trip's papers), Music (a recording, a MIDI piece, the practice
+ *    log), Pictures, and a few loose files (a video clip, a note, a picture,
+ *    a ticket).
  */
 /** The seed's input: the demo's `data/` folder, split by what each writer takes. */
 export interface DemoSeedData {
   /** `data/prototypes/` and `data/thumbnails/`: Prototypes' fixture. */
   prototypes: PrototypeFixtureData;
-  /** `data/documents/`: Demo's `~/Documents`, path below it → bytes. */
-  documents: Readonly<Record<string, Uint8Array>>;
+  /** `data/home/`: Demo's home folder, path below `~` → bytes. */
+  home: Readonly<Record<string, Uint8Array>>;
 }
 
 const PRACTICE_TIMER = demoStoryByKey("practice-timer");
@@ -234,10 +236,7 @@ export async function seed(
   await settleJobQueue();
   await writeBrowserHomeFiles(
     Object.fromEntries(
-      Object.entries(data.documents).map(([path, bytes]) => [
-        `~/Documents/${path}`,
-        bytes,
-      ]),
+      Object.entries(data.home).map(([path, bytes]) => [`~/${path}`, bytes]),
     ),
     systemOrigin("demo seed"),
   );

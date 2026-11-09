@@ -437,11 +437,11 @@ export const compositionsConfig = defineConfig({
             // capability ids they define stay.
             "conversations.conversation-view.push-and-exit.capabilities",
             "tasks.outcome-report.capability",
-            // Files, whole: the demo's virtual file system. It opens on App
-            // data — the data-files roots the apps keep (Prototypes, and the
-            // user's Documents the seed fills), memory here — and the places
-            // that need the computer (Home, Downloads, the checkout, the
-            // volume, pins) are left out (their reads are `needsMachine`).
+            // Files, whole: it browses the browser's own file system — its
+            // Home, which the seed fills (Documents, Music, Pictures, a few
+            // loose files), with the apps' folders under the hidden ~/.equin/
+            // — and leaves out the computer's disk, which this host does not
+            // serve (its places are absent).
             // The file-peek pane every transcript path opens imports its
             // panes too; reading a checkout file there says "not available".
             "apps.file-explorer.**",
@@ -453,12 +453,11 @@ export const compositionsConfig = defineConfig({
             "apps.home.**",
             "!apps.home.tour.**",
             "apps.prototypes.**",
-            // Sonata, as its own app ships (`app("sonata")` below): without
-            // transcription (it launches an agent in a scratch workspace) and
-            // the MIDI file preview (its adapter into the file viewer, which
-            // this demo leaves out).
+            // Sonata, as its own app ships (`app("sonata")` below), without
+            // transcription (it launches an agent in a scratch workspace) —
+            // but WITH the MIDI file preview, its adapter into the file
+            // viewer: this demo has Files, whose Music folder holds a MIDI.
             "apps.sonata.**",
-            "!apps.sonata.sources.midi.file-preview.**",
             "!apps.sonata.transcription.**",
             // The Desktop (floating windows over a wallpaper, the shelf,
             // virtual desktops), switched to from the launcher inside the

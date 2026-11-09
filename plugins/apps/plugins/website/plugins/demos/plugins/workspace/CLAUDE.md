@@ -54,19 +54,22 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
   trips (Lisbon being planned, Tokyo next, Rome and New York been), on the
   starter tag tree plus Demo's "Trips › <city>", "Friends' tips" and "Home"
   (`core/internal/places.ts`, a Places fixture; never a real user's saved
-  places), and Demo's Documents in Files (`data/documents/`: notes,
-  markdown, code, a picture, an HTML recipe, a PDF and a recording — real
-  files, path → bytes). How each app's data is written is that
+  places), and Demo's home folder in Files (`data/home/`, written at
+  `~` of the browser's file system: Documents — notes, code, an HTML recipe,
+  the Lisbon trip's papers —, Music — a recording, a MIDI piece, the practice
+  log —, Pictures, and loose files — a short video clip, a note, a picture, a
+  ticket; real files, path → bytes, kept tiny). How each app's data is written is that
   app's fixture writer: `apps/pages/fixtures`' `writePageTree`,
   `apps/prototypes/fixtures`' `writePrototypeFixture`,
   `apps/sonata/fixtures`' `writeSongFixtures` and `apps/places/fixtures`'
   `writePlacesFixture` (its tags through the tag tree's endpoints on the
-  seed's `host`), `apps/file-explorer/documents`' `writeDocumentsFixture`.
+  seed's `host`), the browser file system's `writeBrowserHomeFiles`
+  (`infra/paths/data-files/memory`).
   Design:
   `research/2026-10-28-global-per-app-demo-seeds-v2.md`.
-- **The prototypes, the Documents and the boot test read `data/` off disk**
-  (`bin/bun-host.ts`'s `diskDemoData`: `data/documents/` is the Documents
-  fixture, the rest Prototypes'): the seed runs in Bun only, so nothing
+- **The prototypes, the home folder and the boot test read `data/` off disk**
+  (`bin/bun-host.ts`'s `diskDemoData`: `data/home/` is Demo's home, the rest
+  Prototypes'): the seed runs in Bun only, so nothing
   inlines the folder into the worker.
 - **The seed writes into a live host** (`bin/seed.ts`, run by the snapshot
   script). `bootBrowserHost` seeds after the post-ready phases, so triggers, the job queue and the files
@@ -87,7 +90,7 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
   the page header's own `PATCH` sent to the host's router (`seed`'s `host`
   argument) — an agent's tools cannot set an icon, a person can — → settle →
   the transcripts → the prototypes fixture → settle → the songs → settle →
-  Places → settle → the Documents → settle. (Sonata's MIDI starters are not the demo's: the MIDI source seeds
+  Places → settle → the home folder → settle. (Sonata's MIDI starters are not the demo's: the MIDI source seeds
   them itself, as on a fresh install.)
 - **Every id carries `demo`** (`conv-demo-…`, `task-demo-…`, `att-demo-…`, the
   pages and the blocks a record names), so a request that leaked past the
@@ -123,8 +126,9 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
   (`apps.prototypes.**`, a positive: its tree is a `data-files` root, memory
   here — `research/2026-10-24-global-data-files-host-service.md`), Home
   (`apps.home.**`, the app gallery, minus its onboarding tour) and Sonata
-  (`apps.sonata.**`, minus transcription and the MIDI file preview, exactly as
-  Sonata's own app composition ships it;
+  (`apps.sonata.**`, minus transcription, as Sonata's own app composition
+  ships it — but with the MIDI file preview, Sonata's adapter into Files'
+  viewer, which this demo has;
   `research/2026-11-04-global-sonata-in-browser-demo.md`), and the Desktop
   (`apps.desktop.**`, minus its Openverse wallpaper source, which searches an
   external API: picked from the launcher inside the embed, as on main, it
@@ -143,8 +147,8 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
   Google's details and photos, the icon pick and Ask need the computer and say
   so (`research/2026-11-06-global-places-in-browser-demo.md`). Files
   (`apps.file-explorer.**`, whole, listed) browses the browser's own file
-  system (`file-systems`' `browser`): it opens on its Home, where the seed
-  wrote Demo's `~/Documents` (`writeBrowserHomeFiles`), with the apps' folders
+  system (`file-systems`' `browser`): it opens on its Home, which the seed
+  filled from `data/home/` (`writeBrowserHomeFiles`), with the apps' folders
   under the hidden `~/.equin/` — and leaves out the computer's disk, which
   this host does not serve; `apps/demo`'s `file-explorer-in-demo.ts` opens
   each viewer.

@@ -5,17 +5,17 @@
  *
  *  1. opens the launcher inside the embed and picks Files: the embed switches
  *     to the file explorer, which opens on Home — the browser storage's home
- *     folder, holding Demo's `Documents`;
+ *     folder, holding Demo's Documents, Music and Pictures and a few loose
+ *     files;
  *  2. checks the Places sidebar lists Home and no place of the computer's
- *     disk (Downloads, the equin checkout, the startup volume, Trash), and no
- *     failed row;
- *  3. opens `~/Documents` in the same browser the desktop has: the seeded
- *     folders are listed, and each kind of file the seed wrote opens in its
- *     viewer beside its folder — markdown rendered, plain text and code as
- *     listings, the picture drawn, the HTML page in its sandboxed frame, the
- *     PDF in the browser's viewer and the recording loaded in the player (both
- *     from the worker's storage, as blobs the transport fetched) — never an
- *     error;
+ *     disk (Downloads, the equin checkout, the startup volume, Trash), no
+ *     empty Locations heading, and no failed row;
+ *  3. opens each kind of file the seed wrote, from Home down, in the same
+ *     browser the desktop has — markdown rendered, plain text and code as
+ *     listings, pictures drawn, the HTML page in its sandboxed frame, the PDFs
+ *     in the browser's viewer, the video and the recording loaded in the
+ *     player (from the worker's storage, as blobs the transport fetched), the
+ *     MIDI in Sonata's own preview — never an error;
  *  4. shows hidden files and opens `~/.equin/apps/prototypes`: the apps' own
  *     folders are folders of the same file system, where the desktop keeps
  *     them.
@@ -68,13 +68,18 @@ const APP_NAME = /^\s*Files\s*$/;
 const APP_ID = "file-explorer";
 /** The places of the computer's disk (`apps/file-explorer/places`). */
 const MACHINE_PLACES = ["Downloads", "equin", "Trash"] as const;
-/** The demo's Documents (`apps/website/demos/workspace`'s `data/documents/`). */
-const DOCUMENT_FOLDERS = [
-  "Code",
-  "Lisbon trip",
-  "Notes",
-  "Piano",
-  "Recipes",
+/**
+ * What Demo's Home holds (`apps/website/demos/workspace`'s `data/home/`): three
+ * folders and a few loose files, each a different preview.
+ */
+const HOME_ENTRIES = [
+  "~/Documents",
+  "~/Music",
+  "~/Pictures",
+  "~/Tram 28 ride.webm",
+  "~/This week.md",
+  "~/Alfama at dusk.png",
+  "~/Fado night ticket.pdf",
 ] as const;
 /** How long an app swap, a worker read or a viewer gets. */
 const RENDER_TIMEOUT_MS = 30_000;
@@ -107,7 +112,6 @@ function toolbarButton(page: Page, label: string): Locator {
   return embedRoot(page).getByRole("button", { name: label }).first();
 }
 
-const DOCUMENTS = "~/Documents";
 /** The hidden folder holding the apps' data dirs, as on the desktop. */
 const DATA = `~/${DATA_DIR_NAME}`;
 
@@ -168,9 +172,12 @@ await withBrowser(async (h) => {
     (id) => id === APP_ID,
   );
   await renders(
-    "Files opens on Home, holding Documents",
-    async () => (await row(page, DOCUMENTS).count()) > 0,
-    (there) => there,
+    "Files opens on Home: its folders and loose files",
+    async () =>
+      Promise.all(
+        HOME_ENTRIES.map(async (p) => (await row(page, p).count()) > 0),
+      ),
+    (there) => there.every(Boolean),
   );
   r.ok(
     "App data is gone",
@@ -195,37 +202,60 @@ await withBrowser(async (h) => {
       sidebarLines.join(" | "),
     );
   r.ok(
+    "the sidebar's section headings are read (Favorites, holding Home)",
+    sidebarLines.includes("Favorites"),
+    sidebarLines.join(" | "),
+  );
+  r.ok(
+    "the sidebar has no empty Locations heading (every location is the computer's)",
+    !sidebarLines.includes("Locations"),
+    sidebarLines.join(" | "),
+  );
+  r.ok(
     "the sidebar has no failed row",
     !/not available|not known/i.test(sidebarLines.join(" ")),
     sidebarLines.join(" | "),
   );
 
-  // ── 3. Documents: the seeded tree, each viewer ──────────────────────────
-  await row(page, DOCUMENTS).click();
-  await renders(
-    "Documents lists the seeded folders",
-    async () =>
-      Promise.all(
-        DOCUMENT_FOLDERS.map(
-          async (f) => (await row(page, `${DOCUMENTS}/${f}`).count()) > 0,
-        ),
-      ),
-    (there) => there.every(Boolean),
-  );
-  await snap(page, OUT, "3-documents");
+  // ── 3. every kind of preview, from Home down ────────────────────────────
+  /** Back to Home through its place in the sidebar. */
+  const home = async (): Promise<void> => {
+    await sidebar(page).getByText("Home", { exact: true }).first().click();
+    await renders(
+      "back on Home",
+      // A loose file of Home's: listed only while Home itself is.
+      async () => (await row(page, "~/Tram 28 ride.webm").count()) > 0,
+      (there) => there,
+    );
+  };
 
-  /** Open `folder/file` and wait for its viewer to read `ok`. */
+  /**
+   * Open `path` (a `~/…` file): each folder above it from Home, then the
+   * file, and wait for its viewer to read `ok`.
+   */
   const view = async (
-    folder: string,
-    file: string,
+    path: string,
     what: string,
     ok: (preview: Locator, text: string) => Promise<boolean>,
   ): Promise<void> => {
-    const dir = `${DOCUMENTS}/${folder}`;
-    await row(page, dir).click();
-    await row(page, `${dir}/${file}`).click();
+    const segments = path.split("/");
+    for (let i = 2; i < segments.length; i++) {
+      const dir = segments.slice(0, i).join("/");
+      await renders(
+        `${dir} is listed`,
+        async () => (await row(page, dir).count()) > 0,
+        (there) => there,
+      );
+      await row(page, dir).click();
+    }
     await renders(
-      `${folder}/${file}: ${what}`,
+      `${path} is listed`,
+      async () => (await row(page, path).count()) > 0,
+      (there) => there,
+    );
+    await row(page, path).click();
+    await renders(
+      `${path}: ${what}`,
       async () => {
         const text = await previewText(page);
         return { ok: await ok(preview(page), text), text: text.slice(0, 160) };
@@ -233,106 +263,127 @@ await withBrowser(async (h) => {
       (v) => v.ok,
     );
     r.ok(
-      `${folder}/${file}: the pane shows no error`,
+      `${path}: the pane shows no error`,
       !BROKEN.test(await previewText(page)),
       await previewText(page),
     );
-    await snap(page, OUT, `3-${file.replace(/\W+/g, "-")}`);
-    // Back to Documents: up out of the folder.
-    await toolbarButton(page, "Enclosing folder").click();
-    await renders(
-      `back in Documents after ${file}`,
-      async () => (await row(page, dir).count()) > 0,
-      (there) => there,
-    );
+    await snap(page, OUT, `3-${path.replace(/\W+/g, "-")}`);
+    await home();
   };
 
+  const markdown = (heading: string) => async (p: Locator, text: string) =>
+    (await p.getByRole("heading", { name: heading }).count()) > 0 &&
+    !text.includes(`# ${heading}`);
+  const picture = (width: number) => async (p: Locator) => {
+    const img = p.locator("img").first();
+    if ((await img.count()) === 0) return false;
+    return img.evaluate(
+      (el: HTMLImageElement, w) => el.complete && el.naturalWidth === w,
+      width,
+    );
+  };
+  // Every file system serves every file's bytes (file-systems' `fileUrl`), so
+  // the PDF, the recording and the video preview from the worker's storage —
+  // a blob the transport fetched, never "No preview".
+  const pdf = async (p: Locator, text: string) => {
+    if (NOT_AVAILABLE.test(text)) return false;
+    const frame = p.locator("iframe, embed, object").first();
+    if ((await frame.count()) === 0) return false;
+    // Headless Chromium has no PDF viewer (the frame stays blank, on the
+    // desktop's disk too): what is checked is that the frame holds the
+    // worker's bytes as a PDF, which a real browser's viewer renders.
+    const src =
+      (await frame.getAttribute("src")) ?? (await frame.getAttribute("data"));
+    if (!(src?.startsWith("blob:") ?? false)) return false;
+    const type = await page.evaluate(
+      async (url) => (await (await fetch(url)).blob()).type,
+      src!,
+    );
+    return type === "application/pdf";
+  };
+  const media =
+    (tag: "audio" | "video") => async (p: Locator, text: string) => {
+      if (NOT_AVAILABLE.test(text)) return false;
+      const el = p.locator(tag).first();
+      if ((await el.count()) === 0) return false;
+      return el.evaluate(
+        (m: HTMLMediaElement) =>
+          m.currentSrc.startsWith("blob:") &&
+          m.readyState >= HTMLMediaElement.HAVE_METADATA &&
+          m.duration > 0,
+      );
+    };
+
+  // Home's loose files: a video, a note, a picture, a ticket.
   await view(
-    "Notes",
-    "Ideas for equin.md",
+    "~/Tram 28 ride.webm",
+    "the video is loaded in the player, from the worker",
+    media("video"),
+  );
+  await view(
+    "~/This week.md",
     "the markdown is rendered (its heading, no `#`)",
-    async (p, text) =>
-      (await p.getByRole("heading", { name: "Ideas for equin" }).count()) > 0 &&
-      !text.includes("# Ideas"),
+    markdown("This week"),
   );
-  await view("Notes", "groceries.txt", "the text is shown", async (_p, text) =>
-    text.includes("coffee beans"),
+  await view("~/Alfama at dusk.png", "the picture is drawn", picture(640));
+  await view(
+    "~/Fado night ticket.pdf",
+    "the PDF is shown in the browser's viewer, from the worker",
+    pdf,
+  );
+  // Music: the MIDI in Sonata's own preview, the recording in the player.
+  await view(
+    "~/Music/Ode to Joy.mid",
+    "the MIDI is drawn in Sonata's preview (song position, Open in Sonata, no loading veil)",
+    async (p, text) =>
+      !/Loading/.test(text) &&
+      (await p.locator("[inert]").count()) === 0 &&
+      (await p.getByRole("slider", { name: "Song position" }).count()) > 0 &&
+      (await p.getByRole("button", { name: "Open in Sonata" }).count()) > 0,
   );
   await view(
-    "Code",
-    "practice-timer.js",
+    "~/Music/C major arpeggio.wav",
+    "the recording is loaded in the player, from the worker",
+    media("audio"),
+  );
+  await view(
+    "~/Pictures/Trips/Lisbon/tram 28.png",
+    "the picture is drawn",
+    picture(640),
+  );
+  // Documents.
+  await view(
+    "~/Documents/Notes/Ideas for equin.md",
+    "the markdown is rendered (its heading, no `#`)",
+    markdown("Ideas for equin"),
+  );
+  await view(
+    "~/Documents/Notes/groceries.txt",
+    "the text is shown",
+    async (_p, text) => text.includes("coffee beans"),
+  );
+  await view(
+    "~/Documents/Code/practice-timer.js",
     "the code is listed",
     async (_p, text) => text.includes("class PracticeTimer"),
   );
-  await view("Code", "split_bill.py", "the code is listed", async (_p, text) =>
-    text.includes("expenses"),
+  await view(
+    "~/Documents/Code/split_bill.py",
+    "the code is listed",
+    async (_p, text) => text.includes("expenses"),
   );
   await view(
-    "Lisbon trip",
-    "tram 28.png",
-    "the picture is drawn",
-    async (p) => {
-      const img = p.locator("img").first();
-      if ((await img.count()) === 0) return false;
-      return img.evaluate(
-        (el: HTMLImageElement) => el.complete && el.naturalWidth === 640,
-      );
-    },
-  );
-  await view(
-    "Recipes",
-    "shakshuka.html",
+    "~/Documents/Recipes/shakshuka.html",
     "the page is rendered in its frame",
     async (p) => (await p.locator("iframe").count()) > 0,
   );
-  // Every file system serves every file's bytes (file-systems' `fileUrl`), so
-  // the PDF and the recording preview from the worker's storage — a blob the
-  // transport fetched, never "No preview".
   await view(
-    "Lisbon trip",
-    "boarding pass.pdf",
+    "~/Documents/Lisbon trip/boarding pass.pdf",
     "the PDF is shown in the browser's viewer, from the worker",
-    async (p, text) => {
-      if (NOT_AVAILABLE.test(text)) return false;
-      const frame = p.locator("iframe, embed, object").first();
-      if ((await frame.count()) === 0) return false;
-      // Headless Chromium has no PDF viewer (the frame stays blank, on the
-      // desktop's disk too): what is checked is that the frame holds the
-      // worker's bytes as a PDF, which a real browser's viewer renders.
-      const src =
-        (await frame.getAttribute("src")) ?? (await frame.getAttribute("data"));
-      if (!(src?.startsWith("blob:") ?? false)) return false;
-      const type = await page.evaluate(
-        async (url) => (await (await fetch(url)).blob()).type,
-        src!,
-      );
-      return type === "application/pdf";
-    },
-  );
-  await view(
-    "Piano",
-    "C major arpeggio.wav",
-    "the recording is loaded in the player, from the worker",
-    async (p, text) => {
-      if (NOT_AVAILABLE.test(text)) return false;
-      const media = p.locator("audio, video").first();
-      if ((await media.count()) === 0) return false;
-      return media.evaluate(
-        (el: HTMLMediaElement) =>
-          el.currentSrc.startsWith("blob:") &&
-          el.readyState >= HTMLMediaElement.HAVE_METADATA &&
-          el.duration > 0,
-      );
-    },
+    pdf,
   );
 
   // ── 4. the apps' folders, under the hidden ~/.equin ─────────────────────
-  await toolbarButton(page, "Enclosing folder").click();
-  await renders(
-    "back on Home",
-    async () => (await row(page, DOCUMENTS).count()) > 0,
-    (there) => there,
-  );
   await toolbarButton(page, "Show hidden files").click();
   for (const path of [DATA, `${DATA}/apps`, `${DATA}/apps/prototypes`]) {
     await renders(

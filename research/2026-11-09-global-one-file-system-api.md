@@ -127,7 +127,7 @@ The about 25 `source` switches in file-viewer (`file-url`, `use-file-text`, `use
 - `browse.ts` and its four reads and raw route are deleted.
 - `app-data` (web plugin) is deleted.
 - `documents` (root, fixture writer, binding, data dir) is deleted.
-- The demo seed (`demos/workspace/bin/seed.ts` step 8, `bun-host.ts` `documents/`) writes `~/Documents/…` through `files.write` into `browser`.
+- The demo seed (`demos/workspace/bin/seed.ts` step 8) writes Demo's home folder (`data/home/` → `~/…`: Documents, Music, Pictures, loose files) into `browser` through `writeBrowserHomeFiles` (as built; originally planned as `files.write`).
 - `file-explorer-in-demo.ts` e2e expects Home, not App data.
 - The five other roots keep their API. Only their browser binding moves under `~/.equin/`.
 

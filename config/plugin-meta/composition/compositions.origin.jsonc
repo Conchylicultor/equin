@@ -1,4 +1,4 @@
-// @hash 3e8e873231f2
+// @hash 3c4b0ed39bd8
 {
   "manifests": [
     {
@@ -197,7 +197,6 @@
         "!apps.home.tour.**",
         "apps.prototypes.**",
         "apps.sonata.**",
-        "!apps.sonata.sources.midi.file-preview.**",
         "!apps.sonata.transcription.**",
         "apps.desktop.**",
         "!apps.desktop.wallpaper.openverse.**",
