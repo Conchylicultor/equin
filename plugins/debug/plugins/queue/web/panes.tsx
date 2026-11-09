@@ -227,7 +227,6 @@ export const jobDetailPane = Pane.define({
   app: debugApp,
   title: { useText: useJobRowTitle, fallback: "Job" },
   component: JobDetailBody,
-  width: 520,
   useResolve: useResolveJobRow,
 });
 
@@ -366,7 +365,6 @@ export const deadDetailPane = Pane.define({
   app: debugApp,
   title: { useText: useDeadJobTitle, fallback: "Dead job" },
   component: DeadDetailBody,
-  width: 520,
   useResolve: useResolveDeadJob,
 });
 
@@ -405,7 +403,6 @@ export const emissionDetailPane = Pane.define({
   app: debugApp,
   title: { useText: useEmissionTitle, fallback: "Emission" },
   component: EmissionDetailBody,
-  width: 520,
   useResolve: useResolveEmission,
 });
 
@@ -463,7 +460,6 @@ export const triggerDetailPane = Pane.define({
   app: debugApp,
   title: { useText: useTriggerTitle, fallback: "Trigger" },
   component: TriggerDetailBody,
-  width: 520,
   useResolve: useResolveTrigger,
 });
 

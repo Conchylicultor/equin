@@ -78,56 +78,41 @@ because it was already valid).
 - `<MillerColumns/>` — the renderer. The shell mounts it once.
 
 That's it. Pane authors don't import anything from this plugin. They
-register panes with the regular `Pane.define` + `Pane.Register` flow, and
-optionally set a default column width.
+register panes with the regular `Pane.define` + `Pane.Register` flow. A pane
+declares no width: every column takes its share of the row (below).
 
-## Per-pane width
-
-```ts
-Pane.define({
-  route: tasksRootRoute,
-  app: agentManagerApp,
-  component: TasksRoot,
-  width: 320,
-});
-```
-
-`width` is the column's default width in pixels (top-level on
-`Pane.define`, separate from the `chrome` config). Defaults to 400.
-
-## Sizing: shrink until the trailing panes fit, then scroll ("fit")
+## Sizing: balanced, then scroll
 
 The whole row is laid out by one pure function, `layoutColumns` in
 [`web/layout.ts`](web/layout.ts) (tested beside it); the components only draw
-what it decides.
+what it decides. Prototype: `proto-1794189254-saewzy` (`open=balanced`).
 
-- **Every column has its own width** `w`: the width the user dragged it to ??
-  `pane.width` ?? 400 — a property of the pane, never the space left over, so
-  the same pane opens at the same width whatever was on screen before. The
-  width is the whole column, its 4px divider included.
-- **…and a floor** `m = min(w, max(240, round(0.65·w)))` (`columnFloor`,
-  `FLOOR_RATIO` / `FLOOR_MIN`, the reasoning beside them). A collapsed bar is
-  32 fixed; a column the user dragged is its own width, fixed — the fit never
-  compresses an explicit choice.
-- **The columns fit** (`Σw ≤ row`): each at its own width; the leaf grows to
-  fill the spare room.
-- **They don't**: the largest trailing window — the leaf and as many columns to
-  its left as possible — whose floors fit the row is shown. Its columns are
-  compressed in proportion from `w` toward `m` so that together they fill the
-  row exactly (the leaf is compressed like the others). The columns left of
-  the window sit at their floor, scrolled off to the left: the row's end
-  (`total − row`) puts the window's left edge exactly on the viewport's — no
-  column half-cut. So a laptop shows three default panes side by side, a wide
-  screen more, and a deeper chain scrolls the oldest away.
-- **Not even the leaf's floor fits**: the leaf takes it and the row scrolls.
-- **A window resize re-fits live**, unanimated; a row sitting at its end stays
-  at its end.
+- **Columns that fit share the row equally**: 50/50, 33/33/33, … A column
+  "fits" while every shown column gets at least `SHARE_MIN` (420px) — so a
+  1470px laptop row shows three, a 1920px one four. The width is the whole
+  column, its 4px divider included.
+- **The leaf gets no bonus.** It is one share like the others, so opening the
+  next column never snaps the previous leaf back from a wide fill.
+- **Past that, new columns open on the right at the same width**: the older
+  ones keep their share and sit scrolled off to the left, the row's end
+  (`total − row`) putting the shown window's left edge exactly on the
+  viewport's — no column half-cut.
+- **A narrow row keeps a pair**: when not even two columns fit at
+  `SHARE_MIN`, two still share the row down to `PAIR_MIN` (300px) each, so an
+  open keeps the column it came from beside it. Only below 600px does one
+  column take the row.
+- **A column the user dragged keeps that width** (counted at it when deciding
+  what fits); the others share what it leaves. Double-click the divider to
+  forget it. Every shown column dragged: the leaf shares instead.
+- **A collapsed bar** is 32 fixed and leaves the rest to share.
+- **A window resize re-balances live**, unanimated; a row sitting at its end
+  stays at its end.
 - **A divider drag** lays the row out as it was when the drag began, with the
   dragged column following the pointer (`dragLayout`; the leaf grows back if
-  it would leave a gap). Re-fitting during the drag would re-balance the
-  columns left of the divider and pull it away from the pointer. When the
-  drag ends, the column's own width becomes the width it was left at
-  (stored, so fixed from then on) and the row re-fits — as a motion.
+  it would leave a gap). Re-balancing during the drag would move the columns
+  around the divider and pull it away from the pointer. When the drag ends,
+  the column keeps the width it was left at (stored) and the rest re-balance
+  — as a motion.
 - **Nothing automatic is ever stored.** Only a drag writes a width
   (`miller.column-widths.v2`, localStorage, keyed by `(tabId, paneId)`, per
   surface via a `WeakMap` on the `PaneStore`). The previous owner's entries
@@ -199,7 +184,7 @@ pane declares `chrome.keepMountedWhenCollapsed` (kept mounted, hidden).
 
 - Description: Miller-columns layout renderer. Maps the matched pane chain to a horizontal sequence of resizable, collapsible columns.
 - Web:
-  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×12
     - `primitives/dom/auto-scroll` ×3
     - `primitives/dom/web-storage` ×3
@@ -211,6 +196,7 @@ pane declares `chrome.keepMountedWhenCollapsed` (kept mounted, hidden).
     - `primitives/css/theme-boundary.Theme`
     - `primitives/css/ui-kit.cn`
     - `primitives/dom/element-size.useResizeObserver`
+    - `primitives/dom/scroll-reveal.REVEAL_BOUNDARY_ATTR`
     - `primitives/error-boundary.PluginErrorBoundary`
     - `primitives/scope/surface-id.useSurfaceTabId`
     - `primitives/shortcuts.useSurfaceShortcuts`

@@ -72,7 +72,6 @@ export const eventSourceRunPane = Pane.define({
   component: EventSourceRunPaneView,
   useResolve: useResolveRun,
   title: { useText: useRunTitle, fallback: "Run" },
-  width: 460,
 });
 
 function useResolveRun({ runId }: { runId: string }): ResolveResult {

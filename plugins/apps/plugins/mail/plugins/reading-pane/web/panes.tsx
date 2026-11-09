@@ -19,7 +19,6 @@ export const threadPane = Pane.define({
   route: defineRoute({ id: "mail-thread", segment: "thread/:threadId" }),
   app: mailApp,
   component: ThreadPaneView,
-  width: 640,
   // No existence gate: a missing/deleted thread resolves to an empty message
   // list ("(no subject)") rather than a hard 404 — the list only ever opens
   // thread ids it just rendered.

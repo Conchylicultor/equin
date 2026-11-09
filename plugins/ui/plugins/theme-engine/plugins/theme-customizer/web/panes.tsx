@@ -24,5 +24,4 @@ export const themeCustomizerPane = Pane.define({
   app: settingsApp,
   title: "Theme Customizer",
   component: ThemeCustomizerBody,
-  width: 440,
 });

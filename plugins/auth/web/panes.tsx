@@ -26,7 +26,6 @@ export const accountsPane = Pane.define({
   component: AccountsPane,
   title: "Accounts",
   chrome: { history: true },
-  width: 420,
 });
 
 /** The row's name, from its provider or integration contribution. */
@@ -70,7 +69,6 @@ export const accountPane = Pane.define({
   component: AccountBody,
   useResolve: useResolveAccount,
   title: { useText: useAccountTitle, fallback: "Account" },
-  width: 560,
 });
 
 function AccountBody() {

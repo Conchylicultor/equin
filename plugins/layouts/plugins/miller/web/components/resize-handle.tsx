@@ -16,6 +16,8 @@ interface ResizeHandleProps {
   onResize: (dx: number) => void;
   /** The drag ended `dx` from where it began. */
   onResizeEnd: (dx: number) => void;
+  /** Double-click: forget the dragged width, back to the balanced share. */
+  onResetWidth: () => void;
   onCollapse?: () => void;
 }
 
@@ -37,6 +39,7 @@ export function ResizeHandle({
   onResizeStart,
   onResize,
   onResizeEnd,
+  onResetWidth,
   onCollapse,
 }: ResizeHandleProps) {
   const onPointerDown = useCallback(
@@ -77,6 +80,7 @@ export function ResizeHandle({
       role="separator"
       aria-orientation="vertical"
       onPointerDown={onPointerDown}
+      onDoubleClick={onResetWidth}
       className={handleClass}
       style={{ touchAction: "none" }}
     >
@@ -86,6 +90,7 @@ export function ResizeHandle({
         <button
           type="button"
           onPointerDown={(e) => e.stopPropagation()}
+          onDoubleClick={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation();
             onCollapse();

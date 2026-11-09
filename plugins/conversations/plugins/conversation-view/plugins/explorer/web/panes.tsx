@@ -30,8 +30,6 @@ export const convFileTreePane = Pane.define({
   // convId from the URL, so Expand is Files, on the current location.
   expand: { app: fileExplorerApp, useTarget: useOpenInFilesTarget },
   component: ConvExplorerChromedBody,
-  // Tree plus the selected file's preview beside it.
-  width: 960,
 });
 
 function useOpenInFilesTarget(params: {

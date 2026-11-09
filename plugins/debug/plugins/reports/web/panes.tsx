@@ -45,7 +45,6 @@ export const reportDetailPane = Pane.define({
   app: debugApp,
   title: { useText: useReportTitle, fallback: "Report" },
   component: ReportDetailBody,
-  width: 480,
   useResolve: useResolveReport,
 });
 

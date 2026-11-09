@@ -59,8 +59,8 @@ interface ColumnMotionProps {
  * - **leave** — the entrance in reverse: a closed column is lifted out of flow
  *   at its last rect (a copy of its DOM, on top) and its content slides 36px
  *   right while fading out, over the same duration and curve as an entrance;
- *   the remaining columns transition to their new widths underneath (the new
- *   leaf growing to fill), and the row's scroll glides back with them —
+ *   the remaining columns transition to their new widths underneath (re-balancing
+ *   over the row), and the row's scroll glides back with them —
  *   MillerColumns owns every scroll of the row, this only undoes the clamp
  *   the commit's removals caused.
  * - **swap** — the same pane showing another entity in the same position, or

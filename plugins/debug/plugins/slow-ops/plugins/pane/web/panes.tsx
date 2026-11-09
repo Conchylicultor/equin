@@ -10,7 +10,6 @@ export const slowOpDetailPane = Pane.define({
   route: slowOpDetailRoute,
   app: debugApp,
   component: SlowOpDetailBody,
-  width: 640,
   // No route guard — the detail self-fetches by id and renders a graceful
   // not-found (the trace detail precedent).
   useResolve: false,

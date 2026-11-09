@@ -64,7 +64,6 @@ export const appPreviewPane = Pane.define({
   component: AppPreviewPaneBody,
   title: { useText: ({ attemptId }) => attemptId },
   chrome: { history: false },
-  width: 900,
   useResolve: false,
 });
 

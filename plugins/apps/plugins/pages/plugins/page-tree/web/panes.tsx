@@ -97,7 +97,6 @@ export const pageDetailPane = Pane.define({
   route: pageDetailRoute,
   app: pagesApp,
   component: PageDetailBody,
-  width: 720,
   useResolve: useResolvePage,
   // Tab/document title: the page's title from its row in the pages set (same
   // source PageDetailBody renders), falling back to the pageId. The header
@@ -121,8 +120,6 @@ export const pagesTreePane = Pane.define({
   route: pagesTreeRoute,
   app: pagesApp,
   component: PagesTreeBody,
-  // Nav-column width (the repo's list-column convention); detail panes run wider.
-  width: 320,
   // NO `titleOwner`: this is a nav column. `pageDetailPane` owns the tab title,
   // so opening a page from here titles the tab with the page.
 });
@@ -150,7 +147,6 @@ export const blockDetailPane = Pane.define({
   route: blockDetailRoute,
   app: pagesApp,
   component: BlockDetailBody,
-  width: 720,
   useResolve: useResolveBlock,
   title: {
     useText: useBlockPaneTitle,

@@ -16,7 +16,6 @@ export const pluginViewPane = Pane.define({
   }),
   app: studioApp,
   component: PluginViewBody,
-  width: 600,
   useResolve: false,
   title: { useText: usePluginViewTitle, fallback: "Plugin" },
 });

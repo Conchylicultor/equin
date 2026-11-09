@@ -17,6 +17,11 @@ must never move the user's scroll.
   call site here. `scope: "nearest"` scrolls only the element's closest scroll
   container (a list floating over a larger surface whose own position must
   not move) instead of every ancestor.
+- `REVEAL_BOUNDARY_ATTR` — marks a scroll container whose scroll its owner
+  drives alone (Miller's row of columns): a reveal inside it moves only the
+  containers between the element and it, never it or anything above it. So a
+  pane revealing its selected row, deep in a column, cannot scroll the layout
+  sideways under the user.
 
 Extend this primitive rather than hand-rolling `scrollIntoView` again.
 
@@ -34,16 +39,18 @@ Extend this primitive rather than hand-rolling `scrollIntoView` again.
     - `RevealOptions`
   - Exports (values):
     - `focusElement`
+    - `REVEAL_BOUNDARY_ATTR`
     - `revealElement`
     - `useRevealOnActive`
 - Cross-plugin:
-  - Imported by: 45 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 46 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×16
     - `primitives` ×16
     - `page` ×6
     - `conversations` ×2
     - `apps-core/tab-bar`
     - `hints`
+    - `layouts/miller`
     - `media/player`
     - `search/quick-find`
     - `tag-tree/picker`

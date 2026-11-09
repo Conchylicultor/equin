@@ -23,7 +23,6 @@ export const exhibitsPane = Pane.define({
   route: exhibitsRoute,
   app: debugApp,
   component: ExhibitsBody,
-  width: 520,
 });
 
 // `:id*` because an exhibit id is `<group>/<name>`: the URL spells it as path
@@ -38,7 +37,6 @@ export const exhibitPane = Pane.define({
   title: { useText: ({ id }) => id },
   component: ExhibitBody,
   useResolve: false,
-  width: 1040,
 });
 
 function ExhibitsBody(): ReactElement {

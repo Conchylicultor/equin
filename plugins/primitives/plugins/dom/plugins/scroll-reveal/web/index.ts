@@ -3,6 +3,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 export {
   useRevealOnActive,
   revealElement,
+  REVEAL_BOUNDARY_ATTR,
   type RevealOptions,
 } from "./internal/use-reveal-on-active";
 export {

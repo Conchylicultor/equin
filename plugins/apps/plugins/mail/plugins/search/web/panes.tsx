@@ -20,7 +20,6 @@ const mailSearchRoute = defineRoute({
 export const mailSearchPane = Pane.define({
   route: mailSearchRoute,
   app: mailApp,
-  width: 480,
   component: MailSearchBody,
   title: "Search",
 });
@@ -44,7 +43,6 @@ export const mailMessagePane = Pane.define({
     parent: mailSearchRoute,
   }),
   app: mailApp,
-  width: 640,
   useResolve: false,
   component: MailMessageBody,
   // The subject is known only inside the body (the message's live row), so

@@ -14,6 +14,5 @@ export const workflowNodePane = Pane.define({
   title: { useText: useWorkflowNodeTitle, fallback: "Workflow step" },
   // Conversation-scoped satellite: promote() would strip convId from the URL.
   chrome: { history: false, promote: false },
-  width: 600,
   useResolve: false,
 });

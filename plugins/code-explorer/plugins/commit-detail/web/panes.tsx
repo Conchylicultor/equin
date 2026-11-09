@@ -24,7 +24,6 @@ export const commitDetailPane = Pane.define({
   },
   component: CommitDetailBody,
   chrome: { history: false },
-  width: 720,
   // A git sha is not an app entity the router can validate.
   useResolve: false,
 });

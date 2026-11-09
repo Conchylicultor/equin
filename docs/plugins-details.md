@@ -36448,7 +36448,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `PaneLayoutHost`
     - **`miller`** — Miller-columns layout renderer. Maps the matched pane chain to a horizontal sequence of resizable, collapsible columns.
       - Web:
-        - Uses: 33 symbols — full list in [`plugins/layouts/plugins/miller/REFERENCE.md`](../plugins/layouts/plugins/miller/REFERENCE.md)
+        - Uses: 34 symbols — full list in [`plugins/layouts/plugins/miller/REFERENCE.md`](../plugins/layouts/plugins/miller/REFERENCE.md)
           - `primitives/pane` ×12
           - `primitives/dom/auto-scroll` ×3
           - `primitives/dom/web-storage` ×3
@@ -36460,6 +36460,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/theme-boundary.Theme`
           - `primitives/css/ui-kit.cn`
           - `primitives/dom/element-size.useResizeObserver`
+          - `primitives/dom/scroll-reveal.REVEAL_BOUNDARY_ATTR`
           - `primitives/error-boundary.PluginErrorBoundary`
           - `primitives/scope/surface-id.useSurfaceTabId`
           - `primitives/shortcuts.useSurfaceShortcuts`
@@ -47602,16 +47603,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `RevealOptions`
             - Exports (values):
               - `focusElement`
+              - `REVEAL_BOUNDARY_ATTR`
               - `revealElement`
               - `useRevealOnActive`
           - Cross-plugin:
-            - Imported by: 45 plugins — full list in [`plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md)
+            - Imported by: 46 plugins — full list in [`plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md)
               - `apps` ×16
               - `primitives` ×16
               - `page` ×6
               - `conversations` ×2
               - `apps-core/tab-bar`
               - `hints`
+              - `layouts/miller`
               - `media/player`
               - `search/quick-find`
               - `tag-tree/picker`

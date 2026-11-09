@@ -140,7 +140,6 @@ export const songPeekPane = Pane.define({
   title: { useText: useSongPeekTitle, fallback: "Song" },
   useResolve: useSongPeekResolve,
   expand: { app: sonataApp, useTarget: useSongPeekExpand },
-  width: 480,
 });
 
 function useSongPeekTitle({ songId }: { songId: string }): string | undefined {

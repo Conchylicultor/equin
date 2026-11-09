@@ -16,5 +16,4 @@ export const prototypePresentPane = Pane.define({
   app: prototypesApp,
   useResolve: false,
   component: PresentPage,
-  width: 720,
 });

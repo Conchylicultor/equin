@@ -50,7 +50,6 @@ export const eventListPane = Pane.define({
   route: defineRoute({ id: "event-list", segment: "list" }),
   app: eventsApp,
   component: EventListPaneView,
-  width: 560,
 });
 
 function EventListPaneView(): ReactElement {

@@ -17,7 +17,6 @@ export const graphCanvasPane = Pane.define({
   route: defineRoute({ id: "graph", segment: "graph/:focusId?" }),
   app: studioApp,
   component: GraphBody,
-  width: 900,
   // A focus id that names no plugin is not a missing pane: the graph view
   // renders nothing around it and the search prompt picks another.
   useResolve: false,

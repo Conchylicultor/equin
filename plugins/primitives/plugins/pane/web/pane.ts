@@ -378,8 +378,6 @@ export interface PaneInternal {
   app: AppRef;
   component: ComponentType;
   chrome: NormalizedChrome;
-  /** Default column width in pixels. Read by layout renderers (e.g. Miller). */
-  width?: number;
   /**
    * This pane's header: the ONE slot its whole header row is rendered from,
    * title included. Auto-minted by `Pane.define` unless the pane borrows
@@ -3313,7 +3311,7 @@ type AppIndexField<Seg extends string> = Seg extends "" | "/" | `;${string}`
 
 // The arguments to `Pane.define`. Identity (`id` / `segment` / the ancestor
 // chain) is derived from the `RouteDef`, so the only authored fields are the
-// behavior (`component`, `chrome`, `title`, `options`, `width`, `useResolve`).
+// behavior (`component`, `chrome`, `title`, `options`, `useResolve`).
 //
 // Both of the route's param sets flow through (see `RouteDef`): `Params` is the
 // CHAINED set every ancestor contributes to, which is what a URL needs and so
@@ -3384,12 +3382,6 @@ type RouteDefineArgs<
    * view of it rather than this pane re-rooted. See {@link PaneExpand}.
    */
   expand?: PaneExpand<Closed<OwnRouteParams<Seg>>>;
-  /**
-   * The pane's column width in pixels. Read by layout renderers (e.g. Miller
-   * columns, where the leaf also grows to fill spare room, never below it).
-   * Defaults to 400.
-   */
-  width?: number;
 } & RouteResolveField<Seg> &
   AppIndexField<Seg>;
 
@@ -3466,7 +3458,6 @@ function define(
     app: args.app,
     component: args.component,
     chrome: normalizeChrome(args.chrome),
-    width: args.width,
     actionsSlot,
     useResolve,
     title: normalizeTitle(args.title),

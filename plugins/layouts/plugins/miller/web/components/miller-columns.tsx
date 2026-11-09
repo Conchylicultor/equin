@@ -14,6 +14,7 @@ import {
   restoreScrollOffset,
 } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
+import { REVEAL_BOUNDARY_ATTR } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import {
   PaneBasePathContext,
@@ -32,7 +33,6 @@ import { useCollapsedColumns } from "../hooks/use-column-collapse";
 import { useColumnWidths } from "../hooks/use-column-widths";
 import { useColumnZoom } from "../hooks/use-column-zoom";
 import {
-  DEFAULT_COLUMN_WIDTH,
   MOTION_EASING,
   MOTION_MS,
   effectiveZoom,
@@ -49,6 +49,8 @@ import {
 } from "../layout";
 import { Column } from "./column";
 import { COLUMN_ATTR, ColumnMotion } from "./column-motion";
+
+const revealBoundary = { [REVEAL_BOUNDARY_ATTR]: "" };
 
 /** What the row looked like at the last commit — the "before" of a motion. */
 interface Previous {
@@ -95,7 +97,7 @@ export function MillerColumns() {
     () => {
       if (ref.current) setRowWidth(ref.current.clientWidth);
     },
-    // Measured before paint: the row's width decides the leaf's fill.
+    // Measured before paint: the row's width decides every column's share.
     { beforePaint: true, deps: [match !== null] },
   );
 
@@ -103,25 +105,21 @@ export function MillerColumns() {
   const ids = useMemo(() => panes.map((e) => e.uuid), [panes]);
   const route = routeKey(ids);
   const zoomed = effectiveZoom(zoomState, route, ids);
-  const fitted = useMemo(
+  const balanced = useMemo(
     () =>
       layoutColumns(
-        panes.map((e) => {
-          const own = widths.stored(e.pane.id);
-          return {
-            id: e.uuid,
-            width: own ?? e.pane.width ?? DEFAULT_COLUMN_WIDTH,
-            collapsed: collapsed.isCollapsed(e.uuid),
-            fixed: own !== null,
-          };
-        }),
+        panes.map((e) => ({
+          id: e.uuid,
+          dragged: widths.stored(e.pane.id),
+          collapsed: collapsed.isCollapsed(e.uuid),
+        })),
         rowWidth,
         zoomed,
       ),
     [panes, widths, collapsed, rowWidth, zoomed],
   );
   // A divider drag lays the row out as it was when the drag began, the
-  // dragged column following the pointer (`dragLayout`); the fit applies
+  // dragged column following the pointer (`dragLayout`); the balance applies
   // again when it ends.
   const [drag, setDrag] = useState<Drag | null>(null);
   const [releases, setReleases] = useState(0);
@@ -134,9 +132,9 @@ export function MillerColumns() {
   const layout = useMemo(
     () =>
       drag === null
-        ? fitted
+        ? balanced
         : dragLayout(drag.start, drag.id, drag.startWidth + drag.dx, rowWidth),
-    [drag, fitted, rowWidth],
+    [drag, balanced, rowWidth],
   );
 
   // A motion is a change of what the row shows — its route, the zoom, which
@@ -153,6 +151,36 @@ export function MillerColumns() {
   const prev = useRef<Previous | null>(null);
   const stopGlide = useRef<(() => void) | null>(null);
   const settleFrame = useRef<number | null>(null);
+
+  // On the next frame the boxes' width transitions exist: the scroll glides on
+  // the clock of one of them (same curve, same duration), so the widths and the
+  // scroll are one motion even when a long task delays or eats the
+  // transition's start; and when they have all run, the transition style and
+  // the held widths are dropped. Both read off the transitions themselves,
+  // never a timer started now.
+  const glideTo = (row: HTMLDivElement, target: number, key: string) => {
+    settleFrame.current = requestAnimationFrame(() => {
+      settleFrame.current = null;
+      const transitions = row
+        .getAnimations({ subtree: true })
+        .filter(
+          (a) => a instanceof CSSTransition && a.transitionProperty === "width",
+        );
+      stopGlide.current = glideScroll(
+        row,
+        { left: target },
+        {
+          duration: MOTION_MS,
+          easing: MOTION_EASING,
+          ...(transitions[0] ? { follow: transitions[0] } : {}),
+        },
+      );
+      void Promise.allSettled(transitions.map((a) => a.finished)).then(() => {
+        // A later motion owns the row now; it settles itself.
+        if (prev.current?.key === key) setSettledKey(key);
+      });
+    });
+  };
 
   useLayoutEffect(() => {
     const row = ref.current;
@@ -181,15 +209,21 @@ export function MillerColumns() {
     if (zoomState !== null && zoomState.route !== route) setZoom(null);
     if (before.key === motionKey) {
       // The row resized (the window, a sidebar arriving after boot) while it
-      // sat at its end: it stays at its end. A divider drag changes no row
-      // width, so it never moves the row under the pointer.
-      if (
-        before.rowWidth !== rowWidth &&
-        before.pinned !== null &&
-        Math.abs(row.scrollLeft - before.pinned) <= 1
-      ) {
-        restoreScrollOffset(row, { left: end });
-        next.pinned = end;
+      // sat at its end, or while a motion was taking it there: it stays at
+      // (or keeps heading for) its end — every share follows the row's width,
+      // so the end moves with it. A divider drag changes no row width, so it
+      // never moves the row under the pointer.
+      if (before.rowWidth !== rowWidth && before.pinned !== null) {
+        if (moving) {
+          stopGlide.current?.();
+          if (settleFrame.current !== null)
+            cancelAnimationFrame(settleFrame.current);
+          next.pinned = end;
+          glideTo(row, end, motionKey);
+        } else if (Math.abs(row.scrollLeft - before.pinned) <= 1) {
+          restoreScrollOffset(row, { left: end });
+          next.pinned = end;
+        }
       }
       return;
     }
@@ -212,34 +246,8 @@ export function MillerColumns() {
       key: motionKey,
       before: new Map(before.layout.columns.map((c) => [c.id, c])),
     });
-    // On the next frame the boxes' width transitions exist: the scroll glides
-    // on the clock of one of them (same curve, same duration), so the widths
-    // and the scroll are one motion even when a long task delays or eats the
-    // transition's start; and when they have all run, the transition style
-    // and the held widths are dropped. Both read off the transitions
-    // themselves, never a timer started now.
-    settleFrame.current = requestAnimationFrame(() => {
-      settleFrame.current = null;
-      const transitions = row
-        .getAnimations({ subtree: true })
-        .filter(
-          (a) => a instanceof CSSTransition && a.transitionProperty === "width",
-        );
-      stopGlide.current = glideScroll(
-        row,
-        { left: target },
-        {
-          duration: MOTION_MS,
-          easing: MOTION_EASING,
-          ...(transitions[0] ? { follow: transitions[0] } : {}),
-        },
-      );
-      void Promise.allSettled(transitions.map((a) => a.finished)).then(() => {
-        // A later motion owns the row now; it settles itself.
-        if (prev.current?.key === motionKey) setSettledKey(motionKey);
-      });
-    });
-  }, [motionKey, route, zoomed, zoomState, setZoom, layout, rowWidth]);
+    glideTo(row, target, motionKey);
+  }, [motionKey, route, zoomed, zoomState, setZoom, layout, rowWidth, moving]);
 
   useEffect(
     () => () => {
@@ -260,9 +268,14 @@ export function MillerColumns() {
     const d = dragRef.current;
     setDragBoth(null);
     if (!d || dx === 0) return;
-    // The column's own width becomes what the drag left on screen; dragged,
-    // the fit no longer compresses it. The re-fit that follows is a motion.
+    // The column keeps the width the drag left it at and the rest share what
+    // it leaves. The re-balance that follows is a motion.
     widths.setWidth(paneId, d.startWidth + dx);
+    setReleases((n) => n + 1);
+  };
+  // A divider double-click: the column takes its share again, as a motion.
+  const resetWidth = (paneId: string) => {
+    widths.resetWidth(paneId);
     setReleases((n) => n + 1);
   };
 
@@ -331,8 +344,15 @@ export function MillerColumns() {
           drawn absolutely over its last rect, in this row's scroll
           coordinates. flex-row + scroll-container can't be split without
           breaking the direct-child flex relationship dnd-kit relies on. */}
-      {/* eslint-disable-next-line layout/no-adhoc-layout -- flex-row x-scroll container holding the sortable columns as direct children */}
-      <div ref={ref} className="relative flex h-full overflow-x-auto">
+      {/* The row's scroll is this layout's alone: a pane revealing its own
+          content (a selected row, a focused field) moves its column's
+          scrollers, never the row under the user. */}
+      <div
+        ref={ref}
+        // eslint-disable-next-line layout/no-adhoc-layout -- flex-row x-scroll container holding the sortable columns as direct children
+        className="relative flex h-full overflow-x-auto"
+        {...revealBoundary}
+      >
         <ColumnMotion rowRef={ref} panes={match.panes}>
           <SortableList
             items={itemIds}
@@ -411,6 +431,7 @@ export function MillerColumns() {
                             }
                             onResize={moveDrag}
                             onResizeEnd={(dx) => endDrag(entry.pane.id, dx)}
+                            onResetWidth={() => resetWidth(entry.pane.id)}
                             dragHandleProps={
                               canReorder ? state.handleProps : undefined
                             }

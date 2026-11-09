@@ -40,7 +40,6 @@ export const allConversationsPane = Pane.define({
   app: agentManagerApp,
   title: "Conversations",
   component: AllConversationsView,
-  width: 720,
 });
 
 function AllConversationsView(): ReactElement {

@@ -37,5 +37,4 @@ export const prototypeDetailPane = Pane.define({
     fallback: (params) => params.name,
     component: PrototypeTitle,
   },
-  width: 720,
 });

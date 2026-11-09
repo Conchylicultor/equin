@@ -16,7 +16,6 @@ export const pluginConvSidePane = Pane.define({
   }),
   app: agentManagerApp,
   component: PluginConvSideBody,
-  width: 600,
   chrome: { history: false },
   useResolve: false,
   title: { useText: usePluginConvSideTitle, fallback: (p) => p.pluginId },

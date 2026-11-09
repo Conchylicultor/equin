@@ -111,7 +111,6 @@ export const filePeekPane = Pane.define({
   },
   chrome: { history: false },
   expand: { app: fileExplorerApp, useTarget: useExpandToFiles },
-  width: 600,
   useResolve: false,
 });
 

@@ -25,7 +25,6 @@ export const backgroundPane = Pane.define({
   route: backgroundRoute,
   app: debugApp,
   component: BackgroundBody,
-  width: 640,
 });
 
 function BackgroundBody(): ReactElement {
@@ -69,7 +68,6 @@ export const backgroundEntryPane = Pane.define({
   app: debugApp,
   useResolve: useResolveEntry,
   component: BackgroundEntryBody,
-  width: 460,
 });
 
 function BackgroundEntryBody(): ReactElement {

@@ -22,7 +22,6 @@ export const conversationPane = Pane.define({
   route: conversationRoute,
   app: agentManagerApp,
   component: ConversationView,
-  width: 600,
   useResolve: useResolveConversation,
   // Tab/document title: the conversation's name from its by-id read. The
   // header paints the richer ConversationTitle (same source).

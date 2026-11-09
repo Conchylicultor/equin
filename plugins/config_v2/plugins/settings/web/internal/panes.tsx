@@ -30,7 +30,6 @@ export const configNavPane = Pane.define({
   route: configNavRoute,
   app: settingsApp,
   component: ConfigNavBody,
-  width: 300,
 });
 
 export const configDetailPane = Pane.define({
@@ -38,7 +37,6 @@ export const configDetailPane = Pane.define({
   route: configDetailRoute,
   app: settingsApp,
   component: ConfigDetailBody,
-  width: 500,
   useResolve: false,
 });
 

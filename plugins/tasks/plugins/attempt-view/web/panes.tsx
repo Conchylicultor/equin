@@ -24,7 +24,6 @@ export const attemptPane = Pane.define({
   }),
   app: agentManagerApp,
   component: AttemptPane,
-  width: 320,
   useResolve: useResolveAttempt,
   // The header adds the task's conversation count beside the word.
   title: { useText: "Attempts", component: AttemptsTitle },

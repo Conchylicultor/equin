@@ -27,7 +27,6 @@ export const tasksRootPane = Pane.define({
   route: tasksRootRoute,
   app: agentManagerApp,
   component: TasksRoot,
-  width: 320,
 });
 
 function useResolveTask({ taskId }: { taskId: string }): ResolveResult {
@@ -45,7 +44,6 @@ export const taskDetailPane = Pane.define({
   route: taskDetailRoute,
   app: agentManagerApp,
   component: TaskDetailBody,
-  width: 480,
   useResolve: useResolveTask,
   // The task's title: tab, document and header title alike.
   title: { useText: useTaskTitle },

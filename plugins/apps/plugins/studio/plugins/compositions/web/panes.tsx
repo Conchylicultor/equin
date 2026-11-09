@@ -30,7 +30,6 @@ export const compositionsPane = Pane.define({
   route: compositionsRoute,
   app: studioApp,
   component: CompositionsBody,
-  width: 380,
 });
 
 function useResolveComposition({ id }: { id: string }): ResolveResult {
@@ -52,8 +51,6 @@ export const compositionDetailPane = Pane.define({
   route: compositionDetailRoute,
   app: studioApp,
   component: CompositionDetailBody,
-  // Wider than release-detail's 480: it hosts the closure plugin tree.
-  width: 560,
   useResolve: useResolveComposition,
   title: { useText: useCompositionTitle },
   // Main surface: the release-run pane pushed to the right is a drill-in — it
@@ -70,7 +67,6 @@ export const comparePane = Pane.define({
   }),
   app: studioApp,
   component: CompareBody,
-  width: 480,
 });
 
 function CompositionsBody(): ReactElement {

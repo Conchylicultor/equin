@@ -25,7 +25,6 @@ export const backupRunPane = Pane.define({
   route: backupRunRoute,
   app: debugApp,
   component: BackupRunBody,
-  width: 480,
   useResolve: useResolveBackupRun,
 });
 

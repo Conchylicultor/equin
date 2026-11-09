@@ -14,6 +14,5 @@ export const agentReportPane = Pane.define({
   title: "Sub-agent",
   // Conversation-scoped satellite: promote() would strip convId from the URL.
   chrome: { history: false, promote: false },
-  width: 600,
   useResolve: false,
 });

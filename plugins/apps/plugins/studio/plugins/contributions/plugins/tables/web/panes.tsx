@@ -10,7 +10,6 @@ export const tableDetailPane = Pane.define({
   route: defineRoute({ id: "table-detail", segment: "t/:pluginId/:tableName" }),
   app: studioApp,
   component: TableDetailBody,
-  width: 600,
   useResolve: false,
   title: { fallback: (params) => params.tableName },
 });

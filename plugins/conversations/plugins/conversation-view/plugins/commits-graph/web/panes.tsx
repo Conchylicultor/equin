@@ -16,7 +16,6 @@ export const convCommitsGraphPane = Pane.define({
   // Conversation-scoped satellite: promote() would strip convId from the URL.
   chrome: { promote: false },
   component: ConvCommitsGraphBody,
-  width: 520,
 });
 
 function ConvCommitsGraphBody() {

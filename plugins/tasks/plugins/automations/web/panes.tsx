@@ -25,7 +25,6 @@ export const automationsPane = Pane.define({
   route: automationsRoute,
   app: agentManagerApp,
   component: AutomationsBody,
-  width: 420,
 });
 
 function useResolveAutomation({
@@ -67,7 +66,6 @@ export const automationDetailPane = Pane.define({
   useResolve: useResolveAutomation,
   title: { useText: useAutomationTitle },
   component: AutomationDetailBody,
-  width: 520,
 });
 
 function AutomationsBody(): ReactElement {

@@ -32,7 +32,6 @@ export const agentsRootPane = Pane.define({
   app: agentManagerApp,
   title: "Agents",
   component: AgentsRoot,
-  width: 320,
 });
 
 /** The agent's name, or undefined until it is known (the title's fallback shows). */
@@ -76,7 +75,6 @@ export const agentDetailPane = Pane.define({
   app: agentManagerApp,
   component: AgentDetailBody,
   title: { useText: useAgentDetailTitle, fallback: "Agent" },
-  width: 360,
   useResolve: useResolveAgent,
 });
 

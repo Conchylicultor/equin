@@ -13,7 +13,6 @@ export const prototypesGalleryPane = Pane.define({
   app: prototypesApp,
   appIndex: true,
   component: PrototypesGalleryBody,
-  width: 360,
 });
 
 /**

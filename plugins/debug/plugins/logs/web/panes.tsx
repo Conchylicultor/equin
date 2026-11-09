@@ -24,8 +24,6 @@ export const logsPane = Pane.define({
   route: logsRoute,
   app: debugApp,
   component: LogsBody,
-  // Wide enough beside the reader for a log's name, description and meter.
-  width: 560,
 });
 
 export const logChannelPane = Pane.define({
@@ -38,7 +36,6 @@ export const logChannelPane = Pane.define({
   title: { useText: ({ channel }) => channel },
   component: LogReaderBody,
   useResolve: false,
-  width: 720,
 });
 
 function useWorktree(): string | null {

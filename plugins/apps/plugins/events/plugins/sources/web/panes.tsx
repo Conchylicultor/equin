@@ -22,7 +22,6 @@ export const eventSourcesPane = Pane.define({
   route: eventSourcesRoute,
   app: eventsApp,
   component: EventSourcesPaneView,
-  width: 380,
 });
 
 /**
@@ -54,7 +53,6 @@ export const eventSourceDetailPane = Pane.define({
   component: EventSourceDetailPaneView,
   useResolve: useResolveSource,
   title: { useText: useSourceTitle, fallback: "Source" },
-  width: 460,
 });
 
 /** The source's name once it is found; undefined otherwise (the fallback shows). */

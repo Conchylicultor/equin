@@ -13,7 +13,7 @@ import { useSurfaceTabId } from "@plugins/primitives/plugins/scope/plugins/surfa
 import { MIN_COLUMN_WIDTH } from "../layout";
 
 // The widths the USER set by dragging a divider — nothing else ever writes
-// here: a column without one is its pane's declared width. Scoped per surface
+// here: a column without one takes its share of the row. Scoped per surface
 // (per `PaneStore`): each Miller surface resizes columns independently, so
 // dragging a divider in one mounted surface (one desktop window / keep-alive
 // tab) never resizes it in another. Persistence is keyed by `(tabId, paneId)`
@@ -38,10 +38,11 @@ function stateFor(store: PaneStore): SurfaceWidths {
 }
 
 const widths = defineStore({
-  // `.v2`: the previous owner's entries mixed real drags with the automatic
-  // 50/50 split the leaf used to persist on its first child — indistinguishable
-  // once stored, so they are dropped rather than adopted.
-  owner: "miller.column-widths.v2",
+  // `.v3`: `.v2` widths were dragged relative to each pane's declared width
+  // (the "fit" layout); kept, they would pin columns out of the balanced
+  // share. `.v1` mixed real drags with the automatic 50/50 split the leaf used
+  // to persist. Both are dropped rather than adopted.
+  owner: "miller.column-widths.v3",
   label: "Column widths",
   area: "local",
   cap: "64 KB",
@@ -52,7 +53,9 @@ const widths = defineStore({
     match: (key) =>
       key.startsWith("miller.width.") ||
       key.startsWith("s:miller.column-widths:") ||
-      key.startsWith("s:miller.column-widths@"),
+      key.startsWith("s:miller.column-widths@") ||
+      key.startsWith("s:miller.column-widths.v2:") ||
+      key.startsWith("s:miller.column-widths.v2@"),
   },
 });
 
@@ -80,10 +83,12 @@ export interface ColumnWidths {
   stored(paneId: string): number | null;
   /** The end of a divider drag: stores the new width (clamped), persisted for the tab. */
   setWidth(paneId: string, width: number): void;
+  /** Forgets the dragged width (a divider double-click): the column shares again. */
+  resetWidth(paneId: string): void;
 }
 
-/** Records a dragged width and tells this surface's readers. */
-function commit(s: SurfaceWidths, paneId: string, width: number): void {
+/** Records a dragged width (null: none) and tells this surface's readers. */
+function commit(s: SurfaceWidths, paneId: string, width: number | null): void {
   s.state.set(paneId, width);
   s.version++;
   for (const fn of s.subscribers) fn();
@@ -118,6 +123,11 @@ export function useColumnWidths(): ColumnWidths {
         if (tabId !== undefined)
           persisted.write(storeId(tabId, paneId), clamped);
         commit(s, paneId, clamped);
+      },
+      resetWidth: (paneId) => {
+        if (readStored(s, persisted, tabId, paneId) === null) return;
+        if (tabId !== undefined) persisted.remove(storeId(tabId, paneId));
+        commit(s, paneId, null);
       },
     }),
     [s, persisted, tabId, version],

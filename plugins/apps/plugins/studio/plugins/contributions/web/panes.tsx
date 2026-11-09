@@ -11,7 +11,6 @@ export const contributionsPane = Pane.define({
   route: defineRoute({ id: "contributions", segment: "contributions" }),
   app: studioApp,
   component: ContributionsBody,
-  width: 700,
 });
 
 function ContributionsBody() {

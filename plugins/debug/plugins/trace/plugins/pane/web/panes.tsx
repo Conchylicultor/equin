@@ -32,7 +32,6 @@ export const traceDetailPane = Pane.define({
   route: traceDetailRoute,
   app: debugApp,
   component: TraceDetailBody,
-  width: 640,
   // No route guard — the detail self-fetches by id and renders a graceful 404
   // (the boot-profile detail precedent).
   useResolve: false,

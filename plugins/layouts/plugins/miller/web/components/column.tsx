@@ -35,6 +35,7 @@ interface ColumnProps {
   onResizeStart: () => void;
   onResize: (dx: number) => void;
   onResizeEnd: (dx: number) => void;
+  onResetWidth: () => void;
   dragHandleProps?: Record<string, unknown>;
 }
 
@@ -60,6 +61,7 @@ export function Column({
   onResizeStart,
   onResize,
   onResizeEnd,
+  onResetWidth,
   dragHandleProps,
 }: ColumnProps) {
   const id = entry.uuid;
@@ -154,6 +156,7 @@ export function Column({
           onResizeStart={onResizeStart}
           onResize={onResize}
           onResizeEnd={onResizeEnd}
+          onResetWidth={onResetWidth}
           onCollapse={onCollapse}
         />
       )}

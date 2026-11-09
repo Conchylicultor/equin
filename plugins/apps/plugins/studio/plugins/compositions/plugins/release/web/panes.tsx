@@ -12,7 +12,6 @@ export const releaseDetailPane = Pane.define({
   route: releaseDetailRoute,
   app: studioApp,
   component: ReleaseDetailBody,
-  width: 480,
   useResolve: false,
 });
 

@@ -15,15 +15,39 @@ export interface RevealOptions {
   scope?: "all" | "nearest";
 }
 
-/** The closest ancestor that scrolls on `axis`, or null. */
+/**
+ * Marks a scroll container whose scroll its owner drives alone (a layout's
+ * row of columns): a reveal inside it scrolls the containers between the
+ * element and it, never it or anything above it. Spread on the container:
+ * `{...{ [REVEAL_BOUNDARY_ATTR]: "" }}`.
+ */
+export const REVEAL_BOUNDARY_ATTR = "data-reveal-boundary";
+
+const scrolls = (el: Element) => {
+  const { overflowX, overflowY } = getComputedStyle(el);
+  return /auto|scroll/.test(overflowY) || /auto|scroll/.test(overflowX);
+};
+
+/** The closest ancestor that scrolls, or null. */
 function scrollContainer(el: Element): HTMLElement | null {
   for (let p = el.parentElement; p; p = p.parentElement) {
-    const { overflowX, overflowY } = getComputedStyle(p);
-    if (/auto|scroll/.test(overflowY) || /auto|scroll/.test(overflowX)) {
-      return p;
-    }
+    if (scrolls(p)) return p;
   }
   return null;
+}
+
+/**
+ * The scroll containers between `el` and its reveal boundary, innermost first,
+ * or null when it sits under none (every ancestor may move).
+ */
+function containersInside(el: Element): HTMLElement[] | null {
+  const boundary = el.closest(`[${REVEAL_BOUNDARY_ATTR}]`);
+  if (!boundary) return null;
+  const out: HTMLElement[] = [];
+  for (let p = el.parentElement; p && p !== boundary; p = p.parentElement) {
+    if (scrolls(p)) out.push(p);
+  }
+  return out;
 }
 
 /** How far `container` scrolls on one axis to put `[start, end)` (in its
@@ -48,12 +72,11 @@ function delta(
   }
 }
 
-function revealInNearest(
+function revealIn(
   el: Element,
+  container: HTMLElement,
   opts: Required<Omit<RevealOptions, "scope">>,
 ) {
-  const container = scrollContainer(el);
-  if (!container) return;
   const box = container.getBoundingClientRect();
   const r = el.getBoundingClientRect();
   container.scrollBy({
@@ -93,8 +116,19 @@ export function revealElement(
   // A reveal is a navigation: a transcript following its bottom lets it move
   // the reader rather than putting the bottom back.
   announceNavigation(el);
-  if (opts?.scope === "nearest") revealInNearest(el, resolved);
-  else el.scrollIntoView(resolved);
+  if (opts?.scope === "nearest") {
+    const container = scrollContainer(el);
+    if (container) revealIn(el, container, resolved);
+    return;
+  }
+  const inside = containersInside(el);
+  if (inside === null) {
+    el.scrollIntoView(resolved);
+    return;
+  }
+  // Under a reveal boundary: each container up to it, innermost first (each
+  // measured after the one inside it has moved).
+  for (const container of inside) revealIn(el, container, resolved);
 }
 
 /**

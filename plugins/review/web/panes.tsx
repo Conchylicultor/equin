@@ -29,7 +29,6 @@ export const convReviewPane = Pane.define({
   // Conversation-scoped satellite: promote() would strip convId from the URL.
   chrome: { promote: false },
   component: ConvReviewBody,
-  width: 720,
 });
 
 function ConvReviewBody() {

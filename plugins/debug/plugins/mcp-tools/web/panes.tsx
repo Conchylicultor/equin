@@ -21,7 +21,6 @@ export const mcpToolsPane = Pane.define({
   route: mcpToolsRoute,
   app: debugApp,
   component: McpToolsBody,
-  width: 600,
 });
 
 function McpToolsBody(): ReactElement {
@@ -58,7 +57,6 @@ export const mcpToolPane = Pane.define({
   app: debugApp,
   useResolve: useResolveTool,
   component: McpToolBody,
-  width: 560,
 });
 
 function McpToolBody(): ReactElement {

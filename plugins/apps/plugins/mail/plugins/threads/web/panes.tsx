@@ -40,7 +40,6 @@ export const mailThreadsPane = Pane.define({
   route: defineRoute({ id: "mail-threads", segment: "threads" }),
   app: mailApp,
   component: MailThreadsPaneView,
-  width: 520,
 });
 
 function MailThreadsPaneView(): ReactElement {

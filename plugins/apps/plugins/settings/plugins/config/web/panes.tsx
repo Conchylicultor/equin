@@ -19,7 +19,6 @@ export const settingsConfigIndexPane = Pane.define({
   app: settingsApp,
   appIndex: true,
   component: SettingsConfigIndexBody,
-  width: 300,
 });
 
 function SettingsConfigIndexBody() {

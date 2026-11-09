@@ -11,7 +11,6 @@ export const explorerPane = Pane.define({
   route: defineRoute({ id: "explorer", segment: "explorer" }),
   app: studioApp,
   component: ExplorerBody,
-  width: 360,
 });
 
 function ExplorerBody() {

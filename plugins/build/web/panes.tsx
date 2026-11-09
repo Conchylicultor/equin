@@ -17,7 +17,6 @@ export const buildDetailPane = Pane.define({
   route: buildDetailRoute,
   app: debugApp,
   component: BuildDetailBody,
-  width: 480,
   useResolve: false,
 });
 

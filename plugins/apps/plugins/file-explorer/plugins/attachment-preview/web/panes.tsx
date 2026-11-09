@@ -41,7 +41,6 @@ export const attachmentPreviewPane = Pane.define({
   // stays beside that home rather than replacing it.
   companion: true,
   component: AttachmentPreview,
-  width: 640,
 });
 
 function useAttachmentTitle(params: { id: string }): string {

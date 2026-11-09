@@ -16,7 +16,6 @@ export const convPushProfilingPane = Pane.define({
   // Conversation-scoped satellite: promote() would strip convId from the URL.
   chrome: { promote: false },
   component: ConvPushProfilingBody,
-  width: 600,
 });
 
 function ConvPushProfilingBody() {

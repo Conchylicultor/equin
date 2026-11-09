@@ -51,7 +51,6 @@ export const claudeCliCallDetailPane = Pane.define({
   app: debugApp,
   title: { useText: useCallTitle, fallback: "Call" },
   component: CallDetailBody,
-  width: 520,
   useResolve: useResolveCall,
 });
 

@@ -51,8 +51,6 @@ export const folderPeekPane = Pane.define({
   companion: true,
   expand: { app: fileExplorerApp, useTarget: useOpenInFilesTarget },
   component: FolderPeek,
-  // Tree plus the selected file's preview beside it.
-  width: 960,
 });
 
 function useFolderTitle(params: { dir: string }): string {
