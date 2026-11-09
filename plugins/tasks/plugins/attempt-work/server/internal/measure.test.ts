@@ -28,6 +28,7 @@ import {
   readLanded,
   readPendingFromBranchRef,
   readPendingInWorktree,
+  readUncommitted,
   refExists,
 } from "./measure";
 
@@ -140,13 +141,14 @@ test("D1: a rebased-and-fast-forwarded branch is ahead 0 yet reads as landed", a
     // The attempt's own worktree still sits on its branch.
     await git(repo, "checkout", "claude-web/att-1");
 
-    const pending = await readPendingInWorktree(repo);
+    const pending = await readPendingInWorktree(repo, "main");
     expect(pending).toMatchObject({ kind: "measured", ahead: 0, behind: 0 });
 
     const landed = await readLanded(
       repo,
       { attemptId: "att-none", convIds: new Set(["conv-1"]) },
       ALL_TIME,
+      "refs/heads/main",
     );
     expect(landed.shas).toHaveLength(1);
     expect(landed.pushIds).toEqual(["push-1"]);
@@ -167,6 +169,7 @@ test("the landed grep is scoped to the attempt's own conversations", async () =>
           repo,
           { attemptId: "att-none", convIds: new Set(["conv-mine"]) },
           ALL_TIME,
+          "refs/heads/main",
         )
       ).shas,
     ).toHaveLength(1);
@@ -179,6 +182,7 @@ test("the landed grep is scoped to the attempt's own conversations", async () =>
             convIds: new Set(["conv-mine", "conv-theirs"]),
           },
           ALL_TIME,
+          "refs/heads/main",
         )
       ).shas,
     ).toHaveLength(2);
@@ -188,6 +192,7 @@ test("the landed grep is scoped to the attempt's own conversations", async () =>
           repo,
           { attemptId: "att-none", convIds: new Set(["conv-nobody"]) },
           ALL_TIME,
+          "refs/heads/main",
         )
       ).shas,
     ).toHaveLength(0);
@@ -197,6 +202,7 @@ test("the landed grep is scoped to the attempt's own conversations", async () =>
           repo,
           { attemptId: "att-none", convIds: new Set() },
           ALL_TIME,
+          "refs/heads/main",
         )
       ).shas,
     ).toHaveLength(0);
@@ -213,6 +219,7 @@ test("a commit naming only the attempt lands for that attempt", async () => {
       repo,
       { attemptId: "att-r", convIds: new Set() },
       ALL_TIME,
+      "refs/heads/main",
     );
     expect(landed.shas).toHaveLength(1);
     expect(landed.pushIds).toEqual(["push-r"]);
@@ -228,6 +235,7 @@ test("one push across several commits counts as one push", async () => {
       repo,
       { attemptId: "att-none", convIds: new Set(["conv-1"]) },
       ALL_TIME,
+      "refs/heads/main",
     );
     expect(landed.shas).toHaveLength(3);
     expect([...landed.pushIds].sort()).toEqual(["push-1", "push-2"]);
@@ -243,7 +251,7 @@ test("D2: local commits on a clean worktree read ahead > 0", async () => {
     });
     expect(await git(repo, "status", "--porcelain")).toBe("");
 
-    const pending = await readPendingInWorktree(repo);
+    const pending = await readPendingInWorktree(repo, "main");
     expect(pending).toMatchObject({
       kind: "measured",
       ahead: 1,
@@ -256,6 +264,7 @@ test("D2: local commits on a clean worktree read ahead > 0", async () => {
       repo,
       { attemptId: "att-none", convIds: new Set(["conv-2"]) },
       ALL_TIME,
+      "refs/heads/main",
     );
     expect(landed.shas).toHaveLength(0);
     expect(standing(pending, landed)).toBe("pending");
@@ -265,12 +274,13 @@ test("D2: local commits on a clean worktree read ahead > 0", async () => {
 test("a branch that never committed reads ahead 0 with nothing landed", async () => {
   await withRepo(async (repo) => {
     await git(repo, "checkout", "-b", "claude-web/att-3", "main");
-    const pending = await readPendingInWorktree(repo);
+    const pending = await readPendingInWorktree(repo, "main");
     expect(pending).toMatchObject({ kind: "measured", ahead: 0, behind: 0 });
     const landed = await readLanded(
       repo,
       { attemptId: "att-none", convIds: new Set(["conv-3"]) },
       ALL_TIME,
+      "refs/heads/main",
     );
     // The drop affordance survives: this attempt really has nothing at stake.
     expect(standing(pending, landed)).toBe("none");
@@ -288,15 +298,69 @@ test("rebasing onto a newer main does not make main's commits this attempt's wor
     await git(repo, "checkout", "claude-web/att-4");
     await git(repo, "rebase", "main");
 
-    const pending = await readPendingInWorktree(repo);
+    const pending = await readPendingInWorktree(repo, "main");
     expect(pending).toMatchObject({ kind: "measured", ahead: 0, behind: 0 });
     const landed = await readLanded(
       repo,
       { attemptId: "att-none", convIds: new Set(["conv-4"]) },
       ALL_TIME,
+      "refs/heads/main",
     );
     expect(landed.shas).toHaveLength(0);
     expect(standing(pending, landed)).toBe("none");
+  });
+});
+
+// task-1794176984-s6phxk: exit_clean ran 21 s after the push fast-forwarded
+// `main`, while the watcher still held the old tip. The counts read git's new
+// `main` (ahead 0) and the landed grep answered for the old one (nothing) —
+// "none", and the task was dropped. Over ONE tip either answer is coherent.
+test("one main snapshot: a stale tip reads the landed commit as pending, never none", async () => {
+  await withRepo(async (repo) => {
+    const before = (await git(repo, "rev-parse", "main")).trim();
+    await git(repo, "checkout", "-b", "claude-web/att-7", "main");
+    await commit(repo, "pushed work", { conv: "conv-7", push: "push-7" });
+    await git(repo, "checkout", "main");
+    await git(repo, "merge", "--ff-only", "claude-web/att-7");
+    await git(repo, "checkout", "claude-web/att-7");
+    const after = (await git(repo, "rev-parse", "main")).trim();
+    const owner = { attemptId: "att-7", convIds: new Set(["conv-7"]) };
+
+    const stale = standing(
+      await readPendingInWorktree(repo, before),
+      await readLanded(repo, owner, ALL_TIME, before),
+    );
+    expect(stale).toBe("pending");
+    const fresh = standing(
+      await readPendingInWorktree(repo, after),
+      await readLanded(repo, owner, ALL_TIME, after),
+    );
+    expect(fresh).toBe("landed");
+    // The mixed read the bug made: counts on the new tip, grep on the old.
+    expect(
+      standing(
+        await readPendingInWorktree(repo, after),
+        await readLanded(repo, owner, ALL_TIME, before),
+      ),
+    ).toBe("none");
+  });
+});
+
+// task-1794193514-ia99gm: an agent holding its push for review has all its
+// work uncommitted — agents never commit — and its branch `ahead: 0`.
+test("readUncommitted sees tracked edits and untracked files, not ignored ones", async () => {
+  await withRepo(async (repo) => {
+    expect(await readUncommitted(repo)).toBe(false);
+    writeFileSync(join(repo, ".gitignore"), "ignored.txt\n");
+    await git(repo, "add", ".gitignore");
+    await git(repo, "commit", "-m", "ignore");
+    writeFileSync(join(repo, "ignored.txt"), "build output\n");
+    expect(await readUncommitted(repo)).toBe(false);
+    writeFileSync(join(repo, "new.txt"), "work\n");
+    expect(await readUncommitted(repo)).toBe(true);
+    rmSync(join(repo, "new.txt"));
+    writeFileSync(join(repo, ".gitignore"), "ignored.txt\nother\n");
+    expect(await readUncommitted(repo)).toBe(true);
   });
 });
 
@@ -312,13 +376,16 @@ test("a reaped worktree still measures its branch from the main repo", async () 
 
     // The directory is gone: a determinate state, and the git runner says so with
     // its own error class rather than a generic failure.
-    expect(readPendingInWorktree(wt)).rejects.toBeInstanceOf(WorktreeGoneError);
+    expect(readPendingInWorktree(wt, "main")).rejects.toBeInstanceOf(
+      WorktreeGoneError,
+    );
 
     // `git worktree remove` does not delete the branch, so the commits are still
     // measurable — this is what keeps a reaped attempt's unpushed work visible.
     const pending = await readPendingFromBranchRef(
       repo,
       "refs/heads/claude-web/att-5",
+      "main",
     );
     expect(pending).toMatchObject({
       kind: "measured",
@@ -335,7 +402,11 @@ test("a deleted branch is the determinate no-branch answer", async () => {
     expect(await refExists(repo, "refs/heads/main")).toBe(true);
     expect(await refExists(repo, "refs/heads/claude-web/gone")).toBe(false);
     expect(
-      await readPendingFromBranchRef(repo, "refs/heads/claude-web/gone"),
+      await readPendingFromBranchRef(
+        repo,
+        "refs/heads/claude-web/gone",
+        "main",
+      ),
     ).toEqual({
       kind: "no-branch",
     });
@@ -349,14 +420,15 @@ test("a git failure throws — it never resolves to a confident zero", async () 
     // absorbed `{ahead: 0}` / `[]` here is exactly what would offer the drop.
     expect(refExists(dir, "refs/heads/main")).rejects.toBeInstanceOf(GitError);
     expect(
-      readPendingFromBranchRef(dir, "refs/heads/main"),
+      readPendingFromBranchRef(dir, "refs/heads/main", "main"),
     ).rejects.toBeInstanceOf(GitError);
-    expect(readPendingInWorktree(dir)).rejects.toBeInstanceOf(GitError);
+    expect(readPendingInWorktree(dir, "main")).rejects.toBeInstanceOf(GitError);
     expect(
       readLanded(
         dir,
         { attemptId: "att-none", convIds: new Set(["conv-1"]) },
         ALL_TIME,
+        "refs/heads/main",
       ),
     ).rejects.toBeInstanceOf(GitError);
     expect(probeHeadMain(dir)).rejects.toBeInstanceOf(GitError);

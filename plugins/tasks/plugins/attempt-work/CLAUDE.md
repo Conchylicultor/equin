@@ -51,7 +51,8 @@ ever be **ORed into** a positive answer — see `standingOf` — and never used 
 conclude a negative one. Its absence proves nothing at all.
 
 Anything new that wants to know whether an attempt has work at stake reads
-`getAttemptWork` / the `attemptWork` live value, not the ledger. What stays on the ledger
+`getAttemptStanding` (a decision) / the `attemptWork` live value (a display),
+not the ledger. What stays on the ledger
 is everything that is *about one specific recorded push* (`task-events`,
 `push-profiling`, the per-push diff, the review pane, the `pushes.landed` trigger)
 — those are display-only or self-healing.
@@ -71,6 +72,29 @@ misread, and the destructive branch is reachable only from a measured `"none"`.
 
 `"pending"` wins over `"landed"`: unpushed commits are the actionable state, so an
 attempt with both still asks for a push.
+
+## I7 — one `main` snapshot per measurement
+
+`main`'s tip is the measurement's INPUT, read once, and every read of `main` in
+it — the pending counts, the merge-base, the landed grep, both memos'
+signatures — reads that one sha. They used to read `main` separately (the
+counts and the grep from git, the signatures from git-watcher's in-memory
+copy, which trails a ref advance by however late the file event arrives).
+Right after a push the counts saw the new `main` (`ahead: 0`) while the landed
+memo answered from an entry signed on the old one (nothing landed): `"none"`,
+and exit_clean dropped a task whose commit had landed 21 s earlier
+(task-1794176984-s6phxk). Over one sha a stale tip is a stale but coherent
+answer — the commit is in HEAD and not in that `main`, so it reads `pending`.
+`measure.test.ts` reproduces the mixed read.
+
+Which tip is the caller's: the live value reads the watcher's (it is
+recomputed on every advance the watcher hears); **`getAttemptStanding`** — the
+read for a decision (the exit-drop guard, the outcome report) — reads git's
+own `main` at that instant, and adds the one fact the live value does not
+carry: a checkout holding uncommitted work turns `"none"` into `"pending"`
+(agents never commit; work held for review lives only in the checkout —
+task-1794193514-ia99gm was dropped over it). Not on the live value, because no
+signature of it sees an edit to the tree.
 
 ## `no-branch` is an answer, not a failure
 
@@ -118,7 +142,7 @@ Everything that could make the standing merely *unknown* is kept out of that arm
   attempt row, its conversation ids, its ledger count, its delivery), and
   `contextFrom(attemptId, facts)` derives the measurement's context purely. Two
   producers of the facts: the live value's followed rows (`attemptFactsFrom`)
-  and `readAttemptFacts` (the same facts by SQL) behind `getAttemptWork`, for the
+  and `readAttemptFacts` (the same facts by SQL) behind `getAttemptStanding`, for the
   callers that are not a resource (the exit-drop guard, the outcome-report MCP
   tool). The signature folds in both tips, the conversation set (it grows while
   an attempt runs), the ledger count (a push row can land with no local ref
@@ -127,7 +151,7 @@ Everything that could make the standing merely *unknown* is kept out of that arm
   unchanged must not hit an entry read from the other). The cached value IS the wire payload, so a hit hands the runtime the
   very object it last served and D8 sends nothing.
 - **The landed memo** (`work.ts`, `landedShasFrom`) — the trailer grep alone,
-  signed on `main`'s tip, the attempt's start and its sorted conversation set,
+  signed on the `main` tip it is handed (I7), the attempt's start and its sorted conversation set,
   keyed by attempt. attempt-work's measurement and commits-graph's pane both read
   it (each handing the facts its own follows read), so the chip's count and the
   pane's rows come from ONE grep. No "unmeasurable" arm: the facts it takes carry
@@ -174,10 +198,9 @@ Everything that could make the standing merely *unknown* is kept out of that arm
     - `attemptWorkEtag`
     - `deltaEtag`
     - `evictLandedShas`
-    - `getAttemptWork`
+    - `getAttemptStanding`
     - `landedShasFrom`
     - `probeHeadMain`
-    - `probeRefMain`
     - `readBranch`
     - `readDeltaCounts`
     - `readLanded`

@@ -16,7 +16,11 @@ export default {
       // ledger's inserts reach it through the feed like any write.
       ensureFresh: () =>
         runTracked("push-ledger.reconcile", async () => {
-          await ensurePushLedgerFresh();
+          await ensurePushLedgerFresh("watched");
+        }),
+      ensureCurrent: () =>
+        runTracked("push-ledger.reconcile", async () => {
+          await ensurePushLedgerFresh("git");
         }),
     }),
   ],

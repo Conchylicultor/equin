@@ -20,6 +20,6 @@ export const pushLedgerReaction = defineRefReaction({
   name: "tasks.push-ledger",
   refName: "refs/heads/main",
   run: async () => {
-    await ensurePushLedgerFresh();
+    await ensurePushLedgerFresh("watched");
   },
 });

@@ -1,7 +1,7 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 
 export {
-  getAttemptWork,
+  getAttemptStanding,
   landedShasFrom,
   evictLandedShas,
 } from "./internal/work";
@@ -14,7 +14,6 @@ export {
   readDeltaCounts,
   refExists,
   probeHeadMain,
-  probeRefMain,
   readPendingInWorktree,
   readPendingFromBranchRef,
   readLanded,

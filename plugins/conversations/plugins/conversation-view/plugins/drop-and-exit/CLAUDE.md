@@ -22,7 +22,7 @@
   - Exports (values): `droppedNotification`
 - Server:
   - Uses:
-    - `tasks/attempt-work.getAttemptWork`
+    - `tasks/attempt-work.getAttemptStanding`
     - `tasks/tasks-core.dropTaskIfNoActiveSibling`
   - Exports (values): `dropTaskOnExit`
 - Machine:

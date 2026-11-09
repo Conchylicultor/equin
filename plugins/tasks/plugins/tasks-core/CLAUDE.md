@@ -99,6 +99,15 @@ seeded rows ARE the ledger.
 - `raw-reads.ts` — the ungated reads the reconcile itself needs, kept in their own
   file so re-entering the gate from inside a reconcile has no spelling.
 - `reaction.ts` (machine) — the push half, a `defineRefReaction` on `refs/heads/main`.
+- **`ensureCurrent`** — the pull half against git's OWN `main` (one `rev-parse`),
+  not the watcher's copy. Every write that ends a conversation (`gone` / `done`,
+  `mutations/conversations.ts`) calls it first: `attempts_v` turns a `pushed`
+  attempt `completed` the moment no conversation is live, but only if the push
+  row is there — with the watcher hearing a push tens of seconds late, an agent
+  that pushed and closed at once read `attempted` ("ended without landing")
+  until it caught up (task-1794187243-6jyy8o). So the derived status is a
+  function of what is on `main` when the session ends, not of when a file event
+  arrived.
 
 ## Status batches ride the transaction
 
@@ -152,7 +161,7 @@ I5 is about **completeness**; I3 (`tasks/attempt-work/CLAUDE.md`) is about
 **interpretation**. Even a complete ledger cannot see a commit that carries no
 trailer (a `--from-main` push), so a row still only ever *proves* a push happened
 and its absence still proves nothing. Anything asking "does this attempt have work
-at stake?" reads `getAttemptWork`, not this table.
+at stake?" reads `getAttemptStanding`, not this table.
 
 Full design: `research/2026-08-18-global-push-ledger-git-projection.md`.
 
@@ -168,7 +177,7 @@ Full design: `research/2026-08-18-global-push-ledger-git-projection.md`.
 There is deliberately **no `abandoned`**, and no arm that means "nothing landed".
 Removing the value is the enforcement: the conclusion has no spelling, so no future
 CASE arm or consumer can reach it. If you are about to add one back, the thing you
-want is almost certainly `getAttemptWork` (I3) — `has_push IS NULL` conflates *never
+want is almost certainly `getAttemptStanding` (I3) — `has_push IS NULL` conflates *never
 pushed*, *finished with nothing to push*, *landed untrailered* and *the ledger has
 not caught up*, and it is `false` for every hibernated (`gone`) attempt too.
 
@@ -759,8 +768,8 @@ serves them.
     - `TRAILER_LOG_FORMAT`
     - `UNATTRIBUTED_TRAILER_KEY`
 - Cross-plugin:
-  - Imported by: 117 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×47
+  - Imported by: 118 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×48
     - `tasks` ×36
     - `debug` ×6
     - `active-data` ×5

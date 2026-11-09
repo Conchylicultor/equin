@@ -39,12 +39,13 @@ export async function readBranch(worktreePath: string): Promise<string | null> {
 export async function readMergeBase(
   cwd: string,
   rev: string = "HEAD",
+  main: string = MAIN,
 ): Promise<string | null> {
   // `git merge-base` exits 1 legitimately when the branches share no common
   // ancestor — that is a real "no merge-base" answer (→ null), NOT a failure.
   // Any other non-zero exit is a genuine failure and must throw so the caller
   // aborts the recompute and keeps its previous cache (never a "" collision).
-  const args = ["merge-base", MAIN, rev];
+  const args = ["merge-base", main, rev];
   const res = await tryRunGit(args, cwd);
   if (!res.ok) {
     if (res.exitCode === 1) return null;
@@ -62,13 +63,14 @@ export async function readMergeBase(
 export async function readDeltaCounts(
   cwd: string,
   rev: string = "HEAD",
+  main: string = MAIN,
 ): Promise<{ ahead: number; behind: number }> {
   // `--left-right --count <left>...<right>` prints "<left-only>\t<right-only>".
   // left  = main only  = behind
   // right = the attempt's tip only = ahead
   // runGit throws on failure — a false 0/0 is never manufactured from a failed read.
   const out = await runGit(
-    ["rev-list", "--left-right", "--count", `${MAIN}...${rev}`],
+    ["rev-list", "--left-right", "--count", `${main}...${rev}`],
     cwd,
   );
   const parts = out.trim().split(/\s+/);
@@ -102,7 +104,33 @@ export async function probeHeadMain(
  * watcher as "main unchanged". Throws on a failed read.
  */
 export async function readMainSha(cwd: string): Promise<string> {
-  return lastKnownMainSha() ?? (await runGit(["rev-parse", MAIN], cwd)).trim();
+  return lastKnownMainSha() ?? (await readMainShaFromGit(cwd));
+}
+
+/**
+ * `main`'s tip as git holds it NOW — never the watcher's copy, which trails a
+ * ref advance by however late the file event arrives (seconds to tens of
+ * seconds while fseventsd is loaded). For a decision read: the exit-drop guard
+ * once dropped a task 21 s after its push landed, because the watcher's `main`
+ * was the one from before the push. A `rev-parse` is microseconds.
+ */
+export async function readMainShaFromGit(cwd: string): Promise<string> {
+  return (await runGit(["rev-parse", "refs/heads/main"], cwd)).trim();
+}
+
+/**
+ * Whether a checkout holds work no commit records yet: tracked edits, staged
+ * changes or untracked files (`.gitignore`d ones excluded). Agents do not
+ * commit — `./equin push` does — so an attempt that held its push for review
+ * has ALL its work here, and a branch measured `ahead: 0`. Throws
+ * `WorktreeGoneError` once the checkout is gone, like every worktree read.
+ */
+export async function readUncommitted(worktreePath: string): Promise<boolean> {
+  const out = await runGit(
+    ["status", "--porcelain", "--untracked-files=normal"],
+    worktreePath,
+  );
+  return out.trim().length > 0;
 }
 
 /**
@@ -119,24 +147,29 @@ export async function refExists(cwd: string, ref: string): Promise<boolean> {
   throw new GitError({ args, cwd, exitCode: res.exitCode, stderr: res.stderr });
 }
 
+/** The attempt's tip in a live checkout (`HEAD`). Throws on a failed read. */
+export async function readHeadSha(worktreePath: string): Promise<string> {
+  return (await runGit(["rev-parse", "HEAD"], worktreePath)).trim();
+}
+
 /**
- * The tips a branch-ref measurement reads, for the signature. `headSha` is
- * `null` when the ref is gone — the same determinate "no-branch" the measurement
- * itself reports, so signature and value stay one consistent pair.
+ * A branch ref's tip, for the signature of a reaped attempt's measurement —
+ * `null` when the ref is gone, the same determinate "no-branch" the
+ * measurement itself reports, so signature and value stay one consistent pair.
  */
-export async function probeRefMain(
+export async function readRefSha(
   mainRepoRoot: string,
   ref: string,
-): Promise<{ headSha: string | null; mainSha: string }> {
-  const mainSha = await readMainSha(mainRepoRoot);
-  if (!(await refExists(mainRepoRoot, ref))) return { headSha: null, mainSha };
-  const headSha = (await runGit(["rev-parse", ref], mainRepoRoot)).trim();
-  return { headSha, mainSha };
+): Promise<string | null> {
+  if (!(await refExists(mainRepoRoot, ref))) return null;
+  return (await runGit(["rev-parse", ref], mainRepoRoot)).trim();
 }
 
 /**
  * The pending half read from a live worktree: how far its HEAD is ahead of (and
- * behind) `main`.
+ * behind) `main` — the tip the caller names (`main`, a sha), so the pending
+ * half and the landed grep of one measurement read the SAME `main` (see
+ * `work.ts`, "one snapshot").
  *
  * `mergeBase` is reported as measured — `null` means main and this branch share
  * no common ancestor, which is a real answer. The counts are read
@@ -146,11 +179,12 @@ export async function probeRefMain(
  */
 export async function readPendingInWorktree(
   worktreePath: string,
+  main: string,
 ): Promise<AttemptPending> {
   const [branch, mergeBase, counts] = await Promise.all([
     readBranch(worktreePath),
-    readMergeBase(worktreePath),
-    readDeltaCounts(worktreePath),
+    readMergeBase(worktreePath, "HEAD", main),
+    readDeltaCounts(worktreePath, "HEAD", main),
   ]);
   return {
     kind: "measured",
@@ -173,11 +207,12 @@ export async function readPendingInWorktree(
 export async function readPendingFromBranchRef(
   mainRepoRoot: string,
   branchRef: string,
+  main: string,
 ): Promise<AttemptPending> {
   if (!(await refExists(mainRepoRoot, branchRef))) return { kind: "no-branch" };
   const [mergeBase, counts] = await Promise.all([
-    readMergeBase(mainRepoRoot, branchRef),
-    readDeltaCounts(mainRepoRoot, branchRef),
+    readMergeBase(mainRepoRoot, branchRef, main),
+    readDeltaCounts(mainRepoRoot, branchRef, main),
   ]);
   return {
     kind: "measured",
@@ -208,6 +243,9 @@ export interface LandedOwner {
  * record of what landed. The read is bounded by `since` (the attempt's own
  * lifetime) because a commit cannot predate the attempt that authored it.
  *
+ * `main` is the tip to read (a sha, or a ref name in a test) — the same one
+ * the measurement's pending half counts against.
+ *
  * Returns the distinct push ids alongside the shas: one `./equin push`
  * stamps one push-trailer value across every commit it rebases, so the
  * distinct count is the true number of pushes.
@@ -216,6 +254,7 @@ export async function readLanded(
   mainRepoRoot: string,
   owner: LandedOwner,
   since: Date,
+  main: string,
 ): Promise<{ shas: string[]; pushIds: string[] }> {
   // runGit throws on failure — a failed log must never be absorbed into "nothing
   // landed", which is the exact lie this whole plugin exists to remove.
@@ -225,7 +264,7 @@ export async function readLanded(
       "--no-color",
       `--since=${since.toISOString()}`,
       `--format=${TRAILER_LOG_FORMAT}`,
-      "refs/heads/main",
+      main,
     ],
     mainRepoRoot,
   );

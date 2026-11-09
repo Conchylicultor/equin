@@ -7,8 +7,7 @@ import {
 } from "@plugins/tasks/plugins/orchestration/plugins/mandate/server";
 import { exitClean } from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities/core";
 import { reportRequired } from "@plugins/tasks/plugins/outcome-report/plugins/capability/core";
-import { getAttemptWork } from "@plugins/tasks/plugins/attempt-work/server";
-import { standingOf } from "@plugins/tasks/plugins/attempt-work/core";
+import { getAttemptStanding } from "@plugins/tasks/plugins/attempt-work/server";
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";
 import { conversationRoute } from "@plugins/conversations/core";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
@@ -63,14 +62,15 @@ Calling it again replaces the earlier report. Afterwards, follow your mandate's 
     }
     const { taskId } = conversation;
     // Measured from git at submit time (attempt-work), not from the pushes
-    // ledger: "branch built, waiting for its push" is a standing of its own.
-    const work = await getAttemptWork(conversation.attemptId);
-    if (!work.resolved) {
+    // ledger: "work waiting for its push" — committed or still in the
+    // checkout — is a standing of its own.
+    const measured = await getAttemptStanding(conversation.attemptId);
+    if (!measured.resolved) {
       throw new Error(
-        `Could not measure this attempt's work against main (${work.reason}); try again.`,
+        `Could not measure this attempt's work against main (${measured.reason}); try again.`,
       );
     }
-    const standing = standingOf(work.value);
+    const standing = measured.value;
 
     await taskOutcomeReports.upsert(taskId, {
       conversationId,

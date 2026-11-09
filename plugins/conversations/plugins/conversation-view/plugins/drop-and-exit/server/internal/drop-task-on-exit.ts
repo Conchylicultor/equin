@@ -1,5 +1,4 @@
-import { getAttemptWork } from "@plugins/tasks/plugins/attempt-work/server";
-import { standingOf } from "@plugins/tasks/plugins/attempt-work/core";
+import { getAttemptStanding } from "@plugins/tasks/plugins/attempt-work/server";
 import { dropTaskIfNoActiveSibling } from "@plugins/tasks/plugins/tasks-core/server";
 import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 import { dropsTask, type DropPolicy } from "../../core/drop-policy";
@@ -13,7 +12,7 @@ import { dropsTask, type DropPolicy } from "../../core/drop-policy";
  *
  * Never drop when work is at stake OR unmeasurable:
  *
- * - **Unknown state is not a licence to drop a task.** `getAttemptWork` returns a
+ * - **Unknown state is not a licence to drop a task.** `getAttemptStanding` returns a
  *   `Resolvable`, and its unresolved arm means the standing could not be
  *   measured at all (the attempt row is gone). Leaving the task as `attempted`
  *   is recoverable by a human; dropping work we cannot account for is not.
@@ -25,6 +24,10 @@ import { dropsTask, type DropPolicy } from "../../core/drop-policy";
  *   cleanly had its task dropped with no UI involved. (The ledger is a git-derived
  *   projection now, but its emptiness still is not evidence: it records only what
  *   landed, and only commits that carry a trailer.)
+ * - **The standing is a decision read** (`getAttemptStanding`): `main` as git
+ *   holds it at this instant, one snapshot for every count, and uncommitted
+ *   work in the checkout counts as pending — an agent never commits, so work
+ *   held for review lives only there.
  * - **`standingOf` is a discriminated value, not a count.** There is no array
  *   here whose emptiness could be misread, and the drop is reachable only from a
  *   measured standing that `policy` allows (see `DropPolicy`): the manual action
@@ -43,8 +46,8 @@ export async function dropTaskOnExit(
   conversation: Conversation,
   policy: DropPolicy,
 ): Promise<boolean> {
-  const work = await getAttemptWork(conversation.attemptId);
-  if (!work.resolved) return false;
-  if (!dropsTask(standingOf(work.value), policy)) return false;
+  const standing = await getAttemptStanding(conversation.attemptId);
+  if (!standing.resolved) return false;
+  if (!dropsTask(standing.value, policy)) return false;
   return dropTaskIfNoActiveSibling(conversation);
 }

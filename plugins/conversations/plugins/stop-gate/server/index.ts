@@ -11,7 +11,7 @@ export type {
 
 export default {
   description:
-    "The stop-gate backend: the StopGate contribution (a plugin's check(conversationId) — block the agent's stop while it still owes the plugin something, with the reason it reads) and the StopWaiver contribution (waives(conversationId) — the agent may stop anyway, it will be woken), and the GET /api/conversations/:id/stop-gate endpoint the Stop hook asks: block iff some gate blocks and no waiver waives.",
+    "The stop-gate backend: the StopGate contribution (a plugin's check(conversationId) — block the agent's stop while it still owes the plugin something, with the reason it reads) and the StopWaiver contribution (waives(conversationId) — the agent may stop anyway, it will be woken), and the GET /api/conversations/:id/stop-gate endpoint the Stop hook asks: block iff some gate blocks and no waiver waives. Owns stop_gate_reminders, the machine half's backstop record.",
   httpRoutes: {
     [stopGate.route]: handleStopGate,
   },

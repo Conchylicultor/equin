@@ -28,14 +28,23 @@ import { reconcilePushLedger, type ReconcileResult } from "./reconcile";
 const LEDGER_KEY = "pushes";
 
 /**
+ * Which `main` tip the ledger must cover: `"watched"` — as this host's ref
+ * watcher last heard it (a `Map` read; what a read path and the ref reaction
+ * want, since the watcher's next advance re-runs them) — or `"git"`, as git
+ * holds it now (one `rev-parse`; what a write whose derived status reads the
+ * ledger at once wants — see `PushLedgerImpl.ensureCurrent`).
+ */
+export type LedgerTip = "watched" | "git";
+
+/**
  * The cheap, ungated fingerprint: `main`'s tip. The watcher tracks
  * `refs/heads/main` in EVERY backend (only the durable `emit` is main-gated), so
- * this is normally a `Map` read. The `rev-parse` fallback covers the window
- * before the watcher has seeded — `lastKnownMainSha()` returning null means "not
- * seeded", never "main unchanged".
+ * a `"watched"` read is normally a `Map` read. The `rev-parse` fallback covers
+ * the window before the watcher has seeded — `lastKnownMainSha()` returning
+ * null means "not seeded", never "main unchanged".
  */
-async function mainTip(): Promise<string> {
-  const known = lastKnownMainSha();
+async function mainTip(tip: LedgerTip): Promise<string> {
+  const known = tip === "watched" ? lastKnownMainSha() : null;
   if (known) return known;
   const root = await ensureMainWorktreeRoot();
   return (await runGit(["rev-parse", "refs/heads/main"], root)).trim();
@@ -51,9 +60,9 @@ async function mainTip(): Promise<string> {
  * attributable arrived, the tip had not moved, so the memo answered from cache
  * and the ledger stayed incomplete until some unrelated push advanced `main`.
  */
-async function ledgerSignature(): Promise<string> {
-  const tip = await mainTip();
-  return `${tip}:${attributionGeneration()}`;
+async function ledgerSignature(tip: LedgerTip): Promise<string> {
+  const sha = await mainTip(tip);
+  return `${sha}:${attributionGeneration()}`;
 }
 
 // A signature hit short-circuits before any heavy slot is acquired, concurrent
@@ -61,9 +70,14 @@ async function ledgerSignature(): Promise<string> {
 // memo caches only on success. A reconcile that throws leaves the covered
 // signature unadvanced, so the next call retries rather than inheriting a
 // half-applied walk as settled truth.
-const ledgerMemo = createSignedMemo<ReconcileResult>({
+//
+// The two tips share ONE entry: a reconcile walks git's `main` whichever tip
+// asked, so an entry signed on the git tip is exactly as covering as one signed
+// on the watched tip when they agree — and when they do not, the stale one
+// misses and re-runs a reconcile that inserts nothing.
+const ledgerMemo = createSignedMemo<ReconcileResult, LedgerTip>({
   name: "push-ledger",
-  signature: () => ledgerSignature(),
+  signature: (_key, tip) => ledgerSignature(tip),
   compute: () => withHeavyReadSlot(() => reconcilePushLedger()),
 });
 
@@ -77,6 +91,8 @@ const ledgerMemo = createSignedMemo<ReconcileResult>({
  * database is unreadable: a caller must never be handed a ledger that silently
  * failed to catch up.
  */
-export function ensurePushLedgerFresh(): Promise<ReconcileResult> {
-  return ledgerMemo.get(LEDGER_KEY);
+export function ensurePushLedgerFresh(
+  tip: LedgerTip,
+): Promise<ReconcileResult> {
+  return ledgerMemo.get(LEDGER_KEY, { input: tip });
 }

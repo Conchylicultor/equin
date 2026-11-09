@@ -18,6 +18,9 @@ import {
   type ConversationStatusState,
 } from "../status-emit";
 import { noteAttributionChanged } from "../push-ledger/attribution";
+import { PushLedger } from "../push-ledger/service";
+import { reportServerError } from "@plugins/framework/plugins/server-core/core";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import type { DbExecutor } from "../status-batch";
 import { withTaskStatusChange } from "../status-scope";
 
@@ -231,6 +234,8 @@ export async function updateConversation(
   patch: UpdateConversationPatch,
   opts: { alongside?: (tx: DbExecutor) => Promise<void> } = {},
 ): Promise<void> {
+  if (patch.status === "gone" || patch.status === "done")
+    await ledgerCurrentBeforeEnding();
   const { taskId, state: prev } = await conversationContext(id);
   // Typed against the table's own insert row, not `Record<string, unknown>`:
   // `status` is a DECODED column now, so its encoder runs on this `.set(...)`.
@@ -378,10 +383,39 @@ export async function deleteConversationRow(id: string): Promise<void> {
     });
 }
 
+// A conversation ending is the write that settles its attempt: `attempts_v`
+// reads a `pushed` attempt as `completed` (its task `done`) the moment no
+// conversation of it is live — but only if its push row is already in the
+// ledger. The ledger follows `main` through the ref watcher, which can hear a
+// push tens of seconds late, so an agent that pushed and closed at once read
+// `attempted` ("ended without landing") until it caught up
+// (task-1794187243-6jyy8o). Pulled current against git's own `main` first, the
+// status goes straight from `pushed` to `completed`: a function of what is on
+// `main`, not of when a file event arrived. Free (one `rev-parse`) when nothing
+// landed since the last reconcile.
+//
+// A failed pull is reported, never allowed to veto the write: the session
+// ending is a fact of its own, and a status reconciler retrying a close that a
+// wedged git or ledger keeps refusing would leave the agent reading `working`
+// forever. Reported, the status is late (the ledger's next pull promotes it),
+// not wrong — I6: a missing push row claims nothing.
+async function ledgerCurrentBeforeEnding(): Promise<void> {
+  try {
+    await PushLedger.get().ensureCurrent();
+  } catch (err) {
+    const error = err instanceof Error ? err : new Error(String(err));
+    reportServerError({
+      message: `[tasks-core] push ledger could not be pulled current before a conversation ended: ${error.message}`,
+      ...crashFieldsOf(error),
+    });
+  }
+}
+
 // Atomically transition to "gone" only if the current status is still active.
 // Returns true if the row was updated, false if it was already gone/done.
 // Prevents the status reconciler from overwriting a "done" set by the exit_clean flow.
 export async function markConversationGone(id: string): Promise<boolean> {
+  await ledgerCurrentBeforeEnding();
   const { taskId, state: prev } = await conversationContext(id);
   const now = new Date();
   const result = await withTaskStatusChange(taskId ?? [], db, async () =>
@@ -464,6 +498,7 @@ export async function markConversationClosed(
   id: string,
   endedAt: Date = new Date(),
 ): Promise<void> {
+  await ledgerCurrentBeforeEnding();
   const { taskId, state: prev } = await conversationContext(id);
   await withTaskStatusChange(taskId ?? [], db, async () => {
     await db

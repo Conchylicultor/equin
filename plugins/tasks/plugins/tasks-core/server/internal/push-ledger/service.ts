@@ -16,6 +16,17 @@ export interface PushLedgerImpl {
    * never be handed a ledger that silently failed to catch up.
    */
   ensureFresh(): Promise<void>;
+  /**
+   * Resolves once the ledger covers `main` as git holds it NOW — not as this
+   * host's ref watcher last heard it, which trails a push by however late the
+   * file event arrives. For a write whose derived status reads the ledger at
+   * once: closing a conversation (or losing its process) turns a `pushed`
+   * attempt `completed` only if its push row is already there, so the close
+   * pulls the ledger current first — otherwise the task reads `attempted`
+   * ("its agent ended without landing") until the watcher catches up
+   * (task-1794187243-6jyy8o). Throws like `ensureFresh`.
+   */
+  ensureCurrent(): Promise<void>;
 }
 
 export const PushLedger = defineHostService<PushLedgerImpl>(

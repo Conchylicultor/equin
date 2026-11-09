@@ -47,20 +47,30 @@ const startedSource = watchSource({
   ],
 });
 
-/** A task settled — done or dropped (`settled`). */
+/** A task settled — done or dropped (`settled`) — once per settled status it
+ * reaches: `dropped → done` is news of its own. A dropped task whose work then
+ * landed (`done` outranks `dropped`) used to say nothing, so a watcher kept
+ * the `dropped` it had heard and reported shipped work as abandoned
+ * (task-1794176984-s6phxk). */
+export function settledEvents(p: {
+  taskId: string;
+  status: TaskStatus;
+  previousStatus: TaskStatus;
+}): WatchEventInput[] {
+  if (!isSettled(p.status) || p.status === p.previousStatus) return [];
+  return [
+    {
+      kind: "settled",
+      taskId: p.taskId,
+      summary: `${p.previousStatus} → ${p.status}`,
+    },
+  ];
+}
+
 const settledSource = watchSource({
   id: "tasks.settled",
   on: taskStatusChanged,
-  toEvents: (p) =>
-    isSettled(p.status) && !isSettled(p.previousStatus)
-      ? [
-          {
-            kind: "settled",
-            taskId: p.taskId,
-            summary: `${p.previousStatus} → ${p.status}`,
-          },
-        ]
-      : [],
+  toEvents: settledEvents,
 });
 
 /** A task stopped short of settling: its agent ended without landing

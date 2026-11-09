@@ -19,9 +19,9 @@ surface exists only on a host that runs agents); the table and the
 
 On submit, in order:
 
-1. `standing` is measured from git (`attempt-work`'s `getAttemptWork` +
-   `standingOf`): `landed` | `pending` (a built branch waiting for its push) |
-   `none`. An unmeasurable attempt fails the call (the agent retries) — never a
+1. `standing` is measured from git (`attempt-work`'s `getAttemptStanding`):
+   `landed` | `pending` (work waiting for its push — committed, or still in
+   the checkout) | `none`. An unmeasurable attempt fails the call (the agent retries) — never a
    guessed value. Stored instead of a `pushed` bool because "stopped at a built
    branch" is the case the reader acts on.
 2. Upsert `tasks_ext_outcome_report` (one row per task; a resubmit replaces it).

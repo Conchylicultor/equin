@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { stoppedEvents } from "./watch-sources";
+import { settledEvents, stoppedEvents } from "./watch-sources";
 
 describe("stoppedEvents", () => {
   test("entering attempted is `stopped`", () => {
@@ -30,5 +30,39 @@ describe("stoppedEvents", () => {
       expect(
         stoppedEvents({ taskId: "t", status, previousStatus: "attempted" }),
       ).toEqual([]);
+  });
+});
+
+describe("settledEvents", () => {
+  test("fires when a task settles", () => {
+    expect(
+      settledEvents({
+        taskId: "t",
+        status: "done",
+        previousStatus: "in_progress",
+      }),
+    ).toEqual([
+      { kind: "settled", taskId: "t", summary: "in_progress → done" },
+    ]);
+  });
+
+  // A dropped task whose work then landed: the watcher must hear `done`.
+  test("fires again when a dropped task turns out done", () => {
+    expect(
+      settledEvents({ taskId: "t", status: "done", previousStatus: "dropped" }),
+    ).toEqual([{ kind: "settled", taskId: "t", summary: "dropped → done" }]);
+  });
+
+  test("is silent off a settled status, or with no change", () => {
+    expect(
+      settledEvents({
+        taskId: "t",
+        status: "attempted",
+        previousStatus: "done",
+      }),
+    ).toEqual([]);
+    expect(
+      settledEvents({ taskId: "t", status: "done", previousStatus: "done" }),
+    ).toEqual([]);
   });
 });

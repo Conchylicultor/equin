@@ -345,6 +345,7 @@ withdrawn).
     - `conversations/conversation-view/push-and-exit`
     - `conversations/runtime-sdk`
     - `conversations/self-compact`
+    - `conversations/stop-gate`
     - `conversations/transcript-source`
     - `tasks/orchestration/watch`
     - `tasks/task-title`

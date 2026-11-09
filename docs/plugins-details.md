@@ -642,8 +642,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/icons.symbol`
             - Exports (values): `agentManagerApp`
           - Cross-plugin:
-            - Imported by: 33 plugins — full list in [`plugins/apps/plugins/agent-manager/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/agent-manager/plugins/shell/REFERENCE.md)
-              - `conversations` ×16
+            - Imported by: 34 plugins — full list in [`plugins/apps/plugins/agent-manager/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/agent-manager/plugins/shell/REFERENCE.md)
+              - `conversations` ×17
               - `tasks` ×6
               - `apps` ×4
               - `active-data/plugin-link`
@@ -14973,8 +14973,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `SYSTEM_CATEGORY_ID`
       - `withdrawConversationTurn`
   - Cross-plugin:
-    - Imported by: 82 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
-      - `conversations` ×56
+    - Imported by: 83 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+      - `conversations` ×57
       - `tasks` ×8
       - `apps` ×6
       - `infra` ×3
@@ -15470,6 +15470,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `conversations/self-compact`
+          - `conversations/stop-gate`
           - `tasks/orchestration/watch`
     - **`close`** — Closing a conversation, portable half: POST /api/conversations/:id/close marks it done on every host (markConversationClosed) — the demo's in-browser server included — then runs every CloseTeardown contribution before it returns (the desktop's stops the agent).
       - Server:
@@ -16433,7 +16434,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `droppedNotification`
           - Server:
             - Uses:
-              - `tasks/attempt-work.getAttemptWork`
+              - `tasks/attempt-work.getAttemptStanding`
               - `tasks/tasks-core.dropTaskIfNoActiveSibling`
             - Exports (values): `dropTaskOnExit`
           - Machine:
@@ -20707,9 +20708,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations`
           - `conversations/conversation-view/status`
           - `conversations/conversations-view/data-view/queue`
-    - **`stop-gate`** — The stop-gate backend: the StopGate contribution (a plugin's check(conversationId) — block the agent's stop while it still owes the plugin something, with the reason it reads) and the StopWaiver contribution (waives(conversationId) — the agent may stop anyway, it will be woken), and the GET /api/conversations/:id/stop-gate endpoint the Stop hook asks: block iff some gate blocks and no waiver waives.
+    - **`stop-gate`** — The stop-gate backend: the StopGate contribution (a plugin's check(conversationId) — block the agent's stop while it still owes the plugin something, with the reason it reads) and the StopWaiver contribution (waives(conversationId) — the agent may stop anyway, it will be woken), and the GET /api/conversations/:id/stop-gate endpoint the Stop hook asks: block iff some gate blocks and no waiver waives. Owns stop_gate_reminders, the machine half's backstop record.
       - Server:
-        - Uses: `infra/endpoints.implement`
+        - Contributes: `trigger` "stop-gate.backstop"
+        - Uses:
+          - `infra/endpoints.implement`
+          - `tasks/tasks-core._conversations`
+        - DB schema: `plugins/conversations/plugins/stop-gate/server/internal/tables.ts`
         - Exports (types):
           - `StopGateEntry`
           - `StopVerdict`
@@ -20740,6 +20745,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `endpoints/no-raw-web-fetch` — `shared/client.ts` (sanctioned)
       - Machine:
         - Exports (values): `stopGateHookEntry`
+        - Register: `defineJob('stop-gate.backstop')`
     - **`summary`** — Toolbar button that opens a side pane with the Summarise action and the latest structured Sonnet summary (phase, flags, next action). On-demand structured summaries of conversations: phase, flags, next action, served live. Curated by Sonnet via MCP (the tool is the machine half's). Append-only history.
       - Web:
         - Slots: `conv-summary.actions`
@@ -21120,6 +21126,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-view/push-and-exit`
           - `conversations/runtime-sdk`
           - `conversations/self-compact`
+          - `conversations/stop-gate`
           - `conversations/transcript-source`
           - `tasks/orchestration/watch`
           - `tasks/task-title`
@@ -21396,9 +21403,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadedDatabaseConfig`
       - `readDatabaseConfigSync`
   - Cross-plugin:
-    - Imported by: 152 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 153 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×42
-      - `conversations` ×17
+      - `conversations` ×18
       - `infra` ×15
       - `page` ×14
       - `tasks` ×14
@@ -32567,8 +32574,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TriggerRowSchema`
           - `TriggersPayloadSchema`
       - Cross-plugin:
-        - Imported by: 38 plugins — full list in [`plugins/infra/plugins/events/REFERENCE.md`](../plugins/infra/plugins/events/REFERENCE.md)
-          - `conversations` ×10
+        - Imported by: 39 plugins — full list in [`plugins/infra/plugins/events/REFERENCE.md`](../plugins/infra/plugins/events/REFERENCE.md)
+          - `conversations` ×11
           - `tasks` ×10
           - `apps` ×7
           - `infra` ×4
@@ -33788,9 +33795,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskFor`
           - `TOTAL_JOB_SLOTS`
       - Cross-plugin:
-        - Imported by: 78 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
+        - Imported by: 79 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
           - `apps` ×20
-          - `conversations` ×16
+          - `conversations` ×17
           - `infra` ×14
           - `debug` ×8
           - `tasks` ×7
@@ -35178,10 +35185,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runtimeNamespace`
           - `servingSocketPath`
       - Cross-plugin:
-        - Imported by: 67 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
+        - Imported by: 68 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
           - `infra` ×16
           - `debug` ×13
-          - `conversations` ×8
+          - `conversations` ×9
           - `build` ×7
           - `database` ×4
           - `tasks` ×4
@@ -38284,7 +38291,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `withDeadline`
     - **`error-subject`** — What an error is about, carried by the error: SubjectError (a shared throw site — the migration runner, the trigger installer — names the one subject it failed for), errorSubject(err) (the subjects along the cause chain plus the innermost class code, ENOENT / SQLSTATE) and crashFieldsOf(err, scope?) — the errorType / stack / scope every crash filer derives from an error, so a shared throw site's failures land on one report row per cause instead of one for all. Enforced by error-subject/crash-fields-of.
       - Cross-plugin:
-        - Imported by: 27 plugins — full list in [`plugins/packages/plugins/error-subject/REFERENCE.md`](../plugins/packages/plugins/error-subject/REFERENCE.md)
+        - Imported by: 28 plugins — full list in [`plugins/packages/plugins/error-subject/REFERENCE.md`](../plugins/packages/plugins/error-subject/REFERENCE.md)
           - `infra` ×8
           - `conversations` ×5
           - `database` ×5
@@ -38293,6 +38300,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network` ×2
           - `apps/deploy/deployments`
           - `framework/server-core`
+          - `tasks/tasks-core`
       - Exemptions:
         - Exempts itself from: `error-subject/crash-fields-of` — `core/internal/error-subject.ts` (sanctioned)
         - Exempted by:
@@ -54304,8 +54312,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale` ×10
           - `ui/tokens/density` ×5
           - `ui/tokens/shape` ×2
-        - Imported by: 37 plugins — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
-          - `conversations` ×14
+        - Imported by: 38 plugins — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
+          - `conversations` ×15
           - `tasks` ×7
           - `apps` ×2
           - `build` ×2
@@ -55195,10 +55203,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `attemptWorkEtag`
           - `deltaEtag`
           - `evictLandedShas`
-          - `getAttemptWork`
+          - `getAttemptStanding`
           - `landedShasFrom`
           - `probeHeadMain`
-          - `probeRefMain`
           - `readBranch`
           - `readDeltaCounts`
           - `readLanded`
@@ -57601,8 +57608,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TRAILER_LOG_FORMAT`
           - `UNATTRIBUTED_TRAILER_KEY`
       - Cross-plugin:
-        - Imported by: 117 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
-          - `conversations` ×47
+        - Imported by: 118 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+          - `conversations` ×48
           - `tasks` ×36
           - `debug` ×6
           - `active-data` ×5

@@ -29,13 +29,16 @@ import {
   type WorkspaceKind,
 } from "@plugins/conversations/plugins/workspace/core";
 import type { AttemptPending, AttemptWork } from "../../core/protocol";
+import { standingOf, type Standing } from "../../core/standing";
 import {
-  probeHeadMain,
-  probeRefMain,
+  readHeadSha,
   readLanded,
   readMainSha,
+  readMainShaFromGit,
   readPendingFromBranchRef,
   readPendingInWorktree,
+  readRefSha,
+  readUncommitted,
 } from "./measure";
 import { attemptWorkEtag } from "./etag";
 
@@ -169,42 +172,44 @@ export function contextFrom(
   };
 }
 
-// The worktree is the cheapest and most current place to read the tips, but an
-// attempt outlives its checkout: `worktreePath` is a DB-held claim about a
-// directory that may already be gone. That is a determinate state, not a failed
-// read, so it falls through to the branch ref — which still holds the same
-// commits. Detected by catching rather than by stat-then-run: a reap racing the
-// probe would slip past any pre-check. Every other git failure propagates.
-async function probeTips(
+// The worktree is the cheapest and most current place to read the attempt's
+// tip, but an attempt outlives its checkout: `worktreePath` is a DB-held claim
+// about a directory that may already be gone. That is a determinate state, not
+// a failed read, so it falls through to the branch ref — which still holds the
+// same commits. Detected by catching rather than by stat-then-run: a reap
+// racing the probe would slip past any pre-check. Every other git failure
+// propagates. `main`'s tip is not read here: it is the measurement's input
+// (see "one snapshot" below).
+async function probeHead(
   ctx: WorkContext,
   mainRepoRoot: string,
-): Promise<{ headSha: string; mainSha: string }> {
+): Promise<string> {
   if (ctx.worktreePath) {
     try {
-      return await probeHeadMain(ctx.worktreePath);
+      return await readHeadSha(ctx.worktreePath);
     } catch (err) {
       if (!(err instanceof WorktreeGoneError)) throw err;
     }
   }
-  const { headSha, mainSha } = await probeRefMain(mainRepoRoot, ctx.branchRef);
   // No ref ⇒ the literal "no-branch", the same determinate answer the measurement
   // reports, so the signature and the value it labels agree.
-  return { headSha: headSha ?? "no-branch", mainSha };
+  return (await readRefSha(mainRepoRoot, ctx.branchRef)) ?? "no-branch";
 }
 
-// Same worktree-gone fall-through as `probeTips`, on the measuring path.
+// Same worktree-gone fall-through as `probeHead`, on the measuring path.
 async function readPending(
   ctx: WorkContext,
   mainRepoRoot: string,
+  mainSha: string,
 ): Promise<AttemptPending> {
   if (ctx.worktreePath) {
     try {
-      return await readPendingInWorktree(ctx.worktreePath);
+      return await readPendingInWorktree(ctx.worktreePath, mainSha);
     } catch (err) {
       if (!(err instanceof WorktreeGoneError)) throw err;
     }
   }
-  return readPendingFromBranchRef(mainRepoRoot, ctx.branchRef);
+  return readPendingFromBranchRef(mainRepoRoot, ctx.branchRef, mainSha);
 }
 
 // ── the landed memo — one trailer grep, shared with commits-graph ───────────
@@ -225,6 +230,12 @@ interface LandedInput {
   readonly since: Date;
 }
 
+/** The landed memo's input: what it greps for, and the `main` tip it greps —
+ * the snapshot the rest of the measurement reads too. */
+interface LandedRead extends LandedInput {
+  readonly mainSha: string;
+}
+
 /** The facts the landed set derives from, as a follower holds them. */
 export interface LandedFacts {
   /** The attempt's start — the grep's floor. */
@@ -242,13 +253,11 @@ function landedInputOf(facts: LandedFacts): LandedInput {
 
 const landedMemo = createSignedMemo<
   { shas: string[]; pushIds: string[] },
-  LandedInput
+  LandedRead
 >({
   name: "attempt-landed",
-  signature: async (_attemptId, input) => {
-    const mainSha = await readMainSha(await ensureMainWorktreeRoot());
-    return `${mainSha}|${input.since.toISOString()}|${input.convIds.join(",")}`;
-  },
+  signature: async (_attemptId, input) =>
+    `${input.mainSha}|${input.since.toISOString()}|${input.convIds.join(",")}`,
   // Reentrant inside attempt-work's own slot (one heavy slot for its whole
   // job); commits-graph's loader enters it here.
   compute: async (attemptId, input) => {
@@ -258,6 +267,7 @@ const landedMemo = createSignedMemo<
         mainRepoRoot,
         { attemptId, convIds: new Set(input.convIds) },
         input.since,
+        input.mainSha,
       ),
     );
   },
@@ -274,8 +284,9 @@ export async function landedShasFrom(
   attemptId: string,
   facts: LandedFacts,
 ): Promise<string[]> {
+  const mainSha = await readMainSha(await ensureMainWorktreeRoot());
   const landed = await landedMemo.get(attemptId, {
-    input: landedInputOf(facts),
+    input: { ...landedInputOf(facts), mainSha },
   });
   return landed.shas;
 }
@@ -302,17 +313,32 @@ export function evictLandedShas(attemptId: string): void {
 // Keyed by `attemptId` (not by worktree): the value is attempt-scoped — two
 // attempts sharing a worktree have different conversation sets and different
 // landed commits.
-const workMemo = createSignedMemo<Resolvable<AttemptWork>, AttemptFacts>({
+//
+// ONE SNAPSHOT. `main`'s tip is the measurement's input, read once by the
+// caller, and every read of `main` in it — the pending counts, the merge-base,
+// the landed grep, the signature — reads that sha. They used to read `main`
+// separately: the counts and the grep each as git held it, the signatures
+// (this memo's and the landed memo's) as git-watcher's in-memory copy, which
+// trails a ref advance by however late the file event arrives. Right after a
+// push, the counts saw the new `main` (`ahead: 0`) while the landed memo
+// answered from its entry signed on the old one (nothing landed) — together
+// `"none"`, a state of no `main` at all — and exit_clean dropped a task whose
+// commit had landed 21 s earlier (task-1794176984-s6phxk). Over one sha, a
+// stale tip yields a stale but COHERENT answer: the attempt's commit is in
+// HEAD and not in that `main`, so it reads `pending`, never `none`.
+interface WorkRead {
+  readonly facts: AttemptFacts;
+  readonly mainSha: string;
+}
+
+const workMemo = createSignedMemo<Resolvable<AttemptWork>, WorkRead>({
   name: "attempt-work",
-  signature: async (attemptId, facts) => {
+  signature: async (attemptId, { facts, mainSha }) => {
     const read = contextFrom(attemptId, facts);
     if (read.kind === "unmeasurable") return `unmeasurable:${read.reason}`;
     if (read.kind === "no-git") return `no-git:${read.delivered}`;
     const { ctx } = read;
-    const { headSha, mainSha } = await probeTips(
-      ctx,
-      await ensureMainWorktreeRoot(),
-    );
+    const headSha = await probeHead(ctx, await ensureMainWorktreeRoot());
     return attemptWorkEtag(
       headSha,
       mainSha,
@@ -321,7 +347,7 @@ const workMemo = createSignedMemo<Resolvable<AttemptWork>, AttemptFacts>({
       ctx.worktreePath,
     );
   },
-  compute: async (attemptId, facts) => {
+  compute: async (attemptId, { facts, mainSha }) => {
     const read = contextFrom(attemptId, facts);
     if (read.kind === "unmeasurable") return unresolved(read.reason);
     if (read.kind === "no-git") {
@@ -340,8 +366,8 @@ const workMemo = createSignedMemo<Resolvable<AttemptWork>, AttemptFacts>({
     // probe above was fully ungated.
     return withHeavyReadSlot(async () => {
       const [pending, landed] = await Promise.all([
-        readPending(ctx, mainRepoRoot),
-        landedMemo.get(attemptId, { input: ctx.landed }),
+        readPending(ctx, mainRepoRoot, mainSha),
+        landedMemo.get(attemptId, { input: { ...ctx.landed, mainSha } }),
       ]);
       return resolved({
         pending,
@@ -354,32 +380,80 @@ const workMemo = createSignedMemo<Resolvable<AttemptWork>, AttemptFacts>({
   },
 });
 
+// A live value reads `main` from git-watcher's in-memory sha: it is
+// recomputed on every advance the watcher hears (`recomputeOn: [refHeadServed]`),
+// so a late event costs latency, and — over one snapshot — never a wrong answer.
+async function watchedMainSha(): Promise<string> {
+  return readMainSha(await ensureMainWorktreeRoot());
+}
+
 /** The resource's `revalidate`: the memo's own signature, not a twin of it. */
-export function attemptWorkSignature(
+export async function attemptWorkSignature(
   attemptId: string,
   facts: AttemptFacts,
 ): Promise<string> {
-  return workMemo.signature(attemptId, { input: facts });
+  return workMemo.signature(attemptId, {
+    input: { facts, mainSha: await watchedMainSha() },
+  });
 }
 
 /** The resource's `loader`: a read through the memo, over the followed facts. */
-export function attemptWorkFrom(
+export async function attemptWorkFrom(
   attemptId: string,
   facts: AttemptFacts,
 ): Promise<Resolvable<AttemptWork>> {
-  return workMemo.get(attemptId, { input: facts });
+  return workMemo.get(attemptId, {
+    input: { facts, mainSha: await watchedMainSha() },
+  });
 }
 
 /**
- * The attempt's standing, for a consumer that is not a resource — the exit-drop
- * guard, an MCP tool: the facts by SQL, then a read through the same memo, so
- * a caller pays nothing extra when a subscriber has already measured the same
- * facts.
+ * The standing a DECISION acts on — the exit-drop guard, the outcome report —
+ * not a display: measured against `main` as git holds it now (never the
+ * watcher's copy, which may not have heard a push that landed seconds ago),
+ * through the same memo, so a caller pays nothing extra when a subscriber
+ * already measured the same tips.
+ *
+ * And one fact the live value does not carry: a checkout holding uncommitted
+ * work. Agents do not commit — `./equin push` does — so an agent that held
+ * its push for review leaves ALL its work in the checkout and a branch
+ * `ahead: 0`; read as `"none"`, its exit_clean dropped the task
+ * (task-1794193514-ia99gm). It turns only `"none"` into `"pending"`: a landed
+ * attempt is already safe from any drop, and a push requires a clean tree, so
+ * what sits in a checkout after a landing is not the landing's to answer for.
+ * Not on the live value because no signature of it sees an edit to the tree
+ * (a chip would show the state as of the last ref move); a decision reads it
+ * at the moment it decides.
  */
-export async function getAttemptWork(
+export async function getAttemptStanding(
   attemptId: string,
-): Promise<Resolvable<AttemptWork>> {
-  return attemptWorkFrom(attemptId, await readAttemptFacts(attemptId));
+): Promise<Resolvable<Standing>> {
+  const facts = await readAttemptFacts(attemptId);
+  const mainSha = await readMainShaFromGit(await ensureMainWorktreeRoot());
+  const work = await workMemo.get(attemptId, { input: { facts, mainSha } });
+  if (!work.resolved) return work;
+  const standing = standingOf(work.value);
+  if (standing !== "none") return resolved(standing);
+  // Only a git checkout has a tree to read (a scratch workspace's standing is
+  // its delivery alone).
+  const read = contextFrom(attemptId, facts);
+  const worktreePath = read.kind === "ok" ? read.ctx.worktreePath : null;
+  return resolved(
+    worktreePath !== null && (await hasUncommitted(worktreePath))
+      ? "pending"
+      : "none",
+  );
+}
+
+// A reaped checkout holds nothing uncommitted: its work, if any, is in the
+// branch the pending counts already read.
+async function hasUncommitted(worktreePath: string): Promise<boolean> {
+  try {
+    return await readUncommitted(worktreePath);
+  } catch (err) {
+    if (err instanceof WorktreeGoneError) return false;
+    throw err;
+  }
 }
 
 /** Drop an attempt's cached measurement (subscription-lifecycle cleanup). */

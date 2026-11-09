@@ -1,6 +1,6 @@
 {
-  "id": "c187774b-eb1e-4898-8d7f-02c93c1f1062",
-  "prevId": "9f401d92-b693-427e-a038-0aa7ace678e0",
+  "id": "ec004e9a-f993-422b-9ad4-0c1f7b14556a",
+  "prevId": "c187774b-eb1e-4898-8d7f-02c93c1f1062",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -7380,6 +7380,52 @@
           ],
           "onDelete": "cascade",
           "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.stop_gate_reminders": {
+      "name": "stop_gate_reminders",
+      "schema": "",
+      "columns": {
+        "conversation_id": {
+          "name": "conversation_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "turn_id": {
+          "name": "turn_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sent_at": {
+          "name": "sent_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "stop_gate_reminders_conversation_id_conversations_id_fk": {
+          "name": "stop_gate_reminders_conversation_id_conversations_id_fk",
+          "tableFrom": "stop_gate_reminders",
+          "tableTo": "conversations",
+          "columnsFrom": [
+            "conversation_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
