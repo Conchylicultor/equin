@@ -27,10 +27,14 @@ interface ColumnProps {
   isFirst: boolean;
   isLast: boolean;
   zoomed: boolean;
+  /** A zoom is on in this row: a bar keeps its pane mounted under it. */
+  zoomActive: boolean;
   onToggleZoom: (id: string) => void;
   onBarClick: () => void;
   onCollapse: () => void;
+  onResizeStart: () => void;
   onResize: (dx: number) => void;
+  onResizeEnd: (dx: number) => void;
   dragHandleProps?: Record<string, unknown>;
 }
 
@@ -49,10 +53,13 @@ export function Column({
   isFirst,
   isLast,
   zoomed,
+  zoomActive,
   onToggleZoom,
   onBarClick,
   onCollapse,
+  onResizeStart,
   onResize,
+  onResizeEnd,
   dragHandleProps,
 }: ColumnProps) {
   const id = entry.uuid;
@@ -76,7 +83,12 @@ export function Column({
     });
   }, [fadeIn]);
 
-  const keepMounted = entry.pane.chrome.keepMountedWhenCollapsed;
+  // Under a zoom's bar the pane stays mounted and laid out at its unzoomed
+  // width, hidden: leaving the zoom (or moving it here) then only uncovers
+  // it, where unmounting would remount it — a long task in the very commit
+  // that starts the motion, eating the transition — and lose its state.
+  // A user-collapsed bar unmounts its pane unless the pane asks otherwise.
+  const keepMounted = zoomActive || entry.pane.chrome.keepMountedWhenCollapsed;
 
   return (
     // The column box: its width is the layout's, transitioned while a motion
@@ -103,8 +115,9 @@ export function Column({
             fadeIn={fadeIn === "bar"}
           />
         )}
-        {/* With keepMounted the pane stays mounted (hidden) while collapsed, at
-            the same child position, so its subtree is never torn down. */}
+        {/* Kept mounted under a bar, the pane sits past the bar (which fills
+            the clip), its contents skipped, at the same child position, so its
+            subtree is never torn down. */}
         {(!box.bar || keepMounted) && (
           // `PaneBox` is the pane's own box: it stamps the pane id and the home
           // app's theme scope on this element AND forwards both across portals,
@@ -117,7 +130,17 @@ export function Column({
               ref={paneRef}
               pane={entry.pane}
               params={entry.params}
-              style={box.bar ? { display: "none" } : { width: inner }}
+              // Under a bar: `content-visibility: hidden` — its contents
+              // skip rendering, focus and hit-testing but keep their layout
+              // state, so uncovering costs ~1ms. `visibility: hidden` would
+              // restyle every descendant both ways (~100ms for a
+              // conversation, measured), a long task in the very frame the
+              // motion starts.
+              style={
+                box.bar
+                  ? { width: inner, contentVisibility: "hidden" }
+                  : { width: inner }
+              }
               // A rigid flex-col clip pane at the pixel width the layout gives
               // it (wider than the box while it narrows).
               // eslint-disable-next-line layout/no-adhoc-layout -- JS-sized rigid pane body inside miller's column clip
@@ -127,7 +150,12 @@ export function Column({
         )}
       </div>
       {box.handle && (
-        <ResizeHandle onResize={onResize} onCollapse={onCollapse} />
+        <ResizeHandle
+          onResizeStart={onResizeStart}
+          onResize={onResize}
+          onResizeEnd={onResizeEnd}
+          onCollapse={onCollapse}
+        />
       )}
     </div>
   );

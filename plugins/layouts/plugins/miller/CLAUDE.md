@@ -95,33 +95,59 @@ Pane.define({
 `width` is the column's default width in pixels (top-level on
 `Pane.define`, separate from the `chrome` config). Defaults to 400.
 
-## Sizing: every column has its own width ("scroll", Finder-style)
+## Sizing: shrink until the trailing panes fit, then scroll ("fit")
 
 The whole row is laid out by one pure function, `layoutColumns` in
 [`web/layout.ts`](web/layout.ts) (tested beside it); the components only draw
 what it decides.
 
-- **Every column, the leaf included, has its own width**: the width the user
-  dragged it to ?? `pane.width` ?? 400. A width is a property of the pane, never
-  the space left over — the same pane opens at the same width whatever was
-  on screen before. The width is the whole column, its 4px divider included.
-- **Spare room goes to the leaf.** When the columns are narrower than the row,
-  the leaf grows to fill it (never below its own width). When they are wider,
-  the row overflows and scrolls horizontally.
-- **Nothing automatic is ever stored.** Only a divider drag writes a width
+- **Every column has its own width** `w`: the width the user dragged it to ??
+  `pane.width` ?? 400 — a property of the pane, never the space left over, so
+  the same pane opens at the same width whatever was on screen before. The
+  width is the whole column, its 4px divider included.
+- **…and a floor** `m = min(w, max(240, round(0.65·w)))` (`columnFloor`,
+  `FLOOR_RATIO` / `FLOOR_MIN`, the reasoning beside them). A collapsed bar is
+  32 fixed; a column the user dragged is its own width, fixed — the fit never
+  compresses an explicit choice.
+- **The columns fit** (`Σw ≤ row`): each at its own width; the leaf grows to
+  fill the spare room.
+- **They don't**: the largest trailing window — the leaf and as many columns to
+  its left as possible — whose floors fit the row is shown. Its columns are
+  compressed in proportion from `w` toward `m` so that together they fill the
+  row exactly (the leaf is compressed like the others). The columns left of
+  the window sit at their floor, scrolled off to the left: the row's end
+  (`total − row`) puts the window's left edge exactly on the viewport's — no
+  column half-cut. So a laptop shows three default panes side by side, a wide
+  screen more, and a deeper chain scrolls the oldest away.
+- **Not even the leaf's floor fits**: the leaf takes it and the row scrolls.
+- **A window resize re-fits live**, unanimated; a row sitting at its end stays
+  at its end.
+- **A divider drag** lays the row out as it was when the drag began, with the
+  dragged column following the pointer (`dragLayout`; the leaf grows back if
+  it would leave a gap). Re-fitting during the drag would re-balance the
+  columns left of the divider and pull it away from the pointer. When the
+  drag ends, the column's own width becomes the width it was left at
+  (stored, so fixed from then on) and the row re-fits — as a motion.
+- **Nothing automatic is ever stored.** Only a drag writes a width
   (`miller.column-widths.v2`, localStorage, keyed by `(tabId, paneId)`, per
   surface via a `WeakMap` on the `PaneStore`). The previous owner's entries
   were mixed with the automatic 50/50 split the leaf used to persist on its
   first child, so they are dropped (`legacy`), not adopted.
+
+## Motion
+
 - **Every change of what the row shows is one motion** — a route change (open,
-  close, swap, reorder, back/forward), a zoom, a collapse. The column boxes
-  transition their width (280ms `cubic-bezier(.33,1,.68,1)`), and the row's
-  scroll glides on the same curve and duration, frame by frame
-  (`glideScroll`, auto-scroll), to `scrollTarget`: the row's end, so the newest
-  column is fully on screen. A column that narrows keeps its old inner width
-  (clipped by its box) until the motion ends, so its content does not re-wrap
-  every frame. A divider drag or a row resize is no motion: it follows at once.
-  `prefers-reduced-motion`: no transition, the scroll lands at once. The first
+  close, swap, reorder, back/forward), a zoom, a collapse, the re-fit at the
+  end of a drag. The column boxes transition their width (280ms
+  `cubic-bezier(.33,1,.68,1)`), and the row's scroll glides to `scrollTarget`
+  (the row's end) on the same curve **and on the transition's own clock**
+  (`glideScroll`'s `follow`): a CSS transition starts when the browser
+  resolves the style change, which a long task in the same commit can push
+  back or eat, so a scroll on a clock of its own would drift from the widths.
+  The motion ends when the width transitions report finished.
+- A column that narrows keeps its old inner width (clipped by its box) until
+  the motion ends, so its content does not re-wrap every frame.
+- `prefers-reduced-motion`: no transition, the scroll lands at once. The first
   paint lands in place.
 - **Enter / leave / swap** (`ColumnMotion`) ride on top: a newcomer mounts at
   its final width and only its content slides in; a closed column's ghost
@@ -147,6 +173,12 @@ pane declares `chrome.keepMountedWhenCollapsed` (kept mounted, hidden).
 
 - Double-click a column's header → that column expands to fill the row and
   every other one, the leaf included, collapses to a bar (no dividers).
+- **A zoom's bars keep their panes mounted**, laid out at their unzoomed width
+  and hidden under the bar. Leaving the zoom, or moving it to another column,
+  only uncovers them: remounting a heavy pane (a conversation: >1 s measured)
+  in the commit that starts the motion blocked the main thread while the
+  width transition's clock ran, so the motion was already over when the next
+  frame painted — and the pane lost its state.
 - While zoomed, clicking a bar moves the zoom to that column.
 - Double-click the zoomed header again, or press Esc (a surface shortcut,
   registered only while zoomed) → back to the exact layout and the row's

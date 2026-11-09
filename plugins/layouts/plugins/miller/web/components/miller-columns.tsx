@@ -37,6 +37,7 @@ import {
   MOTION_MS,
   effectiveZoom,
   heldInner,
+  dragLayout,
   layoutColumns,
   moveZoom,
   routeKey,
@@ -60,6 +61,16 @@ interface Previous {
   /** The row's end offset when we last put the row at its end (null when we
    *  put it elsewhere — a zoom restored to the scroll from before it). */
   pinned: number | null;
+}
+
+/** A divider drag in progress: the row as it was when it began. */
+interface Drag {
+  id: string;
+  start: RowLayout;
+  /** The dragged column's displayed width when the drag began. */
+  startWidth: number;
+  /** How far the pointer has moved since. */
+  dx: number;
 }
 
 /** The columns' widths before the motion `key`, held while it runs. */
@@ -92,30 +103,49 @@ export function MillerColumns() {
   const ids = useMemo(() => panes.map((e) => e.uuid), [panes]);
   const route = routeKey(ids);
   const zoomed = effectiveZoom(zoomState, route, ids);
-  const layout = useMemo(
+  const fitted = useMemo(
     () =>
       layoutColumns(
-        panes.map((e) => ({
-          id: e.uuid,
-          width: widths.widthOf(
-            e.pane.id,
-            e.pane.width ?? DEFAULT_COLUMN_WIDTH,
-          ),
-          collapsed: collapsed.isCollapsed(e.uuid),
-        })),
+        panes.map((e) => {
+          const own = widths.stored(e.pane.id);
+          return {
+            id: e.uuid,
+            width: own ?? e.pane.width ?? DEFAULT_COLUMN_WIDTH,
+            collapsed: collapsed.isCollapsed(e.uuid),
+            fixed: own !== null,
+          };
+        }),
         rowWidth,
         zoomed,
       ),
     [panes, widths, collapsed, rowWidth, zoomed],
   );
+  // A divider drag lays the row out as it was when the drag began, the
+  // dragged column following the pointer (`dragLayout`); the fit applies
+  // again when it ends.
+  const [drag, setDrag] = useState<Drag | null>(null);
+  const [releases, setReleases] = useState(0);
+  // The drag as the pointer handlers last left it (they outlive renders).
+  const dragRef = useRef<Drag | null>(null);
+  const setDragBoth = (next: Drag | null) => {
+    dragRef.current = next;
+    setDrag(next);
+  };
+  const layout = useMemo(
+    () =>
+      drag === null
+        ? fitted
+        : dragLayout(drag.start, drag.id, drag.startWidth + drag.dx, rowWidth),
+    [drag, fitted, rowWidth],
+  );
 
   // A motion is a change of what the row shows — its route, the zoom, which
-  // columns are bars. A divider drag or a row resize is none: they follow at
-  // once, never animated.
+  // columns are bars — and the re-fit at the end of a drag. The drag itself
+  // and a row resize are none: they follow at once, never animated.
   const motionKey = `${route}#${zoomed ?? ""}#${layout.columns
     .filter((c) => c.bar)
     .map((c) => c.id)
-    .join(",")}`;
+    .join(",")}#${releases}`;
   const [settledKey, setSettledKey] = useState(motionKey);
   const [hold, setHold] = useState<Hold | null>(null);
   const moving = motionKey !== settledKey && !prefersReducedMotion();
@@ -182,25 +212,29 @@ export function MillerColumns() {
       key: motionKey,
       before: new Map(before.layout.columns.map((c) => [c.id, c])),
     });
-    // The widths' CSS transition and this glide share one curve and duration,
-    // so the row's scroll and its columns move as one.
-    stopGlide.current = glideScroll(
-      row,
-      { left: target },
-      { duration: MOTION_MS, easing: MOTION_EASING },
-    );
-    // When the widths' transitions have run, drop the transition style and
-    // the held widths. Read off the transitions themselves (not a timer from
-    // now): they start on the next frame, which a heavy mount in this commit
-    // can push back by hundreds of ms.
+    // On the next frame the boxes' width transitions exist: the scroll glides
+    // on the clock of one of them (same curve, same duration), so the widths
+    // and the scroll are one motion even when a long task delays or eats the
+    // transition's start; and when they have all run, the transition style
+    // and the held widths are dropped. Both read off the transitions
+    // themselves, never a timer started now.
     settleFrame.current = requestAnimationFrame(() => {
       settleFrame.current = null;
-      const widths = row
+      const transitions = row
         .getAnimations({ subtree: true })
         .filter(
           (a) => a instanceof CSSTransition && a.transitionProperty === "width",
         );
-      void Promise.allSettled(widths.map((a) => a.finished)).then(() => {
+      stopGlide.current = glideScroll(
+        row,
+        { left: target },
+        {
+          duration: MOTION_MS,
+          easing: MOTION_EASING,
+          ...(transitions[0] ? { follow: transitions[0] } : {}),
+        },
+      );
+      void Promise.allSettled(transitions.map((a) => a.finished)).then(() => {
         // A later motion owns the row now; it settles itself.
         if (prev.current?.key === motionKey) setSettledKey(motionKey);
       });
@@ -215,6 +249,22 @@ export function MillerColumns() {
     },
     [],
   );
+
+  const startDrag = (id: string, startWidth: number) =>
+    setDragBoth({ id, start: layout, startWidth, dx: 0 });
+  const moveDrag = (dx: number) => {
+    const d = dragRef.current;
+    if (d) setDragBoth({ ...d, dx });
+  };
+  const endDrag = (paneId: string, dx: number) => {
+    const d = dragRef.current;
+    setDragBoth(null);
+    if (!d || dx === 0) return;
+    // The column's own width becomes what the drag left on screen; dragged,
+    // the fit no longer compresses it. The re-fit that follows is a motion.
+    widths.setWidth(paneId, d.startWidth + dx);
+    setReleases((n) => n + 1);
+  };
 
   const onToggleZoom = useCallback(
     (id: string) =>
@@ -346,6 +396,7 @@ export function MillerColumns() {
                             isFirst={i === 0}
                             isLast={isLast}
                             zoomed={zoomed === entry.uuid}
+                            zoomActive={zoomed !== null}
                             onToggleZoom={onToggleZoom}
                             onBarClick={() =>
                               zoomed !== null
@@ -355,13 +406,11 @@ export function MillerColumns() {
                                 : collapsed.toggle(entry.uuid)
                             }
                             onCollapse={() => collapsed.toggle(entry.uuid)}
-                            onResize={(dx) =>
-                              widths.setWidth(
-                                entry.pane.id,
-                                (w) => w + dx,
-                                entry.pane.width ?? DEFAULT_COLUMN_WIDTH,
-                              )
+                            onResizeStart={() =>
+                              startDrag(entry.uuid, box.width)
                             }
+                            onResize={moveDrag}
+                            onResizeEnd={(dx) => endDrag(entry.pane.id, dx)}
                             dragHandleProps={
                               canReorder ? state.handleProps : undefined
                             }

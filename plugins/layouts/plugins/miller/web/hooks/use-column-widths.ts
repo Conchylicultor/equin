@@ -75,13 +75,11 @@ function readStored(
   return v;
 }
 
-export type WidthUpdater = number | ((prev: number) => number);
-
 export interface ColumnWidths {
-  /** The column's own width: the dragged one, else `fallback` (the pane's). */
-  widthOf(paneId: string, fallback: number): number;
-  /** A divider drag: stores the new width (clamped), persisted for the tab. */
-  setWidth(paneId: string, next: WidthUpdater, fallback: number): void;
+  /** The width the user dragged the column to, or null (none). */
+  stored(paneId: string): number | null;
+  /** The end of a divider drag: stores the new width (clamped), persisted for the tab. */
+  setWidth(paneId: string, width: number): void;
 }
 
 /** Records a dragged width and tells this surface's readers. */
@@ -107,18 +105,15 @@ export function useColumnWidths(): ColumnWidths {
     () => 0,
   );
 
-  // A new object per version, so a memoized read of `widthOf` re-runs when a
+  // A new object per version, so a memoized read of `stored` re-runs when a
   // width changes.
   return useMemo(
     (): ColumnWidths & { version: number } => ({
       version,
-      widthOf: (paneId, fallback) =>
-        readStored(s, persisted, tabId, paneId) ?? fallback,
-      setWidth: (paneId, next, fallback) => {
-        const current = readStored(s, persisted, tabId, paneId) ?? fallback;
-        const value = typeof next === "function" ? next(current) : next;
-        const clamped = Math.max(MIN_COLUMN_WIDTH, Math.round(value));
-        if (clamped === current && s.state.get(paneId) !== null) return;
+      stored: (paneId) => readStored(s, persisted, tabId, paneId),
+      setWidth: (paneId, width) => {
+        const clamped = Math.max(MIN_COLUMN_WIDTH, Math.round(width));
+        if (clamped === readStored(s, persisted, tabId, paneId)) return;
         // A refused write is reported by the store.
         if (tabId !== undefined)
           persisted.write(storeId(tabId, paneId), clamped);

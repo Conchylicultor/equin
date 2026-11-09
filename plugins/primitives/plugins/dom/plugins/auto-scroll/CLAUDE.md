@@ -10,7 +10,10 @@ that wants it. Today that is six roles:
 - **stick-to-bottom streaming** — `useStickyScroll` + `JumpToBottomButton`, and `announceNavigation` (every navigating scroll writer calls it)
 - **a glide in step with a transition** — `glideScroll(scroller, { left }, { duration, easing })`
   writes the offset frame by frame on a CSS `cubic-bezier` curve, so a scroll
-  and a width transition beside it (miller's row) move as one motion
+  and a width transition beside it (miller's row) move as one motion; pass
+  `follow: <that transition>` and the glide reads its elapsed time off the
+  transition's own clock, so a long task that delays or eats the transition's
+  start cannot pull the two apart
 - **container-scoped positioning** — `scrollToBottom`, `scrollChildIntoView`
   (scroll only THIS container; never an ancestor, unlike `scrollIntoView`; it
   honours the child's CSS `scroll-margin` as `scrollIntoView` does, so a

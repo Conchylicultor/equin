@@ -10,7 +10,12 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 const chevronLeftIcon = symbol("chevron-left");
 
 interface ResizeHandleProps {
+  /** A drag begins. */
+  onResizeStart: () => void;
+  /** The pointer moved: `dx` is how far since the drag began. */
   onResize: (dx: number) => void;
+  /** The drag ended `dx` from where it began. */
+  onResizeEnd: (dx: number) => void;
   onCollapse?: () => void;
 }
 
@@ -28,7 +33,12 @@ const collapseButtonClass = cn(
 );
 /* eslint-enable layout/no-adhoc-layout */
 
-export function ResizeHandle({ onResize, onCollapse }: ResizeHandleProps) {
+export function ResizeHandle({
+  onResizeStart,
+  onResize,
+  onResizeEnd,
+  onCollapse,
+}: ResizeHandleProps) {
   const onPointerDown = useCallback(
     (e: ReactPointerEvent<HTMLDivElement>) => {
       e.preventDefault();
@@ -39,12 +49,14 @@ export function ResizeHandle({ onResize, onCollapse }: ResizeHandleProps) {
       const handle = e.currentTarget;
       const { pointerId } = e;
       handle.setPointerCapture(pointerId);
-      let lastX = e.clientX;
+      const startX = e.clientX;
+      let dx = 0;
+      onResizeStart();
       const onMove = (ev: PointerEvent) => {
         if (ev.pointerId !== pointerId) return;
-        const dx = ev.clientX - lastX;
-        lastX = ev.clientX;
-        if (dx !== 0) onResize(dx);
+        if (ev.clientX - startX === dx) return;
+        dx = ev.clientX - startX;
+        onResize(dx);
       };
       // lostpointercapture fires after pointerup / pointercancel too, and when
       // capture is dropped any other way — one exit for every drag end.
@@ -52,11 +64,12 @@ export function ResizeHandle({ onResize, onCollapse }: ResizeHandleProps) {
         if (ev.pointerId !== pointerId) return;
         handle.removeEventListener("pointermove", onMove);
         handle.removeEventListener("lostpointercapture", onEnd);
+        onResizeEnd(dx);
       };
       handle.addEventListener("pointermove", onMove);
       handle.addEventListener("lostpointercapture", onEnd);
     },
-    [onResize],
+    [onResizeStart, onResize, onResizeEnd],
   );
 
   return (

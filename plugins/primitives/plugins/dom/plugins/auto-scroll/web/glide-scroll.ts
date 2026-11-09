@@ -9,6 +9,15 @@ export interface GlideScrollOptions {
   /** The curve it runs on — pass the same points as a CSS transition it moves
    *  with, so the scroll and that transition land as one motion. */
   easing: CubicBezier;
+  /**
+   * The animation the glide moves with (a CSS transition beside it): the
+   * glide reads its elapsed time off that animation's own clock every frame,
+   * instead of keeping one of its own. A transition's clock starts when the
+   * browser resolves the style change, which a long task after the commit
+   * (a heavy mount) can push anywhere — one clock is the only way the two
+   * cannot drift apart. Once it finishes or is cancelled, the glide lands.
+   */
+  follow?: Animation;
 }
 
 /**
@@ -49,7 +58,7 @@ export function cubicBezierAt(
 export function glideScroll(
   scroller: HTMLElement,
   to: { left?: number; top?: number },
-  { duration, easing }: GlideScrollOptions,
+  { duration, easing, follow }: GlideScrollOptions,
 ): () => void {
   const fromLeft = scroller.scrollLeft;
   const fromTop = scroller.scrollTop;
@@ -65,9 +74,18 @@ export function glideScroll(
   // moved yet.
   let start = -1;
   let raf = 0;
-  const step = (now: number) => {
+  const elapsed = (now: number): number => {
+    if (follow) {
+      if (follow.playState === "finished" || follow.playState === "idle") {
+        return duration;
+      }
+      return Number(follow.currentTime ?? 0);
+    }
     if (start < 0) start = now;
-    const p = duration <= 0 ? 1 : Math.min(1, (now - start) / duration);
+    return now - start;
+  };
+  const step = (now: number) => {
+    const p = duration <= 0 ? 1 : Math.min(1, elapsed(now) / duration);
     const e = cubicBezierAt(easing, p);
     if (to.left !== undefined) {
       scroller.scrollLeft = fromLeft + (to.left - fromLeft) * e;
