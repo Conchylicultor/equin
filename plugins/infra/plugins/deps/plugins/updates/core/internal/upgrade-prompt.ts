@@ -112,10 +112,10 @@ First, the holds to review (listed above, per updater): \`./equin deps upgrade\`
    Also delete any hold whose release a newer one has already moved past — it holds nothing any more.
 
 1. Run \`./equin deps upgrade\` (in the background — it runs the full check and test suites at least twice).
-   With no updater named it moves EVERY updater together, behind one baseline: it compares every check, test and
-   the moved inputs' smoke tests on the current releases against the new ones. When something regresses it narrows
-   the batch down on its own (a lockstep group is never split), keeps every release that passes, and names each
-   release responsible. Its verdict is in \`deps-upgrade.json\` in this worktree's data dir (the command prints the
+   With no updater named it moves EVERY updater together, behind one baseline: it compares every check, test, the
+   web build (\`./equin build --hermetic\`) and the moved inputs' smoke tests on the current releases against the new
+   ones. When something regresses it narrows the batch down on its own (a lockstep group is never split), keeps every
+   release that passes, and names each release responsible. Its verdict is in \`deps-upgrade.json\` in this worktree's data dir (the command prints the
    path): \`landed\`, \`culprits\` (each with what it broke), \`untested\`, and \`blind\` (what already fails without
    any upgrade — file it with \`add_task\`, it is not this task's to fix).
 

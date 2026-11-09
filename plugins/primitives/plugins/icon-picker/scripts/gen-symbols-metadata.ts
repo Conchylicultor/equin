@@ -2,23 +2,22 @@
 import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 /**
  * Vendors Google's Material Symbols metadata (category, tags, popularity per
- * icon) into `web/internal/symbols-metadata.json`, trimmed to the names the
- * installed sets draw — the icon picker's browse and search data (Iconify's
- * own metadata has categories but no tags, and tags carry search: "robot" →
- * `smart-toy`). Run it after upgrading an `@iconify-json/material-symbols*`
- * package; `icon-picker:symbols-metadata-in-sync` fails until you do.
+ * icon) into `web/internal/symbols-metadata.json` — the icon picker's browse
+ * and search data (Iconify's own metadata has categories but no tags, and tags
+ * carry search: "robot" → `smart-toy`). Every icon Google lists is kept: the
+ * picker drops, as it loads, the names the installed sets do not draw, so an
+ * `@iconify-json/material-symbols*` upgrade needs no rerun. Rerun it only to
+ * pick up Google's newer metadata (new icons, tags, categories).
  *
  * Usage: ./equin run plugins/primitives/plugins/icon-picker/scripts/gen-symbols-metadata.ts
  */
 import { z } from "zod";
 import { writeGenerated } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
-import { isSavedSymbolName } from "@plugins/ui/plugins/icons/plugins/saved-names/core";
 import {
   SYMBOLS_METADATA_REL_PATH,
   SYMBOLS_METADATA_URL,
   symbolsMetadataContentHash,
-  symbolsMetadataInputsHash,
   type SymbolsMetadata,
 } from "../shared/symbols-metadata";
 
@@ -49,8 +48,7 @@ const kept = google.icons
   .filter((icon) =>
     symbolFamilies.some((f) => !icon.unsupported_families.includes(f)),
   )
-  .map((icon) => ({ ...icon, name: icon.name.replace(/_/g, "-") }))
-  .filter((icon) => isSavedSymbolName(icon.name));
+  .map((icon) => ({ ...icon, name: icon.name.replace(/_/g, "-") }));
 
 const categoryOf = (icon: { categories: string[] }) =>
   icon.categories[0] ?? "Other";
@@ -70,7 +68,6 @@ const icons: SymbolsMetadata["icons"] = [...byName.values()]
   ]);
 
 const data: SymbolsMetadata = {
-  inputsHash: symbolsMetadataInputsHash(),
   contentHash: symbolsMetadataContentHash({ categories, icons }),
   categories,
   icons,

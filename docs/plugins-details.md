@@ -33500,7 +33500,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/barrel-import` (0 debt)
               - `plugin-meta/relocate` (0 debt)
               - `plugin-meta/token-usage` (0 debt)
-              - `primitives/icon-picker` (0 debt)
               - `reports/engine` (0 debt)
               - `reports/outbox` (0 debt)
         - **`image`** — Images on the host filesystem: the daily host-fs-image.sweep keeps the resized-copy cache (machine/'s GET resized) within 30 days unused and 1 GB.
@@ -34544,11 +34543,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `namespaceUrl`
           - `resolveNamespaceAlias`
       - Cross-plugin:
-        - Imported by: 72 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
+        - Imported by: 73 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
           - `framework` ×12
           - `debug` ×11
           - `apps` ×10
-          - `infra` ×8
+          - `infra` ×9
           - `conversations` ×7
           - `build` ×5
           - `plugin-meta` ×3
@@ -38922,7 +38921,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/ticket-line.ts` (debt)
     - **`timed-fs`** — The file reads, listings, stats and glob scans every non-browser process makes, timed: node:fs's read calls under their own names and types (readFile / readdir / stat / lstat / access / realpath / readlink and their *Sync twins, existsSync) plus scanGlob / scanGlobSync over a Bun.Glob, each call metered while it runs (installFsWaitMeter — the backend's profiler shows one past FS_WAIT_FLOOR_MS in progress and charges it) and, once it returns past the floor, handed to onSlowFsCall subscribers, under a named wait layer (fs-read / fs-readdir / fs-stat / fs-glob) — so a disk stall names itself instead of reading as the caller's own work. A leaf (node builtins only), enforced by the timed-fs/no-untimed-fs-read lint.
       - Cross-plugin:
-        - Imported by: 161 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+        - Imported by: 160 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
           - `infra` ×47
           - `framework` ×24
           - `apps` ×15
@@ -38934,9 +38933,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta` ×5
           - `build` ×4
           - `config_v2` ×3
-          - `primitives` ×3
           - `release` ×3
           - `integrations` ×2
+          - `primitives` ×2
           - `reports` ×2
           - `code-explorer`
           - `hints/ask`
@@ -48391,9 +48390,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/avatar`
           - `tag-tree/picker`
       - Exemptions:
-        - Exempts itself from:
-          - `boundaries/no-platform-api` — `shared/symbols-metadata.ts` (debt)
-          - `blocking-fs/sync-named` — `shared/symbols-metadata.ts` (sanctioned)
+        - Exempts itself from: `boundaries/no-platform-api` — `shared/symbols-metadata.ts` (debt)
     - **`inline-text`** — Renders a raw string with every registered inline-text walker (active-data chips, file-links) applied in registry order. Consumers write <InlineText text={…}/>; walkers register via InlineTextWalkerSlot. The string seed makes wrong-order composition structurally impossible.
       - Web:
         - Slots: `InlineTextWalkerSlot`

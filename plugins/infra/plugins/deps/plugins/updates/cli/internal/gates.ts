@@ -5,7 +5,10 @@ import {
   spawnPassthrough,
 } from "@plugins/infra/plugins/spawn/core";
 import { runtimePath } from "@plugins/infra/plugins/launcher/plugins/runtime-env/core";
-import type { Namespace } from "@plugins/infra/plugins/namespace/core";
+import {
+  MAIN_COMPOSITION_ID,
+  type Namespace,
+} from "@plugins/infra/plugins/namespace/core";
 import { readCheckProgress } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { readLatestTestStatus } from "@plugins/framework/plugins/cli/plugins/test/core";
 import type { GateResult } from "../../core/internal/compare";
@@ -106,6 +109,32 @@ export async function runTests(
   return { gate: "tests", failures };
 }
 
+const WEB_BUILD_GATE = "web build";
+
+/**
+ * The main composition's web dist, built hermetically: `./equin build
+ * --hermetic`, the artifact half `release` runs — every web artifact, the
+ * vendor set (esbuild over every npm package the browser loads, `browser`
+ * field maps and all), the global CSS and the compose-time link checks, with
+ * no cluster touched and nothing published. Checks and tests never bundle for
+ * the browser, so without it a release that breaks only the browser build (a
+ * Node builtin its browser code imports, a changed export) passed every gate
+ * and failed the `./equin build` after the landing (@electric-sql/pglite
+ * 0.5.13+, 2026-11-09).
+ */
+export async function runWebBuild(root: string): Promise<GateResult> {
+  const exitCode = await cli(root, [
+    "build",
+    "--hermetic",
+    "--composition",
+    MAIN_COMPOSITION_ID,
+  ]);
+  return {
+    gate: WEB_BUILD_GATE,
+    failures: exitCode === 0 ? [] : [`(build exited ${exitCode})`],
+  };
+}
+
 /** One smoke test. A failure is the smoke test's own name. */
 export async function runSmoke(
   root: string,
@@ -128,13 +157,20 @@ export async function runSmoke(
   return { gate: `smoke: ${smoke.name}`, failures: ok ? [] : [smoke.name] };
 }
 
-/** Every gate a move must pass: checks, tests, and the moved inputs' smoke tests. */
+/**
+ * Every gate a move must pass: checks, tests, the web build, and the moved
+ * inputs' smoke tests.
+ */
 export async function runAllGates(
   root: string,
   slug: Namespace,
   smoke: readonly UpdaterSmoke[],
 ): Promise<GateResult[]> {
-  const results = [await runChecks(root, slug), await runTests(root, slug)];
+  const results = [
+    await runChecks(root, slug),
+    await runTests(root, slug),
+    await runWebBuild(root),
+  ];
   for (const s of smoke) results.push(await runSmoke(root, s));
   return results;
 }
@@ -163,6 +199,8 @@ export async function retryGates(
           files.some((f) => f.startsWith("(")) ? [] : files,
         ),
       );
+    } else if (gate === WEB_BUILD_GATE) {
+      results.push(await runWebBuild(root));
     } else {
       const smoke = smokes.find((s) => gate === `smoke: ${s.name}`);
       if (smoke === undefined)
@@ -175,7 +213,7 @@ export async function retryGates(
 
 /**
  * The gates an upgrade runs, as one seam: the real ones spawn
- * `./equin check` / `test` and the smoke commands; the runner's tests
+ * `./equin check` / `test` / `build --hermetic` and the smoke commands; the runner's tests
  * hand fakes.
  */
 export interface Gates {

@@ -19,8 +19,8 @@ export interface SymbolSet {
 let cached: Promise<SymbolSet> | null = null;
 
 /**
- * The picker's data — every Material Symbols name Google's metadata lists (and
- * the installed sets draw), by category, with its search tags. Loaded on first
+ * The picker's data — every Material Symbols name Google's metadata lists that
+ * the installed sets draw, by category, with its search tags. Loaded on first
  * call (~1 MB of JSON, its own chunk), then kept. The glyphs are not in it:
  * each cell draws through `<Icon>`'s runtime symbols, so only visible rows load.
  */
@@ -37,11 +37,9 @@ export function loadSymbolSet(): Promise<SymbolSet> {
       number,
       string,
     ][]) {
-      if (!isSavedSymbolName(name)) {
-        throw new Error(
-          `[icon-picker] "${name}" is not in the installed sets — regenerate symbols-metadata.json`,
-        );
-      }
+      // Google's list and the installed sets move independently: a name
+      // Google lists that the installed sets do not draw (yet) is not offered.
+      if (!isSavedSymbolName(name)) continue;
       const label = name.replace(/-/g, " ");
       const entry: Rich = { name, label, haystack: `${name} ${label} ${tags}` };
       const bucket = categories[category];

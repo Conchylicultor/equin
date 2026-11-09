@@ -150,7 +150,6 @@ task that removes it: `./equin exempt list --rule blocking-fs/no-sync-fs
     - `plugin-meta/barrel-import` (0 debt)
     - `plugin-meta/relocate` (0 debt)
     - `plugin-meta/token-usage` (0 debt)
-    - `primitives/icon-picker` (0 debt)
     - `reports/engine` (0 debt)
     - `reports/outbox` (0 debt)
 

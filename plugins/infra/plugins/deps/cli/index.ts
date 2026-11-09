@@ -44,7 +44,7 @@ export default defineCliCommand({
       name: "upgrade",
       description:
         "Move updaters' locks (mise, uv, …) to the newest releases, proving it first: the full check and test " +
-        "suites plus the moved inputs' smoke tests run before and after the move, and a failure only the new " +
+        "suites, a hermetic web build and the moved inputs' smoke tests run before and after the move, and a failure only the new " +
         "releases have — twice — is a regression, which puts every lock back. With no updater named, every " +
         "updater moves at once behind ONE baseline and ONE candidate run (receipt deps-upgrade.json); naming one " +
         "moves only it (deps-upgrade-<updater>.json). Receipts land in the worktree data dir. Refuses to run in " +

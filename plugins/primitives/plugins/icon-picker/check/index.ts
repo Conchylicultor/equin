@@ -9,7 +9,6 @@ import {
   SYMBOLS_METADATA_REL_PATH,
   SymbolsMetadataSchema,
   symbolsMetadataContentHash,
-  symbolsMetadataInputsHash,
 } from "../shared/symbols-metadata";
 
 const REGEN =
@@ -18,7 +17,7 @@ const REGEN =
 const check: Check = {
   id: "icon-picker:symbols-metadata-in-sync",
   description:
-    "icon-picker/web/internal/symbols-metadata.json was generated for the installed Material Symbols sets and not edited by hand",
+    "icon-picker/web/internal/symbols-metadata.json is the generator's output, not edited by hand",
   async run() {
     const file = join(await getWorktreeRoot(), SYMBOLS_METADATA_REL_PATH);
     if (!existsSync(file)) {
@@ -31,14 +30,6 @@ const check: Check = {
     const data = SymbolsMetadataSchema.parse(
       JSON.parse(readFileSync(file, "utf8")),
     );
-    const inputs = symbolsMetadataInputsHash();
-    if (data.inputsHash !== inputs) {
-      return {
-        ok: false,
-        message: `${SYMBOLS_METADATA_REL_PATH} is stale (file=${data.inputsHash}, installed sets=${inputs})`,
-        hint: REGEN,
-      };
-    }
     if (data.contentHash !== symbolsMetadataContentHash(data)) {
       return {
         ok: false,

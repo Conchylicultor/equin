@@ -1,5 +1,5 @@
 /**
- * One gate's result: the named suite (`checks`, `tests`, or `smoke: <name>`)
+ * One gate's result: the named suite (`checks`, `tests`, `web build`, or `smoke: <name>`)
  * and the stable identity of every failure in it.
  */
 export interface GateResult {
