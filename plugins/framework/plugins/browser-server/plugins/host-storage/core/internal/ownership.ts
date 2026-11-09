@@ -45,6 +45,14 @@ export function knowsEveryMigration(
 export interface Ownership {
   /** The storage serves: answer claims from now on (one that came earlier is answered now). */
   answerClaims(): void;
+  /**
+   * The storage is being wiped (Reset): answer no claim from now on — a
+   * claimant (the next host generation's worker, started by a tab opened
+   * mid-wipe) waits on the lock, granted when the wipe releases it, and opens
+   * the wiped storage. Yielding to it would end this host `superseded`
+   * instead of `reset` and close the storage under the wipe.
+   */
+  wiping(): void;
   /** Release the lock (the storage is closed); idempotent. */
   release(): void;
 }
@@ -116,6 +124,7 @@ export async function acquireOwnership(opts: {
   let answering = false;
   let waiting: string | null = null;
   let yielding = false;
+  let wiping = false;
   const yieldTo = (): void => {
     yielding = true;
     void opts
@@ -134,7 +143,7 @@ export async function acquireOwnership(opts: {
   };
   channel.onmessage = (event: MessageEvent<OwnershipMessage>) => {
     const msg = event.data;
-    if (msg.t !== "claim" || yielding) return;
+    if (msg.t !== "claim" || yielding || wiping) return;
     const olderSnapshot =
       opts.snapshotTakenAt !== undefined &&
       msg.snapshotTakenAt !== null &&
@@ -157,7 +166,10 @@ export async function acquireOwnership(opts: {
   return {
     answerClaims() {
       answering = true;
-      if (waiting !== null && !yielding) yieldTo();
+      if (waiting !== null && !yielding && !wiping) yieldTo();
+    },
+    wiping() {
+      wiping = true;
     },
     release() {
       channel.close();

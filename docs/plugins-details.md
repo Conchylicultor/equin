@@ -27762,6 +27762,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.Button`
                   - `primitives/dom/web-storage.clearStorageScope`
+                  - `primitives/dom/web-storage.defineStore`
                   - `primitives/loading.Loading`
                   - `primitives/log-channels.clientLog`
                   - `primitives/networking.TransportProvider`

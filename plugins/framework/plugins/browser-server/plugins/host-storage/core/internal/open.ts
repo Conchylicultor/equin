@@ -440,6 +440,7 @@ async function openPersistent(
     },
     close,
     async wipe() {
+      ownership.wiping();
       try {
         // Marked first: a wipe cut short (the tab closed) is a dead first
         // boot to the next open, which wipes again — never a `ready` record

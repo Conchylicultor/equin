@@ -28,6 +28,14 @@ seed — so the unchanged app reads demo data through `useLive` /
 - **Reset** (`useDemoHostControl().reset()`, inside the scope — the /demo
   caption bar's "Reset demo"): the host wipes its storage and ends with
   `reset`; every tab's scope reconnects to a fresh host, which seeds again.
+  The fresh host is the NEXT host generation's SharedWorker (`startShared` is
+  named `<scenario>@<generation>`, the generation kept page-wide in
+  localStorage, `web/internal/host-generation.ts`): the old worker closes
+  itself, but Chromium hands a `new SharedWorker` of the same name to a dying
+  worker until the browser process hears of its close — a tab reconnecting at
+  once would wait on a worker that never answers. The resetting tab advances
+  the generation before it sends Reset (a tab opened mid-wipe already asks for
+  the next one), and every tab told `ended: "reset"` advances past its own.
 - **Scoped to the host's composition**: the children render inside
   `<PluginScope composition={scenario.host}>` (`web-sdk`), so only the plugins
   the worker's composition ships contribute to any slot read inside the demo
@@ -90,6 +98,7 @@ in-realm `MessageChannel` standing in for the worker).
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/dom/web-storage.clearStorageScope`
+    - `primitives/dom/web-storage.defineStore`
     - `primitives/loading.Loading`
     - `primitives/log-channels.clientLog`
     - `primitives/networking.TransportProvider`

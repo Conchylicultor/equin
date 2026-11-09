@@ -87,8 +87,11 @@ serveBrowserHost({
   (`browser-server`'s `hello`).
 - **Reset** (`ToHost` `reset`): `wipe()` — close, then delete every IndexedDB
   database of the storage — every tab is told `ended: "reset"`, the worker
-  closes itself, and the tabs reconnect to a fresh one, which starts from the
-  snapshot again.
+  closes itself, and the tabs reconnect to a fresh one (under a new name: a
+  closing SharedWorker can still be matched by its old one — `demo/scope`),
+  which starts from the snapshot again. From the wipe's start the holder
+  answers no claim: a fresh worker started meanwhile waits on the lock and
+  opens the wiped storage, rather than ending this host `superseded`.
 - **The boot report says where the data came from** (`HostBoot.data`:
   `stored`, `snapshot`, …) and what opening the storage cost (a `storage`
   stage), in the page's `demo-host-boot` log line.

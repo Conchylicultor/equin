@@ -55,6 +55,11 @@ import {
 import { PluginScope } from "@plugins/framework/plugins/web-sdk/core";
 import { RenderOrigin } from "@plugins/primitives/plugins/scope/plugins/render-origin/web";
 import { ScopeIconSymbols } from "@plugins/ui/plugins/icons/plugins/sprites/web";
+import {
+  hostWorkerName,
+  trackHostGenerations,
+  type HostGenerations,
+} from "../internal/host-generation";
 
 // ── The host ───────────────────────────────────────────────────────────
 
@@ -108,17 +113,18 @@ interface ScopeStart {
 }
 
 /**
- * The page's end of the scenario's host: ONE SharedWorker per build for every
- * tab of the demo (one server, one database — what keeps a persistent host's
- * data whole across tabs), or, where the browser has none, a dedicated worker
- * of this page's own (the host's storage lock keeps a single owner).
+ * The page's end of the scenario's host: ONE SharedWorker per build and host
+ * generation for every tab of the demo (one server, one database — what keeps
+ * a persistent host's data whole across tabs; `host-generation.ts` for why a
+ * Reset moves to the next name), or, where the browser has none, a dedicated
+ * worker of this page's own (the host's storage lock keeps a single owner).
  */
 function connectHost(
   mod: Awaited<ReturnType<DemoScenario["host"]["start"]>>,
-  scenarioId: string,
+  workerName: string,
 ): { end: PortEnd; stop(): void } {
   if (typeof SharedWorker === "function") {
-    const shared = mod.startShared(scenarioId);
+    const shared = mod.startShared(workerName);
     // `addEventListener` alone does not start a MessagePort.
     shared.port.start();
     return { end: shared.port, stop: () => shared.port.close() };
@@ -128,13 +134,15 @@ function connectHost(
 }
 
 /**
- * Connect to the scenario's host — its frame serving attached alongside the
- * boot — and report how it goes (`ScopeStart`); returns the teardown (frame
- * serving detached, the server disposed, this page's end of the worker
- * closed).
+ * Connect to the scenario's host — at its generation as of connecting, so a
+ * Reset sent from another tab while the host module loads is not missed —
+ * its frame serving attached alongside the boot — and report how it goes (`ScopeStart`); returns the
+ * teardown (frame serving detached, the server disposed, this page's end of
+ * the worker closed).
  */
 function startScopeServer(
   scenario: DemoScenario,
+  generations: HostGenerations,
   inputs: readonly string[],
   report: ScopeStart,
 ): () => void {
@@ -146,7 +154,11 @@ function startScopeServer(
     const asked = performance.now();
     const mod = await scenario.host.start();
     if (ended) return;
-    const { end, stop } = connectHost(mod, scenario.id);
+    const generation = generations.current();
+    const { end, stop } = connectHost(
+      mod,
+      hostWorkerName(scenario.id, generation),
+    );
     stopEnd = stop;
     const framing = attachFrameServing(end, mod.serviceWorkerUrl);
     let hosted: PortServer;
@@ -178,12 +190,19 @@ function startScopeServer(
     clientLog(BOOT_LOG_CHANNEL, line);
     served = hosted.server;
     void hosted.ended.then((why) => {
+      // Past this generation in every tab told so, whichever sent the Reset.
+      if (why === "reset") generations.advance(generation);
       if (!ended) report.onEnded(why);
     });
     report.onReady({
       server: served,
       frameBase: frames.kind === "serving" ? frames.frameBase : null,
-      reset: hosted.reset,
+      reset: () => {
+        // Before the host is asked: a tab opened while it wipes already
+        // connects to the next generation, never to the worker that closes.
+        generations.advance(generation);
+        hosted.reset();
+      },
       notice: hosted.notice,
       supply: hosted.supply,
       declareInputs: hosted.declareInputs,
@@ -261,24 +280,29 @@ export function DemoScope({
     inputKeysRef.current = inputKeys;
   });
   const [state, setState] = useState<ScopeState>({ kind: "booting" });
-  // Bumped when the host is reset, to start a fresh one.
-  const [generation, setGeneration] = useState(0);
+  // Bumped when the host is reset, to start a fresh one (on the host
+  // generation the reset moved every tab to).
+  const [resets, setResets] = useState(0);
+  const generations = useMemo(
+    () => trackHostGenerations(scenario.id),
+    [scenario.id],
+  );
   useEffect(() => {
     // A reset throws away the scope's browser-side state with its data (the
     // drafts and view state its plugins kept in Web Storage, in every tab):
     // here, once the old subtree has unmounted and written its last.
-    if (generation > 0) clearStorageScope(scenario.host.id);
+    if (resets > 0) clearStorageScope(scenario.host.id);
     // Started here, not in a useState initialiser: the host is a disposable
     // resource owned by this mount, so StrictMode's mount → unmount → mount
     // ends the first and keeps the second (an initialiser would start one a
     // discarded render never ends).
-    const stop = startScopeServer(scenario, inputKeysRef.current, {
+    const stop = startScopeServer(scenario, generations, inputKeysRef.current, {
       onReady: (host) => setState({ kind: "ready", host }),
       onRefused: (message) => setState({ kind: "stopped", message }),
       onEnded: (why) => {
         if (why === "reset") {
           setState({ kind: "booting" });
-          setGeneration((g) => g + 1);
+          setResets((r) => r + 1);
         } else {
           setState({ kind: "stopped", message: SUPERSEDED_MESSAGE });
         }
@@ -290,7 +314,7 @@ export function DemoScope({
       // The next server (a host still booting) is not this one.
       setState({ kind: "booting" });
     };
-  }, [scenario, generation]);
+  }, [scenario, generations, resets]);
   const host = state.kind === "ready" ? state.host : null;
   const declaredKeys = inputKeys.join("\n");
   useEffect(() => {
