@@ -1253,8 +1253,12 @@ tree, not a Lexical doc, is the source of truth).
 changed rows, `canUndo` flipped, undo restores, redo reproduces) — every mutation
 reachable from the context is in its table.
 
-**Not recorded, only these two:** `setExpanded` (view state, `record: false`) and
-`projectText` (the doc owns text history).
+**Not recorded, only these three:** `setExpanded` (view state, `record: false`),
+`projectText` (the doc owns text history) and `BlockEditorAPI.settle` — data a
+renderer DERIVES from the block's recorded fields (a bookmark's fetched preview, a
+place's resolved snapshot). The edit that set the input is the undo step; a
+recorded fill would be what Cmd+Z pops, after which the block re-derives at once
+and the undo visibly does nothing.
 
 ## Drag and block-selection writes are ops too
 

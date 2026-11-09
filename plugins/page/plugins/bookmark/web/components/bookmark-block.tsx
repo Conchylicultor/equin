@@ -135,13 +135,18 @@ function FetchingBookmarkBlock({
   // Copy the answer into the block once: the write turns this block into the
   // filled card (state 3), which unmounts this read. A failure marks the block
   // fetched too — a plain link card — so it never loops.
+  //
+  // `settle`, not `update`: the preview is derived from the url, so the undo
+  // step is the edit that set the url (the paste's conversion, the URL field).
+  // Recorded, the fill would be what Cmd+Z pops — the block falls back here,
+  // refetches at once, and the undo visibly does nothing.
   const copiedRef = useRef<LinkPreview | Error | null>(null);
   useEffect(() => {
     if (preview.status === "ready") {
       if (copiedRef.current === preview.data) return;
       copiedRef.current = preview.data;
       const meta = preview.data;
-      editor.update({
+      editor.settle({
         url,
         ...meta,
         // Mirror the cached image ids into the shared attachment convention so
@@ -154,7 +159,7 @@ function FetchingBookmarkBlock({
     } else if (preview.status === "error") {
       if (copiedRef.current === preview.error) return;
       copiedRef.current = preview.error;
-      editor.update({ url, fetched: true });
+      editor.settle({ url, fetched: true });
     }
   }, [preview, url, editor]);
 

@@ -1,9 +1,9 @@
 // The per-mutation "is it recorded" invariant.
 //
 // Every mutation reachable from `useBlockEditor()` must put exactly ONE entry on
-// the unified undo stack — except the two deliberate exclusions (`setExpanded`,
-// `projectText`). There is no third case: no structural mutation is left
-// unrecorded, so a new one that records nothing has no precedent to hide behind.
+// the unified undo stack — except the three deliberate exclusions (`setExpanded`,
+// `projectText`, `settle`). No structural mutation is left unrecorded, so a new
+// one that records nothing has no precedent to hide behind.
 // This file is the guardrail: adding a mutation without recording it, or letting
 // an existing one silently stop mutating, fails here. Both halves are real
 // regressions this suite was written against — `paste` reached the store without
@@ -562,6 +562,37 @@ describe("mutations that deliberately stay off the stack", () => {
     );
     expect(snapshot(h.ctx().blocks)).not.toEqual(before);
     expect(h.ctx().canUndo).toBe(false);
+  });
+
+  it("settle fills derived data without a step of its own: one undo takes back the edit it completes", async () => {
+    // The bookmark path: an edit sets the url, the renderer's fetch settles the
+    // preview. Recorded, the fill was the step Cmd+Z popped — the block fell
+    // back to unfetched, refetched at once, and the undo did nothing.
+    const h = mount();
+    const before = snapshot(h.ctx().blocks);
+    await act(async () =>
+      h.ctx().makeBlockAPI(h.id("B")).update({ url: "https://example.com" }),
+    );
+    await settle();
+    await act(async () =>
+      h
+        .ctx()
+        .makeBlockAPI(h.id("B"))
+        .settle({ url: "https://example.com", fetched: true }),
+    );
+    await settle();
+    const filled = snapshot(h.ctx().blocks);
+
+    await act(async () => h.ctx().undo());
+    await settle();
+    expect(snapshot(h.ctx().blocks)).toEqual(before);
+    expect(h.ctx().canUndo).toBe(false);
+
+    // Redo replays the edit, not the fill: the renderer derives it again.
+    await act(async () => h.ctx().redo());
+    await settle();
+    expect(snapshot(h.ctx().blocks)).not.toEqual(filled);
+    expect(h.ctx().canRedo).toBe(false);
   });
 
   it("a fully-refused indent records nothing and changes nothing", async () => {

@@ -63,7 +63,10 @@ export function PlaceBlock({ block, editor }: BlockRendererProps) {
 
   const onResolved = useCallback(
     (resolvedProviderId: string, snapshot: PlaceSnapshot) => {
-      editor.update(
+      // `settle`: the snapshot is derived from the picked place id, so the
+      // pick is the undo step — a recorded fill would be what Cmd+Z pops,
+      // and the block would re-resolve at once.
+      editor.settle(
         placeDataFromSnapshot(resolvedProviderId, snapshot, Date.now()),
       );
       // The round is over — the next search starts a new one.

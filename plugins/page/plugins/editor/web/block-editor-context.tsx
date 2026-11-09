@@ -2904,6 +2904,19 @@ export function BlockEditorProviderInner({
           { label: "Edit block", coalesceKey: blockId },
         );
       },
+      settle(data: RowData) {
+        // A derived fill (see `BlockEditorAPI.settle`): the edit that set its
+        // input is already on the stack, and its undo restores the whole `data`
+        // blob — fill included — so this write must not be a step of its own.
+        commitRow(
+          blockId,
+          (b) => ({
+            ...b,
+            data: preserveText(b.data, data),
+          }),
+          { label: "Fill block", record: false },
+        );
+      },
       setExpanded(expanded: boolean) {
         // Pure view state — deliberately NOT recorded into history (`record: false`):
         // Notion doesn't undo collapse/expand; it's not a document edit. Still flows

@@ -18,7 +18,10 @@
 //      the block holds more than the link)
 //   E. Mention on https://example.com retitles the link "Example Domain" with
 //      its href unchanged, and Cmd+Z brings the URL text back
-//   F. Create bookmark / G. Create embed still convert the block
+//   F. Create bookmark / G. Create embed still convert the block; once the
+//      bookmark's preview has landed, ONE Cmd+Z turns it back into the link
+//      (the fill is no undo step — it used to be the one Cmd+Z popped, and the
+//      block refetched at once)
 //
 // E fetches example.com from the SERVER, so it needs the deploy to have network
 // access; it is the one case that can fail for reasons outside the app.
@@ -67,6 +70,7 @@ const r = report();
 interface Row {
   id: string;
   type: string;
+  data: { fetched?: boolean };
 }
 
 /** The editing host of the block with this id. */
@@ -351,6 +355,34 @@ await withBrowser(async (h) => {
       );
       r.eq(`${which}: the block's row type`, converted.value, wantType);
       if (!converted.ok) await snap(page, OUT, `${which}-not-converted`);
+      if (which !== "F") continue;
+
+      // The preview fill (fetched or failed — either settles the block) must
+      // not be the step Cmd+Z pops.
+      const fetched = await waitFor(
+        async () =>
+          (await fetchRows(page, pageId)).find(
+            (row) => row.id === blockOf(which),
+          )?.data.fetched,
+        (f) => f === true,
+        { timeoutMs: 15_000 },
+      );
+      r.eq("F: the bookmark's preview settled", fetched.value, true);
+      await page.keyboard.press(UNDO);
+      const undone = await waitFor(
+        async () =>
+          (await fetchRows(page, pageId)).find(
+            (row) => row.id === blockOf(which),
+          )?.type,
+        (type) => type !== "bookmark",
+        { timeoutMs: 10_000 },
+      );
+      r.eq("F: one Cmd+Z turns the bookmark back into text", undone.value, "text");
+      if (!undone.ok) await snap(page, OUT, "f-undo-kept-bookmark");
+      r.eq("F: …holding the pasted link again", await linkOf(blockEl(page, blockOf(which))), {
+        href: URL,
+        text: URL,
+      });
     }
 
     await snap(page, OUT, "final");

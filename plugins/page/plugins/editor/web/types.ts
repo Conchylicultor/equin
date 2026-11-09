@@ -21,6 +21,21 @@ export interface BlockEditorAPI {
    * `block.data`, so the row's `text` projection never rides along.
    */
   update(data: RowData): void;
+  /**
+   * Fill in data DERIVED from what the block already holds — a bookmark's
+   * fetched preview of its url, a place's resolved snapshot of its place id.
+   * Same optimistic write as `update`, but NOT an undo step: the user's edit is
+   * the one that set the input (the conversion, the url, the pick), and undoing
+   * it must take the block back past the fill in ONE Cmd+Z. Recorded, the fill
+   * would be the step Cmd+Z pops: the block falls back to its unfilled state,
+   * re-derives at once, and the undo visibly does nothing (and clears redo).
+   *
+   * Only for data a renderer computes from the block's own recorded fields —
+   * anything the user chose goes through `update`. The fill is taken back WITH
+   * the edit that wrote its inputs into `data` (an undo restores the `data` it
+   * replaced, whole); an edit that left `data` alone does not reach it.
+   */
+  settle(data: RowData): void;
   /** Toggle this block's expanded/collapsed state (children show/hide). */
   setExpanded(expanded: boolean): void;
   /**
