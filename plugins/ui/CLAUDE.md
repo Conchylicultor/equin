@@ -9,6 +9,7 @@
   - **`ambient-field`** — <AmbientField>: a living, barely-there background behind its children — hairline strands (iron filings) following a slowly turning flow, drawn on a canvas. Each pointer stroke is a magnet of its own…
   - **`breadcrumb-separator`** — Breadcrumb-separator region (chevron / slash). Contributes its variant-region host into BreadcrumbSlots.Separator.
   - **`icons`** — Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token…
+  - **`logo`** — <Logo className tone>: the equin logo, drawn from ui/logo's geometry — its small master below 28 px (a container query on its own box), in the brand gradient or the text colour.
   - **`segmented-progress-bar`** — Pluggable segmented progress bar with switchable visual variants.
   - **`sidebar-framing`** — Per-app sidebar framing region (flush / floating / inset). Contributes its variant-region host into AppShell.Framing.
   - **`tab-bar`** — Themable tab bar: chip / underline / connected variants.

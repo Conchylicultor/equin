@@ -1,0 +1,9 @@
+{
+  "name": "@equin/plugin-ui-logo",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The equin logo from one source: its geometry as data (core), the <Logo> component every in-app use draws, and the static files (favicons, the native helper's icons) generated from it and held in sync by a check.",
+  "dependencies": {
+    "@resvg/resvg-js": "^2.6.2"
+  }
+}

@@ -7092,6 +7092,13 @@
       "name": "@equin/plugin-ui-icons-sprites-bundled-symbols",
       "version": "0.0.1",
     },
+    "plugins/ui/plugins/logo": {
+      "name": "@equin/plugin-ui-logo",
+      "version": "0.0.1",
+      "dependencies": {
+        "@resvg/resvg-js": "^2.6.2",
+      },
+    },
     "plugins/ui/plugins/segmented-progress-bar": {
       "name": "@equin/plugin-ui-segmented-progress-bar",
       "version": "0.0.1",
@@ -10810,6 +10817,8 @@
     "@equin/plugin-ui-icons-sprites-bundled-sprites": ["@equin/plugin-ui-icons-sprites-bundled-sprites@workspace:plugins/ui/plugins/icons/plugins/sprites/plugins/bundled-sprites"],
 
     "@equin/plugin-ui-icons-sprites-bundled-symbols": ["@equin/plugin-ui-icons-sprites-bundled-symbols@workspace:plugins/ui/plugins/icons/plugins/sprites/plugins/bundled-symbols"],
+
+    "@equin/plugin-ui-logo": ["@equin/plugin-ui-logo@workspace:plugins/ui/plugins/logo"],
 
     "@equin/plugin-ui-segmented-progress-bar": ["@equin/plugin-ui-segmented-progress-bar@workspace:plugins/ui/plugins/segmented-progress-bar"],
 

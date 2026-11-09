@@ -827,6 +827,7 @@ export const browserHost = {
     "ui.icons",
     "ui.icons.emoji",
     "ui.icons.sprites",
+    "ui.logo",
     "ui.segmented-progress-bar",
     "ui.segmented-progress-bar.arc",
     "ui.segmented-progress-bar.dots",

@@ -7,7 +7,7 @@
 - Description: App tab bar: the top tab strip with per-tab titles, overflow collapse, drag reorder/tear-off, and the new-tab/new-window + button.
 - Web:
   - Contributes: `Apps.TabBar` "Tab bar" → `AppTabBar`
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps-core/tabs` ×3
     - `primitives/css/ui-kit` ×3
     - `primitives/sortable-list` ×2
@@ -23,6 +23,7 @@
     - `primitives/css/theme-boundary.Theme`
     - `primitives/dom/scroll-reveal.useRevealOnActive`
     - `primitives/icon-button.IconButton`
+    - `ui/logo.Logo`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`

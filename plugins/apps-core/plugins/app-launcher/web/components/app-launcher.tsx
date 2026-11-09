@@ -9,6 +9,7 @@ import {
   type ActiveApp,
 } from "@plugins/apps-core/web";
 import { isNodeData, useReorderedEntries } from "@plugins/reorder/web";
+import { Logo } from "@plugins/ui/plugins/logo/web";
 import {
   foldResource,
   mapResource,
@@ -126,7 +127,7 @@ function LauncherMark({
   app: ActiveApp | undefined;
   className: string;
 }) {
-  if (!app) return <img src="/icon.svg" alt="" className={className} />;
+  if (!app) return <Logo className={className} />;
   if (app.mark) return <app.mark className={className} />;
   return <AppIconView icon={app.icon} className={className} />;
 }

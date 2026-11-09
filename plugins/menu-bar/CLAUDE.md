@@ -276,7 +276,7 @@ helper build and reloads the tray onto it
     - `ThemeEngine.Theme` "Menu bar"
     - `MenuBar.Section` "Header" → `PanelHeader`
     - `MenuBar.Section` "Footer" → `PanelFooter`
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/spacing` ×3
     - `primitives/persistent-draft` ×2
     - `primitives/slot-render` ×2
@@ -296,6 +296,7 @@ helper build and reloads the tray onto it
     - `primitives/loading.Loading`
     - `primitives/log-channels.clientLog`
     - `shell/toast.useSuppressToasts`
+    - `ui/logo.Logo`
     - `ui/theme-engine.ThemeEngine`
   - Exports (types):
     - `MenuBarStatus`

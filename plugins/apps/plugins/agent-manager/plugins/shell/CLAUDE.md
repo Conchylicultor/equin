@@ -14,6 +14,7 @@
     - `layouts/miller.MillerColumns`
     - `primitives/app-shell.AppShellLayout`
     - `shell.Shell`
+    - `ui/logo.Logo`
     - `ui/theme-engine.ThemeEngine`
 - Core:
   - Uses:

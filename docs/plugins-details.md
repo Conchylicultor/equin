@@ -636,6 +636,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `layouts/miller.MillerColumns`
               - `primitives/app-shell.AppShellLayout`
               - `shell.Shell`
+              - `ui/logo.Logo`
               - `ui/theme-engine.ThemeEngine`
           - Core:
             - Uses:
@@ -12095,7 +12096,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Apps.Overlay` "Overlay" → `FloatingAppLauncher`
           - `FieldPresentation.Register` "collection:apps.installed-app"
           - `Fields.Identity` "app-icon"
-        - Uses: 44 symbols — full list in [`plugins/apps-core/plugins/app-launcher/REFERENCE.md`](../plugins/apps-core/plugins/app-launcher/REFERENCE.md)
+        - Uses: 45 symbols — full list in [`plugins/apps-core/plugins/app-launcher/REFERENCE.md`](../plugins/apps-core/plugins/app-launcher/REFERENCE.md)
           - `apps-core/tabs` ×6
           - `apps-core` ×5
           - `network/live/live-state` ×4
@@ -12119,6 +12120,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/overlay/hover-popover.HoverPopover`
           - `primitives/pane.usePaneStore`
           - `ui/icons.Icon`
+          - `ui/logo.Logo`
         - Exports (types): `AppRow`
         - Exports (values):
           - `AppIconCell`
@@ -12416,7 +12418,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`tab-bar`** — App tab bar: the top tab strip with per-tab titles, overflow collapse, drag reorder/tear-off, and the new-tab/new-window + button.
       - Web:
         - Contributes: `Apps.TabBar` "Tab bar" → `AppTabBar`
-        - Uses: 21 symbols — full list in [`plugins/apps-core/plugins/tab-bar/REFERENCE.md`](../plugins/apps-core/plugins/tab-bar/REFERENCE.md)
+        - Uses: 22 symbols — full list in [`plugins/apps-core/plugins/tab-bar/REFERENCE.md`](../plugins/apps-core/plugins/tab-bar/REFERENCE.md)
           - `apps-core/tabs` ×3
           - `primitives/css/ui-kit` ×3
           - `primitives/sortable-list` ×2
@@ -12432,6 +12434,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/theme-boundary.Theme`
           - `primitives/dom/scroll-reveal.useRevealOnActive`
           - `primitives/icon-button.IconButton`
+          - `ui/logo.Logo`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --muted-foreground`
@@ -36806,7 +36809,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ThemeEngine.Theme` "Menu bar"
       - `MenuBar.Section` "Header" → `PanelHeader`
       - `MenuBar.Section` "Footer" → `PanelFooter`
-    - Uses: 24 symbols — full list in [`plugins/menu-bar/REFERENCE.md`](../plugins/menu-bar/REFERENCE.md)
+    - Uses: 25 symbols — full list in [`plugins/menu-bar/REFERENCE.md`](../plugins/menu-bar/REFERENCE.md)
       - `primitives/css/spacing` ×3
       - `primitives/persistent-draft` ×2
       - `primitives/slot-render` ×2
@@ -36826,6 +36829,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives/loading.Loading`
       - `primitives/log-channels.clientLog`
       - `shell/toast.useSuppressToasts`
+      - `ui/logo.Logo`
       - `ui/theme-engine.ThemeEngine`
     - Exports (types):
       - `MenuBarStatus`
@@ -38847,16 +38851,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withForegroundPriority`
     - **`string-hash`** — Portable string hashes in plain JS (no node:crypto, no Bun.hash), so every host — the Bun server, central and a browser page — computes the same value: hash53 (cyrb53, a 53-bit number, optionally seeded), hashHex (two seeded cyrb53s, ~106 bits as hex), hash64 (a 64-bit bigint), sha256Hex (a synchronous SHA-256, identical to node:crypto's hex digest), createSha256 (the same SHA-256, incremental over strings and bytes) and sha1Hex (SHA-1 for values already stored as one).
       - Cross-plugin:
-        - Imported by: 36 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
+        - Imported by: 37 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
           - `apps` ×10
           - `network` ×5
           - `database` ×4
           - `framework` ×3
+          - `ui` ×3
           - `infra` ×2
           - `page` ×2
           - `plugin-meta` ×2
           - `reports` ×2
-          - `ui` ×2
           - `debug/queue-health`
           - `map`
           - `menu-bar`
@@ -45907,13 +45911,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 458 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 459 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×111
               - `apps` ×104
               - `conversations` ×53
               - `page` ×26
               - `debug` ×24
-              - `ui` ×22
+              - `ui` ×23
               - `tasks` ×19
               - `fields` ×12
               - `apps-core` ×10
@@ -58240,6 +58244,36 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/icons/sprites.RuntimeSymbolDrawerImpl`
                   - `ui/icons/sprites.savedIconNames`
                 - Register: `defineWarmup('icons.bundled-symbols.draw-saved')`
+    - **`logo`** — <Logo className tone>: the equin logo, drawn from ui/logo's geometry — its small master below 28 px (a container query on its own box), in the brand gradient or the text colour.
+      - Web:
+        - Uses: `primitives/css/ui-kit.cn`
+        - Exports (types): `LogoProps`
+        - Exports (values): `Logo`
+      - Core:
+        - Uses: `packages/string-hash.sha256Hex`
+        - Exports (types):
+          - `Knockout`
+          - `LogoFile`
+          - `LogoMaster`
+          - `LogoSvgOptions`
+        - Exports (values):
+          - `arcStartClearing`
+          - `hasPngText`
+          - `LOGO`
+          - `LOGO_FILES`
+          - `LOGO_PNG_SOURCE_KEY`
+          - `logoFileSvg`
+          - `logoPath`
+          - `logoPngSourceDigest`
+          - `logoStroke`
+          - `logoSvg`
+          - `withPngText`
+      - Cross-plugin:
+        - Imported by:
+          - `apps-core/app-launcher`
+          - `apps-core/tab-bar`
+          - `apps/agent-manager/shell`
+          - `menu-bar`
     - **`segmented-progress-bar`** — Pluggable segmented progress bar with switchable visual variants.
       - Web:
         - Slots: `SegmentedProgressBarSlots.Variant`

@@ -7,10 +7,11 @@ import {
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Logo } from "@plugins/ui/plugins/logo/web";
 import { useStatusLine } from "../internal/panel-status";
 
 /**
- * The panel's header: the equin spiral (the app icon, `web-core/public/icon.svg`)
+ * The panel's header: the equin logo (`ui/logo`)
  * and one status line joined from every `MenuBar.Status` part.
  */
 export function PanelHeader() {
@@ -22,7 +23,7 @@ export function PanelHeader() {
       align="center"
       className={insetClass({ x: "md", t: "md", b: "lg" })}
     >
-      <img src="/icon.svg" alt="" className={cn("size-7.5", rigidClass())} />
+      <Logo className={cn("size-7.5", rigidClass())} />
       <Fill>
         <Stack gap="none">
           <Text as="div" variant="label" className="font-semibold">

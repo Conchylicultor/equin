@@ -2,9 +2,9 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Apps } from "@plugins/apps-core/web";
 
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
+import { Logo } from "@plugins/ui/plugins/logo/web";
 import { agentManagerApp } from "../core";
 import { AgentManagerLayout } from "./components/agent-manager-layout";
-import { EquinMark } from "./components/equin-mark";
 import { mistTheme } from "./internal/theme";
 
 export default {
@@ -13,7 +13,7 @@ export default {
   contributions: [
     Apps.App({
       app: agentManagerApp,
-      mark: EquinMark,
+      mark: Logo,
       component: AgentManagerLayout,
     }),
     // The agent manager's theme, selected for the app in

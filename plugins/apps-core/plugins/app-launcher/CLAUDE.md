@@ -6,7 +6,7 @@ never draw their own header (the shell places it; see
 
 - **Launcher** (both forms) — the current app's own mark in an icon button: its
   `Apps.App` entry's `mark` (a drawn logo) when it registers one, else its rail
-  `icon`; the Equin mark (`/icon.svg`) outside any app. Each app keeps its
+  `icon`; the equin `<Logo>` (`ui/logo`) outside any app. Each app keeps its
   identity at the top-left; the button is the same launcher everywhere. It is
   wrapped in [`HoverPopover`](../../../primitives/plugins/overlay/plugins/hover-popover/CLAUDE.md).
   Click (link gestures: ⌘/middle-click opens it in a new browser tab) → the
@@ -60,7 +60,7 @@ never draw their own header (the shell places it; see
     - `Apps.Overlay` "Overlay" → `FloatingAppLauncher`
     - `FieldPresentation.Register` "collection:apps.installed-app"
     - `Fields.Identity` "app-icon"
-  - Uses: 44 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 45 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps-core/tabs` ×6
     - `apps-core` ×5
     - `network/live/live-state` ×4
@@ -84,6 +84,7 @@ never draw their own header (the shell places it; see
     - `primitives/overlay/hover-popover.HoverPopover`
     - `primitives/pane.usePaneStore`
     - `ui/icons.Icon`
+    - `ui/logo.Logo`
   - Exports (types): `AppRow`
   - Exports (values):
     - `AppIconCell`
