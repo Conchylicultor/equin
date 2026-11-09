@@ -31,8 +31,8 @@
     - `ui/tokens/type-scale --font-size-2xs`
     - `ui/tokens/type-scale --font-weight-medium`
     - `ui/tokens/type-scale --line-height-2xs`
-  - Imported by: 24 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives` ×9
+  - Imported by: 25 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives` ×10
     - `page` ×6
     - `apps` ×5
     - `tasks` ×3

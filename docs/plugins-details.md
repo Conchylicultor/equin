@@ -48524,7 +48524,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Test helpers:
         - Web: `@plugins/primitives/plugins/lazy-component/web/testing`
           - `loadLazyComponents` — Load every lazy component's chunk declared so far — call it in a suite's `beforeAll`, after the imports that declare them.
-    - **`link-gesture`** — The browser's link gestures as spreadable handler props: plain click opens here, ⌘/Ctrl- and middle-click open the destination's URL in a new browser tab. A <button> gets none of this for free, so every navigating control reads it from one place.
+    - **`link-gesture`** — The browser's link gestures as spreadable handler props: plain click opens here, ⌘/Ctrl- and middle-click open the destination's URL in a new browser tab, ⌥/Alt-click opens it here keeping the others (keepsOthers: a pane open inserts beside the caller, a pane close removes only that pane). A <button> gets none of this for free, so every navigating control reads it from one place.
       - Web:
         - Uses:
           - `primitives/pane/route-prefix.withActiveRoutePrefix`
@@ -48533,6 +48533,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `activationProps`
           - `browserTabAddressSink`
+          - `clickProps`
+          - `keepsOthers`
           - `linkGestureProps`
           - `linkProps`
           - `openInBrowserTab`
@@ -49785,8 +49787,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-size-2xs`
               - `ui/tokens/type-scale --font-weight-medium`
               - `ui/tokens/type-scale --line-height-2xs`
-            - Imported by: 24 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md)
-              - `primitives` ×9
+            - Imported by: 25 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md)
+              - `primitives` ×10
               - `page` ×6
               - `apps` ×5
               - `tasks` ×3
@@ -49924,12 +49926,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `welcomePane.Actions` "title" → `PaneTitleItem`
           - `workflow-node.actions` "title" → `PaneTitleItem`
           - `worktreeCleanupPane.Actions` "title" → `PaneTitleItem`
-        - Uses: 41 symbols — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Uses: 44 symbols — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `primitives/css/ui-kit` ×4
+          - `primitives/link-gesture` ×4
           - `primitives/slot-render` ×4
           - `network/live/live-state` ×3
           - `primitives/css/scroll` ×2
-          - `primitives/link-gesture` ×2
           - `primitives/adaptive-bar.AdaptiveBar`
           - `primitives/bar.Bar`
           - `primitives/css/center.Center`
@@ -49951,6 +49953,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/icon-button.IconButton`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/loading.Loading`
+          - `primitives/overlay/tooltip.TooltipDoc`
           - `primitives/pane/route-prefix.splitRoutePrefix`
           - `primitives/scope/install-sink.defineInstallSink`
           - `primitives/scope/surface-id.SurfaceIdContext`

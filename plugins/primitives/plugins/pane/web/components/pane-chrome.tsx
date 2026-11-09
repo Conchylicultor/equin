@@ -1,3 +1,5 @@
+import { clickProps } from "@plugins/primitives/plugins/link-gesture/web";
+import { TooltipDoc } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
 import { useContext, useMemo, type MouseEvent, type ReactNode } from "react";
 import { isChromeGesture } from "@plugins/primitives/plugins/dom/plugins/gesture-origin/web";
@@ -374,7 +376,16 @@ export function PaneEndControls({ pane }: { pane: AnyPane }): ReactNode {
     <>
       <PromoteControl pane={pane} ancestorsHidden={ancestorsHidden} />
       {!ancestorsHidden && pane._internal.chrome.close && doClose && (
-        <PaneIconAction label="Close" icon={closeIcon} onClick={doClose} />
+        <PaneIconAction
+          label="Close"
+          tooltip={
+            <TooltipDoc title="Close">
+              ⌥-click to close only this pane, keeping the ones to its right.
+            </TooltipDoc>
+          }
+          icon={closeIcon}
+          {...clickProps(doClose)}
+        />
       )}
     </>
   );

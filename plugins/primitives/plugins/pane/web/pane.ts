@@ -54,6 +54,7 @@ import {
   type AppNavigator,
 } from "./app-nav-sink";
 import {
+  keepsOthers,
   linkProps,
   type LinkGestureProps,
 } from "@plugins/primitives/plugins/link-gesture/web";
@@ -1318,6 +1319,7 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
         mode: implOpts.root ? "root" : "push",
         options: implOpts.options,
         hint: implOpts.hint,
+        insert: keepsOthers(),
       },
       currentIndex,
     );
@@ -1338,7 +1340,11 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     // which sits beside the app's index pane: closing it empties the route,
     // and the bare root shows that landing pane alone again.
     if (idx < 0 || (idx === 0 && !internal.companion)) return;
-    const newRoute = route.slice(0, idx);
+    // ⌥-close keeps the others: only this pane goes (and whatever only it
+    // addressed), the panes right of it stay.
+    const newRoute = keepsOthers()
+      ? withoutSlot(route, idx)
+      : route.slice(0, idx);
     const replace = !internal.chrome.history;
     setRoute(newRoute, replace);
   }
@@ -2063,6 +2069,36 @@ export interface OpenRequest {
   hint?: PaneHintBag;
   /** Replace the current history entry instead of pushing one (a redirect). */
   replace?: boolean;
+  /**
+   * Keep the others: INSERT the target right after the caller (after the
+   * route's last pane when there is no caller in it) instead of replacing what
+   * stands there — `A | B | C | D` opened from B gives `A | B | E | C | D`.
+   * Set from the ⌥-click gesture (link-gesture's `keepsOthers`), whatever the
+   * mode. Falls back to the mode's own open where the kept panes cannot host
+   * the target's address.
+   */
+  insert?: boolean;
+}
+
+/**
+ * The route with slot `idx` removed — an ⌥-close, which keeps the panes right
+ * of it. A slot right of it that DECLARES the removed pane (or one removed with
+ * it) as an ancestor goes too, unless an earlier slot of that pane still stands
+ * left of it: its address was chained through the removed slot's params, and
+ * without them it names nothing.
+ */
+function withoutSlot(route: PaneSlot[], idx: number): PaneSlot[] {
+  const removed = new Set([route[idx]!.paneId]);
+  const kept = route.slice(0, idx);
+  for (const slot of route.slice(idx + 1)) {
+    const parents = registry.get(slot.paneId)?.parentPaneIds ?? [];
+    const orphaned = parents.some(
+      (id) => removed.has(id) && !kept.some((k) => k.paneId === id),
+    );
+    if (orphaned) removed.add(slot.paneId);
+    else kept.push(slot);
+  }
+  return kept;
 }
 
 /** Where an open lands. See {@link computeOpen}. */
@@ -2144,6 +2180,33 @@ export function computeOpen(
         `Pane "${target.id}" is its app's index pane and declares keyed params ("${target.segment}"), ` +
           `which ride the app's base path — it can only be opened with mode "root", not "${opts.mode}".`,
       );
+    }
+  }
+
+  // insert (⌥-click): the target goes right after the caller — after the last
+  // pane when the caller is not in the route — and every pane already there
+  // stays. A left-push already keeps them, so it is left to its own branch.
+  // Where the kept prefix cannot host the target's address (another entity's
+  // ancestor stands in it), the mode's own open decides, as it would anyway.
+  if (opts.insert === true && opts.side !== "left" && !target.appIndex) {
+    const callerAt =
+      callerInstanceId === undefined
+        ? -1
+        : currentRoute.findIndex((s) => s.instanceId === callerInstanceId);
+    const anchor = callerAt >= 0 ? callerAt : currentRoute.length - 1;
+    const head = currentRoute.slice(0, anchor + 1);
+    if (head.length > 0 && prefixHosts(head, target, params)) {
+      const next = currentRoute[anchor + 1];
+      if (
+        next?.paneId === target.id &&
+        sameAddress(ownParams, next.params) &&
+        sameOptions(options, next.options)
+      )
+        return unchanged;
+      return to([
+        ...relativeHead(head, target, params, ownParams, options, hint),
+        ...currentRoute.slice(anchor + 1),
+      ]);
     }
   }
 
@@ -3805,7 +3868,12 @@ export function useOpenPane(): OpenPaneFn {
       opts: OpenRequest,
     ): void => {
       const store = resolveStore();
-      const next = compute(store, target, params, opts);
+      // ⌥-click keeps the others (link-gesture's ambient gesture). The href
+      // (⌘/middle-click) never reads it: an elsewhere gesture is not ⌥.
+      const next = compute(store, target, params, {
+        ...opts,
+        insert: keepsOthers(),
+      });
       if (!next.changed) return;
       // A route headed by another app's pane belongs to that app: hand it over,
       // exactly as Expand does, instead of stranding it here.

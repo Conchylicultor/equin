@@ -27,6 +27,17 @@ is what keeps every such control agreeing on what a ⌘-click means.
   at an app path (open-app's button, whose default flips between a browser tab
   on another origin and a framed pane). Prefer `linkProps`.
 
+## ⌥/Alt-click: keep the others
+
+`keepsOthers()` answers, synchronously inside a click run through this module
+(`linkProps`, `activationProps`, `linkGestureProps`, or `clickProps(action)` for
+a plain navigating action such as a pane's × close), whether it was an
+⌥/Alt-click. The pane store reads it: an open inserts beside the caller instead
+of replacing what is right of it, a close removes only that pane. It is ambient
+rather than a `LinkTarget` field on purpose — a target passes through wrappers
+(a toggle, `afterOpen`, a row activation) that would each have to forward a
+field, and the first one that did not would drop the gesture silently.
+
 A new in-app (equin) tab is not a link gesture: it is reachable only from
 an explicit menu entry (`navigate(url, { newTab: true })`).
 
@@ -98,7 +109,7 @@ resolver returning one. Fix: spread `openPane.link(…)`, or pass `openPane.to(�
 
 ## Plugin reference
 
-- Description: The browser's link gestures as spreadable handler props: plain click opens here, ⌘/Ctrl- and middle-click open the destination's URL in a new browser tab. A <button> gets none of this for free, so every navigating control reads it from one place.
+- Description: The browser's link gestures as spreadable handler props: plain click opens here, ⌘/Ctrl- and middle-click open the destination's URL in a new browser tab, ⌥/Alt-click opens it here keeping the others (keepsOthers: a pane open inserts beside the caller, a pane close removes only that pane). A <button> gets none of this for free, so every navigating control reads it from one place.
 - Web:
   - Uses:
     - `primitives/pane/route-prefix.withActiveRoutePrefix`
@@ -107,6 +118,8 @@ resolver returning one. Fix: spread `openPane.link(…)`, or pass `openPane.to(�
   - Exports (values):
     - `activationProps`
     - `browserTabAddressSink`
+    - `clickProps`
+    - `keepsOthers`
     - `linkGestureProps`
     - `linkProps`
     - `openInBrowserTab`

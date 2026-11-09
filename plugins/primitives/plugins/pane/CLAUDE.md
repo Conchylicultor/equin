@@ -265,6 +265,14 @@ not an `onClick` (`link-gesture/no-click-navigate` enforces; also
 
 - Plain click opens; ⌘/Ctrl/middle-click opens the URL plain click *would*
   produce in a new browser tab.
+- **⌥/Alt-click keeps the others** (link-gesture's ambient `keepsOthers()`,
+  read by the store — never forwarded by hand, so it survives any wrapper):
+  - an open, whatever its mode, INSERTS the target right after the caller
+    (after the last pane with no caller) — `A | B | C | D` opened from B gives
+    `A | B | E | C | D`; falls back to the mode's own open when the kept prefix
+    cannot host the address;
+  - a close (the × button, a toggle closing its pane) removes only that pane
+    — `A | B | D` for C — plus any pane right of it chained through it.
 - Both run one pure
   `computeOpen(currentRoute, callerInstanceId, target, params, opts)` — the
   only implementation of the modes (shared with `store.openPaneImpl` and
@@ -809,12 +817,12 @@ with an empty route.
     - `welcomePane.Actions` "title" → `PaneTitleItem`
     - `workflow-node.actions` "title" → `PaneTitleItem`
     - `worktreeCleanupPane.Actions` "title" → `PaneTitleItem`
-  - Uses: 41 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 44 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×4
+    - `primitives/link-gesture` ×4
     - `primitives/slot-render` ×4
     - `network/live/live-state` ×3
     - `primitives/css/scroll` ×2
-    - `primitives/link-gesture` ×2
     - `primitives/adaptive-bar.AdaptiveBar`
     - `primitives/bar.Bar`
     - `primitives/css/center.Center`
@@ -836,6 +844,7 @@ with an empty route.
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/loading.Loading`
+    - `primitives/overlay/tooltip.TooltipDoc`
     - `primitives/pane/route-prefix.splitRoutePrefix`
     - `primitives/scope/install-sink.defineInstallSink`
     - `primitives/scope/surface-id.SurfaceIdContext`
