@@ -44832,8 +44832,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pin`
               - `pinClasses`
           - Cross-plugin:
-            - Imported by: 58 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
-              - `primitives` ×18
+            - Imported by: 59 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
+              - `primitives` ×19
               - `apps` ×16
               - `page` ×9
               - `conversations` ×4
@@ -48089,10 +48089,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hoverRevealTargetWithGroupFocus`
           - `useHoverReveal`
       - Cross-plugin:
-        - Imported by: 39 plugins — full list in [`plugins/primitives/plugins/hover-reveal/REFERENCE.md`](../plugins/primitives/plugins/hover-reveal/REFERENCE.md)
+        - Imported by: 40 plugins — full list in [`plugins/primitives/plugins/hover-reveal/REFERENCE.md`](../plugins/primitives/plugins/hover-reveal/REFERENCE.md)
           - `apps` ×12
           - `page` ×9
-          - `primitives` ×7
+          - `primitives` ×8
           - `ui` ×4
           - `conversations` ×2
           - `fields/identifier/table`
@@ -48619,10 +48619,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/copy-to-clipboard.CopyButton`
           - `primitives/css/clip.Clip`
           - `primitives/css/grow.growClass`
+          - `primitives/css/pin.Pin`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.ControlSizeProvider`
+          - `primitives/hover-reveal.hoverRevealGroup`
+          - `primitives/hover-reveal.hoverRevealTarget`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/lazy-component.lazyComponent`
           - `primitives/lazy-component.useLazyReady`
@@ -48643,9 +48647,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useMarkdownEnhancement`
           - `useMarkdownLoaded`
       - Cross-plugin:
-        - Uses tokens: 22 vars — full list in [`plugins/primitives/plugins/markdown/REFERENCE.md`](../plugins/primitives/plugins/markdown/REFERENCE.md)
+        - Uses tokens: 23 vars — full list in [`plugins/primitives/plugins/markdown/REFERENCE.md`](../plugins/primitives/plugins/markdown/REFERENCE.md)
           - `ui/tokens/density` ×9
-          - `ui/tokens/color-palette` ×5
+          - `ui/tokens/color-palette` ×6
           - `ui/tokens/type-scale` ×4
           - `ui/tokens/shape` ×3
           - `ui/tokens/font-family --font-mono`

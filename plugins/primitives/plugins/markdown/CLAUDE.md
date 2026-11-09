@@ -47,10 +47,14 @@ Design rationale lives in:
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/clip.Clip`
     - `primitives/css/grow.growClass`
+    - `primitives/css/pin.Pin`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
+    - `primitives/hover-reveal.hoverRevealGroup`
+    - `primitives/hover-reveal.hoverRevealTarget`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/lazy-component.lazyComponent`
     - `primitives/lazy-component.useLazyReady`
@@ -71,9 +75,9 @@ Design rationale lives in:
     - `useMarkdownEnhancement`
     - `useMarkdownLoaded`
 - Cross-plugin:
-  - Uses tokens: 22 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 23 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/density` ×9
-    - `ui/tokens/color-palette` ×5
+    - `ui/tokens/color-palette` ×6
     - `ui/tokens/type-scale` ×4
     - `ui/tokens/shape` ×3
     - `ui/tokens/font-family --font-mono`

@@ -4,10 +4,18 @@ import { useCodePreviewRenderer } from "@plugins/primitives/plugins/syntax-highl
 import { ViewSwitcher } from "@plugins/primitives/plugins/view-switcher/web";
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import {
+  hoverRevealGroup,
+  hoverRevealTarget,
+} from "@plugins/primitives/plugins/hover-reveal/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { growClass } from "@plugins/primitives/plugins/css/plugins/grow/web";
-import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  ControlSizeProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const VIEWS = [
@@ -18,7 +26,8 @@ const VIEWS = [
 /**
  * A fenced code block. A language with a registered code preview (a mermaid
  * fence) is drawn as what it describes, with a Preview / Code switch and a copy
- * button; every other fence is highlighted code, as before.
+ * button; every other fence is highlighted code with a copy button revealed
+ * on hover (or keyboard focus) in its top-right corner.
  */
 export function FencedCode({
   code,
@@ -31,7 +40,24 @@ export function FencedCode({
   const [view, setView] = useState<string>("preview");
   if (!renderer)
     return (
-      <HighlightedCode code={code} lang={lang} className="my-flow-block" />
+      // clear-both: a clipped box cannot wrap around a float.
+      <Clip
+        className={cn(
+          hoverRevealGroup,
+          "my-flow-block clear-both relative rounded-md",
+        )}
+      >
+        <HighlightedCode code={code} lang={lang} />
+        <Pin to="top-right" offset="xs" className={hoverRevealTarget}>
+          <ControlSizeProvider size="xs">
+            <CopyButton
+              text={code}
+              tooltip="Copy code"
+              className="bg-background/80 backdrop-blur"
+            />
+          </ControlSizeProvider>
+        </Pin>
+      </Clip>
     );
 
   const Preview = renderer.Component;
