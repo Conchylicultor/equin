@@ -14,7 +14,10 @@ import { buildInitialConfig } from "../internal/lexical-config";
 import { EnterKeyPlugin } from "../internal/enter-key-plugin";
 import { DecoratorNavPlugin } from "@plugins/primitives/plugins/text-editor/plugins/decorator-nav/web";
 import { DecoratorBlockPlugin } from "../internal/decorator-block-plugin";
-import { TokenPastePlugin } from "@plugins/primitives/plugins/text-editor/plugins/token-extension/plugins/node/web";
+import {
+  TokenBoundaryPlugin,
+  TokenPastePlugin,
+} from "@plugins/primitives/plugins/text-editor/plugins/token-extension/plugins/node/web";
 import { TextEditorSlots } from "../slots";
 import {
   getNodeExtensions,
@@ -110,6 +113,7 @@ export function TextEditor({
       <DecoratorNavPlugin />
       <DecoratorBlockPlugin />
       <TokenPastePlugin extensions={extensions} />
+      <TokenBoundaryPlugin extensions={extensions} />
       {onSubmit && submitMode !== "none" && (
         <EnterKeyPlugin onSubmit={onSubmit} submitMode={submitMode} />
       )}

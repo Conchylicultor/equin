@@ -8,3 +8,8 @@ export {
 } from "./token-dom";
 
 export { $insertTokenizedText, $tokenizedLineNodes } from "./insert-tokens";
+
+export {
+  $separateFromNeighbours,
+  registerTokenBoundaries,
+} from "./token-boundary";

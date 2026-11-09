@@ -18,7 +18,10 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { localUndoProps } from "@plugins/primitives/plugins/undo-redo/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { DecoratorNavPlugin } from "@plugins/primitives/plugins/text-editor/plugins/decorator-nav/web";
-import { TokenPastePlugin } from "@plugins/primitives/plugins/text-editor/plugins/token-extension/plugins/node/web";
+import {
+  TokenBoundaryPlugin,
+  TokenPastePlugin,
+} from "@plugins/primitives/plugins/text-editor/plugins/token-extension/plugins/node/web";
 import type { RichText } from "../../core";
 import {
   blockTextNodes,
@@ -137,6 +140,7 @@ export function RichTextField({
       <FormatShortcutsPlugin />
       <FormatToolbarPlugin />
       <TokenPastePlugin extensions={blockTextTokenExtensions()} />
+      <TokenBoundaryPlugin extensions={blockTextTokenExtensions()} />
       <FieldPlugin onChange={onChange} onKey={onKey} caret={caret} />
     </LexicalComposer>
   );

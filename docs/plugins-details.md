@@ -39674,7 +39674,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Editor.TurnInto` ×2
           - `Editor.BlockMenuItem` ← `page.open-as-page`
         - Contributes: `IdKinds.Kind` "block"
-        - Uses: 102 symbols — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
+        - Uses: 103 symbols — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
           - `network/live/live-state` ×6
           - `primitives/dom/web-storage` ×5
           - `primitives/text-editor/caret-trigger` ×5
@@ -39695,6 +39695,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/motion` ×2
           - `primitives/dom/scroll-reveal` ×2
           - `primitives/latest-ref` ×2
+          - `primitives/text-editor/token-extension/node` ×2
           - `ids.IdKinds`
           - `network/live.useLive`
           - `primitives/announce.announce`
@@ -39720,7 +39721,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/sortable-list.useChromePointerSensor`
           - `primitives/sync-status.useReportSync`
           - `primitives/text-editor/decorator-nav.DecoratorNavPlugin`
-          - `primitives/text-editor/token-extension/node.TokenPastePlugin`
           - `shell/toast.showToast`
           - `ui/icons/emoji.EmojiGlyph`
           - `ui/icons.Icon`
@@ -50986,6 +50986,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/lazy-component.lazyComponent`
           - `primitives/slot-render.defineRenderSlot`
           - `primitives/text-editor/decorator-nav.DecoratorNavPlugin`
+          - `primitives/text-editor/token-extension/node.TokenBoundaryPlugin`
           - `primitives/text-editor/token-extension/node.TokenPastePlugin`
           - `primitives/undo-redo.localUndoProps`
         - Exports (types):
@@ -51335,7 +51336,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `matchTokens`
               - `tokenExtension`
           - Plugins:
-            - **`node`** — The inline-token node factory's browser half: TokenPastePlugin, the registry-driven paste that materializes a pasted token as its node and declines an intra-app copy (which already carries the materialized nodes); and TokenFrame, the editing chrome every decorated token wears in an editable editor (selected as one object with a ring, never its characters; a hover-revealed × removes it).
+            - **`node`** — The inline-token node factory's browser half: TokenPastePlugin, the registry-driven paste that materializes a pasted token as its node and declines an intra-app copy (which already carries the materialized nodes); TokenBoundaryPlugin, which puts a space between a token and whatever beside it would fuse with it once serialized (two id chips, a letter typed against a chip), so saved text reads back as the same tokens; and TokenFrame, the editing chrome every decorated token wears in an editable editor (selected as one object with a ring, never its characters; a hover-revealed × removes it).
               - Web:
                 - Uses:
                   - `primitives/css/center.Center`
@@ -51348,6 +51349,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/latest-ref.useLatestRef`
                   - `ui/icons.Icon`
                 - Exports (values):
+                  - `TokenBoundaryPlugin`
                   - `TokenFrame`
                   - `TokenPastePlugin`
               - Core:
@@ -51362,6 +51364,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/text-editor/token-extension.TokenFieldValue`
                 - Exports (values):
                   - `defineInlineTokenNode`
+                  - `registerTokenBoundaries`
                   - `TOKEN_FIELDS_ATTR`
                   - `TOKEN_TYPE_ATTR`
                   - `tokenDomElement`

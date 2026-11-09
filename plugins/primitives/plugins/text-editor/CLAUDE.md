@@ -100,6 +100,7 @@ registry readers are headless.
     - `primitives/lazy-component.lazyComponent`
     - `primitives/slot-render.defineRenderSlot`
     - `primitives/text-editor/decorator-nav.DecoratorNavPlugin`
+    - `primitives/text-editor/token-extension/node.TokenBoundaryPlugin`
     - `primitives/text-editor/token-extension/node.TokenPastePlugin`
     - `primitives/undo-redo.localUndoProps`
   - Exports (types):

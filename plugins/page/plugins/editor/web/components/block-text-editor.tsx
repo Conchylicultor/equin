@@ -13,7 +13,10 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import { LinkNode } from "@lexical/link";
 import { DecoratorNavPlugin } from "@plugins/primitives/plugins/text-editor/plugins/decorator-nav/web";
 import { announceCaretCrossing } from "@plugins/primitives/plugins/text-editor/plugins/caret-motion/web";
-import { TokenPastePlugin } from "@plugins/primitives/plugins/text-editor/plugins/token-extension/plugins/node/web";
+import {
+  TokenBoundaryPlugin,
+  TokenPastePlugin,
+} from "@plugins/primitives/plugins/text-editor/plugins/token-extension/plugins/node/web";
 import {
   $getRoot,
   $getSelection,
@@ -510,6 +513,7 @@ export function BlockTextEditor({
           through the `@lexical/yjs` binding exactly like typing and is recorded
           by the block's run tracker for free. */}
       <TokenPastePlugin extensions={blockTextTokenExtensions()} />
+      <TokenBoundaryPlugin extensions={blockTextTokenExtensions()} />
       <EditorRefPlugin editorRef={lexicalEditorRef} />
     </LexicalComposer>
   );

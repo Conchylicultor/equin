@@ -2196,7 +2196,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `Editor.TurnInto` ×2
     - `Editor.BlockMenuItem` ← `page.open-as-page`
   - Contributes: `IdKinds.Kind` "block"
-  - Uses: 102 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 103 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live/live-state` ×6
     - `primitives/dom/web-storage` ×5
     - `primitives/text-editor/caret-trigger` ×5
@@ -2217,6 +2217,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `primitives/css/motion` ×2
     - `primitives/dom/scroll-reveal` ×2
     - `primitives/latest-ref` ×2
+    - `primitives/text-editor/token-extension/node` ×2
     - `ids.IdKinds`
     - `network/live.useLive`
     - `primitives/announce.announce`
@@ -2242,7 +2243,6 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `primitives/sortable-list.useChromePointerSensor`
     - `primitives/sync-status.useReportSync`
     - `primitives/text-editor/decorator-nav.DecoratorNavPlugin`
-    - `primitives/text-editor/token-extension/node.TokenPastePlugin`
     - `shell/toast.showToast`
     - `ui/icons/emoji.EmojiGlyph`
     - `ui/icons.Icon`
