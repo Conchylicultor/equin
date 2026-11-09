@@ -6,7 +6,7 @@ import type {
   AppShellToolbarItem,
 } from "@plugins/primitives/plugins/app-shell/web";
 import type { IconRef } from "@plugins/ui/plugins/icons/core";
-import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
+import type { BrowsableFileSystem } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 
 /** Which run of the Places sidebar a place sits in. */
 export type PlaceGroup = "favorites" | "locations";
@@ -20,11 +20,14 @@ interface PlaceBase {
 }
 
 /**
- * A host folder the routed browser opens. `path` is in display form (`~/…`
- * under home); the sidebar marks it active while the browser shows it.
+ * A folder of a file system the routed browser opens. `path` is in display
+ * form (`~/…` under that system's home); the sidebar marks it active while the
+ * browser shows it.
  */
 export interface FolderPlace extends PlaceBase {
   kind: "folder";
+  /** The file system it is a folder of. */
+  fs: BrowsableFileSystem;
   /** The folder it opens. */
   path: string;
   /**
@@ -35,24 +38,10 @@ export interface FolderPlace extends PlaceBase {
 }
 
 /**
- * A place that is not a host folder — reached by a route of its own (the App
- * data place: the app's own files, on every host). Its source says where it
- * leads and whether the surface is showing it.
+ * One place the sidebar lists — always a folder of some file system (an app
+ * that wants an entry for its own files points one at its folder).
  */
-export interface RoutePlace extends PlaceBase {
-  kind: "route";
-  /**
-   * Where it leads, as a link: a history push from the sidebar, a replace
-   * when the explorer lands on it in place of a home folder this host has
-   * not got (`replace: true`, so Back skips the address that only forwarded).
-   */
-  to: (opts: { replace: boolean }) => LinkTarget;
-  /** The surface shows this place now (the sidebar marks it). */
-  active: boolean;
-}
-
-/** One place the sidebar lists. */
-export type Place = FolderPlace | RoutePlace;
+export type Place = FolderPlace;
 
 /**
  * What a source of places answers. Its places come from the server or a live
@@ -60,10 +49,10 @@ export type Place = FolderPlace | RoutePlace;
  * source that cannot answer is `failed` — still one row, under `label` and
  * `icon`, saying why — never an empty list that looks like "no places".
  *
- * `unavailable`: this host has no such place at all — a folder on the
- * computer's disk, on a host without the computer (the in-browser demo). Its
- * read said so (`needsMachine`), so the sidebar leaves it out rather than
- * listing a place that cannot open.
+ * `unavailable`: this host has no such place at all — a folder of a file
+ * system this host does not serve (the computer's disk in the in-browser
+ * demo), so the sidebar leaves it out rather than listing a place that cannot
+ * open.
  */
 export type PlacesState =
   | { kind: "pending" }

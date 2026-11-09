@@ -433,14 +433,14 @@
       "parent": null
     },
     {
-      "paneId": "files-data",
-      "segment": "data",
+      "paneId": "files-browser-at",
+      "segment": "browser/at/:dir/:open?",
       "appIndex": false,
       "parent": null
     },
     {
-      "paneId": "files-data-at",
-      "segment": "data/:root/:at?",
+      "paneId": "files-computer-at",
+      "segment": "computer/at/:dir/:open?",
       "appIndex": false,
       "parent": null
     },

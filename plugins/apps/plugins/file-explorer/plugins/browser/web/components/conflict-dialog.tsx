@@ -8,11 +8,11 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useOpenDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
-import type { HostFsMoveResolution } from "@plugins/infra/plugins/host-fs/core";
+import type { FileMoveResolution } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 
 /** What the person chose for one name collision of a move. */
 export type ConflictAnswer =
-  | { kind: "resolve"; resolution: HostFsMoveResolution; applyToAll: boolean }
+  | { kind: "resolve"; resolution: FileMoveResolution; applyToAll: boolean }
   /** Cancel, Escape or a press outside: this one and every later one skipped. */
   | { kind: "cancel" };
 
@@ -65,7 +65,7 @@ function ConflictDialogBody({
   onAnswer: (answer: ConflictAnswer) => void;
 }): ReactNode {
   const [applyToAll, setApplyToAll] = useState(false);
-  const resolve = (resolution: HostFsMoveResolution) =>
+  const resolve = (resolution: FileMoveResolution) =>
     onAnswer({ kind: "resolve", resolution, applyToAll });
   return (
     <Stack gap="md">

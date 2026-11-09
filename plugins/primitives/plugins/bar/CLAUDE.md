@@ -35,7 +35,6 @@ Tiers: `chrome` (the app toolbar, `h-chrome-bar`), `pane` (a pane header, `h-chr
     - `apps/browser/bookmarks`
     - `apps/browser/shell`
     - `apps/demo/shell`
-    - `apps/file-explorer/app-data`
     - `apps/file-explorer/browser`
     - `conversations/conversation-view`
     - `primitives/app-shell`

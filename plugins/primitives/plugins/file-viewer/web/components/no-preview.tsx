@@ -3,10 +3,7 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
-import {
-  hostFsOpen,
-  hostFsPathStat,
-} from "@plugins/infra/plugins/host-fs/core";
+import { hostFsPathStat } from "@plugins/infra/plugins/host-fs/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import { navIcons } from "@plugins/ui/plugins/icons/core";
@@ -14,6 +11,7 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 import { fileTypeOf } from "@plugins/primitives/plugins/file-type/core";
 import { FileTypeIcon } from "@plugins/primitives/plugins/file-type/web";
 import {
+  computerFileOpen,
   locationName,
   opensNatively,
   type FileLocation,
@@ -111,7 +109,7 @@ export function useOpenHostFile(): (
   path: string,
   opts?: { reveal?: boolean },
 ) => Promise<void> {
-  const open = useEndpointMutation(hostFsOpen);
+  const open = useEndpointMutation(computerFileOpen);
   return async (path, opts) => {
     // Opening hands the file to the computer's default app: a host without
     // the computer says so instead.

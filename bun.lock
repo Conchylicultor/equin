@@ -593,20 +593,12 @@
       "name": "@equin/plugin-apps-file-explorer",
       "version": "0.0.1",
     },
-    "plugins/apps/plugins/file-explorer/plugins/app-data": {
-      "name": "@equin/plugin-apps-file-explorer-app-data",
-      "version": "0.0.1",
-    },
     "plugins/apps/plugins/file-explorer/plugins/attachment-preview": {
       "name": "@equin/plugin-apps-file-explorer-attachment-preview",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/file-explorer/plugins/browser": {
       "name": "@equin/plugin-apps-file-explorer-browser",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/file-explorer/plugins/documents": {
-      "name": "@equin/plugin-apps-file-explorer-documents",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/file-explorer/plugins/folder-peek": {
@@ -7723,13 +7715,9 @@
 
     "@equin/plugin-apps-file-explorer": ["@equin/plugin-apps-file-explorer@workspace:plugins/apps/plugins/file-explorer"],
 
-    "@equin/plugin-apps-file-explorer-app-data": ["@equin/plugin-apps-file-explorer-app-data@workspace:plugins/apps/plugins/file-explorer/plugins/app-data"],
-
     "@equin/plugin-apps-file-explorer-attachment-preview": ["@equin/plugin-apps-file-explorer-attachment-preview@workspace:plugins/apps/plugins/file-explorer/plugins/attachment-preview"],
 
     "@equin/plugin-apps-file-explorer-browser": ["@equin/plugin-apps-file-explorer-browser@workspace:plugins/apps/plugins/file-explorer/plugins/browser"],
-
-    "@equin/plugin-apps-file-explorer-documents": ["@equin/plugin-apps-file-explorer-documents@workspace:plugins/apps/plugins/file-explorer/plugins/documents"],
 
     "@equin/plugin-apps-file-explorer-folder-peek": ["@equin/plugin-apps-file-explorer-folder-peek@workspace:plugins/apps/plugins/file-explorer/plugins/folder-peek"],
 

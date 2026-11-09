@@ -4,13 +4,16 @@ import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { sliceRange } from "@plugins/network/plugins/live/server";
 import type { LiveKeyRange } from "@plugins/network/plugins/live/core";
 import {
-  hostFsDirPeek,
   hostFsListing,
-  type HostFsDirPeek,
   type HostFsEntry,
   type HostFsListingMeta,
   type HostFsListResult,
 } from "../../core";
+import {
+  computerDirPeek,
+  computerFileListing,
+  type FileDirPeek,
+} from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { byName } from "../../server/internal/entry";
 import { describeChildren, listHostPath } from "../../server/internal/list";
 import { classifyFsError } from "../../server/internal/path";
@@ -173,8 +176,8 @@ const PEEK_CONCURRENCY = 8;
 const peeks = createSemaphore(PEEK_CONCURRENCY);
 
 /** A folder's child names, or the refusal saying why there are none. */
-export async function dirPeek(path: string): Promise<HostFsDirPeek> {
-  const abs = resolveOrRefuse(hostFsDirPeek.refuse, path);
+export async function dirPeek(path: string): Promise<FileDirPeek> {
+  const abs = resolveOrRefuse(computerDirPeek.refuse, path);
   const peeked = await peeks.run(() => peekHostDir(abs));
   switch (peeked.kind) {
     case "ok":
@@ -185,9 +188,24 @@ export async function dirPeek(path: string): Promise<HostFsDirPeek> {
     case "denied":
     case "not-a-dir":
     case "unreadable-archive":
-      throw refusalFor(hostFsDirPeek.refuse, peeked);
+      throw refusalFor(computerDirPeek.refuse, peeked);
   }
 }
+
+/** How a folder's listing is served, whichever value names it. */
+const listingServing = {
+  source: "external",
+  changes: "notified",
+  throttleMs: 1_000,
+  loader: listingPage,
+  meta: listingMeta,
+  whileSubscribed: async (q: { path?: string }, notify: () => void) => {
+    const abs = resolvedOrNull(q.path);
+    // The loader refuses the spelling; there is nothing to watch.
+    if (abs === null) return () => {};
+    return holdListingOver(watchHostDir, abs, notify);
+  },
+} as const;
 
 /**
  * A folder's entries, paged by name: every page — and the meta — cut from the
@@ -195,20 +213,17 @@ export async function dirPeek(path: string): Promise<HostFsDirPeek> {
  * question of it is read (`watchHostDir`: its entries, or its own entry while
  * it is not there; the archive file, inside one). Throttled: a folder being
  * written (a download, a build) is re-read at most once a second, and then
- * only the entries that changed.
+ * only the entries that changed. Served as host-fs's own `host-fs.list` (the
+ * folder picker's, the image viewer's) and as the computer's disk's
+ * `files.computer.list` (Files') — one listing held for both.
  */
-export const hostFsListingServed = serveValue(hostFsListing, {
-  source: "external",
-  changes: "notified",
-  throttleMs: 1_000,
-  loader: listingPage,
-  meta: listingMeta,
-  whileSubscribed: async (q, notify) => {
-    const abs = resolvedOrNull(q.path);
-    // The loader refuses the spelling; there is nothing to watch.
-    if (abs === null) return () => {};
-    return holdListingOver(watchHostDir, abs, notify);
-  },
+export const hostFsListingServed = serveValue(hostFsListing, listingServing);
+
+/** The computer's disk's folder listing (file-systems' `files.computer.list`). */
+export const computerFileListingServed = serveValue(computerFileListing, {
+  ...listingServing,
+  whileSubscribed: (q: { path: string }, notify: () => void) =>
+    listingServing.whileSubscribed(q, notify),
 });
 
 /**
@@ -245,7 +260,7 @@ export async function holdListingOver(
  * A folder's child names (`peek`), pushed from a watch of the folder while
  * read. `ok` / `too-many` / `archive` are answers; every failure is a refusal.
  */
-export const hostFsDirPeekServed = serveValue(hostFsDirPeek, {
+export const computerDirPeekServed = serveValue(computerDirPeek, {
   source: "external",
   changes: "notified",
   throttleMs: 1_000,

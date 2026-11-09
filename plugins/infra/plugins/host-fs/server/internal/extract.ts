@@ -2,7 +2,8 @@ import { randomUUID } from "node:crypto";
 import { mkdir, rename, rm, utimes } from "node:fs/promises";
 import { stat } from "@plugins/packages/plugins/timed-fs/core";
 import { basename, dirname, extname, join } from "node:path";
-import { type HostFsArchiveReason, type HostFsExtractResult } from "../../core";
+import type { HostFsArchiveReason } from "../../core";
+import type { FileExtractResult } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { locateHostPath } from "./archive/locate";
 import { isCorruptStream } from "./archive/read";
 import { archiveFormatFor } from "./archive/registry";
@@ -41,7 +42,7 @@ function folderNameFor(archiveName: string): string {
  */
 export async function extractHostArchive(
   path: UserPath,
-): Promise<HostFsExtractResult> {
+): Promise<FileExtractResult> {
   const located = await locateHostPath(path);
   if (located.kind === "archive") return { kind: "not-an-archive", path };
   const format = archiveFormatFor(basename(path));
@@ -52,7 +53,7 @@ export async function extractHostArchive(
   } catch (err) {
     return { kind: classifyFsError(err), path };
   }
-  const unreadable = (reason: HostFsArchiveReason): HostFsExtractResult => ({
+  const unreadable = (reason: HostFsArchiveReason): FileExtractResult => ({
     kind: "unreadable-archive",
     path,
     archive: path,

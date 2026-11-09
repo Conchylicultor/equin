@@ -1,6 +1,11 @@
 import { displayPath } from "@plugins/infra/plugins/host-account/core";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
-import { hostFsVolumeInfo } from "@plugins/infra/plugins/host-fs/core";
+import {
+  BROWSABLE_FILE_SYSTEMS,
+  FILE_SYSTEMS,
+  computerVolume,
+} from "@plugins/infra/plugins/paths/plugins/file-systems/core";
+import { useFileSystems } from "@plugins/infra/plugins/paths/plugins/file-systems/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { useHomeDir } from "@plugins/apps/plugins/file-explorer/plugins/browser/web";
 import {
@@ -18,8 +23,9 @@ const driveIcon = symbol("hard-drive");
 const trashIcon = symbol("delete");
 
 /**
- * A source of one host folder that is the same on every computer: a fixed
- * label and path under home — none on a host without a home folder.
+ * A source of one folder of the computer's disk that is the same on every
+ * computer: a fixed label and path under home — none on a host without the
+ * computer.
  */
 function fixedPlace(
   id: string,
@@ -29,7 +35,7 @@ function fixedPlace(
 ): () => PlacesState {
   const state: PlacesState = {
     kind: "ready",
-    places: [{ kind: "folder", id, label, path, icon }],
+    places: [{ kind: "folder", fs: "computer", id, label, path, icon }],
   };
   return function useFixedPlace() {
     const home = useHomeDir();
@@ -79,6 +85,7 @@ function useRepoPlace(): PlacesState {
     places: [
       {
         kind: "folder",
+        fs: "computer",
         id: LEGACY_IDS.fileExplorerPlace,
         label,
         path,
@@ -90,10 +97,10 @@ function useRepoPlace(): PlacesState {
 
 /**
  * The startup volume, named as the system names it ("Macintosh HD") by
- * `host-fs.volume` — the same tuple the storage meter reads.
+ * `files.computer.volume` — the same tuple the storage meter reads.
  */
 function useStartupVolumePlace(): PlacesState {
-  const volume = useLive(hostFsVolumeInfo, { path: "/" });
+  const volume = useLive(computerVolume, { path: "/" });
   switch (volume.status) {
     case "loading":
       return { kind: "pending" };
@@ -112,6 +119,7 @@ function useStartupVolumePlace(): PlacesState {
         places: [
           {
             kind: "folder",
+            fs: "computer",
             id: "startup-volume",
             label: volume.data.name,
             path: "/",
@@ -122,12 +130,58 @@ function useStartupVolumePlace(): PlacesState {
   }
 }
 
+/**
+ * Home: the home folder of every file system this host serves — the
+ * computer's on the desktop, the browser's storage in the in-browser demo
+ * (named by its system where a host serves several). Read from which systems
+ * are here, so a system this host lacks has no Home.
+ */
+function useHomePlaces(): PlacesState {
+  const systems = useFileSystems();
+  const computerHome = useHomeDir();
+  switch (systems.kind) {
+    case "pending":
+      return { kind: "pending" };
+    case "failed":
+      return {
+        kind: "failed",
+        label: "Home",
+        icon: homeIcon,
+        message: systems.error.message,
+      };
+    case "ready":
+      break;
+  }
+  const served = BROWSABLE_FILE_SYSTEMS.filter(
+    (fs) =>
+      systems.served.includes(fs) &&
+      // The computer's disk is served, yet unreadable from here when no
+      // computer is behind this transport.
+      (fs !== "computer" || computerHome.kind !== "unavailable"),
+  );
+  if (served.includes("computer") && computerHome.kind === "pending") {
+    return { kind: "pending" };
+  }
+  if (served.length === 0) return { kind: "unavailable" };
+  return {
+    kind: "ready",
+    places: served.map((fs) => ({
+      kind: "folder",
+      fs,
+      id: fs === "computer" ? "home" : `home:${fs}`,
+      label: served.length > 1 ? FILE_SYSTEMS[fs].label : "Home",
+      path: "~",
+      icon: homeIcon,
+    })),
+  };
+}
+
 /** The place sources this plugin contributes, in sidebar order within each group. */
 export const placeContributions = [
   FileExplorer.Places({
     id: "home",
     group: "favorites",
-    usePlaces: fixedPlace("home", "Home", "~", homeIcon),
+    usePlaces: useHomePlaces,
   }),
   FileExplorer.Places({
     id: "downloads",

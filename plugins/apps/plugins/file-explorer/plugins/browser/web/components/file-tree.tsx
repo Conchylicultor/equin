@@ -18,17 +18,19 @@ import type {
 } from "@plugins/primitives/plugins/data-view/core";
 import type { TreeChildrenState } from "@plugins/primitives/plugins/tree/core";
 import {
-  compareHostFsNames,
-  handOffHostPaths,
-  hasHostPaths,
-  hostFileUrl,
-  hostFsDirPeek,
+  compareFileNames,
+  dirPeekOf,
+  fileUrl,
+  handOffComputerFiles,
+  hasFileLocations,
   isBrowsable,
-  writeHostPaths,
-  type DraggedHostPath,
-  type HostFsDirPeek,
-  type HostFsEntry,
-} from "@plugins/infra/plugins/host-fs/core";
+  writeFileLocations,
+  type BrowsableFileSystem,
+  type DirPeekValue,
+  type DraggedFile,
+  type FileDirPeek,
+  type FileEntry,
+} from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import type { LiveValueTupleRead } from "@plugins/network/plugins/live/web";
 import { assetUrlOver } from "@plugins/infra/plugins/endpoints/web";
 import {
@@ -61,6 +63,7 @@ import {
 import { isOnDisk, type Listing, type Listings } from "../internal/listings";
 import { FileBrowserSlots } from "../slots";
 import { ExplorerControlsSlot } from "../internal/controls-slot";
+import type { ExplorerSystem } from "../internal/explorer-system";
 
 const FILE_TREE_VIEW = defineDataView("file-explorer.tree");
 
@@ -87,12 +90,12 @@ function refusalMessage(refusal: FolderRefusal): string {
  */
 function visibleEntries(
   dir: string,
-  entries: readonly HostFsEntry[],
+  entries: readonly FileEntry[],
   shows: EntryFilter,
-): HostFsEntry[] {
+): FileEntry[] {
   return entries
     .filter((e) => shows(e, joinPath(dir, e.name)))
-    .sort((a, b) => compareHostFsNames(a.name, b.name));
+    .sort((a, b) => compareFileNames(a.name, b.name));
 }
 
 /**
@@ -102,6 +105,7 @@ function visibleEntries(
  * chevron and asks for them (lazy children).
  */
 function buildRows(
+  fs: BrowsableFileSystem,
   listings: Listings,
   root: string,
   shows: EntryFilter,
@@ -118,6 +122,7 @@ function buildRows(
         id: path,
         parentId,
         rank,
+        fs,
         name: entry.name,
         path,
         kind: entry.kind,
@@ -331,7 +336,7 @@ function FolderSize({
   listing: Listing | undefined;
   shows: EntryFilter;
   /** The folder's peek: `loading` while off screen, or while listed (not read). */
-  peek: LiveValueTupleRead<typeof hostFsDirPeek>;
+  peek: LiveValueTupleRead<DirPeekValue>;
 }): ReactNode {
   const listed = listedFolder(listing);
   if (peek.status === "unavailable") {
@@ -351,7 +356,7 @@ function FolderSize({
       />
     );
   }
-  let peeked: HostFsDirPeek | FolderRefusal | undefined;
+  let peeked: FileDirPeek | FolderRefusal | undefined;
   if (peek.status === "ready") peeked = peek.data;
   else if (peek.status === "error" && peek.error.code !== undefined) {
     peeked = {
@@ -398,8 +403,11 @@ export interface FileTreeProps {
   onOpen: (row: EntryRow) => void;
   /** What an empty folder shows. */
   emptyState: ReactNode;
-  /** The home directory, absolute: a drag carries absolute paths. */
-  home: string;
+  /**
+   * The file system the tree lists — what `~` is there (a drag carries
+   * absolute paths) and what it can do (move, a real file to drag out).
+   */
+  system: ExplorerSystem;
   /** The selected rows (a set and its anchor), by path. */
   rowSelection: RowSelectionConfig;
   /**
@@ -410,7 +418,7 @@ export interface FileTreeProps {
     paths: readonly string[],
     ended: Promise<unknown> | null,
   ) => void;
-  /** Host paths dropped on a folder row (`dir`, display form). */
+  /** Files dropped on a folder row (`dir`, display form). */
   onDropInto: (dir: string, dt: DataTransfer) => void;
 }
 
@@ -418,7 +426,7 @@ export interface FileTreeProps {
  * The folder's contents as a DataView tree: Name / Kind / Modified / Size in
  * aligned columns (Created, Accessed, Category, Extension, Path and Link
  * target hidden until switched on) plus the client fields of the `fileEntry` kind (git's), folders first (a
- * pinned sort rule, so they stay on top under any header sort), every folder lazily listed through host-fs on first
+ * pinned sort rule, so they stay on top under any header sort), every folder lazily listed through its file system on first
  * expand — an archive file (a zip) expands like one. Clicking a folder makes it the listing; clicking a file selects it
  * (and opens it beside the listing). Double-click or Enter opens either. A
  * row's hover actions are the `FileBrowserSlots.RowActions` contributions.
@@ -436,7 +444,7 @@ export function FileTree({
   rowActivation,
   onOpen,
   emptyState,
-  home,
+  system,
   rowSelection,
   onDragPaths,
   onDropInto,
@@ -444,8 +452,8 @@ export function FileTree({
   // "Today" is today as of this visit to the folder.
   const [now] = useState(() => Date.now());
   const rows = useMemo(
-    () => buildRows(listings, root, shows),
-    [listings, root, shows],
+    () => buildRows(system.fs, listings, root, shows),
+    [system.fs, listings, root, shows],
   );
 
   const hierarchy = useMemo<HierarchyConfig<EntryRow>>(
@@ -462,24 +470,25 @@ export function FileTree({
     [listings, request, setOpen],
   );
 
-  // Rows drag as host paths with their kinds (the selection when the grabbed
-  // row is in it), so any surface taking `HOST_PATHS_MIME` — a folder row
-  // here, the Favorites sidebar — can take them without reading the disk.
-  // In an installed app window, rows on disk drag as real files instead (the
-  // OS drag: Finder, Mail, a website's upload take them), which this page
-  // still reads as its own host paths; in a browser tab, one file also
-  // carries Chrome's `DownloadURL` (dropped on the desktop or Finder, it is
-  // saved there).
+  // Rows drag as files of their system with their kinds (the selection when
+  // the grabbed row is in it), so any surface taking `FILE_LOCATIONS_MIME` —
+  // a folder row here, the Favorites sidebar — can take them without reading
+  // the system again. On the computer's disk (`openNative`), in an installed
+  // app window, rows drag as real files instead (the OS drag: Finder, Mail, a
+  // website's upload take them), which this page still reads as its own
+  // files; in a browser tab, one file also carries Chrome's `DownloadURL`
+  // (dropped on the desktop or Finder, it is saved there).
   const fileDrag = useNativeFileDrag();
   const transport = useTransport();
   const rowDrag = useMemo<RowDragConfig<EntryRow>>(() => {
-    const entriesOf = (dragged: readonly EntryRow[]): DraggedHostPath[] =>
+    const { fs, home, capabilities } = system;
+    const entriesOf = (dragged: readonly EntryRow[]): DraggedFile[] =>
       dragged.map((r) => ({ path: absolutePath(r.path, home), kind: r.kind }));
     return {
       write: (dragged, dt) => {
         const entries = entriesOf(dragged);
-        writeHostPaths(dt, entries);
-        writeDownloadUrl(dt, entries, transport);
+        writeFileLocations(dt, fs, entries);
+        if (capabilities.openNative) writeDownloadUrl(dt, entries, transport);
         onDragPaths(
           entries.map((e) => e.path),
           null,
@@ -489,11 +498,12 @@ export function FileTree({
         // A row inside an archive is no file the OS can drag.
         if (
           fileDrag === null ||
+          fs !== "computer" ||
           !dragged.every((r) => isOnDisk(listings, r.parentId ?? root))
         )
           return null;
         const entries = entriesOf(dragged);
-        const ended = handOffHostPaths(entries, fileDrag);
+        const ended = handOffComputerFiles(entries, fileDrag);
         onDragPaths(
           entries.map((e) => e.path),
           ended,
@@ -501,18 +511,19 @@ export function FileTree({
         return ended;
       },
     };
-  }, [home, onDragPaths, fileDrag, transport, listings, root]);
+  }, [system, onDragPaths, fileDrag, transport, listings, root]);
   // A real folder takes them — not an archive file, nor a folder inside one
   // (its listing is an archive's: `within`), which cannot be written to.
   const rowDrop = useMemo<RowDropConfig<EntryRow>>(
     () => ({
       accepts: (r, types) =>
+        system.capabilities.move &&
         r.kind === "dir" &&
-        hasHostPaths(types) &&
+        hasFileLocations(types) &&
         isOnDisk(listings, r.parentId ?? root),
       onDrop: (r, dt) => onDropInto(r.path, dt),
     }),
-    [listings, root, onDropInto],
+    [system, listings, root, onDropInto],
   );
 
   // When the listing is narrow the trailing columns (Kind) give their room to
@@ -532,7 +543,7 @@ export function FileTree({
         value: (r) => (r.kind === "dir" ? null : r.size),
         // A folder not listed is peeked — for the folders on screen only.
         rowRead: rowRead({
-          value: hostFsDirPeek,
+          value: dirPeekOf(system.fs),
           params: (r: EntryRow) =>
             r.kind === "dir" &&
             listedFolder(listings.get(r.path))?.kind !== "listed"
@@ -579,7 +590,7 @@ export function FileTree({
         value: (r) => r.symlinkTarget ?? null,
       },
     ],
-    [now, shows, listings],
+    [now, shows, listings, system],
   );
 
   // A nested outline table (its config row) with its column labels: the
@@ -627,12 +638,13 @@ export function FileTree({
 /**
  * Chrome's `DownloadURL` drag type for a drag of ONE file — `mime:name:url`,
  * the one way a page drags a file out as a file: dropped on the desktop or a
- * Finder window, Chrome saves it there (other browsers ignore it). Only where
- * the file's bytes have a URL (the page's own server); never for a folder.
+ * Finder window, Chrome saves it there (other browsers ignore it). Only for a
+ * file of the computer's disk whose bytes have a URL (the page's own server);
+ * never for a folder.
  */
 function writeDownloadUrl(
   dt: DataTransfer,
-  entries: readonly DraggedHostPath[],
+  entries: readonly DraggedFile[],
   transport: Transport,
 ): void {
   const [only] = entries;
@@ -642,7 +654,10 @@ function writeDownloadUrl(
   const name = only.path.slice(only.path.lastIndexOf("/") + 1);
   // The format's own separator: a name holding one cannot be spelled.
   if (name === "" || name.includes(":")) return;
-  const asset = assetUrlOver(transport, hostFileUrl(only.path));
+  const asset = assetUrlOver(
+    transport,
+    fileUrl({ fs: "computer", path: only.path }),
+  );
   if (asset.kind !== "ready") return;
   const url = new URL(asset.url, window.location.href).href;
   dt.setData("DownloadURL", `application/octet-stream:${name}:${url}`);

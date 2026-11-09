@@ -1,5 +1,8 @@
 import { useMemo } from "react";
-import type { ExplorerLens } from "@plugins/apps/plugins/file-explorer/plugins/browser/core";
+import type {
+  ExplorerFolder,
+  ExplorerLens,
+} from "@plugins/apps/plugins/file-explorer/plugins/browser/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { relativeTo } from "../../shared/status-index";
 import { useGitView } from "./use-git";
@@ -12,12 +15,13 @@ const ignoredIcon = symbol("commit");
 const NO_LENS: ExplorerLens = {};
 
 /**
- * The git lens on the absolute folder `dir`: ignored files behind a "Show
+ * The git lens on the absolute folder `dir` — of the computer's disk only
+ * (git runs on this computer's checkouts): ignored files behind a "Show
  * ignored files" toggle, and a changed file's git context (its status against
  * the main merge-base, else against HEAD), which gives its preview a Diff tab.
  */
-export function useGitLens(dir: string): ExplorerLens {
-  const view = useGitView(dir);
+export function useGitLens(folder: ExplorerFolder): ExplorerLens {
+  const view = useGitView(folder.fs === "computer" ? folder.dir : null);
   return useMemo<ExplorerLens>(() => {
     if (view.kind !== "ready") return NO_LENS;
     const { checkout, index } = view;

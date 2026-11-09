@@ -1,17 +1,18 @@
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import { defineItemActions } from "@plugins/primitives/plugins/data-view/web";
-import type { EntryRow, ExplorerLens } from "../core";
+import type { EntryRow, ExplorerFolder, ExplorerLens } from "../core";
 
 /**
- * A lens on the browser's folder: `useLens(dir)` (a hook, so a lens may read
- * the server) answers what it hides and what it knows of a file's git state.
- * `dir` is absolute.
+ * A lens on the browser's folder: `useLens(folder)` (a hook, so a lens may
+ * read the server) answers what it hides and what it knows of a file's git
+ * state. `folder.dir` is absolute in `folder.fs`; a lens that knows only one
+ * file system answers nothing for another.
  */
 export interface ExplorerLensItem {
   /** Unique among lenses. */
   id: string;
-  useLens: Hook<(dir: string) => ExplorerLens>;
+  useLens: Hook<(folder: ExplorerFolder) => ExplorerLens>;
 }
 
 /**

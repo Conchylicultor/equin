@@ -12,4 +12,13 @@ describe("home-relative paths", () => {
     expect(displayPath("/h/meow", HOME_ABS)).toBe("/h/meow");
     expect(displayPath("~/a", HOME_ABS)).toBe("~/a");
   });
+
+  test("a home at the root: every path is under it", () => {
+    expect(absolutePath("~/Documents", "/")).toBe("/Documents");
+    expect(absolutePath("~", "/")).toBe("/");
+    expect(displayPath("/Documents/a.md", "/")).toBe("~/Documents/a.md");
+    expect(displayPath("/", "/")).toBe("~");
+    expect(displayPath("~/a", "/")).toBe("~/a");
+    expect(displayPath("relative", "/")).toBe("relative");
+  });
 });

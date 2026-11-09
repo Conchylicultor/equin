@@ -287,8 +287,8 @@ to reconcile them; they never needed reconciling.
     - `ui/tokens/type-scale` ×37
     - `ui/tokens/color-palette` ×6
     - `ui/tokens/font-family` ×2
-  - Imported by: 419 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×111
+  - Imported by: 418 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×110
     - `conversations` ×80
     - `primitives` ×47
     - `debug` ×37

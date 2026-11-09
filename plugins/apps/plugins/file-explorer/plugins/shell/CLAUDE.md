@@ -12,7 +12,6 @@
     - `FileExplorer.Places`
   - Slot contributors:
     - `FileExplorer.Sidebar` ← `apps.file-explorer.places`
-    - `FileExplorer.Places` ← `apps.file-explorer.app-data`
     - `FileExplorer.Places` ← `apps.file-explorer.places`
   - Contributes:
     - `Apps.App` "Files" → `FileExplorerLayout`
@@ -31,7 +30,6 @@
     - `PlacesSource`
     - `PlacesState`
     - `ResolvedPlaces`
-    - `RoutePlace`
   - Exports (values):
     - `FileExplorer`
     - `ResolvePlaces`
@@ -42,8 +40,6 @@
   - Exports (values): `fileExplorerApp`
 - Cross-plugin:
   - Imported by:
-    - `apps/file-explorer`
-    - `apps/file-explorer/app-data`
     - `apps/file-explorer/attachment-preview`
     - `apps/file-explorer/browser`
     - `apps/file-explorer/folder-peek`

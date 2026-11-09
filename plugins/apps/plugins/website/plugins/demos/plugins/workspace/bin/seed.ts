@@ -33,10 +33,8 @@ import {
 import { writePrototypeFixture } from "@plugins/apps/plugins/prototypes/plugins/fixtures/server";
 import { writeSongFixtures } from "@plugins/apps/plugins/sonata/plugins/fixtures/server";
 import { writePlacesFixture } from "@plugins/apps/plugins/places/plugins/fixtures/server";
-import {
-  writeDocumentsFixture,
-  type DocumentsFixture,
-} from "@plugins/apps/plugins/file-explorer/plugins/documents/server";
+import { writeBrowserHomeFiles } from "@plugins/infra/plugins/paths/plugins/data-files/plugins/memory/server";
+import { systemOrigin } from "@plugins/infra/plugins/request-origin/core";
 import { settleJobQueue } from "@plugins/infra/plugins/jobs/plugins/in-process/server";
 import { eq } from "drizzle-orm";
 import {
@@ -99,16 +97,17 @@ import {
  * 7. Demo's Places map (`../core`'s), through Places' fixture writer
  *    (`writePlacesFixture`): its tags through the tag tree's endpoints on the
  *    host, its places through the app's one insert, icons given;
- * 8. Demo's Documents in Files (`../data/documents/`), through Files'
- *    fixture writer (`writeDocumentsFixture`): notes, a markdown doc, code, a
- *    picture, a page and a PDF, each written through the root's own write.
+ * 8. Demo's Documents (`../data/documents/`), at `~/Documents` of the
+ *    browser's own home folder — what Files opens on — through the browser
+ *    file system's own writes (`writeBrowserHomeFiles`): notes, a markdown
+ *    doc, code, a picture, a page, a PDF and a recording.
  */
 /** The seed's input: the demo's `data/` folder, split by what each writer takes. */
 export interface DemoSeedData {
   /** `data/prototypes/` and `data/thumbnails/`: Prototypes' fixture. */
   prototypes: PrototypeFixtureData;
-  /** `data/documents/`: the user's Documents in Files, path → bytes. */
-  documents: DocumentsFixture;
+  /** `data/documents/`: Demo's `~/Documents`, path below it → bytes. */
+  documents: Readonly<Record<string, Uint8Array>>;
 }
 
 const PRACTICE_TIMER = demoStoryByKey("practice-timer");
@@ -233,7 +232,15 @@ export async function seed(
   await settleJobQueue();
   await writePlacesFixture(DEMO_PLACES, host);
   await settleJobQueue();
-  await writeDocumentsFixture(data.documents);
+  await writeBrowserHomeFiles(
+    Object.fromEntries(
+      Object.entries(data.documents).map(([path, bytes]) => [
+        `~/Documents/${path}`,
+        bytes,
+      ]),
+    ),
+    systemOrigin("demo seed"),
+  );
   await settleJobQueue();
 }
 

@@ -29,7 +29,7 @@ ruleTester.run("no-cell-live-read", rule, {
   invalid: [
     // A cell rendering a same-file component that calls useLive.
     {
-      code: `function FolderSize({ path }) { const peek = useLive(hostFsDirPeek, { path }); return <span>{peek.status}</span>; }
+      code: `function FolderSize({ path }) { const peek = useLive(computerDirPeek, { path }); return <span>{peek.status}</span>; }
              const f = { id: "size", cell: (r) => r.kind === "dir" ? <FolderSize path={r.path} /> : null };`,
       errors: [{ messageId: "cellLiveRead" }],
     },

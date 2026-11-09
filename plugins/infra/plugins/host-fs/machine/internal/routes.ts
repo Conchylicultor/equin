@@ -3,7 +3,12 @@ import {
   implementMachine,
   machineHandler,
 } from "@plugins/infra/plugins/endpoints/machine";
-import { hostFsExtract, hostFsMove, hostFsOpen, hostFsRaw } from "../../core";
+import { hostFsRaw } from "../../core";
+import {
+  computerFileExtract,
+  computerFileMove,
+  computerFileOpen,
+} from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { extractHostArchive } from "../../server/internal/extract";
 import { moveHostPaths } from "../../server/internal/move";
 import { openHostPath } from "../../server/internal/open";
@@ -13,7 +18,8 @@ import { handleRaw as rawBytes } from "../../server/internal/raw";
 // host-fs's routes: every one reads or changes the host filesystem, so each
 // endpoint is declared `needsMachine` and served here — a host without the
 // computer (the in-browser demo) answers it unavailable without a request.
-// The reads a surface makes (stat, complete, …) are live values (`./reads.ts`,
+// The writes (open, extract, move) are file-systems' `computer` endpoints; the
+// reads a surface makes (stat, complete, …) are live values (`./reads.ts`,
 // `./complete.ts`); `raw` stays a route because a byte URL is an asset.
 // Who may call them is the socket host's principal gate, not a per-route
 // Origin check: every route here is owner-only (no `access: { public }`), so a
@@ -22,7 +28,7 @@ import { handleRaw as rawBytes } from "../../server/internal/raw";
 /** The bytes: a raw handler (its own status and headers — 200 / 206 / 416). */
 export const handleRaw = machineHandler(hostFsRaw, rawBytes);
 
-export const handleOpen = implementMachine(hostFsOpen, ({ body }) => {
+export const handleOpen = implementMachine(computerFileOpen, ({ body }) => {
   if (process.platform !== "darwin") {
     throw new HttpError(
       501,
@@ -32,11 +38,11 @@ export const handleOpen = implementMachine(hostFsOpen, ({ body }) => {
   return openHostPath(resolveHostPath(body.path), body.reveal ?? false);
 });
 
-export const handleExtract = implementMachine(hostFsExtract, ({ body }) =>
+export const handleExtract = implementMachine(computerFileExtract, ({ body }) =>
   extractHostArchive(resolveHostPath(body.path)),
 );
 
-export const handleMove = implementMachine(hostFsMove, ({ body }) => {
+export const handleMove = implementMachine(computerFileMove, ({ body }) => {
   const resolutions = new Map(
     Object.entries(body.resolutions ?? {}).map(
       ([source, resolution]) => [resolveHostPath(source), resolution] as const,

@@ -1,13 +1,9 @@
 export {
   HOST_FS_COMPLETE_LIMIT,
-  HOST_FS_MOVE_MAX_SOURCES,
   HOST_FS_PEEK_MAX_NAMES,
   HOST_FS_TEXT_MAX_BYTES,
   MACOS_FILES_AND_FOLDERS_SETTINGS,
   hostFileUrl,
-  hostFsExtract,
-  hostFsMove,
-  hostFsOpen,
   hostFsRaw,
   isBrowsable,
 } from "./internal/endpoints";
@@ -16,12 +12,7 @@ export type {
   HostFsCompleteResult,
   HostFsEntry,
   HostFsEntryKind,
-  HostFsExtractResult,
   HostFsListResult,
-  HostFsMoveOutcome,
-  HostFsMoveResolution,
-  HostFsMoveResult,
-  HostFsOpenResult,
   HostFsPeekResult,
   HostFsReadAccess,
   HostFsStatResult,
@@ -29,14 +20,6 @@ export type {
   HostFsVolumeResult,
   HostFsWithin,
 } from "./internal/endpoints";
-export {
-  HOST_PATHS_MIME,
-  handOffHostPaths,
-  hasHostPaths,
-  readHostPaths,
-  writeHostPaths,
-} from "./internal/drag";
-export type { DraggedHostPath, ReadHostPathsResult } from "./internal/drag";
 export {
   FileVersionSchema,
   hostFsVersion,
@@ -46,15 +29,8 @@ export { compareHostFsNames } from "./internal/names";
 export { HOST_FS_MACHINE } from "./internal/machine-feature";
 export {
   HostFsListingQuerySchema,
-  hostFsArchiveReasonMessage,
-  hostFsCompletions,
-  hostFsDirPeek,
   hostFsListing,
   hostFsPathStat,
-  hostFsVolumeInfo,
-  type HostFsCompletions,
-  type HostFsDirPeek,
   type HostFsListingMeta,
   type HostFsPathStat,
-  type HostFsVolumeInfo,
 } from "./internal/live";

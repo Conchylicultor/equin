@@ -57,10 +57,12 @@ import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage
 import { z } from "zod";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import {
-  hasHostPaths,
-  readHostPaths,
-  type HostFsEntry,
-} from "@plugins/infra/plugins/host-fs/core";
+  hasFileLocations,
+  readFileLocations,
+  type BrowsableFileSystem,
+  type FileEntry,
+} from "@plugins/infra/plugins/paths/plugins/file-systems/core";
+import { showToast } from "@plugins/shell/plugins/toast/web";
 import type { RowSelectionState } from "@plugins/primitives/plugins/tree/core";
 import { DROP_TARGET_RING } from "@plugins/primitives/plugins/data-view/web";
 import {
@@ -73,7 +75,11 @@ import {
   type EntryRow,
   type LensHideRule,
 } from "../../core";
-import { useHostPathSource, useHomeDir } from "../internal/host-path-source";
+import { useFolderPathSource } from "../internal/host-path-source";
+import {
+  useExplorerSystem,
+  type ExplorerSystem,
+} from "../internal/explorer-system";
 import {
   isOnDisk,
   unlistedCount,
@@ -129,18 +135,21 @@ export interface FileBrowserProps {
    * Where the browser is and how it moves. The `/files` app passes its route
    * navigator (back / forward are the browser history; every location is a
    * link). Absent → the browser keeps its own location and history, starting
-   * at `initialPath` — for a browser embedded in another surface.
+   * at `initialPath` in `fs` — for a browser embedded in another surface.
    */
   navigator?: ExplorerNavigator;
+  /** The file system an embedded browser shows. Default the computer's disk. */
+  fs?: BrowsableFileSystem;
   /** Where an embedded browser starts. Default `~`. */
   initialPath?: string;
   /**
    * The highest folder this browser may show: up and the path bar stop here
-   * (an embedded browser rooted at a checkout). Absent → the whole host.
+   * (an embedded browser rooted at a checkout). Absent → the whole system.
    */
   root?: string;
   /**
-   * Where a file opens instead, given its absolute path (a consumer with its
+   * Where a file opens instead, given its absolute path in the browser's
+   * file system (a consumer with its
    * own preview) — a `LinkTarget` when that is a place, so ⌘/middle-click
    * opens it in a new browser tab. When set, the browser has no preview pane
    * of its own: selecting or opening a file activates this instead.
@@ -156,7 +165,8 @@ export interface FileBrowserProps {
 }
 
 /**
- * A file browser over the host filesystem: a toolbar (back / forward / up, the
+ * A file browser over one file system (the computer's disk, the browser's
+ * storage — whatever this host serves): a toolbar (back / forward / up, the
  * Dolphin path bar, a filter), the folder as a lazily-listed tree with Name /
  * Modified / Size, a status bar, and the selected file previewed in a
  * resizable pane beside it.
@@ -175,22 +185,24 @@ export function FileBrowser(props: FileBrowserProps): ReactNode {
 const FILES_SCOPE = appThemeScope(fileExplorerApp.id);
 
 function FileBrowserBody(props: FileBrowserProps): ReactNode {
-  const home = useHomeDir();
-  if (home.kind === "pending") return <Loading variant="rows" />;
-  if (home.kind === "failed") {
+  const state = useExplorerSystem(
+    props.navigator?.location.fs ?? props.fs ?? "computer",
+  );
+  if (state.kind === "pending") return <Loading variant="rows" />;
+  if (state.kind === "failed") {
     return (
       <ResourceErrorInline
         variant="block"
-        subject="the home directory"
-        error={home.error}
-        refetch={home.refetch}
+        subject="this file system"
+        error={state.error}
+        refetch={state.refetch}
       />
     );
   }
-  if (home.kind === "unavailable") {
-    return <Placeholder>{home.message}</Placeholder>;
+  if (state.kind === "unavailable") {
+    return <Placeholder>{state.message}</Placeholder>;
   }
-  return <FileBrowserReady {...props} home={home.home} />;
+  return <FileBrowserReady {...props} system={state.system} />;
 }
 
 function FileBrowserReady({
@@ -199,9 +211,14 @@ function FileBrowserReady({
   root,
   fileTarget,
   atSurfaceEdge = navigator !== undefined,
-  home,
-}: FileBrowserProps & { home: string }): ReactNode {
-  const local = useLocalNavigator({ dir: initialPath, open: null });
+  system,
+}: FileBrowserProps & { system: ExplorerSystem }): ReactNode {
+  const { home } = system;
+  const local = useLocalNavigator({
+    fs: system.fs,
+    dir: initialPath,
+    open: null,
+  });
   const nav = navigator ?? local;
   const { dir, open } = nav.location;
   const { contentOwnsTopChrome, leadingControl } =
@@ -214,13 +231,13 @@ function FileBrowserReady({
   const [lensShown, setLensShown] = useDraft(lensShownStore, NONE_SHOWN);
 
   const listing = (
-    <WithLenses dir={absolutePath(dir, home)}>
+    <WithLenses fs={system.fs} dir={absolutePath(dir, home)}>
       {(lens) => (
         <ExplorerControlsSlot.Provider>
           <Listing
             key={dir}
             nav={nav}
-            home={home}
+            system={system}
             root={root}
             fileTarget={fileTarget}
             lens={lens}
@@ -243,10 +260,14 @@ function FileBrowserReady({
 
   const preview =
     open === null ? null : (
-      <WithLenses dir={absolutePath(parentPath(open, home) ?? "/", home)}>
+      <WithLenses
+        fs={system.fs}
+        dir={absolutePath(parentPath(open, home) ?? "/", home)}
+      >
         {(lens) => (
           <PreviewPane
             key={open}
+            fs={system.fs}
             path={open}
             home={home}
             git={lens.fileGit(absolutePath(open, home))}
@@ -294,7 +315,7 @@ function FileBrowserReady({
  */
 function Listing({
   nav,
-  home,
+  system,
   root,
   fileTarget,
   lens,
@@ -306,7 +327,7 @@ function Listing({
   endSafeArea,
 }: {
   nav: ExplorerNavigator;
-  home: string;
+  system: ExplorerSystem;
   root: string | undefined;
   fileTarget: ((path: string) => Activation) | undefined;
   lens: ComposedLens;
@@ -318,6 +339,7 @@ function Listing({
   endSafeArea: boolean;
 }): ReactNode {
   const { dir, open } = nav.location;
+  const { home } = system;
   const [query, setQuery] = useState("");
   // The selected rows, by path: Finder's set and the anchor a range grows
   // from. The anchor is the primary row — the one the status bar names.
@@ -327,9 +349,9 @@ function Listing({
   }));
   const selected = selection.anchor;
   const treeRef = useRef<HTMLElement | null>(null);
-  const source = useHostPathSource(home, root);
-  const { listings, request, setOpen, readers } = useListings(dir);
-  const moveInto = useMoveInto();
+  const source = useFolderPathSource(system, root);
+  const { listings, request, setOpen, readers } = useListings(system.fs, dir);
+  const moveInto = useMoveInto(system.fs);
   // The paths this listing is dragging right now: dropping them back into
   // the folder they sit in is no move, so the pane does not offer it.
   const dragging = useRef<readonly string[] | null>(null);
@@ -358,7 +380,7 @@ function Listing({
     [lens, lensShown],
   );
   const shows = useCallback<EntryFilter>(
-    (entry: Pick<HostFsEntry, "hidden">, path: string) => {
+    (entry: Pick<FileEntry, "hidden">, path: string) => {
       if (!showHidden && entry.hidden) return false;
       if (activeHides.length === 0) return true;
       const abs = absolutePath(path, home);
@@ -442,15 +464,25 @@ function Listing({
     }
   };
 
-  // Host paths dropped on a folder (`target`, display form) move into it.
-  // The drop's data is read here, before anything is awaited.
+  // Files dropped on a folder (`target`, display form) move into it — files
+  // of this browser's system only: moving between two file systems is not
+  // offered yet (it says so). The drop's data is read here, before anything
+  // is awaited.
   const dropInto = (target: string, dt: DataTransfer) => {
-    const read = readHostPaths(dt);
+    const read = readFileLocations(dt);
     if (read.kind === "absent") return;
     if (read.kind === "malformed") {
       throw new Error(
-        `file-explorer: malformed host-paths drop: ${read.error}`,
+        `file-explorer: malformed file-locations drop: ${read.error}`,
       );
+    }
+    if (read.fs !== system.fs) {
+      showToast({
+        variant: "error",
+        description:
+          "Moving files between two file systems is not supported yet",
+      });
+      return;
     }
     void moveInto(
       read.entries.map((e) => e.path),
@@ -468,7 +500,8 @@ function Listing({
   // The listing's own empty space — below the rows too — is this folder.
   const background = useBackgroundDrop({
     accepts: (types) =>
-      hasHostPaths(types) &&
+      system.capabilities.move &&
+      hasFileLocations(types) &&
       isOnDisk(listings, dir) &&
       !allIn(dragging.current, absolutePath(dir, home)),
     onDrop: (dt) => dropInto(dir, dt),
@@ -524,7 +557,7 @@ function Listing({
         rowActivation={rowActivation}
         onOpen={onOpen}
         emptyState={<Placeholder>This folder is empty</Placeholder>}
-        home={home}
+        system={system}
         rowSelection={{ ...selection, onChange: onSelectionChange }}
         onDragPaths={onDragPaths}
         onDropInto={dropInto}

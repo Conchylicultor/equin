@@ -35,7 +35,6 @@ edited-files rooms.
     - `conversations/conversation-view/jsonl-viewer`
     - `infra/file-watcher`
     - `infra/git/checkout-watch`
-    - `infra/paths/data-files`
     - `infra/paths/data-files/memory`
     - `packages/watched-memo`
     - `primitives/metrics`

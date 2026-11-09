@@ -674,8 +674,8 @@ with an empty route.
 - Load-bearing: yes
 - Web:
   - Slots: `Pane.Register`
-  - Slot contributors: 95 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Pane.Register` ×95
+  - Slot contributors: 94 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Pane.Register` ×94
   - Contributes: 125 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `SlotRender.ListMiddleware`
     - `WebsiteHeader` "title" → `PaneTitleItem`
@@ -734,9 +734,9 @@ with an empty route.
     - `exhibits.actions` "title" → `PaneTitleItem`
     - `explorerPane.Actions` "title" → `PaneTitleItem`
     - `filePeekPane.Actions` "title" → `PaneTitleItem`
-    - `files-data-at.actions` "title" → `PaneTitleItem`
-    - `files-data.actions` "title" → `PaneTitleItem`
-    - `filesAtPane.Actions` "title" → `PaneTitleItem`
+    - `files-at.actions` "title" → `PaneTitleItem`
+    - `filesBrowserAtPane.Actions` "title" → `PaneTitleItem`
+    - `filesComputerAtPane.Actions` "title" → `PaneTitleItem`
     - `filesHomePane.Actions` "title" → `PaneTitleItem`
     - `folderPeekPane.Actions` "title" → `PaneTitleItem`
     - `graphCanvasPane.Actions` "title" → `PaneTitleItem`
@@ -940,8 +940,8 @@ with an empty route.
     - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-md`
     - `ui/tokens/shape --spacing`
-  - Imported by: 194 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×72
+  - Imported by: 193 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×71
     - `conversations` ×32
     - `debug` ×27
     - `active-data` ×10

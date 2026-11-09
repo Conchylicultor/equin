@@ -4,6 +4,7 @@
 // under the hidden data folder the desktop keeps them in.
 
 import { expect, test } from "bun:test";
+import { declareMemoryHostStorage } from "@plugins/framework/plugins/browser-server/plugins/host-storage/core/testing";
 import { withHostServices } from "@plugins/framework/plugins/server-core/core/testing";
 import {
   DataFiles,
@@ -14,13 +15,21 @@ import { systemOrigin } from "@plugins/infra/plugins/request-origin/core";
 import { createMemoryDataFiles } from "./memory-store";
 import { DATA_FOLDER } from "./home-layout";
 import {
+  browserDirPeekServed,
   browserFileBytesServed,
+  browserListingMeta,
+  browserListingPage,
   browserFileStatServed,
   browserFileTextServed,
   handleBrowserFileRaw,
+  moveBrowserFiles,
+  writeBrowserHomeFiles,
 } from "./browser-files";
 
 const w = { writer: systemOrigin("browser files test") };
+
+// The home's tree is the host's own store, kept in its declared storage.
+declareMemoryHostStorage();
 
 const watched = defineFileRoot({
   id: "test.browser-files",
@@ -28,7 +37,7 @@ const watched = defineFileRoot({
   watch: { name: "browser-files-test.tree", description: "Test root." },
 });
 
-// No `watch`, no `browse`: still a folder of the browser's file system.
+// No `watch`: still a folder of the browser's file system.
 const cache = defineFileRoot({
   id: "test.browser-files-cache",
   dir: "cache/browser-files-test",
@@ -63,7 +72,7 @@ test("a root's file reads at its data dir under the hidden data folder, every mi
     ).rejects.toMatchObject({ code: "missing" });
   }));
 
-test("a root declared without watch or browse is a folder like any other", () =>
+test("a root declared without watch is a folder like any other", () =>
   withStore(async () => {
     await cache.write(relPath("x.txt"), "cached", w);
     const text = await browserFileTextServed.load({
@@ -84,9 +93,128 @@ test("the folders above the roots are implied by the roots there are", () =>
     expect(
       browserFileStatServed.load({ path: `${DATA}/nothing-here` }),
     ).rejects.toMatchObject({ code: "missing" });
+    // The home's own tree holds nothing until something is written there.
     expect(
       browserFileStatServed.load({ path: "~/Documents" }),
     ).rejects.toMatchObject({ code: "missing" });
+    expect(await browserFileStatServed.load({ path: "~" })).toMatchObject({
+      path: "~",
+      parent: null,
+    });
+  }));
+
+test("the home's own tree sits beside the hidden data folder", () =>
+  withStore(async () => {
+    await writeBrowserHomeFiles(
+      { "~/Documents/notes.md": "# Notes", "~/todo.txt": "milk" },
+      w.writer,
+    );
+    const range = { after: null, until: null, limit: 500 } as const;
+    const names = async (path: string) =>
+      (await browserListingPage({ path }, range)).map((e) => e.name);
+    expect(await names("~")).toEqual([DATA_FOLDER, "Documents", "todo.txt"]);
+    expect(await names("~/Documents")).toEqual(["notes.md"]);
+    expect(await browserListingMeta({ path: "~/Documents" })).toEqual({
+      path: "~/Documents",
+      parent: "~",
+      total: 1,
+    });
+    const stat = await browserFileStatServed.load({
+      path: "~/Documents/notes.md",
+    });
+    expect(stat).toMatchObject({
+      path: "~/Documents/notes.md",
+      parent: "~/Documents",
+      entry: { kind: "file", size: 7 },
+    });
+    expect((await browserDirPeekServed.load({ path: "~" })).kind).toBe("ok");
+    expect(
+      browserListingPage({ path: "~/todo.txt" }, range),
+    ).rejects.toMatchObject({ code: "not-a-dir" });
+    expect(
+      writeBrowserHomeFiles({ [`${AT}/x`]: "no" }, w.writer),
+    ).rejects.toThrow(/home's own tree/);
+  }));
+
+test("a move inside the home is the Finder's; the apps' folders are kept", () =>
+  withStore(async () => {
+    const range = { after: null, until: null, limit: 500 } as const;
+    await writeBrowserHomeFiles(
+      {
+        "~/a.txt": "a",
+        "~/Archive/a.txt": "old",
+        "~/Archive/sub/b.txt": "b",
+      },
+      w.writer,
+    );
+    const taken = await moveBrowserFiles(
+      ["~/a.txt"],
+      "~/Archive",
+      {},
+      w.writer,
+    );
+    expect(taken).toEqual({
+      kind: "ok",
+      destDir: "~/Archive",
+      results: [{ kind: "exists", from: "~/a.txt", to: "~/Archive/a.txt" }],
+    });
+    const both = await moveBrowserFiles(
+      ["~/a.txt"],
+      "~/Archive",
+      { "~/a.txt": "keep-both" },
+      w.writer,
+    );
+    expect(both.kind === "ok" && both.results[0]).toEqual({
+      kind: "moved",
+      from: "~/a.txt",
+      to: "~/Archive/a 2.txt",
+    });
+    const self = await moveBrowserFiles(
+      ["~/Archive"],
+      "~/Archive/sub",
+      {},
+      w.writer,
+    );
+    expect(self.kind === "ok" && self.results[0]?.kind).toBe("into-self");
+    // Replace sets the taken entry aside until the source is in place.
+    await writeBrowserHomeFiles({ "~/b.txt": "new" }, w.writer);
+    const replaced = await moveBrowserFiles(
+      ["~/../x", "~/b.txt"],
+      "~/Archive/sub",
+      { "~/b.txt": "replace" },
+      w.writer,
+    );
+    expect(
+      replaced.kind === "ok" && replaced.results.map((r) => r.kind),
+    ).toEqual(["missing", "moved"]);
+    await writeBrowserHomeFiles({ "~/b.txt": "newer" }, w.writer);
+    const again = await moveBrowserFiles(
+      ["~/b.txt"],
+      "~/Archive/sub",
+      { "~/b.txt": "replace" },
+      w.writer,
+    );
+    expect(again.kind === "ok" && again.results[0]?.kind).toBe("moved");
+    const text = await browserFileTextServed.load({
+      path: "~/Archive/sub/b.txt",
+    });
+    expect(text.content).toBe("newer");
+    expect(
+      (await browserListingPage({ path: "~/Archive/sub" }, range)).map(
+        (e) => e.name,
+      ),
+    ).toEqual(["b.txt"]);
+    expect(
+      await moveBrowserFiles(["~/Archive/a.txt"], AT, {}, w.writer),
+    ).toEqual({ kind: "archive", path: AT });
+    await watched.write(relPath("kept.txt"), "app", w);
+    const app = await moveBrowserFiles(
+      [`${AT}/kept.txt`],
+      "~/Archive",
+      {},
+      w.writer,
+    );
+    expect(app.kind === "ok" && app.results[0]?.kind).toBe("archive");
   }));
 
 test("a binary file has no text", () =>
@@ -133,15 +261,4 @@ test("a root's location is its data dir under the browser's hidden data folder",
     fs: "browser",
     path: AT,
   });
-});
-
-test("browse without watch is refused", () => {
-  expect(() =>
-    // @ts-expect-error — `browse` needs `watch` (BrowseNeedsWatch)
-    defineFileRoot({
-      id: "test.browse-unwatched",
-      dir: "apps/x",
-      browse: { label: "X" },
-    }),
-  ).toThrow(/without `watch`/);
 });

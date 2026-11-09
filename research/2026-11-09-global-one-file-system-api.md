@@ -2,7 +2,7 @@
 
 Task: task-1794184535-l1s405 (attempt att-1794184536-w9oj3z). Track: "apps running in the browser" (wiki block-d04c6c0d-56fd-49f2-88f4-914e059cc83b); the same design is the track's sub-page "Design: one file-system API, many file systems". Session decision: D22 (block-e48cf036-58bd-4faa-802d-40037ef5fe1a).
 
-Status: **design, waiting for review**. Nothing is implemented.
+Status: design approved (D22a–d); sessions 1 and 2 implemented (outcomes at the end), session 3 next.
 
 ## Context
 
@@ -178,3 +178,17 @@ Estimated at 3 sessions.
 - `./equin check`, including the new boot rule and plugin-boundaries.
 - `./equin build`, then the 11 demo e2e scripts, with `file-explorer-in-demo.ts` extended so PDF and audio preview and Files opens on Home. The no-leak e2e must find no request to the page's server.
 - On the desktop build: Files' move, extract, open, path bar and git columns are unchanged (screenshot.ts before/after), and conversation file peeks open checkout files at a ref.
+
+## Session 2 outcome (2026-11-09, att-1794187380-hzxi72)
+
+Files reads any browsable file system through file-systems; App data and the Documents root are gone.
+
+- **Shape, as built.** The set stays closed and per-system (session 1's choice): `BrowsableFileSystem = "computer" | "browser"`; each declares `files.<fs>.list` (paged, meta `{path, parent, total, within?}`), `.peek`, `.stat` (now with the resolved `path` and `parent`), and `POST /api/files/<fs>/move`. Operations only the computer has are declared only for it (`files.computer.complete` / `.volume`, `computerFileOpen`, `computerFileExtract`, `handOffComputerFiles`), so they cannot be called on another system. `FILE_SYSTEMS[fs].capabilities` is the data the UI gates on.
+- **Which systems are here**: `files.systems`, from `FileSystemProvided(fs)` contributions (host-fs machine → `computer`, the in-browser store → `browser`). Files' index opens on the first served system's Home; a link into a system not served says so.
+- **Moved out of host-fs core**: the peek / complete / volume values, the open / extract / move endpoints (routes now `/api/files/computer/*`), the drag payload (now `FILE_LOCATIONS_MIME` carrying `fs`) and the archive-reason sentence. host-fs's machine half serves file-systems' declarations; `host-fs.list` and `files.computer.list` share one held listing. Still in host-fs core for session 3: `hostFsListing`, `hostFsPathStat`, `hostFileUrl`, `compareHostFsNames`.
+- **The browser's home** (D22a): the memory provider keeps a home tree beside the roots; `~` lists it plus the hidden `.equin/`. Moves inside the home are the Finder's (exists / keep-both / replace / skip); the apps' folders are refused as move sources or targets. The demo seed writes `~/Documents` through `writeBrowserHomeFiles`. The browser's home is its root, so host-account's `absolutePath` / `displayPath` now take a home of `/`.
+- **Routes** (D22d): `/files/computer/at/…`, `/files/browser/at/…` (a route cannot start with a `:param`, so one literal-prefix pane per system); the old `/files/at/…` pane forwards to the computer's with a history replace.
+- **Places / Favorites**: a place is always a folder of a file system (`RoutePlace` is gone); Home lists one per served system; pins store `fs` (an old pin heals to `computer`, and keeps its row key, so saved order survives).
+- **Cross-system move** (D22c): a drop of another system's files says "Moving files between two file systems is not supported yet".
+- **Not in this session**: Files never had rename / new folder / trash; they are not added (the capability flags have no such entries yet). Checkouts are not browsable in Files (read file by file).
+- **Verified**: build + every check; unit tests of host-fs, file-systems, data-files/memory, Files, host-account; all 11 demo e2e scripts (`file-explorer-in-demo.ts` now opens on Home, `~/Documents`, every viewer, and `~/.equin/apps/prototypes`); desktop Files by hand and by its e2e scripts (listing, Places, storage meter, folder sizes, zips, git dots / Diff, the old-URL redirect, move on disk). Pre-existing failures, identical on main: `explorer-verify` / `folders-on-top-verify` / `item-count-verify` (their cell selectors), git-verify's file badge in a deep folder; select-and-move's 5 s wait for a pushed listing times out on this loaded machine on main too (FSEvents dropping events).

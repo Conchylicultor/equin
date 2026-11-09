@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { hostFsVolumeInfo } from "@plugins/infra/plugins/host-fs/core";
+import { computerVolume } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { Meter } from "@plugins/primitives/plugins/css/plugins/meter/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -15,13 +15,14 @@ const METER_INSET = {
 /**
  * The startup volume's storage, at the foot of the Places sidebar: its name,
  * a bar filled to the used fraction, and "X GB free of Y GB". Free space is
- * a `host-fs.volume` snapshot — measured as the sidebar mounts (nothing
+ * a `files.computer.volume` snapshot — measured as the sidebar mounts (nothing
  * signals a change). Renders nothing until the volume has answered — a meter
  * at zero would claim an empty disk — nor when it cannot (the startup-volume
- * place above says why).
+ * place above says why), nor on a host without the computer's disk: only it
+ * has a volume to measure.
  */
 export function StorageMeter(): ReactNode {
-  const volume = useLive(hostFsVolumeInfo, { path: "/" });
+  const volume = useLive(computerVolume, { path: "/" });
   switch (volume.status) {
     case "loading":
     case "error":

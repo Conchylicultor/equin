@@ -101,10 +101,10 @@ async function expand(page: Page, name: string): Promise<void> {
   await row(page, name).locator("button[aria-label='Expand']").click();
 }
 
-/** Every folder path a `host-fs.peek` subscription has asked for, deduplicated. */
+/** Every folder path a `files.computer.peek` subscription has asked for, deduplicated. */
 const peeked = new Set<string>();
 
-/** The `host-fs.peek` paths one client socket frame subscribes (a sub or a replay). */
+/** The `files.computer.peek` paths one client socket frame subscribes (a sub or a replay). */
 function peekPaths(payload: string | Buffer): string[] {
   if (typeof payload !== "string") return [];
   const frame = JSON.parse(payload) as {
@@ -120,7 +120,7 @@ function peekPaths(payload: string | Buffer): string[] {
         ? (frame.entries ?? [])
         : [];
   return subs.flatMap((sub) =>
-    sub.key === "host-fs.peek" && sub.params?.path !== undefined
+    sub.key === "files.computer.peek" && sub.params?.path !== undefined
       ? [sub.params.path]
       : [],
   );

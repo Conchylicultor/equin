@@ -27,18 +27,3 @@ export type {
 } from "./internal/types";
 export { copyTree, readText, stageThenRename } from "./internal/helpers";
 export type { ReadTextResult } from "./internal/helpers";
-export {
-  BrowsableRootSchema,
-  DataFileEntrySchema,
-  DataFileStatSchema,
-  DataFolderMetaSchema,
-  DataFolderQuerySchema,
-  dataFileRoots,
-  dataFileStat,
-  dataFolderListing,
-} from "./internal/browse";
-export type {
-  BrowsableRoot,
-  DataFileStat,
-  DataFolderMeta,
-} from "./internal/browse";

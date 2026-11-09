@@ -9,7 +9,7 @@ location to the reads here and never asks which system it is in. Design:
 
 ```ts
 const pdf: FileLocation = { fs: "computer", path: "~/Downloads/boarding-pass.pdf" };
-const note: FileLocation = { fs: "browser", path: "~/.equin/apps/file-explorer/Notes/groceries.txt" };
+const note: FileLocation = { fs: "browser", path: "~/Documents/Notes/groceries.txt" };
 const old: FileLocation = { fs: "checkout", checkout: "att-123", path: "plugins/a.ts", version: "HEAD" };
 
 useFileText(note);        // web: loading | ok | unavailable (why) | error
@@ -23,7 +23,7 @@ useAssetSrc(fileUrl(pdf)) // an <img>/<iframe>/<video> src, over the subtree's t
 | `fs` | What | Served by | Path |
 |---|---|---|---|
 | `computer` | the computer's disk | host-fs's `machine/` (desktop only, `needsMachine`) | absolute, or `~`-rooted; `.`/`..` collapsed; may cross into an archive (`~/x.zip/a.jpg`) |
-| `browser` | a browser host's own storage, laid out like a home folder | data-files' in-browser store (`data-files/plugins/memory`, browser hosts only) | `~`-rooted; the apps' folders sit under the hidden `~/.equin/` at their data dir (`~/.equin/apps/prototypes/…`), the folders above them implied by the roots there are |
+| `browser` | a browser host's own storage, laid out like a home folder | data-files' in-browser store (`data-files/plugins/memory`, browser hosts only) | `~`-rooted; the home's own tree (`~/Documents/…`) beside the apps' folders under the hidden `~/.equin/` at their data dir (`~/.equin/apps/prototypes/…`), the folders above them implied by the roots there are |
 | `checkout` | one checkout's files, on disk now or AS OF `version` (a git ref: `HEAD`, `main`, a sha) | code-explorer's `machine/` (`needsMachine`) | relative to the checkout's root; `checkout` is the workspace id the code reads take (an attempt id, `main`, `self`, an absolute root) |
 
 The set is closed (`FileSystemKind`): both runtimes name it, and each system's
@@ -52,80 +52,199 @@ them, and the web hooks' dispatch.
 - `opensNatively(location)` — only the computer's disk hands a file to the
   computer's own apps (Open with default app, Reveal in Finder).
 
+## Folders (what a browser reads and does)
+
+The systems with folders a person browses are `BrowsableFileSystem` —
+`computer` and `browser` (a checkout is read file by file). Each declares, in
+`core/` (`internal/folders.ts`), the same folder reads, served by the
+system's own half:
+
+- `files.<fs>.list` — a folder's entries, key-range-paged by name in
+  code-point order, its `{ path, parent, total, within? }` the meta sibling;
+  read with `useFolderListing(fs, path)` (web). Re-sort with
+  `compareFileNames`; `isBrowsable(entry)` is the "opens like a folder" test
+  (a folder, or an archive file).
+- `files.<fs>.peek` — a folder's child names, capped (`FILE_PEEK_MAX_NAMES`):
+  `dirPeekOf(fs)`.
+- `files.<fs>.stat` answers the resolved `path` and `parent` too:
+  `fileStatOf(fs)` (a path bar's validation).
+- `POST /api/files/<fs>/move` — the Finder's move (never replacing unless a
+  per-source resolution says so; `exists` until then): `useFileMove(fs)`.
+
+What a system can do beyond that is data, `FILE_SYSTEMS[fs].capabilities`
+(`move`, `archives`, `openNative`, `completions`, `volume`), and a browser
+offers a control only for what its system has. The operations only the
+computer's disk has are declared only for it — there is no declaration to
+call for another system: `computerFileCompletions`, `computerVolume`,
+`computerFileOpen` (Open with default app, Reveal in Finder),
+`computerFileExtract`, and `handOffComputerFiles` (the OS drag of real files).
+Moving between two file systems is not offered yet (D22c): a drop of another
+system's files says so.
+
+**Which systems are here** is `files.systems` (`useFileSystems()`): the half
+that serves a system contributes `FileSystemProvided(fs)` (this plugin's
+`server/`) — host-fs's machine half `computer`, the in-browser store
+`browser`. A system this host does not serve is absent: Files lists no place
+of it and opens none of its folders.
+
+**Drag payload.** `FILE_LOCATIONS_MIME`: `{ fs, entries: { path, kind }[] }`
+(`writeFileLocations` / `readFileLocations` / `hasFileLocations`) — one
+system per drag.
+
+**The browser's home.** `~` of the `browser` system is a home folder like the
+desktop's: the home's own tree (`~/Documents`, what the demo's seed writes
+through `writeBrowserHomeFiles`) beside the hidden `~/.equin/` holding every
+app's data dir. Its home is its root, so its `~` stands for `/`
+(host-account's `absolutePath` / `displayPath` take a home of `/`).
+
 ## Not yet
 
-Folder listings, writes (move, rename, new folder, trash, upload) and the
-explorer on this API are session 2 of the design; until then Files' browser
-reads host-fs's own values, and the image viewer's ← / → set reads host-fs's
-and code-explorer's listings directly.
+The folder picker, folder links, recordings and the image viewer's ← / → set
+still read host-fs's own values (session 3 of the design moves them and
+deletes those).
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./equin build` -->
 
 ## Plugin reference
 
-- Description: One read of a file in any file system: useFileText, useFileBytes and useFileStat take a FileLocation and read that system's live value (the computer's disk, the browser's storage, a checkout), so a reader never branches on where a file lives; a system this host cannot run is `unavailable`, nothing read.
+- Description: One read of a file in any file system: useFileText, useFileBytes and useFileStat take a FileLocation and read that system's live value (the computer's disk, the browser's storage, a checkout), so a reader never branches on where a file lives; a system this host cannot run is `unavailable`, nothing read. useFileSystems reads which systems this host serves (files.systems), useFolderListing(fs, path) a folder's pages and meta, and useFileMove(fs) one system's move as one mutation shape. Which file systems this host serves: FileSystemProvided(fs), contributed by the half serving a system's reads, and the files.systems value listing them (fixed per build) — what a browser reads to leave out a system nobody answers here.
+- Server:
+  - Contributes: `resource.declare` "files.systems"
+  - Uses: `network/live.serveValue`
+  - Exports (values): `FileSystemProvided`
+  - Resources: `files.systems` (push, fixed, whole: the closed set of file systems, at most one entry each)
 - Web:
-  - Uses: `network/live.useLive`
+  - Uses:
+    - `infra/endpoints.useEndpointMutation`
+    - `network/live.useLive`
   - Exports (types):
     - `FileBytesState`
     - `FileBytesUnavailable`
     - `FileStatState`
+    - `FileSystemsState`
     - `FileTextState`
     - `FileTextUnavailable`
   - Exports (values):
     - `fileBytesUnavailableMessage`
     - `fileTextUnavailableMessage`
     - `useFileBytes`
+    - `useFileMove`
     - `useFileStat`
+    - `useFileSystems`
     - `useFileText`
+    - `useFolderListing`
 - Core:
   - Uses:
+    - `framework/product-name.LEGACY_IDS`
     - `infra/endpoints.assetPath`
     - `infra/endpoints.AssetPath`
     - `infra/endpoints.blob`
     - `infra/endpoints.defineEndpoint`
+    - `infra/endpoints.MachineFeature`
     - `network/live.liveValue`
+    - `packages/list-bound.cappedList`
+    - `packages/list-bound.wholeList`
   - Exports (types):
+    - `BrowsableFileSystem`
+    - `DirPeekValue`
+    - `DraggedFile`
+    - `DraggedFiles`
+    - `FileArchiveReason`
+    - `FileCompletions`
+    - `FileDirPeek`
     - `FileEntry`
+    - `FileExtractResult`
+    - `FileListingMeta`
     - `FileLocation`
+    - `FileMoveOutcome`
+    - `FileMoveResolution`
+    - `FileMoveResult`
+    - `FileOpenResult`
     - `FileReadAccess`
     - `FileStat`
+    - `FileStatValue`
+    - `FileSystemCapabilities`
+    - `FileSystemInfo`
     - `FileSystemKind`
     - `FileText`
+    - `FileVolume`
+    - `FileWithin`
+    - `ReadFileLocationsResult`
   - Exports (values):
+    - `archiveReasonMessage`
+    - `BROWSABLE_FILE_SYSTEMS`
+    - `browserDirPeek`
     - `browserFileBytes`
+    - `browserFileListing`
+    - `browserFileMove`
     - `browserFileRaw`
     - `browserFileStat`
     - `browserFileText`
     - `checkoutFileBytes`
     - `checkoutFileRaw`
     - `checkoutFileText`
+    - `compareFileNames`
+    - `computerDirPeek`
     - `computerFileBytes`
+    - `computerFileCompletions`
+    - `computerFileExtract`
+    - `computerFileListing`
+    - `computerFileMove`
+    - `computerFileOpen`
     - `computerFileRaw`
     - `computerFileStat`
     - `computerFileText`
+    - `computerVolume`
     - `contentTypeOf`
+    - `dirPeekOf`
     - `FILE_BYTES_MAX`
+    - `FILE_COMPLETE_LIMIT`
+    - `FILE_LOCATIONS_MIME`
+    - `FILE_MOVE_MAX_SOURCES`
+    - `FILE_PEEK_MAX_NAMES`
+    - `FILE_SYSTEMS`
     - `FILE_TEXT_MAX_BYTES`
+    - `FileArchiveReasonSchema`
+    - `FileCompletionsSchema`
+    - `FileDirPeekSchema`
     - `FileEntrySchema`
+    - `FileExtractResultSchema`
+    - `FileListingMetaSchema`
+    - `FileListingQuerySchema`
     - `FileLocationSchema`
+    - `FileMoveOutcomeSchema`
+    - `FileMoveResolutionSchema`
+    - `FileMoveResultSchema`
+    - `FileOpenResultSchema`
     - `FileReadAccessSchema`
+    - `fileStatOf`
     - `FileStatSchema`
+    - `fileSystemsServed`
     - `FileTextSchema`
     - `fileUrl`
+    - `FileVolumeSchema`
+    - `FileWithinSchema`
+    - `handOffComputerFiles`
+    - `hasFileLocations`
+    - `isBrowsable`
+    - `isBrowsableFileSystem`
     - `locationKey`
     - `locationName`
     - `opensNatively`
+    - `readFileLocations`
     - `sameLocation`
+    - `writeFileLocations`
 - Cross-plugin:
   - Imported by:
+    - `apps/file-explorer/browser`
+    - `apps/file-explorer/places`
     - `apps/sonata/sources/midi/file-preview`
     - `code-explorer`
     - `conversations/conversation-view/artifacts/screenshot`
+    - `conversations/conversation-view/code/file-pane`
     - `conversations/conversation-view/jsonl-viewer/tool-call/read`
     - `conversations/conversation-view/markdown-extensions`
     - `infra/host-fs`
-    - `infra/paths/data-files`
     - `infra/paths/data-files/memory`
     - `primitives/diff-view`
     - `primitives/file-viewer`

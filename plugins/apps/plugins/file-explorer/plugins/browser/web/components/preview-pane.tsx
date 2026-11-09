@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
@@ -14,7 +14,10 @@ import {
 import { subThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { hostFsPathStat } from "@plugins/infra/plugins/host-fs/core";
+import {
+  fileStatOf,
+  type BrowsableFileSystem,
+} from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { FileTypeIcon } from "@plugins/primitives/plugins/file-type/web";
@@ -34,11 +37,13 @@ const closeIcon = symbol("close");
 
 /**
  * The file open beside the listing: a header naming it (`parent · size ·
- * modified`) with Open with default app and Close, over the file viewer's best
+ * modified`) with Open with default app (on the computer's disk) and Close,
+ * over the file viewer's best
  * renderer for it. The renderer tabs show only when there is a choice — a
  * changed file in a git checkout (`git`, from a lens) also offers its diff.
  */
 export function PreviewPane({
+  fs = "computer",
   path,
   name: displayName,
   home,
@@ -47,6 +52,8 @@ export function PreviewPane({
   closeLabel = "Close (Esc)",
   endSafeArea,
 }: {
+  /** The file system holding it. Default the computer's disk. */
+  fs?: BrowsableFileSystem;
   /** The file, in display form (`~/…`). */
   path: string;
   /**
@@ -54,6 +61,7 @@ export function PreviewPane({
    * stored as `<uuid>.pdf` but is the `report.pdf` the user attached.
    */
   name?: string;
+  /** What `~` is in `fs`. */
   home: string;
   /** The file's git context, when a lens knows it. */
   git: FileViewerGit | undefined;
@@ -64,8 +72,9 @@ export function PreviewPane({
   /** The header sits at the surface's top-right corner (floating action bar). */
   endSafeArea: boolean;
 }): ReactNode {
+  const file = useMemo(() => ({ fs, path }), [fs, path]);
   const renderers = useFileRenderers({
-    file: { fs: "computer", path },
+    file,
     ...(git !== undefined ? { git } : {}),
   });
   const openHostFile = useOpenHostFile();
@@ -101,14 +110,16 @@ export function PreviewPane({
               >
                 {name}
               </Text>
-              <PreviewMeta path={path} home={home} />
+              <PreviewMeta fs={fs} path={path} home={home} />
             </Stack>
           </Fill>
           {renderers.resolved.length > 1 && <FileTabs {...renderers} />}
-          {/* No button for an archive member (nothing on disk to open) or
-              when there is no telling; pending until the stat lands. */}
-          {(membership.kind === "loading" ||
-            (membership.kind === "known" && !membership.inArchive)) && (
+          {/* Only the computer's disk hands a file to its apps. No button for
+              an archive member (nothing on disk to open) or when there is no
+              telling; pending until the stat lands. */}
+          {fs === "computer" &&
+            (membership.kind === "loading" ||
+              (membership.kind === "known" && !membership.inArchive)) && (
             <IconButton
               icon={navIcons.hostApp}
               label="Open with default app"
@@ -135,10 +146,7 @@ export function PreviewPane({
             // The code renderer is its own scroll box, sized to this height.
             className="h-full"
           >
-            <FileContent
-              file={{ fs: "computer", path }}
-              active={renderers.active}
-            />
+            <FileContent file={file} active={renderers.active} />
           </Theme>
         </Scroll>
       }
@@ -147,18 +155,20 @@ export function PreviewPane({
 }
 
 /**
- * `parent · size · modified`, from the file's own stat (`host-fs.stat`,
+ * `parent · size · modified`, from the file's own stat (its system's `stat`,
  * pushed while read, so an edit on disk moves them). Only the parent until
  * the stat answers; a refusal says why in its place.
  */
 function PreviewMeta({
+  fs,
   path,
   home,
 }: {
+  fs: BrowsableFileSystem;
   path: string;
   home: string;
 }): ReactNode {
-  const stat = useLive(hostFsPathStat, { path });
+  const stat = useLive(fileStatOf(fs), { path });
   const [now] = useState(() => Date.now());
   const parent = parentPath(path, home) ?? "/";
   const parts = [parent];
@@ -175,7 +185,7 @@ function PreviewMeta({
       case "denied":
         parts.push("permission denied");
         break;
-      case "unreadable-archive":
+      case "unsupported":
       case "invalid-path":
         parts.push(stat.error.message);
         break;

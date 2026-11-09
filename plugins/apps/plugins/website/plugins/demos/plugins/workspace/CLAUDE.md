@@ -139,11 +139,12 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
   `google-maps/page-config`; never in the snapshot); searching, saving,
   Google's details and photos, the icon pick and Ask need the computer and say
   so (`research/2026-11-06-global-places-in-browser-demo.md`). Files
-  (`apps.file-explorer.**`, whole, listed) is a virtual file system: on a
-  host without a home folder it lands on App data — every browsable
-  `data-files` root the worker holds (Demo's Documents, Prototypes) — and
-  leaves out the places that need the computer (their reads are
-  `needsMachine`); `apps/demo`'s `file-explorer-in-demo.ts` opens each viewer.
+  (`apps.file-explorer.**`, whole, listed) browses the browser's own file
+  system (`file-systems`' `browser`): it opens on its Home, where the seed
+  wrote Demo's `~/Documents` (`writeBrowserHomeFiles`), with the apps' folders
+  under the hidden `~/.equin/` — and leaves out the computer's disk, which
+  this host does not serve; `apps/demo`'s `file-explorer-in-demo.ts` opens
+  each viewer.
   The third-party
   hosts the demo may reach are the scoped plugins' `ExternalHosts.Declare`s
   (`externalHosts`, exported from `core`), which `apps/demo`'s e2e hold every

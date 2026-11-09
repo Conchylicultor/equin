@@ -1,16 +1,21 @@
 import { useMemo } from "react";
 import {
-  hostFsCompletions,
-  hostFsPathStat,
-  hostFsVolumeInfo,
+  FILE_COMPLETE_LIMIT,
+  FILE_SYSTEMS,
+  computerFileCompletions,
+  computerVolume,
+  fileStatOf,
   isBrowsable,
-} from "@plugins/infra/plugins/host-fs/core";
+  type BrowsableFileSystem,
+  type FileSystemCapabilities,
+} from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import {
   HOME,
   absolutePath,
   displayPath,
   hostHome,
 } from "@plugins/infra/plugins/host-account/core";
+import { useFolderListing } from "@plugins/infra/plugins/paths/plugins/file-systems/web";
 import {
   useLive,
   useLiveReader,
@@ -53,7 +58,7 @@ export function useHomeDir(): HomeDir {
 
 /**
  * A crumb's label: "Home" for `~`, the volume's name for `/` (`rootName`,
- * once `host-fs.volume` has named it; the path itself until then).
+ * once the computer's volume read has named it; the path itself until then).
  */
 export function crumbLabel(path: string, rootName: string | undefined): string {
   if (path === HOME) return "Home";
@@ -61,15 +66,28 @@ export function crumbLabel(path: string, rootName: string | undefined): string {
   return baseName(path);
 }
 
+/** The file system a path bar walks: which one, what `~` is, what it can do. */
+export interface PathBarSystem {
+  fs: BrowsableFileSystem;
+  home: string;
+  capabilities: FileSystemCapabilities;
+}
+
 /**
- * {@link hostPathSource} bound to this subtree: the live reader its
- * validation reads through, and the name of the volume mounted at `/`
- * ("Macintosh HD") for its crumb — which reads "/" itself until the volume
- * names it, or when it cannot. What every host path bar renders from (the
- * explorer's toolbar, a file pane's header).
+ * {@link folderPathSource} bound to this subtree: the live reader its
+ * validation reads through, and — on a system with a volume — the name of the
+ * volume mounted at `/` ("Macintosh HD") for its crumb, which reads "/" itself
+ * until the volume names it, or when it cannot. What every folder path bar
+ * renders from (the explorer's toolbar).
  */
-export function useHostPathSource(home: string, root?: string): PathBarSource {
-  const rootVolume = useLive(hostFsVolumeInfo, { path: "/" });
+export function useFolderPathSource(
+  system: PathBarSystem,
+  root?: string,
+): PathBarSource {
+  const rootVolume = useLive(
+    computerVolume,
+    system.capabilities.volume ? { path: "/" } : null,
+  );
   let rootName: string | undefined;
   switch (rootVolume.status) {
     case "ready":
@@ -83,32 +101,65 @@ export function useHostPathSource(home: string, root?: string): PathBarSource {
   }
   const liveReader = useLiveReader();
   return useMemo(
-    () => hostPathSource(liveReader, home, rootName, root),
-    [liveReader, home, rootName, root],
+    () => folderPathSource(liveReader, system, rootName, root),
+    [liveReader, system, rootName, root],
   );
 }
 
 /**
- * The host filesystem as a path-bar source: crumbs from the path itself,
- * folder completions read live from `host-fs.complete` (`useLive`, one tuple
- * per text typed, pushed while the folder searched changes), and validation
- * one `host-fs.stat` answer to the commit (`read`, the subtree's
- * `useLiveReader()` — a file resolves to itself, so the explorer opens its
- * folder and previews it). Paths come back in display form (`~/…` under home).
+ * The computer's disk as a path bar, rooted at `root` when given — a file
+ * pane's header, drawing a file's place on this computer.
+ */
+export function useHostPathSource(home: string, root?: string): PathBarSource {
+  const system = useMemo<PathBarSystem>(
+    () => ({
+      fs: "computer",
+      home,
+      capabilities: FILE_SYSTEMS.computer.capabilities,
+    }),
+    [home],
+  );
+  return useFolderPathSource(system, root);
+}
+
+/** The folder a typed prefix searches and the fragment it matches, or `null` (not a path). */
+function splitPrefix(
+  prefix: string,
+  home: string,
+): { dir: string; fragment: string } | null {
+  const abs = absolutePath(prefix, home);
+  if (!abs.startsWith("/")) return null;
+  const cut = abs.lastIndexOf("/");
+  return {
+    dir: cut === 0 ? "/" : abs.slice(0, cut),
+    fragment: abs.slice(cut + 1),
+  };
+}
+
+/**
+ * A file system as a path-bar source: crumbs from the path itself, folder
+ * completions read live (the system's own completions where it has them —
+ * the computer's `files.computer.complete` — else the typed folder's listing,
+ * its folders matched by name), and validation one stat answer to the commit
+ * (`read`, the subtree's `useLiveReader()` — a file resolves to itself, so
+ * the explorer opens its folder and previews it). Paths come back in display
+ * form (`~/…` under the system's home).
  *
  * With a `root` (an embedded browser), the bar never leads above it: the
  * crumbs start at the root, completions outside it are dropped, and a typed
  * path outside it is invalid.
  */
-export function hostPathSource(
+export function folderPathSource(
   read: LiveReader,
-  home: string,
+  system: PathBarSystem,
   rootName: string | undefined,
   root?: string,
 ): PathBarSource {
+  const { fs, home, capabilities } = system;
   const rootAbs = root === undefined ? undefined : absolutePath(root, home);
   const inRoot = (path: string) =>
     rootAbs === undefined || isWithin(absolutePath(path, home), rootAbs);
+  const ownCompletions = capabilities.completions;
   return {
     segments: (path) =>
       pathChain(path)
@@ -120,9 +171,52 @@ export function hostPathSource(
         })),
     useComplete: (prefix): Suggestions => {
       const answer = useLive(
-        hostFsCompletions,
-        prefix === null ? null : { prefix },
+        computerFileCompletions,
+        ownCompletions && prefix !== null ? { prefix } : null,
       );
+      const split =
+        ownCompletions || prefix === null ? null : splitPrefix(prefix, home);
+      const listing = useFolderListing(fs, split?.dir ?? null).pages;
+      if (!ownCompletions) {
+        if (prefix === null) return { kind: "pending" };
+        if (split === null) return { kind: "ready", items: [] };
+        switch (listing.status) {
+          case "loading":
+            return { kind: "pending" };
+          case "unavailable":
+            return { kind: "failed", message: listing.message };
+          case "error":
+            if (
+              listing.error.kind === "refused" &&
+              (listing.error.code === "missing" ||
+                listing.error.code === "not-a-dir")
+            ) {
+              return { kind: "ready", items: [] };
+            }
+            return { kind: "failed", message: listing.error.message };
+          case "ready": {
+            const typed = split.fragment.toLowerCase();
+            return {
+              kind: "ready",
+              items: listing.data
+                .filter(
+                  (e) =>
+                    e.kind === "dir" &&
+                    e.name.toLowerCase().startsWith(typed) &&
+                    (!e.hidden || typed.startsWith(".")),
+                )
+                .slice(0, FILE_COMPLETE_LIMIT)
+                .map((e) =>
+                  displayPath(
+                    split.dir === "/" ? `/${e.name}` : `${split.dir}/${e.name}`,
+                    home,
+                  ),
+                )
+                .filter(inRoot),
+            };
+          }
+        }
+      }
       switch (answer.status) {
         case "loading":
           return { kind: "pending" };
@@ -153,7 +247,7 @@ export function hostPathSource(
       }
     },
     validate: async (path): Promise<PathResolution> => {
-      const answer = await read(hostFsPathStat, { path });
+      const answer = await read(fileStatOf(fs), { path });
       switch (answer.status) {
         case "unavailable":
           return { kind: "invalid", path, reason: answer.message };
@@ -184,7 +278,7 @@ export function hostPathSource(
             // Not a path at all, or an archive that cannot be read: the
             // refusal's message says which.
             case "invalid-path":
-            case "unreadable-archive":
+            case "unsupported":
               return { kind: "invalid", path, reason: answer.message };
           }
       }

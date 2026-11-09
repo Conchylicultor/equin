@@ -1,9 +1,7 @@
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import type { ResourceRefusal } from "@plugins/network/plugins/live/plugins/resource-protocol/core";
-import {
-  hostFsArchiveReasonMessage,
-  type HostFsArchiveReason,
-} from "../../core";
+import type { HostFsArchiveReason } from "../../core";
+import { archiveReasonMessage } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { resolveHostPath } from "../../server/internal/path";
 import type { UserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
@@ -67,9 +65,6 @@ export function refusalFor<K extends HostFsFailure["kind"]>(
     case "not-a-file":
       return refuse(code, `Not a file: ${f.path}`);
     case "unreadable-archive":
-      return refuse(
-        code,
-        `${hostFsArchiveReasonMessage(f.reason)}: ${f.archive}`,
-      );
+      return refuse(code, `${archiveReasonMessage(f.reason)}: ${f.archive}`);
   }
 }

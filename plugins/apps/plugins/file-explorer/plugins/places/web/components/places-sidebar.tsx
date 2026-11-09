@@ -10,9 +10,9 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import { EndpointError } from "@plugins/infra/plugins/endpoints/web";
 import {
-  hasHostPaths,
-  readHostPaths,
-} from "@plugins/infra/plugins/host-fs/core";
+  hasFileLocations,
+  readFileLocations,
+} from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import type { SectionsToolbar } from "@plugins/primitives/plugins/data-view/core";
 import type { ResourceReadiness } from "@plugins/network/plugins/live/plugins/live-state/core";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
@@ -20,6 +20,7 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 import {
   useExplorerLocation,
   useHomeDir,
+  useHomeSystem,
   useExplorerFolderTarget,
 } from "@plugins/apps/plugins/file-explorer/plugins/browser/web";
 import {
@@ -138,8 +139,8 @@ const SIDEBAR_SELECTION = {
 /**
  * The Places sidebar: the places of every `FileExplorer.Places` source as a
  * DataView list in sections — Favorites, Worktrees, Locations (config-authored
- * filters on `group`). The place the surface is showing is the active row: a
- * route place that says so, else the one whose folder the explorer shows.
+ * filters on `group`). The place the surface is showing is the active row:
+ * the one whose folder (of the same file system) the explorer shows.
  * The list grows to fill the sidebar, so the storage meter after it sits at
  * the bottom.
  */
@@ -180,7 +181,7 @@ function placeRows(resolved: readonly ResolvedPlaces[]): {
           group: source.group,
           icon: state.icon,
           label: state.label,
-          route: null,
+          fs: null,
           path: null,
           open: null,
           message: state.message,
@@ -195,16 +196,9 @@ function placeRows(resolved: readonly ResolvedPlaces[]): {
             group: source.group,
             icon: place.icon,
             label: place.label,
-            ...(place.kind === "folder"
-              ? { route: null, path: place.path, open: place.open ?? null }
-              : {
-                  route: {
-                    target: place.to({ replace: false }),
-                    active: place.active,
-                  },
-                  path: null,
-                  open: null,
-                }),
+            fs: place.fs,
+            path: place.path,
+            open: place.open ?? null,
             message: null,
           });
         }
@@ -221,33 +215,48 @@ function PlacesList({
   rows: PlaceRow[];
   pending: boolean;
 }): ReactNode {
-  const location = useExplorerLocation();
+  const routed = useExplorerLocation();
+  const homeSystem = useHomeSystem();
   const home = useHomeDir();
   const folderTarget = useExplorerFolderTarget();
+  // The index pane shows the home system's home.
+  const homeFs = homeSystem.kind === "ready" ? homeSystem.fs : null;
+  // Its parts, so a fresh read of the same place keeps the memo below.
+  const fs = routed?.fs ?? homeFs;
+  const dir = routed?.dir ?? "~";
+  const open = routed?.open ?? null;
   const readiness: ResourceReadiness =
-    pending || home.kind === "pending"
+    pending || home.kind === "pending" || homeSystem.kind === "pending"
       ? { status: "loading" }
       : { status: "ready" };
   const activeId = useMemo(() => {
-    // A route place the surface shows wins: the routed browser then is not
-    // showing any folder (its location reads as Home).
-    const routed = rows.find((r) => r.route?.active === true);
-    if (routed !== undefined) return routed.id;
-    if (home.kind !== "ready") return undefined;
-    const abs = (p: string) => absolutePath(p, home.home);
+    if (fs === null) return undefined;
+    const location = { fs, dir, open };
+    // What `~` is in the location's system: the account's home on the
+    // computer's disk (not known yet: nothing is active), the root elsewhere.
+    const homeOf =
+      location.fs !== "computer"
+        ? "/"
+        : home.kind === "ready"
+          ? home.home
+          : null;
+    if (homeOf === null) return undefined;
+    const abs = (p: string) => absolutePath(p, homeOf);
     const here = abs(location.dir);
     const opened = location.open === null ? null : abs(location.open);
-    const inHere = rows.filter((r) => r.path !== null && abs(r.path) === here);
+    const inHere = rows.filter(
+      (r) => r.fs === location.fs && r.path !== null && abs(r.path) === here,
+    );
     // The file showing, when it is a place; else the folder.
     return (
       inHere.find((r) => r.open !== null && abs(r.open) === opened) ??
       inHere.find((r) => r.open === null)
     )?.id;
-  }, [rows, location.dir, location.open, home]);
+  }, [rows, fs, dir, open, home]);
 
   const fields = useMemo(() => placeFields(activeId), [activeId]);
 
-  // Host paths dropped on Favorites go in the gap the line shows — between
+  // Files dropped on Favorites go in the gap the line shows — between
   // any two favorites, built-in or pinned, or after the last for the
   // section's empty space: the drop places their rows in the view's own row
   // order FIRST, then pins them (a pin already there just moves). Under a
@@ -256,14 +265,14 @@ function PlacesList({
   const { pinsOf, pin } = useFavorites();
   const rowDrop = useMemo<RowDropConfig<PlaceRow>>(() => {
     const pinDrop = (dt: DataTransfer, ctx: RowDropContext) => {
-      const read = readHostPaths(dt);
+      const read = readFileLocations(dt);
       if (read.kind === "absent") return;
       if (read.kind === "malformed") {
         throw new Error(
-          `file-explorer places: malformed host-paths drop: ${read.error}`,
+          `file-explorer places: malformed file-locations drop: ${read.error}`,
         );
       }
-      const pins = pinsOf(read.entries);
+      const pins = pinsOf(read);
       const place = async () => {
         if (ctx.order) await ctx.order.insert(pins.map(pinRowKey));
         pin(pins);
@@ -277,10 +286,11 @@ function PlacesList({
     return {
       placement: "between",
       accepts: (r, types, edge) =>
-        r.group === "favorites" && edge !== "into" && hasHostPaths(types),
+        r.group === "favorites" && edge !== "into" && hasFileLocations(types),
       onDrop: (_r, dt, _edge, ctx) => pinDrop(dt, ctx),
       background: {
-        accepts: (types, at) => at.viewId === FAVORITES && hasHostPaths(types),
+        accepts: (types, at) =>
+          at.viewId === FAVORITES && hasFileLocations(types),
         onDrop: (dt, _at, ctx) => pinDrop(dt, ctx),
       },
       dropEffect: "link",
@@ -304,17 +314,13 @@ function PlacesList({
           density="compact"
           selectedRowId={activeId}
           rowActivation={(r) =>
-            r.route !== null
-              ? r.route.target
-              : r.path === null
-                ? undefined
-                : folderTarget(r.path, r.open ?? undefined)
+            r.fs === null || r.path === null
+              ? undefined
+              : folderTarget(r.fs, r.path, r.open ?? undefined)
           }
           itemActions={PlacesSlots.RowActions}
           rowDrop={rowDrop}
-          rowTone={(r) =>
-            r.path === null && r.route === null ? "muted" : "default"
-          }
+          rowTone={(r) => (r.path === null ? "muted" : "default")}
           viewOptions={listOptions(activeId)}
         />
       </div>

@@ -1,16 +1,26 @@
 import type { MachinePluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { hostFsDirPeekServed, hostFsListingServed } from "./internal/listing";
-import { hostFsPathStatServed, hostFsVolumeInfoServed } from "./internal/reads";
+import {
+  computerDirPeekServed,
+  computerFileListingServed,
+  hostFsListingServed,
+} from "./internal/listing";
+import { computerVolumeServed, hostFsPathStatServed } from "./internal/reads";
 import {
   computerFileBytesServed,
   computerFileStatServed,
   computerFileTextServed,
   handleComputerFileRaw,
 } from "./internal/file-system";
-import { computerFileRaw } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
+import {
+  computerFileExtract,
+  computerFileMove,
+  computerFileOpen,
+  computerFileRaw,
+} from "@plugins/infra/plugins/paths/plugins/file-systems/core";
+import { FileSystemProvided } from "@plugins/infra/plugins/paths/plugins/file-systems/server";
 import { hostFsVersionServed } from "./internal/version";
-import { hostFsCompletionsServed } from "./internal/complete";
-import { hostFsExtract, hostFsMove, hostFsOpen, hostFsRaw } from "../core";
+import { computerFileCompletionsServed } from "./internal/complete";
+import { hostFsRaw } from "../core";
 import {
   handleExtract,
   handleMove,
@@ -30,23 +40,25 @@ export {
 
 export default {
   description:
-    "host-fs's desktop half: the host filesystem as live values — host-fs.list (a folder's entries, key-range-paged by name, its path / parent / total / within as the meta sibling), host-fs.peek (a folder's child names, capped), host-fs.stat, host-fs.complete (a typed path's folder completions, capped), host-fs.volume (a snapshot) and host-fs.version (a host file's on-disk revision), each pushed from the shared dir hub while read and refusing missing / denied / … paths by code; the computer's disk as a file system (file-systems' `computer` reads: files.computer.stat / .text / .bytes and GET /api/files/computer/raw) — plus hostPathVersion / watchHostPath / watchHostDir, which stamp and watch any absolute host path or folder (an archive member through its archive file). And the routes, each needsMachine: raw bytes of any path the user account can read (filesystem permissions are the boundary), POST open (Open with default app, Reveal in Finder), POST extract (an archive beside itself) and POST move (paths into a folder, a taken name answered `exists` until the caller resolves it) — the three POSTs refused unless the Origin is the app's own *.localhost.",
+    "host-fs's desktop half: the host filesystem as live values — host-fs.list (a folder's entries, key-range-paged by name, its path / parent / total / within as the meta sibling), host-fs.stat and host-fs.version (a host file's on-disk revision), each pushed from the shared dir hub while read and refusing missing / denied / … paths by code; the computer's disk as a file system (file-systems' `computer` declarations, provided as FileSystemProvided(\"computer\"): files.computer.list (the same held listing as host-fs.list) / .peek (a folder's child names, capped) / .stat / .text / .bytes / .complete (a typed path's folder completions, capped) / .volume (a snapshot) and GET /api/files/computer/raw) — plus hostPathVersion / watchHostPath / watchHostDir, which stamp and watch any absolute host path or folder (an archive member through its archive file). And the routes, each needsMachine: raw bytes of any path the user account can read (filesystem permissions are the boundary), and file-systems' computer writes: POST open (Open with default app, Reveal in Finder), POST extract (an archive beside itself) and POST move (paths into a folder, a taken name answered `exists` until the caller resolves it) — the three POSTs refused unless the Origin is the app's own *.localhost.",
   httpRoutes: {
     [hostFsRaw.route]: handleRaw,
-    [hostFsOpen.route]: handleOpen,
-    [hostFsExtract.route]: handleExtract,
-    [hostFsMove.route]: handleMove,
+    [computerFileOpen.route]: handleOpen,
+    [computerFileExtract.route]: handleExtract,
+    [computerFileMove.route]: handleMove,
     [computerFileRaw.route]: handleComputerFileRaw,
   },
   contributions: [
     ...hostFsVersionServed.declare,
     ...hostFsListingServed.declare,
-    ...hostFsDirPeekServed.declare,
+    ...computerFileListingServed.declare,
+    ...computerDirPeekServed.declare,
     ...hostFsPathStatServed.declare,
-    ...hostFsCompletionsServed.declare,
+    ...computerFileCompletionsServed.declare,
     ...computerFileStatServed.declare,
     ...computerFileTextServed.declare,
     ...computerFileBytesServed.declare,
-    ...hostFsVolumeInfoServed.declare,
+    ...computerVolumeServed.declare,
+    FileSystemProvided("computer"),
   ],
 } satisfies MachinePluginDefinition;

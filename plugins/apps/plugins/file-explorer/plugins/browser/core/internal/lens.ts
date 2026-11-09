@@ -1,5 +1,12 @@
 import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type { FileViewerGit } from "@plugins/primitives/plugins/file-viewer/core";
+import type { BrowsableFileSystem } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
+
+/** A folder a browser shows: its file system, and its absolute path there. */
+export interface ExplorerFolder {
+  fs: BrowsableFileSystem;
+  dir: string;
+}
 
 /**
  * A rule hiding some entries behind a toolbar toggle, like Show hidden files.

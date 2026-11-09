@@ -24,6 +24,9 @@ describe("paths", () => {
     expect(parentPath("~", HOME_ABS)).toBe("/h");
     expect(parentPath("/h", HOME_ABS)).toBe("/");
     expect(parentPath("/", HOME_ABS)).toBeNull();
+    // A home at the root (the browser's storage) has no parent.
+    expect(parentPath("~/Documents", "/")).toBe("~");
+    expect(parentPath("~", "/")).toBeNull();
   });
 
   test("within", () => {

@@ -7,7 +7,7 @@ import type { TSESTree } from "@typescript-eslint/utils";
  * A field's cell must not read live data of its own:
  *
  *   { id: "size", cell: (r) => <FolderSize path={r.path} /> }
- *   function FolderSize({ path }) { const peek = useLive(hostFsDirPeek, { path }); … }
+ *   function FolderSize({ path }) { const peek = useLive(computerDirPeek, { path }); … }
  *                                                       // <-- flagged at `cell`
  *
  * A `useLive` per cell is one subscription per row MOUNTED — a windowed list

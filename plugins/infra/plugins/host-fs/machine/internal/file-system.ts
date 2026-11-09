@@ -6,10 +6,10 @@ import {
   computerFileRaw,
   computerFileStat,
   computerFileText,
+  archiveReasonMessage,
   type FileStat,
   type FileText,
 } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
-import { hostFsArchiveReasonMessage } from "../../core";
 import { openHostFile } from "../../server/internal/open-file";
 import { handleRaw as rawBytes } from "../../server/internal/raw";
 import { statHostOrArchivePath } from "../../server/internal/stat";
@@ -45,6 +45,8 @@ export const computerFileStatServed = serveValue(computerFileStat, {
     switch (stat.kind) {
       case "ok":
         return {
+          path: stat.path,
+          parent: stat.parent,
           entry: stat.entry,
           ...(stat.within !== undefined ? { within: stat.within } : {}),
           ...(stat.read !== undefined ? { read: stat.read } : {}),
@@ -62,7 +64,7 @@ export const computerFileStatServed = serveValue(computerFileStat, {
       case "unreadable-archive":
         throw computerFileStat.refuse(
           "unsupported",
-          `${hostFsArchiveReasonMessage(stat.reason)}: ${stat.archive}`,
+          `${archiveReasonMessage(stat.reason)}: ${stat.archive}`,
         );
     }
   },
@@ -101,7 +103,7 @@ export const computerFileTextServed = serveValue(computerFileText, {
       case "unreadable-archive":
         throw computerFileText.refuse(
           "unsupported",
-          `${hostFsArchiveReasonMessage(text.reason)}: ${text.archive}`,
+          `${archiveReasonMessage(text.reason)}: ${text.archive}`,
         );
     }
   },

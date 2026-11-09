@@ -26,7 +26,11 @@ export {
   entryKindLabel,
   type EntryCategory,
 } from "./internal/entry-kind";
-export type { ExplorerLens, LensHideRule } from "./internal/lens";
+export type {
+  ExplorerFolder,
+  ExplorerLens,
+  LensHideRule,
+} from "./internal/lens";
 export {
   itemCount,
   type EntryFilter,

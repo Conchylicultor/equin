@@ -18,7 +18,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`deploy`** [test helpers] [exempt] [25 sub-plugins] — The Deploy task category: the category tasks filed from the Deploy app, such as a failed deploy's investigation, are grouped under.
     - **`desktop`** [10 sub-plugins] — Desktop — the floating-window desktop mode as an app: windows over a wallpaper, one bottom shelf (launcher, pinned apps, running windows, tray), virtual desktops, overview and a window switcher.
     - **`events`** [exempt] [22 sub-plugins] — Events — track events from pluggable sources in one database.
-    - **`file-explorer`** [exempt] [8 sub-plugins] — File explorer app.
+    - **`file-explorer`** [exempt] [6 sub-plugins] — File explorer app.
     - **`home`** [5 sub-plugins] — Home — app launcher and entry point. The Apps task category: the category tasks filed from the Home app's cards, such as building a new app, are grouped under.
     - **`keyboard-party`** — Keyboard Party — a keyboard toy for a small child: every key answers with its own animation and sound.
       - Plugins:

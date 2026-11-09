@@ -97,10 +97,10 @@ export function useRoutedHistory(location: ExplorerLocation): {
   canForward: boolean;
 } {
   const surface = useSurfaceTabId() ?? "";
-  const { dir, open } = location;
+  const { fs, dir, open } = location;
   useEffect(() => {
-    recordRouted(surface, { dir, open });
-  }, [surface, dir, open]);
+    recordRouted(surface, { fs, dir, open });
+  }, [surface, fs, dir, open]);
   const stacks = useSyncExternalStore(
     subscribeRouted,
     () => routedStacks.get(surface) ?? NO_STACKS,
@@ -129,8 +129,8 @@ export function useLocalNavigator(
   const to = useCallback(
     (dir: string, open: string | null = null) =>
       () =>
-        go({ dir, open }),
-    [go],
+        go({ fs: initial.fs, dir, open }),
+    [go, initial.fs],
   );
   const fileTo = useCallback(
     (open: string | null) => () =>

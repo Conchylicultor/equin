@@ -1784,7 +1784,7 @@ a `ResourceResult<Row | null>`, `undefined` off screen):
 ```tsx
 { id: "size", label: "Size",
   rowRead: rowRead({
-    value: hostFsDirPeek,
+    value: computerDirPeek,
     params: (r: EntryRow) => (r.kind === "dir" ? { path: r.path } : null),
     cell: (r, peek) => <FolderSize row={r} peek={peek} />, // peek typed by the value
   }) }
@@ -2203,8 +2203,8 @@ list, table and `primitives/tree` share it.
     - `DataViewSlots.Control` ← `primitives.data-view`
     - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
     - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-  - Contributes: 104 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.WebRegister` ×94
+  - Contributes: 102 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.WebRegister` ×92
     - `DataViewSlots.Control` ×4
     - `DataViewSlots.Setting` ×4
     - `IdKinds.Kind` ×2
@@ -2481,8 +2481,8 @@ list, table and `primitives/tree` share it.
     - `useViewRowCounts`
     - `wearsTimeInk`
 - Server:
-  - Contributes: 96 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.Register` ×94
+  - Contributes: 94 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.Register` ×92
     - `ids.kind` ×2
   - Uses:
     - `config_v2.getConfig`
@@ -2674,9 +2674,9 @@ list, table and `primitives/tree` share it.
     - `ui/tokens/type-scale` ×6
     - `ui/tokens/shadow` ×3
     - `ui/tokens/shape` ×3
-  - Imported by: 123 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 122 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `fields` ×39
-    - `apps` ×29
+    - `apps` ×28
     - `debug` ×15
     - `primitives` ×10
     - `conversations` ×8

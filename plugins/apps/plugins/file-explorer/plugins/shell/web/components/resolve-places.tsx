@@ -9,8 +9,7 @@ export interface ResolvedPlaces {
 
 /**
  * Every `FileExplorer.Places` source's answer, in contribution order — for
- * whatever reads the places as a whole (the Places sidebar; the explorer's
- * landing on a host without a home folder). Each source's `usePlaces` hook
+ * whatever reads the places as a whole (the Places sidebar). Each source's `usePlaces` hook
  * runs in a component of its own, chained, so the call order never changes.
  */
 export function ResolvePlaces({

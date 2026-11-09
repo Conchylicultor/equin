@@ -1,6 +1,6 @@
 import { stat } from "@plugins/packages/plugins/timed-fs/core";
 import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
-import type { HostFsOpenResult } from "../../core";
+import type { FileOpenResult } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { locateHostPath } from "./archive/locate";
 import { classifyFsError } from "./path";
 import {
@@ -22,7 +22,7 @@ export function openArgv(path: UserPath, reveal: boolean): string[] {
 export async function openHostPath(
   path: UserPath,
   reveal: boolean,
-): Promise<HostFsOpenResult> {
+): Promise<FileOpenResult> {
   const located = await locateHostPath(path);
   if (located.kind === "archive") {
     // A member has no file of its own: reveal shows the archive that holds it,

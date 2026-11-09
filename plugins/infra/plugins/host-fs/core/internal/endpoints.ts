@@ -163,7 +163,7 @@ export const HostFsPeekResultSchema = z.discriminatedUnion("kind", [
 ]);
 /**
  * What one folder holds, by name — the machine half's own answer, which the
- * `host-fs.peek` live value (`hostFsDirPeek`) serves with its failures as
+ * `files.computer.peek` live value (`computerDirPeek`) serves with its failures as
  * refusals.
  */
 export type HostFsPeekResult = z.infer<typeof HostFsPeekResultSchema>;
@@ -237,7 +237,7 @@ export const HostFsCompleteResultSchema = z.discriminatedUnion("kind", [
 ]);
 /**
  * A typed path's folder completions — the machine half's own answer, which the
- * `host-fs.complete` live value (`hostFsCompletions`) serves with its failures
+ * `files.computer.complete` live value (`computerFileCompletions`) serves with its failures
  * as refusals.
  */
 export type HostFsCompleteResult = z.infer<typeof HostFsCompleteResultSchema>;
@@ -315,163 +315,7 @@ export const HostFsVolumeResultSchema = z.discriminatedUnion("kind", [
 ]);
 /**
  * The storage of the volume holding a path — the machine half's own answer,
- * which the `host-fs.volume` live value (`hostFsVolumeInfo`) serves with its
+ * which file-systems' `files.computer.volume` value (`computerVolume`) serves with its
  * failures as refusals.
  */
 export type HostFsVolumeResult = z.infer<typeof HostFsVolumeResultSchema>;
-
-// ── open ─────────────────────────────────────────────────────────────────────
-
-export const HostFsOpenResultSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("opened"), path: z.string() }),
-  /** Open with default app on a file inside an archive: there is no file on disk to hand an app. */
-  z.object({
-    kind: z.literal("in-archive"),
-    path: z.string(),
-    archive: z.string(),
-  }),
-  Missing,
-  Denied,
-]);
-export type HostFsOpenResult = z.infer<typeof HostFsOpenResultSchema>;
-
-/**
- * Open a host path with its default app (`open <path>`), or reveal it in the
- * Finder (`reveal: true` → `open -R <path>`; a path inside an archive reveals
- * the archive). The one side effect host-fs has:
- * a request whose `Origin` is not a `*.localhost` origin is refused (403).
- */
-export const hostFsOpen = defineEndpoint({
-  route: "POST /api/host-fs/open",
-  body: z.object({ path: z.string(), reveal: z.boolean().optional() }),
-  response: HostFsOpenResultSchema,
-  needsMachine: HOST_FS_MACHINE,
-});
-
-// ── extract ──────────────────────────────────────────────────────────────────
-
-export const HostFsExtractResultSchema = z.discriminatedUnion("kind", [
-  z.object({
-    kind: z.literal("extracted"),
-    /** The archive file, absolute. */
-    path: z.string(),
-    /** What the extraction created beside the archive, absolute. */
-    created: z.string(),
-    /**
-     * `single`: the archive held one top-level entry (a folder or a file),
-     * extracted as itself. `folder`: it held several, so they were extracted
-     * into a new folder named after the archive.
-     */
-    layout: z.enum(["single", "folder"]),
-  }),
-  /** The path is not a file on disk any registered archive format claims. */
-  z.object({ kind: z.literal("not-an-archive"), path: z.string() }),
-  Missing,
-  Denied,
-  UnreadableArchive,
-]);
-export type HostFsExtractResult = z.infer<typeof HostFsExtractResultSchema>;
-
-/**
- * Extract an archive file next to itself, the way the Finder does: an archive
- * holding exactly one top-level entry (a folder, or a single file) puts that
- * entry beside it; one holding several puts them in a new folder named after
- * the archive (`photos.zip` → `photos/`). Nothing is overwritten — a name
- * already taken gets a number (`photos 2`). The work is staged in a hidden
- * sibling and moved into place at the end, so a failed extraction leaves
- * nothing behind. macOS's `__MACOSX/` resource forks and `.DS_Store` files are
- * not extracted. A request whose `Origin` is not a `*.localhost` origin is
- * refused (403), as `open` is.
- */
-export const hostFsExtract = defineEndpoint({
-  route: "POST /api/host-fs/extract",
-  body: z.object({ path: z.string() }),
-  response: HostFsExtractResultSchema,
-  needsMachine: HOST_FS_MACHINE,
-});
-
-// ── move ─────────────────────────────────────────────────────────────────────
-
-/** How many sources one `move` request moves at most. */
-export const HOST_FS_MOVE_MAX_SOURCES = 1000;
-
-/**
- * What to do with a source whose name is already taken in the destination:
- * `replace` the taken entry, `keep-both` (the source gets the Finder's next
- * free name, `a 2.txt`), or `skip` it.
- */
-export const HostFsMoveResolutionSchema = z.enum([
-  "replace",
-  "keep-both",
-  "skip",
-]);
-export type HostFsMoveResolution = z.infer<typeof HostFsMoveResolutionSchema>;
-
-/** What happened to one source of a `move`. `from` is the resolved source path. */
-export const HostFsMoveOutcomeSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("moved"), from: z.string(), to: z.string() }),
-  /**
-   * `to` is taken and the request carried no resolution for this source:
-   * nothing was moved. Re-send it with one.
-   */
-  z.object({ kind: z.literal("exists"), from: z.string(), to: z.string() }),
-  /** Taken, and the request's resolution said `skip`. */
-  z.object({ kind: z.literal("skipped"), from: z.string() }),
-  /** A folder dropped into itself or one of its descendants. */
-  z.object({ kind: z.literal("into-self"), from: z.string() }),
-  /**
-   * `replace` would delete a folder that holds the source itself (moving
-   * `Docs/a/a` up into `Docs`, replacing `Docs/a`): refused, nothing moved.
-   */
-  z.object({
-    kind: z.literal("replaces-ancestor"),
-    from: z.string(),
-    to: z.string(),
-  }),
-  /** The source already sits in the destination: nothing to do. */
-  z.object({ kind: z.literal("same-dir"), from: z.string() }),
-  z.object({ kind: z.literal("missing"), from: z.string() }),
-  z.object({ kind: z.literal("denied"), from: z.string() }),
-  /** The source is a member inside an archive: a virtual path, not movable. */
-  z.object({ kind: z.literal("archive"), from: z.string() }),
-]);
-export type HostFsMoveOutcome = z.infer<typeof HostFsMoveOutcomeSchema>;
-
-export const HostFsMoveResultSchema = z.discriminatedUnion("kind", [
-  z.object({
-    kind: z.literal("ok"),
-    /** The resolved destination folder. */
-    destDir: z.string(),
-    /** One outcome per source, aligned with the request's `sources`. */
-    results: z.array(HostFsMoveOutcomeSchema),
-  }),
-  // The destination itself cannot take anything: no source was touched.
-  Missing,
-  Denied,
-  NotADir,
-  /** The destination lies inside an archive (or is an archive file's root). */
-  z.object({ kind: z.literal("archive"), path: z.string() }),
-]);
-export type HostFsMoveResult = z.infer<typeof HostFsMoveResultSchema>;
-
-/**
- * Move host paths into a folder, the way the Finder does: each source keeps
- * its name; a folder cannot go into itself or a descendant; a source already
- * in `destDir` is left alone. A name already taken in `destDir` is NOT
- * overwritten unless asked: without a `resolutions` entry for that source it
- * answers `exists` (the other sources still move), and the caller re-sends it
- * with `replace` / `keep-both` / `skip`. `resolutions` is keyed by source path
- * (as sent, or as answered in `from`). Across volumes the source is copied
- * then removed. Archive members are refused on either side. A request whose
- * `Origin` is not a `*.localhost` origin is refused (403), as `open` is.
- */
-export const hostFsMove = defineEndpoint({
-  route: "POST /api/host-fs/move",
-  body: z.object({
-    sources: z.array(z.string()).min(1).max(HOST_FS_MOVE_MAX_SOURCES),
-    destDir: z.string(),
-    resolutions: z.record(z.string(), HostFsMoveResolutionSchema).optional(),
-  }),
-  response: HostFsMoveResultSchema,
-  needsMachine: HOST_FS_MACHINE,
-});

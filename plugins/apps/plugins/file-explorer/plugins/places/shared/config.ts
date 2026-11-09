@@ -8,8 +8,10 @@ import { enumField } from "@plugins/fields/plugins/enum/plugins/config/core";
  * Favorites on a row). Where each shows among the favorites is the Favorites
  * view's own row order (a drop lands in the gap it was dropped in); a pin
  * never arranged there follows the built-in ones in the order pinned.
- * `path` is in display form (`~/…` under home); `kind` says whether it opens
- * as a folder or as a file previewed in its folder.
+ * `fs` is the file system it is in (a pin stored before Files browsed more
+ * than the computer's disk reads as the computer's); `path` is in display
+ * form (`~/…` under that system's home); `kind` says whether it opens as a
+ * folder or as a file previewed in its folder.
  */
 export const placesConfig = defineConfig({
   fields: {
@@ -18,6 +20,14 @@ export const placesConfig = defineConfig({
       description:
         "Folders and files pinned to the Places sidebar's Favorites, after the built-in ones.",
       itemFields: {
+        fs: enumField({
+          label: "File system",
+          options: [
+            { value: "computer", label: "This computer" },
+            { value: "browser", label: "This browser" },
+          ],
+          default: "computer",
+        }),
         path: textField({ label: "Path" }),
         kind: enumField({
           label: "Kind",

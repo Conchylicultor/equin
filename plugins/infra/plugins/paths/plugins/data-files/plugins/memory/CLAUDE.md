@@ -20,15 +20,20 @@ one service fail boot; `plugin-meta/closure`'s `hostProviders`).
 
 ## Plugin reference
 
-- Description: Data files in memory: provides the DataFiles host service for a host without the computer's disk (the browser composition), every root's tree kept in this process and written through to the host's declared storage (read back after a reload when it is persistent) — directories made as a write's parents, one monotonic clock, in-process locks, and a watch that hears every mutation as one change per microtask. And the browser's file system (file-systems' `browser` reads: files.browser.stat / .text / .bytes and GET /api/files/browser/raw): this storage laid out like a home folder, each root at its data dir under the hidden data folder the desktop keeps them in. Never booted by the desktop.
+- Description: Data files in memory: provides the DataFiles host service for a host without the computer's disk (the browser composition), every root's tree kept in this process and written through to the host's declared storage (read back after a reload when it is persistent) — directories made as a write's parents, one monotonic clock, in-process locks, and a watch that hears every mutation as one change per microtask. And the browser's file system (FileSystemProvided("browser"): files.browser.list / .peek / .stat / .text / .bytes, GET /api/files/browser/raw and POST /api/files/browser/move): this storage laid out like a home folder — the home's own tree (~/Documents, …) beside the hidden data folder holding each root at its data dir, as the desktop keeps them; writeBrowserHomeFiles writes a fixture into the home for a demo's seed. Never booted by the desktop.
 - Excluded: yes
 - Server:
   - Contributes:
     - `host-service:data-files.store` "data-files.store"
+    - `file-systems.provided` "browser"
     - `resource.declare` "files.browser.bytes"
+    - `resource.declare` "files.browser.list"
+    - `resource.declare` "files.browser.list:meta"
+    - `resource.declare` "files.browser.peek"
     - `resource.declare` "files.browser.stat"
     - `resource.declare` "files.browser.text"
   - Uses:
+    - `infra/endpoints.implement`
     - `infra/endpoints.rawEndpointHandler`
     - `infra/paths/data-files.assertNotRoot`
     - `infra/paths/data-files.DataFiles`
@@ -40,9 +45,16 @@ one service fail boot; `plugin-meta/closure`'s `hostProviders`).
     - `infra/paths/data-files.requireWatchSpec`
     - `infra/paths/data-files.WatchedFileRoot`
     - `infra/paths/data-files.watchedPaths`
+    - `infra/paths/file-systems.FileSystemProvided`
     - `network/live.serveValue`
+    - `network/live.sliceRange`
+  - Exports (types): `BrowserHomeFixture`
+  - Exports (values): `writeBrowserHomeFiles`
   - Resources:
     - `files.browser.bytes` (invalidate, notified)
+    - `files.browser.list` (keyed, window, notified)
+    - `files.browser.list:meta` (push, notified)
+    - `files.browser.peek` (push, notified)
     - `files.browser.stat` (push, notified)
     - `files.browser.text` (invalidate, notified)
 - Test helpers:

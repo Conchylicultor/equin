@@ -1,13 +1,10 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
-import { cappedList } from "@plugins/packages/plugins/list-bound/core";
 import {
-  HOST_FS_COMPLETE_LIMIT,
   HOST_FS_PEEK_MAX_NAMES,
   HostFsEntrySchema,
   HostFsReadAccessSchema,
   HostFsWithinSchema,
-  type HostFsArchiveReason,
 } from "./endpoints";
 import { HOST_FS_MACHINE } from "./machine-feature";
 
@@ -28,23 +25,7 @@ const MACHINE = HOST_FS_MACHINE;
 // - `denied` — the user account may not read it (EACCES / EPERM);
 // - `not-a-dir` / `not-a-file` — the wrong kind of entry for the read;
 // - `unreadable-archive` — the path crosses into an archive that cannot be
-//   read; the message says why (see `hostFsArchiveReasonMessage`).
-
-/** The sentence an unreadable archive's refusal carries, by reason. */
-export function hostFsArchiveReasonMessage(
-  reason: HostFsArchiveReason,
-): string {
-  switch (reason) {
-    case "corrupt":
-      return "This archive is damaged or not in a format it claims";
-    case "encrypted":
-      return "This archive is encrypted";
-    case "unsupported-method":
-      return "This archive uses a compression method that cannot be read";
-    case "too-many-entries":
-      return "This archive has too many entries to browse";
-  }
-}
+//   read; the message says why (see file-systems' `archiveReasonMessage`).
 
 // ── list ─────────────────────────────────────────────────────────────────────
 
@@ -103,57 +84,6 @@ export const hostFsListing = liveValue("host-fs.list", {
   needsMachine: MACHINE,
 });
 
-// ── peek ─────────────────────────────────────────────────────────────────────
-
-/**
- * What a folder holds, by name only. Bounded: at most
- * {@link HOST_FS_PEEK_MAX_NAMES} names — a fuller folder answers `too-many`
- * with its raw total — so a peek is never a whole-folder payload.
- */
-export const HostFsDirPeekSchema = z.discriminatedUnion("kind", [
-  z.object({
-    kind: z.literal("ok"),
-    path: z.string(),
-    /** Every child, hidden ones included, by name only — no child is stat'ed. */
-    children: z
-      .array(z.object({ name: z.string(), hidden: z.boolean() }))
-      .max(HOST_FS_PEEK_MAX_NAMES),
-  }),
-  /** More than {@link HOST_FS_PEEK_MAX_NAMES} children: `total` counts them all. */
-  z.object({
-    kind: z.literal("too-many"),
-    path: z.string(),
-    total: z.number(),
-  }),
-  /**
-   * An archive file on disk: a peek never opens one (reading its index is not
-   * the cheap read a peek promises). Its listing lists its root.
-   */
-  z.object({ kind: z.literal("archive"), path: z.string() }),
-]);
-export type HostFsDirPeek = z.infer<typeof HostFsDirPeekSchema>;
-
-/**
- * The child names of one host folder (`peek`): one `readdir` on disk, the
- * cached index inside an archive — for counting a folder's items without
- * listing it. Many folders at once: `useLive(hostFsDirPeek, paths.map((path)
- * => ({ path })))`. Pushed while read from a children-scope watch of the
- * folder. Refused: `invalid-path`, `missing`, `denied`, `not-a-dir`,
- * `unreadable-archive`.
- */
-export const hostFsDirPeek = liveValue("host-fs.peek", {
-  schema: HostFsDirPeekSchema,
-  params: ["path"],
-  refusals: [
-    "invalid-path",
-    "missing",
-    "denied",
-    "not-a-dir",
-    "unreadable-archive",
-  ],
-  needsMachine: MACHINE,
-});
-
 // ── stat ─────────────────────────────────────────────────────────────────────
 
 export const HostFsPathStatSchema = z.object({
@@ -179,65 +109,5 @@ export const hostFsPathStat = liveValue("host-fs.stat", {
   schema: HostFsPathStatSchema,
   params: ["path"],
   refusals: ["invalid-path", "missing", "denied", "unreadable-archive"],
-  needsMachine: MACHINE,
-});
-
-// ── complete ─────────────────────────────────────────────────────────────────
-
-export const HostFsCompletionsSchema = z.object({
-  /** The folder whose children were matched (`dirname` of the prefix), absolute. */
-  dir: z.string(),
-  /** The matching folders, in natural name order (`localeCompare`, numeric). */
-  matches: cappedList(z.object({ name: z.string(), path: z.string() }), {
-    max: HOST_FS_COMPLETE_LIMIT,
-  }),
-  /** More folders matched than {@link HOST_FS_COMPLETE_LIMIT}. */
-  truncated: z.boolean(),
-});
-export type HostFsCompletions = z.infer<typeof HostFsCompletionsSchema>;
-
-/**
- * Folder-only completions of a typed path (`complete`): the folders (symlinks
- * to folders included) in `dirname(prefix)` whose name starts with
- * `basename(prefix)`, case-insensitively. A prefix ending in `/` completes
- * every child of that folder; dotfolders are offered only once the typed
- * fragment starts with `.`; `~` expands. Stays on disk (never inside an
- * archive). Read as the user types — `useLive(hostFsCompletions, { prefix })`,
- * one tuple per text — and pushed while read from a children-scope watch of
- * the folder searched. Refused: `invalid-path` (empty, relative or NUL),
- * `missing` (the folder is not there), `denied`, `not-a-dir` (typed into a
- * file).
- */
-export const hostFsCompletions = liveValue("host-fs.complete", {
-  schema: HostFsCompletionsSchema,
-  params: ["prefix"],
-  refusals: ["invalid-path", "missing", "denied", "not-a-dir"],
-  needsMachine: MACHINE,
-});
-
-// ── volume ───────────────────────────────────────────────────────────────────
-
-export const HostFsVolumeInfoSchema = z.object({
-  path: z.string(),
-  /** The volume's display name ("Macintosh HD", or the `/Volumes/<name>` it is mounted at). */
-  name: z.string(),
-  /** Bytes. */
-  total: z.number(),
-  /** Bytes available to the user account. */
-  free: z.number(),
-});
-export type HostFsVolumeInfo = z.infer<typeof HostFsVolumeInfoSchema>;
-
-/**
- * The storage of the volume holding `path` (home when absent) — a SNAPSHOT:
- * free space moves with every write anywhere on the volume and nothing
- * signals it, so it is measured when a reader mounts and on `refresh()`.
- * Refused: `invalid-path`, `missing`, `denied`.
- */
-export const hostFsVolumeInfo = liveValue("host-fs.volume", {
-  schema: HostFsVolumeInfoSchema,
-  params: ["path?"],
-  load: "snapshot",
-  refusals: ["invalid-path", "missing", "denied"],
   needsMachine: MACHINE,
 });

@@ -11,7 +11,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join as joinPath } from "node:path";
-import type { HostFsMoveResolution } from "../../core";
+import type { FileMoveResolution } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { moveHostPaths, movePath } from "./move";
 import {
   asUserPath,
@@ -32,7 +32,7 @@ function caseDirs(): { src: string; dest: string } {
   return { src: join(dir, "src"), dest: join(dir, "dest") };
 }
 
-const none = new Map<UserPath, HostFsMoveResolution>();
+const none = new Map<UserPath, FileMoveResolution>();
 
 beforeAll(() => {
   root = realpathSync(mkdtempSync(join(tmpdir(), "host-fs-move-test-")));
@@ -115,7 +115,7 @@ describe("moveHostPaths", () => {
     writeFileSync(join(dest, "a 2.txt"), "old 2");
     mkdirSync(join(dest, "docs"));
     const from = [join(src, "a.txt"), join(src, "docs")];
-    const resolutions = new Map<UserPath, HostFsMoveResolution>(
+    const resolutions = new Map<UserPath, FileMoveResolution>(
       from.map((f) => [f, "keep-both"]),
     );
     expect(

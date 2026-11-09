@@ -1,22 +1,24 @@
 /**
- * Files runs in the demo, as a virtual file system.
+ * Files runs in the demo, on the browser's own file system.
  *
  * In `/demo`, it:
  *
  *  1. opens the launcher inside the embed and picks Files: the embed switches
- *     to the file explorer, which lands on App data (the host has no home
- *     folder) — the App data place marked, the roots the worker's apps keep
- *     listed (Documents, Prototypes);
- *  2. checks the Places sidebar lists no place that needs the computer (Home,
- *     Downloads, the equin checkout, the startup volume, Trash) and no failed
- *     row;
- *  3. opens Documents: the seeded folders are listed, and each kind of file
- *     the seed wrote opens in its viewer beside its folder — markdown
- *     rendered, plain text and code as listings, the picture drawn, the HTML
- *     page in its sandboxed frame, the PDF in the browser's viewer and the
- *     recording loaded in the player (both from the worker's storage, as
- *     blobs the transport fetched) — never an error;
- *  4. opens Prototypes: the gallery's folders are files here too.
+ *     to the file explorer, which opens on Home — the browser storage's home
+ *     folder, holding Demo's `Documents`;
+ *  2. checks the Places sidebar lists Home and no place of the computer's
+ *     disk (Downloads, the equin checkout, the startup volume, Trash), and no
+ *     failed row;
+ *  3. opens `~/Documents` in the same browser the desktop has: the seeded
+ *     folders are listed, and each kind of file the seed wrote opens in its
+ *     viewer beside its folder — markdown rendered, plain text and code as
+ *     listings, the picture drawn, the HTML page in its sandboxed frame, the
+ *     PDF in the browser's viewer and the recording loaded in the player (both
+ *     from the worker's storage, as blobs the transport fetched) — never an
+ *     error;
+ *  4. shows hidden files and opens `~/.equin/apps/prototypes`: the apps' own
+ *     folders are folders of the same file system, where the desktop keeps
+ *     them.
  *
  * Every file-type and Lucide icon is drawn from the demo's own server
  * (`ScopeIconSymbols` reads `icons.sprite` through the scope).
@@ -30,6 +32,7 @@
  */
 import type { Locator, Page, Request, WebSocket } from "playwright";
 import { pickFromLauncher } from "@plugins/apps-core/plugins/app-launcher/e2e";
+import { DATA_DIR_NAME } from "@plugins/infra/plugins/paths/core";
 import {
   arg,
   boot,
@@ -58,8 +61,8 @@ const SANCTIONED: readonly RegExp[] = [
 /** The app's launcher name and id (`apps/file-explorer/shell`'s `fileExplorerApp`). */
 const APP_NAME = /^\s*Files\s*$/;
 const APP_ID = "file-explorer";
-/** The places that need the computer (`apps/file-explorer/places`). */
-const MACHINE_PLACES = ["Home", "Downloads", "equin", "Trash"] as const;
+/** The places of the computer's disk (`apps/file-explorer/places`). */
+const MACHINE_PLACES = ["Downloads", "equin", "Trash"] as const;
 /** The demo's Documents (`apps/website/demos/workspace`'s `data/documents/`). */
 const DOCUMENT_FOLDERS = [
   "Code",
@@ -84,30 +87,24 @@ function sidebar(page: Page): Locator {
   return embedRoot(page).locator("[data-slot=sidebar-container]").first();
 }
 
-/** The preview panel beside the listing (`app-data`'s split). */
+/** The preview panel beside the listing (the browser's split). */
 function preview(page: Page): Locator {
   return embedRoot(page).locator('[data-panel][id="preview"]').first();
 }
 
-/**
- * A row of App data's lists, by its key: a root by its id, an entry by its
- * path relative to the root (`app-data`'s row keys).
- */
-function row(page: Page, key: string): Locator {
-  return embedRoot(page).locator(`[data-row-key="${key}"]`).first();
+/** A row of the browser's tree, by its key: the entry's path (`~/…`). */
+function row(page: Page, path: string): Locator {
+  return embedRoot(page).locator(`[data-row-key="${path}"]`).first();
 }
 
-/** A crumb of App data's path (`App data › <root> › …`), by its label. */
-function crumb(page: Page, label: string): Locator {
-  return embedRoot(page)
-    .locator("a")
-    .filter({ hasText: new RegExp(`^${label}$`) })
-    .first();
+/** A toolbar button of the browser, by its label. */
+function toolbarButton(page: Page, label: string): Locator {
+  return embedRoot(page).getByRole("button", { name: label }).first();
 }
 
-/** The roots (`apps/file-explorer/documents`, `apps/prototypes`). */
-const DOCUMENTS_ROOT = "apps.file-explorer.documents";
-const PROTOTYPES_ROOT = "apps.prototypes";
+const DOCUMENTS = "~/Documents";
+/** The hidden folder holding the apps' data dirs, as on the desktop. */
+const DATA = `~/${DATA_DIR_NAME}`;
 
 async function previewText(page: Page): Promise<string> {
   if ((await preview(page).count()) === 0) return "";
@@ -151,7 +148,7 @@ await withBrowser(async (h) => {
   const embedText = async (): Promise<string> =>
     (await embedRoot(page).innerText()).replace(/\s+/g, " ");
 
-  // ── 1. launcher → Files, landing on App data ────────────────────────────
+  // ── 1. launcher → Files, opening on Home ────────────────────────────────
   await boot(page, pathUrl("/demo"), {
     marker: 'button:has-text("Conversations")',
   });
@@ -166,24 +163,29 @@ await withBrowser(async (h) => {
     (id) => id === APP_ID,
   );
   await renders(
-    "Files lands on App data, listing the roots the worker's apps keep",
-    embedText,
-    (text) => text.includes("Documents") && text.includes("Prototypes"),
+    "Files opens on Home, holding Documents",
+    async () => (await row(page, DOCUMENTS).count()) > 0,
+    (there) => there,
   );
-  await snap(page, OUT, "1-app-data");
+  r.ok(
+    "App data is gone",
+    !(await embedText()).includes("App data"),
+    (await embedText()).slice(0, 200),
+  );
+  await snap(page, OUT, "1-home");
 
-  // ── 2. no place that needs the computer ─────────────────────────────────
+  // ── 2. Home, and no place of the computer's disk ────────────────────────
   await renders(
-    "the Places sidebar lists App data",
+    "the Places sidebar lists Home",
     async () => (await sidebar(page).innerText()).split("\n"),
-    (lines) => lines.some((l) => l.trim() === "App data"),
+    (lines) => lines.some((l) => l.trim() === "Home"),
   );
   const sidebarLines = (await sidebar(page).innerText())
     .split("\n")
     .map((l) => l.trim());
   for (const place of MACHINE_PLACES)
     r.ok(
-      `the sidebar has no "${place}" place (it needs the computer)`,
+      `the sidebar has no "${place}" place (it is the computer's)`,
       !sidebarLines.includes(place),
       sidebarLines.join(" | "),
     );
@@ -194,9 +196,16 @@ await withBrowser(async (h) => {
   );
 
   // ── 3. Documents: the seeded tree, each viewer ──────────────────────────
-  await row(page, DOCUMENTS_ROOT).click();
-  await renders("Documents lists the seeded folders", embedText, (text) =>
-    DOCUMENT_FOLDERS.every((f) => text.includes(f)),
+  await row(page, DOCUMENTS).click();
+  await renders(
+    "Documents lists the seeded folders",
+    async () =>
+      Promise.all(
+        DOCUMENT_FOLDERS.map(
+          async (f) => (await row(page, `${DOCUMENTS}/${f}`).count()) > 0,
+        ),
+      ),
+    (there) => there.every(Boolean),
   );
   await snap(page, OUT, "3-documents");
 
@@ -207,8 +216,9 @@ await withBrowser(async (h) => {
     what: string,
     ok: (preview: Locator, text: string) => Promise<boolean>,
   ): Promise<void> => {
-    await row(page, folder).click();
-    await row(page, `${folder}/${file}`).click();
+    const dir = `${DOCUMENTS}/${folder}`;
+    await row(page, dir).click();
+    await row(page, `${dir}/${file}`).click();
     await renders(
       `${folder}/${file}: ${what}`,
       async () => {
@@ -223,8 +233,13 @@ await withBrowser(async (h) => {
       await previewText(page),
     );
     await snap(page, OUT, `3-${file.replace(/\W+/g, "-")}`);
-    // Back to Documents through its crumb.
-    await crumb(page, "Documents").click();
+    // Back to Documents: up out of the folder.
+    await toolbarButton(page, "Enclosing folder").click();
+    await renders(
+      `back in Documents after ${file}`,
+      async () => (await row(page, dir).count()) > 0,
+      (there) => there,
+    );
   };
 
   await view(
@@ -306,11 +321,24 @@ await withBrowser(async (h) => {
     },
   );
 
-  // ── 4. Prototypes: the gallery's folders are files here too ─────────────
-  await crumb(page, "App data").click();
-  await row(page, PROTOTYPES_ROOT).click();
+  // ── 4. the apps' folders, under the hidden ~/.equin ─────────────────────
+  await toolbarButton(page, "Enclosing folder").click();
   await renders(
-    "Prototypes lists the demo's prototype folders",
+    "back on Home",
+    async () => (await row(page, DOCUMENTS).count()) > 0,
+    (there) => there,
+  );
+  await toolbarButton(page, "Show hidden files").click();
+  for (const path of [DATA, `${DATA}/apps`, `${DATA}/apps/prototypes`]) {
+    await renders(
+      `${path} is listed`,
+      async () => (await row(page, path).count()) > 0,
+      (there) => there,
+    );
+    await row(page, path).click();
+  }
+  await renders(
+    `${DATA}/apps/prototypes lists the demo's prototype folders`,
     embedText,
     (text) => /-demo\d+/.test(text),
   );

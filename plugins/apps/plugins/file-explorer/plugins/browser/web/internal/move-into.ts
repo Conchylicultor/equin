@@ -1,26 +1,24 @@
 import { useCallback } from "react";
-import {
-  EndpointError,
-  useEndpointMutation,
-} from "@plugins/infra/plugins/endpoints/web";
-import {
-  hostFsMove,
-  type HostFsMoveOutcome,
-  type HostFsMoveResolution,
-  type HostFsMoveResult,
-} from "@plugins/infra/plugins/host-fs/core";
+import { EndpointError } from "@plugins/infra/plugins/endpoints/web";
+import type {
+  BrowsableFileSystem,
+  FileMoveOutcome,
+  FileMoveResolution,
+  FileMoveResult,
+} from "@plugins/infra/plugins/paths/plugins/file-systems/core";
+import { useFileMove } from "@plugins/infra/plugins/paths/plugins/file-systems/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import { baseName } from "../../core";
 import { useAskConflict } from "../components/conflict-dialog";
 
-/** The folder holding an absolute path (host-fs answers resolved paths). */
+/** The folder holding a resolved path (a move answers resolved paths). */
 function dirOf(path: string): string {
   const cut = path.lastIndexOf("/");
   return cut <= 0 ? "/" : path.slice(0, cut);
 }
 
 /** Why a source did not move, in the user's words — `null` when it is no refusal. */
-function refusal(outcome: HostFsMoveOutcome): string | null {
+function refusal(outcome: FileMoveOutcome): string | null {
   const name = `“${baseName(outcome.from)}”`;
   switch (outcome.kind) {
     case "moved":
@@ -37,13 +35,13 @@ function refusal(outcome: HostFsMoveOutcome): string | null {
     case "denied":
       return `${name}: permission denied`;
     case "archive":
-      return `${name} is inside an archive`;
+      return `${name} cannot be moved from where it is`;
   }
 }
 
 /** A destination that cannot take anything, in the user's words. */
 function destinationRefusal(
-  result: Exclude<HostFsMoveResult, { kind: "ok" }>,
+  result: Exclude<FileMoveResult, { kind: "ok" }>,
 ): string {
   const name = `“${baseName(result.path)}”`;
   switch (result.kind) {
@@ -54,12 +52,12 @@ function destinationRefusal(
     case "not-a-dir":
       return `${name} is not a folder`;
     case "archive":
-      return `Items cannot be moved into an archive`;
+      return `Items cannot be moved into ${name}`;
   }
 }
 
 /**
- * Move host paths into a folder, the Finder's way: what does not collide moves
+ * Move paths of `fs` into one of its folders, the Finder's way: what does not collide moves
  * at once; each name already taken there asks (Replace / Keep both / Skip,
  * optionally for every remaining one; Cancel skips the rest), and only those
  * are sent again with their answers. Listings, peeks and stats are live
@@ -67,16 +65,15 @@ function destinationRefusal(
  * itself, missing, …) are said in one toast. Resolves with the sources that
  * moved, as given.
  */
-export function useMoveInto(): (
-  sources: readonly string[],
-  destDir: string,
-) => Promise<readonly string[]> {
-  const move = useEndpointMutation(hostFsMove);
+export function useMoveInto(
+  fs: BrowsableFileSystem,
+): (sources: readonly string[], destDir: string) => Promise<readonly string[]> {
+  const move = useFileMove(fs);
   const askConflict = useAskConflict();
   return useCallback(
     async (sources, destDir) => {
-      // Moving renames paths on the computer's disk: a host without the
-      // computer says so and moves nothing.
+      // A system this host cannot run (the computer's disk in the demo) says
+      // so and moves nothing.
       if (move.kind === "unavailable") {
         showToast({ variant: "error", description: move.message });
         return [];
@@ -84,8 +81,8 @@ export function useMoveInto(): (
       const { mutateAsync } = move;
       const send = async (
         batch: readonly string[],
-        resolutions?: Record<string, HostFsMoveResolution>,
-      ): Promise<HostFsMoveResult | null> => {
+        resolutions?: Record<string, FileMoveResolution>,
+      ): Promise<FileMoveResult | null> => {
         try {
           return await mutateAsync({
             body: {
@@ -105,7 +102,7 @@ export function useMoveInto(): (
       const refused: string[] = [];
       const settle = (
         batch: readonly string[],
-        result: HostFsMoveResult | null,
+        result: FileMoveResult | null,
       ): { source: string; to: string }[] => {
         if (result === null) return [];
         if (result.kind !== "ok") {
@@ -128,8 +125,8 @@ export function useMoveInto(): (
 
       const conflicts = settle(sources, await send(sources));
       if (conflicts.length > 0) {
-        const resolutions: Record<string, HostFsMoveResolution> = {};
-        let forAll: HostFsMoveResolution | null = null;
+        const resolutions: Record<string, FileMoveResolution> = {};
+        let forAll: FileMoveResolution | null = null;
         for (const [i, { source, to }] of conflicts.entries()) {
           if (forAll === null) {
             const answer = await askConflict({

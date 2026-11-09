@@ -51,13 +51,18 @@ export type GitView =
  * `file-explorer.git-checkout` snapshot, measured as the folder's view mounts
  * — a folder's checkout only changes when a repo is created around it, which
  * nothing signals), then its live status.
+ * `null` is a folder of no computer checkout (one in the browser's storage):
+ * nothing is read, and it is in no checkout.
  * The view keeps its identity while neither answer changes (it is memoized on
  * the answers, not on the reads' wrappers), so a lens built from it does too.
  * A status cut at its cap is `failed`: the paths it left out would otherwise
  * read clean.
  */
-export function useGitView(dir: string): GitView {
-  const checkout = useLive(fileExplorerGitCheckoutValue, { path: dir });
+export function useGitView(dir: string | null): GitView {
+  const checkout = useLive(
+    fileExplorerGitCheckoutValue,
+    dir === null ? null : { path: dir },
+  );
   const checkoutKnown = checkout.status === "ready";
   const found =
     checkoutKnown && checkout.data.kind === "checkout" ? checkout.data : null;
@@ -69,6 +74,7 @@ export function useGitView(dir: string): GitView {
   const statusError = status.status === "error" ? status.error : null;
   const refetchStatus = status.status === "unavailable" ? null : status.refetch;
   return useMemo<GitView>(() => {
+    if (dir === null) return { kind: "none" };
     // Either read unavailable: this host has no git.
     if (refetchCheckout === null || refetchStatus === null)
       return { kind: "unavailable" };
@@ -92,6 +98,7 @@ export function useGitView(dir: string): GitView {
     if (checkoutKnown && found === null) return { kind: "none" };
     return { kind: "loading" };
   }, [
+    dir,
     checkoutError,
     checkoutKnown,
     found,

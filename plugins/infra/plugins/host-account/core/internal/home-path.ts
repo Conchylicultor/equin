@@ -7,10 +7,15 @@
 /** The home directory, in its display form. */
 export const HOME = "~";
 
-/** `path` with `~` expanded against `home`. */
+/**
+ * `path` with `~` expanded against `home`. A home at the root (`/` — a file
+ * system whose home IS its root, the browser's storage) expands `~/a` to `/a`.
+ */
 export function absolutePath(path: string, home: string): string {
   if (path === HOME) return home;
-  if (path.startsWith(`${HOME}/`)) return `${home}${path.slice(1)}`;
+  if (path.startsWith(`${HOME}/`)) {
+    return home === "/" ? path.slice(1) : `${home}${path.slice(1)}`;
+  }
   return path;
 }
 
@@ -18,6 +23,7 @@ export function absolutePath(path: string, home: string): string {
 export function displayPath(path: string, home: string): string {
   const abs = absolutePath(path, home);
   if (abs === home) return HOME;
+  if (home === "/") return abs.startsWith("/") ? `${HOME}${abs}` : abs;
   if (abs.startsWith(`${home}/`)) return `${HOME}${abs.slice(home.length)}`;
   return abs;
 }

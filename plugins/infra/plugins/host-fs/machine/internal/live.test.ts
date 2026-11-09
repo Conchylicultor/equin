@@ -25,7 +25,7 @@ import { checkPagedSource } from "@plugins/network/plugins/live/server/testing";
 import { hostFsListing, type HostFsEntry } from "../../core";
 import { listHostDir } from "../../server/internal/list";
 import { dirPeek, holdListingOver, listingMeta, listingPage } from "./listing";
-import { hostFsPathStatServed, hostFsVolumeInfoServed } from "./reads";
+import { hostFsPathStatServed, computerVolumeServed } from "./reads";
 import { computerFileTextServed } from "./file-system";
 import { completions } from "./complete";
 import { watchHostPathOver } from "./version";
@@ -155,10 +155,10 @@ describe("host-fs.peek / stat / text / volume", () => {
   });
 
   test("volume measures the volume, and refuses a missing path", async () => {
-    const volume = await hostFsVolumeInfoServed.load({ path: root });
+    const volume = await computerVolumeServed.load({ path: root });
     expect(volume.total).toBeGreaterThan(0);
     expect(
-      hostFsVolumeInfoServed.load({ path: join(root, "nope") }),
+      computerVolumeServed.load({ path: join(root, "nope") }),
     ).rejects.toMatchObject({ code: "missing" });
   });
 });

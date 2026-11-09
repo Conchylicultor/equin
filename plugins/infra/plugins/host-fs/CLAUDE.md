@@ -3,19 +3,24 @@
 The one host-filesystem API: every read of an arbitrary path on the user's
 machine (not a git ref, not an app data dir) goes through here. Contracts live
 in `core/` — the live values (`liveValue`, served by `machine/`) and the
-endpoints (`defineEndpoint`, handled in `server/` by `implement()`, plus one
-raw byte-stream handler). There is no web barrel: a surface reads the live
-values with `useLive` (`hostFsListing`, `hostFsDirPeek`, `hostFsPathStat`,
-`hostFsCompletions`, `hostFsVolumeInfo` — *Live reads* below), and an event that needs one answer (validate a typed path, then go)
-with `useLiveReader`; `fetchEndpoint` (`infra/endpoints`) is only for the
-open / extract / move actions, and `hostFileUrl(path)` builds byte URLs.
+endpoints (`defineEndpoint`, plus one raw byte-stream handler). It is also
+the computer's disk as a FILE SYSTEM: its `machine/` serves file-systems'
+`computer` declarations (`infra/paths/file-systems` — `files.computer.list` /
+`.peek` / `.stat` / `.text` / `.bytes` / `.complete` / `.volume`, the raw
+route and the open / extract / move writes), and contributes
+`FileSystemProvided("computer")`. Files reads the computer only through
+those. There is no web barrel: what is left in `core/` here (`hostFsListing`,
+`hostFsPathStat` — *Live reads* below, and `hostFileUrl(path)`) is read by the
+folder picker, folder links and the image viewer until they move onto
+file-systems too (session 3 of
+research/2026-11-09-global-one-file-system-api.md), then deleted.
 
 | Endpoint | Answers |
 |---|---|
 | `GET /api/host-fs/raw?path` (`hostFsRaw`, `hostFileUrl`) | the bytes, streamed; `Range` (one range) → 206 / 416; 404 / 403 / 400 (a directory) / 422 (an unreadable archive member) |
-| `POST /api/host-fs/open {path, reveal?}` (`hostFsOpen`) | `opened` · `in-archive` · `missing`; 501 off macOS |
-| `POST /api/host-fs/extract {path}` (`hostFsExtract`) | `extracted {created, layout: single \| folder}` · `not-an-archive` · `missing` · `denied` · `unreadable-archive` |
-| `POST /api/host-fs/move {sources, destDir, resolutions?}` (`hostFsMove`) | `ok {destDir, results}` — one per source: `moved {from, to}` · `exists {from, to}` · `skipped` · `into-self` · `replaces-ancestor` · `same-dir` · `missing` · `denied` · `archive`; or, for the destination, `missing` · `denied` · `not-a-dir` · `archive` |
+| `POST /api/files/computer/open {path, reveal?}` (file-systems' `computerFileOpen`) | `opened` · `in-archive` · `missing`; 501 off macOS |
+| `POST /api/files/computer/extract {path}` (`computerFileExtract`) | `extracted {created, layout: single \| folder}` · `not-an-archive` · `missing` · `denied` · `unreadable-archive` |
+| `POST /api/files/computer/move {sources, destDir, resolutions?}` (`computerFileMove`) | `ok {destDir, results}` — one per source: `moved {from, to}` · `exists {from, to}` · `skipped` · `into-self` · `replaces-ancestor` · `same-dir` · `missing` · `denied` · `archive`; or, for the destination, `missing` · `denied` · `not-a-dir` · `archive` |
 
 ## Live reads (the reads above, kept fresh)
 
@@ -29,7 +34,7 @@ it the read is `unavailable`) and pushed from the shared dir hub
 answered as a result kind is a declared refusal (`error.kind === "refused"`,
 `error.code`): `invalid-path` (the endpoints' 400), `missing`, `denied`,
 `not-a-dir` / `not-a-file`, `unreadable-archive` (message from
-`hostFsArchiveReasonMessage`). Design:
+file-systems' `archiveReasonMessage`). Design:
 research/2026-10-11-global-endpoint-reads-onto-live.md (B5).
 
 A children-scope watch never opens a recursive one: it rides a folder-tree
@@ -43,11 +48,11 @@ so no change after the read is missed.
 
 | Value | Question → answer | Bound · freshness |
 |---|---|---|
-| `hostFsListing` (`host-fs.list`) | `{ path? }` (none = home) → pages of `HostFsEntry`, by name in CODE-POINT order; meta `hostFsListing.meta` → `{ path, parent, total, within? }` | key-range-paged (`limit` 500, `maxLimit` 10 000 without a viewport); `watchHostDir`, throttle 1 s; every page cut from one held listing per folder, which a change patches (one `readdir`, then a `lstat` of only the entries the watch named — O(changed), not O(folder)); entries described ≤ 16 at once process-wide |
-| `hostFsDirPeek` (`host-fs.peek`) | `{ path }` → `ok {children}` · `too-many {total}` · `archive` | ≤ `HOST_FS_PEEK_MAX_NAMES` names; `watchHostDir`, throttle 1 s; many folders: `useLive(v, [...])` |
-| `hostFsPathStat` (`host-fs.stat`) | `{ path }` → `{ path, parent, entry, within? }` | one entry; `watchHostPath` |
-| `hostFsCompletions` (`host-fs.complete`) | `{ prefix }` → `{ dir, matches: {name, path}[], truncated }` — folder-only children of `dirname(prefix)` matching `basename(prefix)`, case-insensitive, natural order; dotfolders only for a `.` fragment; on disk only. Refuses `invalid-path` (empty / relative), `missing`, `denied`, `not-a-dir` | ≤ `HOST_FS_COMPLETE_LIMIT` (50) matches; `watchHostDir` of the folder searched, throttle 1 s; one tuple per text typed (the path bar) |
-| `hostFsVolumeInfo` (`host-fs.volume`) | `{ path? }` → `{ path, name, total, free }` | snapshot (`refresh()`): free space has no change signal |
+| `hostFsListing` (`host-fs.list`), and file-systems' `computerFileListing` (`files.computer.list`, `{ path }`) over the same held listing | `{ path? }` (none = home) → pages of `HostFsEntry`, by name in CODE-POINT order; meta `hostFsListing.meta` → `{ path, parent, total, within? }` | key-range-paged (`limit` 500, `maxLimit` 10 000 without a viewport); `watchHostDir`, throttle 1 s; every page cut from one held listing per folder, which a change patches (one `readdir`, then a `lstat` of only the entries the watch named — O(changed), not O(folder)); entries described ≤ 16 at once process-wide |
+| file-systems' `computerDirPeek` (`files.computer.peek`) | `{ path }` → `ok {children}` · `too-many {total}` · `archive` | ≤ `HOST_FS_PEEK_MAX_NAMES` names; `watchHostDir`, throttle 1 s; many folders: `useLive(v, [...])` |
+| `hostFsPathStat` (`host-fs.stat`), and `computerFileStat` (`files.computer.stat`, the same answer) | `{ path }` → `{ path, parent, entry, within? }` | one entry; `watchHostPath` |
+| file-systems' `computerFileCompletions` (`files.computer.complete`) | `{ prefix }` → `{ dir, matches: {name, path}[], truncated }` — folder-only children of `dirname(prefix)` matching `basename(prefix)`, case-insensitive, natural order; dotfolders only for a `.` fragment; on disk only. Refuses `invalid-path` (empty / relative), `missing`, `denied`, `not-a-dir` | ≤ `HOST_FS_COMPLETE_LIMIT` (50) matches; `watchHostDir` of the folder searched, throttle 1 s; one tuple per text typed (the path bar) |
+| file-systems' `computerVolume` (`files.computer.volume`) | `{ path? }` → `{ path, name, total, free }` | snapshot (`refresh()`): free space has no change signal |
 
 `watchHostPath(path, onChange)` (machine barrel) watches one path: its entry
 in its folder (while the folder is not there, the nearest ancestor that is,
@@ -144,12 +149,9 @@ or `skip`. Across volumes (`EXDEV`) the source is copied into a hidden staging
 sibling, renamed into place, then removed. Comparisons (`into-self`,
 `same-dir`) use real paths, a symlink source compared by its own location.
 
-Dragging host paths between surfaces uses one payload (core):
-`HOST_PATHS_MIME`, `writeHostPaths(dt, entries)` — each a `DraggedHostPath
-{ path, kind }`, the entry kind as the dragging surface listed it, so a drop
-that needs it (Favorites pins a folder or a file) reads nothing —
-`readHostPaths(dt)` → `paths {entries}` · `absent` · `malformed`, and
-`hasHostPaths(types)` for `dragover` (the data is unreadable until `drop`).
+Dragging files between surfaces is file-systems' payload
+(`FILE_LOCATIONS_MIME`, `writeFileLocations` / `readFileLocations`, and
+`handOffComputerFiles` for the OS drag of the computer's files).
 
 `decodeTextBytes` (server barrel) is the one size + binary gate for decoding
 file bytes as text; code-explorer's git-ref reads use it too.
@@ -202,15 +204,18 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
 - Server:
   - Contributes:
     - `resource.declare` "files.computer.bytes"
+    - `resource.declare` "files.computer.complete"
+    - `resource.declare` "files.computer.list"
+    - `resource.declare` "files.computer.list:meta"
+    - `resource.declare` "files.computer.peek"
     - `resource.declare` "files.computer.stat"
     - `resource.declare` "files.computer.text"
-    - `resource.declare` "host-fs.complete"
+    - `resource.declare` "files.computer.volume"
     - `resource.declare` "host-fs.list"
     - `resource.declare` "host-fs.list:meta"
-    - `resource.declare` "host-fs.peek"
     - `resource.declare` "host-fs.stat"
     - `resource.declare` "host-fs.version"
-    - `resource.declare` "host-fs.volume"
+    - `file-systems.provided` "computer"
   - Uses:
     - `infra/endpoints.HttpError`
     - `infra/host/host-read-pool.withHeavyReadSlot`
@@ -232,15 +237,17 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
     - `serveHostPath`
   - Resources:
     - `files.computer.bytes` (invalidate, notified)
+    - `files.computer.complete` (push, notified, capped: FILE_COMPLETE_LIMIT)
+    - `files.computer.list` (keyed, window)
+    - `files.computer.list:meta` (push)
+    - `files.computer.peek` (push, notified)
     - `files.computer.stat` (push, notified)
     - `files.computer.text` (invalidate, notified)
-    - `host-fs.complete` (push, notified, capped: HOST_FS_COMPLETE_LIMIT)
-    - `host-fs.list` (keyed, window, notified)
-    - `host-fs.list:meta` (push, notified)
-    - `host-fs.peek` (push, notified)
+    - `files.computer.volume` (invalidate, snapshot)
+    - `host-fs.list` (keyed, window)
+    - `host-fs.list:meta` (push)
     - `host-fs.stat` (push, notified)
     - `host-fs.version` (push, notified)
-    - `host-fs.volume` (invalidate, snapshot)
 - Machine:
   - Uses:
     - `infra/endpoints.implementMachine`
@@ -255,78 +262,47 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
     - `resolveOrRefuse`
     - `watchHostDir`
     - `watchHostPath`
-  - Routes:
-    - `GET /api/host-fs/raw`
-    - `POST /api/host-fs/open`
-    - `POST /api/host-fs/extract`
-    - `POST /api/host-fs/move`
+  - Routes: `GET /api/host-fs/raw`
 - Core:
   - Uses:
-    - `framework/product-name.LEGACY_IDS`
     - `infra/endpoints.assetPath`
     - `infra/endpoints.AssetPath`
     - `infra/endpoints.blob`
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
-    - `packages/list-bound.cappedList`
   - Exports (types):
-    - `DraggedHostPath`
     - `FileVersion`
     - `HostFsArchiveReason`
     - `HostFsCompleteResult`
-    - `HostFsCompletions`
-    - `HostFsDirPeek`
     - `HostFsEntry`
     - `HostFsEntryKind`
-    - `HostFsExtractResult`
     - `HostFsListingMeta`
     - `HostFsListResult`
-    - `HostFsMoveOutcome`
-    - `HostFsMoveResolution`
-    - `HostFsMoveResult`
-    - `HostFsOpenResult`
     - `HostFsPathStat`
     - `HostFsPeekResult`
     - `HostFsReadAccess`
     - `HostFsStatResult`
     - `HostFsTextResult`
-    - `HostFsVolumeInfo`
     - `HostFsVolumeResult`
     - `HostFsWithin`
-    - `ReadHostPathsResult`
   - Exports (values):
     - `compareHostFsNames`
     - `FileVersionSchema`
-    - `handOffHostPaths`
-    - `hasHostPaths`
     - `HOST_FS_COMPLETE_LIMIT`
     - `HOST_FS_MACHINE`
-    - `HOST_FS_MOVE_MAX_SOURCES`
     - `HOST_FS_PEEK_MAX_NAMES`
     - `HOST_FS_TEXT_MAX_BYTES`
-    - `HOST_PATHS_MIME`
     - `hostFileUrl`
-    - `hostFsArchiveReasonMessage`
-    - `hostFsCompletions`
-    - `hostFsDirPeek`
-    - `hostFsExtract`
     - `hostFsListing`
     - `HostFsListingQuerySchema`
-    - `hostFsMove`
-    - `hostFsOpen`
     - `hostFsPathStat`
     - `hostFsRaw`
     - `hostFsVersion`
-    - `hostFsVolumeInfo`
     - `isBrowsable`
     - `MACOS_FILES_AND_FOLDERS_SETTINGS`
-    - `readHostPaths`
-    - `writeHostPaths`
 - Cross-plugin:
   - Imported by:
     - `active-data/folder-link`
-    - `apps/file-explorer/browser`
-    - `apps/file-explorer/places`
     - `apps/sonata/sources/midi/folders`
     - `code-explorer`
     - `code-explorer/file-resolve`

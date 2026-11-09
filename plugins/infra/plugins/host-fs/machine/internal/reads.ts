@@ -1,10 +1,9 @@
 import { serveValue } from "@plugins/network/plugins/live/machine";
+import { hostFsPathStat, type HostFsPathStat } from "../../core";
 import {
-  hostFsPathStat,
-  hostFsVolumeInfo,
-  type HostFsPathStat,
-  type HostFsVolumeInfo,
-} from "../../core";
+  computerVolume,
+  type FileVolume,
+} from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { statHostOrArchivePath } from "../../server/internal/stat";
 import { hostVolume } from "../../server/internal/volume";
 import { refusalFor, resolveOrRefuse, resolvedOrNull } from "./refuse";
@@ -42,7 +41,7 @@ export const hostFsPathStatServed = serveValue(hostFsPathStat, {
 });
 
 /** The storage of a volume, measured whenever a reader asks. */
-export const hostFsVolumeInfoServed = serveValue(hostFsVolumeInfo, {
+export const computerVolumeServed = serveValue(computerVolume, {
   source: "external",
   changes: {
     snapshot: {
@@ -50,11 +49,11 @@ export const hostFsVolumeInfoServed = serveValue(hostFsVolumeInfo, {
         "free space moves with every write anywhere on the volume, which nothing signals; measured on mount and on Refresh",
     },
   },
-  loader: async ({ path }): Promise<HostFsVolumeInfo> => {
+  loader: async ({ path }): Promise<FileVolume> => {
     const volume = await hostVolume(
-      resolveOrRefuse(hostFsVolumeInfo.refuse, path),
+      resolveOrRefuse(computerVolume.refuse, path),
     );
-    if (volume.kind !== "ok") throw refusalFor(hostFsVolumeInfo.refuse, volume);
+    if (volume.kind !== "ok") throw refusalFor(computerVolume.refuse, volume);
     return {
       path: volume.path,
       name: volume.name,

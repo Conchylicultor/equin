@@ -1,4 +1,4 @@
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, useContext, useMemo, type ReactNode } from "react";
 import { FilepathBreadcrumb } from "@plugins/primitives/plugins/filepath-breadcrumb/web";
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
@@ -11,11 +11,15 @@ import {
   FileTabs,
   type FileRenderersHandle,
 } from "@plugins/primitives/plugins/file-viewer/web";
-import type { FileLocation } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
+import {
+  FILE_SYSTEMS,
+  type BrowsableFileSystem,
+  type FileLocation,
+} from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   useFileHostPath,
-  useHostPathSource,
+  useFolderPathSource,
 } from "@plugins/apps/plugins/file-explorer/plugins/browser/web";
 
 /**
@@ -67,8 +71,9 @@ function useFilePeekHeader(): FilePeekHeaderValue {
  * (rooted at its checkout for a workspace file), every folder a link to that
  * folder's listing, then a copy of the path as shown to agents. While the
  * place is read (the checkout's root) a loading block holds the spot —
- * invisible on a fast read; a file with no place on this computer (an app
- * data file, a host without the computer) is a plain breadcrumb.
+ * invisible on a fast read; a file with no place on this computer (a host
+ * without the computer, a file in the browser's storage) is a plain
+ * breadcrumb.
  */
 export function FilePeekTitle() {
   const { path, file, activationFor } = useFilePeekHeader();
@@ -79,8 +84,13 @@ export function FilePeekTitle() {
     case "none":
       return <FilepathBreadcrumb path={path} />;
     case "ready":
+      // A folder crumb opens the folder pane, which browses the computer's
+      // disk: a file of another system (the browser's storage) keeps the
+      // plain breadcrumb.
+      if (place.fs !== "computer") return <FilepathBreadcrumb path={path} />;
       return (
         <HostPathBar
+          fs={place.fs}
           home={place.home}
           root={place.root}
           path={place.path}
@@ -92,19 +102,25 @@ export function FilePeekTitle() {
 }
 
 function HostPathBar({
+  fs,
   home,
   root,
   path,
   copyText,
   activationFor,
 }: {
+  fs: BrowsableFileSystem;
   home: string;
   root: string | undefined;
   path: string;
   copyText: string;
   activationFor: (target: PathTarget) => Activation;
 }) {
-  const source = useHostPathSource(home, root);
+  const system = useMemo(
+    () => ({ fs, home, capabilities: FILE_SYSTEMS[fs].capabilities }),
+    [fs, home],
+  );
+  const source = useFolderPathSource(system, root);
   return (
     <PathBar
       path={path}

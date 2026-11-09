@@ -66,24 +66,20 @@ desktop, `~/.equin/<dir>` in the browser's storage in a browser host (served by
 reader (the file viewer) names a root's file by that location — never by root
 id.
 
-## Browsing a root (`browse`)
+## Browsing a root's files
 
-A root declared `browse: { label }` (it must also declare `watch` — tsc and a
-throw) is listed by the App data place (`apps/file-explorer/app-data`) on every
-host, served by the portable `server/`: `data-files.roots` (`id`, `label`,
-`dir`, `location`, fixed per build), `data-files.list` (a folder's entries,
-key-range-paged by name, its total as the meta sibling) and `data-files.stat`.
-Each refuses by code (`unknown-root`, `invalid-path`, `missing`, `not-a-dir`)
-and is pushed while read from the root's watch — one subscription per root (a
-refcount hub). To be deleted with App data (session 2 of
-`research/2026-11-09-global-one-file-system-api.md`).
+A root defines nothing a person browses: its folder is a folder of the host's
+file system (`~/.equin/<dir>`), which Files lists like any other — on the
+desktop a hidden folder of the computer's disk, in a browser host a hidden
+folder of the browser's home (`plugins/memory`). An app that wants a sidebar
+entry adds an ordinary Files place pointing at it.
 
 ## Providers
 
 | host | provider | notes |
 |---|---|---|
 | desktop | `data-files#machine` | single-descriptor reads (a racing remove is `missing`, never ENOENT), temp+rename writes, flock, one `defineFileWatcher` per watching root (named by the root, so the Background catalog lists it; declared in data-files), opened with `startEventualFileWatcher` so it follows the root's dir through a removal and re-creation or a replace (a `rescan` each time; the dir is made only on the first open), one ledger per ledgered root |
-| browser | `plugins/memory` (base-excluded) | in-process tree, monotonic clock, keyed-mutex locks, one `changed` per microtask, never `rescan`; also serves file-systems' `browser` reads over every root |
+| browser | `plugins/memory` (base-excluded) | in-process tree, monotonic clock, keyed-mutex locks, one `changed` per microtask, never `rescan`; also serves file-systems' `browser` system: the home's own tree (`~/Documents`, …) beside every root under `~/.equin/` |
 
 `diskMount(dataDir)` (machine barrel) is the disk operations for a `cli/`
 process, which boots no graph — no watch, no ledger. `diskDirMount(dir)` is the
@@ -115,21 +111,12 @@ against both providers; a new provider runs it too.
 
 ## Plugin reference
 
-- Description: Data files: the files app-owned data dirs hold, on whatever host runs — the DataFiles host service (the computer's disk on the desktop, memory in a browser host) behind defineFileRoot, a root declared by the plugin owning the data dir: list / stat / read / write (atomic) / remove / rename (never replacing) / withLock / watch over validated relative paths, every miss a typed result and every mutation naming its writer. Each root's folder is a location in this host's file system (DataFilesImpl.location: the data dir on the computer's disk, or the same dir in the browser storage's hidden data folder), where file-systems' reads read its files. A root declared `browse` (and watched) is listed by a generic browser on every host: data-files.roots (each with its location), data-files.list (a folder's entries, paged by name) and data-files.stat, each pushed from the root's watch while read.
+- Description: Data files: the files app-owned data dirs hold, on whatever host runs — the DataFiles host service (the computer's disk on the desktop, memory in a browser host) behind defineFileRoot, a root declared by the plugin owning the data dir: list / stat / read / write (atomic) / remove / rename (never replacing) / withLock / watch over validated relative paths, every miss a typed result and every mutation naming its writer. Each root's folder is a location in this host's file system (DataFilesImpl.location: the data dir on the computer's disk, or the same dir in the browser storage's hidden data folder), where file-systems' reads read its files. A person browses a root's files as a folder of that file system (Files), never through the root.
 - Server:
-  - Contributes:
-    - `resource.declare` "data-files.list"
-    - `resource.declare` "data-files.list:meta"
-    - `resource.declare` "data-files.roots"
-    - `resource.declare` "data-files.stat"
-    - `host-service:data-files.store` "data-files.store"
-  - Uses:
-    - `network/live.serveValue`
-    - `network/live.sliceRange`
+  - Contributes: `host-service:data-files.store` "data-files.store"
   - Exports (types):
     - `DataFilesImpl`
     - `FileRoot`
-    - `FileRootBrowseSpec`
     - `FileRootLedgerSpec`
     - `FileRootSpec`
     - `FileRootStore`
@@ -142,28 +129,29 @@ against both providers; a new provider runs it too.
     - `listFileRoots`
     - `requireWatchSpec`
     - `watchedPaths`
-  - Resources:
-    - `data-files.list` (keyed, window, notified)
-    - `data-files.list:meta` (push, notified)
-    - `data-files.roots` (push, fixed, whole: the file roots declared in code that opt in to browsing — a handful, fixed per build)
-    - `data-files.stat` (push, notified)
 - Machine:
   - Uses: `infra/file-watcher.startEventualFileWatcher`
   - Exports (values):
     - `diskDirMount`
     - `diskMount`
     - `FileRootLocation`
+- Cross-plugin:
+  - Imported by:
+    - `apps/desktop/wallpaper`
+    - `apps/prototypes`
+    - `apps/prototypes/files`
+    - `apps/prototypes/files/snapshot-history`
+    - `apps/prototypes/fixtures`
+    - `apps/prototypes/thumbnails`
+    - `apps/sonata/covers`
+    - `infra/asset-mirror`
+    - `infra/paths/data-files/memory`
+- Exemptions:
+  - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/roots.ts` (debt)
 - Core:
-  - Uses:
-    - `infra/paths/file-systems.FileLocationSchema`
-    - `network/live.liveValue`
-    - `packages/list-bound.wholeList`
   - Exports (types):
-    - `BrowsableRoot`
     - `DataChange`
     - `DataChangeHandler`
-    - `DataFileStat`
-    - `DataFolderMeta`
     - `DataWatch`
     - `FileData`
     - `FileEntry`
@@ -178,15 +166,7 @@ against both providers; a new provider runs it too.
     - `StatResult`
     - `WriteOpts`
   - Exports (values):
-    - `BrowsableRootSchema`
     - `copyTree`
-    - `DataFileEntrySchema`
-    - `dataFileRoots`
-    - `dataFileStat`
-    - `DataFileStatSchema`
-    - `dataFolderListing`
-    - `DataFolderMetaSchema`
-    - `DataFolderQuerySchema`
     - `InvalidRelPathError`
     - `isWithinRel`
     - `joinRel`
@@ -198,21 +178,6 @@ against both providers; a new provider runs it too.
     - `relPath`
     - `splitRel`
     - `stageThenRename`
-- Cross-plugin:
-  - Imported by:
-    - `apps/desktop/wallpaper`
-    - `apps/file-explorer/app-data`
-    - `apps/file-explorer/documents`
-    - `apps/prototypes`
-    - `apps/prototypes/files`
-    - `apps/prototypes/files/snapshot-history`
-    - `apps/prototypes/fixtures`
-    - `apps/prototypes/thumbnails`
-    - `apps/sonata/covers`
-    - `infra/asset-mirror`
-    - `infra/paths/data-files/memory`
-- Exemptions:
-  - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/roots.ts` (debt)
 - Test helpers:
   - Server: `@plugins/infra/plugins/paths/plugins/data-files/server/testing`
     - `CONFORMANCE_ROOT` — The suite's root: watched, with {@link CONFORMANCE_WATCH_EXTENSIONS}.

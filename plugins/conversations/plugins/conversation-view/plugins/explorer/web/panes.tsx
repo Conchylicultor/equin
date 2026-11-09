@@ -42,7 +42,10 @@ function useOpenInFilesTarget(params: {
   const conversation = useConversationById(convId);
   const worktree = rowOrStale(conversation)?.worktreePath;
   const target = useOpenInFiles(
-    locationOf({ dir: params.dir ?? worktree ?? "", open: params.open }),
+    locationOf("computer", {
+      dir: params.dir ?? worktree ?? "",
+      open: params.open,
+    }),
   );
   // Never `none`: its fallback is the pane's own promote, which drops convId.
   // Pending only while the worktree may still arrive: a conversation that is

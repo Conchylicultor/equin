@@ -52,14 +52,20 @@ function useFolderTitle(params: { dir: string }): string {
 }
 
 function useOpenInFilesTarget(params: LocationParams): PaneExpandTarget {
-  return { kind: "ready", target: useOpenInFiles(locationOf(params)) };
+  return {
+    kind: "ready",
+    target: useOpenInFiles(locationOf("computer", params)),
+  };
 }
 
 function FolderPeek(): ReactNode {
   const { dir, open } = folderPeekPane.useParams();
   const setParams = folderPeekPane.useSetParams();
   const openPane = useOpenPane();
-  const location = useMemo(() => locationOf({ dir, open }), [dir, open]);
+  const location = useMemo(
+    () => locationOf("computer", { dir, open }),
+    [dir, open],
+  );
   // Another folder swaps this slot (a history entry, a fresh instance);
   // opening a file rewrites the params in place.
   const go = useCallback(

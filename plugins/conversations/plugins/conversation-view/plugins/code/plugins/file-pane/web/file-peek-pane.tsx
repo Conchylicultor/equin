@@ -174,7 +174,7 @@ function FilePeekPaneContent() {
       target.kind === "dir"
         ? openPane.to(
             folderPeekPane,
-            locationParams({ dir: target.path, open: null }),
+            locationParams({ fs: "computer", dir: target.path, open: null }),
             { mode: "swap" },
           )
         : openPane.to(

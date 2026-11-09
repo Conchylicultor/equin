@@ -1,7 +1,7 @@
 import type {
-  HostFsDirPeek,
-  HostFsEntry,
-} from "@plugins/infra/plugins/host-fs/core";
+  FileDirPeek,
+  FileEntry,
+} from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { joinPath } from "./paths";
 
 /**
@@ -11,12 +11,12 @@ import { joinPath } from "./paths";
  * very rule a listed entry is.
  */
 export type EntryFilter = (
-  entry: Pick<HostFsEntry, "hidden">,
+  entry: Pick<FileEntry, "hidden">,
   path: string,
 ) => boolean;
 
 /**
- * Why a host-fs folder read (`host-fs.list` / `host-fs.peek`) refused, as its
+ * Why a folder read (a file system's `list` / `peek`) refused, as its
  * declared refusal code and the server's message.
  */
 export interface FolderRefusal {
@@ -28,7 +28,7 @@ export interface FolderRefusal {
 
 /** A folder's own listing, as far as counting it goes. */
 export type ListedFolder =
-  | { kind: "listed"; entries: readonly Pick<HostFsEntry, "name" | "hidden">[] }
+  | { kind: "listed"; entries: readonly Pick<FileEntry, "name" | "hidden">[] }
   | FolderRefusal;
 
 /** How many items a folder holds, as its Size cell shows it. */
@@ -54,7 +54,7 @@ export type ItemCount =
 export function itemCount(
   path: string,
   listed: ListedFolder | undefined,
-  peek: HostFsDirPeek | FolderRefusal | undefined,
+  peek: FileDirPeek | FolderRefusal | undefined,
   shows: EntryFilter,
 ): ItemCount {
   if (listed?.kind === "listed") {

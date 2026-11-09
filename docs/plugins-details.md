@@ -4482,40 +4482,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Exemptions:
                 - Exempts itself from: `boundaries/no-platform-api` — `server/internal/page-text.ts` (debt)
     - **`file-explorer`** — File explorer app.
-      - Cross-plugin:
-        - Imported by: `apps/file-explorer/documents`
       - Plugins:
-        - **`app-data`** — The file explorer's App data place: a Locations entry leading to every file root an app declares browsable (data-files.roots — the root ids are the server's, the explorer names none), each browsed read-only at /files/data/<root>[/<path>] — a folder's entries as a paged live DataView list, a file previewed beside its folder through the file viewer, at the root's location in this host's file system — on every host: the computer's disk on the desktop, memory in a browser host.
-          - Web:
-            - Slots:
-              - `files-data.actions`
-              - `files-data-at.actions`
-            - Slot contributors:
-              - `files-data.actions` ← `primitives.pane`
-              - `files-data-at.actions` ← `primitives.pane`
-            - Contributes:
-              - `Pane.Register` "files-data"
-              - `Pane.Register` "files-data-at"
-              - `FileExplorer.Places` "app-data"
-            - Uses: 24 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/app-data/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/app-data/REFERENCE.md)
-              - `primitives/data-view` ×4
-              - `primitives/css/ui-kit` ×3
-              - `primitives/pane` ×3
-              - `network/live/live-state` ×2
-              - `apps/file-explorer/shell.FileExplorer`
-              - `network/live.useLive`
-              - `primitives/bar.Bar`
-              - `primitives/css/column.Column`
-              - `primitives/css/fill.Fill`
-              - `primitives/css/placeholder.Placeholder`
-              - `primitives/css/text.Text`
-              - `primitives/file-type.FileTypeIcon`
-              - `primitives/file-viewer.FileView`
-              - `primitives/link-gesture.activationProps`
-              - `primitives/loading.Loading`
-              - `ui/icons.Icon`
-          - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
         - **`attachment-preview`** — An attachment previewed as a side pane through the Files preview (every file-viewer tab, Open with default app, size and age): the attachment/:id pane, homed in Files and opened beside any surface, and the file chip's opener, so clicking an attached file in a prompt opens it there.
           - Web:
             - Slots: `attachmentPreviewPane.Actions`
@@ -4538,34 +4505,40 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/pane.useReservesFloatingBar`
               - `primitives/text-editor/paste-images.AttachmentSlots`
             - Exports (values): `attachmentPreviewPane`
-        - **`browser`** — The file explorer's browser: <FileBrowser/> (toolbar with back / forward / up, the host path bar and a filter; the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to fileTarget; its FileBrowserSlots seams — RowActions, a row's hover actions (its own: Extract here on an archive, Copy path in the ⋯ menu), and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — the home index and /files/at/<folder>[/<open file>], so every location is a link and back / forward are the browser history; useExplorerFileTarget names any file's place there (its folder, the file previewed) as a pane's Expand target; useFileHostPath + useHostPathSource let any surface draw a file's place as the same host path bar. Contributes the files-document sub-theme the preview's page wears (28/32/48px inset, 14px on 1.6, a 24px heading).
+        - **`browser`** — The file explorer's browser over any file system this host serves (the computer's disk, the browser's storage; useExplorerSystem says what `~` is there and what it can do, useHomeSystem which one Files opens on): <FileBrowser/> (toolbar with back / forward / up, the system's path bar and a filter; the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to fileTarget; its FileBrowserSlots seams — RowActions, a row's hover actions (its own: Extract here on an archive, Copy path in the ⋯ menu), and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — the home index (the home system's home) and /files/<fs>/at/<folder>[/<open file>] per file system (the old /files/at/… forwards to the computer's disk), so every location is a link and back / forward are the browser history; moves (drag onto a folder) and the other operations are offered only where the system has them; useExplorerFileTarget names any file's place there (its folder, the file previewed) as a pane's Expand target; useFileHostPath + useHostPathSource let any surface draw a file's place as the same host path bar. Contributes the files-document sub-theme the preview's page wears (28/32/48px inset, 14px on 1.6, a 24px heading).
           - Web:
             - Slots:
               - `filesHomePane.Actions`
-              - `filesAtPane.Actions`
+              - `filesComputerAtPane.Actions`
+              - `filesBrowserAtPane.Actions`
+              - `files-at.actions`
               - `FileBrowserSlots.Lens`
               - `FileBrowserSlots.RowActions`
             - Slot contributors:
               - `filesHomePane.Actions` ← `primitives.pane`
-              - `filesAtPane.Actions` ← `primitives.pane`
+              - `filesComputerAtPane.Actions` ← `primitives.pane`
+              - `filesBrowserAtPane.Actions` ← `primitives.pane`
+              - `files-at.actions` ← `primitives.pane`
               - `FileBrowserSlots.Lens` ← `apps.file-explorer.git`
               - `FileBrowserSlots.RowActions` ← `apps.file-explorer.browser`
               - `FileBrowserSlots.RowActions` ← `apps.file-explorer.places`
             - Contributes:
               - `Pane.Register` "files-at"
+              - `Pane.Register` "files-browser-at"
+              - `Pane.Register` "files-computer-at"
               - `Pane.Register` "files-home"
               - `ThemeEngine.SubTheme` "Files document"
               - `FieldPresentation.Register` "collection:file-explorer.entry"
               - `FileBrowserSlots.RowActions` "extract" → `ExtractAction`
               - `FileBrowserSlots.RowActions` "copy-path" → `CopyPathAction`
-            - Uses: 72 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
+            - Uses: 73 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
               - `primitives/data-view` ×10
               - `primitives/css/ui-kit` ×8
               - `primitives/file-viewer` ×5
+              - `primitives/pane` ×5
               - `network/live` ×4
-              - `primitives/pane` ×4
-              - `apps/file-explorer/shell` ×3
               - `infra/endpoints` ×3
+              - `infra/paths/file-systems` ×3
               - `network/live/live-state` ×3
               - `primitives/networking` ×2
               - `primitives/path-bar` ×2
@@ -4599,14 +4572,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types):
               - `ExplorerLensItem`
               - `ExplorerNavigator`
+              - `ExplorerSystem`
+              - `ExplorerSystemState`
               - `FileBrowserProps`
               - `FileHostPath`
               - `HomeDir`
+              - `HomeSystemState`
               - `LocationParams`
+              - `PathBarSystem`
             - Exports (values):
               - `FileBrowser`
               - `FileBrowserSlots`
-              - `filesAtPane`
+              - `filesAtPaneOf`
+              - `filesBrowserAtPane`
+              - `filesComputerAtPane`
               - `filesHomePane`
               - `locationOf`
               - `locationParams`
@@ -4615,8 +4594,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useExplorerFileTarget`
               - `useExplorerFolderTarget`
               - `useExplorerLocation`
+              - `useExplorerSystem`
               - `useFileHostPath`
+              - `useFolderPathSource`
               - `useHomeDir`
+              - `useHomeSystem`
               - `useHostPathSource`
               - `useLocationNavigator`
               - `useOpenInFiles`
@@ -4631,6 +4613,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `EntryCategory`
               - `EntryFilter`
               - `EntryRow`
+              - `ExplorerFolder`
               - `ExplorerLens`
               - `ExplorerLocation`
               - `FolderRefusal`
@@ -4669,7 +4652,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shape --spacing`
               - `ui/tokens/type-scale --font-weight-semibold`
             - Imported by:
-              - `apps/file-explorer/app-data`
               - `apps/file-explorer/attachment-preview`
               - `apps/file-explorer/folder-peek`
               - `apps/file-explorer/git`
@@ -4677,16 +4659,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/code/file-pane`
               - `conversations/conversation-view/explorer`
               - `plugin-meta/plugin-view/file-tree`
-        - **`documents`** — Documents, portable half: Files' data dir (apps/file-explorer) as the documentsFiles file root — watched, and browsable read-only in App data as "Documents" on every host (the computer's disk on the desktop, memory in a browser host) — and writeDocumentsFixture, which writes a fixture's files through the root's own writes for a demo's seed or a test.
-          - Server:
-            - Contributes: `data-files.root-location` "apps.file-explorer.documents"
-            - Uses: `infra/paths/data-files.defineFileRoot`
-            - Exports (types): `DocumentsFixture`
-            - Exports (values):
-              - `documentsFiles`
-              - `writeDocumentsFixture`
-          - Machine:
-            - Uses: `infra/paths/data-files.FileRootLocation`
         - **`folder-peek`** — A host folder browsed as a side pane through the Files browser (tree, path bar, Up, a file previewed beside it): the folder/<dir>[/<open file>] pane, homed in Files and opened beside any surface — useFolderPeekTarget(dir) is its link — with Expand opening Files at the pane's location.
           - Web:
             - Slots: `folderPeekPane.Actions`
@@ -4754,7 +4726,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens: `ui/tokens/color-palette --warning`
           - Exemptions:
             - Exempts itself from: `live-state/no-handrolled-result` — `web/components/git-fields.tsx` (sanctioned)
-        - **`places`** — The file explorer's Places sidebar: the places of every FileExplorer.Places source (its own: Home, Downloads, the equin checkout, the user's pinned favorites, the startup volume, Trash) as a DataView list in Favorites / Worktrees / Locations sections with the current folder's place active, and the startup volume's storage meter at its foot. Host paths dragged onto Favorites (HOST_PATHS_MIME) are pinned there — a folder opens itself, a file its folder with the file previewed — kept in the file-explorer places config; a pin's row offers Remove from Favorites, and the browser's row ⋯ menu Add to Favorites. The file explorer's places, portable half: registers the pinned-favorites config.
+        - **`places`** — The file explorer's Places sidebar: the places of every FileExplorer.Places source (its own: Home — of every file system this host serves —, Downloads, the equin checkout, the user's pinned favorites, the startup volume, Trash; each a folder of a file system) as a DataView list in Favorites / Worktrees / Locations sections with the current folder's place active, and the startup volume's storage meter at its foot. Files dragged onto Favorites (FILE_LOCATIONS_MIME, any file system) are pinned there — a folder opens itself, a file its folder with the file previewed — kept in the file-explorer places config; a pin's row offers Remove from Favorites, and the browser's row ⋯ menu Add to Favorites. The file explorer's places, portable half: registers the pinned-favorites config.
           - Web:
             - Slots: `row-actions`
             - Slot contributors: `row-actions` ← `apps.file-explorer.places`
@@ -4770,13 +4742,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ConfigV2.WebRegister` "config"
               - `row-actions` "remove-favorite" → `RemoveFavoriteAction`
               - `FileBrowserSlots.RowActions` "add-to-favorites" → `AddToFavoritesAction`
-            - Uses: 28 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/places/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/places/REFERENCE.md)
+            - Uses: 30 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/places/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/places/REFERENCE.md)
               - `primitives/data-view` ×6
-              - `apps/file-explorer/browser` ×4
+              - `apps/file-explorer/browser` ×5
               - `apps/file-explorer/shell` ×4
               - `config_v2` ×3
               - `primitives/css/ui-kit` ×2
               - `infra/endpoints.EndpointError`
+              - `infra/paths/file-systems.useFileSystems`
               - `network/live/live-state.foldResource`
               - `network/live.useLive`
               - `primitives/css/meter.Meter`
@@ -4821,7 +4794,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `FileExplorer.Places`
             - Slot contributors:
               - `FileExplorer.Sidebar` ← `apps.file-explorer.places`
-              - `FileExplorer.Places` ← `apps.file-explorer.app-data`
               - `FileExplorer.Places` ← `apps.file-explorer.places`
             - Contributes:
               - `Apps.App` "Files" → `FileExplorerLayout`
@@ -4840,7 +4812,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PlacesSource`
               - `PlacesState`
               - `ResolvedPlaces`
-              - `RoutePlace`
             - Exports (values):
               - `FileExplorer`
               - `ResolvePlaces`
@@ -4851,8 +4822,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `fileExplorerApp`
           - Cross-plugin:
             - Imported by:
-              - `apps/file-explorer`
-              - `apps/file-explorer/app-data`
               - `apps/file-explorer/attachment-preview`
               - `apps/file-explorer/browser`
               - `apps/file-explorer/folder-peek`
@@ -28582,8 +28551,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `validatePersistedValue`
           - `withNotifyBatch`
       - Cross-plugin:
-        - Imported by: 108 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
-          - `infra` ×26
+        - Imported by: 109 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
+          - `infra` ×27
           - `debug` ×13
           - `conversations` ×11
           - `tasks` ×10
@@ -33226,15 +33195,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Contributes:
           - `resource.declare` "files.computer.bytes"
+          - `resource.declare` "files.computer.complete"
+          - `resource.declare` "files.computer.list"
+          - `resource.declare` "files.computer.list:meta"
+          - `resource.declare` "files.computer.peek"
           - `resource.declare` "files.computer.stat"
           - `resource.declare` "files.computer.text"
-          - `resource.declare` "host-fs.complete"
+          - `resource.declare` "files.computer.volume"
           - `resource.declare` "host-fs.list"
           - `resource.declare` "host-fs.list:meta"
-          - `resource.declare` "host-fs.peek"
           - `resource.declare` "host-fs.stat"
           - `resource.declare` "host-fs.version"
-          - `resource.declare` "host-fs.volume"
+          - `file-systems.provided` "computer"
         - Uses:
           - `infra/endpoints.HttpError`
           - `infra/host/host-read-pool.withHeavyReadSlot`
@@ -33256,15 +33228,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveHostPath`
         - Resources:
           - `files.computer.bytes` (invalidate, notified)
+          - `files.computer.complete` (push, notified, capped: FILE_COMPLETE_LIMIT)
+          - `files.computer.list` (keyed, window)
+          - `files.computer.list:meta` (push)
+          - `files.computer.peek` (push, notified)
           - `files.computer.stat` (push, notified)
           - `files.computer.text` (invalidate, notified)
-          - `host-fs.complete` (push, notified, capped: HOST_FS_COMPLETE_LIMIT)
-          - `host-fs.list` (keyed, window, notified)
-          - `host-fs.list:meta` (push, notified)
-          - `host-fs.peek` (push, notified)
+          - `files.computer.volume` (invalidate, snapshot)
+          - `host-fs.list` (keyed, window)
+          - `host-fs.list:meta` (push)
           - `host-fs.stat` (push, notified)
           - `host-fs.version` (push, notified)
-          - `host-fs.volume` (invalidate, snapshot)
       - Machine:
         - Uses:
           - `infra/endpoints.implementMachine`
@@ -33279,78 +33253,47 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resolveOrRefuse`
           - `watchHostDir`
           - `watchHostPath`
-        - Routes:
-          - `GET /api/host-fs/raw`
-          - `POST /api/host-fs/open`
-          - `POST /api/host-fs/extract`
-          - `POST /api/host-fs/move`
+        - Routes: `GET /api/host-fs/raw`
       - Core:
         - Uses:
-          - `framework/product-name.LEGACY_IDS`
           - `infra/endpoints.assetPath`
           - `infra/endpoints.AssetPath`
           - `infra/endpoints.blob`
           - `infra/endpoints.defineEndpoint`
           - `network/live.liveValue`
-          - `packages/list-bound.cappedList`
         - Exports (types):
-          - `DraggedHostPath`
           - `FileVersion`
           - `HostFsArchiveReason`
           - `HostFsCompleteResult`
-          - `HostFsCompletions`
-          - `HostFsDirPeek`
           - `HostFsEntry`
           - `HostFsEntryKind`
-          - `HostFsExtractResult`
           - `HostFsListingMeta`
           - `HostFsListResult`
-          - `HostFsMoveOutcome`
-          - `HostFsMoveResolution`
-          - `HostFsMoveResult`
-          - `HostFsOpenResult`
           - `HostFsPathStat`
           - `HostFsPeekResult`
           - `HostFsReadAccess`
           - `HostFsStatResult`
           - `HostFsTextResult`
-          - `HostFsVolumeInfo`
           - `HostFsVolumeResult`
           - `HostFsWithin`
-          - `ReadHostPathsResult`
         - Exports (values):
           - `compareHostFsNames`
           - `FileVersionSchema`
-          - `handOffHostPaths`
-          - `hasHostPaths`
           - `HOST_FS_COMPLETE_LIMIT`
           - `HOST_FS_MACHINE`
-          - `HOST_FS_MOVE_MAX_SOURCES`
           - `HOST_FS_PEEK_MAX_NAMES`
           - `HOST_FS_TEXT_MAX_BYTES`
-          - `HOST_PATHS_MIME`
           - `hostFileUrl`
-          - `hostFsArchiveReasonMessage`
-          - `hostFsCompletions`
-          - `hostFsDirPeek`
-          - `hostFsExtract`
           - `hostFsListing`
           - `HostFsListingQuerySchema`
-          - `hostFsMove`
-          - `hostFsOpen`
           - `hostFsPathStat`
           - `hostFsRaw`
           - `hostFsVersion`
-          - `hostFsVolumeInfo`
           - `isBrowsable`
           - `MACOS_FILES_AND_FOLDERS_SETTINGS`
-          - `readHostPaths`
-          - `writeHostPaths`
       - Cross-plugin:
         - Imported by:
           - `active-data/folder-link`
-          - `apps/file-explorer/browser`
-          - `apps/file-explorer/places`
           - `apps/sonata/sources/midi/folders`
           - `code-explorer`
           - `code-explorer/file-resolve`
@@ -34684,21 +34627,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Plugins:
-        - **`data-files`** — Data files: the files app-owned data dirs hold, on whatever host runs — the DataFiles host service (the computer's disk on the desktop, memory in a browser host) behind defineFileRoot, a root declared by the plugin owning the data dir: list / stat / read / write (atomic) / remove / rename (never replacing) / withLock / watch over validated relative paths, every miss a typed result and every mutation naming its writer. Each root's folder is a location in this host's file system (DataFilesImpl.location: the data dir on the computer's disk, or the same dir in the browser storage's hidden data folder), where file-systems' reads read its files. A root declared `browse` (and watched) is listed by a generic browser on every host: data-files.roots (each with its location), data-files.list (a folder's entries, paged by name) and data-files.stat, each pushed from the root's watch while read.
+        - **`data-files`** — Data files: the files app-owned data dirs hold, on whatever host runs — the DataFiles host service (the computer's disk on the desktop, memory in a browser host) behind defineFileRoot, a root declared by the plugin owning the data dir: list / stat / read / write (atomic) / remove / rename (never replacing) / withLock / watch over validated relative paths, every miss a typed result and every mutation naming its writer. Each root's folder is a location in this host's file system (DataFilesImpl.location: the data dir on the computer's disk, or the same dir in the browser storage's hidden data folder), where file-systems' reads read its files. A person browses a root's files as a folder of that file system (Files), never through the root.
           - Server:
-            - Contributes:
-              - `resource.declare` "data-files.list"
-              - `resource.declare` "data-files.list:meta"
-              - `resource.declare` "data-files.roots"
-              - `resource.declare` "data-files.stat"
-              - `host-service:data-files.store` "data-files.store"
-            - Uses:
-              - `network/live.serveValue`
-              - `network/live.sliceRange`
+            - Contributes: `host-service:data-files.store` "data-files.store"
             - Exports (types):
               - `DataFilesImpl`
               - `FileRoot`
-              - `FileRootBrowseSpec`
               - `FileRootLedgerSpec`
               - `FileRootSpec`
               - `FileRootStore`
@@ -34711,28 +34645,29 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `listFileRoots`
               - `requireWatchSpec`
               - `watchedPaths`
-            - Resources:
-              - `data-files.list` (keyed, window, notified)
-              - `data-files.list:meta` (push, notified)
-              - `data-files.roots` (push, fixed, whole: the file roots declared in code that opt in to browsing — a handful, fixed per build)
-              - `data-files.stat` (push, notified)
           - Machine:
             - Uses: `infra/file-watcher.startEventualFileWatcher`
             - Exports (values):
               - `diskDirMount`
               - `diskMount`
               - `FileRootLocation`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/desktop/wallpaper`
+              - `apps/prototypes`
+              - `apps/prototypes/files`
+              - `apps/prototypes/files/snapshot-history`
+              - `apps/prototypes/fixtures`
+              - `apps/prototypes/thumbnails`
+              - `apps/sonata/covers`
+              - `infra/asset-mirror`
+              - `infra/paths/data-files/memory`
+          - Exemptions:
+            - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/roots.ts` (debt)
           - Core:
-            - Uses:
-              - `infra/paths/file-systems.FileLocationSchema`
-              - `network/live.liveValue`
-              - `packages/list-bound.wholeList`
             - Exports (types):
-              - `BrowsableRoot`
               - `DataChange`
               - `DataChangeHandler`
-              - `DataFileStat`
-              - `DataFolderMeta`
               - `DataWatch`
               - `FileData`
               - `FileEntry`
@@ -34747,15 +34682,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `StatResult`
               - `WriteOpts`
             - Exports (values):
-              - `BrowsableRootSchema`
               - `copyTree`
-              - `DataFileEntrySchema`
-              - `dataFileRoots`
-              - `dataFileStat`
-              - `DataFileStatSchema`
-              - `dataFolderListing`
-              - `DataFolderMetaSchema`
-              - `DataFolderQuerySchema`
               - `InvalidRelPathError`
               - `isWithinRel`
               - `joinRel`
@@ -34767,21 +34694,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `relPath`
               - `splitRel`
               - `stageThenRename`
-          - Cross-plugin:
-            - Imported by:
-              - `apps/desktop/wallpaper`
-              - `apps/file-explorer/app-data`
-              - `apps/file-explorer/documents`
-              - `apps/prototypes`
-              - `apps/prototypes/files`
-              - `apps/prototypes/files/snapshot-history`
-              - `apps/prototypes/fixtures`
-              - `apps/prototypes/thumbnails`
-              - `apps/sonata/covers`
-              - `infra/asset-mirror`
-              - `infra/paths/data-files/memory`
-          - Exemptions:
-            - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/roots.ts` (debt)
           - Test helpers:
             - Server: `@plugins/infra/plugins/paths/plugins/data-files/server/testing`
               - `CONFORMANCE_ROOT` — The suite's root: watched, with {@link CONFORMANCE_WATCH_EXTENSIONS}.
@@ -34790,14 +34702,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `describeDataFilesConformance` — Register the conformance suite for one provider. `makeHarness` is called once per test.
               - Types: `ConformanceHarness`
           - Plugins:
-            - **`memory`** (excluded) — Data files in memory: provides the DataFiles host service for a host without the computer's disk (the browser composition), every root's tree kept in this process and written through to the host's declared storage (read back after a reload when it is persistent) — directories made as a write's parents, one monotonic clock, in-process locks, and a watch that hears every mutation as one change per microtask. And the browser's file system (file-systems' `browser` reads: files.browser.stat / .text / .bytes and GET /api/files/browser/raw): this storage laid out like a home folder, each root at its data dir under the hidden data folder the desktop keeps them in. Never booted by the desktop.
+            - **`memory`** (excluded) — Data files in memory: provides the DataFiles host service for a host without the computer's disk (the browser composition), every root's tree kept in this process and written through to the host's declared storage (read back after a reload when it is persistent) — directories made as a write's parents, one monotonic clock, in-process locks, and a watch that hears every mutation as one change per microtask. And the browser's file system (FileSystemProvided("browser"): files.browser.list / .peek / .stat / .text / .bytes, GET /api/files/browser/raw and POST /api/files/browser/move): this storage laid out like a home folder — the home's own tree (~/Documents, …) beside the hidden data folder holding each root at its data dir, as the desktop keeps them; writeBrowserHomeFiles writes a fixture into the home for a demo's seed. Never booted by the desktop.
               - Server:
                 - Contributes:
                   - `host-service:data-files.store` "data-files.store"
+                  - `file-systems.provided` "browser"
                   - `resource.declare` "files.browser.bytes"
+                  - `resource.declare` "files.browser.list"
+                  - `resource.declare` "files.browser.list:meta"
+                  - `resource.declare` "files.browser.peek"
                   - `resource.declare` "files.browser.stat"
                   - `resource.declare` "files.browser.text"
                 - Uses:
+                  - `infra/endpoints.implement`
                   - `infra/endpoints.rawEndpointHandler`
                   - `infra/paths/data-files.assertNotRoot`
                   - `infra/paths/data-files.DataFiles`
@@ -34809,9 +34726,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `infra/paths/data-files.requireWatchSpec`
                   - `infra/paths/data-files.WatchedFileRoot`
                   - `infra/paths/data-files.watchedPaths`
+                  - `infra/paths/file-systems.FileSystemProvided`
                   - `network/live.serveValue`
+                  - `network/live.sliceRange`
+                - Exports (types): `BrowserHomeFixture`
+                - Exports (values): `writeBrowserHomeFiles`
                 - Resources:
                   - `files.browser.bytes` (invalidate, notified)
+                  - `files.browser.list` (keyed, window, notified)
+                  - `files.browser.list:meta` (push, notified)
+                  - `files.browser.peek` (push, notified)
                   - `files.browser.stat` (push, notified)
                   - `files.browser.text` (invalidate, notified)
               - Test helpers:
@@ -34834,69 +34758,144 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SECRETS_DIR_DISPLAY`
               - `USER_CONFIG_DIR_DISPLAY`
               - `WORKTREES_DIR_DISPLAY`
-        - **`file-systems`** — One read of a file in any file system: useFileText, useFileBytes and useFileStat take a FileLocation and read that system's live value (the computer's disk, the browser's storage, a checkout), so a reader never branches on where a file lives; a system this host cannot run is `unavailable`, nothing read.
+        - **`file-systems`** — One read of a file in any file system: useFileText, useFileBytes and useFileStat take a FileLocation and read that system's live value (the computer's disk, the browser's storage, a checkout), so a reader never branches on where a file lives; a system this host cannot run is `unavailable`, nothing read. useFileSystems reads which systems this host serves (files.systems), useFolderListing(fs, path) a folder's pages and meta, and useFileMove(fs) one system's move as one mutation shape. Which file systems this host serves: FileSystemProvided(fs), contributed by the half serving a system's reads, and the files.systems value listing them (fixed per build) — what a browser reads to leave out a system nobody answers here.
+          - Server:
+            - Contributes: `resource.declare` "files.systems"
+            - Uses: `network/live.serveValue`
+            - Exports (values): `FileSystemProvided`
+            - Resources: `files.systems` (push, fixed, whole: the closed set of file systems, at most one entry each)
           - Web:
-            - Uses: `network/live.useLive`
+            - Uses:
+              - `infra/endpoints.useEndpointMutation`
+              - `network/live.useLive`
             - Exports (types):
               - `FileBytesState`
               - `FileBytesUnavailable`
               - `FileStatState`
+              - `FileSystemsState`
               - `FileTextState`
               - `FileTextUnavailable`
             - Exports (values):
               - `fileBytesUnavailableMessage`
               - `fileTextUnavailableMessage`
               - `useFileBytes`
+              - `useFileMove`
               - `useFileStat`
+              - `useFileSystems`
               - `useFileText`
+              - `useFolderListing`
           - Core:
             - Uses:
+              - `framework/product-name.LEGACY_IDS`
               - `infra/endpoints.assetPath`
               - `infra/endpoints.AssetPath`
               - `infra/endpoints.blob`
               - `infra/endpoints.defineEndpoint`
+              - `infra/endpoints.MachineFeature`
               - `network/live.liveValue`
+              - `packages/list-bound.cappedList`
+              - `packages/list-bound.wholeList`
             - Exports (types):
+              - `BrowsableFileSystem`
+              - `DirPeekValue`
+              - `DraggedFile`
+              - `DraggedFiles`
+              - `FileArchiveReason`
+              - `FileCompletions`
+              - `FileDirPeek`
               - `FileEntry`
+              - `FileExtractResult`
+              - `FileListingMeta`
               - `FileLocation`
+              - `FileMoveOutcome`
+              - `FileMoveResolution`
+              - `FileMoveResult`
+              - `FileOpenResult`
               - `FileReadAccess`
               - `FileStat`
+              - `FileStatValue`
+              - `FileSystemCapabilities`
+              - `FileSystemInfo`
               - `FileSystemKind`
               - `FileText`
+              - `FileVolume`
+              - `FileWithin`
+              - `ReadFileLocationsResult`
             - Exports (values):
+              - `archiveReasonMessage`
+              - `BROWSABLE_FILE_SYSTEMS`
+              - `browserDirPeek`
               - `browserFileBytes`
+              - `browserFileListing`
+              - `browserFileMove`
               - `browserFileRaw`
               - `browserFileStat`
               - `browserFileText`
               - `checkoutFileBytes`
               - `checkoutFileRaw`
               - `checkoutFileText`
+              - `compareFileNames`
+              - `computerDirPeek`
               - `computerFileBytes`
+              - `computerFileCompletions`
+              - `computerFileExtract`
+              - `computerFileListing`
+              - `computerFileMove`
+              - `computerFileOpen`
               - `computerFileRaw`
               - `computerFileStat`
               - `computerFileText`
+              - `computerVolume`
               - `contentTypeOf`
+              - `dirPeekOf`
               - `FILE_BYTES_MAX`
+              - `FILE_COMPLETE_LIMIT`
+              - `FILE_LOCATIONS_MIME`
+              - `FILE_MOVE_MAX_SOURCES`
+              - `FILE_PEEK_MAX_NAMES`
+              - `FILE_SYSTEMS`
               - `FILE_TEXT_MAX_BYTES`
+              - `FileArchiveReasonSchema`
+              - `FileCompletionsSchema`
+              - `FileDirPeekSchema`
               - `FileEntrySchema`
+              - `FileExtractResultSchema`
+              - `FileListingMetaSchema`
+              - `FileListingQuerySchema`
               - `FileLocationSchema`
+              - `FileMoveOutcomeSchema`
+              - `FileMoveResolutionSchema`
+              - `FileMoveResultSchema`
+              - `FileOpenResultSchema`
               - `FileReadAccessSchema`
+              - `fileStatOf`
               - `FileStatSchema`
+              - `fileSystemsServed`
               - `FileTextSchema`
               - `fileUrl`
+              - `FileVolumeSchema`
+              - `FileWithinSchema`
+              - `handOffComputerFiles`
+              - `hasFileLocations`
+              - `isBrowsable`
+              - `isBrowsableFileSystem`
               - `locationKey`
               - `locationName`
               - `opensNatively`
+              - `readFileLocations`
               - `sameLocation`
+              - `writeFileLocations`
           - Cross-plugin:
             - Imported by:
+              - `apps/file-explorer/browser`
+              - `apps/file-explorer/places`
               - `apps/sonata/sources/midi/file-preview`
               - `code-explorer`
               - `conversations/conversation-view/artifacts/screenshot`
+              - `conversations/conversation-view/code/file-pane`
               - `conversations/conversation-view/jsonl-viewer/tool-call/read`
               - `conversations/conversation-view/markdown-extensions`
               - `infra/host-fs`
-              - `infra/paths/data-files`
               - `infra/paths/data-files/memory`
               - `primitives/diff-view`
               - `primitives/file-viewer`
@@ -34947,7 +34946,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `UNREVERTED_WRITE_HEADER`
       - Cross-plugin:
         - Imported by:
-          - `apps/file-explorer/documents`
           - `apps/pages/agent-origin`
           - `apps/prototypes/files`
           - `apps/prototypes/files/snapshot-history`
@@ -34960,6 +34958,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/tooling/e2e-harness`
           - `infra/endpoints`
           - `infra/mcp/browser`
+          - `infra/paths/data-files/memory`
           - `infra/request-origin/agent-write-ledger`
           - `tasks/automations`
           - `tasks/sidequest-autopilot`
@@ -37229,12 +37228,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
           - `sliceRange`
       - Cross-plugin:
-        - Imported by: 341 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `apps` ×86
+        - Imported by: 339 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `apps` ×85
           - `conversations` ×70
           - `debug` ×33
           - `tasks` ×28
-          - `infra` ×24
+          - `infra` ×23
           - `page` ×16
           - `active-data` ×13
           - `build` ×10
@@ -37626,8 +37625,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `unresolved`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --destructive`
-            - Imported by: 300 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
-              - `apps` ×83
+            - Imported by: 299 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
+              - `apps` ×82
               - `conversations` ×48
               - `debug` ×29
               - `ui` ×25
@@ -38324,11 +38323,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `wholeRecord`
           - `wholeTuple`
       - Cross-plugin:
-        - Imported by: 125 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
+        - Imported by: 124 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
           - `apps` ×26
           - `debug` ×18
-          - `infra` ×16
           - `conversations` ×15
+          - `infra` ×15
           - `tasks` ×8
           - `build` ×5
           - `stats` ×4
@@ -38454,7 +38453,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-view/jsonl-viewer`
           - `infra/file-watcher`
           - `infra/git/checkout-watch`
-          - `infra/paths/data-files`
           - `infra/paths/data-files/memory`
           - `packages/watched-memo`
           - `primitives/metrics`
@@ -43872,7 +43870,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/browser/bookmarks`
           - `apps/browser/shell`
           - `apps/demo/shell`
-          - `apps/file-explorer/app-data`
           - `apps/file-explorer/browser`
           - `conversations/conversation-view`
           - `primitives/app-shell`
@@ -44425,8 +44422,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ColumnProps`
             - Exports (values): `Column`
           - Cross-plugin:
-            - Imported by: 27 plugins — full list in [`plugins/primitives/plugins/css/plugins/column/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/column/REFERENCE.md)
-              - `apps` ×12
+            - Imported by: 26 plugins — full list in [`plugins/primitives/plugins/css/plugins/column/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/column/REFERENCE.md)
+              - `apps` ×11
               - `primitives` ×5
               - `debug` ×4
               - `conversations` ×2
@@ -44554,8 +44551,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Fill`
               - `fillClasses`
           - Cross-plugin:
-            - Imported by: 180 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
-              - `apps` ×53
+            - Imported by: 179 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
+              - `apps` ×52
               - `primitives` ×31
               - `conversations` ×26
               - `debug` ×17
@@ -44925,8 +44922,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-size-body`
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-body`
-            - Imported by: 92 plugins — full list in [`plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md)
-              - `apps` ×29
+            - Imported by: 91 plugins — full list in [`plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md)
+              - `apps` ×28
               - `debug` ×18
               - `primitives` ×12
               - `page` ×7
@@ -45448,8 +45445,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 419 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
-              - `apps` ×111
+            - Imported by: 418 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+              - `apps` ×110
               - `conversations` ×80
               - `primitives` ×47
               - `debug` ×37
@@ -45751,9 +45748,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 460 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 459 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×111
-              - `apps` ×106
+              - `apps` ×105
               - `conversations` ×53
               - `page` ×26
               - `debug` ×24
@@ -46043,8 +46040,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ← `primitives.data-view`
           - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
           - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-        - Contributes: 104 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.WebRegister` ×94
+        - Contributes: 102 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.WebRegister` ×92
           - `DataViewSlots.Control` ×4
           - `DataViewSlots.Setting` ×4
           - `IdKinds.Kind` ×2
@@ -46321,8 +46318,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useViewRowCounts`
           - `wearsTimeInk`
       - Server:
-        - Contributes: 96 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.Register` ×94
+        - Contributes: 94 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.Register` ×92
           - `ids.kind` ×2
         - Uses:
           - `config_v2.getConfig`
@@ -46514,9 +46511,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale` ×6
           - `ui/tokens/shadow` ×3
           - `ui/tokens/shape` ×3
-        - Imported by: 123 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Imported by: 122 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `fields` ×39
-          - `apps` ×29
+          - `apps` ×28
           - `debug` ×15
           - `primitives` ×10
           - `conversations` ×8
@@ -47791,7 +47788,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Uses tokens: `ui/tokens/file-type-palette --folder`
         - Imported by:
-          - `apps/file-explorer/app-data`
           - `apps/file-explorer/browser`
           - `primitives/file-viewer`
           - `primitives/file-viewer/media`
@@ -47860,7 +47856,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --spacing`
         - Imported by:
-          - `apps/file-explorer/app-data`
           - `apps/file-explorer/browser`
           - `apps/sonata/sources/midi/file-preview`
           - `conversations/conversation-view/artifacts/screenshot`
@@ -48402,10 +48397,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `linkProps`
           - `openInBrowserTab`
       - Cross-plugin:
-        - Imported by: 66 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
+        - Imported by: 65 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
           - `primitives` ×16
           - `conversations` ×15
-          - `apps` ×10
+          - `apps` ×9
           - `page` ×5
           - `tasks` ×4
           - `apps-core` ×3
@@ -48482,8 +48477,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 226 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
-          - `apps` ×68
+        - Imported by: 225 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+          - `apps` ×67
           - `conversations` ×23
           - `ui` ×23
           - `debug` ×19
@@ -49660,8 +49655,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
         - Slots: `Pane.Register`
-        - Slot contributors: 95 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `Pane.Register` ×95
+        - Slot contributors: 94 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `Pane.Register` ×94
         - Contributes: 125 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `SlotRender.ListMiddleware`
           - `WebsiteHeader` "title" → `PaneTitleItem`
@@ -49720,9 +49715,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `exhibits.actions` "title" → `PaneTitleItem`
           - `explorerPane.Actions` "title" → `PaneTitleItem`
           - `filePeekPane.Actions` "title" → `PaneTitleItem`
-          - `files-data-at.actions` "title" → `PaneTitleItem`
-          - `files-data.actions` "title" → `PaneTitleItem`
-          - `filesAtPane.Actions` "title" → `PaneTitleItem`
+          - `files-at.actions` "title" → `PaneTitleItem`
+          - `filesBrowserAtPane.Actions` "title" → `PaneTitleItem`
+          - `filesComputerAtPane.Actions` "title" → `PaneTitleItem`
           - `filesHomePane.Actions` "title" → `PaneTitleItem`
           - `folderPeekPane.Actions` "title" → `PaneTitleItem`
           - `graphCanvasPane.Actions` "title" → `PaneTitleItem`
@@ -49926,8 +49921,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-2xs`
           - `ui/tokens/density --space-md`
           - `ui/tokens/shape --spacing`
-        - Imported by: 194 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `apps` ×72
+        - Imported by: 193 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `apps` ×71
           - `conversations` ×32
           - `debug` ×27
           - `active-data` ×10
@@ -57677,8 +57672,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useWantedStyleKeys`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 544 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
-          - `apps` ×154
+        - Imported by: 543 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+          - `apps` ×153
           - `conversations` ×83
           - `page` ×52
           - `primitives` ×52
@@ -59518,9 +59513,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --radius-chip-compact`
               - `ui/tokens/density --space-sm`
-            - Tokens used by: 392 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 391 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `conversations` ×84
-              - `apps` ×82
+              - `apps` ×81
               - `primitives` ×60
               - `page` ×35
               - `debug` ×26

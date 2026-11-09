@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: The file explorer's Places sidebar: the places of every FileExplorer.Places source (its own: Home, Downloads, the equin checkout, the user's pinned favorites, the startup volume, Trash) as a DataView list in Favorites / Worktrees / Locations sections with the current folder's place active, and the startup volume's storage meter at its foot. Host paths dragged onto Favorites (HOST_PATHS_MIME) are pinned there — a folder opens itself, a file its folder with the file previewed — kept in the file-explorer places config; a pin's row offers Remove from Favorites, and the browser's row ⋯ menu Add to Favorites. The file explorer's places, portable half: registers the pinned-favorites config.
+- Description: The file explorer's Places sidebar: the places of every FileExplorer.Places source (its own: Home — of every file system this host serves —, Downloads, the equin checkout, the user's pinned favorites, the startup volume, Trash; each a folder of a file system) as a DataView list in Favorites / Worktrees / Locations sections with the current folder's place active, and the startup volume's storage meter at its foot. Files dragged onto Favorites (FILE_LOCATIONS_MIME, any file system) are pinned there — a folder opens itself, a file its folder with the file previewed — kept in the file-explorer places config; a pin's row offers Remove from Favorites, and the browser's row ⋯ menu Add to Favorites. The file explorer's places, portable half: registers the pinned-favorites config.
 - Web:
   - Slots: `row-actions`
   - Slot contributors: `row-actions` ← `apps.file-explorer.places`
@@ -20,13 +20,14 @@
     - `ConfigV2.WebRegister` "config"
     - `row-actions` "remove-favorite" → `RemoveFavoriteAction`
     - `FileBrowserSlots.RowActions` "add-to-favorites" → `AddToFavoritesAction`
-  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×6
-    - `apps/file-explorer/browser` ×4
+    - `apps/file-explorer/browser` ×5
     - `apps/file-explorer/shell` ×4
     - `config_v2` ×3
     - `primitives/css/ui-kit` ×2
     - `infra/endpoints.EndpointError`
+    - `infra/paths/file-systems.useFileSystems`
     - `network/live/live-state.foldResource`
     - `network/live.useLive`
     - `primitives/css/meter.Meter`

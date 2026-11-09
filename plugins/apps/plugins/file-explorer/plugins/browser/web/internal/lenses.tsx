@@ -1,6 +1,7 @@
 import { useMemo, type ReactNode } from "react";
 import type { FileViewerGit } from "@plugins/primitives/plugins/file-viewer/core";
-import type { ExplorerLens, LensHideRule } from "../../core";
+import type { BrowsableFileSystem } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
+import type { ExplorerFolder, ExplorerLens, LensHideRule } from "../../core";
 import { FileBrowserSlots, type ExplorerLensItem } from "../slots";
 import { ExplorerDirContext } from "./explorer-dir";
 
@@ -13,24 +14,27 @@ export interface ComposedLens {
 }
 
 /**
- * Resolve every `FileBrowserSlots.Lens` on `dir` (absolute) and hand the
- * composition to `children`, inside which `useExplorerDir()` answers `dir`.
+ * Resolve every `FileBrowserSlots.Lens` on `dir` (absolute in `fs`) and hand
+ * the composition to `children`, inside which `useExplorerDir()` answers it.
  * One component per lens, chained, so each lens's hook has its own component
  * and the call order never changes; each step
  * memoizes the answers so far, so the composition keeps its identity while
  * every lens's answer does.
  */
 export function WithLenses({
+  fs,
   dir,
   children,
 }: {
+  fs: BrowsableFileSystem;
   dir: string;
   children: (lens: ComposedLens) => ReactNode;
 }): ReactNode {
   const items = FileBrowserSlots.Lens.useContributions();
+  const folder = useMemo<ExplorerFolder>(() => ({ fs, dir }), [fs, dir]);
   return (
-    <ExplorerDirContext.Provider value={dir}>
-      <LensStep items={items} index={0} dir={dir} answers={NO_ANSWERS}>
+    <ExplorerDirContext.Provider value={folder}>
+      <LensStep items={items} index={0} dir={folder} answers={NO_ANSWERS}>
         {children}
       </LensStep>
     </ExplorerDirContext.Provider>
@@ -48,7 +52,7 @@ function LensStep({
 }: {
   items: readonly ExplorerLensItem[];
   index: number;
-  dir: string;
+  dir: ExplorerFolder;
   answers: readonly ExplorerLens[];
   children: (lens: ComposedLens) => ReactNode;
 }): ReactNode {
@@ -74,7 +78,7 @@ function ResolveLens({
   children,
 }: {
   item: ExplorerLensItem;
-  dir: string;
+  dir: ExplorerFolder;
   answers: readonly ExplorerLens[];
   children: (answers: readonly ExplorerLens[]) => ReactNode;
 }): ReactNode {

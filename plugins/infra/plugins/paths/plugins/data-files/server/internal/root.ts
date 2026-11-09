@@ -1,7 +1,6 @@
 import type { DataChangeHandler, DataWatch, Mount } from "../../core";
 import {
   DataFiles,
-  type FileRootBrowseSpec,
   type FileRootSpec,
   type FileRootStore,
   type FileRootWatchSpec,
@@ -36,23 +35,10 @@ export type FileRootOf<S extends FileRootSpec> = S extends {
   ? WatchedFileRoot
   : FileRoot;
 
-/**
- * A spec declaring `browse` must declare `watch` too: a browser's reads are
- * pushed from the root's watch. Intersected into `defineFileRoot`'s parameter,
- * so the missing `watch` is a tsc error at the declaration.
- */
-type BrowseNeedsWatch<S> = S extends { readonly browse: FileRootBrowseSpec }
-  ? S extends { readonly watch: FileRootWatchSpec }
-    ? unknown
-    : { readonly watch: FileRootWatchSpec }
-  : unknown;
-
 // Every root whose declaring module has been evaluated. The desktop provider's
 // register phase reads it to prove each one bound to a location — by then every
 // barrel of the graph has loaded, so every declaration has run.
 const declared = new Map<string, FileRoot>();
-// The declared roots that opt in to browsing (`browse`), each watched.
-const browsable = new Map<string, WatchedFileRoot>();
 
 // A root id names the root in URLs and messages: dotted kebab.
 const ROOT_ID_RE = /^[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
@@ -72,16 +58,11 @@ const ROOT_ID_RE = /^[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
  * ```
  */
 export function defineFileRoot<const S extends FileRootSpec>(
-  spec: S & BrowseNeedsWatch<S>,
+  spec: S,
 ): FileRootOf<S> {
   if (!ROOT_ID_RE.test(spec.id)) {
     throw new Error(
       `[data-files] root id "${spec.id}" must be dotted lowercase kebab (e.g. "apps.prototypes")`,
-    );
-  }
-  if (spec.browse !== undefined && spec.watch === undefined) {
-    throw new Error(
-      `[data-files] root "${spec.id}" declares \`browse\` without \`watch\` — a browser's reads are pushed from the root's watch`,
     );
   }
   if (declared.has(spec.id)) {
@@ -106,8 +87,6 @@ export function defineFileRoot<const S extends FileRootSpec>(
       ? mount
       : { ...mount, watch: (onChange) => store().watch(onChange) };
   declared.set(spec.id, root);
-  if (spec.browse !== undefined && "watch" in root)
-    browsable.set(spec.id, root);
   // `FileRootOf<S>` is decided by the same `spec.watch` the line above reads;
   // tsc cannot narrow a conditional type through a runtime check.
   return root as FileRootOf<S>;
@@ -116,17 +95,4 @@ export function defineFileRoot<const S extends FileRootSpec>(
 /** Every root declared in this process, in declaration order. */
 export function listFileRoots(): readonly FileRoot[] {
   return [...declared.values()];
-}
-
-/**
- * The roots declared `browse` in this process, in declaration order — what the
- * read surface (`data-files.list` / `.stat` / `.text`, the raw route) serves.
- */
-export function browsableFileRoots(): readonly WatchedFileRoot[] {
-  return [...browsable.values()];
-}
-
-/** The browsable root `id`, or `undefined` when no root of that id opts in. */
-export function browsableFileRoot(id: string): WatchedFileRoot | undefined {
-  return browsable.get(id);
 }

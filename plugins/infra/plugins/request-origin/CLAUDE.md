@@ -117,7 +117,6 @@ own server half.)
     - `UNREVERTED_WRITE_HEADER`
 - Cross-plugin:
   - Imported by:
-    - `apps/file-explorer/documents`
     - `apps/pages/agent-origin`
     - `apps/prototypes/files`
     - `apps/prototypes/files/snapshot-history`
@@ -130,6 +129,7 @@ own server half.)
     - `framework/tooling/e2e-harness`
     - `infra/endpoints`
     - `infra/mcp/browser`
+    - `infra/paths/data-files/memory`
     - `infra/request-origin/agent-write-ledger`
     - `tasks/automations`
     - `tasks/sidequest-autopilot`

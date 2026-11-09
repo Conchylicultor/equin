@@ -104,7 +104,6 @@ every file's bytes, so PDF, media and images preview wherever the file lives
     - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --spacing`
   - Imported by:
-    - `apps/file-explorer/app-data`
     - `apps/file-explorer/browser`
     - `apps/sonata/sources/midi/file-preview`
     - `conversations/conversation-view/artifacts/screenshot`

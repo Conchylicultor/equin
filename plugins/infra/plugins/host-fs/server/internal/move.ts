@@ -2,11 +2,11 @@ import { randomUUID } from "node:crypto";
 import { cp, rename as fsRename, rm } from "node:fs/promises";
 import { lstat, realpath, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { basename, dirname, join, sep } from "node:path";
-import {
-  type HostFsMoveOutcome,
-  type HostFsMoveResolution,
-  type HostFsMoveResult,
-} from "../../core";
+import type {
+  FileMoveOutcome,
+  FileMoveResolution,
+  FileMoveResult,
+} from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { locateHostPath } from "./archive/locate";
 import { freePath, isTaken } from "./free-path";
 import { classifyFsError } from "./path";
@@ -92,9 +92,9 @@ async function moveOne(
   from: UserPath,
   destDir: UserPath,
   realDest: UserPath,
-  resolution: HostFsMoveResolution | undefined,
+  resolution: FileMoveResolution | undefined,
   rename: RenameFn,
-): Promise<HostFsMoveOutcome> {
+): Promise<FileMoveOutcome> {
   if ((await locateHostPath(from)).kind === "archive") {
     return { kind: "archive", from };
   }
@@ -142,9 +142,9 @@ async function moveOne(
 export async function moveHostPaths(
   sources: readonly UserPath[],
   destDir: UserPath,
-  resolutions: ReadonlyMap<UserPath, HostFsMoveResolution>,
+  resolutions: ReadonlyMap<UserPath, FileMoveResolution>,
   rename: RenameFn = fsRename,
-): Promise<HostFsMoveResult> {
+): Promise<FileMoveResult> {
   if ((await locateHostPath(destDir)).kind === "archive") {
     return { kind: "archive", path: destDir };
   }
@@ -157,7 +157,7 @@ export async function moveHostPaths(
   } catch (err) {
     return { kind: classifyFsError(err), path: destDir };
   }
-  const results: HostFsMoveOutcome[] = [];
+  const results: FileMoveOutcome[] = [];
   for (const from of sources) {
     results.push(
       await moveOne(from, destDir, realDest, resolutions.get(from), rename),

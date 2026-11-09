@@ -63,7 +63,6 @@ fileTypeOf("src/index.ts");
 - Cross-plugin:
   - Uses tokens: `ui/tokens/file-type-palette --folder`
   - Imported by:
-    - `apps/file-explorer/app-data`
     - `apps/file-explorer/browser`
     - `primitives/file-viewer`
     - `primitives/file-viewer/media`

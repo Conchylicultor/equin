@@ -46,7 +46,7 @@ type ParamsOf<V> =
  * ```tsx
  * { id: "size", label: "Size",
  *   rowRead: rowRead({
- *     value: hostFsDirPeek,
+ *     value: computerDirPeek,
  *     params: (r: EntryRow) => (r.kind === "dir" ? { path: r.path } : null),
  *     cell: (r, peek) => <FolderSize row={r} peek={peek} />,
  *   }) }

@@ -10,7 +10,7 @@ import { convFileTreePane } from "../panes";
 export function useConvLocation(worktree: string): ExplorerLocation {
   const { dir, open } = convFileTreePane.useParams();
   return useMemo(
-    () => locationOf({ dir: dir ?? worktree, open }),
+    () => locationOf("computer", { dir: dir ?? worktree, open }),
     [dir, open, worktree],
   );
 }

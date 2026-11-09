@@ -48,9 +48,20 @@ export const FileEntrySchema = z.object({
   size: z.number(),
   mtimeMs: z.number(),
   birthtimeMs: z.number().optional(),
-  /** A dotfile. Presentation only. */
+  /**
+   * Last access as the system records it — approximate (relatime / lazy
+   * updates, and our own reads bump it). Absent where it is not recorded.
+   */
+  atimeMs: z.number().optional(),
+  /** A dotfile. Presentation only: hidden entries are still listed. */
   hidden: z.boolean(),
-  /** Present on a file a registered archive format claims (`.zip`): browsable like a folder. */
+  /** The link's own text (`readlink`), present iff the entry is a symlink. */
+  symlinkTarget: z.string().optional(),
+  /**
+   * Present on a real file whose name a registered archive format claims
+   * (`.zip`, …): it stays a `file`, and can also be browsed like a folder — a
+   * listing of its path lists the archive's root. Never set inside an archive.
+   */
   archive: z.object({ format: z.string() }).optional(),
 });
 export type FileEntry = z.infer<typeof FileEntrySchema>;
@@ -67,14 +78,26 @@ export const FileReadAccessSchema = z.enum([
 ]);
 export type FileReadAccess = z.infer<typeof FileReadAccessSchema>;
 
+/**
+ * Set on a path that lies INSIDE an archive (`…/photos.zip/2022/a.jpg`): it is
+ * virtual, so it cannot be moved, opened with its default app, or have a git
+ * status, and it is revealed as the archive file itself.
+ */
+export const FileWithinSchema = z.object({
+  /** The archive file, in the system's absolute spelling. */
+  archive: z.string(),
+  format: z.string(),
+});
+export type FileWithin = z.infer<typeof FileWithinSchema>;
+
 /** One path described. */
 export const FileStatSchema = z.object({
+  /** The path as the system resolves it (`~` expanded, `.`/`..` collapsed). */
+  path: z.string(),
+  /** The folder holding it, in the same spelling; `null` at the system's root. */
+  parent: z.string().nullable(),
   entry: FileEntrySchema,
-  /**
-   * Set when the path lies INSIDE an archive (`…/photos.zip/a.jpg`): it is
-   * virtual, so it cannot be opened with its default app.
-   */
-  within: z.object({ archive: z.string(), format: z.string() }).optional(),
+  within: FileWithinSchema.optional(),
   /** Absent when the system cannot tell (or on an unresolvable symlink). */
   read: FileReadAccessSchema.optional(),
 });

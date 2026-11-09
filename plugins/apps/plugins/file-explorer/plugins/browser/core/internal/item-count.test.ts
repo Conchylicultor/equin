@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { HostFsEntry } from "@plugins/infra/plugins/host-fs/core";
+import type { FileEntry } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import {
   itemCount,
   type EntryFilter,
@@ -9,7 +9,7 @@ import {
 
 const DIR = "~/src";
 
-const entry = (name: string): HostFsEntry => ({
+const entry = (name: string): FileEntry => ({
   name,
   kind: "file",
   size: 1,

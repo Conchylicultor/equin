@@ -102,10 +102,12 @@ export function GitBadgeCell({ badge }: { badge: GitBadge }): ReactNode {
 export function GitFieldsResolver({
   render,
 }: ClientFieldsResolverProps<EntryRow, GitFieldsRecord>): ReactNode {
-  const dir = useExplorerDir();
+  const folder = useExplorerDir();
   const homeDir = useHomeDir();
   const home = homeDir.kind === "ready" ? homeDir.home : null;
-  const view = useGitView(dir);
+  // Git runs on this computer's checkouts: a folder of another file system
+  // is in none.
+  const view = useGitView(folder.fs === "computer" ? folder.dir : null);
 
   const values = useMemo<
     ResourceResult<ClientFieldReaders<EntryRow, GitFieldsRecord>>

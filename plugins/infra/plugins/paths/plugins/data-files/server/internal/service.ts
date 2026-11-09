@@ -36,17 +36,6 @@ export interface FileRootLedgerSpec {
 }
 
 /**
- * A root a generic browser may show (the file explorer's "App data" place),
- * read-only — through `data-files.list` / `.stat` / `.text` and the raw route.
- * Only a watched root may opt in: what a browser shows is pushed from the
- * root's watch (`defineFileRoot` refuses `browse` without `watch`).
- */
-export interface FileRootBrowseSpec {
-  /** What a person calls it, e.g. "Prototypes". */
-  label: string;
-}
-
-/**
  * A file root's portable identity: which declared data dir it is, and its
  * policies. Never an absolute path — a host binds the dir to a location
  * (the desktop's `FileRootLocation`), or keeps the files somewhere else.
@@ -58,8 +47,6 @@ export interface FileRootSpec {
   readonly dir: DataDirRef;
   readonly watch?: FileRootWatchSpec;
   readonly ledger?: FileRootLedgerSpec;
-  /** Shown, read-only, by a generic browser. Needs `watch`. */
-  readonly browse?: FileRootBrowseSpec;
 }
 
 /** One root's files on this host: the Mount operations plus its watch. */
