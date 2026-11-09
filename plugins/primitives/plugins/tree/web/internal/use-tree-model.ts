@@ -1,3 +1,7 @@
+import {
+  PLAIN_GESTURE,
+  type Gesture,
+} from "@plugins/primitives/plugins/link-gesture/core";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { DragEndEvent } from "@dnd-kit/core";
@@ -36,7 +40,8 @@ export type TreeModelArgs<T extends TreeItem> = {
    */
   revealSelected?: boolean;
   rootId?: string;
-  onSelect: (id: string) => void;
+  /** A row selected, with the gesture that did it (`PLAIN_GESTURE` for a programmatic select). */
+  onSelect: (id: string, gesture: Gesture) => void;
   /**
    * Makes a row's select click a LINK: for an id it returns the thunk of the URL
    * a ⌘/Ctrl- or middle-click on that row opens in a new browser tab (evaluated
@@ -209,7 +214,7 @@ export function useTreeModel<T extends TreeItem>(
       const id = await onCreate({ parentId });
       if (!id) return;
       setPendingFocusId(id);
-      onSelect(id);
+      onSelect(id, PLAIN_GESTURE);
     },
     [onCreate, onSelect],
   );

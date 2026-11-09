@@ -13,7 +13,10 @@ import {
 } from "@plugins/primitives/plugins/pane/web";
 import { defineApp } from "@plugins/primitives/plugins/pane/core";
 import { defaultStore } from "@plugins/primitives/plugins/pane/web/testing";
-import { runActivation } from "@plugins/primitives/plugins/link-gesture/core";
+import {
+  PLAIN_GESTURE,
+  runActivation,
+} from "@plugins/primitives/plugins/link-gesture/core";
 import { TabsProvider, getSurfaceMode, useTabs } from "../internal/use-tabs";
 import { useActivateApp } from "../internal/use-activate-app";
 import { pagePlacementRegistry } from "../internal/placement-registry";
@@ -176,6 +179,7 @@ describe("useActivateApp inside an AppNavBoundary", () => {
           app: deskApp,
           surfaceMode: "desktop",
         }),
+        PLAIN_GESTURE,
       );
     });
 
@@ -196,6 +200,7 @@ describe("useActivateApp inside an AppNavBoundary", () => {
           app: storyApp,
           surfaceMode: undefined,
         }),
+        PLAIN_GESTURE,
       );
     });
 
@@ -215,6 +220,7 @@ describe("useActivateApp inside an AppNavBoundary", () => {
           app: storyApp,
           surfaceMode: undefined,
         }),
+        PLAIN_GESTURE,
       );
     });
 
@@ -236,6 +242,7 @@ describe("useActivateApp outside any boundary", () => {
           app: storyApp,
           surfaceMode: undefined,
         }),
+        PLAIN_GESTURE,
       );
     });
 

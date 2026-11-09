@@ -1,3 +1,4 @@
+import { PLAIN_GESTURE } from "@plugins/primitives/plugins/link-gesture/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -196,7 +197,7 @@ export function TaskGraph({ taskId }: { taskId: string }) {
   // A task the edge's "+" just created opens after the mutation settles: no
   // gesture to read, so the plain open.
   const onNavigate = useCallback(
-    (id: string) => taskTarget(id).open(),
+    (id: string) => taskTarget(id).open(PLAIN_GESTURE),
     [taskTarget],
   );
   const onConnect = useCallback(

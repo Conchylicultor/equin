@@ -52,8 +52,8 @@ export function useSecretsCheck({
         ? `${first.key} ${DEPLOY_SECRET_STATUS_LABELS[first.status]}`
         : `${rows.length - waiting.length} of ${rows.length} approved`,
     fix: {
-      open: () => {
-        settings.open();
+      open: (gesture) => {
+        settings.open(gesture);
         reveal(SECRETS_SECTION_ID);
       },
       href: settings.href,

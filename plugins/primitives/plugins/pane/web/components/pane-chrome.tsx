@@ -1,3 +1,4 @@
+import { gestureOf } from "@plugins/primitives/plugins/link-gesture/web";
 import { TooltipDoc } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
 import { useContext, useMemo, type MouseEvent, type ReactNode } from "react";
@@ -234,7 +235,11 @@ export function PaneChrome({
     >
       {showLeading && leadingControl}
       {ancestorsHidden && chrome.close && doBack && (
-        <PaneIconAction label="Back" icon={arrowBackIcon} onClick={doBack} />
+        <PaneIconAction
+          label="Back"
+          icon={arrowBackIcon}
+          onClick={(e) => doBack(gestureOf(e))}
+        />
       )}
       {/* The bar IS the row's grow cell (`min-w-0 flex-1`), which is why
               there is no `Fill` beside it: a second claimant on the same slack
@@ -303,7 +308,7 @@ export function PaneChrome({
                   <PaneIconAction
                     label="Back"
                     icon={arrowBackIcon}
-                    onClick={doBack}
+                    onClick={(e) => doBack(gestureOf(e))}
                   />
                 )}
                 <PaneTitleContext.Provider value={titleValue}>
@@ -383,7 +388,7 @@ export function PaneEndControls({ pane }: { pane: AnyPane }): ReactNode {
             </TooltipDoc>
           }
           icon={closeIcon}
-          onClick={doClose}
+          onClick={(e) => doClose(gestureOf(e))}
         />
       )}
     </>

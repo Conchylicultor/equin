@@ -41,11 +41,11 @@ export function useMorphFromPane(): {
   const [control, attach] = useState<HTMLButtonElement | null>(null);
   const morph = (target: LinkTarget): LinkTarget => ({
     href: target.href,
-    open: () => {
+    open: (gesture) => {
       const from = control?.closest<HTMLElement>("[data-pane-id]");
       const run = paneMorphSink.peek();
-      if (from == null || run === null) target.open();
-      else run(from, target.open);
+      if (from == null || run === null) target.open(gesture);
+      else run(from, () => target.open(gesture));
     },
   });
   return { attach, morph };

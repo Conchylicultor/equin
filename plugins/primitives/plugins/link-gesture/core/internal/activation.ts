@@ -10,9 +10,30 @@
  * still a user gesture); it returns an app path (`/agents/c/42`).
  */
 export interface LinkTarget {
-  open(): void;
+  /**
+   * Open it here. `gesture` is REQUIRED so a wrapper that forwards a link
+   * (a toggle, `afterOpen`, a row activation) cannot drop it: a wrapper that
+   * calls `open()` bare is a type error, not a silently lost ⌥-click.
+   */
+  open(gesture: Gesture): void;
   href(): string;
 }
+
+/**
+ * How the user asked to open (or close) something HERE — the modifiers that
+ * do not send it elsewhere. Read off the event by `gestureOf` (web barrel);
+ * {@link PLAIN_GESTURE} for an activation with no modifiers to read.
+ *
+ * `keepOthers` (⌥/Alt): keep what is already on screen — a pane open inserts
+ * beside the caller instead of replacing what stands right of it, a pane close
+ * removes only that pane.
+ */
+export interface Gesture {
+  keepOthers: boolean;
+}
+
+/** The gesture of an activation with no modifiers (a plain click, an open run after a mutation). */
+export const PLAIN_GESTURE: Gesture = Object.freeze({ keepOthers: false });
 
 /**
  * A plain action: a function that returns NOTHING. Spelled `void | undefined`,
@@ -32,10 +53,13 @@ export type Action = () => void | undefined;
  */
 export type Activation = Action | LinkTarget;
 
-/** Run an activation the way a plain click (or Enter) does. */
-export function runActivation(activation: Activation): void {
+/**
+ * Run an activation the way a click (or Enter) does, with that input's
+ * {@link Gesture} — {@link PLAIN_GESTURE} when there is none to read.
+ */
+export function runActivation(activation: Activation, gesture: Gesture): void {
   if (typeof activation === "function") activation();
-  else activation.open();
+  else activation.open(gesture);
 }
 
 /** The URL an "elsewhere" gesture opens, or `undefined` for a plain action. */
@@ -64,8 +88,8 @@ export function afterOpen(
     };
   }
   return {
-    open: () => {
-      activation.open();
+    open: (gesture) => {
+      activation.open(gesture);
       effect();
     },
     href: () => activation.href(),
@@ -89,9 +113,9 @@ export function beforeOpen(
     };
   }
   return {
-    open: () => {
+    open: (gesture) => {
       effect();
-      activation.open();
+      activation.open(gesture);
     },
     href: () => activation.href(),
   };

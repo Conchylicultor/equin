@@ -1,3 +1,4 @@
+import type { Gesture } from "@plugins/primitives/plugins/link-gesture/core";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ReactNode, Ref } from "react";
 import type {
@@ -32,8 +33,8 @@ export type TreeRowChromeProps = {
   selected?: boolean;
   /** Chevron click. Stops propagation internally so it never triggers onSelect. */
   onToggle?: () => void;
-  /** Row click. */
-  onSelect?: () => void;
+  /** Row click, with its gesture (⌥ keeps the others when it opens a pane). */
+  onSelect?: (gesture: Gesture) => void;
   /**
    * Makes the row click a LINK: ⌘/Ctrl- and middle-click open `selectHref()`
    * in a new browser tab instead of running `onSelect` (link-gesture). Absent →

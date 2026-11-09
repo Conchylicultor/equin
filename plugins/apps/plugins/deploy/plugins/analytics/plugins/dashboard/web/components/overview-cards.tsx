@@ -14,6 +14,7 @@ import { useLive } from "@plugins/network/plugins/live/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { PLAIN_GESTURE } from "@plugins/primitives/plugins/link-gesture/core";
 import { linkProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -229,7 +230,7 @@ function TopBody({ report }: { report: AnalyticsReport }): ReactNode {
               report={report}
               source={source}
               filters={NO_FILTERS}
-              onFilterRow={() => link.open()}
+              onFilterRow={() => link.open(PLAIN_GESTURE)}
               excerpt={excerpt}
             />
           </SiteCardBody>

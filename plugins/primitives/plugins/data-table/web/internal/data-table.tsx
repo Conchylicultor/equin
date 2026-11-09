@@ -60,7 +60,10 @@ import {
   runActivation,
   type Activation,
 } from "@plugins/primitives/plugins/link-gesture/core";
-import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
+import {
+  activationProps,
+  gestureOf,
+} from "@plugins/primitives/plugins/link-gesture/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 
@@ -1001,7 +1004,7 @@ function DataTableRow<TRow>({
                 activation !== undefined
               ) {
                 e.preventDefault();
-                runActivation(activation);
+                runActivation(activation, gestureOf(e));
               }
             }
           : undefined

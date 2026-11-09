@@ -1,3 +1,4 @@
+import { linkProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { convFileTreePane } from "../panes";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -14,7 +15,7 @@ export function ConvTreeButton() {
       label="File explorer"
       variant={isOpen ? "secondary" : "ghost"}
       aria-pressed={isOpen}
-      onClick={toggle}
+      {...linkProps(toggle)}
     />
   );
 }

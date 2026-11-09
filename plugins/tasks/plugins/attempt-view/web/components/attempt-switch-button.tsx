@@ -1,3 +1,4 @@
+import { linkProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useLive, rowOrStale } from "@plugins/network/plugins/live/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
@@ -31,13 +32,12 @@ export function AttemptSwitchButton() {
     case "loading":
     case "error":
       return (
-        // eslint-disable-next-line icon-button/prefer-icon-button -- placeholder for the icon+count button below; a square IconButton would resize the toolbar when the count settles
         <Button
           variant={isOpen ? "secondary" : "ghost"}
           tooltip={isOpen ? "Close attempt view" : "Open attempt view"}
           aria-label={isOpen ? "Close attempt view" : "Open attempt view"}
           aria-pressed={isOpen}
-          onClick={toggle}
+          {...linkProps(toggle)}
         >
           <Icon icon={splitscreenIcon} />
         </Button>
@@ -52,7 +52,7 @@ export function AttemptSwitchButton() {
       tooltip={isOpen ? "Close attempt view" : "Open attempt view"}
       aria-label={isOpen ? "Close attempt view" : "Open attempt view"}
       aria-pressed={isOpen}
-      onClick={toggle}
+      {...linkProps(toggle)}
       className="gap-xs"
     >
       <Icon icon={splitscreenIcon} />

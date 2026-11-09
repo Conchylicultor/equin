@@ -140,6 +140,7 @@ import { subItemsSettingsFor } from "./sub-items-settings";
 import {
   afterOpen,
   beforeOpen,
+  PLAIN_GESTURE,
   runActivation,
   type Activation,
 } from "@plugins/primitives/plugins/link-gesture/core";
@@ -570,7 +571,7 @@ function DataViewBodyInner<TRow>(
             if (link === undefined) return mine;
             return mine === undefined
               ? link
-              : afterOpen(link, () => runActivation(mine));
+              : afterOpen(link, () => runActivation(mine, PLAIN_GESTURE));
           };
     const record = sectionActivation?.record;
     if (!base || !record) return base;

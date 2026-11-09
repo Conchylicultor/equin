@@ -1,3 +1,4 @@
+import { PLAIN_GESTURE } from "@plugins/primitives/plugins/link-gesture/core";
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { cleanup, fireEvent, render } from "@testing-library/react";
 
@@ -320,7 +321,11 @@ describe("useBack: a parent of another app goes through the boundary", () => {
   function BackButton() {
     const back = hostUnderGuest.useBack();
     return (
-      <button type="button" disabled={back === null} onClick={() => back?.()}>
+      <button
+        type="button"
+        disabled={back === null}
+        onClick={() => back?.(PLAIN_GESTURE)}
+      >
         back
       </button>
     );

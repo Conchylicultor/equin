@@ -6,7 +6,10 @@ import {
   type Ref,
 } from "react";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
-import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
+import {
+  activationProps,
+  gestureOf,
+} from "@plugins/primitives/plugins/link-gesture/web";
 import {
   runActivation,
   type Activation,
@@ -366,7 +369,7 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
             ? (e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
-                  runActivation(activate);
+                  runActivation(activate, gestureOf(e));
                 }
               }
             : undefined
@@ -760,7 +763,7 @@ function AddTile({
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          runActivation(activation);
+          runActivation(activation, gestureOf(e));
         }
       }}
       className={cn("group/icon focus-ring relative", geometry.tilePad)}

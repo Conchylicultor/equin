@@ -7,7 +7,10 @@ import { PickerPill } from "@plugins/primitives/plugins/text-editor/plugins/comp
 import { TooltipDoc } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useConfigLink } from "@plugins/config_v2/plugins/config-link/web";
-import { runActivation } from "@plugins/primitives/plugins/link-gesture/core";
+import {
+  PLAIN_GESTURE,
+  runActivation,
+} from "@plugins/primitives/plugins/link-gesture/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { TaskLaunch } from "../slots";
 import { launchOptionValue, type LaunchOptionValues } from "../internal/values";
@@ -203,7 +206,8 @@ function LaunchOptionGroup({
                 label: `Configure: ${option.label}`,
                 // A menu-section action: no gestures to read, so it follows
                 // the link the way a plain click does.
-                onAction: () => runActivation(configLink(configure)),
+                onAction: () =>
+                  runActivation(configLink(configure), PLAIN_GESTURE),
               }
             }
           >

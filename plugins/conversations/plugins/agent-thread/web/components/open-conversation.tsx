@@ -31,8 +31,8 @@ export function OpenConversationButton({
     { mode: "push" },
   );
   const link = linkProps({
-    open: () => {
-      target.open();
+    open: (gesture) => {
+      target.open(gesture);
       onOpened?.();
     },
     href: target.href,

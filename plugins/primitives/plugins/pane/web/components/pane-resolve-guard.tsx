@@ -1,3 +1,4 @@
+import { gestureOf } from "@plugins/primitives/plugins/link-gesture/web";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
 import { useState, type ComponentType, type ReactNode } from "react";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -166,7 +167,7 @@ function FallbackChrome({
               <PaneIconAction
                 label="Close"
                 icon={closeIcon}
-                onClick={doClose}
+                onClick={(e) => doClose(gestureOf(e))}
               />
             )}
           </Stack>

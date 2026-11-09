@@ -55,11 +55,15 @@ export function usePaneToggle(): (target: PaneTarget) => LinkTarget {
       );
       const push = openPane.to(target.pane, target.params, { mode: "push" });
       return {
-        open: () => {
+        open: (gesture) => {
           if (opened && sameParams(opened.params, target.params)) {
-            resolveStore().close(target.pane._internal, opened.instanceId);
+            resolveStore().close(
+              target.pane._internal,
+              opened.instanceId,
+              gesture,
+            );
           } else {
-            push.open();
+            push.open(gesture);
           }
         },
         href: push.href,

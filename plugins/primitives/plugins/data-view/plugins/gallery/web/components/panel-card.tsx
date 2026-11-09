@@ -12,7 +12,10 @@ import {
   RowActions,
   rowActionsAnchor,
 } from "@plugins/primitives/plugins/row-actions/web";
-import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
+import {
+  activationProps,
+  gestureOf,
+} from "@plugins/primitives/plugins/link-gesture/web";
 import {
   runActivation,
   type Activation,
@@ -84,7 +87,7 @@ export function PanelCard({
           ? (e) => {
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
-                runActivation(onActivate);
+                runActivation(onActivate, gestureOf(e));
               }
             }
           : undefined

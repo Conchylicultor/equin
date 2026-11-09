@@ -265,14 +265,20 @@ not an `onClick` (`link-gesture/no-click-navigate` enforces; also
 
 - Plain click opens; ⌘/Ctrl/middle-click opens the URL plain click *would*
   produce in a new browser tab.
-- **⌥/Alt-click keeps the others** (link-gesture's ambient `keepsOthers()`,
-  read by the store — never forwarded by hand, so it survives any wrapper):
+- **⌥/Alt-click keeps the others** — the `Gesture` link-gesture reads off the
+  click and passes to `LinkTarget.open(gesture)` (required, so no wrapper can
+  drop it):
   - an open, whatever its mode, INSERTS the target right after the caller
     (after the last pane with no caller) — `A | B | C | D` opened from B gives
     `A | B | E | C | D`; falls back to the mode's own open when the kept prefix
     cannot host the address;
   - a close (the × button, a toggle closing its pane) removes only that pane
     — `A | B | D` for C — plus any pane right of it chained through it.
+  - `pane.useToggle()`'s `toggle` is a `LinkTarget` (spread
+    `linkProps(toggle)`), `useClose()` / `useBack()` return
+    `(gesture) => void` (`onClick={(e) => close(gestureOf(e))}`), and
+    `store.close(internal, id, gesture)` takes it; an imperative open or
+    close with no input to read passes `PLAIN_GESTURE`.
 - Both run one pure
   `computeOpen(currentRoute, callerInstanceId, target, params, opts)` — the
   only implementation of the modes (shared with `store.openPaneImpl` and

@@ -36,12 +36,12 @@ export function ConversationList() {
       { mode: "root" },
     );
     return {
-      open: () => {
+      open: (gesture) => {
         const result = loadRouteForConversation(id);
         if (result.kind === "restored" && result.slots.length > 1) {
           store.restoreRoute(result.slots);
         } else {
-          fresh.open();
+          fresh.open(gesture);
         }
       },
       href: () => {

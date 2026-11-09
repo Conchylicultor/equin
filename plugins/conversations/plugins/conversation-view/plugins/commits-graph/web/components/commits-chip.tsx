@@ -1,3 +1,5 @@
+import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
+import { linkProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useLive, rowOrStale } from "@plugins/network/plugins/live/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
@@ -61,7 +63,7 @@ function AttemptCommitsChip({ attemptId }: { attemptId: string }) {
   // measured.
   if (!work.resolved) {
     return (
-      <UnmeasuredChip reason={work.reason} isOpen={isOpen} onToggle={toggle} />
+      <UnmeasuredChip reason={work.reason} isOpen={isOpen} toggle={toggle} />
     );
   }
 
@@ -71,7 +73,7 @@ function AttemptCommitsChip({ attemptId }: { attemptId: string }) {
       <UnmeasuredChip
         reason="Branch no longer exists — nothing left to compare against main"
         isOpen={isOpen}
-        onToggle={toggle}
+        toggle={toggle}
       />
     );
   }
@@ -98,7 +100,7 @@ function AttemptCommitsChip({ attemptId }: { attemptId: string }) {
       tooltip={title}
       aria-label={title}
       aria-pressed={isOpen}
-      onClick={toggle}
+      {...linkProps(toggle)}
       className="gap-xs px-sm text-control-compact tabular-nums"
     >
       <Icon icon={altRouteIcon} />
@@ -132,11 +134,11 @@ function AttemptCommitsChip({ attemptId }: { attemptId: string }) {
 function UnmeasuredChip({
   reason,
   isOpen,
-  onToggle,
+  toggle,
 }: {
   reason: string;
   isOpen: boolean;
-  onToggle: () => void;
+  toggle: LinkTarget;
 }) {
   return (
     <Button
@@ -144,7 +146,7 @@ function UnmeasuredChip({
       tooltip={reason}
       aria-label={reason}
       aria-pressed={isOpen}
-      onClick={onToggle}
+      {...linkProps(toggle)}
       className="gap-xs px-sm text-control-compact tabular-nums"
     >
       <Icon icon={altRouteIcon} />

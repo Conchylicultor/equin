@@ -43,7 +43,7 @@ export function useConfigLink(): (descriptor: ConfigDescriptor) => LinkTarget {
         return reg.storePath;
       };
       return {
-        open: () => pathLink(storePath()).open(),
+        open: (gesture) => pathLink(storePath()).open(gesture),
         href: () => pathLink(storePath()).href(),
       };
     },

@@ -1,3 +1,4 @@
+import { PLAIN_GESTURE } from "@plugins/primitives/plugins/link-gesture/core";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
@@ -129,7 +130,13 @@ export function DeleteHeaderAction() {
         <TitleActionButton
           icon={deleteIcon}
           label="Delete prototype"
-          onClick={() => deleteNow(meta.name, meta.title, back ?? undefined)}
+          onClick={() =>
+            deleteNow(
+              meta.name,
+              meta.title,
+              back === null ? undefined : () => back(PLAIN_GESTURE),
+            )
+          }
         />
       );
     },

@@ -1,3 +1,4 @@
+import { linkProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { convReviewPane } from "../panes";
@@ -18,7 +19,7 @@ export function ReviewButton() {
       tooltip="Review"
       aria-label="Review"
       aria-pressed={isOpen}
-      onClick={toggle}
+      {...linkProps(toggle)}
       className="gap-xs"
     >
       <Icon icon={differenceIcon} />

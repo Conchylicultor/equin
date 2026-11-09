@@ -1185,7 +1185,9 @@ function renderTreeChromeRow(
       selected={props.selected}
       // `undefined` stays `undefined`: a non-activating row is no button.
       onSelect={
-        activation === undefined ? undefined : () => runActivation(activation)
+        activation === undefined
+          ? undefined
+          : (gesture) => runActivation(activation, gesture)
       }
       selectHref={activationHref(activation)}
       icon={leadingSlot({

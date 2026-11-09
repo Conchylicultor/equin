@@ -53,6 +53,7 @@ contributions: [
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/css/ui-kit.Button`
     - `primitives/detail-sections.defineDetailSections`
+    - `primitives/link-gesture.linkProps`
     - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`

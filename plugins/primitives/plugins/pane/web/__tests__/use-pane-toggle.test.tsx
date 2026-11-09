@@ -1,3 +1,4 @@
+import { PLAIN_GESTURE } from "@plugins/primitives/plugins/link-gesture/core";
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { useEffect } from "react";
 import { act, cleanup, render } from "@testing-library/react";
@@ -103,7 +104,7 @@ function linkFor(itemId: string): LinkTarget {
 
 /** A plain click on the link — built outside `act`, which defers a render. */
 function click(link: LinkTarget): void {
-  act(() => link.open());
+  act(() => link.open(PLAIN_GESTURE));
 }
 
 const items = () =>

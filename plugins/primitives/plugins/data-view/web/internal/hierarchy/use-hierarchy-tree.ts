@@ -4,6 +4,8 @@ import type { TreeModelArgs } from "@plugins/primitives/plugins/tree/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   activationHref,
+  PLAIN_GESTURE,
+  type Gesture,
   runActivation,
 } from "@plugins/primitives/plugins/link-gesture/core";
 import {
@@ -296,26 +298,29 @@ export function useHierarchyTree(args: {
   // child" creating a page nobody was taken to. So an unresolvable id is held
   // and activated the moment its row shows up.
   const pendingActivationRef = useRef<string | null>(null);
-  const activateById = useEventCallback((id: string): boolean => {
-    const original = originalById.get(id);
-    if (original === undefined) return false;
-    const activation = props.rowActivation?.(original);
-    if (activation !== undefined) runActivation(activation);
-    return true;
-  });
+  const activateById = useEventCallback(
+    (id: string, gesture: Gesture): boolean => {
+      const original = originalById.get(id);
+      if (original === undefined) return false;
+      const activation = props.rowActivation?.(original);
+      if (activation !== undefined) runActivation(activation, gesture);
+      return true;
+    },
+  );
   useEffect(() => {
     const pending = pendingActivationRef.current;
     if (pending === null) return;
-    if (activateById(pending)) pendingActivationRef.current = null;
+    if (activateById(pending, PLAIN_GESTURE))
+      pendingActivationRef.current = null;
   }, [originalById, activateById]);
   const onSelect = useCallback(
-    (id: string) => {
+    (id: string, gesture: Gesture) => {
       // A row created from the tree ("add child" / "add below") is activated
       // by the id `onCreate` returned, one live-state round-trip BEFORE the
       // row itself lands — so it is normal for the lookup to miss here. Hold
       // the id and let the effect above activate it on arrival; anything that
       // does resolve now supersedes a held one.
-      pendingActivationRef.current = activateById(id) ? null : id;
+      pendingActivationRef.current = activateById(id, gesture) ? null : id;
     },
     [activateById],
   );

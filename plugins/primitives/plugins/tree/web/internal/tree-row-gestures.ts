@@ -1,5 +1,9 @@
 import type { KeyboardEvent, MouseEvent } from "react";
-import { linkProps } from "@plugins/primitives/plugins/link-gesture/web";
+import {
+  gestureOf,
+  linkProps,
+} from "@plugins/primitives/plugins/link-gesture/web";
+import type { Gesture } from "@plugins/primitives/plugins/link-gesture/core";
 
 /** The row the latest gesture's first click landed on (see `onDoubleClick`). */
 let firstClickTarget: EventTarget | null = null;
@@ -29,7 +33,7 @@ export function treeRowGestures({
   clickOpens = false,
   selection,
 }: {
-  onSelect?: () => void;
+  onSelect?: (gesture: Gesture) => void;
   selectHref?: () => string;
   onOpen?: () => void;
   clickOpens?: boolean;
@@ -41,7 +45,9 @@ export function treeRowGestures({
     onSelect && selectHref
       ? linkProps({ open: onSelect, href: selectHref })
       : undefined;
-  const selectClick = selectLink?.onClick ?? onSelect;
+  const selectClick =
+    selectLink?.onClick ??
+    (onSelect && ((e: MouseEvent) => onSelect(gestureOf(e))));
   const onClick =
     onOpen || selection
       ? (e: MouseEvent) => {
@@ -61,7 +67,7 @@ export function treeRowGestures({
           firstClickTarget = e.currentTarget;
           if (onOpen && clickOpens) onOpen();
           else if (selectLink) selectLink.onClick(e);
-          else onSelect?.();
+          else onSelect?.(gestureOf(e));
         }
       : selectClick;
   return {

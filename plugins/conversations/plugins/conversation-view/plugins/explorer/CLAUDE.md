@@ -48,6 +48,7 @@ reverse. The pane's id and segment predate this plugin (it moved out of
     - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/icon-button.IconButton`
+    - `primitives/link-gesture.linkProps`
     - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`

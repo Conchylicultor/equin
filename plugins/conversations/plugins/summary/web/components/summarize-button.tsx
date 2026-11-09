@@ -1,3 +1,4 @@
+import { linkProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
@@ -52,7 +53,7 @@ export function SummarizeButton() {
       <Button
         variant={isOpen ? "secondary" : "ghost"}
 
-        onClick={toggle}
+        {...linkProps(toggle)}
         className="gap-xs text-caption"
         tooltip="Summary"
         aria-label="Summary"
@@ -67,7 +68,7 @@ export function SummarizeButton() {
   return (
     <Button
       variant={isOpen ? "secondary" : "ghost"}
-      onClick={toggle}
+      {...linkProps(toggle)}
       className="gap-xs"
       tooltip={`Summary: ${PHASE_LABEL[latest.phase]}`}
       aria-label={`Summary: ${PHASE_LABEL[latest.phase]}`}

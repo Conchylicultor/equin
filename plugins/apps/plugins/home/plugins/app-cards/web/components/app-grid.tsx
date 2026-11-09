@@ -22,7 +22,10 @@ import { installedApp } from "@plugins/apps-core/plugins/app-launcher/core";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { newAppPane } from "@plugins/apps/plugins/home/plugins/new-app/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
-import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
+import {
+  PLAIN_GESTURE,
+  type LinkTarget,
+} from "@plugins/primitives/plugins/link-gesture/core";
 import { linkProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -79,7 +82,7 @@ export function AppGrid() {
       id: "new-app",
       label: "New app",
       icon: <Icon icon={addIcon} className="size-4" />,
-      onSelect: newApp.open,
+      onSelect: () => newApp.open(PLAIN_GESTURE),
     },
   ];
 

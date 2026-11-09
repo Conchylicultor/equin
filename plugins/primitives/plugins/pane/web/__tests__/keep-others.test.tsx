@@ -13,6 +13,10 @@ import {
   useSyncPaneRegistry,
   type PaneStore,
 } from "@plugins/primitives/plugins/pane/web";
+import {
+  gestureOf,
+  linkProps,
+} from "@plugins/primitives/plugins/link-gesture/web";
 import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { createTestSurfaceStore, TestSurface, defaultStore } from "../testing";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -77,12 +81,12 @@ function OpenE() {
   );
 }
 
-// A bare `onClick={toggle}` — no link-gesture props anywhere — as the
-// conversation's File explorer button is.
+// A `pane.useToggle` button, as the conversation's File explorer is: its
+// toggle is a LinkTarget, so the gesture reaches it like any link's.
 function ToggleE() {
   const { toggle } = ePane.useToggle({});
   return (
-    <button type="button" onClick={toggle}>
+    <button type="button" {...linkProps(toggle)}>
       toggle
     </button>
   );
@@ -152,7 +156,9 @@ function closeAt(index: number, alt: boolean) {
   const view = render(
     <button
       type="button"
-      onClick={() => store.close(pane._internal, slot.instanceId)}
+      onClick={(e) =>
+        store.close(pane._internal, slot.instanceId, gestureOf(e))
+      }
     >
       close
     </button>,
@@ -206,7 +212,7 @@ describe("⌥-close removes only that pane", () => {
   });
 });
 
-describe("⌥ reaches a bare onClick toggle", () => {
+describe("⌥ reaches a useToggle button", () => {
   it("⌥-click on a toggle inserts", () => {
     seed(["a", "b", "c", "d"]);
     toggleFrom(1, true);
@@ -219,11 +225,9 @@ describe("⌥ reaches a bare onClick toggle", () => {
     expect(ids()).toEqual(["a", "b", "e"]);
   });
 
-  it("an open after the click (no event dispatching) does not insert", () => {
-    seed(["a", "b", "c", "d"]);
-    const route = store.getRoute();
-    expect(window.event).toBeUndefined();
-    store.close(cPane._internal, route[2]!.instanceId);
-    expect(ids()).toEqual(["a", "b"]);
+  it("⌥-click on an open toggle closes only its pane", () => {
+    seed(["a", "b", "e", "c"]);
+    toggleFrom(1, true);
+    expect(ids()).toEqual(["a", "b", "c"]);
   });
 });

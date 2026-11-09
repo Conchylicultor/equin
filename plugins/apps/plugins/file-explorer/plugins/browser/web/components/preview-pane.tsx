@@ -1,3 +1,5 @@
+import type { Gesture } from "@plugins/primitives/plugins/link-gesture/core";
+import { gestureOf } from "@plugins/primitives/plugins/link-gesture/web";
 import { useMemo, useState, type ReactNode } from "react";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
@@ -67,7 +69,7 @@ export function PreviewPane({
   /** The file's git context, when a lens knows it. */
   git: FileViewerGit | undefined;
   /** Omitted where there is nothing to close to (the pane is the route's root). */
-  onClose?: () => void;
+  onClose?: (gesture: Gesture) => void;
   /** The Close button's name — it states the host's own shortcut, if any. */
   closeLabel?: string;
   /** The header sits at the surface's top-right corner (floating action bar). */
@@ -135,7 +137,7 @@ export function PreviewPane({
               icon={closeIcon}
               label={closeLabel}
               variant="ghost"
-              onClick={onClose}
+              onClick={(e) => onClose(gestureOf(e))}
             />
           )}
         </Bar>

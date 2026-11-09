@@ -1,3 +1,4 @@
+import { linkProps } from "@plugins/primitives/plugins/link-gesture/web";
 import {
   ResourceErrorInline,
   useCombinedResources,
@@ -88,7 +89,7 @@ function AgentAvatarTitlePrefixInner({
       disabled={!agentId}
       aria-pressed={isOpen}
       title={agent?.name ?? "Agent"}
-      onClick={toggle}
+      {...linkProps(toggle)}
       className={cn(
         "rounded-full transition-opacity",
         isOpen

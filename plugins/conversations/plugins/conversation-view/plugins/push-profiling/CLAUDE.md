@@ -20,6 +20,7 @@
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/text.Text`
     - `primitives/icon-button.IconButton`
+    - `primitives/link-gesture.linkProps`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`

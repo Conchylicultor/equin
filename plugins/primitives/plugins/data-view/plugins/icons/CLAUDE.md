@@ -106,10 +106,11 @@ through the real body, `web/__tests__/paged-conformance.test.tsx` (data-view's
 - Description: Icons view child for the data-view primitive: a centred launcher grid of fixed-size tiles (the row's leading avatar filling a squircle) with the name underneath, drag-to-reorder in manual order.
 - Web:
   - Contributes: `DataViewSlots.View` "Icons" → `IconsView`
-  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×20
     - `primitives/avatar` ×2
     - `primitives/css/ui-kit` ×2
+    - `primitives/link-gesture` ×2
     - `primitives/rank-reorder` ×2
     - `primitives/row-actions` ×2
     - `primitives/css/center.Center`
@@ -120,7 +121,6 @@ through the real body, `web/__tests__/paged-conformance.test.tsx` (data-view's
     - `primitives/css/text.Text`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/dom/scroll-reveal.focusElement`
-    - `primitives/link-gesture.activationProps`
     - `primitives/virtual-rows.VirtualRows`
     - `ui/icons.Icon`
 - Cross-plugin:

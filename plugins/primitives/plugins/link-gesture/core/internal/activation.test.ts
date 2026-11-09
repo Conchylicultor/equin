@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { runActivation, type Activation, type LinkTarget } from "./activation";
+import {
+  PLAIN_GESTURE,
+  runActivation,
+  type Activation,
+  type LinkTarget,
+} from "./activation";
 
 const linkTo = (id: string): LinkTarget => ({
   open: () => {},
@@ -38,8 +43,11 @@ describe("runActivation", () => {
     const seen: string[] = [];
     runActivation(() => {
       seen.push("action");
-    });
-    runActivation({ open: () => seen.push("open"), href: () => "/x" });
+    }, PLAIN_GESTURE);
+    runActivation(
+      { open: () => seen.push("open"), href: () => "/x" },
+      PLAIN_GESTURE,
+    );
     expect(seen).toEqual(["action", "open"]);
   });
 });

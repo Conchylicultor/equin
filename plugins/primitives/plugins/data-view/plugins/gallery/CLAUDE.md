@@ -175,10 +175,11 @@ taking `{song, onOpen}` never trips it.
 - Description: Gallery view child for the data-view primitive: a responsive grid of cover cards — the cover is the card, its fields three fixed lines under it, its actions on the cover.
 - Web:
   - Contributes: `DataViewSlots.View` "Gallery" → `GalleryView`
-  - Uses: 49 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 50 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×28
     - `primitives/css/ui-kit` ×3
     - `primitives/css/spacing` ×2
+    - `primitives/link-gesture` ×2
     - `primitives/row-actions` ×2
     - `primitives/avatar.Avatar`
     - `primitives/css/badge.Badge`
@@ -192,7 +193,6 @@ taking `{song, onOpen}` never trips it.
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
     - `primitives/dom/element-size.useResizeObserver`
-    - `primitives/link-gesture.activationProps`
     - `primitives/virtual-rows.VirtualRows`
   - Exports (types):
     - `DataCardActions`

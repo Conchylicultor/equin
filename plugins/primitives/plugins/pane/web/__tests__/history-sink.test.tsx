@@ -1,3 +1,4 @@
+import { PLAIN_GESTURE } from "@plugins/primitives/plugins/link-gesture/core";
 import {
   afterEach,
   beforeAll,
@@ -180,7 +181,7 @@ describe("commit intents — mode + url + state per the push/replace matrix", ()
     const commit = vi.fn();
     setHistoryAdapter({ commit, restore: vi.fn() });
 
-    store.close(childPane._internal, child.instanceId);
+    store.close(childPane._internal, child.instanceId, PLAIN_GESTURE);
 
     expect(commit).toHaveBeenCalledTimes(1);
     const change = commit.mock.calls[0]![0] as LocationChange;

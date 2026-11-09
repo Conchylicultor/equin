@@ -47,8 +47,10 @@ import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/co
 import { fileExplorerApp } from "@plugins/apps/plugins/file-explorer/plugins/shell/core";
 import {
   beforeOpen,
+  PLAIN_GESTURE,
   runActivation,
   type Activation,
+  type Gesture,
 } from "@plugins/primitives/plugins/link-gesture/core";
 import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
@@ -283,7 +285,7 @@ function FileBrowserReady({
         key={open}
         system={system}
         path={open}
-        onClose={() => runActivation(nav.fileTo(null))}
+        onClose={(gesture) => runActivation(nav.fileTo(null), gesture)}
         endSafeArea={atTopEdge}
       />
     );
@@ -333,7 +335,7 @@ function ExplorerPreview({
   /** The file, in display form (`~/…`). */
   path: string;
   /** Absent where there is nothing to close to. */
-  onClose: (() => void) | undefined;
+  onClose: ((gesture: Gesture) => void) | undefined;
   endSafeArea: boolean;
 }): ReactNode {
   const { home } = system;
@@ -368,7 +370,7 @@ export function FilePreview({
   fs: BrowsableFileSystem;
   /** The file, in display form (`~/…`). */
   path: string;
-  onClose: (() => void) | null;
+  onClose: ((gesture: Gesture) => void) | null;
 }): ReactNode {
   const state = useExplorerSystem(fs);
   const endSafeArea = useReservesFloatingBar();
@@ -488,7 +490,7 @@ function Listing({
         keys: "escape",
         label: "Close the preview",
         when: () => open !== null,
-        handler: () => runActivation(nav.fileTo(null)),
+        handler: () => runActivation(nav.fileTo(null), PLAIN_GESTURE),
       },
       {
         id: "file-explorer.up",
@@ -496,7 +498,7 @@ function Listing({
         label: "Go to the enclosing folder",
         when: () => up !== null,
         handler: () => {
-          if (up !== null) runActivation(nav.to(up, open));
+          if (up !== null) runActivation(nav.to(up, open), PLAIN_GESTURE);
         },
       },
       {
@@ -533,7 +535,10 @@ function Listing({
     return row.browsable ? select : beforeOpen(fileAt(row.path), select);
   };
   const onOpen = (row: EntryRow) =>
-    runActivation(row.browsable ? nav.to(row.path, open) : fileAt(row.path));
+    runActivation(
+      row.browsable ? nav.to(row.path, open) : fileAt(row.path),
+      PLAIN_GESTURE,
+    );
 
   // A ⌘/Shift-click changes the set only; the preview follows its anchor
   // when that is a file the gesture added (a plain click opens it itself).
@@ -548,7 +553,7 @@ function Listing({
       next.selected.has(anchor) &&
       isFile(listings, anchor, home)
     ) {
-      runActivation(nav.fileTo(anchor));
+      runActivation(nav.fileTo(anchor), PLAIN_GESTURE);
     }
   };
 
@@ -582,7 +587,9 @@ function Listing({
         selected: new Set([...s.selected].filter((p) => !gone.has(p))),
         anchor: s.anchor !== null && gone.has(s.anchor) ? null : s.anchor,
       }));
-      if (open !== null && gone.has(open)) runActivation(nav.fileTo(null));
+      if (open !== null && gone.has(open)) {
+        runActivation(nav.fileTo(null), PLAIN_GESTURE);
+      }
     });
   };
   // The listing's own empty space — below the rows too — is this folder.

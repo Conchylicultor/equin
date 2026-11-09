@@ -1,3 +1,4 @@
+import { PLAIN_GESTURE } from "@plugins/primitives/plugins/link-gesture/core";
 import { createContext, useContext, type ReactNode } from "react";
 import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 
@@ -99,7 +100,7 @@ export function useOpenMadePage(): (
   const nav = usePageNavigation();
   return (made, pageId) => {
     void made.then(() => {
-      nav?.open(pageId).open();
+      nav?.open(pageId).open(PLAIN_GESTURE);
     });
   };
 }

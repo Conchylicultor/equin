@@ -31,6 +31,7 @@ import {
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import {
+  PLAIN_GESTURE,
   runActivation,
   type Activation,
 } from "@plugins/primitives/plugins/link-gesture/core";
@@ -187,7 +188,7 @@ export function PathBar({
         }
         session.current += 1;
         dispatch({ type: "cancel" });
-        runActivation(activationFor(resolution));
+        runActivation(activationFor(resolution), PLAIN_GESTURE);
       },
       (err: unknown) => {
         if (session.current !== mine) return;

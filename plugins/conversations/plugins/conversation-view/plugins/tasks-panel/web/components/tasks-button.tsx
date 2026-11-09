@@ -1,3 +1,4 @@
+import { gestureOf } from "@plugins/primitives/plugins/link-gesture/web";
 import { rowOrStale } from "@plugins/network/plugins/live/web";
 import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -63,8 +64,8 @@ export function TasksButton() {
       tooltip={title}
       aria-label={title}
       aria-pressed={isOpen}
-      onClick={() => {
-        if (taskId) toggle();
+      onClick={(e) => {
+        if (taskId) toggle.open(gestureOf(e));
       }}
       disabled={!taskId}
       className="gap-xs"

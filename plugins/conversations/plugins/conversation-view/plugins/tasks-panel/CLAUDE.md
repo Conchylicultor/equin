@@ -16,6 +16,7 @@
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
+    - `primitives/link-gesture.gestureOf`
     - `tasks.useActiveDependentCount`
     - `tasks.useTask`
     - `tasks/task-detail.taskDetailPane`

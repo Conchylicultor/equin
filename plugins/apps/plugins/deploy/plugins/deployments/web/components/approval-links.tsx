@@ -62,9 +62,9 @@ function LinksElsewhere({ run }: { run: HeldRun }): ReactElement {
     <LinkRow
       run={run}
       activation={(id) => ({
-        open: () => {
+        open: (gesture) => {
           reveal(id);
-          target.open();
+          target.open(gesture);
         },
         href: target.href,
       })}

@@ -33,7 +33,7 @@
     - `FieldPresentation.Register` "collection:file-explorer.entry"
     - `FileBrowserSlots.RowActions` "extract" → `ExtractAction`
     - `FileBrowserSlots.RowActions` "copy-path" → `CopyPathAction`
-  - Uses: 76 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 77 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×10
     - `primitives/css/ui-kit` ×8
     - `primitives/pane` ×7
@@ -42,6 +42,7 @@
     - `infra/endpoints` ×3
     - `infra/paths/file-systems` ×3
     - `network/live/live-state` ×3
+    - `primitives/link-gesture` ×2
     - `primitives/networking` ×2
     - `primitives/path-bar` ×2
     - `primitives/persistent-draft` ×2
@@ -62,7 +63,6 @@
     - `primitives/dom/web-storage.defineStore`
     - `primitives/file-type.FileTypeIcon`
     - `primitives/icon-button.IconButton`
-    - `primitives/link-gesture.activationProps`
     - `primitives/loading.Loading`
     - `primitives/overlay/imperative-dialog.useOpenDialog`
     - `primitives/scope/dom-scope.defineDomScope`

@@ -1,7 +1,7 @@
 import { withActiveRoutePrefix } from "@plugins/primitives/plugins/pane/plugins/route-prefix/web";
 import { defineInstallSink } from "@plugins/primitives/plugins/scope/plugins/install-sink/web";
 import type { MouseEvent } from "react";
-import type { Activation, LinkTarget } from "../../core";
+import type { Activation, Gesture, LinkTarget } from "../../core";
 
 /**
  * Handler props that give any control the browser's own link gestures:
@@ -9,7 +9,7 @@ import type { Activation, LinkTarget } from "../../core";
  *   • plain click                 → open it HERE
  *   • ⌘/Ctrl-click, middle-click  → open it ELSEWHERE, staying put
  *   • ⌥/Alt-click                 → open it HERE, KEEPING the others
- *                                   (see {@link keepsOthers})
+ *                                   (the {@link Gesture} — see {@link gestureOf})
  *
  * Build them with {@link linkProps} — "elsewhere" is a new browser tab at the
  * destination's URL, exactly what the same gesture does on an `<a href>`:
@@ -49,41 +49,19 @@ export interface LinkGestureProps {
  * It returns an app path (`/agents/c/42`), resolved against this origin.
  */
 export function linkProps({ open, href }: LinkTarget): LinkGestureProps {
-  return linkGestureProps(({ elsewhere }) => {
+  return linkGestureProps(({ elsewhere, gesture }) => {
     if (elsewhere) openInBrowserTab(href());
-    else open();
+    else open(gesture);
   });
 }
 
-// ---------------------------------------------------------------------------
-// The keep-others gesture (⌥/Alt-click)
-//
-// Plain click on something that opens or closes a pane REPLACES what stands to
-// its right (an open truncates after the caller, a close drops every pane right
-// of the closed one). ⌥-click is the same action with the others kept: an open
-// inserts the new pane beside the caller, a close removes only that pane.
-//
-// It is read off the event the browser is dispatching right now
-// (`window.event`), not handed down: a navigation passes through many hands
-// before it acts (a toggle's `onClick={toggle}`, a toggle wrapping a push,
-// `afterOpen`, a row's activation), and a gesture every one of them had to
-// forward would be dropped by the first that did not know about it — silently,
-// which is exactly how a bare `onClick` button lost it. The browser sets
-// `window.event` for the whole synchronous dispatch of any handler (React's
-// root listener included) and clears it after, so an open run later (after a
-// mutation settles, from a timer) correctly sees no gesture.
-// ---------------------------------------------------------------------------
-
 /**
- * Whether the click being handled right now is an ⌥/Alt-click — the
- * keep-others gesture. Read by whatever ACTS on a navigation (the pane store),
- * synchronously inside the click; outside any event dispatch it is `false`.
+ * The {@link Gesture} of an input event: ⌥/Alt keeps the others. Takes any
+ * event carrying the modifier (a click, an Enter keydown), so a keyboard
+ * activation can read it the same way.
  */
-export function keepsOthers(): boolean {
-  if (typeof window === "undefined") return false;
-  // `window.event`: the event being dispatched (see the section comment).
-  const event = window.event;
-  return event instanceof window.MouseEvent && event.altKey;
+export function gestureOf(e: Pick<MouseEvent, "altKey">): Gesture {
+  return { keepOthers: e.altKey };
 }
 
 /**
@@ -177,18 +155,18 @@ export function openInBrowserTab(url: string): void {
  * and a framed pane).
  */
 export function linkGestureProps(
-  open: (opts: { elsewhere: boolean }) => void,
+  open: (opts: { elsewhere: boolean; gesture: Gesture }) => void,
 ): LinkGestureProps {
   return {
     onClick(e) {
-      open({ elsewhere: e.metaKey || e.ctrlKey });
+      open({ elsewhere: e.metaKey || e.ctrlKey, gesture: gestureOf(e) });
     },
     onAuxClick(e) {
       if (e.button !== 1) return;
       // The default middle-button action (autoscroll on Windows, paste on
       // X11) has nothing to do with navigating, so it never reaches the page.
       e.preventDefault();
-      open({ elsewhere: true });
+      open({ elsewhere: true, gesture: gestureOf(e) });
     },
     onMouseDown(e) {
       // Autoscroll arms on mousedown, not on the aux click — cancelling it

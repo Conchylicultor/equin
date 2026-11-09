@@ -11,7 +11,7 @@
   - Contributes:
     - `IdKinds.Kind` "summary"
     - `Pane.Register` "conv-summary"
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live/live-state` ×4
     - `primitives/pane` ×3
     - `infra/endpoints` ×2
@@ -22,6 +22,7 @@
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/text.Text`
+    - `primitives/link-gesture.linkProps`
     - `primitives/loading.Loading`
     - `shell/notifications.useToast`
     - `ui/icons.Icon`

@@ -1,3 +1,4 @@
+import { PLAIN_GESTURE } from "@plugins/primitives/plugins/link-gesture/core";
 import type { ReactElement } from "react";
 import {
   Button,
@@ -78,7 +79,7 @@ export function DraftActions({ id }: { id: string }): ReactElement {
       name: draftName,
       onDeleted: () => {
         clearActive();
-        close();
+        close(PLAIN_GESTURE);
       },
     });
   }

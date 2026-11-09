@@ -54,11 +54,14 @@ import {
   type AppNavigator,
 } from "./app-nav-sink";
 import {
-  keepsOthers,
   linkProps,
   type LinkGestureProps,
 } from "@plugins/primitives/plugins/link-gesture/web";
-import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
+import {
+  PLAIN_GESTURE,
+  type Gesture,
+  type LinkTarget,
+} from "@plugins/primitives/plugins/link-gesture/core";
 import { definePaneHeaderSlot, type PaneHeaderSlot } from "./header-slot";
 import type { ResolveResult } from "./resolve";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
@@ -965,7 +968,11 @@ export interface PaneStore {
       crossApp: AppNavigator;
     },
   ): void;
-  close(internal: PaneInternal, instanceId: number): void;
+  /**
+   * Close one instance: everything right of it goes too, unless `gesture`
+   * keeps the others (⌥) — then only it (and what only it addressed).
+   */
+  close(internal: PaneInternal, instanceId: number, gesture: Gesture): void;
   unwrap(instanceId: number): void;
   promote(internal: PaneInternal, instanceId: number): void;
   /** Rewrite one instance's own params in place. See `PaneObject.useSetParams`. */
@@ -1319,7 +1326,6 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
         mode: implOpts.root ? "root" : "push",
         options: implOpts.options,
         hint: implOpts.hint,
-        insert: keepsOthers(),
       },
       currentIndex,
     );
@@ -1332,7 +1338,11 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     if (next.changed) setRoute(next.route, next.replace, next.landing?.index);
   }
 
-  function close(internal: PaneInternal, instanceId: number): void {
+  function close(
+    internal: PaneInternal,
+    instanceId: number,
+    gesture: Gesture,
+  ): void {
     if (typeof window === "undefined") return;
     const route = currentSlots();
     const idx = route.findIndex((s) => s.instanceId === instanceId);
@@ -1342,7 +1352,7 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     if (idx < 0 || (idx === 0 && !internal.companion)) return;
     // ⌥-close keeps the others: only this pane goes (and whatever only it
     // addressed), the panes right of it stay.
-    const newRoute = keepsOthers()
+    const newRoute = gesture.keepOthers
       ? withoutSlot(route, idx)
       : route.slice(0, idx);
     const replace = !internal.chrome.history;
@@ -2073,8 +2083,8 @@ export interface OpenRequest {
    * Keep the others: INSERT the target right after the caller (after the
    * route's last pane when there is no caller in it) instead of replacing what
    * stands there — `A | B | C | D` opened from B gives `A | B | E | C | D`.
-   * Set from the ⌥-click gesture (link-gesture's `keepsOthers`), whatever the
-   * mode. Falls back to the mode's own open where the kept panes cannot host
+   * Set from the open's {@link Gesture} (⌥-click) by `openPane.to` / `.link`,
+   * whatever the mode. Falls back to the mode's own open where the kept panes cannot host
    * the target's address.
    */
   insert?: boolean;
@@ -2785,7 +2795,7 @@ export interface PaneObject<
    * root/not in route. A companion at the route's head is not "root" while its
    * app's index pane is shown to its left — closing it returns to that pane.
    */
-  useClose: Hook<() => (() => void) | null>;
+  useClose: Hook<() => ((gesture: Gesture) => void) | null>;
   /**
    * Hook: "go up to my parent", for a layout that paints this pane alone
    * (full-pane). It is {@link useClose} while a parent slot sits to the left in
@@ -2794,7 +2804,7 @@ export interface PaneObject<
    * DECLARED parent route afresh. Null when there is no parent to go to, or the
    * parent needs a param this route does not carry.
    */
-  useBack: Hook<() => (() => void) | null>;
+  useBack: Hook<() => ((gesture: Gesture) => void) | null>;
   /**
    * Hook: returns the bound {@link PromoteAction} for the current instance, or
    * null when there is nowhere to promote to (this pane is already the root of
@@ -2815,12 +2825,17 @@ export interface PaneObject<
    * Throws when called from outside a pane instance.
    */
   useSetParams: Hook<() => (params: OwnParams) => void>;
-  /** Hook: toggle this pane open/closed relative to the caller's position in the route. */
+  /**
+   * Hook: toggle this pane open/closed relative to the caller's position in
+   * the route. `toggle` is a {@link LinkTarget} — spread `linkProps(toggle)`:
+   * ⌥-click keeps the others (inserts / closes only it), ⌘/middle-click opens
+   * the opened route in a new browser tab.
+   */
   useToggle: Hook<
     (
       params: FullParams,
       opts?: PaneToggleOpts<Options, HintT>,
-    ) => { isOpen: boolean; toggle: () => void }
+    ) => { isOpen: boolean; toggle: LinkTarget }
   >;
   back(): void;
   forward(): void;
@@ -2979,7 +2994,7 @@ function makePaneObject(
   // tab's route), matching the historical module-global behavior for external
   // imperative callers (e.g. `conversationPane.close(instanceId)`).
   function close(instanceId: number): void {
-    liveStoreSink.peek().close(internal, instanceId);
+    liveStoreSink.peek().close(internal, instanceId, PLAIN_GESTURE);
   }
 
   function unwrap(instanceId: number): void {
@@ -2999,7 +3014,7 @@ function makePaneObject(
   }
 
   // Hooks read/write the *context* store — the surface they are rendered in.
-  function useClose(): (() => void) | null {
+  function useClose(): ((gesture: Gesture) => void) | null {
     const store = usePaneStore();
     const instanceId = useContext(PaneInstanceContext);
     const route = useRouteSlots();
@@ -3016,11 +3031,11 @@ function makePaneObject(
           match?.panes.findIndex((e) => e.instanceId === instanceId) ?? -1;
         if (shownAt <= 0) return null;
       }
-      return () => store.close(internal, instanceId);
+      return (gesture: Gesture) => store.close(internal, instanceId, gesture);
     }, [store, instanceId, route, match]);
   }
 
-  function useBack(): (() => void) | null {
+  function useBack(): ((gesture: Gesture) => void) | null {
     const close = useClose();
     const store = usePaneStore();
     const instanceId = useContext(PaneInstanceContext);
@@ -3043,7 +3058,7 @@ function makePaneObject(
       const params = route[0]!.params;
       const required = segmentRequiredParamNames(parent.segment);
       if (required.some((name) => !(name in params))) return null;
-      return () =>
+      return (_gesture: Gesture) =>
         store.openPaneImpl(parent, params, {
           root: true,
           crossApp: navigator ?? navigateApp,
@@ -3144,7 +3159,7 @@ function makePaneObject(
   function useToggle(
     params: Record<string, string>,
     opts?: PaneToggleOpts<PaneOptions, PaneHintBag>,
-  ): { isOpen: boolean; toggle: () => void } {
+  ): { isOpen: boolean; toggle: LinkTarget } {
     const store = usePaneStore();
     const callerInstanceId = useContext(PaneInstanceContext);
     const route = useRouteSlots();
@@ -3176,21 +3191,25 @@ function makePaneObject(
       searchRegion.find((s) => s.paneId === internal.id) ?? null;
     const isOpen = targetSlot !== null;
 
-    const toggle = useCallback(() => {
-      if (targetSlot) {
-        if (action === "unwrap") {
-          store.unwrap(targetSlot.instanceId);
-        } else {
-          store.close(internal, targetSlot.instanceId);
-        }
-      } else {
-        openPaneFn(paneObject, paramsRef.current, {
+    const toggle = useMemo((): LinkTarget => {
+      // Read at click time (the refs), like the open itself.
+      const opening = () =>
+        openPaneFn.to(paneObject, paramsRef.current, {
           mode,
           side,
           options: optionsRef.current,
           hint: hintRef.current,
         });
-      }
+      return {
+        open: (gesture) => {
+          if (!targetSlot) opening().open(gesture);
+          else if (action === "unwrap") store.unwrap(targetSlot.instanceId);
+          else store.close(internal, targetSlot.instanceId, gesture);
+        },
+        // Always the opened route's URL: ⌘/middle-click opens it in a new
+        // browser tab, never closes.
+        href: () => opening().href(),
+      };
     }, [store, targetSlot, action, openPaneFn, mode, side]);
 
     return { isOpen, toggle };
@@ -3868,12 +3887,7 @@ export function useOpenPane(): OpenPaneFn {
       opts: OpenRequest,
     ): void => {
       const store = resolveStore();
-      // ⌥-click keeps the others (link-gesture's ambient gesture). The href
-      // (⌘/middle-click) never reads it: an elsewhere gesture is not ⌥.
-      const next = compute(store, target, params, {
-        ...opts,
-        insert: keepsOthers(),
-      });
+      const next = compute(store, target, params, opts);
       if (!next.changed) return;
       // A route headed by another app's pane belongs to that app: hand it over,
       // exactly as Expand does, instead of stranding it here.
@@ -3887,7 +3901,10 @@ export function useOpenPane(): OpenPaneFn {
       params: Record<string, string>,
       opts: OpenRequest,
     ): LinkTarget => ({
-      open: () => open(target, params, opts),
+      // ⌥-click keeps the others: the open inserts beside the caller. The
+      // href (⌘/middle-click) never reads it — an elsewhere gesture is not ⌥.
+      open: (gesture) =>
+        open(target, params, { ...opts, insert: gesture.keepOthers }),
       // Unchanged ⇒ the destination is already on screen, and the current
       // route's URL is exactly it.
       href: () => {

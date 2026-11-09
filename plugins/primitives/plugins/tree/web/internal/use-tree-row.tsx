@@ -1,4 +1,8 @@
 import {
+  PLAIN_GESTURE,
+  type Gesture,
+} from "@plugins/primitives/plugins/link-gesture/core";
+import {
   createContext,
   useCallback,
   useContext,
@@ -27,7 +31,7 @@ export type TreeContextValue<T extends TreeItem> = {
   /** Focus this row's name input once it appears (e.g. right after a create). */
   setPendingFocus: (id: string) => void;
   clearPendingFocus: () => void;
-  onSelect: (id: string) => void;
+  onSelect: (id: string, gesture: Gesture) => void;
   /** See `TreeModelArgs.selectHref`. */
   selectHref?: (id: string) => (() => string) | undefined;
   /** Batched expand write (see `TreeModelArgs.setExpanded`) — a single-row
@@ -129,7 +133,7 @@ export type RowControls = {
   isOverAfter: boolean;
   shouldAutoFocus: boolean;
   consumeAutoFocus: () => void;
-  select: () => void;
+  select: (gesture: Gesture) => void;
   /** The URL a ⌘/middle-click on the row opens; absent → the row is no link. */
   selectHref?: () => string;
   /** The open gesture for this row (double-click / Enter), or `undefined` when
@@ -251,13 +255,16 @@ export function useTreeRow<T extends TreeItem>(node: TreeNode<T>): RowControls {
   // `addBelow` below, and by the reveal path — and every one of those must keep
   // navigating to the row it just created or revealed. Only a real body click
   // routes through `select`, so only `select` may divert the gesture to a toggle.
-  const select = useCallback(() => {
-    if (ctx.expandOnActivate?.(node)) {
-      toggleExpanded();
-      return;
-    }
-    ctx.onSelect(node.id);
-  }, [ctx, node, toggleExpanded]);
+  const select = useCallback(
+    (gesture: Gesture) => {
+      if (ctx.expandOnActivate?.(node)) {
+        toggleExpanded();
+        return;
+      }
+      ctx.onSelect(node.id, gesture);
+    },
+    [ctx, node, toggleExpanded],
+  );
   // A row whose click toggles expansion is not navigating, so it is no link.
   // Presence is read now; the URL is resolved again at click time, so the thunk
   // keeps one identity across renders (this object is a context value).
@@ -306,7 +313,7 @@ export function useTreeRow<T extends TreeItem>(node: TreeNode<T>): RowControls {
     // child would be created invisibly. Expanding the parent needs no round-trip.
     await ctx.setExpanded([{ id: node.id, expanded: true }]);
     ctx.setPendingFocus(id);
-    ctx.onSelect(id);
+    ctx.onSelect(id, PLAIN_GESTURE);
   }, [ctx, node.id]);
 
   // Positional intent only. `ctx.rows` may be a *filtered projection* of a
@@ -320,7 +327,7 @@ export function useTreeRow<T extends TreeItem>(node: TreeNode<T>): RowControls {
     const id = await create({ parentId: node.parentId, afterId: node.id });
     if (!id) return;
     ctx.setPendingFocus(id);
-    ctx.onSelect(id);
+    ctx.onSelect(id, PLAIN_GESTURE);
   }, [ctx, node.id, node.parentId]);
 
   // Memoized, not a fresh literal per render: the row publishes this object

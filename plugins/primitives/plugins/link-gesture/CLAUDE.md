@@ -27,17 +27,15 @@ is what keeps every such control agreeing on what a ⌘-click means.
   at an app path (open-app's button, whose default flips between a browser tab
   on another origin and a framed pane). Prefer `linkProps`.
 
-## ⌥/Alt-click: keep the others
+## ⌥/Alt-click: keep the others — the `Gesture`
 
-`keepsOthers()` answers whether the event being dispatched right now
-(`window.event`) is an ⌥/Alt-click — so EVERY click handler carries it, a bare
-`onClick={toggle}` as much as `linkProps`. The pane store reads it: an open
-inserts beside the caller instead of replacing what is right of it, a close
-removes only that pane. Read off the dispatch rather than forwarded on purpose:
-a navigation passes through wrappers (a toggle, `afterOpen`, a row activation)
-that would each have to forward a flag, and the first one that did not would
-drop the gesture silently. An open run after the dispatch (a mutation settling)
-sees no gesture.
+`LinkTarget.open(gesture)` takes a REQUIRED `Gesture` (`{ keepOthers }`, read
+off the event by `gestureOf(e)`; `PLAIN_GESTURE` where there is no input to
+read). `linkProps` / `activationProps` / `linkGestureProps` pass it; the pane
+store acts on it: an open inserts beside the caller instead of replacing what
+is right of it, a close removes only that pane. Required, so a wrapper that
+forwards a link (a toggle, `afterOpen`, a row activation) cannot drop it — a
+bare `open()` is a type error. `runActivation(activation, gesture)` likewise.
 
 A new in-app (equin) tab is not a link gesture: it is reachable only from
 an explicit menu entry (`navigate(url, { newTab: true })`).
@@ -110,7 +108,7 @@ resolver returning one. Fix: spread `openPane.link(…)`, or pass `openPane.to(�
 
 ## Plugin reference
 
-- Description: The browser's link gestures as spreadable handler props: plain click opens here, ⌘/Ctrl- and middle-click open the destination's URL in a new browser tab, ⌥/Alt-click opens it here keeping the others (keepsOthers: a pane open inserts beside the caller, a pane close removes only that pane). A <button> gets none of this for free, so every navigating control reads it from one place.
+- Description: The browser's link gestures as spreadable handler props: plain click opens here, ⌘/Ctrl- and middle-click open the destination's URL in a new browser tab, ⌥/Alt-click opens it here keeping the others (a Gesture passed to LinkTarget.open: a pane open inserts beside the caller, a pane close removes only that pane). A <button> gets none of this for free, so every navigating control reads it from one place.
 - Web:
   - Uses:
     - `primitives/pane/route-prefix.withActiveRoutePrefix`
@@ -119,17 +117,17 @@ resolver returning one. Fix: spread `openPane.link(…)`, or pass `openPane.to(�
   - Exports (values):
     - `activationProps`
     - `browserTabAddressSink`
-    - `keepsOthers`
+    - `gestureOf`
     - `linkGestureProps`
     - `linkProps`
     - `openInBrowserTab`
 - Cross-plugin:
-  - Imported by: 65 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 77 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×21
     - `primitives` ×16
-    - `conversations` ×15
-    - `apps` ×9
-    - `page` ×5
-    - `tasks` ×4
+    - `apps` ×12
+    - `page` ×6
+    - `tasks` ×5
     - `apps-core` ×3
     - `debug` ×2
     - `hints` ×2
@@ -140,15 +138,18 @@ resolver returning one. Fix: spread `openPane.link(…)`, or pass `openPane.to(�
     - `infra/claude-cli/sign-in`
     - `integrations/google-maps/usage`
     - `plugin-meta/plugin-view`
+    - `review`
     - `ui/theme-engine/quick-theme`
 - Core:
   - Exports (types):
     - `Activation`
+    - `Gesture`
     - `LinkTarget`
   - Exports (values):
     - `activationHref`
     - `afterOpen`
     - `beforeOpen`
+    - `PLAIN_GESTURE`
     - `runActivation`
 - Sub-plugins:
   - **`new-tab`** — The new-browser-tab control in every form — NewTabButton (icon or text), NewTabMenuItem, NewTabLink, newTabAnchorProps for a component rendered as a link, NewTabGlyph for a container that is one…

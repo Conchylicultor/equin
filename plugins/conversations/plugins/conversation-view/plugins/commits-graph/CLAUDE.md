@@ -30,7 +30,7 @@ The chip renders a muted `—` (reason as tooltip) both for an unresolved payloa
   - Contributes:
     - `Pane.Register` "conv-commits-graph"
     - `Conversation.ActionBar` → `CommitsChip`
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×4
     - `network/live` ×3
     - `primitives/commit-list` ×2
@@ -45,6 +45,7 @@ The chip renders a muted `—` (reason as tooltip) both for an unresolved payloa
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/link-gesture.linkProps`
     - `primitives/loading.Loading`
     - `ui/icons.Icon`
 - Server:

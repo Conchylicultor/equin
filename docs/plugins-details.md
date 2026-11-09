@@ -625,6 +625,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/pages/page-tree.pagesTreePane`
               - `conversations/conversation-view/action-bar.Conversation`
               - `primitives/icon-button.IconButton`
+              - `primitives/link-gesture.linkProps`
         - **`shell`** — App shell for the agent manager. Registers the /agents app entry, renders the main Shell layout, and contributes the app's own theme (Mist), which the agent manager selects.
           - Web:
             - Contributes:
@@ -4578,7 +4579,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `FieldPresentation.Register` "collection:file-explorer.entry"
               - `FileBrowserSlots.RowActions` "extract" → `ExtractAction`
               - `FileBrowserSlots.RowActions` "copy-path" → `CopyPathAction`
-            - Uses: 76 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
+            - Uses: 77 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
               - `primitives/data-view` ×10
               - `primitives/css/ui-kit` ×8
               - `primitives/pane` ×7
@@ -4587,6 +4588,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/endpoints` ×3
               - `infra/paths/file-systems` ×3
               - `network/live/live-state` ×3
+              - `primitives/link-gesture` ×2
               - `primitives/networking` ×2
               - `primitives/path-bar` ×2
               - `primitives/persistent-draft` ×2
@@ -4607,7 +4609,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/dom/web-storage.defineStore`
               - `primitives/file-type.FileTypeIcon`
               - `primitives/icon-button.IconButton`
-              - `primitives/link-gesture.activationProps`
               - `primitives/loading.Loading`
               - `primitives/overlay/imperative-dialog.useOpenDialog`
               - `primitives/scope/dom-scope.defineDomScope`
@@ -15165,7 +15166,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Item.Avatar` → `AgentAvatarRow`
           - `conversationPane.Actions` "agent-avatar" → `AgentAvatarTitlePrefix`
           - `Agents.AgentActions` "delete" → `DeleteAgentAction`
-        - Uses: 60 symbols — full list in [`plugins/conversations/plugins/agents/REFERENCE.md`](../plugins/conversations/plugins/agents/REFERENCE.md)
+        - Uses: 61 symbols — full list in [`plugins/conversations/plugins/agents/REFERENCE.md`](../plugins/conversations/plugins/agents/REFERENCE.md)
           - `primitives/pane` ×7
           - `primitives/data-view` ×5
           - `conversations/conversation-ui/item` ×4
@@ -15190,6 +15191,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/surface.Surface`
           - `primitives/editable-field.useEditableField`
           - `primitives/icon-button.IconButton`
+          - `primitives/link-gesture.linkProps`
           - `primitives/loading.Loading`
           - `primitives/multi-select.useMultiSelect`
           - `primitives/slot-render.defineRenderSlot`
@@ -16311,7 +16313,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `Pane.Register` "conv-commits-graph"
               - `Conversation.ActionBar` → `CommitsChip`
-            - Uses: 23 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/commits-graph/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/commits-graph/REFERENCE.md)
+            - Uses: 24 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/commits-graph/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/commits-graph/REFERENCE.md)
               - `primitives/pane` ×4
               - `network/live` ×3
               - `primitives/commit-list` ×2
@@ -16326,6 +16328,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/placeholder.Placeholder`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
+              - `primitives/link-gesture.linkProps`
               - `primitives/loading.Loading`
               - `ui/icons.Icon`
           - Server:
@@ -16510,6 +16513,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live/live-state.ResourceErrorInline`
               - `primitives/css/placeholder.Placeholder`
               - `primitives/icon-button.IconButton`
+              - `primitives/link-gesture.linkProps`
               - `primitives/loading.Loading`
               - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
@@ -19417,6 +19421,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/placeholder.Placeholder`
               - `primitives/css/text.Text`
               - `primitives/icon-button.IconButton`
+              - `primitives/link-gesture.linkProps`
               - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
@@ -19626,6 +19631,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/status-dot.StatusDot`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
+              - `primitives/link-gesture.gestureOf`
               - `tasks.useActiveDependentCount`
               - `tasks.useTask`
               - `tasks/task-detail.taskDetailPane`
@@ -20726,7 +20732,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `IdKinds.Kind` "summary"
           - `Pane.Register` "conv-summary"
-        - Uses: 21 symbols — full list in [`plugins/conversations/plugins/summary/REFERENCE.md`](../plugins/conversations/plugins/summary/REFERENCE.md)
+        - Uses: 22 symbols — full list in [`plugins/conversations/plugins/summary/REFERENCE.md`](../plugins/conversations/plugins/summary/REFERENCE.md)
           - `network/live/live-state` ×4
           - `primitives/pane` ×3
           - `infra/endpoints` ×2
@@ -20737,6 +20743,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.useLive`
           - `primitives/css/badge.Badge`
           - `primitives/css/text.Text`
+          - `primitives/link-gesture.linkProps`
           - `primitives/loading.Loading`
           - `shell/notifications.useToast`
           - `ui/icons.Icon`
@@ -46101,19 +46108,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `shell/notifications`
     - **`data-table`** — Sortable/filterable flex-layout data table primitive.
       - Web:
-        - Uses: 27 symbols — full list in [`plugins/primitives/plugins/data-table/REFERENCE.md`](../plugins/primitives/plugins/data-table/REFERENCE.md)
+        - Uses: 28 symbols — full list in [`plugins/primitives/plugins/data-table/REFERENCE.md`](../plugins/primitives/plugins/data-table/REFERENCE.md)
           - `primitives/css/ui-kit` ×4
           - `primitives/css/sticky/stack` ×3
           - `primitives/css/text` ×3
           - `primitives/multi-select` ×3
           - `primitives/css/sticky` ×2
           - `primitives/dom/element-size` ×2
+          - `primitives/link-gesture` ×2
           - `primitives/row-actions` ×2
           - `primitives/virtual-rows/row-fold` ×2
           - `primitives/css/center.Center`
           - `primitives/css/scroll.useScrollsSideways`
           - `primitives/css/spacing.Stack`
-          - `primitives/link-gesture.activationProps`
           - `primitives/virtual-rows.useVirtualRows`
           - `ui/icons.Icon`
         - Exports (types):
@@ -46847,10 +46854,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`gallery`** — Gallery view child for the data-view primitive: a responsive grid of cover cards — the cover is the card, its fields three fixed lines under it, its actions on the cover.
           - Web:
             - Contributes: `DataViewSlots.View` "Gallery" → `GalleryView`
-            - Uses: 49 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/gallery/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/gallery/REFERENCE.md)
+            - Uses: 50 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/gallery/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/gallery/REFERENCE.md)
               - `primitives/data-view` ×28
               - `primitives/css/ui-kit` ×3
               - `primitives/css/spacing` ×2
+              - `primitives/link-gesture` ×2
               - `primitives/row-actions` ×2
               - `primitives/avatar.Avatar`
               - `primitives/css/badge.Badge`
@@ -46864,7 +46872,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/surface.Surface`
               - `primitives/css/text.Text`
               - `primitives/dom/element-size.useResizeObserver`
-              - `primitives/link-gesture.activationProps`
               - `primitives/virtual-rows.VirtualRows`
             - Exports (types):
               - `DataCardActions`
@@ -46896,10 +46903,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`icons`** — Icons view child for the data-view primitive: a centred launcher grid of fixed-size tiles (the row's leading avatar filling a squircle) with the name underneath, drag-to-reorder in manual order.
           - Web:
             - Contributes: `DataViewSlots.View` "Icons" → `IconsView`
-            - Uses: 39 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/icons/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/icons/REFERENCE.md)
+            - Uses: 40 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/icons/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/icons/REFERENCE.md)
               - `primitives/data-view` ×20
               - `primitives/avatar` ×2
               - `primitives/css/ui-kit` ×2
+              - `primitives/link-gesture` ×2
               - `primitives/rank-reorder` ×2
               - `primitives/row-actions` ×2
               - `primitives/css/center.Center`
@@ -46910,7 +46918,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/text.Text`
               - `primitives/dom/element-size.useResizeObserver`
               - `primitives/dom/scroll-reveal.focusElement`
-              - `primitives/link-gesture.activationProps`
               - `primitives/virtual-rows.VirtualRows`
               - `ui/icons.Icon`
           - Cross-plugin:
@@ -48544,7 +48551,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Test helpers:
         - Web: `@plugins/primitives/plugins/lazy-component/web/testing`
           - `loadLazyComponents` — Load every lazy component's chunk declared so far — call it in a suite's `beforeAll`, after the imports that declare them.
-    - **`link-gesture`** — The browser's link gestures as spreadable handler props: plain click opens here, ⌘/Ctrl- and middle-click open the destination's URL in a new browser tab, ⌥/Alt-click opens it here keeping the others (keepsOthers: a pane open inserts beside the caller, a pane close removes only that pane). A <button> gets none of this for free, so every navigating control reads it from one place.
+    - **`link-gesture`** — The browser's link gestures as spreadable handler props: plain click opens here, ⌘/Ctrl- and middle-click open the destination's URL in a new browser tab, ⌥/Alt-click opens it here keeping the others (a Gesture passed to LinkTarget.open: a pane open inserts beside the caller, a pane close removes only that pane). A <button> gets none of this for free, so every navigating control reads it from one place.
       - Web:
         - Uses:
           - `primitives/pane/route-prefix.withActiveRoutePrefix`
@@ -48553,17 +48560,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `activationProps`
           - `browserTabAddressSink`
-          - `keepsOthers`
+          - `gestureOf`
           - `linkGestureProps`
           - `linkProps`
           - `openInBrowserTab`
       - Cross-plugin:
-        - Imported by: 65 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
+        - Imported by: 77 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
+          - `conversations` ×21
           - `primitives` ×16
-          - `conversations` ×15
-          - `apps` ×9
-          - `page` ×5
-          - `tasks` ×4
+          - `apps` ×12
+          - `page` ×6
+          - `tasks` ×5
           - `apps-core` ×3
           - `debug` ×2
           - `hints` ×2
@@ -48574,15 +48581,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/claude-cli/sign-in`
           - `integrations/google-maps/usage`
           - `plugin-meta/plugin-view`
+          - `review`
           - `ui/theme-engine/quick-theme`
       - Core:
         - Exports (types):
           - `Activation`
+          - `Gesture`
           - `LinkTarget`
         - Exports (values):
           - `activationHref`
           - `afterOpen`
           - `beforeOpen`
+          - `PLAIN_GESTURE`
           - `runActivation`
       - Plugins:
         - **`new-tab`** — The new-browser-tab control in every form — NewTabButton (icon or text), NewTabMenuItem, NewTabLink, newTabAnchorProps for a component rendered as a link, NewTabGlyph for a container that is one — owning the open-in-new glyph and the open-in-a-browser-tab behaviour together, so the arrow can never be paired with anything else. Enforced by new-tab/no-adhoc-new-tab.
@@ -51638,10 +51648,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Slots: `Tree.Disclosure`
         - Slot contributors: `Tree.Disclosure` ← `ui.tree-disclosure`
-        - Uses: 27 symbols — full list in [`plugins/primitives/plugins/tree/REFERENCE.md`](../plugins/primitives/plugins/tree/REFERENCE.md)
+        - Uses: 28 symbols — full list in [`plugins/primitives/plugins/tree/REFERENCE.md`](../plugins/primitives/plugins/tree/REFERENCE.md)
           - `primitives/css/ui-kit` ×6
           - `primitives/css/spacing` ×2
           - `primitives/dom/scroll-reveal` ×2
+          - `primitives/link-gesture` ×2
           - `primitives/row-actions` ×2
           - `primitives/collapsible.CollapsibleChevron`
           - `primitives/css/center.Center`
@@ -51652,7 +51663,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/text.Text`
           - `primitives/icon-button.IconButton`
           - `primitives/latest-ref.useLatestRef`
-          - `primitives/link-gesture.linkProps`
           - `primitives/loading.Loading`
           - `primitives/rank-reorder.useRankReorderItem`
           - `primitives/search.filterTree`
@@ -53385,6 +53395,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives/css/toggle-chip.ToggleChip`
       - `primitives/css/ui-kit.Button`
       - `primitives/detail-sections.defineDetailSections`
+      - `primitives/link-gesture.linkProps`
       - `primitives/loading.Loading`
       - `primitives/pane.defineRoute`
       - `primitives/pane.Pane`
@@ -55159,13 +55170,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `Pane.Register` "attempt"
           - `Conversation.ActionBar` → `AttemptSwitchButton`
-        - Uses: 31 symbols — full list in [`plugins/tasks/plugins/attempt-view/REFERENCE.md`](../plugins/tasks/plugins/attempt-view/REFERENCE.md)
+        - Uses: 32 symbols — full list in [`plugins/tasks/plugins/attempt-view/REFERENCE.md`](../plugins/tasks/plugins/attempt-view/REFERENCE.md)
           - `primitives/pane` ×7
           - `conversations/conversation-ui/item` ×2
           - `network/live` ×2
           - `primitives/css/fill` ×2
           - `primitives/css/spacing` ×2
           - `primitives/css/ui-kit` ×2
+          - `primitives/link-gesture` ×2
           - `conversations/conversation-view/action-bar.Conversation`
           - `conversations/conversation-view.conversationPane`
           - `conversations.useConversationById`
@@ -55177,7 +55189,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/status-dot.StatusDot`
           - `primitives/css/text.Text`
           - `primitives/launch.LaunchControl`
-          - `primitives/link-gesture.activationProps`
           - `primitives/loading.Loading`
           - `ui/icons.Icon`
         - Exports (values): `attemptPane`

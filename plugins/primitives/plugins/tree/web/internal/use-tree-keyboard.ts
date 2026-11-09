@@ -1,4 +1,8 @@
 import {
+  PLAIN_GESTURE,
+  type Gesture,
+} from "@plugins/primitives/plugins/link-gesture/core";
+import {
   useCallback,
   useEffect,
   useMemo,
@@ -40,7 +44,7 @@ export function useTreeKeyboard<T extends TreeItem>(args: {
   flatNodes: readonly KeyboardLine<T>[];
   enabled: boolean;
   selectedId: string | undefined;
-  onSelect: (id: string) => void;
+  onSelect: (id: string, gesture: Gesture) => void;
   setExpanded: (changes: readonly ExpandChange[]) => void | Promise<void>;
   lazyChildren: LazyChildren<T> | undefined;
   rowSelection?: {
@@ -142,7 +146,7 @@ export function useTreeKeyboard<T extends TreeItem>(args: {
         return;
       }
       reselect({ kind: "click", id: move.id });
-      onSelect(move.id);
+      onSelect(move.id, PLAIN_GESTURE);
       focusWanted();
     },
     [

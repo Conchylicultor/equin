@@ -7,7 +7,10 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
-import { runActivation } from "@plugins/primitives/plugins/link-gesture/core";
+import {
+  PLAIN_GESTURE,
+  runActivation,
+} from "@plugins/primitives/plugins/link-gesture/core";
 import {
   pickPrimaryField,
   useFieldIdentities,
@@ -144,7 +147,7 @@ export function MapDataView(props: DataViewRenderProps<unknown>): ReactNode {
     const row = rowById.get(id);
     if (row === undefined) return;
     const activation = props.rowActivation?.(row);
-    if (activation !== undefined) runActivation(activation);
+    if (activation !== undefined) runActivation(activation, PLAIN_GESTURE);
     else props.onRowOpen?.(row);
   };
   // The surface's row hover bridged to the pins: a hovered row lifts its pin
