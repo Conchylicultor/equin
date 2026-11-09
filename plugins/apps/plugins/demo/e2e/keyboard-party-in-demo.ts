@@ -38,6 +38,7 @@ import {
   report,
   snap,
   waitFor,
+  waitForNetworkIdle,
   withBrowser,
   type Settled,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
@@ -188,6 +189,17 @@ await withBrowser(async (h) => {
     await boot(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
       marker: 'button:has-text("Conversations")',
     });
+    // Counted from once the page's OWN chrome has booted (its deferred tier
+    // mounted, its requests answered), as no-leak takes its baseline: the
+    // demo can be up before the page around it is, and the page's chrome
+    // reading its own server is not the demo's traffic.
+    await page.waitForFunction(
+      () =>
+        performance.getEntriesByName("boot:deferred-load-complete").length > 0,
+      undefined,
+      { timeout: RENDER_TIMEOUT_MS },
+    );
+    await waitForNetworkIdle(page);
     demoUp = true;
     r.ok(
       `${pass}: the launcher offers Tap Tap Party`,

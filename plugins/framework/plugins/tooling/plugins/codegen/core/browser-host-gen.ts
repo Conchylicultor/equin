@@ -689,6 +689,7 @@ export function renderBrowserHostScope(
           "  ],",
         ]
       : []),
+    `  module: ${JSON.stringify(`@browser-host/${host.pluginPath}`)},`,
     `  start: () => import(${JSON.stringify(`@browser-host/${host.pluginPath}`)}),`,
     "} satisfies DemoHost;",
     "",

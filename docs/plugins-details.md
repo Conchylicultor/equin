@@ -1849,7 +1849,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `shell/notifications`
     - **`demo`** — Demo — a temporary sandbox app hosting the in-app demo (the Agent Manager on made-up data) while it is prototyped, before it ships on the website.
       - Plugins:
-        - **`shell`** — App shell for the Demo sandbox: registers the /demo app entry — equin rendered in-process on made-up data (DemoScope + AppEmbed over the workspace demo's browser host), starting on its home app (the app gallery). Where the visitor is inside the demo is the page's URL (/demo/at/<location>, e.g. /demo/at/agents/c/<id>), so a reload comes back to it; ;full=1 shows it full screen instead of framed under the caption bar (its Full screen button; a hover strip at the top edge exits), and a new browser tab opened from inside the demo opens it there, full screen, on the same data.
+        - **`shell`** — App shell for the Demo sandbox: registers the /demo app entry — equin rendered in-process on made-up data (DemoScope + AppEmbed over the workspace demo's browser host), starting on its home app (the app gallery). Where the visitor is inside the demo is the page's URL (/demo/at/<location>, e.g. /demo/at/agents/c/<id>), so a reload comes back to it; ;full=1 shows it full screen instead of framed under the caption bar (its Full screen button; a hover strip at the top edge exits), and a new browser tab opened from inside the demo opens it there, full screen, on the same data. The /demo page's head script (DocumentHead.Fragment): starts the demo's browser host before the app boots, so its worker boots alongside the page's own bundle.
           - Web:
             - Slots:
               - `start.actions`
@@ -1879,8 +1879,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/loading.Loading`
               - `primitives/overlay/imperative-dialog/confirm.useConfirmDialog`
               - `ui/icons.Icon`
+          - Server:
+            - Contributes: `DocumentHead.Fragment` "demo-prestart"
+            - Uses: `shell/document-head.DocumentHead`
           - Core:
             - Uses:
+              - `apps/website/demos/workspace.workspaceDemo`
               - `primitives/pane.defineApp`
               - `primitives/pane.defineRoute`
               - `ui/icons.symbol`
@@ -1888,6 +1892,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DEMO_FULL`
               - `demoApp`
               - `demoAtRoute`
+              - `demoScenario`
               - `demoStartRoute`
           - Cross-plugin:
             - Uses tokens:
@@ -27895,27 +27900,33 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DemoHost`
               - `DemoScenario`
           - Plugins:
+            - **`prestart`** — Which SharedWorker a demo's tabs share — its name, the scenario and its Reset generation (kept page-wide, so a Reset moves every tab past the closing worker) — and starting it before the page boots (prestartDemoHost, run by the demo page's head script), so the host boots alongside the page's own bundle. Kept apart from demo/scope so that head script loads only this, not the scope's UI.
+              - Web:
+                - Uses: `primitives/dom/web-storage.defineStore`
+                - Exports (types): `HostGenerations`
+                - Exports (values):
+                  - `advanceHostGeneration`
+                  - `hostGeneration`
+                  - `hostWorkerName`
+                  - `prestartDemoHost`
+                  - `trackHostGenerations`
+              - Cross-plugin:
+                - Imported by: `framework/browser-server/demo/scope`
             - **`scope`** — <DemoScope scenario>: renders its subtree against the scenario's browser host — real server code in a worker, on the scenario's seed — and scoped to the host's composition (<PluginScope>), so the page shows exactly the plugins the worker serves. Everything inside reaches the host only (the scope's transport): the build's coverage guard holds the host to serving every read, endpoint and config the scope uses, or declaring it needsMachine (answered unavailable); a key or endpoint it still does not serve fails loudly. A host that fails to boot throws to the error boundary. Connects to one SharedWorker per build (every tab of the demo shares its server and data), shows why when the host declines the page (data written by a newer version) or stops serving it (another tab took it over), and exposes Reset (useDemoHostControl) — the host wipes its data and every tab reconnects to a fresh one.
               - Web:
-                - Uses:
-                  - `framework/browser-server.attachFrameServing`
-                  - `framework/browser-server.browserServerTransport`
-                  - `framework/browser-server.FrameServing`
-                  - `framework/browser-server.HostInputs`
-                  - `framework/browser-server.HostInputSupply`
+                - Uses: 22 symbols — full list in [`plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/REFERENCE.md`](../plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/REFERENCE.md)
+                  - `framework/browser-server` ×5
+                  - `framework/browser-server/demo/prestart` ×3
+                  - `network/live/live-state` ×2
+                  - `primitives/networking` ×2
                   - `network/live.useLive`
-                  - `network/live/live-state.foldResource`
-                  - `network/live/live-state.NotificationsProvider`
                   - `primitives/css/center.Center`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.Button`
                   - `primitives/dom/web-storage.clearStorageScope`
-                  - `primitives/dom/web-storage.defineStore`
                   - `primitives/loading.Loading`
                   - `primitives/log-channels.clientLog`
-                  - `primitives/networking.TransportProvider`
-                  - `primitives/networking.useTransport`
                   - `primitives/scope/render-origin.RenderOrigin`
                   - `ui/icons/sprites.ScopeIconSymbols`
                 - Exports (types): `DemoHostControl`
@@ -47615,14 +47626,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useStore`
               - `WebStorageSlots`
           - Cross-plugin:
-            - Imported by: 48 plugins — full list in [`plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md)
+            - Imported by: 49 plugins — full list in [`plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md)
               - `primitives` ×15
               - `apps` ×12
               - `conversations` ×6
               - `apps-core` ×2
+              - `framework` ×2
               - `reports` ×2
               - `config_v2`
-              - `framework/browser-server/demo/scope`
               - `hints/ask`
               - `layouts/miller`
               - `map`
@@ -53970,6 +53981,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `apps-core/app-manifest`
+          - `apps/demo/shell`
           - `framework/cli/build/experimental-marks`
           - `ui/theme-engine`
       - Server:

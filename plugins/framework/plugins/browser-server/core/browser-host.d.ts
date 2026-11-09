@@ -14,6 +14,13 @@ declare module "@browser-host/*" {
    * Only where `SharedWorker` exists — the caller checks.
    */
   export function startShared(name: string): SharedWorker;
+  /**
+   * Start the SharedWorker named `name` now, before the page asks for it, so
+   * the host boots while the page's own code still loads; the next
+   * `startShared(name)` is handed this worker. Only where `SharedWorker`
+   * exists — the caller checks.
+   */
+  export function prestartShared(name: string): void;
   /** The absolute URL of the host's frame-serving Service Worker script. */
   export const serviceWorkerUrl: string;
 }

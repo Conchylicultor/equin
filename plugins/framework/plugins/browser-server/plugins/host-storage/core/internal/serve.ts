@@ -66,6 +66,9 @@ export function serveBrowserHost(opts: {
   storage: BrowserHostStorage;
   boot: (storage: OpenedHostStorage) => Promise<HostBooted>;
 }): void {
+  // The worker's clock starts when it is created: what passed before its
+  // entry ran is fetching and evaluating the worker's module graph.
+  const scriptMs = Math.round(performance.now());
   const { scope } = opts;
   let storage: OpenedHostStorage | null = null;
   const served: ServedHost = serveHost({
@@ -96,14 +99,20 @@ export function serveBrowserHost(opts: {
       try {
         const host = await opts.boot(storage);
         await storage.booted();
-        // The boot report says where the data came from, and what opening the
-        // storage cost (a snapshot's load included) before the graph booted.
+        // The boot report says where the data came from, what loading the
+        // worker's own code cost, and what opening the storage cost (a
+        // snapshot's load included) before the graph booted.
         return {
           ...host,
           boot: {
             ...host.boot,
-            stages: [{ name: "storage", ms: openedMs }, ...host.boot.stages],
+            stages: [
+              { name: "script", ms: scriptMs },
+              { name: "storage", ms: openedMs },
+              ...host.boot.stages,
+            ],
             data: originLabel(storage.origin),
+            createdAt: performance.timeOrigin,
           },
         };
       } catch (err) {

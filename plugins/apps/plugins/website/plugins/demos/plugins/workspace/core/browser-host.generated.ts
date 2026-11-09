@@ -900,6 +900,7 @@ export const browserHost = {
     "tasks.sidequest-autopilot",
     "tasks.task-triage",
   ],
+  module: "@browser-host/apps/plugins/website/plugins/demos/plugins/workspace",
   start: () => import("@browser-host/apps/plugins/website/plugins/demos/plugins/workspace"),
 } satisfies DemoHost;
 

@@ -718,7 +718,12 @@ export async function installDbTriggers(
       await run(dropSlice, (tx, p) => applyFunctionDrops(tx, p));
     }
   }
-  const after = plan(await readCatalog(db, sets), sets, sweep, keep);
+  // Nothing to install ran nothing: the catalog the first plan read is the
+  // one to assert, and reading it again (every trigger's definition, hashed)
+  // was half of what a boot with every set current spent here.
+  const after = isEmpty(first)
+    ? first
+    : plan(await readCatalog(db, sets), sets, sweep, keep);
   if (!isEmpty(after)) {
     throw new Error(
       `db-triggers: trigger set missing or out of date after install: ${touched(after).join(", ")}.`,

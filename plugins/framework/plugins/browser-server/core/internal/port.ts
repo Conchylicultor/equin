@@ -402,6 +402,12 @@ export interface HostBoot {
    * an earlier boot stored, a snapshot, nothing). Absent: the host keeps none.
    */
   data?: string;
+  /**
+   * When the worker was created, on the wall clock (its
+   * `performance.timeOrigin`, ms since the epoch): a page places it on its
+   * own clock, to tell the wait for the worker to exist from its boot.
+   */
+  createdAt?: number;
 }
 
 /** A server booted in the worker: what `serveHost`'s `boot` returns. */

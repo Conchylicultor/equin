@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: App shell for the Demo sandbox: registers the /demo app entry — equin rendered in-process on made-up data (DemoScope + AppEmbed over the workspace demo's browser host), starting on its home app (the app gallery). Where the visitor is inside the demo is the page's URL (/demo/at/<location>, e.g. /demo/at/agents/c/<id>), so a reload comes back to it; ;full=1 shows it full screen instead of framed under the caption bar (its Full screen button; a hover strip at the top edge exits), and a new browser tab opened from inside the demo opens it there, full screen, on the same data.
+- Description: App shell for the Demo sandbox: registers the /demo app entry — equin rendered in-process on made-up data (DemoScope + AppEmbed over the workspace demo's browser host), starting on its home app (the app gallery). Where the visitor is inside the demo is the page's URL (/demo/at/<location>, e.g. /demo/at/agents/c/<id>), so a reload comes back to it; ;full=1 shows it full screen instead of framed under the caption bar (its Full screen button; a hover strip at the top edge exits), and a new browser tab opened from inside the demo opens it there, full screen, on the same data. The /demo page's head script (DocumentHead.Fragment): starts the demo's browser host before the app boots, so its worker boots alongside the page's own bundle.
 - Web:
   - Slots:
     - `start.actions`
@@ -34,8 +34,12 @@
     - `primitives/loading.Loading`
     - `primitives/overlay/imperative-dialog/confirm.useConfirmDialog`
     - `ui/icons.Icon`
+- Server:
+  - Contributes: `DocumentHead.Fragment` "demo-prestart"
+  - Uses: `shell/document-head.DocumentHead`
 - Core:
   - Uses:
+    - `apps/website/demos/workspace.workspaceDemo`
     - `primitives/pane.defineApp`
     - `primitives/pane.defineRoute`
     - `ui/icons.symbol`
@@ -43,6 +47,7 @@
     - `DEMO_FULL`
     - `demoApp`
     - `demoAtRoute`
+    - `demoScenario`
     - `demoStartRoute`
 - Cross-plugin:
   - Uses tokens:

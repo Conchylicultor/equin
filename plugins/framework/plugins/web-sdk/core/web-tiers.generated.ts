@@ -42,7 +42,6 @@
 //   - apps/plugins/studio/plugins/explorer/plugins/membership: dependency closure (imported by an eager plugin)
 //   - apps/plugins/studio/plugins/graph: dependency closure (imported by an eager plugin)
 //   - apps/plugins/studio/plugins/membership-tint: dependency closure (imported by an eager plugin)
-//   - apps/plugins/website/plugins/demos/plugins/workspace: dependency closure (imported by an eager plugin)
 
 export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/agent-manager/plugins/icons",
@@ -223,6 +222,7 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/studio/plugins/explorer/plugins/collapsed",
   "apps/plugins/studio/plugins/explorer/plugins/excluded",
   "apps/plugins/studio/plugins/explorer/plugins/load-bearing",
+  "apps/plugins/website/plugins/demos/plugins/workspace",
   "apps/plugins/website/plugins/improve",
   "apps/plugins/website/plugins/landing/plugins/contact",
   "apps/plugins/website/plugins/landing/plugins/hero",

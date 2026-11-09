@@ -125,11 +125,20 @@ export function hostWorkerSpecifier(pluginPath: string): string {
  * The host's page-side module. It starts the worker from its entry's
  * import-map specifier (`import.meta.resolve`), so this source never changes
  * with the worker's code: the map does.
+ *
+ * `prestartShared(name)` starts the SharedWorker before anything on the page
+ * asks for it (a page's head script, while the page's own bundle still loads),
+ * so the host boots alongside the page; the first `startShared(name)` of that
+ * name is then handed that same worker — its port not started yet, so nothing
+ * the host sent is lost — instead of starting a second one.
  */
 export function hostModuleSource(pluginPath: string): string {
+  const url = `import.meta.resolve(${JSON.stringify(hostWorkerSpecifier(pluginPath))})`;
   return (
-    `export function start() {\n  return new Worker(import.meta.resolve(${JSON.stringify(hostWorkerSpecifier(pluginPath))}), { type: "module" });\n}\n` +
-    `export function startShared(name) {\n  return new SharedWorker(import.meta.resolve(${JSON.stringify(hostWorkerSpecifier(pluginPath))}), { type: "module", name });\n}\n` +
+    `export function start() {\n  return new Worker(${url}, { type: "module" });\n}\n` +
+    `const prestarted = new Map();\n` +
+    `export function prestartShared(name) {\n  if (!prestarted.has(name)) prestarted.set(name, new SharedWorker(${url}, { type: "module", name }));\n}\n` +
+    `export function startShared(name) {\n  const early = prestarted.get(name);\n  if (early !== undefined) {\n    prestarted.delete(name);\n    return early;\n  }\n  return new SharedWorker(${url}, { type: "module", name });\n}\n` +
     `export const serviceWorkerUrl = import.meta.url.replace(/[^/]*$/, ${JSON.stringify(FRAMES_SW_FILE)});\n`
   );
 }

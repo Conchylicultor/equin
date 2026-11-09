@@ -2,7 +2,7 @@ import { FullPane } from "@plugins/layouts/plugins/full-pane/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { DemoScope } from "@plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/web";
-import { workspaceDemo } from "@plugins/apps/plugins/website/plugins/demos/plugins/workspace/core";
+import { demoScenario } from "../../core";
 import { useIsPhone } from "../hooks/use-is-phone";
 
 const PHONE_NOTICE = "Apps are only available on desktop, not mobile.";
@@ -30,7 +30,7 @@ export function DemoLayout() {
     );
   }
   return (
-    <DemoScope scenario={workspaceDemo}>
+    <DemoScope scenario={demoScenario}>
       <FullPane />
     </DemoScope>
   );

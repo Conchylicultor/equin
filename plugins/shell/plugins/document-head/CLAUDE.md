@@ -33,6 +33,7 @@ rebuilt by `./equin start`, so a change to the Go half needs that restart.
 - Cross-plugin:
   - Imported by:
     - `apps-core/app-manifest`
+    - `apps/demo/shell`
     - `framework/cli/build/experimental-marks`
     - `ui/theme-engine`
 - Server:

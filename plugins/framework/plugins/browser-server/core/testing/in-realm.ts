@@ -68,11 +68,14 @@ export function channelHost(
 ): () => Promise<{
   start(): Worker;
   startShared(name: string): SharedWorker;
+  prestartShared(name: string): void;
   serviceWorkerUrl: string;
 }> {
   return () =>
     Promise.resolve({
       serviceWorkerUrl,
+      // Nothing boots ahead in a realm: `startShared` starts a channel anyway.
+      prestartShared: () => {},
       // The same in-realm "worker", as a SharedWorker's connection: its
       // `port` is the page end, `close()` ends it.
       startShared: () => {

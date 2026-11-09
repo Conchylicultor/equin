@@ -59,7 +59,7 @@ import {
   hostWorkerName,
   trackHostGenerations,
   type HostGenerations,
-} from "../internal/host-generation";
+} from "@plugins/framework/plugins/browser-server/plugins/demo/plugins/prestart/web";
 
 // ── The host ───────────────────────────────────────────────────────────
 
@@ -68,10 +68,12 @@ const BOOT_LOG_CHANNEL = "demo-host-boot";
 
 /**
  * One host boot as a line: the wait the page saw (from asking for the host
- * module to the worker's `ready`), then the worker's own account of it.
+ * module to the worker's `ready`) and when it asked (the page's clock, from
+ * its navigation), then the worker's own account of it.
  */
 function bootLine(
   scenarioId: string,
+  askedAtMs: number,
   waitedMs: number,
   hosted: PortServer,
   frames: FrameServing,
@@ -83,8 +85,14 @@ function bootLine(
     frames.kind === "serving"
       ? `frames at ${frames.frameBase}`
       : `frames unsupported: ${frames.reason}`;
+  // When the worker was created, on this page's clock: what the wait spent
+  // before the worker ran at all (loading the host module, starting it).
+  const created =
+    boot.createdAt === undefined
+      ? ""
+      : `, worker created at ${Math.round(boot.createdAt - performance.timeOrigin)} ms`;
   return (
-    `${scenarioId}: host ready in ${Math.round(waitedMs)} ms ` +
+    `${scenarioId}: host ready in ${Math.round(waitedMs)} ms, asked at ${Math.round(askedAtMs)} ms${created} ` +
     `(worker ready at ${readyAtMs} ms: ${stages}; ${boot.plugins} plugins; data: ${boot.data ?? "none kept"}; ${framed}) — slowest: ${slowest}`
   );
 }
@@ -115,7 +123,7 @@ interface ScopeStart {
 /**
  * The page's end of the scenario's host: ONE SharedWorker per build and host
  * generation for every tab of the demo (one server, one database — what keeps
- * a persistent host's data whole across tabs; `host-generation.ts` for why a
+ * a persistent host's data whole across tabs; `demo/prestart`'s `host-generation.ts` for why a
  * Reset moves to the next name), or, where the browser has none, a dedicated
  * worker of this page's own (the host's storage lock keeps a single owner).
  */
@@ -182,6 +190,7 @@ function startScopeServer(
     if (ended) return;
     const line = bootLine(
       scenario.id,
+      asked,
       performance.now() - asked,
       hosted,
       frames,

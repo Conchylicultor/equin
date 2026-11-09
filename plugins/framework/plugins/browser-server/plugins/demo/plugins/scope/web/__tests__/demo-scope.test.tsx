@@ -160,7 +160,13 @@ const scenarioOf = (
   id,
   app: "test-app",
   route: "/",
-  host: { id, home: null, plugins: SCOPE_PLUGINS, start: channelHost(boot) },
+  host: {
+    id,
+    home: null,
+    plugins: SCOPE_PLUGINS,
+    module: "@browser-host/test-host",
+    start: channelHost(boot),
+  },
 });
 
 /** A `note` value the host serves, its text changeable and announced with `notify()`. */

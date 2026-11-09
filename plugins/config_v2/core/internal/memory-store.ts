@@ -46,29 +46,57 @@ export function createMemoryConfigStore(opts?: {
 }): ConfigStoreImpl {
   let loaded: Map<string, MemoryConfigDoc> | null = null;
   let writes = 0;
+  /**
+   * Which scopes hold documents, per hierarchy: hier → scope id → how many of
+   * its documents are stored. Kept with every write and removal, so `scopes`
+   * answers from it instead of scanning every stored key — a scan per call
+   * made the registry's boot, which asks once per descriptor, quadratic.
+   */
+  const scopeIndex = new Map<string, Map<string, number>>();
+  const indexScope = (key: string, delta: 1 | -1): void => {
+    const [path, scopeId] = key.split("\0");
+    if (!scopeId) return;
+    const { hier } = storePathParts(path!);
+    let counts = scopeIndex.get(hier);
+    if (counts === undefined) scopeIndex.set(hier, (counts = new Map()));
+    const next = (counts.get(scopeId) ?? 0) + delta;
+    if (next === 0) counts.delete(scopeId);
+    else counts.set(scopeId, next);
+  };
   const persisted = (): HostStore<MemoryConfigDoc> | undefined =>
     opts?.persist?.();
   /** The layer, read back from `persist` on first use. */
   const docsMap = (): Map<string, MemoryConfigDoc> => {
     if (loaded === null) {
       loaded = new Map(persisted()?.loaded);
-      for (const doc of loaded.values()) writes = Math.max(writes, doc.version);
+      for (const [key, doc] of loaded) {
+        writes = Math.max(writes, doc.version);
+        indexScope(key, 1);
+      }
     }
     return loaded;
   };
   const docs = {
     get: (key: string) => docsMap().get(key),
     has: (key: string) => docsMap().has(key),
-    keys: () => docsMap().keys(),
     /** Store a new version of `key` (its version numbered after every stored one). */
     write(key: string, content: JsonValue, hash: string | null): void {
       const map = docsMap();
       const doc = { content, hash, version: ++writes };
+      if (!map.has(key)) indexScope(key, 1);
       map.set(key, doc);
       persisted()?.put(key, doc);
     },
     delete(key: string): void {
-      if (docsMap().delete(key)) persisted()?.delete(key);
+      if (docsMap().delete(key)) {
+        indexScope(key, -1);
+        persisted()?.delete(key);
+      }
+    },
+    /** The scopes holding documents under `hier`. */
+    scopesOf(hier: string): string[] {
+      docsMap();
+      return [...(scopeIndex.get(hier)?.keys() ?? [])].sort();
     },
   };
   // storePath → its propagation, run once (concurrent first touches share it).
@@ -130,13 +158,7 @@ export function createMemoryConfigStore(opts?: {
     },
     async scopes(storePath) {
       await seed(storePath);
-      const { hier } = storePathParts(storePath);
-      const ids = new Set<string>();
-      for (const key of docs.keys()) {
-        const [path, scopeId] = key.split("\0");
-        if (scopeId && storePathParts(path!).hier === hier) ids.add(scopeId);
-      }
-      return [...ids].sort();
+      return docs.scopesOf(storePathParts(storePath).hier);
     },
     async dropScope(storePath) {
       await seed(storePath);

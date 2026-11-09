@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createMemoryConfigStore } from "./memory-store";
+import { createMemoryConfigStore, type MemoryConfigDoc } from "./memory-store";
 import { configFileRelPath, parseConfigFileRelPath } from "./store";
 
 const base = { storePath: "a/b/config.jsonc" };
@@ -50,6 +50,29 @@ describe("createMemoryConfigStore", () => {
       "app:mail",
       "app:pages",
     ]);
+  });
+
+  test("a scope whose last document is removed is no longer listed", async () => {
+    const store = createMemoryConfigStore();
+    await store.write({ ...scoped, file: "origin" }, {}, "h");
+    await store.write({ ...scoped, file: "override" }, {}, "h");
+    await store.remove({ ...scoped, file: "origin" });
+    expect(await store.scopes(base.storePath)).toEqual(["app:pages"]);
+    await store.remove({ ...scoped, file: "override" });
+    expect(await store.scopes(base.storePath)).toEqual([]);
+  });
+
+  test("scopes lists what a persisted layer held when it was read back", async () => {
+    const kept = new Map<string, MemoryConfigDoc>();
+    const persist = () => ({
+      loaded: kept,
+      put: (key: string, doc: MemoryConfigDoc) => void kept.set(key, doc),
+      delete: (key: string) => void kept.delete(key),
+    });
+    const first = createMemoryConfigStore({ persist });
+    await first.write({ ...scoped, file: "override" }, {}, "h");
+    const reopened = createMemoryConfigStore({ persist });
+    expect(await reopened.scopes(base.storePath)).toEqual(["app:pages"]);
   });
 
   test("edit runs the mutation and returns its result", async () => {
