@@ -28,15 +28,17 @@
   animation: arrival-fade 180ms ease-out both;
 }
 
-/* A BATCH arriving as one gesture (`Arrival` given an `ArrivalStep`): every
-   row's slot opens at the same moment on the same calm ease-in-out, so the
-   batch's room is ONE continuous push — Σ hᵢ·E(t) = H·E(t), everything below
-   moving as one rigid mass. Each row's content then cascades in at its step
-   (`--arrival-delay`, set by `Arrival`, 150 ms apart): opacity and a small
-   rise on a soft ease-out long enough to be seen, no scale, no overshoot. The
-   opening (`--arrival-open`) lasts past the last step's start. A large row (a
-   map) rises further and a bit slower. A row with nothing to show
-   (`step: null`) only opens. */
+/* A BATCH arriving as a top-to-bottom cascade (`Arrival` given an
+   `ArrivalStep`): each row arrives at its step (`--arrival-delay`, set by
+   `Arrival`, 150 ms apart) — its slot opening on a calm ease-in-out and its
+   content entering WITH it: opacity and a small rise on a soft ease-out, no
+   scale, no overshoot. The openings overlap, so the room is one continuous
+   push and what is below the batch moves as one mass. Slot and content share
+   the step because the slot clips its content while it opens: a content
+   delayed inside a slot already opening would be revealed by that slot, not
+   by its own entry. A large row (a map) opens and rises over longer. A row
+   with nothing to show (`blank`) only opens. Before its step a row holds its
+   start (fill `both`): no room, no content. */
 @keyframes arrival-rise {
   from {
     opacity: 0;
@@ -48,7 +50,8 @@
   display: grid;
   grid-template-rows: 1fr;
   grid-template-columns: minmax(0, 1fr);
-  animation: arrival-open var(--arrival-open, 600ms) cubic-bezier(0.45, 0, 0.55, 1);
+  animation: arrival-open var(--arrival-duration, 450ms)
+    cubic-bezier(0.45, 0, 0.55, 1) var(--arrival-delay, 0ms) both;
 }
 
 .arrival-batch > * {

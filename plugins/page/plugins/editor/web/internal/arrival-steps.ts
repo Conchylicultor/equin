@@ -7,7 +7,7 @@
 // row's content enters at its step, in document order. A row whose parent
 // arrives in the same batch enters WITH it (a block's children are its
 // content, never a step of their own); a row with nothing to show (an empty
-// line) has no entry at all, its room just opens.
+// line) has no entry at all, its room just opens with the step before it.
 
 import type { ArrivalStep } from "@plugins/primitives/plugins/css/plugins/motion/web";
 import type { Block } from "../../core";
@@ -21,19 +21,30 @@ export function arrivalSteps(
   arrived: (block: Block) => boolean,
   isEmpty: (block: Block) => boolean,
 ): ReadonlyMap<string, ArrivalStep> {
-  const order = new Map<string, number | null>();
+  // A row's step, or "blank" (nothing to show: its room opens with the step
+  // before it — the first step when none came before).
+  const order = new Map<string, number | "blank">();
   let next = 0;
   for (const { block } of rows) {
     if (!arrived(block)) continue;
     const parent =
       block.parentId === null ? undefined : order.get(block.parentId);
-    if (parent !== undefined && parent !== null) order.set(block.id, parent);
-    else if (isEmpty(block)) order.set(block.id, null);
+    if (parent !== undefined && parent !== "blank") order.set(block.id, parent);
+    else if (isEmpty(block)) order.set(block.id, "blank");
     else order.set(block.id, next++);
   }
-  // Every row of the push knows its length: the room opens for the whole
-  // cascade.
+  // Every row of the push knows its length (a long cascade compresses).
   const steps = new Map<string, ArrivalStep>();
-  for (const [id, step] of order) steps.set(id, { step, steps: next });
+  let last = 0;
+  for (const { block } of rows) {
+    const at = order.get(block.id);
+    if (at === undefined) continue;
+    if (at !== "blank") last = at;
+    steps.set(block.id, {
+      step: at === "blank" ? last : at,
+      steps: next,
+      blank: at === "blank",
+    });
+  }
   return steps;
 }

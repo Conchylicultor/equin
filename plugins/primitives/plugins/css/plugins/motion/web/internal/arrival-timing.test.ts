@@ -1,23 +1,19 @@
 import { describe, expect, test } from "bun:test";
-import { arrivalDelayMs, arrivalOpenMs } from "./arrival-timing";
+import { arrivalDelayMs } from "./arrival-timing";
 
-describe("arrival timing", () => {
-  test("a short batch cascades 150 ms apart, the room open past the last step", () => {
+describe("arrivalDelayMs", () => {
+  test("a short batch cascades 150 ms apart from its mount", () => {
     expect([0, 1, 2, 3].map((s) => arrivalDelayMs(s, 4))).toEqual([
-      150, 300, 450, 600,
+      0, 150, 300, 450,
     ]);
-    expect(arrivalOpenMs(4)).toBe(975);
-    expect(arrivalOpenMs(3)).toBe(825);
   });
 
-  test("one step opens over the minimum", () => {
-    expect(arrivalDelayMs(0, 1)).toBe(150);
-    expect(arrivalOpenMs(1)).toBe(600);
+  test("one step arrives at once", () => {
+    expect(arrivalDelayMs(0, 1)).toBe(0);
   });
 
-  test("a long batch compresses its gaps to keep the cascade bounded", () => {
-    expect(arrivalDelayMs(19, 20)).toBe(1050);
-    expect(arrivalOpenMs(20)).toBe(1425);
-    expect(arrivalOpenMs(100)).toBe(1425);
+  test("a long batch compresses its gaps to keep the cascade within 900 ms", () => {
+    expect(arrivalDelayMs(19, 20)).toBe(900);
+    expect(arrivalDelayMs(99, 100)).toBe(900);
   });
 });

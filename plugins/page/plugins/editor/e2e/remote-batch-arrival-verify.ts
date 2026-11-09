@@ -6,12 +6,15 @@
 // an agent's edit takes, not this editor's own overlay: three to-dos each with
 // a place under it, an empty line and a map. Per frame it records the
 // scroller's scrollTop, the top of the line below the insertion, and every new
-// row's opacity. Then one more to-do on its own.
+// row's opacity and its slot's height. Then one more to-do on its own.
 //
-// Asserts: scrollTop never changes; the content below moves monotonically on
-// ONE curve to its full displacement (no frame jumps more than a fraction of
-// it); the batch's content cascades in document order (a place with its to-do,
-// the empty line with no entry, the map last); a lone block still eases in.
+// Asserts: scrollTop never changes; the content below moves monotonically to
+// its full displacement with no frame jumping more than a fraction of it; the
+// batch cascades in document order — each row's slot and content arriving
+// together at its step, a place with its to-do, the empty line with no entry
+// of its own, the map last — and each block is first SEEN (its slot open and
+// its content showing) a step after the one above it; a lone block still
+// eases in on one curve.
 //
 // With `--frames <dir>`, one more identical batch is written and held still:
 // every animation paused and stepped through 0…1500 ms, one screenshot per
@@ -48,6 +51,8 @@ interface Frame {
   scrollTop: number;
   below: number;
   opacity: Record<string, number>;
+  /** The row's slot (its Arrival wrapper) height. */
+  slot: Record<string, number>;
 }
 
 function place(name: string, lat: number, lng: number) {
@@ -147,10 +152,12 @@ async function startTrace(
       const tick = () => {
         const below = document.querySelector(`[data-block-id="${belowId}"]`)!;
         const opacity: Record<string, number> = {};
+        const slot: Record<string, number> = {};
         for (const id of ids) {
           const el = entryOf(id);
           if (!el) continue;
           opacity[id] = Number(getComputedStyle(el).opacity);
+          slot[id] = el.parentElement?.getBoundingClientRect().height ?? 0;
           if (anims[id]) continue;
           // The row's own entry and its slot's opening, as the page runs them.
           const running = [
@@ -175,6 +182,7 @@ async function startTrace(
           scrollTop: scroller.scrollTop,
           below: below.getBoundingClientRect().top,
           opacity,
+          slot,
         });
         if (performance.now() - t0 < 2500) requestAnimationFrame(tick);
         else
@@ -229,23 +237,25 @@ function checkCamera(label: string, frames: Frame[]): void {
   r.eq(`${label}: scrollTop never changes`, [...tops], [frames[0]!.scrollTop]);
 }
 
-/** The content below moves on one monotonic curve; returns its displacement. */
+/**
+ * The content below moves monotonically, and on every frame sits where the
+ * rows' own openings put it: Σ (row's final height × its ease at t) — so the
+ * push is exactly the overlapping openings, whatever the frame rate.
+ */
 function checkPush(
   label: string,
   frames: Frame[],
-  open: Anim | undefined,
+  rows: { open: Anim | undefined; height: number }[],
 ): number {
   const start = frames[0]!.below;
   const end = frames.at(-1)!.below;
   const total = end - start;
   let monotonic = true;
-  let maxStep = 0;
   let moveStart: number | null = null;
   let moveEnd = 0;
   for (let i = 1; i < frames.length; i++) {
     const d = frames[i]!.below - frames[i - 1]!.below;
     if (d < -0.5) monotonic = false;
-    maxStep = Math.max(maxStep, d);
     if (Math.abs(d) > 0.5) {
       moveStart ??= frames[i - 1]!.t;
       moveEnd = frames[i]!.t;
@@ -253,21 +263,25 @@ function checkPush(
   }
   r.ok(`${label}: the content below moves down`, total > 0, `moved ${total}px`);
   r.ok(`${label}: monotonically`, monotonic);
-  // Every frame sits on ONE calm ease-in-out over the slots' shared opening —
-  // the push as one rigid mass, whatever the frame rate.
-  if (open) {
+  const known = rows.every((x) => x.open !== undefined);
+  r.ok(`${label}: every row's opening was traced`, known);
+  if (known) {
     let worst = 0;
     for (const f of frames) {
-      const u = Math.min(
-        1,
-        Math.max(0, (f.t - open.start - open.delay) / open.duration),
-      );
-      worst = Math.max(worst, Math.abs(f.below - start - total * CALM(u)));
+      let want = 0;
+      for (const { open, height } of rows) {
+        const u = Math.min(
+          1,
+          Math.max(0, (f.t - open!.start - open!.delay) / open!.duration),
+        );
+        want += height * CALM(u);
+      }
+      worst = Math.max(worst, Math.abs(f.below - start - want));
     }
     r.ok(
-      `${label}: the content below follows one ease-in-out curve (${open.duration}ms)`,
+      `${label}: the content below follows the rows' own openings`,
       worst <= total * 0.08 + 2,
-      `worst deviation ${worst.toFixed(1)}px of ${total.toFixed(1)}px (max frame step ${maxStep.toFixed(0)}px)`,
+      `worst deviation ${worst.toFixed(1)}px of ${total.toFixed(1)}px`,
     );
   }
   r.note(
@@ -332,79 +346,98 @@ await withBrowser(async (h) => {
     watched.every((id) => frames.at(-1)!.opacity[id] === 1),
   );
   checkCamera("batch", frames);
-  const opens = watched.map((id) => anim(id, "arrival-open"));
-  r.ok(
-    "batch: every slot opens at the same moment on the same curve",
-    opens.every(
-      (o) =>
-        o !== undefined &&
-        Math.abs(o.start - opens[0]!.start) < 1 &&
-        o.duration === 975 &&
-        o.easing === opens[0]!.easing,
-    ),
-    JSON.stringify(opens.map((o) => o && [o.start.toFixed(0), o.duration])),
-  );
-  checkPush("batch", frames, opens[0]);
-
-  // The content cascade, as the page schedules it: entry start = slot open
-  // start + delay, for each row.
-  const enter = (id: string) => {
-    const a = anim(id, "arrival-rise");
+  // Each row's slot opens at its step, its content entering with it.
+  const at = (id: string, name: string) => {
+    const a = anim(id, name);
     return a ? a.start + a.delay : Number.NaN;
   };
+  const t0 = Math.min(
+    ...watched.map((id) => anim(id, "arrival-open")?.start ?? Infinity),
+  );
   r.note(
-    `batch: entries ${watched
+    `batch: open / entry (delay+duration ms) ${watched
       .map((id) => {
-        const a = anim(id, "arrival-rise");
-        return a ? `${a.delay}+${a.duration}` : "none";
+        const o = anim(id, "arrival-open");
+        const e = anim(id, "arrival-rise");
+        return `${o ? `${o.delay}+${o.duration}` : "?"} / ${e ? `${e.delay}+${e.duration}` : "none"}`;
       })
       .join(", ")} (to-do, place ×3, blank, map)`,
   );
+  checkPush(
+    "batch",
+    frames,
+    watched.map((id) => ({
+      open: anim(id, "arrival-open"),
+      height: frames.at(-1)!.slot[id] ?? 0,
+    })),
+  );
+  r.ok(
+    "batch: each row's slot and content arrive together",
+    [...shops.flatMap((s) => [s.id, s.children[0]!.id]), map.id].every(
+      (id) => Math.abs(at(id, "arrival-open") - at(id, "arrival-rise")) < 1,
+    ),
+  );
   for (const s of shops)
     r.ok(
-      `batch: "${(s.data.text[0] as { text: string }).text}"'s place enters with it`,
-      enter(s.id) === enter(s.children[0]!.id),
+      `batch: "${(s.data.text[0] as { text: string }).text}"'s place arrives with it`,
+      at(s.id, "arrival-open") === at(s.children[0]!.id, "arrival-open"),
     );
+  const order = [shops[0]!, shops[1]!, shops[2]!, map];
   r.eq(
-    "batch: the shops then the map cascade 150 ms apart, in document order",
-    [shops[1]!, shops[2]!, map].map((b, i) =>
-      Math.round(
-        enter(b.id) -
-          enter(i === 0 ? shops[0]!.id : [shops[1]!, shops[2]!][i - 1]!.id),
-      ),
-    ),
-    [150, 150, 150],
+    "batch: the shops then the map arrive 0 / 150 / 300 / 450 ms after the push",
+    order.map((b) => Math.round(at(b.id, "arrival-open") - t0)),
+    [0, 150, 300, 450],
   );
   r.eq(
-    "batch: the first entry starts 150 ms into the opening",
-    anim(shops[0]!.id, "arrival-rise")?.delay,
-    150,
+    "batch: the empty line opens with the shop before it",
+    at(blank.id, "arrival-open"),
+    at(shops[2]!.id, "arrival-open"),
   );
   r.eq(
-    "batch: a shop enters over 450 ms",
-    anim(shops[0]!.id, "arrival-rise")?.duration,
-    450,
+    "batch: a shop opens and enters over 450 ms",
+    [
+      anim(shops[0]!.id, "arrival-open")?.duration,
+      anim(shops[0]!.id, "arrival-rise")?.duration,
+    ],
+    [450, 450],
   );
   r.eq(
-    "batch: the map (a large block) enters over 600 ms",
-    anim(map.id, "arrival-rise")?.duration,
-    600,
+    "batch: the map (a large block) opens and enters over 600 ms",
+    [
+      anim(map.id, "arrival-open")?.duration,
+      anim(map.id, "arrival-rise")?.duration,
+    ],
+    [600, 600],
   );
-  // The room covers the cascade: when the last step (the map) starts, its
-  // slot is still visibly opening.
-  const lastStart = enter(map.id) - opens[0]!.start - opens[0]!.delay;
-  r.ok(
-    "batch: the room is still opening when the last entry starts",
-    CALM(lastStart / opens[0]!.duration) < 0.85,
-    `last entry at ${lastStart.toFixed(0)}ms of ${opens[0]!.duration}ms (room ${(100 * CALM(lastStart / opens[0]!.duration)).toFixed(0)}% open)`,
-  );
+  // What the viewer sees: a block is first SEEN once its slot has opened a
+  // little AND its content shows — never earlier because another row's slot
+  // revealed it. Measured on the trace, per block.
+  const seenAt = (id: string): number => {
+    const f = frames.find(
+      (f) => (f.slot[id] ?? 0) > 3 && (f.opacity[id] ?? 0) > 0.1,
+    );
+    return f ? f.t : Number.NaN;
+  };
+  const legibleAt = (id: string): number => {
+    const full = frames.at(-1)!.slot[id] ?? 0;
+    const f = frames.find(
+      (f) => (f.slot[id] ?? 0) >= full * 0.6 && (f.opacity[id] ?? 0) >= 0.6,
+    );
+    return f ? f.t : Number.NaN;
+  };
+  const seen = order.map((b) => seenAt(b.id));
+  const legible = order.map((b) => legibleAt(b.id));
+  const traceT0 = frames[0]!.t;
   r.note(
-    `batch: first shop opacity(t) ${frames
-      .filter((f) => f.opacity[shops[0]!.id] !== undefined)
-      .filter((_, i) => i % 3 === 0)
-      .slice(0, 25)
-      .map((f) => `${f.t.toFixed(0)}:${f.opacity[shops[0]!.id]!.toFixed(2)}`)
-      .join(" ")}`,
+    `batch: first seen ${seen.map((t) => (t - traceT0).toFixed(0)).join(" / ")} ms, legible ${legible.map((t) => (t - traceT0).toFixed(0)).join(" / ")} ms (shop 1-3, map; trace clock)`,
+  );
+  r.ok(
+    "batch: each block is first seen at least 100 ms after the one above it",
+    seen.every((t, i) => i === 0 || t - seen[i - 1]! >= 100),
+  );
+  r.ok(
+    "batch: and is legible at least 100 ms after it",
+    legible.every((t, i) => i === 0 || t - legible[i - 1]! >= 100),
   );
   r.ok(
     "batch: the empty line has no entry of its own",
@@ -441,11 +474,12 @@ await withBrowser(async (h) => {
   });
   const one = await readTrace(page);
   checkCamera("lone", one.frames);
-  checkPush(
-    "lone",
-    one.frames,
-    one.anims[lone.id]?.find((a) => a.name === "arrival-open"),
-  );
+  checkPush("lone", one.frames, [
+    {
+      open: one.anims[lone.id]?.find((a) => a.name === "arrival-open"),
+      height: one.frames.at(-1)!.slot[lone.id] ?? 0,
+    },
+  ]);
   r.ok("lone: it enters (not drawn at rest)", everHidden(one.frames, lone.id));
 
   // ---- Held frames, to judge by eye ---------------------------------------------

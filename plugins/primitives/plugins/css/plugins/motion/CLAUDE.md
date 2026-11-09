@@ -77,24 +77,24 @@ whose geometry something else already animates.
 - **`arrived={true}`** — one row on its own (a transcript line): 180 ms,
   `grid-template-rows` 0fr → 1fr on the wrapper (clipping the row meanwhile),
   opacity 0 → 1 on the row.
-- **`arrived={{ step, steps }}`** (`ArrivalStep`) — one row of a BATCH, the
-  rows one write added together, arriving as ONE gesture. Every row's slot
-  opens at the same moment on the same curve (ease-in-out
-  `cubic-bezier(.45,0,.55,1)`), so the batch's room is one continuous push
-  (Σ hᵢ·E(t) = H·E(t)) and what is below moves as one rigid mass. Each row's
-  content then cascades in at its step, top to bottom: opacity + a 12 px rise,
-  450 ms on a soft ease-out `cubic-bezier(.33,1,.68,1)` (so the fade and rise
-  are seen), starting 150 ms into the open and 150 ms per step — no scale, no
-  overshoot. A batch of more than 7 steps compresses its gaps so the last step
-  starts at most 900 ms after the first. `steps` (the batch's step count, the
-  same on every row) sizes the opening: it lasts until 375 ms after the last
-  step starts, at least 600 ms (3 steps: 825 ms, 4: 975 ms, at most 1425 ms),
-  so no content enters into a slot that has visibly finished opening
-  (`internal/arrival-timing.ts`). A row taller than 160 px (a map) rises 16 px
-  over 600 ms. `step: null` (a row with nothing to show) only opens. The
-  caller numbers the steps (document order; rows that belong together share
-  one). Design: prototype `proto-1794145785-ej5bjg`, `?motion=staged`; timing
-  retuned for a visible cascade.
+- **`arrived={{ step, steps, blank }}`** (`ArrivalStep`) — one row of a BATCH,
+  the rows one write added together, arriving as a top-to-bottom cascade. Each
+  row arrives at its step, 150 ms after the step above it (a batch of more than
+  7 steps compresses its gaps so the last arrives at most 900 ms after the
+  first — `steps` is the batch's step count; `internal/arrival-timing.ts`): its
+  slot opens on a calm ease-in-out (`cubic-bezier(.45,0,.55,1)`, 450 ms) and
+  its content enters WITH it — opacity + a 12 px rise on a soft ease-out
+  (`cubic-bezier(.33,1,.68,1)`, 450 ms), no scale, no overshoot. The openings
+  overlap, so the room is one continuous push and what is below the batch
+  moves as one mass. A row taller than 160 px (a map) opens and rises (16 px)
+  over 600 ms. `blank` (a row with nothing to show) only opens, at its step.
+  Before its step a row holds its start: no room, no content. The caller
+  numbers the steps (document order; rows that belong together share one).
+  - **Why slot and content share the step**: a slot clips its content while
+    it opens. When every slot of the batch opened together (the first
+    design, prototype `proto-1794145785-ej5bjg ?motion=staged`), each row was
+    revealed by its own growing slot at the same moment — the batch unfolded
+    as one, whatever the content's delays.
 - Nothing in it scrolls, focuses or reads the scroller: the camera is the
   viewer's.
 - While entering it carries `FOLLOW_MOTION_ATTR` (`dom/auto-scroll`), so a
