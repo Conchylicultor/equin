@@ -17,6 +17,7 @@ export default {
   contributions: [
     CompactionContext({
       id: "page-instructions",
+      size: "whole",
       restore: (conversationId) => restoreAfterCompaction(conversationId),
     }),
   ],

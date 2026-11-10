@@ -45,6 +45,11 @@ export const SERVER_REPORT_SOURCES = [
   // model menu named something outside the model id grammar, or left out a
   // family. An observation of the bundled Claude Code, not an error anyone caught.
   "server-model-discovery",
+  // The compaction-context delivery check (conversations/compaction-context/
+  // delivery-check): an agent's transcript shows that the context handed back
+  // after a compaction did not reach it whole — the Claude CLI cut the hook's
+  // output. An observation of the bundled Claude Code, not an error anyone caught.
+  "server-compaction-context",
   // The boot-time audit of this namespace's saved settings: some of the user's
   // own config overrides sit where no live config reads them any more (a plugin
   // was removed, or moved onto a destination that already had settings).

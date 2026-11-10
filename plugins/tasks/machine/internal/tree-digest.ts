@@ -1,5 +1,6 @@
 import { Mcp } from "@plugins/infra/plugins/mcp/server";
 import { CompactionContext } from "@plugins/conversations/plugins/compaction-context/server";
+import { fitToBudget } from "@plugins/conversations/plugins/compaction-context/core";
 import {
   TaskStatusSchema,
   isBlockedStatus,
@@ -79,12 +80,20 @@ export const treeDigestInstructions = Mcp.instructions({
 /**
  * The tree, handed back after a compaction: the summary folds away every
  * digest the agent was given, and the tree is its memory of the work around it.
+ * Cut to the room the instructions left (`fit`): the agent can re-read the
+ * whole tree with `task_tree`, and the footer says so.
  */
 export const treeAfterCompaction = CompactionContext({
   id: "task-tree",
-  restore: async (conversationId) => {
+  size: "fit",
+  restore: async (conversationId, budget) => {
     if ((await grantOf(tasksFile, conversationId)) === null) return "";
     const text = await taskTree({ conversationId });
-    return text === null ? "" : `## Task tree\n\n${text}`;
+    if (text === null) return "";
+    return fitToBudget(
+      `## Task tree\n\n${text}`,
+      budget,
+      (cut) => `+${cut} more lines — call \`task_tree\` for the whole tree`,
+    );
   },
 });

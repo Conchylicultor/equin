@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-conversations-compaction-context-delivery-check",
+  "description": "Reads back from an agent's transcript whether the context handed back after a compaction reached it whole; when the Claude CLI cut it, files a report and sends the whole context as a turn.",
+  "private": true,
+  "version": "0.0.1"
+}

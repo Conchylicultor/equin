@@ -9,3 +9,9 @@ export {
   compactionContextHook,
 } from "./hook";
 export type { CompactionHookEntry } from "./hook";
+export {
+  COMPACTION_CONTEXT_BUDGET,
+  fitToBudget,
+  HOOK_OUTPUT_CAP,
+  PART_SEPARATOR,
+} from "./budget";

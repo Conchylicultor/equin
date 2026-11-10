@@ -167,6 +167,7 @@ memo degrades to a full chain re-read on every push.
     - `apps/prototypes/checkpoints`
     - `backup/sources/transcripts`
     - `conversations`
+    - `conversations/compaction-context/delivery-check`
     - `conversations/conversation-view/jsonl-viewer/background-shells`
     - `conversations/conversation-view/jsonl-viewer/subagents`
     - `conversations/transcript-api`

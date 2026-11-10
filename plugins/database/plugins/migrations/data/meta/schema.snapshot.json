@@ -1,6 +1,6 @@
 {
-  "id": "d1b7b216-f7ce-41e6-ada6-15b9d564aeb6",
-  "prevId": "c342f1f7-4c4c-4d7a-9ab6-2605720198b5",
+  "id": "fd8e6d51-87e3-4406-bf01-dbfaf234adc1",
+  "prevId": "d1b7b216-f7ce-41e6-ada6-15b9d564aeb6",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -6134,6 +6134,37 @@
           "onUpdate": "no action"
         }
       },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.compaction_context_sends": {
+      "name": "compaction_context_sends",
+      "schema": "",
+      "columns": {
+        "conversation_id": {
+          "name": "conversation_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "context": {
+          "name": "context",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sent_at": {
+          "name": "sent_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},

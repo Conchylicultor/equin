@@ -1760,6 +1760,10 @@
       "name": "@equin/plugin-conversations-compaction-context",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/compaction-context/plugins/delivery-check": {
+      "name": "@equin/plugin-conversations-compaction-context-delivery-check",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/context-usage": {
       "name": "@equin/plugin-conversations-context-usage",
       "version": "0.0.1",
@@ -8343,6 +8347,8 @@
     "@equin/plugin-conversations-commit-conversation": ["@equin/plugin-conversations-commit-conversation@workspace:plugins/conversations/plugins/commit-conversation"],
 
     "@equin/plugin-conversations-compaction-context": ["@equin/plugin-conversations-compaction-context@workspace:plugins/conversations/plugins/compaction-context"],
+
+    "@equin/plugin-conversations-compaction-context-delivery-check": ["@equin/plugin-conversations-compaction-context-delivery-check@workspace:plugins/conversations/plugins/compaction-context/plugins/delivery-check"],
 
     "@equin/plugin-conversations-context-usage": ["@equin/plugin-conversations-context-usage@workspace:plugins/conversations/plugins/context-usage"],
 

@@ -15207,8 +15207,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `SYSTEM_CATEGORY_ID`
       - `withdrawConversationTurn`
   - Cross-plugin:
-    - Imported by: 83 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
-      - `conversations` ×57
+    - Imported by: 84 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+      - `conversations` ×58
       - `tasks` ×8
       - `apps` ×6
       - `infra` ×3
@@ -15729,11 +15729,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `build/build-commits`
           - `build/deployment`
-    - **`compaction-context`** — The compaction-context backend: the CompactionContext contribution (a plugin's restore(conversationId) — re-record what the compacted agent no longer holds, return the text to hand back) and the POST /api/conversations/:id/compaction-context endpoint the SessionStart(compact) hook calls, joining every contribution's part.
+    - **`compaction-context`** — The compaction-context backend: the CompactionContext contribution (a plugin's restore — re-record what the compacted agent no longer holds, return the text to hand back; a `whole` part is never cut, a `fit` part is given the room left under the hook's cap) and the POST /api/conversations/:id/compaction-context endpoint the SessionStart(compact) hook calls, joining every part and recording the answer (compaction_context_sends) for delivery-check to confirm against the transcript.
       - Server:
-        - Uses: `infra/endpoints.implement`
-        - Exports (types): `CompactionContextSource`
-        - Exports (values): `CompactionContext`
+        - Uses:
+          - `database.db`
+          - `infra/endpoints.implement`
+        - DB schema: `plugins/conversations/plugins/compaction-context/server/internal/tables.ts`
+        - Exports (types):
+          - `CompactionContextSend`
+          - `CompactionContextSource`
+        - Exports (values):
+          - `_compactionContextSends`
+          - `CompactionContext`
+          - `onCompactionContextSent`
+          - `pendingSends`
+          - `settleSend`
         - Routes: `POST /api/conversations/:id/compaction-context`
       - Core:
         - Uses:
@@ -15743,14 +15753,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CompactionContextResponse`
           - `CompactionHookEntry`
         - Exports (values):
+          - `COMPACTION_CONTEXT_BUDGET`
           - `COMPACTION_HOOK_MATCHER`
           - `COMPACTION_HOOK_TIMEOUT_S`
           - `compactionContext`
           - `compactionContextHook`
           - `CompactionContextResponseSchema`
+          - `fitToBudget`
+          - `HOOK_OUTPUT_CAP`
+          - `PART_SEPARATOR`
       - Cross-plugin:
         - Imported by:
           - `conversations/agent-launch`
+          - `conversations/compaction-context/delivery-check`
           - `conversations/runtime-sdk`
           - `page/annotations/agent-access`
           - `tasks`
@@ -15758,6 +15773,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `endpoints/no-raw-web-fetch` — `shared/client.ts` (sanctioned)
       - Machine:
         - Exports (values): `compactionHookEntry`
+      - Plugins:
+        - **`delivery-check`** — Reads back from the agent's transcript whether the context handed back after a compaction (compaction_context_sends) reached it whole — the first SessionStart context written since must hold the exact text — rather than trusting a copy of the Claude CLI's hook-output cap. When it did not, files compaction-context-cut and sends the whole context to the agent as a turn.
+          - Server:
+            - Contributes: `report-kind` "compaction-context-cut"
     - **`context-usage`** — Each conversation's last context reading — what fills its agent's context window, as the harness measured it — in the conversations_ext_context_usage table: recordContextUsage, which a conversation runtime calls with each reading its agent reports, and the lookup-only conversations.context-usage collection the context ring reads. No read ever asks the agent.
       - Server:
         - Contributes: `resource.declare` "conversations.context-usage:rows"
@@ -21254,6 +21273,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/prototypes/checkpoints`
           - `backup/sources/transcripts`
           - `conversations`
+          - `conversations/compaction-context/delivery-check`
           - `conversations/conversation-view/jsonl-viewer/background-shells`
           - `conversations/conversation-view/jsonl-viewer/subagents`
           - `conversations/transcript-api`
@@ -21636,9 +21656,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadedDatabaseConfig`
       - `readDatabaseConfigSync`
   - Cross-plugin:
-    - Imported by: 153 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 154 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×42
-      - `conversations` ×18
+      - `conversations` ×19
       - `infra` ×15
       - `page` ×14
       - `tasks` ×14
@@ -39469,7 +39489,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`agent-access`** — The agent-facing tool surface over a page, as the file triple: read_page (human-audience subtrees pruned), write_agent_note (one agent-authored block's whole contents — an <agent-inline> card, or an <agent-page> by its own id) and edit_page (any block, judged by what the diff touched — every write must resolve inside a region an agent authors, so an <agent-inline> card or an <agent-page> admits it and a <human> or <todo> card nested there refuses it; a tagless <agent-page title> mints a sub-page). The policy over page/markdown-apply's audience-and-author-agnostic engine, as portable functions (pageTools.read / edit / writeNote — the exact tool results) that the machine half's MCP tools wrap.
           - Server:
-            - Contributes: `conversations.compaction-context` "page-instructions"
+            - Contributes: `conversations.compaction-context` "page-instructions (whole)"
             - Uses: 26 symbols — full list in [`plugins/page/plugins/annotations/plugins/agent-access/REFERENCE.md`](../plugins/page/plugins/annotations/plugins/agent-access/REFERENCE.md)
               - `page/annotations/instructions` ×9
               - `page/markdown-apply` ×5
@@ -53100,10 +53120,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `SERVER_REPORT_SOURCES`
       - `submitReport`
   - Cross-plugin:
-    - Imported by: 71 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+    - Imported by: 72 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
       - `reports` ×29
       - `debug` ×18
-      - `conversations` ×6
+      - `conversations` ×7
       - `database` ×4
       - `infra` ×3
       - `build` ×2
@@ -53304,9 +53324,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Machine:
         - Uses: `infra/endpoints.implementMachine`
       - Cross-plugin:
-        - Imported by: 30 plugins — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
+        - Imported by: 31 plugins — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
           - `debug` ×11
-          - `conversations` ×4
+          - `conversations` ×5
           - `database` ×3
           - `infra` ×3
           - `reports` ×3
@@ -55435,7 +55455,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `mandateCapability` "tasks.manage"
       - `resource.declare` "tasks.repo-info"
       - `treeDigestAnnotation` "tasks"
-      - `conversations.compaction-context` "task-tree"
+      - `conversations.compaction-context` "task-tree (fit)"
       - `watchSource` "tasks.created"
       - `watchSource` "tasks.settled"
       - `watchSource` "tasks.started"

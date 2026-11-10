@@ -189,10 +189,10 @@ before it) beside the total, worded by `formatReportActivity`
     - `SERVER_REPORT_SOURCES`
     - `submitReport`
 - Cross-plugin:
-  - Imported by: 71 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 72 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `reports` ×29
     - `debug` ×18
-    - `conversations` ×6
+    - `conversations` ×7
     - `database` ×4
     - `infra` ×3
     - `build` ×2

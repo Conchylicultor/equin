@@ -11,7 +11,7 @@
     - `mandateCapability` "tasks.manage"
     - `resource.declare` "tasks.repo-info"
     - `treeDigestAnnotation` "tasks"
-    - `conversations.compaction-context` "task-tree"
+    - `conversations.compaction-context` "task-tree (fit)"
     - `watchSource` "tasks.created"
     - `watchSource` "tasks.settled"
     - `watchSource` "tasks.started"
