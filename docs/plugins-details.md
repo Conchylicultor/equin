@@ -12567,21 +12567,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps-core/surface/docked`
           - `apps-core/surface/solo`
+          - `apps/demo`
           - `apps/desktop/windows`
       - Plugins:
         - **`docked`** — Docked surface placement — the full-area tab that fills the surface below the tab strip.
           - Web:
             - Contributes: `Surface.Placement` "Dock in tab strip"
             - Uses: `apps-core/surface.Surface`
-        - **`solo`** — Solo (fullscreen) surface mode — the default boot mode: only the focused tab, full-viewport (the tab bar and app rail hidden, the global action bar floating), with an Esc shortcut back to the previous mode.
+        - **`solo`** — Solo (fullscreen) surface mode — the default boot mode: only the focused tab, full-viewport (the tab bar and app rail hidden, the global action bar floating). Left only through the surface-mode control (no keyboard shortcut: Esc belongs to whatever is open).
           - Web:
-            - Contributes:
-              - `Surface.Placement` "Fullscreen (solo)"
-              - `Shortcuts.Shortcut` "surface.exit-solo (Escape)"
-            - Uses:
-              - `apps-core/surface.Surface`
-              - `apps-core/tabs.peekFocusedTabSet`
-              - `primitives/shortcuts.defineShortcut`
+            - Contributes: `Surface.Placement` "Fullscreen (solo)"
+            - Uses: `apps-core/surface.Surface`
     - **`tab-bar`** — App tab bar: the top tab strip with per-tab titles, overflow collapse, drag reorder/tear-off, and the new-tab/new-window + button.
       - Web:
         - Contributes: `Apps.TabBar` "Tab bar" → `AppTabBar`
@@ -12704,9 +12700,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSurfaceMode`
           - `useTabs`
       - Cross-plugin:
-        - Imported by: 38 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
+        - Imported by: 37 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
           - `apps` ×13
-          - `apps-core` ×9
+          - `apps-core` ×8
           - `debug` ×3
           - `hints` ×2
           - `primitives` ×2
@@ -51086,7 +51082,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Slots: `Shortcuts.Shortcut`
         - Slot contributors:
-          - `Shortcuts.Shortcut` ← `apps-core.surface.solo`
           - `Shortcuts.Shortcut` ← `apps.desktop.launcher`
           - `Shortcuts.Shortcut` ← `apps.desktop.switcher`
           - `Shortcuts.Shortcut` ← `apps.desktop.windows`
@@ -51112,10 +51107,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSurfaceShortcuts`
           - `useSurfaceSignal`
       - Cross-plugin:
-        - Imported by: 32 plugins — full list in [`plugins/primitives/plugins/shortcuts/REFERENCE.md`](../plugins/primitives/plugins/shortcuts/REFERENCE.md)
+        - Imported by: 31 plugins — full list in [`plugins/primitives/plugins/shortcuts/REFERENCE.md`](../plugins/primitives/plugins/shortcuts/REFERENCE.md)
           - `apps` ×15
           - `primitives` ×10
-          - `apps-core` ×3
+          - `apps-core` ×2
           - `hints`
           - `layouts/miller`
           - `media/player`
@@ -54321,6 +54316,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-sm`
           - `ui/tokens/shape --spacing`
         - Imported by:
+          - `apps-core/surface`
           - `apps/home/tour`
           - `hints/ask`
           - `shell/notifications`

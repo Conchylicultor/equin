@@ -21,7 +21,7 @@ export type ShortcutDescriptor = {
   when?: (event: KeyboardEvent) => boolean;
   /**
    * Which handler wins when several eligible shortcuts match ONE keystroke
-   * (`Escape` while a tour, edit mode and solo are all live): the highest
+   * (`Escape` while a tour and edit mode are both live): the highest
    * precedence fires, alone. Default 0. Not an order of anything drawn.
    */
   precedence?: number;

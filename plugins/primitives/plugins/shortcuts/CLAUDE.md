@@ -57,7 +57,6 @@ has no other reactive read. Design: `research/2026-11-05-global-ambient-signals-
 - Web:
   - Slots: `Shortcuts.Shortcut`
   - Slot contributors:
-    - `Shortcuts.Shortcut` ← `apps-core.surface.solo`
     - `Shortcuts.Shortcut` ← `apps.desktop.launcher`
     - `Shortcuts.Shortcut` ← `apps.desktop.switcher`
     - `Shortcuts.Shortcut` ← `apps.desktop.windows`
@@ -83,10 +82,10 @@ has no other reactive read. Design: `research/2026-11-05-global-ambient-signals-
     - `useSurfaceShortcuts`
     - `useSurfaceSignal`
 - Cross-plugin:
-  - Imported by: 32 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 31 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×15
     - `primitives` ×10
-    - `apps-core` ×3
+    - `apps-core` ×2
     - `hints`
     - `layouts/miller`
     - `media/player`

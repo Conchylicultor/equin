@@ -155,6 +155,7 @@ tab bar, which an embed does not paint.
     - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --spacing`
   - Imported by:
+    - `apps-core/surface`
     - `apps/home/tour`
     - `hints/ask`
     - `shell/notifications`

@@ -50,7 +50,7 @@ const sectionIcon = symbol("view-agenda");
  *   expands the dock with that section open.
  * - **panel** (expanded): every section's title, each opening and closing on
  *   its own (so any number can be open together), under a "Song" header whose
- *   × folds it back to the rail. (Not Esc: Esc already leaves the solo surface.)
+ *   × folds it back to the rail. (Only ×, not Esc: Esc is left to whatever else is open.)
  *
  * The two morph into each other (`useDockMorph`): the panel grows out of the
  * rail's pill and shrinks back into it, while the notes' edge eases on the

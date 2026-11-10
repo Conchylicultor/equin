@@ -17,9 +17,10 @@
 //   1. entering fullscreen keeps the marked tab node and its scroll offset;
 //   2. the solo'd container's rect IS the viewport (0,0 → innerWidth×innerHeight);
 //   3. the container is still a descendant of the surface, never a body child;
-//   4. Esc back to the previous mode keeps the same node, stamp and scroll.
+//   4. docking again (the mode control) keeps the same node, stamp and scroll.
 
 import type { Page } from "playwright";
+import { pickSurfaceMode } from "./support/pick-surface-mode";
 import {
   arg,
   pathUrl,
@@ -134,30 +135,13 @@ function isFullViewport(p: TabProbe): boolean {
   );
 }
 
-/**
- * Click a surface-mode chip by its tooltip title. The chips live in the shared
- * action bar, which is a hover-revealed floating overlay in fullscreen — so
- * reveal it first by moving the pointer into the top-right corner.
- */
-async function selectMode(page: Page, title: string): Promise<boolean> {
-  const size = page.viewportSize() ?? { width: 1280, height: 800 };
-  await page.mouse.move(size.width - 24, 24);
-  await page.waitForTimeout(400);
-  const chip = page.getByRole("radio", { name: title, exact: true }).first();
-  try {
-    await chip.waitFor({ state: "visible", timeout: 5000 });
-    // eslint-disable-next-line promise-safety/no-bare-catch, promise-safety/no-absorbed-failure -- "the mode chip never appeared" IS the answer here; the caller asserts on the returned false.
-  } catch {
-    return false;
-  }
-  await chip.click();
-  await page.waitForTimeout(600);
-  return true;
-}
-
-/** Wait until the SPA has painted something meaningful (rail buttons exist). */
+/** Wait until the SPA has painted something meaningful (a tab is shown). */
 async function settle(page: Page, ms = 800): Promise<void> {
-  await page.locator("button.size-8").first().waitFor({ timeout: 20_000 });
+  await page
+    .locator(TAB_SELECTOR)
+    .locator("visible=true")
+    .first()
+    .waitFor({ timeout: 20_000 });
   await page.waitForTimeout(ms);
 }
 
@@ -165,6 +149,9 @@ await withBrowser(async (h) => {
   const { page } = await h.session();
 
   await page.goto(pathUrl("/agents"));
+  // Fullscreen is the boot mode: dock first, so there is a mode to leave.
+  await page.locator('[data-ui-owner^="ViewOptionsButton@"]').waitFor();
+  await pickSurfaceMode(page, "Dock in tab strip");
   await settle(page);
 
   const marked = await markTab(page, MARKER);
@@ -184,8 +171,8 @@ await withBrowser(async (h) => {
   await snap(page, out, "docked");
 
   // ---- Enter fullscreen ----------------------------------------------------
-  const entered = await selectMode(page, "Fullscreen (solo)");
-  r.ok("entered fullscreen via the mode control", entered, String(entered));
+  await pickSurfaceMode(page, "Fullscreen (solo)");
+  await page.waitForTimeout(600);
 
   const solo = await probeTab(page);
   r.ok("a tab is still painted in fullscreen", solo.found, String(solo.found));
@@ -212,20 +199,8 @@ await withBrowser(async (h) => {
   );
   await snap(page, out, "solo");
 
-  // ---- Esc back to the previous mode ---------------------------------------
-  // Leave the mode chip first: clicking it left FOCUS inside the floating action
-  // bar, which keeps that panel open (focus counts as intent), and an open panel
-  // swallows the first Escape to close itself — so the surface never hears it.
-  // Measured: Escape with the chip focused does nothing, Escape after blurring
-  // exits. That papercut belongs to the action bar, not to the placement, so the
-  // script steps out of the way rather than asserting on it.
-  const centre = page.viewportSize() ?? { width: 1280, height: 800 };
-  await page.mouse.move(centre.width / 2, centre.height / 2);
-  await page.evaluate(() =>
-    (document.activeElement as HTMLElement | null)?.blur(),
-  );
-  await page.waitForTimeout(300);
-  await page.keyboard.press("Escape");
+  // ---- Back to docked through the mode control (no Esc shortcut) ----------
+  await pickSurfaceMode(page, "Dock in tab strip");
   await page.waitForTimeout(800);
 
   const after = await probeTab(page);

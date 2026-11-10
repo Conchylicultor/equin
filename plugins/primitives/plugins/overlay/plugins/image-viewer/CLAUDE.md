@@ -109,7 +109,7 @@ all three, another site's image only "Open original".
 The viewer's root takes focus on open, keeps Tab on its own buttons, and returns
 focus to the thumbnail on close. Its `onKeyDown` stops every keydown from
 propagating: the global shortcut manager listens on `window`, and the viewer is
-portaled into `<body>`, so without that Esc would also leave solo mode (and ⌘K
+portaled into `<body>`, so without that Esc would also fire app-wide shortcuts (and ⌘K
 would open the palette underneath). The shortcut registry cannot express "only
 this overlay gets keys while it is open", which is why the viewer does not
 register there. Every key lives in one `VIEWER_KEYS` table (`core/`) that the key

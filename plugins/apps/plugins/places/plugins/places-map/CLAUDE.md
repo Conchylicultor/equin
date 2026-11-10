@@ -49,8 +49,7 @@ Then `PlacesSurface` renders, inside a `relative h-full` box:
   the sidebar, the toolbar — closes the card (`web/internal/use-click-away.ts`):
   not a drag (a map pan), not a click that selected another row (it `claim()`s),
   and nothing portalled outside the screen (the card's own pickers, the delete
-  confirm). Esc closes it too (a surface shortcut above the solo surface's
-  exit-fullscreen Esc).
+  confirm). Esc closes it too (a surface shortcut, priority 1).
 - **Pick mode** (`PinPick`, `web/components/pin-pick-bar.tsx`): the search
   panel's *Drop a custom pin* (`drop`, named in the bar first — the typed search text
   seeds the name) or the card's *Move* on a custom place (`move`) hands the

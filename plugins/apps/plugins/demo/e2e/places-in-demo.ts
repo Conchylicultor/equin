@@ -28,7 +28,8 @@
  *  4. types in the search bar: the Google half says searching is not
  *     available;
  *  5. switches the embed to the Desktop, opens Places as a window from the
- *     shelf's launcher, takes it full screen, and comes back with Esc.
+ *     shelf's launcher, takes it full screen, and comes back through the
+ *     Layout control.
  *
  * And asserts, throughout, that nothing left the scope — the list `no-leak.ts`
  * checks against (D3): no `/api/…` request for the page's origin but the
@@ -41,6 +42,7 @@
  */
 import type { Locator, Page, Request, WebSocket } from "playwright";
 import { pickFromLauncher } from "@plugins/apps-core/plugins/app-launcher/e2e";
+import { pickSurfaceMode } from "@plugins/apps-core/plugins/surface/e2e";
 import { externalHosts } from "@plugins/apps/plugins/website/plugins/demos/plugins/workspace/core";
 import { DEMO_PLACES } from "@plugins/apps/plugins/website/plugins/demos/plugins/workspace/plugins/story/core";
 import {
@@ -407,9 +409,9 @@ await withBrowser(async (h) => {
     (n) => n > 0,
   );
   await snap(page, OUT, "5-full-screen");
-  await page.keyboard.press("Escape");
+  await pickSurfaceMode(page, "Desktop");
   await renders(
-    "Esc returns to the desktop",
+    "the Layout control returns to the desktop",
     () => windowIds(embedRoot(page)),
     (ids) => ids.length >= 1,
   );

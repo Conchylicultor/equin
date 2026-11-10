@@ -288,7 +288,7 @@ export function MillerColumns() {
   );
 
   // Esc leaves a zoom — registered only while one is on, so the key is free
-  // otherwise (solo's Esc, a dialog's).
+  // otherwise (a dialog's).
   const shortcuts = useMemo(
     () =>
       zoomed === null

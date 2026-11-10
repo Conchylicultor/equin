@@ -8,7 +8,7 @@
 //   Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
 // The Layout control's options, left to right, and the order the surface falls
 // back through: the first mode here is the default when no mode sets
-// `default: true` (solo does), and "the first other mode" solo's Esc leaves for.
+// `default: true` (solo does).
 // Docked, then the desktop, then fullscreen — from the most chrome to the least.
 {
   "items": [

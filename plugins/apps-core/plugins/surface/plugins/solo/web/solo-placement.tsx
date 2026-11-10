@@ -24,8 +24,9 @@ export const soloDef: PlacementDef = {
   id: "solo",
   label: "Fullscreen (solo)",
   icon: fullscreenIcon,
-  // The boot mode: a fresh session opens one app edge to edge. Esc (or the
-  // mode control) leaves it for the previous mode, else the first other one.
+  // The boot mode: a fresh session opens one app edge to edge. The mode control
+  // (the action bar's Layout view option) is the only way out — no Esc
+  // shortcut: Esc closes whatever is open, and leaving solo by accident confuses.
   default: true,
   frame: "viewport",
   // A single app fills the viewport, so `:root` carries the app's theme (like
@@ -35,5 +36,5 @@ export const soloDef: PlacementDef = {
   // No frame chrome: a fullscreen tab is edge to edge, and its canvas comes from
   // the host's `<Theme surface="canvas">` container like every other mode's.
   // The way out is the global action bar, which floats over the top-right
-  // corner in this mode (its gear holds the mode control), plus Esc.
+  // corner in this mode (its gear holds the mode control).
 };

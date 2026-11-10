@@ -116,7 +116,7 @@ at mount — a box inside a page is not where the user is yet — unless its see
 says it `fillsPage` (the page shows nothing but it); the page's own boot claim
 then yields to it. Chrome outside every set that acts on that one (the action bar's Layout control) reads `useFocusedTabSet()`,
 its reactive twin; its handle switches the set's mode (`setMode`,
-`exitToPreviousMode` — solo's Esc). A surface-mode app's activation
+`exitToPreviousMode` — the desktop launcher's and a tab container's exit). A surface-mode app's activation
 (`useActivateApp`) switches the mode of the set it is drawn in, the context's.
 Design: `research/2026-11-04-global-desktop-mode-in-browser-demo.md`.
 
@@ -273,9 +273,9 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `useSurfaceMode`
     - `useTabs`
 - Cross-plugin:
-  - Imported by: 38 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 37 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×13
-    - `apps-core` ×9
+    - `apps-core` ×8
     - `debug` ×3
     - `hints` ×2
     - `primitives` ×2

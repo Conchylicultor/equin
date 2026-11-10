@@ -643,8 +643,8 @@ function PlacesSurface({
           id: "places.close-card",
           keys: "Escape",
           label: "Close the place card",
-          // Above the solo surface's Esc (exit fullscreen): the card is the
-          // nearer thing to close. A popover open in the card owns its Esc.
+          // Above other app-wide Esc shortcuts: the card is the nearer thing
+          // to close. A popover open in the card owns its Esc.
           priority: 1,
           // The open search panel owns its own Esc.
           when: () => cardOpen && !searchOpen,

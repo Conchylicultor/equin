@@ -141,7 +141,7 @@ contributions: [Hints.Tour({ tour: homeTour, companion: true })]
   outcome (`completed` / `skipped` / `dismissed`) lands when it ends.
 - **Keys**: Esc ends (`dismissed`), → presses the primary (not on a
   `next: "none"` step), ← goes back — `defineShortcut`s gated on a running
-  tour, priority 10 (above solo mode's Esc).
+  tour, priority 10 (above any other Esc).
 
 ### The one exit path
 
