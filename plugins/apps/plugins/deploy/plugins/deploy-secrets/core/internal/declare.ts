@@ -16,11 +16,20 @@ export interface DeploySecret {
   readonly key: string;
   /** What it is for, in one sentence — shown on the approval card. */
   readonly description: string;
+  /**
+   * Whether the box runs without it. A required secret (the default) holds
+   * every deploy until it has a value; an optional one with no value reads
+   * `not-set` and ships nothing — the box reads it `unset` — while a value,
+   * once entered, is approved like any other (nothing reaches a box unseen).
+   */
+  readonly optional: boolean;
 }
 
 export function defineDeploySecret(spec: {
   key: string;
   description: string;
+  /** A static `true` literal or absent — the deploy side reads it from source (`plugin-meta/facets/deploy-secrets`). */
+  optional?: true;
 }): DeploySecret {
   if (!DEPLOY_SECRET_KEY_PATTERN.test(spec.key)) {
     throw new Error(
@@ -31,5 +40,6 @@ export function defineDeploySecret(spec: {
     kind: "deploy-secret",
     key: spec.key,
     description: spec.description,
+    optional: spec.optional === true,
   };
 }

@@ -13,6 +13,7 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import {
   DEPLOY_SECRET_STATUS_LABELS,
   deploySecretsStatus,
+  isPendingSecretStatus,
   SECRETS_SECTION_ID,
   type DeploySecretRow,
 } from "../../core";
@@ -40,7 +41,7 @@ export function useSecretsBanner({ deployment }: SiteProps): SiteBannerAnswer {
 }
 
 function waitingSpec(rows: readonly DeploySecretRow[]): SiteBannerSpec | null {
-  const waiting = rows.filter((r) => r.status !== "approved");
+  const waiting = rows.filter((r) => isPendingSecretStatus(r.status));
   const first = waiting[0];
   if (!first) return null;
   return {

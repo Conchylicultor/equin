@@ -2470,7 +2470,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Exemptions:
             - Exempts itself from: `user-path/no-unproven-claim` — `machine/internal/read-credential.ts` (sanctioned)
           - Plugins:
-            - **`approvals`** — Secrets section of a site's Settings (and the site page's banner while a secret waits on approval): every deploy secret its composition's closure declares as a DataView (key, requesting plugin, description, status approved / new / value changed / missing value) with per-row Set value (a password dialog) and Approve (no approve-all). Shown only when the composition needs a secret. Deploy-secret approvals on the local machine: values in the secrets store (namespace deploy-secrets), per-deployment grants of a value's HMAC fingerprint (deploy_secret_grants), the deploy gate that ends a run needs-approval while any secret its composition's closure declares is missing, new or changed, the deploy-secrets.status live value behind the Secrets section, and the browser-refusing endpoint converge reads the approved env from.
+            - **`approvals`** — Secrets section of a site's Settings (and the site page's banner while a secret waits on approval): every deploy secret its composition's closure declares as a DataView (key, requesting plugin, description, status approved / new / value changed / missing value / not set (optional)) with per-row Set value (a password dialog) and Approve (no approve-all). Shown only when the composition needs a secret. Deploy-secret approvals on the local machine: values in the secrets store (namespace deploy-secrets), per-deployment grants of a value's HMAC fingerprint (deploy_secret_grants), the deploy gate that ends a run needs-approval while any secret its composition's closure declares is missing, new or changed, the deploy-secrets.status live value behind the Secrets section, and the browser-refusing endpoint converge reads the approved env from.
               - Web:
                 - Slots: `item-actions`
                 - Slot contributors: `item-actions` ← `apps.deploy.deploy-secrets.approvals`
@@ -2543,6 +2543,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `DeploySecretRowSchema`
                   - `deploySecretsStatus`
                   - `DeploySecretValueSchema`
+                  - `isPendingSecretStatus`
                   - `SECRETS_SECTION_ID`
                   - `setDeploySecretValue`
               - Cross-plugin:
@@ -36411,14 +36412,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `integrations/google-maps/page-config`
               - `map/google`
           - Plugins:
-            - **`deployed-key`** — GOOGLE_MAPS_BROWSER_KEY: the deploy secret a deployed site draws its maps with.
+            - **`deployed-key`** — GOOGLE_MAPS_BROWSER_KEY and GOOGLE_MAPS_MAP_ID: the deploy values a deployed site draws its maps with — the browser key (required) and the vector map's Map ID (optional; unset, the raster map).
               - Core:
                 - Uses: `apps/deploy/deploy-secrets.defineDeploySecret`
-                - Exports (values): `GOOGLE_MAPS_BROWSER_KEY`
+                - Exports (values):
+                  - `GOOGLE_MAPS_BROWSER_KEY`
+                  - `GOOGLE_MAPS_MAP_ID`
               - Cross-plugin:
                 - Imported by: `integrations/google-maps/browser-config`
               - Deploy-secrets:
-                - Deploy secrets: `GOOGLE_MAPS_BROWSER_KEY` — The Google Maps browser key the deployed site draws its maps with: restricted to the site's domains (HTTP referrers) and to the Maps JavaScript API only.
+                - Deploy secrets:
+                  - `GOOGLE_MAPS_BROWSER_KEY` — The Google Maps browser key the deployed site draws its maps with: restricted to the site's domains (HTTP referrers) and to the Maps JavaScript API only.
+                  - `GOOGLE_MAPS_MAP_ID` — The Map ID the deployed site's maps draw with (vector map, its cloud style): a JavaScript / Vector Map ID in the same Google Cloud project as GOOGLE_MAPS_BROWSER_KEY. Optional — unset, the site draws the raster map.
         - **`page-config`** (excluded) — The Maps browser config of a browser host: provides the MapsBrowserConfigSource host service from the page around the host — the key the real app already sends that page, handed over by the page's chrome as a page input (never read from a server by the host's own code, never stored). A page that supplies none reads as unset, so the map shows its set-up state, whose writes need the computer. Never booted by the desktop.
           - Server:
             - Contributes: `host-service:google-maps.browser-config` "google-maps.browser-config"

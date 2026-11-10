@@ -19,7 +19,11 @@ export function SetValueAction({
   return (
     <IconButton
       icon={keyIcon}
-      label={row.status === "missing-value" ? "Set value" : "Replace value"}
+      label={
+        row.status === "missing-value" || row.status === "not-set"
+          ? "Set value"
+          : "Replace value"
+      }
       onClick={(e) => {
         e.stopPropagation();
         // Fire-and-forget: awaiting would pend the button for the dialog's life.
@@ -44,7 +48,9 @@ export function ApproveAction({
   const reason =
     row.status === "approved"
       ? "Already approved for this deployment"
-      : row.status === "missing-value" || row.fingerprint === null
+      : row.status === "missing-value" ||
+          row.status === "not-set" ||
+          row.fingerprint === null
         ? "Set a value first"
         : null;
   const fingerprint = row.fingerprint;

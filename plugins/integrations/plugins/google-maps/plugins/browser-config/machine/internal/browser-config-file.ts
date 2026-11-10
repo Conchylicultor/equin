@@ -4,10 +4,14 @@ import { implementMachine } from "@plugins/infra/plugins/endpoints/machine";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { readDeploySecret } from "@plugins/apps/plugins/deploy/plugins/deploy-secrets/server";
 import { googleMapsDir } from "../../data-dirs";
-import { GOOGLE_MAPS_BROWSER_KEY } from "@plugins/integrations/plugins/google-maps/plugins/browser-config/plugins/deployed-key/core";
+import {
+  GOOGLE_MAPS_BROWSER_KEY,
+  GOOGLE_MAPS_MAP_ID,
+} from "@plugins/integrations/plugins/google-maps/plugins/browser-config/plugins/deployed-key/core";
 import {
   BROWSER_KEY_PATTERN,
   clearMapsBrowserConfig,
+  MAP_ID_PATTERN,
   clearMapsMapId,
   setMapsBrowserConfig,
   setMapsMapId,
@@ -39,8 +43,9 @@ export const mapsBrowserConfigWatcher = defineFileWatcher({
 /**
  * The computer's browser config. A deployed box answers its approved
  * `GOOGLE_MAPS_BROWSER_KEY` deploy secret (its own key, restricted to the
- * site's domains; no Map ID, so the raster map) — fixed for the process's
- * life, since a changed credential restarts the service. Everywhere else
+ * site's domains) with its optional `GOOGLE_MAPS_MAP_ID` (the vector map; unset,
+ * the raster map) — fixed for the process's life, since a changed credential
+ * restarts the service. Everywhere else
  * (no such credential) it is the one host-global file: a write through any
  * checkout's endpoint notifies that backend directly; every other backend
  * learns of it from its own watcher on the directory while a tab reads it.
@@ -56,7 +61,13 @@ export const browserConfigFile: MapsBrowserConfigSourceImpl = {
           `The ${GOOGLE_MAPS_BROWSER_KEY.key} deploy secret is not a Google API key (expected AIza…).`,
         );
       }
-      return { kind: "set", browserKey, mapId: null };
+      return { kind: "set", browserKey, mapId: await readDeployedMapId() };
+    }
+    // A Map ID with no key to draw with is a deploy assembled wrong, not "no map".
+    if ((await readDeploySecret(GOOGLE_MAPS_MAP_ID)).kind === "set") {
+      throw new Error(
+        `The ${GOOGLE_MAPS_MAP_ID.key} deploy secret is set without ${GOOGLE_MAPS_BROWSER_KEY.key}.`,
+      );
     }
     return readBrowserConfig();
   },
@@ -77,6 +88,19 @@ export const browserConfigFile: MapsBrowserConfigSourceImpl = {
     };
   },
 };
+
+/** The deployed Map ID, or `null` (raster map) when the site has none. */
+async function readDeployedMapId(): Promise<string | null> {
+  const deployed = await readDeploySecret(GOOGLE_MAPS_MAP_ID);
+  if (deployed.kind === "unset") return null;
+  const mapId = deployed.value.trim();
+  if (!MAP_ID_PATTERN.test(mapId)) {
+    throw new Error(
+      `The ${GOOGLE_MAPS_MAP_ID.key} deploy secret is not a Map ID (letters, digits, - and _).`,
+    );
+  }
+  return mapId;
+}
 
 /**
  * A box drawing with its deploy secret has no key to set here: a write to the

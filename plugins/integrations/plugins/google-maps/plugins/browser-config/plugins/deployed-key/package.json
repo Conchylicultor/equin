@@ -1,6 +1,6 @@
 {
   "name": "@equin/plugin-integrations-google-maps-browser-config-deployed-key",
-  "description": "GOOGLE_MAPS_BROWSER_KEY: the deploy secret a deployed site draws its maps with.",
+  "description": "GOOGLE_MAPS_BROWSER_KEY and GOOGLE_MAPS_MAP_ID: the deploy values a deployed site draws its maps with — the browser key (required) and the vector map's Map ID (optional; unset, the raster map).",
   "private": true,
   "version": "0.0.1"
 }

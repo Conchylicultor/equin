@@ -85,8 +85,8 @@ export const handleApprove = implement(
 );
 
 /**
- * The approved env for converge: every required key's current value, provided
- * EVERY one is approved — otherwise the same `needs-approval` the gate gives.
+ * The approved env for converge: every required key's current value (an
+ * optional one only when it has a value), provided EVERY one is approved — otherwise the same `needs-approval` the gate gives.
  * Re-checked here rather than trusted from the run's gate, because a value can
  * be replaced between the gate and the converge leg (and converge can be run
  * by hand): what is delivered is always exactly what was approved.
@@ -112,15 +112,19 @@ export const handleDeliver = implement(
     }
     return {
       kind: "ready",
-      env: plan.rows.map((r) => {
-        const value = plan.values.get(r.key);
-        if (value === undefined) {
-          throw new Error(
-            `[deploy-secrets] ${r.key} is approved but has no value in this plan — the diff and the values disagree.`,
-          );
-        }
-        return { key: r.key, value };
-      }),
+      // An optional secret with no value ships nothing: the box reads it
+      // `unset`, and converge removes a credential delivered before.
+      env: plan.rows
+        .filter((r) => r.status !== "not-set")
+        .map((r) => {
+          const value = plan.values.get(r.key);
+          if (value === undefined) {
+            throw new Error(
+              `[deploy-secrets] ${r.key} is approved but has no value in this plan — the diff and the values disagree.`,
+            );
+          }
+          return { key: r.key, value };
+        }),
     };
   },
 );

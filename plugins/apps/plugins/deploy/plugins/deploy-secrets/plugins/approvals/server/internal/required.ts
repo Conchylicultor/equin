@@ -75,6 +75,7 @@ function requiredInTree(
         plugin: node.id,
         key: d.key,
         description: d.description,
+        optional: d.optional,
       }));
     });
   return mergeDeclarations(declared);

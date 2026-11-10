@@ -17,13 +17,16 @@ export const SECRETS_SECTION_ID = "secrets";
  * - `new`            — a value is set, never approved for this deployment;
  * - `changed`        — approved once, but the value has changed since (a
  *                      rotation counts as new: nothing reaches the box unseen);
- * - `missing-value`  — no value has been entered yet.
+ * - `missing-value`  — no value has been entered yet;
+ * - `not-set`        — an OPTIONAL secret with no value: nothing to approve,
+ *                      nothing delivered, the box reads it `unset`.
  */
 export const DEPLOY_SECRET_STATUSES = [
   "approved",
   "new",
   "changed",
   "missing-value",
+  "not-set",
 ] as const;
 export type DeploySecretStatus = (typeof DEPLOY_SECRET_STATUSES)[number];
 
@@ -33,7 +36,17 @@ export const DEPLOY_SECRET_STATUS_LABELS: Record<DeploySecretStatus, string> = {
   new: "new",
   changed: "value changed",
   "missing-value": "missing value",
+  "not-set": "not set (optional)",
 };
+
+/**
+ * Whether a status holds the deploy until the user acts — the one rule the
+ * gate, delivery, the banner and the Checks row all read. `approved` ships its
+ * value; `not-set` ships nothing, which an optional secret allows.
+ */
+export function isPendingSecretStatus(status: DeploySecretStatus): boolean {
+  return status !== "approved" && status !== "not-set";
+}
 
 /** One required secret of one deployment, as the Secrets section lists it. Never carries the value. */
 export const DeploySecretRowSchema = z.object({

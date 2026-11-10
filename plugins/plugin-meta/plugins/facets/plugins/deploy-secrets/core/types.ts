@@ -9,6 +9,8 @@ export interface DeclaredDeploySecret {
   key: string;
   /** What it is for, in one sentence. */
   description: string;
+  /** `optional: true` in the call: the box runs without it (see `defineDeploySecret`). */
+  optional: boolean;
   /** The declaring file, relative to the plugin's own folder. */
   file: string;
 }

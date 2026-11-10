@@ -10,17 +10,19 @@ describe("extractDeploySecrets", () => {
         key: "RESEND_API_KEY",
         description: "Sends the contact form's notification emails.",
       });
-      export const OTHER = defineDeploySecret({ description: 'Second one.', key: 'OTHER_KEY' });
+      export const OTHER = defineDeploySecret({ description: 'Second one.', key: 'OTHER_KEY', optional: true });
     `;
     expect(extractDeploySecrets(src, "core/internal/secrets.ts")).toEqual([
       {
         key: "RESEND_API_KEY",
         description: "Sends the contact form's notification emails.",
+        optional: false,
         file: "core/internal/secrets.ts",
       },
       {
         key: "OTHER_KEY",
         description: "Second one.",
+        optional: true,
         file: "core/internal/secrets.ts",
       },
     ]);

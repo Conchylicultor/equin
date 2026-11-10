@@ -29,12 +29,13 @@ const NO_ITEMS: SecretItem[] = [];
 
 const STATUS_BADGE: Record<
   DeploySecretStatus,
-  "success" | "warning" | "destructive"
+  "success" | "warning" | "destructive" | "muted"
 > = {
   approved: "success",
   new: "warning",
   changed: "warning",
   "missing-value": "destructive",
+  "not-set": "muted",
 };
 
 /** Sentence-case, for a badge. */

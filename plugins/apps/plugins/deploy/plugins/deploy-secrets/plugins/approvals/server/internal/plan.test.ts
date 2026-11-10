@@ -8,10 +8,11 @@ import {
 } from "./plan";
 import { fingerprintSecret, importHmacKey } from "./fingerprint";
 
-const req = (key: string): RequiredSecret => ({
+const req = (key: string, optional = false): RequiredSecret => ({
   key,
   description: `${key} description`,
   plugins: ["apps.example"],
+  optional,
 });
 
 describe("diffSecrets", () => {
@@ -55,6 +56,25 @@ describe("diffSecrets", () => {
     expect(rows.map((r) => r.lastWrite)).toEqual([write, null]);
   });
 
+  test("an optional secret with no value is not-set, and holds nothing", () => {
+    const rows = diffSecrets(
+      [req("OPT_UNSET", true), req("OPT_NEW", true), req("OPT_OK", true)],
+      new Map([
+        ["OPT_NEW", "fp-n"],
+        ["OPT_OK", "fp-o"],
+      ]),
+      new Map([["OPT_OK", "fp-o"]]),
+      new Map(),
+    );
+    expect(rows.map((r) => [r.key, r.status])).toEqual([
+      ["OPT_UNSET", "not-set"],
+      ["OPT_NEW", "new"],
+      ["OPT_OK", "approved"],
+    ]);
+    // A value, once entered, is approved like any other.
+    expect(pendingSecrets(rows).map((r) => r.key)).toEqual(["OPT_NEW"]);
+  });
+
   test("a grant for a missing value is still missing", () => {
     const [row] = diffSecrets(
       [req("K")],
@@ -82,13 +102,31 @@ describe("mergeDeclarations", () => {
   test("one row per key, naming every declaring plugin", () => {
     expect(
       mergeDeclarations([
-        { plugin: "b", key: "K", description: "for b" },
-        { plugin: "a", key: "K", description: "for a" },
-        { plugin: "a", key: "A", description: "x" },
+        { plugin: "b", key: "K", description: "for b", optional: false },
+        { plugin: "a", key: "K", description: "for a", optional: false },
+        { plugin: "a", key: "A", description: "x", optional: false },
       ]),
     ).toEqual([
-      { key: "A", description: "x", plugins: ["a"] },
-      { key: "K", description: "for b / for a", plugins: ["a", "b"] },
+      { key: "A", description: "x", plugins: ["a"], optional: false },
+      {
+        key: "K",
+        description: "for b / for a",
+        plugins: ["a", "b"],
+        optional: false,
+      },
+    ]);
+  });
+
+  test("optional only when every declaring plugin says so", () => {
+    const merged = mergeDeclarations([
+      { plugin: "a", key: "BOTH", description: "x", optional: true },
+      { plugin: "b", key: "BOTH", description: "x", optional: true },
+      { plugin: "a", key: "MIXED", description: "x", optional: true },
+      { plugin: "b", key: "MIXED", description: "x", optional: false },
+    ]);
+    expect(merged.map((r) => [r.key, r.optional])).toEqual([
+      ["BOTH", true],
+      ["MIXED", false],
     ]);
   });
 });

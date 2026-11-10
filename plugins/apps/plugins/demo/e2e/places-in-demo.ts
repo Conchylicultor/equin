@@ -132,6 +132,9 @@ const RENDER_TIMEOUT_MS = 30_000;
 const GOOGLE_RASTER_FALLBACK =
   /^Attempted to load a Vector Map, but failed\. Falling back to Raster/;
 
+/** Google's fetch of a Map ID's configuration — made only for a vector map. */
+const MAP_ID_CONFIG = /^maps\.googleapis\.com\/maps\/api\/mapsjs\/mapConfigs/;
+
 /** What the map says where its page hands the demo no Maps key. */
 const NO_MAP_KEY = /The map can't be drawn here/;
 /**
@@ -500,6 +503,20 @@ await withBrowser(async (h) => {
     r.note(
       `Google fell back to the raster map ${fallback.length}× (no WebGL here)`,
     );
+  // Which basemap the page's config asked for: with a Map ID, Google fetches
+  // the Map ID's configuration (its cloud style) before drawing the vector map.
+  if (map.value === "google") {
+    const askedVector = offOriginUrls.some((u) => MAP_ID_CONFIG.test(u));
+    r.note(
+      `basemap: ${
+        askedVector
+          ? fallback.length > 0
+            ? "vector asked (Map ID), drawn raster"
+            : "vector (Map ID and its style)"
+          : "raster (no Map ID configured)"
+      }`,
+    );
+  }
   r.eq(
     "no console errors",
     captured.consoleErrors.filter((e) => !GOOGLE_RASTER_FALLBACK.test(e)),

@@ -1,6 +1,7 @@
 import {
   findMarkerCalls,
   lineAt,
+  parseBoolField,
   parseStringField,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import type { DeclaredDeploySecret } from "../core";
@@ -9,7 +10,7 @@ import type { DeclaredDeploySecret } from "../core";
 const MARKER = "defineDeploySecret";
 
 /**
- * Every `defineDeploySecret({ key, description })` call in one source file.
+ * Every `defineDeploySecret({ key, description, optional? })` call in one source file.
  *
  * Read statically — the deploy side asks this of a composition's closure
  * without importing any of it — so both fields must be static string literals.
@@ -45,7 +46,15 @@ export function extractDeploySecrets(
           `string literal (got ${r.kind === "dynamic" ? r.expr : "nothing"}).`,
       );
     };
-    out.push({ key: field("key"), description: field("description"), file });
+    out.push({
+      key: field("key"),
+      description: field("description"),
+      // Only the literal `true` makes it optional (the factory's type allows
+      // nothing else); anything unreadable reads as required — the side that
+      // asks the user more, never less.
+      optional: parseBoolField(body, "optional", { depth0: true }),
+      file,
+    });
   }
   return out;
 }

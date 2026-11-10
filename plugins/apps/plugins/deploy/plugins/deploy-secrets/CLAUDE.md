@@ -47,6 +47,11 @@ and on the box: `readDeploySecret(RESEND_API_KEY)` → `{ kind: "set", value } |
   or a computed key **throws** (fails the plugin-tree build, naming file:line) — a
   declaration the reader cannot see would be a secret the deploy never asks about.
 - Two plugins may declare the same key: one row, one value, both named.
+- **`optional: true`** (a literal, read by the facet too): the box runs without it.
+  With no value it reads `not-set` — the deploy is not held and nothing is delivered
+  (the box reads `unset`); once a value is entered it is approved like any other. A
+  key is optional only when every plugin declaring it says so. For a value that only
+  improves the site (e.g. `GOOGLE_MAPS_MAP_ID`, the vector map's Map ID).
 
 ## The approval model (`approvals`)
 
@@ -58,7 +63,8 @@ and on the box: `readDeploySecret(RESEND_API_KEY)` → `{ kind: "set", value } |
   32 random bytes minted on first use in the store (`deploy-secret-grants/hmac-v1`). The
   table never holds a value, and a rotated value is just a fingerprint no grant names.
 - **Status per required key** (`diffSecrets`, pure): `missing-value` (no value),
-  `new` (no grant), `changed` (grant ≠ current fingerprint), `approved`. A granted key no
+  `new` (no grant), `changed` (grant ≠ current fingerprint), `approved`, and `not-set` (an optional
+  key with no value — holds nothing, delivers nothing). A granted key no
   longer required has no row and is not delivered — its credential is removed from the box.
 - **Approve** is per row (no approve-all) and sends the fingerprint the row SHOWED: a
   value replaced in between is a 409, never approved blind.

@@ -1,6 +1,7 @@
 import type { SecretWrite } from "@plugins/infra/plugins/secrets/core";
 import {
   DEPLOY_SECRET_STATUS_LABELS,
+  isPendingSecretStatus,
   type DeploySecretRow,
 } from "../../core/schemas";
 
@@ -9,6 +10,8 @@ export interface RequiredSecret {
   readonly key: string;
   readonly description: string;
   readonly plugins: readonly string[];
+  /** Every declaring plugin marked it optional: the box runs without it. */
+  readonly optional: boolean;
 }
 
 /**
@@ -34,7 +37,9 @@ export function diffSecrets(
     const granted = grants.get(r.key);
     const status =
       fingerprint === null
-        ? "missing-value"
+        ? r.optional
+          ? "not-set"
+          : "missing-value"
         : granted === undefined
           ? "new"
           : granted === fingerprint
@@ -55,7 +60,7 @@ export function diffSecrets(
 export function pendingSecrets(
   rows: readonly DeploySecretRow[],
 ): DeploySecretRow[] {
-  return rows.filter((r) => r.status !== "approved");
+  return rows.filter((r) => isPendingSecretStatus(r.status));
 }
 
 /**
@@ -77,17 +82,28 @@ export function approvalMessage(pending: readonly DeploySecretRow[]): string {
 /**
  * Merge the closure's declarations by key. Two plugins may need the same env
  * var (they share one value on the box), so a key is one row naming both; two
- * different descriptions are both kept.
+ * different descriptions are both kept. A key is optional only when every
+ * plugin declaring it says so — one that needs it makes it required.
  */
 export function mergeDeclarations(
-  declared: readonly { plugin: string; key: string; description: string }[],
+  declared: readonly {
+    plugin: string;
+    key: string;
+    description: string;
+    optional: boolean;
+  }[],
 ): RequiredSecret[] {
   const byKey = new Map<
     string,
-    { descriptions: string[]; plugins: string[] }
+    { descriptions: string[]; plugins: string[]; optional: boolean }
   >();
   for (const d of declared) {
-    const entry = byKey.get(d.key) ?? { descriptions: [], plugins: [] };
+    const entry = byKey.get(d.key) ?? {
+      descriptions: [],
+      plugins: [],
+      optional: true,
+    };
+    entry.optional &&= d.optional;
     if (!entry.descriptions.includes(d.description))
       entry.descriptions.push(d.description);
     if (!entry.plugins.includes(d.plugin)) entry.plugins.push(d.plugin);
@@ -99,5 +115,6 @@ export function mergeDeclarations(
       key,
       description: e.descriptions.join(" / "),
       plugins: e.plugins.sort(),
+      optional: e.optional,
     }));
 }

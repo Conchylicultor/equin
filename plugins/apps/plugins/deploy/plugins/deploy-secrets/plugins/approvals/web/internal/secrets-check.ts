@@ -8,6 +8,7 @@ import {
 import {
   DEPLOY_SECRET_STATUS_LABELS,
   deploySecretsStatus,
+  isPendingSecretStatus,
   SECRETS_SECTION_ID,
 } from "../../core";
 
@@ -33,9 +34,11 @@ export function useSecretsCheck({
       detail: `Couldn't read the deploy secrets: ${result.error.message}`,
     };
   }
-  const rows = result.data;
+  // An optional secret left unset ships nothing and asks nothing: it is not
+  // counted, so a site whose only secrets are such has no row at all.
+  const rows = result.data.filter((r) => r.status !== "not-set");
   if (rows.length === 0) return null;
-  const waiting = rows.filter((r) => r.status !== "approved");
+  const waiting = rows.filter((r) => isPendingSecretStatus(r.status));
   const first = waiting[0];
   if (!first) {
     return {
