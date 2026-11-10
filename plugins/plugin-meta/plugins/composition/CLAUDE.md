@@ -52,7 +52,7 @@ automation and the outcome-report card with it) — and adds Prototypes back (`a
 `withAppAdapters`) and Home (`apps.home.**`), the app gallery, which is its
 home as on main: the app launcher's grid lists every app but the home, and its
 "All apps" opens the home, so an agent-manager home would hide the agent manager
-from the demo's launcher (Home's onboarding tour, `apps.home.tour`, stays out). Sonata, the Desktop, Keyboard Party (`apps.keyboard-party.**`), Places and Files (`apps.file-explorer.**`: a virtual file system over the worker's `data-files` roots, its disk places left out) join it whole, minus what needs the computer. Its web plugins are the scope the demo page renders in
+from the demo's launcher (Home's onboarding tour, `apps.home.tour`, stays out). Sonata, the Desktop, Keyboard Party (`apps.keyboard-party.**`), Places and Files (`apps.file-explorer.**`: a virtual file system over the worker's `data-files` roots, its disk places left out) join it whole, minus what needs the computer. Settings ships with its Config pane only (`apps.settings.shell` + `apps.settings.config`: a pane contributes to the shell and nothing imports it, so the shell alone is an empty app). Its web plugins are the scope the demo page renders in
 (`web-sdk`'s `<PluginScope>`) and its portable server barrels (portability
 derived from each barrel's closure, `serverPortabilityOf`) the worker's graph,
 both derived by codegen (`browser-host-gen.ts`). A plugin portable by its

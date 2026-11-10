@@ -524,6 +524,14 @@ export const compositionsConfig = defineConfig({
               // loads nothing — emoji pictures, WebAudio-synthesized sounds,
               // the browser's own speechSynthesis.
               "apps.keyboard-party.**",
+              // Settings, with its Config pane only (its index: Settings opens
+              // on it): the demo's configs, grouped from their registrations
+              // and written to the worker's config, kept in the demo's own
+              // storage. Its panes contribute to the shell and nothing imports
+              // them, so naming the shell alone shipped an empty app. Not
+              // Appearance nor Accounts (the user's decision, 2026-11-10).
+              "apps.settings.shell",
+              "apps.settings.config",
               // Places, the map of saved places: the map draws through Google
               // Maps (`map.google`, selected below) with the owner's browser key
               // the page hands the host (`google-maps/page-config`); searching,

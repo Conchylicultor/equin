@@ -18,7 +18,11 @@
  *  5. the apps list in one order: the Home gallery's tiles are the launcher's,
  *     in the app rail's authored order (`useListedApps`) — never the raw
  *     registration order, which put Settings first on the website (printed, and
- *     written to `apps.json` under `--out`).
+ *     written to `apps.json` under `--out`);
+ *  6. Settings opens on Config, which lists the demo's configs grouped by
+ *     plugin; Keyboard Party's opens, its Scene set to Paper is kept across a
+ *     reload, and the party's stage paints it — every write answered by the
+ *     demo's worker, never an `/api/config…` request to the page's server.
  *
  * Run it on both builds and compare the shots and `tokens.json`:
  *   ./equin run plugins/apps/plugins/demo/e2e/site-parity.ts --out /tmp/parity-main
@@ -28,7 +32,7 @@
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { Locator, Page } from "playwright";
+import type { Locator, Page, Request } from "playwright";
 import {
   arg,
   flag,
@@ -37,6 +41,7 @@ import {
   snap,
   waitFor,
   withBrowser,
+  type Settled,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import {
   launcherTiles,
@@ -193,5 +198,93 @@ await withBrowser(async (h) => {
     galleryApps.join() === launcherApps.join(),
     `launcher: ${launcherApps.join(", ")}`,
   );
+
+  // ── 6. Settings → Config: the demo's configs, edited in the demo ────
+  // Watched on the context, so a request from the demo's worker counts too.
+  const pageOrigin = new URL(demoUrl("/settings")).origin;
+  const configLeaks: string[] = [];
+  const onConfigRequest = (req: Request): void => {
+    const url = new URL(req.url());
+    if (url.origin !== pageOrigin) return;
+    if (/^\/api\/config/.test(url.pathname))
+      configLeaks.push(`${req.method()} ${url.pathname}`);
+  };
+  page.context().on("request", onConfigRequest);
+  const settingsEmbed = page.locator('[data-app-embed="settings"]').first();
+  /** The Config nav's rows drawn now (it is virtualized), by their text. */
+  const navRows = (): Promise<string[]> =>
+    settingsEmbed
+      .getByRole("row")
+      .evaluateAll((els) => els.map((e) => (e.textContent ?? "").trim()));
+  /** Settings at its index, narrowed to Keyboard Party's config. */
+  const findPartyConfig = async (): Promise<Settled<string[]>> => {
+    await open(page, "/settings", "settings");
+    await settingsEmbed
+      .getByRole("row")
+      .first()
+      .waitFor({ timeout: RENDER_TIMEOUT_MS });
+    await settingsEmbed.locator('input[placeholder^="Search"]').fill("party");
+    return waitFor(
+      navRows,
+      (rows) =>
+        rows.some((t) => t.startsWith("keyboard-party")) &&
+        rows.some((t) => /^party/.test(t)),
+      { timeoutMs: RENDER_TIMEOUT_MS },
+    );
+  };
+  /** Keyboard Party's config opened from the nav: its Paper scene option. */
+  const openPartyConfig = async (): Promise<Locator> => {
+    await findPartyConfig();
+    await settingsEmbed
+      .getByRole("row")
+      .filter({ hasText: /^\s*party/ })
+      .first()
+      .click();
+    const paper = settingsEmbed.getByRole("radio", { name: "Paper" });
+    await paper.waitFor({ timeout: RENDER_TIMEOUT_MS });
+    return paper;
+  };
+  await open(page, "/settings", "settings");
+  await settingsEmbed
+    .getByRole("row")
+    .first()
+    .waitFor({ timeout: RENDER_TIMEOUT_MS });
+  const top = await navRows();
+  await snap(page, OUT, "5-settings");
+  const party = await findPartyConfig();
+  r.ok(
+    "Settings opens on Config, the demo's configs grouped by plugin",
+    top.some((t) => t.startsWith("apps")) && party.ok,
+    `top: ${top.slice(0, 6).join(", ")}; "party": ${party.value.join(" › ")}`,
+  );
+  const paper = await openPartyConfig();
+  await paper.click();
+  const picked = await waitFor(
+    () => paper.getAttribute("aria-checked"),
+    (v) => v === "true",
+    { timeoutMs: RENDER_TIMEOUT_MS },
+  );
+  r.ok("a config opens and its Scene is set to Paper", picked.ok);
+  await snap(page, OUT, "5-settings-party-paper");
+  const reopened = await openPartyConfig();
+  const kept = await waitFor(
+    () => reopened.getAttribute("aria-checked"),
+    (v) => v === "true",
+    { timeoutMs: RENDER_TIMEOUT_MS },
+  );
+  r.ok("reload: the Scene is still Paper (the demo's storage)", kept.ok);
+  await open(page, "/keyboard-party", "keyboard-party");
+  const scene = await waitFor(
+    () =>
+      page
+        .locator('[data-app-embed="keyboard-party"] .kp-root')
+        .first()
+        .getAttribute("data-scene"),
+    (v) => v === "paper",
+    { timeoutMs: RENDER_TIMEOUT_MS },
+  );
+  r.ok("the party's stage paints the scene Settings picked", scene.ok);
+  page.context().off("request", onConfigRequest);
+  r.eq("no config request reached the page's own server", configLeaks, []);
   await r.finish();
 });

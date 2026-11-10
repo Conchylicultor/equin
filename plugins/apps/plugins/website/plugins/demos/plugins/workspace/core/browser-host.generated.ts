@@ -111,6 +111,7 @@ export const browserHost = {
     "apps.prototypes.shell",
     "apps.prototypes.state",
     "apps.prototypes.thumbnails",
+    "apps.settings.config",
     "apps.settings.shell",
     "apps.sonata.audio.engine",
     "apps.sonata.audio.instruments",

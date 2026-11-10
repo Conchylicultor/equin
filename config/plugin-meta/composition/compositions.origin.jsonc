@@ -1,4 +1,4 @@
-// @hash 99515e183595
+// @hash 847162405e96
 {
   "manifests": [
     {
@@ -199,6 +199,8 @@
         "apps.desktop.**",
         "!apps.desktop.wallpaper.openverse.**",
         "apps.keyboard-party.**",
+        "apps.settings.shell",
+        "apps.settings.config",
         "apps.places.**",
         "!menu-bar.**",
         "menu-bar.app-window",
