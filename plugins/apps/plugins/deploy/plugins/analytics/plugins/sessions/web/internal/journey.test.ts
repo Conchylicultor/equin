@@ -17,6 +17,7 @@ function pv(s: number, path: string, engagedMs = 0): SessionHit {
     eventProps: null,
     engagedMs,
     gaps: null,
+    load: null,
   };
 }
 function ev(
@@ -33,6 +34,7 @@ function ev(
     eventProps: props,
     engagedMs: 0,
     gaps: null,
+    load: null,
   };
 }
 const reach = (s: number, path: string, section: string) =>

@@ -288,6 +288,7 @@ export function fixtureSessions(now: number): Session[] {
         eventProps: null,
         engagedMs: seconds * 1000,
         gaps: null,
+        load: null,
       });
       const events: [number, SessionHit][] = [
         ...reached.map(([key, t]): [number, SessionHit] => [
@@ -300,6 +301,7 @@ export function fixtureSessions(now: number): Session[] {
             eventProps: { section: `${PAGE_KEY[path]}/${key}` },
             engagedMs: 0,
             gaps: null,
+            load: null,
           },
         ]),
         ...actions.map(([name, t, props]): [number, SessionHit] => [
@@ -312,6 +314,7 @@ export function fixtureSessions(now: number): Session[] {
             eventProps: props ?? null,
             engagedMs: 0,
             gaps: null,
+            load: null,
           },
         ]),
       ];
