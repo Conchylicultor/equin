@@ -1,0 +1,38 @@
+/* Maximize / Restore as a view transition (maximize-morph.ts). Every rule is
+   scoped to html[data-demo-morph], set for the length of one morph, so no
+   other view transition inherits it. */
+
+:root {
+  --demo-morph-duration: 420ms;
+  --demo-morph-easing: cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+html[data-demo-morph]::view-transition-group(*),
+html[data-demo-morph]::view-transition-old(*),
+html[data-demo-morph]::view-transition-new(*) {
+  animation-duration: var(--demo-morph-duration);
+  animation-timing-function: var(--demo-morph-easing);
+}
+
+/* The demo's two pictures keep their natural size, pinned top-left and
+   clipped by the moving box — never stretched to its aspect: the box grows
+   over the demo's large layout (or shrinks off it), as a window zooms. */
+html[data-demo-morph]::view-transition-old(demo-frame),
+html[data-demo-morph]::view-transition-new(demo-frame) {
+  width: auto;
+  height: auto;
+  inset: 0 auto auto 0;
+  object-fit: none;
+  object-position: left top;
+}
+
+html[data-demo-morph]::view-transition-group(demo-frame) {
+  overflow: clip;
+  background: var(--background);
+}
+
+/* The old picture clears early, so the two layouts are not double-exposed
+   for long. */
+html[data-demo-morph]::view-transition-old(demo-frame) {
+  animation-duration: calc(var(--demo-morph-duration) * 0.4);
+}

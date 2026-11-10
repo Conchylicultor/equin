@@ -7,7 +7,8 @@
  *  2. opens Pages and creates a page there: the URL follows the embed
  *     (`/demo/at/pages/…`), rewriting the current history entry (framed, the
  *     demo's moves are not the page's Back steps); a reload reopens the demo
- *     on that same page;
+ *     on that same page, once the visitor enters it again (the gate shows on
+ *     every visit);
  *  3. ⌘-clicks the launcher mark (a link to the home app): a NEW tab opens the
  *     demo maximized there (`/demo/at/home;full=1`, no caption bar) — not
  *     the real app — and its Pages lists the page the first tab created (both
@@ -15,11 +16,15 @@
  *     the tab's history: Back from Pages returns the demo to Home, Forward
  *     to Pages;
  *  4. Maximize, then Restore (revealed by the pointer at the top
- *     edge): the URL gains and loses `;full=1`, and the embed stays the same
- *     element throughout (the demo never remounts);
+ *     edge): each runs as a view transition, maximized a "Press Esc to
+ *     restore" notice shows and then hides on its own, the URL gains and
+ *     loses `;full=1`, and the embed stays the same element throughout (the
+ *     demo never remounts);
  *  5. Maximize again, then another page from the sidebar: Back reopens
  *     the created page, a second Back leaves maximized for the frame, Forward comes
- *     back maximized — the same embed throughout;
+ *     back maximized — the same embed throughout; Esc in the page's title
+ *     field stays the field's (still maximized), and Esc outside a field
+ *     restores;
  *  6. the desktop, maximized: Pages then Sonata from the shelf, each a
  *     window; Back focuses the Pages window again and Forward the Sonata one
  *     — the URL following — with no window added or turned into another.
@@ -49,6 +54,7 @@ import {
   RENDER_TIMEOUT_MS,
   showsApp,
   bootDemo,
+  enterDemo,
 } from "./internal/demo-pages";
 
 const OUT = arg("out") ?? "/tmp/demo-location";
@@ -136,6 +142,25 @@ async function tagEmbed(page: Page): Promise<void> {
   });
 }
 
+/** Count the page's view transitions from now on (`viewTransitions`). */
+async function countViewTransitions(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const w = window as unknown as { __e2eTransitions: number };
+    w.__e2eTransitions = 0;
+    const start = document.startViewTransition.bind(document);
+    document.startViewTransition = ((update?: ViewTransitionUpdateCallback) => {
+      w.__e2eTransitions++;
+      return start(update);
+    }) as typeof document.startViewTransition;
+  });
+}
+
+function viewTransitions(page: Page): Promise<number> {
+  return page.evaluate(
+    () => (window as unknown as { __e2eTransitions: number }).__e2eTransitions,
+  );
+}
+
 async function sameEmbed(page: Page): Promise<boolean> {
   return (
     (await page.locator("[data-app-embed][data-e2e-same-embed]").count()) > 0
@@ -184,6 +209,7 @@ await withBrowser(async (h) => {
   );
   gate.on = false;
   await page.reload();
+  await enterDemo(page, { marker: "[data-app-embed]" });
   await showsApp(r, page, "after a reload, the demo reopens on Pages", "pages");
   await showsPage(r, page, "after a reload, the same page is open", TITLE);
   r.eq("after a reload, the URL is unchanged", pathOf(page), at);
@@ -205,6 +231,7 @@ await withBrowser(async (h) => {
   const tabGate = { on: false };
   watchLeaks(tab, leaked, tabGate);
   await tab.waitForLoadState();
+  await enterDemo(tab, { marker: "[data-app-embed]" });
   await urlSettles(
     r,
     tab,
@@ -254,12 +281,26 @@ await withBrowser(async (h) => {
 
   // ── 4. Maximize and back, the embed never remounting ────────────────
   await tagEmbed(page);
+  await countViewTransitions(page);
   await page.getByRole("button", { name: "Maximize" }).first().click();
   await urlSettles(r, page, "Maximize: the URL gains ;full=1", (p) =>
     p.endsWith(";full=1"),
   );
   r.ok("Maximize: no caption bar", !(await framed(page)));
   r.ok("Maximize: the same embed (no remount)", await sameEmbed(page));
+  r.eq("Maximize: run as a view transition", await viewTransitions(page), 1);
+  const notice = page.locator("[data-demo-esc-notice]");
+  r.ok(
+    "Maximize: a notice says Esc restores",
+    /Press\s*Esc\s*to restore/.test((await notice.textContent()) ?? ""),
+  );
+  await snap(page, OUT, "4-maximized-notice");
+  const hidden = await waitFor(
+    () => notice.isVisible(),
+    (v) => !v,
+    { timeoutMs: 8_000 },
+  );
+  r.ok("Maximize: the notice hides on its own", hidden.ok);
   const exit = page.getByRole("button", { name: "Restore" });
   const strip = page.locator("[data-demo-restore]");
   const box = await strip.boundingBox();
@@ -275,6 +316,7 @@ await withBrowser(async (h) => {
   await urlSettles(r, page, "Restore: the URL loses ;full=1", (p) => p === at);
   r.ok("Restore: framed again", await framed(page));
   r.ok("Restore: still the same embed", await sameEmbed(page));
+  r.eq("Restore: run as a view transition", await viewTransitions(page), 2);
   await showsPage(r, page, "the page is still open", TITLE);
 
   // ── 5. Back / Forward maximized, and out of it ──────────────────────
@@ -314,10 +356,29 @@ await withBrowser(async (h) => {
   await showsPage(r, page, "Forward: the page is still open", TITLE);
   r.ok("Back / Forward: still the same embed", await sameEmbed(page));
   await snap(page, OUT, "5-back-forward");
+  // Esc: the field's while a field has it; the demo's Restore otherwise.
+  const title = embedRoot(page)
+    .locator('[data-pane-id="page-detail"]')
+    .last()
+    .locator('input[aria-label="Page title"]')
+    .first();
+  await title.focus();
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(300);
+  r.ok(
+    "Esc in a text field is the field's: still maximized",
+    pathOf(page).endsWith(";full=1"),
+    pathOf(page),
+  );
+  await title.evaluate((el) => (el as HTMLElement).blur());
+  await page.keyboard.press("Escape");
+  await urlSettles(r, page, "Esc outside a field restores", (p) => p === at);
+  r.ok("Esc: framed again", await framed(page));
 
   // ── 6. the desktop, maximized: Back / Forward move between windows ──
   gate.on = false;
   await page.goto(pathUrl("/demo/at/desktop;full=1"));
+  await enterDemo(page, { marker: "[data-app-embed]" });
   await waitForNetworkIdle(page);
   gate.on = true;
   const desk = embedRoot(page);

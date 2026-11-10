@@ -45,7 +45,8 @@ serveBrowserHost({
   Its migrations must equal this bundle's, or the boot fails loudly.
   `whenOutdated` is the app's: `reset` (a demo) replaces stored data from an
   older snapshot — or from before it had one — with this one (`origin.
-  replacedOutdated`; the root's `HostBooted.notice` tells the page) — whatever
+  replacedOutdated`; the page is not told — an update just starts on the
+  fresh data) — whatever
   migrations it was stored at, since it is thrown away — and the new snapshot
   is loaded and checked BEFORE anything is wiped for it (offline, the stored
   data stays); `keep` (a user's data) never does. Data from a NEWER snapshot

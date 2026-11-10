@@ -12,7 +12,8 @@
  *  3. makes the stored data read as started from an older build's snapshot
  *     (the lifecycle record rewritten while no worker holds it), and opens the
  *     demo again: the data is reset to this build's snapshot — the created
- *     page is gone, the seeded ones are back — and the page says why.
+ *     page is gone, the seeded ones are back — silently: an update just
+ *     starts on the fresh data, with no notice.
  *
  * And, throughout: the page stays on the demo, no page error, no console error.
  *
@@ -48,7 +49,6 @@ import {
 const OUT = arg("out") ?? "/tmp/demo-snapshot";
 
 /** What the demo tells a visitor whose older data was replaced (`bin/browser-host.ts`). */
-const UPDATED_NOTICE = /The demo was updated/;
 
 /** Where the boot line says the host's data came from (`data: <origin>;`). */
 const dataOf = (line: string | null): string | null =>
@@ -140,7 +140,7 @@ await withBrowser(async (h) => {
     "stored",
   );
 
-  // ── 3. data from an older snapshot is reset, with a notice ────────────
+  // ── 3. data from an older snapshot is reset, with no notice ───────────
   await second.close();
   await waitForStorageReleased(
     r,
@@ -160,19 +160,12 @@ await withBrowser(async (h) => {
     dataOf(replaced),
     "snapshot (replacing data from an older one)",
   );
-  const notice = third.locator("[data-host-notice]");
-  const shown = await waitFor(
-    async () =>
-      (await notice.count()) === 0 ? null : notice.first().textContent(),
-    (text) => text !== null && UPDATED_NOTICE.test(text),
-    { timeoutMs: RENDER_TIMEOUT_MS },
+  r.eq(
+    "the update says nothing: no notice over the demo",
+    await third.getByText(/The demo was updated/).count(),
+    0,
   );
-  r.ok(
-    "the visitor is told the demo was reset to the new version",
-    shown.ok,
-    String(shown.value),
-  );
-  await snap(third, OUT, "3-reset-notice");
+  await snap(third, OUT, "3-reset-silently");
   await openPages(r, third, "after a newer build");
   for (const title of ROOT_PAGES) {
     await listed(
@@ -190,14 +183,6 @@ await withBrowser(async (h) => {
     CREATED,
     0,
   );
-  await third.getByRole("button", { name: "Dismiss" }).first().click();
-  const gone = await waitFor(
-    () => notice.count(),
-    (n) => n === 0,
-    { timeoutMs: RENDER_TIMEOUT_MS },
-  );
-  r.ok("Dismiss hides the notice", gone.ok, `${gone.value} notice(s)`);
-
   r.ok("the page stays on the demo", onDemoPage(third.url()), third.url());
   await r.finish();
 });

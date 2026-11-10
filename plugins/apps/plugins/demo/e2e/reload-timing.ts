@@ -11,7 +11,9 @@
  *    DemoScope's boot line reports it, with the worker's own stages (the
  *    worker's clock starts when it is created) — `data:` says where its data
  *    came from;
- *  - `paint`: navigation start → the Agent Manager's conversation shown;
+ *  - `paint`: navigation start → the Agent Manager's conversation shown, the
+ *    gate (shown on every visit, the host starting behind it) entered as
+ *    soon as it shows;
  *  - `page boot`: the page's own boot spans (`boot-trace`), at least 20 ms.
  *
  * It also says whether the worker survived the reload (a reload whose worker
@@ -38,6 +40,7 @@ import {
   MARKER,
   RENDER_TIMEOUT_MS,
   bootDemo,
+  enterDemo,
 } from "./internal/demo-pages";
 
 const RELOADS = numArg("reloads", 3);
@@ -157,7 +160,11 @@ await withBrowser(async (h) => {
   console.info(describe("first visit", first));
   for (let i = 1; i <= RELOADS; i++) {
     const t = await timeLoad(r, page, `reload ${i}`, () =>
-      page.reload({ waitUntil: "domcontentloaded" }),
+      // The gate shows on every visit (the host starting behind it): the
+      // visitor enters at once.
+      page
+        .reload({ waitUntil: "domcontentloaded" })
+        .then(() => enterDemo(page, { marker: MARKER })),
     );
     console.info(describe(`reload ${i}`, t));
   }

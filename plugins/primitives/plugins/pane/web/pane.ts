@@ -45,6 +45,7 @@ import { useRenderSync } from "./use-render-sync";
 import {
   historySink,
   liveStoreAccessorSink,
+  type HistoryMode,
   type HistoryWrite,
   type SerializedSlot,
 } from "./history-sink";
@@ -902,7 +903,8 @@ export interface PaneStore {
   getIndexParams(): Record<string, string>;
   /**
    * Set (or, with `undefined`, clear) ONE keyed param of an instance in place,
-   * REPLACING the history entry — the write half of {@link usePaneViewParam}.
+   * REPLACING the history entry unless `history` is `"push"` — the write half
+   * of {@link usePaneViewParam}.
    * `instanceId` may be the app's index pane, whose params live beside the
    * route ({@link getIndexParams}). Keeps every other param, the instance and
    * the panes to its right, like `setParams`.
@@ -912,6 +914,7 @@ export interface PaneStore {
     instanceId: number,
     name: string,
     value: string | undefined,
+    history?: HistoryMode,
   ): void;
   /**
    * Seed an unresolved (pending) route from a raw app-relative path — NO
@@ -1446,7 +1449,9 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     instanceId: number,
     name: string,
     value: string | undefined,
+    history: HistoryMode = "replace",
   ): void {
+    const replace = history === "replace";
     const withValue = (params: Record<string, string>) => {
       const next = { ...params };
       if (value === undefined) delete next[name];
@@ -1456,7 +1461,7 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     if (internal.appIndex && instanceId === indexInstanceIdFor(internal.id)) {
       const index = nonEmptyIndex(withValue(currentIndex));
       if (sameParams(index, currentIndex)) return;
-      setRoute(currentSlots(), true, index);
+      setRoute(currentSlots(), replace, index);
       return;
     }
     const route = currentSlots();
@@ -1471,7 +1476,7 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     if (sameParams(params, slot.params)) return;
     const next = [...route];
     next[idx] = { ...slot, params };
-    setRoute(next, true, currentIndex);
+    setRoute(next, replace, currentIndex);
   }
 
   const store: PaneStore = {
@@ -2533,9 +2538,11 @@ export interface PaneViewParam {
   value: string | undefined;
   /**
    * Write it (or clear it with `undefined`) in place, REPLACING the history
-   * entry: which view is on screen is not a navigation Back should step through.
+   * entry by default: which view is on screen is not a navigation Back should
+   * step through. `"push"` adds an entry, for a surface whose moves ARE the
+   * page's history (a maximized embed's navigation, its Maximize itself).
    */
-  set: (value: string | undefined) => void;
+  set: (value: string | undefined, history?: HistoryMode) => void;
 }
 
 /**
@@ -2571,11 +2578,11 @@ export function usePaneViewParam(surface: string): PaneViewParam | null {
       (pane.appIndex && instanceId === indexInstanceIdFor(pane.id)));
 
   const set = useCallback(
-    (value: string | undefined) => {
+    (value: string | undefined, history?: HistoryMode) => {
       if (store === null || pane === undefined || instanceId === undefined) {
         return;
       }
-      store.setKeyedParam(pane, instanceId, key, value);
+      store.setKeyedParam(pane, instanceId, key, value, history);
     },
     [store, pane, instanceId, key],
   );

@@ -32,6 +32,7 @@ import {
   RENDER_TIMEOUT_MS,
   waitForStorageReleased,
   bootDemo,
+  enterDemo,
 } from "./internal/demo-pages";
 
 const OUT = arg("out");
@@ -202,11 +203,10 @@ await withBrowser(async (h) => {
   await pageCdp.send("Profiler.setSamplingInterval", { interval: 200 });
   await pageCdp.send("Profiler.start");
   await page.goto(url, { waitUntil: "domcontentloaded" });
+  // The worker starts behind the gate (the data is stored); the visitor
+  // enters at once.
   await workerStarted;
-  await page
-    .locator(MARKER)
-    .first()
-    .waitFor({ state: "visible", timeout: RENDER_TIMEOUT_MS });
+  await enterDemo(page, { marker: MARKER });
   const paintMs = await page.evaluate(() => performance.now());
   const pageProfile = (
     (await pageCdp.send("Profiler.stop")) as { profile: CpuProfile }

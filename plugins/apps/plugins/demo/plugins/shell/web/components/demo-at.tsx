@@ -10,8 +10,10 @@ import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { Pane, type HistoryMode } from "@plugins/primitives/plugins/pane/web";
 import { AppEmbed } from "@plugins/apps-core/plugins/app-embed/web";
 import {
+  DEMO_FRAME_ATTR,
+  MaximizedChrome,
+  morphDemoFrame,
   ResetDemoButton,
-  RestoreStrip,
 } from "@plugins/apps/plugins/demo/plugins/chrome/web";
 import { DEMO_FULL, demoApp, demoAtRoute } from "../../core";
 import {
@@ -55,6 +57,12 @@ export const demoAtPane = Pane.define({
  * two is the page's own navigation (a pushed entry): Back from maximized
  * returns to the frame.
  *
+ * Maximize and Restore (its button, the strip at the top edge, Esc) run as a
+ * view transition: the demo's box grows to the whole page and shrinks back
+ * (`morphDemoFrame`). Maximized, a notice says Esc restores; Esc goes to the
+ * demo first, and restores only when nothing inside wants it
+ * (`MaximizedChrome`).
+ *
  * Framed, the caption is the page's own top bar: it is the surface's top-right
  * corner, so it reserves the global floating action bar's room and anchors it
  * (the embed is a floating-bar boundary). Maximized, the embed is that
@@ -79,8 +87,17 @@ function DemoAt(): ReactNode {
     [paramsRef, setParams],
   );
   const start = useStartLocation();
-  const setFull = (on: boolean) =>
-    setParams({ url: paramsRef.current.url, full: on ? DEMO_FULL : undefined });
+  const setFull = useCallback(
+    (on: boolean) =>
+      morphDemoFrame(() =>
+        setParams({
+          url: paramsRef.current.url,
+          full: on ? DEMO_FULL : undefined,
+        }),
+      ),
+    [paramsRef, setParams],
+  );
+  const restore = useCallback(() => setFull(false), [setFull]);
   return (
     <DemoFrame
       full={isFull}
@@ -109,7 +126,7 @@ function DemoAt(): ReactNode {
         onLocationChange={onLocationChange}
         browserTabUrl={maximizedUrl}
       />
-      {isFull && <RestoreStrip onRestore={() => setFull(false)} />}
+      {isFull && <MaximizedChrome onRestore={restore} />}
     </DemoFrame>
   );
 }
@@ -145,9 +162,10 @@ export function DemoFrame({
         className={cn("flex min-h-0 flex-1 flex-col", !full && "p-lg")}
       >
         <div
+          {...{ [DEMO_FRAME_ATTR]: "" }}
           // eslint-disable-next-line layout/no-adhoc-layout -- the demo's frame: the embedded app fills it
           className={cn(
-            "min-h-0 flex-1",
+            "relative min-h-0 flex-1",
             !full && "overflow-hidden rounded-lg border",
           )}
         >

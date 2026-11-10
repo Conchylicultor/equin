@@ -1,0 +1,44 @@
+/* The maximized demo's notice (maximized-chrome.tsx): a pill at the top
+   centre, as a browser's full-screen notice — it fades in, stays a few
+   seconds and fades out on its own (a CSS animation: nothing to time). */
+.demo-esc-notice {
+  border-radius: 9999px;
+  padding: calc(var(--spacing) * 2) calc(var(--spacing) * 4);
+  background: color-mix(in srgb, var(--foreground) 82%, transparent);
+  color: var(--background);
+  box-shadow: 0 6px 24px color-mix(in srgb, var(--foreground) 25%, transparent);
+  animation: demo-esc-notice 4s ease forwards;
+}
+.demo-esc-notice kbd {
+  margin: 0 0.25em;
+}
+@keyframes demo-esc-notice {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  8%,
+  82% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .demo-esc-notice {
+    animation-name: demo-esc-notice-still;
+  }
+  @keyframes demo-esc-notice-still {
+    0%,
+    82% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+      visibility: hidden;
+    }
+  }
+}

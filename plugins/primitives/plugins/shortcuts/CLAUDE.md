@@ -15,6 +15,14 @@ shortcut. Before matching, it yields the key to whoever already owns it:
 - **Another surface** — a shortcut registered with `useSurfaceShortcuts` is
   eligible only while its surface is the focused one.
 
+- **Precedence** — among the eligible shortcuts matching one keystroke, the
+  highest `precedence` fires alone. A shortcut that must yield to every other
+  binding of its key takes a negative one: a maximized demo's Esc to restore
+  (`usePageShortcuts`, page-wide, precedence -1) fires only when nothing inside
+  the demo wants Esc — no field, no open menu or dialog (Radix layers
+  `preventDefault` the Esc they close on), no inner Esc shortcut (exit full
+  screen, leave the desktop overview, end a tour).
+
 A raw key listener that bypasses the registry (allowed only with a lint
 exemption, e.g. Sonata's hold-to-scrub seek) must apply the same three rules.
 
@@ -78,12 +86,13 @@ has no other reactive read. Design: `research/2026-11-05-global-ambient-signals-
     - `Shortcuts`
     - `targetClaimsKey`
     - `useFocusedSurfaceSignal`
+    - `usePageShortcuts`
     - `usePlayPauseShortcut`
     - `useSurfaceShortcuts`
     - `useSurfaceSignal`
 - Cross-plugin:
-  - Imported by: 31 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×15
+  - Imported by: 32 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×16
     - `primitives` ×10
     - `apps-core` ×2
     - `hints`

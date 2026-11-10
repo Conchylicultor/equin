@@ -88,7 +88,6 @@ type FromHost =
       keys: string[];
       boot: HostBoot;
       readyAtMs: number;
-      notice: string | null;
     }
   | { t: "failed"; error: string }
   /** How far the boot has come (`HostProgress`), posted to every page waiting for it until it settles. */
@@ -219,13 +218,10 @@ export function serveHost(opts: ServeHostOptions): ServedHost {
     });
     if (announce && !bootSettled && progress !== null)
       post({ t: "progress", progress });
-    if (announce) void announceTo(post, !bootSettled);
+    if (announce) void announceTo(post);
   }
 
-  async function announceTo(
-    post: (msg: FromHost) => void,
-    waitedForBoot: boolean,
-  ): Promise<void> {
+  async function announceTo(post: (msg: FromHost) => void): Promise<void> {
     let host: HostBooted;
     try {
       host = await booted;
@@ -250,9 +246,6 @@ export function serveHost(opts: ServeHostOptions): ServedHost {
       keys: [...host.keys],
       boot: host.boot,
       readyAtMs: Math.round(performance.now()),
-      // Told to the pages that waited for this boot, not to every page that
-      // connects later.
-      notice: waitedForBoot ? (host.notice ?? null) : null,
     });
   }
 
@@ -430,19 +423,12 @@ export interface HostBooted {
   server: BrowserServer;
   keys: ReadonlySet<string>;
   boot: HostBoot;
-  /**
-   * Something the person should be told about this boot (a demo reset to a
-   * newer version), shown by the pages that waited for it.
-   */
-  notice?: string;
 }
 
 /** A booted server across a port, with the keys it serves and how its boot went. */
-export interface PortServer extends Omit<HostBooted, "notice"> {
+export interface PortServer extends HostBooted {
   /** When the worker reported ready: ms after it was created, on its clock. */
   readyAtMs: number;
-  /** What this page should tell the person about the boot it waited for (`HostBooted.notice`). */
-  notice: string | null;
   /** Resolves when the host stops serving (`ended`); never, while it serves. */
   ended: Promise<HostEndReason>;
   /** Ask the host to wipe its data and end (it answers with `ended: "reset"`). */
@@ -605,7 +591,6 @@ export function portBrowserServer(
             keys: new Set(msg.keys),
             boot: msg.boot,
             readyAtMs: msg.readyAtMs,
-            notice: msg.notice,
             ended,
             reset: () => port.postMessage({ t: "reset" } satisfies ToHost),
             supply: (key, input) =>

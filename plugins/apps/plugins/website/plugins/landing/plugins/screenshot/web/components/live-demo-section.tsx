@@ -1,4 +1,10 @@
-import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
@@ -14,12 +20,15 @@ import {
   type DemoBoot,
 } from "@plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/web";
 import {
+  DEMO_FRAME_ATTR,
   DemoBootScreen,
+  MaximizedChrome,
+  morphDemoFrame,
   ResetDemoButton,
-  RestoreStrip,
 } from "@plugins/apps/plugins/demo/plugins/chrome/web";
 import { workspaceDemo } from "@plugins/apps/plugins/website/plugins/demos/plugins/workspace/core";
 import { WebsiteBand } from "@plugins/apps/plugins/website/plugins/shell/web";
+import { useDemoPlace } from "../internal/demo-place";
 import "./live-demo-section.css";
 
 const CAPTION = "equin, running entirely in your browser.";
@@ -37,23 +46,27 @@ const FOOT_ROOM = 56;
  * The homepage's live demo, where the desktop picture was: equin itself — its
  * real server code in a worker, on the workspace demo's data
  * (`<DemoScope>` around `<AppEmbed>`), opening on its home app. Nothing
- * downloads until the visitor clicks Enter equin (`DemoScope`'s gate; a
- * browser that already holds the demo's data starts it at once).
+ * downloads until the visitor clicks Enter equin (`DemoScope`'s gate, shown
+ * on every visit; a browser that already holds the demo's data starts it
+ * behind the gate, so entering is instant).
  *
- * Entering grows the frame in place: out of the reading measure, nearly as
- * wide and tall as the window, the page below moving down and scrolling to
- * it. The frame is one element from the gate to the running demo (the scope
- * lives inside it), so its growth is never cut by the demo arriving. Once it
- * runs, the row under it offers Maximize (the demo fills the tab's surface,
- * above the site; Restore at its top edge), Collapse / Expand, and Reset
- * demo — drawn from inside the scope, into the row, through a portal.
+ * Entering grows the frame in place, for good: out of the reading measure,
+ * nearly as wide and tall as the window, the page below moving down and
+ * scrolling to it. The frame is one element from the gate to the running demo
+ * (the scope lives inside it), so its growth is never cut by the demo
+ * arriving. Once it runs, the row under it offers Maximize (the demo grows
+ * over the tab's surface, above the site — `morphDemoFrame`; Restore at its
+ * top edge, or Esc when nothing inside wants it — `MaximizedChrome`) and
+ * Reset demo, drawn from inside the scope, into the row, through a portal.
+ *
+ * Where the visitor is inside the demo, and whether it is maximized, is the
+ * homepage's URL (`useDemoPlace`), so a reload comes back there.
  */
 export function LiveDemoSection(): ReactNode {
+  // Entered: the frame grows, and stays grown.
   const [grown, setGrown] = useState(false);
-  const [maximized, setMaximized] = useState(false);
-  // Where the visitor is inside the demo (the embed's app-rooted URL);
-  // `undefined` until it moves: the demo's home app.
-  const [location, setLocation] = useState<string | undefined>(undefined);
+  const place = useDemoPlace();
+  const { maximized, setMaximized } = place;
   const [columnRef, column] = useElementSize<HTMLDivElement>();
   const viewport = useViewportSize();
   const [figure, setFigure] = useState<HTMLElement | null>(null);
@@ -65,13 +78,28 @@ export function LiveDemoSection(): ReactNode {
     revealElement(figure, { behavior: "smooth", block: "start" });
   };
   const frameStyle = frameSize(column.width, viewport, grown);
-  const embed = <AppEmbed url={location} onLocationChange={setLocation} />;
+  const restore = useCallback(
+    () => morphDemoFrame(() => setMaximized(false)),
+    [setMaximized],
+  );
+  const embed = (
+    <AppEmbed
+      url={place.location}
+      onLocationChange={place.move}
+      browserTabUrl={place.maximizedUrl}
+      fills={maximized ? "viewport" : undefined}
+    />
+  );
+  // The demo's box (what a Maximize grows): the frame, or maximized the
+  // overlay — one of the two at a time.
+  const frameMark = { [DEMO_FRAME_ATTR]: "" };
 
   return (
     <WebsiteBand section="screenshot" divider rhythm="section">
       <div ref={columnRef}>
         <figure ref={setFigure} className="website-demo">
           <div
+            {...(maximized ? {} : frameMark)}
             className={cn(
               "website-demo-frame",
               frameStyle !== null && "is-sized",
@@ -90,11 +118,12 @@ export function LiveDemoSection(): ReactNode {
                   was. */}
               {maximized ? (
                 <SurfaceOverlay
+                  {...frameMark}
                   className="bg-background"
                   data-website-demo-maximized=""
                 >
                   {embed}
-                  <RestoreStrip onRestore={() => setMaximized(false)} />
+                  <MaximizedChrome onRestore={restore} />
                 </SurfaceOverlay>
               ) : (
                 embed
@@ -104,18 +133,12 @@ export function LiveDemoSection(): ReactNode {
                   <Inline gap="sm">
                     <Button
                       variant="outline"
-                      onClick={() => setMaximized(true)}
+                      onClick={() => morphDemoFrame(() => setMaximized(true))}
                     >
                       <Icon icon={symbol("fullscreen")} />
                       Maximize
                     </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => (grown ? setGrown(false) : grow())}
-                    >
-                      {grown ? "Collapse" : "Expand"}
-                    </Button>
-                    <ResetDemoButton />
+                    <ResetDemoButton onReset={place.restart} />
                   </Inline>,
                   controls,
                 )}

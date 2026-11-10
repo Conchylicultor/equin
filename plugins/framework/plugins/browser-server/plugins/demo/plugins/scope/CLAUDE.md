@@ -22,12 +22,13 @@ seed — so the unchanged app reads demo data through `useLive` /
   browser has no SharedWorker. Unmount disposes the server and closes this
   page's end. A host that fails to boot throws to the error boundary.
 - **A gate, where the page draws the boot** (`boot={(state) => …}`,
-  `DemoBoot`: `asking` → `gate` → `starting` with the worker's
-  `HostProgress`). The scope first asks whether this browser holds the
-  scenario's data (`scenario.storage`, `host-storage/stored`'s
-  `hostDataStored`): if so it starts at once; if not it shows the gate and
-  starts nothing — no worker, no download — until the gate's `enter`. A Reset
-  never asks again. Without `boot`, it starts at once behind `<Loading/>`.
+  `DemoBoot`: `gate` → `starting` with the worker's `HostProgress`). The
+  visitor enters through the gate on every visit. Behind it, the scope asks
+  whether this browser holds the scenario's data (`scenario.storage`,
+  `host-storage/stored`'s `hostDataStored`): if so the host starts at once
+  (entering is then instant); if not it starts nothing — no worker, no
+  download — until the gate's `enter`. A Reset never asks again. Without
+  `boot`, it starts at once behind `<Loading/>`.
 - **Progress while it boots**: `portBrowserServer`'s `onProgress` hands the
   worker's reports (downloaded bytes, the starting data's bytes, plugins
   loaded) to the boot render.
@@ -97,7 +98,7 @@ in-realm `MessageChannel` standing in for the worker).
 
 ## Plugin reference
 
-- Description: <DemoScope scenario>: renders its subtree against the scenario's browser host — real server code in a worker, on the scenario's seed — and scoped to the host's composition (<PluginScope>), so the page shows exactly the plugins the worker serves. Everything inside reaches the host only (the scope's transport): the build's coverage guard holds the host to serving every read, endpoint and config the scope uses, or declaring it needsMachine (answered unavailable); a key or endpoint it still does not serve fails loudly. A host that fails to boot throws to the error boundary. Until the host serves, an optional boot render draws where it is (DemoBoot: asking, the gate, starting with the worker's progress) and gates the start: a browser already holding the demo's data starts at once, a first visit only when the visitor asks (enter), since it downloads the whole server and its data. Connects to one SharedWorker per build (every tab of the demo shares its server and data), shows why when the host declines the page (data written by a newer version) or stops serving it (another tab took it over), and exposes Reset (useDemoHostControl) — the host wipes its data and every tab reconnects to a fresh one.
+- Description: <DemoScope scenario>: renders its subtree against the scenario's browser host — real server code in a worker, on the scenario's seed — and scoped to the host's composition (<PluginScope>), so the page shows exactly the plugins the worker serves. Everything inside reaches the host only (the scope's transport): the build's coverage guard holds the host to serving every read, endpoint and config the scope uses, or declaring it needsMachine (answered unavailable); a key or endpoint it still does not serve fails loudly. A host that fails to boot throws to the error boundary. An optional boot render gates the demo on every visit (DemoBoot: the gate, then starting with the worker's progress): the visitor enters it (enter); behind the gate, a browser already holding the demo's data starts the host at once, a first visit only on enter, since it downloads the whole server and its data. Connects to one SharedWorker per build (every tab of the demo shares its server and data), shows why when the host declines the page (data written by a newer version) or stops serving it (another tab took it over), and exposes Reset (useDemoHostControl) — the host wipes its data and every tab reconnects to a fresh one.
 - Web:
   - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework/browser-server` ×5
@@ -121,10 +122,7 @@ in-realm `MessageChannel` standing in for the worker).
     - `DemoScope`
     - `useDemoHostControl`
 - Cross-plugin:
-  - Uses tokens:
-    - `ui/tokens/density --space-lg`
-    - `ui/tokens/density --space-md`
-    - `ui/tokens/density --space-sm`
+  - Uses tokens: `ui/tokens/density --space-lg`
   - Imported by:
     - `apps/demo/chrome`
     - `apps/demo/shell`

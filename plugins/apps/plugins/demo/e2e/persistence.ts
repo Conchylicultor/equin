@@ -44,6 +44,7 @@ import {
   showsApp,
   sidebarEntries,
   bootDemo,
+  enterDemo,
 } from "./internal/demo-pages";
 
 const OUT = arg("out") ?? "/tmp/demo-persistence";
@@ -151,6 +152,7 @@ await withBrowser(async (h) => {
 
   // ── 2. it survives a reload; the seed does not run again ────────────────
   await page.reload();
+  await enterDemo(page, { marker: "[data-app-embed]" });
   // The page's URL kept where the visitor was: the reload reopens Pages.
   await showsApp(
     r,
@@ -186,7 +188,7 @@ await withBrowser(async (h) => {
   // ── 3. a second tab shares the data, live ───────────────────────────────
   const second = await context.newPage();
   await second.goto(pathUrl(demoPath(AGENT_MANAGER_LOCATION)));
-  await second.locator(MARKER).first().waitFor({ timeout: RENDER_TIMEOUT_MS });
+  await enterDemo(second, { marker: MARKER });
   await openPages(r, second, "second tab");
   await listed(
     r,

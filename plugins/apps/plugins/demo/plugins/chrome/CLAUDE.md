@@ -6,8 +6,9 @@ website's demo band (`apps/website/landing/screenshot`):
 - **`DemoBootScreen`** — what `<DemoScope boot>` draws before the demo runs:
   the equin logo over the logo's own colours (`ui/logo`'s `LOGO.gradient`,
   passed to `demo-boot-screen.css` as custom properties), then
-  - at the gate, **Enter equin** and "Try a demo version in this tab" — a
-    first visit downloads nothing before the click;
+  - at the gate, **Enter equin** and "Try a demo version in this tab" — on
+    every visit; a first visit downloads nothing before the click, a return
+    visit's host already starts behind it;
   - while the host starts, one bar in the logo's gradient, in the button's
     place: "Downloading equin in your browser" with the MB the worker
     downloaded so far, then "Starting equin". The bar is weighed from the
@@ -16,8 +17,22 @@ website's demo band (`apps/website/landing/screenshot`):
     feed) reports nothing, so the bar holds short of the end until the demo
     appears. Its total in MB is not known ahead (no build manifest of the
     worker's download yet), so it shows what has arrived.
-- **`RestoreStrip`** — the way back from a maximized demo: hidden until the
-  pointer reaches the top edge (or keyboard focus does).
+- **`MaximizedChrome`** — what a maximized demo draws over itself: the
+  Restore strip (hidden until the pointer reaches the top edge, or keyboard
+  focus does), a "Press Esc to restore" notice that fades out on its own (a
+  CSS animation, as a browser's full-screen notice), and Esc itself.
+- **Who gets Esc.** The demo's apps use Esc too, so Restore takes it last:
+  a page-wide shortcut (`shortcuts`' `usePageShortcuts`) of precedence -1,
+  under the shortcuts' own rule — it fires only when the key was not handled
+  already (an open menu or dialog closes on it and `preventDefault`s it), no
+  text field claims it, and no other Esc shortcut is eligible (exit a window's
+  full screen, leave the desktop overview, end a tour). Esc goes to the
+  innermost thing that wants it; only an Esc nothing inside wants restores.
+- **`morphDemoFrame(update)`** — Maximize / Restore as a view transition:
+  the element marked `DEMO_FRAME_ATTR` (the frame, or the maximized box —
+  one at a time) grows to the tab's surface and shrinks back, its pictures
+  pinned top-left and clipped, never stretched. Back / Forward switch
+  without it (the browser's own steps are instant); reduced motion skips it.
 - **`ResetDemoButton`** — Reset demo, confirmed; the host wipes its data and
   every tab starts again from the story (`useDemoHostControl`).
 
@@ -28,10 +43,11 @@ full screen means the browser's to a visitor.
 
 ## Plugin reference
 
-- Description: The demo before it runs, drawn for <DemoScope boot>: the equin logo over the logo's own colours, then at the gate the Enter equin button (a first visit downloads nothing before it), and while the host starts one bar in the logo's gradient — what it is doing and how much it downloaded, weighed from the worker's progress (the starting data, then the plugins loaded). Also the demo's two controls: Reset demo (confirmed; the host wipes its data and every tab starts again from the story) and the Restore strip of a maximized demo (revealed by the pointer at the page's top edge). Shared by /demo and the website's demo band.
+- Description: The demo before it runs, drawn for <DemoScope boot>: the equin logo over the logo's own colours, then the Enter equin button on every visit (a first visit downloads nothing before it; a return visit's host already starts behind it), and once entered, while the host starts, one bar in the logo's gradient — what it is doing and how much it downloaded, weighed from the worker's progress (the starting data, then the plugins loaded). Also the demo's controls: Reset demo (confirmed; the host wipes its data and every tab starts again from the story), and the maximized demo's chrome — the Restore strip (revealed by the pointer at the page's top edge), a 'Press Esc to restore' notice that hides on its own, and Esc itself (page-wide, the lowest precedence: only when nothing inside the demo wants the key) — with Maximize / Restore run as a view transition (morphDemoFrame: the demo's box grows to the tab's surface and shrinks back). Shared by /demo and the website's demo band.
 - Web:
   - Uses:
     - `framework/browser-server/demo/scope.useDemoHostControl`
+    - `primitives/css/motion.prefersReducedMotion`
     - `primitives/css/pin.Pin`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
@@ -40,12 +56,16 @@ full screen means the browser's to a visitor.
     - `primitives/hover-reveal.hoverRevealClass`
     - `primitives/hover-reveal.useHoverReveal`
     - `primitives/overlay/imperative-dialog/confirm.useConfirmDialog`
+    - `primitives/overlay/tooltip.Kbd`
+    - `primitives/shortcuts.usePageShortcuts`
     - `ui/icons.Icon`
     - `ui/logo.Logo`
   - Exports (values):
+    - `DEMO_FRAME_ATTR`
     - `DemoBootScreen`
+    - `MaximizedChrome`
+    - `morphDemoFrame`
     - `ResetDemoButton`
-    - `RestoreStrip`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --background`

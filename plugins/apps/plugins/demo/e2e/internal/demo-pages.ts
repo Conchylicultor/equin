@@ -32,13 +32,14 @@ export const ROOT_PAGES = [
  */
 export const AGENT_MANAGER_LOCATION = "/agents/c/conv-demo-practice-timer";
 
-/** The gate's button: a browser holding no demo data waits on it (`DemoScope`'s gate). */
+/** The gate's button: every visit waits on it (`DemoScope`'s gate). */
 export const ENTER_DEMO = 'button:has-text("Enter equin")';
 
 /**
- * Open the demo page at `url` and wait for `marker` — through the gate when
- * it shows: a browser holding no demo data (every fresh e2e context) starts
- * nothing until Enter equin; one that holds it starts at once.
+ * Open the demo page at `url`, enter it through the gate, and wait for
+ * `marker`. The gate shows on every visit: a browser holding no demo data
+ * (every fresh e2e context) starts nothing until Enter equin; one that holds
+ * it starts behind the gate.
  */
 export async function bootDemo(
   page: Page,
@@ -46,12 +47,22 @@ export async function bootDemo(
   opts: { marker: string; timeoutMs?: number },
 ): Promise<void> {
   const timeout = opts.timeoutMs ?? RENDER_TIMEOUT_MS;
-  await boot(page, url, {
-    marker: `${opts.marker}, ${ENTER_DEMO}`,
-    timeoutMs: timeout,
-  });
+  await boot(page, url, { marker: ENTER_DEMO, timeoutMs: timeout });
+  await enterDemo(page, opts);
+}
+
+/**
+ * The demo page loaded (a reload, a `goto`, a new tab): wait for its gate,
+ * Enter equin, and wait for `marker`.
+ */
+export async function enterDemo(
+  page: Page,
+  opts: { marker: string; timeoutMs?: number },
+): Promise<void> {
+  const timeout = opts.timeoutMs ?? RENDER_TIMEOUT_MS;
   const gate = page.locator(ENTER_DEMO).first();
-  if (await gate.isVisible()) await gate.click();
+  await gate.waitFor({ timeout });
+  await gate.click();
   await page.locator(opts.marker).first().waitFor({ timeout });
 }
 

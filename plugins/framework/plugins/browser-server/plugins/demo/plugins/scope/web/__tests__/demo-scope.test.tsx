@@ -9,6 +9,8 @@
  * coverage guard missed — nothing hides it); a POST the host serves is
  * answered; a host whose boot throws reaches the error boundary; a page
  * pipeline beside the scope reading the same tuple sees its own backend only.
+ * The gate: nothing starts before `enter` without stored data; with it the
+ * host starts behind the gate, and the demo shows only once entered.
  * Frame serving: without a Service Worker the scope's `frameBase` is null;
  * with one (a stubbed container) the host's script is registered, an earlier
  * build's frame scope dropped, and the port the Service Worker is handed
@@ -22,6 +24,15 @@ vi.mock(
   async (importOriginal) => ({
     ...(await importOriginal<object>()),
     clientLog: () => {},
+  }),
+);
+
+// Whether this browser holds a scenario's data: a storage named "held" does.
+vi.mock(
+  "@plugins/framework/plugins/browser-server/plugins/host-storage/plugins/stored/core",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    hostDataStored: (name: string) => Promise.resolve(name === "held"),
   }),
 );
 
@@ -383,6 +394,43 @@ describe("<DemoScope>", () => {
     );
     await waitFor(() => expect(seen.boot).toBe("gate"));
     expect(start).not.toHaveBeenCalled();
+    act(() => enter!());
+    await waitFor(() => expect(seen.greeting).toBe("hello ada (demo)"));
+    expect(start).toHaveBeenCalledTimes(1);
+  });
+
+  it("with stored data the host starts behind the gate, and the demo shows only on enter", async () => {
+    const scenario = scenarioOf();
+    const start = vi.fn(scenario.host.start);
+    const held: DemoScenario = {
+      ...scenario,
+      host: { ...scenario.host, start },
+      storage: "held",
+    };
+    const seen: { boots: string[]; greeting?: string } = { boots: [] };
+    let enter: (() => void) | null = null;
+    await renderAsync(
+      <PluginProvider plugins={PLUGINS}>
+        <DemoScope
+          scenario={held}
+          boot={(state) => {
+            seen.boots.push(state.kind);
+            if (state.kind === "gate") enter = state.enter;
+            return null;
+          }}
+        >
+          <Probe
+            read={() => useLive(greeting, { who: "ada" })}
+            onRead={(r) => (seen.greeting = textOf(r))}
+          />
+        </DemoScope>
+      </PluginProvider>,
+    );
+    await waitFor(() => expect(start).toHaveBeenCalledTimes(1));
+    // Started, yet still the gate: the visitor has not entered.
+    await new Promise((r) => setTimeout(r, 50));
+    expect(seen.greeting).toBeUndefined();
+    expect(new Set(seen.boots)).toEqual(new Set(["gate"]));
     act(() => enter!());
     await waitFor(() => expect(seen.greeting).toBe("hello ada (demo)"));
     expect(start).toHaveBeenCalledTimes(1);

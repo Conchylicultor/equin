@@ -8,6 +8,7 @@ import { Shortcuts } from "./slots";
 export { Shortcuts } from "./slots";
 export { defineShortcut } from "./internal/define-shortcut";
 export { useSurfaceShortcuts } from "./internal/use-surface-shortcut";
+export { usePageShortcuts } from "./internal/use-page-shortcuts";
 export { usePlayPauseShortcut } from "./internal/use-play-pause-shortcut";
 export {
   setFocusedSurfaceId,

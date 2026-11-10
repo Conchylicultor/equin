@@ -21,10 +21,6 @@ import workspaceSnapshot from "@browser-host-snapshot/apps/plugins/website/plugi
 import { WORKSPACE_DEMO_STORAGE } from "../core";
 import { hostEntries } from "./browser-host.generated";
 
-/** Told to the visitor whose older demo data this build replaced. */
-const DEMO_UPDATED_NOTICE =
-  "The demo was updated, so its data was reset to the new version.";
-
 serveBrowserHost({
   // A worker's global scope: the repo's one lib types `self` as a Window.
   scope: self as unknown as WorkerScope,
@@ -33,10 +29,11 @@ serveBrowserHost({
     name: WORKSPACE_DEMO_STORAGE,
     migrations: bundledMigrations().map((m) => m.hash),
     // The demo's policy: its data is throwaway, so a visitor's data from an
-    // older snapshot is replaced by this build's (and they are told).
+    // older snapshot is replaced by this build's — silently: an update just
+    // starts on the fresh data.
     start: { snapshot: workspaceSnapshot, whenOutdated: "reset" },
   },
-  async boot(storage) {
+  async boot() {
     const host = await bootBrowserHost({
       // Each plugin module reports as it loads: the pages see the server arrive.
       entries: reportingLoads(hostEntries),
@@ -46,9 +43,6 @@ serveBrowserHost({
       server: runtimeBrowserServer(host),
       keys: new Set(host.keys),
       boot: host.boot,
-      ...(storage.origin.kind === "snapshot" && storage.origin.replacedOutdated
-        ? { notice: DEMO_UPDATED_NOTICE }
-        : {}),
     };
   },
 });
