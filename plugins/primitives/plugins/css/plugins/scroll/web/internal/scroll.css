@@ -48,13 +48,20 @@
    - The scroller takes the region's width, centred on the column.
    - Its content (`data-bleed-content`) is the column's width whenever what
      it holds fits the column (a table wraps its cells to fit, never widens
-     to keep them on one line). Only content that cannot fit — its
-     min-content is wider than the column — bleeds, and only as far as that
-     min-content: it overflows the column as little as possible, centred, on
-     BOTH sides, never wider than the region (less a gutter each side), and
-     being no wider than the scroller it never passes its left edge. Content
-     wider still overflows it to the right: that, and only that, scrolls. No
-     padding is involved, so nothing scrolls while it all fits.
+     to keep them on one line). Content that cannot fit — its min-content is
+     wider than the column — takes its natural width (max-content), centred,
+     growing past the column on BOTH sides, up to the region (less a gutter
+     each side); being no wider than the scroller it never passes its left
+     edge. Content wider still overflows it to the right: that, and only
+     that, scrolls. No padding is involved, so nothing scrolls while it all
+     fits.
+
+     The branch is one `max-width`: `calc-size(min-content, …)` reads the
+     content's min-content as `size`, and `sign(size - 100cqi)` switches the
+     cap from the column (it fits: stay the column) to the region (it does
+     not: take the room it wants). A bleed sized at min-content alone would
+     cram a non-fitting table at its tightest wrap; at max-content alone, a
+     table that fits by wrapping would still spread across the region.
 
    Assumes the column is centred in the region (`mx-auto`), which is what a
    region is for. */
@@ -85,9 +92,13 @@
 
     :where([data-bleed-content]) {
       flex: none;
-      width: min-content;
+      width: max-content;
       min-width: 100cqi;
-      max-width: calc(var(--bleed-region-width) - 2 * var(--space-sm));
+      max-width: calc-size(
+        min-content,
+        100cqi + (var(--bleed-region-width) - 2 * var(--space-sm) - 100cqi) *
+          max(0, sign(size - 100cqi))
+      );
     }
   }
 }

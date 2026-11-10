@@ -169,8 +169,8 @@ export function buildBaseComponents(
     pre: ({ children }) => <>{children}</>,
     table: (p) => (
       // A table wraps its cells to fit the text column; only one that cannot
-      // fit (its min-content is wider) grows past it on both sides, centred,
-      // by as little as it needs, as far as its host's bleed region allows (a
+      // fit (its min-content is wider) takes its natural width, past the
+      // column on both sides, centred, as far as its host's bleed region allows (a
       // transcript's pane: `<Scroll bleed>`), and only beyond that scrolls
       // sideways in its own box, so the host never has to: only the table
       // moves. Outside a region it stays the column's width. clear-both: a

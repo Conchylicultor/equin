@@ -83,9 +83,9 @@ export interface ScrollProps extends React.HTMLAttributes<HTMLElement> {
    *
    * `x` axis: this sideways scroller bleeds — inside a bleed region, content
    * that fits the column (wrapping as it can) stays the column's width;
-   * content that cannot (its min-content is wider) grows past the column on
-   * both sides, centred, by as little as it needs, up to the region's width,
-   * and scrolls sideways only beyond that. Outside a region it stays the
+   * content that cannot (its min-content is wider) takes its natural width,
+   * growing past the column on both sides, centred, up to the region's
+   * width, and scrolls sideways only beyond that. Outside a region it stays the
    * column's width.
    */
   bleed?: boolean;
