@@ -6,9 +6,10 @@ import {
 import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
-import type {
-  AssetMirrorPrewarm,
-  prewarmEntries,
+import {
+  cachedFileSegments,
+  type AssetMirrorPrewarm,
+  type CollectedEntry,
 } from "@plugins/infra/plugins/asset-mirror/core";
 import { mirrorFetchToDisk } from "./fetch-to-disk";
 
@@ -26,7 +27,8 @@ function compositionRegistryPath(composition: string): AppPath {
 }
 
 /**
- * Pre-warm every mirror in the composition's closure into `<destRoot>/<id>/`.
+ * Pre-warm every mirror in the composition's closure into `<destRoot>/<id>/<sha256>`
+ * (the cache's content-addressed layout), each file checked against its pin.
  *
  * Reads the composition-filtered prewarm registry
  * (asset-mirror's `core/prewarm.composition.<composition>.generated`), which exists ONLY
@@ -36,7 +38,7 @@ function compositionRegistryPath(composition: string): AppPath {
  * closure.
  *
  * For each entry we run its `loader()` to get the {@link AssetMirrorPrewarm}
- * descriptor and download every `file` via {@link mirrorFetchToDisk}.
+ * descriptor and download every pinned file via {@link mirrorFetchToDisk}.
  *
  * FAIL LOUD: a malformed descriptor or any failed download is collected and
  * thrown as a combined error at the end, aborting the release (mirrors
@@ -62,7 +64,7 @@ export async function runAssetMirrorPrewarm(opts: {
   }
 
   const { prewarmEntries: entries } = (await import(registry)) as {
-    prewarmEntries: typeof prewarmEntries;
+    prewarmEntries: CollectedEntry[];
   };
 
   if (entries.length === 0) {
@@ -82,7 +84,8 @@ export async function runAssetMirrorPrewarm(opts: {
         typeof descriptor !== "object" ||
         typeof (descriptor as AssetMirrorPrewarm).id !== "string" ||
         typeof (descriptor as AssetMirrorPrewarm).remoteBaseUrl !== "string" ||
-        !Array.isArray((descriptor as AssetMirrorPrewarm).files)
+        typeof (descriptor as AssetMirrorPrewarm).files !== "object" ||
+        (descriptor as AssetMirrorPrewarm).files === null
       ) {
         failures.push(
           `${entry.pluginPath}/prewarm — default export is not a valid AssetMirrorPrewarm descriptor`,
@@ -97,15 +100,18 @@ export async function runAssetMirrorPrewarm(opts: {
       continue;
     }
 
+    const files = Object.entries(spec.files);
     log(
-      `[asset-mirror] pre-warming "${spec.id}" (${spec.files.length} file(s)) from ${spec.remoteBaseUrl}`,
+      `[asset-mirror] pre-warming "${spec.id}" (${files.length} pinned file(s)) from ${spec.remoteBaseUrl}`,
     );
-    for (const file of spec.files) {
+    for (const [file, sha256] of files) {
       try {
+        // The cache's own content-addressed layout, so the launch seed is a
+        // plain copy into the cache root.
         await mirrorFetchToDisk({
-          remoteBaseUrl: spec.remoteBaseUrl,
+          source: spec,
           file,
-          diskPath: join(destRoot, spec.id, file),
+          diskPath: join(destRoot, ...cachedFileSegments(spec, sha256)),
         });
       } catch (err) {
         failures.push(

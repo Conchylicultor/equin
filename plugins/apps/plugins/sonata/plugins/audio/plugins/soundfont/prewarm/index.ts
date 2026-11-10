@@ -1,5 +1,6 @@
 import { defineAssetMirrorPrewarm } from "@plugins/infra/plugins/asset-mirror/core";
-import { SOUNDFONT_MIRROR_ID, SOUNDFONT_REMOTE_BASE } from "../shared/mirror";
+import { soundfontFile } from "../shared/mirror";
+import { soundfontSource } from "../shared/source";
 
 /**
  * Prewarm seed for the gm-soundfont mirror.
@@ -19,13 +20,12 @@ import { SOUNDFONT_MIRROR_ID, SOUNDFONT_REMOTE_BASE } from "../shared/mirror";
  * `gleitz` slug copied verbatim from this plugin's `web/gm.ts` GM table (the
  * authoritative source — not imported here because gm.ts pulls React icons into
  * what is a build-time-only, browser-free runner). voices.ts forms the URL as
- * `<mirror>/<gleitz>-mp3.js`; mp3 is universal so there is one file per patch
+ * `<mirror>/<gleitz>-mp3.js` (`soundfontFile`); mp3 is universal so there is one file per patch
  * (no per-browser format split, unlike the piano's ogg/m4a).
  */
 const DEFAULT_GLEITZ = "bright_acoustic_piano";
 
 export default defineAssetMirrorPrewarm({
-  id: SOUNDFONT_MIRROR_ID,
-  remoteBaseUrl: SOUNDFONT_REMOTE_BASE,
-  files: [`${DEFAULT_GLEITZ}-mp3.js`],
+  source: soundfontSource,
+  files: [soundfontFile(DEFAULT_GLEITZ)],
 });

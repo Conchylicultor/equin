@@ -5,7 +5,7 @@ import type {
   ScheduledNote,
 } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/instruments/web";
 import { sharedSampleLoader } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/sample-loader/web";
-import { SOUNDFONT_MIRROR_ID } from "../shared/mirror";
+import { SOUNDFONT_MIRROR_ID, soundfontFile } from "../shared/mirror";
 
 /**
  * Wrap one smplr `Soundfont` instrument (a single General MIDI patch, identified
@@ -112,7 +112,7 @@ export function createSoundfontVoices(
         // Full same-origin URL to this patch's gleitz file. `<base>` already
         // pins the kit directory, so the only trailing segment is the flat
         // `<gleitz>-mp3.js` name the mirror route accepts.
-        instrumentUrl: `${base}/${gleitzName}-mp3.js`,
+        instrumentUrl: `${base}/${soundfontFile(gleitzName)}`,
         // Fetched over the host's transport, never by URL from the page.
         storage,
         // Shared per AudioContext, like the piano's. See the note above on why

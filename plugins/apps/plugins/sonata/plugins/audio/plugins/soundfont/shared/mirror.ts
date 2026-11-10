@@ -25,3 +25,8 @@ export const SOUNDFONT_MIRROR_ID = "gm-soundfont";
  */
 export const SOUNDFONT_REMOTE_BASE =
   "https://gleitz.github.io/midi-js-soundfonts/MusyngKite";
+
+/** The file smplr's `Soundfont` fetches for one gleitz patch slug: `<gleitz>-mp3.js` (mp3 — see `web/voices.ts`). */
+export function soundfontFile<G extends string>(gleitz: G): `${G}-mp3.js` {
+  return `${gleitz}-mp3.js`;
+}

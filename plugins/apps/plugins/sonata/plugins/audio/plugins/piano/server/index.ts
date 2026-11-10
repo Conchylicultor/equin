@@ -1,6 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { defineAssetMirror } from "@plugins/infra/plugins/asset-mirror/server";
-import { PIANO_MIRROR_ID, PIANO_REMOTE_BASE } from "../shared/mirror";
+import { pianoSource } from "../shared/source";
 
 /**
  * Registers the splendid-grand-piano asset mirror so the web voices can fetch
@@ -11,10 +11,5 @@ import { PIANO_MIRROR_ID, PIANO_REMOTE_BASE } from "../shared/mirror";
 export default {
   description:
     "Registers the splendid-grand-piano asset mirror so the acoustic piano's samples are served same-origin (offline-capable) rather than streamed from the remote CDN.",
-  register: [
-    defineAssetMirror({
-      id: PIANO_MIRROR_ID,
-      remoteBaseUrl: PIANO_REMOTE_BASE,
-    }),
-  ],
+  register: [defineAssetMirror(pianoSource)],
 } satisfies ServerPluginDefinition;

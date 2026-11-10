@@ -6,8 +6,8 @@ the equin repo (a pre-release, so it never becomes the repo's Latest and never
 collides with a versioned equin release), and reach the page through the
 asset mirror (`infra/asset-mirror`):
 
-- `server/` registers the `website-media` mirror over the release's download
-  URL, so `GET /api/asset-mirror/website-media/<file>` downloads a file once per
+- `core/` declares the `website-media` mirror's source: the release's download
+  URL and the sha256 of every file (`core/pins.ts`); `server/` registers it, so `GET /api/asset-mirror/website-media/<file>` downloads a file once per
   machine and serves it same-origin — with byte ranges, so the video seeks.
 - `prewarm/` declares every file the site shows, so `./equin release` bundles
   them: a deployed site serves the film from its first visitor on, never a
@@ -25,7 +25,14 @@ file name, never a re-upload under the same one**:
    `equin-v<N>-web.mp4` (~16 MB, faststart) — the site serves the web one.
 2. `gh release upload website-media -R Conchylicultor/equin equin-v<N>-web.mp4 equin-v<N>-web-poster.jpg`
    (the poster: a frame of the film, `ffmpeg -ss <t> -i … -frames:v 1 -q:v 3`).
-3. Point `FILM_FILE` / `FILM_POSTER_FILE` in `core/media.ts` at them.
+3. Pin them: `./equin run plugins/infra/plugins/asset-mirror/scripts/pin.ts
+   --base https://github.com/Conchylicultor/equin/releases/download/website-media
+   --out plugins/apps/plugins/website/plugins/media/core/pins.ts
+   --export WEBSITE_MEDIA_PINS equin-v<N>-web.mp4 equin-v<N>-web-poster.jpg`,
+   and check the film's sha256 against the local render's (`shasum -a 256`) —
+   the mirror serves only pinned bytes, so a replaced asset is refused.
+4. Point `FILM_FILE` / `FILM_POSTER_FILE` in `core/media.ts` at them (a name
+   the pins lack is a tsc error).
 
 Old assets stay on the release, so an older deploy keeps serving its film.
 
@@ -33,18 +40,16 @@ Old assets stay on the release, so an older deploy keeps serving its film.
 
 ## Plugin reference
 
-- Description: The website's media (the showcase film and its poster), kept out of git: assets of the website-media GitHub release, served same-origin through the asset mirror and bundled into a release by prewarm.
+- Description: The website's media (the showcase film and its poster), kept out of git: assets of the website-media GitHub release, pinned by sha256 and served same-origin through the asset mirror and bundled into a release by prewarm.
 - Server:
   - Uses: `infra/asset-mirror.defineAssetMirror`
 - Core:
   - Uses:
     - `infra/asset-mirror.assetMirrorFile`
-    - `infra/asset-mirror.AssetMirrorPrewarm`
+    - `infra/asset-mirror.defineAssetMirrorSource`
   - Exports (values):
     - `showcaseFilm`
-    - `WEBSITE_MEDIA_FILES`
-    - `WEBSITE_MEDIA_MIRROR_ID`
-    - `WEBSITE_MEDIA_REMOTE_BASE`
+    - `websiteMediaSource`
 - Cross-plugin:
   - Imported by: `apps/website/landing/hero`
 

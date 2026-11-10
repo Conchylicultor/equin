@@ -11655,18 +11655,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/color-palette --foreground`
                   - `ui/tokens/color-palette --muted-foreground`
                   - `ui/tokens/type-scale --font-weight-normal`
-        - **`media`** — The website's media (the showcase film and its poster), kept out of git: assets of the website-media GitHub release, served same-origin through the asset mirror and bundled into a release by prewarm.
+        - **`media`** — The website's media (the showcase film and its poster), kept out of git: assets of the website-media GitHub release, pinned by sha256 and served same-origin through the asset mirror and bundled into a release by prewarm.
           - Server:
             - Uses: `infra/asset-mirror.defineAssetMirror`
           - Core:
             - Uses:
               - `infra/asset-mirror.assetMirrorFile`
-              - `infra/asset-mirror.AssetMirrorPrewarm`
+              - `infra/asset-mirror.defineAssetMirrorSource`
             - Exports (values):
               - `showcaseFilm`
-              - `WEBSITE_MEDIA_FILES`
-              - `WEBSITE_MEDIA_MIRROR_ID`
-              - `WEBSITE_MEDIA_REMOTE_BASE`
+              - `websiteMediaSource`
           - Cross-plugin:
             - Imported by: `apps/website/landing/hero`
         - **`pages`** — The inner pages of the public website: the apps gallery, the vision for applications, the technical foundations, the story of how equin came to be, the getting-started guide, and how to install it.
@@ -31057,13 +31055,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`infra`** — Umbrella for cross-cutting server-side primitives used by feature plugins: jobs, events, secrets, mcp, attachments.
   - Plugins:
-    - **`asset-mirror`** — Generic asset mirror, on every host: plugins declare a remote asset source via defineAssetMirror; GET /api/asset-mirror/:id/:file (and /:id/:dir/:file) downloads each file on its first request into the assetMirrorFiles data-files root and serves it same-origin thereafter — offline-capable after one warm-up on the desktop (the computer's disk, shared by every worktree), once per browser profile in a browser host (its data-files store, kept in the host's storage).
+    - **`asset-mirror`** — Generic asset mirror, on every host: plugins declare a remote asset source via defineAssetMirror, every file pinned by sha256 (defineAssetMirrorSource, core); GET /api/asset-mirror/:id/:file (and /:id/:dir/:file) downloads each pinned file on its first request, keeps it only if its bytes hash to the pin (else 502), into the assetMirrorFiles data-files root and serves it same-origin thereafter — offline-capable after one warm-up on the desktop (the computer's disk, shared by every worktree), once per browser profile in a browser host (its data-files store, kept in the host's storage).
       - Server:
         - Contributes: `data-files.root-location` "infra.asset-mirror"
         - Uses:
           - `infra/endpoints.rawEndpointHandler`
           - `infra/paths/data-files.defineFileRoot`
-        - Exports (types): `AssetMirrorSpec`
         - Exports (values):
           - `assetMirrorFiles`
           - `defineAssetMirror`
@@ -31083,15 +31080,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.defineEndpoint`
         - Exports (types):
           - `AssetMirrorPrewarm`
+          - `AssetMirrorSource`
           - `CollectedEntry`
         - Exports (values):
           - `assetMirrorBase`
           - `assetMirrorFile`
           - `assetMirrorPrewarmCollectedDir`
+          - `AssetPinMismatchError`
+          - `cachedFileSegments`
           - `defineAssetMirrorPrewarm`
+          - `defineAssetMirrorSource`
           - `getMirroredFile`
           - `getMirroredNestedFile`
-          - `prewarmEntries`
+          - `pinOf`
+          - `remoteFileUrl`
+          - `verifyPinnedBytes`
       - Cross-plugin:
         - Imported by:
           - `apps/sonata/audio/piano`

@@ -1,31 +1,41 @@
+import type { AssetMirrorSource } from "./source";
+
 /**
- * Prewarm contribution: the data a plugin declares so the release pipeline can
- * bake its mirror's files into the bundle for offline cold start.
+ * Prewarm contribution: the files the release pipeline bakes into the bundle
+ * for offline cold start — a pinned subset of one mirror's source.
  *
  * A plugin drops a `prewarm/index.ts` default-exporting
- * `defineAssetMirrorPrewarm({...})`. Codegen discovers it (via the
+ * `defineAssetMirrorPrewarm({ source, files? })`. Codegen discovers it (via the
  * `defineCollectedDir("prewarm")` marker in this plugin's core) into
  * `./prewarm.generated.ts`; a composition build emits the closure-filtered
  * `./prewarm.composition.<name>.generated.ts` the release runner reads.
  *
- * The descriptor is deliberately self-contained data (no live mirror registry)
- * so the release runner reads it generically without booting the server.
+ * The descriptor is self-contained data (no live mirror registry) so the
+ * release runner reads it without booting the server; it is an
+ * {@link AssetMirrorSource} itself, so each file carries its pin.
  */
-export interface AssetMirrorPrewarm {
-  /** Matches the mirror's `defineAssetMirror` id (the `/api/asset-mirror/<id>`
-   *  URL segment). The seeded files land under `<destRoot>/<id>/`. */
-  id: string;
-  /** Matches the mirror's `remoteBaseUrl` (import the same shared constant).
-   *  Files are fetched as `<remoteBaseUrl>/<file>` at release time. */
-  remoteBaseUrl: string;
-  /** Flat file names to pre-download, e.g. `"PP C#1.ogg"`. */
-  files: string[];
-}
+export type AssetMirrorPrewarm = AssetMirrorSource;
 
-/** Declare a set of mirror files to pre-warm into release bundles. Default-export
- *  the returned descriptor from a plugin's `prewarm/index.ts`. */
-export function defineAssetMirrorPrewarm(
-  spec: AssetMirrorPrewarm,
-): AssetMirrorPrewarm {
-  return spec;
+/**
+ * Declare the files of `source` to pre-warm into release bundles — every file
+ * it pins when `files` is omitted. Default-export the result from a plugin's
+ * `prewarm/index.ts`. A name the source does not pin throws at module eval.
+ */
+export function defineAssetMirrorPrewarm<F extends string>(spec: {
+  source: AssetMirrorSource<F>;
+  files?: readonly NoInfer<F>[];
+}): AssetMirrorPrewarm {
+  const { source } = spec;
+  if (spec.files === undefined) return source;
+  const pinned = source.files as Record<string, string>;
+  const files: Record<string, string> = {};
+  for (const name of spec.files) {
+    if (!Object.hasOwn(pinned, name)) {
+      throw new Error(
+        `[asset-mirror:${source.id}] prewarm names "${name}", which the mirror does not pin`,
+      );
+    }
+    files[name] = pinned[name]!;
+  }
+  return { ...source, files };
 }

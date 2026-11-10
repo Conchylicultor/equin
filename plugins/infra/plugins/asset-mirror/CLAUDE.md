@@ -1,7 +1,8 @@
 # asset-mirror
 
 Generic mirror for remote binary assets, on every host. A plugin declares a
-remote source; the primitive downloads each requested file once into its cache
+remote source and the sha256 of every file it serves; the primitive downloads
+each requested file once, keeps it only if its bytes hash to the pin, into its cache
 — the `assetMirrorFiles` data-files root over `cache/asset-mirror` — and serves
 it same-origin thereafter. On the desktop that root is the computer's disk
 (bound by `machine/`, outside any worktree, so the download happens at most
@@ -14,19 +15,47 @@ a returning visitor's samples never leave the browser.
 ## API
 
 ```ts
-// server — declare a mirror (add the token to the plugin's `register` array)
-import { defineAssetMirror } from "@plugins/infra/plugins/asset-mirror/server";
+// shared/source.ts (or core/) — the source: a closed, pinned file set
+import { defineAssetMirrorSource } from "@plugins/infra/plugins/asset-mirror/core";
+import { MY_PINS } from "./pins"; // written by scripts/pin.ts
 
-export default {
-  name: "My Plugin",
-  register: [
-    defineAssetMirror({
-      id: "my-assets",
-      remoteBaseUrl: "https://cdn.example.com/assets",
-    }),
-  ],
-} satisfies ServerPluginDefinition;
+export const mySource = defineAssetMirrorSource({
+  id: "my-assets",
+  remoteBaseUrl: "https://cdn.example.com/assets",
+  files: MY_PINS, // { "logo.png": "<sha256 hex>", "en/data.json": "…" }
+});
+
+// server — register it (add the token to the plugin's `register` array)
+import { defineAssetMirror } from "@plugins/infra/plugins/asset-mirror/server";
+export default { register: [defineAssetMirror(mySource)] } satisfies ServerPluginDefinition;
 ```
+
+### Pins
+
+Every file a mirror serves is pinned by sha256, like every other download in
+the repo (`infra/deps`' `download(...)`): a remote asset replaced under the
+same name, or a download that came back corrupted, is refused — never cached,
+served as immutable for a year, or served differently on two machines.
+
+- **Closed set.** A name the source does not pin is a **404**; the mirror is
+  not an open proxy onto its remote.
+- **Checked before written.** Both the cache miss and the release prewarm
+  fetch `remoteFileUrl` and pass the bytes to `verifyPinnedBytes` (core; Web
+  Crypto, every host); a mismatch throws `AssetPinMismatchError` — the route
+  logs it and answers **502**, the release prewarm aborts.
+- **Content-addressed cache.** A file is stored at `<id>/<sha256>`
+  (`cachedFileSegments`), so it is only ever read back as the bytes it was
+  verified to be, a re-pin is a new entry rather than an overwrite, and a file
+  cached before pins existed (`<id>/<name>`) is never served.
+- **Pinning.** `./equin run plugins/infra/plugins/asset-mirror/scripts/pin.ts
+  --base <remoteBaseUrl> --out <plugin>/shared/pins.ts --export MY_PINS
+  [--names-json names.json] [name …]` downloads each file and writes the
+  module. A pin is the reviewed bytes: re-pin after reviewing a remote change,
+  never to make a mismatch go away. Keep the pins in their own module, imported
+  by the source only, so a web bundle that needs the id never carries them.
+- **A file set derived from code** (Sonata's samplers: smplr's `LAYERS`, the GM
+  table) is held equal to its pins by the consumer's own test
+  (`piano/shared/source.test.ts`, `soundfont/web/gm.test.ts`).
 
 ```ts
 // web — a library that fetches `<base>/<file>` itself, through a fetch hook
@@ -59,12 +88,11 @@ the bundle for **every mirror in the composition's closure**.
 ```ts
 // <plugin>/prewarm/index.ts — default-export the descriptor
 import { defineAssetMirrorPrewarm } from "@plugins/infra/plugins/asset-mirror/core";
-import { MY_MIRROR_ID, MY_REMOTE_BASE } from "../shared/mirror";
+import { mySource } from "../shared/source";
 
 export default defineAssetMirrorPrewarm({
-  id: MY_MIRROR_ID, // must match the defineAssetMirror id
-  remoteBaseUrl: MY_REMOTE_BASE, // same shared constant as the mirror
-  files: ["logo.png", "sample.ogg"], // flat names, exactly as requested at runtime
+  source: mySource,
+  files: ["logo.png"], // optional: a subset of the pinned names (tsc), every one by default
 });
 ```
 
@@ -77,8 +105,9 @@ mechanism:
 
 - **Release** (`release.ts` `[3.5]`) calls
   `runAssetMirrorPrewarm({ composition, destRoot })` (the `bundle` sub-plugin), which reads that
-  composition's closure-filtered registry and downloads each declared file into
-  `<destRoot>/<id>/<file>` (fail-loud: any failed download aborts the release).
+  composition's closure-filtered registry and downloads each declared file,
+  checked against its pin, into `<destRoot>/<id>/<sha256>` — the cache's own
+  layout (fail-loud: any failed download or mismatch aborts the release).
 - **Launch** (`launch.ts`) calls `seedAssetMirrorCache({ bundleRoot, dataDir })` (the `bundle` sub-plugin),
   which copies the bundled `asset-mirror/` tree into the cache's declared spot
   beneath `dataDir` **copy-if-absent** — never clobbering a user's
@@ -86,37 +115,38 @@ mechanism:
   install's root, e.g. a preview under `/tmp`), so the subpath comes from
   `assetMirrorRelativeToRoot()` in `data-dirs/` rather than `.path`.
 
-`remoteBaseUrl` is repeated in the mirror and the prewarm descriptor; import the
-same constant from the plugin's `shared/` so the literal lives once. The
-descriptor is deliberately self-contained data so the release runner reads it
-without booting the server.
+The mirror and its prewarm descriptor share one source, so the id, the remote
+and the pins live once. The descriptor is a pinned source itself —
+self-contained data the release runner reads without booting the server.
 
 ## Caveats
 
-- **Fail-loud is server-side.** A cache miss that cannot reach the remote source
-  logs an error and returns **502** — it never writes a partial/placeholder file.
+- **Fail-loud is server-side.** A cache miss that cannot reach the remote
+  source, or whose bytes are not the pinned ones, logs an error and returns **502** — it never writes a partial/placeholder file.
   Callers that swallow non-200 responses (e.g. smplr's sample loader) will
   therefore degrade silently on the client; the loud signal is the server log +
   the browser Network tab, not a client exception.
+- **Old cache entries.** Files cached under `<id>/<name>` before pins existed
+  are no longer read, and nothing deletes them yet (≈ a few hundred MB at most
+  per machine).
 - **First request only.** Files are fetched lazily, on demand — there is no
   prefetch. The first (online) use of a consumer populates the cache.
 - **Flat names, or one directory deep.** A mirrored path is `:file` or
   `:dir/:file` (e.g. emojibase's `en/data.json`) — the server router has no
   splat, so each depth is its own route key onto one handler. Every segment is
-  flat (no `/`, `\`, `..`). Segments are URL-encoded by the consumer and
+  flat (no `/`, `\`, `..`), checked when the source is declared. Segments are URL-encoded by the consumer and
   decoded server-side, then re-encoded one by one for the upstream fetch.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./equin build` -->
 
 ## Plugin reference
 
-- Description: Generic asset mirror, on every host: plugins declare a remote asset source via defineAssetMirror; GET /api/asset-mirror/:id/:file (and /:id/:dir/:file) downloads each file on its first request into the assetMirrorFiles data-files root and serves it same-origin thereafter — offline-capable after one warm-up on the desktop (the computer's disk, shared by every worktree), once per browser profile in a browser host (its data-files store, kept in the host's storage).
+- Description: Generic asset mirror, on every host: plugins declare a remote asset source via defineAssetMirror, every file pinned by sha256 (defineAssetMirrorSource, core); GET /api/asset-mirror/:id/:file (and /:id/:dir/:file) downloads each pinned file on its first request, keeps it only if its bytes hash to the pin (else 502), into the assetMirrorFiles data-files root and serves it same-origin thereafter — offline-capable after one warm-up on the desktop (the computer's disk, shared by every worktree), once per browser profile in a browser host (its data-files store, kept in the host's storage).
 - Server:
   - Contributes: `data-files.root-location` "infra.asset-mirror"
   - Uses:
     - `infra/endpoints.rawEndpointHandler`
     - `infra/paths/data-files.defineFileRoot`
-  - Exports (types): `AssetMirrorSpec`
   - Exports (values):
     - `assetMirrorFiles`
     - `defineAssetMirror`
@@ -136,15 +166,21 @@ without booting the server.
     - `infra/endpoints.defineEndpoint`
   - Exports (types):
     - `AssetMirrorPrewarm`
+    - `AssetMirrorSource`
     - `CollectedEntry`
   - Exports (values):
     - `assetMirrorBase`
     - `assetMirrorFile`
     - `assetMirrorPrewarmCollectedDir`
+    - `AssetPinMismatchError`
+    - `cachedFileSegments`
     - `defineAssetMirrorPrewarm`
+    - `defineAssetMirrorSource`
     - `getMirroredFile`
     - `getMirroredNestedFile`
-    - `prewarmEntries`
+    - `pinOf`
+    - `remoteFileUrl`
+    - `verifyPinnedBytes`
 - Cross-plugin:
   - Imported by:
     - `apps/sonata/audio/piano`

@@ -1,6 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { defineAssetMirror } from "@plugins/infra/plugins/asset-mirror/server";
-import { SOUNDFONT_MIRROR_ID, SOUNDFONT_REMOTE_BASE } from "../shared/mirror";
+import { soundfontSource } from "../shared/source";
 
 /**
  * Registers the General MIDI soundfont asset mirror so the web voices can fetch
@@ -11,10 +11,5 @@ import { SOUNDFONT_MIRROR_ID, SOUNDFONT_REMOTE_BASE } from "../shared/mirror";
 export default {
   description:
     "Registers the gm-soundfont asset mirror so the General MIDI instruments' samples are served same-origin (offline-capable) rather than streamed from the remote gleitz CDN.",
-  register: [
-    defineAssetMirror({
-      id: SOUNDFONT_MIRROR_ID,
-      remoteBaseUrl: SOUNDFONT_REMOTE_BASE,
-    }),
-  ],
+  register: [defineAssetMirror(soundfontSource)],
 } satisfies ServerPluginDefinition;

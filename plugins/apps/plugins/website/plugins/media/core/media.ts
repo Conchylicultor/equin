@@ -1,29 +1,29 @@
 import {
   assetMirrorFile,
-  type AssetMirrorPrewarm,
+  defineAssetMirrorSource,
 } from "@plugins/infra/plugins/asset-mirror/core";
 import type { AssetPath } from "@plugins/infra/plugins/endpoints/core";
-
-/** Mirror id → URL segment `/api/asset-mirror/website-media/…`. */
-export const WEBSITE_MEDIA_MIRROR_ID = "website-media";
+import { WEBSITE_MEDIA_PINS } from "./pins";
 
 /**
- * Where the site's media lives: the assets of the `website-media` GitHub
- * release (a pre-release, so it never becomes the repo's Latest), never git.
- * Each render is a new file name (`equin-v<N>.mp4`), so a mirrored file — cached
- * once, served immutable — never changes under the same name.
+ * The site's media, served by the `website-media` mirror
+ * (`/api/asset-mirror/website-media/…`): the assets of the `website-media`
+ * GitHub release (a pre-release, so it never becomes the repo's Latest), never
+ * git. Anyone with write access can replace a release asset, so every file is
+ * pinned by sha256 (`./pins.ts`): a replaced or corrupted download is refused,
+ * never served. Each render is a new file name (`equin-v<N>.mp4`) — pin it
+ * with the asset mirror's `scripts/pin.ts` when it is uploaded.
  */
-export const WEBSITE_MEDIA_REMOTE_BASE =
-  "https://github.com/Conchylicultor/equin/releases/download/website-media";
+export const websiteMediaSource = defineAssetMirrorSource({
+  id: "website-media",
+  remoteBaseUrl:
+    "https://github.com/Conchylicultor/equin/releases/download/website-media",
+  files: WEBSITE_MEDIA_PINS,
+});
 
-const FILM_FILE = "equin-v20-web.mp4";
-const FILM_POSTER_FILE = "equin-v20-web-poster.jpg";
-
-/** Every file the site shows, so a release bundles them (`prewarm/`). */
-export const WEBSITE_MEDIA_FILES: AssetMirrorPrewarm["files"] = [
-  FILM_FILE,
-  FILM_POSTER_FILE,
-];
+type MediaFile = keyof typeof WEBSITE_MEDIA_PINS;
+const FILM_FILE: MediaFile = "equin-v20-web.mp4";
+const FILM_POSTER_FILE: MediaFile = "equin-v20-web-poster.jpg";
 
 /**
  * The showcase film — `apps/website/promo-film`'s web render (`-web.mp4`:
@@ -35,7 +35,7 @@ export const showcaseFilm: {
   readonly poster: AssetPath;
   readonly label: string;
 } = {
-  video: assetMirrorFile(WEBSITE_MEDIA_MIRROR_ID, FILM_FILE),
-  poster: assetMirrorFile(WEBSITE_MEDIA_MIRROR_ID, FILM_POSTER_FILE),
+  video: assetMirrorFile(websiteMediaSource.id, FILM_FILE),
+  poster: assetMirrorFile(websiteMediaSource.id, FILM_POSTER_FILE),
   label: "equin, the showcase film",
 };
