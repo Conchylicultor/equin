@@ -1,6 +1,5 @@
 import { rmSync } from "fs";
 import { join, relative, resolve } from "path";
-import { ensureParcelWatcherAddonLinked } from "@plugins/infra/plugins/file-watcher/plugins/parcel-addon/cli";
 import { envName } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { readAwakeClock } from "@plugins/packages/plugins/sleep-clock/core";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
@@ -437,13 +436,6 @@ const run: CliAction<[string[]], object> = async (paths) => {
     (grant, ctx) =>
       withRunTmpdir(async (scratch) => {
         const env = { ...process.env, ...grant.env(), ...tmpdirEnv(scratch) };
-        // Suites load @parcel/watcher, whose patched index.js refuses to run
-        // without the patched addon on darwin: an install since the last build
-        // dropped it, so put it back first (one stat when it is there).
-        await ensureParcelWatcherAddonLinked({
-          root,
-          log: (line) => console.log(line),
-        });
         // The run's machine-readable record, written before either runner starts
         // so a killed run reads `running` rather than a previous run's verdict.
         // `toolchain upgrade` compares two of these, before and after.

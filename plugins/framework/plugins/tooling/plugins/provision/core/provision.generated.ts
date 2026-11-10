@@ -13,6 +13,7 @@ export interface CollectedEntry {
 }
 
 export const provisionEntries: CollectedEntry[] = [
+  { pluginPath: "infra/plugins/file-watcher/plugins/parcel-addon", id: "infra.file-watcher.parcel-addon", loader: () => import("@plugins/infra/plugins/file-watcher/plugins/parcel-addon/provision"), dependsOn: [] },
 ];
 
 export interface CompositionIdentity {

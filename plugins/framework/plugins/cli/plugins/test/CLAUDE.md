@@ -151,7 +151,6 @@ queueing for a grant, writes its own record (the leader's runners,
   - Uses:
     - `framework/cli/op-runtime.DirectOpFlight`
     - `framework/cli/op-runtime.withDirectOp`
-    - `infra/file-watcher/parcel-addon.ensureParcelWatcherAddonLinked`
 - Cross-plugin:
   - Imported by:
     - `framework/cli/await`

@@ -1,8 +1,5 @@
-// The steps that put the patched @parcel/watcher addon in place: `./equin
-// build` links it every build; `./equin test` / `./equin run` link it when an
-// install dropped it. No default export: shared CLI machinery, not a command
-// declaration.
-export {
-  ensureParcelWatcherAddonLinked,
-  linkParcelWatcherAddon,
-} from "./internal/link-parcel-addon";
+// The step that puts the patched @parcel/watcher addon in place: every
+// install runs it (this plugin's provision, through `scripts/link-addon.ts`),
+// and `./equin build` again to refresh a stale identity. No default export:
+// shared CLI machinery, not a command declaration.
+export { linkParcelWatcherAddon } from "./internal/link-parcel-addon";

@@ -51,8 +51,8 @@ export default defineBoundaries({
     // chromium installer used to sit in `browser-fetch/core`, and a thumbnail
     // render called it, so a missing binary blocked a backend's event loop for
     // a ~150 MB download. (Chromium is now an on-demand `infra/deps`
-    // dependency, and no provisioning step remains; the registry still works
-    // with zero entries.)
+    // dependency. The one step today is `infra/file-watcher/parcel-addon`'s,
+    // which links the patched @parcel/watcher addon after every install.)
     //
     // The row polices it in both directions: a provisioning step may not import
     // `@plugins/x/web` or its own `../web`, and no other folder's row lists

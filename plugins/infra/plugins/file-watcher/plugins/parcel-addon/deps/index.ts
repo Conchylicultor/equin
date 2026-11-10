@@ -1,7 +1,7 @@
 // @parcel/watcher's native addon built from the patched source, collected into infra/deps' registry through the `default`
 // array (Debug → Dependencies, `./equin deps install parcel-watcher-addon`).
-// `./equin build` ensures it and links it into the checkout
-// (`linkParcelWatcherAddon`, this plugin's `cli/` barrel).
+// Every install links it into the checkout (this plugin's `provision/`), and
+// `./equin build` refreshes it (`linkParcelWatcherAddon`, the `cli/` barrel).
 import { parcelWatcherAddon } from "./internal/parcel-addon";
 
 export {

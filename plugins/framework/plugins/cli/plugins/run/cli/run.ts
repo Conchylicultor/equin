@@ -13,7 +13,6 @@ import { isE2eScriptPath } from "@plugins/framework/plugins/tooling/plugins/e2e-
 import { withDirectOp } from "@plugins/framework/plugins/cli/plugins/op-runtime/cli";
 import { withForegroundPriority } from "@plugins/packages/plugins/spawn-priority/core";
 import { pacedHeapEnv } from "@plugins/packages/plugins/heap-pacing/core";
-import { ensureParcelWatcherAddonLinked } from "@plugins/infra/plugins/file-watcher/plugins/parcel-addon/cli";
 import {
   getWorktreeRoot,
   spawnPassthrough,
@@ -98,14 +97,6 @@ const run: CliAction<[string, string[]], object> = async (script, args) => {
   // that lets a `cpu` grant holder run in the foreground; this process does
   // nothing else while it waits on the script. An unadmitted script has no
   // bound, so it is not lifted.
-  // A script may load @parcel/watcher, whose patched index.js refuses to run
-  // without the patched addon on darwin: an install since the last build
-  // dropped it, so put it back first (one stat when it is there).
-  await ensureParcelWatcherAddonLinked({
-    root,
-    log: (line) => console.error(line),
-  });
-
   const kind = isE2eScriptPath(rel) ? "e2e" : "script";
   const outcome = await withDirectOp(kind, { max: 1 }, async (grant) => {
     const spawnScript = () =>

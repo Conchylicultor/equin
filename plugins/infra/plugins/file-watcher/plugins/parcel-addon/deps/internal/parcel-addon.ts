@@ -119,14 +119,16 @@ function darwinOnly(
  *
  * Its identity is the patch, this declaration (sources and flags), the
  * plugin's `package.json` (the Node-API headers' version) and
- * `$CXX --version`. `./equin build` ensures it and copies it into the
- * checkout's `@parcel/watcher/build/Release/`, which the patched `index.js`
- * loads on darwin in place of the prebuild, which it never falls back to
- * (`linkParcelWatcherAddon` / `ensureParcelWatcherAddonLinked`, the `cli/` barrel).
+ * `$CXX --version`. Every install ensures it and copies it into the
+ * checkout's `@parcel/watcher/build/Release/` (this plugin's `provision/`),
+ * and `./equin build` refreshes it there; the patched `index.js` loads it on
+ * darwin in place of the prebuild, which it never falls back to
+ * (`linkParcelWatcherAddon`, the `cli/` barrel).
  *
  * It takes no host admission: it is awaited inside `build`, which already
  * holds its host grant, so queuing for a background unit could wait on the
- * build itself. Cold it is ~20 s of CPU across twelve parallel compiles, once
+ * build itself — and inside an install, which every other CLI command of the
+ * checkout waits on. Cold it is ~20 s of CPU across twelve parallel compiles, once
  * per machine per identity.
  */
 export const parcelWatcherAddon = defineDep({
