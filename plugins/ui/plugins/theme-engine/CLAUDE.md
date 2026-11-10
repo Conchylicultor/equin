@@ -12,11 +12,14 @@ an app's is its own `config/ui/theme-engine/@app/<id>/theme.jsonc`. The base
 document also holds the GLOBAL `colorMode`; an app's light/dark is its own
 (below), and a `colorMode` in an app's theme document is never read.
 
-## Light/dark: one scheme per document, chosen by the app owning it
+## Light/dark: one scheme per document, chosen by the focused app
 
 `<html>.dark` is one class per page, so a document wears ONE scheme: that of
-the scope owning `:root` — the focused full-surface app (`useRootThemeScopeState`),
-or the desktop when no single app fills the surface. What that scope wears is
+the focused full-surface app (`useRootThemeScopeState`), or the desktop when no
+single app fills the surface. Unlike the theme tokens (which never re-root —
+see Painting), the class does follow the focused app; it flips only when that
+app's scheme differs from the desktop's (an app declaring `light` / `dark`, or
+a per-app override), and each flip restyles the whole document. What that scope wears is
 `effectiveColorMode` (`core/config.ts`), the one resolution both runtimes call:
 
 1. the user's per-app override, `appColorModeConfig` (`color-mode`, its own
@@ -29,12 +32,12 @@ or the desktop when no single app fills the surface. What that scope wears is
 `system` follows `prefers-color-scheme` live. Readers: `useColorModeSetting`
 (every layer, for the root scope, with its writer `setColorMode` — the focused
 app's override, or the global with no app; a state, `{ known: false }` until
-the surface says which app owns `:root`, so no control shows or writes the
+the surface says which app fills it, so no control shows or writes the
 desktop's setting meanwhile), `useColorModeSettingFor(appId)` (a named app —
 the customizer), `useResolvedColorMode` / `useColorMode` (light|dark —
 prop-themed widgets). Other writers: `useSetAppColorMode(appId)`,
 `useSetGlobalColorMode`. The class applier waits while the surface has not yet
-said which app owns `:root` (`useRootThemeScopeState`), so it never paints the
+said which app fills it (`useRootThemeScopeState`), so it never paints the
 desktop's answer over the server's first frame. A second app visible at once
 (an unfocused floating window) wears the root's scheme: per-region schemes are
 deferred. The controls are `ui/theme-toggle`'s (quick-theme switches, the
@@ -172,27 +175,42 @@ and its theme — changes underneath them.
 
 ## Painting
 
-`ThemeInjector` paints the focused full-surface app's theme into `:root` (the
-desktop's when nothing is focused or the focus is a floating window).
-`AppScopeThemes` adds a `[data-theme-scope="app:<id>"]` block for each other
-visible app with its own theme document, `SubThemeStyles` one sparse
-`[data-theme-scope="sub:<id>"]` block per sub-theme fragment, and
-`FixedThemeStyles` a complete `[data-theme-scope="fixed:<id>"]` block per
-fixed theme. Nothing is injected while a resident source loads, so the CSS
-the server painted into the HTML stays up.
+**`:root` wears ONE stable theme — the desktop's — and never follows
+navigation or the surface mode.** A change of inherited custom properties at
+the root restyles the whole document (~18k elements, ~670 inherited custom
+properties each: 350–480 ms per change in Chromium), which is what switching
+the surface between the desktop and full screen used to pay when `:root` was
+re-rooted on the focused full-surface app. Only an edit of the desktop's theme
+rewrites `:root`.
 
-Nor while the root scope is not known (`useRootThemeScopeState` →
-`{ known: false }`: the surface has not registered its placements yet). The
-server rooted `:root` on the app the page opens; guessing the desktop there
-was a visible flash on the website. The `:root` block and every owning app's
-scoped block are mounted **held** — the same `ScopeStyles` element, adopting
-and claiming the server's `<style>` by id but writing nothing, faults
-unreported — and flip to painting in place once the root is known (the root
-app's scoped block then unmounts). Never a different element for held vs
-known: unmounting a `GroupStyle` removes its `<style>`, the server's CSS with
-it. Every surface body registers placements — `apps-core/surface`, the
-`AppTabsBody` fallback (docked only), and AppsLayout's error outcomes (an empty
-set: no app owns the surface) — so the window always closes.
+- `ThemeInjector` paints the desktop's theme into `:root` / `.dark`.
+- `AppScopeThemes` paints a `[data-theme-scope="app:<id>"]` block for EVERY app
+  with its own theme document — focused or not, visible or not, in every
+  surface mode. Every tab container is a `<Theme name="app:<id>"
+  surface="canvas">` (`apps-core/surface`), which also forwards the scope to
+  popups portaled out of it, so an app looks the same docked, solo or in a
+  desktop window, and a focus or mode change writes no token block. An app
+  without its own document inherits `:root` whole.
+- `SubThemeStyles` paints one sparse `[data-theme-scope="sub:<id>"]` block per
+  sub-theme fragment, `FixedThemeStyles` a complete
+  `[data-theme-scope="fixed:<id>"]` block per fixed theme.
+- **The document canvas** (`DocumentCanvas`, `CANVAS_STYLE_ID`) is `<body>`'s
+  background, in the focused full-surface app's `--background` (the desktop's
+  when no single app fills the surface) — what shows before the app mounts,
+  so a page load never flashes the desktop's canvas under a themed app. One
+  non-inherited property on one element, so following the focused app restyles
+  `<body>` alone. It is held (adopting the server's element, writing nothing)
+  until the surface has registered its placements (`useRootThemeScopeState` →
+  `{ known: false }`).
+
+So what sits outside every app boundary — `<body>`, a Core.Root overlay
+portaled with no forwarded scope — wears the desktop's theme. A surface that
+should wear an app's theme is inside that app's `<Theme>` boundary, or opened
+from inside it (the portal forward).
+
+Nothing is injected while a resident source loads, so the CSS the server
+painted into the HTML stays up. A painted element is adopted by id and only
+removed when its painter unmounts — never as part of a content update.
 
 Picking a theme is `theme-gallery`'s job.
 
@@ -215,18 +233,21 @@ the browser adopts the elements by id. What the server reads:
   resolved with each app's declared default (`declaredApps`) by
   `effectiveColorMode`.
 
-It re-renders on any config-dir change and on each source's change signal. An
-app is rooted at its base path because a page load opens it solo; it gets an
-entry when it has its own theme document OR its effective scheme is not the
-global one (the entry's `.dark` script is the app's — `system` as a
-`matchMedia` test), and an app like the desktop in both is the `""` entry
-exactly.
+It re-renders on any config-dir change and on each source's change signal.
+Every entry holds the same token blocks (`:root` in the desktop's theme, every
+themed app's scoped blocks — a surface-mode app's, the desktop's own, included
+— the sub-themes', the fixed themes'). What differs per path is only what the
+page around the app wears before it mounts: the canvas (from the theme of the
+app a page load opens there) and the `.dark` script (its scheme — `system` as
+a `matchMedia` test). A tab app gets an entry at its base path when it has its
+own theme document OR its effective scheme is not the global one; every other
+path is the `""` entry.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./equin build` -->
 
 ## Plugin reference
 
-- Description: Paints each scope's selected theme: the token-group, theme and theme-source slots, the theme selection config, the injector that resolves one theme per scope into CSS variables, and the document's light/dark: the root scope's effective color mode (the app's declared default from defineApp, the user's per-app override, else the global setting), read and written through useColorModeSetting (a state: not known until the surface says which app owns :root). Registers the theme selection and per-app color-mode configs, and paints the first frame: renders every app's theme CSS into the SPA shell's head (DocumentHead.Fragment) from the generated theme declarations, the ThemeEngine.Source themes, the selections and each app's effective light/dark (its declared default and the user's override), re-rendered when any of them changes.
+- Description: Paints each scope's selected theme: the token-group, theme and theme-source slots, the theme selection config, the injector that resolves one theme per scope into CSS variables, and the document's light/dark: the focused full-surface app's effective color mode (the app's declared default from defineApp, the user's per-app override, else the global setting), read and written through useColorModeSetting (a state: not known until the surface says which app fills it). :root always wears the desktop's theme; each app's theme is painted on its own scope. Registers the theme selection and per-app color-mode configs, and paints the first frame: renders every app's theme CSS into the SPA shell's head (DocumentHead.Fragment) from the generated theme declarations, the ThemeEngine.Source themes, the selections and each app's effective light/dark (its declared default and the user's override), re-rendered when any of them changes.
 - Web:
   - Slots:
     - `ThemeEngine.VariantGroup`
@@ -352,6 +373,7 @@ exactly.
     - `appColorModeConfig`
     - `assertUniqueFixedThemes`
     - `both`
+    - `CANVAS_STYLE_ID`
     - `ColorAdjustmentSchema`
     - `DEFAULT_THEME_ID`
     - `defineFixedTheme`
@@ -367,6 +389,7 @@ exactly.
     - `paintThemeStyles`
     - `parseAppColorModeOverride`
     - `parseConfiguredColorMode`
+    - `renderCanvasBlock`
     - `renderSubThemeBlock`
     - `renderThemeGroupBlock`
     - `resolveFixedTheme`

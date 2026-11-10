@@ -54,21 +54,19 @@ async function render(): Promise<HeadFragments> {
   const globalMode = parseConfiguredColorMode(
     getConfig(themeSelectionConfig).colorMode,
   );
-  // Tab apps only. A surface-mode app's base path (`/desktop`) is a route
-  // prefix in front of another app's URL, and while its mode shows, `:root`
-  // wears the base theme — the `""` entry these pages already fall back to.
-  const apps = declaredApps
-    .filter(({ launch }) => launch === "tab")
-    .map(({ app }) => ({
-      id: app.id,
-      basePath: app.basePath,
-      colorMode: effectiveColorMode(globalMode, {
-        declared: app.colorMode,
-        override: parseAppColorModeOverride(
-          getConfig(appColorModeConfig, appThemeScope(app.id)).colorMode,
-        ),
-      }),
-    }));
+  // Every app scope gets its blocks; only a tab app is opened by a page at its
+  // base path. A surface-mode app's base path (`/desktop`) is a route prefix in
+  // front of another app's URL — the `""` entry these pages already fall back to.
+  const apps = declaredApps.map(({ app, launch }) => ({
+    id: app.id,
+    ...(launch === "tab" && { basePath: app.basePath }),
+    colorMode: effectiveColorMode(globalMode, {
+      declared: app.colorMode,
+      override: parseAppColorModeOverride(
+        getConfig(appColorModeConfig, appThemeScope(app.id)).colorMode,
+      ),
+    }),
+  }));
   return renderThemeHead(
     {
       groups: tokenGroups,

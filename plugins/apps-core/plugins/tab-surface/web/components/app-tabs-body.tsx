@@ -10,11 +10,11 @@ import { TabSurface } from "./tab-surface";
 
 /**
  * What this body is, in the placement registry's words: one docked, full-area
- * mode (the id `apps-core/surface/docked` registers too), which wears the
- * focused app's theme — so the focused app owns `:root`, as the server painted
- * it. Without a registration nobody could ever say which app owns `:root` in a
- * composition with no `Apps.Surface` (the website), and the theme would stay
- * held on the server's first frame for good.
+ * mode (the id `apps-core/surface/docked` registers too), in which the focused
+ * app fills the surface — so the document's light/dark and canvas follow it, as
+ * the server painted them. Without a registration nobody could ever say which
+ * app fills the surface in a composition with no `Apps.Surface` (the website),
+ * and both would stay held on the server's first frame for good.
  */
 const DOCKED_ONLY: PlacementCapabilities = {
   defaultId: "docked",

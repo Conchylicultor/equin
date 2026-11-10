@@ -16,10 +16,16 @@ export interface ThemeHeadSelections {
   scopes: readonly { scopeId: string; themeId: ThemeId }[];
 }
 
-/** One app the composition bundles: where it is mounted, and its effective scheme. */
+/** One app the composition bundles: where a page opens it, and its effective scheme. */
 export interface ThemeHeadApp {
   id: string;
-  basePath: string;
+  /**
+   * The base path a page load opens the app at, full-surface; absent for a
+   * surface-mode app (the desktop), whose base path is a route prefix in front
+   * of another app's URL — its pages are the `""` entry. Its scoped blocks are
+   * painted all the same: the desktop's chrome wears `app:desktop`.
+   */
+  basePath?: string;
   /** `effectiveColorMode` of the app (its declared default and the user's override). */
   colorMode: ConfiguredColorMode;
 }
@@ -28,19 +34,19 @@ export interface ThemeHeadApp {
  * The first frame's theme, as head HTML per app path — what theme-engine's
  * `DocumentHead.Fragment` answers.
  *
- * One entry per app that differs from the desktop, keyed by its base path: an
- * app with its own theme document, whose `:root` wears that app's theme (the
- * browser roots the focused app's theme in the solo / docked surface a page
- * load opens), or one whose colour scheme is not the global one. Plus the `""`
- * entry for every other path, rooted on the desktop's theme in the global
- * scheme. Every entry also carries each other themed app's scoped blocks, the
- * sub-themes' and the fixed themes' — the same elements the browser mounts, so
- * it adopts them unchanged. An app like the desktop in both is the `""` entry
- * exactly, so it needs none.
+ * Every entry carries the SAME token blocks the browser mounts whatever it
+ * shows: `:root` in the desktop's theme (never re-rooted on an app — see
+ * `ThemePaintSelection`), each themed app's scoped blocks, the sub-themes' and
+ * the fixed themes'. So the browser adopts them unchanged on any path. What
+ * differs per path is only what the page around the app wears before it
+ * mounts: the canvas (`<body>`'s background, from the app's theme) and the
+ * `.dark` class (the app's scheme).
  *
- * Each entry ends with the `.dark` class of the app it is rooted on, from the
- * setting rather than its resolution: `system` is resolved against the OS by
- * the page itself.
+ * One entry per page-opened app that differs from the desktop in either —
+ * its own theme document, or a scheme other than the global one — keyed by its
+ * base path, plus the `""` entry for every other path. The `.dark` class comes
+ * from the setting rather than its resolution: `system` is resolved against
+ * the OS by the page itself.
  */
 export function renderThemeHead(
   sources: ThemePaintSources,
@@ -55,23 +61,18 @@ export function renderThemeHead(
   // An app scope whose app this composition does not bundle paints nowhere.
   const appThemes = apps.flatMap((app) => {
     const themeId = themeOf.get(app.id);
-    return themeId === undefined
-      ? []
-      : [{ appId: app.id, basePath: app.basePath, themeId }];
+    return themeId === undefined ? [] : [{ appId: app.id, themeId }];
   });
 
-  // One painter for every entry: they share the sub-theme and fixed-theme
-  // blocks and each app's scoped blocks, rendered once here instead of per entry.
+  // One painter for every entry: they share every token block, rendered once
+  // here instead of per entry.
   const painter = themePainter(sources);
-  const entry = (
-    rootThemeId: ThemeId,
-    colorMode: ConfiguredColorMode,
-    rootAppId?: string,
-  ) =>
+  const entry = (canvasThemeId: ThemeId, colorMode: ConfiguredColorMode) =>
     styleTags(
       painter.paint({
-        rootThemeId,
-        appThemes: appThemes.filter((a) => a.appId !== rootAppId),
+        baseThemeId: selections.baseThemeId,
+        appThemes,
+        canvasThemeId,
       }),
     ) + colorModeScript(colorMode);
 
@@ -79,6 +80,7 @@ export function renderThemeHead(
     "": entry(selections.baseThemeId, selections.colorMode),
   };
   for (const app of apps) {
+    if (app.basePath === undefined) continue;
     const themeId = themeOf.get(app.id);
     if (themeId === undefined && app.colorMode === selections.colorMode) {
       continue;
@@ -86,7 +88,6 @@ export function renderThemeHead(
     head[app.basePath] = entry(
       themeId ?? selections.baseThemeId,
       app.colorMode,
-      themeId === undefined ? undefined : app.id,
     );
   }
   return head;

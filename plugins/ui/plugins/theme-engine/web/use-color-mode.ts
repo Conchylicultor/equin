@@ -22,7 +22,7 @@ export type { ConfiguredColorMode };
 
 // WHO decides light/dark. `<html>.dark` is one class per document, and the
 // `color-scheme` property it drives is a document-level thing, so a document
-// has ONE colour scheme: that of the scope owning `:root` — the focused
+// has ONE colour scheme: that of the focused
 // full-surface app (`useRootThemeScopeState`), or the desktop when no single app
 // fills the surface. Every reader below resolves at that scope, the class
 // applier and the prop-themed widgets (sonner, charts, editors) alike, so they

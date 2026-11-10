@@ -1,10 +1,17 @@
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, useContext, useMemo, type ReactNode } from "react";
 import type { IconFamilyId } from "../../core";
 
-// The theme scope token (`app:<id>`, `fixed:<id>`, `sub:<id>`) of the nearest
-// theme boundary, or undefined outside every boundary — where `:root`'s theme
-// applies. React context, so it crosses portals the way the theme does.
-const IconScopeContext = createContext<string | undefined>(undefined);
+/**
+ * The theme scope tokens (`app:<id>`, `fixed:<id>`, `sub:<id>`) of every theme
+ * boundary enclosing a component, nearest first — empty outside every boundary,
+ * where `:root`'s theme applies. The whole chain, not just the nearest token,
+ * because a sub-theme is a layer over the scope around it, as its CSS is: its
+ * icons draw in the enclosing scope's style with only the tokens it names
+ * changed. React context, so it crosses portals the way the theme does.
+ */
+export type IconScopeChain = readonly string[];
+
+const IconScopeContext = createContext<IconScopeChain>([]);
 
 /**
  * Tells the icons below which theme scope they are drawn in. The `<Theme>`
@@ -20,14 +27,18 @@ export function IconScopeProvider({
   children: ReactNode;
 }) {
   const parent = useContext(IconScopeContext);
+  const chain = useMemo(
+    () => (scope === undefined ? parent : [scope, ...parent]),
+    [scope, parent],
+  );
   return (
-    <IconScopeContext.Provider value={scope ?? parent}>
+    <IconScopeContext.Provider value={chain}>
       {children}
     </IconScopeContext.Provider>
   );
 }
 
-export function useIconScope(): string | undefined {
+export function useIconScope(): IconScopeChain {
   return useContext(IconScopeContext);
 }
 

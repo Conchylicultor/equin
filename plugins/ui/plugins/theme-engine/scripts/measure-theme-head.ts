@@ -73,7 +73,11 @@ const bare = { ...sources, subThemes: [], fixedThemes: [] };
 const scopesOnly = median(
   Array.from({ length: runs }, () =>
     time(() =>
-      paintThemeStyles(bare, { rootThemeId: baseThemeId, appThemes: [] }),
+      paintThemeStyles(bare, {
+        baseThemeId,
+        canvasThemeId: baseThemeId,
+        appThemes: [],
+      }),
     ),
   ),
 );
@@ -82,7 +86,7 @@ const withSub = median(
     time(() =>
       paintThemeStyles(
         { ...bare, subThemes },
-        { rootThemeId: baseThemeId, appThemes: [] },
+        { baseThemeId, canvasThemeId: baseThemeId, appThemes: [] },
       ),
     ),
   ),
@@ -92,7 +96,7 @@ const withFixed = median(
     time(() =>
       paintThemeStyles(
         { ...bare, fixedThemes },
-        { rootThemeId: baseThemeId, appThemes: [] },
+        { baseThemeId, canvasThemeId: baseThemeId, appThemes: [] },
       ),
     ),
   ),

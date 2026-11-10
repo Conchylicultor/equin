@@ -10,6 +10,7 @@ import { renderThemeHead } from "./theme-head";
 
 const palette = defineTokenGroup("palette", {
   primary: { default: "blue" },
+  background: { default: "white" },
 });
 const defaultTheme = defineTheme({
   id: DEFAULT_THEME_ID,
@@ -19,7 +20,12 @@ const defaultTheme = defineTheme({
 const ink = defineTheme({
   id: "ink",
   label: "Ink",
-  fragments: [palette.fragment({ light: { primary: "black" }, dark: {} })],
+  fragments: [
+    palette.fragment({
+      light: { primary: "black", background: "ivory" },
+      dark: {},
+    }),
+  ],
 });
 const sources = {
   groups: [palette],
@@ -33,7 +39,7 @@ const apps = [
 ];
 
 describe("renderThemeHead", () => {
-  it("roots each app with its own theme at its base path, the desktop's everywhere else", () => {
+  it("paints the same token blocks on every path, the canvas from the app a path opens", () => {
     const head = renderThemeHead(sources, apps, {
       baseThemeId: DEFAULT_THEME_ID,
       colorMode: "dark",
@@ -46,16 +52,37 @@ describe("renderThemeHead", () => {
     // a document of its own is the "" entry.
     expect(Object.keys(head).sort()).toEqual(["", "/pages"]);
 
+    // :root is the desktop's theme everywhere — never re-rooted on the app…
+    for (const entry of [head[""], head["/pages"]]) {
+      expect(entry).toContain(
+        '<style id="theme-engine-palette">:root {\n  --primary: blue;',
+      );
+      // …and the app's own theme is on its scope, on every path.
+      expect(entry).toContain(
+        '<style id="theme-scope-app:pages-palette">[data-theme-scope="app:pages"] {\n  --primary: black;',
+      );
+    }
+    // Only the canvas follows the app the path opens.
     expect(head["/pages"]).toContain(
-      '<style id="theme-engine-palette">:root {\n  --primary: black;',
+      '<style id="theme-engine-canvas">body {\n  background-color: ivory;',
     );
-    // Its own scope block is not painted where it owns :root…
-    expect(head["/pages"]).not.toContain("theme-scope-app:pages");
-    // …but is everywhere else.
     expect(head[""]).toContain(
-      '<style id="theme-engine-palette">:root {\n  --primary: blue;',
+      '<style id="theme-engine-canvas">body {\n  background-color: white;',
     );
-    expect(head[""]).toContain('<style id="theme-scope-app:pages-palette">');
+  });
+
+  it("paints a surface-mode app's scope but gives it no entry", () => {
+    const head = renderThemeHead(
+      sources,
+      [...apps, { id: "desktop", colorMode: "light" }],
+      {
+        baseThemeId: DEFAULT_THEME_ID,
+        colorMode: "dark",
+        scopes: [{ scopeId: "app:desktop", themeId: "ink" }],
+      },
+    );
+    expect(Object.keys(head)).toEqual([""]);
+    expect(head[""]).toContain('<style id="theme-scope-app:desktop-palette">');
   });
 
   it("ends every entry with the configured .dark class, resolving system in the page", () => {
@@ -87,7 +114,7 @@ describe("renderThemeHead", () => {
       },
     );
     expect(Object.keys(head).sort()).toEqual(["", "/home/panel", "/pages"]);
-    // No theme document of its own: the desktop's theme at :root…
+    // No theme document of its own: the desktop's theme at :root and canvas…
     expect(head["/home/panel"]).toContain(
       '<style id="theme-engine-palette">:root {\n  --primary: blue;',
     );

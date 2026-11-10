@@ -17,10 +17,12 @@ const icons = iconsGroup.fragment(both({ iconFamily: "lucide" }));
 
 These are not CSS. An icon's style is WHICH sprite symbol `<Icon>` uses, which
 no stylesheet can choose, so the values reach the icons primitive through
-`IconThemeBridge` (a `Core.Root`): it resolves every painted scope — the root,
-each app with its own theme document, each fixed theme, each sub-theme naming
-this group — and publishes `readIconTokens(values)` under the scope's token
-with `usePublishIconStyle`. The CSS variables are still painted like every
+`IconThemeBridge` (a `Core.Root`): it resolves every painted scope — the root
+(the desktop's theme), each app with its own theme document, each fixed theme —
+and publishes `readIconTokens(values)` under the scope's token with
+`usePublishIconStyle`; each sub-theme naming this group publishes only its own
+tokens (`readIconTokenLayer`) as a layer (`usePublishIconStyleLayer`), worn over
+whatever scope encloses its region. The CSS variables are still painted like every
 group's; nothing reads them. A value outside the vocabulary throws (inside the
 bridge's error boundary), since there is no honest sprite to fall back to.
 
@@ -42,8 +44,6 @@ primitive.
     - `Icons.Root` → `IconThemeBridge`
   - Uses:
     - `apps-core.Apps`
-    - `apps-core/theme-scope.RootThemeScopeState`
-    - `apps-core/theme-scope.useRootThemeScopeState`
     - `config_v2.useScopeMembership`
     - `network/live/live-state.foldResource`
     - `primitives/css/row.Row`
@@ -55,6 +55,7 @@ primitive.
     - `ui/icons.Icons`
     - `ui/icons.useIconFamilies`
     - `ui/icons.usePublishIconStyle`
+    - `ui/icons.usePublishIconStyleLayer`
     - `ui/theme-engine.ThemeEngine`
     - `ui/theme-engine.useResolvedColorMode`
     - `ui/theme-engine.useResolvedTheme`
@@ -72,6 +73,7 @@ primitive.
   - Exports (types): `IconsTokenValues`
   - Exports (values):
     - `iconsGroup`
+    - `readIconTokenLayer`
     - `readIconTokens`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`

@@ -11,6 +11,7 @@ export type { IconProps } from "./internal/icon";
 export { IconFamilyPreview, IconScopeProvider } from "./internal/icon-scope";
 export {
   usePublishIconStyle,
+  usePublishIconStyleLayer,
   useScopeIconStyles,
   useWantedStyleKeys,
 } from "./internal/style-store";

@@ -45,10 +45,12 @@ export type {
 } from "./resolve-theme";
 export { transformValues } from "./transform";
 export {
+  CANVAS_STYLE_ID,
   THEME_STYLE_ID_PREFIXES,
   assertUniqueFixedThemes,
   fixedThemeGroupValues,
   paintThemeStyles,
+  renderCanvasBlock,
   renderSubThemeBlock,
   renderThemeGroupBlock,
   subThemeBlocks,

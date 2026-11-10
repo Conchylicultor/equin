@@ -30,7 +30,7 @@ independently reachable: boot's initial composite stamp, the canonicalization
 redirect, and close-tab neighbor refocus. Restoration never writes history.
 
 **One app-identity source for chrome.** Chrome outside a surface (rail
-highlight, theme scope, `:root` tokens) reads the focused tab's app from the
+highlight, theme scope, the document's light/dark and canvas) reads the focused tab's app from the
 `focusedApp` module store (`apps-core/web` → `setFocusedApp`/`useFocusedAppId`),
 published on every focus/app change and synchronously during a restore — never
 by parsing the URL. So the theme can never diverge from what the focused surface

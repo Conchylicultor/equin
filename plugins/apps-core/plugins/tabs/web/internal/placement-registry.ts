@@ -23,7 +23,7 @@ import {
  * They are alternatives in one conditional, so one sits at a time. Until the
  * first registration the sink is empty (`null`): the predicates read it as the
  * inert answer (`""` / `false`), and `usePlacementCapabilities` hands it on as
- * "not known yet" — which app owns `:root` waits for it (`theme-scope`).
+ * "not known yet" — which app fills the surface waits for it (`theme-scope`).
  */
 export interface PlacementCapabilities {
   /** The id of the default surface mode (the one the surface boots into). */
@@ -155,11 +155,10 @@ export function placementIsNewTabFollows(
 }
 
 /**
- * Whether the focused chrome wears the app theme when the focused tab uses
- * placement `id`. Same value-in shape, for the same reason — and here the
- * stale answer reached further: this one decides the `:root` token layer for
- * the whole page, so a sampled `false` left the rail, tab bar, toaster and
- * `:root` on a different theme than the focused app's. `null` is `false`.
+ * Whether the focused tab's app fills the surface when it uses placement `id`
+ * — which decides the document's light/dark and canvas (`theme-scope`). Same
+ * value-in shape, for the same reason: a sampled stale answer would leave the
+ * page's scheme on a different app's than the focused one. `null` is `false`.
  */
 export function placementHasAppThemeScope(
   caps: PlacementCapabilities | null,

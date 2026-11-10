@@ -22,6 +22,7 @@ import { resolveFixedTheme, type FixedTheme } from "./fixed-theme";
 import {
   resolveTheme,
   type GroupValues,
+  type ResolvedTheme,
   type SkippedThemeValue,
 } from "./resolve-theme";
 import { renderGroupBlock } from "./serialize-vars";
@@ -213,18 +214,33 @@ export interface ThemePaintSources {
   fixedThemes: readonly FixedTheme[];
 }
 
-/** What the screen shows: the theme `:root` wears and every other app with a theme of its own. */
+/**
+ * What the screen shows. `:root` wears ONE stable theme — the desktop's — and
+ * never follows navigation or the surface mode: a change of inherited custom
+ * properties at the root restyles the whole document (~18k elements, 350–480 ms
+ * a time in Chromium), which is what switching the surface between the desktop
+ * and full screen used to pay. Every app with a theme of its own wears it on its
+ * own `[data-theme-scope="app:<id>"]` boundary instead — every tab container is
+ * one — painted whether or not it is focused.
+ */
 export interface ThemePaintSelection {
-  /** The theme the `:root` / `.dark` blocks paint — the focused app's, or the desktop's. */
-  rootThemeId: ThemeId;
-  /** Each app with its own theme document that does NOT own `:root`, painted on `[data-theme-scope="app:<id>"]`. */
+  /** The theme the `:root` / `.dark` blocks paint: the desktop's (the base document's). */
+  baseThemeId: ThemeId;
+  /** Each app with its own theme document, painted on `[data-theme-scope="app:<id>"]`. */
   appThemes: readonly { appId: string; themeId: ThemeId }[];
+  /**
+   * The theme whose `--background` the document canvas (`<body>`) paints: the
+   * app the page shows full-surface, else the desktop's. Only `<body>` reads it
+   * — a non-inherited property on one element — so following the focused app
+   * costs nothing, unlike re-rooting the tokens.
+   */
+  canvasThemeId: ThemeId;
 }
 
 /**
  * Every `<style>` the browser's painter mounts for this selection, as
- * `styleId → css`, in the order it mounts them: the `:root` blocks, each other
- * app's scoped blocks, the sub-themes', the fixed themes'. A selection naming
+ * `styleId → css`, in the order it mounts them: the `:root` blocks, each
+ * app's scoped blocks, the canvas, the sub-themes', the fixed themes'. A selection naming
  * a theme that does not exist paints Default, as the browser does (which also
  * reports it — this function only paints).
  */
@@ -250,6 +266,7 @@ export interface ThemePainter {
  */
 export function themePainter(sources: ThemePaintSources): ThemePainter {
   const scopes = new Map<string, Record<string, string>>();
+  const canvases = new Map<ThemeId, string>();
   let regions: Record<string, string> | undefined;
 
   const scope = (themeId: ThemeId, scopeToken?: string) => {
@@ -265,14 +282,70 @@ export function themePainter(sources: ThemePaintSources): ThemePainter {
   return {
     paint(selection) {
       const styles: Record<string, string> = {};
-      Object.assign(styles, scope(selection.rootThemeId));
+      Object.assign(styles, scope(selection.baseThemeId));
       for (const { appId, themeId } of selection.appThemes) {
         Object.assign(styles, scope(themeId, appThemeScope(appId)));
       }
+      let canvas = canvases.get(selection.canvasThemeId);
+      if (canvas === undefined) {
+        canvas = paintCanvasStyle(sources, selection.canvasThemeId);
+        canvases.set(selection.canvasThemeId, canvas);
+      }
+      styles[CANVAS_STYLE_ID] = canvas;
       Object.assign(styles, (regions ??= paintRegionStyles(sources)));
       return styles;
     },
   };
+}
+
+/**
+ * The `<style>` id of the document canvas — `<body>`'s background, painted from
+ * one theme's `--background` (see {@link ThemePaintSelection.canvasThemeId}).
+ * Under the `theme-engine-` prefix so the prune keeps it only while claimed; no
+ * token group may take the id `canvas` (asserted where it is painted).
+ */
+export const CANVAS_STYLE_ID = themeStyleId("canvas");
+
+/** The CSS var the canvas paints — the `canvas` surface's own background role. */
+const CANVAS_VAR = "--background";
+
+/**
+ * The document canvas block: `<body>`'s background in the theme's light and
+ * dark `--background`, written out as values (not `var()`), because `<body>`
+ * sits outside every app boundary and reads `:root`'s tokens. A value that is
+ * itself a `var()` resolves against `:root` — the desktop's theme.
+ */
+export function renderCanvasBlock(
+  groups: readonly TokenGroupSpec[],
+  theme: ResolvedTheme,
+): string {
+  if (groups.some((g) => g.id === "canvas")) {
+    throw new Error(
+      `[theme-engine] a token group claims the id "canvas" — its style id would collide with the document canvas (${CANVAS_STYLE_ID}).`,
+    );
+  }
+  const group = groups.find((g) => Object.values(g.vars).includes(CANVAS_VAR));
+  if (group === undefined) {
+    throw new Error(
+      `[theme-engine] no registered token group declares ${CANVAS_VAR} — the document canvas has nothing to paint.`,
+    );
+  }
+  const key = Object.keys(group.vars).find(
+    (k) => group.vars[k] === CANVAS_VAR,
+  )!;
+  const values = theme.groups[group.id]!;
+  const light = transformValues(values.light, theme.colorAdjust)[key];
+  const dark = transformValues(values.dark, theme.colorAdjust)[key];
+  return `body {\n  background-color: ${light};\n}\n.dark body {\n  background-color: ${dark};\n}`;
+}
+
+function paintCanvasStyle(
+  sources: ThemePaintSources,
+  themeId: ThemeId,
+): string {
+  const painted = sources.themesById.has(themeId) ? themeId : DEFAULT_THEME_ID;
+  const { theme } = resolveTheme(painted, sources.themesById, sources.groups);
+  return renderCanvasBlock(sources.groups, theme);
 }
 
 /** One scope's blocks — `:root` without a token, else `[data-theme-scope=…]` — for the theme it selects. */

@@ -13,7 +13,7 @@ export type RootThemeScopeState =
  * The theme scope owned by the focused full-surface app, as a state:
  *
  * - `{ known: false }` — the surface has not registered its placements yet, so
- *   nobody can say which app owns `:root`. Never folded into "no app": the
+ *   nobody can say which app fills the surface. Never folded into "no app": the
  *   server already painted the first frame for the app the page opens, and a
  *   reader that guessed the desktop here would repaint over it (the website's
  *   first-paint theme flash). Readers hold what is on screen instead.
@@ -22,11 +22,13 @@ export type RootThemeScopeState =
  *   active; `undefined` when no single app fills the surface (desktop /
  *   floating focus → global `:root`).
  *
- * It decides the `:root` token values, via theme-engine's `ThemeInjector`, so
- * the base layer carries the focused full-surface app's theme (the "base layer
- * owns `:root`" model), and the document's light/dark. The app chrome (rail,
- * tab bar, toaster) does NOT wear this: it wears its own fixed theme
- * (`apps-core/chrome-theme`), the same whichever app is focused.
+ * It decides what the page AROUND the apps wears — the document's light/dark
+ * (`<html>.dark`) and its canvas (`<body>`'s background), via theme-engine —
+ * and which app the light/dark controls edit. It does NOT decide the `:root`
+ * tokens: those are always the desktop's, and each app wears its own theme on
+ * its own `<Theme name="app:<id>">` boundary, so a focus or surface-mode change
+ * never rewrites the inherited tokens of the whole document. The app chrome
+ * (rail, tab bar, toaster) wears its own fixed theme (`apps-core/chrome-theme`).
  *
  * Provider-free, so it works outside `<TabsProvider>` (the `Core.Root`
  * `ThemeInjector`): `useActiveApp` resolves the focused app from the URL when

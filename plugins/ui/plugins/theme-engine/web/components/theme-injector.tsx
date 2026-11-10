@@ -22,7 +22,9 @@ import {
 } from "../use-resolved-theme";
 import {
   assertUniqueFixedThemes,
+  CANVAS_STYLE_ID,
   fixedThemeGroupValues,
+  renderCanvasBlock,
   renderSubThemeBlock,
   renderThemeGroupBlock,
   subThemeBlocks,
@@ -134,27 +136,16 @@ function usePaintedStyle(id: string, text: string | null): void {
  * One scope's painted blocks: a GroupStyle per registered token group, all fed
  * from ONE resolution of the scope's theme, plus the reports for anything that
  * resolution could not paint as stored.
- *
- * `held`: which theme this element paints is not known yet (the root scope
- * before the surface registered its placements). Every GroupStyle is still
- * mounted — adopting and claiming the server-painted `<style>` by id, so the
- * prune keeps it — but writes nothing, exactly like a pending theme. Callers
- * flip `held` on the SAME element rather than rendering a different one:
- * unmounting a GroupStyle removes its `<style>`, which would delete the CSS the
- * server painted for the first frame.
  */
 function ScopeStyles({
   scopeId,
   scopeToken,
-  held = false,
 }: {
   scopeId: string | undefined;
   scopeToken?: string;
-  held?: boolean;
 }) {
   const groups = ThemeEngine.TokenGroup.useContributions();
-  const resolved = useResolvedTheme(scopeId);
-  const state: ResolvedThemeState = held ? { pending: true } : resolved;
+  const state = useResolvedTheme(scopeId);
   useReportResolutionFaults(scopeId, state);
 
   return (
@@ -217,7 +208,7 @@ function useReportFaults(faults: ThemeResolutionFault[]): void {
 }
 
 // Toggles the document's `<html>.dark` class from the resolved colour mode of
-// the scope owning `:root` (use-color-mode: the focused full-surface app's
+// the focused full-surface app (use-color-mode: that app's
 // effective mode, or the global setting). `undefined` while that scope is not
 // known yet: the class the server's first frame set stays untouched, rather
 // than the desktop's answer flashing for a frame.
@@ -234,106 +225,105 @@ function ColorModeApplier({ resolved }: { resolved: ColorMode | undefined }) {
 }
 
 export function ThemeInjector() {
-  // "Base layer owns `:root`": `:root` carries the FOCUSED full-surface app's
-  // theme. The root scope is `app:<id>` when the focused placement is
-  // `themeScope:"app"` (docked/solo) and an app is active, else `undefined`
-  // (desktop/floating → global) — and not known at all before the surface has
-  // registered its placements, when the block is HELD on the server's first
-  // frame rather than repainted with the desktop's guess. The app chrome (rail,
-  // tab bar, toaster) does NOT follow it: it wears its own fixed theme (see
-  // FixedThemeStyles), so it stays the same while the focused app changes
-  // underneath it.
+  // `:root` wears ONE stable theme — the desktop's (the base document's) — and
+  // never follows navigation or the surface mode. Re-rooting it on the focused
+  // full-surface app (as it once did) changed inherited custom properties at the
+  // root on every switch between the desktop and full screen, and so restyled
+  // the whole document (~18k elements, 350–480 ms a time). Each app with its own
+  // theme wears it on its own boundary instead (AppScopeThemes below; every tab
+  // container is a `<Theme name="app:<id>">`). Only an edit of the desktop's
+  // theme changes `:root`.
   const root = useRootThemeScopeState();
-  // `<html>.dark` follows the same root scope, resolved by use-color-mode.
+  // `<html>.dark` still follows the focused full-surface app's scheme
+  // (use-color-mode): a document has one. It flips only where that app's
+  // scheme differs from the desktop's — per-region schemes are deferred.
   const resolved = useDocumentColorMode();
   useDropRetiredThemeCache();
 
-  // The `:root`/`.dark` blocks paint the FOCUSED full-surface app's theme
-  // (the root scope) — the base layer, always emitted. A root scope without its
-  // own theme document resolves to the desktop's choice (config_v2 falls back
-  // to the base document). Other simultaneously-visible apps with their own
-  // theme add a scoped override block via AppScopeThemes below.
   return (
     <>
       <ColorModeApplier resolved={resolved} />
-      <ScopeStyles
-        scopeId={root.known ? root.scopeId : undefined}
-        held={!root.known}
-      />
+      <ScopeStyles scopeId={undefined} />
+      <DocumentCanvas root={root} />
     </>
   );
 }
 
-// Scoped sibling of ThemeInjector for a single app id, for an app that is NOT the
-// one currently owning `:root`. A scoped override block targeting
-// `[data-theme-scope="app:<id>"]` lets a second simultaneously-visible surface (an
-// unfocused docked tab, a floating window, a portaled solo) show ITS app's theme
-// while `:root` keeps the focused app's (or desktop) theme.
+/**
+ * The document canvas: `<body>`'s background, in the focused full-surface app's
+ * `--background` (the desktop's when no single app fills the surface). It is
+ * what shows before the app mounts — the server paints the same block for the
+ * app a page opens — so a page load never flashes the desktop's canvas under an
+ * app with a theme of its own. One non-inherited property on one element, so
+ * following the focused app costs a restyle of `<body>` alone.
+ *
+ * Held (adopting the server's element, writing nothing) until the surface says
+ * which app owns it, and while that app's theme is pending.
+ */
+function DocumentCanvas({ root }: { root: RootThemeScopeState }) {
+  const groups = ThemeEngine.TokenGroup.useContributions();
+  const resolved = useResolvedTheme(root.known ? root.scopeId : undefined);
+  const text = useMemo(
+    () =>
+      !root.known || resolved.pending
+        ? null
+        : renderCanvasBlock(
+            groups.map((g) => g.descriptor),
+            resolved.theme,
+          ),
+    [root.known, resolved, groups],
+  );
+  usePaintedStyle(CANVAS_STYLE_ID, text);
+  return null;
+}
+
+// One app's scoped blocks, on `[data-theme-scope="app:<id>"]` — the boundary
+// every tab container of the app is — for an app with its own theme document.
+// Painted whether or not the app is focused, visible or full-surface: whatever
+// the surface mode, the app's tokens live on its own boundary, never on `:root`,
+// so focusing it or switching the surface mode writes no `<style>` at all.
 //
-// Two gates suppress all needless blocks:
-//  - Whole-app root gate: when `appThemeScope(appId)` is the known root scope,
-//    this app's theme is ALREADY `:root`, so it emits nothing — no redundant
-//    scoped block. While the root is not known yet, every owning app's block is
-//    mounted HELD (keeping what the server painted, writing nothing): the app
-//    the server rooted has no scoped block to adopt, every other one keeps its
-//    server-painted block, and once the root is known the root app's block
-//    unmounts and the rest start painting — the same element throughout.
-//  - Ownership gate: ONE check per scope, on the theme selection document. An app
-//    with its own theme document emits blocks for every group; an app without one
-//    emits nothing and inherits `:root` whole (it cannot own part of a theme).
-// Combined, the common single-docked-app case (only the focused app visible, which
-// owns `:root`) emits ZERO scoped blocks.
+// Ownership gate: ONE check per scope, on the theme selection document. An app
+// with its own theme document emits blocks for every group; an app without one
+// emits nothing and inherits `:root` (the desktop's theme) whole — it cannot
+// own part of a theme.
 //
 // It reuses the same resolution, color adjustment and completeness backstop as
 // the `:root` path (all live in ScopeStyles / GroupStyle) — only the selector and
 // style id differ (via `scopeToken`). The server paints the same blocks into the
-// first frame's HTML for every app with its own theme. Deliberately omits
-// ColorModeApplier: a document has one scheme, the root scope's.
+// first frame's HTML. Deliberately omits ColorModeApplier: a document has one
+// scheme.
 //
 // Mounted centrally (one per registered app via AppScopeThemes at Core.Root),
 // not per open surface — so the degraded `AppTabsBody` fallback and the real
 // surface share the same scope blocks, with no `apps → theme-engine` cycle.
-export function ScopedAppTheme({
-  appId,
-  root,
-}: {
-  appId: string;
-  root: RootThemeScopeState;
-}) {
+export function ScopedAppTheme({ appId }: { appId: string }) {
   const scopeId = appThemeScope(appId);
   const ownsTheme = useScopeMembership(themeSelectionConfig, scopeId);
-  // Hooks above run unconditionally (Rules of Hooks); only the emitted tree
-  // branches — unmounting the blocks removes their <style> elements. No block
-  // while membership is unknown (preloaded, so only a failed boot has that
-  // window): the app's surface wears the root theme until it is known. A
-  // failed read keeps its last-known answer, else wears the root theme too.
+  // No block while membership is unknown (preloaded, so only a failed boot has
+  // that window): the app's surface wears `:root` until it is known. A failed
+  // read keeps its last-known answer, else wears `:root` too.
   const owns = foldResource(ownsTheme, {
     loading: () => false,
     error: (_error, stale) => stale ?? false,
     ready: (member) => member,
   });
-  if (!owns || (root.known && scopeId === root.scopeId)) return null;
-  return (
-    <ScopeStyles scopeId={scopeId} scopeToken={scopeId} held={!root.known} />
-  );
+  if (!owns) return null;
+  return <ScopeStyles scopeId={scopeId} scopeToken={scopeId} />;
 }
 
 // Central mount point for every registered app's scope block: one
-// <ScopedAppTheme/> per `Apps.App` contribution. The app currently owning `:root`
-// (the focused full-surface app) is skipped per-instance via `root`, and
-// every other app emits only when it owns a theme — so the common
-// single-docked-app case emits nothing. Mounted at Core.Root — slot
-// `useContributions()` is provider-free, so this needs no TabsProvider ancestor
-// (which is exactly why it can't hang off `useTabs`). Mounting centrally (rather
-// than per open surface) is what lets the degraded `AppTabsBody` fallback be
-// themed without an `apps → theme-engine` import cycle.
+// <ScopedAppTheme/> per `Apps.App` contribution; each emits only when its app
+// owns a theme. Mounted at Core.Root — slot `useContributions()` is
+// provider-free, so this needs no TabsProvider ancestor. Mounting centrally
+// (rather than per open surface) is what lets the degraded `AppTabsBody`
+// fallback be themed without an `apps → theme-engine` import cycle.
 export function AppScopeThemes() {
   const apps = Apps.App.useContributions();
-  const root = useRootThemeScopeState();
   return (
     <>
       {apps.map((app) => (
-        <ScopedAppTheme key={app.id} appId={app.id} root={root} />
+        <ScopedAppTheme key={app.id} appId={app.id} />
       ))}
     </>
   );

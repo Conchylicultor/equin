@@ -8,7 +8,7 @@ const viewSidebarIcon = symbol("view-sidebar");
  * surface below the tab strip and shows only when focused. No chrome, no backdrop,
  * no dynamic style, and no frame chrome either; the `pane` frame is all it needs.
  *
- * `themeScope: "app"` makes the focused docked tab's chrome wear the app theme.
+ * `themeScope: "app"` makes the document's light/dark and canvas follow the focused docked tab's app.
  * There is no paint here any more: the host renders every tab container as a
  * `<Theme surface="canvas">`, which paints the app's own app-scoped background,
  * so a transparent region falls back to the app theme rather than to the

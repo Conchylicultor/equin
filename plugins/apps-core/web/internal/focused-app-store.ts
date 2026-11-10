@@ -2,7 +2,7 @@ import { useSyncExternalStore } from "react";
 
 // The focused app's id — a page-global signal mirroring `focusedSurfaceId`
 // (shortcuts) and `surfaceMode` (tabs). Chrome identity (rail highlight, theme
-// scope, `:root` tokens) derives from THIS, the focused tab's app — not from
+// scope, the document's light/dark and canvas) derives from THIS, the focused tab's app — not from
 // parsing the URL — so the "theme says app A while content shows app B"
 // divergence class becomes structurally impossible. `TabsProvider` publishes it
 // on every focus/app change (and boot); the shell history adapter publishes it

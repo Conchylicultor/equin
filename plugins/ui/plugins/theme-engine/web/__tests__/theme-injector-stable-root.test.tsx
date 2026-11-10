@@ -1,13 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 
-// The website's first-paint flash: before the surface registered its
-// placements, which app owns `:root` is not known, and the injector used to
-// guess the desktop — repainting the server's website theme with the desktop's
-// for a frame. While the root is not known the blocks are HELD: the SAME
-// `<style>` element the server painted stays, with its text, until the resolved
-// text replaces it in place. A different element (a remount) would delete the
-// server's CSS — `usePaintedStyle` removes its element on unmount.
+// `:root` wears the desktop's theme whatever app is focused and whatever the
+// surface mode: re-rooting it restyled the whole document on every switch
+// between the desktop and full screen. Each themed app's block is painted on
+// its own scope, focused or not, so a focus change rewrites no token block —
+// only the document canvas (`<body>`'s background) follows the focused app.
 
 const root = vi.hoisted(() => ({
   state: { known: false } as
@@ -58,8 +56,7 @@ vi.mock("../slots", () => ({
   },
 }));
 
-// Every scope resolves at once, and reports a missing theme — so a fault
-// reported while held would show up.
+// Every scope resolves at once, and reports a missing theme.
 vi.mock("../use-resolved-theme", async () => {
   const { NEUTRAL_COLOR_ADJUSTMENT } = await import("../../core/theme");
   return {
@@ -70,8 +67,14 @@ vi.mock("../use-resolved-theme", async () => {
       theme: {
         groups: {
           palette: {
-            light: { primary: scopeId ?? "desktop" },
-            dark: { primary: scopeId ?? "desktop" },
+            light: {
+              primary: scopeId ?? "desktop",
+              background: `bg-${scopeId ?? "desktop"}`,
+            },
+            dark: {
+              primary: scopeId ?? "desktop",
+              background: `bg-${scopeId ?? "desktop"}`,
+            },
           },
         },
         colorAdjust: NEUTRAL_COLOR_ADJUSTMENT,
@@ -82,6 +85,7 @@ vi.mock("../use-resolved-theme", async () => {
 });
 
 import {
+  CANVAS_STYLE_ID,
   defineTokenGroup,
   renderThemeGroupBlock,
   themeStyleId,
@@ -90,14 +94,20 @@ import { NEUTRAL_COLOR_ADJUSTMENT } from "../../core/theme";
 import { themeResolutionReportSink } from "../internal/resolution-report-sink";
 import { AppScopeThemes, ThemeInjector } from "../components/theme-injector";
 
-const group = defineTokenGroup("palette", { primary: { default: "blue" } });
+const group = defineTokenGroup("palette", {
+  primary: { default: "blue" },
+  background: { default: "white" },
+});
 palette.group = group;
 
 function painted(scopeId: string | undefined, scopeToken?: string): string {
   const v = scopeId ?? "desktop";
   return renderThemeGroupBlock(
     group,
-    { light: { primary: v }, dark: { primary: v } },
+    {
+      light: { primary: v, background: `bg-${v}` },
+      dark: { primary: v, background: `bg-${v}` },
+    },
     NEUTRAL_COLOR_ADJUSTMENT,
     scopeToken,
   );
@@ -128,45 +138,62 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("ThemeInjector while the root scope is not known", () => {
-  it("keeps the server's :root element and text, then repaints it in place", () => {
+describe("ThemeInjector", () => {
+  it("paints the desktop's theme on :root, adopting the server's element, whatever app is focused", () => {
     const id = themeStyleId("palette");
-    const server = serverStyle(id, "SERVER-WEBSITE");
+    const server = serverStyle(id, painted(undefined));
 
     const { rerender } = render(<ThemeInjector />);
     expect(document.getElementById(id)).toBe(server);
-    expect(server.textContent).toBe("SERVER-WEBSITE");
-    expect(emit).not.toHaveBeenCalled();
+    expect(server.textContent).toBe(painted(undefined));
 
     root.state = { known: true, scopeId: "app:website" };
     rerender(<ThemeInjector />);
     expect(document.getElementById(id)).toBe(server);
-    expect(server.textContent).toBe(painted("app:website"));
-    expect(emit).toHaveBeenCalledWith(
-      expect.objectContaining({ themeId: "missing-for-app:website" }),
+    expect(server.textContent).toBe(painted(undefined));
+
+    root.state = { known: true, scopeId: undefined };
+    rerender(<ThemeInjector />);
+    expect(server.textContent).toBe(painted(undefined));
+  });
+
+  it("holds the server's canvas until the root is known, then follows the focused app", () => {
+    const canvas = serverStyle(CANVAS_STYLE_ID, "SERVER-CANVAS");
+
+    const { rerender } = render(<ThemeInjector />);
+    expect(document.getElementById(CANVAS_STYLE_ID)).toBe(canvas);
+    expect(canvas.textContent).toBe("SERVER-CANVAS");
+
+    root.state = { known: true, scopeId: "app:website" };
+    rerender(<ThemeInjector />);
+    expect(canvas.textContent).toBe(
+      "body {\n  background-color: bg-app:website;\n}\n.dark body {\n  background-color: bg-app:website;\n}",
     );
+
+    root.state = { known: true, scopeId: undefined };
+    rerender(<ThemeInjector />);
+    expect(canvas.textContent).toContain("bg-desktop");
   });
 });
 
-describe("AppScopeThemes while the root scope is not known", () => {
-  it("holds every owning app's block on the same element, then drops the root app's", () => {
+describe("AppScopeThemes", () => {
+  it("paints every owning app's block, the focused one included, and keeps it across focus changes", () => {
     owning.add("app:website");
-    owning.add("app:other");
     const otherId = themeStyleId("palette", "app:other");
-    const other = serverStyle(otherId, "SERVER-OTHER");
+    const websiteId = themeStyleId("palette", "app:website");
 
     const { rerender } = render(<AppScopeThemes />);
-    expect(document.getElementById(otherId)).toBe(other);
-    expect(other.textContent).toBe("SERVER-OTHER");
-    const websiteId = themeStyleId("palette", "app:website");
-    expect(document.getElementById(websiteId)?.textContent).toBe("");
-    expect(emit).not.toHaveBeenCalled();
+    const website = document.getElementById(websiteId);
+    expect(website?.textContent).toBe(painted("app:website", "app:website"));
+    // An app without its own theme document inherits `:root` whole.
+    expect(document.getElementById(otherId)).toBeNull();
 
     root.state = { known: true, scopeId: "app:website" };
     rerender(<AppScopeThemes />);
-    expect(document.getElementById(otherId)).toBe(other);
-    expect(other.textContent).toBe(painted("app:other", "app:other"));
-    // The app owning `:root` needs no scoped block.
-    expect(document.getElementById(websiteId)).toBeNull();
+    expect(document.getElementById(websiteId)).toBe(website);
+    expect(website?.textContent).toBe(painted("app:website", "app:website"));
+    expect(emit).toHaveBeenCalledWith(
+      expect.objectContaining({ themeId: "missing-for-app:website" }),
+    );
   });
 });

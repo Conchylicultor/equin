@@ -12734,7 +12734,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/runtime-sdk`
           - `menu-bar/app-grid`
           - `ui/theme-engine/quick-theme`
-    - **`theme-scope`** — Theme-scope helpers: the single definition of the focused full-surface app's theme scope, which decides the :root token layer and the document's light/dark (useRootThemeScopeState: a state that keeps the not-registered-yet window apart from 'no app owns the surface'), and useAppSettingsScope — the app:<id> config scope per-app theme settings (variants) are read in: the nearest app theme boundary's (a pane's home app), else the focused app's.
+    - **`theme-scope`** — Theme-scope helpers: the single definition of the focused full-surface app's theme scope, which decides the document's light/dark and canvas (never the :root tokens, always the desktop's) (useRootThemeScopeState: a state that keeps the not-registered-yet window apart from 'no app owns the surface'), and useAppSettingsScope — the app:<id> config scope per-app theme settings (variants) are read in: the nearest app theme boundary's (a pane's home app), else the focused app's.
       - Web:
         - Uses:
           - `apps-core.useActiveApp`
@@ -12751,7 +12751,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `ui/segmented-progress-bar`
           - `ui/theme-engine`
-          - `ui/tokens/icons`
           - `ui/variant-region`
 
 - **`audience`** — Who the user is (user | developer), read live as useAudience() from the Developer mode config; registers that config. Registers the Developer mode config and reads the user's audience on the server (getAudience).
@@ -58220,6 +58219,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useIconMarkup`
           - `useIconStyle`
           - `usePublishIconStyle`
+          - `usePublishIconStyleLayer`
           - `useScopeIconStyles`
           - `useWantedScopeSprites`
           - `useWantedSprites`
@@ -58959,7 +58959,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --space-sm`
               - `ui/tokens/density --space-xs`
               - `ui/tokens/shape --spacing`
-    - **`theme-engine`** — Paints each scope's selected theme: the token-group, theme and theme-source slots, the theme selection config, the injector that resolves one theme per scope into CSS variables, and the document's light/dark: the root scope's effective color mode (the app's declared default from defineApp, the user's per-app override, else the global setting), read and written through useColorModeSetting (a state: not known until the surface says which app owns :root). Registers the theme selection and per-app color-mode configs, and paints the first frame: renders every app's theme CSS into the SPA shell's head (DocumentHead.Fragment) from the generated theme declarations, the ThemeEngine.Source themes, the selections and each app's effective light/dark (its declared default and the user's override), re-rendered when any of them changes.
+    - **`theme-engine`** — Paints each scope's selected theme: the token-group, theme and theme-source slots, the theme selection config, the injector that resolves one theme per scope into CSS variables, and the document's light/dark: the focused full-surface app's effective color mode (the app's declared default from defineApp, the user's per-app override, else the global setting), read and written through useColorModeSetting (a state: not known until the surface says which app fills it). :root always wears the desktop's theme; each app's theme is painted on its own scope. Registers the theme selection and per-app color-mode configs, and paints the first frame: renders every app's theme CSS into the SPA shell's head (DocumentHead.Fragment) from the generated theme declarations, the ThemeEngine.Source themes, the selections and each app's effective light/dark (its declared default and the user's override), re-rendered when any of them changes.
       - Web:
         - Slots:
           - `ThemeEngine.VariantGroup`
@@ -59085,6 +59085,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `appColorModeConfig`
           - `assertUniqueFixedThemes`
           - `both`
+          - `CANVAS_STYLE_ID`
           - `ColorAdjustmentSchema`
           - `DEFAULT_THEME_ID`
           - `defineFixedTheme`
@@ -59100,6 +59101,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `paintThemeStyles`
           - `parseAppColorModeOverride`
           - `parseConfiguredColorMode`
+          - `renderCanvasBlock`
           - `renderSubThemeBlock`
           - `renderThemeGroupBlock`
           - `resolveFixedTheme`
@@ -59804,8 +59806,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Icons.Root` → `IconThemeBridge`
             - Uses:
               - `apps-core.Apps`
-              - `apps-core/theme-scope.RootThemeScopeState`
-              - `apps-core/theme-scope.useRootThemeScopeState`
               - `config_v2.useScopeMembership`
               - `network/live/live-state.foldResource`
               - `primitives/css/row.Row`
@@ -59817,6 +59817,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/icons.Icons`
               - `ui/icons.useIconFamilies`
               - `ui/icons.usePublishIconStyle`
+              - `ui/icons.usePublishIconStyleLayer`
               - `ui/theme-engine.ThemeEngine`
               - `ui/theme-engine.useResolvedColorMode`
               - `ui/theme-engine.useResolvedTheme`
@@ -59834,6 +59835,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `IconsTokenValues`
             - Exports (values):
               - `iconsGroup`
+              - `readIconTokenLayer`
               - `readIconTokens`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`

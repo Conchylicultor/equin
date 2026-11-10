@@ -74,15 +74,21 @@ cycle. So the pieces around it are wired in, not imported:
 
 - **Which scope an icon is in** — `IconScopeProvider`, rendered by every
   `<Theme>` boundary (`primitives/css/theme-boundary`) with its scope token. It
-  is React context, so it crosses portals like the theme does. (A sub-theme's
-  popups keep the sub-theme's icon style — the region-only forward is a DOM
-  attribute concern the icon scope does not mirror.)
-- **What each scope says** — `usePublishIconStyle(scope, style)`, called by the
-  token group's `IconThemeBridge` (a `Core.Root`) for the root (`:root`), each
-  app with its own theme document, each fixed theme and each sub-theme that
-  names the group. A scope with no entry uses the root's, as its CSS inherits
-  `:root`; before anything is published the default applies. One publisher per
-  scope — a second throws.
+  is React context, so it crosses portals like the theme does, and it carries
+  the CHAIN of enclosing boundaries, nearest first — a sub-theme is a layer
+  over whatever scope encloses it. (A sub-theme's popups keep the sub-theme's
+  icon style — the region-only forward is a DOM attribute concern the icon
+  scope does not mirror.)
+- **What each scope says** — `usePublishIconStyle(scope, style)` publishes a
+  WHOLE style, `usePublishIconStyleLayer(scope, partial)` a LAYER (only the
+  axes it names). Both are called by the token group's `IconThemeBridge` (a
+  `Core.Root`): whole styles for the root (`:root`, the desktop's theme), each
+  app with its own theme document and each fixed theme; a layer for each
+  sub-theme that names the group. An `<Icon>` draws the nearest whole style in
+  its chain (else the root's, else the default) with every layer between them
+  applied over it — so a media player's filled icons keep the family of the
+  app hosting it, as its CSS keeps that app's tokens. One publisher per scope
+  — a second throws.
 - **Sprites** — the `sprites` sub-plugin fills the sprite store
   (`provideSprite`) and mounts `IconSpriteSheet`, an inline container of
   one `<svg>` per sprite (its symbols under `display: none`, so no style
@@ -462,6 +468,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `useIconMarkup`
     - `useIconStyle`
     - `usePublishIconStyle`
+    - `usePublishIconStyleLayer`
     - `useScopeIconStyles`
     - `useWantedScopeSprites`
     - `useWantedSprites`

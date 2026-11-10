@@ -3,10 +3,6 @@ import { useScopeMembership } from "@plugins/config_v2/web";
 import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Apps } from "@plugins/apps-core/web";
 import {
-  useRootThemeScopeState,
-  type RootThemeScopeState,
-} from "@plugins/apps-core/plugins/theme-scope/web";
-import {
   appThemeScope,
   fixedThemeScope,
   subThemeScope,
@@ -23,8 +19,11 @@ import {
   useResolvedColorMode,
   useResolvedTheme,
 } from "@plugins/ui/plugins/theme-engine/web";
-import { usePublishIconStyle } from "@plugins/ui/plugins/icons/web";
-import { iconsGroup, readIconTokens } from "../../core";
+import {
+  usePublishIconStyle,
+  usePublishIconStyleLayer,
+} from "@plugins/ui/plugins/icons/web";
+import { iconsGroup, readIconTokenLayer, readIconTokens } from "../../core";
 
 /**
  * Tells the icons primitive what every painted theme scope says about icons.
@@ -32,30 +31,27 @@ import { iconsGroup, readIconTokens } from "../../core";
  * It publishes one style per scope the theme engine paints, keyed by the same
  * scope token a `<Theme>` boundary names, mirroring how the CSS falls back:
  *
- * - the root (`:root`, no boundary): the focused full-surface app's theme, or
- *   the desktop's;
+ * - the root (`:root`, no boundary): the desktop's theme — `:root` never
+ *   follows the focused app (theme-engine's ThemeInjector);
  * - each app with its OWN theme document (`app:<id>`) — an app without one
  *   draws with the root's style, as its region inherits `:root`;
  * - each fixed theme (`fixed:<id>`, the app chrome), resolved over the schema
  *   defaults alone;
- * - each sub-theme that names this group (`sub:<id>`), its values over the
- *   root's. (A sub-theme sits over whatever scope surrounds it; the one we have,
- *   the website's page, sits over the root.)
+ * - each sub-theme that names this group (`sub:<id>`), as a LAYER of only the
+ *   tokens it names: the icons primitive wears it over the style of whatever
+ *   scope encloses the region, exactly as the CSS block sits over the
+ *   surrounding theme.
  *
  * A scope whose theme is still loading publishes nothing: its icons draw in
- * the global default style meanwhile, the same glyphs in the same box. So does
- * the root — and every sub-theme, resolved over it — before the surface has
- * said which app owns `:root`: publishing the desktop's style meanwhile would
- * draw the wrong family for a frame on a page an app opens.
+ * the global default style meanwhile, the same glyphs in the same box.
  */
 export function IconThemeBridge() {
-  const root = useRootThemeScopeState();
   const apps = Apps.App.useContributions();
   const fixedThemes = ThemeEngine.FixedTheme.useContributions();
   const subThemes = ThemeEngine.SubTheme.useContributions();
   return (
     <>
-      <RootScope root={root} />
+      <SelectedScope themeScope={undefined} publishAs={undefined} />
       {apps.map((app) => (
         <AppScope key={app.id} appId={app.id} />
       ))}
@@ -63,15 +59,10 @@ export function IconThemeBridge() {
         <FixedScope key={fixed.id} fixed={fixed} />
       ))}
       {subThemes.map((sub) => (
-        <SubScope key={sub.id} sub={sub} root={root} />
+        <SubScope key={sub.id} sub={sub} />
       ))}
     </>
   );
-}
-
-function RootScope({ root }: { root: RootThemeScopeState }) {
-  if (!root.known) return null;
-  return <SelectedScope themeScope={root.scopeId} publishAs={undefined} />;
 }
 
 function AppScope({ appId }: { appId: string }) {
@@ -123,32 +114,23 @@ function FixedScope({ fixed }: { fixed: FixedTheme }) {
   return <Publish scope={fixedThemeScope(fixed)} values={values} />;
 }
 
-function SubScope({ sub, root }: { sub: SubTheme; root: RootThemeScopeState }) {
+function SubScope({ sub }: { sub: SubTheme }) {
   const fragment = sub.fragments.find((f) => f.groupId === iconsGroup.id);
-  if (fragment === undefined || !root.known) return null;
-  return (
-    <KnownSubScope sub={sub} fragment={fragment} rootScope={root.scopeId} />
-  );
+  if (fragment === undefined) return null;
+  return <SubLayer sub={sub} fragment={fragment} />;
 }
 
-function KnownSubScope({
+function SubLayer({
   sub,
   fragment,
-  rootScope,
 }: {
   sub: SubTheme;
   fragment: TokenGroupFragment;
-  rootScope: string | undefined;
 }) {
   const mode = useResolvedColorMode();
-  const rootValues = useSelectedIconValues(rootScope);
-  if (rootValues === null) return null;
-  const own = fragment[mode];
-  const values: Record<string, string> = { ...rootValues };
-  for (const [token, value] of Object.entries(own)) {
-    if (value !== undefined) values[token] = value;
-  }
-  return <Publish scope={subThemeScope(sub)} values={values} />;
+  const layer = readIconTokenLayer(fragment[mode]);
+  usePublishIconStyleLayer(subThemeScope(sub), layer);
+  return null;
 }
 
 function Publish({

@@ -1,26 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 
-// Before the surface has said which app owns `:root`, the root scope — and
-// every sub-theme, resolved over it — publishes NOTHING: publishing the
-// desktop's icon style meanwhile would draw the wrong family for a frame on a
-// page an app opens. Once known, both publish the root app's style.
-
-const root = vi.hoisted(() => ({
-  state: { known: false } as
-    { known: false } | { known: true; scopeId: string | undefined },
-}));
+// The root publishes the desktop's style — `:root` never follows the focused
+// app — and a sub-theme publishes a LAYER of only the tokens it names, worn by
+// the icons primitive over whatever scope encloses its region.
 
 const published = vi.hoisted(
-  () => [] as { scope: string | undefined; values: unknown }[],
-);
-
-vi.mock(
-  "@plugins/apps-core/plugins/theme-scope/web",
-  async (importOriginal) => ({
-    ...(await importOriginal<object>()),
-    useRootThemeScopeState: () => root.state,
-  }),
+  () => [] as { scope: string | undefined; values: unknown; layer?: true }[],
 );
 
 vi.mock("@plugins/apps-core/web", async (importOriginal) => ({
@@ -36,6 +22,7 @@ vi.mock("@plugins/config_v2/web", async (importOriginal) => ({
 vi.mock("../../core", () => ({
   iconsGroup: { id: "icons" },
   readIconTokens: (values: unknown) => values,
+  readIconTokenLayer: (values: unknown) => values,
 }));
 
 const sub = vi.hoisted(() => ({
@@ -77,6 +64,9 @@ vi.mock("@plugins/ui/plugins/icons/web", async (importOriginal) => ({
   usePublishIconStyle: (scope: string | undefined, values: unknown) => {
     published.push({ scope, values });
   },
+  usePublishIconStyleLayer: (scope: string, values: unknown) => {
+    published.push({ scope, values, layer: true });
+  },
 }));
 
 import { IconThemeBridge } from "../components/icon-theme-bridge";
@@ -84,25 +74,19 @@ import { IconThemeBridge } from "../components/icon-theme-bridge";
 afterEach(() => {
   cleanup();
   published.length = 0;
-  root.state = { known: false };
 });
 
 describe("IconThemeBridge's root and sub-theme scopes", () => {
-  it("publish nothing while the root scope is not known", () => {
-    render(<IconThemeBridge />);
-    expect(published).toEqual([]);
-  });
-
-  it("publish the root app's style once it is known", () => {
-    root.state = { known: true, scopeId: "app:website" };
+  it("publishes the desktop's style for the root and the sub-theme's own tokens as a layer", () => {
     render(<IconThemeBridge />);
     expect(published).toContainEqual({
       scope: undefined,
-      values: { iconFamily: "app:website" },
+      values: { iconFamily: "desktop" },
     });
     expect(published).toContainEqual({
       scope: "sub:doc",
-      values: { iconFamily: "app:website", iconFill: "filled" },
+      values: { iconFill: "filled" },
+      layer: true,
     });
   });
 });

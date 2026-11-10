@@ -2,7 +2,12 @@ import { describe, it, expect } from "bun:test";
 
 import { both, defineTokenGroup } from "./define-token-group";
 import { defineFixedTheme } from "./fixed-theme";
-import { paintThemeStyles, themePainter, themeStyleId } from "./paint";
+import {
+  CANVAS_STYLE_ID,
+  paintThemeStyles,
+  themePainter,
+  themeStyleId,
+} from "./paint";
 import { defineSubTheme } from "./sub-theme";
 import { DEFAULT_THEME_ID, defineTheme, type Theme } from "./theme";
 
@@ -51,7 +56,8 @@ const sources = {
 describe("paintThemeStyles", () => {
   it("paints the root, other apps, sub-themes and fixed themes, in mount order", () => {
     const styles = paintThemeStyles(sources, {
-      rootThemeId: "red",
+      baseThemeId: "red",
+      canvasThemeId: "red",
       appThemes: [{ appId: "home", themeId: DEFAULT_THEME_ID }],
     });
     expect(Object.keys(styles)).toEqual([
@@ -59,6 +65,7 @@ describe("paintThemeStyles", () => {
       "theme-engine-shape",
       "theme-scope-app:home-palette",
       "theme-scope-app:home-shape",
+      "theme-engine-canvas",
       "theme-scope-sub:card-shape",
       "theme-scope-fixed:chrome-palette",
       "theme-scope-fixed:chrome-shape",
@@ -71,9 +78,25 @@ describe("paintThemeStyles", () => {
     );
   });
 
+  it("paints the canvas on <body> alone, from the canvas theme's --background", () => {
+    const styles = paintThemeStyles(sources, {
+      baseThemeId: DEFAULT_THEME_ID,
+      appThemes: [],
+      canvasThemeId: "red",
+    });
+    expect(styles[CANVAS_STYLE_ID]).toBe(
+      "body {\n  background-color: white;\n}\n.dark body {\n  background-color: black;\n}",
+    );
+    // The canvas never re-roots the tokens: :root stays the base theme's.
+    expect(styles["theme-engine-palette"]).toStartWith(
+      ":root {\n  --primary: blue;",
+    );
+  });
+
   it("writes a sub-theme's named tokens plus the ones derived from them, nothing else", () => {
     const styles = paintThemeStyles(sources, {
-      rootThemeId: DEFAULT_THEME_ID,
+      baseThemeId: DEFAULT_THEME_ID,
+      canvasThemeId: DEFAULT_THEME_ID,
       appThemes: [],
     });
     expect(styles[themeStyleId("shape", "sub:card")]).toBe(
@@ -83,7 +106,8 @@ describe("paintThemeStyles", () => {
 
   it("wears a fixed theme's scheme in both modes", () => {
     const styles = paintThemeStyles(sources, {
-      rootThemeId: DEFAULT_THEME_ID,
+      baseThemeId: DEFAULT_THEME_ID,
+      canvasThemeId: DEFAULT_THEME_ID,
       appThemes: [],
     });
     expect(styles["theme-scope-fixed:chrome-palette"]).toBe(
@@ -93,11 +117,13 @@ describe("paintThemeStyles", () => {
 
   it("paints Default for a selection naming no theme, as the browser does", () => {
     const missing = paintThemeStyles(sources, {
-      rootThemeId: "gone",
+      baseThemeId: "gone",
+      canvasThemeId: "gone",
       appThemes: [],
     });
     const fallback = paintThemeStyles(sources, {
-      rootThemeId: DEFAULT_THEME_ID,
+      baseThemeId: DEFAULT_THEME_ID,
+      canvasThemeId: DEFAULT_THEME_ID,
       appThemes: [],
     });
     expect(missing).toEqual(fallback);
@@ -118,7 +144,7 @@ describe("paintThemeStyles", () => {
     };
     const styles = paintThemeStyles(
       { ...sources, themesById: new Map([...themesById, ["tinted", tinted]]) },
-      { rootThemeId: "tinted", appThemes: [] },
+      { baseThemeId: "tinted", canvasThemeId: "tinted", appThemes: [] },
     );
     expect(styles["theme-engine-palette"]).toContain(
       "--primary: oklch(0.5000 0.1000 110.00);",
@@ -130,8 +156,12 @@ describe("paintThemeStyles", () => {
       inset: { default: "initial" },
     });
     const styles = paintThemeStyles(
-      { ...sources, groups: [optIn] },
-      { rootThemeId: DEFAULT_THEME_ID, appThemes: [] },
+      { ...sources, groups: [optIn, palette] },
+      {
+        baseThemeId: DEFAULT_THEME_ID,
+        canvasThemeId: DEFAULT_THEME_ID,
+        appThemes: [],
+      },
     );
     // `--inset: initial` is the guaranteed-invalid value: every
     // `var(--inset, fallback)` takes its fallback, i.e. the consumer's own.
@@ -146,19 +176,22 @@ describe("themePainter", () => {
     const painter = themePainter(sources);
     const selections = [
       {
-        rootThemeId: DEFAULT_THEME_ID,
+        baseThemeId: DEFAULT_THEME_ID,
+        canvasThemeId: DEFAULT_THEME_ID,
         appThemes: [{ appId: "a", themeId: "red" }],
       },
-      { rootThemeId: "red", appThemes: [] },
+      { baseThemeId: "red", canvasThemeId: "red", appThemes: [] },
       {
-        rootThemeId: DEFAULT_THEME_ID,
+        baseThemeId: DEFAULT_THEME_ID,
+        canvasThemeId: DEFAULT_THEME_ID,
         appThemes: [
           { appId: "b", themeId: "red" },
           { appId: "a", themeId: "red" },
         ],
       },
       {
-        rootThemeId: "missing",
+        baseThemeId: "missing",
+        canvasThemeId: "missing",
         appThemes: [{ appId: "a", themeId: "missing" }],
       },
     ];

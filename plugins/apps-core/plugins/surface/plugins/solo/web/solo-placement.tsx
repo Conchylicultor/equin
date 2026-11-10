@@ -31,8 +31,9 @@ export const soloDef: PlacementDef = {
   // shortcut: Esc closes whatever is open, and leaving solo by accident confuses.
   default: true,
   frame: "viewport",
-  // A single app fills the viewport, so `:root` carries the app's theme (like
-  // docked, unlike floating's multi-window backdrop) — see useRootThemeScopeState.
+  // A single app fills the viewport, so the document's light/dark and canvas
+  // follow it (like docked, unlike floating's multi-window backdrop) — see
+  // useRootThemeScopeState. Its theme tokens stay on its tab's own boundary.
   themeScope: "app",
   ownsChrome: true,
   // No frame chrome: a fullscreen tab is edge to edge, and its canvas comes from

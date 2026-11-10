@@ -93,3 +93,30 @@ export function readIconTokens(
     weight: oneOf("iconStroke", values.iconStroke, ICON_WEIGHTS),
   };
 }
+
+/**
+ * The axes a SPARSE set of icon tokens names (a sub-theme's fragment), checked
+ * the same way as {@link readIconTokens}; an axis it leaves out stays absent,
+ * so the style it is worn over keeps its own.
+ */
+export function readIconTokenLayer(
+  values: Readonly<Record<string, string | undefined>>,
+): Partial<IconStyle> {
+  return {
+    ...(values.iconFamily !== undefined && {
+      family: familyId(values.iconFamily),
+    }),
+    ...(values.iconShape !== undefined && {
+      shape: oneOf("iconShape", values.iconShape, ICON_SHAPES),
+    }),
+    ...(values.iconFill !== undefined && {
+      fill: oneOf("iconFill", values.iconFill, ICON_FILLS),
+    }),
+    ...(values.iconActiveFill !== undefined && {
+      activeFill: oneOf("iconActiveFill", values.iconActiveFill, ICON_FILLS),
+    }),
+    ...(values.iconStroke !== undefined && {
+      weight: oneOf("iconStroke", values.iconStroke, ICON_WEIGHTS),
+    }),
+  };
+}
