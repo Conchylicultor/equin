@@ -270,7 +270,13 @@ useLive(nodes, { id, include: "ancestors" }); // ready: row + ancestors (root-fi
   once, then stays `ready` with `ancestorsPending: true` while a tuple (a new
   page, a page whose rows moved) has not answered. A row read is `loading`
   whenever its parent's tuple has not answered (a re-parented row included).
-  Its own read kinds (`*-ancestors`), latched like the others.
+  Its own read kinds, latched like the others — except under a viewport: a
+  tree collection's viewport read is ONE kind whether its query asks for
+  ancestors or is `null` (reads nothing), so a call site may ask on some
+  renders only (a live tree's hits read, detached in expand mode); asking
+  again starts the ancestors over. A caller that detaches such a read passes
+  the collection with a `null` query, never a `null` collection (that is a
+  plain viewport read's kind).
 - Tests: `server/internal/serve-collection-tree-oracle.test.ts` (real feed,
   a real `materializeJoin`: insert / delete / re-parent / `where` flip
   recount on the window and `:rows`), `resource-vocabulary`'s `mints.test.ts`.

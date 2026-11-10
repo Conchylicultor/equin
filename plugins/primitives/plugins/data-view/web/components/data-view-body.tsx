@@ -792,6 +792,7 @@ function DataViewBodyInner<TRow>(
   const collapsedSections = viewModel.collapsedSectionsFor(activeViewId);
   const live = useLiveSource({
     source: flatLiveSource,
+    collection: liveSource?.collection ?? null,
     plan: livePlan,
     fields,
     state: activeState,
@@ -802,6 +803,7 @@ function DataViewBodyInner<TRow>(
   });
   const treeView = useLiveTree({
     source: treeNests ? (liveSource as LiveTreeDataSource<TRow>) : undefined,
+    collection: liveSource?.collection ?? null,
     plan: livePlan,
     fields,
     state: activeState,

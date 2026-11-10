@@ -234,6 +234,7 @@ function mount(
     (p: { state: ViewState }) =>
       useLiveSource<Thread>({
         source,
+        collection: source.collection,
         plan,
         fields,
         state: p.state,
@@ -480,6 +481,7 @@ function LiveBody(props: {
   );
   const origin = useLiveSource<Thread>({
     source: props.source,
+    collection: props.source.collection,
     plan,
     fields: props.fields,
     state: baseState,
@@ -599,6 +601,7 @@ describe("useLiveSource — server sections", () => {
     );
     const view = useLiveSource<Thread>({
       source: props.source,
+      collection: props.source.collection,
       plan,
       fields: props.fields,
       state: props.state,

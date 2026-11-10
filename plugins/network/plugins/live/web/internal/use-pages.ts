@@ -316,28 +316,41 @@ export type WithAncestors<R, Row> = R extends { status: "ready" }
   : R;
 
 /**
- * `useLive(tree, { …, include: "ancestors" }, { viewport })` — the viewport
- * read of `useViewportPages`, plus each loaded page's ancestors
- * (`./use-ancestors`). Paging, `canGrow` and the rows are exactly the plain
- * read's (the query without `include` — the same tuples).
+ * Every viewport read of a tree collection — `useLive(tree, query, {
+ * viewport })` — the viewport read of `useViewportPages`, plus, when the
+ * query asks (`include: "ancestors"`, passed here as `withAncestorsOf`), each
+ * loaded page's ancestors (`./use-ancestors`). Paging, `canGrow` and the rows
+ * are exactly the plain read's (the query without `include` — the same
+ * tuples).
+ *
+ * One read whether or not it asks, so one set of hooks: a call site may ask
+ * for ancestors on one render and not on the next (a live tree flipping
+ * between its hits and expand modes), or read nothing (`null` query) in
+ * between — asking again starts the ancestors over, `loading` until every
+ * page's answered.
  */
 export function useTreeViewportPages<Row, F, S extends string>(
   collection: LiveTreeCollection<Row, F, S>,
   query: LivePagesQuery<F, S> | null,
   options: LivePagesOptions,
-): WithAncestors<LivePagesResult<Row>, Row> {
+  withAncestorsOf: boolean,
+): LivePagesResult<Row> | WithAncestors<LivePagesResult<Row>, Row> {
   const read = usePages(pageSourceOf(collection), query, {
     viewport: options.viewport,
     resetKey: options.resetKey,
     step: undefined,
   });
+  // Not asked: no segments, so no `:ancestors` tuple is read.
   const ancestors = useSegmentAncestors(
     collection as unknown as LiveTreeCollection<Row, unknown, string>,
-    read.segments,
+    withAncestorsOf ? read.segments : null,
   );
   return useMemo(
-    () => withAncestors(read.pages, ancestors, read.refetch),
-    [read, ancestors],
+    () =>
+      withAncestorsOf
+        ? withAncestors(read.pages, ancestors, read.refetch)
+        : read.pages,
+    [read, ancestors, withAncestorsOf],
   );
 }
 

@@ -173,6 +173,15 @@ export const SEARCH_DEBOUNCE_MS = 200;
  */
 export function useLiveSource<TRow>(args: {
   source: LiveDataSource<TRow> | undefined;
+  /**
+   * The surface's collection (its live source's, `null` without one), named
+   * on every render whether this read reads or not (`source` absent, a
+   * sectioned view): a detached read reads nothing over it, so the call
+   * site's read keeps one kind — a tree's viewport read is its own kind
+   * (`useLive`), and a call site flips between reading and not as the view
+   * changes (a live tree's modes, nesting on and off).
+   */
+  collection: LiveDataSource<TRow>["collection"] | null;
   plan: LiveFieldPlan<TRow> | null;
   fields: readonly FieldDef<TRow>[];
   state: ViewState;
@@ -192,6 +201,7 @@ export function useLiveSource<TRow>(args: {
 }): SourceView<TRow> | null {
   const {
     source,
+    collection: surfaceCollection,
     plan,
     fields,
     state,
@@ -431,10 +441,16 @@ export function useLiveSource<TRow>(args: {
         : null,
     [lowering, include],
   );
+  if (source !== undefined && source.collection !== surfaceCollection) {
+    throw new Error(
+      "useLiveSource: the source reads another collection than the surface's",
+    );
+  }
   const { pages, paging: pagesPaging } = useLivePagesPaging(
     // No source, or a sectioned view (each section reads its own): a
-    // detached read, which reads nothing.
-    pagesQuery === null ? null : (source?.collection ?? null),
+    // detached read — a `null` query, which reads nothing over the surface's
+    // collection.
+    surfaceCollection,
     pagesQuery,
     lowering.kind === "ok" ? { resetKey: lowering.resetKey } : undefined,
   );

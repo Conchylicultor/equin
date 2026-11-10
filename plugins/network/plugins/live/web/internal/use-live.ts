@@ -1172,7 +1172,9 @@ export function useLive<Row, F, S extends string>(
         source as LiveRowsCollection<Row>,
         (query as LiveRowQuery).id,
       );
-    case "viewport-pages-ancestors":
+    case "viewport-pages-tree":
+      // Ancestors or not, one read (`useTreeViewportPages`): a tree's call
+      // site may ask for them on some renders only, or read nothing between.
       return useTreeViewportPages(
         source as LiveTreeCollection<Row, F, S>,
         usePinnedClock(
@@ -1180,6 +1182,7 @@ export function useLive<Row, F, S extends string>(
           withoutInclude(query as LivePagesQuery<F, S> | null),
         ),
         options as LivePagesOptions,
+        includesAncestors(query),
       );
     case "all-pages-ancestors":
       return useTreeAllPages(
@@ -1237,6 +1240,13 @@ function usePinnedClock<Q extends object | null | undefined>(
   );
 }
 
+/** Whether a read's query asks for its tree's ancestors (`include: "ancestors"`, checked by `readKindOf`). */
+function includesAncestors(query: object | null | undefined): boolean {
+  return (
+    query != null && (query as { include?: unknown }).include === "ancestors"
+  );
+}
+
 /**
  * The query without `include` — what the window's codec and pages read, so a
  * tree read's tuples are byte-identical to the plain read's (the boot-hydrated
@@ -1264,8 +1274,8 @@ const READ_KIND = {
   "all-pages": "window read (its pages every one live, no viewport)",
   row: "row by id",
   collection: "grouping or id set",
-  "viewport-pages-ancestors":
-    "tree read with its ancestors, kept live by a viewport",
+  "viewport-pages-tree":
+    "tree read kept live by a viewport (with its ancestors when asked)",
   "all-pages-ancestors": "tree window read with its ancestors",
   "row-ancestors": "tree row by id with its ancestors",
 } as const;
@@ -1296,8 +1306,8 @@ function readKindOf(
     );
   }
   switch (kind) {
-    case "viewport-pages":
-      return "viewport-pages-ancestors";
+    case "viewport-pages-tree":
+      return kind;
     case "all-pages":
       return "all-pages-ancestors";
     case "row":
@@ -1311,7 +1321,7 @@ function readKindOf(
     case "value-list":
     case "all":
     case "collection":
-    case "viewport-pages-ancestors":
+    case "viewport-pages":
     case "all-pages-ancestors":
     case "row-ancestors":
       throw new Error(
@@ -1348,7 +1358,11 @@ function plainReadKindOf(
   // Read by value, not by key: a value read's `{ limit, viewport: undefined }`
   // (its `viewport?: never`) is a read with none.
   if ((options as { viewport?: unknown } | undefined)?.viewport !== undefined) {
-    return "viewport-pages";
+    // A tree collection's viewport read is one kind whether its query asks
+    // for ancestors or is `null` (reads nothing): `include` is per render.
+    return ((source as { tree?: unknown } | null)?.tree ?? null) === null
+      ? "viewport-pages"
+      : "viewport-pages-tree";
   }
   if (source === null) return "count";
   if ("live" in source) {

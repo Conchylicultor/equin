@@ -29,6 +29,7 @@ import {
 } from "@plugins/network/plugins/live/plugins/live-state/web/testing";
 import { liveCollection } from "@plugins/network/plugins/live/core";
 import { useLive } from "@plugins/network/plugins/live/web";
+import { mintVisibleRange } from "../internal/visible-range";
 
 let seq = 0;
 const tree = () =>
@@ -194,6 +195,72 @@ describe('useLive(tree, { …, include: "ancestors" })', () => {
     const a = root.result.current;
     if (a.status !== "ready") throw new Error("not ready");
     expect(a.ancestors).toEqual([]);
+  });
+
+  it("a viewport read is one read whether it asks for ancestors or reads nothing — a call site may flip between them", async () => {
+    // A live tree's hits read: detached (`null` query) while the tree is in
+    // expand mode, then asking with ancestors, then without, then detached
+    // again — one call site, so one set of hooks throughout.
+    const c = tree();
+    const live = createLiveStateHarness();
+    const viewport = mintVisibleRange({ kind: "measuring" });
+    type Q = { include?: "ancestors" } | null;
+    vi.spyOn(live.notifications, "hasEverBeenReady").mockReturnValue(true);
+    const { result, rerender } = renderHook(
+      (p: { q: Q }) => useLive(c, p.q, { viewport }),
+      { wrapper: live.Wrapper, initialProps: { q: null as Q } },
+    );
+    expect(result.current.status).toBe("loading");
+
+    rerender({ q: { include: "ancestors" } });
+    act(() => {
+      live.queryClient.setQueryData(
+        queryKeyFor(c.key, c.window.defaultParams),
+        [{ ...node("x", "p"), $key: '["x","x"]' }],
+      );
+      live.queryClient.setQueryData(
+        queryKeyFor(c.ancestors.key, c.ancestors.point.encode(["p"])),
+        [node("p", null)],
+      );
+    });
+    await waitFor(() => {
+      const r = result.current;
+      if (r.status !== "ready") throw new Error(r.status);
+      expect("ancestors" in r && r.ancestors.map((row) => row.id)).toEqual([
+        "p",
+      ]);
+    });
+
+    // Not asked: the same rows, no ancestors read.
+    rerender({ q: {} });
+    await waitFor(() => {
+      const r = result.current;
+      if (r.status !== "ready") throw new Error(r.status);
+      expect(r.rows.map((row) => row.id)).toEqual(["x"]);
+      expect("ancestors" in r).toBe(false);
+    });
+
+    // Detached, the page is released; asking again reads it (and its
+    // ancestors) anew — landed again here, as the server's sub-acks would.
+    rerender({ q: null });
+    rerender({ q: { include: "ancestors" } });
+    act(() => {
+      live.queryClient.setQueryData(
+        queryKeyFor(c.key, c.window.defaultParams),
+        [{ ...node("x", "p"), $key: '["x","x"]' }],
+      );
+      live.queryClient.setQueryData(
+        queryKeyFor(c.ancestors.key, c.ancestors.point.encode(["p"])),
+        [node("p", null)],
+      );
+    });
+    await waitFor(() => {
+      const r = result.current;
+      if (r.status !== "ready") throw new Error(r.status);
+      expect("ancestors" in r && r.ancestors.map((row) => row.id)).toEqual([
+        "p",
+      ]);
+    });
   });
 
   it("refuses `include` on a collection that is no tree", () => {

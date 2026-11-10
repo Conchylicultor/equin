@@ -112,6 +112,8 @@ export interface LiveTreeView<TRow> {
  */
 export function useLiveTree<TRow>(args: {
   source: LiveTreeDataSource<TRow> | undefined;
+  /** The surface's collection, named on every render (`useLiveSource`'s `collection`): the tree's reads keep their kind while it is not drawn. */
+  collection: LiveDataSource<TRow>["collection"] | null;
   plan: LiveFieldPlan<TRow> | null;
   fields: readonly FieldDef<TRow>[];
   state: ViewState;
@@ -124,6 +126,7 @@ export function useLiveTree<TRow>(args: {
 }): LiveTreeView<TRow> | null {
   const {
     source,
+    collection: surfaceCollection,
     plan,
     fields,
     state,
@@ -181,6 +184,7 @@ export function useLiveTree<TRow>(args: {
     [tree],
   );
   const rootView = useLiveSource<TRow>({
+    collection: surfaceCollection,
     source: rootSource,
     plan,
     fields,
@@ -213,6 +217,7 @@ export function useLiveTree<TRow>(args: {
     [state],
   );
   const hitsView = useLiveSource<TRow>({
+    collection: surfaceCollection,
     source: hitsSource,
     plan,
     fields,
