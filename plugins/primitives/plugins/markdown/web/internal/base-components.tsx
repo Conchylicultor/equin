@@ -91,6 +91,16 @@ function BaseLink({ href, ...p }: { href?: string } & Record<string, unknown>) {
   );
 }
 
+// An inline render's paragraph: its words, transformed, with no element of its
+// own — so the enhancers' chips still apply where the <p> is unwrapped.
+export function inlineParagraph(
+  transform: (children: ReactNode) => ReactNode,
+): NonNullable<Components["p"]> {
+  return function InlineParagraph({ children }) {
+    return <>{transform(children)}</>;
+  };
+}
+
 // `transform` and `getInlineCodeHandlers` are stable accessors that read the
 // latest context value at call time. The base map is built ONCE (permanent tag
 // identities) so react-markdown never remounts a base tag — live data flows

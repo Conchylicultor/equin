@@ -1,6 +1,8 @@
+import type React from "react";
 import { describe, expect, test } from "vitest";
 import { render } from "@testing-library/react";
 import { MarkdownRenderer } from "../internal/markdown-renderer";
+import { MarkdownEnhancementContext } from "../internal/enhancement-context";
 
 function inline(source: string) {
   return render(<MarkdownRenderer inline>{source}</MarkdownRenderer>).container;
@@ -24,6 +26,29 @@ describe("inline markdown", () => {
     expect(el.querySelector("strong")?.textContent).toBe("bold");
     expect(el.querySelector("code")?.textContent).toBe("code");
     expect(el.querySelector("ol")).toBeNull();
+  });
+
+  test("an inline render runs the enhancers' transforms on its words", () => {
+    const chip = (children: React.ReactNode) =>
+      typeof children === "string" && children.includes("task-1") ? (
+        <span data-chip>{children}</span>
+      ) : (
+        children
+      );
+    const el = render(
+      <MarkdownEnhancementContext.Provider
+        value={{
+          transforms: [chip],
+          components: {},
+          inlineCodeHandlers: [],
+          remarkPlugins: [],
+        }}
+      >
+        <MarkdownRenderer inline>{"start task-1"}</MarkdownRenderer>
+      </MarkdownEnhancementContext.Provider>,
+    ).container;
+    expect(el.querySelector("[data-chip]")?.textContent).toBe("start task-1");
+    expect(el.querySelector("p")).toBeNull();
   });
 
   test("a block render keeps its lists", () => {

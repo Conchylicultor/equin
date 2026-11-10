@@ -8,7 +8,11 @@ import {
   MarkdownEnhancementContext,
   type RemarkPlugins,
 } from "./enhancement-context";
-import { buildBaseComponents, stripNodeProp } from "./base-components";
+import {
+  buildBaseComponents,
+  inlineParagraph,
+  stripNodeProp,
+} from "./base-components";
 
 const BASE_REMARK_PLUGINS = [remarkGfm];
 
@@ -17,8 +21,10 @@ const BASE_REMARK_PLUGINS = [remarkGfm];
 // `markdown.tsx` can load it through a `lazyComponent()` dynamic import,
 // keeping react-markdown (~151KB) off the eager plugin-boot wave — it loads
 // once, on the first markdown render of the session.
-// An inline render unwraps paragraphs: their words stay, the <p> goes.
-const INLINE_DISALLOWED = ["p"];
+// An inline render unwraps paragraphs: their words stay, the <p> goes. It is
+// replaced by a fragment rather than dropped (react-markdown's
+// `disallowedElements`), because `p` is where the enhancers' transforms run on
+// a paragraph's words — dropping it would skip every chip (ids, file links).
 
 // An inline render parses inline syntax only: text that merely starts like a
 // block (`1. …`, `- …`, `# …`, `> …`) stays the words it is, rather than
@@ -68,19 +74,18 @@ export function MarkdownRenderer({
   // identity, so react-markdown never remounts them on a re-render. The
   // accessors read the stable `ref.current`, so live data is reflected in place
   // while the map is still built exactly once.
-  const base = useMemo(
-    () =>
-      stripNodeProp(
-        /* eslint-disable react-hooks/refs -- the accessors run at react-markdown render time (not this hook's render); reading the latest transforms / inline-code handlers off the stable ref is what keeps the base map built ONCE while still reflecting live data */
-        buildBaseComponents(
-          (c: ReactNode) =>
-            ref.current.transforms.reduce((acc, fn) => fn(acc), c),
-          () => ref.current.inlineCodeHandlers,
-        ),
-        /* eslint-enable react-hooks/refs */
+  const { base, inlineP } = useMemo(() => {
+    /* eslint-disable react-hooks/refs -- the accessors run at react-markdown render time (not this hook's render); reading the latest transforms / inline-code handlers off the stable ref is what keeps the base map built ONCE while still reflecting live data */
+    const transform = (c: ReactNode) =>
+      ref.current.transforms.reduce((acc, fn) => fn(acc), c);
+    return {
+      base: stripNodeProp(
+        buildBaseComponents(transform, () => ref.current.inlineCodeHandlers),
       ),
-    [],
-  );
+      inlineP: inlineParagraph(transform),
+    };
+    /* eslint-enable react-hooks/refs */
+  }, []);
 
   // Overrides re-wrap only when the override map actually changes; `code` lives
   // only in `base`, so its identity is constant forever.
@@ -90,8 +95,12 @@ export function MarkdownRenderer({
   );
 
   const components = useMemo(
-    () => ({ ...base, ...strippedOverrides }),
-    [base, strippedOverrides],
+    () => ({
+      ...base,
+      ...(inline ? { p: inlineP } : {}),
+      ...strippedOverrides,
+    }),
+    [base, inline, inlineP, strippedOverrides],
   );
 
   const remarkPlugins = useMemo(
@@ -120,15 +129,10 @@ export function MarkdownRenderer({
   // subscriptions; they don't depend on this component re-rendering.
   return useMemo(
     () => (
-      <ReactMarkdownLib
-        remarkPlugins={remarkPlugins}
-        components={components}
-        disallowedElements={inline ? INLINE_DISALLOWED : undefined}
-        unwrapDisallowed={inline}
-      >
+      <ReactMarkdownLib remarkPlugins={remarkPlugins} components={components}>
         {children}
       </ReactMarkdownLib>
     ),
-    [children, components, remarkPlugins, inline],
+    [children, components, remarkPlugins],
   );
 }
