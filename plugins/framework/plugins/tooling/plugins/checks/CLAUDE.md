@@ -591,6 +591,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
   - **`migration-hashes-unique`** [exempt]
   - **`migration-metadata-consistent`**
   - **`migrations-in-sync`**
+  - **`negated-complex-selector`**
   - **`no-db-backed-notify`** [exempt]
   - **`no-disabled-flag`**
   - **`no-gitlinks`** [exempt]

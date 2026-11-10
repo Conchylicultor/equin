@@ -29610,6 +29610,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
             - **`migration-metadata-consistent`**
             - **`migrations-in-sync`**
+            - **`negated-complex-selector`**
             - **`no-db-backed-notify`**
               - Exemptions:
                 - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/resolve.ts` (debt)

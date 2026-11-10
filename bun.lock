@@ -3746,6 +3746,10 @@
       "name": "@equin/plugin-framework-tooling-checks-migrations-in-sync",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/negated-complex-selector": {
+      "name": "@equin/plugin-framework-tooling-checks-negated-complex-selector",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/no-db-backed-notify": {
       "name": "@equin/plugin-framework-tooling-checks-no-db-backed-notify",
       "version": "0.0.1",
@@ -9311,6 +9315,8 @@
     "@equin/plugin-framework-tooling-checks-migration-metadata-consistent": ["@equin/plugin-framework-tooling-checks-migration-metadata-consistent@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/migration-metadata-consistent"],
 
     "@equin/plugin-framework-tooling-checks-migrations-in-sync": ["@equin/plugin-framework-tooling-checks-migrations-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/migrations-in-sync"],
+
+    "@equin/plugin-framework-tooling-checks-negated-complex-selector": ["@equin/plugin-framework-tooling-checks-negated-complex-selector@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/negated-complex-selector"],
 
     "@equin/plugin-framework-tooling-checks-no-db-backed-notify": ["@equin/plugin-framework-tooling-checks-no-db-backed-notify@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/no-db-backed-notify"],
 
