@@ -2,13 +2,29 @@ import { useEffect, useState } from "react";
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 
 /**
- * The CSS var `pr-floating-bar` / `pr-floating-bar-pane` read: the right inset
- * a surface-edge header reserves so the floating bar does not cover its
- * actions. It exists on `:root` **iff** the floating bar is mounted and in its
- * home slot, so a header falls back to its own end inset whenever the bar is
- * docked, off, or dragged elsewhere.
+ * The CSS var `pr-floating-bar` / `pr-floating-bar-pane` (and the desktop
+ * window titlebar) read: the right inset a surface-edge header reserves so the
+ * floating bar does not cover its actions. It is set **iff** the floating bar
+ * is mounted and in its home slot, so a header falls back to its own end inset
+ * whenever the bar is docked, off, or dragged elsewhere.
  */
 const SAFE_AREA_VAR = "--floating-bar-safe-area";
+
+/**
+ * Which boxes the reservation is set on: exactly the headers that read it. The
+ * header that reserves the bar's room is the header the bar sits in — every
+ * reserving header names itself the band's anchor (`anchor-floating-bar-band`)
+ * — except one inside a `floating-bar-boundary` (a desktop window's content,
+ * an app embed), which is not at the viewport's corner whatever its surface
+ * believes.
+ *
+ * Set on those boxes, never on `:root`: a custom property on `<html>` is
+ * inherited by every element of the page, so each write restyles the whole
+ * document (~300–450 ms on an 18k-element page, measured), where this rule's
+ * class-keyed invalidation restyles only the headers it matches (~5 ms).
+ */
+const RESERVING_HEADERS =
+  ".anchor-floating-bar-band:not(.floating-bar-boundary *)";
 
 /**
  * Publish the floating bar's safe area while `reserve` holds (the bar sits in
@@ -16,9 +32,13 @@ const SAFE_AREA_VAR = "--floating-bar-safe-area";
  * mounted. Returns a callback ref for the home slot's band — the fixed box the
  * size of the bar's collapsed footprint, at the bar's home corner.
  *
+ * The value lives in a stylesheet of its own, adopted by the document while the
+ * bar is mounted: one rule, {@link RESERVING_HEADERS}, rewritten when the
+ * reservation changes and emptied when it is withdrawn.
+ *
  * The reservation is measured from the band's LEFT edge to the viewport's right
  * edge (so it includes the bar's corner offset and its panel chrome, and
- * follows the density preset), plus the pane header's own end inset as the gap
+ * follows the density preset), plus the header's own end inset as the gap
  * between the header's last action and the bar. It is the COLLAPSED footprint
  * only: the bar expands leftward on hover as a card over the header, while the
  * hitbox the band wraps holds its collapsed size. Never measure the trigger: it
@@ -33,18 +53,28 @@ export function useFloatingBarSafeArea(
   reserve: boolean,
 ): (node: HTMLElement | null) => void {
   const [node, setNode] = useState<HTMLElement | null>(null);
+  const [sheet] = useState(() => new CSSStyleSheet());
+
+  // Adopted for as long as the bar is mounted; an empty sheet matches nothing.
+  useEffect(() => {
+    document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+    return () => {
+      document.adoptedStyleSheets = document.adoptedStyleSheets.filter(
+        (s) => s !== sheet,
+      );
+    };
+  }, [sheet]);
 
   useResizeObserver(
     () => node,
     () => {
       if (!node || !reserve) return;
       const room = window.innerWidth - node.getBoundingClientRect().left;
-      // A write on `:root` restyles the whole page: returned, it runs after
-      // every other read of the after-layout batch, not between two of them.
+      // Returned, the write runs after every other read of the after-layout
+      // batch, not between two of them.
       return () =>
-        document.documentElement.style.setProperty(
-          SAFE_AREA_VAR,
-          `calc(${Math.ceil(room)}px + var(--chrome-pane-pad-end))`,
+        sheet.replaceSync(
+          `${RESERVING_HEADERS} { ${SAFE_AREA_VAR}: calc(${Math.ceil(room)}px + var(--chrome-pane-pad-end)); }`,
         );
     },
     // Undebounced: a resize observation is delivered before paint, so the
@@ -58,10 +88,8 @@ export function useFloatingBarSafeArea(
   // transition their padding, so their actions glide into the freed room.
   useEffect(() => {
     if (!reserve) return;
-    return () => {
-      document.documentElement.style.removeProperty(SAFE_AREA_VAR);
-    };
-  }, [reserve]);
+    return () => sheet.replaceSync("");
+  }, [reserve, sheet]);
 
   return setNode;
 }

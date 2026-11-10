@@ -66,7 +66,10 @@ where it was put across apps, surface modes (solo, the desktop) and reloads.
   The slot is its own invisible box, sized to the bar's collapsed footprint;
   the safe area is measured from IT (`useFloatingBarSafeArea(reserve)`), never
   from the bar, and is published only while the bar is home, settling home, or
-  hovering home mid-drag.
+  hovering home mid-drag. It is published as `--floating-bar-safe-area` ON the
+  reserving headers (the band's anchors outside any `floating-bar-boundary`),
+  by one rule in a stylesheet the bar adopts — never on `:root`, where each
+  write restyled the whole page (`dom-access-safety/no-root-style-write`).
 - **Dragged off**, the reservation is withdrawn: `pr-floating-bar*` (and the
   desktop titlebar's inset) transition their padding, so the header's actions
   glide into the freed room. Back within `SNAP_RADIUS_PX` of the slot, the slot

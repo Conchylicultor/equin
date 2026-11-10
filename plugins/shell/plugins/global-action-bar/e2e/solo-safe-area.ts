@@ -1,5 +1,5 @@
 // Fullscreen (solo) safe area: the floating action bar publishes
-// `--floating-bar-safe-area` while it floats, and the surface-edge header
+// `--floating-bar-safe-area` on the reserving header (never `:root`) while it floats, and the surface-edge header
 // reserves that much room on its right, so the collapsed bar no longer sits on
 // top of the header's actions.
 //
@@ -32,7 +32,22 @@ const out = arg("out") ?? "/tmp/solo-safe-area";
 // which has none.
 const url = pageUrl("/agents");
 
+/** The safe area as the reserving header reads it (published on the header
+ *  itself, never on `:root`), or "" when no visible header carries it. */
 const readVar = (page: Page) =>
+  page.evaluate(() => {
+    const header = [...document.querySelectorAll(".anchor-floating-bar-band")]
+      .filter((el) => el.getBoundingClientRect().height > 0)
+      .at(-1);
+    return header
+      ? getComputedStyle(header)
+          .getPropertyValue("--floating-bar-safe-area")
+          .trim()
+      : "";
+  });
+
+/** What `:root` carries: nothing, ever — a var there restyles the whole page. */
+const readRootVar = (page: Page) =>
   page.evaluate(() =>
     getComputedStyle(document.documentElement)
       .getPropertyValue("--floating-bar-safe-area")
@@ -115,6 +130,7 @@ await withBrowser(async (h) => {
   const solo = await readVar(page);
   t.ok("solo: safe area published", solo !== "", JSON.stringify(solo));
   t.note(`--floating-bar-safe-area: ${solo}`);
+  t.eq("solo: nothing published on :root", await readRootVar(page), "");
   const m = await measure(page);
   t.note(`bar left ${m.barLeft}px, header right ${m.headerRight}px`);
   t.ok(

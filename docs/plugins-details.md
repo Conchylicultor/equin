@@ -30326,6 +30326,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `framework/server-core` (0 debt)
                   - `infra/background/timer` (0 debt)
             - **`dom-access-safety`** — dom-access-safety lint rule: no-module-scope-dom
+              - Exemptions:
+                - Exempted by: `primitives/embed/frame/agent` (0 debt)
             - **`dom-selection-safety`** — dom-selection-safety lint rule: no-raw-selection-range
               - Exemptions:
                 - Exempted by: `primitives/dom/dom-selection` (0 debt)
@@ -48147,7 +48149,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `infra/endpoints`
                   - `primitives/embed/frame`
               - Exemptions:
-                - Exempts itself from: `scroll-safety/no-adhoc-scroll-write` — `core/frame-agent.ts` (sanctioned)
+                - Exempts itself from:
+                  - `scroll-safety/no-adhoc-scroll-write` — `core/frame-agent.ts` (sanctioned)
+                  - `dom-access-safety/no-root-style-write` — `core/frame-agent.ts` (sanctioned)
               - Core:
                 - Exports (types):
                   - `DocumentScroll`

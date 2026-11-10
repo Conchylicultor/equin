@@ -1492,7 +1492,10 @@
 /* Floating-bar safe area — right inset that clears the global floating action
  * bar (a fixed top-right overlay). Width is owned + published by the
  * global-action-bar plugin (while it floats, i.e. in solo) as
- * --floating-bar-safe-area; it falls back to the chrome
+ * --floating-bar-safe-area, set ON the reserving headers themselves (the
+ * band's anchors outside any `floating-bar-boundary`) by a rule in its own
+ * adopted stylesheet — never on :root, where every write would restyle the
+ * whole page; it falls back to the chrome
  * pad when the bar is hidden (config off / a toolbar-hosting app), so an app
  * header never sits under the bar without hand-reserving a pr-14.
  * The bar can be dragged off its slot and back (the var withdrawn and
@@ -1523,10 +1526,11 @@
 /* Floating-bar boundary — a box that is NOT the viewport's top-right corner (a
  * desktop window's content, an in-process app embed), though the surface inside
  * it believes it is. Headers inside it neither reserve the bar's safe area (the
- * var is reset, so `pr-floating-bar*` fall back to their own end inset) nor
- * anchor its band (`anchor-scope` hides their anchor names from the band outside
- * the box), so the bar stays at the corner instead of following the box. */
-@utility floating-bar-boundary { --floating-bar-safe-area: initial; anchor-scope: --floating-bar-band; } /* twmerge: standalone -- Scopes the floating-bar safe-area var and anchor name to this box; no built-in group sets anchor-scope. */
+ * bar's rule skips them, `:not(.floating-bar-boundary *)`, so `pr-floating-bar*`
+ * fall back to their own end inset) nor anchor its band (`anchor-scope` hides
+ * their anchor names from the band outside the box), so the bar stays at the
+ * corner instead of following the box. */
+@utility floating-bar-boundary { anchor-scope: --floating-bar-band; } /* twmerge: standalone -- Scopes the floating-bar anchor name to this box (the bar's safe-area rule skips headers inside it); no built-in group sets anchor-scope. */
 
 /* Control-panel geometry — the one grid every data-control panel (filter, sort,
  * view settings, …) is drawn on, owned by the `control-panel` primitive. The

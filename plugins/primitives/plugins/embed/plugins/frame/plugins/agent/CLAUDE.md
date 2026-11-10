@@ -23,7 +23,9 @@ The model and the rules live in the parent's CLAUDE.md (`primitives/embed/frame`
     - `infra/endpoints`
     - `primitives/embed/frame`
 - Exemptions:
-  - Exempts itself from: `scroll-safety/no-adhoc-scroll-write` — `core/frame-agent.ts` (sanctioned)
+  - Exempts itself from:
+    - `scroll-safety/no-adhoc-scroll-write` — `core/frame-agent.ts` (sanctioned)
+    - `dom-access-safety/no-root-style-write` — `core/frame-agent.ts` (sanctioned)
 - Core:
   - Exports (types):
     - `DocumentScroll`

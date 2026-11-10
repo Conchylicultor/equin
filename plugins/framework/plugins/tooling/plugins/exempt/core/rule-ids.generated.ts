@@ -49,6 +49,7 @@ export type ExemptableRuleId =
   | "detached-work-safety/no-untracked-detached-work"
   | "detail-sections/no-adhoc-detail-sections"
   | "dom-access-safety/no-module-scope-dom"
+  | "dom-access-safety/no-root-style-write"
   | "dom-selection-safety/no-raw-selection-range"
   | "drizzle-cli-safety/no-adhoc-drizzle-cli"
   | "e2e-harness/no-networkidle"
