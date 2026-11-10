@@ -97,6 +97,15 @@ const TAKE_TIMEOUT_MS = 10 * 60_000;
 const CLUSTER_SCRIPT_REL =
   "plugins/framework/plugins/tooling/plugins/web-artifacts/bin/pglite-cluster.ts";
 
+/**
+ * Every repo file the cluster's address reads by fixed path, as code it runs
+ * (beyond `bun.lock` and `patches/`) — the one list the address hashes, so a
+ * fixture tree can derive the files it must hold from it rather than restate
+ * them. A file the address starts covering joins this list, never a bare
+ * `repo.blobOf` of its own.
+ */
+export const CLUSTER_SCRIPT_FILES: readonly string[] = [CLUSTER_SCRIPT_REL];
+
 /** The cluster's data directory (gzipped) inside its store dir. */
 const CLUSTER_FILE = "cluster.tar.gz";
 
@@ -167,7 +176,8 @@ export async function pgliteClusterDirName(
   h.update(`pglite\t${resolution[0]!.trim()}\n`);
   for (const file of repo.under(PATCHES_DIR))
     h.update(`patch\t${file}\t${repo.blobOf(file)}\n`);
-  h.update(`script\t${repo.blobOf(CLUSTER_SCRIPT_REL)}\n`);
+  for (const file of CLUSTER_SCRIPT_FILES)
+    h.update(`script\t${repo.blobOf(file)}\n`);
   return artifactDirName("pglite", "pglite-cluster", h.digest("hex"));
 }
 

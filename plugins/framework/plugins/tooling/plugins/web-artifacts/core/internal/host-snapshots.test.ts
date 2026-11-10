@@ -7,7 +7,7 @@ import { dirname, join } from "node:path";
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { repoSnapshotOver } from "@plugins/framework/plugins/tooling/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
-import { hostSnapshotDirName } from "./host-snapshots";
+import { CLUSTER_SCRIPT_FILES, hostSnapshotDirName } from "./host-snapshots";
 import type { PlannedTarget } from "./plan";
 
 // The snapshot's address covers everything that can change its bytes: every
@@ -85,6 +85,14 @@ const BASE: Record<string, string> = {
   "patches/pkg@1.0.0.patch": `--- a\n+++ b\n`,
   [`plugins/${HOST}/data/proto/app.ts`]: `export const proto = 1;`,
   [SCAN]: readFileSync(join(REPO_ROOT, SCAN), "utf8"),
+  // The code the address reads by fixed path, from the list it reads: a file
+  // it starts covering joins the tree with it.
+  ...Object.fromEntries(
+    CLUSTER_SCRIPT_FILES.map((f) => [
+      f,
+      readFileSync(join(REPO_ROOT, f), "utf8"),
+    ]),
+  ),
 };
 
 /** A worker closure of one artifact that inlines the migration history. */
@@ -150,6 +158,14 @@ describe("a host snapshot's address", () => {
         edited(`plugins/${HOST}/data/proto/app.ts`, `export const proto = 2;`),
       ),
     ).not.toBe(await address(BASE));
+  });
+
+  test("moves with the code the PGlite cluster is written by", async () => {
+    const before = await address(BASE);
+    for (const file of CLUSTER_SCRIPT_FILES)
+      expect(await address(edited(file, `${BASE[file]}\n// edited`))).not.toBe(
+        before,
+      );
   });
 
   test("moves with a patch bun applies to an npm package", async () => {
