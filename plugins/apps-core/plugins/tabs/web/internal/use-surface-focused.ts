@@ -5,7 +5,7 @@ import { useTabs } from "./use-tabs";
  * Whether the calling surface is the focused tab.
  *
  * The trap it removes: tabs are keep-alive. Every open tab stays MOUNTED (the
- * unfocused ones are `display: none`, and under the floating placement several
+ * unfocused ones are hidden, and under the floating placement several
  * are on screen at once), so a `window`-level listener a pane registers — an
  * Escape handler, a hotkey — is live in background tabs too and fires for
  * whatever the user is actually looking at. Gate such a listener on this hook

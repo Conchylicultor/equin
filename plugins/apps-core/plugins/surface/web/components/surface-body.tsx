@@ -69,6 +69,12 @@ const FRAME_CLASS: Record<PlacementFrame, string> = {
   viewport: "fixed inset-0 z-overlay",
 };
 
+/** A kept-alive tab that is not shown — see `TabContainer`'s visibility gate. */
+const HIDDEN_TAB: CSSProperties = {
+  contentVisibility: "hidden",
+  clipPath: "inset(50%)",
+};
+
 /**
  * The single surface body that renders EVERY open tab at once and positions each
  * by its own per-tab placement. There is no global arrangement mode — the surface
@@ -262,7 +268,7 @@ function SurfaceBodyReady({
     // area) AND trap their `z-overlay` inside the surface's own stacking layer
     // (so it would lose to the rail's `z-nav`). Nothing inside can leak while it
     // is dropped: solo declares no Backdrop/Foreground, a mounted inactive
-    // mode's are `display:none` (`ModeActivity`), and so is every unfocused tab. (An app's OWN `fixed` chrome stays bounded by the
+    // mode's are `display:none` (`ModeActivity`), and every unfocused tab is skipped and clipped away (`HIDDEN_TAB`). (An app's OWN `fixed` chrome stays bounded by the
     // per-tab content inset below, a different transform, in every mode.)
     //
     // No theme boundary here — the backdrop inherits the desktop `:root` theme.
@@ -465,15 +471,26 @@ function TabContainer({
   // Every tab stays mounted (keep-alive); only the visibility gate changes. A
   // mode that paints all tabs (`visibleWhenUnfocused`, i.e. windows) shows every
   // tab; docked / solo show only the focused one, so a non-focused tab is
-  // display:none and can never overlap the visible one.
+  // hidden and can never overlap the visible one.
   //
-  // `display: none`, not `content-visibility: hidden` (measured 2026-11-10 with
-  // the desktop's fullscreen-switch profile, 4 windows): keeping a hidden tab's
-  // styles buys nothing while a mode switch moves the app theme scope on and
-  // off `:root` — that swap rewrites every `[data-theme-scope="app:…"]` sheet,
-  // invalidating each hidden tab's styles anyway — and a skipped subtree is
-  // still restyled when anything reads it, so entering solo got 3 × 20k
-  // elements dearer. Revisit once the switch stops touching the root scope.
+  // Hidden is `content-visibility: hidden`, not `display: none`: the browser
+  // skips the subtree (no paint, no hit-testing, no focus, out of the
+  // accessibility tree) but KEEPS its styles and layout, so showing it again —
+  // leaving full screen back to a desktop of several windows, or switching to a
+  // docked tab — reuses them instead of restyling the whole app from scratch
+  // (~20k elements a Sonata tab, measured with the desktop's fullscreen-switch
+  // profile: 86k elements restyled on exit with 3 extra windows → ~3k). It
+  // only pays off because nothing invalidates a hidden tab's styles on a mode
+  // switch any more — the root theme stays put, and the floating bar's
+  // safe-area rule no longer restyles under a `floating-bar-boundary` toggle.
+  // A new whole-subtree invalidation there would bring the cost back, as a
+  // forced restyle of every hidden tab (measure with that profile).
+  //
+  // The container box itself is not skipped — it would still paint the app's
+  // canvas and catch the pointer over the visible tab (every solo tab is the
+  // same `fixed inset-0`) — so it is also clipped away. `clip-path`, not
+  // `visibility` / `pointer-events`: those inherit, and flipping one restyles
+  // every element below.
   const visible = visibleWhenUnfocused || focused;
 
   // The host ALWAYS owns focus-on-pointerdown (harmless for every mode); the
@@ -505,7 +522,7 @@ function TabContainer({
       // needs this one.
       data-tab-id={tab.tabId}
       className={containerClassName}
-      style={{ display: visible ? "block" : "none", ...overrideStyle }}
+      style={{ ...(visible ? null : HIDDEN_TAB), ...overrideStyle }}
     >
       {/* Stable content inset: ALWAYS present so `TabSurface`'s parent chain is
           identical in every placement. Only its CSS changes (pushed by the active

@@ -67,7 +67,10 @@ async function markTab(page: Page, marker: string): Promise<boolean> {
       const nodes = Array.from(
         document.querySelectorAll<HTMLElement>(selector!),
       );
-      const node = nodes.find((n) => getComputedStyle(n).display !== "none");
+      // A hidden keep-alive tab is `content-visibility: hidden`.
+      const node = nodes.find(
+        (n) => getComputedStyle(n).contentVisibility !== "hidden",
+      );
       if (!node) return false;
       const marked = node as HTMLElement & {
         __soloKeepAlive?: string;
@@ -93,7 +96,10 @@ async function markTab(page: Page, marker: string): Promise<boolean> {
 async function probeTab(page: Page): Promise<TabProbe> {
   return page.evaluate((selector) => {
     const nodes = Array.from(document.querySelectorAll<HTMLElement>(selector));
-    const node = nodes.find((n) => getComputedStyle(n).display !== "none");
+    // A hidden keep-alive tab is `content-visibility: hidden`.
+    const node = nodes.find(
+      (n) => getComputedStyle(n).contentVisibility !== "hidden",
+    );
     const empty = {
       found: false,
       scrollTop: -1,

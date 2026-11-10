@@ -144,9 +144,10 @@ The six kinds (`AdaptiveBarFaultKind`):
     (each is a forced reflow).
   - **0px row with occupants relocated**: first, does the row generate a box?
     (`getClientRects().length > 0` via the seam's `isRendered`.)
-    - A `display: none` surface — unfocused tab, keep-alive body, minimized
-      window, collapsed miller column — is no reading at all;
-      `visibility: hidden` counts.
+    - A `display: none` surface — keep-alive body, minimized window,
+      collapsed miller column — is no reading at all; `visibility: hidden`
+      counts. (An unfocused surface tab is `content-visibility: hidden`: it
+      keeps its box and its last real width.)
     - A rendered 0 is either a ratchet-emptied shrink-wrap host or an
       **over-full** row (`flex: 1 1 0%` resolves to 0 under negative free
       space).
