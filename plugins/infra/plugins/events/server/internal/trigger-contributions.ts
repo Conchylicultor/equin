@@ -8,6 +8,7 @@ import { getAllRegisteredJobNames } from "@plugins/infra/plugins/jobs/server";
 import { db, writeAtomically } from "@plugins/database/server";
 import { triggerTableRegistry } from "./registry";
 import { declaredTriggerRow } from "./trigger";
+import { planTriggerSync } from "./trigger-sync-plan";
 import type { TriggerSpec } from "./trigger";
 
 // biome-ignore lint/suspicious/noExplicitAny: type params erased at the contribution boundary
@@ -37,10 +38,12 @@ export const Trigger = defineServerContribution<TriggerSpec<any, any>>(
  * that database serves: a composition gets a database of its own
  * (`ensureDatabase`, never a fork), and an `exec` child runs no `onReady`.
  *
- * One statement, one DELETE and at most one INSERT per trigger table. It was
- * one DELETE per table per job, then one INSERT per trigger — ~750 serial
- * statements on a main boot (~900 ms of `onReady`), with a window between a
- * job's delete and its re-insert in which its event fired into nothing.
+ * One read per trigger table, then one write statement — at most one DELETE
+ * and one INSERT per table, only for the rows that differ, and none at all
+ * when nothing does. It was one DELETE per table per job, then one INSERT per
+ * trigger — ~750 serial statements on a main boot (~900 ms of `onReady`), with
+ * a window between a job's delete and its re-insert in which its event fired
+ * into nothing.
  */
 export async function syncTriggerContributions(): Promise<void> {
   const declared = Trigger.getContributions();
@@ -54,27 +57,61 @@ export async function syncTriggerContributions(): Promise<void> {
     else rowsByTable.set(table, [values]);
   }
 
+  // Read what the tables hold now, then write only the difference: a row
+  // already equal to a contribution's stays (its id too), a row nothing
+  // declares any more is deleted, a contribution with no equal row is
+  // inserted. A boot of unchanged code writes nothing — before, it deleted
+  // and re-inserted every declared row on every boot, so each boot paid the
+  // writes, the change feed's statement triggers on every trigger table, and
+  // the recompute (and persist) of every live read over them, to land the
+  // same rows under new ids.
+  // The sync walks the registry's tables: a contribution's table outside it
+  // would otherwise be skipped without a word.
+  const registered = new Set(triggerTableRegistry.values());
+  for (const t of declared) {
+    if (!registered.has(declaredTriggerRow(t).table)) {
+      throw new Error(
+        `[events] Trigger(${t.do.name}) binds an event whose trigger table is not registered — its defineTriggerEvent never ran in this graph`,
+      );
+    }
+  }
+  const owned = await Promise.all(
+    [...triggerTableRegistry.values()].map(async (table) => {
+      // biome-ignore lint/suspicious/noExplicitAny: dynamic column access on base-columns.
+      const columns = table as any as Record<string, AnyPgColumn>;
+      // One array parameter per table, not one per job name.
+      const rows = (await db
+        .select()
+        .from(table)
+        .where(
+          sql`${columns.declared} OR ${columns.jobName} = ANY(${sql.param(jobNames)}::text[])`,
+        )) as Record<string, unknown>[];
+      return { table, columns, rows };
+    }),
+  );
+  const writes = owned.flatMap(({ table, columns, rows }) => {
+    const { deletes, inserts } = planTriggerSync(
+      rows,
+      rowsByTable.get(table) ?? [],
+    );
+    return [
+      deletes.length === 0
+        ? null
+        : db
+            .delete(table)
+            .where(sql`${columns.id} = ANY(${sql.param(deletes)}::uuid[])`),
+      inserts.length === 0 ? null : db.insert(table).values(inserts),
+    ];
+  });
   // ONE statement: every delete and insert are arms of one data-modifying CTE,
   // so the event never fires into a job's missing rows and no trigger table
   // stays locked across an app round trip. Every arm sees the tables as they
   // were before the statement, so an insert arm never meets the rows a delete
-  // arm removes (and their ids are fresh, so no key is re-inserted).
-  await writeAtomically(db, [
-    ...[...triggerTableRegistry.values()].map((table) => {
-      // biome-ignore lint/suspicious/noExplicitAny: dynamic column access on base-columns.
-      const jobNameCol = (table as any).jobName as AnyPgColumn;
-      // biome-ignore lint/suspicious/noExplicitAny: dynamic column access on base-columns.
-      const declaredCol = (table as any).declared as AnyPgColumn;
-      // One array parameter per table, not one per job name: every arm shares
-      // the statement's bind-parameter budget.
-      return db
-        .delete(table)
-        .where(
-          sql`${declaredCol} OR ${jobNameCol} = ANY(${sql.param(jobNames)}::text[])`,
-        );
-    }),
-    ...[...rowsByTable].map(([table, rows]) => db.insert(table).values(rows)),
-  ]);
+  // arm removes (and their ids are fresh, so no key is re-inserted). Nothing
+  // to write → no statement at all. A row a runtime `trigger()` adds for a
+  // declared job between the read and this write is left in place: the next
+  // boot's sync replaces it, as it would have been then anyway.
+  await writeAtomically(db, writes);
 }
 
 // A dangling trigger is a row whose `jobName` is not in the live job registry —

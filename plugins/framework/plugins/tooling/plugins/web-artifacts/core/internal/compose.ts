@@ -85,32 +85,54 @@ export interface ComposeOptions {
 const MAIN_SCRIPT_TAG = '<script type="module" src="/main.tsx"></script>';
 
 /**
- * BFS over static imports from the seed URLs: bare specifiers resolve through
- * the import map; relative specifiers resolve against the importing file's URL.
- * Returns every reachable module URL — the modulepreload set.
+ * Every module URL reachable over static imports from the seed URLs — the
+ * modulepreload set — DEPENDENCIES FIRST: a post-order walk from each seed in
+ * turn, each module's imports in the order it imports them. Bare specifiers
+ * resolve through the import map; relative ones against the importing file's
+ * URL.
+ *
+ * The order is the order the shell lists the preloads, and so roughly the
+ * order the browser answers them in (~1,600 of them, drained first-in
+ * first-out even from the HTTP cache). A module graph can run only once all
+ * of it is in, so listing each module after what it imports completes the
+ * entry's own graph first (DOMContentLoaded), then each eager plugin's, and
+ * any smaller graph the page starts early (a head script) with it. Sorted by
+ * URL, the vendor set (`set.<hash>/`: react, zod — imported by nearly
+ * everything) came last: DOMContentLoaded of a warm /demo reload went from
+ * about 1,050 to 525 ms with this order (2026-11-10).
  */
 export function computePreloadClosure(opts: {
   seeds: string[];
   imports: Record<string, string[]>; // url → emitted static import specifiers
   map: Record<string, string>; // specifier → url
 }): string[] {
+  const resolve = (from: string, spec: string): string | undefined =>
+    spec.startsWith("./") || spec.startsWith("../")
+      ? new URL(spec, `https://x${from}`).pathname
+      : opts.map[spec];
   const seen = new Set<string>();
-  const queue = [...opts.seeds];
-  while (queue.length > 0) {
-    const url = queue.shift()!;
-    if (seen.has(url)) continue;
-    seen.add(url);
-    for (const spec of opts.imports[url] ?? []) {
-      let next: string | undefined;
-      if (spec.startsWith("./") || spec.startsWith("../")) {
-        next = new URL(spec, `https://x${url}`).pathname;
-      } else {
-        next = opts.map[spec];
+  const order: string[] = [];
+  // Iterative: a deep import chain must not overflow the stack.
+  for (const seed of opts.seeds) {
+    if (seen.has(seed)) continue;
+    seen.add(seed);
+    const stack: { url: string; next: number }[] = [{ url: seed, next: 0 }];
+    while (stack.length > 0) {
+      const top = stack[stack.length - 1]!;
+      const specs = opts.imports[top.url] ?? [];
+      if (top.next < specs.length) {
+        const dep = resolve(top.url, specs[top.next++]!);
+        if (dep !== undefined && !seen.has(dep)) {
+          seen.add(dep);
+          stack.push({ url: dep, next: 0 });
+        }
+        continue;
       }
-      if (next !== undefined && !seen.has(next)) queue.push(next);
+      stack.pop();
+      order.push(top.url);
     }
   }
-  return [...seen].sort();
+  return order;
 }
 
 /**

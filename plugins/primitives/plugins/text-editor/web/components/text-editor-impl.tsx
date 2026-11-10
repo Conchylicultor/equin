@@ -265,6 +265,12 @@ function EditorShell({
                 "overflow-y-auto",
                 className,
               )}
+              // A textbox whether or not it can be edited now: Lexical (0.53)
+              // gives a read-only editor with no accessible name no role and
+              // then strips its aria-placeholder — so a disabled composer lost
+              // the sentence saying why it is disabled ("… isn't available in
+              // this version of the app").
+              role="textbox"
               aria-disabled={disabled}
               aria-placeholder={placeholder ?? ""}
               placeholder={

@@ -73,7 +73,11 @@ The frontend boot cost is dominated by the **eager set**. In artifact mode that
 set is exactly the entry artifact plus the eager tier's `modulepreload` closure —
 computed by `computePreloadClosure` in web-artifacts' `core/internal/compose.ts`
 and written into `dist/index.html` as `<link rel="modulepreload">` tags, seeded
-from the entry, the registry, and every non-deferred web target. That closure IS
+from the entry, the registry, and every non-deferred web target. The tags
+are listed dependencies first (a post-order walk from those seeds), the order
+the browser answers them in, so the entry's own graph completes first: sorted
+by URL, the vendor set came last and DOMContentLoaded waited for nearly every
+preload (warm `/agents` reload 795 → 465 ms, 2026-11-10). That closure IS
 the lever: moving a plugin into the deferred tier is what removes its bytes from
 boot.
 

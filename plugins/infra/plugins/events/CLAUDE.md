@@ -32,10 +32,16 @@ its event's subject; with a constant `with` the subject reached it only through
 
 Static triggers are declared as `Trigger({ on, do, with })` contributions and
 re-projected from code each boot by `syncTriggerContributions()`: their rows
-carry `declared = true`, and the sync wipes every declared row (plus every row
-of a declared job) and inserts the contributions' rows, so the declared rows
-are a pure projection of code — renaming or removing a declared trigger's job
-cannot leave a stale row. (Before the `declared` column the sync wiped only
+carry `declared = true`, and the sync owns every declared row (plus every row
+of a declared job): it reads them and writes only the difference with the
+contributions' rows (`planTriggerSync`, `internal/trigger-sync-plan.ts`: an
+equal row is kept with its id, every other owned row deleted, a missing one
+inserted, in one statement), so the declared rows are a pure projection of
+code — renaming or removing a declared trigger's job cannot leave a stale
+row — and a boot of unchanged code writes nothing. (Until 2026-11-10 it
+deleted and re-inserted every declared row on every boot: the change feed's
+triggers on every trigger table, and a recompute of every read over them, to
+land the same rows under new ids; before the `declared` column it wiped only
 the jobs still declared, so every such rename reached the sweep below as an
 error, once per database.) The sweep is therefore only ever about a row a
 runtime `trigger()` call made for a job that has since gone — a real leak. Trigger **tables** are real Drizzle tables

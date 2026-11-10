@@ -13,7 +13,11 @@ import {
   asAppPath,
   joinAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { composeDist, computeGraphHash } from "./compose";
+import {
+  composeDist,
+  computeGraphHash,
+  computePreloadClosure,
+} from "./compose";
 
 const graph = {
   htmlSrc: "<!doctype html><head><script>var a = 1;</script></head>",
@@ -27,6 +31,46 @@ const graph = {
   entryUrl: "/artifacts/entry.3333333333333333/index.js",
   cssHref: "/global.4444444444444444.css",
 };
+
+describe("computePreloadClosure", () => {
+  test("lists every module after the modules it imports, seeds in turn", () => {
+    const imports: Record<string, string[]> = {
+      "/a/entry.js": ["@p/app", "./util.js"],
+      "/a/util.js": ["zod"],
+      "/p/app.js": ["zod", "react"],
+      "/p/eager.js": ["react", "@p/app"],
+    };
+    const map = {
+      "@p/app": "/p/app.js",
+      zod: "/v/zod.js",
+      react: "/v/react.js",
+    };
+    expect(
+      computePreloadClosure({
+        seeds: ["/a/entry.js", "/p/eager.js"],
+        imports,
+        map,
+      }),
+    ).toEqual([
+      "/v/zod.js",
+      "/v/react.js",
+      "/p/app.js",
+      "/a/util.js",
+      "/a/entry.js",
+      "/p/eager.js",
+    ]);
+  });
+
+  test("terminates on an import cycle and drops unmapped specifiers", () => {
+    expect(
+      computePreloadClosure({
+        seeds: ["/a.js"],
+        imports: { "/a.js": ["./b.js", "missing"], "/b.js": ["./a.js"] },
+        map: {},
+      }),
+    ).toEqual(["/b.js", "/a.js"]);
+  });
+});
 
 describe("computeGraphHash", () => {
   test("is stable across two composes of the same graph", () => {
