@@ -5,14 +5,24 @@
  *  1. opens the bare `/demo`: the demo starts on Home (the app gallery), and
  *     the URL settles on `/demo/at/home`, framed under the caption bar;
  *  2. opens Pages and creates a page there: the URL follows the embed
- *     (`/demo/at/pages/…`); a reload reopens the demo on that same page;
+ *     (`/demo/at/pages/…`), rewriting the current history entry (framed, the
+ *     demo's moves are not the page's Back steps); a reload reopens the demo
+ *     on that same page;
  *  3. ⌘-clicks the launcher mark (a link to the home app): a NEW tab opens the
  *     demo full screen there (`/demo/at/home;full=1`, no caption bar) — not
  *     the real app — and its Pages lists the page the first tab created (both
- *     tabs on the demo's one SharedWorker);
+ *     tabs on the demo's one SharedWorker); full screen, the demo's moves are
+ *     the tab's history: Back from Pages returns the demo to Home, Forward
+ *     to Pages;
  *  4. Full screen, then Exit full screen (revealed by the pointer at the top
  *     edge): the URL gains and loses `;full=1`, and the embed stays the same
- *     element throughout (the demo never remounts).
+ *     element throughout (the demo never remounts);
+ *  5. Full screen again, then another page from the sidebar: Back reopens
+ *     the created page, a second Back leaves full screen for the frame, Forward comes
+ *     back full screen — the same embed throughout;
+ *  6. the desktop, full screen: Pages then Sonata from the shelf, each a
+ *     window; Back focuses the Pages window again and Forward the Sonata one
+ *     — the URL following — with no window added or turned into another.
  *
  * And, throughout: no `/api/…` request left for the page's origin but the
  * sanctioned telemetry routes (`no-leak.ts`'s list), no page or console error.
@@ -109,6 +119,11 @@ async function showsPage(
   r.ok(name, settled.ok, JSON.stringify(settled.value));
 }
 
+/** How many entries the tab's session history holds. */
+function historyLength(page: Page): Promise<number> {
+  return page.evaluate(() => window.history.length);
+}
+
 /** Whether the caption bar (its Reset demo button) is on the page. */
 async function framed(page: Page): Promise<boolean> {
   return (await page.getByRole("button", { name: "Reset demo" }).count()) > 0;
@@ -148,6 +163,7 @@ await withBrowser(async (h) => {
   await waitForNetworkIdle(page);
   gate.on = true;
   await snap(page, OUT, "1-home");
+  const framedEntries = await historyLength(page);
 
   // ── 2. the URL follows the embed; a reload comes back to it ───────────
   // Home IS the app gallery: Pages is one of its tiles.
@@ -160,6 +176,11 @@ await withBrowser(async (h) => {
     page,
     "the URL names the page inside Pages",
     (p) => p.startsWith("/demo/at/pages/") && !p.includes(";full"),
+  );
+  r.eq(
+    "framed, the demo's moves add no history entry",
+    await historyLength(page),
+    framedEntries,
   );
   gate.on = false;
   await page.reload();
@@ -212,6 +233,23 @@ await withBrowser(async (h) => {
     (p) => p.startsWith("/demo/at/pages") && p.endsWith(";full=1"),
   );
   await snap(tab, OUT, "3-new-tab");
+  // Full screen, the demo is the tab: Back and Forward step through its moves.
+  await tab.goBack();
+  await urlSettles(
+    r,
+    tab,
+    "full screen, Back returns the URL to Home",
+    (p) => p === "/demo/at/home;full=1",
+  );
+  await showsApp(r, tab, "full screen, Back returns the demo to Home", "home");
+  await tab.goForward();
+  await urlSettles(
+    r,
+    tab,
+    "full screen, Forward returns the URL to Pages",
+    (p) => p.startsWith("/demo/at/pages") && p.endsWith(";full=1"),
+  );
+  await showsApp(r, tab, "full screen, Forward reopens Pages", "pages");
   await tab.close();
 
   // ── 4. Full screen and back, the embed never remounting ────────────────
@@ -243,6 +281,100 @@ await withBrowser(async (h) => {
   r.ok("Exit full screen: framed again", await framed(page));
   r.ok("Exit full screen: still the same embed", await sameEmbed(page));
   await showsPage(r, page, "the page is still open", TITLE);
+
+  // ── 5. Back / Forward full screen, and out of it ──────────────────────
+  await page.getByRole("button", { name: "Full screen" }).first().click();
+  await urlSettles(r, page, "Full screen again", (p) => p === `${at};full=1`);
+  // Another page of the sidebar: a move inside Pages.
+  await embedRoot(page).getByText("Journal", { exact: true }).first().click();
+  await showsPage(r, page, "full screen, the sidebar opens Journal", "Journal");
+  await urlSettles(
+    r,
+    page,
+    "full screen, the URL follows to Journal",
+    (p) =>
+      p.startsWith("/demo/at/pages/") &&
+      p.endsWith(";full=1") &&
+      p !== `${at};full=1`,
+  );
+  await page.goBack();
+  await urlSettles(
+    r,
+    page,
+    "Back: the URL returns to the page, full screen",
+    (p) => p === `${at};full=1`,
+  );
+  await showsPage(r, page, "Back: the demo reopens the page", TITLE);
+  r.ok("Back: still full screen", !(await framed(page)));
+  await page.goBack();
+  await urlSettles(r, page, "Back again: out of full screen", (p) => p === at);
+  r.ok("Back again: framed", await framed(page));
+  await page.goForward();
+  await urlSettles(
+    r,
+    page,
+    "Forward: full screen again",
+    (p) => p === `${at};full=1`,
+  );
+  await showsPage(r, page, "Forward: the page is still open", TITLE);
+  r.ok("Back / Forward: still the same embed", await sameEmbed(page));
+  await snap(page, OUT, "5-back-forward");
+
+  // ── 6. the desktop, full screen: Back / Forward move between windows ──
+  gate.on = false;
+  await page.goto(pathUrl("/demo/at/desktop;full=1"));
+  await waitForNetworkIdle(page);
+  gate.on = true;
+  const desk = embedRoot(page);
+  const windows = () =>
+    desk
+      .locator("[data-floating-window-id]")
+      .evaluateAll((els) =>
+        [
+          ...new Set(
+            els.map((el) => el.getAttribute("data-floating-window-id")),
+          ),
+        ].sort(),
+      );
+  const shelf = (name: string) =>
+    desk.getByRole("button", { name, exact: true }).last().click();
+  await shelf("Pages");
+  await urlSettles(
+    r,
+    page,
+    "desktop: Pages opens a window",
+    (p) => p === "/demo/at/desktop/pages;full=1",
+  );
+  await shelf("Sonata");
+  await urlSettles(
+    r,
+    page,
+    "desktop: Sonata opens a window",
+    (p) => p === "/demo/at/desktop/sonata;full=1",
+  );
+  const open = await windows();
+  await page.goBack();
+  await urlSettles(
+    r,
+    page,
+    "desktop: Back returns to the Pages window",
+    (p) => p === "/demo/at/desktop/pages;full=1",
+  );
+  r.eq("desktop: Back keeps every window as it was", await windows(), open);
+  await page.goForward();
+  await urlSettles(
+    r,
+    page,
+    "desktop: Forward returns to the Sonata window",
+    (p) => p === "/demo/at/desktop/sonata;full=1",
+  );
+  r.eq("desktop: Forward keeps every window as it was", await windows(), open);
+  r.ok(
+    "desktop: Pages and Sonata are both still open",
+    (await desk.getByText("Library", { exact: true }).count()) > 0 &&
+      (await desk.getByText("Demo's pages", { exact: true }).count()) > 0,
+  );
+  await snap(page, OUT, "6-desktop-back-forward");
 
   r.ok("the page stays on the demo", onDemoPage(page.url()), page.url());
   r.eq("no unsanctioned /api request left for the page's origin", leaked, []);

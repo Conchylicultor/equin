@@ -221,8 +221,8 @@ same browser tab from finding the blob. Both call sites are marked for removal.
 
 - Description: Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, the focused tab's title as a module signal (useFocusedTabTitle, readable outside TabsProvider), and the surface-written placement-capabilities registry — one per tab set: the page's own, or an embedded one (TabsProvider embedded={{ at, onLeave, onLocationChange?, browserTabUrl? }}, an AppEmbed's: seeded, never live, persisting nothing, publishing no page-global signal, behind its own navigation boundary), found from outside React by peekFocusedTabSet().
 - Web:
-  - Uses: 49 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/pane` ×20
+  - Uses: 50 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×21
     - `apps-core` ×9
     - `primitives/scope/app-instance` ×5
     - `primitives/embed` ×3

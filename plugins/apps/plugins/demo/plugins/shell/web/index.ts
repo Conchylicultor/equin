@@ -8,7 +8,7 @@ import { demoAtPane } from "./components/demo-at";
 
 export default {
   description:
-    "App shell for the Demo sandbox: registers the /demo app entry — equin rendered in-process on made-up data (DemoScope + AppEmbed over the workspace demo's browser host), starting on its home app (the app gallery). Where the visitor is inside the demo is the page's URL (/demo/at/<location>, e.g. /demo/at/agents/c/<id>), so a reload comes back to it; ;full=1 shows it full screen instead of framed under the caption bar (its Full screen button; a hover strip at the top edge exits), and a new browser tab opened from inside the demo opens it there, full screen, on the same data.",
+    "App shell for the Demo sandbox: registers the /demo app entry — equin rendered in-process on made-up data (DemoScope + AppEmbed over the workspace demo's browser host), starting on its home app (the app gallery). Where the visitor is inside the demo is the page's URL (/demo/at/<location>, e.g. /demo/at/agents/c/<id>), so a reload comes back to it; ;full=1 shows it full screen instead of framed under the caption bar (its Full screen button; a hover strip at the top edge exits), and a new browser tab opened from inside the demo opens it there, full screen, on the same data. Full screen, the demo is the tab: its moves are history entries (Back / Forward step through them, the embed following the URL); framed, they rewrite the current entry, so Back leaves the page.",
   contributions: [
     Apps.App({
       app: demoApp,

@@ -1852,7 +1852,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `shell/notifications`
     - **`demo`** — Demo — a temporary sandbox app hosting the in-app demo (the Agent Manager on made-up data) while it is prototyped, before it ships on the website.
       - Plugins:
-        - **`shell`** — App shell for the Demo sandbox: registers the /demo app entry — equin rendered in-process on made-up data (DemoScope + AppEmbed over the workspace demo's browser host), starting on its home app (the app gallery). Where the visitor is inside the demo is the page's URL (/demo/at/<location>, e.g. /demo/at/agents/c/<id>), so a reload comes back to it; ;full=1 shows it full screen instead of framed under the caption bar (its Full screen button; a hover strip at the top edge exits), and a new browser tab opened from inside the demo opens it there, full screen, on the same data. The /demo page's head script (DocumentHead.Fragment): starts the demo's browser host before the app boots, so its worker boots alongside the page's own bundle.
+        - **`shell`** — App shell for the Demo sandbox: registers the /demo app entry — equin rendered in-process on made-up data (DemoScope + AppEmbed over the workspace demo's browser host), starting on its home app (the app gallery). Where the visitor is inside the demo is the page's URL (/demo/at/<location>, e.g. /demo/at/agents/c/<id>), so a reload comes back to it; ;full=1 shows it full screen instead of framed under the caption bar (its Full screen button; a hover strip at the top edge exits), and a new browser tab opened from inside the demo opens it there, full screen, on the same data. Full screen, the demo is the tab: its moves are history entries (Back / Forward step through them, the embed following the URL); framed, they rewrite the current entry, so Back leaves the page. The /demo page's head script (DocumentHead.Fragment): starts the demo's browser host before the app boots, so its worker boots alongside the page's own bundle.
           - Web:
             - Slots:
               - `start.actions`
@@ -1864,12 +1864,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Apps.App` "Demo" → `DemoLayout`
               - `Pane.Register` "demo-at"
               - `Pane.Register` "demo-start"
-            - Uses: 23 symbols — full list in [`plugins/apps/plugins/demo/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/demo/plugins/shell/REFERENCE.md)
+            - Uses: 24 symbols — full list in [`plugins/apps/plugins/demo/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/demo/plugins/shell/REFERENCE.md)
               - `apps-core` ×3
+              - `primitives/pane` ×3
               - `framework/browser-server/demo/scope` ×2
               - `primitives/css/ui-kit` ×2
               - `primitives/hover-reveal` ×2
-              - `primitives/pane` ×2
               - `apps-core/app-embed.AppEmbed`
               - `layouts/full-pane.FullPane`
               - `primitives/bar.Bar`
@@ -12505,8 +12505,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/surface`
     - **`tabs`** — Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, the focused tab's title as a module signal (useFocusedTabTitle, readable outside TabsProvider), and the surface-written placement-capabilities registry — one per tab set: the page's own, or an embedded one (TabsProvider embedded={{ at, onLeave, onLocationChange?, browserTabUrl? }}, an AppEmbed's: seeded, never live, persisting nothing, publishing no page-global signal, behind its own navigation boundary), found from outside React by peekFocusedTabSet().
       - Web:
-        - Uses: 49 symbols — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
-          - `primitives/pane` ×20
+        - Uses: 50 symbols — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
+          - `primitives/pane` ×21
           - `apps-core` ×9
           - `primitives/scope/app-instance` ×5
           - `primitives/embed` ×3
@@ -50037,6 +50037,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AppNavigator`
           - `Hint`
           - `HistoryAdapter`
+          - `HistoryMode`
+          - `HistoryWrite`
           - `LocationChange`
           - `MatchEntry`
           - `OpenPaneFn`
@@ -50069,6 +50071,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ResolveResult`
           - `RouteState`
           - `SerializedSlot`
+          - `SetParamsOptions`
           - `SurfaceChrome`
           - `TypeMarker`
         - Exports (values):

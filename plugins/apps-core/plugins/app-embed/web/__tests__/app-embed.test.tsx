@@ -305,6 +305,50 @@ describe("<AppEmbed>", () => {
       expect(window.location.pathname).toBe("/host/page");
     });
 
+    it("says how each move would reach history: its first report corrects, a link pushes", () => {
+      const onLocationChange = mountAt({ url: "/emb/c/one" });
+      expect(onLocationChange.mock.calls.at(-1)).toEqual([
+        "/emb/c/one",
+        "replace",
+      ]);
+      goTo("/other/c/x");
+      expect(onLocationChange.mock.calls.at(-1)).toEqual([
+        "/other/c/x",
+        "push",
+      ]);
+    });
+
+    it("follows a url its host changes (Back / Forward), not its own echo", () => {
+      const onLocationChange = vi.fn();
+      const tree = (url: string) => (
+        <PluginProvider
+          plugins={[slotsPlugin, appsPlugin, otherPlugin]}
+          composition={{ id: "app-embed-test", home: "emb" }}
+        >
+          <AppEmbed
+            url={url}
+            fills="page"
+            onLocationChange={onLocationChange}
+          />
+        </PluginProvider>
+      );
+      const { rerender } = render(tree("/emb/c/one"));
+      goTo("/other/c/x");
+      // The host writes the report back: an echo, nothing moves.
+      rerender(tree("/other/c/x"));
+      expect(screen.getByTestId("app").textContent).toBe("other");
+      const reports = onLocationChange.mock.calls.length;
+      // The host goes Back: the embed returns to where it was.
+      rerender(tree("/emb/c/one"));
+      expect(screen.getByTestId("app").textContent).toBe("emb");
+      expect(last(onLocationChange)).toBe("/emb/c/one");
+      expect(onLocationChange.mock.calls.length).toBeGreaterThan(reports);
+      // Forward again.
+      rerender(tree("/other/c/x"));
+      expect(screen.getByTestId("app").textContent).toBe("other");
+      expect(window.location.pathname).toBe("/");
+    });
+
     it("addresses a new browser tab opened inside it as its host says", () => {
       mountAt(
         { url: "/emb/c/one" },

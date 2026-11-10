@@ -201,17 +201,20 @@ describe("building an optional :param?", () => {
 });
 
 /** A control rendered inside the detail pane, rewriting its own params. */
-function SetStage({ stage }: { stage: string }) {
+function SetStage({ stage, replace }: { stage: string; replace?: boolean }) {
   const setParams = detailPane.useSetParams();
   return (
-    <button type="button" onClick={() => setParams({ name: "x", stage })}>
+    <button
+      type="button"
+      onClick={() => setParams({ name: "x", stage }, { replace })}
+    >
       set
     </button>
   );
 }
 
 describe("useSetParams", () => {
-  function mountOnDetail(stage: string): HTMLElement {
+  function mountOnDetail(stage: string, replace?: boolean): HTMLElement {
     store.restoreRoute([
       { paneId: "opt-detail", params: { name: "x" } },
       { paneId: "opt-kid", params: { id: "7" } },
@@ -219,7 +222,7 @@ describe("useSetParams", () => {
     const view = render(
       <TestSurface store={store} plugins={plugins} basePath="">
         <PaneInstanceContext.Provider value={store.getRoute()[0]!.instanceId}>
-          <SetStage stage={stage} />
+          <SetStage stage={stage} replace={replace} />
         </PaneInstanceContext.Provider>
       </TestSurface>,
     );
@@ -247,6 +250,19 @@ describe("useSetParams", () => {
       name: "x",
       stage: "compare",
     });
+  });
+
+  it("pushes a history entry, or with { replace: true } rewrites the current one", () => {
+    const push = mountOnDetail("compare");
+    let length = window.history.length;
+    push.click();
+    expect(window.history.length).toBe(length + 1);
+    cleanup();
+    const replace = mountOnDetail("diff", true);
+    length = window.history.length;
+    replace.click();
+    expect(window.location.pathname).toBe("/proto/x/diff/kid/7");
+    expect(window.history.length).toBe(length);
   });
 
   it("is a no-op when the params are unchanged", () => {

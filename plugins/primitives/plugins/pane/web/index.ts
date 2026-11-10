@@ -58,6 +58,7 @@ export type {
   PaneMatch,
   MatchEntry,
   PaneChromeConfig,
+  SetParamsOptions,
   PaneTitleSpec,
   PaneTitleHook,
   PaneToggleOpts,
@@ -93,6 +94,8 @@ export {
 } from "./morph-sink";
 export type {
   HistoryAdapter,
+  HistoryMode,
+  HistoryWrite,
   LocationChange,
   PaneHistoryState,
   SerializedSlot,

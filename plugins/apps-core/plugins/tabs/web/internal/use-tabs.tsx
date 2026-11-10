@@ -22,6 +22,7 @@ import {
   appNavSink,
   AppNavBoundary,
   type AppNavigator,
+  type HistoryMode,
   type ParsedRoute,
   type PaneSlot,
   type PaneStore,
@@ -554,6 +555,14 @@ export function bootTabs(
 export interface EmbeddedTabSet {
   /** Where the first tab opens (read once, at the set's first render). */
   at: EmbeddedAt;
+  /**
+   * The host's copy of the set's location, once the set is open: what
+   * {@link onLocationChange} told it, or a place the host moved to itself (its
+   * page's Back / Forward). Changed to one the set did not just report, the
+   * set moves there — its surface mode included (`/desktop/sonata`). Omitted:
+   * the host keeps none, and the set goes only where its user takes it.
+   */
+  location?: string;
   /** An app-rooted URL no app in scope owns. */
   onLeave: (url: string) => void;
   /**
@@ -563,8 +572,14 @@ export interface EmbeddedTabSet {
    * changed (a repeat is possible: compare before writing it anywhere). What a
    * host page keeps it in (its own URL, so a reload comes back to it) is the
    * host's.
+   *
+   * `history` is how the move would reach the browser's history were the set
+   * the page's own: `"push"` for a move Back returns from (a link, an app
+   * switch), `"replace"` for a correction (a redirect, the route a pending
+   * path resolved to, the first report, a surface-mode switch) — so a host
+   * that fills its page can give its Back / Forward the app's own steps.
    */
-  onLocationChange?: (url: string) => void;
+  onLocationChange?: (url: string, history: HistoryMode) => void;
   /**
    * How an in-app path opened in a NEW browser tab from inside the set (a
    * ⌘-click, a middle-click, an Open in a new tab) is addressed: given the
@@ -1657,17 +1672,25 @@ export function TabsProvider({
 
   // An embedded set's location, told to its host on every change of the
   // focused tab, its route or the surface mode (the page's own is the URL).
+  // A report says `"push"` only for a history write it has not reported yet:
+  // a report with none (the first, a mode switch, a pending path resolving)
+  // corrects the current entry.
   const locationRef = useLatestRef(embedded?.onLocationChange);
+  const reportedRef = useRef<{ url: string; seq: number } | undefined>(
+    undefined,
+  );
   useEffect(() => {
     if (page) return;
-    const report = () =>
-      locationRef.current?.(
-        embeddedLocation(
-          tabsRef.current.find((t) => t.tabId === focusedRef.current),
-          rawMode,
-          appsRef.current,
-        ),
-      );
+    const report = () => {
+      const tab = tabsRef.current.find((t) => t.tabId === focusedRef.current);
+      const url = embeddedLocation(tab, rawMode, appsRef.current);
+      const write = tab?.store.lastHistoryWrite();
+      const seen = reportedRef.current?.seq ?? 0;
+      const history: HistoryMode =
+        write !== undefined && write.seq > seen ? write.mode : "replace";
+      reportedRef.current = { url, seq: Math.max(seen, write?.seq ?? 0) };
+      locationRef.current?.(url, history);
+    };
     report();
     return focusedStore?.subscribeRoute(report);
   }, [page, focusedStore, focusedTabId, rawMode, locationRef, appsRef]);
@@ -1702,6 +1725,40 @@ export function TabsProvider({
     },
     [appsRef, leaveRef, navigate, setMode],
   );
+
+  // The host moved the set (its page's Back / Forward): go to the location it
+  // holds, in the surface mode that location names — unless it is the echo
+  // of the set's own report. Judged on a CHANGE of the host's location only:
+  // at mount the set is where it was seeded, and its first report may still
+  // be on its way to the host.
+  const followed = embedded?.location;
+  const followedRef = useRef(followed);
+  useEffect(() => {
+    if (page || followed === undefined || followed === followedRef.current)
+      return;
+    followedRef.current = followed;
+    if (followed === reportedRef.current?.url) return;
+    const apps = appsRef.current;
+    const prefixed = splitSurfacePrefix(followed, apps);
+    // An unprefixed location leaves a prefixed mode for the set's default.
+    const mode =
+      prefixed?.mode ??
+      (routePrefixForMode(modeRef.current, apps) === undefined
+        ? modeRef.current
+        : "");
+    setMode(mode);
+    // A tab already there (a desktop window) is the one the user was in:
+    // focus it, as the page's own Back refocuses the tab that wrote the entry.
+    const there = tabsRef.current.find(
+      (t) => embeddedLocation(t, mode, apps) === followed,
+    );
+    if (there !== undefined) {
+      focusTab(there.tabId);
+      return;
+    }
+    const path = prefixed?.rest ?? followed;
+    if (path !== "/") navigate(path);
+  }, [page, followed, appsRef, navigate, setMode, focusTab]);
 
   const provided = (
     <PlacementRegistryProvider value={registry}>

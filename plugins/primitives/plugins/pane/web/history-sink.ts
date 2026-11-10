@@ -51,7 +51,20 @@ export interface LocationChange {
   url: string;
   /** The pane's route payload for this entry. */
   state: PaneHistoryState;
-  mode: "push" | "replace";
+  mode: HistoryMode;
+}
+
+/** How a route change reaches history: a new entry, or the current one rewritten. */
+export type HistoryMode = "push" | "replace";
+
+/**
+ * A route change that asked to reach history (`PaneStore.lastHistoryWrite`):
+ * how, and `seq` — unique across every store of the page, so a reader can
+ * tell a new write from one it already saw.
+ */
+export interface HistoryWrite {
+  seq: number;
+  mode: HistoryMode;
 }
 
 export interface HistoryAdapter {

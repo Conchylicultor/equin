@@ -653,9 +653,13 @@ await withBrowser(async (h) => {
   await clickButton(page, "Conversations");
   await page.locator('[data-ui-owner^="ConvTitle"]').first().click();
   // The composer is the prompt editor, disabled, its placeholder saying why.
-  const composer = page.locator(
-    '[aria-placeholder*="available in this version of the app"]',
-  );
+  // (Lexical drops `aria-placeholder` from an editor that is not editable:
+  // the placeholder is read from the cell the editable shares with it.)
+  const composer = page
+    .locator(
+      'div:has(> [data-ui-owner^="EditorShell"]):has-text("available in this version of the app")',
+    )
+    .locator('> [data-ui-owner^="EditorShell"]');
   const unavailable = await waitFor(
     () => composer.count(),
     (n) => n > 0,

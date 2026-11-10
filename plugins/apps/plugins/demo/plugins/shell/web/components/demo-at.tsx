@@ -12,7 +12,7 @@ import {
   useHoverReveal,
 } from "@plugins/primitives/plugins/hover-reveal/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import { Pane } from "@plugins/primitives/plugins/pane/web";
+import { Pane, type HistoryMode } from "@plugins/primitives/plugins/pane/web";
 import { useDemoHostControl } from "@plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/web";
 import { useConfirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
 import { AppEmbed } from "@plugins/apps-core/plugins/app-embed/web";
@@ -32,9 +32,8 @@ export const demoAtPane = Pane.define({
   app: demoApp,
   component: DemoAt,
   // Every move inside the demo and the full-screen switch rewrite this one
-  // instance's params in place, replacing the history entry (the embed keeps
-  // no history of its own to go back through) — so the demo never remounts.
-  chrome: { history: false },
+  // instance's params in place — so the demo never remounts — each a history
+  // entry or not per {@link DemoAt}'s history rule.
   useResolve: false,
 });
 
@@ -50,6 +49,15 @@ export const demoAtPane = Pane.define({
  * a new tab) opens this page at that place, full screen — the same demo, on
  * the same data (every tab shares the demo's one SharedWorker).
  *
+ * History follows who owns the tab. Full screen, the demo IS the tab, so its
+ * moves are the page's: each is the history entry the app's own tab would
+ * write (a link pushes one, a redirect rewrites it), and Back / Forward step
+ * through them — the embed follows the URL there. Framed, the demo is a box
+ * on a page: its moves rewrite the current entry, so Back leaves the page
+ * rather than replaying clicks made inside a widget. Switching between the
+ * two is the page's own navigation (a pushed entry): Back from full screen
+ * returns to the frame.
+ *
  * Framed, the caption is the page's own top bar: it is the surface's top-right
  * corner, so it reserves the global floating action bar's room and anchors it
  * (the embed is a floating-bar boundary). Full screen, the embed is that
@@ -62,10 +70,14 @@ function DemoAt(): ReactNode {
   const isFull = full === DEMO_FULL;
   const paramsRef = useLatestRef({ url, full });
   const onLocationChange = useCallback(
-    (next: string) => {
+    (next: string, history: HistoryMode) => {
       const param = locationParam(next);
-      if (param === "" || param === paramsRef.current.url) return;
-      setParams({ ...paramsRef.current, url: param });
+      const current = paramsRef.current;
+      if (param === "" || param === current.url) return;
+      setParams(
+        { ...current, url: param },
+        { replace: current.full !== DEMO_FULL || history === "replace" },
+      );
     },
     [paramsRef, setParams],
   );
@@ -87,7 +99,10 @@ function DemoAt(): ReactNode {
             <ResetDemoButton
               onReset={() => {
                 if (start !== undefined)
-                  setParams({ ...paramsRef.current, url: start });
+                  setParams(
+                    { ...paramsRef.current, url: start },
+                    { replace: true },
+                  );
               }}
             />
           </Inline>

@@ -15,6 +15,7 @@ import {
   type EmbeddedTabSet,
 } from "@plugins/apps-core/plugins/tabs/web";
 import { AppTabsBody } from "@plugins/apps-core/plugins/tab-surface/web";
+import type { HistoryMode } from "@plugins/primitives/plugins/pane/web";
 
 /** An app-rooted URL the embed was asked to open but cannot hold (no app in scope owns it). */
 export type AppEmbedLeave = (url: string) => void;
@@ -65,14 +66,17 @@ const refuseLeave: AppEmbedLeave = () => {
  *   at mount, as the app's own surface does, so its shortcuts answer at once.
  * - **Its location, for the host to keep.** `onLocationChange` is told the
  *   focused tab's app-rooted URL (under the surface mode's prefix) as it
- *   moves; handed back as `url`, it reopens the embed there — a host page
- *   keeps it in its own URL, so a reload comes back to it.
+ *   moves, and whether the app's own tab would have pushed a history entry
+ *   for the move or replaced the current one; handed back as `url`, it
+ *   reopens the embed there — a host page keeps it in its own URL, so a
+ *   reload comes back to it. A `url` the host changes later (its page's Back
+ *   / Forward) moves the open embed there.
  * - **Its new browser tabs.** A ⌘-click or an Open in a new tab inside opens
  *   `browserTabUrl(location there)` when given (the host's page showing the
  *   embed at that place), else the path on the host's origin (the real app).
  *
- * Size it with `className` (it fills its box). `app` / `route` (or `url`)
- * seed the first tab only.
+ * Size it with `className` (it fills its box). `app` / `route` seed the
+ * first tab only; `url` seeds it and is then followed.
  */
 export function AppEmbed({
   onLeave = refuseLeave,
@@ -93,7 +97,7 @@ export function AppEmbed({
    */
   fills?: "page" | "viewport";
   /** See {@link EmbeddedTabSet.onLocationChange}. */
-  onLocationChange?: (url: string) => void;
+  onLocationChange?: (url: string, history: HistoryMode) => void;
   /** See {@link EmbeddedTabSet.browserTabUrl}. */
   browserTabUrl?: (url: string) => string;
   className?: string;
@@ -103,15 +107,17 @@ export function AppEmbed({
   const seed: EmbeddedAt =
     at.app !== undefined ? { app: at.app, route: at.route } : { url: at.url };
   const [embeddedAt] = useState(seed);
+  const location = at.url;
   const embedded = useMemo<EmbeddedTabSet>(
     () => ({
       at: embeddedAt,
+      location,
       onLeave,
       fillsPage,
       onLocationChange,
       browserTabUrl,
     }),
-    [embeddedAt, onLeave, fillsPage, onLocationChange, browserTabUrl],
+    [embeddedAt, location, onLeave, fillsPage, onLocationChange, browserTabUrl],
   );
   return (
     <TabsProvider embedded={embedded}>

@@ -862,6 +862,8 @@ with an empty route.
     - `AppNavigator`
     - `Hint`
     - `HistoryAdapter`
+    - `HistoryMode`
+    - `HistoryWrite`
     - `LocationChange`
     - `MatchEntry`
     - `OpenPaneFn`
@@ -894,6 +896,7 @@ with an empty route.
     - `ResolveResult`
     - `RouteState`
     - `SerializedSlot`
+    - `SetParamsOptions`
     - `SurfaceChrome`
     - `TypeMarker`
   - Exports (values):

@@ -45,6 +45,7 @@ import { useRenderSync } from "./use-render-sync";
 import {
   historySink,
   liveStoreAccessorSink,
+  type HistoryWrite,
   type SerializedSlot,
 } from "./history-sink";
 import {
@@ -290,6 +291,12 @@ function normalizeTitle(
     fallback: spec.fallback,
     component: spec.component,
   };
+}
+
+/** How `useSetParams` writes its rewrite to history. */
+export interface SetParamsOptions {
+  /** Rewrite the current entry, even for a pane whose moves are history entries. */
+  replace?: boolean;
 }
 
 export interface PaneChromeConfig {
@@ -869,6 +876,14 @@ export interface PaneStore {
   /** Subscribe to route changes; returns an unsubscribe. */
   subscribeRoute(cb: () => void): () => void;
   /**
+   * The latest route change that asked to reach the browser's history, and
+   * how — recorded on a background store too, which writes none: an embedded
+   * tab set reads it to tell its host page what the app's own tab would have
+   * written (a new entry, or the current one rewritten). A seed or a URL
+   * re-parse is not a write. Undefined until the first.
+   */
+  lastHistoryWrite(): HistoryWrite | undefined;
+  /**
    * Replace the route (resolved). Mirrors to the browser when `live`. Drops
    * the landing pane's index params unless `index` carries them on.
    */
@@ -978,13 +993,24 @@ export interface PaneStore {
     internal: PaneInternal,
     instanceId: number,
     params: Record<string, string>,
+    opts?: SetParamsOptions,
   ): void;
   /** Whether route mutations mirror to the browser URL/history. */
   live: boolean;
 }
 
+/** {@link HistoryWrite.seq}'s counter, shared by every store of the page. */
+let historyWriteSeq = 0;
+
 function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
   let currentState: RouteState = RESOLVED_EMPTY;
+  let lastHistoryWrite: HistoryWrite | undefined;
+  const recordHistoryWrite = (replace: boolean) => {
+    lastHistoryWrite = {
+      seq: ++historyWriteSeq,
+      mode: replace ? "replace" : "push",
+    };
+  };
   let currentIndex: Record<string, string> = NO_PARAMS;
   const routeListeners = new Set<() => void>();
   let currentBasePath = "";
@@ -1037,6 +1063,7 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
   ): void {
     currentState = { kind: "resolved", slots: route };
     currentIndex = index;
+    recordHistoryWrite(replace);
     // The address bar moves BEFORE any listener hears of the change, so every
     // listener sees one world: a route listener that reads the URL (the tab
     // set persists the address bar as the route's rawPath — the key a reload
@@ -1123,6 +1150,7 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
   function navigatePending(rawPath: string, replace = false): void {
     currentState = { kind: "unresolved", rawPath };
     currentIndex = NO_PARAMS;
+    recordHistoryWrite(replace);
     // URL first, listeners second — see `setRoute`.
     if (store.live) {
       historySink.peek().commit({
@@ -1376,7 +1404,9 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     internal: PaneInternal,
     instanceId: number,
     params: Record<string, string>,
+    opts?: SetParamsOptions,
   ): void {
+    const replace = opts?.replace === true || !internal.chrome.history;
     // The app's landing pane is not a slot: its keyed params live beside the
     // route (`getIndexParams`) and ride the base path (`/places;page=x`). The
     // same in-place rewrite — the route, and so the mounted pane, untouched;
@@ -1387,7 +1417,7 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
         ...onlySurfaceViews(currentIndex),
       });
       if (sameParams(index, currentIndex)) return;
-      setRoute(currentSlots(), !internal.chrome.history, index);
+      setRoute(currentSlots(), replace, index);
       return;
     }
     const route = currentSlots();
@@ -1408,7 +1438,7 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     // state; only its address changes.
     const next = [...route];
     next[idx] = { ...slot, params: own };
-    setRoute(next, !internal.chrome.history, currentIndex);
+    setRoute(next, replace, currentIndex);
   }
 
   function setKeyedParam(
@@ -1455,6 +1485,7 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
       routeListeners.add(cb);
       return () => routeListeners.delete(cb);
     },
+    lastHistoryWrite: () => lastHistoryWrite,
     setRoute,
     seedPending,
     navigatePending,
@@ -2814,7 +2845,8 @@ export interface PaneObject<
    * Hook: rewrite THIS instance's own params in place — its URL changes, the
    * instance does not. Same column, same React instance (no remount), same
    * options and panes to its right; a history entry per `chrome.history`, like
-   * any other navigation.
+   * any other navigation — or, with `{ replace: true }`, rewriting the current
+   * entry (a correction, or a move its caller keeps out of Back).
    *
    * For state that is a VIEW of the entity the pane already shows (which tab,
    * which stage), carried in an optional `:name?` so the bare URL stays valid.
@@ -2822,7 +2854,9 @@ export interface PaneObject<
    * which mints a fresh instance so nothing of the old entity leaks across.
    * Throws when called from outside a pane instance.
    */
-  useSetParams: Hook<() => (params: OwnParams) => void>;
+  useSetParams: Hook<
+    () => (params: OwnParams, opts?: SetParamsOptions) => void
+  >;
   /**
    * Hook: toggle this pane open/closed relative to the caller's position in
    * the route. `toggle` is a {@link LinkTarget} — spread `linkProps(toggle)`:
@@ -3135,13 +3169,16 @@ function makePaneObject(
     }, [store, instanceId, slots, surfaceAppId, navigator]);
   }
 
-  function useSetParams(): (params: Record<string, string>) => void {
+  function useSetParams(): (
+    params: Record<string, string>,
+    opts?: SetParamsOptions,
+  ) => void {
     const store = usePaneStore();
     const instanceId = useContext(PaneInstanceContext);
     const set = useCallback(
-      (params: Record<string, string>) => {
+      (params: Record<string, string>, opts?: SetParamsOptions) => {
         if (instanceId !== undefined)
-          store.setParams(internal, instanceId, params);
+          store.setParams(internal, instanceId, params, opts);
       },
       [store, instanceId],
     );
