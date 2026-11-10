@@ -1,11 +1,9 @@
 import {
-  HOME,
   absolutePath,
   displayPath,
 } from "@plugins/infra/plugins/host-account/core";
 import {
   useCallback,
-  useContext,
   useMemo,
   useRef,
   useState,
@@ -18,7 +16,6 @@ import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -30,41 +27,19 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
-import {
-  PathBar,
-  type PathTarget,
-} from "@plugins/primitives/plugins/path-bar/web";
-import {
-  SurfaceChromeContext,
-  useReservesFloatingBar,
-} from "@plugins/primitives/plugins/pane/web";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
-import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
-import { fileExplorerApp } from "@plugins/apps/plugins/file-explorer/plugins/shell/core";
 import {
   beforeOpen,
   PLAIN_GESTURE,
   runActivation,
   type Activation,
-  type Gesture,
 } from "@plugins/primitives/plugins/link-gesture/core";
-import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
-import {
-  legacyDraftKeys,
-  useDraft,
-} from "@plugins/primitives/plugins/persistent-draft/web";
-import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
-import { z } from "zod";
-import { symbol } from "@plugins/ui/plugins/icons/core";
 import {
   hasFileLocations,
   readFileLocations,
-  type BrowsableFileSystem,
   type FileEntry,
 } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { showToast } from "@plugins/shell/plugins/toast/web";
@@ -78,13 +53,7 @@ import {
   parentPath,
   type EntryFilter,
   type EntryRow,
-  type LensHideRule,
 } from "../../core";
-import { useFolderPathSource } from "../internal/host-path-source";
-import {
-  useExplorerSystem,
-  type ExplorerSystem,
-} from "../internal/explorer-system";
 import {
   isOnDisk,
   unlistedCount,
@@ -92,188 +61,111 @@ import {
   type Listings,
 } from "../internal/listings";
 import { useMoveInto } from "../internal/move-into";
-import {
-  useLocalNavigator,
-  type ExplorerNavigator,
-} from "../internal/navigator";
-import { WithLenses, type ComposedLens } from "../internal/lenses";
-import { ExplorerControlsSlot } from "../internal/controls-slot";
+import { FILES_SCOPE } from "../internal/theme";
 import { useViewportAtMost } from "../internal/use-viewport-at-most";
 import { FileTree } from "./file-tree";
-import { PreviewPane } from "./preview-pane";
+import { SplitPreview } from "./file-preview";
+import {
+  FileBrowserFilter,
+  FileBrowserNav,
+  FileBrowserPath,
+  FileBrowserProvider,
+  FileBrowserToggles,
+  useFileBrowser,
+  type FileBrowserProps,
+  type FileBrowserReady,
+} from "./file-browser-header";
 import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
-
-const backIcon = symbol("chevron-left");
-const forwardIcon = symbol("chevron-right");
-const upIcon = symbol("arrow-upward");
-const hiddenOnIcon = symbol("visibility");
-const hiddenOffIcon = symbol("visibility-off");
-
-/** Which lens hide rules are switched to show, by rule id. Absent → hidden. */
-type LensShown = Readonly<Record<string, boolean>>;
-const NONE_SHOWN: LensShown = {};
-
-// Device preferences, kept like Finder keeps them — so a long TTL.
-const showHiddenStore = defineStore({
-  owner: "file-explorer.show-hidden",
-  label: "File browser preferences",
-  area: "local",
-  cap: "2 KB",
-  ttl: 365 * 24 * 60 * 60 * 1000,
-  whenFull: "refuse",
-  schema: z.boolean(),
-  legacy: legacyDraftKeys("file-explorer:show-hidden"),
-});
-const lensShownStore = defineStore<LensShown>({
-  owner: "file-explorer.lens-shown",
-  label: "File browser lens preferences",
-  area: "local",
-  cap: "2 KB",
-  ttl: 365 * 24 * 60 * 60 * 1000,
-  whenFull: "refuse",
-  schema: z.record(z.string(), z.boolean()),
-  legacy: legacyDraftKeys("file-explorer:lens-shown"),
-});
-
-export interface FileBrowserProps {
-  /**
-   * Where the browser is and how it moves. The `/files` app passes its route
-   * navigator (back / forward are the browser history; every location is a
-   * link). Absent → the browser keeps its own location and history, starting
-   * at `initialPath` in `fs` — for a browser embedded in another surface.
-   */
-  navigator?: ExplorerNavigator;
-  /** The file system an embedded browser shows. Default the computer's disk. */
-  fs?: BrowsableFileSystem;
-  /** Where an embedded browser starts. Default `~`. */
-  initialPath?: string;
-  /**
-   * The highest folder this browser may show: up and the path bar stop here
-   * (an embedded browser rooted at a checkout). Absent → the whole system.
-   */
-  root?: string;
-  /**
-   * Where a file opens instead, given its absolute path in the browser's
-   * file system (a consumer with its
-   * own preview) — a `LinkTarget` when that is a place, so ⌘/middle-click
-   * opens it in a new browser tab. When set, the browser has no preview pane
-   * of its own: selecting or opening a file activates this instead.
-   */
-  fileTarget?: (path: string) => Activation;
-  /**
-   * Whether the toolbar is its surface's top edge, so it hosts the surface's
-   * leading control and keeps clear of the floating action bar. Default: when
-   * routed — the Files app paints its browser with no pane header above it. A
-   * pane that wraps the browser in its own header passes `false`.
-   */
-  atSurfaceEdge?: boolean;
-  /**
-   * Where the open file is previewed:
-   * - `"split"` (default) — beside the listing, in a resizable split this
-   *   browser draws (a browser hosted inside one pane);
-   * - `"pane"` — in a pane of its own beside this one, which the navigator
-   *   opens and closes (`/files`, whose preview is a Miller column): the
-   *   browser draws the listing only, marking the open file.
-   */
-  preview?: "split" | "pane";
-}
 
 /**
  * A file browser over one file system (the computer's disk, the browser's
- * storage — whatever this host serves): a toolbar (back / forward / up, the
- * Dolphin path bar, a filter), the folder as a lazily-listed tree with Name /
- * Modified / Size, a status bar, and the selected file previewed in a
- * resizable pane beside it.
+ * storage — whatever this host serves), all in one box, for a host with no
+ * pane header of its own (a plugin's detail section): a sub-header laying the
+ * browser's header items (back / forward / up, the path bar, the filter, the
+ * toggles), then the body. A host that owns a pane header renders
+ * {@link FileBrowserProvider} around its `PaneChrome`, borrows the
+ * `FileBrowserHeader` slot, and draws {@link FileBrowserBody} instead.
  */
 export function FileBrowser(props: FileBrowserProps): ReactNode {
-  // The browser IS the Files app, wherever it is drawn: hosted beside a
-  // conversation or inside a plugin's detail it wears Files' theme, not its
-  // host's (in Files itself this is the scope it is already in).
+  return (
+    <FileBrowserProvider {...props}>
+      <Theme name={FILES_SCOPE} surface="canvas" className="h-full">
+        <Column
+          fill
+          className="h-full"
+          scrollBody={false}
+          header={
+            // The mockup's tight 4px toolbar rhythm.
+            <Bar tier="subpane" className="gap-xs">
+              <FileBrowserNav />
+              {/* No pane title to size it: the crumbs read in body type. */}
+              <Fill>
+                <Text as="div" variant="body">
+                  <FileBrowserPath />
+                </Text>
+              </Fill>
+              <FileBrowserFilter />
+              <FileBrowserToggles />
+            </Bar>
+          }
+          body={<FileBrowserBodyContent />}
+        />
+      </Theme>
+    </FileBrowserProvider>
+  );
+}
+
+/**
+ * The browser's body under its host's pane header: the folder as a tree, the
+ * status bar, and — with `preview: "split"` — the open file beside it; or what
+ * stops the file system from being browsed. In Files' theme: hosted beside a
+ * conversation or inside a folder peek, the browser IS the Files app.
+ */
+export function FileBrowserBody(): ReactNode {
   return (
     <Theme name={FILES_SCOPE} surface="canvas" className="h-full">
-      <FileBrowserBody {...props} />
+      <FileBrowserBodyContent />
     </Theme>
   );
 }
 
-const FILES_SCOPE = appThemeScope(fileExplorerApp.id);
-
-function FileBrowserBody(props: FileBrowserProps): ReactNode {
-  const state = useExplorerSystem(
-    props.navigator?.location.fs ?? props.fs ?? "computer",
-  );
-  if (state.kind === "pending") return <Loading variant="rows" />;
-  if (state.kind === "failed") {
-    return (
-      <ResourceErrorInline
-        variant="block"
-        subject="this file system"
-        error={state.error}
-        refetch={state.refetch}
-      />
-    );
+function FileBrowserBodyContent(): ReactNode {
+  const browser = useFileBrowser();
+  switch (browser.kind) {
+    case "host-pending":
+      throw new Error(
+        "FileBrowserBody rendered under a PendingFileBrowserProvider: while " +
+          "the host has nothing to browse, it draws its own state as the body.",
+      );
+    case "system": {
+      const { state } = browser;
+      if (state.kind === "pending") return <Loading variant="rows" />;
+      if (state.kind === "failed") {
+        return (
+          <ResourceErrorInline
+            variant="block"
+            subject="this file system"
+            error={state.error}
+            refetch={state.refetch}
+          />
+        );
+      }
+      return <Placeholder>{state.message}</Placeholder>;
+    }
+    case "ready":
+      return <ReadyBody browser={browser} />;
   }
-  if (state.kind === "unavailable") {
-    return <Placeholder>{state.message}</Placeholder>;
-  }
-  return <FileBrowserReady {...props} system={state.system} />;
 }
 
-function FileBrowserReady({
-  navigator,
-  initialPath = HOME,
-  root,
-  fileTarget,
-  atSurfaceEdge = navigator !== undefined,
-  preview: previewMode = "split",
-  system,
-}: FileBrowserProps & { system: ExplorerSystem }): ReactNode {
-  const { home } = system;
-  const local = useLocalNavigator({
-    fs: system.fs,
-    dir: initialPath,
-    open: null,
-  });
-  const nav = navigator ?? local;
+function ReadyBody({ browser }: { browser: FileBrowserReady }): ReactNode {
+  const { nav, system, fileTarget, previewMode } = browser;
   const { dir, open } = nav.location;
-  const { contentOwnsTopChrome, leadingControl } =
-    useContext(SurfaceChromeContext);
-  const atTopEdge = atSurfaceEdge && contentOwnsTopChrome;
-  // The listing's column is the surface's end edge unless a preview stands
-  // beside it — in this browser's split, or as the next column.
-  const reservesFloatingBar = useReservesFloatingBar();
-  const listingAtEnd =
-    previewMode === "pane" ? reservesFloatingBar : atTopEdge && open === null;
   const phone = useViewportAtMost(640);
   const narrow = useViewportAtMost(900);
 
-  const [showHidden, setShowHidden] = useDraft(showHiddenStore, false);
-  const [lensShown, setLensShown] = useDraft(lensShownStore, NONE_SHOWN);
-
-  const listing = (
-    <WithLenses fs={system.fs} dir={absolutePath(dir, home)}>
-      {(lens) => (
-        <ExplorerControlsSlot.Provider>
-          <Listing
-            key={dir}
-            nav={nav}
-            system={system}
-            root={root}
-            fileTarget={fileTarget}
-            lens={lens}
-            showHidden={showHidden}
-            onToggleHidden={() => setShowHidden(!showHidden)}
-            lensShown={lensShown}
-            onToggleLens={(id) =>
-              setLensShown({ ...lensShown, [id]: lensShown[id] !== true })
-            }
-            leading={atTopEdge ? leadingControl : undefined}
-            endSafeArea={listingAtEnd}
-          />
-        </ExplorerControlsSlot.Provider>
-      )}
-    </WithLenses>
-  );
+  // Keyed by the folder, so the selection starts fresh in every folder
+  // visited (the filter does too: the provider's own).
+  const listing = <Listing key={dir} browser={browser} />;
 
   // A consumer bringing its own preview, or a preview pane beside this one,
   // gets the listing alone.
@@ -281,12 +173,11 @@ function FileBrowserReady({
 
   const preview =
     open === null ? null : (
-      <ExplorerPreview
+      <SplitPreview
         key={open}
         system={system}
         path={open}
         onClose={(gesture) => runActivation(nav.fileTo(null), gesture)}
-        endSafeArea={atTopEdge}
       />
     );
 
@@ -322,115 +213,16 @@ function FileBrowserReady({
 }
 
 /**
- * The open file of a browser over `system`, previewed: the Files preview
- * with the file's git context, when a lens knows it.
+ * One folder's listing: tree and status bar, with the browser's keyboard
+ * shortcuts. Keyed by the folder, so the selection starts fresh in every
+ * folder visited.
  */
-function ExplorerPreview({
-  system,
-  path,
-  onClose,
-  endSafeArea,
-}: {
-  system: ExplorerSystem;
-  /** The file, in display form (`~/…`). */
-  path: string;
-  /** Absent where there is nothing to close to. */
-  onClose: ((gesture: Gesture) => void) | undefined;
-  endSafeArea: boolean;
-}): ReactNode {
-  const { home } = system;
-  return (
-    <WithLenses
-      fs={system.fs}
-      dir={absolutePath(parentPath(path, home) ?? "/", home)}
-    >
-      {(lens) => (
-        <PreviewPane
-          fs={system.fs}
-          path={path}
-          home={home}
-          git={lens.fileGit(absolutePath(path, home))}
-          {...(onClose !== undefined ? { onClose } : {})}
-          endSafeArea={endSafeArea}
-        />
-      )}
-    </WithLenses>
-  );
-}
-
-/**
- * A file of `fs` previewed in a pane of its own — the column beside a
- * `preview: "pane"` browser — in Files' theme, as the browser is.
- */
-export function FilePreview({
-  fs,
-  path,
-  onClose,
-}: {
-  fs: BrowsableFileSystem;
-  /** The file, in display form (`~/…`). */
-  path: string;
-  onClose: ((gesture: Gesture) => void) | null;
-}): ReactNode {
-  const state = useExplorerSystem(fs);
-  const endSafeArea = useReservesFloatingBar();
-  return (
-    <Theme name={FILES_SCOPE} surface="canvas" className="h-full">
-      {state.kind === "pending" ? (
-        <Loading variant="rows" />
-      ) : state.kind === "failed" ? (
-        <ResourceErrorInline
-          variant="block"
-          subject="this file system"
-          error={state.error}
-          refetch={state.refetch}
-        />
-      ) : state.kind === "unavailable" ? (
-        <Placeholder>{state.message}</Placeholder>
-      ) : (
-        <ExplorerPreview
-          system={state.system}
-          path={path}
-          onClose={onClose ?? undefined}
-          endSafeArea={endSafeArea}
-        />
-      )}
-    </Theme>
-  );
-}
-
-/**
- * One folder's listing: toolbar, tree and status bar. Keyed by the folder, so
- * the filter and the selection start fresh in every folder visited.
- */
-function Listing({
-  nav,
-  system,
-  root,
-  fileTarget,
-  lens,
-  showHidden,
-  onToggleHidden,
-  lensShown,
-  onToggleLens,
-  leading,
-  endSafeArea,
-}: {
-  nav: ExplorerNavigator;
-  system: ExplorerSystem;
-  root: string | undefined;
-  fileTarget: ((path: string) => Activation) | undefined;
-  lens: ComposedLens;
-  showHidden: boolean;
-  onToggleHidden: () => void;
-  lensShown: LensShown;
-  onToggleLens: (id: string) => void;
-  leading: ReactNode;
-  endSafeArea: boolean;
-}): ReactNode {
+function Listing({ browser }: { browser: FileBrowserReady }): ReactNode {
+  const { nav, system, fileTarget, lens, showHidden, lensShown, query, up } =
+    browser;
+  const setQuery = browser.setQuery;
   const { dir, open } = nav.location;
   const { home } = system;
-  const [query, setQuery] = useState("");
   // The selected rows, by path: Finder's set and the anchor a range grows
   // from. The anchor is the primary row — the one the status bar names.
   const [selection, setSelection] = useState<RowSelectionState>(() => ({
@@ -439,7 +231,6 @@ function Listing({
   }));
   const selected = selection.anchor;
   const treeRef = useRef<HTMLElement | null>(null);
-  const source = useFolderPathSource(system, root);
   const { listings, request, setOpen, readers } = useListings(system.fs, dir);
   const moveInto = useMoveInto(system.fs);
   // The paths this listing is dragging right now: dropping them back into
@@ -462,7 +253,6 @@ function Listing({
     },
     [],
   );
-  const publishControls = ExplorerControlsSlot.usePublishRef();
 
   // Show hidden files, then every lens hide rule that is not switched to show.
   const activeHides = useMemo(
@@ -478,10 +268,6 @@ function Listing({
     },
     [showHidden, activeHides, home],
   );
-
-  const atRoot =
-    root !== undefined && absolutePath(dir, home) === absolutePath(root, home);
-  const up = atRoot ? null : parentPath(dir, home);
 
   const shortcuts = useMemo(
     () => [
@@ -514,14 +300,6 @@ function Listing({
     [nav, open, up, selected],
   );
   useSurfaceShortcuts(shortcuts);
-
-  // After the shortcuts' memo: handing `up` to `nav.to` before it would read,
-  // to the React Compiler, as a possible mutation of a memo dependency.
-  const upTarget = up === null ? undefined : nav.to(up, open);
-  const pathTarget = (target: PathTarget): Activation =>
-    target.kind === "dir"
-      ? nav.to(target.path, open)
-      : nav.to(parentPath(target.path, home) ?? "/", target.path);
 
   const fileAt = (path: string): Activation =>
     fileTarget !== undefined
@@ -665,85 +443,6 @@ function Listing({
       fill
       className="h-full"
       scrollBody={false}
-      header={
-        // The mockup's tight 4px toolbar rhythm.
-        <Bar tier="pane" endSafeArea={endSafeArea} className="gap-xs">
-          {leading}
-          <IconButton
-            icon={backIcon}
-            label="Back"
-            variant="ghost"
-            disabled={!nav.canBack}
-            onClick={nav.back}
-          />
-          <IconButton
-            icon={forwardIcon}
-            label="Forward"
-            variant="ghost"
-            disabled={!nav.canForward}
-            onClick={nav.forward}
-          />
-          <IconButton
-            icon={upIcon}
-            label="Enclosing folder"
-            variant="ghost"
-            disabled={upTarget === undefined}
-            {...activationProps(upTarget)}
-          />
-          {/* The mockup sets the first crumb's text 18px past Up and leaves
-              only the bar's 4px gap before Filter: the crumbs' own insets
-              (border + 2px + 2px) plus this 8px lead. */}
-          <Fill className="pl-sm">
-            <PathBar
-              path={dir}
-              source={source}
-              activationFor={pathTarget}
-              text="body"
-              leafWeight="semibold"
-            />
-          </Fill>
-          <SearchInput
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Escape") {
-                setQuery("");
-                e.currentTarget.blur();
-              }
-            }}
-            placeholder="Filter"
-            aria-label="Filter this folder"
-            appearance="filled"
-            // 180px, or 132px beside an open file; 130px at 1100px and under,
-            // and gone at 900px and under.
-            wrapperClassName={cn(
-              open === null ? "w-[180px]" : "w-[132px]",
-              "max-[1100px]:w-[130px] max-[900px]:hidden",
-            )}
-          />
-          <IconButton
-            icon={showHidden ? hiddenOnIcon : hiddenOffIcon}
-            label={showHidden ? "Hide hidden files" : "Show hidden files"}
-            variant="ghost"
-            onClick={onToggleHidden}
-          />
-          {lens.hides.map((rule) => (
-            <LensToggle
-              key={rule.id}
-              rule={rule}
-              shown={lensShown[rule.id] === true}
-              onToggle={() => onToggleLens(rule.id)}
-            />
-          ))}
-          {/* The folder view's own controls (view switcher, creators, sort /
-              filter / fields), portaled in by the tree's hosted frame. Empty —
-              and collapsed — while no tree is mounted. */}
-          <Line
-            ref={publishControls}
-            className={cn(rigidClass(), "gap-sm empty:hidden")}
-          />
-        </Bar>
-      }
       body={
         <Scroll
           ref={treeRef}
@@ -776,28 +475,6 @@ function Listing({
           selectedCount={selection.selected.size}
         />
       }
-    />
-  );
-}
-
-/** A lens hide rule's toolbar toggle: "Show ignored files" / "Hide …". */
-function LensToggle({
-  rule,
-  shown,
-  onToggle,
-}: {
-  rule: LensHideRule;
-  shown: boolean;
-  onToggle: () => void;
-}): ReactNode {
-  return (
-    <IconButton
-      icon={rule.icon}
-      active={shown}
-      aria-pressed={shown}
-      label={shown ? `Hide ${rule.label}` : `Show ${rule.label}`}
-      variant="ghost"
-      onClick={onToggle}
     />
   );
 }

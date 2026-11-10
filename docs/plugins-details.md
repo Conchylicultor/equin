@@ -777,6 +777,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --primary-text`
             - Imported by: `apps/browser/start-page`
             - Endpoint callers: `history`
+          - Exemptions:
+            - Exempts itself from: `pane/no-pane-header-bar` — `web/components/bookmarks-bar.tsx` (sanctioned)
         - **`engine`** — The Browser app's engine, backend half: relays each viewed tab's socket (ENGINE_WS_PATH) byte for byte to the machine's engine host over its Unix socket — launching the host (a detached `bin/host.ts`, Chromium on a persistent profile in apps/browser/profile) when there is none, after checking Chromium is installed (requesting the install when not), and replacing it when it runs other code and this backend is main or the namespace that launched it.
           - Cross-plugin:
             - Imported by: `apps/browser/webview`
@@ -4682,13 +4684,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`attachment-preview`** — An attachment previewed as a side pane through the Files preview (every file-viewer tab, Open with default app, size and age): the attachment/:id pane, homed in Files and opened beside any surface, and the file chip's opener, so clicking an attached file in a prompt opens it there.
           - Web:
-            - Slots: `attachmentPreviewPane.Actions`
-            - Slot contributors: `attachmentPreviewPane.Actions` ← `primitives.pane`
             - Contributes:
               - `Pane.Register` "attachment-preview"
               - `AttachmentSlots.Opener` "opener"
             - Uses:
-              - `apps/file-explorer/browser.PreviewPane`
+              - `apps/file-explorer/browser.FilePreviewBody`
+              - `apps/file-explorer/browser.FilePreviewHeader`
+              - `apps/file-explorer/browser.FilePreviewProvider`
+              - `apps/file-explorer/browser.FilePreviewTitle`
+              - `apps/file-explorer/browser.PendingFilePreviewPane`
+              - `apps/file-explorer/browser.useFilePreview`
               - `apps/file-explorer/browser.useHomeDir`
               - `network/live.useLive`
               - `network/live/live-state.foldResource`
@@ -4698,26 +4703,28 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/loading.Loading`
               - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
+              - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
-              - `primitives/pane.useReservesFloatingBar`
               - `primitives/text-editor/paste-images.AttachmentSlots`
             - Exports (values): `attachmentPreviewPane`
-        - **`browser`** — The file explorer's browser over any file system this host serves (the computer's disk, the browser's storage; useExplorerSystem says what `~` is there and what it can do, useHomeSystem which one Files opens on): <FileBrowser/> (toolbar with back / forward / up, the system's path bar and a filter; the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to fileTarget; its FileBrowserSlots seams — RowActions, a row's hover actions (its own: Extract here on an archive, Copy path in the ⋯ menu), and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — a Miller row of a folder column (/files/browse/<folder>[;fs=<system>], the bare /files forwarding to the home system's home) and the open file's preview column beside it (…/preview/<open file>, pushed and closed so it slides in and out while the listing stays mounted; the old /files/<fs>/at/<folder>[/<open file>] forwards), so every location is a link and back / forward are the browser history; moves (drag onto a folder) and the other operations are offered only where the system has them; useExplorerFileTarget names any file's place there (its folder, the file previewed) as a pane's Expand target; useFileHostPath + useHostPathSource let any surface draw a file's place as the same host path bar. Contributes the files-document sub-theme the preview's page wears (28/32/48px inset, 14px on 1.6, a 24px heading).
+        - **`browser`** — The file explorer's browser over any file system this host serves (the computer's disk, the browser's storage; useExplorerSystem says what `~` is there and what it can do, useHomeSystem which one Files opens on): the browser's header as the shared FileBrowserHeader pane-header slot (back / forward / up, the system's path bar as each pane's title — FileBrowserPath —, a filter, show hidden, the lenses' hide-rule toggles and the folder view's own controls), borrowed by the Files folder column, the folder peek and the conversation's Files pane, whose host wraps its PaneChrome in FileBrowserProvider (PendingFileBrowserProvider while it has nothing to browse) over FileBrowserBody (the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to fileTarget); <FileBrowser/>, the same in one box under a sub-header of the same items, for a host with no pane header; its FileBrowserSlots seams — RowActions, a row's hover actions (its own: Extract here on an archive, Copy path in the ⋯ menu), and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — a Miller row of a folder column (/files/browse/<folder>[;fs=<system>], the bare /files forwarding to the home system's home) and the open file's preview column beside it (…/preview/<open file>, pushed and closed so it slides in and out while the listing stays mounted; the old /files/<fs>/at/<folder>[/<open file>] forwards), so every location is a link and back / forward are the browser history; moves (drag onto a folder) and the other operations are offered only where the system has them; useExplorerFileTarget names any file's place there (its folder, the file previewed) as a pane's Expand target; useFileHostPath + useHostPathSource let any surface draw a file's place as the same host path bar. The preview's header is the shared FilePreviewHeader pane-header slot (the file's title, its renderer tabs, Open with default app) — borrowed by the Files preview column and the attachment preview, with FilePreviewProvider / useFilePreview / FilePreviewBody for a host's own pane; a browser hosted inside one pane previews the open file beside the listing under a sub-header of the same items. Contributes the files-document sub-theme the preview's page wears (28/32/48px inset, 14px on 1.6, a 24px heading).
           - Web:
             - Slots:
               - `filesHomePane.Actions`
-              - `filesFolderPane.Actions`
-              - `filesPreviewPane.Actions`
               - `files-computer-at.actions`
               - `files-browser-at.actions`
+              - `FilePreviewHeader`
+              - `FileBrowserHeader`
               - `FileBrowserSlots.Lens`
               - `FileBrowserSlots.RowActions`
             - Slot contributors:
               - `filesHomePane.Actions` ← `primitives.pane`
-              - `filesFolderPane.Actions` ← `primitives.pane`
-              - `filesPreviewPane.Actions` ← `primitives.pane`
               - `files-computer-at.actions` ← `primitives.pane`
               - `files-browser-at.actions` ← `primitives.pane`
+              - `FilePreviewHeader` ← `apps.file-explorer.browser`
+              - `FilePreviewHeader` ← `primitives.pane`
+              - `FileBrowserHeader` ← `apps.file-explorer.browser`
+              - `FileBrowserHeader` ← `primitives.pane`
               - `FileBrowserSlots.Lens` ← `apps.file-explorer.git`
               - `FileBrowserSlots.RowActions` ← `apps.file-explorer.browser`
               - `FileBrowserSlots.RowActions` ← `apps.file-explorer.places`
@@ -4729,20 +4736,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pane.Register` "files-preview"
               - `ThemeEngine.SubTheme` "Files document"
               - `FieldPresentation.Register` "collection:file-explorer.entry"
+              - `FileBrowserHeader` "nav" → `FileBrowserNav`
+              - `FileBrowserHeader` "filter" → `FileBrowserFilter`
+              - `FileBrowserHeader` "toggles" → `FileBrowserToggles`
+              - `FilePreviewHeader` "tabs" → `FilePreviewTabs`
+              - `FilePreviewHeader` "open-with" → `OpenWithDefaultApp`
               - `FileBrowserSlots.RowActions` "extract" → `ExtractAction`
               - `FileBrowserSlots.RowActions` "copy-path" → `CopyPathAction`
-            - Uses: 77 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
+            - Uses: 79 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
               - `primitives/data-view` ×10
               - `primitives/css/ui-kit` ×8
+              - `primitives/file-viewer` ×7
               - `primitives/pane` ×7
-              - `primitives/file-viewer` ×6
               - `network/live` ×4
               - `infra/endpoints` ×3
               - `infra/paths/file-systems` ×3
               - `network/live/live-state` ×3
+              - `primitives/path-bar` ×3
               - `primitives/link-gesture` ×2
               - `primitives/networking` ×2
-              - `primitives/path-bar` ×2
               - `primitives/persistent-draft` ×2
               - `menu-bar/app-window.useNativeFileDrag`
               - `primitives/bar.Bar`
@@ -4776,25 +4788,36 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ExplorerSystemState`
               - `FileBrowserProps`
               - `FileHostPath`
+              - `FilePreviewValue`
               - `HomeDir`
               - `HomeSystemState`
               - `LocationParams`
               - `PathBarSystem`
             - Exports (values):
               - `FileBrowser`
+              - `FileBrowserBody`
+              - `FileBrowserHeader`
+              - `FileBrowserPath`
+              - `FileBrowserProvider`
               - `FileBrowserSlots`
+              - `FilePreviewBody`
+              - `FilePreviewHeader`
+              - `FilePreviewProvider`
+              - `FilePreviewTitle`
               - `filesFolderPane`
               - `filesHomePane`
               - `filesPreviewPane`
               - `locationOf`
               - `locationParams`
-              - `PreviewPane`
+              - `PendingFileBrowserProvider`
+              - `PendingFilePreviewPane`
               - `useExplorerDir`
               - `useExplorerFileTarget`
               - `useExplorerFolderTarget`
               - `useExplorerLocation`
               - `useExplorerSystem`
               - `useFileHostPath`
+              - `useFilePreview`
               - `useFolderPathSource`
               - `useHomeDir`
               - `useHomeSystem`
@@ -4858,16 +4881,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/code/file-pane`
               - `conversations/conversation-view/explorer`
               - `plugin-meta/plugin-view/file-tree`
-        - **`folder-peek`** — A folder of any browsable file system browsed as a side pane through the Files browser (tree, path bar, Up, a file previewed beside it): the folder/<dir>[/<open file>][;fs=<system>] pane (no ;fs: the computer's disk), homed in Files and opened beside any surface — useFolderPeekTarget()(fs, dir) is its link, folderLocationParams(fs, dir) its params — with Expand opening Files at the pane's location.
+        - **`folder-peek`** — A folder of any browsable file system browsed as a side pane through the Files browser (the browser's header — back / forward / up, the path bar as the title, the filter, the toggles — as the pane header; tree, a file previewed beside it): the folder/<dir>[/<open file>][;fs=<system>] pane (no ;fs: the computer's disk), homed in Files and opened beside any surface — useFolderPeekTarget()(fs, dir) is its link, folderLocationParams(fs, dir) its params — with Expand opening Files at the pane's location.
           - Web:
-            - Slots: `folderPeekPane.Actions`
-            - Slot contributors: `folderPeekPane.Actions` ← `primitives.pane`
             - Contributes: `Pane.Register` "folder-peek"
             - Uses:
-              - `apps/file-explorer/browser.FileBrowser`
+              - `apps/file-explorer/browser.FileBrowserBody`
+              - `apps/file-explorer/browser.FileBrowserHeader`
+              - `apps/file-explorer/browser.FileBrowserPath`
+              - `apps/file-explorer/browser.FileBrowserProvider`
               - `apps/file-explorer/browser.locationOf`
               - `apps/file-explorer/browser.locationParams`
               - `apps/file-explorer/browser.LocationParams`
+              - `apps/file-explorer/browser.PendingFileBrowserProvider`
               - `apps/file-explorer/browser.useLocationNavigator`
               - `apps/file-explorer/browser.useOpenInFiles`
               - `primitives/css/placeholder.Placeholder`
@@ -16689,34 +16714,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/drop-dependents`
               - `conversations/conversation-view/exit`
               - `conversations/conversation-view/hold-and-exit`
-        - **`explorer`** — Conversation toolbar button opening a side pane that browses the agent's worktree with the file explorer's <FileBrowser/> (wearing the Files theme), rooted at the checkout, its folder and open file carried in the pane's route (;dir / ;open), with Open in Files at that location (git status from the file explorer's git lens).
+        - **`explorer`** — Conversation toolbar button opening a side pane that browses the agent's worktree with the file explorer's browser (its header — back / forward / up, the path bar as the title, the filter, the toggles — as the pane header; its body wearing the Files theme), rooted at the checkout, its folder and open file carried in the pane's route (;dir / ;open), with Open in Files at that location (git status from the file explorer's git lens).
           - Web:
-            - Slots: `conv-file-tree.actions`
-            - Slot contributors: `conv-file-tree.actions` ← `primitives.pane`
             - Contributes:
               - `Pane.Register` "conv-file-tree"
               - `Conversation.ActionBar` → `ConvTreeButton`
-            - Uses:
-              - `apps/file-explorer/browser.FileBrowser`
-              - `apps/file-explorer/browser.locationOf`
-              - `apps/file-explorer/browser.locationParams`
-              - `apps/file-explorer/browser.useLocationNavigator`
-              - `apps/file-explorer/browser.useOpenInFiles`
-              - `conversations.useConversation`
-              - `conversations.useConversationById`
-              - `conversations/conversation-view.conversationPane`
+            - Uses: 24 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/explorer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/explorer/REFERENCE.md)
+              - `apps/file-explorer/browser` ×9
+              - `primitives/pane` ×5
+              - `conversations` ×2
               - `conversations/conversation-view/action-bar.Conversation`
-              - `network/live.rowOrStale`
+              - `conversations/conversation-view.conversationPane`
               - `network/live/live-state.ResourceErrorInline`
+              - `network/live.rowOrStale`
               - `primitives/css/placeholder.Placeholder`
               - `primitives/icon-button.IconButton`
               - `primitives/link-gesture.linkProps`
               - `primitives/loading.Loading`
-              - `primitives/pane.defineRoute`
-              - `primitives/pane.Pane`
-              - `primitives/pane.PaneChrome`
-              - `primitives/pane.PaneExpandTarget`
-              - `primitives/pane.useOpenPane`
         - **`fork-conversation`** — Side chat: an icon split under the prompt that opens a new, blank conversation in the same worktree — the icon on the default model, the chevron to pick another.
           - Web:
             - Contributes: `Conversation.PromptBar` "New" → `ForkConversationButtons`
@@ -50167,7 +50181,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots: `Pane.Register`
         - Slot contributors: 94 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `Pane.Register` ×94
-        - Contributes: 128 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Contributes: 125 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `FileBrowserHeader` "title" → `PaneTitleItem`
+          - `FilePreviewHeader` "title" → `PaneTitleItem`
           - `SlotRender.ListMiddleware`
           - `WebsiteHeader` "title" → `PaneTitleItem`
           - `accountPane.Actions` "title" → `PaneTitleItem`
@@ -50179,7 +50195,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `allConversationsPane.Actions` "title" → `PaneTitleItem`
           - `app-preview.actions` "title" → `PaneTitleItem`
           - `at.actions` "title" → `PaneTitleItem`
-          - `attachmentPreviewPane.Actions` "title" → `PaneTitleItem`
           - `attemptPane.Actions` "title" → `PaneTitleItem`
           - `automation-detail.actions` "title" → `PaneTitleItem`
           - `automations.actions` "title" → `PaneTitleItem`
@@ -50204,7 +50219,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `configOrphansPane.Actions` "title" → `PaneTitleItem`
           - `contributions.actions` "title" → `PaneTitleItem`
           - `conv-commits-graph.actions` "title" → `PaneTitleItem`
-          - `conv-file-tree.actions` "title" → `PaneTitleItem`
           - `conv-push-profiling.actions` "title" → `PaneTitleItem`
           - `conv-summary.actions` "title" → `PaneTitleItem`
           - `convReviewPane.Actions` "title" → `PaneTitleItem`
@@ -50228,10 +50242,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `filePeekPane.Actions` "title" → `PaneTitleItem`
           - `files-browser-at.actions` "title" → `PaneTitleItem`
           - `files-computer-at.actions` "title" → `PaneTitleItem`
-          - `filesFolderPane.Actions` "title" → `PaneTitleItem`
           - `filesHomePane.Actions` "title" → `PaneTitleItem`
-          - `filesPreviewPane.Actions` "title" → `PaneTitleItem`
-          - `folderPeekPane.Actions` "title" → `PaneTitleItem`
           - `graphCanvasPane.Actions` "title" → `PaneTitleItem`
           - `healthMonitorPane.Actions` "title" → `PaneTitleItem`
           - `heapSnapshotPane.Actions` "title" → `PaneTitleItem`
@@ -50476,8 +50487,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempts itself from:
           - `pane/no-core-define-route-in-web` — `.` (sanctioned)
+          - `pane/no-pane-header-bar` — `.` (sanctioned)
           - `check-thread-safety/no-blocking-check-work` — `check/identity-manifest.ts`, `check/index.ts` (debt)
         - Exempted by:
+          - `apps/browser/bookmarks` (0 debt)
           - `primitives/bar` (0 debt)
           - `primitives/pane` (0 debt)
       - Core:
@@ -52662,8 +52675,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. Applies each slot's committed layout (order, hidden items, spacers, dividers, groups) everywhere slots render; a layout is edited in its config file or the Config pane's reorder-tree field. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 284 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×284
+    - Contributes: 281 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×281
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfigResult`
@@ -52686,8 +52699,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useLayoutOrder`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 283 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×283
+    - Contributes: 280 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×280
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:

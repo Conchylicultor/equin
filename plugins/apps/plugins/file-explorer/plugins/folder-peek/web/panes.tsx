@@ -18,7 +18,11 @@ import {
   type ExplorerLocation,
 } from "@plugins/apps/plugins/file-explorer/plugins/browser/core";
 import {
-  FileBrowser,
+  FileBrowserBody,
+  FileBrowserHeader,
+  FileBrowserPath,
+  FileBrowserProvider,
+  PendingFileBrowserProvider,
   locationOf,
   locationParams,
   useLocationNavigator,
@@ -44,7 +48,10 @@ import {
 export const folderPeekPane = Pane.define({
   route: defineRoute({ id: "folder-peek", segment: "folder/:dir/:open?;fs" }),
   app: fileExplorerApp,
-  title: { useText: useFolderTitle },
+  // The header is the Files browser's own (back / forward / up, the path bar
+  // as the title, the filter, the toggles).
+  title: { useText: useFolderTitle, component: FileBrowserPath },
+  actions: FileBrowserHeader,
   useResolve: false,
   // Opened from an app's bare root (the agent manager's home), it stays
   // beside that home rather than replacing it.
@@ -81,17 +88,18 @@ function useOpenInFilesTarget(params: FolderRouteParams): PaneExpandTarget {
 function FolderPeek(): ReactNode {
   const { fs } = folderPeekPane.useParams();
   const system = systemOf(fs);
-  return (
-    <PaneChrome pane={folderPeekPane}>
-      {system === null ? (
-        <Placeholder tone="error">
-          {`"${fs}" is not a file system this app knows.`}
-        </Placeholder>
-      ) : (
-        <FolderPeekBrowser fs={system} />
-      )}
-    </PaneChrome>
-  );
+  if (system === null) {
+    return (
+      <PendingFileBrowserProvider>
+        <PaneChrome pane={folderPeekPane}>
+          <Placeholder tone="error">
+            {`"${fs}" is not a file system this app knows.`}
+          </Placeholder>
+        </PaneChrome>
+      </PendingFileBrowserProvider>
+    );
+  }
+  return <FolderPeekBrowser fs={system} />;
 }
 
 function FolderPeekBrowser({ fs }: { fs: BrowsableFileSystem }): ReactNode {
@@ -115,7 +123,13 @@ function FolderPeekBrowser({ fs }: { fs: BrowsableFileSystem }): ReactNode {
     [setParams, fs],
   );
   const navigator = useLocationNavigator(location, go, setLocation);
-  return <FileBrowser navigator={navigator} atSurfaceEdge={false} />;
+  return (
+    <FileBrowserProvider navigator={navigator}>
+      <PaneChrome pane={folderPeekPane}>
+        <FileBrowserBody />
+      </PaneChrome>
+    </FileBrowserProvider>
+  );
 }
 
 /**

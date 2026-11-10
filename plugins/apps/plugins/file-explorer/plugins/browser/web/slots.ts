@@ -1,5 +1,6 @@
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
+import { definePaneHeaderSlot } from "@plugins/primitives/plugins/pane/web";
 import { defineItemActions } from "@plugins/primitives/plugins/data-view/web";
 import type { EntryRow, ExplorerFolder, ExplorerLens } from "../core";
 
@@ -38,3 +39,23 @@ export const FileBrowserSlots = {
     docLabel: (p) => p.id,
   }),
 };
+
+/**
+ * The header of a file preview pane — ONE pane header slot worn by every
+ * preview pane (`filesPreviewPane`, the attachment preview): the file's title
+ * first, then the renderer tabs and Open with default app. A pane borrows it
+ * with `Pane.define({ actions: FilePreviewHeader })`; it is declared once, in
+ * this plugin's `slots`.
+ */
+export const FilePreviewHeader = definePaneHeaderSlot();
+
+/**
+ * The header of a pane hosting a file browser — ONE pane header slot worn by
+ * the Files folder column, the folder peek and the conversation's Files pane:
+ * back / forward / up, then the path bar (each pane's `title.component`,
+ * `FileBrowserPath`), the filter, and the toggles (show hidden, the lenses'
+ * hide rules, the folder view's own controls). A pane borrows it with
+ * `Pane.define({ actions: FileBrowserHeader })` and wraps its `PaneChrome` in
+ * `FileBrowserProvider`; it is declared once, in this plugin's `slots`.
+ */
+export const FileBrowserHeader = definePaneHeaderSlot();

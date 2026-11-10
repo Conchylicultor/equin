@@ -93,7 +93,7 @@
   - **`drop-dependents`** — Exit-menu entry that drops the task and all its transitive dependents, then closes the conversation.
   - **`exit`** — Exit-menu entry that closes the conversation without changing any task state.
   - **`exit-menu`** — Ghost icon button next to Push & Exit that opens a menu of exit actions (hold, exit, drop, drop dependents). Hosts the ExitMenu.Item slot each action contributes to.
-  - **`explorer`** — Conversation toolbar button opening a side pane that browses the agent's worktree with the file explorer's <FileBrowser/> (wearing the Files theme), rooted at the checkout, its folder and open file…
+  - **`explorer`** — Conversation toolbar button opening a side pane that browses the agent's worktree with the file explorer's browser (its header — back / forward / up, the path bar as the title, the filter, the…
   - **`fork-conversation`** — Side chat: an icon split under the prompt that opens a new, blank conversation in the same worktree — the icon on the default model, the chevron to pick another.
   - **`header`** — HeaderChip, the themable pill (header-chip pad tokens, the `tag` role) the model and status chips in the conversation pane header share.
   - **`hold-and-exit`** — Exit-menu entry that marks the task as held and closes the conversation.

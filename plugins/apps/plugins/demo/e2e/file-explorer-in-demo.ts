@@ -98,9 +98,9 @@ function sidebar(page: Page): Locator {
   return embedRoot(page).locator("[data-slot=sidebar-container]").first();
 }
 
-/** The preview beside the listing (the file's own column). */
+/** The preview beside the listing: the file's own column, header included. */
 function preview(page: Page): Locator {
-  return embedRoot(page).locator("[data-files-preview]").first();
+  return embedRoot(page).locator('[data-pane-id="files-preview"]').first();
 }
 
 /** A row of the browser's tree, by its key: the entry's path (`~/…`). */

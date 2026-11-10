@@ -127,6 +127,7 @@ export type ExemptableRuleId =
   | "page-editor/no-unhistoried-block-field"
   | "pane/no-adhoc-pane-toolbar"
   | "pane/no-core-define-route-in-web"
+  | "pane/no-pane-header-bar"
   | "pane/no-raw-location-path"
   | "passthrough/no-anonymous-passthrough"
   | "passthrough/no-unanchored-passthrough"
@@ -223,6 +224,7 @@ export type SanctionedOnlyRuleId =
   | "live/where-declared"
   | "networking/no-page-transport"
   | "networking/no-request-guard-capability"
+  | "pane/no-pane-header-bar"
   | "user-path/no-unproven-claim";
 
 /** What a `kind: "debt"` exemption may name. */

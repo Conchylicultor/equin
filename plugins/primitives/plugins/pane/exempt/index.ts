@@ -9,6 +9,13 @@ export default [
       "The plugin does not address itself through the cross-plugin specifier: its web/ files reach ../core relatively, and its jsdom suites drive the core barrel directly on purpose.",
   },
   {
+    rule: "pane/no-pane-header-bar",
+    paths: ["."],
+    kind: "sanctioned",
+    reason:
+      "The pane header's own tier: PaneChrome and its FallbackChrome mirror (and the resolve guard's header) are the one place that draws `<Bar tier=\"pane\">`.",
+  },
+  {
     rule: "check-thread-safety/no-blocking-check-work",
     paths: ["check/identity-manifest.ts", "check/index.ts"],
     kind: "debt",

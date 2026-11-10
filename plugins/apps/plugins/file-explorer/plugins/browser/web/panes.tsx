@@ -26,7 +26,18 @@ import {
   encodeOpenParam,
   type ExplorerLocation,
 } from "../core";
-import { FileBrowser, FilePreview } from "./components/file-browser";
+import { FileBrowserBody } from "./components/file-browser";
+import {
+  FileBrowserPath,
+  FileBrowserProvider,
+  PendingFileBrowserProvider,
+} from "./components/file-browser-header";
+import {
+  FilePreviewPane,
+  FilePreviewTitle,
+  PendingFilePreviewPane,
+} from "./components/file-preview";
+import { FileBrowserHeader, FilePreviewHeader } from "./slots";
 import { useRoutedHistory, type ExplorerNavigator } from "./internal/navigator";
 import { useHomeSystem } from "./internal/explorer-system";
 
@@ -56,7 +67,10 @@ const folderRoute = defineRoute({ id: "files-at", segment: "browse/:dir;fs" });
 export const filesFolderPane = Pane.define({
   route: folderRoute,
   app: fileExplorerApp,
-  title: { useText: useFolderTitle },
+  // The header is the shared browser header (back / forward / up, the path
+  // bar as the title, the filter, the toggles).
+  title: { useText: useFolderTitle, component: FileBrowserPath },
+  actions: FileBrowserHeader,
   useResolve: false,
   component: FilesFolder,
 });
@@ -69,7 +83,10 @@ export const filesPreviewPane = Pane.define({
     parent: folderRoute,
   }),
   app: fileExplorerApp,
-  title: { useText: usePreviewTitle },
+  // The header is the shared preview header (the file's title, then its
+  // renderer tabs and Open with default app).
+  title: { useText: usePreviewTitle, component: FilePreviewTitle },
+  actions: FilePreviewHeader,
   useResolve: false,
   component: FilesPreview,
 });
@@ -328,7 +345,13 @@ function FilesFolder(): ReactNode {
   const { dir, fs: fsParam } = filesFolderPane.useParams();
   const fs = systemOf(fsParam);
   if (fs === null) {
-    return <Placeholder>No file system is called “{fsParam}”</Placeholder>;
+    return (
+      <PendingFileBrowserProvider>
+        <PaneChrome pane={filesFolderPane}>
+          <Placeholder>No file system is called “{fsParam}”</Placeholder>
+        </PaneChrome>
+      </PendingFileBrowserProvider>
+    );
   }
   return <FilesFolderBrowser fs={fs} dir={dir} />;
 }
@@ -384,30 +407,34 @@ function FilesFolderBrowser({
     [openPane, store, go, fs, dir, openedId],
   );
   const navigator = useRoutedNavigator(location, go, fileTo);
-  return <FileBrowser navigator={navigator} preview="pane" />;
+  // The provider and the chrome stay mounted while the preview beside this
+  // column opens, closes or changes file: only the navigator's value moves.
+  return (
+    <FileBrowserProvider navigator={navigator} preview="pane">
+      <PaneChrome pane={filesFolderPane}>
+        <FileBrowserBody />
+      </PaneChrome>
+    </FileBrowserProvider>
+  );
 }
 
 function FilesPreview(): ReactNode {
   const { open } = filesPreviewPane.useParams();
   const folder = filesFolderPane.useEnclosing();
-  const close = filesPreviewPane.useClose();
   if (folder === null) {
     // Only ever opened beside its folder (its declared parent).
     throw new Error("files-preview: no folder column to its left");
   }
+  const path = decodeOpenParam(folder.params.dir, open);
   const fs = systemOf(folder.params.fs);
   if (fs === null) {
     return (
-      <Placeholder>No file system is called “{folder.params.fs}”</Placeholder>
+      <PendingFilePreviewPane pane={filesPreviewPane} name={baseName(path)}>
+        <Placeholder>No file system is called “{folder.params.fs}”</Placeholder>
+      </PendingFilePreviewPane>
     );
   }
-  return (
-    <FilePreview
-      fs={fs}
-      path={decodeOpenParam(folder.params.dir, open)}
-      onClose={close}
-    />
-  );
+  return <FilePreviewPane pane={filesPreviewPane} fs={fs} path={path} />;
 }
 
 /**

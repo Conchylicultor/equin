@@ -1,13 +1,14 @@
 import { rowOrStale } from "@plugins/network/plugins/live/web";
 import {
   Pane,
-  PaneChrome,
   defineRoute,
   type PaneExpandTarget,
 } from "@plugins/primitives/plugins/pane/web";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { fileExplorerApp } from "@plugins/apps/plugins/file-explorer/plugins/shell/core";
 import {
+  FileBrowserHeader,
+  FileBrowserPath,
   locationOf,
   useOpenInFiles,
 } from "@plugins/apps/plugins/file-explorer/plugins/browser/web";
@@ -16,7 +17,10 @@ import { useConversationById } from "@plugins/conversations/web";
 import { ConvExplorerBody } from "./components/conv-explorer-body";
 
 export const convFileTreePane = Pane.define({
-  title: "Files",
+  // The header is the file browser's own (back / forward / up, the path bar
+  // as the title, the filter, the toggles); the tab still reads "Files".
+  title: { useText: "Files", component: FileBrowserPath },
+  actions: FileBrowserHeader,
   // The explorer's location rides the route like `/files/browse/…` does — the
   // folder (`;dir`, absent = the checkout) and the file open beside it
   // (`;open`) — so every folder is a link, back / forward are the browser
@@ -29,7 +33,7 @@ export const convFileTreePane = Pane.define({
   // Conversation-scoped satellite: a promote of the pane itself would strip
   // convId from the URL, so Expand is Files, on the current location.
   expand: { app: fileExplorerApp, useTarget: useOpenInFilesTarget },
-  component: ConvExplorerChromedBody,
+  component: ConvExplorerBody,
 });
 
 function useOpenInFilesTarget(params: {
@@ -56,12 +60,4 @@ function useOpenInFilesTarget(params: {
     return { kind: "pending" };
   }
   return { kind: "ready", target };
-}
-
-function ConvExplorerChromedBody() {
-  return (
-    <PaneChrome pane={convFileTreePane}>
-      <ConvExplorerBody />
-    </PaneChrome>
-  );
 }

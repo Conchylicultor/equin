@@ -1,6 +1,9 @@
 import { useCallback } from "react";
+import type { ReactNode } from "react";
 import {
-  FileBrowser,
+  FileBrowserBody,
+  FileBrowserProvider,
+  PendingFileBrowserProvider,
   locationParams,
   useLocationNavigator,
 } from "@plugins/apps/plugins/file-explorer/plugins/browser/web";
@@ -10,32 +13,61 @@ import { useConversation } from "@plugins/conversations/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
-import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { convFileTreePane } from "../panes";
 import { useConvLocation } from "./conv-location";
 
+/**
+ * The pane: the browser over the conversation's checkout, its header the
+ * browser's own — held back (PendingFileBrowserProvider) while there is no
+ * checkout to browse yet.
+ */
 export function ConvExplorerBody() {
   const convId = conversationPane.useEnclosing()?.params.convId;
   if (convId === undefined)
-    return <Placeholder>No conversation open.</Placeholder>;
+    return (
+      <Pending>
+        <Placeholder>No conversation open.</Placeholder>
+      </Pending>
+    );
   return <ConvExplorer convId={convId} />;
+}
+
+function Pending({ children }: { children: ReactNode }) {
+  return (
+    <PendingFileBrowserProvider>
+      <PaneChrome pane={convFileTreePane}>{children}</PaneChrome>
+    </PendingFileBrowserProvider>
+  );
 }
 
 function ConvExplorer({ convId }: { convId: string }) {
   const result = useConversation(convId);
-  if (result.status === "loading") return <Loading variant="rows" />;
+  if (result.status === "loading") {
+    return (
+      <Pending>
+        <Loading variant="rows" />
+      </Pending>
+    );
+  }
   if (result.status === "error") {
     return (
-      <ResourceErrorInline
-        variant="block"
-        subject="the conversation"
-        error={result.error}
-        refetch={result.refetch}
-      />
+      <Pending>
+        <ResourceErrorInline
+          variant="block"
+          subject="the conversation"
+          error={result.error}
+          refetch={result.refetch}
+        />
+      </Pending>
     );
   }
   if (result.data === null) {
-    return <Placeholder>This conversation no longer exists.</Placeholder>;
+    return (
+      <Pending>
+        <Placeholder>This conversation no longer exists.</Placeholder>
+      </Pending>
+    );
   }
   // A reaped worktree is not special-cased: the browser renders its root
   // listing's `missing` answer ("… does not exist") like any other folder.
@@ -59,6 +91,10 @@ function RoutedExplorer({ worktree }: { worktree: string }) {
   );
   const navigator = useLocationNavigator(location, go, setParams);
   return (
-    <FileBrowser navigator={navigator} root={worktree} atSurfaceEdge={false} />
+    <FileBrowserProvider navigator={navigator} root={worktree}>
+      <PaneChrome pane={convFileTreePane}>
+        <FileBrowserBody />
+      </PaneChrome>
+    </FileBrowserProvider>
   );
 }

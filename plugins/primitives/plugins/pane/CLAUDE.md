@@ -695,7 +695,9 @@ with an empty route.
   - Slots: `Pane.Register`
   - Slot contributors: 94 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `Pane.Register` ×94
-  - Contributes: 128 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Contributes: 125 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `FileBrowserHeader` "title" → `PaneTitleItem`
+    - `FilePreviewHeader` "title" → `PaneTitleItem`
     - `SlotRender.ListMiddleware`
     - `WebsiteHeader` "title" → `PaneTitleItem`
     - `accountPane.Actions` "title" → `PaneTitleItem`
@@ -707,7 +709,6 @@ with an empty route.
     - `allConversationsPane.Actions` "title" → `PaneTitleItem`
     - `app-preview.actions` "title" → `PaneTitleItem`
     - `at.actions` "title" → `PaneTitleItem`
-    - `attachmentPreviewPane.Actions` "title" → `PaneTitleItem`
     - `attemptPane.Actions` "title" → `PaneTitleItem`
     - `automation-detail.actions` "title" → `PaneTitleItem`
     - `automations.actions` "title" → `PaneTitleItem`
@@ -732,7 +733,6 @@ with an empty route.
     - `configOrphansPane.Actions` "title" → `PaneTitleItem`
     - `contributions.actions` "title" → `PaneTitleItem`
     - `conv-commits-graph.actions` "title" → `PaneTitleItem`
-    - `conv-file-tree.actions` "title" → `PaneTitleItem`
     - `conv-push-profiling.actions` "title" → `PaneTitleItem`
     - `conv-summary.actions` "title" → `PaneTitleItem`
     - `convReviewPane.Actions` "title" → `PaneTitleItem`
@@ -756,10 +756,7 @@ with an empty route.
     - `filePeekPane.Actions` "title" → `PaneTitleItem`
     - `files-browser-at.actions` "title" → `PaneTitleItem`
     - `files-computer-at.actions` "title" → `PaneTitleItem`
-    - `filesFolderPane.Actions` "title" → `PaneTitleItem`
     - `filesHomePane.Actions` "title" → `PaneTitleItem`
-    - `filesPreviewPane.Actions` "title" → `PaneTitleItem`
-    - `folderPeekPane.Actions` "title" → `PaneTitleItem`
     - `graphCanvasPane.Actions` "title" → `PaneTitleItem`
     - `healthMonitorPane.Actions` "title" → `PaneTitleItem`
     - `heapSnapshotPane.Actions` "title" → `PaneTitleItem`
@@ -1004,8 +1001,10 @@ with an empty route.
 - Exemptions:
   - Exempts itself from:
     - `pane/no-core-define-route-in-web` — `.` (sanctioned)
+    - `pane/no-pane-header-bar` — `.` (sanctioned)
     - `check-thread-safety/no-blocking-check-work` — `check/identity-manifest.ts`, `check/index.ts` (debt)
   - Exempted by:
+    - `apps/browser/bookmarks` (0 debt)
     - `primitives/bar` (0 debt)
     - `primitives/pane` (0 debt)
 - Core:

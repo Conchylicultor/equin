@@ -143,14 +143,13 @@ try {
     r.ok("node_modules hides again", await hidden(row(page, "node_modules")));
 
     // 4. Changed vs main, through the tree's options trigger — the "View
-    //    options" in the explorer's own toolbar (the global action bar has one
+    //    options" in the folder pane's header (the global action bar has one
     //    too, and which comes first in the DOM depends on the surface mode).
     const before = await page.locator("[data-tree-row]").count();
     await page.locator("[data-tree-row]").first().hover();
     await page
-      .getByRole("button", { name: "Enclosing folder" })
+      .locator('[data-pane-id="files-at"] [data-part="pane.header"]')
       .first()
-      .locator("xpath=..")
       .getByRole("button", { name: "View options" })
       .click();
     const panel = page.getByRole("dialog");
@@ -202,24 +201,28 @@ try {
       await page
         .locator('button[aria-label="File explorer"][aria-pressed]')
         .click();
-      const pane = page.locator("[data-tree-row]").first();
+      // Scoped to the conversation's Files pane: the Files tab of step 2 is
+      // still open (kept alive in the background) with its own Up.
+      const convPane = page.locator('[data-pane-id="conv-file-tree"]');
+      const pane = convPane.locator("[data-tree-row]").first();
       r.ok("the conversation explorer lists rows", await visible(pane, 20_000));
+      const up = convPane
+        .getByRole("button", { name: "Enclosing folder", exact: true })
+        .first();
       r.ok(
         "it is rooted at the worktree",
-        (await visible(row(page, "plugins"))) &&
-          (await page
-            .getByRole("button", { name: "Enclosing folder" })
-            .first()
-            .isDisabled()),
+        (await visible(row(convPane, "plugins"))) && (await up.isDisabled()),
         "Up must be disabled at the root",
       );
       await snap(page, out, "6-conv-explorer");
       // Into a folder, Up returns, and stops at the root.
-      await row(page, "plugins").dblclick();
-      r.ok("double-click enters plugins/", await visible(row(page, "apps")));
-      const up = page.getByRole("button", { name: "Enclosing folder" }).first();
+      await row(convPane, "plugins").dblclick();
+      r.ok(
+        "double-click enters plugins/",
+        await visible(row(convPane, "apps")),
+      );
       await up.click();
-      r.ok("Up returns to the root", await visible(row(page, "plugins")));
+      r.ok("Up returns to the root", await visible(row(convPane, "plugins")));
       r.ok("Up stops at the root", await up.isDisabled());
       await snap(page, out, "6b-conv-up");
 
@@ -250,7 +253,7 @@ try {
     r.ok(
       "it is rooted at the plugin (Up disabled)",
       await page
-        .getByRole("button", { name: "Enclosing folder" })
+        .getByRole("button", { name: "Enclosing folder", exact: true })
         .first()
         .isDisabled(),
     );

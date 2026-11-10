@@ -1,3 +1,5 @@
+import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
+import { fileExplorerApp } from "@plugins/apps/plugins/file-explorer/plugins/shell/core";
 import { both, defineSubTheme } from "@plugins/ui/plugins/theme-engine/core";
 import { densityGroup } from "@plugins/ui/plugins/tokens/plugins/density/core";
 import { typeScaleGroup } from "@plugins/ui/plugins/tokens/plugins/type-scale/core";
@@ -30,3 +32,11 @@ export const filesDocumentTheme = defineSubTheme({
     ),
   ],
 });
+
+/**
+ * Files' own theme scope: what the browser and its preview wear wherever they
+ * are drawn — hosted beside a conversation or inside a plugin's detail, they
+ * wear Files' theme, not their host's (in Files itself this is the scope they
+ * are already in).
+ */
+export const FILES_SCOPE = appThemeScope(fileExplorerApp.id);

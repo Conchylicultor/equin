@@ -6,13 +6,16 @@
 
 - Description: An attachment previewed as a side pane through the Files preview (every file-viewer tab, Open with default app, size and age): the attachment/:id pane, homed in Files and opened beside any surface, and the file chip's opener, so clicking an attached file in a prompt opens it there.
 - Web:
-  - Slots: `attachmentPreviewPane.Actions`
-  - Slot contributors: `attachmentPreviewPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "attachment-preview"
     - `AttachmentSlots.Opener` "opener"
   - Uses:
-    - `apps/file-explorer/browser.PreviewPane`
+    - `apps/file-explorer/browser.FilePreviewBody`
+    - `apps/file-explorer/browser.FilePreviewHeader`
+    - `apps/file-explorer/browser.FilePreviewProvider`
+    - `apps/file-explorer/browser.FilePreviewTitle`
+    - `apps/file-explorer/browser.PendingFilePreviewPane`
+    - `apps/file-explorer/browser.useFilePreview`
     - `apps/file-explorer/browser.useHomeDir`
     - `network/live.useLive`
     - `network/live/live-state.foldResource`
@@ -22,8 +25,8 @@
     - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
+    - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`
-    - `primitives/pane.useReservesFloatingBar`
     - `primitives/text-editor/paste-images.AttachmentSlots`
   - Exports (values): `attachmentPreviewPane`
 

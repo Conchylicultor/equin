@@ -115,7 +115,7 @@ try {
       `width ${sidebar?.width}`,
     );
     const toolbar = await page
-      .getByRole("button", { name: "Enclosing folder" })
+      .getByRole("button", { name: "Enclosing folder", exact: true })
       .first()
       .evaluate((el) => {
         const bar = el.closest(".h-chrome-pane");
