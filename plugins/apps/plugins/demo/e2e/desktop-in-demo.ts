@@ -32,6 +32,7 @@
  */
 import type { Locator, Page, Request, WebSocket } from "playwright";
 import { pickFromLauncher } from "@plugins/apps-core/plugins/app-launcher/e2e";
+import { shownWindowIds } from "@plugins/apps/plugins/desktop/plugins/windows/e2e";
 import { pickSurfaceMode } from "@plugins/apps-core/plugins/surface/e2e";
 import {
   arg,
@@ -77,16 +78,6 @@ function dock(page: Page): Locator {
     .locator('button[title^="Apps ("]')
     .first()
     .locator("xpath=..");
-}
-
-/** The distinct windows (one titlebar tab strip each) inside `root`. */
-async function windowIds(root: Locator): Promise<string[]> {
-  const ids = await root
-    .locator("[data-floating-window-id]")
-    .evaluateAll((els) =>
-      els.map((el) => el.getAttribute("data-floating-window-id") ?? ""),
-    );
-  return [...new Set(ids)].sort();
 }
 
 /**
@@ -224,7 +215,7 @@ await withBrowser(async (h) => {
   );
   const firstWindow = await renders(
     "the embed is a desktop: the Agent Manager is its one window",
-    () => windowIds(embedRoot(page)),
+    () => shownWindowIds(embedRoot(page)),
     (ids) => ids.length === 1,
   );
   await renders(
@@ -251,7 +242,7 @@ await withBrowser(async (h) => {
   await dock(page).getByRole("button", { name: "Pages" }).first().click();
   const both = await renders(
     "Pages opens as a second window",
-    () => windowIds(embedRoot(page)),
+    () => shownWindowIds(embedRoot(page)),
     (ids) => ids.length === 2,
   );
   r.ok(
@@ -280,7 +271,7 @@ await withBrowser(async (h) => {
   await fullScreen.last().click();
   await renders(
     "Full screen leaves no window: the surface shows the one tab",
-    () => windowIds(embedRoot(page)),
+    () => shownWindowIds(embedRoot(page)),
     (ids) => ids.length === 0,
   );
   const filled = await renders(
@@ -288,9 +279,15 @@ await withBrowser(async (h) => {
     () =>
       embedRoot(page).evaluate((embed) => {
         const box = embed.getBoundingClientRect();
+        // A hidden keep-alive tab is `content-visibility: hidden` (kept
+        // styled, skipped), and every tab of a hidden mode is under its
+        // `display: none` <Activity>: shown is neither.
         const shown = [
           ...embed.querySelectorAll<HTMLElement>("[data-tab-id]"),
-        ].filter((el) => el.style.display !== "none");
+        ].filter((el) => {
+          const style = getComputedStyle(el);
+          return el.checkVisibility() && style.contentVisibility !== "hidden";
+        });
         if (shown.length !== 1) return null;
         const tab = shown[0]!.getBoundingClientRect();
         return {
@@ -315,7 +312,7 @@ await withBrowser(async (h) => {
   await pickSurfaceMode(page, "Desktop");
   await renders(
     "the Layout control returns to the desktop with both windows",
-    () => windowIds(embedRoot(page)),
+    () => shownWindowIds(embedRoot(page)),
     (ids) => ids.length === 2 && both.value.every((id) => ids.includes(id)),
   );
   await snap(page, OUT, "3-back-to-desktop");

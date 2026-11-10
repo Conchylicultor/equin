@@ -239,11 +239,18 @@ function ElectedHintHost() {
   useElementEvent(shownTip ? el : null, "pointerdown", () =>
     answerShownTip("acted"),
   );
-  useElementEvent(
-    shownTip?.hint.actOn === "hover" ? el : null,
-    "pointerenter",
-    () => answerShownTip("acted"),
-  );
+  const hoverAnchor = shownTip?.hint.actOn === "hover" ? el : null;
+  useElementEvent(hoverAnchor, "pointerenter", () => answerShownTip("acted"));
+  // …including a pointer already resting on it when the tip arrives (it
+  // shows after its settle window): no `pointerenter` will come, and the card
+  // would land over what the hover opened (the launcher's grid) — teaching
+  // the gesture the user is making, and taking a click meant for the grid.
+  const answerIfHovered = useEventCallback((anchor: HTMLElement) => {
+    if (anchor.matches(":hover")) answerShownTip("acted");
+  });
+  useEffect(() => {
+    if (hoverAnchor) answerIfHovered(hoverAnchor);
+  }, [hoverAnchor, shownTip?.key, answerIfHovered]);
   useStepEffects(run && step ? { run, step } : null, el);
   usePointerEffects(pointer, rect);
 

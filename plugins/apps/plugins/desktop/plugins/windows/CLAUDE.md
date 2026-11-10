@@ -226,6 +226,7 @@ new window of the focused window's app; F3 toggles the overview.
     - `ui/tokens/shadow --shadow-md`
     - `ui/tokens/shape --spacing`
   - Imported by:
+    - `apps/demo`
     - `apps/desktop/launcher`
     - `apps/desktop/shelf`
     - `apps/desktop/switcher`

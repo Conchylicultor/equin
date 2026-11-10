@@ -31,6 +31,7 @@
  */
 import type { Locator, Page, Request, WebSocket } from "playwright";
 import { pickFromLauncher } from "@plugins/apps-core/plugins/app-launcher/e2e";
+import { shownWindowIds } from "@plugins/apps/plugins/desktop/plugins/windows/e2e";
 import {
   arg,
   pathUrl,
@@ -137,16 +138,6 @@ async function beads(page: Page): Promise<string[]> {
 
 async function stageHasFocus(page: Page): Promise<boolean> {
   return stage(page).evaluate((el) => document.activeElement === el);
-}
-
-/** The distinct windows (one titlebar tab strip each) inside the embed. */
-async function windowIds(page: Page): Promise<string[]> {
-  const ids = await embedRoot(page)
-    .locator("[data-floating-window-id]")
-    .evaluateAll((els) =>
-      els.map((el) => el.getAttribute("data-floating-window-id") ?? ""),
-    );
-  return [...new Set(ids)].sort();
 }
 
 await withBrowser(async (h) => {
@@ -293,7 +284,7 @@ await withBrowser(async (h) => {
   );
   await renders(
     "the embed is a desktop: the party is its one window",
-    () => windowIds(page),
+    () => shownWindowIds(embedRoot(page)),
     (ids) => ids.length === 1,
   );
   await stage(page).focus();
@@ -307,7 +298,7 @@ await withBrowser(async (h) => {
   await fullScreen.first().click();
   await renders(
     "Full screen leaves no window: the stage fills the embed",
-    () => windowIds(page),
+    () => shownWindowIds(embedRoot(page)),
     (ids) => ids.length === 0,
   );
   await stage(page).focus();

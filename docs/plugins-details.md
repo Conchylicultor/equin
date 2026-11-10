@@ -3901,6 +3901,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shadow --shadow-md`
               - `ui/tokens/shape --spacing`
             - Imported by:
+              - `apps/demo`
               - `apps/desktop/launcher`
               - `apps/desktop/shelf`
               - `apps/desktop/switcher`

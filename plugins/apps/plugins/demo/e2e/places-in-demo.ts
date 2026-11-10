@@ -42,6 +42,7 @@
  */
 import type { Locator, Page, Request, WebSocket } from "playwright";
 import { pickFromLauncher } from "@plugins/apps-core/plugins/app-launcher/e2e";
+import { shownWindowIds } from "@plugins/apps/plugins/desktop/plugins/windows/e2e";
 import { pickSurfaceMode } from "@plugins/apps-core/plugins/surface/e2e";
 import { externalHosts } from "@plugins/apps/plugins/website/plugins/demos/plugins/workspace/core";
 import { DEMO_PLACES } from "@plugins/apps/plugins/website/plugins/demos/plugins/workspace/plugins/story/core";
@@ -115,16 +116,6 @@ const NOT_AVAILABLE = /isn't available in this version of the app/;
 
 function embedRoot(page: Page): Locator {
   return page.locator("[data-app-embed]").first();
-}
-
-/** The distinct windows (one titlebar tab strip each) inside `root`. */
-async function windowIds(root: Locator): Promise<string[]> {
-  const ids = await root
-    .locator("[data-floating-window-id]")
-    .evaluateAll((els) =>
-      els.map((el) => el.getAttribute("data-floating-window-id") ?? ""),
-    );
-  return [...new Set(ids)].sort();
 }
 
 await withBrowser(async (h) => {
@@ -376,7 +367,7 @@ await withBrowser(async (h) => {
   );
   await renders(
     "the embed is a desktop",
-    () => windowIds(embedRoot(page)),
+    () => shownWindowIds(embedRoot(page)),
     (ids) => ids.length >= 1,
   );
   r.ok(
@@ -385,7 +376,7 @@ await withBrowser(async (h) => {
   );
   await renders(
     "Places shows in a window",
-    () => windowIds(embedRoot(page)),
+    () => shownWindowIds(embedRoot(page)),
     (ids) => ids.length >= 1,
   );
   await renders(
@@ -400,7 +391,7 @@ await withBrowser(async (h) => {
     .click();
   await renders(
     "Full screen leaves no window: Places fills the embed",
-    () => windowIds(embedRoot(page)),
+    () => shownWindowIds(embedRoot(page)),
     (ids) => ids.length === 0,
   );
   await renders(
@@ -412,7 +403,7 @@ await withBrowser(async (h) => {
   await pickSurfaceMode(page, "Desktop");
   await renders(
     "the Layout control returns to the desktop",
-    () => windowIds(embedRoot(page)),
+    () => shownWindowIds(embedRoot(page)),
     (ids) => ids.length >= 1,
   );
   r.ok("the page stays on the demo", onDemoPage(page.url()), page.url());

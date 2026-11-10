@@ -38,6 +38,7 @@
  *   ./equin run plugins/apps/plugins/demo/e2e/location-in-demo.ts [--out /tmp/demo-location] [--headed]
  */
 import type { Page, Request } from "playwright";
+import { shownWindowIds } from "@plugins/apps/plugins/desktop/plugins/windows/e2e";
 import {
   arg,
   pathUrl,
@@ -404,16 +405,7 @@ await withBrowser(async (h) => {
   await waitForNetworkIdle(page);
   gate.on = true;
   const desk = embedRoot(page);
-  const windows = () =>
-    desk
-      .locator("[data-floating-window-id]")
-      .evaluateAll((els) =>
-        [
-          ...new Set(
-            els.map((el) => el.getAttribute("data-floating-window-id")),
-          ),
-        ].sort(),
-      );
+  const windows = () => shownWindowIds(desk);
   const shelf = (name: string) =>
     desk.getByRole("button", { name, exact: true }).last().click();
   await shelf("Pages");
