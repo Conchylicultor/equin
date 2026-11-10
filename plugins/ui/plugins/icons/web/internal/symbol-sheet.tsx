@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { splitSheetMarkup } from "./sheet-markup";
+import { useSplitSheet, useHeldSymbols } from "./sheet-resources";
 
 /** One `<svg>` of `<symbol>`s in a sheet, and the data attribute naming it. */
 export interface SheetEntry {
@@ -31,10 +31,12 @@ const SKIPPED = { display: "none" } as const;
  * The symbols sit under `display: none`, so no style recalc ever visits them —
  * they are thousands of elements, more than most apps' visible DOM, and a
  * rendered sheet made every whole-document recalc pay for them. A `<use>`
- * still draws them: it clones the symbol into its own tree. The few resources
+ * still draws them: it clones the symbol into its own tree. The resources
  * they reference (`splitSheetMarkup`: an active form's masks) are resolved in
  * the document and not rendered under `display: none`, so they are lifted out
- * into a zero-size rendered subtree, ids unchanged.
+ * into a zero-size rendered subtree, ids unchanged — and only those of the
+ * symbols an icon draws right now (`sheet-resources`): a rendered resource is
+ * restyled by every whole-document recalc too, and a sheet holds hundreds.
  */
 export function SymbolSheet({
   entries,
@@ -44,11 +46,10 @@ export function SymbolSheet({
   /** The container's own `data-*` attribute (`data-icon-sprites`, …). */
   attribute: `data-${string}`;
 }) {
-  const split = useMemo(
-    () =>
-      entries.map((entry) => ({ entry, ...splitSheetMarkup(entry.markup) })),
-    [entries],
-  );
+  const markups = useMemo(() => entries.map((e) => e.markup), [entries]);
+  const splits = useSplitSheet(markups);
+  const split = entries.map((entry, i) => ({ entry, ...splits[i]! }));
+  const isHeld = useHeldSymbols();
   return (
     <div aria-hidden style={RENDERED_ZERO_SIZE} {...{ [attribute]: "" }}>
       <div style={SKIPPED}>
@@ -60,15 +61,25 @@ export function SymbolSheet({
           />
         ))}
       </div>
-      {split.map(({ entry, resources }) =>
-        resources === null ? null : (
-          <div
+      {split.map(({ entry, resources }) => {
+        const drawn = [...resources].filter(([id]) => isHeld(id));
+        return drawn.length === 0 ? null : (
+          <svg
             key={`${entry.attribute}:${entry.key}`}
+            xmlns="http://www.w3.org/2000/svg"
             data-sheet-resources={entry.key}
-            dangerouslySetInnerHTML={{ __html: resources }}
-          />
-        ),
-      )}
+          >
+            {drawn.map(([id, markup]) => (
+              <g
+                key={id}
+                data-sheet-resources-of={id}
+                // The sheet's own resources, split from its symbols above.
+                dangerouslySetInnerHTML={{ __html: markup }}
+              />
+            ))}
+          </svg>
+        );
+      })}
     </div>
   );
 }

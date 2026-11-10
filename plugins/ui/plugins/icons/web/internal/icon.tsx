@@ -28,6 +28,7 @@ import {
 } from "./icon-drawing";
 import { iconFamily, subscribeFamilies } from "./family-store";
 import { reportIconFamilyGap } from "./family-gap";
+import { useSheetResources } from "./sheet-resources";
 
 export interface IconProps extends Omit<
   ComponentPropsWithRef<"svg">,
@@ -190,6 +191,8 @@ export function Icon({ icon, active = false, title, ...rest }: IconProps) {
   const inline = useSyncExternalStore(subscribe, () =>
     inlineGlyphMarkup(resolve().drawing?.source),
   );
+  // The `<use>`d symbol's masks are rendered only while an icon draws it.
+  useSheetResources(inline === null ? id : null);
   // An id no other icon has, for an inline active form's masks.
   const maskIds = `icon-${useId().replace(/[^\w-]/g, "")}`;
   const gapFamily = useSyncExternalStore(subscribe, () => {

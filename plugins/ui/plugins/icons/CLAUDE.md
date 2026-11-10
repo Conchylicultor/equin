@@ -93,7 +93,8 @@ cycle. So the pieces around it are wired in, not imported:
   (`provideSprite`) and mounts `IconSpriteSheet`, an inline container of
   one `<svg>` per sprite (its symbols under `display: none`, so no style
   recalc visits their thousands of elements; the masks they reference lifted
-  into a zero-size rendered subtree — `web/internal/symbol-sheet.tsx`), so `<use href="#id">` resolves in-document (portals
+  into a zero-size rendered subtree, only while an `<Icon>` draws their symbol —
+  `web/internal/symbol-sheet.tsx`, `sheet-resources.ts`), so `<use href="#id">` resolves in-document (portals
   and Fullscreen subtrees included).
 
 Until the wanted style's sprite has loaded, `<Icon>` draws the **default
@@ -258,7 +259,13 @@ puts it in the page — the sheet under the symbol id, an inline (animated)
 `<Icon>` under its own `useId`, so no two copies share an id. A mask under
 `display: none` is not rendered, so a sheet's symbols sit under `display: none`
 (out of every style recalc) but their masks are lifted into a zero-size
-**rendered** subtree, ids unchanged (`web/internal/symbol-sheet.tsx`). Each part keeps its
+**rendered** subtree, ids unchanged (`web/internal/symbol-sheet.tsx`) — and
+only a drawn symbol's: a rendered mask is restyled by every whole-document
+recalc, and a sheet holds hundreds (the Lucide active sprite, ~1.5k elements),
+so `<Icon>` holds its `<use>`d symbol (`useSheetResources`, a layout effect:
+the masks land before it paints) and each sheet renders the masks of the held
+symbols only (`web/internal/sheet-resources.ts`). Every resource sits in its
+symbol; one outside every symbol throws. Each part keeps its
 ancestors (`<g>` with a transform, a paint, a motion) copied around it, so a
 moving part's fill and its cut-out move together. A glyph with no outer closed shape (a chevron, a
 list) has no active form and draws the same; so does a `paint: "fill"` glyph.
