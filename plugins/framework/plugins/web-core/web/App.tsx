@@ -17,7 +17,10 @@ import type {
   PluginLoadError,
   PluginRegistry,
 } from "@plugins/framework/plugins/web-sdk/core";
-import { RenderCoreRoot } from "@plugins/primitives/plugins/slot-render/web";
+import {
+  RenderCoreRoot,
+  RenderScopeRoot,
+} from "@plugins/primitives/plugins/slot-render/web";
 import { normalizeRoutePath } from "@plugins/primitives/plugins/pane/core";
 import {
   NotificationsProvider,
@@ -497,6 +500,7 @@ function PageApp() {
           registry={registry}
           composition={composition}
           onDemand={onDemand}
+          scopeRoots={<RenderScopeRoot />}
         >
           <RenderCoreRoot />
         </PluginProvider>

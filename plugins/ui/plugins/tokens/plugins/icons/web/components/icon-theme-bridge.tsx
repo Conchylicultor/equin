@@ -23,6 +23,7 @@ import {
   usePublishIconStyle,
   usePublishIconStyleLayer,
 } from "@plugins/ui/plugins/icons/web";
+import { usePluginScopeId } from "@plugins/framework/plugins/web-sdk/core";
 import { iconsGroup, readIconTokenLayer, readIconTokens } from "../../core";
 
 /**
@@ -46,6 +47,12 @@ import { iconsGroup, readIconTokenLayer, readIconTokens } from "../../core";
  * the global default style meanwhile, the same glyphs in the same box.
  */
 export function IconThemeBridge() {
+  // A root host of every scope (`scope: "each"`). Inside a `<PluginScope>` it
+  // publishes the SCOPE's styles (the icons primitive keys them by the plugin
+  // scope), as the theme painters paint its blocks: the root is the scope's
+  // base theme, and every app publishes — one without its own document
+  // resolves to the base, as its CSS block does.
+  const inScope = usePluginScopeId() !== null;
   const apps = Apps.App.useContributions();
   const fixedThemes = ThemeEngine.FixedTheme.useContributions();
   const subThemes = ThemeEngine.SubTheme.useContributions();
@@ -53,7 +60,7 @@ export function IconThemeBridge() {
     <>
       <SelectedScope themeScope={undefined} publishAs={undefined} />
       {apps.map((app) => (
-        <AppScope key={app.id} appId={app.id} />
+        <AppScope key={app.id} appId={app.id} always={inScope} />
       ))}
       {fixedThemes.map((fixed) => (
         <FixedScope key={fixed.id} fixed={fixed} />
@@ -65,7 +72,7 @@ export function IconThemeBridge() {
   );
 }
 
-function AppScope({ appId }: { appId: string }) {
+function AppScope({ appId, always }: { appId: string; always: boolean }) {
   const scope = appThemeScope(appId);
   const ownsTheme = useScopeMembership(themeSelectionConfig, scope);
   // While membership is unknown the scope publishes nothing, like a scope
@@ -75,7 +82,7 @@ function AppScope({ appId }: { appId: string }) {
     error: (_error, stale) => stale ?? false,
     ready: (member) => member,
   });
-  if (!owns) return null;
+  if (!owns && !always) return null;
   return <SelectedScope themeScope={scope} publishAs={scope} />;
 }
 

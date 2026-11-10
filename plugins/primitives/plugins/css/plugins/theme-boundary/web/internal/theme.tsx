@@ -3,6 +3,8 @@ import {
   SURFACE_LEVELS,
   PortalThemeScopeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { qualifyThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
+import { usePluginScopeId } from "@plugins/framework/plugins/web-sdk/core";
 import type { Passthrough } from "@plugins/primitives/plugins/passthrough/core";
 import { IconScopeProvider } from "@plugins/ui/plugins/icons/web";
 import type React from "react";
@@ -150,6 +152,12 @@ export function Theme({
   ref,
   ...rest
 }: ThemeProps) {
+  // The attribute is qualified by the plugin scope it is stamped in, so only
+  // that scope's theme hosts paint it (`qualifyThemeScope`); the React
+  // contexts below keep the bare token (config reads, icon scopes).
+  const pluginScope = usePluginScopeId();
+  const stamped =
+    name === undefined ? undefined : qualifyThemeScope(pluginScope, name);
   return (
     <Comp
       ref={ref}
@@ -162,7 +170,7 @@ export function Theme({
       // (No inline disable needed: `no-adhoc-theme-scope` exempts this
       // plugin's own files by path — it is the one sanctioned home for the raw
       // attribute, and `reportUnusedDisableDirectives` is an error.)
-      data-theme-scope={name}
+      data-theme-scope={stamped}
       // NO display class here, unlike `<Surface>`, and the difference is the
       // point. A surface is a contained BOX, so it owns `block` and `as` is
       // purely a tag choice. A theme boundary is a REGION of layout that already

@@ -51,6 +51,8 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { PLUGIN_SCOPE_ROOT_THEME } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
+import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import {
   TransportProvider,
   useTransport,
@@ -511,10 +513,20 @@ export function DemoScope({
                 asked of the page's sprite host, which reads the page's
                 server. */}
             <ScopeIconSymbols>
-              {/* What the scope's code hands to page chrome (a toast's body,
-                  an imperative dialog) renders here, against the host —
-                  never in the page's tree, against the page's server. */}
-              <RenderOrigin>{children}</RenderOrigin>
+              {/* The scope's own `:root`: its base theme, painted by the
+                  scope's theme hosts (`PLUGIN_SCOPE_ROOT_THEME`, qualified by
+                  the scope) — so nothing the page's `:root` declares reaches
+                  the demo's glue. `contents`: a theme region, not a box. */}
+              <Theme
+                name={PLUGIN_SCOPE_ROOT_THEME}
+                surface="none"
+                className="contents"
+              >
+                {/* What the scope's code hands to page chrome (a toast's body,
+                    an imperative dialog) renders here, against the host —
+                    never in the page's tree, against the page's server. */}
+                <RenderOrigin>{children}</RenderOrigin>
+              </Theme>
             </ScopeIconSymbols>
           </PluginScope>
         </NotificationsProvider>

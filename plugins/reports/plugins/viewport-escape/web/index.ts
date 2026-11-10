@@ -10,7 +10,7 @@ export default {
   description:
     "Viewport-escape collector: drains the viewport-overlay primitive's viewportEscapeReportSink into a deduped report whenever an ancestor stops a viewport-filling box from reaching the viewport (a containing block) or from painting over the chrome beside it (a stacking context), plus the Debug → Reports summary view.",
   contributions: [
-    Core.Root({ component: ViewportEscapeCollector }),
+    Core.Root({ component: ViewportEscapeCollector, scope: "page" }),
     Reports.KindView({
       match: "viewport-escape",
       component: ViewportEscapeKindView,

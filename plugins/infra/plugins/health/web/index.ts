@@ -12,8 +12,8 @@ export default {
   description:
     "Surfaces server restarts as a toast; exposes /api/health helpers; reports the server and central socket connection as the health report's Connection row.",
   contributions: [
-    Core.Root({ component: ReconnectWatcher }),
-    Core.Root({ component: WedgeWatchdog }),
+    Core.Root({ component: ReconnectWatcher, scope: "page" }),
+    Core.Root({ component: WedgeWatchdog, scope: "page" }),
     HealthReport.Row({
       kind: "status",
       id: "connection",

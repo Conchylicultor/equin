@@ -43,7 +43,7 @@ export default {
     "Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Icon families beyond Material are contributed to Icons.Family (Lucide is this plugin's own; an app draws its own with defineIconFamily), published to <Icon> by IconFamilyHost. A family states its coverage: fallback (an unmapped symbol draws the next family of its chain, Material last) or strict (its gap glyph, reported through iconFamilyGapReportSink); resolveIconSource answers which, by the same chain. Animated family glyphs (data-motion parts, a closed ICON_MOTIONS vocabulary) are drawn inline and play once on hover inside an IconMotionRegion.",
   contributions: [
     Core.Root({ slot: Icons.Root }),
-    Icons.Root({ component: IconFamilyHost, companion: true }),
+    Icons.Root({ component: IconFamilyHost, companion: true, scope: "each" }),
     Icons.Family({ family: LUCIDE_FAMILY }),
   ],
   slots: Icons,

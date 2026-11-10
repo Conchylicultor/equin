@@ -13,7 +13,7 @@ export default {
     "The Show experimental marks setting (view-options popover and Settings → Config, on an experimental build): useShowExperimentalMarks() is true when the build stamped this document experimental and the marks are on; the frame and the Wish banner both follow it.",
   contributions: [
     ConfigV2.WebRegister({ descriptor: experimentalMarksConfig }),
-    Core.Root({ component: ExperimentalMarksHost }),
+    Core.Root({ component: ExperimentalMarksHost, scope: "page" }),
     ActionBar.ViewOption({
       id: "experimental-marks",
       component: ExperimentalMarksSwitch,

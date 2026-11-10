@@ -182,7 +182,7 @@ describe("<Icon> on a runtime (saved) symbol", () => {
 
 describe("<Icon> in a Lucide scope", () => {
   const lucide: IconStyle = { ...rounded, family: "lucide" };
-  afterEach(() => provideIconFamilies([]));
+  afterEach(() => provideIconFamilies("", null));
 
   function Wanted() {
     return <span data-testid="wanted">{useWantedSprites().join(",")}</span>;
@@ -201,7 +201,7 @@ describe("<Icon> in a Lucide scope", () => {
   });
 
   it("draws a mapped symbol's Lucide drawing once the lucide sprite lands, its Material drawing until then", () => {
-    act(() => provideIconFamilies([LUCIDE_FAMILY]));
+    act(() => provideIconFamilies("", [LUCIDE_FAMILY]));
     act(() => provideSprite("rounded-filled-300", "<svg></svg>"));
     const { container, getByTestId } = render(
       <>
@@ -219,7 +219,7 @@ describe("<Icon> in a Lucide scope", () => {
   });
 
   it("keeps the Material drawing, in the scope's style, for a material-only symbol", () => {
-    act(() => provideIconFamilies([LUCIDE_FAMILY]));
+    act(() => provideIconFamilies("", [LUCIDE_FAMILY]));
     act(() => provideSprite("lucide", "<svg></svg>"));
     const { container } = render(
       <>
@@ -247,7 +247,7 @@ describe("<Icon> with an app-drawn family", () => {
     symbols: { close: "x" },
   });
   const appStyle: IconStyle = { ...rounded, family: "test-app" };
-  afterEach(() => provideIconFamilies([]));
+  afterEach(() => provideIconFamilies("", null));
 
   function inApp(scope: string, icon: IconRef) {
     return render(
@@ -261,12 +261,12 @@ describe("<Icon> with an app-drawn family", () => {
   }
 
   it("draws a mapped symbol from the family's own glyph", () => {
-    act(() => provideIconFamilies([app, LUCIDE_FAMILY]));
+    act(() => provideIconFamilies("", [app, LUCIDE_FAMILY]));
     expect(hrefOf(inApp("app:fam-1", symbol("close")))).toBe("#fam-test-app-x");
   });
 
   it("falls down the chain for a name it does not map: Lucide, then Material", () => {
-    act(() => provideIconFamilies([app, LUCIDE_FAMILY]));
+    act(() => provideIconFamilies("", [app, LUCIDE_FAMILY]));
     act(() => provideSprite("lucide", "<svg></svg>"));
     expect(hrefOf(inApp("app:fam-2", symbol("folder")))).toBe("#lucide-folder");
     expect(hrefOf(inApp("app:fam-3", symbol("grain")))).toBe(
@@ -277,7 +277,7 @@ describe("<Icon> with an app-drawn family", () => {
   it("draws a custom glyph from its family in any scope, an empty box until it is contributed", () => {
     const { container } = render(<Icon icon={app.icon("roll")} />);
     expect(hrefOf(container)).toBeNull();
-    act(() => provideIconFamilies([app]));
+    act(() => provideIconFamilies("", [app]));
     expect(hrefOf(container)).toBe("#fam-test-app-roll");
   });
 

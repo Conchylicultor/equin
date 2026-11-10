@@ -9,7 +9,11 @@ export default {
   description:
     "Makes browser storage visible: an error toast once per owner per page load when a write is refused (over the owner's cap, the area full, or storage blocked — the value then lives only in memory), and the health report's Browser storage row (critical when the browser refused a write, attention when an owner hit or nears its cap; its detail lists every owner's use against its cap plus the legacy and unowned keys).",
   contributions: [
-    WebStorageSlots.Root({ component: StorageFailureToast, companion: true }),
+    WebStorageSlots.Root({
+      component: StorageFailureToast,
+      companion: true,
+      scope: "page",
+    }),
     HealthReport.Row({
       kind: "status",
       id: "browser-storage",

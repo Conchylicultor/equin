@@ -40,7 +40,7 @@ function CompanionMount() {
 const hostPlugin = {
   id: "shell.global-action-bar",
   description: "root mount fixture",
-  contributions: [Core.Root({ component: FloatingHost })],
+  contributions: [Core.Root({ component: FloatingHost, scope: "page" })],
 } as unknown as LoadedPlugin;
 
 const capabilityPlugin = {
@@ -53,7 +53,7 @@ const capabilityPlugin = {
 const companionPlugin = {
   id: "ui.icons.sprites",
   description: "root-slot companion fixture",
-  contributions: [capabilityRoot({ component: CompanionMount })],
+  contributions: [capabilityRoot({ component: CompanionMount, scope: "page" })],
 } as unknown as LoadedPlugin;
 
 function renderRoot() {

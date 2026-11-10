@@ -77,8 +77,16 @@ demo visitor's tip is recorded in the demo's database, never the page user's,
 and the page's seen rows never silence the demo's. The request, its "answered
 this session" mark and the anchor (`useHintAnchor` registers in its scope) are
 all keyed by the scope (`inScope`), so the page and the demo each ask for, and
-point at, their own. The host stays one (one stage over the page); tours stay
-the page's.
+point at, their own. The engine stays one (one stage over the page, one tip
+at a time); tours stay the page's.
+
+**One host runs, wherever the plugin is.** `HintHost` is a root host of every
+scope (`scope: "each"`, web-sdk's `RootScope`): a page that holds this plugin
+only for a `<PluginScope>` (the standalone website, whose demo loads it on
+demand) mounts it nowhere but inside the scope. Every mounted host registers
+and exactly one runs (`web/internal/host-election.ts`): the page's when there
+is one (main — unchanged), else the first scope's. Requests carry their scope,
+so whichever runs serves every scope's tips alike.
 
 ## A tour
 

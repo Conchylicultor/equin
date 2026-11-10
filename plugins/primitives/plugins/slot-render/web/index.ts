@@ -29,7 +29,7 @@ export type {
   WrapperSlotConfig,
   WrapContribution,
 } from "./internal/render-slot";
-export { RenderCoreRoot } from "./internal/root-render";
+export { RenderCoreRoot, RenderScopeRoot } from "./internal/root-render";
 export { useSlotOrder } from "./internal/slot-order";
 export { SlotItemLayout } from "./internal/item-layout";
 export type { SlotItemOrientation } from "./internal/item-layout";

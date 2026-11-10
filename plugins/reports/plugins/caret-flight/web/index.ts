@@ -7,7 +7,7 @@ export default {
   description:
     "Caret-flight collector: drains the page editor's caretFlightReportSink into a report whenever a claimed caret landing is abandoned and the keystrokes it was holding had to be replayed into the origin block (or were lost), plus the Debug → Reports summary view.",
   contributions: [
-    Core.Root({ component: CaretFlightCollector }),
+    Core.Root({ component: CaretFlightCollector, scope: "page" }),
     Reports.KindView({ match: "caret-flight", component: CaretFlightKindView }),
   ],
 } satisfies PluginDefinition;

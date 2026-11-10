@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 
+import { RenderScopeRoot } from "@plugins/primitives/plugins/slot-render/web";
 import {
   createPluginRegistry,
   defineSlot,
@@ -65,6 +66,7 @@ function setup() {
     <PluginProvider
       registry={registry}
       composition={{ id: "page", home: null }}
+      scopeRoots={<RenderScopeRoot />}
       onDemand={onDemand}
     >
       {children}
@@ -159,6 +161,7 @@ describe("on-demand plugins", () => {
       <PluginProvider
         registry={registry}
         composition={{ id: "page", home: null }}
+        scopeRoots={<RenderScopeRoot />}
       >
         <Items testId="page" />
         <Demo enabled={false} />

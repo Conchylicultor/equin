@@ -31,7 +31,7 @@ import { pageRuntimeSymbols } from "../internal/runtime-symbol-store";
 
 afterEach(() => {
   cleanup();
-  provideIconFamilies([]);
+  provideIconFamilies("", null);
   iconFamilyGapReportSink.register(null);
 });
 
@@ -87,7 +87,7 @@ function hrefOf(container: HTMLElement): string | null {
 
 describe("resolveIconSource", () => {
   it("own, fallback down the chain, and Material at its end", () => {
-    act(() => provideIconFamilies([fallbackFam, LUCIDE_FAMILY]));
+    act(() => provideIconFamilies("", [fallbackFam, LUCIDE_FAMILY]));
     expect(resolveIconSource("close", "cov-fallback")).toEqual({
       kind: "own",
       glyph: "x",
@@ -107,7 +107,7 @@ describe("resolveIconSource", () => {
   });
 
   it("a strict family's unmapped name is a gap", () => {
-    act(() => provideIconFamilies([strictFam]));
+    act(() => provideIconFamilies("", [strictFam]));
     expect(resolveIconSource("close", "cov-strict")).toEqual({
       kind: "own",
       glyph: "x",
@@ -130,7 +130,7 @@ describe("<IconFamilyPreview>", () => {
   it("draws the icons below in its family, in a Material scope, and never reports a gap", () => {
     const gaps: IconFamilyGap[] = [];
     iconFamilyGapReportSink.register((g) => gaps.push(g));
-    act(() => provideIconFamilies([strictFam]));
+    act(() => provideIconFamilies("", [strictFam]));
     const draw = (icon: IconRef) =>
       hrefOf(
         render(
@@ -149,7 +149,7 @@ describe("<Icon> in a strict scope", () => {
   it("draws the gap glyph, not Material, for an unmapped symbol — and reports it once", () => {
     const gaps: IconFamilyGap[] = [];
     iconFamilyGapReportSink.register((g) => gaps.push(g));
-    act(() => provideIconFamilies([strictFam]));
+    act(() => provideIconFamilies("", [strictFam]));
     expect(
       hrefOf(inScope("app:strict-1", "cov-strict", symbol("folder"))),
     ).toBe("#famgap-cov-strict");
@@ -165,7 +165,7 @@ describe("<Icon> in a strict scope", () => {
   it("leaves brand, seti, runtime-symbol and custom icons alone", () => {
     const gaps: IconFamilyGap[] = [];
     iconFamilyGapReportSink.register((g) => gaps.push(g));
-    act(() => provideIconFamilies([strictFam, fallbackFam]));
+    act(() => provideIconFamilies("", [strictFam, fallbackFam]));
     act(() => provideSprite("seti", "<svg></svg>"));
     act(() =>
       pageRuntimeSymbols.provide("cov-runtime", "<svg></svg>", [
@@ -196,7 +196,7 @@ describe("<Icon> in a strict scope", () => {
 
 describe("<Icon> drawing an animated glyph", () => {
   it("draws it inline, with the family paint, so motion CSS reaches its parts", () => {
-    act(() => provideIconFamilies([fallbackFam, LUCIDE_FAMILY]));
+    act(() => provideIconFamilies("", [fallbackFam, LUCIDE_FAMILY]));
     const c = inScope("app:anim-1", "cov-fallback", symbol("chevron-right"));
     expect(c.querySelector("use")).toBeNull();
     const part = c.querySelector('[data-motion="nudge-right"]');
@@ -205,14 +205,14 @@ describe("<Icon> drawing an animated glyph", () => {
   });
 
   it("draws an animated app-only glyph (a custom ref) inline too, in any scope", () => {
-    act(() => provideIconFamilies([fallbackFam, LUCIDE_FAMILY]));
+    act(() => provideIconFamilies("", [fallbackFam, LUCIDE_FAMILY]));
     const c = inScope("app:anim-3", "material", fallbackFam.icon("arrow"));
     expect(c.querySelector("use")).toBeNull();
     expect(c.querySelector('[data-motion="nudge-right"]')).not.toBeNull();
   });
 
   it("keeps <use> for a still glyph", () => {
-    act(() => provideIconFamilies([fallbackFam, LUCIDE_FAMILY]));
+    act(() => provideIconFamilies("", [fallbackFam, LUCIDE_FAMILY]));
     expect(hrefOf(inScope("app:anim-2", "cov-fallback", symbol("close")))).toBe(
       "#fam-cov-fallback-x",
     );

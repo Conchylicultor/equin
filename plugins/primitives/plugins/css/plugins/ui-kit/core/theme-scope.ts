@@ -40,3 +40,45 @@ export const themeScopeSelectors = (token: string) => ({
   light: `[data-theme-scope="${token}"]`,
   dark: `.dark [data-theme-scope="${token}"]`,
 });
+
+/**
+ * The token a plugin scope's root boundary wears (`DemoScope` draws it): the
+ * scope's own base theme, painted by the scope's theme hosts — the scope's
+ * `:root`. Only ever written qualified ({@link qualifyThemeScope}).
+ */
+export const PLUGIN_SCOPE_ROOT_THEME = "root";
+
+/** The separator between a plugin scope's id and the token it qualifies. */
+const PLUGIN_SCOPE_SEPARATOR = "/";
+
+/**
+ * A theme-scope token as it is written into the DOM and painted: bare on the
+ * page (`pluginScope` null), `<plugin scope>/<token>` inside a `<PluginScope>`.
+ * Every writer of the attribute (`<Theme>`, the portal forward) and every
+ * painter of its selector (theme-engine) goes through this, so a block the
+ * PAGE paints (`[data-theme-scope="app:sonata"]`) cannot match an element a
+ * scope stamped (`agent-manager-demo/app:sonata`), and a scope's block never
+ * matches the page: inside a scope only the scope's own theme hosts paint.
+ */
+export const qualifyThemeScope = (
+  pluginScope: string | null,
+  token: string,
+): string =>
+  pluginScope === null
+    ? token
+    : `${pluginScope}${PLUGIN_SCOPE_SEPARATOR}${token}`;
+
+/** The bare token of a {@link qualifyThemeScope}d one, for `pluginScope`. */
+export const bareThemeScope = (
+  pluginScope: string | null,
+  qualified: string,
+): string => {
+  if (pluginScope === null) return qualified;
+  const prefix = `${pluginScope}${PLUGIN_SCOPE_SEPARATOR}`;
+  if (!qualified.startsWith(prefix)) {
+    throw new Error(
+      `theme scope "${qualified}" was not qualified by plugin scope "${pluginScope}"`,
+    );
+  }
+  return qualified.slice(prefix.length);
+};

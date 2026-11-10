@@ -265,6 +265,24 @@ and an out-of-composition read has no spelling inside the demo.
   plugins are loaded throws; one contributing a `Core.Boot` task is refused
   at load (it would run against the page's server). `DemoScope` calls it once
   entered, alongside the host's boot.
+- **A scope is served by its own root hosts.** Every root mount declares
+  `scope: "page" | "each"` (`RootScope`, required by tsc on `Core.Root` and on
+  every `defineRootSlot` mount). `"page"` is page chrome, mounted once at the
+  page root. `"each"` is a host of the plugins it reads (the theme painters,
+  the icon families and styles): mounted at the page root AND inside every
+  `PluginScope` — the page root hands slot-render's `<RenderScopeRoot/>` to
+  `PluginProvider`'s `scopeRoots`, and the scope renders it ahead of its
+  children — where it reads the scope's contributions, transport, config and
+  `usePluginScopeId()`. What it writes into a page-global place it keys by
+  that id (theme-scope tokens are qualified by it, `qualifyThemeScope`), so
+  the page's instance never serves inside a scope. That is what makes a scope
+  look the same whether the page bundles its plugins (main's /demo) or holds
+  them on demand (the standalone website). The keys assume ONE live scope
+  per composition id on a page (two at once would share style ids, icon
+  styles and families). A scope's renderer draws a root theme boundary inside
+  it (`DemoScope`: `<Theme name={PLUGIN_SCOPE_ROOT_THEME}>`), so popups below
+  never inherit a forwarded page token. Design:
+  `research/2026-11-10-global-plugin-scope-hosts.md`.
 - **Limits**: the global `register` phase (module writes applied once per
   page — error-boundary, pending-turn) is not scopable; the first read of a
   slot from inside a scope records the scope's contributors in its
@@ -400,6 +418,7 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
     - `PluginLoadReport`
     - `PluginRegistry`
     - `RootContribution`
+    - `RootScope`
     - `RootSlot`
     - `ScopedComposition`
     - `ScopePluginsState`
@@ -444,11 +463,11 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
     - `webCollectedDir`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
-  - Imported by: 115 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives` ×21
+  - Imported by: 117 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives` ×22
     - `reports` ×20
     - `apps` ×18
-    - `ui` ×6
+    - `ui` ×7
     - `apps-core` ×5
     - `debug` ×5
     - `framework` ×4

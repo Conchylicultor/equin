@@ -10,7 +10,7 @@ export default {
   description:
     "Icon-family-gap collector: drains the icons plugin's iconFamilyGapReportSink into a deduped report whenever a scope whose icon family is strict draws a symbol the family does not map (it shows the family's gap glyph), plus the Debug → Reports summary view.",
   contributions: [
-    Core.Root({ component: IconFamilyGapCollector }),
+    Core.Root({ component: IconFamilyGapCollector, scope: "page" }),
     Reports.KindView({
       match: "icon-family-gap",
       component: IconFamilyGapKindView,

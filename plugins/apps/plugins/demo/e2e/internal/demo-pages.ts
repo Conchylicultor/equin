@@ -7,12 +7,26 @@ import {
   DEMO_FULL,
   demoApp,
   demoAtRoute,
+  demoScenario,
 } from "@plugins/apps/plugins/demo/plugins/shell/core";
+import {
+  appThemeScope,
+  qualifyThemeScope,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import {
   boot,
   waitFor,
   type Report,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+
+/**
+ * The `data-theme-scope` an app's boundary stamps inside the demo: its app
+ * token qualified by the demo's plugin scope (`qualifyThemeScope`), so only
+ * the demo's own theme hosts paint it.
+ */
+export function demoAppThemeScope(appId: string): string {
+  return qualifyThemeScope(demoScenario.host.id, appThemeScope(appId));
+}
 
 /** How long an app swap, a worker read or a host boot gets to render. */
 export const RENDER_TIMEOUT_MS = 30_000;

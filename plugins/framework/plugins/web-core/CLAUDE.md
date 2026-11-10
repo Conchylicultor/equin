@@ -147,6 +147,7 @@ bun run test:dom plugins/framework/plugins/web-core/web/__tests__/plugin-render.
     - `primitives/perfs/scheduler.yieldToMain`
     - `primitives/relative-time.ElapsedTime`
     - `primitives/slot-render.RenderCoreRoot`
+    - `primitives/slot-render.RenderScopeRoot`
     - `reports.report`
 - Core:
   - Uses:

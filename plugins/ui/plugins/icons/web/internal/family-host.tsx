@@ -1,7 +1,8 @@
 import { useLayoutEffect, useMemo } from "react";
+import { usePluginScopeId } from "@plugins/framework/plugins/web-sdk/core";
 import { familyGlyphMarkup } from "../../core";
 import { Icons } from "../slots";
-import { provideIconFamilies, useIconFamilies } from "./family-store";
+import { provideIconFamilies } from "./family-store";
 import { SymbolSheet, type SheetEntry } from "./symbol-sheet";
 // The motion keyframes and region rules, shipped wherever icons are.
 import "./icon-motion.css";
@@ -12,16 +13,26 @@ import "./icon-motion.css";
  * style recalc, their active forms' masks rendered), so `<use href>` resolves
  * in-document (portals and Fullscreen subtrees included).
  *
+ * A root host of every scope (`scope: "each"`): inside a `<PluginScope>` it
+ * publishes and draws that scope's families — on a page that holds the
+ * scope's plugins only on demand (the standalone website's demo), nothing
+ * else would.
+ *
  * A layout effect: icons that rendered before the families were held
  * re-render before the browser paints, so a family's scope never flashes its
  * fallback drawing.
  */
 export function IconFamilyHost() {
+  const host = usePluginScopeId() ?? "";
   const contributed = Icons.Family.useContributions();
+  const families = useMemo(
+    () => contributed.map((c) => c.family),
+    [contributed],
+  );
   useLayoutEffect(() => {
-    provideIconFamilies(contributed.map((c) => c.family));
-  }, [contributed]);
-  const families = useIconFamilies();
+    provideIconFamilies(host, families);
+    return () => provideIconFamilies(host, null);
+  }, [host, families]);
   const entries = useMemo(
     (): SheetEntry[] =>
       families.flatMap((family) =>

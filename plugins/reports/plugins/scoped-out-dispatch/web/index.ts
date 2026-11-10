@@ -10,7 +10,7 @@ export default {
   description:
     "Scoped-out-dispatch collector: drains slot-render's scopedOutDispatchSink into a deduped report whenever a dispatch slot renders its fallback inside a PluginScope though the page holds a contribution for that key which the scope's composition neither bundles nor negates (the demo's tool cards falling back to the generic card), plus the Debug → Reports summary view.",
   contributions: [
-    Core.Root({ component: ScopedOutDispatchCollector }),
+    Core.Root({ component: ScopedOutDispatchCollector, scope: "page" }),
     Reports.KindView({
       match: "scoped-out-dispatch",
       component: ScopedOutDispatchKindView,

@@ -74,7 +74,10 @@ function bootWith(run: () => Promise<void>) {
         description: "fake",
         contributions: [
           Core.Boot({ label: "Fake snapshot", ifUnavailable: "block", run }),
-          Core.Root({ component: () => <div data-testid="app">app</div> }),
+          Core.Root({
+            component: () => <div data-testid="app">app</div>,
+            scope: "page",
+          }),
         ],
       },
     }),

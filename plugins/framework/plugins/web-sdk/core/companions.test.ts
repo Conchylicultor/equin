@@ -32,7 +32,7 @@ describe("missingCompanions", () => {
     registry.append([
       owner,
       plugin("ui.icons.sprites", [
-        IconsRoot({ component: Nothing, companion: true }),
+        IconsRoot({ component: Nothing, companion: true, scope: "page" }),
       ]),
     ]);
     const problems = missingCompanions(registry);
@@ -46,10 +46,10 @@ describe("missingCompanions", () => {
     registry.append([
       owner,
       plugin("ui.icons.sprites", [
-        IconsRoot({ component: Nothing, companion: true }),
+        IconsRoot({ component: Nothing, companion: true, scope: "page" }),
       ]),
       plugin("ui.tokens.icons", [
-        IconsRoot({ component: Nothing, companion: true }),
+        IconsRoot({ component: Nothing, companion: true, scope: "page" }),
       ]),
     ]);
     expect(missingCompanions(registry)).toEqual([]);

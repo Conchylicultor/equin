@@ -6,6 +6,10 @@ export default {
   description:
     "Auto-resumes Mail sync when the Gmail scope is (re)granted: an app-wide headless listener that POSTs the sync kick endpoint on the connect edge.",
   contributions: [
-    Mail.Root({ component: GmailReconnectResume, companion: true }),
+    Mail.Root({
+      component: GmailReconnectResume,
+      companion: true,
+      scope: "page",
+    }),
   ],
 } satisfies PluginDefinition;

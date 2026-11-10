@@ -1,4 +1,5 @@
 import { useLayoutEffect, useSyncExternalStore } from "react";
+import { usePluginScopeId } from "@plugins/framework/plugins/web-sdk/core";
 import {
   DEFAULT_ICON_STYLE,
   DEFAULT_STYLE_KEYS,
@@ -19,8 +20,18 @@ import {
  * A WHOLE entry (an app's theme, a fixed theme, the root) is a complete style;
  * a LAYER (a sub-theme) names only the axes it changes, worn over the style of
  * whatever scope encloses it.
+ *
+ * Every key is also qualified by the plugin scope it was published from
+ * ({@link keyOf}): a `<PluginScope>`'s styles are its own theme hosts'
+ * (`IconThemeBridge` runs in every scope, `RootScope` "each"), its root is
+ * its own, and the page's never answer inside it.
  */
 const ROOT = "";
+
+/** The store key of theme scope `scope` published from plugin scope `pluginScope`. */
+function keyOf(pluginScope: string | null, scope: string): string {
+  return `${pluginScope ?? ""}\u0000${scope}`;
+}
 
 type Published =
   | { layer: false; style: IconStyle }
@@ -51,7 +62,7 @@ export function usePublishIconStyle(
   scope: string | undefined,
   style: IconStyle,
 ): void {
-  usePublish(scope ?? ROOT, false, style);
+  usePublish(keyOf(usePluginScopeId(), scope ?? ROOT), false, style);
 }
 
 /**
@@ -63,7 +74,7 @@ export function usePublishIconStyleLayer(
   scope: string,
   style: Partial<IconStyle>,
 ): void {
-  usePublish(scope, true, style);
+  usePublish(keyOf(usePluginScopeId(), scope), true, style);
 }
 
 function usePublish(
@@ -75,7 +86,7 @@ function usePublish(
   useLayoutEffect(() => {
     if (styles.has(key)) {
       throw new Error(
-        `[icons] two publishers claim the icon style of scope "${key || "root"}"`,
+        `[icons] two publishers claim the icon style of scope "${key.replace("\u0000", " ") || "root"}"`,
       );
     }
     const own = withoutUndefined({ family, shape, fill, activeFill, weight });
@@ -100,15 +111,19 @@ function withoutUndefined(style: Partial<IconStyle>): Partial<IconStyle> {
 }
 
 /**
- * The icon style an `<Icon>` inside the boundaries `chain` (nearest first) draws
- * with: the nearest WHOLE style (else the root's, else the global default),
- * with every layer between it and the icon applied over it, outermost first.
+ * The icon style an `<Icon>` inside the boundaries `chain` (nearest first) of
+ * plugin scope `pluginScope` draws with: the nearest WHOLE style (else its
+ * plugin scope's root's, else the global default), with every layer between
+ * it and the icon applied over it, outermost first.
  */
-export function iconStyleOf(chain: readonly string[]): IconStyle {
+function iconStyleOf(
+  pluginScope: string | null,
+  chain: readonly string[],
+): IconStyle {
   const layers: Partial<IconStyle>[] = [];
   let base: IconStyle | undefined;
   for (const scope of chain) {
-    const entry = styles.get(scope);
+    const entry = styles.get(keyOf(pluginScope, scope));
     if (entry === undefined) continue;
     if (!entry.layer) {
       base = entry.style;
@@ -116,7 +131,7 @@ export function iconStyleOf(chain: readonly string[]): IconStyle {
     }
     layers.push(entry.style);
   }
-  base ??= rootStyle();
+  base ??= rootStyle(pluginScope);
   if (layers.length === 0) return base;
   return layers.reduceRight<IconStyle>(
     (style, layer) => ({ ...style, ...layer }),
@@ -124,8 +139,8 @@ export function iconStyleOf(chain: readonly string[]): IconStyle {
   );
 }
 
-function rootStyle(): IconStyle {
-  const root = styles.get(ROOT);
+function rootStyle(pluginScope: string | null): IconStyle {
+  const root = styles.get(keyOf(pluginScope, ROOT));
   return root !== undefined && !root.layer ? root.style : DEFAULT_ICON_STYLE;
 }
 
@@ -138,18 +153,24 @@ const chainStyleCache = new Map<
   { version: number; style: IconStyle }
 >();
 
-function chainStyleSnapshot(chain: readonly string[]): IconStyle {
-  if (chain.length === 0) return iconStyleOf(chain);
-  const key = chain.join("\n");
+function chainStyleSnapshot(
+  pluginScope: string | null,
+  chain: readonly string[],
+): IconStyle {
+  if (chain.length === 0) return iconStyleOf(pluginScope, chain);
+  const key = keyOf(pluginScope, chain.join("\n"));
   const hit = chainStyleCache.get(key);
   if (hit?.version === version) return hit.style;
-  const style = iconStyleOf(chain);
+  const style = iconStyleOf(pluginScope, chain);
   chainStyleCache.set(key, { version, style });
   return style;
 }
 
 export function useScopeIconStyle(chain: readonly string[]): IconStyle {
-  return useSyncExternalStore(subscribe, () => chainStyleSnapshot(chain));
+  const pluginScope = usePluginScopeId();
+  return useSyncExternalStore(subscribe, () =>
+    chainStyleSnapshot(pluginScope, chain),
+  );
 }
 
 /**
@@ -161,8 +182,9 @@ export function useScopeIconStyle(chain: readonly string[]): IconStyle {
 export function useScopeIconStyles(
   scopes: readonly (string | undefined)[],
 ): readonly IconStyle[] {
+  const pluginScope = usePluginScopeId();
   // The scopes as one value, so a fresh array of the same scopes is no change.
-  const key = JSON.stringify(scopes.map((s) => s ?? ROOT));
+  const key = JSON.stringify([pluginScope, scopes.map((s) => s ?? ROOT)]);
   // The snapshot itself is the answer, re-read on every publish. (A useMemo
   // keyed on a version it never reads is a dependency the React Compiler
   // drops: the styles froze at the first render, before any publish.)
@@ -178,8 +200,9 @@ const scopeStylesCache = new Map<
 function scopeStylesSnapshot(key: string): readonly IconStyle[] {
   const hit = scopeStylesCache.get(key);
   if (hit?.version === version) return hit.styles;
-  const styles = (JSON.parse(key) as string[]).map((s) =>
-    iconStyleOf(s === ROOT ? [] : [s]),
+  const [pluginScope, scopes] = JSON.parse(key) as [string | null, string[]];
+  const styles = scopes.map((s) =>
+    iconStyleOf(pluginScope, s === ROOT ? [] : [s]),
   );
   scopeStylesCache.set(key, { version, styles });
   return styles;

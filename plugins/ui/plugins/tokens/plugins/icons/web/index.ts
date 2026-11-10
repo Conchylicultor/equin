@@ -22,6 +22,6 @@ export default {
       component: IconsSection,
       useAvailable: ({ search }) => tokenGroupMatchesSearch(iconsGroup, search),
     }),
-    Icons.Root({ component: IconThemeBridge, companion: true }),
+    Icons.Root({ component: IconThemeBridge, companion: true, scope: "each" }),
   ],
 } satisfies PluginDefinition;

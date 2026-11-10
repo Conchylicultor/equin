@@ -29,5 +29,5 @@ export {
 export default {
   description:
     "Deep-link affordances from any config-backed surface to its settings section. useConfigLink() links a descriptor to its config pane; ConfigGearButton and ConfigPopoverHeader surface it as a gear; ConfigSelectContent / ConfigMenuContent bake the gear into Select / DropdownMenu picker chrome. At Core.Root, ConflictWriteToast says why a config change was refused while its document is in conflict, with a Resolve link to the config.",
-  contributions: [Core.Root({ component: ConflictWriteToast })],
+  contributions: [Core.Root({ component: ConflictWriteToast, scope: "page" })],
 } satisfies PluginDefinition;

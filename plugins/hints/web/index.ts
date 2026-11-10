@@ -39,7 +39,7 @@ export default {
     "The hints engine, web half: Hints.Hint / Hints.Tour declarations, useHintAnchor (ref registration, holding a floating toolbar open while its tip shows), useHintMoment (a tip shown once at its moment, lowest order first, one at a time), startTour / autoStart, pointAt (a one-off, non-modal highlight — pulsing ring, plus a click-through caption when the element shows no text of its own, gone after a few seconds or at the user's next move — on an element the caller resolved, refused while a tour runs), emitHintSignal, the seen state and catalog reads — and the one HintHost at Core.Root drawing the active tip (halo + card) or the tour's welcome card / spotlit step on one persistent stage — every change of scene a CSS transition of the same elements — in the hints' own fixed theme (the same look in every app), every tour end pulsing ? and toasting where the tour lives.",
   slots: Hints,
   contributions: [
-    Core.Root({ component: HintHost }),
+    Core.Root({ component: HintHost, scope: "each" }),
     HintsLayer.contribution,
     ThemeEngine.FixedTheme(hintsTheme),
     defineShortcut({

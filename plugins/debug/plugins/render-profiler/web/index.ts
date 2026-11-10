@@ -21,7 +21,7 @@ export default {
       icon: symbol("insights"),
       opens: { pane: renderProfilerPane, params: {} },
     }),
-    Core.Root({ component: ProfilerInstaller }),
+    Core.Root({ component: ProfilerInstaller, scope: "page" }),
   ],
   slots: { "render-profiler": renderProfilerPane },
 } satisfies PluginDefinition;

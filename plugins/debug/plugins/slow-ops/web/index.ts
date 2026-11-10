@@ -12,7 +12,7 @@ export default {
     "Records slow client operations (page load, element appearance, and every client latency signal — a live update applied, an optimistic write confirmed — split into its phases) into the durable slow-op store via the slow-ops client endpoint.",
   contributions: [
     ConfigV2.WebRegister({ descriptor: slowOpConfig }),
-    Core.Root({ component: SlowOpCollector }),
+    Core.Root({ component: SlowOpCollector, scope: "page" }),
     Reports.KindView({ match: "slow-op", component: SlowOpKindView }),
   ],
 } satisfies PluginDefinition;

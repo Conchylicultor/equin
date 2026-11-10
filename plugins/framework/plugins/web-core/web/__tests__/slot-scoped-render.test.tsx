@@ -44,6 +44,7 @@ function mount() {
     <PluginProvider
       registry={registry}
       composition={{ id: "test", home: null }}
+      scopeRoots={null}
     >
       <ReaderA key={`a${pass}`} />
       <ReaderB key={`b${pass}`} />

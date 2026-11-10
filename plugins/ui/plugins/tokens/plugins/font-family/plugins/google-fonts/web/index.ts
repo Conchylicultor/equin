@@ -6,6 +6,10 @@ export default {
   description:
     "Loads the Google Fonts that the theme each scope selects asks for (the desktop's and every app's own), so a per-app font loads whether or not that app is focused.",
   contributions: [
-    FontFamily.Root({ component: GoogleFontsLoader, companion: true }),
+    FontFamily.Root({
+      component: GoogleFontsLoader,
+      companion: true,
+      scope: "page",
+    }),
   ],
 } satisfies PluginDefinition;

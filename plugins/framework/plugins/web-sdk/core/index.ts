@@ -12,6 +12,7 @@ export type {
   CompanionFlag,
   RootSlot,
   RootContribution,
+  RootScope,
 } from "./slots";
 export { UNSAFE_unsealSlotComponent } from "./sealed-component";
 export type {

@@ -28145,7 +28145,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by: `framework/browser-server/demo/scope`
             - **`scope`** — <DemoScope scenario>: renders its subtree against the scenario's browser host — real server code in a worker, on the scenario's seed — and scoped to the host's composition (<PluginScope>), so the page shows exactly the plugins the worker serves. Everything inside reaches the host only (the scope's transport): the build's coverage guard holds the host to serving every read, endpoint and config the scope uses, or declaring it needsMachine (answered unavailable); a key or endpoint it still does not serve fails loudly. A host that fails to boot throws to the error boundary. An optional boot render gates the demo on every visit (DemoBoot: checking, the gate, then starting with the worker's progress): the visitor enters it (enter), or — while they are in the demo in another tab of this browser (a shared Web Lock each such tab holds) — the tab joins it with no gate (onEnter hears both); behind the gate, a browser already holding the demo's data starts the host at once, a first visit only on enter, since it downloads the whole server and its data. Connects to one SharedWorker per build (every tab of the demo shares its server and data), shows why when the host declines the page (data written by a newer version) or stops serving it (another tab took it over), and exposes Reset (useDemoHostControl) — the host wipes its data and every tab reconnects to a fresh one.
               - Web:
-                - Uses: 23 symbols — full list in [`plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/REFERENCE.md`](../plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/REFERENCE.md)
+                - Uses: 24 symbols — full list in [`plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/REFERENCE.md`](../plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/REFERENCE.md)
                   - `framework/browser-server` ×5
                   - `framework/browser-server/demo/prestart` ×3
                   - `network/live/live-state` ×2
@@ -28154,6 +28154,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/center.Center`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
+                  - `primitives/css/theme-boundary.Theme`
                   - `primitives/css/ui-kit.Button`
                   - `primitives/dom/web-storage.clearStorageScope`
                   - `primitives/latest-ref.useEventCallback`
@@ -30585,6 +30586,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/perfs/scheduler.yieldToMain`
           - `primitives/relative-time.ElapsedTime`
           - `primitives/slot-render.RenderCoreRoot`
+          - `primitives/slot-render.RenderScopeRoot`
           - `reports.report`
       - Core:
         - Uses:
@@ -30647,6 +30649,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PluginLoadReport`
           - `PluginRegistry`
           - `RootContribution`
+          - `RootScope`
           - `RootSlot`
           - `ScopedComposition`
           - `ScopePluginsState`
@@ -30691,11 +30694,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `webCollectedDir`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 115 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
-          - `primitives` ×21
+        - Imported by: 117 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+          - `primitives` ×22
           - `reports` ×20
           - `apps` ×18
-          - `ui` ×6
+          - `ui` ×7
           - `apps-core` ×5
           - `debug` ×5
           - `framework` ×4
@@ -45996,11 +45999,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/sidebar-palette --sidebar`
               - `ui/tokens/sidebar-palette --sidebar-accent`
-            - Imported by: 24 plugins — full list in [`plugins/primitives/plugins/css/plugins/theme-boundary/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/theme-boundary/REFERENCE.md)
+            - Imported by: 25 plugins — full list in [`plugins/primitives/plugins/css/plugins/theme-boundary/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/theme-boundary/REFERENCE.md)
               - `apps` ×8
               - `apps-core` ×7
               - `hints` ×2
               - `shell` ×2
+              - `framework/browser-server/demo/scope`
               - `layouts/miller`
               - `map`
               - `media/player`
@@ -46227,9 +46231,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 463 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 464 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×111
-              - `apps` ×107
+              - `apps` ×108
               - `conversations` ×53
               - `page` ×27
               - `debug` ×24
@@ -46274,9 +46278,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `APP_STYLESHEET_PATH`
               - `appThemeScope`
+              - `bareThemeScope`
               - `fixedThemeScope`
               - `isAppThemeScope`
               - `isSubThemeScope`
+              - `PLUGIN_SCOPE_ROOT_THEME`
+              - `qualifyThemeScope`
               - `subThemeScope`
               - `themeScopeSelectors`
         - **`viewport-overlay`** — Viewport-filling overlay primitive: self-portals to document.body + z-layer + theme-scope so fixed inset-0 fills the real viewport, never a transformed ancestor. Also owns the runtime auditor for the same invariant — the containing-block + stacking-context ancestor walk (assertViewportEscape / useViewportEscape), which reports the two ways a fixed box silently stops being viewport-relative.
@@ -51293,6 +51300,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `renderAsContribution`
           - `RenderCoreRoot`
           - `renderIsolated`
+          - `RenderScopeRoot`
           - `RenderSlotSubIdContext`
           - `scopedOutDispatchSink`
           - `SlotItemLayout`

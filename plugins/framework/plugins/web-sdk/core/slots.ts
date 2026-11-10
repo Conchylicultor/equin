@@ -201,19 +201,44 @@ export function defineSlotFacade<F extends object, S extends SlotHandle>(
  * ties it to the plugin that needs it. The icon sprite sheet shipped missing
  * that way. Through its owner's root slot it ships whenever the owner does.
  */
-export type RootSlot = Slot<{ component: ComponentType } & CompanionFlag>;
+export type RootSlot = Slot<
+  { component: ComponentType; scope: RootScope } & CompanionFlag
+>;
 
 export function defineRootSlot(): RootSlot {
-  return defineSlot<{ component: ComponentType }>({ companions: true });
+  return defineSlot<{ component: ComponentType; scope: RootScope }>({
+    companions: true,
+  });
 }
 
 /**
- * One `Core.Root` entry: a component mounted at the app root, or a capability's
- * {@link RootSlot}, whose contributions are mounted there in turn.
+ * Where a root host mounts — required on every root mount, because a host
+ * that collects contributions decides whether a `<PluginScope>`'s plugins
+ * are its to serve:
+ *
+ * - `"page"` — page chrome: mounted once, at the page root, and never inside
+ *   a scope. Reads the page's contributions, transport and config (reports,
+ *   the app layout, shortcuts, the action bar, toasts).
+ * - `"each"` — a host of the plugins it reads: mounted at the page root AND
+ *   again inside every `<PluginScope>`, where it reads that scope's
+ *   contributions, transport, config and `usePluginScopeId()` (the theme
+ *   painters, the icon families, the hints host). Whatever it writes into a
+ *   page-global place (a CSS selector, a module store, a portal stage) it keys
+ *   by `usePluginScopeId()`, so the page's instance never serves inside a
+ *   scope and a scope's never leaks onto the page. That is what makes a scope
+ *   look the same whether the page around it bundles its plugins (main's
+ *   /demo) or loads them on demand (the standalone website).
+ */
+export type RootScope = "page" | "each";
+
+/**
+ * One `Core.Root` entry: a component mounted at the app root (with its
+ * {@link RootScope}), or a capability's {@link RootSlot}, whose contributions
+ * are mounted there in turn — each declaring its own scope.
  */
 export type RootContribution =
-  | { component: ComponentType; slot?: never }
-  | { slot: RootSlot; component?: never };
+  | { component: ComponentType; scope: RootScope; slot?: never }
+  | { slot: RootSlot; component?: never; scope?: never };
 
 export const Core = {
   Root: defineSlot<RootContribution>(),

@@ -5,5 +5,7 @@ import { EndpointErrorReporter } from "./components/endpoint-error-reporter";
 export default {
   description:
     "Files crash tasks for bug-shaped handled endpoint errors (validation 400s and 5xx).",
-  contributions: [Core.Root({ component: EndpointErrorReporter })],
+  contributions: [
+    Core.Root({ component: EndpointErrorReporter, scope: "page" }),
+  ],
 } satisfies PluginDefinition;

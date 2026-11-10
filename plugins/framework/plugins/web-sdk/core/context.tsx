@@ -55,6 +55,11 @@ export interface OnDemandPlugins {
 
 const OnDemandContext = createContext<OnDemandPlugins | null>(null);
 
+// What every `<PluginScope>` mounts inside itself: the page root's element
+// rendering the `scope: "each"` root hosts (`PluginProvider`'s `scopeRoots`).
+// Null under a provider given none (a test's), where a scope mounts no hosts.
+const ScopeRootsContext = createContext<ReactNode>(null);
+
 /** Where loading a scope's on-demand plugins is (`useScopePlugins`). */
 export type ScopePluginsState =
   { kind: "pending" } | { kind: "ready" } | { kind: "failed"; error: unknown };
@@ -264,6 +269,15 @@ export function PluginProvider(
            * The boot path always passes its own; absent = nothing on demand.
            */
           onDemand?: OnDemandPlugins;
+          /**
+           * Renders the `scope: "each"` root hosts (`RootScope`) — mounted by
+           * every `<PluginScope>` inside itself, so a scope is served by hosts
+           * of its own. web-sdk cannot import the root render path
+           * (slot-render's), so the page root hands it in. Required on the
+           * boot path: a scope without its hosts would be served by the
+           * page's, which is the bug this exists to close.
+           */
+          scopeRoots: ReactNode;
           plugins?: never;
         }
       // Tests and standalone mounts provide one only when what they render reads it.
@@ -272,6 +286,8 @@ export function PluginProvider(
           composition?: CompositionIdentity;
           registry?: never;
           onDemand?: never;
+          /** As on the boot path; absent = a scope mounts no root hosts. */
+          scopeRoots?: ReactNode;
         }
     ),
 ) {
@@ -286,6 +302,7 @@ export function PluginProvider(
     return owned;
   });
   const onDemand = props.onDemand ?? null;
+  const scopeRoots = props.scopeRoots ?? null;
   // The page's own view: the whole registry minus what it holds on demand.
   const [reader] = useState(() =>
     onDemand === null || onDemand.ids.size === 0
@@ -306,9 +323,11 @@ export function PluginProvider(
     <PluginRegistryContext.Provider value={reader}>
       <PluginScopeBaseContext.Provider value={reader === whole ? null : whole}>
         <OnDemandContext.Provider value={onDemand}>
-          <CompositionContext.Provider value={composition}>
-            {children}
-          </CompositionContext.Provider>
+          <ScopeRootsContext.Provider value={scopeRoots}>
+            <CompositionContext.Provider value={composition}>
+              {children}
+            </CompositionContext.Provider>
+          </ScopeRootsContext.Provider>
         </OnDemandContext.Provider>
       </PluginScopeBaseContext.Provider>
     </PluginRegistryContext.Provider>
@@ -359,6 +378,10 @@ export type ScopedComposition = CompositionIdentity & {
  * embedded app, served by a host that boots only that composition's plugins —
  * so the page renders exactly what that host serves, by construction.
  *
+ * It mounts the `scope: "each"` root hosts inside itself (`RootScope`), ahead
+ * of `children`, so the scope is served by hosts of its own — reading its
+ * contributions, its transport and its id — never by the page's.
+ *
  * Limits: the global `register` phase (module writes applied once per page) is
  * not scopable; and the first read of a slot from inside a scope records the
  * scope's contributors in its `slot-read:` timing mark.
@@ -373,6 +396,7 @@ export function PluginScope({
   const view = useContext(PluginRegistryContext);
   const base = useContext(PluginScopeBaseContext);
   const onDemand = useContext(OnDemandContext);
+  const scopeRoots = useContext(ScopeRootsContext);
   if (!view) {
     throw new Error("PluginScope must be rendered within PluginProvider");
   }
@@ -410,6 +434,7 @@ export function PluginScope({
       <PluginScopeBaseContext.Provider value={null}>
         <CompositionContext.Provider value={identity}>
           <PluginScopeIdContext.Provider value={id}>
+            {scopeRoots}
             {children}
           </PluginScopeIdContext.Provider>
         </CompositionContext.Provider>

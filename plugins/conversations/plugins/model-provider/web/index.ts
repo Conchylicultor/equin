@@ -38,6 +38,6 @@ export default {
       field: modelProviderConfig.fields.visibleModels,
       useOptions: useVisibleModelFlagOptions,
     }),
-    Core.Root({ component: ModelCorruptionReporter }),
+    Core.Root({ component: ModelCorruptionReporter, scope: "page" }),
   ],
 } satisfies PluginDefinition;

@@ -31,8 +31,11 @@ describe("Core.Root mounts are isolated one by one", () => {
       id: "test.roots",
       description: "root mounts",
       contributions: [
-        Core.Root({ component: Boom }),
-        Core.Root({ component: () => <div data-testid="sibling" /> }),
+        Core.Root({ component: Boom, scope: "page" }),
+        Core.Root({
+          component: () => <div data-testid="sibling" />,
+          scope: "page",
+        }),
       ],
     } as unknown as LoadedPlugin;
     const { getByTestId } = render(

@@ -60,6 +60,7 @@ function Plugins({ children }: { children: ReactNode }) {
     <PluginProvider
       registry={registry}
       composition={{ id: "test", home: null }}
+      scopeRoots={null}
     >
       {children}
     </PluginProvider>

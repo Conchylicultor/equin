@@ -3,7 +3,8 @@ import {
   PortalForwardProvider,
   usePortalForwardedAttrs,
 } from "./portal-forward";
-import { isSubThemeScope } from "../../core";
+import { usePluginScopeId } from "@plugins/framework/plugins/web-sdk/core";
+import { bareThemeScope, isSubThemeScope, qualifyThemeScope } from "../../core";
 
 /** The DOM attribute this signal rides across portals on. */
 const THEME_SCOPE_ATTR = "data-theme-scope";
@@ -16,7 +17,13 @@ const THEME_SCOPE_ATTR = "data-theme-scope";
  *  bridge: it forwards `data-theme-scope` exactly the way plugin lineage and pane
  *  id forward theirs, so portal surfaces re-stamp every forwarded signal at once. */
 export function usePortalThemeScope(): string | undefined {
-  return usePortalForwardedAttrs()[THEME_SCOPE_ATTR];
+  const pluginScope = usePluginScopeId();
+  const forwarded = usePortalForwardedAttrs()[THEME_SCOPE_ATTR];
+  // The attribute is qualified by the plugin scope it was stamped in
+  // (`qualifyThemeScope`); a reader wants the bare token.
+  return forwarded === undefined
+    ? undefined
+    : bareThemeScope(pluginScope, forwarded);
 }
 
 export function PortalThemeScopeProvider({
@@ -37,8 +44,17 @@ export function PortalThemeScopeProvider({
     : scope !== undefined && isSubThemeScope(scope)
       ? "region"
       : "all";
+  // Re-stamped as the DOM attribute, so qualified by the plugin scope like
+  // `<Theme>`'s own (a page block must not match a scope's popup).
+  const pluginScope = usePluginScopeId();
+  const stamped =
+    scope === undefined ? undefined : qualifyThemeScope(pluginScope, scope);
   return (
-    <PortalForwardProvider name={THEME_SCOPE_ATTR} value={scope} reach={reach}>
+    <PortalForwardProvider
+      name={THEME_SCOPE_ATTR}
+      value={stamped}
+      reach={reach}
+    >
       {children}
     </PortalForwardProvider>
   );

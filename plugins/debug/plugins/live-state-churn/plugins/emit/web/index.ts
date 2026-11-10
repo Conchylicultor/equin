@@ -21,7 +21,7 @@ export default {
       icon: symbol("bolt"),
       opens: { pane: liveStateEmitPane, params: {} },
     }),
-    Core.Root({ component: EmitInstaller }),
+    Core.Root({ component: EmitInstaller, scope: "page" }),
   ],
   slots: { "debug-live-state-emit": liveStateEmitPane },
 } satisfies PluginDefinition;

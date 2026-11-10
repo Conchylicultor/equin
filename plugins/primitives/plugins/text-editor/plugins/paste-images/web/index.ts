@@ -28,7 +28,7 @@ export default {
     'File paste/drop/pick support for the text editor. Uploads files via the attachments primitive and renders them inline: an image as a thumbnail chip that opens the full-window image viewer, any other file as a file chip; AttachFilesButton is the composer bar\'s "+" picker. Keeps every attachment an unsent draft references alive on the server for as long as the draft lives.',
   slots: { opener: AttachmentSlots.Opener },
   contributions: [
-    Core.Root({ component: DraftAttachmentHolds }),
+    Core.Root({ component: DraftAttachmentHolds, scope: "page" }),
     TextEditorSlots.Plugin({
       id: "paste-images",
       component: ImageUploadPlugin,

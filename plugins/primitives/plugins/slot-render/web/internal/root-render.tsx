@@ -2,6 +2,8 @@ import { Fragment } from "react";
 import {
   Core,
   useRawContributions,
+  type RootContribution,
+  type RootScope,
   type RootSlot,
 } from "@plugins/framework/plugins/web-sdk/core";
 import { renderIsolated } from "./render-slot";
@@ -32,20 +34,44 @@ import { renderIsolated } from "./render-slot";
  * contributing companion), so a pick names the capability that owns the mount.
  */
 export function RenderCoreRoot() {
+  return <RootMounts inScope={false} />;
+}
+
+/**
+ * The root hosts a `<PluginScope>` mounts inside itself: only the
+ * `scope: "each"` ones (`RootScope`), each read through the scope's registry —
+ * so a scope is served by hosts of its own, reading its contributions, its
+ * transport and its id. The page root hands it to `PluginProvider`'s
+ * `scopeRoots`; the scope renders it.
+ */
+export function RenderScopeRoot() {
+  return <RootMounts inScope />;
+}
+
+// Whether a mount runs here: at the page root every one does; inside a scope
+// only those declared `"each"`.
+function mountsHere(scope: RootScope, inScope: boolean): boolean {
+  return !inScope || scope === "each";
+}
+
+function RootMounts({ inScope }: { inScope: boolean }) {
   const roots = useRawContributions(Core.Root);
   return (
     <>
       {roots.map((root, i) => {
-        const slot = (root as { slot?: RootSlot }).slot;
+        const { slot, scope } = root as Partial<RootContribution>;
+        // Index keys: root mounts carry no id, and the list only grows (the
+        // deferred tier appends), as before this went through slot-render.
+        if (slot) {
+          return (
+            <Fragment key={i}>
+              <RootSlotMounts slot={slot} inScope={inScope} />
+            </Fragment>
+          );
+        }
         return (
-          // Index keys: root mounts carry no id, and the list only grows (the
-          // deferred tier appends), as before this went through slot-render.
           <Fragment key={i}>
-            {slot ? (
-              <RootSlotMounts slot={slot} />
-            ) : (
-              renderIsolated(Core.Root, root)
-            )}
+            {mountsHere(scope!, inScope) && renderIsolated(Core.Root, root)}
           </Fragment>
         );
       })}
@@ -53,12 +79,23 @@ export function RenderCoreRoot() {
   );
 }
 
-function RootSlotMounts({ slot }: { slot: RootSlot }) {
+function RootSlotMounts({
+  slot,
+  inScope,
+}: {
+  slot: RootSlot;
+  inScope: boolean;
+}) {
   const mounts = useRawContributions(slot);
   return (
     <>
       {mounts.map((mount, i) => (
-        <Fragment key={i}>{renderIsolated(slot, mount)}</Fragment>
+        <Fragment key={i}>
+          {mountsHere(
+            (mount as Partial<{ scope: RootScope }>).scope!,
+            inScope,
+          ) && renderIsolated(slot, mount)}
+        </Fragment>
       ))}
     </>
   );

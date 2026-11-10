@@ -43,6 +43,7 @@ import { subscribeHintSignals } from "../internal/signal-bus";
 import { activeRequest, wakeAt, type TipRequest } from "../internal/tip-queue";
 import { ledgerOf, subscribeLedgers } from "../internal/seen-ledger";
 import { inScope } from "../internal/scope-key";
+import { useElectedHintHost } from "../internal/host-election";
 import {
   canGoBack,
   currentStep,
@@ -71,7 +72,9 @@ const FAREWELL_MS = 4800;
 
 /**
  * The one hints host, at `Core.Root` — outside every tab, so a tour crosses
- * apps. It owns the engine's effects: stepping the tip queue (one settle
+ * apps. Mounted at the page root and in every plugin scope; one of them runs
+ * (`useElectedHintHost`): the page's, else — on a page that holds the hints
+ * plugin only for a scope — the scope's. It owns the engine's effects: stepping the tip queue (one settle
  * timer), resolving `startTour` / `autoStart` against the declared tours, the
  * single tour-exit path, routing signals to the running tour, and declaring
  * which anchors are held. It draws the one active tip, or the running tour's
@@ -80,6 +83,11 @@ const FAREWELL_MS = 4800;
  * scene is a transition of the same elements.
  */
 export function HintHost() {
+  // A root host of every scope (`scope: "each"`), of which one runs.
+  return useElectedHintHost() ? <ElectedHintHost /> : null;
+}
+
+function ElectedHintHost() {
   const goToApp = useNavigate();
   const engine = useEngineState();
   // Not known (loading, or a failed read) is `null`: nothing shows and nothing

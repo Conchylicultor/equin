@@ -9,7 +9,7 @@ export default {
   description:
     "Crash report kind: browser crash collector and the Debug → Reports summary view.",
   contributions: [
-    Core.Root({ component: CrashCollector }),
+    Core.Root({ component: CrashCollector, scope: "page" }),
     Reports.KindView({ match: "crash", component: CrashSummary }),
   ],
 } satisfies PluginDefinition;

@@ -7,5 +7,7 @@ export { ScopeIconSymbols } from "./internal/sprite-host";
 export default {
   description:
     "Mounts the page's icon sprites inline: the resident default-style sprites from the boot snapshot (present at first paint) plus, on demand, the sprite of every other style a theme scope picks, and the page's saved-icon symbols. ScopeIconSymbols gives a plugin scope (a demo) saved icons of its own, read from the scope's server and drawn in a sheet inside it.",
-  contributions: [Icons.Root({ component: IconSpriteHost, companion: true })],
+  contributions: [
+    Icons.Root({ component: IconSpriteHost, companion: true, scope: "page" }),
+  ],
 } satisfies PluginDefinition;

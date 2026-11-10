@@ -10,7 +10,7 @@ export default {
   description:
     "Adaptive-bar collector: drains the adaptive-bar primitive's adaptiveBarReportSink into a deduped report whenever a bar's layout contract is violated (it was given no slack, it was written inside another bar, its fit disagrees with the layout engine, its placement never converged, it refused to relocate an iframe, or one of its widgets declared a form it does not render), plus the Debug → Reports summary view.",
   contributions: [
-    Core.Root({ component: AdaptiveBarCollector }),
+    Core.Root({ component: AdaptiveBarCollector, scope: "page" }),
     Reports.KindView({ match: "adaptive-bar", component: AdaptiveBarKindView }),
   ],
 } satisfies PluginDefinition;

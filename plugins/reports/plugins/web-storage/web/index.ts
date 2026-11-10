@@ -9,6 +9,7 @@ export default {
     WebStorageSlots.Root({
       component: StorageFailureCollector,
       companion: true,
+      scope: "page",
     }),
   ],
 } satisfies PluginDefinition;

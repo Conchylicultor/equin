@@ -97,17 +97,22 @@ export function renderThemeGroupBlock(
   );
 }
 
-/** One sub-theme fragment's sparse block: the tokens it names plus the same group's tokens derived from them. */
+/**
+ * One sub-theme fragment's sparse block: the tokens it names plus the same
+ * group's tokens derived from them — on the sub-theme's selector, or on
+ * `scopeToken` (the sub-theme's token qualified by a plugin scope).
+ */
 export function renderSubThemeBlock(
   group: TokenGroupSpec,
   fragment: TokenGroupFragment,
   subTheme: SubTheme,
+  scopeToken: string = subThemeScope(subTheme),
 ): string {
   return renderGroupBlock(
     group,
     subThemeBlockValues(group, definedValues(fragment.light), "light"),
     subThemeBlockValues(group, definedValues(fragment.dark), "dark"),
-    themeScopeSelectors(subThemeScope(subTheme)),
+    themeScopeSelectors(scopeToken),
   );
 }
 

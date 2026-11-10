@@ -43,6 +43,7 @@ import {
   type Settled,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import {
+  demoAppThemeScope,
   AGENT_MANAGER_LOCATION,
   demoPath,
   onDemoPage,
@@ -305,7 +306,9 @@ await withBrowser(async (h) => {
   r.eq(
     "the full-screen tab is the one the embed shows",
     filled.value?.scope,
-    `app:${await embedRoot(page).getAttribute("data-app-embed")}`,
+    demoAppThemeScope(
+      (await embedRoot(page).getAttribute("data-app-embed")) ?? "",
+    ),
   );
   r.ok("the page stays on the demo", onDemoPage(page.url()), page.url());
   await snap(page, OUT, "3-full-screen");

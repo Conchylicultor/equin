@@ -5,5 +5,5 @@ export default {
   description:
     "Apps layout: the Core.Root composition wiring the tab bar, rail framing, and surface together, with the default-app redirect and document-title sync.",
   loadBearing: true,
-  contributions: [Core.Root({ component: AppsLayout })],
+  contributions: [Core.Root({ component: AppsLayout, scope: "page" })],
 } satisfies PluginDefinition;

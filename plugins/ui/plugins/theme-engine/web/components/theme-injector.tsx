@@ -11,8 +11,11 @@ import {
 import {
   appThemeScope,
   fixedThemeScope,
+  PLUGIN_SCOPE_ROOT_THEME,
+  qualifyThemeScope,
   subThemeScope,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
+import { usePluginScopeId } from "@plugins/framework/plugins/web-sdk/core";
 import { useDocumentColorMode, type ColorMode } from "../use-color-mode";
 import { ThemeEngine } from "../slots";
 import type { TokenGroupContribution } from "../slots";
@@ -224,7 +227,27 @@ function ColorModeApplier({ resolved }: { resolved: ColorMode | undefined }) {
   return null;
 }
 
+/**
+ * The base layer. A root host of every scope (`scope: "each"`): on the page it
+ * owns `:root`, `<html>.dark` and the document canvas; inside a
+ * `<PluginScope>` it touches none of them and paints the scope's base theme on
+ * the scope's root boundary (`PLUGIN_SCOPE_ROOT_THEME`, qualified) — every
+ * token group the SCOPE registers, resolved complete from the scope's own
+ * config — so nothing the page's `:root` declares reaches inside it.
+ */
 export function ThemeInjector() {
+  const pluginScope = usePluginScopeId();
+  return pluginScope === null ? (
+    <PageThemeInjector />
+  ) : (
+    <ScopeStyles
+      scopeId={undefined}
+      scopeToken={qualifyThemeScope(pluginScope, PLUGIN_SCOPE_ROOT_THEME)}
+    />
+  );
+}
+
+function PageThemeInjector() {
   // `:root` wears ONE stable theme — the desktop's (the base document's) — and
   // never follows navigation or the surface mode. Re-rooting it on the focused
   // full-surface app (as it once did) changed inherited custom properties at the
@@ -319,6 +342,40 @@ export function ScopedAppTheme({ appId }: { appId: string }) {
 // (rather than per open surface) is what lets the degraded `AppTabsBody`
 // fallback be themed without an `apps → theme-engine` import cycle.
 export function AppScopeThemes() {
+  const pluginScope = usePluginScopeId();
+  return pluginScope === null ? (
+    <PageAppScopeThemes />
+  ) : (
+    <PluginScopeAppThemes pluginScope={pluginScope} />
+  );
+}
+
+/**
+ * Inside a `<PluginScope>`: a COMPLETE block for every app of the scope — its
+ * own theme document's, else the scope's base (config falls back to it) — on
+ * the app's token qualified by the scope. Every app, not only the owners: a
+ * popup portaled out of the scope's DOM re-stamps only its app's token, so it
+ * must find a block there rather than inherit the page's `:root`.
+ */
+function PluginScopeAppThemes({ pluginScope }: { pluginScope: string }) {
+  const apps = Apps.App.useContributions();
+  return (
+    <>
+      {apps.map((app) => {
+        const scopeId = appThemeScope(app.id);
+        return (
+          <ScopeStyles
+            key={app.id}
+            scopeId={scopeId}
+            scopeToken={qualifyThemeScope(pluginScope, scopeId)}
+          />
+        );
+      })}
+    </>
+  );
+}
+
+function PageAppScopeThemes() {
   const apps = Apps.App.useContributions();
   return (
     <>
@@ -343,6 +400,8 @@ export function AppScopeThemes() {
  * surrounding theme's values before its own.
  */
 export function SubThemeStyles() {
+  // Inside a `<PluginScope>`, on the tokens its boundaries stamp (qualified).
+  const pluginScope = usePluginScopeId();
   const subThemes = ThemeEngine.SubTheme.useContributions();
   const groups = ThemeEngine.TokenGroup.useContributions();
   const { blocks, skipped } = subThemeBlocks(
@@ -359,6 +418,7 @@ export function SubThemeStyles() {
           subTheme={subTheme}
           group={group}
           fragment={fragment}
+          pluginScope={pluginScope}
         />
       ))}
     </>
@@ -369,16 +429,19 @@ function SubThemeFragmentStyle({
   subTheme,
   group,
   fragment,
+  pluginScope,
 }: {
   subTheme: SubTheme;
   group: TokenGroupSpec;
   fragment: TokenGroupFragment;
+  pluginScope: string | null;
 }) {
+  const token = qualifyThemeScope(pluginScope, subThemeScope(subTheme));
   const text = useMemo(
-    () => renderSubThemeBlock(group, fragment, subTheme),
-    [group, fragment, subTheme],
+    () => renderSubThemeBlock(group, fragment, subTheme, token),
+    [group, fragment, subTheme, token],
   );
-  usePaintedStyle(themeStyleId(group.id, subThemeScope(subTheme)), text);
+  usePaintedStyle(themeStyleId(group.id, token), text);
   return null;
 }
 
@@ -425,7 +488,11 @@ function FixedThemeScopeStyles({
     [fixed, groups],
   );
   useReportFaults(skippedFaults(skipped));
-  const scopeToken = fixedThemeScope(fixed);
+  // Inside a `<PluginScope>`, on the token its boundaries stamp (qualified).
+  const scopeToken = qualifyThemeScope(
+    usePluginScopeId(),
+    fixedThemeScope(fixed),
+  );
 
   return (
     <>

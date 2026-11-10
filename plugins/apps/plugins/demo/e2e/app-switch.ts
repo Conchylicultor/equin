@@ -44,6 +44,7 @@ import {
   type Settled,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import {
+  demoAppThemeScope,
   AGENT_MANAGER_LOCATION,
   demoPath,
   onDemoPage,
@@ -204,7 +205,7 @@ await withBrowser(async (h) => {
   r.eq(
     "the embed wears Pages' theme scope",
     await embedRoot(page).getAttribute("data-theme-scope"),
-    "app:pages",
+    demoAppThemeScope("pages"),
   );
   for (const title of ROOT_PAGES) {
     await renders(

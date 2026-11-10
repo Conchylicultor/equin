@@ -11,9 +11,12 @@ export type { ClassName } from "./class-name";
 export { APP_STYLESHEET_PATH } from "./app-stylesheet";
 export {
   appThemeScope,
+  bareThemeScope,
   fixedThemeScope,
   isAppThemeScope,
   isSubThemeScope,
+  PLUGIN_SCOPE_ROOT_THEME,
+  qualifyThemeScope,
   subThemeScope,
   themeScopeSelectors,
 } from "./theme-scope";

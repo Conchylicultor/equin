@@ -212,6 +212,22 @@ Nothing is injected while a resident source loads, so the CSS the server
 painted into the HTML stays up. A painted element is adopted by id and only
 removed when its painter unmounts — never as part of a content update.
 
+### Inside a plugin scope
+
+The four painters are root hosts of every scope (`scope: "each"`, web-sdk's
+`RootScope`): each `<PluginScope>` (the demo) mounts its own, reading the
+scope's token groups, apps, sub/fixed themes and config. Every theme-scope
+token stamped inside a scope is qualified by the scope's id
+(`qualifyThemeScope`: `<scope>/app:sonata`), by `<Theme>` and the portal
+forward alike, so a block the page paints never matches there and the scope's
+never matches the page. Inside a scope the painters never touch `:root` or
+`<html>.dark`: `ThemeInjector` paints the scope's base theme on its root
+boundary (`PLUGIN_SCOPE_ROOT_THEME`, drawn by `DemoScope`), complete over
+every group the scope registers, and `AppScopeThemes` paints a complete block
+for EVERY scope app (its own theme, else the base) — a popup portaled out of
+the scope's DOM re-stamps only its app's token. Light/dark stays the page's
+one class.
+
 Picking a theme is `theme-gallery`'s job.
 
 ## The first frame is painted by the server

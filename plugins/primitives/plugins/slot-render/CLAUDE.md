@@ -372,6 +372,7 @@ the outcome too, with no separate code path.
     - `renderAsContribution`
     - `RenderCoreRoot`
     - `renderIsolated`
+    - `RenderScopeRoot`
     - `RenderSlotSubIdContext`
     - `scopedOutDispatchSink`
     - `SlotItemLayout`

@@ -13,7 +13,7 @@ export default {
   description:
     "Resource-error collector: drains the live-state primitive's resourceErrorReportSink (one body per failing live read, however many hooks observe it) into a deduped resource-error report for the failures a developer must fix (loader-failed, not-found — never client-outdated or transport), the Debug → Reports summary view, and the health report's Live reads row (attention with 'N resources failing' while any read on the page is in error).",
   contributions: [
-    Core.Root({ component: ResourceErrorCollector }),
+    Core.Root({ component: ResourceErrorCollector, scope: "page" }),
     Reports.KindView({
       match: RESOURCE_ERROR_KIND,
       component: ResourceErrorKindView,

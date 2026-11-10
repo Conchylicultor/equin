@@ -10,7 +10,7 @@ export default {
   description:
     "Panel-overflow collector: drains the control-panel primitive's panelOverflowReportSink into a deduped report whenever a popover panel's showing page is wider than the panel — content needing a width bucket (picker, builder, described) nothing on the page declared — plus the Debug → Reports summary view.",
   contributions: [
-    Core.Root({ component: PanelOverflowCollector }),
+    Core.Root({ component: PanelOverflowCollector, scope: "page" }),
     Reports.KindView({
       match: "panel-overflow",
       component: PanelOverflowKindView,
