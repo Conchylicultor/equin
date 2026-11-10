@@ -400,9 +400,12 @@ function TranscriptViewInner({
     // eslint-disable-next-line layout/no-adhoc-layout -- relative+isolate positioning host that is also the flex-fill child of the transcript column; hosts the scroller plus the Pin'd overlays as siblings so they don't scroll
     <div className="relative min-h-0 flex-1 isolate">
       {/* Vertical only: the reading column stays centred over the prompt.
-          Anything wider (a markdown table, a code block) scrolls sideways in
-          its own box; a long unbroken word wraps rather than overflowing. */}
+          A bleed region: a markdown table may grow past the column, up to the
+          pane's width, before it scrolls sideways in its own box. Anything
+          else wider (a code block) scrolls in its own box; a long unbroken
+          word wraps rather than overflowing. */}
       <Scroll
+        bleed
         ref={attachScroll}
         data-pane-scroll
         className={`h-full transition-opacity ${dimmed ? "opacity-50" : ""}`}

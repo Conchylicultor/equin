@@ -31,3 +31,60 @@
     max-width: 100cqi;
   }
 }
+
+/* Bleed: a sideways scroller inside a centred column (a markdown table in a
+   transcript's reading measure) may grow past the column, up to the width of
+   the vertical scroller around it — the bleed region.
+
+   - The region (`<Scroll bleed>`, y axis) is an inline-size container and sets
+     `--bleed-region: on`, which every box inside inherits: the style query is
+     how a bleeding scroller knows it sits in one. Outside a region nothing
+     applies, so it stays the column's width (no viewport-sized fallback).
+   - The anchor (`data-bleed-anchor`, the column-wide box `<Scroll axis="x"
+     bleed>` renders around its scroller) records the region's width as a
+     registered length — `100cqi` resolved HERE, against the region, then
+     inherited as pixels — and is itself an inline-size container, so below it
+     `100cqi` is the column's width.
+   - The scroller takes the region's width, centred on the column.
+   - Its content (`data-bleed-content`) is never narrower than the column,
+     never wider than the region (less a gutter each side), and as wide as its
+     content wants in between, centred: it grows past the column on BOTH
+     sides, and being no wider than the scroller it never passes its left edge.
+     Content wider still overflows it to the right: that, and only that,
+     scrolls. No padding is involved, so nothing scrolls while it all fits.
+
+   Assumes the column is centred in the region (`mx-auto`), which is what a
+   region is for. */
+@property --bleed-region-width {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+
+@layer base {
+  :where([data-bleed-region]) {
+    container-type: inline-size;
+    --bleed-region: on;
+  }
+
+  @container style(--bleed-region: on) {
+    :where([data-bleed-anchor]) {
+      --bleed-region-width: 100cqi;
+      container-type: inline-size;
+    }
+
+    :where([data-bleed]) {
+      display: flex;
+      justify-content: center;
+      width: var(--bleed-region-width);
+      margin-inline: calc(50cqi - var(--bleed-region-width) / 2);
+    }
+
+    :where([data-bleed-content]) {
+      flex: none;
+      width: max-content;
+      min-width: 100cqi;
+      max-width: calc(var(--bleed-region-width) - 2 * var(--space-sm));
+    }
+  }
+}

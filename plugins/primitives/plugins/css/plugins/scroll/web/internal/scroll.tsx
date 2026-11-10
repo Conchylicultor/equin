@@ -75,6 +75,19 @@ export interface ScrollProps extends React.HTMLAttributes<HTMLElement> {
   as?: React.ElementType;
   /** Forwarded to the rendered element (mirrors Surface/Card/Row). */
   ref?: React.Ref<HTMLElement>;
+  /**
+   * `y` axis: make this scroller a bleed region — a sideways scroller marked
+   * `bleed` anywhere inside it may grow past its own column, up to this
+   * scroller's width. Set it on a pane whose content is a centred column
+   * narrower than the pane (a transcript's reading measure).
+   *
+   * `x` axis: this sideways scroller bleeds — inside a bleed region it is as
+   * wide as the region, its content centred on the column it sits in, growing
+   * past the column on both sides as far as the region allows and scrolling
+   * sideways only beyond that. Its content is never narrower than the column.
+   * Outside a region it stays the column's width.
+   */
+  bleed?: boolean;
 }
 
 /**
@@ -97,29 +110,45 @@ export function Scroll({
   isolate = false,
   as: As = "div",
   ref,
+  bleed = false,
   className,
   children,
   ...rest
 }: ScrollProps) {
-  return (
+  const bleeds = bleed && axis === "x";
+  const scroller = (
     <As
       ref={ref}
       className={cn(
         scrollClasses({ axis, fill, hideScrollbar, isolate }),
-        className,
+        bleeds ? null : className,
       )}
       // A vertical scroller is where a wide grid table may scroll sideways
       // (it opens the `SidewaysScroll` region below); the mark is what this
       // plugin's CSS keys the pinning of everything else on, and what the
       // table checks is the box actually clipping it.
       data-scroll-x-host={axis === "y" ? "" : undefined}
+      // Bleed: the region and the bleeding scroller are keyed on in scroll.css.
+      data-bleed-region={bleed && axis === "y" ? "" : undefined}
+      data-bleed={bleeds ? "" : undefined}
       {...rest}
     >
       {axis === "y" ? (
         <SidewaysScrollProvider value={true}>{children}</SidewaysScrollProvider>
+      ) : bleeds ? (
+        <div data-bleed-content="">{children}</div>
       ) : (
         children
       )}
     </As>
+  );
+  // A bleeding scroller sits in a column-wide anchor (scroll.css), which
+  // takes the caller's className: the box in the flow is the anchor.
+  return bleeds ? (
+    <div data-bleed-anchor="" className={className}>
+      {scroller}
+    </div>
+  ) : (
+    scroller
   );
 }
