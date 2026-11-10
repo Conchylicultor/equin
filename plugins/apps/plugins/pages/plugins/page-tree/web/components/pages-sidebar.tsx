@@ -31,6 +31,7 @@ import {
   type PagesTreeRow,
 } from "@plugins/page/plugins/editor/core";
 import { pageLinkTargets } from "@plugins/page/plugins/links/core";
+import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
 import { usePageReferenceTint } from "@plugins/page/plugins/page-reference/web";
 import { pageDetailPane, pagesTreePane } from "../panes";
@@ -62,7 +63,9 @@ const ACTIVE_LABEL = cn("font-medium text-strong-foreground");
 
 /**
  * Pages a page links to (page-link blocks, inline [[links]]) appear as
- * read-only reference children of the linking page. The tree reads each held
+ * read-only reference children of the linking page — a link-to-page block AT
+ * its place among the sub-pages (its `docRank`, minted in the same group),
+ * an inline link after them. The tree reads each held
  * row's link targets by id (`pageLinkTargets`, one read per loaded level), so
  * the sidebar holds the links of the rows its windows hold, never every link;
  * a target no window holds is read by id while its linking page is open.
@@ -72,6 +75,10 @@ const ACTIVE_LABEL = cn("font-medium text-strong-foreground");
 const LINK_ALIASES = treeAliases({
   collection: pageLinkTargets,
   targets: (row) => row.linksTo,
+  rank: (row, target) => {
+    const at = row.linkRanks[target];
+    return at === undefined ? null : Rank.from(at);
+  },
 });
 
 /**

@@ -12,6 +12,7 @@ import type { Block } from "../../core";
 import { PAGE_BLOCK_TYPE, PAGE_BLOCKS_TRASH_SOURCE } from "../../core";
 import { namesField, type BlockFieldChanges } from "../../core";
 import { _blocks } from "./tables";
+import { pageTreePlacedTypes } from "./block-registry";
 import type { BlockRow } from "./forest";
 import {
   parseBlockData,
@@ -133,8 +134,9 @@ export async function insertBlocks(
  *
  * A write naming a placement column marks the row's partition — BOTH of them
  * when it names `pageId`, read before the write so a row leaving a group marks
- * the group it left. A write turning the row into anything but a page clears
- * its `doc_rank` in the same statement: only page rows carry one.
+ * the group it left. A write turning the row into a type with no place in
+ * the page tree clears its `doc_rank` in the same statement: only page-tree
+ * rows (`pageTreePlacedTypes`) carry one.
  */
 export async function updateBlockFields(
   tx: PageForestTx,
@@ -154,11 +156,11 @@ export async function updateBlockFields(
       .where(eq(_blocks.id, id));
     if (old) markDocOrderDirty(tx, [old.pageId]);
   }
-  const leavesPages =
-    changes.type !== undefined && changes.type !== PAGE_BLOCK_TYPE;
+  const leavesTree =
+    changes.type !== undefined && !pageTreePlacedTypes().includes(changes.type);
   const written = await tx
     .update(_blocks)
-    .set(leavesPages ? { ...changes, docRank: null } : changes)
+    .set(leavesTree ? { ...changes, docRank: null } : changes)
     .where(eq(_blocks.id, id))
     .returning({ pageId: _blocks.pageId });
   markDocOrderDirty(

@@ -93,6 +93,15 @@ const calloutStub = defineBlock({
   anchor: true,
 });
 
+// A link-to-page stand-in: a void block that takes a place in the page tree
+// (`pageTreePlace`), so it is ordered with the sub-pages around it.
+const linkStub = defineBlock({
+  type: "link",
+  schema: z.object({ pageId: z.string() }),
+  empty: () => ({ pageId: "" }),
+  pageTreePlace: true,
+});
+
 const TEXT_TYPES = ["para", "todo"] as const;
 
 let t: TestDb;
@@ -137,6 +146,7 @@ beforeAll(async () => {
         Editor.BlockData(paraStub),
         Editor.BlockData(todoStub),
         Editor.BlockData(calloutStub),
+        Editor.BlockData(linkStub),
       ],
     },
   ]);
@@ -168,6 +178,7 @@ function pagePayload(title: string): unknown {
 function payloadFor(type: string, text: string): unknown {
   if (type === PAGE_BLOCK_TYPE) return pagePayload(text);
   if (type === "callout") return {};
+  if (type === "link") return { pageId: "W" };
   return { text: [{ text }] };
 }
 
@@ -898,6 +909,142 @@ describe("reconcile cost", () => {
     const ran = reconcileStatements();
     expect(ran).toHaveLength(1);
     expect(ran[0]).toContain("WITH RECURSIVE members");
+  });
+});
+
+describe("page-tree-placed blocks (pageTreePlace)", () => {
+  test("a link block takes a doc_rank between the sub-pages around it", async () => {
+    await seed({
+      id: "W",
+      parentId: null,
+      pageId: null,
+      type: "page",
+      rank: "a0",
+    });
+    await seed({
+      id: "A",
+      parentId: "W",
+      pageId: "W",
+      type: "page",
+      rank: "a0",
+    });
+    await seed({
+      id: "B",
+      parentId: "W",
+      pageId: "W",
+      type: "page",
+      rank: "a2",
+    });
+    await seed({
+      id: "L",
+      parentId: "W",
+      pageId: "W",
+      type: "link",
+      rank: "a1",
+    });
+    await seed({
+      id: "F",
+      parentId: "W",
+      pageId: "W",
+      type: "link",
+      rank: "Zz",
+    });
+    await expectInvariant("after seeding links");
+    const order = (await docOrderRows(t.db))
+      .filter((r) => r.pageId === "W")
+      .sort((a, b) => Rank.compare(a.docRank!, b.docRank!))
+      .map((r) => r.id);
+    expect(order).toEqual(["F", "A", "L", "B"]);
+  });
+
+  test("a row converted away from a placed type loses its doc_rank", async () => {
+    await seed({
+      id: "W",
+      parentId: null,
+      pageId: null,
+      type: "page",
+      rank: "a0",
+    });
+    await seed({
+      id: "L",
+      parentId: "W",
+      pageId: "W",
+      type: "link",
+      rank: "a0",
+    });
+    expect(await docRankOf("L")).not.toBeNull();
+    await withPageForest(
+      "W",
+      async (ctx) => {
+        const [current] = await ctx.tx
+          .select({ type: _blocks.type, data: _blocks.data })
+          .from(_blocks)
+          .where(eq(_blocks.id, "L"));
+        if (!current) throw new Error("no row L");
+        await updateBlockFields(ctx.tx, "L", {
+          type: "para",
+          data: rewriteBlockData({
+            type: "para",
+            before: current,
+            next: { text: [] },
+          }),
+        });
+      },
+      t.db,
+    );
+    expect(await docRankOf("L")).toBeNull();
+    await expectInvariant("after converting the link away");
+  });
+
+  test("the first boot of a newly placed type is a silent backfill", async () => {
+    await seed({
+      id: "W",
+      parentId: null,
+      pageId: null,
+      type: "page",
+      rank: "a0",
+    });
+    await seed({
+      id: "A",
+      parentId: "W",
+      pageId: "W",
+      type: "page",
+      rank: "a0",
+    });
+    await seed({
+      id: "L",
+      parentId: "W",
+      pageId: "W",
+      type: "link",
+      rank: "Zz",
+    });
+    // The state before `link` declared its place: pages keyed, links not.
+    await t.db.execute(
+      sql`UPDATE page_blocks SET doc_rank = NULL WHERE type = 'link'`,
+    );
+    expect(await reconcileDocRanksAtBoot(t.db)).toEqual({
+      kind: "backfill",
+      written: 1,
+    });
+    await expectInvariant("after the link backfill");
+    // …but an unkeyed link once links are maintained is drift.
+    await t.db.execute(
+      sql`UPDATE page_blocks SET doc_rank = NULL WHERE id = 'L'`,
+    );
+    await seed({
+      id: "M",
+      parentId: "W",
+      pageId: "W",
+      type: "link",
+      rank: "a1",
+    });
+    await t.db.execute(
+      sql`UPDATE page_blocks SET doc_rank = NULL WHERE id = 'L'`,
+    );
+    expect(await reconcileDocRanksAtBoot(t.db)).toMatchObject({
+      kind: "drift",
+      unkeyed: 1,
+    });
   });
 });
 

@@ -246,6 +246,17 @@ export const PAGE_LINK_TARGETS_TABLE = "page_link_targets";
 export const PAGE_LIVE_TABLE = "page_live";
 
 /**
+ * Where each page-tree row sits in its sidebar group (a derived-tables rollup
+ * over `page_blocks`, in
+ * `plugins/page/plugins/editor/server/internal/rollup-spec.ts`): one row per
+ * live block holding a `doc_rank` — a page, or a link-to-page block — so a
+ * materialized join can nest it (`page_link_targets` places each link alias
+ * at its linking block). Created and reconciled by `rebuildDerivedTables`
+ * like the ones above.
+ */
+export const PAGE_TREE_RANK_TABLE = "page_tree_rank";
+
+/**
  * The full allowlist of public tables created imperatively (outside drizzle),
  * keyed BY THE NAME OF THE CONSTANT that holds each table name.
  *
@@ -290,6 +301,7 @@ export const IMPERATIVE_PUBLIC_TABLES = {
   PAGE_TREE_CHILDREN_TABLE,
   PAGE_LINK_TARGETS_TABLE,
   PAGE_LIVE_TABLE,
+  PAGE_TREE_RANK_TABLE,
 } as const satisfies Record<string, string>;
 
 /**

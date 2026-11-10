@@ -21930,6 +21930,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PAGE_LINK_TARGETS_TABLE`
           - `PAGE_LIVE_TABLE`
           - `PAGE_TREE_CHILDREN_TABLE`
+          - `PAGE_TREE_RANK_TABLE`
           - `READ_ALIAS_SCHEMA`
           - `readAliasStem`
           - `TASK_ACTIVE_DEPENDENTS_TABLE`
@@ -26997,13 +26998,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Imported by: 36 plugins — full list in [`plugins/fields/plugins/json/plugins/config/REFERENCE.md`](../plugins/fields/plugins/json/plugins/config/REFERENCE.md)
+            - Imported by: 37 plugins — full list in [`plugins/fields/plugins/json/plugins/config/REFERENCE.md`](../plugins/fields/plugins/json/plugins/config/REFERENCE.md)
               - `apps` ×7
               - `conversations` ×6
               - `debug` ×4
               - `infra` ×4
+              - `page` ×4
               - `tasks` ×4
-              - `page` ×3
               - `backup` ×2
               - `active-data`
               - `apps-core/app-launcher`
@@ -40330,6 +40331,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `derived-table` "page_content_edited_at"
           - `derived-table` "page_live"
           - `derived-table` "page_tree_children"
+          - `derived-table` "page_tree_rank"
           - `page.block-data` "page"
           - `page.block-annotation`
         - Uses:
@@ -40394,6 +40396,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `pageData`
           - `PageDataSchema`
           - `pageLive`
+          - `pageTreeRank`
           - `readPageEditedAt`
           - `renamePage`
           - `resolveBlockAnnotations`
@@ -41111,8 +41114,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `derived-table` "page_link_targets"
           - `trigger` "page.links.reindex"
           - `page.editor.block.onDelete`
-        - Uses: 24 symbols — full list in [`plugins/page/plugins/links/REFERENCE.md`](../plugins/page/plugins/links/REFERENCE.md)
-          - `page/editor` ×9
+        - Uses: 25 symbols — full list in [`plugins/page/plugins/links/REFERENCE.md`](../plugins/page/plugins/links/REFERENCE.md)
+          - `page/editor` ×10
           - `network/live` ×3
           - `database` ×2
           - `infra/events` ×2
@@ -41164,6 +41167,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Uses:
           - `fields/bool/config.boolField`
+          - `fields/json/config.jsonField`
           - `fields/string-list/config.stringListField`
           - `fields/text/config.textField`
           - `infra/entities.entityRef`
@@ -41171,6 +41175,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.liveValue`
           - `network/live/query-resource.compositeKey`
           - `packages/list-bound.wholeList`
+          - `packages/list-bound.wholeRecord`
           - `page/block-entity.pagesEntityRef`
           - `ui/icons/emoji.EmojiSchema`
         - Exports (types):
@@ -41179,6 +41184,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PageLinkTargetsRow`
         - Exports (values):
           - `BacklinkRowSchema`
+          - `LinkRanksSchema`
           - `pageBacklinkEdges`
           - `pageBacklinks`
           - `pageLinksEntityRef`
@@ -50698,8 +50704,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `rankText`
           - `withRank`
       - Cross-plugin:
-        - Imported by: 25 plugins — full list in [`plugins/primitives/plugins/rank/REFERENCE.md`](../plugins/primitives/plugins/rank/REFERENCE.md)
-          - `apps` ×6
+        - Imported by: 26 plugins — full list in [`plugins/primitives/plugins/rank/REFERENCE.md`](../plugins/primitives/plugins/rank/REFERENCE.md)
+          - `apps` ×7
           - `conversations` ×5
           - `primitives` ×4
           - `config_v2` ×2

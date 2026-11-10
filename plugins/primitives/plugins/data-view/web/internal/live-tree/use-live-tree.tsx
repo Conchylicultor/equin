@@ -50,6 +50,7 @@ import {
   ChildWindowReader,
   MovedRowReader,
   PathReader,
+  type AliasEdge,
   type ChildQuery,
   type ChildReport,
   type MovedRowReport,
@@ -376,7 +377,7 @@ export function useLiveTree<TRow>(args: {
     return out;
   }, [aliases, access, view, mode, levels, windowRowById]);
   const [edgeReads, setEdgeReads] = useState<
-    ReadonlyMap<string, ReadonlyMap<string, readonly string[]>>
+    ReadonlyMap<string, ReadonlyMap<string, readonly AliasEdge[]>>
   >(() => new Map());
   const liveEdgeKeys = useMemo(
     () => new Set(edgeChunks.map((c) => c.key)),
@@ -387,10 +388,13 @@ export function useLiveTree<TRow>(args: {
   // Answers of chunks no longer mounted are dropped on the next answer.
   const liveEdgeKeysRef = useLatestRef(liveEdgeKeys);
   const onEdges = useCallback(
-    (key: string, answer: ReadonlyMap<string, readonly string[]>) =>
+    (key: string, answer: ReadonlyMap<string, readonly AliasEdge[]>) =>
       setEdgeReads((prev) => {
         if (prev.get(key) === answer) return prev;
-        const next = new Map<string, ReadonlyMap<string, readonly string[]>>();
+        const next = new Map<
+          string,
+          ReadonlyMap<string, readonly AliasEdge[]>
+        >();
         for (const [k, v] of prev) {
           if (liveEdgeKeysRef.current.has(k)) next.set(k, v);
         }
@@ -400,7 +404,7 @@ export function useLiveTree<TRow>(args: {
     [liveEdgeKeysRef],
   );
   const aliasTargets = useMemo(() => {
-    const out = new Map<string, readonly string[]>();
+    const out = new Map<string, readonly AliasEdge[]>();
     // Expand mode's own, like the reads behind it: a hits read draws no
     // reference, never one left from the expand mode before it.
     if (!aliases || mode !== "expand") return out;
@@ -413,9 +417,30 @@ export function useLiveTree<TRow>(args: {
     }
     return out;
   }, [aliases, mode, edgeReads, liveEdgeKeys]);
+  // Per parent, the ids it references (what the tree draws under it) and
+  // where each sits among its children (`aliases.rank`).
+  const aliasIds = useMemo(() => {
+    const out = new Map<string, readonly string[]>();
+    for (const [parent, edges] of aliasTargets) {
+      out.set(
+        parent,
+        edges.map((e) => e.id),
+      );
+    }
+    return out;
+  }, [aliasTargets]);
+  const aliasRanks = useMemo(() => {
+    const out = new Map<string, ReadonlyMap<string, Rank>>();
+    for (const [parent, edges] of aliasTargets) {
+      const ranks = new Map<string, Rank>();
+      for (const e of edges) if (e.rank !== null) ranks.set(e.id, e.rank);
+      if (ranks.size > 0) out.set(parent, ranks);
+    }
+    return out;
+  }, [aliasTargets]);
   const aliasChildrenOf = useCallback(
-    (id: string): readonly string[] => aliasTargets.get(id) ?? NO_PARENTS,
-    [aliasTargets],
+    (id: string): readonly string[] => aliasIds.get(id) ?? NO_PARENTS,
+    [aliasIds],
   );
   const aliasParents = useMemo(() => {
     const map = new Map<string, string[]>();
@@ -705,6 +730,8 @@ export function useLiveTree<TRow>(args: {
         ? {
             getAliasParents: (row: TRow) =>
               aliasParents.get(access.idOf(row)) ?? NO_PARENTS,
+            getAliasRank: (row: TRow, parentId: string) =>
+              aliasRanks.get(parentId)?.get(access.idOf(row)) ?? null,
             referenceOnly: (row: TRow) =>
               referenceIds.has(access.idOf(row)) &&
               !windowIds.has(access.idOf(row)),
@@ -736,6 +763,7 @@ export function useLiveTree<TRow>(args: {
     assembled,
     aliases,
     aliasParents,
+    aliasRanks,
     referenceIds,
     windowIds,
     onMove,
@@ -810,6 +838,7 @@ export function useLiveTree<TRow>(args: {
                 readKey={c.key}
                 ids={c.ids}
                 targets={aliases.targets}
+                rank={aliases.rank}
                 onResult={onEdges}
               />
             ))

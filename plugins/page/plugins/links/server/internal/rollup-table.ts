@@ -1,11 +1,13 @@
-import { pgTable, text } from "drizzle-orm/pg-core";
+import { jsonb, pgTable, text } from "drizzle-orm/pg-core";
 import { PAGE_LINK_TARGETS_TABLE } from "@plugins/database/plugins/derived-views/core";
 
 // The drizzle READ handle for `pageLinkTargets`' materialized join
 // (`./link-target-rows.ts`, query-resource's `materializeJoin`): one row per
 // page that links to another, keyed by the page id, its distinct targets as a
 // `text[]` (NOT NULL: a page linking nowhere reads `[]`, the aggregate's
-// `ifNone`) — asserted against the aggregate at module eval.
+// `ifNone`), and its placed linking blocks' ranks as a `jsonb` object of
+// target → rank (NOT NULL, `{}` when none) — asserted against the aggregates
+// at module eval.
 //
 // In a NON-glob file (NOT `tables.ts` / `schema.ts`) so the drizzle codegen
 // glob never sees it: the table is DERIVED state, created imperatively on boot
@@ -17,4 +19,5 @@ import { PAGE_LINK_TARGETS_TABLE } from "@plugins/database/plugins/derived-views
 export const _pageLinkTargets = pgTable(PAGE_LINK_TARGETS_TABLE, {
   pageId: text("page_id").primaryKey(),
   targets: text("targets").array().notNull(),
+  ranks: jsonb("ranks").notNull(),
 });

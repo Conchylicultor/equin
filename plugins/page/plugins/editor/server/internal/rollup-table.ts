@@ -9,6 +9,7 @@ import {
   PAGE_CONTENT_EDITED_AT_TABLE,
   PAGE_TREE_CHILDREN_TABLE,
   PAGE_LIVE_TABLE,
+  PAGE_TREE_RANK_TABLE,
 } from "@plugins/database/plugins/derived-views/core";
 
 // Drizzle READ handles for the page rows' two materialized joins
@@ -28,6 +29,10 @@ import {
 //  - `page_live`: one row per live page (`livePageSql`), `live` a constant
 //    `true` marker — a missing row reads NULL, "not a live page" — so a
 //    materialized join nesting it filters on `live`.
+//  - `page_tree_rank`: one row per live block holding a `doc_rank` (a page,
+//    a link-to-page block), keyed by the block id — so a materialized join
+//    over rows naming a block (`page_links.source_block_id`) reads where it
+//    sits in its page's sidebar group.
 //
 // These live in a NON-glob file (NOT `tables.ts`/`schema.ts`) so the drizzle
 // codegen glob (`**/internal/{schema,tables}{,-*}.ts`) never sees them: the
@@ -51,4 +56,9 @@ export const _pageTreeChildren = pgTable(PAGE_TREE_CHILDREN_TABLE, {
 export const _pageLive = pgTable(PAGE_LIVE_TABLE, {
   pageId: text("page_id").primaryKey(),
   live: boolean("live").notNull(),
+});
+
+export const _pageTreeRank = pgTable(PAGE_TREE_RANK_TABLE, {
+  blockId: text("block_id").primaryKey(),
+  docRank: text("doc_rank").notNull(),
 });

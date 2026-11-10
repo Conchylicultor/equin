@@ -301,7 +301,9 @@ prefix orphans children); one over a **tree collection** nests — see
   `FieldDef.onEdit` on that field (`EditableTreeLabel`).
 - **Aliases** (`getAliasParents`): the row also appears as a read-only leaf under each
   returned parent — navigation only; a `child` drop or add-child resolves to the
-  real row.
+  real row. `getAliasRank(row, parent)` (live: `treeAliases({ rank })`) places
+  one AMONG the parent's real children — a rank in their own rank space; an
+  unranked alias is drawn after them (`project-rows.ts`).
 
 ### Live trees: a `source` over a collection declaring `tree`
 

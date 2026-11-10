@@ -170,6 +170,7 @@ and re-export it from `core/index.ts`. See
     - `PAGE_LINK_TARGETS_TABLE`
     - `PAGE_LIVE_TABLE`
     - `PAGE_TREE_CHILDREN_TABLE`
+    - `PAGE_TREE_RANK_TABLE`
     - `READ_ALIAS_SCHEMA`
     - `readAliasStem`
     - `TASK_ACTIVE_DEPENDENTS_TABLE`

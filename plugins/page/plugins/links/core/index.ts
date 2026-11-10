@@ -1,4 +1,4 @@
-export { BacklinkRowSchema } from "./schemas";
+export { BacklinkRowSchema, LinkRanksSchema } from "./schemas";
 export type { BacklinkRow, BacklinkSnippet } from "./schemas";
 export {
   pageBacklinkEdges,

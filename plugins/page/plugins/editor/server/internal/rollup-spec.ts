@@ -12,6 +12,7 @@ import {
   _pageContentEditedAt,
   _pageLive,
   _pageTreeChildren,
+  _pageTreeRank,
 } from "./rollup-table";
 import { _blocks } from "./tables";
 
@@ -126,6 +127,35 @@ export const pageLive = defineRollup({
 });
 
 /**
+ * Where each live page-tree row sits in its sidebar group: one row per live
+ * block holding a `doc_rank` (a page, or a type declaring `pageTreePlace` —
+ * a link-to-page block), keyed by the block id. What a materialized join
+ * over rows that NAME a block nests (`NestedRollupJoin`, `on` the column
+ * naming it): `page_link_targets` reads its linking block's rank, so the
+ * sidebar draws a link alias where the link is written. A plain rollup, not on
+ * the change feed: only the joins nesting it read it, and they hear of a
+ * re-mint, a trash or a restore of the block through its writes (a typing
+ * projection, a rename or a fold writes nothing here: the source reads
+ * `doc_rank` and `deleted_at` alone).
+ */
+export const pageTreeRank = defineRollup({
+  table: _pageTreeRank,
+  key: _pageTreeRank.blockId,
+  select: (scope) => `
+    SELECT b.id AS block_id, b.doc_rank::text AS doc_rank
+      FROM page_blocks b
+     WHERE b.doc_rank IS NOT NULL AND b.deleted_at IS NULL
+       AND ${scope("b.id")}`,
+  sources: [
+    {
+      table: _blocks,
+      carry: _blocks.id,
+      reads: [_blocks.docRank, _blocks.deletedAt],
+    },
+  ],
+});
+
+/**
  * Every rollup this plugin contributes (`DerivedTable`, server/index.ts) — the
  * one list the boot contributions and the suites installing the derived layer
  * read, so a new one cannot be missed by either.
@@ -134,4 +164,5 @@ export const PAGE_ROLLUPS = [
   pageContent.rollup,
   pageTreeChildren.rollup,
   pageLive,
+  pageTreeRank,
 ] as const;

@@ -47,4 +47,8 @@ export const pageLinkBlock = defineBlock({
   // Always show the collapse chevron: a collapsed link mounts no children, so
   // `hasChildren` is false and without this no chevron would ever appear.
   collapsible: "always",
+  // The sidebar draws the linked page under this one, AT the link: the block
+  // takes a `doc_rank` among the page's sub-pages, so the reference sits
+  // where the link is written rather than after every sub-page.
+  pageTreePlace: true,
 });

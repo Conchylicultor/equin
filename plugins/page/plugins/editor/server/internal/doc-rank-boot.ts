@@ -13,9 +13,9 @@ export type BootDocRankOutcome =
   /** Every group already satisfied I-DR. */
   | { kind: "clean" }
   /**
-   * The database's first boot with the column: no live page held a key yet, so
-   * every group was minted from scratch. Expected once per database (main and
-   * each fork), and silent.
+   * The first boot of the column, or of a newly placed block type: no live row
+   * of each type written held a key yet, so its rows were minted from scratch.
+   * Expected once per database (main and each fork) and type, and silent.
    */
   | { kind: "backfill"; written: number }
   /**
@@ -45,9 +45,10 @@ export type BootDocRankOutcome =
  * writer racing the boot cannot be overwritten by this read's stale plan.
  * Idempotent: a second run finds nothing to change.
  *
- * Backfill vs drift is decided from the state BEFORE the write: no live page
- * holding a key means the column was never populated (the first boot of this
- * database); otherwise any change is drift.
+ * Backfill vs drift is decided from the state BEFORE the write, per block
+ * type: no live row of a type holding a key means that type was never placed
+ * (the first boot of this database, or of a type newly declaring
+ * `pageTreePlace`); otherwise any change is drift.
  */
 export async function reconcileDocRanksAtBoot(
   executor: ForestExecutor = db,
@@ -66,7 +67,20 @@ export async function reconcileDocRanksAtBoot(
     executor,
   );
 
-  if (rows.every((r) => r.docRank === null)) {
+  // A backfill is per TYPE: a type no row of which held a key was never
+  // placed before (the column's first boot, or a type newly declaring
+  // `pageTreePlace`), so minting its rows is expected. A key that moved, or an
+  // unkeyed row of a type already maintained, is drift.
+  const keyedTypes = new Set(
+    rows.filter((r) => r.docRank !== null).map((r) => r.type),
+  );
+  const typeOf = new Map(rows.map((r) => [r.id, r.type]));
+  // A row the plan never read (written under the lock) is no backfill.
+  const drifted = written.filter((c) => {
+    const type = typeOf.get(c.id);
+    return c.from !== null || type === undefined || keyedTypes.has(type);
+  });
+  if (drifted.length === 0) {
     return { kind: "backfill", written: written.length };
   }
   return {

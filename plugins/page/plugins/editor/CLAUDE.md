@@ -12,9 +12,17 @@ NULL on content rows), emitted as `PageRow.docRank` by `pagesTree` and
 `GET /api/pages`. A tree level's window is ordered by it server-side, so
 display order and the level's order are one order.
 
-> **Invariant I-DR.** For each group P (live page rows sharing `page_id`; NULL is
-> the root group), ordering by `doc_rank` equals document order — `docOrderRows` +
+> **Invariant I-DR.** For each group P (live page-tree rows sharing `page_id`; NULL
+> is the root group), ordering by `doc_rank` equals document order — `docOrderRows` +
 > `compareDocOrder`: rank-ordered DFS pre-order, stopping at nested pages.
+
+**Page-tree rows** are the pages plus every type whose handle declares
+`pageTreePlace: true` (`pageTreePlacedTypes()`, read off `Editor.BlockData` at
+call time): today the link-to-page block, so the sidebar draws a link's alias
+AT the link, among the sub-pages (`page_tree_rank`, a rollup of each placed
+row's `doc_rank`, nested by `page/links`' `page_link_targets`). A conversion to
+an unplaced type clears the key. The boot reconcile's backfill is per type: the
+first boot of a newly placed type is silent, not drift.
 
 Maintained at the one structural-write chokepoint:
 
@@ -2381,6 +2389,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `derived-table` "page_content_edited_at"
     - `derived-table` "page_live"
     - `derived-table` "page_tree_children"
+    - `derived-table` "page_tree_rank"
     - `page.block-data` "page"
     - `page.block-annotation`
   - Uses:
@@ -2445,6 +2454,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `pageData`
     - `PageDataSchema`
     - `pageLive`
+    - `pageTreeRank`
     - `readPageEditedAt`
     - `renamePage`
     - `resolveBlockAnnotations`

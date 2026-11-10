@@ -29,10 +29,11 @@ export const realNodeId = (id: string) => {
 };
 
 /**
- * Ranks for one alias-parent's run of `count` reference leaves: minted as a
- * contiguous run AFTER that parent's last real child (`maxRealRank`), so alias
- * ranks are distinct both from the real siblings' and from each other, and rank
- * order agrees with the display order (the alias pass appends them last).
+ * Ranks for one alias-parent's run of `count` UNRANKED reference leaves:
+ * minted as a contiguous run AFTER that parent's last child (`maxRank` — its
+ * last real child, or its last ranked alias), so alias ranks are distinct both
+ * from the real siblings' and from each other, and rank order agrees with the
+ * display order (unranked aliases are drawn last).
  *
  * Distinctness is load-bearing, not cosmetic. A row's rank is only meaningful
  * within its own sibling group, so an alias carrying its row's own rank imports
@@ -45,14 +46,18 @@ export const realNodeId = (id: string) => {
  * silently swallowed the drag — for drops on the REAL rows beside the alias
  * too. The tree's drop contract is anchor-only now (`resolveDropParent`), so
  * what minting still protects is the display invariant.
+ *
+ * A RANKED alias (`HierarchyConfig.getAliasRank`) needs none of this: its rank
+ * is already a key of the parent's own child space, minted by the consumer
+ * among the real children it sits between.
  */
 function mintAliasRanks(
-  maxRealRank: Rank | null,
+  maxRank: Rank | null,
   count: number,
   fallback: () => Rank[],
 ): Rank[] {
   try {
-    return Rank.nBetween(maxRealRank, null, count);
+    return Rank.nBetween(maxRank, null, count);
     // eslint-disable-next-line promise-safety/no-bare-catch -- Rank.nBetween throws a plain Error on an exhausted/corrupt neighbourhood; aliases are read-only navigation leaves, so degrading to the row's own rank (today's behavior) keeps them rendered and reachable rather than dropping them from the tree. The collision hazard above is what this fallback re-admits, bounded to a rank space already corrupt.
   } catch {
     return fallback();
@@ -110,46 +115,93 @@ export function projectRows<TRow>(args: {
     });
   });
 
-  // Second pass: synthesize the alias (reference) leaves AFTER every real node,
-  // so `buildTree` (insertion-order children) lands them last among each
-  // parent's children. Grouped by alias-parent so each parent's aliases mint as
-  // one contiguous run past its last real child — see `mintAliasRanks`.
+  // Second pass: synthesize the alias (reference) leaves, grouped by
+  // alias-parent. `buildTree` keeps insertion order, so WHERE an alias is
+  // inserted is where it is drawn: a ranked alias (`getAliasRank`) goes just
+  // before the first real sibling ranked after it — its place in the parent's
+  // order — and an unranked one after every child, its rank minted as one
+  // contiguous run past the parent's last (see `mintAliasRanks`).
   const getAliasParents = hierarchy.getAliasParents;
-  if (getAliasParents) {
-    const byAliasParent = new Map<string, { nodeId: string; row: TRow }[]>();
-    rows.forEach((row, i) => {
-      const id = rowKey(row, i);
-      const realParentId = hierarchy.getParentId(row);
-      for (const parent of getAliasParents(row)) {
-        if (parent === id || parent === realParentId || !drawn.has(parent)) {
-          continue;
-        }
-        const nodeId = aliasNodeId(id, parent);
-        if (byId.has(nodeId)) continue; // duplicate edge
-        byId.set(nodeId, row);
-        const list = byAliasParent.get(parent);
-        if (list) list.push({ nodeId, row });
-        else byAliasParent.set(parent, [{ nodeId, row }]);
+  if (!getAliasParents) return { projected: out, originalById: byId };
+  const getAliasRank = hierarchy.getAliasRank;
+  const ranked = new Map<string, ProjectedRow<TRow>[]>();
+  const unranked = new Map<string, { nodeId: string; row: TRow }[]>();
+  rows.forEach((row, i) => {
+    const id = rowKey(row, i);
+    const realParentId = hierarchy.getParentId(row);
+    for (const parent of getAliasParents(row)) {
+      if (parent === id || parent === realParentId || !drawn.has(parent)) {
+        continue;
       }
-    });
-    for (const [parent, entries] of byAliasParent) {
-      const ranks = mintAliasRanks(
-        maxRankByParent.get(parent) ?? null,
-        entries.length,
-        () => entries.map((e) => hierarchy.getRank(e.row)),
-      );
-      entries.forEach((entry, k) => {
-        out.push({
-          id: entry.nodeId,
+      const nodeId = aliasNodeId(id, parent);
+      if (byId.has(nodeId)) continue; // duplicate edge
+      byId.set(nodeId, row);
+      const rank = getAliasRank?.(row, parent) ?? null;
+      if (rank !== null) {
+        push(ranked, parent, {
+          id: nodeId,
           parentId: parent,
-          rank: ranks[k]!,
+          rank,
           expanded: false,
           alias: true,
-          __row: entry.row,
+          __row: row,
         });
-      });
+      } else {
+        push(unranked, parent, { nodeId, row });
+      }
+    }
+  });
+
+  // Ranked aliases woven into the real rows: each parent's run sorted by
+  // rank, drained before the first real child ranked after it.
+  for (const list of ranked.values()) {
+    list.sort((a, b) => Rank.compare(a.rank, b.rank));
+    const last = list[list.length - 1]!.rank;
+    const parent = list[0]!.parentId!;
+    const prevMax = maxRankByParent.get(parent);
+    if (prevMax === undefined || Rank.compare(last, prevMax) > 0) {
+      maxRankByParent.set(parent, last);
     }
   }
+  const woven: ProjectedRow<TRow>[] = [];
+  if (ranked.size === 0) woven.push(...out);
+  else {
+    for (const node of out) {
+      const pending =
+        node.parentId === null ? undefined : ranked.get(node.parentId);
+      while (pending && pending.length > 0) {
+        if (Rank.compare(pending[0]!.rank, node.rank) >= 0) break;
+        woven.push(pending.shift()!);
+      }
+      woven.push(node);
+    }
+    // Ranked after every real child: in order, after them.
+    for (const list of ranked.values()) woven.push(...list);
+  }
 
-  return { projected: out, originalById: byId };
+  for (const [parent, entries] of unranked) {
+    const ranks = mintAliasRanks(
+      maxRankByParent.get(parent) ?? null,
+      entries.length,
+      () => entries.map((e) => hierarchy.getRank(e.row)),
+    );
+    entries.forEach((entry, k) => {
+      woven.push({
+        id: entry.nodeId,
+        parentId: parent,
+        rank: ranks[k]!,
+        expanded: false,
+        alias: true,
+        __row: entry.row,
+      });
+    });
+  }
+
+  return { projected: woven, originalById: byId };
+}
+
+function push<V>(map: Map<string, V[]>, key: string, value: V): void {
+  const list = map.get(key);
+  if (list) list.push(value);
+  else map.set(key, [value]);
 }

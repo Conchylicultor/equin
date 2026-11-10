@@ -39,7 +39,8 @@ import {
   setDefaultTimeout,
   test,
 } from "bun:test";
-import { asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, sql } from "drizzle-orm";
+import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { z } from "zod";
 import { installRollups } from "@plugins/database/plugins/derived-tables/server/testing";
 import type { QueryDb } from "@plugins/network/plugins/live/plugins/query-resource/server";
@@ -51,6 +52,7 @@ import {
   liveBlocks,
   PAGE_BLOCK_TYPE,
   pageLive,
+  pageTreeRank,
 } from "@plugins/page/plugins/editor/server";
 import {
   createTreeOracle,
@@ -122,9 +124,44 @@ async function oldLoaderFolded(): Promise<PageLinkTargetsRow[]> {
     if (list) list.push(e.targetPageId);
     else bySource.set(e.sourcePageId, [e.targetPageId]);
   }
+  // Where each placed linking block sits: per source page and target, the
+  // first `doc_rank` in document order of a live block linking there.
+  const placed = await oracle.db
+    .select({
+      sourcePageId: _pageLinks.sourcePageId,
+      targetPageId: _pageLinks.targetPageId,
+      docRank: liveBlocks.docRank,
+    })
+    .from(_pageLinks)
+    .innerJoin(
+      liveBlocks,
+      and(
+        eq(liveBlocks.id, _pageLinks.sourceBlockId),
+        isNotNull(liveBlocks.docRank),
+      ),
+    );
+  const ranksBySource = new Map<string, Record<string, string>>();
+  for (const e of placed) {
+    if (e.sourcePageId === e.targetPageId) continue;
+    if (!live.has(e.targetPageId) || e.docRank === null) continue;
+    const ranks = ranksBySource.get(e.sourcePageId) ?? {};
+    const held = ranks[e.targetPageId];
+    const rank = String(e.docRank);
+    if (
+      held === undefined ||
+      Rank.compare(Rank.from(rank), Rank.from(held)) < 0
+    ) {
+      ranks[e.targetPageId] = rank;
+    }
+    ranksBySource.set(e.sourcePageId, ranks);
+  }
   return pages
     .filter((p) => (WATCHED as readonly string[]).includes(p.id))
-    .map((p) => ({ id: p.id, linksTo: bySource.get(p.id) ?? [] }));
+    .map((p) => ({
+      id: p.id,
+      linksTo: bySource.get(p.id) ?? [],
+      linkRanks: ranksBySource.get(p.id) ?? {},
+    }));
 }
 
 const pointParams = () => pageLinkTargets.rows.point.encode([...WATCHED]);
@@ -156,7 +193,11 @@ beforeAll(async () => {
   });
   // The materialized join, installed through the boot path (ON the feed:
   // readers are routed by its own rows), and the target liveness it nests.
-  await installRollups(oracle.db, [pageLive, pageLinkTargetsJoin.rollup]);
+  await installRollups(oracle.db, [
+    pageLive,
+    pageTreeRank,
+    pageLinkTargetsJoin.rollup,
+  ]);
   oracle.registerLookup(
     pageLinkTargets,
     compileCollection(pageLinkTargets, {
@@ -205,9 +246,9 @@ describe("page-links.targets — a lookup-only collection on the tree oracle", (
         .parse(oracle.view(ROWS_KEY, pointParams()))
         .sort((a, b) => (a.id < b.id ? -1 : 1)),
     ).toEqual([
-      { id: W, linksTo: [X] },
-      { id: X, linksTo: [W] },
-      { id: Y, linksTo: [W] },
+      { id: W, linksTo: [X], linkRanks: {} },
+      { id: X, linksTo: [W], linkRanks: {} },
+      { id: Y, linksTo: [W], linkRanks: {} },
     ]);
 
     // A keystroke burst's `data.text` projection on a content block: the
@@ -252,6 +293,40 @@ describe("page-links.targets — a lookup-only collection on the tree oracle", (
       {
         label: "edge.insert.same-pair",
         statements: [edge(W, X, W_C2)],
+      },
+      [],
+    );
+
+    // A linking block takes a place in the page tree (a link-to-page block's
+    // `doc_rank`, minted by the editor's reconcile): its page's row carries
+    // the rank for that target, refilled alone.
+    await runStep(
+      {
+        label: "link.placed",
+        statements: [
+          `UPDATE page_blocks SET doc_rank = 'a5' WHERE id = ${q(content(W))}`,
+        ],
+      },
+      [{ ids: [W] }],
+    );
+    // A second placed block of the same pair, EARLIER in the document: the
+    // pair's rank is the first one's.
+    await runStep(
+      {
+        label: "link.placed.earlier",
+        statements: [
+          `UPDATE page_blocks SET doc_rank = 'a4' WHERE id = ${q(W_C2)}`,
+        ],
+      },
+      [{ ids: [W] }],
+    );
+    // …and a re-mint of the LATER one changes nothing stored: nothing loads.
+    await runStep(
+      {
+        label: "link.placed.later-re-mint",
+        statements: [
+          `UPDATE page_blocks SET doc_rank = 'a6' WHERE id = ${q(content(W))}`,
+        ],
       },
       [],
     );
@@ -313,7 +388,7 @@ describe("page-links.targets — a lookup-only collection on the tree oracle", (
       PageLinkTargetsRowSchema.array()
         .parse(oracle.view(ROWS_KEY, pointParams()))
         .find((r) => r.id === Y),
-    ).toEqual({ id: Y, linksTo: [X] });
+    ).toEqual({ id: Y, linksTo: [X], linkRanks: {} });
 
     // Trash a SOURCE (Y): it reads not found, and keeps its edges (its
     // content, restored with it).

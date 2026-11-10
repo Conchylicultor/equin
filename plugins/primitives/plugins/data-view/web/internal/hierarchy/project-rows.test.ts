@@ -134,3 +134,66 @@ describe("alias rank minting", () => {
     expect(Rank.compare(aliases[0]!.rank, aliases[1]!.rank)).toBe(-1);
   });
 });
+
+describe("ranked aliases (getAliasRank)", () => {
+  // The pages sidebar: a link block written FIRST in `host` carries a rank in
+  // host's child space (its `docRank`, minted among the sub-pages around it),
+  // so the reference is drawn where the link sits in the document.
+  const ranks: Record<string, string> = { "x>host": "Zz", "y>host": "a0V" };
+  const ranked: HierarchyConfig<Row> = {
+    ...hierarchy,
+    getAliasRank: (r, parent) => {
+      const k = ranks[`${r.id}>${parent}`];
+      return k === undefined ? null : Rank.from(k);
+    },
+  };
+  const projectRanked = (rows: Row[]) =>
+    projectRows({
+      rows,
+      rowKey: (r) => r.id,
+      hierarchy: ranked,
+      expanded: undefined,
+      defaultExpanded: undefined,
+    });
+
+  test("draws a ranked alias among the real children, by rank", () => {
+    const rows = [
+      row("host", null, "a0"),
+      row("c1", "host", "a0"),
+      row("c1kid", "c1", "a0"),
+      row("c2", "host", "a1"),
+      row("otherA", null, "a1"),
+      row("x", "otherA", "a0", ["host"]), // ranked Zz — before c1
+      row("y", "otherA", "a1", ["host"]), // ranked a0V — between c1 and c2
+      row("z", "otherA", "a2", ["host"]), // unranked — after everything
+    ];
+
+    const { projected } = projectRanked(rows);
+    const underHost = projected.filter((p) => p.parentId === "host");
+    expect(underHost.map((p) => realNodeId(p.id))).toEqual([
+      "x",
+      "c1",
+      "y",
+      "c2",
+      "z",
+    ]);
+    // Paint order and rank order agree; the unranked one is minted past all.
+    for (let i = 1; i < underHost.length; i++) {
+      expect(Rank.compare(underHost[i - 1]!.rank, underHost[i]!.rank)).toBe(-1);
+    }
+  });
+
+  test("a ranked alias past every real child is drawn after them, before the unranked", () => {
+    const rows = [
+      row("host", null, "a0"),
+      row("c1", "host", "Zy"),
+      row("otherA", null, "a1"),
+      row("z", "otherA", "a0", ["host"]), // unranked
+      row("y", "otherA", "a1", ["host"]), // ranked a0V
+    ];
+    const { projected } = projectRanked(rows);
+    const underHost = projected.filter((p) => p.parentId === "host");
+    expect(underHost.map((p) => realNodeId(p.id))).toEqual(["c1", "y", "z"]);
+    expect(Rank.compare(underHost[1]!.rank, underHost[2]!.rank)).toBe(-1);
+  });
+});

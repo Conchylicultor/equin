@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
-import { PAGE_BLOCK_TYPE } from "../../core";
+import { pageTreePlacedTypes } from "./block-registry";
 import { _blocks } from "./tables";
 import type { BlockReadExecutor } from "./page-id";
 import type { PageScope } from "./page-forest";
@@ -20,15 +20,22 @@ type RankPath = string[];
 // the live cluster, and the reason the cast in the SQL is load-bearing.
 const DocOrderRowSchema = z.object({
   id: z.string(),
+  type: z.string(),
   page_id: z.string().nullable(),
   rank: z.string(),
   doc_rank: z.string().nullable(),
   path: z.array(z.string()).nullable(),
 });
 
-/** One live page row, with what its sidebar group is ordered by. */
+/**
+ * One live row placed in the page tree (a page, or a type declaring
+ * `pageTreePlace` — a link-to-page block), with what its sidebar group is
+ * ordered by.
+ */
 export interface DocOrderRow {
   id: string;
+  /** Its block type: a page, or another page-tree-placed type. */
+  type: string;
   /** Its sidebar group: the nearest page ancestor (`null` = the root group). */
   pageId: PageScope;
   rank: Rank;
@@ -43,13 +50,14 @@ export interface DocOrderRow {
 }
 
 /**
- * Every LIVE page row of the given sidebar groups (all of them when `pageIds`
+ * Every LIVE page-tree row (`pageTreePlacedTypes`: pages, link-to-page
+ * blocks) of the given sidebar groups (all of them when `pageIds`
  * is absent), each with its rank path — the input the `doc_rank` reconcile
  * orders a group by.
  *
  * Two relations in ONE query, kept strictly apart:
  *
- * - **Membership** is the plain select of live `type="page"` rows, and must
+ * - **Membership** is the plain select of live page-tree-placed rows, and must
  *   NEVER become a function of the traversal. A page whose ancestor chain
  *   cannot resolve still gets a row (with `path: null`): otherwise it would
  *   never be given a `doc_rank` and would leak a NULL into the sidebar.
@@ -96,9 +104,10 @@ export async function docOrderRows(
     row: DocOrderRowSchema,
     query: sql`
     WITH RECURSIVE members AS (
-      SELECT b.id, b.page_id, b.parent_id, b.rank, b.doc_rank
+      SELECT b.id, b.type, b.page_id, b.parent_id, b.rank, b.doc_rank
       FROM ${_blocks} b
-      WHERE b.type = ${PAGE_BLOCK_TYPE} AND b.deleted_at IS NULL
+      WHERE b.type = ANY(${sql.param(pageTreePlacedTypes())}::text[])
+        AND b.deleted_at IS NULL
         AND ${partition}
     ),
     up AS (
@@ -122,7 +131,7 @@ export async function docOrderRows(
     done AS (
       SELECT page_row_id, path FROM up WHERE cursor IS NULL OR cursor = page_id
     )
-    SELECT m.id, m.page_id, m.rank::text AS rank, m.doc_rank::text AS doc_rank,
+    SELECT m.id, m.type, m.page_id, m.rank::text AS rank, m.doc_rank::text AS doc_rank,
            d.path
     FROM members m
     LEFT JOIN done d ON d.page_row_id = m.id
@@ -130,6 +139,7 @@ export async function docOrderRows(
   });
   return rows.map((r) => ({
     id: r.id,
+    type: r.type,
     pageId: r.page_id,
     rank: Rank.from(r.rank),
     docRank: r.doc_rank === null ? null : Rank.from(r.doc_rank),

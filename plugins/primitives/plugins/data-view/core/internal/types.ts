@@ -170,6 +170,16 @@ export interface HierarchyConfig<TRow> {
    */
   getAliasParents?: (row: TRow) => readonly string[];
   /**
+   * Where the alias of `row` under `parentId` sits among that parent's
+   * children: a rank in the same space as {@link getRank} of the parent's
+   * real children (e.g. the pages sidebar: the `docRank` of the link block,
+   * minted in the same group as the sub-pages around it), or `null` for a
+   * reference with no place in the parent's order. A ranked alias is drawn
+   * among the real children by rank; an unranked one (or every one, without
+   * this accessor) after them.
+   */
+  getAliasRank?: (row: TRow, parentId: string) => Rank | null;
+  /**
    * A row present ONLY as a reference: drawn under its alias parents
    * (`getAliasParents`) and never at its own place — a live tree's alias
    * target read by id for an open node, whose own parent is not loaded.
@@ -272,6 +282,12 @@ export interface LiveTreeAliases {
   readonly collection: LiveRowsCollection<unknown> & { readonly id: string };
   /** The ids one parent's edge row references. Erased here; typed by `treeAliases()`. */
   readonly targets: (edges: unknown) => readonly string[];
+  /**
+   * Where one referenced id sits among the parent's children, in the tree's
+   * `rank` space ({@link HierarchyConfig.getAliasRank}); `null` (or absent) =
+   * after the real children. Erased here; typed by `treeAliases()`.
+   */
+  readonly rank?: (edges: unknown, target: string) => Rank | null;
 }
 
 /**

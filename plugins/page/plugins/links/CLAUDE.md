@@ -86,6 +86,14 @@ grouped join is `all`-only, and this is read by id. It keeps only the edges
 into a LIVE page: the join nests the editor's `pageLive` rollup on
 `target_page_id` (below).
 
+- **`linkRanks`** — target → the `doc_rank` of the FIRST placed block linking
+  there (a link-to-page block: the editor's `pageTreePlace`), a second
+  aggregate of the same join, nesting the editor's `page_tree_rank` rollup on
+  `source_block_id`. The sidebar hands it to `treeAliases({ rank })`, so a
+  link alias is drawn where the link is written among the sub-pages; a
+  target linked only inline has no entry (drawn after the sub-pages). A
+  re-mint of a placed block re-aggregates its page's row; it is refilled
+  only when the stored map changed.
 - **One row per SOURCE page**: a `page_links` write — the reindexer's diff,
   an FK cascade — or a target's trash / restore (a `page_live` write, routed
   to every page linking there) re-aggregates its source's stored
@@ -136,8 +144,8 @@ a steady-state reboot writes nothing).
     - `derived-table` "page_link_targets"
     - `trigger` "page.links.reindex"
     - `page.editor.block.onDelete`
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `page/editor` ×9
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `page/editor` ×10
     - `network/live` ×3
     - `database` ×2
     - `infra/events` ×2
@@ -189,6 +197,7 @@ a steady-state reboot writes nothing).
 - Core:
   - Uses:
     - `fields/bool/config.boolField`
+    - `fields/json/config.jsonField`
     - `fields/string-list/config.stringListField`
     - `fields/text/config.textField`
     - `infra/entities.entityRef`
@@ -196,6 +205,7 @@ a steady-state reboot writes nothing).
     - `network/live.liveValue`
     - `network/live/query-resource.compositeKey`
     - `packages/list-bound.wholeList`
+    - `packages/list-bound.wholeRecord`
     - `page/block-entity.pagesEntityRef`
     - `ui/icons/emoji.EmojiSchema`
   - Exports (types):
@@ -204,6 +214,7 @@ a steady-state reboot writes nothing).
     - `PageLinkTargetsRow`
   - Exports (values):
     - `BacklinkRowSchema`
+    - `LinkRanksSchema`
     - `pageBacklinkEdges`
     - `pageBacklinks`
     - `pageLinksEntityRef`

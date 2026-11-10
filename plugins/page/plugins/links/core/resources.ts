@@ -3,8 +3,13 @@ import { compositeKey } from "@plugins/network/plugins/live/plugins/query-resour
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
-import { wholeList } from "@plugins/packages/plugins/list-bound/core";
+import {
+  wholeList,
+  wholeRecord,
+} from "@plugins/packages/plugins/list-bound/core";
 import { stringListField } from "@plugins/fields/plugins/string-list/plugins/config/core";
+import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
+import { z } from "zod";
 import { pagesEntityRef } from "@plugins/page/plugins/block-entity/core";
 import { BacklinkRowSchema } from "./schemas";
 
@@ -47,8 +52,19 @@ export const pageLinkTargets = liveCollection("page-links.targets", {
   // A page row (`page_blocks`) with the ids of the pages it links to — an
   // aggregate of the materialized children join, bound by the server half.
   from: pagesEntityRef,
-  carry: { pick: ["id"], fields: { linksTo: stringListField() } },
-  // Its wire rows stay `{ id, linksTo }`: no exposure of a page folds in.
+  carry: {
+    pick: ["id"],
+    fields: {
+      linksTo: stringListField(),
+      linkRanks: jsonField({
+        schema: wholeRecord(z.string(), {
+          reason:
+            "one page's placed links, one rank per page it links to — as many as linksTo",
+        }),
+      }),
+    },
+  },
+  // Its wire rows stay `{ id, linksTo, linkRanks }`: no exposure of a page folds in.
   baseExposures: false,
   id: "id",
 });

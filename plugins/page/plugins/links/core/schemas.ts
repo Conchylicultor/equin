@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { wholeList } from "@plugins/packages/plugins/list-bound/core";
+import {
+  wholeList,
+  wholeRecord,
+} from "@plugins/packages/plugins/list-bound/core";
 import { EmojiSchema } from "@plugins/ui/plugins/icons/plugins/emoji/core";
 
 // Where the link sits in the source page: an excerpt of the linking block's
@@ -32,12 +35,26 @@ export const BacklinkRowSchema = z.object({
 });
 export type BacklinkRow = z.infer<typeof BacklinkRowSchema>;
 
+// Where the page's link to each target is written, for the targets linked
+// from a block with a place in the page tree (a link-to-page block): the
+// linking block's `doc_rank` — the same rank space as the page's sub-pages,
+// so the sidebar draws the alias among them. A target linked only inline
+// (a `[[mention]]` in a line of text) has no entry; a target linked by
+// several placed blocks keeps the FIRST in document order.
+export const LinkRanksSchema = wholeRecord(z.string(), {
+  reason:
+    "one page's placed links, one rank per page it links to — as many as linksTo",
+});
+
 // One live page and the pages it links TO: the distinct target pages of its
 // `page_links` edges, a self-link excluded, in id order (`[]` for a page that
-// links nowhere). The row of `pageLinkTargets` — the pages sidebar draws each
-// target as a reference child of the page.
+// links nowhere), and where each placed link sits (`linkRanks`). The row of
+// `pageLinkTargets` — the pages sidebar draws each target as a reference child
+// of the page, at its link.
 export const PageLinkTargetsRowSchema = z.object({
   id: z.string(),
   linksTo: z.array(z.string()),
+  linkRanks: LinkRanksSchema,
 });
+
 export type PageLinkTargetsRow = z.infer<typeof PageLinkTargetsRowSchema>;

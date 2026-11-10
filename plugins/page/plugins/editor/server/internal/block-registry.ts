@@ -5,7 +5,12 @@ import {
   type InlineTokenExtension,
   type InlineTokenNodeRef,
 } from "@plugins/primitives/plugins/text-editor/plugins/token-extension/core";
-import type { AgentCodeSpan, BlockHandle, MarkdownSpan } from "../../core";
+import {
+  PAGE_BLOCK_TYPE,
+  type AgentCodeSpan,
+  type BlockHandle,
+  type MarkdownSpan,
+} from "../../core";
 
 // Server-reachable `type → handle` registry. `Editor.Block` is a WEB-only dispatch
 // slot, so nothing on the server could resolve a block type's `data` schema; each
@@ -116,6 +121,22 @@ export function resolveBlockHandle(
     );
   }
   return matches[0];
+}
+
+/**
+ * The block types whose rows take a place in the page tree — the rows a
+ * sidebar group's `doc_rank` orders (invariant I-DR): the page type, plus
+ * every registered type declaring {@link BlockHandle.pageTreePlace} (a
+ * link-to-page block). Read at call time, never memoized, for
+ * {@link blockTextProtectedSpans}' reason; the page type needs no
+ * registration, so a host without the registry still orders its sub-pages.
+ */
+export function pageTreePlacedTypes(): string[] {
+  const out = new Set<string>([PAGE_BLOCK_TYPE]);
+  for (const h of Editor.BlockData.getContributions()) {
+    if (h.pageTreePlace) out.add(h.type);
+  }
+  return [...out].sort();
 }
 
 /**

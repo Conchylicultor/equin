@@ -10,6 +10,7 @@ import type {
 import { useLive } from "@plugins/network/plugins/live/web";
 import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
+import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import type { TreeChildrenState } from "@plugins/primitives/plugins/tree/core";
 
 // The reads of a live tree beyond its root window, each a sibling component
@@ -243,6 +244,15 @@ export function AliasTargetsReader(props: {
 }
 
 /**
+ * One reference a parent draws: the referenced row's id, and where it sits
+ * among the parent's children (`LiveTreeAliases.rank`; `null` = after them).
+ */
+export interface AliasEdge {
+  id: string;
+  rank: Rank | null;
+}
+
+/**
  * One chunk of a level's reference edges (`LiveHierarchyConfig.aliases`):
  * ONE `{ ids }` read of the edge collection for the rows a level holds.
  * Renders nothing; reports, once the read has answered, each asked id's
@@ -256,12 +266,13 @@ export function AliasEdgesReader(props: {
   readKey: string;
   ids: readonly string[];
   targets: (edges: unknown) => readonly string[];
+  rank: ((edges: unknown, target: string) => Rank | null) | undefined;
   onResult: (
     readKey: string,
-    answer: ReadonlyMap<string, readonly string[]>,
+    answer: ReadonlyMap<string, readonly AliasEdge[]>,
   ) => void;
 }): ReactNode {
-  const { collection, readKey, ids, targets, onResult } = props;
+  const { collection, readKey, ids, targets, rank, onResult } = props;
   // Erased: any collection answers `{ ids }` through its `:rows`.
   const read = useLive(collection as AnyCollection, { ids: [...ids] });
   const rows = foldResource(read, {
@@ -272,20 +283,26 @@ export function AliasEdgesReader(props: {
   const idField = collection.id;
   const answer = useMemo(() => {
     if (rows === null) return null;
-    const out = new Map<string, readonly string[]>();
+    const out = new Map<string, readonly AliasEdge[]>();
     for (const id of ids) out.set(id, NO_TARGETS);
     for (const row of rows) {
-      out.set(String((row as Record<string, unknown>)[idField]), targets(row));
+      out.set(
+        String((row as Record<string, unknown>)[idField]),
+        targets(row).map((target) => ({
+          id: target,
+          rank: rank ? rank(row, target) : null,
+        })),
+      );
     }
     return out;
-  }, [rows, ids, idField, targets]);
+  }, [rows, ids, idField, targets, rank]);
   useEffect(() => {
     if (answer !== null) onResult(readKey, answer);
   }, [onResult, readKey, answer]);
   return null;
 }
 
-const NO_TARGETS: readonly string[] = [];
+const NO_TARGETS: readonly AliasEdge[] = [];
 const NO_ROWS: readonly unknown[] = [];
 const LOADING: TreeChildrenState = { kind: "loading" };
 const LOADED: TreeChildrenState = { kind: "loaded" };

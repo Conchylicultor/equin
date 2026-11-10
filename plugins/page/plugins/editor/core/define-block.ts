@@ -425,6 +425,15 @@ export interface BlockHandle<T> {
    */
   displayOnly?: readonly string[];
   /**
+   * This type's rows take a PLACE in the page tree: like a sub-page, the row
+   * is drawn under its page in the Pages sidebar (a link-to-page block, as a
+   * reference to the page it links to), so it is given a `doc_rank` in its
+   * page's sidebar group alongside the sub-pages — document order, one rank
+   * space (invariant I-DR, `server/internal/doc-rank.ts`). The page type is
+   * always placed; nothing else is unless it declares this.
+   */
+  pageTreePlace?: true;
+  /**
    * Enter-split behavior. By default a block splits into a sibling of the same
    * type. A block with this set instead nests the split-off content as its FIRST
    * CHILD *when it is currently expanded* (a collapsed block still splits into a
@@ -495,6 +504,7 @@ export function defineBlock<
   authorFromData?(data: Partial<z.infer<S>>): BlockAuthor | undefined;
   refine?(data: z.infer<S>, ctx: z.RefinementCtx): void;
   displayOnly?: readonly (keyof z.infer<S> & string)[];
+  pageTreePlace?: true;
 }): BlockHandle<z.infer<S>> & TextLens<S> & { anchor: A } {
   // Computed once at definition: text-bearing-ness is a fact of the schema.
   const acceptsText = "text" in opts.schema.shape;
@@ -548,6 +558,7 @@ export function defineBlock<
     authorFromData: opts.authorFromData,
     refine: opts.refine,
     displayOnly: opts.displayOnly,
+    pageTreePlace: opts.pageTreePlace,
   };
   // Neither intersection can be proved from the value, and each states a fact
   // already established above. `TextLens<S>`: the runtime `text` presence tracks

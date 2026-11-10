@@ -12,8 +12,9 @@ import {
   _blocks,
   PAGE_BLOCK_TYPE,
   pageLive,
+  pageTreeRank,
 } from "@plugins/page/plugins/editor/server";
-import type { PageLinkTargetsRow } from "../../core";
+import { LinkRanksSchema, type PageLinkTargetsRow } from "../../core";
 import { _pageLinkTargets } from "./rollup-table";
 import { _pageLinks } from "./tables";
 
@@ -55,13 +56,27 @@ const target = {
   on: _pageLinks.targetPageId,
 } as const satisfies NestedRollupJoin;
 
+/**
+ * Where the edge's linking block sits in its page's sidebar group: the
+ * editor's `page_tree_rank` row, by `source_block_id` — present for a block
+ * that takes a place in the page tree (a link-to-page block), absent (NULL)
+ * for an inline `[[mention]]` inside a line of text. A re-mint of that block's
+ * `doc_rank` (a drag, a block inserted above it) re-aggregates its page's row.
+ */
+const at = {
+  kind: "rollup",
+  alias: "at",
+  rollup: pageTreeRank,
+  on: _pageLinks.sourceBlockId,
+} as const satisfies NestedRollupJoin;
+
 /** Per page, the distinct live pages it links to, stored per page (`page_link_targets`). */
 export const pageLinkTargetsJoin = materializeJoin(
   childrenJoin({
     alias: "links",
     table: _pageLinks,
     fk: _pageLinks.sourcePageId,
-    rollups: [target],
+    rollups: [target, at],
     // A missing `page_live` row (a trashed target) reads NULL.
     where: (c) =>
       sql`${c.links.targetPageId} <> ${c.links.sourcePageId} AND ${c.target.live} IS TRUE`,
@@ -73,6 +88,20 @@ export const pageLinkTargetsJoin = materializeJoin(
           sqlType: "text[]",
           notNull: true,
           ifNone: sql`ARRAY[]::text[]`,
+        },
+      ),
+      // Each placed linking block's rank, per target the FIRST in document
+      // order: ordered so the smallest rank of a target comes last, which
+      // `jsonb_object_agg` keeps for a repeated key. `COLLATE "C"` is rank
+      // order (byte order — `rank_text`'s own collation, which a rollup's
+      // plain `text` column does not carry).
+      ranks: aggregate(
+        sql`coalesce(jsonb_object_agg(${c.links.targetPageId}, ${c.at.docRank} ORDER BY ${c.links.targetPageId}, ${c.at.docRank} COLLATE "C" DESC) FILTER (WHERE ${c.at.docRank} IS NOT NULL), '{}'::jsonb)`,
+        {
+          decoder: parsed(LinkRanksSchema, "page-links.ranks"),
+          sqlType: "jsonb",
+          notNull: true,
+          ifNone: sql`'{}'::jsonb`,
         },
       ),
     }),
@@ -88,6 +117,7 @@ export const linkTargetRowsServeOptions = {
   joins,
   columns: {
     linksTo: (j) => j.links.targets,
+    linkRanks: (j) => j.links.ranks,
   },
 } satisfies ServeCollectionOptions<
   typeof _blocks,
