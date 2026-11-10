@@ -122,6 +122,40 @@ describe("io-health detector", () => {
     expect(steady.raised).toEqual([]);
   });
 
+  test("a sustained FSEvents flood is raised, holds down to its lower bar, and a busy healthy hour is not one", () => {
+    // ids/s per tick: 100k for an hour, 15k (between hold and raise), then 3k.
+    const rate = (i: number) => (i < 120 ? 100_000 : i < 240 ? 15_000 : 3_000);
+    const ids: number[] = [1_000];
+    for (let i = 1; i < 500; i++) ids.push(ids[i - 1]! + rate(i) * 30);
+    const fsev = (i: number): Partial<MonitorTick> => ({
+      fsevents_event_id: ids[i]!,
+      daemon_procs: { fseventsd: { pid: 9, age_s: i * 30, rss_mb: 12 } },
+    });
+    const { raised, cleared, d } = run(500, fsev);
+    expect(raised).toEqual([{ i: T.minTicks, key: "fsevents-flood:fsevents" }]);
+    expect(cleared.map((c) => c.key)).toEqual(["fsevents-flood:fsevents"]);
+    // The 15k stretch holds it (above the hold bar); it clears in the 3k one.
+    expect(cleared[0]!.i).toBeGreaterThan(240);
+    expect(d.active()).toEqual([]);
+
+    // A busy healthy hour: 19k/s (the healthy p99) sustained is no flood.
+    const busy = run(240, (i) => ({
+      fsevents_event_id: 1_000 + i * 19_000 * 30,
+      daemon_procs: { fseventsd: { pid: 9, age_s: i * 30 } },
+    }));
+    expect(busy.raised).toEqual([]);
+  });
+
+  test("only deltas between ticks of the same fseventsd pid are rates", () => {
+    // A new pid on every tick, each counter 1e9 above the last: read across
+    // the relaunches, every delta would be a 3.3e7/s flood. None is a rate.
+    const { d } = run(120, (i) => ({
+      fsevents_event_id: i * 1e9,
+      daemon_procs: { fseventsd: { pid: 100 + i, age_s: 1 } },
+    }));
+    expect(d.active().map((f) => f.rule)).toEqual(["relaunch-loop"]);
+  });
+
   test("cache collapse needs every tick since the canary's read to be quiet", () => {
     const canary = [{ age_s: 90, resident: 0 }];
     const quiet = run(120, () => ({ new_vnodes_s: 50, canary }));

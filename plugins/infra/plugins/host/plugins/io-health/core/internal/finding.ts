@@ -18,6 +18,8 @@ export const IO_HEALTH_RULES = [
   "relaunch-loop",
   /** The file cache drops files within minutes although nothing churns it. */
   "cache-collapse",
+  /** The machine generates file events at a rate no healthy hour reaches (a runaway writer). */
+  "fsevents-flood",
   /** The monitor's root daemon is installed but not the one writing (its plist empty, invalid or unloaded, or it is silent). */
   "root-daemon",
 ] as const;

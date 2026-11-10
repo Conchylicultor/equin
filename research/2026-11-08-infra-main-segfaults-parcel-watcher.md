@@ -95,9 +95,17 @@ const [pkg, addon, secs = 30] = process.argv.slice(2);
 const w = require(path.join(pkg, 'wrapper.js')).createWrapper(require(addon));
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pw-race-'));
 for (let i = 0; i < 200; i++) fs.writeFileSync(path.join(dir, `seed-${i}`), '');
+// The churn child is bounded by its parent and a deadline. The parent is MEANT
+// to die by SIGSEGV, which runs no cleanup: an unbounded loop here was
+// orphaned (ppid 1) three times on 2026-11-09 and made 99 % of the machine's
+// file events for 25 h, until fseventsd grew to 82–97 GB and jetsam killed it
+// twice (research/2026-11-10-global-fseventsd-relapse-orphaned-churn.md).
 const churn = spawn(process.execPath, ['-e', `
   const fs = require('fs'), p = require('path'); const d = ${JSON.stringify(dir)};
-  let i = 0; for (;;) { const f = p.join(d, 'f' + (i++ % 50));
+  const parent = process.ppid, end = Date.now() + ${(Number(secs) + 10) * 1000};
+  for (let i = 0; ; i++) {
+    if (i % 1000 === 0 && (process.ppid !== parent || Date.now() > end)) process.exit(0);
+    const f = p.join(d, 'f' + (i % 50));
     try { fs.writeFileSync(f, ''); fs.unlinkSync(f); } catch {} }`], { stdio: 'ignore' });
 const cb = () => {};
 (async () => {

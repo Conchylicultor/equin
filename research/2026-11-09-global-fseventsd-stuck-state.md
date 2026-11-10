@@ -1,5 +1,17 @@
 # fseventsd pinned at one core since 2026-11-08 15:23Z, at any load
 
+> **Correction (2026-11-10, research/2026-11-10-global-fseventsd-relapse-orphaned-churn.md):**
+> the cause was not the event id crossing 2^32, and the restart was not a
+> fix. A crash repro (research/2026-11-08-infra-main-segfaults-parcel-watcher.md)
+> was first run at 15:22:43Z on 11-08, inside the onset minute. It left its
+> create/unlink churn child orphaned whenever its parent segfaulted. Run again
+> at 12:30Z on 11-09, it left three that made 99 % of the machine's file
+> events for 25 h. fseventsd regrew within an hour, pinned, and jetsam killed
+> it at 82 GB (01:27Z) and 97 GB (09:06Z). Each kill reset the event ids to
+> ~0, and their growth happened far below 2^32. Stopping the loops took
+> fseventsd from 170 % to 2 % CPU at once. The "case (b)" conclusion below
+> held only because the 11-08 loops had stopped by the restart.
+
 Task: task-1794189374 (responsiveness audit, supervisor task-1793965642-94fdhj).
 Follows research/2026-11-09-global-watch-delivery-lag.md (every FSEvents watch
 3–14 s late) and research/2026-11-08-global-fseventsd-event-volume.md.
@@ -89,7 +101,7 @@ below 2^32. What equin controls:
 - The `daemon-cpu` report's what-to-do names the CacheDelete replay check and
   the RSS / event-id reading.
 
-## D12 result (2026-11-09 04:23Z restart): case (b), a one-off
+## D12 result (2026-11-09 04:23Z restart): case (b), a one-off — wrong, see the correction at the top
 
 ### The sample (pid 71649, 16.3 GB footprint, 10 s at 1 ms)
 

@@ -21,7 +21,7 @@ in a file nobody read.
     `WrittenTick` — the line as the monitor writes it, held to the schema by
     tsc (`_WrittenTickParses`, `_ReaderFieldsWritten` in `core/internal/tick.ts`):
     a field the reader adds or renames is a type error in the monitor.
-  - `createIoHealthDetector` — a trailing one-hour window of ticks, six rules
+  - `createIoHealthDetector` — a trailing one-hour window of ticks, every rule
     re-evaluated per tick (`IO_HEALTH_RULES`), each finding's onset carried
     while it holds. Every threshold and the data it was chosen from is on
     `IO_HEALTH_THRESHOLDS` (`core/internal/detect.ts`).
@@ -53,6 +53,7 @@ in a file nobody read.
 | `rename-stall` | the slowest of a tier's 20-rename burst > 250 ms on ≥ 3 ticks | renames wait on the volume's rename serialization, held by any bulk directory-tree mutation (`bun install`, `rm -rf node_modules`): ≤ 14 ms quiet, 0.3–1.3 s under one install (2026-11-05, any I/O tier); main's `renameSync` stalls with it. The finding names the processes in uninterruptible wait at the worst tick |
 | `relaunch-loop` | ≥ 5 distinct pids of one watched daemon | corecaptured made 13–18 an hour; a healthy daemon keeps one pid |
 | `cache-collapse` | canaries read 60–180 s ago mostly evicted although every tick since their read was quiet (< 500 new vnodes/s), ≥ 20 such ticks | the fleet's vnode churn evicts the cache every busy minute (during and after the fix), so only a quiet-machine eviction is news |
+| `fsevents-flood` | median FSEvents ids/s ≥ 20k between ticks of the same fseventsd pid (≥ 40 ticks); holds down to 10k | ≤ 39k on every tick without a runaway writer, builds included (p50 0.7k, p99 19k, 11-09/10); three orphaned create/unlink loops held 50–150k for 25 h and grew fseventsd to 82–97 GB until jetsam killed it twice (research/2026-11-10-global-fseventsd-relapse-orphaned-churn.md). Replayed: raised 30 min after they started, 3 h before fseventsd pinned. Once it pins, its throughput (the id rate) drops to 1–3k/s and `daemon-cpu` carries on |
 | `root-daemon` | the newest tick carries `root_daemon`: the root daemon's plist is installed but it is not the one writing | the opt-in silently does nothing (and, before the user agent stopped deferring to a plist's existence, the whole monitor stopped) |
 
 Deliberately **not** a rule: read ops/s or MB/s against a baseline. They

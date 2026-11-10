@@ -64,6 +64,23 @@ export const IO_HEALTH_THRESHOLDS = {
   renameStallMs: 250,
   /** Held-rename ticks in the hour before it is a finding: one install's burst is load, a stream of them is the defect. */
   renameStallTicks: 3,
+  /**
+   * Hour median FSEvents ids/s (one id per file event, the rate between two
+   * ticks of the same fseventsd). From the monitor's log 2026-11-09 → 11-10:
+   * without a runaway writer every tick stayed ≤ 39k/s (p50 0.7k, p99 19k,
+   * n = 1,214, builds and checks included); with three orphaned
+   * create/unlink loops (a repro's churn child, research/2026-11-10-…) a
+   * healthy fseventsd took 50–150k/s for hours and grew to 82–97 GB before
+   * jetsam killed it. Once it pins at one core its throughput, and so the id
+   * rate, falls to 1–3k/s: this rule sees the flood in the hours BEFORE that,
+   * and `daemon-cpu` takes over after. Like every rule it reads the trailing
+   * hour: after a relaunch (jetsam) or once the writer stops, it holds until
+   * the flood's ticks leave the window. A tick without fseventsd's pid gives
+   * no rate (fseventsd not running: no FSEvents at all).
+   */
+  fseventsFloodIdsS: 20_000,
+  /** Once raised, it holds until the median falls below this. */
+  fseventsFloodHoldIdsS: 10_000,
 } as const;
 
 /** What one tick changed. */
@@ -275,6 +292,67 @@ function renameStall(win: readonly MonitorTick[]): Observation[] {
   ];
 }
 
+/**
+ * FSEvents ids/s between consecutive ticks that both read the id under the
+ * same fseventsd pid. A relaunched fseventsd restarts the counter near 0
+ * (after an unclean exit it destroys its history and takes a new volume
+ * UUID), so a delta across a pid change, or a negative one, is no rate.
+ */
+function fseventsRates(win: readonly MonitorTick[]): number[] {
+  const out: number[] = [];
+  for (let i = 1; i < win.length; i++) {
+    const a = win[i - 1]!;
+    const b = win[i]!;
+    if (a.fsevents_event_id === undefined || b.fsevents_event_id === undefined)
+      continue;
+    const pa = a.daemon_procs?.fseventsd?.pid;
+    const pb = b.daemon_procs?.fseventsd?.pid;
+    if (pa === undefined || pa !== pb) continue;
+    const d = b.fsevents_event_id - a.fsevents_event_id;
+    if (d < 0) continue;
+    out.push(d / (b.t - a.t));
+  }
+  return out;
+}
+
+function fseventsFlood(win: readonly MonitorTick[], held: Held): Observation[] {
+  const rates = fseventsRates(win);
+  const m = median(rates);
+  const bar = held.has(
+    findingKey({ rule: "fsevents-flood", subject: "fsevents" }),
+  )
+    ? T.fseventsFloodHoldIdsS
+    : T.fseventsFloodIdsS;
+  if (m === null || rates.length < T.minTicks || m < bar) return [];
+  const cpu = median(win.flatMap((r) => r.daemon_cpu["fseventsd"] ?? []));
+  const rss = win.at(-1)?.daemon_procs?.fseventsd?.rss_mb;
+  return [
+    {
+      rule: "fsevents-flood",
+      subject: "fsevents",
+      severity: "attention",
+      summary: `Something generates ${fmt(m / 1000, 0)}k file events per second (median of the last hour; no hour without a runaway writer reached 20k)`,
+      evidence: [
+        { label: "FSEvents ids/s (median)", value: fmt(m, 0) },
+        {
+          label: "FSEvents ids/s (max tick)",
+          value: fmt(Math.max(...rates), 0),
+        },
+        { label: "ticks", value: String(rates.length) },
+        {
+          label: "fseventsd %CPU (median)",
+          value: cpu === null ? "-" : fmt(cpu),
+        },
+        {
+          label:
+            "fseventsd resident MB (ps; most of a grown one is compressed)",
+          value: rss === undefined ? "-" : String(rss),
+        },
+      ],
+    },
+  ];
+}
+
 function procsOf(
   r: MonitorTick,
 ): Record<string, { pid: number; age_s: number }> {
@@ -398,6 +476,7 @@ const RULES: ((win: readonly MonitorTick[], held: Held) => Observation[])[] = [
   renameStall,
   relaunchLoop,
   cacheCollapse,
+  fseventsFlood,
   rootDaemon,
 ];
 

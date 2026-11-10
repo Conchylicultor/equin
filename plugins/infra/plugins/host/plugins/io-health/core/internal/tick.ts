@@ -77,6 +77,13 @@ export const MonitorTickSchema = z.object({
   root_daemon: RootDaemonStatusSchema.optional(),
   /** Processes in uninterruptible wait as the tick ran, by name (from 2026-11-05). */
   uninterruptible: z.record(z.string(), z.number()).optional(),
+  /**
+   * The system's current FSEvents event id (from 2026-11-09): one id per
+   * event, so its rate between two ticks of the same fseventsd is the
+   * machine's file-event volume (`fsevents-flood`). It restarts near 0 when
+   * fseventsd is relaunched after an unclean exit (it destroys its history).
+   */
+  fsevents_event_id: z.number().optional(),
 });
 export type MonitorTick = z.infer<typeof MonitorTickSchema>;
 
