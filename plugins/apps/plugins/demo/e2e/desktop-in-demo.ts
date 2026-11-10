@@ -229,6 +229,13 @@ await withBrowser(async (h) => {
     () => dock(page).getByRole("button", { name: "Pages" }).count(),
     (n) => n > 0,
   );
+  for (const name of ["Files", "Places", "Prototypes"]) {
+    await renders(
+      `the dock also keeps ${name} pinned`,
+      () => dock(page).getByRole("button", { name }).count(),
+      (n) => n > 0,
+    );
+  }
   r.eq(
     "no window outside the embed (the page is not in desktop mode)",
     await page.locator("[data-floating-window-id]").count(),

@@ -1,8 +1,11 @@
-// @hash e66707fc7192
+// @hash dccd45b958e0
 {
   "pinnedApps": [
     "pages",
     "agent-manager",
-    "sonata"
+    "sonata",
+    "file-explorer",
+    "places",
+    "prototypes"
   ]
 }
