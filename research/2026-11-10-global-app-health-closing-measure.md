@@ -1,4 +1,4 @@
-# App health, closing 24 h re-measure (after fseventsd "recovered")
+# App health, closing 24 h re-measure (taken under the fseventsd flood)
 
 Task: task-1794319850-v6eeoj. Supervisor session: task-1793826400-nd8if7 (page "App health audit
 (session)", block-d9db5fe2-021b-4868-86aa-ec300efc8f06). Previous measure:
@@ -19,10 +19,19 @@ hours, so they cover 11-09 14:00Z → 11-10 14:00Z (shifted 1.4 min from the win
 Nothing was fixed and no report was taken (decision D23). No `@parcel/watcher` crash
 reproduction was run.
 
-## 0. Read this first: the window was not clean
+## 0. Read this first: the whole window ran under the flood
 
-The brief assumed fseventsd recovered once the orphaned `node -e` loops were killed at 13:58:36Z.
-**The monitor says it did not stay recovered:**
+> **Correction (after the first push):** the brief dated the kill of the orphaned `node -e`
+> churn loops 2026-11-09 13:58:36Z. They were killed on **2026-11-10** at 13:58:36Z
+> (research/2026-11-10-global-fseventsd-relapse-orphaned-churn.md, slow-ops session). Three loops
+> ran from 11-09 12:31Z until that kill, so **this whole window is the flood itself, not a
+> recovered machine.** The loops explain everything in the table below: the ~190 % CPU hours, the
+> 7 floods with their ~1.1 M events/s peak, and both restarts (jetsam kills at 01:27Z and 09:06Z
+> on 11-10). Since the kill, fseventsd is at 2–7 % CPU. **The numbers in this doc are kept as
+> measured; read every one of them as taken under the flood.** A measure on a quiet machine does
+> not exist yet.
+
+What the monitor recorded:
 
 | | |
 | --- | --- |
@@ -32,11 +41,10 @@ The brief assumed fseventsd recovered once the orphaned `node -e` loops were kil
 | volume event-id floods (> 1 M ids/min; normal is 60–250 k/min) | 7 episodes, ~6.4 billion ids in total: 11-09 13:55–15:52Z (~760 M), 18:38–20:40Z (~2.5 B), 11-10 01:27–03:18Z (~930 M), 09:06–10:19Z (~460 M), **13:01–13:58Z (~1.6 B; 13:01–13:24Z ran at ~1.1 M ids/s, ~500× normal)** |
 | no `node -e` / repro process left | confirmed with `ps` |
 
-The floods after 13:58Z cannot be traced to the killed loops: those processes are gone, and two
-of the episodes follow an fseventsd restart (possibly id re-allocation, not file activity). I could
-not attribute them. They are **not excluded** below. Instead, where it matters, a metric is split
-into the 11 "flood hours" (any part of the hour inside an episode) and the 13 "clean hours".
-An investigation of the relapse is already running (conv-1794317642-ha2b68, the slow-ops side).
+Where it matters, a metric is split into the 11 "flood hours" (any part of the hour inside an
+episode) and the 13 "clean hours". Given the correction, the "clean" hours are only the quieter
+hours of the same flood: the loops were running in them too. (My first version said these floods
+could not be traced to the loops; that was wrong, because it relied on the wrong kill date.)
 
 **Traffic was ~4.6× the 11-08 window:**
 
@@ -73,8 +81,8 @@ not drive fseventsd. It was not killed (no fixes in this task).
 | main restarts / deploys that kept the backend | 74 / 0 | — | 6 / 4 of 8 | **39 / 0 of 39** | ⚠ restart-skip could not judge 19 of the 39 (§3.1) |
 | report notifications/day | 687 (216 red) | 371 (32 red) | 156 (59 red) | **768 (43 red)** | red ✅ (0.9/push vs 2.1 baseline); total ✗ (16.7/push, same as 11-08's ~16) |
 
-**Summary.** Every red criterion the audit chased held under 4.6× the traffic and a relapsed
-fseventsd: main never failed to boot, its event loop never stalled over 3 s, it never crashed, and no job died. Red
+**Summary.** Every red criterion the audit chased held under 4.6× the traffic and the
+fseventsd flood: main never failed to boot, its event loop never stalled over 3 s, it never crashed, and no job died. Red
 notifications are down to 43 a day. What did not improve is the yellow volume: 725 warnings,
 almost all "slow operation" from waits that pile up after main's 39 restarts and from the host's
 file-event floods.
@@ -188,7 +196,7 @@ Split by hour type: **5,204 occurrences in the 11 flood hours, 1,898 in the 13 c
   1,370,711 ms: a change heard **22.8 minutes late** (11-10 13:24Z, the end of the largest flood).
 - `bg watch-delivery:kqueue` 44 + 4 `op-time`.
 - `host-io-degraded` 41: "fseventsd has used 166–198 % CPU (median) for the last hour".
-- **Owner:** slow-ops session (conv-1793965643-wr9rnk); relapse investigation conv-1794317642-ha2b68.
+- **Owner:** slow-ops session (conv-1793965643-wr9rnk). Cause: the orphaned `node -e` churn loops, killed 11-10 13:58:36Z (research/2026-11-10-global-fseventsd-relapse-orphaned-churn.md).
 
 ### 3.3 Check-thread stalls: 57/day, all from this session's own new code
 
@@ -283,7 +291,7 @@ because spare refills consume what reaps produce. No cold install happened in 24
 | **this session — latent bug in our fix, fixed before landing** | website dev-build boot crash on `icons.saved-sprites` follows (2 exits + 3 boot-wedge; fixed by 234c1accaa) |
 | **this session — our fix stopped working (another change caused it)** | restart-skip "closure cannot be measured" on 19 of 39 main deploys (no report; feeds §3.1) |
 | **this session — our code, not a regression of the criterion** | check-thread stalls 57 (§3.3); 5 "Came back" ledger entries (partial fixes, §4); plugin-records store 6.7 GB and growing (no report, §5) |
-| slow-ops session (conv-1793965643-wr9rnk) | fseventsd relapse (`host-io-degraded` 41); `watch-delivery:fs-events` 541 / kqueue 44; `wait fs-*` ~1,690; `pages.tree.v2` no-op pushes; the orphaned engine test spinning a core (task-1794190702-eld769) |
+| slow-ops session (conv-1793965643-wr9rnk) | fseventsd flood, cause found and killed 11-10 13:58Z (`host-io-degraded` 41); `watch-delivery:fs-events` 541 / kqueue 44; `wait fs-*` ~1,690; `pages.tree.v2` no-op pushes; the orphaned engine test spinning a core (task-1794190702-eld769) |
 | standing worklist | `wait read-admit` 2,673 / `background-acquire` 580 (the herd; would shrink with restart-skip working); boot budgets 159; ResizeObserver 97; partial-message op-rate 68; live-state wedges 16 (two of 3.6 h and 38 min); transcript-watcher 157; promo-film worktree exits 5; worktree SIGSEGV 1; type-check divergence 2 (task-1794151616-omc11e); db-lock-holder 2 |
 
 ## 7. Decisions for the user
@@ -309,8 +317,9 @@ because spare refills consume what reaps produce. No cold install happened in 24
     in a line, and each wait files a warning.
   - Main restarted on all 39 deploys, partly because the check that should skip a needless
     restart can no longer measure main's code since the website's demo was added.
-  - The rest comes from macOS's file-change service flooding again (up to 500× the normal event
-    rate), which made the app hear some file changes up to 23 minutes late.
+  - The rest comes from macOS's file-change service being flooded the whole day by leftover test
+    loops (up to 500× the normal event rate), which made the app hear some file changes up to
+    23 minutes late. Those loops were killed at the end of the window.
 - **Our own fixes left three loose ends, none of them visible as errors:**
   - a crash of the website's development build, fixed in the same change that exposed it, before it landed;
   - check-run stalls that come from our faster check path;
@@ -324,10 +333,11 @@ because spare refills consume what reaps produce. No cold install happened in 24
 - Two limits of the sources are stated:
   - the hourly buckets are shifted 1.4 min from the window;
   - `job_runs` is pruned to 20 rows per job, so its totals are a floor.
-- The flood hours are counted, not excluded, because I could not trace them to the killed loops.
-- The one regression our fixes caused is named (§2.2), with the commit that fixed it.
+- The flood hours are counted, not excluded. The whole window ran under the flood (see the §0
+  correction), so every number is a measure under the flood.
+- The one defect our fixes caused is named (§2.2), with the commit that fixed it.
 - The one fix that stopped working is named (§3.1).
-- Three things I did not root-cause are said to be unknown:
+- Two things I did not root-cause are said to be unknown:
   - the 3.6 h and 38 min wedges;
   - the worktree segfault;
-  - why fseventsd relapsed.
+  - (the fseventsd flood is now explained by the slow-ops session: the orphaned loops.)
