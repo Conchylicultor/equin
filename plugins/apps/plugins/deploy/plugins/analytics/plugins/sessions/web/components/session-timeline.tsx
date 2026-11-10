@@ -4,7 +4,11 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
-import { Placed } from "@plugins/primitives/plugins/css/plugins/coords/web";
+import {
+  Placed,
+  pct,
+} from "@plugins/primitives/plugins/css/plugins/coords/web";
+import type { LoadTiming } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import {
   Inset,
@@ -17,8 +21,21 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 import { presentEvent, propsText } from "../internal/events";
 import { sourceOf } from "../internal/facts";
 import { clock, countryName, span, timeOfDay } from "../internal/format";
-import { readShare, type JourneyPage } from "../internal/journey";
+import {
+  readShare,
+  sumS,
+  type JourneyPage,
+  type PageAction,
+  type PageGap,
+} from "../internal/journey";
 import { useLaneWindow } from "../internal/lane-context";
+import {
+  loadPhases,
+  seconds,
+  visitLoad,
+  type LoadPhase,
+} from "../internal/load";
+import { GAP_LABEL, GapSwatch } from "./gap-look";
 import { pageTitle } from "./journey-bar";
 
 /** The timeline's three tracks: the step's time · its rail · its card. */
@@ -37,15 +54,17 @@ function PastRail({ children }: { children: ReactNode }): ReactNode {
 }
 
 /**
- * A visit opened: its facts, then each page as a card on a rail — when it
- * opened, how long it was read, the sections reached (with when), the actions
- * in order — and where the visitor left.
+ * A visit opened: its facts and how its page load went, then each page as a
+ * card on a rail — when it opened, how long it was read (and how much of it
+ * active), the sections reached (with when), the actions and the stretches
+ * away in order — and where the visitor left.
  */
 export function SessionTimeline({ session }: { session: Session }): ReactNode {
   const { journeys, sections } = useLaneWindow();
   const journey = journeys.get(session.id);
   if (!journey)
     throw new Error(`[sessions] no journey derived for visit ${session.id}`);
+  const load = visitLoad(session);
   return (
     <Stack gap="sm" className="max-w-[920px]">
       <PastRail>
@@ -72,6 +91,11 @@ export function SessionTimeline({ session }: { session: Session }): ReactNode {
           </Text>
         </Cluster>
       </PastRail>
+      {load !== null && loadPhases(load).length > 0 && (
+        <PastRail>
+          <LoadLine load={load} />
+        </PastRail>
+      )}
       <Stack gap="none">
         {journey.pages.map((page, i) => (
           <Step key={i} at={page.startS} first={i === 0} last={false}>
@@ -103,6 +127,63 @@ export function SessionTimeline({ session }: { session: Session }): ReactNode {
         </PastRail>
       )}
     </Stack>
+  );
+}
+
+const PHASE_FILL: Record<LoadPhase["key"], string> = {
+  server: "bg-primary/40",
+  paint: "bg-primary/65",
+  ready: "bg-primary",
+};
+
+/** The page load: when it was ready, then server → first paint → ready as one bar, each phase keyed. */
+function LoadLine({ load }: { load: LoadTiming }): ReactNode {
+  const phases = loadPhases(load);
+  const totalMs = phases.at(-1)!.endMs;
+  return (
+    <Cluster gap="smd">
+      <Text variant="caption" tone="muted">
+        {load.readyMs !== null ? (
+          <>
+            Loaded in{" "}
+            <b className="font-semibold text-foreground tabular-nums">
+              {seconds(load.readyMs, 2)}
+            </b>
+          </>
+        ) : (
+          "Loaded in a background tab"
+        )}
+      </Text>
+      <Fill className="relative h-2 min-w-[240px] max-w-[420px] rounded-sm bg-accent">
+        {phases.map((p) => (
+          <Placed
+            key={p.key}
+            decorative
+            x={{
+              start: pct(p.startMs / totalMs),
+              size: pct(p.spanMs / totalMs),
+            }}
+            y="fill"
+            className={PHASE_FILL[p.key]}
+          />
+        ))}
+      </Fill>
+      {phases.map((p) => (
+        <Line key={p.key} className="gap-xs">
+          <span
+            aria-hidden
+            className={cn("inline-block size-2 rounded-xs", PHASE_FILL[p.key])}
+          />
+          <Text variant="caption" tone="muted" className="tabular-nums">
+            {p.key === "server"
+              ? `server ${p.endMs} ms`
+              : p.key === "paint"
+                ? `first paint ${seconds(p.endMs, 2)}`
+                : "ready"}
+          </Text>
+        </Line>
+      ))}
+    </Cluster>
   );
 }
 
@@ -170,6 +251,14 @@ function PageCard({
 }): ReactNode {
   const read = readShare(page, known);
   const reachedAt = new Map(page.reached.map((r) => [r.section, r.atS]));
+  const away = page.gaps ? sumS(page.gaps) : 0;
+  // What happened on the page, in time order: its actions and its stretches away.
+  const items: (
+    { at: number; action: PageAction } | { at: number; gap: PageGap }
+  )[] = [
+    ...page.actions.map((action) => ({ at: action.atS, action })),
+    ...(page.gaps ?? []).map((gap) => ({ at: gap.startS, gap })),
+  ].sort((a, b) => a.at - b.at);
   return (
     <Inset y="2xs" b="sm">
       <Surface level="raised" className="shadow-none">
@@ -195,6 +284,12 @@ function PageCard({
               <Fill />
               <Text variant="label" className="tabular-nums">
                 {span(page.durationS)}
+                {away > 0 && (
+                  <span className="font-normal text-faint-foreground">
+                    {" "}
+                    · {span(page.durationS - away)} active
+                  </span>
+                )}
               </Text>
             </Line>
             {known && known.length > 0 && (
@@ -235,36 +330,16 @@ function PageCard({
                 </Text>
               </Line>
             )}
-            {page.actions.length > 0 && (
+            {items.length > 0 && (
               <Inset t="sm" className="border-t border-dashed border-border">
                 <Stack gap="xs">
-                  {page.actions.map((a, j) => {
-                    const ev = presentEvent(a.name);
-                    const props = propsText(a.props);
-                    return (
-                      <Line key={j} className="gap-sm">
-                        <Text
-                          variant="caption"
-                          tone="faint"
-                          className="w-[46px] tabular-nums"
-                        >
-                          +{clock(a.atS)}
-                        </Text>
-                        <Center
-                          axis="both"
-                          className="size-5 rounded-sm bg-primary/15 text-primary-text"
-                        >
-                          <Icon icon={ev.icon} className="size-3" />
-                        </Center>
-                        <Text variant="body">{ev.label}</Text>
-                        {props && (
-                          <Text variant="code" tone="faint">
-                            {props}
-                          </Text>
-                        )}
-                      </Line>
-                    );
-                  })}
+                  {items.map((it, j) =>
+                    "action" in it ? (
+                      <ActionLine key={j} action={it.action} />
+                    ) : (
+                      <GapLine key={j} gap={it.gap} />
+                    ),
+                  )}
                 </Stack>
               </Inset>
             )}
@@ -272,5 +347,43 @@ function PageCard({
         </Inset>
       </Surface>
     </Inset>
+  );
+}
+
+function ActionLine({ action }: { action: PageAction }): ReactNode {
+  const ev = presentEvent(action.name);
+  const props = propsText(action.props);
+  return (
+    <Line className="gap-sm">
+      <Text variant="caption" tone="faint" className="w-[46px] tabular-nums">
+        +{clock(action.atS)}
+      </Text>
+      <Center
+        axis="both"
+        className="size-5 rounded-sm bg-primary/15 text-primary-text"
+      >
+        <Icon icon={ev.icon} className="size-3" />
+      </Center>
+      <Text variant="body">{ev.label}</Text>
+      {props && (
+        <Text variant="code" tone="faint">
+          {props}
+        </Text>
+      )}
+    </Line>
+  );
+}
+
+function GapLine({ gap }: { gap: PageGap }): ReactNode {
+  return (
+    <Line className="gap-sm">
+      <Text variant="caption" tone="faint" className="w-[46px] tabular-nums">
+        +{clock(gap.startS)}
+      </Text>
+      <GapSwatch kind={gap.kind} className="size-5 rounded-sm" />
+      <Text variant="body" tone="muted" className="italic">
+        {GAP_LABEL[gap.kind].label} · {span(gap.endS - gap.startS)}
+      </Text>
+    </Line>
   );
 }

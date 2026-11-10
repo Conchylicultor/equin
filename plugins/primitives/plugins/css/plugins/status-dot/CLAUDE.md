@@ -48,8 +48,8 @@ same paint through `statusDotPaintClass(paint)`.
     - `ui/tokens/density --status-dot-md`
     - `ui/tokens/density --status-dot-sm`
     - `ui/tokens/density --status-dot-xs`
-  - Imported by: 43 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×11
+  - Imported by: 44 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×12
     - `conversations` ×9
     - `debug` ×8
     - `active-data` ×3

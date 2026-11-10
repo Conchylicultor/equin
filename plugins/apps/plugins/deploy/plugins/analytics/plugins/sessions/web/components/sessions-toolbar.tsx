@@ -15,6 +15,8 @@ import type {
 } from "@plugins/primitives/plugins/data-view/core";
 import { axisFrac, axisTicks } from "../internal/axis";
 import { LANE_TRACKS, LaneWindowContext } from "../internal/lane-context";
+import { GAP_KINDS } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
+import { GAP_LABEL, GapSwatch } from "./gap-look";
 
 /**
  * The Sessions list's band: the search, the surface's actions (the shape
@@ -38,7 +40,8 @@ function SessionsToolbar({ search, actions }: ToolbarParts): ReactNode {
 }
 
 /**
- * The shared axis' labelled ticks, in the lanes' own tracks — the inline
+ * The shared axis' labelled ticks, in the lanes' own tracks, with the key to
+ * the stretches away beside them — the inline
  * inset is the rows': a card's hairline, the row's padding, the lane's own.
  */
 function AxisRow(): ReactNode {
@@ -56,7 +59,17 @@ function AxisRow(): ReactNode {
         // The lane's shared tracks (LANE_TRACKS), so each tick stands over the bars.
         className={LANE_TRACKS}
       >
-        <span />
+        {/* The key to the bars' stretches away, in the facts column. */}
+        <Line className="gap-md">
+          {GAP_KINDS.map((k) => (
+            <Line key={k} className="gap-xsm">
+              <GapSwatch kind={k} className="h-[9px] w-4 rounded-xs" />
+              <Text as="span" variant="caption" tone="faint">
+                {GAP_LABEL[k].legend}
+              </Text>
+            </Line>
+          ))}
+        </Line>
         <div className="relative h-4">
           {ticks.map((t, i) => (
             <Placed

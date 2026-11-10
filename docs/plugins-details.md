@@ -2080,6 +2080,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `EventPropsSchema`
                   - `FilterLevelSchema`
                   - `firstRawDay`
+                  - `GAP_KINDS`
                   - `gapsExtentMs`
                   - `GapsSchema`
                   - `GRANULARITIES`
@@ -2281,11 +2282,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`sessions`** — Sessions tab of a site's page, shown only when the deployment's composition ships the collect plugin: one row per anonymous visit (country, time, device and software, source, first visit or returning, channel), its journey on a shared log time axis (pages split by their share of the visit, the read line and section ticks, action icons, each named on hover) with its duration and actions; opening a row shows its timeline (each page, the sections reached and when, the actions in order, the exit). Range, shape switch with per-shape counts, search over the loaded visits; read over SSH as key-range pages that load as the list scrolls. Reads a deployment's visits over SSH through host-query's hostOnlyQueryOverSsh (collect's host-only sessions query, curled through the install's own gateway), one key range per page, and their per-shape counts — or which of SSH, the request or the answer failed.
               - Web:
                 - Contributes: `SiteTabs.View` "Sessions" → `SessionsSection`
-                - Uses: 38 symbols — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md)
+                - Uses: 40 symbols — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md)
                   - `apps/deploy/host-query` ×5
+                  - `primitives/css/ui-kit` ×5
                   - `primitives/data-view` ×5
                   - `primitives/css/coords` ×4
-                  - `primitives/css/ui-kit` ×4
                   - `network/live/live-state` ×2
                   - `primitives/css/spacing` ×2
                   - `apps/deploy/deployments.SiteTabs`
@@ -2296,6 +2297,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/cluster.Cluster`
                   - `primitives/css/fill.Fill`
                   - `primitives/css/line.Line`
+                  - `primitives/css/status-dot.StatusDot`
                   - `primitives/css/surface.Surface`
                   - `primitives/css/text.Text`
                   - `primitives/css/toggle-chip.SegmentedControl`
@@ -2335,11 +2337,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `DeploymentSessionsMetaSchema`
                   - `DeploymentSessionsQuestionSchema`
               - Cross-plugin:
-                - Uses tokens: 23 vars — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md)
-                  - `ui/tokens/color-palette` ×11
+                - Uses tokens: 28 vars — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md)
+                  - `ui/tokens/color-palette` ×14
                   - `ui/tokens/density` ×9
+                  - `ui/tokens/type-scale` ×3
                   - `ui/tokens/shape` ×2
-                  - `ui/tokens/type-scale --font-weight-semibold`
         - **`composition`** — Composition section of the site page's Settings tab: which composition this deployment builds and ships, the shape of it (category, entry points, what it extends, how many contributors are opted in), and a cross-app link into that composition's Studio detail pane where its membership is actually edited.
           - Web:
             - Contributes: `DeploymentDetail.Section` "Composition" → `CompositionSection`
@@ -45660,8 +45662,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --status-dot-md`
               - `ui/tokens/density --status-dot-sm`
               - `ui/tokens/density --status-dot-xs`
-            - Imported by: 43 plugins — full list in [`plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md)
-              - `apps` ×11
+            - Imported by: 44 plugins — full list in [`plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md)
+              - `apps` ×12
               - `conversations` ×9
               - `debug` ×8
               - `active-data` ×3

@@ -1,4 +1,5 @@
 import type {
+  Gap,
   Session,
   SessionHit,
 } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
@@ -6,13 +7,17 @@ import type {
 /**
  * Made-up visits of the equin website — the prototype's own
  * (proto-1794248902-aof7vs), so the exhibit and the mock compare. Each page:
- * path, seconds on it, sections reached `[key, at]`, actions `[name, at, props]`.
+ * path, seconds on it, sections reached `[key, at]`, actions `[name, at, props]`,
+ * and its stretches away `[from, to, kind]` (page seconds); each visit its
+ * first load `[server, first paint, ready]` ms. A visit without stretches or
+ * load is one recorded before the tracker measured them.
  */
 type Page = [
   path: string,
   seconds: number,
   reached: [string, number][],
   actions: [string, number, Record<string, string>?][],
+  gaps?: [number, number, Gap["kind"]][],
 ];
 interface Visit {
   minutesAgo: number;
@@ -24,6 +29,8 @@ interface Visit {
   channel: Session["channel"];
   returning: boolean;
   pages: Page[];
+  /** `[ttfb, fcp, ready]`, each ms or null; absent = not recorded. */
+  load?: [number | null, number | null, number | null];
 }
 
 const PAGE_KEY: Record<string, string> = {
@@ -38,6 +45,7 @@ const PAGE_KEY: Record<string, string> = {
 const VISITS: Visit[] = [
   {
     minutesAgo: 20,
+    load: [140, 620, 910],
     country: "FR",
     device: "Desktop",
     browser: "Chrome",
@@ -61,6 +69,7 @@ const VISITS: Visit[] = [
           ["foundations_card_open", 60, { card: "plugins" }],
           ["improve_show_me", 78],
         ],
+        [[38, 58, "idle"]],
       ],
       [
         "/vision",
@@ -89,6 +98,7 @@ const VISITS: Visit[] = [
   },
   {
     minutesAgo: 32,
+    load: [380, 1650, 2900],
     country: "US",
     device: "Mobile",
     browser: "Safari",
@@ -100,6 +110,7 @@ const VISITS: Visit[] = [
   },
   {
     minutesAgo: 54,
+    load: [95, 480, 720],
     country: "DE",
     device: "Desktop",
     browser: "Firefox",
@@ -121,6 +132,7 @@ const VISITS: Visit[] = [
           ["improve_open", 104],
           ["improve_element_picked", 117],
         ],
+        [[24, 78, "hidden"]],
       ],
       [
         "/apps",
@@ -136,6 +148,7 @@ const VISITS: Visit[] = [
   },
   {
     minutesAgo: 71,
+    load: [610, 1900, 3400],
     country: "JP",
     device: "Desktop",
     browser: "Chrome",
@@ -167,6 +180,7 @@ const VISITS: Visit[] = [
   },
   {
     minutesAgo: 145,
+    load: [520, 1300, 1900],
     country: "KR",
     device: "Desktop",
     browser: "Chrome",
@@ -188,6 +202,10 @@ const VISITS: Visit[] = [
           ["improve_open", 1200],
           ["improve_element_picked", 1260],
         ],
+        [
+          [130, 1150, "hidden"],
+          [1290, 1700, "idle"],
+        ],
       ],
       [
         "/download",
@@ -201,11 +219,13 @@ const VISITS: Visit[] = [
           ["download_copy_macos", 120],
           ["download_open_claude_app", 2400],
         ],
+        [[150, 2360, "hidden"]],
       ],
     ],
   },
   {
     minutesAgo: 1500,
+    load: [160, 700, 1050],
     country: "FR",
     device: "Desktop",
     browser: "Chrome",
@@ -224,6 +244,7 @@ const VISITS: Visit[] = [
           ["apps", 50],
         ],
         [],
+        [[22, 47, "hidden"]],
       ],
       [
         "/vision",
@@ -257,6 +278,7 @@ const VISITS: Visit[] = [
   },
   {
     minutesAgo: 1700,
+    load: [820, 2700, 4600],
     country: "IN",
     device: "Mobile",
     browser: "Chrome",
@@ -279,16 +301,26 @@ export function fixtureSessions(now: number): Session[] {
     const iso = (s: number) => new Date(start + s * 1000).toISOString();
     const hits: SessionHit[] = [];
     let at = 0;
-    for (const [path, seconds, reached, actions] of v.pages) {
+    v.pages.forEach(([path, seconds, reached, actions, gaps = []], i) => {
+      const hiddenS = gaps
+        .filter(([, , kind]) => kind === "hidden")
+        .reduce((a, [from, to]) => a + to - from, 0);
       hits.push({
         ts: iso(at),
         kind: "pageview",
         path,
         eventName: null,
         eventProps: null,
-        engagedMs: seconds * 1000,
-        gaps: null,
-        load: null,
+        engagedMs: (seconds - hiddenS) * 1000,
+        gaps: gaps.map(([from, to, kind]) => ({
+          startMs: from * 1000,
+          endMs: to * 1000,
+          kind,
+        })),
+        load:
+          i === 0 && v.load
+            ? { ttfbMs: v.load[0], fcpMs: v.load[1], readyMs: v.load[2] }
+            : null,
       });
       const events: [number, SessionHit][] = [
         ...reached.map(([key, t]): [number, SessionHit] => [
@@ -320,9 +352,13 @@ export function fixtureSessions(now: number): Session[] {
       ];
       hits.push(...events.sort((a, b) => a[0] - b[0]).map(([, h]) => h));
       at += seconds;
-    }
+    });
     const last = v.pages.at(-1)!;
     const exitAt = iso(at - last[1]);
+    // The exit page's visible time: what the report's duration counts of it.
+    const exitEngagedMs = hits.findLast(
+      (h) => h.kind === "pageview",
+    )!.engagedMs;
     const pageviews = v.pages.length;
     return {
       id: uuid(n + 1),
@@ -336,8 +372,8 @@ export function fixtureSessions(now: number): Session[] {
       entryPath: v.pages[0]![0],
       exitPath: last[0],
       exitAt,
-      exitEngagedMs: last[1] * 1000,
-      durationMs: at * 1000,
+      exitEngagedMs,
+      durationMs: (at - last[1]) * 1000 + exitEngagedMs,
       engagedMs: at * 1000,
       pageviews,
       events: hits.length - pageviews,

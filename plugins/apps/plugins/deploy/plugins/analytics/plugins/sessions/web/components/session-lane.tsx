@@ -16,7 +16,9 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import { countryName, flagOf, span, timeOfDay } from "../internal/format";
 import { softwareLine } from "../internal/facts";
 import { LANE_TRACKS, useLaneWindow } from "../internal/lane-context";
+import { visitLoad } from "../internal/load";
 import { JourneyBar, actionsLabel } from "./journey-bar";
+import { LoadChip } from "./load-chip";
 
 const DEVICE_ICON = {
   Desktop: symbol("computer"),
@@ -26,8 +28,9 @@ const DEVICE_ICON = {
 
 /**
  * One visit's row: who (flag, country, time; device, software, source;
- * first visit or returning, channel) · its journey on the shared axis · how
- * long it lasted and how many actions it held.
+ * first visit or returning, channel, load time) · its journey on the shared
+ * axis · how long it lasted (and how much of it was active, when the stretches
+ * away are recorded and there were some) and how many actions it held.
  */
 export function SessionLane({ session }: { session: Session }): ReactNode {
   const journey = useLaneWindow().journeys.get(session.id);
@@ -76,6 +79,7 @@ export function SessionLane({ session }: { session: Session }): ReactNode {
           <Badge variant="muted" shape="pill">
             {session.channel}
           </Badge>
+          <LoadChip load={visitLoad(session)} />
         </Cluster>
       </Stack>
       <JourneyBar journey={journey} />
@@ -83,6 +87,14 @@ export function SessionLane({ session }: { session: Session }): ReactNode {
         <Text variant="subheading" className="tabular-nums">
           {span(journey.durationS)}
         </Text>
+        {journey.activeS !== null && journey.activeS < journey.durationS && (
+          <Text variant="caption" tone="faint" className="tabular-nums">
+            <span className="font-medium text-muted-foreground">
+              {span(journey.activeS)}
+            </span>{" "}
+            active
+          </Text>
+        )}
         <Text variant="caption" tone={journey.actionCount ? "muted" : "faint"}>
           {actionsLabel(journey.actionCount)}
         </Text>

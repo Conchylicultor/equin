@@ -180,3 +180,72 @@ describe("a truncated visit", () => {
     expect(j.truncated).toBe(true);
   });
 });
+
+describe("stretches away", () => {
+  const gap = (from: number, to: number, kind: "hidden" | "idle") => ({
+    startMs: from * 1000,
+    endMs: to * 1000,
+    kind,
+  });
+  const withGaps = (hit: SessionHit, gaps: SessionHit["gaps"]): SessionHit => ({
+    ...hit,
+    gaps,
+  });
+
+  it("puts each page's stretches on it, and active = time on the pages minus every stretch", () => {
+    // Exit page: 20 s visible, 30 s in the background between.
+    const j = journeyOf(
+      session(
+        [
+          withGaps(pv(0, "/"), [gap(10, 40, "idle")]),
+          withGaps(pv(100, "/vision", 20_000), [gap(5, 35, "hidden")]),
+        ],
+        120_000,
+      ),
+    );
+    expect(j.pages[0]!.gaps).toEqual([{ kind: "idle", startS: 10, endS: 40 }]);
+    // The exit page's background time is added back to its visible time.
+    expect(j.pages[1]!.durationS).toBe(50);
+    expect(j.durationS).toBe(150);
+    expect(j.activeS).toBe(150 - 30 - 30);
+  });
+
+  it("clips a stretch to its page, and drops one wholly past it", () => {
+    const j = journeyOf(
+      session(
+        [
+          withGaps(pv(0, "/"), [gap(50, 120, "hidden"), gap(130, 140, "idle")]),
+          withGaps(pv(100, "/vision", 10_000), []),
+        ],
+        110_000,
+      ),
+    );
+    expect(j.pages[0]!.gaps).toEqual([
+      { kind: "hidden", startS: 50, endS: 100 },
+    ]);
+    expect(j.activeS).toBe(110 - 50);
+  });
+
+  it("recorded with none: active is the whole time", () => {
+    const j = journeyOf(session([withGaps(pv(0, "/", 30_000), [])], 30_000));
+    expect(j.pages[0]!.gaps).toEqual([]);
+    expect(j.activeS).toBe(30);
+  });
+
+  it("not recorded on any page: no stretches, no active time — never 0 s away", () => {
+    const j = journeyOf(
+      session(
+        [withGaps(pv(0, "/"), [gap(0, 10, "idle")]), pv(60, "/vision", 5000)],
+        65_000,
+      ),
+    );
+    expect(j.pages[1]!.gaps).toBeNull();
+    expect(j.activeS).toBeNull();
+    expect(j.durationS).toBe(65);
+  });
+
+  it("a truncated visit's active time is unknown (its unseen tail may hold stretches)", () => {
+    const v = session([withGaps(pv(0, "/"), []), ev(20, "/", "x")], 600_000);
+    expect(journeyOf({ ...v, hitsTruncated: true }).activeS).toBeNull();
+  });
+});

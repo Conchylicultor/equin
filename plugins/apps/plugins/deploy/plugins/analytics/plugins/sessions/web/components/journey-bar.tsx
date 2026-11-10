@@ -20,8 +20,15 @@ import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { axisFrac, axisTicks, pageShares } from "../internal/axis";
 import { presentEvent, propsText } from "../internal/events";
 import { clock, span } from "../internal/format";
-import { readShare, type Journey, type JourneyPage } from "../internal/journey";
+import {
+  readShare,
+  sumS,
+  type Journey,
+  type JourneyPage,
+  type PageGap,
+} from "../internal/journey";
 import { useLaneWindow } from "../internal/lane-context";
+import { GAP_FILL, GAP_LABEL } from "./gap-look";
 
 /** The space between two pages of a bar, in px. */
 const PAGE_GAP = 2;
@@ -76,6 +83,21 @@ export function JourneyBar({ journey }: { journey: Journey }): ReactNode {
             />
           );
         })}
+        {/* Each stretch away names itself on hover: a hit area over its
+            shading (drawn inside the segment, under the page's label). */}
+        {journey.pages.flatMap((page, i) =>
+          (page.gaps ?? []).map((g, j) => (
+            <GapMark
+              key={`${i}:${j}`}
+              gap={g}
+              path={page.path}
+              left={starts[i]! + shares[i]! * pageFrac(page, g.startS)}
+              width={
+                shares[i]! * (pageFrac(page, g.endS) - pageFrac(page, g.startS))
+              }
+            />
+          )),
+        )}
         {/* The actions sit OVER the segments as their siblings (never inside
             a segment's trigger), so hovering one names the action alone. */}
         {journey.pages.flatMap((page, i) =>
@@ -120,6 +142,7 @@ function PageSegment({
   knownSections: readonly string[];
 }): ReactNode {
   const reached = new Set(page.reached.map((r) => r.section));
+  const away = page.gaps ? sumS(page.gaps) : 0;
   return (
     <Tooltip>
       <TooltipTrigger
@@ -143,6 +166,18 @@ function PageSegment({
           />
         }
       >
+        {page.gaps?.map((g, j) => (
+          <Placed
+            key={j}
+            decorative
+            x={{
+              start: pct(pageFrac(page, g.startS)),
+              size: pct(pageFrac(page, g.endS) - pageFrac(page, g.startS)),
+            }}
+            y="fill"
+            className={GAP_FILL[g.kind]}
+          />
+        ))}
         <Placed
           x={{ start: 8, end: 4 }}
           y={{ start: 5 }}
@@ -176,6 +211,12 @@ function PageSegment({
         <Stack gap="2xs">
           <Text variant="label" tone="strong">
             {page.path} · {span(page.durationS)}
+            {away > 0 && (
+              <span className="font-normal text-muted-foreground">
+                {" "}
+                · {span(page.durationS - away)} active
+              </span>
+            )}
           </Text>
           {knownSections.length > 0 && (
             <Stack direction="row" gap="2xs">
@@ -205,6 +246,41 @@ function PageSegment({
 
 export function actionsLabel(n: number): string {
   return n === 0 ? "no action" : `${n} action${n > 1 ? "s" : ""}`;
+}
+
+function GapMark({
+  gap,
+  path,
+  left,
+  width,
+}: {
+  gap: PageGap;
+  path: string;
+  left: number;
+  width: number;
+}): ReactNode {
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <span
+            className={placedClasses()}
+            style={placedStyle({ start: pct(left), size: pct(width) }, "fill")}
+          />
+        }
+      />
+      <TooltipCardContent side="top">
+        <Stack gap="2xs">
+          <Text variant="label" tone="strong">
+            {GAP_LABEL[gap.kind].label} · {span(gap.endS - gap.startS)}
+          </Text>
+          <Text variant="caption" tone="muted">
+            {path} · +{clock(gap.startS)} → +{clock(gap.endS)}
+          </Text>
+        </Stack>
+      </TooltipCardContent>
+    </Tooltip>
+  );
 }
 
 function ActionMark({

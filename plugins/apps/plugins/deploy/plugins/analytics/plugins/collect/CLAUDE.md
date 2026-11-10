@@ -265,6 +265,7 @@ through `web-core`):
     - `EventPropsSchema`
     - `FilterLevelSchema`
     - `firstRawDay`
+    - `GAP_KINDS`
     - `gapsExtentMs`
     - `GapsSchema`
     - `GRANULARITIES`

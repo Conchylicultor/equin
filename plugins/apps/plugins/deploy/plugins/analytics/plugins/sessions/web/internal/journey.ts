@@ -1,6 +1,8 @@
 import {
   SECTION_REACH_EVENT,
   SECTION_REACH_PROP,
+  type Gap,
+  type GapKind,
   type Session,
   type SessionHit,
 } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
@@ -19,6 +21,13 @@ export interface PageAction {
   props: Readonly<Record<string, string>> | null;
 }
 
+/** A stretch nobody was at the page, in seconds from the page's start, inside the page. */
+export interface PageGap {
+  kind: GapKind;
+  startS: number;
+  endS: number;
+}
+
 /** One pageview of a visit, with what happened on it. */
 export interface JourneyPage {
   path: string;
@@ -30,11 +39,23 @@ export interface JourneyPage {
   reached: SectionReach[];
   /** In order; section reaches excluded. */
   actions: PageAction[];
+  /**
+   * When the tab sat in the background or the visitor was idle, in order and
+   * clipped to the page. `null` = not recorded (an older tracker) — never
+   * "none", which is `[]`.
+   */
+  gaps: PageGap[] | null;
 }
 
 export interface Journey {
   pages: JourneyPage[];
   durationS: number;
+  /**
+   * Time on the pages minus every background and idle stretch; `null` when
+   * that is not known — a page without recorded stretches, or a truncated
+   * visit (its unknown tail may hold some).
+   */
+  activeS: number | null;
   actionCount: number;
   /** One pageview — collect's bounce (the Bounced shape). */
   bounced: boolean;
@@ -60,8 +81,10 @@ function reachedSection(hit: SessionHit): string | null {
 /**
  * A visit's hits, as its pages. A page lasts until the next pageview's `ts`;
  * the exit page until the visit's end (the report's `durationMs`: exit −
- * start + the exit page's visible time). Events belong to the pageview before
- * them (one before any pageview, to the first).
+ * start + the exit page's visible time) — plus, when its stretches are
+ * recorded, the time its tab spent in the background, which the visible time
+ * leaves out while every earlier page's wall-clock span counts it. Events
+ * belong to the pageview before them (one before any pageview, to the first).
  */
 export function journeyOf(session: Session): Journey {
   const start = ms(session.startedAt);
@@ -76,6 +99,7 @@ export function journeyOf(session: Session): Journey {
         durationS: 0,
         reached: [],
         actions: [],
+        gaps: hit.gaps === null ? null : hit.gaps.map(gapOf),
       });
     }
     if (pages.length === 0) pending.push(hit);
@@ -89,27 +113,40 @@ export function journeyOf(session: Session): Journey {
       durationS: 0,
       reached: [],
       actions: [],
+      gaps: null,
     });
   }
   for (const hit of pending) attach(pages[0]!, hit);
   const lastHitS = session.hits.length
     ? (ms(session.hits.at(-1)!.ts) - start) / 1000
     : 0;
+  let visitEndS = durationS;
   pages.forEach((page, i) => {
     // The last shown page of a truncated visit is NOT its exit page: it lasts
     // as far as its own hits say, never the rest of the visit.
-    const end =
-      i + 1 < pages.length
-        ? pages[i + 1]!.startS
-        : session.hitsTruncated
-          ? lastHitS
-          : durationS;
+    const last = i + 1 === pages.length;
+    let end = !last
+      ? pages[i + 1]!.startS
+      : session.hitsTruncated
+        ? lastHitS
+        : durationS;
+    if (last && !session.hitsTruncated && page.gaps !== null) {
+      // The exit page's visible time leaves its background stretches out.
+      end += sumS(page.gaps.filter((g) => g.kind === "hidden"));
+      visitEndS = end;
+    }
     page.durationS = Math.max(0, end - page.startS);
+    if (page.gaps !== null) page.gaps = clipGaps(page.gaps, page.durationS);
   });
   const actionCount = pages.reduce((n, p) => n + p.actions.length, 0);
+  const totalS = Math.max(visitEndS, pages.at(-1)!.startS);
+  const known = !session.hitsTruncated && pages.every((p) => p.gaps !== null);
   return {
     pages,
-    durationS: Math.max(durationS, pages.at(-1)!.startS),
+    durationS: totalS,
+    activeS: known
+      ? Math.max(0, totalS - pages.reduce((a, p) => a + sumS(p.gaps!), 0))
+      : null,
     actionCount,
     bounced: session.pageviews <= 1,
     truncated: session.hitsTruncated,
@@ -130,6 +167,26 @@ export function journeyOf(session: Session): Journey {
       props: hit.eventProps,
     });
   }
+}
+
+function gapOf(g: Gap): PageGap {
+  return { kind: g.kind, startS: g.startMs / 1000, endS: g.endMs / 1000 };
+}
+
+/** The stretches inside a page of `durationS`: clipped to it, those wholly past it dropped. */
+function clipGaps(gaps: readonly PageGap[], durationS: number): PageGap[] {
+  return gaps
+    .map((g) => ({
+      ...g,
+      startS: Math.min(g.startS, durationS),
+      endS: Math.min(g.endS, durationS),
+    }))
+    .filter((g) => g.endS > g.startS);
+}
+
+/** How long `gaps` last in all, in seconds. */
+export function sumS(gaps: readonly PageGap[]): number {
+  return gaps.reduce((a, g) => a + (g.endS - g.startS), 0);
 }
 
 /**

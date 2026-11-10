@@ -46,6 +46,7 @@ import { axisMaxS } from "../internal/axis";
 import { sourceOf } from "../internal/facts";
 import { countryName, median, span } from "../internal/format";
 import { journeyOf, sectionsByPath, type Journey } from "../internal/journey";
+import { seconds, visitLoad } from "../internal/load";
 import { LaneWindowContext, type LaneWindow } from "../internal/lane-context";
 import { SessionLane } from "./session-lane";
 import { SessionTimeline } from "./session-timeline";
@@ -283,6 +284,13 @@ export function SessionsList({
   const loaded = [...laneWindow.journeys.values()];
   const med = median(loaded.map((j) => j.durationS));
   const withActions = loaded.filter((j) => j.actionCount > 0).length;
+  // Over the visits whose load got ready on screen; none such → no figure.
+  const medLoad = median(
+    rows.flatMap((s) => {
+      const ready = visitLoad(s)?.readyMs ?? null;
+      return ready === null ? [] : [ready];
+    }),
+  );
 
   return (
     <LaneWindowContext.Provider value={laneWindow}>
@@ -331,6 +339,11 @@ export function SessionsList({
               {med !== null && (
                 <Text variant="caption" tone="muted">
                   median <Strong>{span(med)}</Strong>
+                </Text>
+              )}
+              {medLoad !== null && (
+                <Text variant="caption" tone="muted">
+                  median load <Strong>{seconds(medLoad, 1)}</Strong>
                 </Text>
               )}
               <Text variant="caption" tone="muted">

@@ -57,6 +57,7 @@ export {
   stripQuery,
 } from "./internal/collect-body";
 export {
+  GAP_KINDS,
   GapsSchema,
   IDLE_AFTER_MS,
   appendGap,
