@@ -1,68 +1,58 @@
+import { useMemo } from "react";
 import { useSprites } from "./sprite-store";
 import {
   pageRuntimeSymbols,
   useRuntimeSymbolChunks,
   type RuntimeSymbolStore,
 } from "./runtime-symbol-store";
-import { SHEET_STYLE } from "./sheet-style";
+import { SymbolSheet, type SheetEntry } from "./symbol-sheet";
 
 /**
- * The page's sprites, inline: a hidden container holding one `<svg>` per
- * loaded sprite, so every `<use href="#id">` resolves in-document — inside
- * portals and Fullscreen API subtrees too, which an external `file.svg#id`
- * reference would not reach without a second fetch per document.
- *
- * Zero-size, not `hidden`: a derived active form (the Lucide active sprite's)
- * holds masks, and a mask under a `display: none` ancestor is not rendered —
- * every `<use>` of it would draw nothing.
+ * The page's sprites and saved-icon symbols, inline: one `<svg>` per loaded
+ * sprite and per chunk of the page's runtime symbols (`SymbolSheet` — the
+ * symbols out of every style recalc, their masks rendered).
  *
  * Mounted once, by the sprite host.
  */
 export function IconSpriteSheet() {
   const sprites = useSprites();
-  return (
-    <div aria-hidden style={SHEET_STYLE} data-icon-sprites="">
-      {sprites.map(([key, markup]) => (
-        <div
-          key={key}
-          data-sprite={key}
-          // The markup is the server's own `<svg>` of `<symbol>`s, built from the
-          // Iconify JSON in node_modules — never user input.
-          dangerouslySetInnerHTML={{ __html: markup }}
-        />
-      ))}
-      <RuntimeSymbolChunks store={pageRuntimeSymbols} />
-    </div>
+  const runtime = useRuntimeSymbolChunks(pageRuntimeSymbols);
+  const entries = useMemo(
+    (): SheetEntry[] => [
+      ...sprites.map(([key, markup]) => ({
+        key,
+        markup,
+        attribute: "data-sprite" as const,
+      })),
+      ...runtimeEntries(runtime),
+    ],
+    [sprites, runtime],
   );
+  return <SymbolSheet entries={entries} attribute="data-icon-sprites" />;
 }
 
 /**
- * A plugin scope's saved-icon symbols, inline and zero-size like the page's
- * sheet: rendered inside the scope by whoever gives it its store (the sprites
- * plugin's `ScopeIconSymbols`). Its ids carry the store's prefix, so it never
- * repeats one of the page's sheet.
+ * A plugin scope's saved-icon symbols, inline like the page's sheet: rendered
+ * inside the scope by whoever gives it its store (the sprites plugin's
+ * `ScopeIconSymbols`). Its ids carry the store's prefix, so it never repeats
+ * one of the page's sheet.
  */
 export function RuntimeSymbolSheet({ store }: { store: RuntimeSymbolStore }) {
+  const runtime = useRuntimeSymbolChunks(store);
+  const entries = useMemo(() => runtimeEntries(runtime), [runtime]);
   return (
-    <div aria-hidden style={SHEET_STYLE} data-runtime-symbol-sheet="">
-      <RuntimeSymbolChunks store={store} />
-    </div>
+    <SymbolSheet entries={entries} attribute="data-runtime-symbol-sheet" />
   );
 }
 
-function RuntimeSymbolChunks({ store }: { store: RuntimeSymbolStore }) {
-  const runtime = useRuntimeSymbolChunks(store);
-  return (
-    <>
-      {runtime.map(([chunkId, markup]) => (
-        <div
-          key={chunkId}
-          data-runtime-symbols={chunkId}
-          // The server's own `<svg>` of `<symbol>`s, built from the Iconify JSON
-          // for names it checked against the installed sets — never user markup.
-          dangerouslySetInnerHTML={{ __html: markup }}
-        />
-      ))}
-    </>
-  );
+// The server's own `<svg>` of `<symbol>`s, built from the Iconify JSON for
+// names it checked against the installed sets — never user markup.
+function runtimeEntries(
+  chunks: readonly (readonly [string, string])[],
+): SheetEntry[] {
+  return chunks.map(([key, markup]) => ({
+    key,
+    markup,
+    attribute: "data-runtime-symbols",
+  }));
 }

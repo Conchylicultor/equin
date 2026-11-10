@@ -84,8 +84,10 @@ cycle. So the pieces around it are wired in, not imported:
   `:root`; before anything is published the default applies. One publisher per
   scope — a second throws.
 - **Sprites** — the `sprites` sub-plugin fills the sprite store
-  (`provideSprite`) and mounts `IconSpriteSheet`, an inline hidden container of
-  one `<svg>` per sprite, so `<use href="#id">` resolves in-document (portals
+  (`provideSprite`) and mounts `IconSpriteSheet`, an inline container of
+  one `<svg>` per sprite (its symbols under `display: none`, so no style
+  recalc visits their thousands of elements; the masks they reference lifted
+  into a zero-size rendered subtree — `web/internal/symbol-sheet.tsx`), so `<use href="#id">` resolves in-document (portals
   and Fullscreen subtrees included).
 
 Until the wanted style's sprite has loaded, `<Icon>` draws the **default
@@ -248,10 +250,11 @@ Two `<mask>`s do the cut (SVG has no boolean geometry), so a form carries mask
 ids: written with `ACTIVE_ID_TOKEN` and placed (`placeActiveIds`) by whoever
 puts it in the page — the sheet under the symbol id, an inline (animated)
 `<Icon>` under its own `useId`, so no two copies share an id. A mask under
-`display: none` is not rendered: the sheets are **zero-size, never `hidden`**
-(`web/internal/sheet-style.ts`). Each part keeps its ancestors (`<g>` with a
-transform, a paint, a motion) copied around it, so a moving part's fill and
-its cut-out move together. A glyph with no outer closed shape (a chevron, a
+`display: none` is not rendered, so a sheet's symbols sit under `display: none`
+(out of every style recalc) but their masks are lifted into a zero-size
+**rendered** subtree, ids unchanged (`web/internal/symbol-sheet.tsx`). Each part keeps its
+ancestors (`<g>` with a transform, a paint, a motion) copied around it, so a
+moving part's fill and its cut-out move together. A glyph with no outer closed shape (a chevron, a
 list) has no active form and draws the same; so does a `paint: "fill"` glyph.
 
 - **Inline families** derive it in `defineIconFamily`; a glyph's own `active`

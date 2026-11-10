@@ -29,7 +29,8 @@ import {
  * written with {@link ACTIVE_ID_TOKEN} and placed (`placeActiveIds`) by
  * whoever puts it in the page: the sheet under its symbol id, an inline
  * `<Icon>` under an id of its own. A mask under `display: none` is not
- * rendered, so the sheets holding these forms are zero-size, not hidden.
+ * rendered, so a sheet lifts these masks out of its hidden symbols into a
+ * zero-size rendered subtree (the icons web `SymbolSheet`).
  *
  * Each part keeps its place in the tree — its ancestors (`<g>`s carrying a
  * transform, a paint, a motion) are copied around it — so a moving part's
