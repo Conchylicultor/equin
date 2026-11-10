@@ -168,12 +168,13 @@ export function buildBaseComponents(
     },
     pre: ({ children }) => <>{children}</>,
     table: (p) => (
-      // A table wider than the text column grows past it on both sides, centred
-      // on it, as far as its host's bleed region allows (a transcript's pane:
-      // `<Scroll bleed>`), and only beyond that scrolls sideways in its own box,
-      // so the host never has to: only the table moves. Outside a region it
-      // stays the column's width. clear-both: a table cannot wrap around a
-      // float — it starts below it.
+      // A table wraps its cells to fit the text column; only one that cannot
+      // fit (its min-content is wider) grows past it on both sides, centred,
+      // by as little as it needs, as far as its host's bleed region allows (a
+      // transcript's pane: `<Scroll bleed>`), and only beyond that scrolls
+      // sideways in its own box, so the host never has to: only the table
+      // moves. Outside a region it stays the column's width. clear-both: a
+      // table cannot wrap around a float — it starts below it.
       <Scroll axis="x" bleed className="my-flow-block clear-both">
         <table className="w-full border-collapse" {...p} />
       </Scroll>

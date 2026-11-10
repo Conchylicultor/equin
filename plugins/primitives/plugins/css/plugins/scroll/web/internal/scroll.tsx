@@ -81,11 +81,12 @@ export interface ScrollProps extends React.HTMLAttributes<HTMLElement> {
    * scroller's width. Set it on a pane whose content is a centred column
    * narrower than the pane (a transcript's reading measure).
    *
-   * `x` axis: this sideways scroller bleeds — inside a bleed region it is as
-   * wide as the region, its content centred on the column it sits in, growing
-   * past the column on both sides as far as the region allows and scrolling
-   * sideways only beyond that. Its content is never narrower than the column.
-   * Outside a region it stays the column's width.
+   * `x` axis: this sideways scroller bleeds — inside a bleed region, content
+   * that fits the column (wrapping as it can) stays the column's width;
+   * content that cannot (its min-content is wider) grows past the column on
+   * both sides, centred, by as little as it needs, up to the region's width,
+   * and scrolls sideways only beyond that. Outside a region it stays the
+   * column's width.
    */
   bleed?: boolean;
 }

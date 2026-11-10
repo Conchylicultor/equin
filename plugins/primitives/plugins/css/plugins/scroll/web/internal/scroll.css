@@ -46,12 +46,15 @@
      inherited as pixels — and is itself an inline-size container, so below it
      `100cqi` is the column's width.
    - The scroller takes the region's width, centred on the column.
-   - Its content (`data-bleed-content`) is never narrower than the column,
-     never wider than the region (less a gutter each side), and as wide as its
-     content wants in between, centred: it grows past the column on BOTH
-     sides, and being no wider than the scroller it never passes its left edge.
-     Content wider still overflows it to the right: that, and only that,
-     scrolls. No padding is involved, so nothing scrolls while it all fits.
+   - Its content (`data-bleed-content`) is the column's width whenever what
+     it holds fits the column (a table wraps its cells to fit, never widens
+     to keep them on one line). Only content that cannot fit — its
+     min-content is wider than the column — bleeds, and only as far as that
+     min-content: it overflows the column as little as possible, centred, on
+     BOTH sides, never wider than the region (less a gutter each side), and
+     being no wider than the scroller it never passes its left edge. Content
+     wider still overflows it to the right: that, and only that, scrolls. No
+     padding is involved, so nothing scrolls while it all fits.
 
    Assumes the column is centred in the region (`mx-auto`), which is what a
    region is for. */
@@ -82,7 +85,7 @@
 
     :where([data-bleed-content]) {
       flex: none;
-      width: max-content;
+      width: min-content;
       min-width: 100cqi;
       max-width: calc(var(--bleed-region-width) - 2 * var(--space-sm));
     }
