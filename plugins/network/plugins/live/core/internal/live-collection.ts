@@ -309,6 +309,7 @@ export interface LiveCollection<
   Row,
   F,
   S extends string,
+  Tr extends LiveTree | null = LiveTree | null,
 > extends LiveRowsCollection<Row> {
   /** A window's id is one row field: its tiebreaker and its cuts read it. */
   id: keyof Row & string;
@@ -350,16 +351,30 @@ export interface LiveCollection<
    * filterable column holding the parent's id, `null` at a root) and `rank`
    * (a sortable column ordering siblings). Its rows carry `$childCount`
    * ({@link TreeRow}) and it mints `${key}:ancestors` ({@link ancestors}).
-   * `null` = not a tree.
+   * `null` = not a tree. `Tr` (any tree, or none, by default) is what
+   * `liveCollection` mints: the declared tree, or `null`.
    */
-  tree: LiveTree | null;
+  tree: Tr;
   /**
    * `${key}:ancestors` — a tree collection's closure read: a set of SEED ids
    * (the point codec) answering those rows and every ancestor of them, up
    * the `parent` column (`useLive(c, { …, include: "ancestors" })` composes
    * it). `null` unless the collection is declared `tree`.
+   *
+   * Derived from `Tr` HERE, never re-declared beside the interface (`… & {
+   * ancestors: PointQueryResourceContract<Row> }`): a minted collection's
+   * type must name its row ONCE. Declaration emit spells an anonymous row
+   * literal out at every mention, so a second mention in a `.d.ts` is a
+   * second, distinct type to a program that reads it — and `serveCollection`
+   * inferred `Row` from both, as their intersection, where a whole program
+   * holds one type and keeps the row's alias (type-check-divergence on
+   * page/editor and tasks-core `server/internal/resources.ts`).
    */
-  ancestors: PointQueryResourceContract<Row> | null;
+  ancestors: [Tr] extends [null]
+    ? null
+    : [Tr] extends [LiveTree]
+      ? PointQueryResourceContract<Row>
+      : PointQueryResourceContract<Row> | null;
   /** A whole ordered set is the `all` overload's ({@link LiveAllCollection}). */
   all?: never;
 }
@@ -424,28 +439,25 @@ export type LiveCollectionOf<
           : WithContributedColumns<TreeRow<Row>>,
         F,
         S,
-        Cn
-      > & {
-        tree: LiveTree<Tr["parent"], Tr["rank"]>;
-        ancestors: PointQueryResourceContract<
-          [Ex] extends [undefined]
-            ? TreeRow<Row>
-            : WithContributedColumns<TreeRow<Row>>
-        >;
-      }
+        Cn,
+        LiveTree<Tr["parent"], Tr["rank"]>
+      >
     : LiveCollectionShapeOf<
         [Ex] extends [undefined] ? Row : WithContributedColumns<Row>,
         F,
         S,
-        Cn
-      > & { tree: null; ancestors: null };
+        Cn,
+        null
+      >;
 
 /** {@link LiveCollectionOf} over its final row, but its tree facet. */
-type LiveCollectionShapeOf<Row, F, S extends string, Cn> = LiveCollection<
+type LiveCollectionShapeOf<
   Row,
   F,
-  S
-> &
+  S extends string,
+  Cn,
+  Tr extends LiveTree | null,
+> = LiveCollection<Row, F, S, Tr> &
   (Cn extends true ? { count: LiveCountDescriptor<F> } : { count: null }) & {
     arms: null;
   };
@@ -457,8 +469,9 @@ type LiveCollectionShapeOf<Row, F, S extends string, Cn> = LiveCollection<
 export type LiveTreeCollection<Row, F, S extends string> = LiveCollection<
   Row,
   F,
-  S
-> & { tree: LiveTree; ancestors: PointQueryResourceContract<Row> };
+  S,
+  LiveTree
+>;
 
 /**
  * What a window declaration may name as its `tree` (tsc): `parent` a
@@ -507,11 +520,9 @@ export type LiveArmsCollection<
   F,
   S extends string,
   D extends keyof Row & string = keyof Row & string,
-> = LiveCollection<WithContributedColumns<Row>, F, S> & {
+> = LiveCollection<WithContributedColumns<Row>, F, S, null> & {
   arms: LiveArms<D>;
   count: null;
-  tree: null;
-  ancestors: null;
 };
 
 /**
