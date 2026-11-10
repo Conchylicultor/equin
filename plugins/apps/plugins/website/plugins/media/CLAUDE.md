@@ -11,7 +11,7 @@ asset mirror (`infra/asset-mirror`):
   machine and serves it same-origin — with byte ranges, so the video seeks.
 - `prewarm/` declares every file the site shows, so `./equin release` bundles
   them: a deployed site serves the film from its first visitor on, never a
-  70 MB fetch from GitHub on someone's first click.
+  fetch from GitHub on someone's first click.
 - `core/` exports `showcaseFilm` (`video` / `poster` as `AssetPath`s, resolved
   with `useAssetSrc`) — what `landing/hero` renders.
 
@@ -20,8 +20,10 @@ asset mirror (`infra/asset-mirror`):
 A mirrored file is cached once and served immutable, so **a new render is a new
 file name, never a re-upload under the same one**:
 
-1. Render it (`promo-film`'s `film.ts` writes `~/Downloads/showcase/equin-v<N>.mp4`).
-2. `gh release upload website-media -R Conchylicultor/equin equin-v<N>.mp4 equin-v<N>-poster.jpg`
+1. Render it: `promo-film`'s `film.ts` writes the master
+   `~/Downloads/showcase/equin-v<N>.mp4` and, beside it, the web version
+   `equin-v<N>-web.mp4` (~16 MB, faststart) — the site serves the web one.
+2. `gh release upload website-media -R Conchylicultor/equin equin-v<N>-web.mp4 equin-v<N>-web-poster.jpg`
    (the poster: a frame of the film, `ffmpeg -ss <t> -i … -frames:v 1 -q:v 3`).
 3. Point `FILM_FILE` / `FILM_POSTER_FILE` in `core/media.ts` at them.
 

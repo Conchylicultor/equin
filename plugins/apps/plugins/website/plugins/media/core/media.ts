@@ -16,8 +16,8 @@ export const WEBSITE_MEDIA_MIRROR_ID = "website-media";
 export const WEBSITE_MEDIA_REMOTE_BASE =
   "https://github.com/Conchylicultor/equin/releases/download/website-media";
 
-const FILM_FILE = "equin-v15.mp4";
-const FILM_POSTER_FILE = "equin-v15-poster.jpg";
+const FILM_FILE = "equin-v20-web.mp4";
+const FILM_POSTER_FILE = "equin-v20-web-poster.jpg";
 
 /** Every file the site shows, so a release bundles them (`prewarm/`). */
 export const WEBSITE_MEDIA_FILES: AssetMirrorPrewarm["files"] = [
@@ -26,8 +26,9 @@ export const WEBSITE_MEDIA_FILES: AssetMirrorPrewarm["files"] = [
 ];
 
 /**
- * The showcase film (`apps/website/promo-film`'s render) and its poster — a
- * frame of the film's desktop pull-back — as what a `<video>` loads.
+ * The showcase film — `apps/website/promo-film`'s web render (`-web.mp4`:
+ * ~16 MB, faststart, beside the ~70 MB master) — and its poster, a frame of
+ * the film's desktop montage, as what a `<video>` loads.
  */
 export const showcaseFilm: {
   readonly video: AssetPath;

@@ -8,7 +8,7 @@ import {
 /**
  * Prewarm seed for the website's media: a release bundles every file the site
  * shows, so a deployed site serves the film from its first visitor on — never
- * a 70 MB download from GitHub on that visitor's first click.
+ * a download from GitHub on that visitor's first click.
  */
 export default defineAssetMirrorPrewarm({
   id: WEBSITE_MEDIA_MIRROR_ID,
