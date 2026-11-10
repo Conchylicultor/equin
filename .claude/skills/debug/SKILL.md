@@ -57,7 +57,7 @@ Slow Events **Aggregates** tab.
   lock/backend picture. Slow under load but fast under isolated `EXPLAIN ANALYZE`
   ⇒ **contention**, not a bad plan.
 → [`plugins/debug/plugins/health-monitor/CLAUDE.md`](../../../plugins/debug/plugins/health-monitor/CLAUDE.md) · trace engine [`plugins/debug/plugins/trace/CLAUDE.md`](../../../plugins/debug/plugins/trace/CLAUDE.md)
-For a full root-cause pass follow the [Debugging / Performance instruction](http://equin.localhost:9000/pages/page/block-76280bce-efc5-4bd5-ad07-c578636c19b9) page (a global instruction).
+For a full root-cause pass follow the [`perfs-investigation`](../perfs-investigation/SKILL.md) skill.
 
 ### Stale UI — a server change doesn't reach an open tab until refresh
 The bug is in the client live-state pipeline (WS → cross-tab leader election →

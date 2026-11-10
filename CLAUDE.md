@@ -307,7 +307,7 @@ This is the single most important coding principle:
 
   **Beware fixes that hide the issue instead of fixing it** — the symptom goes away, the cause stays, and the next occurrence is harder to trace:
 
-  - **A deadline on a slow op** → find out why it is slow (trace to the origin — the global *Debugging / Performance instruction* page).
+  - **A deadline on a slow op** → find out why it is slow (trace to the origin — `perfs-investigation` skill).
   - **A retry on a failing op** → find out why it fails; a retry turns a deterministic bug into a flaky one.
   - **A cache over a slow path** → find out why the path is slow first. A cache is fine as a complement once the path itself is sound — never as the thing that hides why it is slow.
   - **Raising a limit, cap or timeout because it got hit** → find out why the work grew past the bound.

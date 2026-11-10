@@ -16,7 +16,7 @@ structure-only) fix design →
 **Read this first.** It supersedes the framing in
 [`2026-06-29-conversation-load-40s-fanout-herd.md`](./archive/2026-06-29-conversation-load-40s-fanout-herd.md)
 (that doc's lower-layer findings are correct but it stopped two layers too low — see "Discarded/superseded" below).
-Follow the [Debugging / Performance instruction](http://equin.localhost:9000/pages/page/block-76280bce-efc5-4bd5-ad07-c578636c19b9) page: **re-validate, do not inherit.**
+Follow the [`perfs-investigation`](../../.claude/skills/perfs-investigation/SKILL.md) skill: **re-validate, do not inherit.**
 
 ---
 
