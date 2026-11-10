@@ -1,28 +1,59 @@
 diff --git a/index.js b/index.js
-index 78ee744d74900c39a839cafa46b295258fc86307..75613c7548f7ad2c38bd5013654fdce6f1b9db54 100644
+index 78ee744d74900c39a839cafa46b295258fc86307..2e5f5773aeb602007084326e488e0fae5ee594c4 100644
 --- a/index.js
 +++ b/index.js
-@@ -11,13 +11,18 @@ if (process.platform === 'linux') {
+@@ -11,22 +11,43 @@
    }
  }
  
-+// equin: a local build (build/Release) wins over the prebuilt package. The
-+// prebuild is upstream's unpatched source; infra/file-watcher's
-+// `parcel-watcher-addon` dependency compiles this patched source and
-+// `./equin build` links it here. Without that link (a checkout never built,
-+// another platform) the prebuild loads, as upstream does.
++// equin: on macOS only the patched addon loads. infra/file-watcher's
++// `parcel-watcher-addon` dependency compiles this patched source; `./equin
++// build`, and `./equin test` / `./equin run` after an install re-created this
++// package, link it into build/Release. Upstream's darwin prebuild is never a
++// fallback: its kqueue backend diffs a directory into tables a `subscribe` on
++// another thread is writing, unlocked, and leaks descriptors. A test process
++// that loaded it while the link was missing spun 31 h in a corrupted hash
++// table's rehash, its main thread waiting in ~KqueueBackend (2026-11-10). So a
++// missing link is an error that says how to fix it. Other platforms load the
++// prebuild, as upstream does.
  let binding;
- try {
+-try {
 -  binding = require(name);
-+  binding = require('./build/Release/watcher.node');
- } catch (err) {
-   handleError(err);
+-} catch (err) {
+-  handleError(err);
++if (process.platform === 'darwin') {
    try {
--    binding = require('./build/Release/watcher.node');
-+    binding = require(name);
+     binding = require('./build/Release/watcher.node');
    } catch (err) {
      handleError(err);
++    throw new Error(
++      `@parcel/watcher: the patched addon is not linked into this checkout (${__dirname}/build/Release/watcher.node is missing: the package was re-installed since it was linked). Run \`./equin build\`; \`./equin test\` and \`./equin run\` link it too. Upstream's prebuild is never loaded on macOS: its kqueue backend races and leaks descriptors.`,
++    );
++  }
++} else {
++  try {
++    binding = require(name);
++  } catch (err) {
++    handleError(err);
      try {
+-      binding = require('./build/Debug/watcher.node');
++      binding = require('./build/Release/watcher.node');
+     } catch (err) {
+       handleError(err);
+-      throw new Error(
+-        `No prebuild or local build of @parcel/watcher found. Tried ${name}. Please ensure it is installed (don't use --no-optional when installing with npm). Otherwise it is possible we don't support your platform yet. If this is the case, please report an issue to https://github.com/parcel-bundler/watcher.`,
+-      );
++      try {
++        binding = require('./build/Debug/watcher.node');
++      } catch (err) {
++        handleError(err);
++        throw new Error(
++          `No prebuild or local build of @parcel/watcher found. Tried ${name}. Please ensure it is installed (don't use --no-optional when installing with npm). Otherwise it is possible we don't support your platform yet. If this is the case, please report an issue to https://github.com/parcel-bundler/watcher.`,
++        );
++      }
+     }
+   }
+ }
 diff --git a/src/DirTree.cc b/src/DirTree.cc
 index b7eddd8cd659b7447c37724ec50066e7ef66bc4f..43ef113848982e0f945f0183f8471c8b45211dc9 100644
 --- a/src/DirTree.cc

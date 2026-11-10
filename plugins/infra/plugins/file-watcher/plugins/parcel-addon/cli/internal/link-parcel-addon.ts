@@ -3,7 +3,7 @@ import { builtFile } from "@plugins/infra/plugins/deps/plugins/build/deps";
 import { cliExecContext } from "@plugins/infra/plugins/jobs/plugins/supervised-job/cli";
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { copyFile, mkdir, rename } from "node:fs/promises";
-import { readFile } from "@plugins/packages/plugins/timed-fs/core";
+import { readFile, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { constants } from "node:fs";
 import { join } from "node:path";
 import { parcelWatcherAddon, parcelWatcherPackageDir } from "../../deps";
@@ -51,6 +51,45 @@ export async function linkParcelWatcherAddon(opts: {
   const staged = `${target}.${process.pid}.tmp`;
   await copyFile(built, staged, constants.COPYFILE_FICLONE);
   await rename(staged, target);
+}
+
+/**
+ * {@link linkParcelWatcherAddon}, only when the checkout has no linked addon —
+ * for the commands that run this checkout's code without a build first
+ * (`./equin test`, `./equin run`).
+ *
+ * The missing file is exactly the case to repair: an install that re-creates
+ * `@parcel/watcher` (a patch or version change re-creates it, and a fresh
+ * checkout has none) drops `build/Release/`, and the patched `index.js`
+ * refuses to load anything else on darwin. Without this, every test or script
+ * after such an install failed — and before that refusal it silently ran
+ * upstream's racy prebuild: an `./equin test` of the file-watcher engine
+ * wedged 31 h in its kqueue backend (2026-11-10). One stat when linked.
+ */
+export async function ensureParcelWatcherAddonLinked(opts: {
+  root: string;
+  log: (line: string) => void;
+}): Promise<void> {
+  if (process.platform !== "darwin") return;
+  const target = join(
+    await parcelWatcherPackageDir(opts.root),
+    "build",
+    "Release",
+    "watcher.node",
+  );
+  if (await exists(target)) return;
+  opts.log(`Linking the patched @parcel/watcher addon (${target} is missing)…`);
+  await linkParcelWatcherAddon(opts);
+}
+
+async function exists(path: string): Promise<boolean> {
+  try {
+    await stat(path);
+    return true;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return false;
+    throw err;
+  }
 }
 
 /** Whether `target` exists and holds exactly `source`'s bytes. */

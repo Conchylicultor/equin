@@ -112,6 +112,8 @@ export const RUNTIME_WITHHELD_ENV = {
     "marks a supervised build that must outlive its backend, set by the backend for the build it spawns (build/server run-build.ts)",
   FOREGROUND_DEADLINE:
     "the instant (epoch ms) an agent's foreground Bash call is cut off; a PreToolUse guard exports it into that one command, and the op hand-off takes it out of the env of the op it detaches (cli/op-runtime foreground-handoff.ts)",
+  TEST_HEARTBEAT:
+    "the file a bun:test process stamps with its awake clock every 30 s, set by `./equin test` for the runner it spawns so it can tell a run whose event loop stopped (cli/test run.ts, test/bun-preload.ts)",
   OP_HANDED_OFF:
     "marks an op detached by the foreground hand-off, meant to outlive the call that started it; set by the hand-off for that one op (cli/op-runtime foreground-handoff.ts), read by its orphan guard",
   BUILD_IN_PROGRESS:

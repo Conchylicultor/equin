@@ -28622,7 +28622,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `blocking-fs/sync-named` — `shared/entrypoints.ts` (sanctioned)
         - **`run`** — `./equin run <script.ts> [args…]` — run a repo script against THIS worktree's own dependencies; the correct spelling of `bun <file>`, which silently resolves another checkout's installed tree.
           - Cli:
-            - Uses: `framework/cli/op-runtime.withDirectOp`
+            - Uses:
+              - `framework/cli/op-runtime.withDirectOp`
+              - `infra/file-watcher/parcel-addon.ensureParcelWatcherAddonLinked`
         - **`serve-app`** — `./equin serve-app` — boot a packaged app's full runtime (gateway + embedded Postgres + app DB) under an isolated EQUIN_DIR. The one detachable command: it is meant to outlive the shell that launched it.
           - Cli:
             - Uses: `infra/jobs/supervised-job.cliExecContext`
@@ -28649,7 +28651,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `TestRunnerOutcome`
               - `TestStatus`
             - Exports (values):
+              - `formatLoopHeartbeat`
+              - `LOOP_HEARTBEAT_EVERY_MS`
+              - `LOOP_STOPPED_AFTER_MS`
               - `parseJunit`
+              - `parseLoopHeartbeat`
               - `readLatestTestStatus`
               - `readTestStatus`
               - `testFailureLines`
@@ -28658,6 +28664,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `framework/cli/op-runtime.DirectOpFlight`
               - `framework/cli/op-runtime.withDirectOp`
+              - `infra/file-watcher/parcel-addon.ensureParcelWatcherAddonLinked`
           - Cross-plugin:
             - Imported by:
               - `framework/cli/await`
@@ -33102,7 +33109,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`parcel-addon`** — @parcel/watcher's native addon built from the repo's patched source (its kqueue backend closes the descriptor of a watched file that is deleted or renamed): the parcel-watcher-addon build dependency, and the step ./equin build runs to copy it into the checkout's @parcel/watcher when the installed bytes differ.
           - Cli:
             - Uses: `infra/jobs/supervised-job.cliExecContext`
-            - Exports (values): `linkParcelWatcherAddon`
+            - Exports (values):
+              - `ensureParcelWatcherAddonLinked`
+              - `linkParcelWatcherAddon`
           - Deps:
             - Uses:
               - `infra/deps.defineDep`
@@ -33115,6 +33124,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `framework/cli/build`
               - `framework/cli/release`
+              - `framework/cli/run`
+              - `framework/cli/test`
     - **`git`** — Umbrella for the two plugins that answer 'has git state moved, and must I read it again?': the ref watcher that reports every advance, and the signature-keyed memo that skips a gated recompute when a cheap probe says nothing changed.
       - Plugins:
         - **`checkout-watch`** — The checkout watch hub: acquireCheckoutWatch(root, { refs, onChange }) hears every change that can move a git checkout's state — its working tree and its git dir (HEAD, index, and the refs the reader names beside its own branch; a linked worktree's git dir and the common refs live outside it) — each change tagged worktree or git, refcounted per checkout over the shared directory-watch hub, each reader's reaction coalesced (one running plus one pending).
@@ -34431,8 +34442,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `setEnvDefault`
               - `unsetEnv`
           - Cross-plugin:
-            - Imported by: 45 plugins — full list in [`plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md`](../plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md)
-              - `framework` ×17
+            - Imported by: 46 plugins — full list in [`plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md`](../plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md)
+              - `framework` ×18
               - `infra` ×11
               - `database` ×4
               - `packages` ×4
@@ -38997,6 +39008,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `debug/health-monitor`
           - `debug/profiling/op-log`
+          - `framework/cli/test`
           - `infra/file-watcher`
           - `infra/host/machine-sleep`
           - `infra/spawn`

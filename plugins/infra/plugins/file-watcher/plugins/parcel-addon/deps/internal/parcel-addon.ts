@@ -121,7 +121,8 @@ function darwinOnly(
  * plugin's `package.json` (the Node-API headers' version) and
  * `$CXX --version`. `./equin build` ensures it and copies it into the
  * checkout's `@parcel/watcher/build/Release/`, which the patched `index.js`
- * loads ahead of the prebuild (`linkParcelWatcherAddon`, the `cli/` barrel).
+ * loads on darwin in place of the prebuild, which it never falls back to
+ * (`linkParcelWatcherAddon` / `ensureParcelWatcherAddonLinked`, the `cli/` barrel).
  *
  * It takes no host admission: it is awaited inside `build`, which already
  * holds its host grant, so queuing for a background unit could wait on the

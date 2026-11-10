@@ -1,5 +1,8 @@
 import { rmSync } from "fs";
 import { join, relative, resolve } from "path";
+import { ensureParcelWatcherAddonLinked } from "@plugins/infra/plugins/file-watcher/plugins/parcel-addon/cli";
+import { envName } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+import { readAwakeClock } from "@plugins/packages/plugins/sleep-clock/core";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import {
   withDirectOp,
@@ -8,11 +11,18 @@ import {
 import { cpuBudget } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import {
   getWorktreeRoot,
+  spawnCaptured,
   spawnPassthrough,
 } from "@plugins/infra/plugins/spawn/core";
-import { worktreeArtifacts } from "@plugins/infra/plugins/paths/core";
 import {
+  worktreeArtifacts,
+  worktreeDataDir,
+} from "@plugins/infra/plugins/paths/core";
+import { SAMPLE } from "@plugins/infra/plugins/paths/server";
+import {
+  LOOP_STOPPED_AFTER_MS,
   parseJunit,
+  parseLoopHeartbeat,
   readTestStatus,
   testFailureLines,
   writeTestStatus,
@@ -85,15 +95,148 @@ async function enumerateTests(
 // is what makes a concatenated transcript attributable to a runner. `env`
 // carries the host grant, so a runner that spawns workers of its own spends
 // the units this op holds rather than acquiring host-wide again.
+//
+// `loop` (bun:test): the runner's event loop is watched through the preload's
+// heartbeat (core loop-heartbeat.ts). A loop stopped for LOOP_STOPPED_AFTER_MS
+// of awake time is a wedge nothing else can end — bun's own per-test timeout
+// runs on that loop — so its stack is sampled into `loop.samplePath`, the
+// runner is killed, and the run fails naming the sample. Never a wall-clock
+// bound: a slow run whose loop turns runs as long as it needs.
 async function runRunner(
   name: string,
   argv: string[],
   root: string,
   env: Record<string, string | undefined>,
-): Promise<number> {
+  loop?: { heartbeatPath: string; samplePath: string },
+): Promise<{ exitCode: number; wedged: string | null }> {
   console.log(`\n── ${name} ──`);
-  const { exitCode } = await spawnPassthrough(argv, { cwd: root, env });
-  return exitCode;
+  // Set from `onSpawn`, a callback: a holder, so the reads below are not
+  // narrowed to the initial null.
+  const armed: { watch: LoopWatch | null } = { watch: null };
+  try {
+    const { exitCode } = await spawnPassthrough(argv, {
+      cwd: root,
+      env:
+        loop === undefined
+          ? env
+          : { ...env, [envName("TEST_HEARTBEAT")]: loop.heartbeatPath },
+      onSpawn: (child) => {
+        if (loop !== undefined) armed.watch = watchLoop(name, child, loop);
+      },
+    });
+    armed.watch?.cancel();
+    return { exitCode, wedged: (await armed.watch?.end()) ?? null };
+  } finally {
+    armed.watch?.cancel();
+  }
+}
+
+interface LoopWatch {
+  /** The run is over: the sample path when it was declared wedged, else null. */
+  end(): Promise<string | null>;
+  cancel(): void;
+}
+
+/**
+ * Arm the loop-stopped bound on a spawned runner: a one-shot timer, re-armed
+ * from each heartbeat to fire when that beat turns LOOP_STOPPED_AFTER_MS old
+ * (in awake time), never a poll. Where the awake clock does not exist (off
+ * darwin) nothing is armed, and that is said once.
+ */
+function watchLoop(
+  name: string,
+  child: { pid: number; kill: (signal: NodeJS.Signals) => void },
+  loop: { heartbeatPath: string; samplePath: string },
+): LoopWatch {
+  const spawnedAt = awakeNow();
+  if (spawnedAt === null) {
+    console.log(
+      `(${name}: no awake clock on this platform — a stopped event loop is not detected)`,
+    );
+    return { end: () => Promise.resolve(null), cancel: () => {} };
+  }
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  // Settled into a result as it happens, so a sampler that threw is never an
+  // unhandled rejection before the runner's exit lets `end` read it.
+  let wedging: Promise<
+    { ok: true; samplePath: string } | { ok: false; error: unknown }
+  > | null = null;
+  // A check that cannot read the heartbeat cannot vouch for the runner: it is
+  // killed, and the run ends with that error (rethrown from `end`) — never an
+  // uncaught throw in a timer, never a runner left unwatched.
+  let broken: { error: unknown } | null = null;
+  const lastBeat = (): number => {
+    if (!existsSync(loop.heartbeatPath)) return spawnedAt;
+    return parseLoopHeartbeat(readFileSync(loop.heartbeatPath, "utf8"));
+  };
+  const check = (): void => {
+    timer = null;
+    let idle: number;
+    try {
+      idle = (awakeNow() ?? spawnedAt) - lastBeat();
+    } catch (error) {
+      broken = { error };
+      child.kill("SIGKILL");
+      return;
+    }
+    if (idle < LOOP_STOPPED_AFTER_MS) {
+      timer = setTimeout(check, LOOP_STOPPED_AFTER_MS - idle);
+      return;
+    }
+    wedging = declareWedged(name, child, loop.samplePath, idle).then(
+      (samplePath) => ({ ok: true as const, samplePath }),
+      (error: unknown) => ({ ok: false as const, error }),
+    );
+  };
+  timer = setTimeout(check, LOOP_STOPPED_AFTER_MS);
+  return {
+    end: async () => {
+      if (broken !== null) throw broken.error;
+      if (wedging === null) return null;
+      const wedged = await wedging;
+      if (!wedged.ok) throw wedged.error;
+      return wedged.samplePath;
+    },
+    cancel: () => {
+      if (timer !== null) clearTimeout(timer);
+      timer = null;
+    },
+  };
+}
+
+function awakeNow(): number | null {
+  const clock = readAwakeClock();
+  return clock.supported ? clock.awakeMs : null;
+}
+
+/** Sample the stopped runner's stack, then kill it; resolves to the sample's path. */
+async function declareWedged(
+  name: string,
+  child: { pid: number; kill: (signal: NodeJS.Signals) => void },
+  samplePath: string,
+  idleMs: number,
+): Promise<string> {
+  const minutes = (idleMs / 60_000).toFixed(1);
+  console.error(
+    `\n${name} (pid ${child.pid}) is WEDGED: its event loop has not turned for ${minutes} min of awake time, so no test timeout can fire. Sampling its stack to ${samplePath}, then killing it.`,
+  );
+  // `sample` is macOS's, as is the awake clock that got us here. Its failure
+  // is reported (a non-zero exit) or rethrown (a spawn that threw) — and in
+  // either case the wedged runner is killed first: the kill is unconditional.
+  try {
+    const sampled = await spawnCaptured(
+      [SAMPLE, String(child.pid), "10", "-file", samplePath],
+      { timeoutMs: 60_000 },
+    );
+    if (sampled.exitCode !== 0) {
+      console.error(
+        `(sample exited ${sampled.exitCode}${sampled.signalCode ? ` (${sampled.signalCode})` : ""}: ${sampled.stderr.trim()})`,
+      );
+    }
+  } finally {
+    child.kill("SIGKILL");
+  }
+  return samplePath;
 }
 
 /**
@@ -106,8 +249,14 @@ function runnerOutcome(
   exitCode: number,
   files: readonly string[],
   reportPath: string,
+  wedged: string | null = null,
 ): TestRunnerOutcome {
   const failures: string[] = [];
+  if (wedged !== null) {
+    failures.push(
+      `(${runner} wedged: its event loop stopped for ${LOOP_STOPPED_AFTER_MS / 60_000} min and it was killed; stack sampled to ${wedged})`,
+    );
+  }
   const unreported: string[] = [];
   if (existsSync(reportPath)) {
     const report = parseJunit(readFileSync(reportPath, "utf8"));
@@ -257,6 +406,13 @@ const run: CliAction<[string[]], object> = async (paths) => {
     (grant, ctx) =>
       withRunTmpdir(async (scratch) => {
         const env = { ...process.env, ...grant.env(), ...tmpdirEnv(scratch) };
+        // Suites load @parcel/watcher, whose patched index.js refuses to run
+        // without the patched addon on darwin: an install since the last build
+        // dropped it, so put it back first (one stat when it is there).
+        await ensureParcelWatcherAddonLinked({
+          root,
+          log: (line) => console.log(line),
+        });
         // The run's machine-readable record, written before either runner starts
         // so a killed run reads `running` rather than a previous run's verdict.
         // `toolchain upgrade` compares two of these, before and after.
@@ -278,7 +434,7 @@ const run: CliAction<[string[]], object> = async (paths) => {
           "vitest",
         );
 
-        const bunExit =
+        const bunRun =
           bun.length > 0
             ? await runRunner(
                 "bun:test",
@@ -291,12 +447,21 @@ const run: CliAction<[string[]], object> = async (paths) => {
                 ],
                 root,
                 env,
+                {
+                  // In the run's scratch root: gone with the run.
+                  heartbeatPath: join(scratch, "bun-test-loop-heartbeat"),
+                  samplePath: join(
+                    worktreeDataDir(slug),
+                    `test-wedged-${ctx.opId}-bun-sample.txt`,
+                  ),
+                },
               )
             : null;
+        const bunExit = bunRun?.exitCode ?? null;
         // `bun x vitest` resolves the repo's own vitest and honors its
         // `#!/usr/bin/env node` shebang — the same runtime `bun run test:dom`
         // gives it. `vitest run` picks up the root `vitest.config.ts` from `cwd`.
-        const domExit =
+        const domRun =
           dom.length > 0
             ? await runRunner(
                 "vitest",
@@ -317,6 +482,7 @@ const run: CliAction<[string[]], object> = async (paths) => {
                 env,
               )
             : null;
+        const domExit = domRun?.exitCode ?? null;
 
         // The summary names BOTH buckets, always — an empty one is stated, never
         // implied by silence. That line is the whole reason this command exists:
@@ -344,7 +510,13 @@ const run: CliAction<[string[]], object> = async (paths) => {
         ].filter((name): name is string => name !== null);
         if (bunExit !== null)
           status.runners.push(
-            runnerOutcome("bun:test", bunExit, bun, bunReport),
+            runnerOutcome(
+              "bun:test",
+              bunExit,
+              bun,
+              bunReport,
+              bunRun?.wedged ?? null,
+            ),
           );
         if (domExit !== null)
           status.runners.push(runnerOutcome("vitest", domExit, dom, domReport));

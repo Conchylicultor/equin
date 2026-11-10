@@ -11,3 +11,9 @@ export type {
   TestRunnerOutcome,
   TestStatus,
 } from "./internal/test-status";
+export {
+  LOOP_HEARTBEAT_EVERY_MS,
+  LOOP_STOPPED_AFTER_MS,
+  formatLoopHeartbeat,
+  parseLoopHeartbeat,
+} from "./internal/loop-heartbeat";

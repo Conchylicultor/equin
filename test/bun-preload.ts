@@ -1,5 +1,5 @@
 import { declareRuntimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
-import { readFileSync } from "node:fs";
+import { readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   PLUGINS_DIR,
@@ -8,6 +8,39 @@ import {
 } from "@plugins/infra/plugins/paths/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import type { ServerContribution } from "@plugins/framework/plugins/server-core/core";
+import {
+  readEnv,
+  unsetEnv,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+import { readAwakeClock } from "@plugins/packages/plugins/sleep-clock/core";
+import {
+  LOOP_HEARTBEAT_EVERY_MS,
+  formatLoopHeartbeat,
+} from "@plugins/framework/plugins/cli/plugins/test/core";
+
+// The loop heartbeat `./equin test` asked for (cli/test core loop-heartbeat.ts):
+// the awake clock, stamped while this process's event loop turns, so the runner
+// can tell a test stuck in native code — which bun's own per-test timeout,
+// enforced on this same loop, can never time out — from a slow one. Armed
+// before anything else the preload does (until the first stamp the runner
+// counts from the spawn), and unref'd: it never holds the process
+// open. Only under the runner (a hand-run `bun test` has nobody reading it).
+const heartbeatPath = readEnv("TEST_HEARTBEAT");
+// This process's own: a `bun test` a suite spawns must not stamp the same file
+// (it would keep a wedged parent looking alive).
+unsetEnv("TEST_HEARTBEAT");
+if (heartbeatPath !== undefined) {
+  const beat = (): void => {
+    const clock = readAwakeClock();
+    if (!clock.supported) return;
+    // Beside, then renamed over: the runner never reads a half-written stamp.
+    const staged = `${heartbeatPath}.${process.pid}.tmp`;
+    writeFileSync(staged, formatLoopHeartbeat(clock.awakeMs));
+    renameSync(staged, heartbeatPath);
+  };
+  beat();
+  setInterval(beat, LOOP_HEARTBEAT_EVERY_MS).unref();
+}
 
 // `bun test` preload (registered in the root bunfig.toml `[test]` section).
 //

@@ -46,6 +46,27 @@ The two classification failures (a file in neither scope, no files at all) are
 refused **before** the op, so a wrong path never queues for a host slot to be
 told it was wrong.
 
+## A runner whose event loop stopped is ended, loudly
+
+bun enforces each test's timeout on the test process's own event loop, so a
+test stuck in native code is never timed out — and a handed-off run then
+lives forever: on 2026-11-09 a file-watcher run spun 31 h in a native addon
+(the JS thread waiting in a destructor), holding its host CPU slot, until a
+human killed it. So the bun:test preload stamps the **awake** clock into a
+heartbeat file every 30 s (`EQUIN_TEST_HEARTBEAT`, set by this command), and
+the runner arms a one-shot timer re-armed from each stamp: a loop that has not
+turned for 10 min of awake time is wedged — its stack is `sample`d into
+`test-wedged-<opId>-bun-sample.txt` in the worktree data dir, it is killed,
+and the run fails naming the sample (`core/internal/loop-heartbeat.ts`).
+
+The loop, never the wall clock: a wall-clock ceiling on an op misfired under
+host duress and killed healthy builds
+(`research/2026-07-28-global-retire-op-wedge-watchdog.md`); duress slows a
+turning loop by seconds, and a slow run runs as long as it needs. Awake time,
+so a machine that slept mid-run is not a stopped loop. darwin only (the awake
+clock); elsewhere the run says it is not watched. vitest is not watched: its
+tests run in its own worker pool.
+
 ## A run's scratch dirs die with the run
 
 Both runners get `TMPDIR` (and `TMP` / `TEMP`) pointed at a run-scoped root,
@@ -98,7 +119,11 @@ queueing for a grant, writes its own record (the leader's runners,
     - `TestRunnerOutcome`
     - `TestStatus`
   - Exports (values):
+    - `formatLoopHeartbeat`
+    - `LOOP_HEARTBEAT_EVERY_MS`
+    - `LOOP_STOPPED_AFTER_MS`
     - `parseJunit`
+    - `parseLoopHeartbeat`
     - `readLatestTestStatus`
     - `readTestStatus`
     - `testFailureLines`
@@ -107,6 +132,7 @@ queueing for a grant, writes its own record (the leader's runners,
   - Uses:
     - `framework/cli/op-runtime.DirectOpFlight`
     - `framework/cli/op-runtime.withDirectOp`
+    - `infra/file-watcher/parcel-addon.ensureParcelWatcherAddonLinked`
 - Cross-plugin:
   - Imported by:
     - `framework/cli/await`
