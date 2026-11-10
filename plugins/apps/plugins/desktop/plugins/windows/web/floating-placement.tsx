@@ -1,5 +1,11 @@
 import { DESKTOP_PLACEMENT_ID } from "@plugins/apps/plugins/desktop/plugins/shell/core";
-import { useCallback, useEffect, useLayoutEffect, useMemo } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+} from "react";
 import { Apps } from "@plugins/apps-core/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
@@ -32,7 +38,12 @@ import {
 import { type MergeTarget } from "./components/window-system-menu";
 import { DesktopBackdrop } from "./components/desktop-backdrop";
 import { FloatingForeground } from "./components/floating-foreground";
-import { CLOSE_MS, useFloatingWindowStyle } from "./hooks/use-window-motion";
+import {
+  CLOSE_MS,
+  FULLSCREEN_MS,
+  useFloatingWindowStyle,
+  usePrefersReducedMotion,
+} from "./hooks/use-window-motion";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const webAssetIcon = symbol("web-asset");
@@ -140,6 +151,11 @@ function FloatingChrome({
   // (display:none, kept mounted) so a desktop switch is instant with no remount.
   const onActiveDesktop = win.desktopId === activeDesktopId;
 
+  // Full screen is played in two steps (see `goSolo` below): first the window
+  // grows to the whole desk — a style change on this one box, so it starts on
+  // the frame after the click — then the surface switches to solo.
+  const [growing, setGrowing] = useState(false);
+
   const { containerStyle, hidden } = useFloatingWindowStyle(
     win,
     tabId,
@@ -147,10 +163,21 @@ function FloatingChrome({
     windowClosing,
     focused,
     onActiveDesktop,
+    growing,
   );
+  // Growing to full screen, the content slides up over the titlebar (which
+  // fades) in step with the box, so it is already where solo puts it.
   const insetStyle = useMemo(
-    () => (hidden ? { display: "none" } : { top: WINDOW_TITLEBAR_INSET }),
-    [hidden],
+    () =>
+      hidden
+        ? { display: "none" }
+        : growing
+          ? {
+              top: 0,
+              transition: `top ${FULLSCREEN_MS}ms cubic-bezier(0.2, 0.8, 0.2, 1)`,
+            }
+          : { top: WINDOW_TITLEBAR_INSET },
+    [hidden, growing],
   );
   useLayoutEffect(() => {
     setContainerStyle(containerStyle);
@@ -180,12 +207,31 @@ function FloatingChrome({
   // action bar's Layout control, returns to windows mode (the mode we came
   // from). In an `AppEmbed`'s desktop the tab fills the embed box, its tab
   // set's viewport. Only where a solo placement is registered.
+  //
+  // The switch itself is a whole-surface commit (the wallpaper, shelf and every
+  // other window unmount), so it is not what the click does: the click only
+  // sets `growing`, the window sweeps out to the whole desk, and the switch
+  // runs once it is there — where solo's container sits too, so the hand-off
+  // is invisible. Reduced motion switches at once.
   const placements = usePlacementRegistry().useValue();
   const canGoSolo = placements?.ids.has("solo") ?? false;
-  const goSolo = useCallback(() => {
+  const reducedMotion = usePrefersReducedMotion();
+  const enterSolo = useCallback(() => {
     focusTab(win.activeTabId);
     setMode("solo");
   }, [focusTab, setMode, win.activeTabId]);
+  const goSolo = useCallback(() => {
+    if (reducedMotion) enterSolo();
+    else setGrowing(true);
+  }, [reducedMotion, enterSolo]);
+  // The grow's settle: one deferred hand-off per grow (the same one-shot
+  // settle timer the motion layer ends its tweens with), cancelled if the
+  // window goes away first.
+  useEffect(() => {
+    if (!growing) return;
+    const t = setTimeout(enterSolo, FULLSCREEN_MS);
+    return () => clearTimeout(t);
+  }, [growing, enterSolo]);
   const onFullscreen = canGoSolo ? goSolo : undefined;
 
   // Inactive members render no chrome (one titlebar per window). Their container
@@ -329,6 +375,7 @@ function FloatingChrome({
       onCloseWindow={onCloseWindow}
       onTogglePin={togglePin}
       onFullscreen={onFullscreen}
+      fullscreening={growing}
       mergeTargets={mergeTargets}
       onMergeInto={onMergeInto}
       onSplit={onSplit}

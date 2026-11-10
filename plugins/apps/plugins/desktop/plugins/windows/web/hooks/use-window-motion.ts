@@ -45,6 +45,24 @@ import {
 
 /** Box geometry tween (snap / maximize / restore / tile). */
 const BOX_MS = 220;
+/**
+ * The grow-to-full-screen tween: the window's box sweeps out to the whole desk
+ * (the box tween's own timing), after which the chrome hands the tab to the
+ * solo placement — a swap the user cannot see, the box already being there.
+ */
+export const FULLSCREEN_MS = BOX_MS;
+/**
+ * The full-screen-bound window rises over the desktop's overlays (the shelf,
+ * `z-overlay`, drawn after it) — it is about to be the only thing on screen.
+ */
+const FULLSCREEN_Z = "calc(var(--z-overlay) + 1)";
+/** The full-screen-bound window's box: the whole desk, edge to edge. */
+const FULLSCREEN_BOX: CSSProperties = {
+  left: 0,
+  top: 0,
+  width: "100%",
+  height: "100%",
+};
 const EASE_BOX = "cubic-bezier(0.2, 0.8, 0.2, 1)";
 /** Transform tween (open, minimise / restore, overview). */
 const TRANSFORM_MS = 320;
@@ -139,7 +157,7 @@ function subscribeReducedMotion(cb: () => void) {
   return () => mq.removeEventListener("change", cb);
 }
 
-function usePrefersReducedMotion(): boolean {
+export function usePrefersReducedMotion(): boolean {
   return useSyncExternalStore(
     subscribeReducedMotion,
     () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
@@ -188,6 +206,10 @@ export interface WindowStyle {
  * non-active desktop is `display:none` (it stays mounted = keep-alive, so a
  * desktop switch is instant with no remount), with NO transition — it is not an
  * animated minimize, it simply isn't on this desktop.
+ *
+ * `fullscreen` is the window growing toward full screen: its box tweens to the
+ * whole desk, square-cornered, shadowless and above the shelf. The geometry
+ * store is untouched — the window keeps its own box to return to.
  */
 export function useFloatingWindowStyle(
   win: FloatingWindow,
@@ -196,6 +218,7 @@ export function useFloatingWindowStyle(
   closing: boolean,
   focused: boolean,
   onActiveDesktop: boolean,
+  fullscreen: boolean,
 ): WindowStyle {
   const reduced = usePrefersReducedMotion();
   const desk = useDesktop();
@@ -295,9 +318,11 @@ export function useFloatingWindowStyle(
   }, [phase, aim]);
 
   return useMemo<WindowStyle>(() => {
-    const box: CSSProperties = geo.snap
-      ? snapBox(geo.snap, reserve)
-      : { left: geo.x, top: geo.y, width: geo.w, height: geo.h };
+    const box: CSSProperties = fullscreen
+      ? FULLSCREEN_BOX
+      : geo.snap
+        ? snapBox(geo.snap, reserve)
+        : { left: geo.x, top: geo.y, width: geo.w, height: geo.h };
 
     // A minimise/restore flip the phase machine has not reacted to yet: the
     // flag flips one commit before it enters `minimizing` / `restoring`. That
@@ -376,13 +401,15 @@ export function useFloatingWindowStyle(
 
     const containerStyle: CSSProperties = {
       ...box,
-      zIndex: isPeeked ? PEEK_Z : geo.z,
-      borderRadius: geo.snap === "maximize" ? 0 : WINDOW_RADIUS,
-      boxShadow: isPeeked
-        ? SHADOW_PEEKED
-        : focused
-          ? SHADOW_FOCUSED
-          : SHADOW_UNFOCUSED,
+      zIndex: fullscreen ? FULLSCREEN_Z : isPeeked ? PEEK_Z : geo.z,
+      borderRadius: fullscreen || geo.snap === "maximize" ? 0 : WINDOW_RADIUS,
+      boxShadow: fullscreen
+        ? "none"
+        : isPeeked
+          ? SHADOW_PEEKED
+          : focused
+            ? SHADOW_FOCUSED
+            : SHADOW_UNFOCUSED,
       ...(hidden ? { display: "none" } : null),
       ...(transform ? { transform, willChange: "transform, opacity" } : null),
       ...(opacity !== undefined ? { opacity } : null),
@@ -407,5 +434,6 @@ export function useFloatingWindowStyle(
     onActiveDesktop,
     peeked,
     overviewSlot,
+    fullscreen,
   ]);
 }

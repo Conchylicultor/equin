@@ -40,6 +40,7 @@ import {
   type MergeTarget,
 } from "./window-system-menu";
 import { WindowAppTile } from "./window-app-tile";
+import { FULLSCREEN_MS } from "../hooks/use-window-motion";
 
 const closeIcon = symbol("close");
 const removeIcon = symbol("remove");
@@ -105,6 +106,11 @@ interface WindowChromeProps {
    * registered: no control then.
    */
   onFullscreen: (() => void) | undefined;
+  /**
+   * The window is growing to full screen: the titlebar fades out as the box
+   * sweeps to the whole desk (and stops taking input — the grab is over).
+   */
+  fullscreening: boolean;
   /** Other windows of this desktop the active tab can be merged into. */
   mergeTargets: MergeTarget[];
   /** Merge the active tab into a target window. */
@@ -194,6 +200,7 @@ export function WindowChrome({
   onCloseWindow,
   onTogglePin,
   onFullscreen,
+  fullscreening,
   mergeTargets,
   onMergeInto,
   onSplit,
@@ -420,6 +427,13 @@ export function WindowChrome({
             : null),
           height: WINDOW_TITLEBAR_INSET,
           touchAction: "none",
+          ...(fullscreening
+            ? {
+                opacity: 0,
+                pointerEvents: "none",
+                transition: `opacity ${FULLSCREEN_MS}ms ease`,
+              }
+            : null),
         }}
       >
         <Center
