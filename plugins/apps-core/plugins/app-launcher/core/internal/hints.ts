@@ -14,7 +14,7 @@ export const appLauncherHint = defineHint({
   id: "app-launcher.switch-apps",
   anchor: appLauncherAnchor,
   title: "Switch apps",
-  body: "Hover this button to jump to another app, or click it for all your apps.",
+  body: "Hover to switch apps. Click to see them all.",
   placement: "bottom",
   order: 1,
   // Hovering it opens the grid — the very gesture the tip teaches, and the

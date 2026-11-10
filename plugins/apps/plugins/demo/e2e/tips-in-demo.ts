@@ -1,13 +1,13 @@
 /**
  * The first-time tips inside the demo: the app launcher's "Switch apps" and a
- * desktop window's "Back to one app", each shown once — and remembered inside
+ * desktop window's "Leave the desktop", each shown once — and remembered inside
  * the demo (its worker's database), never in the page's.
  *
  * In `/demo` (a fresh context: the demo has met no tip), it:
  *
  *  1. enters the demo on the Agent Manager: the "Switch apps" tip shows,
  *     ringing the embed's launcher; Got it answers it;
- *  2. picks Desktop from the launcher: the "Back to one app" tip shows on the
+ *  2. picks Desktop from the launcher: the "Leave the desktop" tip shows on the
  *     focused window's Full screen control; Got it answers it;
  *  3. reloads and enters again: neither tip shows again — the demo remembers
  *     them;
@@ -128,14 +128,14 @@ await withBrowser(async (h) => {
     ).ok,
   );
 
-  // ── 2. Back to one app, on the focused window's Full screen ─────────────
+  // ── 2. Leave the desktop, on the focused window's Full screen ─────────────
   r.ok(
     "the launcher offers Desktop",
     await pickFromLauncher(embedRoot(page), /^\s*Desktop\s*$/),
   );
-  const backToOne = tipCard(page, "Back to one app");
+  const backToOne = tipCard(page, "Leave the desktop");
   r.ok(
-    "the Back to one app tip shows when a window opens on the desktop",
+    "the Leave the desktop tip shows when a window opens on the desktop",
     (
       await waitFor(
         () => backToOne.count(),

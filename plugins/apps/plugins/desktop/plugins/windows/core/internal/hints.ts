@@ -15,8 +15,8 @@ export const windowFullscreenAnchor = defineHintAnchor(
 export const windowFullscreenHint = defineHint({
   id: "desktop.window-fullscreen",
   anchor: windowFullscreenAnchor,
-  title: "Back to one app",
-  body: "Full screen takes this window out of the desktop: its app fills the screen again, one app at a time.",
+  title: "Leave the desktop",
+  body: "Click to show this app full screen.",
   placement: "bottom",
   order: 2,
 });
