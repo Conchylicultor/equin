@@ -24,6 +24,8 @@ import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/compo
 import { usePortalContainer } from "@plugins/primitives/plugins/overlay/plugins/portal-host/web";
 import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
+import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 
 const chevronRightIcon = symbol("chevron-right");
 const checkIcon = symbol("check");
@@ -238,7 +240,7 @@ function MenuSectionAction({ action }: { action: MenuRowAction }) {
         aria-label={action.label}
         title={action.label}
         data-slot="dropdown-menu-section-action"
-        onClick={(e) => action.onAction(e)}
+        {...menuRowActionProps(action, { isolate: false })}
         render={
           // Keyboard highlight moves focus onto it, so the Button's own focus
           // ring marks it — no menu-row paint for a heading's icon button.
@@ -257,13 +259,47 @@ function MenuSectionAction({ action }: { action: MenuRowAction }) {
  * "launch this model now" beside "make it the default". The row draws it, at
  * the `xs` control density, so it fits inside the row's height and every
  * menu's action looks the same; a click on it never selects the row.
+ *
+ * Either a command (`onAction`) or a LINK (`activation`): an action that
+ * navigates — a gear to the settings behind the rows — hands over its
+ * destination as data, so ⌘/Ctrl- and middle-click open it in a new browser
+ * tab like any other link (`link-gesture`). A navigating `onAction` cannot.
  */
-export interface MenuRowAction {
+export type MenuRowAction = {
   icon: IconRef;
   /** The action's name: its aria-label and hover title. */
   label: string;
-  /** May return a promise: the button shows its pending state until it settles. */
-  onAction: (e: React.MouseEvent) => unknown;
+} & (
+  | {
+      /** May return a promise: the button shows its pending state until it settles. */
+      onAction: (e: React.MouseEvent) => unknown;
+      activation?: never;
+    }
+  | {
+      /** Where the action goes: plain click opens it here, ⌘/middle-click in a new tab. */
+      activation: LinkTarget;
+      onAction?: never;
+    }
+);
+
+/**
+ * The handler props of a {@link MenuRowAction}: a link's full gestures, or a
+ * command's click. `isolate` keeps the click (and a link's aux click) from
+ * reaching the row the action sits in.
+ */
+function menuRowActionProps(
+  action: MenuRowAction,
+  { isolate }: { isolate: boolean },
+) {
+  if (action.activation !== undefined)
+    return activationProps(action.activation, { isolate });
+  const onAction = action.onAction;
+  return {
+    onClick(e: React.MouseEvent) {
+      if (isolate) e.stopPropagation();
+      return onAction(e);
+    },
+  };
 }
 
 /**
@@ -299,10 +335,7 @@ function MenuRowTrailParts({ shortcut, action }: MenuRowTrailProps) {
               // also animates `visibility`, which kept the action showing on
               // a row the highlight had already left.
               className="invisible transition-colors group-data-highlighted/menu-row:visible"
-              onClick={(e) => {
-                e.stopPropagation();
-                return action.onAction(e);
-              }}
+              {...menuRowActionProps(action, { isolate: true })}
             >
               <Icon icon={action.icon} />
             </Button>

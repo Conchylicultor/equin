@@ -46018,6 +46018,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/dom/element-size.useResizeObserver`
               - `primitives/latest-ref.useEventCallback`
               - `primitives/latest-ref.useLatestRef`
+              - `primitives/link-gesture.activationProps`
               - `primitives/overlay/overlay-boundary.OverlayBoundary`
               - `primitives/overlay/popup-open.usePopupAnchorAtRest`
               - `primitives/overlay/popup-open.useReportPopupOpen`
@@ -48855,10 +48856,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by: 75 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
           - `conversations` ×21
-          - `primitives` ×16
+          - `primitives` ×17
           - `apps` ×12
-          - `tasks` ×5
           - `page` ×4
+          - `tasks` ×4
           - `apps-core` ×3
           - `debug` ×2
           - `hints` ×2

@@ -445,6 +445,7 @@ yes/no guard: `useConfirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/latest-ref.useLatestRef`
+    - `primitives/link-gesture.activationProps`
     - `primitives/overlay/overlay-boundary.OverlayBoundary`
     - `primitives/overlay/popup-open.usePopupAnchorAtRest`
     - `primitives/overlay/popup-open.useReportPopupOpen`
