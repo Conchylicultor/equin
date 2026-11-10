@@ -1652,8 +1652,9 @@ function AdaptiveBarShell({
   // ONE subscription covering everything that can change a width: the row's own
   // size, the trigger's, and every occupant's — which folds in content change,
   // font load, control-density change, theme change and zoom. Its first callback
-  // runs SYNCHRONOUSLY inside the layout effect, which is what gives the cold
-  // start no flash: measure, decide and re-commit all happen before paint.
+  // runs in the frame's after-layout pass (`dom/after-layout`), which is what
+  // gives the cold start no flash: measure, decide and re-commit all happen
+  // before paint — each re-commit's own pass draining in the same frame.
   useResizeObserver(
     () => {
       if (root === null) return null;

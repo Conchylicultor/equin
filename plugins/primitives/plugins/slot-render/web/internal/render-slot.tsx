@@ -7,10 +7,8 @@ import {
   createElement,
   useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
-  useState,
   type ComponentType,
   type ReactNode,
 } from "react";
@@ -42,10 +40,7 @@ import {
 import { DispatchOutcomeContext } from "./dispatch-outcome";
 import { emitScopedOutDispatch } from "./scoped-out-dispatch";
 import { useSlotItemLayout } from "./item-layout";
-import {
-  flowAxis,
-  layoutHost,
-} from "@plugins/primitives/plugins/dom/plugins/layout-host/web";
+import { useHostFlowAxis } from "@plugins/primitives/plugins/dom/plugins/layout-host/web";
 
 /**
  * `defineSlot` minus its payload check (`NoOrderingNumber`), for this file's
@@ -351,19 +346,14 @@ export function defineRenderSlot<P>(
     // and truncates. Vertical lists are left untouched (zero layout change).
     // Orientation is read from the container at runtime — same sentinel
     // technique as the reorder list middleware — so slots declare nothing.
+    // The host is the box that lays the contributions out — past any
+    // `display: contents` wrapper — and it is horizontal only when it is a
+    // row flex container: a plain block or grid host treated as a row would
+    // wrap each contribution in a `min-w-0` cell that collapses wide
+    // block-level content to its min-content width. Read after layout,
+    // before paint (no forced style recalc as the slot mounts).
     const sentinelRef = useRef<HTMLSpanElement>(null);
-    const [horizontal, setHorizontal] = useState(false);
-    useLayoutEffect(() => {
-      // The host is the box that lays the contributions out — past any
-      // `display: contents` wrapper — and it is horizontal only when it is a
-      // row flex container: a plain block or grid host treated as a row would
-      // wrap each contribution in a `min-w-0` cell that collapses wide
-      // block-level content to its min-content width.
-      const sentinel = sentinelRef.current;
-      const host = sentinel ? layoutHost(sentinel) : null;
-      if (!host) return;
-      setHorizontal(flowAxis(host) === "row");
-    }, []);
+    const horizontal = useHostFlowAxis(sentinelRef) === "row";
 
     const renderItem = useCallback(
       (contribution: Contribution): ReactNode => {

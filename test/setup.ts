@@ -101,9 +101,9 @@ Element.prototype.scrollIntoView = function (): void {};
 // deliberately inert rather than a polyfill: jsdom has no layout engine, so
 // `getBoundingClientRect` is all-zero and elements never resize — a polling
 // polyfill would observe a 0x0 box forever and fire nothing. `element-size` is
-// built for exactly this (see its CLAUDE.md, "Why a synchronous initial measure"):
-// the one synchronous measure inside the layout effect is enough to decide layout
-// under a no-op observer.
+// built for exactly this: its initial measure (`dom/after-layout` runs reads at
+// once under jsdom, which has no layout to wait for) is enough to
+// decide layout under a no-op observer.
 //
 // So this supplies the global's *existence* only. A test needing a non-zero size
 // stubs the measurement source itself (see `expandable`'s `offsetHeight` fixture);

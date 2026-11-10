@@ -5954,6 +5954,10 @@
       "name": "@equin/plugin-primitives-dom",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/dom/plugins/after-layout": {
+      "name": "@equin/plugin-primitives-dom-after-layout",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/dom/plugins/auto-scroll": {
       "name": "@equin/plugin-primitives-dom-auto-scroll",
       "version": "0.0.1",
@@ -10313,6 +10317,8 @@
     "@equin/plugin-primitives-diff-view": ["@equin/plugin-primitives-diff-view@workspace:plugins/primitives/plugins/diff-view"],
 
     "@equin/plugin-primitives-dom": ["@equin/plugin-primitives-dom@workspace:plugins/primitives/plugins/dom"],
+
+    "@equin/plugin-primitives-dom-after-layout": ["@equin/plugin-primitives-dom-after-layout@workspace:plugins/primitives/plugins/dom/plugins/after-layout"],
 
     "@equin/plugin-primitives-dom-auto-scroll": ["@equin/plugin-primitives-dom-auto-scroll@workspace:plugins/primitives/plugins/dom/plugins/auto-scroll"],
 

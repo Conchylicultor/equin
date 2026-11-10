@@ -30382,7 +30382,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `review/plugin-changes` (0 debt)
             - **`resize-observer-safety`** — resize-observer-safety lint rule: no-raw-resize-observer
               - Exemptions:
-                - Exempted by: `primitives/dom/element-size` (0 debt)
+                - Exempted by:
+                  - `primitives/dom/after-layout` (0 debt)
+                  - `primitives/dom/element-size` (0 debt)
             - **`route-teardown-safety`** — route-teardown-safety lint rule: no-unroute
             - **`rule-kind-safety`** — rule-kind-safety lint rules: type-aware-rule-declared (a lint rule that reads parser services declares meta.docs.requiresTypeChecking: true), no-raw-rule-creator (every rule is made with lint/core lintRuleCreator, which derives its docs URL and types its meta.docs), no-plugin-path-regex (a lint rule names the plugins it matches as strings plugin-refs locates, never inside a regex)
               - Exemptions:
@@ -45141,6 +45143,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.Input`
+              - `primitives/dom/after-layout.afterLayout`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --chrome-pad-x`
           - Exemptions:
@@ -47670,6 +47673,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `review/plugin-changes/file-changes`
     - **`dom`** — How do I read and drive the real DOM, and where is the one place allowed to do it? — the guarded selection read (dom-selection), element measurement (element-size), on-screen detection (in-view), scroll ownership (auto-scroll), the wasted-scroll bounce (overscroll-hint), reveal-on-activation (scroll-reveal), and copying what an element stands for (copy-source-text).
       - Plugins:
+        - **`after-layout`** — Read layout where the browser already computed it: afterLayout(read) runs `read` once the current frame is styled and laid out, before it paints (a ResizeObserver delivery), batched with every other read of that frame — reads first, then the writes they return, then one React commit (flushSync) — so a layout or style read never forces a synchronous recalc on React's commit path, and a write never sits between two reads. runAsAfterLayout(fn) lets a ResizeObserver callback join the phase. element-size and layout-host read through it.
+          - Cross-plugin:
+            - Imported by:
+              - `primitives/css/layout-harness`
+              - `primitives/dom/element-size`
+              - `primitives/dom/layout-host`
+          - Exemptions:
+            - Exempts itself from: `resize-observer-safety/no-raw-resize-observer` — `web/internal/after-layout.ts` (sanctioned)
+          - Web:
+            - Exports (types): `AfterLayoutRead`
+            - Exports (values):
+              - `afterLayout`
+              - `runAsAfterLayout`
         - **`auto-scroll`** — The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton; content stamped FOLLOW_MOTION_ATTR is followed frame by frame while it animates), container-scoped scrollToBottom / scrollChildIntoView, a scroll glided frame by frame on a given CSS curve so it moves in step with a transition beside it (glideScroll), gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross, or restoreScrollOffset from a caller's own snapshot), the reader's anchor kept on screen across a commit that resizes content above it (KeepAnchorAcross), an element kept at its screen position across a re-layout (keepInPlace), a deep copy that keeps its scroll offsets (cloneWithScroll, for a stand-in drawn while content leaves), an inner scroller's offset kept across a page reload (useScrollAcrossReload, put back as async content arrives until reached or the reader takes over), and the shared findScrollParent discovery.
           - Web:
             - Uses:
@@ -47777,9 +47793,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selectionIsCollapsed`
               - `selectionRange`
               - `selectionRect`
-        - **`element-size`** — Element-size ResizeObserver idiom as a primitive: useElementSize(target?) reactively measures an element's size (callback ref, getBoundingClientRect, supports attach-one-node-measure-another via a target getter), useResizeObserver(target, onResize, {debounce, deps}) is the substrate, and useResizeObserverSet(onResize) observes a changing set of elements (windowed rows) through one observer — synchronous initial measure, RAF-debounced resize callbacks, auto cleanup. The single sanctioned home for the hand-rolled ResizeObserver-for-size idiom.
+        - **`element-size`** — Element-size ResizeObserver idiom as a primitive: useElementSize(target?) reactively measures an element's size (callback ref, getBoundingClientRect, supports attach-one-node-measure-another via a target getter), useResizeObserver(target, onResize, {debounce, deps}) is the substrate, and useResizeObserverSet(onResize) observes a changing set of elements (windowed rows) through one observer — initial measure after layout and before paint (dom/after-layout: no forced recalc on the commit path), RAF-debounced resize callbacks, auto cleanup. The single sanctioned home for the hand-rolled ResizeObserver-for-size idiom.
           - Web:
-            - Uses: `primitives/latest-ref.useEventCallback`
+            - Uses:
+              - `primitives/dom/after-layout.afterLayout`
+              - `primitives/dom/after-layout.AfterLayoutRead`
+              - `primitives/dom/after-layout.runAsAfterLayout`
+              - `primitives/latest-ref.useEventCallback`
             - Exports (types):
               - `ElementSize`
               - `ResizeTarget`
@@ -47789,7 +47809,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useResizeObserverSet`
           - Cross-plugin:
             - Imported by: 46 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
-              - `primitives` ×24
+              - `primitives` ×25
               - `apps` ×11
               - `shell` ×2
               - `active-data/go`
@@ -47798,7 +47818,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `layouts/miller`
               - `menu-bar`
               - `page/editor`
-              - `reorder`
               - `screenshot`
               - `ui/ambient-field`
           - Exemptions:
@@ -47852,16 +47871,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/ambient-field`
           - Exemptions:
             - Exempts itself from: `intersection-observer-safety/no-raw-intersection-observer` — `web/internal/in-view.ts` (sanctioned)
-        - **`layout-host`** — Which box lays a node out, and along which axis: layoutHost(node) is the nearest ancestor that draws a box (skipping display: contents wrappers, whose width is 0 and which never resize), flowAxis(host) is row only for a row flex container (computed flex-direction alone says row for every element). Shared by the slot renderer and the reorder middleware so neither misreads a wrapped host.
+        - **`layout-host`** — Which way the box laying a node out flows its children: useHostFlowAxis(sentinelRef, { followResize? }) reads it in the frame's after-layout phase (no forced style recalc on the commit path) — the host being the nearest ancestor that draws a box (skipping display: contents wrappers, whose width is 0 and which never resize), and row only for a row flex container (computed flex-direction alone says row for every element). Shared by the slot renderer and the reorder middleware so neither misreads a wrapped host.
+          - Web:
+            - Uses:
+              - `primitives/dom/after-layout.afterLayout`
+              - `primitives/dom/element-size.useResizeObserver`
+            - Exports (types): `FlowAxis`
+            - Exports (values): `useHostFlowAxis`
           - Cross-plugin:
             - Imported by:
               - `primitives/slot-render`
               - `reorder`
-          - Web:
-            - Exports (types): `FlowAxis`
-            - Exports (values):
-              - `flowAxis`
-              - `layoutHost`
         - **`movable`** — Drag-to-move floating chrome: <Movable at bounds> is a placed floating piece (a pill, a tag, a chip — `at` places it as a Pin step or Placed coordinates and it IS that positioned element, so nothing is left at home after a drag) the user can pull off whatever it covers — grabbed by its surface, or by one of its buttons once the pointer travels (a plain press stays a click, and the release after a drag never clicks). It stays inside `bounds`, is pulled back in when bounds shrink, and a double-click on its surface sends it home. The gesture itself is useDragGesture — the onPointerDown of a handle (threshold on buttons, capture at drag start, the post-drag click swallowed) — for a piece that places itself.
           - Web:
             - Uses:
@@ -51216,8 +51236,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/grow-relay.GrowRelay`
           - `primitives/css/ui-kit.ControlSize`
           - `primitives/css/ui-kit.ControlSizeProvider`
-          - `primitives/dom/layout-host.flowAxis`
-          - `primitives/dom/layout-host.layoutHost`
+          - `primitives/dom/layout-host.useHostFlowAxis`
         - Exports (types):
           - `DerivedIdRenderSlot`
           - `DispatchContribution`
@@ -52642,9 +52661,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `network/live/live-state.foldResource`
       - `network/live/live-state.mapResource`
       - `network/live/live-state.ResourceResult`
-      - `primitives/dom/element-size.useResizeObserver`
-      - `primitives/dom/layout-host.flowAxis`
-      - `primitives/dom/layout-host.layoutHost`
+      - `primitives/dom/layout-host.useHostFlowAxis`
       - `primitives/latest-ref.useLatestRef`
       - `reorder/node-types.useReorderNodeTypes`
     - Exports (types):

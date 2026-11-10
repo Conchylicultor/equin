@@ -141,8 +141,10 @@ Two things about it shape the fixture you write around it:
   wave), so what it falsifies is the *schedule* of a premise check as much as its
   existence: a primitive that asks its host once at mount passes this mutation
   while ratcheting itself empty afterwards.
-- **It freezes the row it finds.** It runs synchronously right after the render
-  commits, before any `ResizeObserver` has re-fitted anything, so `max-content`
+- **It freezes the row it finds.** It runs as a write in the render's
+  after-layout batch (`dom/after-layout`) — after what the commit's own
+  after-layout reads applied, before any `ResizeObserver` has re-fitted
+  anything — so `max-content`
   sizes to the PREVIOUS width's content. A fixture must therefore sweep wide →
   narrow: a mutated pass restarting narrower than the state it inherits clips on
   the stale content alone, which is a falsification that would bite with the
@@ -310,7 +312,11 @@ overflows, was the first.
 ## Settling: measure by observation, never by a frame count
 
 `measure()` re-measures until two consecutive frames agree (capped at 30, so an
-oscillating layout fails on its own geometry instead of hanging).
+oscillating layout fails on its own geometry instead of hanging). Each sample
+is taken AFTER the frame paints (a task queued from its animation frame), never
+inside `requestAnimationFrame`, which runs before the frame's layout and its
+after-layout pass: a sample there reads a state no frame paints, and two of
+them agree on it whenever a decision commits between frames.
 
 The double-rAF this replaced assumed layout is final once the render is committed
 and painted — true only while layout is pure synchronous CSS, which every fixture
@@ -448,6 +454,7 @@ somehow is not.
     - `primitives/css/ui-kit`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.Input`
+    - `primitives/dom/after-layout.afterLayout`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/density --chrome-pad-x`
 - Exemptions:

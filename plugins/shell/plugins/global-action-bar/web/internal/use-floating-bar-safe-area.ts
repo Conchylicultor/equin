@@ -39,10 +39,13 @@ export function useFloatingBarSafeArea(
     () => {
       if (!node || !reserve) return;
       const room = window.innerWidth - node.getBoundingClientRect().left;
-      document.documentElement.style.setProperty(
-        SAFE_AREA_VAR,
-        `calc(${Math.ceil(room)}px + var(--chrome-pane-pad-end))`,
-      );
+      // A write on `:root` restyles the whole page: returned, it runs after
+      // every other read of the after-layout batch, not between two of them.
+      return () =>
+        document.documentElement.style.setProperty(
+          SAFE_AREA_VAR,
+          `calc(${Math.ceil(room)}px + var(--chrome-pane-pad-end))`,
+        );
     },
     // Undebounced: a resize observation is delivered before paint, so the
     // header never paints a frame with a stale reservation (the slot sizing

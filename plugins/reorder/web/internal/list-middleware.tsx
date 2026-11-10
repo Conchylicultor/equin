@@ -1,13 +1,9 @@
-import { Fragment, useMemo, useRef, useState, type ReactNode } from "react";
+import { Fragment, useMemo, useRef, type ReactNode } from "react";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { useSetConfig } from "@plugins/config_v2/web";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import { useReorderNodeTypes } from "@plugins/reorder/plugins/node-types/web";
-import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
-import {
-  flowAxis,
-  layoutHost,
-} from "@plugins/primitives/plugins/dom/plugins/layout-host/web";
+import { useHostFlowAxis } from "@plugins/primitives/plugins/dom/plugins/layout-host/web";
 import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { ReorderTree } from "@plugins/fields/plugins/reorder-tree/core";
 import { reorderDescriptors } from "./descriptors";
@@ -144,23 +140,15 @@ function ReorderNodesArea({
   const writes = useAreaWrites(items, state, setConfig);
 
   // The host's flow, for the nodes that turn to it (a divider's rule stands
-  // upright in a row). The host is the box that lays the sentinel out
-  // (`layoutHost`), not its `parentElement`: a `display: contents` wrapper (the
-  // app-shell sidebar's) has no box. The primitive RAF-debounces resizes and
-  // runs the initial measure synchronously (no timers; repo rule).
+  // upright in a row). The host is the box that lays the sentinel out, past a
+  // `display: contents` wrapper (the app-shell sidebar's has no box); read
+  // after layout, and followed across the host's resizes (a breakpoint
+  // flipping its direction).
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const [orientation, setOrientation] = useState<"horizontal" | "vertical">(
-    "vertical",
-  );
-  const host = () => {
-    const sentinel = sentinelRef.current;
-    return sentinel ? layoutHost(sentinel) : null;
-  };
-  useResizeObserver(host, () => {
-    const el = host();
-    if (!el) return;
-    setOrientation(flowAxis(el) === "row" ? "horizontal" : "vertical");
-  });
+  const orientation =
+    useHostFlowAxis(sentinelRef, { followResize: true }) === "row"
+      ? "horizontal"
+      : "vertical";
 
   const nodes: NodeRenderContext = {
     nodeTypes,

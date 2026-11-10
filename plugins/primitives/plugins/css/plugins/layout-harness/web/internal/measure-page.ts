@@ -195,7 +195,18 @@ export async function openMeasurer(outDir: string): Promise<Measurer> {
             // — which is exactly what it did. Re-measure until two consecutive
             // frames agree, with a cap so a genuinely oscillating layout fails
             // loudly on its own geometry rather than hanging the suite.
+            //
+            // Each sample is taken AFTER the frame paints (a task queued from
+            // its animation frame), never inside `requestAnimationFrame`: that
+            // runs before the frame's style, layout and `ResizeObserver`
+            // delivery, where a primitive's after-layout pass
+            // (`dom/after-layout`) applies what its last commit decided. A
+            // sample there reads a state no frame ever paints, and two of them
+            // agree on it whenever the decision commits between frames.
             const MAX_SETTLE_FRAMES = 30;
+            const afterPaint = (fn: () => void): void => {
+              requestAnimationFrame(() => setTimeout(fn, 0));
+            };
             let previous: string | null = null;
             let frames = 0;
             const settle = (): void => {
@@ -207,9 +218,9 @@ export async function openMeasurer(outDir: string): Promise<Measurer> {
               }
               previous = signature;
               frames += 1;
-              requestAnimationFrame(settle);
+              afterPaint(settle);
             };
-            requestAnimationFrame(() => requestAnimationFrame(settle));
+            afterPaint(() => afterPaint(settle));
           });
         },
         { id, width, falsify },

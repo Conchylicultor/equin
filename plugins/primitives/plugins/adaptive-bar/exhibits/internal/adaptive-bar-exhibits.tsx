@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, useState, type ReactElement } from "react";
+import { afterLayout } from "@plugins/primitives/plugins/dom/plugins/after-layout/web";
 import { HOST_MARKER_ATTR } from "@plugins/primitives/plugins/css/plugins/layout-harness/plugins/geometry/core";
 import {
   isolatedExhibit,
@@ -232,16 +233,23 @@ function useOccupantGeoSlots(
   ids: readonly string[],
 ): (el: HTMLElement | null) => void {
   const [host, setHost] = useState<HTMLElement | null>(null);
+  // After layout, not in the layout effect itself: the bar docks its
+  // containers in its own after-layout pass (`dom/after-layout`), so at commit
+  // time a container may not be in the row yet. Queued from this effect —
+  // which runs after the bar's, the fixture being its parent — the stamp runs
+  // after the bar's dock in the same batch.
   useLayoutEffect(() => {
     if (host === null) return;
-    host
-      .querySelector("[data-adaptive-bar-trigger]")
-      ?.setAttribute("data-geo", "trigger");
-    for (const id of ids) {
+    return afterLayout(() => {
       host
-        .querySelector(`[data-adaptive-bar-item="${id}"]`)
-        ?.setAttribute("data-geo", id);
-    }
+        .querySelector("[data-adaptive-bar-trigger]")
+        ?.setAttribute("data-geo", "trigger");
+      for (const id of ids) {
+        host
+          .querySelector(`[data-adaptive-bar-item="${id}"]`)
+          ?.setAttribute("data-geo", id);
+      }
+    });
   });
   return setHost;
 }

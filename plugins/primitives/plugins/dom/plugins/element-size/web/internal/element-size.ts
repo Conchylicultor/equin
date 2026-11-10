@@ -7,6 +7,11 @@ import {
 } from "react";
 import { flushSync } from "react-dom";
 
+import {
+  afterLayout,
+  runAsAfterLayout,
+  type AfterLayoutRead,
+} from "@plugins/primitives/plugins/dom/plugins/after-layout/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 
 export type ElementSize = { width: number; height: number };
@@ -43,10 +48,18 @@ function resolveTargets(target: ResizeTarget): Element[] {
  * The single sanctioned home for the "observe element size via `ResizeObserver`"
  * idiom that was hand-rolled across the repo. Runs `onResize`:
  *
- * - **synchronously once** on mount (and when `deps` change) — no first-paint
- *   flash, and enough to decide layout under a no-op observer (jsdom tests),
+ * - **once on mount** (and when `deps` change), in the frame's after-layout
+ *   phase (`dom/after-layout`): after the browser's own style/layout pass and
+ *   before paint, batched with every other read — no first-paint flash, and no
+ *   forced style recalc on React's commit path. The `target` getter is resolved
+ *   there too, so it may read layout (`offsetParent`). Under jsdom the phase
+ *   runs at once: the synchronous measure a test asserts after render,
  * - then on every observed resize, **RAF-debounced** by default (coalesces
  *   bursts and sidesteps the "ResizeObserver loop completed" warning).
+ *
+ * `onResize` may return a write (a DOM mutation built from what it read): in
+ * the after-layout phase it runs after every read of the batch, so it never
+ * dirties style between two other readers' reads.
  *
  * `onResize` is stabilised internally ({@link useEventCallback}), so it always
  * sees the latest closure without re-subscribing the observer. Pass `deps` to
@@ -64,7 +77,7 @@ function resolveTargets(target: ResizeTarget): Element[] {
  */
 export function useResizeObserver(
   target: ResizeTarget,
-  onResize: () => void,
+  onResize: AfterLayoutRead,
   options?: { debounce?: boolean; deps?: DependencyList; beforePaint?: true },
 ): void {
   const beforePaint = options?.beforePaint === true;
@@ -73,25 +86,31 @@ export function useResizeObserver(
   const handler = useEventCallback(onResize);
 
   useLayoutEffect(() => {
-    const elements = resolveTargets(target);
-    if (elements.length === 0) return;
-
     let rafId: number | null = null;
+    let observer: ResizeObserver | null = null;
+    const runNow = () => handler()?.();
     const schedule = beforePaint
-      ? () => flushSync(handler)
+      ? () => flushSync(runNow)
       : debounce
         ? () => {
             if (rafId !== null) cancelAnimationFrame(rafId);
-            rafId = requestAnimationFrame(handler);
+            rafId = requestAnimationFrame(runNow);
           }
-        : handler;
+        : runNow;
 
-    const observer = new ResizeObserver(schedule);
-    for (const el of elements) observer.observe(el);
-    handler(); // synchronous initial measure — no first-paint flash
+    // Resolve, subscribe and take the initial measure after layout — never on
+    // the commit path, where each read forces a full style recalc.
+    const cancelInitial = afterLayout(() => {
+      const elements = resolveTargets(target);
+      if (elements.length === 0) return;
+      observer = new ResizeObserver(() => runAsAfterLayout(schedule));
+      for (const el of elements) observer.observe(el);
+      return handler();
+    });
 
     return () => {
-      observer.disconnect();
+      cancelInitial();
+      observer?.disconnect();
       if (rafId !== null) cancelAnimationFrame(rafId);
     };
     // `handler` is stable; `target` is read at effect time (stable refs, or a
@@ -139,9 +158,9 @@ export function useElementSize<T extends HTMLElement = HTMLElement>(
  * Observe a CHANGING set of elements — rows a windowed list mounts and unmounts
  * — through ONE observer. Returns a stable `observe(el)` that starts watching
  * `el` and returns its own release (a React 19 ref-callback cleanup): spread it
- * as `ref={(el) => observe(el)}`. `onResize(targets)` runs synchronously once
- * for each newly observed element (the {@link useResizeObserver} first-measure
- * rule), then with every element whose size changed, RAF-batched. The observer
+ * as `ref={(el) => observe(el)}`. `onResize(targets)` runs once for each newly
+ * observed element in the after-layout phase (the {@link useResizeObserver}
+ * first-measure rule), then with every element whose size changed, RAF-batched. The observer
  * is created on first use and disconnected on unmount; `onResize` is
  * stabilised, so it always sees the latest closure.
  */
@@ -183,8 +202,13 @@ export function useResizeObserverSet(
       }
       const observer = state.observer;
       observer.observe(el);
-      handler([el]); // synchronous first measure — no first-paint flash
+      // First measure after layout (no forced recalc in the ref callback),
+      // before paint (no first-paint flash).
+      const cancelFirst = afterLayout(() => {
+        if (el.isConnected) handler([el]);
+      });
       return () => {
+        cancelFirst();
         observer.unobserve(el);
         state.pending.delete(el);
       };

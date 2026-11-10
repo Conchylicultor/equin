@@ -628,6 +628,7 @@ export const browserHost = {
     "primitives.date-picker",
     "primitives.detail-sections",
     "primitives.diff-view",
+    "primitives.dom.after-layout",
     "primitives.dom.auto-scroll",
     "primitives.dom.copy-source-text",
     "primitives.dom.dom-selection",

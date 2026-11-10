@@ -1,5 +1,6 @@
 import { createRoot, type Root } from "react-dom/client";
 import { flushSync } from "react-dom";
+import { afterLayout } from "@plugins/primitives/plugins/dom/plugins/after-layout/web";
 import { createElement } from "react";
 import {
   HOST_MARKER_ATTR,
@@ -638,7 +639,12 @@ void loadExhibits().then((loaded) => {
       );
       if (!scope)
         throw new Error("__renderFixture: container missing after render");
-      applyMutation(scope, falsify);
+      // The commit is not the whole render: what a primitive applies in its
+      // after-layout pass (`dom/after-layout` — the adaptive bar docks its
+      // occupants there) lands before the frame paints. The mutation is a
+      // WRITE in that same batch, so it runs after every read the commit
+      // queued and before any later resize is observed.
+      afterLayout(() => () => applyMutation(scope, falsify));
     }
   };
 

@@ -13,8 +13,8 @@ idiom, hand-rolled inconsistently across the repo before this primitive.
 
 - `useResizeObserver(target, onResize, { debounce?, deps?, beforePaint? })` → `void`
   The substrate. `target` is a `RefObject`, an array of refs, or a getter
-  (`() => Element | Element[] | null`). Runs `onResize` synchronously on mount
-  (and when `deps` change), then on every resize — RAF-debounced unless
+  (`() => Element | Element[] | null`). Runs `onResize` once on mount (and
+  when `deps` change) after layout, before paint, then on every resize — RAF-debounced unless
   `debounce: false`. `onResize` is stabilised internally, so the observer never
   re-subscribes on closure churn; use `deps` to force a re-measure.
   `beforePaint: true` is for a size that decides layout (the data table's
@@ -26,23 +26,32 @@ idiom, hand-rolled inconsistently across the repo before this primitive.
 - `useResizeObserverSet(onResize)` → `observe(el) => release`
   One observer over a CHANGING set of elements (the rows a windowed list mounts
   and unmounts): `observe` is stable, returns the element's release (use it as a
-  React 19 ref-callback cleanup), measures the new element synchronously, then
+  React 19 ref-callback cleanup), measures the new element after layout, then
   hands `onResize` every element whose size changed, RAF-batched. The list
   view's aligned trailing slots are the consumer.
 
-## Why a synchronous initial measure
+## The initial measure runs after layout, before paint
 
-The first `onResize` runs synchronously inside the layout effect (not behind
-RAF). This avoids a first-paint flash AND lets overflow/size decisions resolve
-under a no-op `ResizeObserver`. Do not defer it.
+The first `onResize` (and the `target` getter) runs in the frame's
+after-layout phase ([`dom/after-layout`](../after-layout/CLAUDE.md)) — not in
+the layout effect, and not behind RAF. Behind RAF would paint a frame first (a
+flash); in the layout effect, every read forces the browser to recompute style
+and layout for the whole dirty document on React's commit path, and again for
+the next reader after any write — a slot or chrome mounting right after a large
+style change (the desktop's full-screen switch) paid hundreds of ms there.
+After layout, the browser has already computed what the read wants; the
+batch's React updates commit in one `flushSync`, before paint.
 
-That second property is what makes this primitive mountable in jsdom, which ships
-no `ResizeObserver` and has no layout engine. The shared DOM-test setup
-(`test/setup.ts`) installs one **inert** observer globally — not a polyfill, since
-a 0x0 box that never resizes would give a polyfill nothing to report. Tests
-therefore get the synchronous measure and nothing more: a test needing a real size
-stubs the measurement source itself (e.g. `expandable`'s `offsetHeight` fixture),
-and a test needing to drive resizes installs a drivable observer via
+`onResize` may return a write (a DOM mutation built from its read): it runs
+after every read of the batch (the floating bar's safe-area var on `:root`
+would otherwise invalidate every later reader's style).
+
+Under jsdom the phase runs at once, so the initial measure is
+still the synchronous one a test asserts after render — enough to decide layout
+under the shared **inert** observer (jsdom has no `ResizeObserver` and no layout
+engine, so a polyfill would have nothing to report). A test needing a real size
+stubs the measurement source itself (e.g. `expandable`'s `offsetHeight`
+fixture), and a test needing to drive resizes installs a drivable observer via
 `vi.stubGlobal`.
 
 ## Don't hand-roll `new ResizeObserver`
@@ -56,9 +65,13 @@ different need, extend the primitive rather than allowlisting a copy.
 
 ## Plugin reference
 
-- Description: Element-size ResizeObserver idiom as a primitive: useElementSize(target?) reactively measures an element's size (callback ref, getBoundingClientRect, supports attach-one-node-measure-another via a target getter), useResizeObserver(target, onResize, {debounce, deps}) is the substrate, and useResizeObserverSet(onResize) observes a changing set of elements (windowed rows) through one observer — synchronous initial measure, RAF-debounced resize callbacks, auto cleanup. The single sanctioned home for the hand-rolled ResizeObserver-for-size idiom.
+- Description: Element-size ResizeObserver idiom as a primitive: useElementSize(target?) reactively measures an element's size (callback ref, getBoundingClientRect, supports attach-one-node-measure-another via a target getter), useResizeObserver(target, onResize, {debounce, deps}) is the substrate, and useResizeObserverSet(onResize) observes a changing set of elements (windowed rows) through one observer — initial measure after layout and before paint (dom/after-layout: no forced recalc on the commit path), RAF-debounced resize callbacks, auto cleanup. The single sanctioned home for the hand-rolled ResizeObserver-for-size idiom.
 - Web:
-  - Uses: `primitives/latest-ref.useEventCallback`
+  - Uses:
+    - `primitives/dom/after-layout.afterLayout`
+    - `primitives/dom/after-layout.AfterLayoutRead`
+    - `primitives/dom/after-layout.runAsAfterLayout`
+    - `primitives/latest-ref.useEventCallback`
   - Exports (types):
     - `ElementSize`
     - `ResizeTarget`
@@ -68,7 +81,7 @@ different need, extend the primitive rather than allowlisting a copy.
     - `useResizeObserverSet`
 - Cross-plugin:
   - Imported by: 46 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives` ×24
+    - `primitives` ×25
     - `apps` ×11
     - `shell` ×2
     - `active-data/go`
@@ -77,7 +90,6 @@ different need, extend the primitive rather than allowlisting a copy.
     - `layouts/miller`
     - `menu-bar`
     - `page/editor`
-    - `reorder`
     - `screenshot`
     - `ui/ambient-field`
 - Exemptions:

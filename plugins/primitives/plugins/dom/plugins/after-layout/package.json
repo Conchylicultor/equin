@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-primitives-dom-after-layout",
+  "description": "Read layout once the browser has laid the frame out, before it paints: afterLayout batches reads behind a ResizeObserver delivery so no read forces a style recalc on React's commit path.",
+  "private": true,
+  "version": "0.0.1"
+}
