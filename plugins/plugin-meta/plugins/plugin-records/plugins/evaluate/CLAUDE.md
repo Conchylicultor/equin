@@ -32,6 +32,7 @@ the slot-declaration engine, which it never calls.
     - `plugin-meta/plugin-records.groupedByOwner`
     - `plugin-meta/plugin-records.ModuleGraph`
     - `plugin-meta/plugin-records.ModuleGraphInput`
+    - `plugin-meta/plugin-records.npmResolutionsKey`
     - `plugin-meta/plugin-records.readGrouped`
     - `plugin-meta/plugin-records.recordKey`
   - Exports (types):

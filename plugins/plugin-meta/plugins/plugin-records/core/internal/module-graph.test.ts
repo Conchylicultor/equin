@@ -231,3 +231,61 @@ describe("buildModuleGraph", () => {
     expect(reads).toContain(`${P}/a/web/index.ts`);
   });
 });
+
+describe("the lockfile in the file-facts key", () => {
+  // The shape bun writes, trimmed: a workspaces section, then packages, where
+  // a workspace package's line names `@workspace:`.
+  const LOCK = `{
+  "lockfileVersion": 1,
+  "workspaces": {
+    "": {
+      "name": "repo",
+    },
+  },
+  "packages": {
+    "zod": ["zod@4.0.0", "", {}, "sha512-x"],
+  }
+}
+`;
+  // A plugin added: its workspace stanza and its link line, nothing installed.
+  const PLUGIN_ADDED = LOCK.replace(
+    `  },\n  "packages": {`,
+    `    "plugins/c": {\n      "name": "@equin/plugin-c",\n      "version": "0.0.1",\n    },\n  },\n  "packages": {\n    "@equin/plugin-c": ["@equin/plugin-c@workspace:plugins/c"],\n`,
+  );
+  const NPM_BUMPED = LOCK.replace("zod@4.0.0", "zod@4.0.1");
+
+  function writes(): { store: RecordStore; written: () => number } {
+    const store = createMemoryRecordStore();
+    let n = 0;
+    return {
+      store: {
+        ...store,
+        putMany(table, entries) {
+          if (table === "file") n += entries.length;
+          store.putMany(table, entries);
+        },
+      },
+      written: () => n,
+    };
+  }
+
+  test("a plugin added to bun.lock re-keys no file record", async () => {
+    expect(PLUGIN_ADDED).not.toBe(LOCK);
+    const { store, written } = writes();
+    const entries = [`${P}/a/web/index.ts`];
+    await graphOf({ ...base, "bun.lock": LOCK }, entries, { store });
+    const first = written();
+    expect(first).toBeGreaterThan(0);
+    await graphOf({ ...base, "bun.lock": PLUGIN_ADDED }, entries, { store });
+    expect(written()).toBe(first);
+  });
+
+  test("an npm resolution change re-keys every file record", async () => {
+    const { store, written } = writes();
+    const entries = [`${P}/a/web/index.ts`];
+    await graphOf({ ...base, "bun.lock": LOCK }, entries, { store });
+    const first = written();
+    await graphOf({ ...base, "bun.lock": NPM_BUMPED }, entries, { store });
+    expect(written()).toBe(2 * first);
+  });
+});

@@ -4240,6 +4240,10 @@
       "name": "@equin/plugin-infra-deps-npm",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/deps/plugins/npm/plugins/lock-resolutions": {
+      "name": "@equin/plugin-infra-deps-npm-lock-resolutions",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/deps/plugins/playwright-browser": {
       "name": "@equin/plugin-infra-deps-playwright-browser",
       "version": "0.0.1",
@@ -9507,6 +9511,8 @@
     "@equin/plugin-infra-deps-mise": ["@equin/plugin-infra-deps-mise@workspace:plugins/infra/plugins/deps/plugins/mise"],
 
     "@equin/plugin-infra-deps-npm": ["@equin/plugin-infra-deps-npm@workspace:plugins/infra/plugins/deps/plugins/npm"],
+
+    "@equin/plugin-infra-deps-npm-lock-resolutions": ["@equin/plugin-infra-deps-npm-lock-resolutions@workspace:plugins/infra/plugins/deps/plugins/npm/plugins/lock-resolutions"],
 
     "@equin/plugin-infra-deps-playwright-browser": ["@equin/plugin-infra-deps-playwright-browser@workspace:plugins/infra/plugins/deps/plugins/playwright-browser"],
 

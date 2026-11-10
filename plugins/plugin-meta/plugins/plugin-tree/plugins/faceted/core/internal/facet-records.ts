@@ -9,6 +9,7 @@ import {
 } from "@plugins/plugin-meta/plugins/facets/plugins/loader/core";
 import {
   buildModuleGraph,
+  npmResolutionsKey,
   defineRecordJob,
   readGrouped,
   recordKey,
@@ -73,7 +74,7 @@ export interface FacetRecordsInput {
 
 /**
  * Each facet's identity: the Merkle key of its own module and of the
- * extraction harness, plus the lockfile (the npm code a facet runs: the
+ * extraction harness, plus the lockfile's npm resolutions (the npm code a facet runs: the
  * transpiler, Tailwind) and the store's environment (the runtime's version).
  */
 async function facetIdentities(
@@ -89,7 +90,7 @@ async function facetIdentities(
   const harness = [graph.keyOf(harnessModule)];
   const env = [
     input.store.environment,
-    input.snapshot.has("bun.lock") ? input.snapshot.blobOf("bun.lock") : "-",
+    await npmResolutionsKey(input.snapshot),
   ];
   const out = new Map<string, string>();
   for (const f of facets) {

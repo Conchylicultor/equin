@@ -11,10 +11,8 @@ import {
 import { join, relative } from "path";
 import ts from "typescript";
 import { sha256 } from "./keys";
-import {
-  lockfileNpmResolutions,
-  patchTouchedFiles,
-} from "@plugins/infra/plugins/deps/plugins/npm/core";
+import { patchTouchedFiles } from "@plugins/infra/plugins/deps/plugins/npm/core";
+import { lockfileNpmResolutions } from "@plugins/infra/plugins/deps/plugins/npm/plugins/lock-resolutions/core";
 import {
   type AppPath,
   asAppPath,

@@ -4,7 +4,6 @@
 // workspace. Never import it from `web/`.
 
 export { rangeAt } from "./internal/spec";
-export { lockfileNpmResolutions } from "./internal/lockfile-resolutions";
 export type { NpmClosure } from "./internal/lockfile-closure";
 export { lockfileNpmClosure } from "./internal/lockfile-closure";
 export { patchTouchedFiles } from "./internal/patch-files";

@@ -18,7 +18,7 @@ anywhere, and no global fingerprint: a change costs the records it touches.
 | Table | One record is | Keyed by |
 | --- | --- | --- |
 | `file` | a module's import specifiers | its blob id |
-| `facet` | one facet's extract of one plugin (`plugin-tree/core/internal/facet-records.ts`) | the plugin's own files (what its snapshot holds), the facet's module Merkle key, the extraction harness, the lockfile |
+| `facet` | one facet's extract of one plugin (`plugin-tree/core/internal/facet-records.ts`) | the plugin's own files (what its snapshot holds), the facet's module Merkle key, the extraction harness, the lockfile's npm resolutions |
 | `evaluated` / `module` | what importing a barrel produced, as data; the slots one module created | the barrel's (module's) Merkle key, the evaluator's |
 
 - **Module graph** (`core/internal/module-graph.ts`): file facts + resolution
@@ -146,7 +146,21 @@ and nothing names that code by hand:
   ~1 main commit in 4 re-keyed every file's record;
 - a facet record by its facet's module and the harness that runs it
   (`facet-records.ts`), evaluated records by the evaluator's modules — each a
-  Merkle key over its whole closure — plus the runtime and the lockfile.
+  Merkle key over its whole closure — plus the runtime and the lockfile's npm
+  resolutions.
+
+**The npm code is the lockfile's npm resolutions, never its blob**
+(`npmResolutionsKey`: `bun.lock` minus its workspaces section and every
+`@workspace:` line — `infra/deps/npm/lock-resolutions`, what type-check and the
+browser host snapshot key on too). Adding a plugin adds its workspace stanza to
+`bun.lock` and installs nothing; keyed by the blob, every new plugin re-keyed
+every record of every producer. From 2026-11-04 to 11-10, 61 of main's 64
+lockfile edits were workspace-only, against 0–18 edits of any producer's own
+closure (the file-facts scan: 0), and the store reached 19M key rows (6.7 GB)
+for ~480k distinct values
+(`research/2026-11-10-global-plugin-records-store-growth.md`). An npm change
+still re-keys every record — the next rung would be each producer's own
+`lockfileNpmClosure`.
 
 **A barrel load reads only what its key names.** Every barrel import runs
 under barrel-import's load guard: while its modules' top level runs, a file
@@ -210,6 +224,7 @@ its docblock records — and then lowered as readily as raised.
 - Description: Content-addressed records of what the build learns about each plugin (file facts, facet extracts, evaluated barrels), shared by every worktree's build and check pass; the daily plugin-records.verify job recomputes them on main and fails on any record that disagrees with its key.
 - Core:
   - Uses:
+    - `infra/deps/npm/lock-resolutions.lockfileNpmResolutions`
     - `infra/host-fs/user-path.AppPath`
     - `infra/host-fs/user-path.joinAppPath`
     - `packages/string-hash.sha1Hex`
@@ -237,6 +252,7 @@ its docblock records — and then lowered as readily as raised.
     - `installRecordStore`
     - `installRecordWorkers`
     - `NO_OUTSIDE_FILES`
+    - `npmResolutionsKey`
     - `outsideFilesAt`
     - `readGrouped`
     - `RECORD_TABLES`

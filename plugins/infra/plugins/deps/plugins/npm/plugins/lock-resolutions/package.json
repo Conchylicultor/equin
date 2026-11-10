@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-infra-deps-npm-lock-resolutions",
+  "version": "0.0.1",
+  "private": true,
+  "description": "lockfileNpmResolutions(text): bun.lock as far as installed npm code can tell — minus the workspaces section and every @workspace: line — the text every cache keyed on npm code hashes, so adding a plugin moves none of them. A leaf with no imports, so a record producer's key (plugin-records) gains one module, not the npm barrel's closure."
+}

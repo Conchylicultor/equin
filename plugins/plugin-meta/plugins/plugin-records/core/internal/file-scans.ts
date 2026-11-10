@@ -4,6 +4,7 @@ import type {
 } from "@plugins/framework/plugins/tooling/core";
 import { groupedByOwner, readGrouped } from "./grouped";
 import { recordKey } from "./keys";
+import { npmResolutionsKey } from "./npm-identity";
 import { currentRecordStore } from "./store";
 import {
   buildModuleGraph,
@@ -94,15 +95,16 @@ function scannerIdentity(
   let id = byModule.get(url);
   if (!id) {
     const module = repoModuleOf(input.snapshot, url);
-    id = buildModuleGraph(input, [module]).then((graph) =>
+    id = Promise.all([
+      buildModuleGraph(input, [module]),
+      npmResolutionsKey(input.snapshot),
+    ]).then(([graph, npm]) =>
       recordKey(
         "scan",
         module,
         graph.keyOf(module),
         input.store.environment,
-        input.snapshot.has("bun.lock")
-          ? input.snapshot.blobOf("bun.lock")
-          : "-",
+        npm,
       ),
     );
     byModule.set(url, id);

@@ -4,6 +4,7 @@ import type {
 } from "@plugins/framework/plugins/tooling/core";
 import { groupedByOwner, readGrouped } from "./grouped";
 import { gitBlobId, recordKey } from "./keys";
+import { npmResolutionsKey } from "./npm-identity";
 import type { RecordStore } from "./store";
 import { relDirname, relJoin } from "./rel-path";
 import { scanModuleImports, type ImportSpec } from "./scan-imports";
@@ -157,16 +158,6 @@ export async function buildModuleGraph(
 
 const factsIdentities = new WeakMap<object, Promise<string>>();
 
-/** The lockfile's blob: the npm code a producer can run (a set with no blob ids: its content's). */
-async function lockBlob(set: RepoFiles | RepoSnapshot): Promise<string> {
-  if (!set.has("bun.lock")) return "-";
-  if (typeof (set as Partial<RepoSnapshot>).blobOf === "function")
-    return (set as RepoSnapshot).blobOf("bun.lock");
-  const text = await set.read("bun.lock");
-  if (text === null) throw new Error("[plugin-records] cannot read bun.lock");
-  return gitBlobId(text);
-}
-
 /**
  * The file facts' identity over `input`'s set: the Merkle key of the scan's own
  * closure, from a graph that reads no record (its facts would need this very
@@ -178,13 +169,13 @@ function fileFactsIdentity(input: ModuleGraphInput): Promise<string> {
     const own = newState();
     id = Promise.all([
       growGraph(own, input, [SCAN_MODULE], null),
-      lockBlob(input.snapshot),
-    ]).then(([, lock]) =>
+      npmResolutionsKey(input.snapshot),
+    ]).then(([, npm]) =>
       recordKey(
         "file-facts",
         viewOf(own, [SCAN_MODULE]).keyOf(SCAN_MODULE),
         input.store.environment,
-        lock,
+        npm,
       ),
     );
     factsIdentities.set(input.snapshot, id);

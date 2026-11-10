@@ -63,7 +63,7 @@ import {
   currentRecordStore,
   NO_OUTSIDE_FILES,
 } from "@plugins/plugin-meta/plugins/plugin-records/core";
-import { lockfileNpmResolutions } from "@plugins/infra/plugins/deps/plugins/npm/core";
+import { lockfileNpmResolutions } from "@plugins/infra/plugins/deps/plugins/npm/plugins/lock-resolutions/core";
 import {
   artifactDirName,
   artifactStorePath,

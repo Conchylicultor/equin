@@ -191,7 +191,7 @@ Key invariants:
   codec; derived, never listed), the data that code reads off disk (the glob
   files of the worker closure's artifacts — the migrations and committed
   config the worker inlines — and every file of the host plugin's `data/`),
-  the npm resolutions (`lockfileNpmResolutions`, `infra/deps/npm`) and the
+  the npm resolutions (`lockfileNpmResolutions`, `infra/deps/npm/lock-resolutions`) and the
   `patches/` applied to them, the Bun version, the initialized PGlite cluster
   the take opens from (below) and the stage's layout. An
   import in the take's graph that resolves to no file throws.
@@ -442,7 +442,7 @@ Key invariants:
     - `packages/owned-fd` ×2
     - `framework/browser-server/host-storage.decodeHostSnapshot`
     - `framework/product-name.LEGACY_IDS`
-    - `infra/deps/npm.lockfileNpmResolutions`
+    - `infra/deps/npm/lock-resolutions.lockfileNpmResolutions`
     - `infra/namespace.MAIN_COMPOSITION_ID`
     - `infra/paths.worktreesDir`
     - `infra/spawn.spawnCaptured`

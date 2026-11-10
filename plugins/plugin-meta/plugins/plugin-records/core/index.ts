@@ -21,6 +21,7 @@ export type {
 } from "./internal/workers";
 export { buildModuleGraph, NO_OUTSIDE_FILES } from "./internal/module-graph";
 export { outsideFilesAt } from "./internal/outside-files";
+export { npmResolutionsKey } from "./internal/npm-identity";
 export type {
   ModuleGraph,
   ModuleGraphInput,

@@ -18,6 +18,7 @@ import {
 import type { RepoSnapshot } from "@plugins/framework/plugins/tooling/core";
 import {
   buildModuleGraph,
+  npmResolutionsKey,
   groupedByOwner,
   readGrouped,
   recordKey,
@@ -167,7 +168,7 @@ export async function evaluateBarrels(
     "evaluator",
     ...EVALUATOR_MODULES.map((m) => graph.keyOf(m)),
     store.environment,
-    snapshot.has("bun.lock") ? snapshot.blobOf("bun.lock") : "-",
+    await npmResolutionsKey(snapshot),
     // What a barrel may read as it loads (barrel-import's load guard refuses
     // every other file, environment and cwd read).
     ...barrelLoadInputs(),

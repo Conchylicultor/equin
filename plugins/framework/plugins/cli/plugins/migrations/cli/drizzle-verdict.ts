@@ -12,6 +12,7 @@ import {
 } from "@plugins/framework/plugins/tooling/core";
 import {
   buildModuleGraph,
+  npmResolutionsKey,
   currentRecordStore,
   NO_OUTSIDE_FILES,
   recordKey,
@@ -29,7 +30,8 @@ import {
  *   - which files are schema files (a new `tables.ts` is a new answer);
  *   - the staged out-dir: the tip snapshot and the journal, read AFTER the
  *     reset / join / settle / journal steps that may rewrite them;
- *   - the npm code (drizzle-kit, drizzle-orm): the lockfile, and the runtime
+ *   - the npm code (drizzle-kit, drizzle-orm): the lockfile's npm resolutions
+ *     (`npmResolutionsKey`), and the runtime
  *     (the store's environment).
  *
  * Only one outcome is ever stored: the probe loaded every file, and either
@@ -117,7 +119,7 @@ export async function drizzleVerdictKey(
       ...VERDICT_CODE.map((f) => graph.keyOf(f)),
       blobOr(`${meta}/${SCHEMA_SNAPSHOT_FILE}`),
       blobOr(`${meta}/_journal.json`),
-      blobOr("bun.lock"),
+      await npmResolutionsKey(snapshot),
     ),
     schemaFiles: schema.length,
   };

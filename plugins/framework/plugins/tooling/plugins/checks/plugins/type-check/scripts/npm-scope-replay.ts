@@ -26,10 +26,8 @@
 import { createHash } from "crypto";
 import ts from "typescript";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
-import {
-  lockfileNpmClosure,
-  lockfileNpmResolutions,
-} from "@plugins/infra/plugins/deps/plugins/npm/core";
+import { lockfileNpmClosure } from "@plugins/infra/plugins/deps/plugins/npm/core";
+import { lockfileNpmResolutions } from "@plugins/infra/plugins/deps/plugins/npm/plugins/lock-resolutions/core";
 import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { parse } from "jsonc-parser";

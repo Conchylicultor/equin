@@ -30437,7 +30437,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/owned-fd` ×2
               - `framework/browser-server/host-storage.decodeHostSnapshot`
               - `framework/product-name.LEGACY_IDS`
-              - `infra/deps/npm.lockfileNpmResolutions`
+              - `infra/deps/npm/lock-resolutions.lockfileNpmResolutions`
               - `infra/namespace.MAIN_COMPOSITION_ID`
               - `infra/paths.worktreesDir`
               - `infra/spawn.spawnCaptured`
@@ -32221,7 +32221,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `groupProblems`
               - `installedVersions`
               - `lockfileNpmClosure`
-              - `lockfileNpmResolutions`
               - `newestTag`
               - `patchTouchedFiles`
               - `planNpm`
@@ -32233,13 +32232,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `workspaceManifests`
               - `wrappersUndeclared`
           - Cross-plugin:
-            - Imported by:
-              - `framework/tooling/checks/type-check`
-              - `framework/tooling/web-artifacts`
+            - Imported by: `framework/tooling/checks/type-check`
           - Exemptions:
             - Exempts itself from:
               - `boundaries/no-platform-api` — `server/internal/npm-updater.ts` (debt)
               - `repo-walk-safety/no-adhoc-repo-listing` — `server/internal/npm-updater.ts` (sanctioned)
+          - Plugins:
+            - **`lock-resolutions`** — lockfileNpmResolutions(text): bun.lock as far as installed npm code can tell — minus the workspaces section and every @workspace: line — the text every cache keyed on npm code hashes, so adding a plugin moves none of them. A leaf with no imports, so a record producer's key (plugin-records) gains one module, not the npm barrel's closure.
+              - Cross-plugin:
+                - Imported by:
+                  - `framework/tooling/checks/type-check`
+                  - `framework/tooling/web-artifacts`
+                  - `plugin-meta/plugin-records`
+              - Core:
+                - Exports (values): `lockfileNpmResolutions`
         - **`playwright-browser`** — The playwright-browser installer kind of infra/deps: playwrightBrowser({ browser: "chromium" }) (its deps barrel) declares the browser build the workspace's playwright-core pins — identity = that version (resolved through this plugin's module graph) plus the platform — installed by the workspace's own playwright CLI with PLAYWRIGHT_BROWSERS_PATH = the install's env/, which then records the headed and headless-shell executables as Playwright reports them in env/executables.json (what isIntact checks); launchChromium(ready, opts) launches the recorded binary for the mode.
           - Core:
             - Uses:
@@ -43429,6 +43435,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`plugin-records`** — Content-addressed records of what the build learns about each plugin (file facts, facet extracts, evaluated barrels), shared by every worktree's build and check pass; the daily plugin-records.verify job recomputes them on main and fails on any record that disagrees with its key.
       - Core:
         - Uses:
+          - `infra/deps/npm/lock-resolutions.lockfileNpmResolutions`
           - `infra/host-fs/user-path.AppPath`
           - `infra/host-fs/user-path.joinAppPath`
           - `packages/string-hash.sha1Hex`
@@ -43456,6 +43463,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `installRecordStore`
           - `installRecordWorkers`
           - `NO_OUTSIDE_FILES`
+          - `npmResolutionsKey`
           - `outsideFilesAt`
           - `readGrouped`
           - `RECORD_TABLES`
@@ -43519,6 +43527,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/plugin-records.groupedByOwner`
               - `plugin-meta/plugin-records.ModuleGraph`
               - `plugin-meta/plugin-records.ModuleGraphInput`
+              - `plugin-meta/plugin-records.npmResolutionsKey`
               - `plugin-meta/plugin-records.readGrouped`
               - `plugin-meta/plugin-records.recordKey`
             - Exports (types):
@@ -43697,8 +43706,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`faceted`** — The faceted plugin tree, build tooling: buildFacetedPluginTree (the structure tree plus every facet extracted — plugin records from a snapshot — enriched and related), and the faceted index a backend keeps in a worker thread (FacetedTreeSource's desktop provider): built once, then refreshed by the watcher's paths — only the plugins owning them re-keyed, only moved records extracted, relate only when a record text changed.
           - Core:
-            - Uses: 41 symbols — full list in [`plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/REFERENCE.md)
-              - `plugin-meta/plugin-records` ×12
+            - Uses: 42 symbols — full list in [`plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/REFERENCE.md)
+              - `plugin-meta/plugin-records` ×13
               - `plugin-meta/plugin-tree` ×9
               - `framework/tooling` ×6
               - `plugin-meta/facets` ×4

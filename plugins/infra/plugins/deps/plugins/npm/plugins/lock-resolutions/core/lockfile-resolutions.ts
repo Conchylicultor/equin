@@ -1,8 +1,10 @@
 // The lockfile as far as installed npm code can tell: what decides which
 // package versions a process loads, and nothing about which workspace plugins
 // exist. Read by every cache keyed on npm code — the type-check pass (its
-// compiler and lint engines) and the browser host snapshot's address — each
-// hashing it with its own hasher (this module stays platform-free).
+// compiler and lint engines), the browser host snapshot's address and every
+// plugin record's key (plugin-records' `npmResolutionsKey`) — each hashing it
+// with its own hasher. A leaf with no imports, so a record producer that keys
+// on it gains one module, not the npm barrel's closure.
 
 /**
  * The lockfile's npm resolutions, as text to hash: its content minus the top-level

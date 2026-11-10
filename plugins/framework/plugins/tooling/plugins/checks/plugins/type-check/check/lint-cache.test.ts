@@ -19,7 +19,7 @@ import { expect, test } from "bun:test";
 import type { ResolvedExemption } from "@plugins/framework/plugins/tooling/plugins/exempt/core";
 import type { RawLintMessage } from "../core";
 import { hasLintDirective } from "./fingerprint";
-import { lockfileNpmResolutions } from "@plugins/infra/plugins/deps/plugins/npm/core";
+import { lockfileNpmResolutions } from "@plugins/infra/plugins/deps/plugins/npm/plugins/lock-resolutions/core";
 import { typeAwareKey, typedGroupFps, type LintGroups } from "./lint-groups";
 import { mergeLintEntry, sameEntry } from "../shared/lint-results";
 import { lintViolationLines } from "./lint-verdict";
