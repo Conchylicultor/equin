@@ -8,36 +8,36 @@
 //   Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
 {
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
-  // The rail splits at the spacer: personal-content apps above, developer and
-  // system tooling below. Events is a content app fed by external sources —
-  // the same family as Mail — so it sits with them, directly after Mail.
-  // Chord (the chord ear trainer) is a music app: it sits beside Sonata.
-  // Places (saved places on a map) is personal content: it sits after Events.
-  // Keyboard Party (a keyboard toy for a child) is play: it sits after Chord.
-  // Demo (temporary: the in-app demo before it ships on the website) sits
-  // right after Website, the surface it is headed for.
-  // Desktop sits right after Home: picking it switches the surface into the
-  // desktop (windows + shelf) rather than opening an app.
+  // Home leads the rail: it is the composition's home app — the launcher mark
+  // itself, never a tile — so every launcher list starts at Agent Manager.
+  // The user's chosen order follows: Agent Manager, Pages, Sonata, Places,
+  // Prototypes, Files, Keyboard Party, Desktop, Settings. Desktop switches the
+  // surface into the desktop (windows + shelf) rather than opening an app.
+  // Every other app comes after Settings, in its previous relative order:
+  // the content apps (Mail, Events — fed by external sources, beside Mail —
+  // Chord, Browser), then the spacer, then developer and system tooling
+  // (Studio, Website, Demo — temporary, right after the Website it is headed
+  // for — Deploy, Debug).
   "items": [
     "apps.home.shell:home",
-    "apps.desktop.shell:desktop",
     "apps.agent-manager.shell:agent-manager",
     "apps.pages.shell:pages",
+    "apps.sonata.shell:sonata",
+    "apps.places.shell:places",
+    "apps.prototypes.shell:prototypes",
+    "apps.file-explorer.shell:file-explorer",
+    "apps.keyboard-party.shell:keyboard-party",
+    "apps.desktop.shell:desktop",
+    "apps.settings.shell:settings",
     "apps.mail.shell:mail",
     "apps.events.shell:events",
-    "apps.places.shell:places",
-    "apps.sonata.shell:sonata",
     "apps.chord.shell:chord",
-    "apps.keyboard-party.shell:keyboard-party",
     "apps.browser.shell:browser",
     { "type": "spacer", "id": "spacer-1" },
-    "apps.file-explorer.shell:file-explorer",
     "apps.studio.shell:studio",
-    "apps.prototypes.shell:prototypes",
     "apps.website.shell:website",
     "apps.demo.shell:demo",
     "apps.deploy.shell:deploy",
-    "apps.settings.shell:settings",
     "apps.debug.shell:debug",
     // The menu-bar panel is an app only so it can wear its own light/dark; it
     // is unlisted (`defineApp({ listed: false })`) — the native helper opens it.
