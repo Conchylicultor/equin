@@ -28091,6 +28091,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HostInputs`
       - Cross-plugin:
         - Imported by:
+          - `apps/demo`
           - `apps/prototypes/canvas`
           - `apps/sonata/audio/piano`
           - `apps/sonata/audio/soundfont`
@@ -32576,7 +32577,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 249 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 250 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×73
           - `conversations` ×35
           - `infra` ×23
@@ -32587,8 +32588,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reports` ×6
           - `ui` ×6
           - `auth` ×5
+          - `framework` ×4
           - `build` ×3
-          - `framework` ×3
           - `integrations` ×3
           - `network` ×3
           - `active-data` ×2

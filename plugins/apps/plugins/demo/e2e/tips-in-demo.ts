@@ -6,9 +6,10 @@
  * In `/demo` (a fresh context: the demo has met no tip), it:
  *
  *  1. enters the demo on the Agent Manager: the "Switch apps" tip shows,
- *     ringing the embed's launcher; Got it answers it;
+ *     ringing the embed's launcher; Got it answers it — the card goes away and
+ *     the demo's worker records the answer;
  *  2. picks Desktop from the launcher: the "Leave the desktop" tip shows on the
- *     focused window's Full screen control; Got it answers it;
+ *     focused window's Full screen control; Got it answers it, recorded too;
  *  3. reloads and enters again: neither tip shows again — the demo remembers
  *     them;
  *  4. throughout, no `/api/hints/…` request reached the page's server (the
@@ -19,6 +20,11 @@
  */
 import type { Locator, Page } from "playwright";
 import { pickFromLauncher } from "@plugins/apps-core/plugins/app-launcher/e2e";
+import {
+  hostRequestsAnswered,
+  recordHostRequests,
+} from "@plugins/framework/plugins/browser-server/e2e";
+import { markHintSeenEndpoint } from "@plugins/hints/core";
 import {
   arg,
   boot,
@@ -90,6 +96,40 @@ await withBrowser(async (h) => {
       hintCalls.push(`${req.method()} ${url.pathname}`);
   });
 
+  // Before the page connects to the demo's worker: its answers are observed
+  // as the port carries them.
+  await recordHostRequests(page);
+  /**
+   * Press `card`'s Got it: the card goes away (at once — the session already
+   * counts it answered) and the demo's worker answers the seen-mark. The card
+   * is gone before the mark has even left the page, so a reload straight after
+   * it can lose the mark; a visitor's answer is recorded by the worker.
+   */
+  const gotIt = async (card: Locator, tip: string): Promise<void> => {
+    const marked = await hostRequestsAnswered(page, markHintSeenEndpoint, {});
+    await card.getByRole("button").first().click();
+    r.ok(
+      `Got it puts ${tip} away`,
+      (
+        await waitFor(
+          () => card.count(),
+          (n) => n === 0,
+          { timeoutMs: 5_000 },
+        )
+      ).ok,
+    );
+    const recorded = await waitFor(
+      () => hostRequestsAnswered(page, markHintSeenEndpoint, {}),
+      (n) => n > marked,
+      { timeoutMs: 5_000 },
+    );
+    r.ok(
+      `the demo's worker records ${tip} as seen`,
+      recorded.ok,
+      `${recorded.value - marked} answered (waited ${recorded.waitedMs} ms)`,
+    );
+  };
+
   await boot(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
     marker: ENTER_DEMO,
     timeoutMs: RENDER_TIMEOUT_MS,
@@ -116,17 +156,7 @@ await withBrowser(async (h) => {
     ),
   );
   await snap(page, OUT, "1-switch-apps");
-  await switchApps.getByRole("button").first().click();
-  r.ok(
-    "Got it puts it away",
-    (
-      await waitFor(
-        () => switchApps.count(),
-        (n) => n === 0,
-        { timeoutMs: 5_000 },
-      )
-    ).ok,
-  );
+  await gotIt(switchApps, "Switch apps");
 
   // ── 2. Leave the desktop, on the focused window's Full screen ─────────────
   r.ok(
@@ -152,7 +182,7 @@ await withBrowser(async (h) => {
     ),
   );
   await snap(page, OUT, "2-back-to-one-app");
-  await backToOne.getByRole("button").first().click();
+  await gotIt(backToOne, "Leave the desktop");
 
   // ── 3. Remembered inside the demo ───────────────────────────────────────
   await page.reload({ waitUntil: "domcontentloaded" });

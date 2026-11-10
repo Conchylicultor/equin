@@ -251,6 +251,7 @@ reaching the server, detach on unmount).
     - `HostInputs`
 - Cross-plugin:
   - Imported by:
+    - `apps/demo`
     - `apps/prototypes/canvas`
     - `apps/sonata/audio/piano`
     - `apps/sonata/audio/soundfont`
