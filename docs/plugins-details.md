@@ -29950,8 +29950,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards/module-extension.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 188 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
-              - `apps` ×55
+            - Imported by: 189 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+              - `apps` ×56
               - `primitives` ×28
               - `conversations` ×26
               - `page` ×26
@@ -39114,6 +39114,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withForegroundPriority`
       - Cross-plugin:
         - Imported by:
+          - `apps/desktop/windows`
           - `debug/profiling/cold-start`
           - `framework/cli/run`
           - `framework/tooling/e2e-harness`
@@ -54393,6 +54394,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape --spacing`
         - Imported by:
           - `apps-core/surface`
+          - `apps/desktop/windows`
           - `apps/home/tour`
           - `hints/ask`
           - `shell/notifications`

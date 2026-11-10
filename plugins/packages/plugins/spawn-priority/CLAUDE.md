@@ -135,6 +135,7 @@ re-exports what server consumers use (same-plugin re-export), and
     - `withForegroundPriority`
 - Cross-plugin:
   - Imported by:
+    - `apps/desktop/windows`
     - `debug/profiling/cold-start`
     - `framework/cli/run`
     - `framework/tooling/e2e-harness`
