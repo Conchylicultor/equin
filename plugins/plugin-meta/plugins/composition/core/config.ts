@@ -56,20 +56,10 @@ import { SERVE_MODE_OPTIONS } from "./serve-mode";
  *   and the variant regions that chrome draws (breadcrumb separator, sidebar
  *   framing, tab bar) with the tweakcn theme catalog.
  *
- * The negatives are adapters INTO another app, which the agent manager does not
- * ship: the song / event-source / prototype chips (Sonata, Events, Prototypes),
- * and — `PLACES_ADAPTERS`, kept apart so a composition shipping Places takes
- * the core list without them — the place and map page blocks and the data
- * view's map (Google Maps, auth, the map primitive).
+ * It names no negative itself: what those umbrellas hold that the agent
+ * manager must NOT ship are adapters into other apps (`APP_ADAPTERS`, below),
+ * and `withAppAdapters` derives them per row from the apps that row ships.
  */
-const PLACES_ADAPTERS = {
-  entryPoints: [
-    "!page.place.**",
-    "!page.map.**",
-    "!primitives.data-view.map.**",
-  ],
-};
-
 const AGENT_MANAGER_CORE = {
   entryPoints: [
     "apps.agent-manager.**",
@@ -77,9 +67,6 @@ const AGENT_MANAGER_CORE = {
     "tasks.**",
     "fields.**",
     "active-data.**",
-    "!active-data.song.**",
-    "!active-data.event-source.**",
-    "!active-data.prototype.**",
     "page.**",
     "ui.tokens.rich-text-palette",
     "code-explorer.**",
@@ -100,11 +87,71 @@ const AGENT_MANAGER_CORE = {
   ],
 };
 
+/**
+ * Adapters INTO an app that live outside it — under an umbrella a composition
+ * seeds whole (`active-data.**`, `page.**`, the data view) — keyed by the app's
+ * entry pattern: the song / event-source / prototype id chips (Sonata, Events,
+ * Prototypes), and the place and map page blocks and the data view's map
+ * (Places: Google Maps, auth, the map primitive).
+ *
+ * An adapter belongs with its app: a row that ships the app ships its
+ * adapters, a row that does not leaves them out. `withAppAdapters` derives
+ * that per row, so a composition gaining an app gains its chips with no edit
+ * here, and a new adapter is one line in its app's entry — never a negative
+ * hand-copied into each row that seeds its umbrella (the demo once shipped
+ * Sonata and Prototypes with their chips negated).
+ */
+const APP_ADAPTERS: ReadonlyArray<{
+  app: { entryPoints: readonly string[] };
+  adapters: { entryPoints: readonly string[] };
+}> = [
+  {
+    app: { entryPoints: ["apps.sonata.**"] },
+    adapters: { entryPoints: ["active-data.song.**"] },
+  },
+  {
+    app: { entryPoints: ["apps.events.**"] },
+    adapters: { entryPoints: ["active-data.event-source.**"] },
+  },
+  {
+    app: { entryPoints: ["apps.prototypes.**"] },
+    adapters: { entryPoints: ["active-data.prototype.**"] },
+  },
+  {
+    app: { entryPoints: ["apps.places.**"] },
+    adapters: {
+      entryPoints: [
+        "page.place.**",
+        "page.map.**",
+        "primitives.data-view.map.**",
+      ],
+    },
+  },
+];
+
+/**
+ * A row's entry points, plus a negative for every adapter into an app the row
+ * does not ship (`APP_ADAPTERS`) — an app counts as shipped when the row
+ * names its entry pattern. For a row seeding the adapters' umbrellas (the
+ * agent-manager profiles): a row seeding none would only gain dead negatives,
+ * which `composition-closure` refuses. Takes `{ entryPoints: [...] }`, never a
+ * bare array: that literal is where the plugin-refs locator reads the ids (and
+ * `./equin plugin move` rewrites them).
+ */
+function withAppAdapters(row: { entryPoints: readonly string[] }): string[] {
+  const shipped = APP_ADAPTERS.filter(({ app }) =>
+    app.entryPoints.every((e) => row.entryPoints.includes(e)),
+  );
+  return [
+    ...row.entryPoints,
+    ...APP_ADAPTERS.filter((a) => !shipped.includes(a)).flatMap(
+      ({ adapters }) => adapters.entryPoints.map((e) => `!${e}`),
+    ),
+  ];
+}
+
 const AGENT_MANAGER = {
-  entryPoints: [
-    ...AGENT_MANAGER_CORE.entryPoints,
-    ...PLACES_ADAPTERS.entryPoints,
-  ],
+  entryPoints: withAppAdapters(AGENT_MANAGER_CORE),
 };
 
 export const compositionsConfig = defineConfig({
@@ -349,10 +396,10 @@ export const compositionsConfig = defineConfig({
         // What `/demo` renders (the Agent Manager on made-up data, inside
         // `<DemoScope>`) and what its browser host's worker serves: the full
         // agent manager — `agent-manager`'s own entries, extends and
-        // selection, but for its adapters into Places (`PLACES_ADAPTERS`):
-        // the demo ships Places, and an inherited negative cannot be
-        // contradicted, so it takes `AGENT_MANAGER_CORE` rather than extending
-        // the row — and the Pages app it reaches into (`extends: [..., "pages"]`
+        // selection, but with the adapters into the apps it ships (Sonata,
+        // Prototypes, Places — `withAppAdapters` derives which): an inherited
+        // negative cannot be contradicted, so it takes `AGENT_MANAGER_CORE`
+        // rather than extending the row — and the Pages app it reaches into (`extends: [..., "pages"]`
         // — the task detail's Origin, the page chips, the page artifacts and
         // tool renderers, and the Pages app itself) MINUS the surfaces that
         // mean nothing without the computer
@@ -394,12 +441,11 @@ export const compositionsConfig = defineConfig({
         // Prototypes joins it (`apps.prototypes.**`): its tree is a
         // `data-files` root, memory in the worker, seeded with the demo's
         // prototypes (research/2026-10-24-global-data-files-host-service.md).
-        // The prototype chips (`active-data.prototype.**`) stay out: the
-        // agent-manager profile this extends negates them, a negative a
-        // positive here may not contradict (composition-closure), and no
-        // seeded transcript names a prototype.
-        // Events is not in the bundle at all, so a negative for it would
-        // trim nothing — a dead negative. (`stats` and `stats.cost`
+        // Its chips (`active-data.prototype.**`) come with it, as Sonata's
+        // song chips do (`withAppAdapters`).
+        // Events is not in the bundle at all, so a negative for the app would
+        // trim nothing — a dead negative. (Its chips, `active-data.event-source`,
+        // are seeded by `active-data.**` and stay negated: `withAppAdapters`.) (`stats` and `stats.cost`
         // are: `conversations.usage`'s page imports the cost model's core.)
         // Debug cannot leave yet: the
         // bell (`shell.notifications`), build, recover and two debug tools
@@ -419,82 +465,84 @@ export const compositionsConfig = defineConfig({
           // `central/` import (the worker never boots those halves), and the
           // browser-host codegen refuses a row not declared for `browser`.
           hosts: ["browser"],
-          entryPoints: [
-            ...AGENT_MANAGER_CORE.entryPoints,
-            "!conversations.conversation-view.push-and-exit.**",
-            "!tasks.automations.**",
-            "!tasks.reports-investigation.**",
-            "!tasks.sidequest-autopilot.**",
-            "!tasks.outcome-report.**",
-            // The task detail's Triage card: it imports automations (the
-            // prompt renderer, the approve footer's launch decision), so it
-            // leaves with them. Written here because the cascade took it out
-            // of `tasks.**` without a word until `cascadeLosses` said so.
-            "!tasks.task-triage",
-            // The task_submit_triage tool call's renderer draws its verdict
-            // with the Triage card's labels (task-triage/core), so it leaves
-            // with it.
-            "!conversations.conversation-view.jsonl-viewer.tool-call.task-triage",
-            // Kept under those negatives: the mandate capabilities as plain
-            // data. `tasks.mandate-presets` (which every task runs with)
-            // grants them from its `shared/`, so the features leave and the
-            // capability ids they define stay.
-            "conversations.conversation-view.push-and-exit.capabilities",
-            "tasks.outcome-report.capability",
-            // Files, whole: it browses the browser's own file system — its
-            // Home, which the seed fills (Documents, Music, Pictures, a few
-            // loose files), with the apps' folders under the hidden ~/.equin/
-            // — and leaves out the computer's disk, which this host does not
-            // serve (its places are absent).
-            // The file-peek pane every transcript path opens imports its
-            // panes too; reading a checkout file there says "not available".
-            "apps.file-explorer.**",
-            // The agent's git worktree (DB fork, checkout): the computer's.
-            "!conversations.workspace.worktree.**",
-            // The get_timeline tool call's renderer: it draws this host's
-            // incident timeline, which a demo has none of.
-            "!conversations.conversation-view.jsonl-viewer.tool-call.timeline.**",
-            "apps.home.**",
-            "!apps.home.tour.**",
-            "apps.prototypes.**",
-            // Sonata, as its own app ships (`app("sonata")` below), without
-            // transcription (it launches an agent in a scratch workspace) —
-            // but WITH the MIDI file preview, its adapter into the file
-            // viewer: this demo has Files, whose Music folder holds a MIDI.
-            "apps.sonata.**",
-            "!apps.sonata.transcription.**",
-            // The Desktop (floating windows over a wallpaper, the shelf,
-            // virtual desktops), switched to from the launcher inside the
-            // embed as on main; its windows are the embed's own tab set. Its
-            // Openverse wallpaper source stays out: it searches an external
-            // API from the computer's server (SSRF-guarded), and a request
-            // must not leave the browser. Importing a wallpaper from a link
-            // says "not available".
-            "apps.desktop.**",
-            "!apps.desktop.wallpaper.openverse.**",
-            // Keyboard Party, whole: its server half only registers the
-            // party's settings (served by the worker's config), and the toy
-            // loads nothing — emoji pictures, WebAudio-synthesized sounds,
-            // the browser's own speechSynthesis.
-            "apps.keyboard-party.**",
-            // Places, the map of saved places: the map draws through Google
-            // Maps (`map.google`, selected below) with the owner's browser key
-            // the page hands the host (`google-maps/page-config`); searching,
-            // saving, Google's details and photos, the icon pick and Ask need
-            // the computer and say so. The adapters into it (the place and
-            // map blocks, the data view's map) are not negated here.
-            "apps.places.**",
-            // The OS menu-bar panel and its sections: a page the native
-            // helper opens on the computer, meaningless in a demo.
-            "!menu-bar.**",
-            // Kept under that negative: the installed-window bridge Files'
-            // browser drags files out through. It answers null in a browser
-            // tab, and negating it cascades the file-peek pane out with Files.
-            "menu-bar.app-window",
-            "!conversations.menu-bar-status.**",
-            "!tasks.menu-bar-task.**",
-            "!shell.notifications.native.**",
-          ],
+          entryPoints: withAppAdapters({
+            entryPoints: [
+              ...AGENT_MANAGER_CORE.entryPoints,
+              "!conversations.conversation-view.push-and-exit.**",
+              "!tasks.automations.**",
+              "!tasks.reports-investigation.**",
+              "!tasks.sidequest-autopilot.**",
+              "!tasks.outcome-report.**",
+              // The task detail's Triage card: it imports automations (the
+              // prompt renderer, the approve footer's launch decision), so it
+              // leaves with them. Written here because the cascade took it out
+              // of `tasks.**` without a word until `cascadeLosses` said so.
+              "!tasks.task-triage",
+              // The task_submit_triage tool call's renderer draws its verdict
+              // with the Triage card's labels (task-triage/core), so it leaves
+              // with it.
+              "!conversations.conversation-view.jsonl-viewer.tool-call.task-triage",
+              // Kept under those negatives: the mandate capabilities as plain
+              // data. `tasks.mandate-presets` (which every task runs with)
+              // grants them from its `shared/`, so the features leave and the
+              // capability ids they define stay.
+              "conversations.conversation-view.push-and-exit.capabilities",
+              "tasks.outcome-report.capability",
+              // Files, whole: it browses the browser's own file system — its
+              // Home, which the seed fills (Documents, Music, Pictures, a few
+              // loose files), with the apps' folders under the hidden ~/.equin/
+              // — and leaves out the computer's disk, which this host does not
+              // serve (its places are absent).
+              // The file-peek pane every transcript path opens imports its
+              // panes too; reading a checkout file there says "not available".
+              "apps.file-explorer.**",
+              // The agent's git worktree (DB fork, checkout): the computer's.
+              "!conversations.workspace.worktree.**",
+              // The get_timeline tool call's renderer: it draws this host's
+              // incident timeline, which a demo has none of.
+              "!conversations.conversation-view.jsonl-viewer.tool-call.timeline.**",
+              "apps.home.**",
+              "!apps.home.tour.**",
+              "apps.prototypes.**",
+              // Sonata, as its own app ships (`app("sonata")` below), without
+              // transcription (it launches an agent in a scratch workspace) —
+              // but WITH the MIDI file preview, its adapter into the file
+              // viewer: this demo has Files, whose Music folder holds a MIDI.
+              "apps.sonata.**",
+              "!apps.sonata.transcription.**",
+              // The Desktop (floating windows over a wallpaper, the shelf,
+              // virtual desktops), switched to from the launcher inside the
+              // embed as on main; its windows are the embed's own tab set. Its
+              // Openverse wallpaper source stays out: it searches an external
+              // API from the computer's server (SSRF-guarded), and a request
+              // must not leave the browser. Importing a wallpaper from a link
+              // says "not available".
+              "apps.desktop.**",
+              "!apps.desktop.wallpaper.openverse.**",
+              // Keyboard Party, whole: its server half only registers the
+              // party's settings (served by the worker's config), and the toy
+              // loads nothing — emoji pictures, WebAudio-synthesized sounds,
+              // the browser's own speechSynthesis.
+              "apps.keyboard-party.**",
+              // Places, the map of saved places: the map draws through Google
+              // Maps (`map.google`, selected below) with the owner's browser key
+              // the page hands the host (`google-maps/page-config`); searching,
+              // saving, Google's details and photos, the icon pick and Ask need
+              // the computer and say so. The adapters into it (the place and
+              // map blocks, the data view's map) come with it (`withAppAdapters`).
+              "apps.places.**",
+              // The OS menu-bar panel and its sections: a page the native
+              // helper opens on the computer, meaningless in a demo.
+              "!menu-bar.**",
+              // Kept under that negative: the installed-window bridge Files'
+              // browser drags files out through. It answers null in a browser
+              // tab, and negating it cascades the file-peek pane out with Files.
+              "menu-bar.app-window",
+              "!conversations.menu-bar-status.**",
+              "!tasks.menu-bar-task.**",
+              "!shell.notifications.native.**",
+            ],
+          }),
           // `agent-manager`'s selection, and Google's map renderer (a
           // contributor to the map Places draws on).
           selectedContributors: ["ui.theme-toggle", "map.google"],

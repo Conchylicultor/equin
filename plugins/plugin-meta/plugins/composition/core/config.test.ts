@@ -97,26 +97,22 @@ test("the website app seed takes the whole site subtree", () => {
   const m = manifestItemToManifest(site);
   expect(typeof m.name).toBe("string");
   expect(m.name.length).toBeGreaterThan(0);
-  // The site is one subtree, less its live demos: `.**` takes it whole, and
-  // `!apps.website.demos.**` subtracts the demos — each is the Agent Manager on
-  // made-up data in its own worker composition, so it hard-reaches the agent
-  // runtime the site excludes. An entry pattern whose base resolves to nothing
-  // is what `composition-closure` rejects, so the negative names a real
-  // umbrella. Whether the bundle really stays clear of worktree infra
-  // is `excludes: ["agent-runtime"]`'s job, asserted in closure.test.ts against a
-  // real plugin tree; here we only assert the grammar.
+  // The site is one subtree: `.**` takes it whole, the homepage's live demo
+  // included — its page scope ships as on-demand web plugins, its server
+  // halves are the demo worker's. Less two negatives:
+  // `!apps.website.demos.workspace.story` (the demo's story is the data its
+  // seed writes, read only by the demo's `bin/` and the worker) and
+  // `!apps.website.promo-film.**` (the showcase film is made from the whole
+  // app, not part of the site). Whether the bundle really stays clear of
+  // worktree infra is `excludes: ["agent-runtime"]`'s job, asserted in
+  // closure.test.ts against a real plugin tree; here we only assert the grammar.
   //
   // `excludes` is read off the CONFIG ITEM, not off `m`: manifestItemToManifest
   // drops it deliberately (the closure engine never reads it).
   const entries = m.entryPoints.map(String);
-  // `!apps.website.landing.screenshot`: the homepage's demo band embeds a
-  // demo, so it goes with them, named. `!apps.website.promo-film.**` likewise:
-  // the showcase film is made from the whole app (its seed writes tasks and
-  // conversations), not part of the site.
   expect(entries).toEqual([
     "apps.website.**",
-    "!apps.website.demos.**",
-    "!apps.website.landing.screenshot",
+    "!apps.website.demos.workspace.story",
     "!apps.website.promo-film.**",
   ]);
   expect(site.excludes).toContain("agent-runtime");
@@ -280,8 +276,8 @@ test("main's entry points stay exactly `**` — the exclusion lives on the base 
 test("the demo profile is the agent manager and Pages minus machine-only surfaces, plus whole apps", () => {
   // `agent-manager-demo` is what the in-page demo's browser host serves: the
   // full agent manager — `agent-manager`'s own entries, extends and selection,
-  // but for its adapters into Places, since the demo ships Places (an
-  // inherited negative could not be contradicted) — and the Pages app by
+  // but for its adapters into the apps it ships (an inherited negative could
+  // not be contradicted) — and the Pages app by
   // `extends`, so a plugin either app gains reaches the demo with no edit
   // here. Its own entries SUBTRACT machine-only surfaces, and the only thing
   // they may add is a whole app (`apps.<app>.**`, e.g. Prototypes over its
@@ -301,10 +297,20 @@ test("the demo profile is the agent manager and Pages minus machine-only surface
     ...agentManager.selectedContributors,
     "map.google",
   ]);
-  // The agent manager's entries, all but its adapters into Places.
+  // The agent manager's entries, all but its adapters into the apps the demo
+  // ships (Sonata's song chips, Prototypes' chips, Places' blocks and map):
+  // an adapter comes with its app. Events it does not ship, so its chips stay
+  // out.
   expect(
     agentManager.entryPoints.filter((e) => !demo.entryPoints.includes(e)),
-  ).toEqual(["!page.place.**", "!page.map.**", "!primitives.data-view.map.**"]);
+  ).toEqual([
+    "!active-data.song.**",
+    "!active-data.prototype.**",
+    "!page.place.**",
+    "!page.map.**",
+    "!primitives.data-view.map.**",
+  ]);
+  expect(demo.entryPoints).toContain("!active-data.event-source.**");
   const own = demo.entryPoints.filter(
     (e) => !agentManager.entryPoints.includes(e),
   );

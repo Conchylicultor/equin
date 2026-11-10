@@ -1,4 +1,4 @@
-// @hash 21ca05c93476
+// @hash 0953f3875b5b
 {
   "manifests": [
     {
@@ -65,9 +65,6 @@
         "tasks.**",
         "fields.**",
         "active-data.**",
-        "!active-data.song.**",
-        "!active-data.event-source.**",
-        "!active-data.prototype.**",
         "page.**",
         "ui.tokens.rich-text-palette",
         "code-explorer.**",
@@ -85,6 +82,9 @@
         "ui.tab-bar.**",
         "ui.tree-disclosure.**",
         "ui.tweakcn.**",
+        "!active-data.song.**",
+        "!active-data.event-source.**",
+        "!active-data.prototype.**",
         "!page.place.**",
         "!page.map.**",
         "!primitives.data-view.map.**"
@@ -114,9 +114,6 @@
         "tasks.**",
         "fields.**",
         "active-data.**",
-        "!active-data.song.**",
-        "!active-data.event-source.**",
-        "!active-data.prototype.**",
         "page.**",
         "ui.tokens.rich-text-palette",
         "code-explorer.**",
@@ -134,6 +131,9 @@
         "ui.tab-bar.**",
         "ui.tree-disclosure.**",
         "ui.tweakcn.**",
+        "!active-data.song.**",
+        "!active-data.event-source.**",
+        "!active-data.prototype.**",
         "!page.place.**",
         "!page.map.**",
         "!primitives.data-view.map.**"
@@ -162,9 +162,6 @@
         "tasks.**",
         "fields.**",
         "active-data.**",
-        "!active-data.song.**",
-        "!active-data.event-source.**",
-        "!active-data.prototype.**",
         "page.**",
         "ui.tokens.rich-text-palette",
         "code-explorer.**",
@@ -207,7 +204,8 @@
         "menu-bar.app-window",
         "!conversations.menu-bar-status.**",
         "!tasks.menu-bar-task.**",
-        "!shell.notifications.native.**"
+        "!shell.notifications.native.**",
+        "!active-data.event-source.**"
       ],
       "selectedContributors": [
         "ui.theme-toggle",

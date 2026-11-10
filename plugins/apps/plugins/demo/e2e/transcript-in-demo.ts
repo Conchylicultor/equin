@@ -12,7 +12,10 @@
  *  1. waits for the transcript, and checks every Read / Write / Edit card
  *     carries its file path chip (`data-file-path`, non-empty) — there is at
  *     least one of each kind the seed holds;
- *  2. clicks the first path: the file-peek pane opens beside the
+ *  2. checks the song id the transcript names draws as Sonata's chip (the
+ *     song's title) — no raw `song-…` text: the demo ships Sonata, so its
+ *     chip comes with it (the composition's `withAppAdapters`);
+ *  3. clicks the first path: the file-peek pane opens beside the
  *     conversation, naming the file, and says the file cannot be read here
  *     (a checkout file needs the computer) — never a blank pane;
  *
@@ -41,6 +44,10 @@ const OUT = arg("out") ?? "/tmp/demo-transcript";
 const RENDER_TIMEOUT_MS = 30_000;
 /** The tool cards that draw a file path chip. */
 const PATH_TOOLS = ["Read", "Write", "Edit"] as const;
+/** The song the practice-timer transcript names, as its chip shows it. */
+const SONG_TITLE = "ii–V–I warm-up";
+/** A song id left as raw text — what the transcript shows without the chip. */
+const RAW_SONG_ID = /\bsong-\d+-\w+/g;
 
 interface PathCard {
   tool: string;
@@ -108,7 +115,30 @@ await withBrowser(async (h) => {
     `${cards.length} cards: ${cards.map((c) => `${c.tool} ${c.path}`).join(", ")}`,
   );
 
-  // 2. A path opens the file-peek pane, which says why it shows no content.
+  // 2. A song id the transcript names is Sonata's chip (the song's title),
+  //    never raw text: an adapter into an app the demo ships comes with it.
+  //    The transcript names the song in prose beside its id too, so the
+  //    chip is found as what it is — a button labelled with the title — and
+  //    the raw id is looked for once it has resolved.
+  const embed = page.locator("[data-app-embed]").first();
+  const chip = embed.locator("button", { hasText: SONG_TITLE });
+  const chips = await waitFor(
+    () => chip.count(),
+    (n) => n > 0,
+    { timeoutMs: RENDER_TIMEOUT_MS },
+  );
+  r.ok(
+    `the transcript's song id draws as its chip ("${SONG_TITLE}")`,
+    chips.value > 0,
+    "no song chip on screen",
+  );
+  r.eq(
+    "no raw song id in the transcript",
+    (await embed.innerText()).match(RAW_SONG_ID) ?? [],
+    [],
+  );
+
+  // 3. A path opens the file-peek pane, which says why it shows no content.
   const first = cards.find((c) => c.path);
   if (first?.path) {
     const name = first.path.slice(first.path.lastIndexOf("/") + 1);

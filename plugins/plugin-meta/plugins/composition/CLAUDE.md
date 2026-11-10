@@ -30,8 +30,12 @@ shell plus every umbrella whose whole subtree the agent manager renders
 (`conversations.**`, `tasks.**`, `fields.**`, `active-data.**`, `page.**`,
 `code-explorer.**`, `apps-core.**`, `shell.**`, `reorder.**`, the data view,
 file viewer, prompt editor and code previews, and the chrome's variant
-regions), with negatives for the adapters into another app (the song /
-event-source / prototype chips, the place and map blocks, the data view's map).
+regions). What those umbrellas hold that is an adapter INTO another app (the
+song / event-source / prototype chips, the place and map blocks, the data view's
+map) is declared once, keyed by its app, in `APP_ADAPTERS`; `withAppAdapters`
+negates exactly the adapters into apps the row does not ship, so a row gaining
+an app gains its adapters with no edit (the demo ships Sonata, Prototypes and
+Places, and so their chips and blocks).
 A pattern, never a hand list of contributors: a renderer a future plugin adds
 under one of those umbrellas ships with the app with no edit here. The two
 profiles still differ only by the `self-improvement` pack (`config.test.ts`
@@ -44,8 +48,8 @@ composition the Agent Manager demo's browser host serves
 so the demo can switch to it — and only subtracts what means nothing without
 the computer — push-and-exit and the automations (`tasks.automations.**`, every
 automation and the outcome-report card with it) — and adds Prototypes back (`apps.prototypes.**`: its files are a
-`data-files` root, memory in the worker; the prototype chips stay negated by the
-agent-manager profile) and Home (`apps.home.**`), the app gallery, which is its
+`data-files` root, memory in the worker; its chips come with it, via
+`withAppAdapters`) and Home (`apps.home.**`), the app gallery, which is its
 home as on main: the app launcher's grid lists every app but the home, and its
 "All apps" opens the home, so an agent-manager home would hide the agent manager
 from the demo's launcher (Home's onboarding tour, `apps.home.tour`, stays out). Sonata, the Desktop, Keyboard Party (`apps.keyboard-party.**`), Places and Files (`apps.file-explorer.**`: a virtual file system over the worker's `data-files` roots, its disk places left out) join it whole, minus what needs the computer. Its web plugins are the scope the demo page renders in
