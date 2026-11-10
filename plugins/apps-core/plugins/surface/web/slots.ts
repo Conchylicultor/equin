@@ -48,6 +48,18 @@ export interface PlacementChromeProps {
   onClose: () => void;
   /** Return the surface to the mode it was in before this one (solo's exit). */
   onExit: () => void;
+  /**
+   * The frame the surface was in just before it entered the current mode, as
+   * its mode declared it — `undefined` while the surface has been in one mode
+   * only. Data, not a mode id: a mode can play its own entry from what the tab
+   * looked like a moment ago without naming another mode (the desktop's
+   * windows shrink back from full screen when entered from a `viewport` frame,
+   * which in a contained tab set means its box). It keeps its value until the
+   * next switch, so read it on the edge a Chrome is shown — a layout effect,
+   * which re-runs on every show (the Chrome is kept mounted, hidden, while its
+   * mode is not active).
+   */
+  enteredFrom: PlacementFrame | undefined;
 }
 
 /**

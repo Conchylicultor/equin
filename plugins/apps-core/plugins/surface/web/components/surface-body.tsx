@@ -214,6 +214,7 @@ function SurfaceBodyReady({
   // single value is why two modes can never be visible at once — there is no
   // per-tab placement to disagree with it.
   const activeDef = byId.get(mode) ?? byId.get(defaultId);
+  const enteredFrom = useEnteredFrom(allSorted, activeDef);
 
   // Exit-presence layer (view-only): the live tabs plus any just-closed tab,
   // retained so the active mode's Chrome can play an exit tween (only when the
@@ -308,6 +309,7 @@ function SurfaceBodyReady({
           onFocus={() => focusTab(p.tab.tabId)}
           onClose={() => closeTab(p.tab.tabId)}
           onExit={exitToPreviousMode}
+          enteredFrom={enteredFrom}
         />
       ))}
       {/* Each mounted mode's optional foreground (e.g. windows' dock), rendered
@@ -362,6 +364,30 @@ function useMountedModes(
 }
 
 /**
+ * The frame the surface was in before the active mode — what each Chrome is
+ * handed as `enteredFrom`. Read off the DECLARED descriptors (`allSorted`, not
+ * the contained set's remap): `viewport` keeps meaning "the tab covered its
+ * tab set's whole viewport", which in a contained set is its box. Updated in
+ * render (React's adjust-state-on-input pattern), so the commit that shows the
+ * new mode already carries where it came from.
+ */
+function useEnteredFrom(
+  declared: readonly PlacementDef[],
+  activeDef: PlacementDef | undefined,
+): PlacementFrame | undefined {
+  const [trail, setTrail] = useState<{
+    id: string | undefined;
+    enteredFrom: PlacementFrame | undefined;
+  }>(() => ({ id: activeDef?.id, enteredFrom: undefined }));
+  if (activeDef?.id !== trail.id)
+    setTrail({
+      id: activeDef?.id,
+      enteredFrom: declared.find((d) => d.id === trail.id)?.frame,
+    });
+  return trail.enteredFrom;
+}
+
+/**
  * One mode's own surface (its Backdrop, its Foreground, or its Chrome for one
  * tab), kept mounted whether or not the mode is active. A React `<Activity>`:
  * while the mode is inactive its subtree keeps its state and its DOM, but its
@@ -397,6 +423,8 @@ interface TabContainerProps {
   onClose: () => void;
   /** Return the surface to the previous mode (passed to the mode's Chrome). */
   onExit: () => void;
+  /** The frame the surface was in before the active mode (to each Chrome). */
+  enteredFrom: PlacementFrame | undefined;
 }
 
 /**
@@ -431,6 +459,7 @@ function TabContainer({
   onFocus,
   onClose,
   onExit,
+  enteredFrom,
 }: TabContainerProps) {
   // Dynamic style pushed by the active placement's `Chrome` (null for static
   // placements like docked / solo). These are the keep-alive override channel.
@@ -561,6 +590,7 @@ function TabContainer({
                   exiting={exiting}
                   onClose={onClose}
                   onExit={onExit}
+                  enteredFrom={enteredFrom}
                 />
               </PlacementStyleProvider>
             </ModeActivity>

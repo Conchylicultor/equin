@@ -52,6 +52,20 @@ const BOX_MS = 220;
  */
 export const FULLSCREEN_MS = BOX_MS;
 /**
+ * Where a window stands relative to full screen (`null`: not involved):
+ *  - `grown`     — at the whole desk, square, shadowless, above the shelf. The
+ *                  grow toward full screen (a box tween from its own box, the
+ *                  normal box transition) and the first frame of the way back
+ *                  (shown again with the box transition still un-armed, so it
+ *                  lands there at once — where full screen had the tab).
+ *  - `returning` — tweening from the whole desk back to its own box, still
+ *                  above the shelf; the tween is forced on (it does not wait
+ *                  for the box to be ready), and the corner and the shadow
+ *                  come back with it.
+ */
+export type FullscreenStep = "grown" | "returning" | null;
+
+/**
  * The full-screen-bound window rises over the desktop's overlays (the shelf,
  * `z-overlay`, drawn after it) — it is about to be the only thing on screen.
  */
@@ -188,6 +202,8 @@ export interface WindowStyle {
   containerStyle: CSSProperties;
   /** Whether the window is fully hidden (display:none) — drives the content inset. */
   hidden: boolean;
+  /** The window is playing its open pop (a fresh window: no way back to play). */
+  opening: boolean;
 }
 
 /**
@@ -207,9 +223,9 @@ export interface WindowStyle {
  * desktop switch is instant with no remount), with NO transition — it is not an
  * animated minimize, it simply isn't on this desktop.
  *
- * `fullscreen` is the window growing toward full screen: its box tweens to the
- * whole desk, square-cornered, shadowless and above the shelf. The geometry
- * store is untouched — the window keeps its own box to return to.
+ * `fullscreen` is the window's step toward or back from full screen (see
+ * {@link FullscreenStep}). The geometry store is untouched — the window keeps
+ * its own box to return to.
  */
 export function useFloatingWindowStyle(
   win: FloatingWindow,
@@ -218,7 +234,7 @@ export function useFloatingWindowStyle(
   closing: boolean,
   focused: boolean,
   onActiveDesktop: boolean,
-  fullscreen: boolean,
+  fullscreen: FullscreenStep,
 ): WindowStyle {
   const reduced = usePrefersReducedMotion();
   const desk = useDesktop();
@@ -325,11 +341,12 @@ export function useFloatingWindowStyle(
   }, [phase, aim]);
 
   return useMemo<WindowStyle>(() => {
-    const box: CSSProperties = fullscreen
-      ? FULLSCREEN_BOX
-      : geo.snap
-        ? snapBox(geo.snap, reserve)
-        : { left: geo.x, top: geo.y, width: geo.w, height: geo.h };
+    const box: CSSProperties =
+      fullscreen === "grown"
+        ? FULLSCREEN_BOX
+        : geo.snap
+          ? snapBox(geo.snap, reserve)
+          : { left: geo.x, top: geo.y, width: geo.w, height: geo.h };
 
     // A minimise/restore flip the phase machine has not reacted to yet: the
     // flag flips one commit before it enters `minimizing` / `restoring`. That
@@ -388,7 +405,10 @@ export function useFloatingWindowStyle(
 
     const motion = `transform ${TRANSFORM_MS}ms ${EASE_TRANSFORM}, opacity ${OPACITY_MS}ms ease`;
     const parts: string[] = [];
-    if (boxReady && !dragging && !reduced && phase === "normal") {
+    if (
+      fullscreen === "returning" ||
+      (boxReady && !dragging && !reduced && phase === "normal")
+    ) {
       for (const p of ["left", "top", "width", "height", "border-radius"])
         parts.push(`${p} ${BOX_MS}ms ${EASE_BOX}`);
       parts.push(
@@ -409,14 +429,16 @@ export function useFloatingWindowStyle(
     const containerStyle: CSSProperties = {
       ...box,
       zIndex: fullscreen ? FULLSCREEN_Z : isPeeked ? PEEK_Z : geo.z,
-      borderRadius: fullscreen || geo.snap === "maximize" ? 0 : WINDOW_RADIUS,
-      boxShadow: fullscreen
-        ? "none"
-        : isPeeked
-          ? SHADOW_PEEKED
-          : focused
-            ? SHADOW_FOCUSED
-            : SHADOW_UNFOCUSED,
+      borderRadius:
+        fullscreen === "grown" || geo.snap === "maximize" ? 0 : WINDOW_RADIUS,
+      boxShadow:
+        fullscreen === "grown"
+          ? "none"
+          : isPeeked
+            ? SHADOW_PEEKED
+            : focused
+              ? SHADOW_FOCUSED
+              : SHADOW_UNFOCUSED,
       ...(hidden ? { display: "none" } : null),
       ...(transform ? { transform, willChange: "transform, opacity" } : null),
       ...(opacity !== undefined ? { opacity } : null),
@@ -424,7 +446,7 @@ export function useFloatingWindowStyle(
       ...(parts.length ? { transition: parts.join(", ") } : null),
     };
 
-    return { containerStyle, hidden };
+    return { containerStyle, hidden, opening: phase === "intro" };
   }, [
     geo,
     win.id,

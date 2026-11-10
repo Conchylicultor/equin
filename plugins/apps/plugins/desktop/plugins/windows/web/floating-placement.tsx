@@ -4,6 +4,7 @@ import {
   useEffect,
   useLayoutEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { Apps } from "@plugins/apps-core/web";
@@ -41,6 +42,7 @@ import { FloatingForeground } from "./components/floating-foreground";
 import {
   CLOSE_MS,
   FULLSCREEN_MS,
+  type FullscreenStep,
   useFloatingWindowStyle,
   usePrefersReducedMotion,
 } from "./hooks/use-window-motion";
@@ -108,6 +110,7 @@ function FloatingChrome({
   appId,
   focused,
   exiting,
+  enteredFrom,
 }: PlacementChromeProps) {
   const { window: win, isActive, setGeo, bringToFront } = useTabWindow(tabId);
   const desk = useDesktop();
@@ -151,33 +154,43 @@ function FloatingChrome({
   // (display:none, kept mounted) so a desktop switch is instant with no remount.
   const onActiveDesktop = win.desktopId === activeDesktopId;
 
-  // Full screen is played in two steps (see `goSolo` below): first the window
-  // grows to the whole desk — a style change on this one box, so it starts on
-  // the frame after the click — then the surface switches to solo.
-  const [growing, setGrowing] = useState(false);
+  // The window's way into and back out of full screen, both played on this
+  // one box over the whole desk (see `goSolo` and the return below):
+  //  - `growing`   — the box sweeps out to the whole desk, then the surface
+  //                  switches to solo;
+  //  - `back-from` — the desktop was just shown again from full screen: the
+  //                  window is drawn at the whole desk, where full screen had
+  //                  the tab, for one painted frame;
+  //  - `back`      — it tweens from there to its own box.
+  const [fsMotion, setFsMotion] = useState<
+    "growing" | "back-from" | "back" | null
+  >(null);
+  const fullscreen: FullscreenStep =
+    fsMotion === "back" ? "returning" : fsMotion === null ? null : "grown";
 
-  const { containerStyle, hidden } = useFloatingWindowStyle(
+  const { containerStyle, hidden, opening } = useFloatingWindowStyle(
     win,
     tabId,
     isActive,
     windowClosing,
     focused,
     onActiveDesktop,
-    growing,
+    fullscreen,
   );
   // Growing to full screen, the content slides up over the titlebar (which
-  // fades) in step with the box, so it is already where solo puts it.
+  // fades) in step with the box, so it is already where solo puts it; coming
+  // back, it slides down under the titlebar fading in.
   const insetStyle = useMemo(
     () =>
       hidden
         ? { display: "none" }
-        : growing
-          ? {
-              top: 0,
+        : fullscreen === null
+          ? { top: WINDOW_TITLEBAR_INSET }
+          : {
+              top: fullscreen === "grown" ? 0 : WINDOW_TITLEBAR_INSET,
               transition: `top ${FULLSCREEN_MS}ms cubic-bezier(0.2, 0.8, 0.2, 1)`,
-            }
-          : { top: WINDOW_TITLEBAR_INSET },
-    [hidden, growing],
+            },
+    [hidden, fullscreen],
   );
   useLayoutEffect(() => {
     setContainerStyle(containerStyle);
@@ -203,10 +216,11 @@ function FloatingChrome({
 
   // Take this window's active tab full-screen: focus it (so it's the tab solo
   // mode shows) and switch the whole surface into solo mode — the windows vanish
-  // (windows mode is no longer active), so nothing can overlap. Esc, or the
-  // action bar's Layout control, returns to windows mode (the mode we came
-  // from). In an `AppEmbed`'s desktop the tab fills the embed box, its tab
-  // set's viewport. Only where a solo placement is registered.
+  // (windows mode is no longer active), so nothing can overlap. The action
+  // bar's Layout control returns to windows mode (the mode we came from; solo
+  // has no Esc shortcut — Esc belongs to whatever is open). In an `AppEmbed`'s
+  // desktop the tab fills the embed box, its tab set's viewport. Only where a
+  // solo placement is registered.
   //
   // The switch itself is a whole-surface commit (the wallpaper, shelf and every
   // other window are hidden), so it is not what the click does: the click only
@@ -222,20 +236,69 @@ function FloatingChrome({
     // This chrome is only hidden by the switch, not unmounted (the surface
     // keeps every visited mode's surfaces): end the grow in the same commit, so
     // the window is back in its own box when the desktop is shown again.
-    setGrowing(false);
+    setFsMotion(null);
   }, [focusTab, setMode, win.activeTabId]);
   const goSolo = useCallback(() => {
     if (reducedMotion) enterSolo();
-    else setGrowing(true);
+    else setFsMotion("growing");
   }, [reducedMotion, enterSolo]);
   // The grow's settle: one deferred hand-off per grow (the same one-shot
   // settle timer the motion layer ends its tweens with), cancelled if the
   // window goes away first.
   useEffect(() => {
-    if (!growing) return;
+    if (fsMotion !== "growing") return;
     const t = setTimeout(enterSolo, FULLSCREEN_MS);
     return () => clearTimeout(t);
-  }, [growing, enterSolo]);
+  }, [fsMotion, enterSolo]);
+
+  // Leaving full screen is the grow played backwards, whatever left it (the
+  // Layout control, any mode switch out of solo — none of which knows about
+  // windows): the surface hands this chrome the frame it came from, and a
+  // focused window shown again from a `viewport` frame (the tab covered its
+  // tab set's viewport — the window, or an embed's box — which is the whole
+  // desk) starts there and tweens back to its own box, which entering never
+  // touched. Decided once per show, on the show's edge (a layout effect —
+  // re-run whenever the kept-mounted chrome is shown again — so the first
+  // painted frame is already the full-desk one, never the window's own box).
+  // Not for a window playing its open pop (a tab opened while in full screen),
+  // nor under reduced motion: those land in their box at once.
+  const returnDecidedRef = useRef(false);
+  useLayoutEffect(() => {
+    if (returnDecidedRef.current) return;
+    returnDecidedRef.current = true;
+    if (
+      enteredFrom === "viewport" &&
+      focused &&
+      isActive &&
+      !opening &&
+      !reducedMotion
+    )
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- the return's first frame is decided on the edge the chrome is shown (a layout effect, so it is painted at once); nothing in render can tell a show from an update.
+      setFsMotion("back-from");
+  }, [enteredFrom, focused, isActive, opening, reducedMotion]);
+  // Hidden again: the next show decides afresh, and an unfinished return ends.
+  useLayoutEffect(
+    () => () => {
+      returnDecidedRef.current = false;
+      setFsMotion(null);
+    },
+    [],
+  );
+  // The return's two one-shot steps: tween once the full-desk frame has been
+  // painted (two frames: the first `requestAnimationFrame` still runs before
+  // that frame's paint, and a transition needs a painted start), then settle.
+  useEffect(() => {
+    if (fsMotion === "back-from") {
+      let raf = requestAnimationFrame(() => {
+        raf = requestAnimationFrame(() => setFsMotion("back"));
+      });
+      return () => cancelAnimationFrame(raf);
+    }
+    if (fsMotion === "back") {
+      const t = setTimeout(() => setFsMotion(null), FULLSCREEN_MS);
+      return () => clearTimeout(t);
+    }
+  }, [fsMotion]);
   const onFullscreen = canGoSolo ? goSolo : undefined;
 
   // Inactive members render no chrome (one titlebar per window). Their container
@@ -379,7 +442,7 @@ function FloatingChrome({
       onCloseWindow={onCloseWindow}
       onTogglePin={togglePin}
       onFullscreen={onFullscreen}
-      fullscreening={growing}
+      fullscreen={fullscreen}
       mergeTargets={mergeTargets}
       onMergeInto={onMergeInto}
       onSplit={onSplit}

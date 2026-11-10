@@ -41,7 +41,7 @@ import {
   type MergeTarget,
 } from "./window-system-menu";
 import { WindowAppTile } from "./window-app-tile";
-import { FULLSCREEN_MS } from "../hooks/use-window-motion";
+import { FULLSCREEN_MS, type FullscreenStep } from "../hooks/use-window-motion";
 import { useHintAnchor, useHintMoment } from "@plugins/hints/web";
 import { windowFullscreenAnchor, windowFullscreenHint } from "../../core";
 
@@ -110,10 +110,12 @@ interface WindowChromeProps {
    */
   onFullscreen: (() => void) | undefined;
   /**
-   * The window is growing to full screen: the titlebar fades out as the box
-   * sweeps to the whole desk (and stops taking input — the grab is over).
+   * The window's step toward or back from full screen: `grown` (growing there,
+   * or drawn there for the first frame back) fades the titlebar out as the box
+   * sweeps to the whole desk, and it stops taking input — the grab is over;
+   * `returning` fades it back in as the box tweens home.
    */
-  fullscreening: boolean;
+  fullscreen: FullscreenStep;
   /** Other windows of this desktop the active tab can be merged into. */
   mergeTargets: MergeTarget[];
   /** Merge the active tab into a target window. */
@@ -206,7 +208,7 @@ export function WindowChrome({
   onCloseWindow,
   onTogglePin,
   onFullscreen,
-  fullscreening,
+  fullscreen,
   mergeTargets,
   onMergeInto,
   onSplit,
@@ -444,9 +446,9 @@ export function WindowChrome({
             : null),
           height: WINDOW_TITLEBAR_INSET,
           touchAction: "none",
-          ...(fullscreening
+          ...(fullscreen
             ? {
-                opacity: 0,
+                opacity: fullscreen === "grown" ? 0 : 1,
                 pointerEvents: "none",
                 transition: `opacity ${FULLSCREEN_MS}ms ease`,
               }
