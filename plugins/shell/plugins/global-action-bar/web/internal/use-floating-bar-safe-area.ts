@@ -16,15 +16,27 @@ const SAFE_AREA_VAR = "--floating-bar-safe-area";
  * reserving header names itself the band's anchor (`anchor-floating-bar-band`)
  * — except one inside a `floating-bar-boundary` (a desktop window's content,
  * an app embed), which is not at the viewport's corner whatever its surface
- * believes.
+ * believes: {@link BOUNDED_HEADERS} withdraws the reservation from those.
  *
  * Set on those boxes, never on `:root`: a custom property on `<html>` is
  * inherited by every element of the page, so each write restyles the whole
  * document (~300–450 ms on an 18k-element page, measured), where this rule's
  * class-keyed invalidation restyles only the headers it matches (~5 ms).
  */
-const RESERVING_HEADERS =
-  ".anchor-floating-bar-band:not(.floating-bar-boundary *)";
+const RESERVING_HEADERS = ".anchor-floating-bar-band";
+
+/**
+ * The reserving headers inside a `floating-bar-boundary`, which take the
+ * reservation back (the higher specificity wins over {@link RESERVING_HEADERS}).
+ *
+ * A plain descendant rule, never `RESERVING_HEADERS:not(.floating-bar-boundary
+ * *)`: the boundary class toggles on every surface-mode switch (a desktop
+ * window's content gains it, a full-screen tab loses it), and Chrome cannot
+ * narrow a class named inside a negated complex selector to the rule's subject
+ * — it restyles the boundary's whole subtree, the entire app (~20k elements per
+ * switch, measured). A descendant selector is invalidated for its subjects only.
+ */
+const BOUNDED_HEADERS = `.floating-bar-boundary ${RESERVING_HEADERS}`;
 
 /**
  * Publish the floating bar's safe area while `reserve` holds (the bar sits in
@@ -33,8 +45,9 @@ const RESERVING_HEADERS =
  * size of the bar's collapsed footprint, at the bar's home corner.
  *
  * The value lives in a stylesheet of its own, adopted by the document while the
- * bar is mounted: one rule, {@link RESERVING_HEADERS}, rewritten when the
- * reservation changes and emptied when it is withdrawn.
+ * bar is mounted: {@link RESERVING_HEADERS} and its {@link BOUNDED_HEADERS}
+ * withdrawal, rewritten when the reservation changes and emptied when it is
+ * withdrawn.
  *
  * The reservation is measured from the band's LEFT edge to the viewport's right
  * edge (so it includes the bar's corner offset and its panel chrome, and
@@ -74,7 +87,8 @@ export function useFloatingBarSafeArea(
       // batch, not between two of them.
       return () =>
         sheet.replaceSync(
-          `${RESERVING_HEADERS} { ${SAFE_AREA_VAR}: calc(${Math.ceil(room)}px + var(--chrome-pane-pad-end)); }`,
+          `${RESERVING_HEADERS} { ${SAFE_AREA_VAR}: calc(${Math.ceil(room)}px + var(--chrome-pane-pad-end)); } ` +
+            `${BOUNDED_HEADERS} { ${SAFE_AREA_VAR}: initial; }`,
         );
     },
     // Undebounced: a resize observation is delivered before paint, so the

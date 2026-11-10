@@ -1526,11 +1526,16 @@
 /* Floating-bar boundary — a box that is NOT the viewport's top-right corner (a
  * desktop window's content, an in-process app embed), though the surface inside
  * it believes it is. Headers inside it neither reserve the bar's safe area (the
- * bar's rule skips them, `:not(.floating-bar-boundary *)`, so `pr-floating-bar*`
- * fall back to their own end inset) nor anchor its band (`anchor-scope` hides
- * their anchor names from the band outside the box), so the bar stays at the
- * corner instead of following the box. */
-@utility floating-bar-boundary { anchor-scope: --floating-bar-band; } /* twmerge: standalone -- Scopes the floating-bar anchor name to this box (the bar's safe-area rule skips headers inside it); no built-in group sets anchor-scope. */
+ * bar's stylesheet withdraws it from the band's anchors under this box, so
+ * `pr-floating-bar*` fall back to their own end inset) nor anchor its band
+ * (`anchor-scope` hides their anchor names from the band outside the box), so
+ * the bar stays at the corner instead of following the box.
+ *
+ * The class toggles with the surface mode — a desktop window's content gains
+ * it, a full-screen tab loses it, on the same element — so whatever reads it is
+ * paid on every mode switch. Never set a custom property here: it is inherited,
+ * so changing it restyles the box's WHOLE subtree (a tab: ~20k elements). */
+@utility floating-bar-boundary { anchor-scope: --floating-bar-band; } /* twmerge: standalone -- Scopes the floating-bar anchor name to this box (the bar's safe-area rule withdraws it from headers inside); no built-in group sets anchor-scope. */
 
 /* Control-panel geometry — the one grid every data-control panel (filter, sort,
  * view settings, …) is drawn on, owned by the `control-panel` primitive. The

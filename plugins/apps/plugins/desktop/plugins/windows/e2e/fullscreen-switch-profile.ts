@@ -21,7 +21,11 @@
 //   window) before the round trips — solo hides them, so exit restyles them.
 // --init: a script added to the page before boot (page.addInitScript) — a
 //   counterfactual, e.g. one dropping every write of a custom property on
-//   <html> after the first, to measure what that invalidation costs.
+//   <html> after the first, to measure what that invalidation costs. If it
+//   calls `console.timeStamp(label)`, each whole-document-sized recalc is
+//   listed with the latest label before it: wrap the DOM write methods to
+//   stamp each write and force a full recalc (`document.body.offsetHeight`)
+//   right after it, and every big recalc names the one write that caused it.
 // --invalidations: also trace Chrome's style-invalidation tracking and list
 //   what scheduled the invalidations (node, changed class / attribute / sheet)
 //   — what made a recalc whole-document. Slows the switch; ignore its times.
@@ -69,6 +73,7 @@ interface CpuProfile {
 interface TraceEvent {
   name: string;
   ph: string;
+  ts?: number;
   dur?: number;
   tdur?: number;
   args?: {
@@ -282,6 +287,7 @@ await withBrowser(async (h) => {
     ((deltas[label] ??= {}).StyledElements ??= []).push(styled);
     ((deltas[label] ??= {}).BigRecalcs ??= []).push(big.length);
     if (invalidations) invalidationReport(trace);
+    for (const line of bigRecalcCauses(trace)) console.log(`    ${line}`);
     const styles = probe?.styles ?? [];
     const tally = (op: StyleChange["op"]) => {
       const of = styles.filter((c) => c.op === op);
@@ -355,6 +361,38 @@ function styleRecalcs(trace: Buffer): number[] {
     )
     .map((e) => e.args?.elementCount ?? e.args?.data?.elementCount ?? 0)
     .filter((n) => n > 0);
+}
+
+/**
+ * Each whole-document recalc with the latest `console.timeStamp` before it —
+ * an --init script that stamps every DOM write and forces a recalc after it
+ * (see the header) names the write that caused each one.
+ */
+function bigRecalcCauses(trace: Buffer): string[] {
+  const { traceEvents } = JSON.parse(trace.toString("utf8")) as {
+    traceEvents: (TraceEvent & { args?: { data?: { message?: string } } })[];
+  };
+  const sorted = traceEvents
+    .filter(
+      (e) =>
+        e.name === "TimeStamp" ||
+        (e.name === "UpdateLayoutTree" && (e.ph === "X" || e.ph === "E")),
+    )
+    .sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0));
+  // No stamps (no --init script stamping writes): nothing to attribute.
+  if (!sorted.some((e) => e.name === "TimeStamp")) return [];
+  let stamp: string | undefined;
+  const lines: string[] = [];
+  for (const e of sorted) {
+    if (e.name === "TimeStamp") {
+      stamp = e.args?.data?.message;
+      continue;
+    }
+    const n = e.args?.elementCount ?? e.args?.data?.elementCount ?? 0;
+    if (n >= BIG_RECALC)
+      lines.push(`${n} elements after: ${stamp ?? "(no stamp)"}`);
+  }
+  return lines;
 }
 
 /**
