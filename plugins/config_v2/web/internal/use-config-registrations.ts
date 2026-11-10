@@ -25,10 +25,11 @@ export interface ConfigRegistration {
    * Canonical DOT-form plugin id this config is *stored* under — the slot-owner
    * when a contribution overrides `pluginId` (e.g. reorder planting each slot's
    * directive under the slot's defining plugin), else the registering plugin.
-   * Matches `PluginNode.id`, so the settings tree groups under the owning plugin.
+   * Its segments are the settings nav's hierarchy (`buildConfigTree`), so the
+   * config groups under the owning plugin.
    */
   pluginId: PluginId;
-  /** Display label: the store plugin's leaf segment, == its `PluginNode.name`. */
+  /** Display label: the store plugin's leaf segment (its directory name). */
   pluginName: string;
   storePath: string;
 }

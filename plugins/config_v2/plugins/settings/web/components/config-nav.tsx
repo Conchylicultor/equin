@@ -5,12 +5,7 @@ import {
 import { useCallback, useMemo } from "react";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useLive } from "@plugins/network/plugins/live/web";
-import {
-  pluginTree,
-  type PluginNode,
-} from "@plugins/plugin-meta/plugins/plugin-view/core";
 import { useConfigRegistrations } from "@plugins/config_v2/web";
-import type { ConfigRegistration } from "@plugins/config_v2/web";
 import { configModifiedCounts } from "@plugins/config_v2/core";
 import type { ConfigV2ConflictLocations } from "@plugins/config_v2/core";
 import {
@@ -20,7 +15,7 @@ import {
   type HierarchyConfig,
 } from "@plugins/primitives/plugins/data-view/web";
 import { configDetailPane } from "../internal/panes";
-import { pruneConfigTree } from "../internal/prune-config-tree";
+import { buildConfigTree } from "../internal/config-tree";
 import {
   flattenConfigTree,
   type ConfigNavRow,
@@ -44,18 +39,6 @@ export function ConfigNav() {
   const registrations = useConfigRegistrations();
   const openPane = useOpenPane();
 
-  const treeRes = useLive(pluginTree);
-  // Rows are built only for a ready tree; `readiness` (below) renders the
-  // loading and failed states, so neither ever reaches the view as a value.
-  const payload = foldResource(treeRes, {
-    loading: () => undefined,
-    error: () => undefined,
-    // No plugin tree on this host: `readiness` carries the arm, and DataView
-    // shows its message instead of the nav — never an empty nav.
-    unavailable: () => undefined,
-    ready: (tree) => tree,
-  });
-
   // Modified/conflict state, read once data-level (no per-row config hooks).
   // While either map is loading (or failed) its answer is `undefined` — not
   // known — and the whole nav renders its loading or error state (`readiness`
@@ -66,69 +49,19 @@ export function ConfigNav() {
   // answer is still unknown.
   const modifiedRes = useLive(configModifiedCounts);
   const conflictRes = useConflictMap();
-  // The nav is ready only when all three are: the plugin tree and both maps.
-  // Precedence error > unavailable > loading.
+  // The nav is ready only when both maps are. Precedence error > unavailable >
+  // loading. The rows themselves need no read: they are built from the config
+  // registrations (`buildConfigTree`), which every browser has — never from the
+  // plugin tree, a scan of `plugins/` on disk only the computer can answer.
   const readiness = useCombinedResources({
-    tree: treeRes,
     modified: modifiedRes,
     conflict: conflictRes,
   });
 
-  // Keyed by the canonical DOT-form plugin id. `reg.pluginId` is already dot and
-  // equals `PluginNode.id`, so no slash→dot bridging is needed.
-  const byPluginId = useMemo(() => {
-    const m = new Map<string, ConfigRegistration[]>();
-    for (const reg of registrations) {
-      const list = m.get(reg.pluginId);
-      if (list) list.push(reg);
-      else m.set(reg.pluginId, [reg]);
-    }
-    return m;
-  }, [registrations]);
-
-  const rows = useMemo<ConfigNavRow[]>(() => {
-    if (!payload) return [];
-    const matched = new Set<string>();
-    const pruned = pruneConfigTree(payload.plugins, byPluginId, matched);
-
-    // Defensive: a config registration should always map to a plugin-tree node
-    // (both derive from the same plugin set). If one doesn't, surface it loudly
-    // and still render it so the settings page is never silently lost.
-    const orphans = registrations.filter((r) => !matched.has(r.pluginId));
-    if (orphans.length > 0) {
-      console.warn(
-        "[config] registrations missing from plugin tree:",
-        orphans.map((r) => r.pluginId),
-      );
-      const byOrphanId = new Map<string, ConfigRegistration[]>();
-      for (const reg of orphans) {
-        const list = byOrphanId.get(reg.pluginId);
-        if (list) list.push(reg);
-        else byOrphanId.set(reg.pluginId, [reg]);
-      }
-      for (const orphanRegs of byOrphanId.values()) {
-        const [reg] = orphanRegs;
-        if (!reg) continue;
-        const node: PluginNode = {
-          path: reg.pluginId,
-          name: reg.pluginName,
-          id: reg.pluginId,
-          loadBearing: false,
-          collapsed: false,
-          runtimes: {
-            web: true,
-            server: false,
-            machine: false,
-            central: false,
-          },
-          children: [],
-          facets: {},
-        };
-        pruned.push({ node, registrations: orphanRegs, children: [] });
-      }
-    }
-    return flattenConfigTree(pruned);
-  }, [payload, byPluginId, registrations]);
+  const rows = useMemo<ConfigNavRow[]>(
+    () => flattenConfigTree(buildConfigTree(registrations)),
+    [registrations],
+  );
 
   // `undefined` = not known yet. A row with no registration (a group header)
   // has no config of its own, so it is known-unmodified.

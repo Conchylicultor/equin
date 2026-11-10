@@ -28762,14 +28762,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `UNDOCUMENTED_RUNTIME_FOLDERS`
           - `VERIFYING_FOLDERS`
       - Cross-plugin:
-        - Imported by: 43 plugins — full list in [`plugins/framework/plugins/plugin-id/REFERENCE.md`](../plugins/framework/plugins/plugin-id/REFERENCE.md)
+        - Imported by: 44 plugins — full list in [`plugins/framework/plugins/plugin-id/REFERENCE.md`](../plugins/framework/plugins/plugin-id/REFERENCE.md)
           - `plugin-meta` ×20
           - `framework` ×10
           - `apps` ×4
+          - `config_v2` ×2
           - `active-data/plugin-link`
           - `apps-core/tabs`
           - `build/serve-composition`
-          - `config_v2`
           - `debug/mcp-tools`
           - `infra/background/catalog`
           - `primitives/data-view`
@@ -43873,11 +43873,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density` ×5
           - `ui/tokens/color-palette` ×3
           - `ui/tokens/shape --spacing`
-        - Imported by: 26 plugins — full list in [`plugins/plugin-meta/plugins/plugin-view/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-view/REFERENCE.md)
+        - Imported by: 25 plugins — full list in [`plugins/plugin-meta/plugins/plugin-view/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-view/REFERENCE.md)
           - `plugin-meta` ×20
           - `apps` ×3
           - `active-data/plugin-link`
-          - `config_v2/settings`
           - `debug/mcp-tools`
       - Plugins:
         - **`dependencies`** — Deduped cargo-tree-style dependency trees in the plugin detail pane: 'Depends on' (recursive forward deps) and 'Used by' (recursive reverse dependents), each marking soft slot-contributions and collapsing DAG diamonds via first-occurrence dedup.
