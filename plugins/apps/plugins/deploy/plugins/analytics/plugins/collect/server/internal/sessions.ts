@@ -7,6 +7,7 @@ import {
   DeviceFamilySchema,
   GapsSchema,
   LoadTimingSchema,
+  PageSectionsSchema,
   MAX_SESSION_HITS,
   OsFamilySchema,
   RAW_RETENTION_DAYS,
@@ -209,6 +210,7 @@ const HitRow = z.object({
   engagedMs: z.coerce.number().int(),
   gaps: GapsSchema.nullable(),
   load: LoadTimingSchema.nullable(),
+  sections: PageSectionsSchema.nullable(),
 });
 
 /**
@@ -227,7 +229,7 @@ async function hitsOf(
     query: sql`
       SELECT x.visit_id::text AS "visitId", ${iso("x.ts")} AS "ts", x.kind, x.path,
         x.event_name AS "eventName", x.event_props AS "eventProps",
-        x.engaged_ms AS "engagedMs", x.gaps, x.load
+        x.engaged_ms AS "engagedMs", x.gaps, x.load, x.sections
       FROM (
         SELECT h.*, row_number() OVER (PARTITION BY h.visit_id ORDER BY h.ts, h.id) AS n
         FROM analytics_hits h

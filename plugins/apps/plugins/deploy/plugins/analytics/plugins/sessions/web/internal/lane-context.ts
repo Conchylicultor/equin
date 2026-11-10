@@ -3,7 +3,8 @@ import type { Journey } from "./journey";
 
 /**
  * What every row of one loaded window shares: the axis' far end (so bars
- * compare across rows), each path's known sections (for "read %"), and each
+ * compare across rows), each path's estimated sections (the "read %" of a
+ * page that did not record its own list — `pageRead`), and each
  * visit's journey (derived once per window, not once per render of a row).
  * Provided around the DataView, read by the rows, the axis row in the toolbar
  * band and the expanded timeline alike.

@@ -22,8 +22,10 @@ import { presentEvent, propsText } from "../internal/events";
 import { sourceOf } from "../internal/facts";
 import { clock, countryName, span, timeOfDay } from "../internal/format";
 import {
-  readShare,
+  pageRead,
+  readLabel,
   sumS,
+  type PageRead,
   type JourneyPage,
   type PageAction,
   type PageGap,
@@ -103,7 +105,7 @@ export function SessionTimeline({ session }: { session: Session }): ReactNode {
               page={page}
               entry={i === 0}
               exit={i === journey.pages.length - 1}
-              known={sections.get(page.path)}
+              read={pageRead(page, sections)}
             />
           </Step>
         ))}
@@ -242,14 +244,14 @@ function PageCard({
   page,
   entry,
   exit,
-  known,
+  read,
 }: {
   page: JourneyPage;
   entry: boolean;
   exit: boolean;
-  known: readonly string[] | undefined;
+  read: PageRead;
 }): ReactNode {
-  const read = readShare(page, known);
+  const known = read.sections;
   const reachedAt = new Map(page.reached.map((r) => [r.section, r.atS]));
   const away = page.gaps ? sumS(page.gaps) : 0;
   // What happened on the page, in time order: its actions and its stretches away.
@@ -292,7 +294,8 @@ function PageCard({
                 )}
               </Text>
             </Line>
-            {known && known.length > 0 && (
+            {known.length > 0 && (
+              <Stack gap="2xs">
               <Line className="gap-2xs">
                 {known.map((section) => {
                   const atS = reachedAt.get(section);
@@ -324,11 +327,18 @@ function PageCard({
                 <Text
                   variant="caption"
                   tone="muted"
-                  className="w-16 text-right tabular-nums"
+                    className="w-20 text-right tabular-nums"
                 >
-                  {read === null ? "—" : `${Math.round(read * 100)}% read`}
+                    {readLabel(read) ?? "—"}
                 </Text>
               </Line>
+                {read.estimated && (
+                  <Text variant="caption" tone="faint">
+                    Estimated: this visit did not record the page&apos;s
+                    sections, so they are the ones other loaded visits reached
+                  </Text>
+                )}
+              </Stack>
             )}
             {items.length > 0 && (
               <Inset t="sm" className="border-t border-dashed border-border">

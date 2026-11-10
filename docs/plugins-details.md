@@ -2025,6 +2025,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `LoadTiming`
                   - `Metrics`
                   - `OsFamily`
+                  - `PageSections`
                   - `PageviewBody`
                   - `PeriodReport`
                   - `RecordedColumn`
@@ -2102,8 +2103,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `MAX_FILTERS`
                   - `MAX_HOST_LENGTH`
                   - `MAX_LOAD_MS`
+                  - `MAX_PAGE_SECTIONS`
                   - `MAX_PATH_LENGTH`
                   - `MAX_REFERRER_LENGTH`
+                  - `MAX_SECTION_NAME_LENGTH`
                   - `MAX_SESSION_HITS`
                   - `MAX_SESSIONS_LIMIT`
                   - `MAX_TOTALS_FILTERS`
@@ -2115,6 +2118,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `OS_FAMILIES`
                   - `OsFamilySchema`
                   - `PagePathSchema`
+                  - `PageSectionsSchema`
                   - `PageviewBodySchema`
                   - `parseEventPropValue`
                   - `PeriodReportSchema`

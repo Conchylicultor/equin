@@ -11,6 +11,7 @@ import {
 import { ChannelSchema } from "./channel";
 import { GapsSchema } from "./gaps";
 import { LoadTimingSchema } from "./load-timing";
+import { PageSectionsSchema } from "./page-sections";
 import { MAX_EVENT_PROPS } from "./collect-body";
 import {
   AnalyticsRangeSchema,
@@ -124,6 +125,12 @@ export const SessionHitSchema = z
      * yet) — never 0.
      */
     load: LoadTimingSchema.nullable(),
+    /**
+     * Pageviews only: the page's full section list, in page order. Null =
+     * not recorded (an event, an older tracker, a page with no sections, no
+     * beacon yet) — the reader then only knows the sections someone reached.
+     */
+    sections: PageSectionsSchema.nullable(),
   })
   .strict();
 export type SessionHit = z.infer<typeof SessionHitSchema>;

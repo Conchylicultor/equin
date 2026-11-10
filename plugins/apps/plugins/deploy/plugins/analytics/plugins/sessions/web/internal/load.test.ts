@@ -17,6 +17,7 @@ const hit = (
   engagedMs: 0,
   gaps: null,
   load,
+  sections: null,
 });
 const visit = (hits: SessionHit[]) => ({ hits }) as unknown as Session;
 

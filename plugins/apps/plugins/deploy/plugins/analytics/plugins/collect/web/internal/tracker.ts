@@ -39,6 +39,12 @@ export interface TrackerDeps {
    * the load is sent: by the first hide or leave, the load is long done.
    */
   loadMilestones: () => LoadMilestones;
+  /**
+   * The sections registered on `path` so far, in page order (empty when it
+   * has none). Read when a beacon is sent: by the first hide or leave, the
+   * page has rendered.
+   */
+  pageSections: (path: string) => readonly string[];
 }
 
 /** When the page load reached each phase of {@link LoadTiming}, on the `now()` clock. */
@@ -71,6 +77,8 @@ interface CurrentPage {
   sentGaps: string;
   /** The page load's first pageview, whose first beacon still owes the load. */
   loadOwed: boolean;
+  /** How many of the page's sections were last sent: the list only grows. */
+  sentSections: number;
 }
 
 export interface Tracker {
@@ -105,7 +113,8 @@ export interface Tracker {
  * the pageview's away stretches: `hidden` from a hide to the next show, `idle`
  * from the last input to the next one once {@link IDLE_AFTER_MS} pass without
  * any while visible and no media plays. The page load's first pageview — the
- * hard load — carries how long the load took on its first beacon.
+ * hard load — carries how long the load took on its first beacon. A beacon
+ * carries the page's full section list whenever it grew since the last one.
  *
  * One instance per page load (see instance.ts), so remounting the React
  * component — or mounting it in two tabs of the same document — can never count
@@ -198,10 +207,12 @@ export function createTracker(deps: TrackerDeps): Tracker {
     const engagedMs = engaged(page);
     const gaps = gapsSoFar(page);
     const gapsJson = JSON.stringify(gaps);
+    const sections = deps.pageSections(page.path);
     if (
       engagedMs <= page.sentMs &&
       gapsJson === page.sentGaps &&
-      !page.loadOwed
+      !page.loadOwed &&
+      sections.length <= page.sentSections
     )
       return;
     if (page.pageviewId === null) {
@@ -212,6 +223,10 @@ export function createTracker(deps: TrackerDeps): Tracker {
     page.owed = false;
     page.sentMs = engagedMs;
     page.sentGaps = gapsJson;
+    // The full list, whenever it grew (a page with none sends none).
+    const grown =
+      sections.length > page.sentSections ? { sections: [...sections] } : {};
+    page.sentSections = sections.length;
     const load = page.loadOwed ? { load: loadTiming() } : {};
     page.loadOwed = false;
     void deps.send({
@@ -220,6 +235,7 @@ export function createTracker(deps: TrackerDeps): Tracker {
       engagedMs,
       gaps,
       ...load,
+      ...grown,
     });
   };
 
@@ -255,6 +271,7 @@ export function createTracker(deps: TrackerDeps): Tracker {
         sentGaps: "[]",
         // The first pageview is the hard load; later ones are in-app navigations.
         loadOwed: !landingSent,
+        sentSections: 0,
       };
       current = page;
       // A new page is a fresh start for the idle clock.

@@ -1,6 +1,6 @@
 import { useEffect, useRef, type RefObject } from "react";
 import { createInViewWatcher } from "@plugins/primitives/plugins/dom/plugins/in-view/web";
-import { track } from "./instance";
+import { registerPageSection, track } from "./instance";
 import { SECTION_REACH_EVENT, SECTION_REACH_PROP } from "../../core";
 
 /**
@@ -15,8 +15,13 @@ import { SECTION_REACH_EVENT, SECTION_REACH_PROP } from "../../core";
  * Once per observation: the observer disconnects after it fires, and returns a
  * disposer for a section unmounted before it is reached. A page shown again
  * mounts again, and is a new pageview, so it counts again.
+ *
+ * Every observed section is also listed in its page's full section list
+ * (`registerPageSection`), reached or not — what "read %" is measured
+ * against. So a part of a page counts toward it exactly when it is observed.
  */
 export function observeSectionReach(el: Element, section: string): () => void {
+  const unregister = registerPageSection(el, section);
   const watcher = createInViewWatcher(
     (entries) => {
       if (!entries.some((e) => e.isIntersecting)) return;
@@ -28,7 +33,10 @@ export function observeSectionReach(el: Element, section: string): () => void {
     { rootMargin: "0px 0px -50% 0px" },
   );
   watcher.observe(el);
-  return () => watcher.disconnect();
+  return () => {
+    watcher.disconnect();
+    unregister();
+  };
 }
 
 /** {@link observeSectionReach} for a React element: attach the returned ref to the section. */

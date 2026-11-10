@@ -23,6 +23,7 @@ import {
   FilterLevelSchema,
   GapsSchema,
   LoadTimingSchema,
+  PageSectionsSchema,
   OsFamilySchema,
 } from "../../core";
 
@@ -145,6 +146,12 @@ export const analyticsHits = pgTable(
      * (an in-app navigation, an event, an older tracker, no beacon yet).
      */
     load: parsedJson("load", LoadTimingSchema),
+    /**
+     * Pageviews only: the page's full section list in page order — the
+     * longest a beacon reported (it only grows). NULL = not recorded (an
+     * event, an older tracker, a page with no sections, no beacon yet).
+     */
+    sections: parsedJson("sections", PageSectionsSchema),
   },
   (t) => [index("analytics_hits_visit_idx").on(t.visitId)],
 );

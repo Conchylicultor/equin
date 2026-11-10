@@ -6,9 +6,11 @@ import { getBootTrace } from "@plugins/primitives/plugins/perfs/plugins/boot-tra
 import {
   EVENT_NAME_PATTERN,
   collectEndpoint,
+  stripQuery,
   type CollectBody,
 } from "../../core";
 import { landingSource } from "./landing";
+import { createPageSectionRegistry } from "./page-sections";
 import { createTracker, type LoadMilestones, type Tracker } from "./tracker";
 
 // Page-wide telemetry: page-view analytics always reach the page's own server (D3).
@@ -32,6 +34,17 @@ function send(body: CollectBody) {
 }
 
 let instance: Tracker | null = null;
+
+/** The page load's sections per path; module scope, like the tracker. */
+const pageSections = createPageSectionRegistry();
+
+/**
+ * Lists `el` as section `section` of the page the address shows now, for the
+ * page's full section list its beacons carry. Returns the unmount.
+ */
+export function registerPageSection(el: Element, section: string): () => void {
+  return pageSections.register(stripQuery(currentRoutePath()), el, section);
+}
 
 /** Input that says someone is at the page (passive listeners, capture phase so element scrolls count). */
 const INPUT_EVENTS = [
@@ -109,6 +122,7 @@ export function getTracker(): Tracker {
     },
     isMediaPlaying,
     loadMilestones,
+    pageSections: (path) => pageSections.sectionsOf(path),
   });
   const activity = () => tracker.activity();
   for (const type of [...INPUT_EVENTS, ...MEDIA_EVENTS])

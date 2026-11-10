@@ -50,8 +50,8 @@ never reported as a loader failure.
   actions" over the LOADED visits), and the axis row — in the sticky band, so
   the ticks stay over the bars while visits scroll under them.
 - **Window**: `LaneWindowContext` carries what every row shares, derived once
-  per loaded window: each visit's journey, the axis' end, each path's known
-  sections.
+  per loaded window: each visit's journey, the axis' end, each path's
+  estimated sections (for pages that did not record their own).
 
 ## The journey (pure, `web/internal/`)
 
@@ -66,9 +66,14 @@ never reported as a loader failure.
   visit lasts as long in the tab as in the report); events belong to the
   pageview before them; `section_reach` hits (collect's `SECTION_REACH_EVENT`,
   section `<page>/<key>`) become the page's reached sections (first reach
-  only), the rest its actions. "Read %" = sections reached ÷ the sections any
-  loaded visit reached on that path (`sectionsByPath`, in mean reach order) —
-  the box does not know a page's full section list.
+  only), the rest its actions. "Read %" (`pageRead`) = sections reached ÷ the
+  page's own recorded section list (collect's pageview `sections`, page order)
+  — every section drawn in the depth bar, unreached ones greyed. A pageview
+  without one (an older tracker, no beacon), or whose list misses a section the
+  visitor reached, falls back to the estimate — the sections any loaded visit
+  reached on that path (`sectionsByPath`, mean reach order) — and is shown as
+  estimated (`~60% read`, a fainter read line, a note in the timeline): it
+  overstates, and moves as visits load.
 - `events.ts` — the website's event names in words, with an icon; an unknown
   event still renders, by its name.
 

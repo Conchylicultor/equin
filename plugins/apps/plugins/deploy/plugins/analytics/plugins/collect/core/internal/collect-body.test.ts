@@ -7,6 +7,7 @@ import {
 } from "./collect-body";
 import { MAX_GAPS, MAX_GAP_OFFSET_MS, appendGap, type Gap } from "./gaps";
 import { MAX_LOAD_MS, loadMs } from "./load-timing";
+import { MAX_PAGE_SECTIONS, MAX_SECTION_NAME_LENGTH } from "./page-sections";
 
 describe("stripQuery", () => {
   test("removes query and fragment", () => {
@@ -110,7 +111,10 @@ describe("engagement gaps", () => {
       fcpMs: MAX_LOAD_MS,
       readyMs: MAX_LOAD_MS,
     };
-    const body = { ...base, engagedMs: MAX_ENGAGED_MS, gaps, load };
+    const sections = Array.from({ length: MAX_PAGE_SECTIONS }, (_, i) =>
+      `${i}`.padEnd(MAX_SECTION_NAME_LENGTH, "x"),
+    );
+    const body = { ...base, engagedMs: MAX_ENGAGED_MS, gaps, load, sections };
     expect(CollectBodySchema.safeParse(body).success).toBe(true);
     expect(new TextEncoder().encode(JSON.stringify(body)).length).toBeLessThan(
       MAX_COLLECT_BODY_BYTES,
@@ -181,5 +185,31 @@ describe("appendGap", () => {
       g((MAX_GAPS - 1) * 100_000, MAX_GAPS * 100_000, "idle"),
     );
     expect(gaps).toHaveLength(MAX_GAPS); // not mutated
+  });
+});
+
+describe("engagement sections", () => {
+  const base = {
+    kind: "engagement",
+    pageviewId: "00000000-0000-4000-8000-00000000000a",
+    engagedMs: 1000,
+  };
+  const ok = (sections: unknown) =>
+    CollectBodySchema.safeParse({ ...base, sections }).success;
+
+  test("optional: an older tracker's body still parses", () => {
+    expect(CollectBodySchema.safeParse(base).success).toBe(true);
+    expect(ok(["landing/hero", "landing/layers"])).toBe(true);
+  });
+  test("distinct, short names, bounded", () => {
+    expect(ok(["landing/hero", "landing/hero"])).toBe(false);
+    expect(ok([""])).toBe(false);
+    expect(ok(["x".repeat(MAX_SECTION_NAME_LENGTH + 1)])).toBe(false);
+    const many = Array.from(
+      { length: MAX_PAGE_SECTIONS + 1 },
+      (_, i) => `s${i}`,
+    );
+    expect(ok(many)).toBe(false);
+    expect(ok(many.slice(0, MAX_PAGE_SECTIONS))).toBe(true);
   });
 });

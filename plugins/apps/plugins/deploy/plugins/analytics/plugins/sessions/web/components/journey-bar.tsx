@@ -21,8 +21,10 @@ import { axisFrac, axisTicks, pageShares } from "../internal/axis";
 import { presentEvent, propsText } from "../internal/events";
 import { clock, span } from "../internal/format";
 import {
-  readShare,
+  pageRead,
+  readLabel,
   sumS,
+  type PageRead,
   type Journey,
   type JourneyPage,
   type PageGap,
@@ -78,8 +80,7 @@ export function JourneyBar({ journey }: { journey: Journey }): ReactNode {
               start={starts[i]!}
               share={shares[i]!}
               first={i === 0}
-              read={readShare(page, sections.get(page.path))}
-              knownSections={sections.get(page.path) ?? []}
+              read={pageRead(page, sections)}
             />
           );
         })}
@@ -132,15 +133,15 @@ function PageSegment({
   share,
   first,
   read,
-  knownSections,
 }: {
   page: JourneyPage;
   start: number;
   share: number;
   first: boolean;
-  read: number | null;
-  knownSections: readonly string[];
+  read: PageRead;
 }): ReactNode {
+  const knownSections = read.sections;
+  const label = readLabel(read);
   const reached = new Set(page.reached.map((r) => r.section));
   const away = page.gaps ? sumS(page.gaps) : 0;
   return (
@@ -187,12 +188,13 @@ function PageSegment({
             {pageTitle(page.path)}
           </Text>
         </Placed>
-        {read !== null && (
+        {read.share !== null && (
           <Placed
             decorative
-            x={{ start: 0, size: pct(read) }}
+            x={{ start: 0, size: pct(read.share) }}
             y={{ end: 0, size: 3 }}
-            className="bg-primary/70"
+            // An estimate reads fainter than a measured read.
+            className={read.estimated ? "bg-primary/35" : "bg-primary/70"}
           />
         )}
         {page.reached
@@ -232,9 +234,11 @@ function PageSegment({
             </Stack>
           )}
           <Text variant="caption" tone="muted">
-            {read === null
+            {label === null
               ? "No section reached"
-              : `Read ${Math.round(read * 100)}%`}
+              : read.estimated
+                ? `${label} (estimated from other visits)`
+                : label}
             {" · "}
             {actionsLabel(page.actions.length)}
           </Text>

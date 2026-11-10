@@ -18,7 +18,10 @@ and the three chrome pieces a page is built out of.
   screen, its `section` prop spelled `<page>/<section>` (`landing/layers`). The page
   comes from `WebsiteChrome` (the pane id without its `website-` prefix), so a band names only itself; a page drawing its own scene calls
   `useWebsiteSectionReach` for each part it wants counted. Read it in the Deploy
-  app's Analytics tab: Events → `section_reach`, expanded by `section`.
+  app's Analytics tab: Events → `section_reach`, expanded by `section`. Every
+  measured section is also listed in the page's full section list collect sends
+  with the pageview's beacons, so the Sessions tab's "read %" counts the
+  sections nobody reached too.
 - **`WebsiteHero`** — the heading every page opens with: a centred sentence
   with its accent half painted through the azure→cyan gradient, the lede under
   it, and the ambient glow behind both (`website-hero.css`). `kind="home"` is

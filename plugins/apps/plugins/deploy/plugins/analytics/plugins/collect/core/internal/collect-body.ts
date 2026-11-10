@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { GapsSchema } from "./gaps";
 import { LoadTimingSchema } from "./load-timing";
+import { PageSectionsSchema } from "./page-sections";
 
 /**
  * What the tracker sends to `POST /api/analytics/collect`, and the limits the
@@ -118,6 +119,12 @@ export const EngagementBodySchema = z
      * gets and ignores any later one.
      */
     load: LoadTimingSchema.optional(),
+    /**
+     * The page's full section list, in page order (`page-sections.ts`):
+     * sent whenever it grew since the last beacon. The server keeps the
+     * longest. Absent from an older tracker, or a page with no sections.
+     */
+    sections: PageSectionsSchema.optional(),
   })
   .strict();
 

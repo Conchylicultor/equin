@@ -45,6 +45,12 @@ export interface JourneyPage {
    * "none", which is `[]`.
    */
   gaps: PageGap[] | null;
+  /**
+   * The page's full section list as the site recorded it, in page order, by
+   * key (`hero`). `null` = not recorded (an older tracker, no beacon) — the
+   * read is then estimated from other visits (`pageRead`).
+   */
+  sections: string[] | null;
 }
 
 export interface Journey {
@@ -69,13 +75,18 @@ export interface Journey {
 
 const ms = (iso: string) => Date.parse(iso);
 
-/** The section a `section_reach` hit names (the key after the page prefix), or `null` for another hit. */
+/** A section's key: its name without the page prefix (`landing/hero` → `hero`). */
+function sectionKey(full: string): string {
+  return full.slice(full.lastIndexOf("/") + 1);
+}
+
+/** The section a `section_reach` hit names (its key), or `null` for another hit. */
 function reachedSection(hit: SessionHit): string | null {
   if (hit.kind !== "event" || hit.eventName !== SECTION_REACH_EVENT)
     return null;
   const full = hit.eventProps?.[SECTION_REACH_PROP];
   if (full === undefined) return null;
-  return full.slice(full.lastIndexOf("/") + 1);
+  return sectionKey(full);
 }
 
 /**
@@ -99,6 +110,7 @@ export function journeyOf(session: Session): Journey {
         reached: [],
         actions: [],
         gaps: hit.gaps === null ? null : hit.gaps.map(gapOf),
+        sections: hit.sections === null ? null : hit.sections.map(sectionKey),
       });
     }
     if (pages.length === 0) pending.push(hit);
@@ -113,6 +125,7 @@ export function journeyOf(session: Session): Journey {
       reached: [],
       actions: [],
       gaps: null,
+      sections: null,
     });
   }
   for (const hit of pending) attach(pages[0]!, hit);
@@ -183,10 +196,11 @@ export function sumS(gaps: readonly PageGap[]): number {
 }
 
 /**
- * The sections each path is known to have, as far as the loaded visits say:
+ * The sections each path is ESTIMATED to have, from the loaded visits alone:
  * every section reached on it in any of them, in the order readers reach them
- * (mean reach offset). The box does not know a page's full section list, so a
- * page's "read %" is reached ÷ this — exact once someone has read it all.
+ * (mean reach offset). Only for a page whose own visit did not record its
+ * list (`pageRead`): a section nobody reached is missing from it, and it moves
+ * as more visits load.
  */
 export function sectionsByPath(
   journeys: readonly Journey[],
@@ -217,12 +231,50 @@ export function sectionsByPath(
   return out;
 }
 
-/** The share of `known` sections `page` reached, 0..1; `null` when none are known. */
-export function readShare(
+/** How far one page was read, and what that is measured against. */
+export interface PageRead {
+  /** The page's sections in page order: the depth bar's segments. */
+  sections: readonly string[];
+  /** The share of `sections` reached, 0..1; `null` when no section is known. */
+  share: number | null;
+  /**
+   * `sections` is the estimate from other visits (`sectionsByPath`), not the
+   * page's own recorded list: the share may overstate the read and may move
+   * as more visits load, so it is shown as estimated.
+   */
+  estimated: boolean;
+}
+
+/**
+ * How far `page` was read: against the page's own recorded section list when
+ * it has one, else against the estimate from the loaded visits. A recorded
+ * list missing a section the visitor reached (a page that changed under its
+ * tracker) is not trusted — the estimate is used, marked so, rather than a
+ * confident number that does not add up.
+ */
+export function pageRead(
   page: JourneyPage,
-  known: readonly string[] | undefined,
-): number | null {
-  if (!known || known.length === 0) return null;
+  estimates: ReadonlyMap<string, readonly string[]>,
+): PageRead {
   const hit = new Set(page.reached.map((r) => r.section));
-  return known.filter((s) => hit.has(s)).length / known.length;
+  const recorded = page.sections;
+  const trusted =
+    recorded !== null &&
+    recorded.length > 0 &&
+    [...hit].every((s) => recorded.includes(s));
+  const sections = trusted ? recorded : (estimates.get(page.path) ?? []);
+  return {
+    sections,
+    share:
+      sections.length === 0
+        ? null
+        : sections.filter((s) => hit.has(s)).length / sections.length,
+    estimated: !trusted,
+  };
+}
+
+/** A read share as words: `60% read`, `~60% read` when estimated. */
+export function readLabel(read: PageRead): string | null {
+  if (read.share === null) return null;
+  return `${read.estimated ? "~" : ""}${Math.round(read.share * 100)}% read`;
 }

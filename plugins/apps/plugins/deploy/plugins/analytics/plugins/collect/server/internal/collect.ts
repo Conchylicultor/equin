@@ -399,6 +399,7 @@ async function recordEngagement(
         engagedMs: analyticsHits.engagedMs,
         gaps: analyticsHits.gaps,
         load: analyticsHits.load,
+        sections: analyticsHits.sections,
       })
       .from(analyticsHits)
       .where(
@@ -420,6 +421,11 @@ async function recordEngagement(
           : {}),
         // Sent once per page load; the first that lands is kept.
         ...(body.load && hit.load === null ? { load: body.load } : {}),
+        // Only grows within a page load, so the longest is the newest.
+        ...(body.sections &&
+        (hit.sections === null || body.sections.length > hit.sections.length)
+          ? { sections: body.sections }
+          : {}),
       })
       .where(eq(analyticsHits.id, body.pageviewId));
     await tx

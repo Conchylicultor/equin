@@ -133,6 +133,33 @@ through `web-core`):
 - Whole positive ms or null, never 0. The server keeps the first load per hit;
   `NULL` = not recorded.
 
+## Page sections
+
+Each pageview hit carries `sections` (`core/internal/page-sections.ts`): the
+page's FULL section list, in page order, named as its `section_reach` hits
+name them (`landing/hero`) — what the Sessions tab measures "read %" against.
+Without it the box knows only the sections someone reached.
+
+- **Who lists a section**: `observeSectionReach` (so `useSectionReach`,
+  `useWebsiteSectionReach`, every `WebsiteBand`) registers it in its page's
+  list (`web/internal/page-sections.ts`) as it mounts, reached or not. A part
+  of a page counts toward read % exactly when it is observed.
+- **Which page**: the path the address shows when the section mounts — not
+  "what is mounted when the beacon goes", because the tracker hears of a route
+  change in an effect that can run after the next page's sections registered.
+  An unmounted section stays listed, so a path's list only grows during the
+  page load. Page order = document order (`compareDocumentPosition`).
+- **When it is sent**: sections register as they mount, so the list is complete
+  only once the page has rendered. It rides the pageview's engagement beacons
+  (the first is at the first hide or leave — long after render), never the
+  pageview itself, and is re-sent whenever it grew. No request of its own.
+- **Bounds**: at most `MAX_PAGE_SECTIONS` (32) distinct names of at most
+  `MAX_SECTION_NAME_LENGTH` (64) chars; registering past either throws (a
+  programming error), so the body stays under `MAX_COLLECT_BODY_BYTES`.
+- **Server**: keeps the longest list a beacon sent (it only grows, so longest =
+  newest, whatever order keepalive beacons land in). `NULL` = not recorded (an
+  event, an older tracker, a page with no sections, no beacon yet).
+
 ## Runtime notes
 
 - The rollup and retention crons are `perWorktree: true` **on purpose**. A
@@ -236,6 +263,7 @@ through `web-core`):
     - `LoadTiming`
     - `Metrics`
     - `OsFamily`
+    - `PageSections`
     - `PageviewBody`
     - `PeriodReport`
     - `RecordedColumn`
@@ -313,8 +341,10 @@ through `web-core`):
     - `MAX_FILTERS`
     - `MAX_HOST_LENGTH`
     - `MAX_LOAD_MS`
+    - `MAX_PAGE_SECTIONS`
     - `MAX_PATH_LENGTH`
     - `MAX_REFERRER_LENGTH`
+    - `MAX_SECTION_NAME_LENGTH`
     - `MAX_SESSION_HITS`
     - `MAX_SESSIONS_LIMIT`
     - `MAX_TOTALS_FILTERS`
@@ -326,6 +356,7 @@ through `web-core`):
     - `OS_FAMILIES`
     - `OsFamilySchema`
     - `PagePathSchema`
+    - `PageSectionsSchema`
     - `PageviewBodySchema`
     - `parseEventPropValue`
     - `PeriodReportSchema`

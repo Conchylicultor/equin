@@ -29,6 +29,7 @@ function harness(opts: { landing?: TrackerDeps["landing"] } = {}) {
   let armed = 0;
   const sent: CollectBody[] = [];
   const pending: ((r: CollectResponse) => void)[] = [];
+  const sections = new Map<string, string[]>();
   let milestones: LoadMilestones = {
     firstByteAt: null,
     firstContentfulPaintAt: null,
@@ -54,6 +55,7 @@ function harness(opts: { landing?: TrackerDeps["landing"] } = {}) {
     },
     isMediaPlaying: () => mediaPlaying,
     loadMilestones: () => milestones,
+    pageSections: (path) => sections.get(path) ?? [],
   });
   return {
     tracker,
@@ -75,6 +77,10 @@ function harness(opts: { landing?: TrackerDeps["landing"] } = {}) {
     armedCount: () => armed,
     setMilestones: (m: LoadMilestones) => {
       milestones = m;
+    },
+    /** Sets the sections registered on `path` so far. */
+    setSections: (path: string, names: string[]) => {
+      sections.set(path, names);
     },
     setVisible: (v: boolean) => {
       visible = v;
@@ -565,5 +571,80 @@ describe("isWithinApp", () => {
     expect(isWithinApp("/website/story", "/website")).toBe(true);
     expect(isWithinApp("/websites", "/website")).toBe(false);
     expect(isWithinApp("/agents", "/website")).toBe(false);
+  });
+});
+
+describe("page sections", () => {
+  const engagements = (sent: CollectBody[]) =>
+    sent.filter((b) => b.kind === "engagement");
+
+  it("ride the beacons whenever the list grew, never the pageview", async () => {
+    const h = harness();
+    h.setSections("/website", ["landing/hero", "landing/layers"]);
+    h.tracker.pathChanged("/website");
+    expect(h.sent[0]).not.toHaveProperty("sections");
+    await h.respond(0, { outcome: "pageview", pageviewId: PV_A });
+    h.advance(1000);
+    h.tracker.hidden();
+    expect(engagements(h.sent)[0]).toMatchObject({
+      sections: ["landing/hero", "landing/layers"],
+    });
+    // Unchanged: a later beacon leaves it out.
+    h.tracker.visible();
+    h.advance(1000);
+    h.tracker.hidden();
+    expect(engagements(h.sent)).toHaveLength(2);
+    expect(engagements(h.sent)[1]).not.toHaveProperty("sections");
+    // A section mounted late: sent again, whole, even with nothing else new.
+    h.setSections("/website", [
+      "landing/hero",
+      "landing/layers",
+      "landing/footer",
+    ]);
+    h.tracker.hidden();
+    expect(engagements(h.sent)).toHaveLength(3);
+    expect(engagements(h.sent)[2]).toMatchObject({
+      sections: ["landing/hero", "landing/layers", "landing/footer"],
+    });
+  });
+
+  it("are the left page's own on the beacon sent when leaving it", async () => {
+    const h = harness();
+    h.setSections("/website", ["landing/hero"]);
+    h.setSections("/website/vision", ["vision/idea"]);
+    h.tracker.pathChanged("/website");
+    await h.respond(0, { outcome: "pageview", pageviewId: PV_A });
+    h.advance(1000);
+    h.tracker.pathChanged("/website/vision");
+    expect(engagements(h.sent)[0]).toMatchObject({
+      pageviewId: PV_A,
+      sections: ["landing/hero"],
+    });
+  });
+
+  it("a revisit is a new pageview that sends the list again", async () => {
+    const h = harness();
+    h.setSections("/website", ["landing/hero"]);
+    h.tracker.pathChanged("/website");
+    await h.respond(0, { outcome: "pageview", pageviewId: PV_A });
+    h.advance(1000);
+    h.tracker.pathChanged("/website/vision");
+    h.tracker.pathChanged("/website");
+    await h.respond(3, { outcome: "pageview", pageviewId: PV_B });
+    h.advance(1000);
+    h.tracker.hidden();
+    expect(engagements(h.sent).at(-1)).toMatchObject({
+      pageviewId: PV_B,
+      sections: ["landing/hero"],
+    });
+  });
+
+  it("a page with no sections sends none", async () => {
+    const h = harness();
+    h.tracker.pathChanged("/website");
+    await h.respond(0, { outcome: "pageview", pageviewId: PV_A });
+    h.advance(1000);
+    h.tracker.hidden();
+    expect(engagements(h.sent)[0]).not.toHaveProperty("sections");
   });
 });

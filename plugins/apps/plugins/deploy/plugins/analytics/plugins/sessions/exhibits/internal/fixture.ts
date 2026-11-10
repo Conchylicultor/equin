@@ -10,7 +10,9 @@ import type {
  * path, seconds on it, sections reached `[key, at]`, actions `[name, at, props]`,
  * and its stretches away `[from, to, kind]` (page seconds); each visit its
  * first load `[server, first paint, ready]` ms. A visit without stretches or
- * load is one recorded before the tracker measured them.
+ * load is one recorded before the tracker measured them; one with
+ * `sectionsUnrecorded` predates the pages' section lists (its read % is
+ * estimated).
  */
 type Page = [
   path: string,
@@ -31,6 +33,8 @@ interface Visit {
   pages: Page[];
   /** `[ttfb, fcp, ready]`, each ms or null; absent = not recorded. */
   load?: [number | null, number | null, number | null];
+  /** Its pages did not record their section lists (an older tracker). */
+  sectionsUnrecorded?: true;
 }
 
 const PAGE_KEY: Record<string, string> = {
@@ -40,6 +44,16 @@ const PAGE_KEY: Record<string, string> = {
   "/apps": "apps",
   "/download": "download",
   "/contact": "contact",
+};
+
+/** Each page's sections in page order — the prototype's site. */
+const PAGE_SECTIONS: Record<string, string[]> = {
+  "/": ["hero", "layers", "film", "apps", "closing", "footer"],
+  "/vision": ["hero", "idea", "ladder", "marketplace", "footer"],
+  "/foundations": ["hero", "iceberg", "plugins", "footer"],
+  "/apps": ["hero", "gallery", "more", "footer"],
+  "/download": ["hero", "install", "requirements", "footer"],
+  "/contact": ["hero", "form", "footer"],
 };
 
 const VISITS: Visit[] = [
@@ -226,6 +240,7 @@ const VISITS: Visit[] = [
   {
     minutesAgo: 1500,
     load: [160, 700, 1050],
+    sectionsUnrecorded: true,
     country: "FR",
     device: "Desktop",
     browser: "Chrome",
@@ -321,6 +336,9 @@ export function fixtureSessions(now: number): Session[] {
           i === 0 && v.load
             ? { ttfbMs: v.load[0], fcpMs: v.load[1], readyMs: v.load[2] }
             : null,
+        sections: v.sectionsUnrecorded
+          ? null
+          : PAGE_SECTIONS[path]!.map((key) => `${PAGE_KEY[path]}/${key}`),
       });
       const events: [number, SessionHit][] = [
         ...reached.map(([key, t]): [number, SessionHit] => [
@@ -334,6 +352,7 @@ export function fixtureSessions(now: number): Session[] {
             engagedMs: 0,
             gaps: null,
             load: null,
+            sections: null,
           },
         ]),
         ...actions.map(([name, t, props]): [number, SessionHit] => [
@@ -347,6 +366,7 @@ export function fixtureSessions(now: number): Session[] {
             engagedMs: 0,
             gaps: null,
             load: null,
+            sections: null,
           },
         ]),
       ];

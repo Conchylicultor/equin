@@ -196,6 +196,7 @@ beforeAll(async () => {
   // B's tracker records away stretches. Beacons land out of order: a stale
   // smaller total changes nothing; the same total reaching further replaces.
   // The first beacon carries the hard load's timing; a second load is ignored.
+  // The page's section list: the longest one sent is kept (it only grows).
   await hit(
     {
       kind: "engagement",
@@ -203,6 +204,7 @@ beforeAll(async () => {
       engagedMs: 5_000,
       gaps: [{ kind: "hidden", startMs: 1_000, endMs: 61_000 }],
       load: { ttfbMs: 120, fcpMs: 900, readyMs: 1_400 },
+      sections: ["apps/hero", "apps/gallery", "apps/footer"],
     },
     B,
     at(DAY, "10:31"),
@@ -214,6 +216,7 @@ beforeAll(async () => {
       engagedMs: 3_000,
       gaps: [],
       load: { ttfbMs: 1, fcpMs: null, readyMs: null },
+      sections: ["apps/hero"],
     },
     B,
     at(DAY, "10:31"),
@@ -362,6 +365,20 @@ describe("collect", () => {
     // Every other hit: an older tracker's beacon, no beacon, or an event.
     expect(
       hits.filter((h) => h.path !== "/apps").every((h) => h.load === null),
+    ).toBe(true);
+  });
+
+  test("page sections: the longest list sent, null when never recorded", async () => {
+    const hits = await t.db
+      .select({ path: analyticsHits.path, sections: analyticsHits.sections })
+      .from(analyticsHits);
+    expect(hits.find((h) => h.path === "/apps")?.sections).toEqual([
+      "apps/hero",
+      "apps/gallery",
+      "apps/footer",
+    ]);
+    expect(
+      hits.filter((h) => h.path !== "/apps").every((h) => h.sections === null),
     ).toBe(true);
   });
 
@@ -669,6 +686,12 @@ describe("sessions", () => {
       { kind: "hidden", startMs: 1_000, endMs: 121_000 },
     ]);
     expect(a1!.hits.map((h) => h.load)).toEqual([null, null, null]);
+    expect(a1!.hits.map((h) => h.sections)).toEqual([null, null, null]);
+    expect(b!.hits[0]!.sections).toEqual([
+      "apps/hero",
+      "apps/gallery",
+      "apps/footer",
+    ]);
     expect(b!.hits[0]!.load).toEqual({
       ttfbMs: 120,
       fcpMs: 900,

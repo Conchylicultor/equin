@@ -3,12 +3,17 @@ import type {
   Session,
   SessionHit,
 } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
-import { journeyOf, readShare, sectionsByPath } from "./journey";
+import { journeyOf, pageRead, readLabel, sectionsByPath } from "./journey";
 
 const T0 = Date.parse("2026-11-10T14:32:00.000Z");
 const at = (s: number) => new Date(T0 + s * 1000).toISOString();
 
-function pv(s: number, path: string, engagedMs = 0): SessionHit {
+function pv(
+  s: number,
+  path: string,
+  engagedMs = 0,
+  sections: string[] | null = null,
+): SessionHit {
   return {
     ts: at(s),
     kind: "pageview",
@@ -18,6 +23,7 @@ function pv(s: number, path: string, engagedMs = 0): SessionHit {
     engagedMs,
     gaps: null,
     load: null,
+    sections,
   };
 }
 function ev(
@@ -35,6 +41,7 @@ function ev(
     engagedMs: 0,
     gaps: null,
     load: null,
+    sections: null,
   };
 }
 const reach = (s: number, path: string, section: string) =>
@@ -152,10 +159,61 @@ describe("read share", () => {
   it("knows a path's sections from every loaded visit, in reach order", () => {
     expect(known.get("/")).toEqual(["hero", "layers", "film"]);
   });
-  it("is reached ÷ known; unknown when no visit reached a section there", () => {
-    expect(readShare(a.pages[0]!, known.get("/"))).toBeCloseTo(2 / 3, 12);
-    expect(readShare(b.pages[0]!, known.get("/"))).toBe(1);
-    expect(readShare(a.pages[0]!, known.get("/nowhere"))).toBeNull();
+  it("without a recorded list: reached ÷ estimated, marked estimated", () => {
+    const ra = pageRead(a.pages[0]!, known);
+    expect(ra.share).toBeCloseTo(2 / 3, 12);
+    expect(ra.estimated).toBe(true);
+    expect(readLabel(ra)).toBe("~67% read");
+    expect(pageRead(b.pages[0]!, known).share).toBe(1);
+    expect(pageRead(a.pages[0]!, new Map()).share).toBeNull();
+    expect(readLabel(pageRead(a.pages[0]!, new Map()))).toBeNull();
+  });
+});
+
+describe("a page that recorded its sections", () => {
+  const recorded = [
+    "landing/hero",
+    "landing/layers",
+    "landing/film",
+    "landing/contact",
+    "landing/footer",
+  ];
+  const j = journeyOf(
+    session(
+      [
+        pv(0, "/", 0, recorded),
+        reach(0, "/", "landing/hero"),
+        reach(8, "/", "landing/layers"),
+        reach(25, "/", "landing/film"),
+        reach(30, "/", "landing/contact"),
+      ],
+      90_000,
+    ),
+  );
+  // Every loaded visit stopped short of the footer: the estimate never sees it.
+  const estimates = sectionsByPath([j]);
+
+  it("reads against the page's own list, unreached sections included, in page order", () => {
+    const r = pageRead(j.pages[0]!, estimates);
+    expect(r.sections).toEqual(["hero", "layers", "film", "contact", "footer"]);
+    expect(r.share).toBe(4 / 5);
+    expect(r.estimated).toBe(false);
+    expect(readLabel(r)).toBe("80% read");
+  });
+  it("does not trust a list missing a section the visitor reached", () => {
+    const odd = journeyOf(
+      session(
+        [
+          pv(0, "/", 0, ["landing/hero"]),
+          reach(0, "/", "landing/hero"),
+          reach(5, "/", "landing/other"),
+        ],
+        60_000,
+      ),
+    );
+    const r = pageRead(odd.pages[0]!, sectionsByPath([odd]));
+    expect(r.estimated).toBe(true);
+    expect(r.sections).toEqual(["hero", "other"]);
   });
 });
 

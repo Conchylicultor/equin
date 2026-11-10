@@ -41,6 +41,7 @@ export const RECORDED_COLUMNS = [
   "exitEngagedMs",
   "gaps",
   "load",
+  "sections",
   "events",
   "eventName",
   "eventProps",
@@ -142,6 +143,12 @@ export const RECORDED_FIELDS = [
     description:
       "How long the page took to load when the visitor opened the site: server response, first paint, and the app ready",
     columns: ["load"],
+  },
+  {
+    name: "sections",
+    description:
+      "The names of the page's sections in page order, so how far it was read is measured against the whole page",
+    columns: ["sections"],
   },
   {
     name: "visitor_id",
