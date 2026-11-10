@@ -7,38 +7,84 @@ import { setSecret } from "@plugins/infra/plugins/secrets/server";
 import { DEPLOY_SECRET_KEY_PATTERN } from "@plugins/apps/plugins/deploy/plugins/deploy-secrets/core";
 import { deploymentIdKind } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
 import {
+  adoptLocalDeploySecretValue,
   approveDeploySecret,
   deliverDeploySecrets,
   setDeploySecretValue,
 } from "../../core/endpoints";
+import { fingerprintKey } from "./fingerprint";
+import { readLocalValue } from "./local";
 import { approvalMessage, pendingSecrets } from "./plan";
 import { deploySecretsStatusServed } from "./served";
 import { DEPLOY_SECRETS_NAMESPACE, loadSecretPlan } from "./state";
 import { _deploySecretGrants } from "./tables";
 
-/** Store a value. Every deployment's rows recompute (a grant of the old value now names another one). */
+function assertSecretKey(key: string): void {
+  if (!DEPLOY_SECRET_KEY_PATTERN.test(key)) {
+    throw new HttpError(
+      400,
+      `"${key}" is not a deploy secret key (${DEPLOY_SECRET_KEY_PATTERN}).`,
+    );
+  }
+}
+
+/**
+ * The one write of a deploy secret's value — Set value and Use this
+ * computer's value both land here. Every deployment's rows recompute (a grant
+ * of the old value now names another one).
+ */
+async function storeDeploySecretValue(
+  key: string,
+  value: string,
+): Promise<void> {
+  await setSecret({ namespace: DEPLOY_SECRETS_NAMESPACE, key }, value);
+  // A value's `notify()` with no params reaches only the `{}` tuple, and the
+  // store has no change feed — so every deployment's tuple is told by name
+  // (one row per install: bounded by the servers you deploy to).
+  const deployments = await db
+    .select({ id: _deployDeployments.id })
+    .from(_deployDeployments);
+  for (const d of deployments) {
+    deploySecretsStatusServed.notify({ deploymentId: d.id });
+  }
+}
+
+/** Store a value typed or pasted in the Set value dialog. */
 export const handleSetValue = implement(
   setDeploySecretValue,
   async ({ params, body }) => {
-    if (!DEPLOY_SECRET_KEY_PATTERN.test(params.key)) {
+    assertSecretKey(params.key);
+    await storeDeploySecretValue(params.key, body.value);
+  },
+);
+
+/**
+ * Store this computer's counterpart as the value: read here, never from the
+ * request (the browser only ever saw its preview), and only when it is still
+ * the value whose fingerprint the row showed — a local value changed since is
+ * a 409, never stored blind. Approving it stays a separate click.
+ */
+export const handleAdoptLocalValue = implement(
+  adoptLocalDeploySecretValue,
+  async ({ params, body }) => {
+    assertSecretKey(params.key);
+    const local = await readLocalValue(await fingerprintKey(), params.key);
+    if (local === undefined) {
       throw new HttpError(
-        400,
-        `"${params.key}" is not a deploy secret key (${DEPLOY_SECRET_KEY_PATTERN}).`,
+        409,
+        `This computer has no value for ${params.key} any more.`,
       );
     }
-    await setSecret(
-      { namespace: DEPLOY_SECRETS_NAMESPACE, key: params.key },
-      body.value,
-    );
-    // A value's `notify()` with no params reaches only the `{}` tuple, and the
-    // store has no change feed — so every deployment's tuple is told by name
-    // (one row per install: bounded by the servers you deploy to).
-    const deployments = await db
-      .select({ id: _deployDeployments.id })
-      .from(_deployDeployments);
-    for (const d of deployments) {
-      deploySecretsStatusServed.notify({ deploymentId: d.id });
+    if (local.reading.kind === "unusable") {
+      throw new HttpError(409, local.reading.reason);
     }
+    if (local.reading.fingerprint !== body.fingerprint) {
+      throw new HttpError(
+        409,
+        `This computer's value of ${params.key} changed since it was shown. Review it and try again.`,
+      );
+    }
+    await storeDeploySecretValue(params.key, local.value);
   },
 );
 
@@ -52,7 +98,9 @@ export const handleSetValue = implement(
 export const handleApprove = implement(
   approveDeploySecret,
   async ({ params, body }) => {
-    const plan = await loadSecretPlan(params.deploymentId);
+    const plan = await loadSecretPlan(params.deploymentId, {
+      withLocal: false,
+    });
     const row = plan.rows.find((r) => r.key === body.key);
     if (!row) {
       throw new HttpError(
@@ -105,7 +153,9 @@ export const handleDeliver = implement(
         "The approved deploy env is read only by `./equin deploy converge`, never by a browser.",
       );
     }
-    const plan = await loadSecretPlan(params.deploymentId);
+    const plan = await loadSecretPlan(params.deploymentId, {
+      withLocal: false,
+    });
     const pending = pendingSecrets(plan.rows);
     if (pending.length > 0) {
       return { kind: "needs-approval", message: approvalMessage(pending) };

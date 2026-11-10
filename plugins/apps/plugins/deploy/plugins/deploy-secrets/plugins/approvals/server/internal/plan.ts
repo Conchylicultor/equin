@@ -1,9 +1,64 @@
 import type { SecretWrite } from "@plugins/infra/plugins/secrets/core";
 import {
   DEPLOY_SECRET_STATUS_LABELS,
+  DeploySecretValueSchema,
   isPendingSecretStatus,
+  type DeploySecretLocal,
   type DeploySecretRow,
 } from "../../core/schemas";
+
+/**
+ * What this computer holds for one secret, read from its
+ * `DeploySecrets.LocalValue` contribution — absent when it holds nothing.
+ * The value itself stays out: only its preview and fingerprint go on a row.
+ */
+export type LocalReading =
+  | {
+      readonly kind: "set";
+      readonly preview: string;
+      readonly fingerprint: string;
+      readonly caution: string | null;
+    }
+  | { readonly kind: "unusable"; readonly reason: string };
+
+/** How many characters a masked preview shows at each end. */
+const MASK_EDGE = 4;
+/**
+ * The shortest value a masked preview shows any of: its two ends are then at
+ * most a quarter of it. A shorter value is all dots.
+ */
+const MASK_MIN_LENGTH = MASK_EDGE * 8;
+
+/**
+ * A local value as the row previews it. `plain` shows it whole (an identifier
+ * that is not secret); `masked` shows only its first and last four characters,
+ * enough to recognise a key, and nothing of a value too short to cut safely
+ * (under {@link MASK_MIN_LENGTH}).
+ */
+export function previewLocalValue(
+  value: string,
+  reveal: "masked" | "plain",
+): string {
+  if (reveal === "plain") return value;
+  if (value.length < MASK_MIN_LENGTH) return "•".repeat(8);
+  return `${value.slice(0, MASK_EDGE)}…${value.slice(-MASK_EDGE)}`;
+}
+
+/**
+ * Whether a local value can be a deploy value: the same rules Set value
+ * applies, so an offered value never fails when it is stored.
+ */
+export function checkLocalValue(
+  value: string,
+): { ok: true } | { ok: false; reason: string } {
+  const parsed = DeploySecretValueSchema.safeParse(value);
+  return parsed.success
+    ? { ok: true }
+    : {
+        ok: false,
+        reason: `This computer's value cannot be used: ${parsed.error.issues[0]?.message ?? "not a valid value"}.`,
+      };
+}
 
 /** One secret a composition's closure needs, merged across the plugins declaring it. */
 export interface RequiredSecret {
@@ -20,7 +75,8 @@ export interface RequiredSecret {
  * - `values`: the current local value's fingerprint per key, absent when no
  *   value is set;
  * - `grants`: the approved fingerprint per key, for THIS deployment;
- * - `lastWrites`: the store's last write per key, absent when it holds none.
+ * - `lastWrites`: the store's last write per key, absent when it holds none;
+ * - `locals`: this computer's counterpart per key, absent when it holds none.
  *
  * Every required key gets a row. A grant for a key no longer required has no
  * row: it is dropped from the delivered env without asking, because removing a
@@ -31,6 +87,7 @@ export function diffSecrets(
   values: ReadonlyMap<string, string>,
   grants: ReadonlyMap<string, string>,
   lastWrites: ReadonlyMap<string, SecretWrite>,
+  locals: ReadonlyMap<string, LocalReading>,
 ): DeploySecretRow[] {
   return required.map((r) => {
     const fingerprint = values.get(r.key) ?? null;
@@ -52,8 +109,24 @@ export function diffSecrets(
       status,
       fingerprint,
       lastWrite: lastWrites.get(r.key) ?? null,
+      local: localOf(locals.get(r.key), fingerprint),
     };
   });
+}
+
+function localOf(
+  reading: LocalReading | undefined,
+  current: string | null,
+): DeploySecretLocal {
+  if (reading === undefined) return { kind: "none" };
+  if (reading.kind === "unusable") return reading;
+  return {
+    kind: "available",
+    preview: reading.preview,
+    fingerprint: reading.fingerprint,
+    caution: reading.caution,
+    sameAsCurrent: reading.fingerprint === current,
+  };
 }
 
 /** The rows still waiting on the user, or none. */

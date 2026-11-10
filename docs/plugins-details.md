@@ -2436,16 +2436,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `network/live.useLive`
                   - `primitives/icon-button.IconButton`
                   - `primitives/overlay/imperative-dialog/confirm.useConfirmDialog`
-        - **`deploy-secrets`** — readDeploySecret(decl) reads an approved deploy secret on the box, as a set/unset state, through the DeploySecretSource host service (the machine half reads the credential systemd decrypted into the service's credentials directory). The host-only GET /api/host-only/deploy-secrets answers set/unset per named key (never a value) — what ship's health gate asks of the running app.
+        - **`deploy-secrets`** — readDeploySecret(decl) reads an approved deploy secret on the box, as a set/unset state, through the DeploySecretSource host service (the machine half reads the credential systemd decrypted into the service's credentials directory). The host-only GET /api/host-only/deploy-secrets answers set/unset per named key (never a value) — what ship's health gate asks of the running app. Owns DeploySecrets.LocalValue: a plugin names where a deploy secret's counterpart lives on the computer (read + watch, masked or plain preview, an optional caution), which the Secrets section offers as "Use this computer's value".
           - Server:
             - Contributes: `host-service:deploy-secrets.source` "deploy-secrets.source"
             - Uses:
               - `apps/deploy/analytics/host-only.hostOnly`
               - `infra/endpoints.implement`
             - Exports (types):
+              - `DeploySecretLocalValue`
               - `DeploySecretSourceImpl`
               - `DeploySecretValue`
             - Exports (values):
+              - `DeploySecrets`
               - `DeploySecretSource`
               - `readDeploySecret`
             - Routes: `GET /api/host-only/deploy-secrets`
@@ -2470,7 +2472,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Exemptions:
             - Exempts itself from: `user-path/no-unproven-claim` — `machine/internal/read-credential.ts` (sanctioned)
           - Plugins:
-            - **`approvals`** — Secrets section of a site's Settings (and the site page's banner while a secret waits on approval): every deploy secret its composition's closure declares as a DataView (key, requesting plugin, description, status approved / new / value changed / missing value / not set (optional)) with per-row Set value (a password dialog) and Approve (no approve-all). Shown only when the composition needs a secret. Deploy-secret approvals on the local machine: values in the secrets store (namespace deploy-secrets), per-deployment grants of a value's HMAC fingerprint (deploy_secret_grants), the deploy gate that ends a run needs-approval while any secret its composition's closure declares is missing, new or changed, the deploy-secrets.status live value behind the Secrets section, and the browser-refusing endpoint converge reads the approved env from.
+            - **`approvals`** — Secrets section of a site's Settings (and the site page's banner while a secret waits on approval): every deploy secret its composition's closure declares as a DataView (key, requesting plugin, description, status approved / new / value changed / missing value / not set (optional)) with per-row Use this computer's value (when a DeploySecrets.LocalValue names this computer's counterpart: a confirmation showing its masked preview and any caution), Set value (a password dialog) and Approve (no approve-all). Shown only when the composition needs a secret. Deploy-secret approvals on the local machine: values in the secrets store (namespace deploy-secrets), per-deployment grants of a value's HMAC fingerprint (deploy_secret_grants), the deploy gate that ends a run needs-approval while any secret its composition's closure declares is missing, new or changed, the deploy-secrets.status live value behind the Secrets section (each row with this computer's counterpart, from DeploySecrets.LocalValue, previewed — masked for a credential — never its value), the Use-this-computer's-value endpoint that stores it through the same write as Set value, and the browser-refusing endpoint converge reads the approved env from.
               - Web:
                 - Slots: `item-actions`
                 - Slot contributors: `item-actions` ← `apps.deploy.deploy-secrets.approvals`
@@ -2478,6 +2480,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `DeploymentDetail.Section` "Secrets" → `SecretsSection`
                   - `SiteBanner` "needs-secret"
                   - `SiteCheck` "secrets"
+                  - `item-actions` "use-local" → `UseLocalValueAction`
                   - `item-actions` "set-value" → `SetValueAction`
                   - `item-actions` "approve" → `ApproveAction`
                 - Uses: 28 symbols — full list in [`plugins/apps/plugins/deploy/plugins/deploy-secrets/plugins/approvals/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/deploy-secrets/plugins/approvals/REFERENCE.md)
@@ -2499,6 +2502,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `deploy.gate` "deploy-secrets"
                   - `resource.declare` "deploy-secrets.status"
                 - Uses:
+                  - `apps/deploy/deploy-secrets.DeploySecretLocalValue`
+                  - `apps/deploy/deploy-secrets.DeploySecrets`
                   - `apps/deploy/deployments._deployDeployments`
                   - `apps/deploy/deployments.DeployGates`
                   - `config_v2.getConfig`
@@ -2517,6 +2522,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Resources: `deploy-secrets.status` (push, notified, whole: one row per deploy secret the deployment's composition closure declares — a handful, whole: the plugins in one closure declaring the same key — normally one)
                 - Routes:
                   - `PUT /api/deploy-secrets/values/:key`
+                  - `PUT /api/deploy-secrets/values/:key/from-local`
                   - `POST /api/deploy-secrets/deployments/:deploymentId/approve`
                   - `POST /api/deploy-secrets/deployments/:deploymentId/env`
               - Core:
@@ -2531,9 +2537,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `network/live.liveValue`
                   - `packages/list-bound.wholeList`
                 - Exports (types):
+                  - `DeploySecretLocal`
                   - `DeploySecretRow`
                   - `DeploySecretStatus`
                 - Exports (values):
+                  - `adoptLocalDeploySecretValue`
                   - `approveDeploySecret`
                   - `deliverDeploySecrets`
                   - `DEPLOY_SECRET_STATUS_LABELS`
@@ -36374,6 +36382,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `resource.declare` "google-maps.browser-config"
               - `host-service:google-maps.browser-config` "google-maps.browser-config"
+              - `deploy-secrets.local-value` "GOOGLE_MAPS_BROWSER_KEY"
+              - `deploy-secrets.local-value` "GOOGLE_MAPS_MAP_ID"
             - Uses: `network/live.serveValue`
             - Exports (types): `MapsBrowserConfigSourceImpl`
             - Exports (values):

@@ -7,11 +7,16 @@ export {
   isPendingSecretStatus,
   SECRETS_SECTION_ID,
 } from "./schemas";
-export type { DeploySecretRow, DeploySecretStatus } from "./schemas";
+export type {
+  DeploySecretLocal,
+  DeploySecretRow,
+  DeploySecretStatus,
+} from "./schemas";
 export { deploySecretsStatus } from "./resources";
 export {
   approveDeploySecret,
   deliverDeploySecrets,
   setDeploySecretValue,
+  adoptLocalDeploySecretValue,
 } from "./endpoints";
 export { deploySecretGrantsEntityRef } from "./grants-entity";

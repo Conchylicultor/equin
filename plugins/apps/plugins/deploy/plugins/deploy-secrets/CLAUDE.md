@@ -53,6 +53,32 @@ and on the box: `readDeploySecret(RESEND_API_KEY)` → `{ kind: "set", value } |
   key is optional only when every plugin declaring it says so. For a value that only
   improves the site (e.g. `GOOGLE_MAPS_MAP_ID`, the vector map's Map ID).
 
+## This computer's value (`DeploySecrets.LocalValue`)
+
+Often the computer already holds a deploy secret's value (the Maps browser key
+in its browser-config file). The plugin that owns that local value names it —
+in its `machine/` half, since only the computer has it:
+
+```ts
+DeploySecrets.LocalValue({
+  secret: GOOGLE_MAPS_BROWSER_KEY,   // the declaration it is the counterpart of
+  reveal: "masked",                  // "plain" for a non-secret id (a Map ID)
+  caution: "…",                      // optional: why reusing it is a choice to weigh
+  read: async () => …,               // { kind: "set", value } | { kind: "unset" }
+  watch: (changed) => …,             // its own change signal; returns the stop
+})
+```
+
+Only the Secrets rows read it (the gate, Approve and delivery never do, so an unreadable local source holds no deploy). The Secrets section offers it per row as **Use this computer's value** (no secret
+is named in the Deploy app — rows are matched by key; two contributions for one
+key throw). The row carries only a preview (masked: the first and last 4 characters of a value 32+ long, all dots below) — `plain` is for a non-secret id only —
+and the value's HMAC fingerprint, never the value. Using it
+(`PUT /api/deploy-secrets/values/:key/from-local`, body: the fingerprint shown)
+re-reads the value on the server, 409s if it changed since it was shown, and
+stores it through the same write as Set value — it is then approved like any
+other value. The token lives in this (box-safe) plugin so a contributor never
+pulls `approvals` into a deployed closure; on a box it is collected and never read.
+
 ## The approval model (`approvals`)
 
 - **Values**: the local secrets store, namespace `deploy-secrets`, key = the env var. One
@@ -144,16 +170,18 @@ failure notice.
 
 ## Plugin reference
 
-- Description: readDeploySecret(decl) reads an approved deploy secret on the box, as a set/unset state, through the DeploySecretSource host service (the machine half reads the credential systemd decrypted into the service's credentials directory). The host-only GET /api/host-only/deploy-secrets answers set/unset per named key (never a value) — what ship's health gate asks of the running app.
+- Description: readDeploySecret(decl) reads an approved deploy secret on the box, as a set/unset state, through the DeploySecretSource host service (the machine half reads the credential systemd decrypted into the service's credentials directory). The host-only GET /api/host-only/deploy-secrets answers set/unset per named key (never a value) — what ship's health gate asks of the running app. Owns DeploySecrets.LocalValue: a plugin names where a deploy secret's counterpart lives on the computer (read + watch, masked or plain preview, an optional caution), which the Secrets section offers as "Use this computer's value".
 - Server:
   - Contributes: `host-service:deploy-secrets.source` "deploy-secrets.source"
   - Uses:
     - `apps/deploy/analytics/host-only.hostOnly`
     - `infra/endpoints.implement`
   - Exports (types):
+    - `DeploySecretLocalValue`
     - `DeploySecretSourceImpl`
     - `DeploySecretValue`
   - Exports (values):
+    - `DeploySecrets`
     - `DeploySecretSource`
     - `readDeploySecret`
   - Routes: `GET /api/host-only/deploy-secrets`

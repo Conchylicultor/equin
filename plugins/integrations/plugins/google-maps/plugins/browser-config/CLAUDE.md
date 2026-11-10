@@ -62,7 +62,9 @@ is the verifier.
 4. Optionally cap its daily quota (Maps JavaScript API → Quotas → Map loads
    per day).
 5. Deploy app → the site's Settings → Secrets: set `GOOGLE_MAPS_BROWSER_KEY`
-   to the key and approve it; the next deploy delivers it (a deploy is held
+   to the key and approve it (or **Use this computer's value**, which takes
+   the key from the browser-config file — a choice, not the default: the
+   site's key is public in its pages, so a separate restricted key is advised); the next deploy delivers it (a deploy is held
    `needs-approval` until then).
 6. Optional, the vector map with your style: Google Maps Platform → Map
    Management → Create Map ID, **in the same project as the key**, type
@@ -86,6 +88,8 @@ is the verifier.
   - Contributes:
     - `resource.declare` "google-maps.browser-config"
     - `host-service:google-maps.browser-config` "google-maps.browser-config"
+    - `deploy-secrets.local-value` "GOOGLE_MAPS_BROWSER_KEY"
+    - `deploy-secrets.local-value` "GOOGLE_MAPS_MAP_ID"
   - Uses: `network/live.serveValue`
   - Exports (types): `MapsBrowserConfigSourceImpl`
   - Exports (values):

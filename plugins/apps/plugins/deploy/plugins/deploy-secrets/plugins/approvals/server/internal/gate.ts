@@ -13,7 +13,7 @@ export const deploySecretsGate = DeployGates.Gate({
   id: "deploy-secrets",
   check: async ({ deploymentId, compositionId }) => {
     const pending = pendingSecrets(
-      (await planFor(deploymentId, compositionId)).rows,
+      (await planFor(deploymentId, compositionId, { withLocal: false })).rows,
     );
     return pending.length === 0
       ? { kind: "pass" }

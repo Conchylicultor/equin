@@ -15,6 +15,18 @@ export const setDeploySecretValue = defineEndpoint({
 });
 
 /**
+ * Store this computer's counterpart of `key` (its `DeploySecrets.LocalValue`)
+ * as the value — the same store write as Set value, read on this machine and
+ * never sent to the browser. `fingerprint` is the one the row's preview
+ * showed: a local value changed since is a 409, never stored blind. Like Set
+ * value, it does not approve anything.
+ */
+export const adoptLocalDeploySecretValue = defineEndpoint({
+  route: "PUT /api/deploy-secrets/values/:key/from-local",
+  body: z.object({ fingerprint: z.string() }),
+});
+
+/**
  * Approve the current value of `key` for one deployment. `fingerprint` is the
  * one the user was shown: a value replaced since is a 409, never approved
  * blind. One key per call — there is deliberately no approve-all.

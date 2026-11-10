@@ -13,7 +13,8 @@ import { _deployDeployments } from "@plugins/apps/plugins/deploy/plugins/deploym
 import { deploymentIdKind } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
 import type { DeploySecretRow } from "../../core/schemas";
 import { fingerprintKey, fingerprintSecret } from "./fingerprint";
-import { diffSecrets } from "./plan";
+import { readLocalValue } from "./local";
+import { diffSecrets, type LocalReading } from "./plan";
 import { requiredDeploySecrets } from "./required";
 import { _deploySecretGrants } from "./tables";
 
@@ -67,33 +68,48 @@ export interface SecretPlan {
  */
 export async function loadSecretPlan(
   deploymentId: string,
+  opts: PlanOptions,
 ): Promise<SecretPlan> {
   const [deployment] = await db
     .select({ compositionId: _deployDeployments.compositionId })
     .from(_deployDeployments)
     .where(eq(_deployDeployments.id, deploymentIdKind.key(deploymentId)));
   if (!deployment) throw new HttpError(404, `No deployment ${deploymentId}.`);
-  return planFor(deploymentId, deployment.compositionId);
+  return planFor(deploymentId, deployment.compositionId, opts);
+}
+
+/**
+ * Whether to read this computer's counterparts (`DeploySecrets.LocalValue`)
+ * too. Only the Secrets rows show them: the gate, Approve and delivery decide
+ * from the store and the grants alone, so a local source that cannot be read
+ * never holds a deploy.
+ */
+export interface PlanOptions {
+  readonly withLocal: boolean;
 }
 
 /** {@link loadSecretPlan} for a deployment whose composition the caller already holds. */
 export async function planFor(
   deploymentId: string,
   compositionId: string,
+  opts: PlanOptions,
 ): Promise<SecretPlan> {
   const required = await requiredDeploySecrets(compositionId);
   const values = new Map<string, string>();
   const fingerprints = new Map<string, string>();
   const lastWrites = new Map<string, SecretWrite>();
+  const locals = new Map<string, LocalReading>();
   if (required.length > 0) {
     const hmacKey = await fingerprintKey();
     await Promise.all(
       required.map(async (r) => {
-        const [lastWrite, value] = await Promise.all([
+        const [lastWrite, value, local] = await Promise.all([
           readSecretLastWrite(r.key),
           readSecretValue(r.key),
+          opts.withLocal ? readLocalValue(hmacKey, r.key) : undefined,
         ]);
         if (lastWrite !== undefined) lastWrites.set(r.key, lastWrite);
+        if (local !== undefined) locals.set(r.key, local.reading);
         if (value === undefined || value === "") return;
         values.set(r.key, value);
         fingerprints.set(r.key, await fingerprintSecret(hmacKey, r.key, value));
@@ -111,7 +127,7 @@ export async function planFor(
     );
   const grants = new Map(grantRows.map((g) => [g.key, g.valueFingerprint]));
   return {
-    rows: diffSecrets(required, fingerprints, grants, lastWrites),
+    rows: diffSecrets(required, fingerprints, grants, lastWrites, locals),
     values,
   };
 }

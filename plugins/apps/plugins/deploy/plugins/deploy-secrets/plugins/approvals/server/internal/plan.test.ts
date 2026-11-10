@@ -1,9 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import {
   approvalMessage,
+  checkLocalValue,
   diffSecrets,
   mergeDeclarations,
   pendingSecrets,
+  previewLocalValue,
+  type LocalReading,
   type RequiredSecret,
 } from "./plan";
 import { fingerprintSecret, importHmacKey } from "./fingerprint";
@@ -31,6 +34,7 @@ describe("diffSecrets", () => {
         ["E_DROPPED", "fp-e"],
       ]),
       new Map(),
+      new Map(),
     );
     expect(rows.map((r) => [r.key, r.status, r.fingerprint])).toEqual([
       ["A_MISSING", "missing-value", null],
@@ -52,6 +56,7 @@ describe("diffSecrets", () => {
       new Map([["A", "fp-a"]]),
       new Map(),
       new Map([["A", write]]),
+      new Map(),
     );
     expect(rows.map((r) => r.lastWrite)).toEqual([write, null]);
   });
@@ -64,6 +69,7 @@ describe("diffSecrets", () => {
         ["OPT_OK", "fp-o"],
       ]),
       new Map([["OPT_OK", "fp-o"]]),
+      new Map(),
       new Map(),
     );
     expect(rows.map((r) => [r.key, r.status])).toEqual([
@@ -81,6 +87,7 @@ describe("diffSecrets", () => {
       new Map(),
       new Map([["K", "fp"]]),
       new Map(),
+      new Map(),
     );
     expect(row?.status).toBe("missing-value");
   });
@@ -89,6 +96,7 @@ describe("diffSecrets", () => {
     const rows = diffSecrets(
       [req("RESEND_API_KEY")],
       new Map([["RESEND_API_KEY", "fp"]]),
+      new Map(),
       new Map(),
       new Map(),
     );
@@ -155,5 +163,65 @@ describe("fingerprintSecret", () => {
 
   test("a malformed stored key throws", () => {
     expect(importHmacKey("abc")).rejects.toThrow("32 hex bytes");
+  });
+});
+
+describe("this computer's value", () => {
+  test("a row offers it, marked when it is already the current value", () => {
+    const local = (fingerprint: string) => ({
+      kind: "set" as const,
+      preview: "AIza…wxyz",
+      fingerprint,
+      caution: "advised: a separate key",
+    });
+    const rows = diffSecrets(
+      [req("A_SAME"), req("B_OTHER"), req("C_NONE"), req("D_BAD")],
+      new Map([
+        ["A_SAME", "fp-a"],
+        ["B_OTHER", "fp-b"],
+      ]),
+      new Map(),
+      new Map(),
+      new Map<string, LocalReading>([
+        ["A_SAME", local("fp-a")],
+        ["B_OTHER", local("fp-b-local")],
+        ["D_BAD", { kind: "unusable" as const, reason: "has a space" }],
+      ]),
+    );
+    expect(rows.map((r) => r.local)).toEqual([
+      {
+        kind: "available",
+        preview: "AIza…wxyz",
+        fingerprint: "fp-a",
+        caution: "advised: a separate key",
+        sameAsCurrent: true,
+      },
+      {
+        kind: "available",
+        preview: "AIza…wxyz",
+        fingerprint: "fp-b-local",
+        caution: "advised: a separate key",
+        sameAsCurrent: false,
+      },
+      { kind: "none" },
+      { kind: "unusable", reason: "has a space" },
+    ]);
+  });
+
+  test("a masked preview shows only the ends, and nothing of a short value", () => {
+    const key = "AIzaSyD-0123456789abcdefghijklmnopqrstu";
+    expect(previewLocalValue(key, "masked")).toBe("AIza…rstu");
+    expect(previewLocalValue(key, "masked")).not.toContain("0123");
+    // Under 32 characters the ends would be a quarter of it or more: nothing shown.
+    expect(previewLocalValue("abcdefghijklmnopqrstuvwxyz01234", "masked")).toBe(
+      "••••••••",
+    );
+    expect(previewLocalValue("abcdef0123", "plain")).toBe("abcdef0123");
+  });
+
+  test("a local value the deploy refuses is named unusable, with why", () => {
+    expect(checkLocalValue("AIzaGood_value-1")).toEqual({ ok: true });
+    const bad = checkLocalValue("has space");
+    expect(bad.ok).toBe(false);
   });
 });

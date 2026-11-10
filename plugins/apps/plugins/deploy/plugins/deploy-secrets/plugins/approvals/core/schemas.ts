@@ -48,6 +48,31 @@ export function isPendingSecretStatus(status: DeploySecretStatus): boolean {
   return status !== "approved" && status !== "not-set";
 }
 
+/**
+ * This computer's counterpart of a secret (a `DeploySecrets.LocalValue`
+ * contribution), as a row offers it:
+ *
+ * - `none`        — nothing on this computer names this secret, or it has no value;
+ * - `available`   — a value the deploy can take: its `preview` (masked for a
+ *                   credential — never the value), its `fingerprint` (the same
+ *                   HMAC as the row's, so Use sends back the one the user SAW),
+ *                   and whether it is already the current value;
+ * - `unusable`    — a local value the deploy value rules refuse, and why.
+ */
+export const DeploySecretLocalSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("none") }),
+  z.object({
+    kind: z.literal("available"),
+    preview: z.string(),
+    fingerprint: z.string(),
+    /** A hint to weigh before reusing it (a key public in every page), or null. */
+    caution: z.string().nullable(),
+    sameAsCurrent: z.boolean(),
+  }),
+  z.object({ kind: z.literal("unusable"), reason: z.string() }),
+]);
+export type DeploySecretLocal = z.infer<typeof DeploySecretLocalSchema>;
+
 /** One required secret of one deployment, as the Secrets section lists it. Never carries the value. */
 export const DeploySecretRowSchema = z.object({
   /** The env var it is delivered as on the box. */
@@ -71,6 +96,8 @@ export const DeploySecretRowSchema = z.object({
    * when the store holds no write of it. Who, never what.
    */
   lastWrite: SecretWriteSchema.nullable(),
+  /** This computer's counterpart, offered as "Use this computer's value". */
+  local: DeploySecretLocalSchema,
 });
 export type DeploySecretRow = z.infer<typeof DeploySecretRowSchema>;
 

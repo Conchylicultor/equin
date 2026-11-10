@@ -10,7 +10,7 @@ Each Secrets row carries `lastWrite` — the store's last write of the value as 
 
 ## Plugin reference
 
-- Description: Secrets section of a site's Settings (and the site page's banner while a secret waits on approval): every deploy secret its composition's closure declares as a DataView (key, requesting plugin, description, status approved / new / value changed / missing value / not set (optional)) with per-row Set value (a password dialog) and Approve (no approve-all). Shown only when the composition needs a secret. Deploy-secret approvals on the local machine: values in the secrets store (namespace deploy-secrets), per-deployment grants of a value's HMAC fingerprint (deploy_secret_grants), the deploy gate that ends a run needs-approval while any secret its composition's closure declares is missing, new or changed, the deploy-secrets.status live value behind the Secrets section, and the browser-refusing endpoint converge reads the approved env from.
+- Description: Secrets section of a site's Settings (and the site page's banner while a secret waits on approval): every deploy secret its composition's closure declares as a DataView (key, requesting plugin, description, status approved / new / value changed / missing value / not set (optional)) with per-row Use this computer's value (when a DeploySecrets.LocalValue names this computer's counterpart: a confirmation showing its masked preview and any caution), Set value (a password dialog) and Approve (no approve-all). Shown only when the composition needs a secret. Deploy-secret approvals on the local machine: values in the secrets store (namespace deploy-secrets), per-deployment grants of a value's HMAC fingerprint (deploy_secret_grants), the deploy gate that ends a run needs-approval while any secret its composition's closure declares is missing, new or changed, the deploy-secrets.status live value behind the Secrets section (each row with this computer's counterpart, from DeploySecrets.LocalValue, previewed — masked for a credential — never its value), the Use-this-computer's-value endpoint that stores it through the same write as Set value, and the browser-refusing endpoint converge reads the approved env from.
 - Web:
   - Slots: `item-actions`
   - Slot contributors: `item-actions` ← `apps.deploy.deploy-secrets.approvals`
@@ -18,6 +18,7 @@ Each Secrets row carries `lastWrite` — the store's last write of the value as 
     - `DeploymentDetail.Section` "Secrets" → `SecretsSection`
     - `SiteBanner` "needs-secret"
     - `SiteCheck` "secrets"
+    - `item-actions` "use-local" → `UseLocalValueAction`
     - `item-actions` "set-value" → `SetValueAction`
     - `item-actions` "approve" → `ApproveAction`
   - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
@@ -39,6 +40,8 @@ Each Secrets row carries `lastWrite` — the store's last write of the value as 
     - `deploy.gate` "deploy-secrets"
     - `resource.declare` "deploy-secrets.status"
   - Uses:
+    - `apps/deploy/deploy-secrets.DeploySecretLocalValue`
+    - `apps/deploy/deploy-secrets.DeploySecrets`
     - `apps/deploy/deployments._deployDeployments`
     - `apps/deploy/deployments.DeployGates`
     - `config_v2.getConfig`
@@ -57,6 +60,7 @@ Each Secrets row carries `lastWrite` — the store's last write of the value as 
   - Resources: `deploy-secrets.status` (push, notified, whole: one row per deploy secret the deployment's composition closure declares — a handful, whole: the plugins in one closure declaring the same key — normally one)
   - Routes:
     - `PUT /api/deploy-secrets/values/:key`
+    - `PUT /api/deploy-secrets/values/:key/from-local`
     - `POST /api/deploy-secrets/deployments/:deploymentId/approve`
     - `POST /api/deploy-secrets/deployments/:deploymentId/env`
 - Core:
@@ -71,9 +75,11 @@ Each Secrets row carries `lastWrite` — the store's last write of the value as 
     - `network/live.liveValue`
     - `packages/list-bound.wholeList`
   - Exports (types):
+    - `DeploySecretLocal`
     - `DeploySecretRow`
     - `DeploySecretStatus`
   - Exports (values):
+    - `adoptLocalDeploySecretValue`
     - `approveDeploySecret`
     - `deliverDeploySecrets`
     - `DEPLOY_SECRET_STATUS_LABELS`

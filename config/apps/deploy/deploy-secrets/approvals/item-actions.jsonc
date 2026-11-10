@@ -1,4 +1,4 @@
-// @hash c7a1fdcf90b4
+// @hash 41c470a3f171
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -24,6 +24,7 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
+    "apps.deploy.deploy-secrets.approvals:use-local",
     "apps.deploy.deploy-secrets.approvals:set-value",
     "apps.deploy.deploy-secrets.approvals:approve"
   ]
