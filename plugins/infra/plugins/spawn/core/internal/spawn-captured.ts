@@ -14,6 +14,7 @@ import { holdParentLifeline } from "@plugins/packages/plugins/flock/core";
 import { spawnAtTier } from "@plugins/packages/plugins/spawn-priority/core";
 import { armAwakeDeadline } from "./awake-deadline";
 import { childEnv } from "./child-env";
+import { killProcessGroup } from "./group-signal";
 import { trackLiveChild } from "./live-children";
 import { readResourceUsage } from "./resource-usage";
 import { signalName } from "./signal-code";
@@ -101,6 +102,20 @@ function makeResult(
  * returning a result, so an abandoned caller cannot absorb the cancellation and
  * carry on (see `SpawnBound.signal` for why the two differ).
  *
+ * **A bound ends the child's whole tree, not just the child.** A bounded child
+ * (`timeoutMs` or `signal`) leads a process group of its own — the same
+ * `processGroup: "own"` mechanism `spawnPassthrough` offers — and the
+ * escalation signals the group: `SIGTERM` to all of it, `SIGKILL` to all of it
+ * after the grace, and once the leader is reaped whatever it left in the group
+ * is `SIGKILL`ed before the call returns. Before this, a timed-out
+ * `sh -c "…; sleep 30"` died and its `sleep` ran on, reparented to pid 1 — and
+ * every shell pipeline, git hook or `taskpolicy` wrapper under a bound left its
+ * real work running the same way. The group only matters once a bound fires: a
+ * child that exits on its own leaves its group untouched, as before. (Leading a
+ * group means `detached`, which bun implements as `setsid`: the child has no
+ * controlling terminal. Its stdio is files here anyway; only a child that opens
+ * `/dev/tty` itself notices.)
+ *
  * `opts.unbounded` is read by NOTHING here. It is a type-level and grep-level
  * artifact only, and this function behaves exactly as it did before bounds
  * existed when that is the arm chosen.
@@ -128,6 +143,11 @@ export async function spawnCaptured(
     let killTimer: ReturnType<typeof setTimeout> | undefined;
     let onAbort: (() => void) | undefined;
     let untrack: (() => void) | undefined;
+    // Set when a bound fires: the group ended once the child is reaped.
+    let groupToEnd: number | undefined;
+    // See the doc comment: a bound has to reach the child's whole tree, and a
+    // process group of its own is how. Nothing to fire for `unbounded`.
+    const ownGroup = opts.timeoutMs !== undefined || opts.signal !== undefined;
     // Held until the child is reaped; the kernel drops it if WE die first, and a
     // child that called `exitWithParent()` dies with it. The tmpdir is private
     // to this spawn, so the lock cannot be contended.
@@ -156,22 +176,40 @@ export async function spawnCaptured(
           stdin: inFd?.fd ?? "ignore",
           stdout: out.fd,
           stderr: err.fd,
+          // A new process group led by the child (pgid = its pid).
+          detached: ownGroup,
         }),
       );
       proc = child;
-      untrack = trackLiveChild(child);
+      // Every signal this call sends goes to the child's group when it leads
+      // one — the exit reaper's `SIGTERM` included, so a parent that dies
+      // mid-call takes the tree down with the child.
+      const signalChild = (sig: NodeJS.Signals): void => {
+        if (!ownGroup) return void child.kill(sig);
+        // `child.kill` is a no-op once the child is reaped; a group kill is
+        // not, and an emptied group's id is free for a new leader. Reaped =
+        // `exitCode`/`signalCode` set. The post-reap SIGKILL in the `finally`
+        // is the one deliberate exception, made right at the reap.
+        if (child.exitCode !== null || child.signalCode !== null) return;
+        killProcessGroup(child.pid, sig);
+      };
+      untrack = trackLiveChild({ kill: signalChild });
       // ONE escalation, shared by the deadline and the abort. The
       // `killTimer === undefined` guard is load-bearing rather than tidy: with
       // both a `timeoutMs` and a `signal` set, each path would otherwise schedule
       // its own SIGKILL timer and the `finally` — which clears the single
       // variable — would leave the earlier one running past the call.
       const escalateKill = () => {
-        child.kill("SIGTERM");
+        if (ownGroup) groupToEnd = child.pid;
+        signalChild("SIGTERM");
         // Escalate only if TERM didn't take. `await proc.exited` resolves as
         // soon as the child is reaped either way, and both timers are
         // cleared in the `finally` below, so this never outlives the call.
         if (killTimer === undefined) {
-          killTimer = setTimeout(() => child.kill("SIGKILL"), SIGKILL_GRACE_MS);
+          killTimer = setTimeout(
+            () => signalChild("SIGKILL"),
+            SIGKILL_GRACE_MS,
+          );
         }
       };
       if (opts.timeoutMs !== undefined) {
@@ -221,6 +259,9 @@ export async function spawnCaptured(
       // result must be returned rather than discarded as a timeout.
       if (timedOut && exitCode === 0 && child.signalCode === null) {
         timedOut = false;
+        // Nor is what it left behind ours to end: a clean exit's background
+        // work is its own business, exactly as when no deadline fired.
+        if (!aborted) groupToEnd = undefined;
       }
     } finally {
       untrack?.();
@@ -235,6 +276,12 @@ export async function spawnCaptured(
       if (errFd !== undefined && errFd !== outFd) errFd.close();
       cancelDeadline?.();
       if (killTimer !== undefined) clearTimeout(killTimer);
+      // The leader is reaped (or never ran); what it left in its group dies
+      // now, with no further grace — the deadline has already expired, and the
+      // leader's exit is the grace its descendants shared. Right after the
+      // reap, so the pgid still names exactly this group (POSIX never reuses a
+      // live group's id) or is empty (ESRCH, nothing signalled).
+      if (groupToEnd !== undefined) killProcessGroup(groupToEnd, "SIGKILL");
     }
     // AFTER the inner `finally` (fds closed, timers cleared, listener removed)
     // and BEFORE the reads: the outer `finally` still removes the tmpdir, and we

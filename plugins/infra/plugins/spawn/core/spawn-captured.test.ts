@@ -231,6 +231,92 @@ test("output written before the deadline is still captured", async () => {
   expect(result.stdout).toBe("early\n");
 }, 15_000);
 
+// --- A bound ends the child's whole tree: a timed-out or aborted wrapper
+// (`sh -c`, a git hook, `taskpolicy`) used to die while the work it started ran
+// on, reparented to pid 1.
+
+function alive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ESRCH") return false;
+    throw err;
+  }
+}
+
+/** Bounded wait for a test-only condition (a readiness gate, not app logic). */
+async function until(what: string, ok: () => boolean, ms = 5_000) {
+  const deadline = Date.now() + ms;
+  while (!ok()) {
+    if (Date.now() > deadline) throw new Error(`timed out waiting: ${what}`);
+    await Bun.sleep(25);
+  }
+}
+
+/**
+ * Runs `spawn` over a shell that starts `grandchild` in the background, records
+ * its pid and waits; asserts the grandchild is gone once the call settled.
+ */
+async function expectGrandchildEnded(
+  grandchild: string,
+  spawn: (argv: string[], pidFile: string) => Promise<unknown>,
+): Promise<void> {
+  const dir = mkdtempSync(join(tmpdir(), "sg-spawn-tree-"));
+  try {
+    const pidFile = join(dir, "grandchild.pid");
+    // The grandchild `exec`s its command, so `$!` is the very process asserted
+    // gone.
+    await spawn(
+      ["/bin/sh", "-c", `(${grandchild}) & echo $! > ${pidFile}; wait`],
+      pidFile,
+    );
+    const pid = Number(readFileSync(pidFile, "utf8").trim());
+    expect(pid).toBeGreaterThan(0);
+    // SIGKILLed; gone once launchd has reaped the orphaned zombie.
+    await until(`grandchild ${pid} ended`, () => !alive(pid));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+test("timeoutMs ends what the child started, not just the child", async () => {
+  await expectGrandchildEnded("exec sleep 30", async (argv) => {
+    // Far past the shell writing the pid file (its first act), well inside
+    // `sleep 30`.
+    const result = await spawnCaptured(argv, { timeoutMs: 2_000 });
+    expect(result.timedOut).toBe(true);
+  });
+}, 15_000);
+
+test("an abort ends what the child started, not just the child", async () => {
+  const controller = new AbortController();
+  const reason = new Error("abandoned");
+  await expectGrandchildEnded("exec sleep 30", async (argv, pidFile) => {
+    const promise = spawnCaptured(argv, { signal: controller.signal });
+    await until("grandchild started", () => existsSync(pidFile));
+    controller.abort(reason);
+    expect(promise).rejects.toBe(reason);
+    await promise.catch((err: unknown) => {
+      if (err !== reason) throw err;
+    });
+  });
+}, 15_000);
+
+test("a descendant that ignores TERM dies with the group once the child is reaped", async () => {
+  // The shell dies on the TERM at once; its grandchild shrugs it off and is
+  // ended by the group SIGKILL after the reap — no grace wait.
+  const started = Date.now();
+  await expectGrandchildEnded(`trap "" TERM; exec sleep 30`, async (argv) => {
+    const result = await spawnCaptured(argv, { timeoutMs: 2_000 });
+    expect(result.timedOut).toBe(true);
+    expect(result.signalCode).toBe("SIGTERM");
+  });
+  // The deadline plus well under the 2 s TERM→KILL grace: the group SIGKILL
+  // ran at the reap, not after a grace.
+  expect(Date.now() - started).toBeLessThan(3_800);
+}, 15_000);
+
 // --- signal: ambient cancellation. Unlike `timeoutMs` these THROW, so an
 // abandoned caller cannot read the cancellation as a value and keep going.
 

@@ -10,7 +10,8 @@ import { holdParentLifeline } from "@plugins/packages/plugins/flock/core";
 import { spawnAtTier } from "@plugins/packages/plugins/spawn-priority/core";
 import { childEnv } from "./child-env";
 import { trackLiveChild } from "./live-children";
-import { endProcessGroup, killProcessGroup } from "./process-group";
+import { killProcessGroup } from "./group-signal";
+import { endProcessGroup } from "./process-group";
 import { readResourceUsage } from "./resource-usage";
 import { signalName } from "./signal-code";
 import type {

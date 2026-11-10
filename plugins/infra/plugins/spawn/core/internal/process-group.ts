@@ -1,3 +1,4 @@
+import { killProcessGroup } from "./group-signal";
 import { spawnCaptured } from "./spawn-captured";
 import type { LeftBehindProcess } from "./types";
 
@@ -29,15 +30,6 @@ export async function endProcessGroup(
   killProcessGroup(pgid, "SIGKILL");
   if (listed instanceof Error) throw listed;
   return listed;
-}
-
-/** Signal every process in group `pgid`; an emptied group is not an error. */
-export function killProcessGroup(pgid: number, signal: NodeJS.Signals): void {
-  try {
-    process.kill(-pgid, signal);
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== "ESRCH") throw err;
-  }
 }
 
 function groupHasMembers(pgid: number): boolean {

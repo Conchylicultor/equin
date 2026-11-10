@@ -82,6 +82,27 @@ descendant stays in that group unless it starts a session of its own, so:
   than SIGTERMing the child alone. SIGKILL, so don't use this mode for a child
   that is itself an op CLI with exit hooks of its own.
 
+**Every bounded `spawnCaptured` child leads its own group too** (`timeoutMs` or
+`signal`; not `unbounded`, which has nothing to fire) — no option, because a
+bound that reaches only the direct child bounds nothing: a timed-out
+`sh -c "…; sleep 30"` died and its `sleep` ran on under pid 1, and the same
+held for every shell pipeline, git hook or `taskpolicy` wrapper. When the
+bound fires, the escalation (SIGTERM, SIGKILL after the grace) goes to the
+group, and once the leader is reaped whatever it left there is SIGKILLed
+before the call returns. A child that exits on its own leaves its group
+untouched, and the exit reaper SIGTERMs the group (not SIGKILL — the child may
+be an op CLI). `detached` is `setsid` in bun, so such a child has no
+controlling terminal; its stdio is files anyway, only a child opening
+`/dev/tty` notices.
+
+Process groups do not nest, so the price is that a bounded child is no longer
+in its caller's group: a `kill(-pgid)` aimed at an OUTER group (a supervised
+run's `killSupervisedRun`, the foreground handoff) misses it. A TERM there is
+still covered — the op CLI it reaches turns it into `process.exit`, whose
+reaper SIGTERMs each bounded child's group — but an outer group SIGKILL leaves
+a bounded child running until it ends on its own (its deadline died with its
+parent), unless it holds the lifeline.
+
 The leader's pid cannot be reused while its group has members, so `-pgid`
 after the leader's reap reaches exactly what it left. The one way out is a
 descendant that calls `setsid` (`detached: true`) — the supervised / daemon
@@ -137,7 +158,7 @@ spawns that are meant to outlive a call, each sanctioned by an exemption.
 
 Both run the same escalation — SIGTERM, SIGKILL after 2s, timers cleared in the
 existing `finally` — through one `escalateKill()`, so setting both cannot leak a
-timer. They differ in how the kill is reported, deliberately:
+timer. It reaches the child's whole process group (see *A child's whole tree*). They differ in how the kill is reported, deliberately:
 
 - **`timeoutMs` returns `timedOut: true`.** It is the CALLER's own deadline, so
   the caller classifies it. Whatever the child wrote first is still captured.
