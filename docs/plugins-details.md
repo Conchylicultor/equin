@@ -33275,8 +33275,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `network/live/live-state.getNotificationsClient`
           - `network/live/live-state.liveStateSocketKind`
+          - `network/live/live-state.UNANSWERED_SUB_MS`
           - `network/live/live-state.unansweredSubReportSink`
           - `network/live/live-state.useNotificationsChannelStatuses`
+          - `primitives/networking.CONNECT_DEADLINE_MS`
           - `primitives/networking.NetDiagEvent`
           - `primitives/networking.subscribeNetDiag`
           - `primitives/networking.subscribeWsStatus`
@@ -37986,6 +37988,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ResourceView`
               - `slowResourceReportSink`
               - `subscribePendingMounts`
+              - `UNANSWERED_SUB_MS`
               - `unansweredSubReportSink`
               - `useCombinedResources`
               - `useFailingResources`
@@ -49463,6 +49466,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `WsStatus`
           - `WsStatusEvent`
         - Exports (values):
+          - `CONNECT_DEADLINE_MS`
           - `fetchWithRetry`
           - `probeUrlStatus`
           - `publishNetDiag`

@@ -2,18 +2,21 @@ import { useEffect, useRef } from "react";
 import {
   subscribeNetDiag,
   subscribeWsStatus,
+  CONNECT_DEADLINE_MS,
   type NetDiagEvent,
 } from "@plugins/primitives/plugins/networking/web";
 import {
   getNotificationsClient,
   liveStateSocketKind,
   unansweredSubReportSink,
+  UNANSWERED_SUB_MS,
   useNotificationsChannelStatuses,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import { getHealth } from "../internal/client";
 import { PUSH_STALL_MS } from "../internal/connection-health";
 import { wedgeReportSink } from "../internal/wedge-report-sink";
+import { createVisibleDeadlines } from "../internal/visible-deadline";
 
 // How long a socket may stay non-open before we declare the live-state pipeline
 // wedged. A transient reconnect self-heals well within this window via sub-ack;
@@ -58,9 +61,13 @@ function diagSocketKind(url: string) {
 // No volatile data (versions, params) enters this, so each mode still dedups
 // into a single task.
 //
-// `benign` deploy-skew wedges are expected (the socket missed version bumps while
-// the server restarted) — they file a (muted) task for the record but skip the
-// user-facing "stalled" toast, which would just be noise on every deploy.
+// `benign` wedges are expected — the socket missed version bumps while the
+// server restarted (`:restart`), or the wait the signal measured was mostly the
+// page being hidden (`:suspended`: what is left of it, counted while visible,
+// stays under the signal's own limit — a phone locking its screen freezes the
+// tab and drops its socket). They file a (muted) task for the record but skip
+// the toast. Every toast is a developer one: this is equin's own telemetry, and
+// the health report's Connection row already tells a user their live state.
 function wedge(
   kind: WedgeKind,
   discriminator: string,
@@ -78,6 +85,7 @@ function wedge(
       description:
         opts.description ?? "Reconnecting… refresh if data looks stale",
       variant: "warning",
+      audience: "developer",
     });
   }
 
@@ -153,18 +161,20 @@ export function WedgeWatchdog() {
   }, [statuses]);
 
   useEffect(() => {
+    // --- Page suspension ---
+    // A hidden page may be frozen (a phone: on screen lock or app switch), its
+    // timers paused and its sockets dropped by the OS. Every signal that
+    // measures elapsed time counts visible time only (`visible-deadline.ts`).
+    const deadlines = createVisibleDeadlines({
+      now: () => Date.now(),
+      isHidden: () => document.visibilityState === "hidden",
+      setTimeout: (fn, ms) => setTimeout(fn, ms),
+      clearTimeout: (h) => clearTimeout(h as ReturnType<typeof setTimeout>),
+    });
+
     // --- Signal 1: socket-down wedge ---
-    // One armed timeout per url. Armed on reconnecting/closed, cleared on open.
-    const downTimers = new Map<string, ReturnType<typeof setTimeout>>();
-
-    const clearDownTimer = (url: string) => {
-      const t = downTimers.get(url);
-      if (t) {
-        clearTimeout(t);
-        downTimers.delete(url);
-      }
-    };
-
+    // One deadline per url: armed on connecting/reconnecting/closed, cleared
+    // on open, elapsed after SOCKET_DOWN_MS of visible time in total.
     const unsubWs = subscribeWsStatus(({ url, status }) => {
       // The status bus is global across EVERY app socket (logs, terminal,
       // build, …). Only the live-state pipeline sockets count toward a
@@ -173,21 +183,18 @@ export function WedgeWatchdog() {
       const channelKind = liveStateSocketKind(url);
       if (channelKind === null) return;
       if (status === "open") {
-        clearDownTimer(url);
+        deadlines.clear(url);
       } else {
         // "connecting" counts: a first connect whose handshake never answers
         // fires no event and never becomes "reconnecting" — the socket just
         // stays connecting, which once went 9 minutes unreported.
-        if (downTimers.has(url)) return; // already armed for this url
-        const timer = setTimeout(() => {
-          downTimers.delete(url);
+        deadlines.arm(url, SOCKET_DOWN_MS, () => {
           wedge(
             "socket-down",
             `socket-down:${channelKind}`,
             `${url} (${status})`,
           );
-        }, SOCKET_DOWN_MS);
-        downTimers.set(url, timer);
+        });
       }
     });
 
@@ -201,6 +208,18 @@ export function WedgeWatchdog() {
         if (kind === null) return;
         const detail = `${ev.url} handshake unanswered for ${Math.round(ev.elapsedMs / 1000)}s (attempt ${ev.attempt})`;
         const stalledSince = Date.now() - ev.elapsedMs;
+        // Hidden time is not the handshake's: what is left of the wait,
+        // counted while visible, must still pass the deadline itself.
+        const visibleMs = deadlines.visibleMsSince(stalledSince);
+        if (visibleMs < CONNECT_DEADLINE_MS) {
+          wedge(
+            "connect-stalled",
+            `connect-stalled:${kind}:suspended`,
+            `${detail}, ${Math.round(visibleMs / 1000)}s of it visible`,
+            { benign: true },
+          );
+          return;
+        }
         // A server (re)booting during the attempt legitimately holds the
         // handshake at the gateway; one that was up the whole time did not.
         void getHealth().then((health) => {
@@ -239,10 +258,15 @@ export function WedgeWatchdog() {
 
     // --- Signal 4: subs the server never answered on an open socket ---
     unansweredSubReportSink.register((r) => {
+      // Hidden time is the (possibly frozen) page's, not the server's: what is
+      // left of the wait, counted while visible, must still pass the limit.
+      const visibleMs = deadlines.visibleMsSince(Date.now() - r.oldestWaitMs);
+      const suspended = visibleMs < UNANSWERED_SUB_MS;
       wedge(
         "unanswered-sub",
-        `unanswered-sub:${r.socket}`,
-        `${r.count} sub(s) unanswered on an open ${r.socket} socket, oldest ${r.oldestKey} ${r.oldestParams} for ${Math.round(r.oldestWaitMs / 1000)}s (tabs on socket: ${r.attachedTabs ?? "?"}, connection ${r.connection ?? "-"})`,
+        `unanswered-sub:${r.socket}${suspended ? ":suspended" : ""}`,
+        `${r.count} sub(s) unanswered on an open ${r.socket} socket, oldest ${r.oldestKey} ${r.oldestParams} for ${Math.round(r.oldestWaitMs / 1000)}s (${Math.round(visibleMs / 1000)}s visible; tabs on socket: ${r.attachedTabs ?? "?"}, connection ${r.connection ?? "-"})`,
+        { benign: suspended },
       );
     });
 
@@ -264,9 +288,12 @@ export function WedgeWatchdog() {
     const onVisibility = () => {
       if (document.visibilityState === "hidden") {
         hiddenAt = Date.now();
+        deadlines.onHidden();
         return;
       }
-      if (document.visibilityState !== "visible" || probing) return;
+      if (document.visibilityState !== "visible") return;
+      deadlines.onVisible();
+      if (probing) return;
       const client = getNotificationsClient();
       if (!client) return; // before first render / outside provider
       const sinceHidden = hiddenAt;
@@ -298,8 +325,7 @@ export function WedgeWatchdog() {
       unsubWs();
       unsubDiag();
       unansweredSubReportSink.register(null);
-      for (const t of downTimers.values()) clearTimeout(t);
-      downTimers.clear();
+      deadlines.clearAll();
       document.removeEventListener("visibilitychange", onVisibility);
     };
   }, []);

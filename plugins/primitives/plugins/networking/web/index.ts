@@ -32,6 +32,7 @@ export { publishWsStatus, subscribeWsStatus } from "./ws-status-bus";
 export type { WsStatus, WsStatusEvent } from "./ws-status-bus";
 export { publishNetDiag, subscribeNetDiag } from "./net-diag-bus";
 export type { NetDiagEvent } from "./net-diag-bus";
+export { CONNECT_DEADLINE_MS } from "./socket-owner";
 
 export default {
   description:

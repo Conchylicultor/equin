@@ -40,11 +40,13 @@ export const staleFrontendRule: ReportNoiseRuleSpec = {
 // backgrounded across one, or a handshake held while the server booted.
 // Benign deploy-skew, not a stuck pipeline — and the build-id check above
 // can't catch it, because such a tab is still on the build the server is
-// currently serving. Record + file the task, mute the notification.
+// currently serving. Or to a page suspension (`:suspended`): the wait it
+// measured spanned a time the page was hidden, frozen by the browser (a phone
+// locking its screen). Record + file the task, mute the notification.
 export const liveStateWedgeRestartRule: ReportNoiseRuleSpec = {
   id: "live-state-wedge-restart",
   matches: ({ errorType }) =>
     errorType?.startsWith("LiveStateWedge:") === true &&
-    errorType.endsWith(":restart"),
+    (errorType.endsWith(":restart") || errorType.endsWith(":suspended")),
   code: import.meta,
 };
