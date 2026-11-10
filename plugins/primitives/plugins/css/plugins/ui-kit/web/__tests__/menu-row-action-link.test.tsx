@@ -35,7 +35,11 @@ function renderMenu(link: LinkTarget) {
       <DropdownMenuContent>
         <DropdownMenuSection
           label="Section"
-          action={{ icon: symbol("settings"), label: "Configure", activation: link }}
+          action={{
+            icon: symbol("settings"),
+            label: "Configure",
+            activation: link,
+          }}
         >
           <DropdownMenuItem>item</DropdownMenuItem>
         </DropdownMenuSection>
@@ -58,7 +62,9 @@ describe("menu section action as a link", () => {
     );
 
     expect(windowOpen).toHaveBeenCalledTimes(1);
-    expect(String(windowOpen.mock.calls[0]![0])).toContain("/settings/config/x");
+    expect(String(windowOpen.mock.calls[0]![0])).toContain(
+      "/settings/config/x",
+    );
     expect(open).not.toHaveBeenCalled();
   });
 
