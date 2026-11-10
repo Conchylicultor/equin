@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render } from "@testing-library/react";
+import { act, cleanup, render, waitFor } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { useActionForm } from "@plugins/primitives/plugins/action-presentation/web";
 import { AdaptiveBar, adaptiveBarReportSink } from "../index";
@@ -240,5 +240,34 @@ describe("an occupant that renders nothing at all", () => {
     // Two 160px occupants fit 400px of row, so nothing had to give.
     expect(isInline("alpha")).toBe(true);
     expect(isInline("beta")).toBe(true);
+  });
+});
+
+describe("an occupant whose content arrives later, inside a display: contents box", () => {
+  it("is shown once something renders in it, though its own child list never changed", async () => {
+    // The file preview's header-action host: an empty `contents` span the
+    // occupant renders at once, which ANOTHER tree (the active renderer) portals
+    // its action into later. The container's direct children never change, so
+    // a child-list-only observer left it `hidden` for good — the MIDI preview's
+    // Open in Sonata was in the DOM but never drawn.
+    // Filled by a plain DOM insert, as another React tree's portal would: no
+    // re-render of the bar (which would re-run its pass and hide the defect),
+    // so only the mutation itself can reveal the occupant.
+    function LateHost(): ReactElement {
+      return <span data-late-host="" style={{ display: "contents" }} />;
+    }
+    render(<Bar third={<LateHost />} />);
+    expect(container("gamma")?.hidden).toBe(true);
+
+    const host = document.querySelector("[data-late-host]");
+    if (host === null) throw new Error("late host not mounted");
+    const action = document.createElement("span");
+    action.setAttribute("data-probe", "gamma");
+    action.setAttribute("data-w", String(FULL_PX));
+    act(() => {
+      host.append(action);
+    });
+    await waitFor(() => expect(container("gamma")?.hidden).toBe(false));
+    expect(faults).toEqual([]);
   });
 });

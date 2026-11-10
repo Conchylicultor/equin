@@ -290,7 +290,7 @@ is `hidden` too, and never goes to the panel.
 - Hence **rigidity is declared per container** (`rigidClass()` on each minted
   container and on the `⋯` trigger), never `[&>*]:shrink-0` on the root.
 - **`hidden` (layout fact) and the blank-rung ledger (decision fact) are
-  distinct**; they may disagree for exactly one pass. A `MutationObserver` per
+  distinct**; they may disagree for exactly one pass. A subtree `MutationObserver` per
   container detects content reappearing (a `display: none` element fires no
   resize).
 

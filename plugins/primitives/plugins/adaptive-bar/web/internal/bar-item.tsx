@@ -194,11 +194,24 @@ function PortaledBarItem({
 
   useLayoutEffect(() => {
     // An occupant that renders nothing is hidden, and a hidden element reports
-    // no resize when content appears inside it — so the child list is the one
+    // no resize when content appears inside it — so DOM mutations are the one
     // signal that survives in both directions. Push-based and scoped to this
     // one node: no polling, and no walk of anyone else's DOM.
+    //
+    // The whole SUBTREE, not the container's own child list: "renders nothing"
+    // (`rendersNothing`) looks through `display: contents` boxes, so content can
+    // appear without the container's children changing — a slot's wrappers are
+    // already there, or the occupant is an empty `contents` span another tree
+    // portals into later (the file preview's FileHeaderActions, which Sonata's
+    // MIDI preview fills with Open in Sonata once it has loaded). Watching only
+    // the child list left such an occupant hidden for good. Text counts too
+    // (`characterData`): a text node going from "" to a label is content.
     const observer = new MutationObserver(() => registry.contentChanged(id));
-    observer.observe(container, { childList: true });
+    observer.observe(container, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
     const release = registry.register(id, container);
     return () => {
       observer.disconnect();
