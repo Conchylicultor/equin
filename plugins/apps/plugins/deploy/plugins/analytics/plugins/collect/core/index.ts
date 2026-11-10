@@ -56,6 +56,13 @@ export {
   UtmTagsSchema,
   stripQuery,
 } from "./internal/collect-body";
+export {
+  GapsSchema,
+  IDLE_AFTER_MS,
+  appendGap,
+  gapsExtentMs,
+} from "./internal/gaps";
+export type { Gap, GapKind } from "./internal/gaps";
 export { parseEventPropValue } from "./internal/event-prop";
 export type { EventProp } from "./internal/event-prop";
 export type {

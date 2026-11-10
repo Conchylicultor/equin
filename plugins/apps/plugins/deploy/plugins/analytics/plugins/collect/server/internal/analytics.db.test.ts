@@ -192,8 +192,30 @@ beforeAll(async () => {
       at(DAY, "10:30"),
     ),
   );
+  // B's tracker records away stretches. Beacons land out of order: a stale
+  // smaller total changes nothing; the same total reaching further replaces.
   await hit(
-    { kind: "engagement", pageviewId: apps, engagedMs: 5_000 },
+    {
+      kind: "engagement",
+      pageviewId: apps,
+      engagedMs: 5_000,
+      gaps: [{ kind: "hidden", startMs: 1_000, endMs: 61_000 }],
+    },
+    B,
+    at(DAY, "10:31"),
+  );
+  await hit(
+    { kind: "engagement", pageviewId: apps, engagedMs: 3_000, gaps: [] },
+    B,
+    at(DAY, "10:31"),
+  );
+  await hit(
+    {
+      kind: "engagement",
+      pageviewId: apps,
+      engagedMs: 5_000,
+      gaps: [{ kind: "hidden", startMs: 1_000, endMs: 121_000 }],
+    },
     B,
     at(DAY, "10:31"),
   );
@@ -292,6 +314,27 @@ describe("collect", () => {
       events: 2,
       country: null,
     });
+  });
+
+  test("away stretches: the newest beacon's list, null when never recorded", async () => {
+    const hits = await t.db
+      .select({
+        path: analyticsHits.path,
+        kind: analyticsHits.kind,
+        gaps: analyticsHits.gaps,
+      })
+      .from(analyticsHits);
+    const apps = hits.find((h) => h.path === "/apps");
+    expect(apps?.gaps).toEqual([
+      { kind: "hidden", startMs: 1_000, endMs: 121_000 },
+    ]);
+    // A's tracker sent no gaps (an older tracker): not recorded, not "none".
+    expect(
+      hits.find((h) => h.path === "/harness" && h.kind === "pageview")?.gaps,
+    ).toBeNull();
+    expect(
+      hits.filter((h) => h.kind === "event").every((h) => h.gaps === null),
+    ).toBe(true);
   });
 
   test("the query string never reaches storage", async () => {
@@ -593,6 +636,10 @@ describe("sessions", () => {
     ]);
     expect(a1!.hits[2]!.eventProps).toEqual({ from: "nav" });
     expect(a1!.hits[1]!.engagedMs).toBe(60_000);
+    expect(a1!.hits.map((h) => h.gaps)).toEqual([null, null, null]);
+    expect(b!.hits[0]!.gaps).toEqual([
+      { kind: "hidden", startMs: 1_000, endMs: 121_000 },
+    ]);
     expect(a1).toMatchObject({
       pageviews: 2,
       events: 1,

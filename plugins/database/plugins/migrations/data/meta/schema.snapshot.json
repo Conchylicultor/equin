@@ -1,6 +1,6 @@
 {
-  "id": "2a8bf372-bcfc-48b7-86e3-06257782d659",
-  "prevId": "5a4fd7d6-7591-4922-acc5-06cf38ad6f70",
+  "id": "7e75808b-75ec-4229-b01a-adef71190d39",
+  "prevId": "2a8bf372-bcfc-48b7-86e3-06257782d659",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1182,6 +1182,12 @@
           "primaryKey": false,
           "notNull": true,
           "default": 0
+        },
+        "gaps": {
+          "name": "gaps",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {

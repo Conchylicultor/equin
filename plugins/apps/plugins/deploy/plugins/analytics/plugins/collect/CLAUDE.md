@@ -72,6 +72,20 @@ end. `startedAt` is spelled as `toISOString()` so its text order is its time
 order. The visitor id never leaves the box: `visitor` is the first 8 hex of
 its sha256. Design: `research/2026-11-10-deploy-sessions-tab.md`.
 
+## Away stretches
+
+Each pageview hit carries `gaps` (`core/internal/gaps.ts`): when the tab was
+`hidden` (hide → next show) or `idle` (visible, no pointer / key / wheel /
+scroll / touch input for `IDLE_AFTER_MS`, and no audible media playing — from
+the last input to the next), as offsets from the pageview's start. The tracker
+sends the whole list with every engagement beacon (no request of its own);
+stretches under `MIN_GAP_MS` are dropped and past `MAX_GAPS` the two closest
+neighbours merge, so the body stays small. Idle is one deadline timer, pushed
+back only when it fires early — never a per-input timer, never a poll. The
+server keeps the newest beacon's list (larger `engagedMs`, or equal and
+reaching further). `NULL` = not recorded (an event, an older tracker, no
+beacon yet) — never "none", which is `[]`.
+
 ## Runtime notes
 
 - The rollup and retention crons are `perWorktree: true` **on purpose**. A
@@ -165,6 +179,8 @@ its sha256. Design: `research/2026-11-10-deploy-sessions-tab.md`.
     - `EventBody`
     - `EventProp`
     - `FilterLevel`
+    - `Gap`
+    - `GapKind`
     - `Granularity`
     - `HitDimension`
     - `Metrics`
@@ -198,6 +214,7 @@ its sha256. Design: `research/2026-11-10-deploy-sessions-tab.md`.
     - `AnalyticsRangeSchema`
     - `AnalyticsReportSchema`
     - `analyticsSessionsEndpoint`
+    - `appendGap`
     - `averageTimeOnPageMs`
     - `averageVisitDurationMs`
     - `BASE64URL_PATTERN`
@@ -226,10 +243,13 @@ its sha256. Design: `research/2026-11-10-deploy-sessions-tab.md`.
     - `EventPropsSchema`
     - `FilterLevelSchema`
     - `firstRawDay`
+    - `gapsExtentMs`
+    - `GapsSchema`
     - `GRANULARITIES`
     - `GranularitySchema`
     - `HIT_DIMENSIONS`
     - `IDENTITY_WINDOW_DAYS`
+    - `IDLE_AFTER_MS`
     - `MAX_COLLECT_BODY_BYTES`
     - `MAX_ENGAGED_MS`
     - `MAX_EVENT_PROP_VALUE_LENGTH`

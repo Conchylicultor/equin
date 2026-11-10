@@ -31,6 +31,38 @@ function send(body: CollectBody) {
 
 let instance: Tracker | null = null;
 
+/** Input that says someone is at the page (passive listeners, capture phase so element scrolls count). */
+const INPUT_EVENTS = [
+  "pointermove",
+  "pointerdown",
+  "keydown",
+  "wheel",
+  "scroll",
+  "touchstart",
+] as const;
+/**
+ * Media starting or stopping. They do not bubble, hence capture. A pause or
+ * end restarts the idle clock the playback was holding off.
+ */
+const MEDIA_EVENTS = ["play", "pause", "ended"] as const;
+
+/**
+ * Audible media playing. A muted (decorative, autoplaying) loop never pauses,
+ * so counting it would keep a tab left open on it from ever reading as idle.
+ */
+function isMediaPlaying(): boolean {
+  for (const media of document.querySelectorAll("video, audio"))
+    if (
+      media instanceof HTMLMediaElement &&
+      !media.paused &&
+      !media.ended &&
+      !media.muted &&
+      media.volume > 0
+    )
+      return true;
+  return false;
+}
+
 /**
  * The page load's one tracker, created on first use. Module scope is the dedup
  * boundary: a remounted `<AnalyticsTracker />` (or two of them) reads the same
@@ -50,13 +82,24 @@ export function getTracker(): Tracker {
     send,
     now: () => performance.now(),
     isVisible: () => document.visibilityState === "visible",
+    setDeadline: (delayMs, fire) => {
+      const timer = setTimeout(fire, delayMs);
+      return () => clearTimeout(timer);
+    },
+    isMediaPlaying,
   });
+  const activity = () => tracker.activity();
+  for (const type of [...INPUT_EVENTS, ...MEDIA_EVENTS])
+    document.addEventListener(type, activity, { capture: true, passive: true });
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") tracker.hidden();
     else tracker.visible();
   });
   window.addEventListener("pagehide", () => tracker.hidden());
-  window.addEventListener("pageshow", () => tracker.visible());
+  window.addEventListener("pageshow", () => {
+    // A bfcache restore can land in a background tab: its visibilitychange shows it later.
+    if (document.visibilityState === "visible") tracker.visible();
+  });
   instance = tracker;
   return tracker;
 }

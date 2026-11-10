@@ -6,6 +6,7 @@ import {
   OsFamilySchema,
 } from "./families";
 import { ChannelSchema } from "./channel";
+import { GapsSchema } from "./gaps";
 import {
   AnalyticsRangeSchema,
   RAW_RETENTION_DAYS,
@@ -106,6 +107,12 @@ export const SessionHitSchema = z
     eventProps: z.record(z.string(), z.string()).nullable(),
     /** Pageviews only: how long the page was visible. */
     engagedMs: z.number().int().nonnegative(),
+    /**
+     * Pageviews only: when the page sat in the background or idle (offsets
+     * from `ts`). Null = not recorded (an event, or a pageview from an older
+     * tracker) — never "none", which is `[]`.
+     */
+    gaps: GapsSchema.nullable(),
   })
   .strict();
 export type SessionHit = z.infer<typeof SessionHitSchema>;

@@ -2010,6 +2010,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `EventBody`
                   - `EventProp`
                   - `FilterLevel`
+                  - `Gap`
+                  - `GapKind`
                   - `Granularity`
                   - `HitDimension`
                   - `Metrics`
@@ -2043,6 +2045,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `AnalyticsRangeSchema`
                   - `AnalyticsReportSchema`
                   - `analyticsSessionsEndpoint`
+                  - `appendGap`
                   - `averageTimeOnPageMs`
                   - `averageVisitDurationMs`
                   - `BASE64URL_PATTERN`
@@ -2071,10 +2074,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `EventPropsSchema`
                   - `FilterLevelSchema`
                   - `firstRawDay`
+                  - `gapsExtentMs`
+                  - `GapsSchema`
                   - `GRANULARITIES`
                   - `GranularitySchema`
                   - `HIT_DIMENSIONS`
                   - `IDENTITY_WINDOW_DAYS`
+                  - `IDLE_AFTER_MS`
                   - `MAX_COLLECT_BODY_BYTES`
                   - `MAX_ENGAGED_MS`
                   - `MAX_EVENT_PROP_VALUE_LENGTH`

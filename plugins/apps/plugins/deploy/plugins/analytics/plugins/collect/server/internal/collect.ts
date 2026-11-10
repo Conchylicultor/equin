@@ -7,11 +7,13 @@ import {
   IDENTITY_WINDOW_DAYS,
   addDays,
   channelOf,
+  gapsExtentMs,
   utcDay,
   type CollectBody,
   type CollectResponse,
   type EngagementBody,
   type EventBody,
+  type Gap,
   type PageviewBody,
 } from "../../core";
 import { parseReferrer, primaryLanguage, visitorHash } from "./request-context";
@@ -363,6 +365,23 @@ async function recordEvent(
 }
 
 /**
+ * Whether a beacon's gap list is newer than the stored one. Beacons are
+ * cumulative and may land out of order (keepalive), so the newer one is the
+ * one with the larger visible total, or — at an equal total (the tab stayed
+ * hidden between them) — the one reaching further into the pageview.
+ */
+function isNewerGaps(
+  engagedMs: number,
+  gaps: readonly Gap[],
+  stored: { engagedMs: number; gaps: readonly Gap[] | null },
+): boolean {
+  if (engagedMs !== stored.engagedMs) return engagedMs > stored.engagedMs;
+  return (
+    stored.gaps === null || gapsExtentMs(gaps) >= gapsExtentMs(stored.gaps)
+  );
+}
+
+/**
  * The beacon carries the pageview's CUMULATIVE visible time, so the stored
  * value only ever rises to the largest one reported and a repeated beacon adds
  * nothing. The visit's sum moves by the same delta, and its exit time on page
@@ -378,6 +397,7 @@ async function recordEngagement(
       .select({
         visitId: analyticsHits.visitId,
         engagedMs: analyticsHits.engagedMs,
+        gaps: analyticsHits.gaps,
       })
       .from(analyticsHits)
       .where(
@@ -392,7 +412,12 @@ async function recordEngagement(
     const delta = engagedMs - hit.engagedMs;
     await tx
       .update(analyticsHits)
-      .set({ engagedMs })
+      .set({
+        engagedMs,
+        ...(body.gaps && isNewerGaps(body.engagedMs, body.gaps, hit)
+          ? { gaps: body.gaps }
+          : {}),
+      })
       .where(eq(analyticsHits.id, body.pageviewId));
     await tx
       .update(analyticsVisits)

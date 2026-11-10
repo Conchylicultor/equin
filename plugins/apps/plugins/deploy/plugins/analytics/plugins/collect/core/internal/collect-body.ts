@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { GapsSchema } from "./gaps";
 
 /**
  * What the tracker sends to `POST /api/analytics/collect`, and the limits the
@@ -104,6 +105,12 @@ export const EngagementBodySchema = z
      * so repeats never double count.
      */
     engagedMs: z.number().int().min(0).max(MAX_ENGAGED_MS),
+    /**
+     * The pageview's away stretches so far (hidden / idle, see `gaps.ts`),
+     * the whole list every time. Absent from an older tracker, which never
+     * recorded them.
+     */
+    gaps: GapsSchema.optional(),
   })
   .strict();
 

@@ -21,6 +21,7 @@ import {
   DailyDimensionSchema,
   DeviceFamilySchema,
   FilterLevelSchema,
+  GapsSchema,
   OsFamilySchema,
 } from "../../core";
 
@@ -130,6 +131,13 @@ export const analyticsHits = pgTable(
     eventProps: parsedJson("event_props", z.record(z.string(), z.string())),
     /** Pageviews only: the highest cumulative visible time a beacon reported. */
     engagedMs: integer("engaged_ms").notNull().default(0),
+    /**
+     * Pageviews only: the away stretches (hidden / idle) the beacon with the
+     * newest total reported. NULL = not recorded (an event, an older tracker,
+     * a row from before the column, or no beacon yet) — never "none", which
+     * is `[]`.
+     */
+    gaps: parsedJson("gaps", GapsSchema),
   },
   (t) => [index("analytics_hits_visit_idx").on(t.visitId)],
 );
