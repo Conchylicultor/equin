@@ -1618,11 +1618,13 @@ function SelectionLayer({
         // Still inside the origin row: the browser's own intra-block
         // selection is the whole feature here. Hands off.
         if (start.id === null || cur === null || cur.id === start.id) return;
-        // The span's anchor, read NOW: the `focusContainer()` below drops the
-        // native selection it lives in.
+        // The span's anchor, taken NOW: the `focusContainer()` below drops the
+        // native selection it lives in. Taken, not read — the origin's editor
+        // gives its selection up with it, or it would re-seat that selection
+        // (and its focus) when the pointer is released, clearing the span.
         const reads = textReadsOf(start.id);
         const offset =
-          reads?.nativeAnchorOffset?.() ??
+          reads?.handOverAnchor?.() ??
           reads?.offsetAtPoint?.(start.x, start.y) ??
           null;
         spanAnchorRef.current =

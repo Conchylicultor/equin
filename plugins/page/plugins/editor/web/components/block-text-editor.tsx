@@ -62,7 +62,7 @@ import { BLOCK_INSET } from "../internal/page-column";
 import {
   linearDomRange,
   linearOffsetAtPoint,
-  nativeAnchorLinearOffset,
+  handOverNativeAnchor,
   placeCaretAtBoundary,
   placeCaretAtColumn,
   placeCaretAtOffset,
@@ -365,11 +365,12 @@ export function BlockTextEditor({
         const ed = lexicalEditorRef.current;
         return ed ? linearOffsetAtPoint(ed, x, y) : null;
       },
-      // The three reads an editor-owned text span is built and painted from
-      // (`block-editor.tsx`, `text-span-highlight.tsx`). None selects anything.
-      nativeAnchorOffset: () => {
+      // What an editor-owned text span is built and painted from
+      // (`block-editor.tsx`, `text-span-highlight.tsx`): the anchor handed over
+      // once, when the drag leaves this block; then reads that select nothing.
+      handOverAnchor: () => {
         const ed = lexicalEditorRef.current;
-        return ed ? nativeAnchorLinearOffset(ed) : null;
+        return ed ? handOverNativeAnchor(ed) : null;
       },
       domRangeOf: (from: number, to: number) => {
         const ed = lexicalEditorRef.current;

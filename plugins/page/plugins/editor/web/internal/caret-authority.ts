@@ -72,12 +72,15 @@ export interface BlockTextSurgery {
   offsetAtPoint?: (x: number, y: number) => number | null;
   /**
    * The linear offset of the NATIVE selection's anchor in this block, or null
-   * when it holds no range selection. Read once, when a text drag leaves its
-   * origin row and becomes an editor-owned span — BEFORE the container takes
-   * the keyboard and drops the native selection, which is what makes it the
-   * span's anchor. Reads only.
+   * when it holds no range selection — and the block gives that selection UP.
+   * Called once, when a text drag leaves its origin row and becomes an
+   * editor-owned span, BEFORE the container takes the keyboard: the offset is
+   * the span's anchor, and from then on the gesture is the block list's alone.
+   * A block that kept its selection would re-seat it when the pointer is
+   * released (its editor tracks a drag that began in it), focusing itself and
+   * clearing the span — see `handOverNativeAnchor`.
    */
-  nativeAnchorOffset?: () => number | null;
+  handOverAnchor?: () => number | null;
   /**
    * The DOM `Range` over linear `[from, to)` of this block's text, offsets
    * clamped into what the editor holds NOW. For PAINTING an editor-owned span
@@ -97,13 +100,14 @@ export interface BlockTextSurgery {
 /**
  * The READ half of {@link BlockTextSurgery}: what the block list needs to build
  * and paint an editor-owned text span across blocks — and nothing that edits
- * content or places a caret.
+ * content or places a caret. (`handOverAnchor` is the one member that is not a
+ * pure read: it takes a caret AWAY, which is what handing a gesture over means.)
  */
 export type BlockTextReads = Pick<
   BlockTextSurgery,
   | "readRuns"
   | "offsetAtPoint"
-  | "nativeAnchorOffset"
+  | "handOverAnchor"
   | "domRangeOf"
   | "onTextUpdate"
 >;

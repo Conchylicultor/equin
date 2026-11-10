@@ -723,14 +723,29 @@ export function linearOffsetAtPoint(
 
 /**
  * The linear offset (stored-runs basis) of the editor's native selection
- * ANCHOR, or null when it holds no range selection. Reads only.
+ * ANCHOR — or null when it holds no range selection — and the editor GIVES THE
+ * SELECTION UP: its Lexical selection is cleared, committed synchronously.
+ *
+ * One call, not a read plus a separate release, because the two cannot be
+ * apart: the moment a text drag leaves its origin block the gesture is the
+ * block list's (an editor-owned span), but Lexical still holds the range the
+ * drag started as. Lexical tracks a mouse drag that began in its root on its
+ * own (document `pointermove` / `pointerup`, for as long as the button is
+ * down), and on RELEASE it rebuilds that range and re-seats it in the DOM —
+ * which focuses the origin block, and that focus clears the span the user just
+ * drew (measured: `e2e/cross-block-text-selection-verify.ts`'s container
+ * case). Whether a given drag hit it depended on whether Lexical judged the
+ * range dirty on release, so it came and went with the page around it. With
+ * no selection left there is nothing to rebuild, and the release is a no-op.
  */
-export function nativeAnchorLinearOffset(editor: LexicalEditor): number | null {
-  return editor.getEditorState().read(() => {
+export function handOverNativeAnchor(editor: LexicalEditor): number | null {
+  const offset = editor.getEditorState().read(() => {
     const selection = $getSelection();
     if (!$isRangeSelection(selection)) return null;
     return $linearOffsetOfPoint(selection.anchor);
   });
+  editor.update(() => $setSelection(null), { discrete: true });
+  return offset;
 }
 
 /**

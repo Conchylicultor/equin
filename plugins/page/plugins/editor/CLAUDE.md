@@ -1044,7 +1044,10 @@ blocks); offsets clamped and snapped OUTWARD off inline tokens
 
 - **Never intercept the text press on the way down** (no `preventDefault`, no
   `focusContainer()`).
-- **Read the anchor at promotion, BEFORE `focusContainer()`** (`nativeAnchorOffset`).
+- **Take the anchor at promotion, BEFORE `focusContainer()`** (`handOverAnchor`):
+  the origin's Lexical selection is cleared with it. Lexical tracks a drag that
+  began in its root and re-seats that selection on `pointerup` — focusing the
+  origin, which clears the span.
 - **Re-read the head on every move** (`offsetAtPoint`), re-normalized.
 - No one-way rule: a span back inside the origin is just a span there.
 - **`select-none` committed synchronously at promotion** (`flushSync`), or the browser

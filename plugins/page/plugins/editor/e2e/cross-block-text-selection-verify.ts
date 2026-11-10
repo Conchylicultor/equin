@@ -19,12 +19,20 @@
 // The span's own semantics (Delete, undo, dragging back) are
 // `cross-block-span-verify.ts`'s.
 //
+// Section 5 is the same gesture into and out of a CONTAINER (a callout), which
+// lost the span on RELEASE: it painted while the button was down, and on
+// `pointerup` the selection snapped back to the origin block alone. Lexical
+// tracks a drag that began in its root by itself and re-seated the range it
+// still held there, focusing the origin — and that focus clears the span. The
+// origin now hands its selection over at promotion (`handOverAnchor`).
+//
 // Usage: bun plugins/page/plugins/editor/e2e/cross-block-text-selection-verify.ts [--url <deploy>]
 import {
+  pageFetch,
   report,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
-import { editableBlocks, openBlankPage } from "./support/blank-page";
+import { blockIdOf, editableBlocks, openBlankPage } from "./support/blank-page";
 import { highlightedLines } from "./support/block-selection";
 import { typeLines } from "./support/type-lines";
 
@@ -34,7 +42,7 @@ await withBrowser(async (h) => {
   const { context, page } = await h.session();
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
 
-  await openBlankPage(page, { settleMs: 3000 });
+  const { pageId } = await openBlankPage(page, { settleMs: 3000 });
 
   // A heading, a bullet, and a bullet indented under it — so the clipboard assertion
   // covers per-type markdown prefixes AND nesting, not just line breaks.
@@ -196,6 +204,76 @@ await withBrowser(async (h) => {
     true,
   );
   r.eq("…and selects no block whole", (await selectedCount()) ?? 0, 0);
+
+  // 5. Into and out of a CONTAINER: the span must survive the release. Seeded
+  //    through the API after the typed lines: a callout holding two lines, and
+  //    one line after the box.
+  await page.keyboard.press("Escape");
+  const post = async (body: unknown): Promise<string> => {
+    const res = await pageFetch(page, "/api/blocks", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok)
+      throw new Error(`POST /api/blocks ${res.status}: ${await res.text()}`);
+    return ((await res.json()) as { id: string }).id;
+  };
+  const text = (parentId: string, body: string) =>
+    post({ parentId, type: "text", data: { text: [{ text: body }] } });
+  const box = await post({
+    parentId: pageId,
+    type: "callout",
+    data: { icon: null, color: "info" },
+  });
+  const inside = await text(box, "Delta inside");
+  await text(box, "Echo inside");
+  const after = await text(pageId, "Foxtrot after");
+  await page
+    .locator(`[data-block-id="${after}"] [contenteditable="true"]`)
+    .waitFor({ state: "visible", timeout: 30_000 });
+  await page.waitForTimeout(1000);
+  const lineBox = async (id: string) => {
+    const b = await page
+      .locator(`[data-block-id="${id}"] [contenteditable="true"]`)
+      .boundingBox();
+    if (!b) throw new Error(`no bounding box for ${id}`);
+    return b;
+  };
+  /** Drag from `from`'s text to the middle of `to`'s, the span read on release. */
+  const dragAcross = async (fromId: string, toId: string) => {
+    const f = await lineBox(fromId);
+    const t = await lineBox(toId);
+    await page.mouse.move(f.x + 10, f.y + f.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(f.x + 40, f.y + f.height / 2, { steps: 5 });
+    await page.mouse.move(t.x + t.width * 0.3, t.y + t.height / 2, {
+      steps: 20,
+    });
+    await page.mouse.up();
+    await page.waitForTimeout(500);
+    return { painted: await painted(), native: (await readSelection()).text };
+  };
+  const charlie = await blockIdOf(block(2));
+
+  const into = await dragAcross(charlie, inside);
+  r.eq(
+    "a drag INTO a callout keeps its span after release",
+    into.painted.some((t) => t.startsWith("Delta")),
+    true,
+  );
+  r.eq("…with no native selection left in the origin", into.native, "");
+
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(300);
+  const out = await dragAcross(inside, after);
+  r.eq(
+    "a drag OUT of a callout keeps its span after release",
+    out.painted.includes("Echo inside"),
+    true,
+  );
+  r.eq("…with no native selection left in the origin", out.native, "");
 
   await r.finish();
 });
