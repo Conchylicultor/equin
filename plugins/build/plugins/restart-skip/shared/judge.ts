@@ -46,7 +46,10 @@ const NODE_MODULES = `${sep}node_modules${sep}`;
 /**
  * Would a backend spawned now run exactly the code `p` runs? Only then is a
  * restart a no-op, and only then is the answer `adopted`. Every check fails
- * toward `restart`, with the reason.
+ * toward a restart, with the reason: `restart` for what the deploy changed
+ * (or a declared limit), `cannot-judge` when the closure walk could not
+ * measure the code at all — a defect of the judgement the deploy reports,
+ * never a quiet `restart`.
  *
  * The rule is "nothing it loaded, or could still load, changed since it
  * started", read by inode change time (`closureChangedSince` explains why that
@@ -75,6 +78,10 @@ export async function judgeAdoption(
 ): Promise<AdoptVerdict> {
   const restart = (reason: string): AdoptVerdict => ({
     kind: "restart",
+    reason,
+  });
+  const cannotJudge = (reason: string): AdoptVerdict => ({
+    kind: "cannot-judge",
     reason,
   });
   const since = p.startedAtMs;
@@ -110,7 +117,7 @@ export async function judgeAdoption(
   const closure = await p.closureSince([await realpath(p.entry)], since);
   switch (closure.kind) {
     case "unmeasurable":
-      return restart(`the closure cannot be measured: ${closure.reason}`);
+      return cannotJudge(`the closure cannot be measured: ${closure.reason}`);
     case "changed":
       return restart(
         `the closure: ${describe(closure.path, closure.changedAtMs)}`,
@@ -128,34 +135,45 @@ export async function judgeAdoption(
   }
   for (const child of p.children) {
     const why = await childChanged(child, p.closureSince);
-    if (why !== null) return restart(`the child ${child.label}: ${why}`);
+    if (why === null) continue;
+    const reason = `the child ${child.label}: ${why.reason}`;
+    return why.blind ? cannotJudge(reason) : restart(reason);
   }
   return { kind: "adopted" };
 }
 
-/** Why `child` may not be running what a respawn now would, or `null`. */
+/**
+ * Why `child` may not be running what a respawn now would (`blind`: its
+ * closure could not be measured), or `null`.
+ */
 async function childChanged(
   child: ChildIncarnation,
   closureSince: ProcessView["closureSince"],
-): Promise<string | null> {
+): Promise<{ reason: string; blind: boolean } | null> {
   const { code, spawnedAtMs } = child;
+  const changed = (reason: string) => ({ reason, blind: false });
   if (code === null || code.entries === null) {
-    return "it runs code this process cannot point at";
+    return changed("it runs code this process cannot point at");
   }
   if (code.binary !== null) {
     if (!isAbsolute(code.binary)) {
-      return `its executable is resolved through PATH (${code.binary})`;
+      return changed(
+        `its executable is resolved through PATH (${code.binary})`,
+      );
     }
-    const changed = await firstChanged([code.binary], spawnedAtMs);
-    if (changed !== null) return changed;
+    const moved = await firstChanged([code.binary], spawnedAtMs);
+    if (moved !== null) return changed(moved);
   }
   const entries = await Promise.all(code.entries.map((e) => realpath(e)));
   const closure = await closureSince(entries, spawnedAtMs);
   switch (closure.kind) {
     case "unmeasurable":
-      return `its closure cannot be measured: ${closure.reason}`;
+      return {
+        reason: `its closure cannot be measured: ${closure.reason}`,
+        blind: true,
+      };
     case "changed":
-      return describe(closure.path, closure.changedAtMs);
+      return changed(describe(closure.path, closure.changedAtMs));
     case "unchanged":
       return null;
   }

@@ -79,6 +79,17 @@ test("a package counts by name@version, a builtin by name", async () => {
   expect(await digestOf(dir)).not.toBe(v1);
 });
 
+test("a lazy import only a page's import map answers counts by its name", async () => {
+  const entry = (host: string) =>
+    `export const start = () => import("@browser-host/${host}");\n`;
+  await tree(dir, { "entry.ts": entry("a") });
+  const a = await digestOf(dir);
+  await tree(dir, { "entry.ts": entry("a") });
+  expect(await digestOf(dir)).toBe(a);
+  await tree(dir, { "entry.ts": entry("b") });
+  expect(await digestOf(dir)).not.toBe(a);
+});
+
 test("an import that does not resolve throws, naming it", async () => {
   await tree(dir, {
     "entry.ts": `import { x } from "./missing";\nexport const a = x;\n`,

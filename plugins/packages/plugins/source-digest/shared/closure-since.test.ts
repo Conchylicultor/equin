@@ -131,6 +131,19 @@ test("a closure holding a computed load is unmeasurable", async () => {
   expect((await since(at)).kind).toBe("unmeasurable");
 });
 
+test("a lazy import only a page's import map answers is measurable — and a package taking its name is a change", async () => {
+  await tree({
+    "entry.ts": `export const start = () => import("@browser-host/apps/plugins/x");\n`,
+  });
+  const at = await started();
+  expect((await since(at)).kind).toBe("unchanged");
+  await tree({
+    "node_modules/@browser-host/apps/package.json": `{"name":"@browser-host/apps","version":"1.0.0"}`,
+  });
+  const r = await since(at);
+  expect(r).toMatchObject({ kind: "changed" });
+});
+
 test("a later walk reads a rewritten file again: its new imports are followed, not the ones first scanned", async () => {
   await tree(BASE);
   const first = await since(await started());

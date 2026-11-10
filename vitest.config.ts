@@ -3,12 +3,13 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import { createJiti } from "jiti";
-import type { isBrowserHostSpecifier as IsBrowserHostSpecifier } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/core";
+import type { isBrowserHostSpecifier as IsBrowserHostSpecifier } from "@plugins/framework/plugins/import-map-names/core";
 
 // The config loader knows nothing of the tsconfig `@plugins/*` alias, so plugin
 // code is loaded through a jiti that does (the same pattern as eslint.config.ts).
-// The predicate's own module, not the barrel: the barrel reaches Bun-only code
-// (`import.meta.dir`), and this config runs under Node.
+// The predicate's own leaf plugin (`framework/import-map-names`, no imports):
+// web-artifacts' barrel reaches Bun-only code (`import.meta.dir`), and this
+// config runs under Node.
 const jiti = createJiti(import.meta.url, {
   alias: { "@plugins": path.resolve(__dirname, "plugins") },
 });
@@ -18,7 +19,7 @@ export default defineConfig(async () => {
   }>(
     path.resolve(
       __dirname,
-      "plugins/framework/plugins/tooling/plugins/web-artifacts/core/browser-host-specifier.ts",
+      "plugins/framework/plugins/import-map-names/core/index.ts",
     ),
   );
   return {

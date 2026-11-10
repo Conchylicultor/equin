@@ -45,7 +45,7 @@ import type { Plugin as VitePlugin } from "vite";
 import {
   BROWSER_HOST_SPECIFIER_PREFIX,
   BROWSER_HOST_WORKER_SPECIFIER_PREFIX,
-} from "../browser-host-specifier";
+} from "@plugins/framework/plugins/import-map-names/core";
 import { globRootsOf } from "./own-files";
 import {
   artifactDirName,

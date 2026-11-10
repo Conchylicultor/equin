@@ -431,8 +431,9 @@ Key invariants:
 
 - Description: Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map
 - Core:
-  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 44 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `packages/timed-fs` ×8
+    - `framework/import-map-names` ×5
     - `framework/plugin-id` ×4
     - `framework/web-core` ×4
     - `infra/host-fs/user-path` ×4
@@ -480,7 +481,6 @@ Key invariants:
     - `INLINE_PACKAGES`
     - `inlinedRootsFor`
     - `isBareSpecifier`
-    - `isBrowserHostSpecifier`
     - `isBrowserUnreachableDynamic`
     - `isInlinedPackage`
     - `isWorkerChunkPath`

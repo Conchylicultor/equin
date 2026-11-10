@@ -4,7 +4,12 @@
 
 ## Plugin reference
 
-- Description: Restart-skip, central's half: POST /api/restart-skip/central/adopt — main's deploy asks central before restarting it, and central answers adopted only when a process spawned now would run exactly its code (the same judgement as a backend's: same Bun and entry, nothing it loaded or could still load changed since it started).
+- Description: The restart-skip-cannot-judge report kind — filed by `./equin build` through the report outbox when the backend or central it asked to adopt a deploy could not measure its own code (the closure walk refused it): the deploy restarts all the same, but restart-skip is off until the cause is fixed, so it is reported rather than left as one more 'restart needed' log line. Restart-skip, central's half: POST /api/restart-skip/central/adopt — main's deploy asks central before restarting it, and central answers adopted only when a process spawned now would run exactly its code (the same judgement as a backend's: same Bun and entry, nothing it loaded or could still load changed since it started).
+- Server:
+  - Contributes: `report-kind` "restart-skip-cannot-judge"
+  - Uses:
+    - `reports.ReportKind`
+    - `reports.ReportRow`
 - Machine:
   - Uses: `infra/endpoints.implementMachine`
   - Register: `defineWarmup('restart-skip.closure')`
@@ -17,12 +22,15 @@
   - Exports (types):
     - `AdoptRequest`
     - `AdoptVerdict`
+    - `CannotJudgePayload`
     - `ChildIncarnation`
   - Exports (values):
     - `adoptCentralDeploy`
     - `adoptDeploy`
     - `AdoptRequestSchema`
     - `AdoptVerdictSchema`
+    - `CANNOT_JUDGE_REPORT_KIND`
+    - `CannotJudgePayloadSchema`
 - Cross-plugin:
   - Imported by: `framework/cli/build`
 - Exemptions:

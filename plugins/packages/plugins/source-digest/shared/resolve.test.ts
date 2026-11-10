@@ -10,6 +10,7 @@ import {
 import { builtinModules } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join, sep } from "node:path";
+import { isImportMapOnlySpecifier } from "@plugins/framework/plugins/import-map-names/core";
 import { createImportResolver, UnresolvedImportError } from "./resolve";
 
 // The resolver answers what `Bun.resolveSync` would, without holding the
@@ -62,6 +63,7 @@ test("agrees with Bun.resolveSync on every import of a backend's and central's c
   const queue = [...seen];
   const disagreements: string[] = [];
   let imports = 0;
+  let importMapOnly = 0;
   while (queue.length > 0) {
     const file = queue.pop()!;
     for (const specifier of scan(file, await readFile(file, "utf8"))) {
@@ -72,10 +74,21 @@ test("agrees with Bun.resolveSync on every import of a backend's and central's c
         bun = Bun.resolveSync(specifier, dirname(file));
       } catch (err) {
         if (!String(err).includes("Cannot find")) throw err;
-        // The runtime cannot resolve it: neither may the resolver.
-        expect(
-          Promise.resolve().then(() => resolver.resolve(specifier, file)),
-        ).rejects.toThrow(UnresolvedImportError);
+        // The runtime cannot resolve it. A name only a page's import map
+        // answers (a `core/` module's lazy `import("@browser-host/…")`) is
+        // an edge the runtime loads nothing for; anything else, the resolver
+        // refuses too.
+        if (isImportMapOnlySpecifier(specifier)) {
+          importMapOnly++;
+          expect(await resolver.resolve(specifier, file)).toEqual({
+            kind: "import-map",
+            specifier,
+          });
+        } else {
+          expect(
+            Promise.resolve().then(() => resolver.resolve(specifier, file)),
+          ).rejects.toThrow(UnresolvedImportError);
+        }
         continue;
       }
       const ours = await resolver.resolve(specifier, file);
@@ -104,6 +117,9 @@ test("agrees with Bun.resolveSync on every import of a backend's and central's c
   // The closure really was walked (not an entry that moved).
   expect(seen.size).toBeGreaterThan(1000);
   expect(imports).toBeGreaterThan(5000);
+  // The website demo's generated scenario (reached through every plugin's
+  // `core/`) holds one: the edge that once made every walk refuse.
+  expect(importMapOnly).toBeGreaterThan(0);
 }, 60_000);
 
 let dir: string;
@@ -162,4 +178,30 @@ test("a file added after one walk is seen by the next walk's resolver", async ()
     kind: "file",
     path: expect.stringMatching(/x\.ts$/),
   });
+});
+
+test("a name only a page's import map answers is an import-map edge — until a package takes it", async () => {
+  await tree({ "a.ts": "" });
+  const importer = join(dir, "a.ts");
+  const spec = "@browser-host/apps/plugins/x";
+  expect(await createImportResolver().resolve(spec, importer)).toEqual({
+    kind: "import-map",
+    specifier: spec,
+  });
+  // As the runtime would: a package of that name is what it loads.
+  await tree({
+    "node_modules/@browser-host/apps/package.json": `{"name":"@browser-host/apps","version":"1.0.0"}`,
+  });
+  expect(await createImportResolver().resolve(spec, importer)).toMatchObject({
+    kind: "package",
+  });
+});
+
+test("any other bare name with no package is still refused", async () => {
+  await tree({ "a.ts": "" });
+  expect(
+    Promise.resolve().then(() =>
+      createImportResolver().resolve("@nowhere/x", join(dir, "a.ts")),
+    ),
+  ).rejects.toThrow(UnresolvedImportError);
 });

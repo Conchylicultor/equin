@@ -28,9 +28,15 @@ export const handleAdopt = implementMachine(adoptDeploy, async ({ body }) => {
     }),
     body,
   );
-  if (verdict.kind === "restart") {
-    log.publish(`restart needed — ${verdict.reason}`);
-    return verdict;
+  switch (verdict.kind) {
+    case "restart":
+      log.publish(`restart needed — ${verdict.reason}`);
+      return verdict;
+    case "cannot-judge":
+      log.publish(`cannot judge (restart needed) — ${verdict.reason}`);
+      return verdict;
+    case "adopted":
+      break;
   }
   // A daemon holding only a cache of its own code's work is not judged above
   // (`onCodeAdopted: "stop"`): it is stopped, as a fresh process would not

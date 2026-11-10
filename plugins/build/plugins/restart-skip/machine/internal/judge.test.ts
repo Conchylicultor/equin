@@ -160,14 +160,14 @@ test("a loaded module the closure no longer reaches: restart", async () => {
   expect(v.kind === "restart" && v.reason).toContain("no longer reaches");
 });
 
-test("a closure the digest cannot follow: restart", async () => {
+test("a closure the digest cannot follow: cannot-judge — a defect the deploy reports, not a quiet restart", async () => {
   await write({
     ...CHECKOUT,
     "app/lazy.ts": `const n = "./a";\nexport const lazy = () => import(n);\n`,
   });
   const p = await startProcess(EAGER);
   const v = await judgeAdoption(p, deploy());
-  expect(v.kind === "restart" && v.reason).toContain("cannot be measured");
+  expect(v.kind === "cannot-judge" && v.reason).toContain("cannot be measured");
 });
 
 /** The process started a worker on `worker/entry.ts`, spawned "now". */
@@ -219,4 +219,13 @@ test("a live child whose code cannot be pointed at: restart", async () => {
     deploy(),
   );
   expect(v.kind === "restart" && v.reason).toContain("cannot point at");
+});
+
+test("a lazy import only a page's import map answers (a demo's browser host): adopted", async () => {
+  await write({
+    ...CHECKOUT,
+    "app/a.ts": `export const a = 1;\nexport const host = () => import("@browser-host/apps/plugins/demo");\n`,
+  });
+  const p = await startProcess(EAGER);
+  expect(await judgeAdoption(p, deploy())).toEqual({ kind: "adopted" });
 });

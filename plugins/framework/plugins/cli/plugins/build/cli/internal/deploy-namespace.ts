@@ -775,6 +775,7 @@ export async function deployNamespace(
       () =>
         askAdoption({
           endpoint: adoptDeploy,
+          asked: { process: "backend", namespace: ns },
           origin: site,
           server,
           command,

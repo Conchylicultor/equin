@@ -21,11 +21,21 @@ export const handleCentralAdopt = implement(
       }),
       body,
     );
-    console.log(
-      verdict.kind === "adopted"
-        ? "[restart-skip] central adopted the deploy — no restart"
-        : `[restart-skip] central restart needed — ${verdict.reason}`,
-    );
+    switch (verdict.kind) {
+      case "adopted":
+        console.log("[restart-skip] central adopted the deploy — no restart");
+        break;
+      case "restart":
+        console.log(
+          `[restart-skip] central restart needed — ${verdict.reason}`,
+        );
+        break;
+      case "cannot-judge":
+        console.error(
+          `[restart-skip] central cannot judge the deploy (restart needed) — ${verdict.reason}`,
+        );
+        break;
+    }
     return verdict;
   },
 );

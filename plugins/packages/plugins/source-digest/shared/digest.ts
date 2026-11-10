@@ -31,7 +31,9 @@ import {
 //   digest (a `host` corpus index main persists is read by every worktree).
 // - A file under `node_modules` counts as its package's `name@version`, and is
 //   not walked: the lockfile, not the bytes, is what moves it.
-// - A builtin (`node:fs`, `bun`) counts by its specifier.
+// - A builtin (`node:fs`, `bun`) counts by its specifier, and so does a
+//   specifier only a page's import map answers (`@browser-host/…`): the
+//   runtime loads nothing for it.
 // - An import that does not resolve throws: a closure with a hole would vouch
 //   for code it never read.
 
@@ -107,6 +109,8 @@ interface Closure {
   files: Map<string, string>;
   packages: Set<string>;
   builtins: Set<string>;
+  /** Specifiers only a page's import map answers: the runtime loads nothing for them. */
+  importMapOnly: Set<string>;
 }
 
 /**
@@ -122,6 +126,8 @@ interface ClosureVisitor {
   /** An import that resolved to a package (its `node_modules` entry and real directory). */
   package(pkg: Extract<Resolution, { kind: "package" }>): Promise<void>;
   builtin(specifier: string): void;
+  /** An import only a page's import map answers (`./resolve`): no file, no package. */
+  importMapOnly(specifier: string): void;
 }
 
 /** What a file's bytes say about its loads: its literal import specifiers (none for a non-module file). */
@@ -256,6 +262,8 @@ async function walkClosure(
       const packages: Extract<Resolution, { kind: "package" }>[] = [];
       for (const edge of edges) {
         if ("builtin" in edge) visit.builtin(edge.builtin);
+        else if (edge.kind === "import-map")
+          visit.importMapOnly(edge.specifier);
         else if (edge.kind === "package") packages.push(edge);
         else if (!seen.has(edge.path)) {
           seen.add(edge.path);
@@ -275,6 +283,7 @@ async function closureOf(entries: readonly string[]): Promise<Closure> {
     files: new Map(),
     packages: new Set(),
     builtins: new Set(),
+    importMapOnly: new Set(),
   };
   const packageIds = new Map<string, Promise<string>>();
   await walkClosure(entries, {
@@ -290,6 +299,9 @@ async function closureOf(entries: readonly string[]): Promise<Closure> {
     },
     builtin(specifier) {
       closure.builtins.add(specifier);
+    },
+    importMapOnly(specifier) {
+      closure.importMapOnly.add(specifier);
     },
   });
   return closure;
@@ -378,6 +390,12 @@ export async function closureChangedSince(
         await assertBefore(join(pkg.dir, "package.json"), stat);
       },
       builtin() {},
+      // Nothing on disk to stat: the walk found no package of that name NOW,
+      // so a process started now loads nothing for it either. One that
+      // appeared since resolves as a package above (its entry's ctime is
+      // after the instant); one that came and went is, if this process ever
+      // loaded it, a loaded module gone — the caller's own check.
+      importMapOnly() {},
     });
   } catch (err) {
     if (err instanceof ChangedSince) {
@@ -394,6 +412,38 @@ export async function closureChangedSince(
     throw err;
   }
   return { kind: "unchanged", files };
+}
+
+/**
+ * Whether the closure of `entries` can be walked at all — the walk the digest
+ * and {@link closureChangedSince} both rest on — and if not, its refusal (an
+ * import the resolver cannot answer exactly, a computed load). For a guard
+ * that keeps a closure measurable (`boot:closure-digestable`): the same walk,
+ * so the guard and the digest cannot disagree on what refuses.
+ */
+export async function closureRefusal(
+  entries: readonly string[],
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+  try {
+    await walkClosure(entries, {
+      async facts(path) {
+        const known = scanned.get(path);
+        if (known !== undefined && known.stamp === stampOf(await stat(path))) {
+          return known.facts;
+        }
+        return (await readFacts(path)).facts;
+      },
+      async package() {},
+      builtin() {},
+      importMapOnly() {},
+    });
+  } catch (err) {
+    if (err instanceof UnmeasurableClosureError) {
+      return { ok: false, reason: err.message };
+    }
+    throw err;
+  }
+  return { ok: true };
 }
 
 // A call that loads a module at runtime: `import(…)` / `require(…)`.
@@ -491,6 +541,7 @@ export async function computeDigest(paths: readonly string[]): Promise<string> {
     ...[...closure.files].map(([p, h]) => `file ${relative(base, p)} ${h}`),
     ...[...closure.packages].map((p) => `package ${p}`),
     ...[...closure.builtins].map((b) => `builtin ${b}`),
+    ...[...closure.importMapOnly].map((s) => `import-map ${s}`),
   ].sort();
   return sha256(lines.join("\n"));
 }

@@ -12,7 +12,6 @@ export {
   packageNameOf,
   WORKER_ASSETS_DIR,
 } from "./constants";
-export { isBrowserHostSpecifier } from "./browser-host-specifier";
 export { COMPOSITION_SPECIFIERS } from "./composition-modules";
 export { makeArtifactExternal } from "./externals";
 export {

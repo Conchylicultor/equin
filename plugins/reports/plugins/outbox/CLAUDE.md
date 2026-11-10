@@ -170,6 +170,7 @@ pass the same `code` field.
     - `debug/backend-liveness`
     - `debug/boot-events`
     - `debug/worktree-cleanup`
+    - `framework/cli/build`
     - `framework/cli/check`
     - `framework/tooling/checks`
     - `framework/tooling/checks/type-check`

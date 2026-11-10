@@ -43,7 +43,7 @@ import {
   BROWSER_HOST_SNAPSHOT_SPECIFIER_PREFIX,
   isBrowserHostSnapshotSpecifier,
   isBrowserHostSpecifier,
-} from "../browser-host-specifier";
+} from "@plugins/framework/plugins/import-map-names/core";
 import { COMPOSITION_SPECIFIERS } from "../composition-modules";
 import {
   isBrowserUnreachableDynamic,

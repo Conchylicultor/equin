@@ -27,7 +27,11 @@ const digest = await sourceDigest([myCode]);
   `Bun.resolveSync`, import by import, over a backend's and central's closures. Repo files
   count by path relative to the closure's common ancestor plus bytes — so main
   and a worktree with the same code agree — packages by `name@version`,
-  builtins by name. Desktop-only (exempt from `no-platform-api`, sanctioned).
+  builtins by name, and a name only a page's import map answers
+  (`@browser-host/…`, declared by `framework/import-map-names`; no package
+  of that name installed) by name: the runtime loads nothing for it. A `core/`
+  module may hold such a lazy `import()` that only the page calls (the website
+  demo's generated scenario does), and the server reaches every `core/`. Desktop-only (exempt from `no-platform-api`, sanctioned).
 - **Fails closed, loudly.** A digest is awaited, never read half-done. An
   unresolvable import throws, and so does an `import(x)` / `require(x)` whose
   path is not a literal (counted on the transpiled output, so prose naming
@@ -41,9 +45,13 @@ const digest = await sourceDigest([myCode]);
   boot sequence warms each plugin's core barrel through the literal `core` loader
   codegen writes into every server/machine registry entry, and a serving
   backend's entry imports its composition's registries by literal path.
-  `computedLoads(path, text)` is that reading on its own, for a guard that
-  keeps a closure digestable (`boot:closure-digestable` holds the serving
-  backend's).
+  `computedLoads(path, text)` is that reading on its own, and
+  `closureRefusal(entries)` the whole walk's refusal (any unresolvable import
+  too), for a guard that keeps a closure digestable
+  (`boot:closure-digestable` holds the serving backend's and central's with
+  both). A refusal in a serving process is not silent either: restart-skip
+  answers `cannot-judge` and the deploy files a `restart-skip-cannot-judge`
+  report.
 - **Once per process, as early as boot.** The plugin's `onReadyBlocking`
   starts every defined set's digest without waiting. A digest reads the files
   when it runs; a file edited after its module was imported would be counted
@@ -96,6 +104,7 @@ import.meta`, carried by `Resource.Declare`) — the L2 stamps judged by
   - Exports (types): `ComputedLoads`
   - Exports (values):
     - `closureChangedSince`
+    - `closureRefusal`
     - `computedLoads`
     - `sourceDigest`
 - Central:

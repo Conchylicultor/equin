@@ -14007,7 +14007,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/font-family --font-mono`
           - `ui/tokens/shape --spacing`
         - Imported by: `build`
-    - **`restart-skip`** — Restart-skip, central's half: POST /api/restart-skip/central/adopt — main's deploy asks central before restarting it, and central answers adopted only when a process spawned now would run exactly its code (the same judgement as a backend's: same Bun and entry, nothing it loaded or could still load changed since it started).
+    - **`restart-skip`** — The restart-skip-cannot-judge report kind — filed by `./equin build` through the report outbox when the backend or central it asked to adopt a deploy could not measure its own code (the closure walk refused it): the deploy restarts all the same, but restart-skip is off until the cause is fixed, so it is reported rather than left as one more 'restart needed' log line. Restart-skip, central's half: POST /api/restart-skip/central/adopt — main's deploy asks central before restarting it, and central answers adopted only when a process spawned now would run exactly its code (the same judgement as a backend's: same Bun and entry, nothing it loaded or could still load changed since it started).
+      - Server:
+        - Contributes: `report-kind` "restart-skip-cannot-judge"
+        - Uses:
+          - `reports.ReportKind`
+          - `reports.ReportRow`
       - Machine:
         - Uses: `infra/endpoints.implementMachine`
         - Register: `defineWarmup('restart-skip.closure')`
@@ -14020,12 +14025,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `AdoptRequest`
           - `AdoptVerdict`
+          - `CannotJudgePayload`
           - `ChildIncarnation`
         - Exports (values):
           - `adoptCentralDeploy`
           - `adoptDeploy`
           - `AdoptRequestSchema`
           - `AdoptVerdictSchema`
+          - `CANNOT_JUDGE_REPORT_KIND`
+          - `CannotJudgePayloadSchema`
       - Cross-plugin:
         - Imported by: `framework/cli/build`
       - Exemptions:
@@ -28692,6 +28700,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readServerTiming`
           - `SERVER_TIMING_METRIC`
           - `serverTimingValue`
+    - **`import-map-names`** — The bare-specifier namespaces only a page's import map answers — a browser host (`@browser-host/`), its worker entry (`@browser-host-worker/`) and its starting snapshot (`@browser-host-snapshot/`), served by web-artifacts: external to every artifact build, never an npm package, never resolved by Bun. A leaf with no imports directly under framework (not under web-artifacts, whose closure a child would carry into every composition), so source-digest's closure walk — which a server reaches a lazy `import("@browser-host/…")` through — knows them for free.
+      - Cross-plugin:
+        - Imported by:
+          - `framework/tooling/web-artifacts`
+          - `packages/source-digest`
+      - Core:
+        - Exports (values):
+          - `BROWSER_HOST_SNAPSHOT_SPECIFIER_PREFIX`
+          - `BROWSER_HOST_SPECIFIER_PREFIX`
+          - `BROWSER_HOST_WORKER_SPECIFIER_PREFIX`
+          - `isBrowserHostSnapshotSpecifier`
+          - `isBrowserHostSpecifier`
+          - `isImportMapOnlySpecifier`
     - **`plugin-id`** — Canonical plugin identity: the branded PluginId type and its derived path encodings.
       - Core:
         - Uses: `framework/product-name.PRODUCT_NAME`
@@ -30433,8 +30454,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
         - **`web-artifacts`** — Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map
           - Core:
-            - Uses: 39 symbols — full list in [`plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md)
+            - Uses: 44 symbols — full list in [`plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md)
               - `packages/timed-fs` ×8
+              - `framework/import-map-names` ×5
               - `framework/plugin-id` ×4
               - `framework/web-core` ×4
               - `infra/host-fs/user-path` ×4
@@ -30482,7 +30504,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `INLINE_PACKAGES`
               - `inlinedRootsFor`
               - `isBareSpecifier`
-              - `isBrowserHostSpecifier`
               - `isBrowserUnreachableDynamic`
               - `isInlinedPackage`
               - `isWorkerChunkPath`
@@ -35303,8 +35324,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/host-fs/user-path.asAppPath`
             - Exports (values): `REPO_ROOT`
           - Cross-plugin:
-            - Imported by: 42 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
-              - `framework` ×12
+            - Imported by: 43 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
+              - `framework` ×13
               - `infra` ×8
               - `build` ×6
               - `apps` ×5
@@ -39051,6 +39072,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types): `ComputedLoads`
         - Exports (values):
           - `closureChangedSince`
+          - `closureRefusal`
           - `computedLoads`
           - `sourceDigest`
       - Central:
@@ -52971,7 +52993,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `SERVER_REPORT_SOURCES`
       - `submitReport`
   - Cross-plugin:
-    - Imported by: 69 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+    - Imported by: 70 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
       - `reports` ×29
       - `debug` ×18
       - `conversations` ×6
@@ -52980,6 +53002,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `framework` ×2
       - `active-data/report`
       - `backup`
+      - `build/restart-skip`
       - `network/live/boot-snapshot`
       - `page/place/google`
       - `stats/cost`
@@ -53440,6 +53463,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/backend-liveness`
           - `debug/boot-events`
           - `debug/worktree-cleanup`
+          - `framework/cli/build`
           - `framework/cli/check`
           - `framework/tooling/checks`
           - `framework/tooling/checks/type-check`

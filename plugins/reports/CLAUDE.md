@@ -189,7 +189,7 @@ before it) beside the total, worded by `formatReportActivity`
     - `SERVER_REPORT_SOURCES`
     - `submitReport`
 - Cross-plugin:
-  - Imported by: 69 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 70 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `reports` ×29
     - `debug` ×18
     - `conversations` ×6
@@ -198,6 +198,7 @@ before it) beside the total, worded by `formatReportActivity`
     - `framework` ×2
     - `active-data/report`
     - `backup`
+    - `build/restart-skip`
     - `network/live/boot-snapshot`
     - `page/place/google`
     - `stats/cost`

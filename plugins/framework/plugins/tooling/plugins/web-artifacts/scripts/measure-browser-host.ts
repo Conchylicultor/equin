@@ -11,7 +11,7 @@ import { writeFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { gzipSync } from "node:zlib";
 import type { Rolldown } from "vite";
-import { isBrowserHostSpecifier } from "../core/browser-host-specifier";
+import { isBrowserHostSpecifier } from "@plugins/framework/plugins/import-map-names/core";
 
 const root = REPO_ROOT;
 const entry = join(

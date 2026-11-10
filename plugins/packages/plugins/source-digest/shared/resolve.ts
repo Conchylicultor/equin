@@ -6,6 +6,7 @@ import {
   stat,
 } from "@plugins/packages/plugins/timed-fs/core";
 import { basename, dirname, isAbsolute, join, sep } from "node:path";
+import { isImportMapOnlySpecifier } from "@plugins/framework/plugins/import-map-names/core";
 
 // Where an import resolves, answered without holding the thread: every disk
 // question is an async `readdir` (one per directory a walk touches, shared by
@@ -40,6 +41,14 @@ import { basename, dirname, isAbsolute, join, sep } from "node:path";
 //   walk never reads a package's files — its `name@version` counts). An entry
 //   whose real directory is outside every `node_modules` (a workspace link) is
 //   refused: it would be repo code the walk does not follow.
+// - A bare specifier with no `node_modules` entry is refused — unless it is in
+//   a namespace only a page's import map answers (`@browser-host/…`,
+//   `framework/import-map-names`): no tsconfig path and no package
+//   answers it, so the runtime loads nothing for it — its `import()` rejects
+//   on the server, which never calls it (the page does). Its answer is
+//   `import-map`, an edge the walk counts by name. Checked AFTER the
+//   aliases and the `node_modules` lookup, as the runtime would: a package
+//   that ever took the name resolves as that package.
 
 /** An import the resolver cannot answer exactly as the runtime would. */
 export class UnresolvedImportError extends Error {}
@@ -53,6 +62,11 @@ export type Resolution =
       entry: string;
       /** The package's real directory. */
       dir: string;
+    }
+  | {
+      /** A specifier only a page's import map answers: nothing the runtime loads. */
+      kind: "import-map";
+      specifier: string;
     };
 
 // The runtime's order (measured, Bun 1.4.4).
@@ -306,6 +320,9 @@ export function createImportResolver(): ImportResolver {
       packageNameOf(specifier),
     );
     if (entry === null) {
+      if (isImportMapOnlySpecifier(specifier)) {
+        return { kind: "import-map", specifier };
+      }
       throw new UnresolvedImportError(
         `no node_modules entry for "${specifier}" above ${importer}`,
       );

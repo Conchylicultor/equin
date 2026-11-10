@@ -4,7 +4,7 @@ import { LEAF_FOLDERS } from "@plugins/framework/plugins/plugin-id/core";
 import {
   isBrowserHostSnapshotSpecifier,
   isBrowserHostSpecifier,
-} from "./browser-host-specifier";
+} from "@plugins/framework/plugins/import-map-names/core";
 import { COMPOSITION_SPECIFIERS } from "./composition-modules";
 import { COBUILT_FOLDERS } from "./own-roots";
 

@@ -1,5 +1,5 @@
 // A browser host is served through the import map as `@browser-host/<pluginPath>`
-// (see `internal/browser-hosts.ts`): a bare specifier external to every
+// (see web-artifacts' `core/internal/browser-hosts.ts`): a bare specifier external to every
 // artifact build and never an npm package, so neither the vendor set nor the
 // barrel closure ever reads it.
 
@@ -11,7 +11,7 @@ export function isBrowserHostSpecifier(id: string): boolean {
 
 /**
  * A browser host's worker entry, mapped by the page's import map to the entry
- * artifact inside the dist's worker tree (`internal/worker-link.ts`). `host.js`
+ * artifact inside the dist's worker tree (web-artifacts' `core/internal/worker-link.ts`). `host.js`
  * starts the worker from `import.meta.resolve` of it, so the host module's bytes
  * never name the tree, whose name changes with the worker's code.
  */
@@ -19,7 +19,7 @@ export const BROWSER_HOST_WORKER_SPECIFIER_PREFIX = "@browser-host-worker/";
 
 /**
  * A browser host's starting snapshot, as its worker imports it
- * (`@browser-host-snapshot/<pluginPath>`, `internal/host-snapshots.ts`): a
+ * (`@browser-host-snapshot/<pluginPath>`, web-artifacts' `core/internal/host-snapshots.ts`): a
  * bare specifier external to every artifact build, linked by the worker tree
  * to the snapshot the build took for that host.
  */
@@ -27,4 +27,20 @@ export const BROWSER_HOST_SNAPSHOT_SPECIFIER_PREFIX = "@browser-host-snapshot/";
 
 export function isBrowserHostSnapshotSpecifier(id: string): boolean {
   return id.startsWith(BROWSER_HOST_SNAPSHOT_SPECIFIER_PREFIX);
+}
+
+/**
+ * Whether `id` is in a namespace only a page's import map answers. Bun never
+ * resolves one (no tsconfig path, no package of that name), so code a server
+ * may hold that names one — a lazy `import("@browser-host/…")` in a `core/`
+ * module the page calls and the server never does — loads nothing on the
+ * server. A closure walk (`packages/source-digest`) counts such an edge by
+ * its name instead of refusing it as unresolved.
+ */
+export function isImportMapOnlySpecifier(id: string): boolean {
+  return (
+    id.startsWith(BROWSER_HOST_SPECIFIER_PREFIX) ||
+    id.startsWith(BROWSER_HOST_WORKER_SPECIFIER_PREFIX) ||
+    id.startsWith(BROWSER_HOST_SNAPSHOT_SPECIFIER_PREFIX)
+  );
 }

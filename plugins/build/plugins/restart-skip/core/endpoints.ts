@@ -19,11 +19,21 @@ export type AdoptRequest = z.infer<typeof AdoptRequestSchema>;
 /**
  * The backend's answer. `adopted`: a process spawned now would run exactly the
  * code this one runs, and this one now stands for the deploy — no restart.
- * `restart`: it cannot vouch for that, and `reason` says why.
+ * `restart`: something it runs (or could still load) changed, or a declared
+ * limit keeps it from vouching (another Bun, a child of unknown code) —
+ * `reason` says what.
+ * `cannot-judge`: the measurement itself broke — the closure walk refused the
+ * code on disk (an import it cannot resolve, a computed load). The deploy
+ * restarts all the same (never a guess), but this is a defect of the
+ * judgement, not a fact about the deploy: left to read as a `restart`, it
+ * turns restart-skip off silently on every deploy until someone notices
+ * (2026-11: 19 of 39 main deploys, for a lazy `import("@browser-host/…")`).
+ * The deploy files it as a `restart-skip-cannot-judge` report.
  */
 export const AdoptVerdictSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("adopted") }),
   z.object({ kind: z.literal("restart"), reason: z.string() }),
+  z.object({ kind: z.literal("cannot-judge"), reason: z.string() }),
 ]);
 export type AdoptVerdict = z.infer<typeof AdoptVerdictSchema>;
 
@@ -53,3 +63,18 @@ export const adoptCentralDeploy = defineEndpoint({
   body: AdoptRequestSchema,
   response: AdoptVerdictSchema,
 });
+
+/** The report kind a deploy files when the process it asked `cannot-judge`. */
+export const CANNOT_JUDGE_REPORT_KIND = "restart-skip-cannot-judge";
+
+/**
+ * Its payload: which process could not judge — a namespace's backend, or
+ * central (one per machine, `namespace: null`) — and the judgement's own
+ * words for why.
+ */
+export const CannotJudgePayloadSchema = z.object({
+  process: z.enum(["backend", "central"]),
+  namespace: z.string().nullable(),
+  reason: z.string(),
+});
+export type CannotJudgePayload = z.infer<typeof CannotJudgePayloadSchema>;

@@ -1705,6 +1705,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
           );
           centralAdoption = await askAdoption({
             endpoint: adoptCentralDeploy,
+            asked: { process: "central", namespace: null },
             // The gateway serves central's routes on every host name.
             origin: "http://localhost:9000",
             server: centralDir,

@@ -3,7 +3,11 @@ import type {
   CheckResult,
 } from "@plugins/framework/plugins/tooling/core";
 import { importClosures } from "@plugins/framework/plugins/tooling/plugins/import-closure/core";
-import { computedLoads } from "@plugins/packages/plugins/source-digest/server";
+import { join } from "node:path";
+import {
+  closureRefusal,
+  computedLoads,
+} from "@plugins/packages/plugins/source-digest/server";
 import { backendEntries, centralEntries } from "./backend-entries";
 
 const ID = "boot:closure-digestable";
@@ -35,7 +39,7 @@ const ID = "boot:closure-digestable";
 const check: Check = {
   id: ID,
   description:
-    "the serving backend's and central's closures (each bin plus every server/machine/central registry barrel, literal dynamic imports followed) hold no dynamic import or require with a computed path — so the code a backend or central runs is measurable (sourceDigest, restart-skip)",
+    "the serving backend's and central's closures (each bin plus every server/machine/central registry barrel, literal dynamic imports followed) hold no dynamic import or require with a computed path, and every import in them resolves as source-digest's walk answers it — so the code a backend or central runs is measurable (sourceDigest, restart-skip)",
   exemptable: {
     [ID]: "this backend entry reaches a module that loads code by a computed path, so the code a backend runs cannot be digested",
   },
@@ -64,7 +68,7 @@ const check: Check = {
         if (n > 0) computed.set(m, n);
       }),
     );
-    if (computed.size === 0) return { ok: true };
+    if (computed.size === 0) return walkRefusal(repo.root, entries);
 
     const entrySet = new Set(entries);
     const exempt = await ctx.exempt(ID);
@@ -89,6 +93,8 @@ const check: Check = {
           reached.map((m) => `${m} (${computed.get(m)})`).join("\n      "),
       );
     }
+    // Every computed load is an exempted entry's declared debt: the closure
+    // is unmeasurable by that debt (its task), so the walk would only repeat it.
     if (findings.length === 0) return { ok: true };
     return {
       ok: false,
@@ -101,5 +107,19 @@ const check: Check = {
     };
   },
 };
+
+/** The digest's own walk over the entries: whatever else it refuses. */
+async function walkRefusal(
+  root: string,
+  entries: readonly string[],
+): Promise<CheckResult> {
+  const refusal = await closureRefusal(entries.map((e) => join(root, e)));
+  if (refusal.ok) return { ok: true };
+  return {
+    ok: false,
+    message: `the backend's closure is one source-digest's walk refuses, so the code a backend or central runs cannot be digested (restart-skip cannot judge a deploy): ${refusal.reason}`,
+    hint: "Make the import resolvable the way the walk mirrors Bun (packages/source-digest/shared/resolve.ts) — a name only a page's import map answers belongs in framework/import-map-names — or keep the module out of what the server loads.",
+  };
+}
 
 export default check;
