@@ -215,12 +215,23 @@ export const Surface = {
  * `useLayoutEffect` (clearing it on cleanup so docked falls back to the host's
  * visibility gate). `setContentInsetStyle` pushes the titlebar inset; the
  * pointer-down-capture handler plumbs floating's raise-to-front.
+ *
+ * A placement hides its tab (a minimized window, an inactive group member, a
+ * window on another virtual desktop) with `setContainerHidden`, never with a
+ * pushed `display: none`: the host hides it the one way a kept-alive tab is
+ * hidden (see `TabContainer`), which keeps its computed styles so showing it
+ * again restyles nothing below it.
  */
 export interface PlacementStyleApi {
   /** Push (or clear, with `null`) the container's dynamic inline style. */
   setContainerStyle(style: CSSProperties | null): void;
   /** Push (or clear, with `null`) the content inset inside the container. */
   setContentInsetStyle(style: CSSProperties | null): void;
+  /**
+   * Hide (or show again) the tab while it stays mounted, on top of the host's
+   * own visibility gate. Cleared (`false`) on the Chrome's cleanup.
+   */
+  setContainerHidden(hidden: boolean): void;
   /** Wire (or clear, with `null`) a pointer-down-capture on the container. */
   setContainerPointerDownCapture(
     handler: ((e: PointerEvent) => void) | null,

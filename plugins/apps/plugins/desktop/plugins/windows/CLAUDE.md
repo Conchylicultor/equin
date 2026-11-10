@@ -118,12 +118,19 @@ monotonically (`d1, d2, …`); a default `d1` is guaranteed to exist after
 reactive read; `createDesktop` / `removeDesktop` / `setActiveDesktop` /
 `moveWindowToDesktop` / `topmostWindowOnDesktop` are the ops.
 
-**Off-desktop = keep-alive `display:none`.** Switching desktops re-uses the
-existing keep-alive "hidden" mechanism: a window off the active desktop stays
-mounted but `display:none` (folded into `useFloatingWindowStyle`'s `hidden` via
-the `onActiveDesktop` param), with **no** transition — it is not an animated
+**Off-desktop = keep-alive hidden.** Switching desktops re-uses the existing
+keep-alive "hidden" mechanism: a window off the active desktop stays mounted but
+hidden (folded into `useFloatingWindowStyle`'s `hidden` via the
+`onActiveDesktop` param), with **no** transition — it is not an animated
 minimize, it simply isn't on this desktop. A switch is therefore instant with
 zero remounts.
+
+A hidden window (minimized, off-desktop, an inactive group member) is never
+`display: none`: the chrome hands `hidden` to the surface host
+(`setContainerHidden`), which hides the tab the one keep-alive way
+(`content-visibility: hidden` + a clip) — keeping its computed styles, so a
+restore does not restyle the whole app from scratch. Measure with
+`e2e/fullscreen-switch-profile.ts --gesture minimize`.
 
 The window menu has a "Move to desktop ▸" submenu (current desktop checked, plus
 "New desktop"); the shelf's tray holds the pager.

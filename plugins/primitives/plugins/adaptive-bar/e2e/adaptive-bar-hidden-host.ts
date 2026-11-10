@@ -5,9 +5,9 @@
  * eviction again) on the 0px it measured while it generated no box.
  *
  * Keeping a surface mounted but not rendered is this app's general contract, and
- * every spelling of it is `display: none` — an unfocused tab
- * (`apps-core/surface`'s `surface-body.tsx`, the mechanism this script copies),
- * a minimized floating window, a collapsed miller column. So an ordinary bar in
+ * a common spelling of it is `display: none` — a keep-alive body, a collapsed
+ * miller column (an unfocused tab and a minimized window are
+ * `content-visibility: hidden` now, which keeps their box). So an ordinary bar in
  * an ordinary app gets hidden and shown many times a session, and each hide is a
  * chance to latch.
  *

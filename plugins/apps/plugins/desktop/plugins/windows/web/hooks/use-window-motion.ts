@@ -188,7 +188,7 @@ export function usePrefersReducedMotion(): boolean {
  * `minimized`) hold a static style; the three transient phases run a one-shot
  * tween then settle:
  *  - `intro`     — opening pop (scale-in + fade), settles to `normal`.
- *  - `minimizing`— exit toward the dock, settles to `minimized` (display:none).
+ *  - `minimizing`— exit toward the dock, settles to `minimized` (hidden).
  *  - `restoring` — reverse of minimizing, settles to `normal`.
  *  - `closing`   — close exit (scale-down + fade, reverse of `intro`); has no
  *                  settle phase — the host unmounts the chrome after the
@@ -200,7 +200,11 @@ type Phase =
 export interface WindowStyle {
   /** The animated container box style (pushed onto the keep-alive container). */
   containerStyle: CSSProperties;
-  /** Whether the window is fully hidden (display:none) — drives the content inset. */
+  /**
+   * Whether the window is fully hidden. Not in `containerStyle`: the chrome hands
+   * it to the host (`setContainerHidden`), which hides a kept-alive tab without
+   * discarding its styles.
+   */
   hidden: boolean;
   /** The window is playing its open pop (a fresh window: no way back to play). */
   opening: boolean;
@@ -219,7 +223,7 @@ export interface WindowStyle {
  * and the transform/opacity of the tweens, the overview and the peek on top.
  *
  * `onActiveDesktop` folds the virtual-desktop visibility in: a window on a
- * non-active desktop is `display:none` (it stays mounted = keep-alive, so a
+ * non-active desktop is hidden (it stays mounted = keep-alive, so a
  * desktop switch is instant with no remount), with NO transition — it is not an
  * animated minimize, it simply isn't on this desktop.
  *
@@ -352,8 +356,7 @@ export function useFloatingWindowStyle(
     // flag flips one commit before it enters `minimizing` / `restoring`. That
     // commit keeps the window laid out (a restore's at opacity 0, so it never
     // flashes at rest): its pushed style is what the tween's aim measures, and a
-    // `display:none` reaching the DOM there nulls the measurement and cancels a
-    // minimise's exit tween outright. Unanimated windows have no pending flip.
+    // hide reaching the DOM there would cancel a minimise's exit tween outright. Unanimated windows have no pending flip.
     const pendingFlip = isActive && !reduced && geo.minimized !== seenMinimized;
 
     // Fully hidden: off the active virtual desktop, an inactive member, a
@@ -439,7 +442,6 @@ export function useFloatingWindowStyle(
             : focused
               ? SHADOW_FOCUSED
               : SHADOW_UNFOCUSED,
-      ...(hidden ? { display: "none" } : null),
       ...(transform ? { transform, willChange: "transform, opacity" } : null),
       ...(opacity !== undefined ? { opacity } : null),
       ...(transformOrigin ? { transformOrigin } : null),

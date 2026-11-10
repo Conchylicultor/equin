@@ -84,7 +84,11 @@ export function WindowSnapshot({
       transformOrigin: "0 0",
       transition: "none",
       opacity: "1",
-      display: "block",
+      // A hidden window (minimized, on another desktop, a background group
+      // member) is hidden by the surface host's keep-alive style, which the
+      // clone copies: undo it, or the picture is an empty box.
+      contentVisibility: "visible",
+      clipPath: "none",
       pointerEvents: "none",
     });
     target.replaceChildren(clone);

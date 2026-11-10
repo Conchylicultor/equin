@@ -35,6 +35,10 @@
 //
 // With --out, writes `<out>-<direction>-<round>.cpuprofile` (open it in
 // Chrome DevTools → Performance).
+//
+// --gesture minimize: profile the window's minimize / restore round trip
+// instead (mod+M, then a click on the app's shelf entry — named by
+// --app-name, default Sonata), with the same totals per direction.
 
 import { readFileSync, writeFileSync } from "node:fs";
 import {
@@ -56,6 +60,10 @@ const init = arg("init");
 const quiet = flag("quiet");
 const invalidations = flag("invalidations");
 const settle = numArg("settle", 1500);
+const gesture = arg("gesture", "fullscreen");
+if (gesture !== "fullscreen" && gesture !== "minimize")
+  throw new Error(`--gesture must be fullscreen or minimize, got ${gesture}`);
+const appName = arg("app-name", "Sonata");
 console.log(`scheduling tier: ${readDarwinBackground().kind}`);
 
 interface ProfileNode {
@@ -144,7 +152,8 @@ await withBrowser(async (h) => {
   /**
    * Arm the probe: record when a tab container's frame flips (its `position`
    * changes from what it was when armed: into `fixed` for solo, out of it
-   * back on the desktop) — checked once a frame, after the commit (reading it
+   * back on the desktop; or whether it is shown at all: a minimize settling,
+   * a restore starting) — checked once a frame, after the commit (reading it
    * inside a mutation callback would force a style recalc mid-commit and bill
    * it to the switch); and log the <style> elements added, removed and
    * rewritten in place meanwhile.
@@ -154,7 +163,11 @@ await withBrowser(async (h) => {
       const tabs = () => [
         ...document.querySelectorAll<HTMLElement>("[data-tab-id]"),
       ];
-      const position = (el: HTMLElement) => getComputedStyle(el).position;
+      // Its frame, and whether it is shown at all (either way it is hidden).
+      const position = (el: HTMLElement) => {
+        const cs = getComputedStyle(el);
+        return `${cs.position} ${cs.display} ${cs.contentVisibility}`;
+      };
       // By tab id: the switch may remount a tab's container.
       const armed = new Map(
         tabs().map((el) => [el.dataset.tabId, position(el)]),
@@ -312,7 +325,17 @@ await withBrowser(async (h) => {
       );
   };
 
-  for (let round = 1; round <= rounds; round++) {
+  for (let round = 1; round <= rounds && gesture === "minimize"; round++) {
+    await measure("minimize", round, () =>
+      page.keyboard.press("ControlOrMeta+m"),
+    );
+    await page.waitForTimeout(1000);
+    const entry = page.locator(`button[aria-label="${appName}"]`);
+    await measure("restore", round, () => entry.click());
+    await page.mouse.move(0, 0);
+    await page.waitForTimeout(1000);
+  }
+  for (let round = 1; round <= rounds && gesture === "fullscreen"; round++) {
     await measure("enter", round, () => fullscreen.click());
     await page.waitForTimeout(1000);
     // Back to the desktop the one way there is (no shortcut: Esc belongs to

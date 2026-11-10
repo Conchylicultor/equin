@@ -97,7 +97,7 @@ export const floatingDef: PlacementDef = {
  *
  * A window can hold several member tabs (browser-style grouping); only the
  * ACTIVE member paints the visible box and renders the `WindowChrome` titlebar.
- * Inactive members push `display:none` so they stay mounted but hidden — there is
+ * Inactive members are hidden through the host so they stay mounted — there is
  * exactly one titlebar per window. Geometry, snap, pin, minimize all operate on
  * the window (shared by every member). Merge / split are pure store mutations
  * driven from the titlebar's system menu (Phase 1).
@@ -121,6 +121,7 @@ function FloatingChrome({
   const {
     setContainerStyle,
     setContentInsetStyle,
+    setContainerHidden,
     setContainerPointerDownCapture,
   } = usePlacementStyle();
 
@@ -139,7 +140,8 @@ function FloatingChrome({
   // The animated window box → the stable container. The motion layer derives the
   // box (snap / maximize / free) plus the open / minimize / restore tweens and a
   // box `transition` (suppressed mid-drag). Inactive members and minimized windows
-  // resolve to `hidden` (display:none) but stay mounted (keep-alive) — the dock
+  // resolve to `hidden` — the host hides the tab the keep-alive way, keeping its
+  // styles so a restore restyles nothing — but stay mounted — the dock
   // chip is then the only restore target. The visible member clears the titlebar
   // via the content inset.
   // This (whole-)window is closing only when this tab is exiting AND none of its
@@ -151,7 +153,7 @@ function FloatingChrome({
   const windowClosing = exiting && win.members.every((m) => !liveIds.has(m));
 
   // Virtual-desktop visibility: a window off the active desktop is hidden
-  // (display:none, kept mounted) so a desktop switch is instant with no remount.
+  // (through the host, kept mounted) so a desktop switch is instant with no remount.
   const onActiveDesktop = win.desktopId === activeDesktopId;
 
   // The window's way into and back out of full screen, both played on this
@@ -180,27 +182,36 @@ function FloatingChrome({
   // Growing to full screen, the content slides up over the titlebar (which
   // fades) in step with the box, so it is already where solo puts it; coming
   // back, it slides down under the titlebar fading in.
+  // A hidden window keeps its inset: the host skips the whole tab, and leaving
+  // the inset as it was keeps the app's layout for the restore.
   const insetStyle = useMemo(
     () =>
-      hidden
-        ? { display: "none" }
-        : fullscreen === null
-          ? { top: WINDOW_TITLEBAR_INSET }
-          : {
-              top: fullscreen === "grown" ? 0 : WINDOW_TITLEBAR_INSET,
-              transition: `top ${FULLSCREEN_MS}ms cubic-bezier(0.2, 0.8, 0.2, 1)`,
-            },
-    [hidden, fullscreen],
+      fullscreen === null
+        ? { top: WINDOW_TITLEBAR_INSET }
+        : {
+            top: fullscreen === "grown" ? 0 : WINDOW_TITLEBAR_INSET,
+            transition: `top ${FULLSCREEN_MS}ms cubic-bezier(0.2, 0.8, 0.2, 1)`,
+          },
+    [fullscreen],
   );
   useLayoutEffect(() => {
     setContainerStyle(containerStyle);
     setContentInsetStyle(insetStyle);
+    setContainerHidden(hidden);
     return () => {
       // Cleanup: clear the pushed style so docked / solo fall back to defaults.
       setContainerStyle(null);
       setContentInsetStyle(null);
+      setContainerHidden(false);
     };
-  }, [containerStyle, insetStyle, setContainerStyle, setContentInsetStyle]);
+  }, [
+    containerStyle,
+    insetStyle,
+    hidden,
+    setContainerStyle,
+    setContentInsetStyle,
+    setContainerHidden,
+  ]);
 
   // Raise this window above others on any pointer-down inside it. The host wires
   // its own focus first; we only add the z-bump.
@@ -302,7 +313,7 @@ function FloatingChrome({
   const onFullscreen = canGoSolo ? goSolo : undefined;
 
   // Inactive members render no chrome (one titlebar per window). Their container
-  // is display:none anyway, so they paint nothing.
+  // is hidden anyway, so they paint nothing.
   // Resolve the strip's member rows (title + app icon) and the merge targets
   // (every OTHER window, labelled by its active member). Done ONLY for the active
   // member, since only it renders the titlebar.

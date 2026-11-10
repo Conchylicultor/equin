@@ -44,7 +44,7 @@ export type WindowId = string;
  * floating surface — the macOS Spaces / GNOME workspaces model. There is NO
  * multi-monitor concept; a desktop is purely a window grouping. Switching
  * desktops re-uses the keep-alive "hidden" mechanism (off-desktop windows stay
- * mounted but `display:none`), so a switch is instant with zero remounts. Pills
+ * mounted but hidden), so a switch is instant with zero remounts. Pills
  * are numbered (1..N); `name` is reserved for a later rename affordance.
  */
 export interface Desktop {
@@ -68,7 +68,7 @@ export interface FloatingWindow {
   /**
    * The virtual desktop this window lives on — a window-organization property,
    * NOT part of {@link Geometry}'s box/chrome. Off-active-desktop windows stay
-   * mounted but hidden (`display:none`). New windows mint on the active desktop.
+   * mounted but hidden (keep-alive, styles kept). New windows mint on the active desktop.
    */
   desktopId: string;
   geo: Geometry;

@@ -467,6 +467,7 @@ function TabContainer({
     null,
   );
   const [insetStyle, setInsetStyle] = useState<CSSProperties | null>(null);
+  const [placementHidden, setPlacementHidden] = useState(false);
   const [pointerDownCapture, setPointerDownCapture] = useState<
     ((e: PointerEvent) => void) | null
   >(null);
@@ -477,6 +478,7 @@ function TabContainer({
     () => ({
       setContainerStyle: (s) => setOverrideStyle(s),
       setContentInsetStyle: (s) => setInsetStyle(s),
+      setContainerHidden: (h) => setPlacementHidden(h),
       setContainerPointerDownCapture: (h) => setPointerDownCapture(() => h),
     }),
     [],
@@ -520,7 +522,12 @@ function TabContainer({
   // same `fixed inset-0`) — so it is also clipped away. `clip-path`, not
   // `visibility` / `pointer-events`: those inherit, and flipping one restyles
   // every element below.
-  const visible = visibleWhenUnfocused || focused;
+  //
+  // The active placement may hide a tab the gate shows (`setContainerHidden`:
+  // a minimized window, an inactive group member, a window on another virtual
+  // desktop) — the same way, so restoring a minimized window reuses its styles
+  // too (~20k elements a Sonata window).
+  const visible = (visibleWhenUnfocused || focused) && !placementHidden;
 
   // The host ALWAYS owns focus-on-pointerdown (harmless for every mode); the
   // active mode may ADD behavior (windows' raise-to-front) via the registered
@@ -555,12 +562,12 @@ function TabContainer({
     >
       {/* Stable content inset: ALWAYS present so `TabSurface`'s parent chain is
           identical in every placement. Only its CSS changes (pushed by the active
-          Chrome — e.g. floating's titlebar inset / minimized hide). The portal
+          Chrome — e.g. floating's titlebar inset). The portal
           forward that used to sit between this box and `TabSurface` is gone from
           here: `<Theme>` above renders it, unconditionally and with the same
           per-tab scope, so the chain is one link shorter and just as stable. */}
       <div
-        // eslint-disable-next-line layout/no-adhoc-layout -- stable keep-alive content inset: always-present full-bleed layer whose CSS the active placement's Chrome pushes via insetStyle (titlebar inset / minimized hide); its parent-chain identity must not change, so no wrapping primitive
+        // eslint-disable-next-line layout/no-adhoc-layout -- stable keep-alive content inset: always-present full-bleed layer whose CSS the active placement's Chrome pushes via insetStyle (titlebar inset); its parent-chain identity must not change, so no wrapping primitive
         className={cn(
           "absolute inset-0 min-h-0 min-w-0 transform-gpu",
           // A window is a box inside the surface, not its top-right corner:
