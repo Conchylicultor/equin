@@ -19,8 +19,8 @@ const FIELD_STYLE = { paddingLeft: "calc(var(--space-sm) + var(--space-2xs))" };
 /**
  * Sidebar "Search" trigger: a filled, field-shaped button (32px, hairline
  * border, the search glyph then "Search" in muted label text) that opens the reusable
- * QuickFindDialog scoped to the "pages" source. Selecting a result opens the
- * page in the page-detail pane. It reads as a search field but is a button: the
+ * QuickFindDialog scoped to the "pages" source. A result is a link to the page
+ * in the page-detail pane (⌘/middle-click: a new browser tab). It reads as a search field but is a button: the
  * typing happens in the dialog.
  */
 export function PagesSearch() {
@@ -48,10 +48,9 @@ export function PagesSearch() {
         onOpenChange={setOpen}
         sources={["pages"]}
         placeholder="Search pages…"
-        onSelect={(r) => {
-          openPane(pageDetailPane, { pageId: r.entityId }, { mode: "push" });
-          setOpen(false);
-        }}
+        resultActivation={(r) =>
+          openPane.to(pageDetailPane, { pageId: r.entityId }, { mode: "push" })
+        }
         renderIcon={(r) => {
           // Search metadata is untyped JSON; the reindexer writes the page's
           // emoji icon under `icon`.

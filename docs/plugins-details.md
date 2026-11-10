@@ -48898,7 +48898,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `linkProps`
           - `openInBrowserTab`
       - Cross-plugin:
-        - Imported by: 76 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
+        - Imported by: 77 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
           - `conversations` ×21
           - `primitives` ×18
           - `apps` ×12
@@ -48915,6 +48915,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `integrations/google-maps/usage`
           - `plugin-meta/plugin-view`
           - `review`
+          - `search/quick-find`
           - `ui/theme-engine/quick-theme`
       - Core:
         - Exports (types):
@@ -54240,7 +54241,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/pages/content-search`
           - `search/quick-find`
-    - **`quick-find`** — Reusable quick-find search UI: the debounced useSearch hook and the <QuickFindDialog> dialog (navigation injected via onSelect).
+    - **`quick-find`** — Reusable quick-find search UI: the debounced useSearch hook and the <QuickFindDialog> dialog (each result a link, injected via resultActivation).
       - Web:
         - Uses:
           - `network/live.useLive`
@@ -54255,6 +54256,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit.ScrollArea`
           - `primitives/css/yield.yieldClass`
           - `primitives/dom/scroll-reveal.revealElement`
+          - `primitives/link-gesture.activationProps`
+          - `primitives/link-gesture.gestureOf`
           - `primitives/loading.Loading`
           - `primitives/search.SearchInput`
         - Exports (types):

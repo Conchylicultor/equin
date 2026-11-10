@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Reusable quick-find search UI: the debounced useSearch hook and the <QuickFindDialog> dialog (navigation injected via onSelect).
+- Description: Reusable quick-find search UI: the debounced useSearch hook and the <QuickFindDialog> dialog (each result a link, injected via resultActivation).
 - Web:
   - Uses:
     - `network/live.useLive`
@@ -19,6 +19,8 @@
     - `primitives/css/ui-kit.ScrollArea`
     - `primitives/css/yield.yieldClass`
     - `primitives/dom/scroll-reveal.revealElement`
+    - `primitives/link-gesture.activationProps`
+    - `primitives/link-gesture.gestureOf`
     - `primitives/loading.Loading`
     - `primitives/search.SearchInput`
   - Exports (types):

@@ -7,6 +7,6 @@ export type { UseSearchOptions } from "./internal/use-search";
 
 export default {
   description:
-    "Reusable quick-find search UI: the debounced useSearch hook and the <QuickFindDialog> dialog (navigation injected via onSelect).",
+    "Reusable quick-find search UI: the debounced useSearch hook and the <QuickFindDialog> dialog (each result a link, injected via resultActivation).",
   contributions: [],
 } satisfies PluginDefinition;

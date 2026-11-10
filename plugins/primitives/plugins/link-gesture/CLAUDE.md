@@ -135,7 +135,7 @@ resolver returning one. Fix: spread `openPane.link(…)`, or pass `openPane.to(�
     - `linkProps`
     - `openInBrowserTab`
 - Cross-plugin:
-  - Imported by: 76 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 77 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×21
     - `primitives` ×18
     - `apps` ×12
@@ -152,6 +152,7 @@ resolver returning one. Fix: spread `openPane.link(…)`, or pass `openPane.to(�
     - `integrations/google-maps/usage`
     - `plugin-meta/plugin-view`
     - `review`
+    - `search/quick-find`
     - `ui/theme-engine/quick-theme`
 - Core:
   - Exports (types):

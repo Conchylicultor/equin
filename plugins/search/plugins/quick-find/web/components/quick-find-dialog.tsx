@@ -18,6 +18,15 @@ import {
 } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { SearchResult } from "@plugins/search/plugins/engine/core";
+import {
+  afterOpen,
+  runActivation,
+  type Activation,
+} from "@plugins/primitives/plugins/link-gesture/core";
+import {
+  activationProps,
+  gestureOf,
+} from "@plugins/primitives/plugins/link-gesture/web";
 import { useSearch } from "../internal/use-search";
 import { parseHighlightedSnippet } from "../internal/parse-snippet";
 
@@ -28,8 +37,13 @@ export interface QuickFindDialogProps {
   sources?: string[];
   /** Search-input placeholder. Default "Search…". */
   placeholder?: string;
-  /** Called with the chosen result; the host owns navigation. */
-  onSelect: (result: SearchResult) => void;
+  /**
+   * What choosing a result does — usually a link to it (`openPane.to(…)`): a
+   * click or Enter opens it here and closes the dialog, ⌘/Ctrl- or
+   * middle-click opens it in a new browser tab and leaves the dialog open.
+   * Data, not an `onSelect` callback, so those gestures cannot be lost.
+   */
+  resultActivation: (result: SearchResult) => Activation;
   /** Optional per-result leading icon (e.g. a page icon from result.metadata). */
   renderIcon?: (result: SearchResult) => ReactNode;
 }
@@ -63,7 +77,7 @@ export function QuickFindDialog({
   onOpenChange,
   sources,
   placeholder = "Search…",
-  onSelect,
+  resultActivation,
   renderIcon,
 }: QuickFindDialogProps) {
   return (
@@ -76,7 +90,7 @@ export function QuickFindDialog({
           onOpenChange={onOpenChange}
           sources={sources}
           placeholder={placeholder}
-          onSelect={onSelect}
+          resultActivation={resultActivation}
           renderIcon={renderIcon}
         />
       </DialogContent>
@@ -88,7 +102,7 @@ function QuickFindDialogBody({
   onOpenChange,
   sources,
   placeholder = "Search…",
-  onSelect,
+  resultActivation,
   renderIcon,
 }: Omit<QuickFindDialogProps, "open">) {
   const [query, setQuery] = useState("");
@@ -113,12 +127,12 @@ function QuickFindDialogBody({
   const safeActiveIdx =
     list.length > 0 ? Math.min(activeIdx, list.length - 1) : 0;
 
-  const select = useCallback(
-    (result: SearchResult) => {
-      onSelect(result);
-      onOpenChange(false);
-    },
-    [onSelect, onOpenChange],
+  // A result opened HERE closes the dialog behind it; one opened elsewhere
+  // (⌘/middle-click) leaves it open for the next pick.
+  const activationOf = useCallback(
+    (result: SearchResult) =>
+      afterOpen(resultActivation(result), () => onOpenChange(false)),
+    [resultActivation, onOpenChange],
   );
 
   const handleKeyDown = useCallback(
@@ -135,10 +149,10 @@ function QuickFindDialogBody({
       } else if (e.key === "Enter") {
         e.preventDefault();
         const chosen = list[safeActiveIdx];
-        if (chosen) select(chosen);
+        if (chosen) runActivation(activationOf(chosen), gestureOf(e));
       }
     },
-    [list, safeActiveIdx, select],
+    [list, safeActiveIdx, activationOf],
   );
 
   useEffect(() => {
@@ -200,7 +214,7 @@ function QuickFindDialogBody({
                 selected={idx === safeActiveIdx}
                 icon={renderIcon?.(result)}
                 onMouseEnter={() => setActiveIdx(idx)}
-                onClick={() => select(result)}
+                {...activationProps(activationOf(result))}
               >
                 <Stack gap="2xs" align="start" className={yieldClass("x")}>
                   <Text as="span" variant="body" className="truncate">
