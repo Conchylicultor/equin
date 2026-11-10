@@ -54,6 +54,14 @@ export interface PageSource<Row, Q, P extends Record<string, string>> {
   columnsOf(query: Q): readonly unknown[] | undefined;
   /** The row field a row is identified by (each row also carries `$key`, its cut key). */
   idField: string;
+  /**
+   * A source with no change signal (a paged value declared `load:
+   * "snapshot"`): each page is read over HTTP — measured when a read first
+   * needs it, re-measured by the read's `refresh()` — never pushed, so a new
+   * page is never seeded from the rows of the ones it replaces (a seed is a
+   * socket answer from what the server holds; a snapshot page is read whole).
+   */
+  snapshot: boolean;
 }
 
 /** A collection's page source: its window's tuples. */
@@ -133,6 +141,7 @@ function valueSource<Item, Q, QIn>(
     params: (query, page) => codec.encode(query, page),
     columnsOf: () => undefined,
     idField: value.paged.id,
+    snapshot: (value as { snapshot?: true }).snapshot === true,
   };
 }
 
@@ -164,6 +173,7 @@ function collectionSource<Row, F, S extends string>(
       ),
     columnsOf: (query) => query.columns,
     idField: collection.id,
+    snapshot: false,
   };
 }
 
@@ -185,4 +195,5 @@ const DETACHED: CollectionPageSource<never, unknown, string> = {
   },
   columnsOf: () => undefined,
   idField: "",
+  snapshot: false,
 };

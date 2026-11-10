@@ -59,6 +59,7 @@ import {
   type LiveListReadOptions,
   type LivePagesOptions,
   type LivePagesResult,
+  type LiveSnapshotRefresh,
   type LiveValuePagesOptions,
   type WithAncestors,
 } from "./use-pages";
@@ -116,6 +117,13 @@ export type LiveSnapshotResult<T, C extends string = string> = ResourceResult<
 export interface RefusalsDecl<C extends string> {
   refusals?: readonly C[];
 }
+
+/**
+ * A paged read's result for its declaration's snapshot brand (`S`): a
+ * snapshot paged value's adds `refresh()` on every arm (see
+ * `LiveSnapshotRefresh`); a pushed one's is the result as is.
+ */
+type PagedSnapshotRead<S, R> = [S] extends [true] ? R & LiveSnapshotRefresh : R;
 
 /** The brand a snapshot declaration carries (see `LiveSnapshotBrand`). */
 interface SnapshotDecl {
@@ -917,13 +925,14 @@ export function useLive<
   QIn,
   C extends string = never,
   NM extends MachineFeature | undefined = undefined,
+  S extends true | undefined = undefined,
 >(
-  value: LivePagedValue<Item, Meta, Q, QIn, LiveValueOrigin, C, NM> | null,
+  value: LivePagedValue<Item, Meta, Q, QIn, LiveValueOrigin, C, NM, S> | null,
   ...args: PagedArgs<
     QIn,
     [query: NoInfer<QIn> | null, options: LivePagesOptions]
   >
-): WithMachine<NM, LivePagesResult<Item, NoInfer<C>>>;
+): WithMachine<NM, PagedSnapshotRead<S, LivePagesResult<Item, NoInfer<C>>>>;
 // The same read for a GENERIC caller (data-view's `useLivePagedValuePaging`
 // passes its own `Item`…`NM`): there `PagedArgs<QIn>` is deferred and admits
 // no arguments, so this twin routes on argument 0 itself (`V`, defaulted
@@ -937,12 +946,13 @@ export function useLive<
   QIn,
   C extends string = never,
   NM extends MachineFeature | undefined = undefined,
+  S extends true | undefined = undefined,
   V extends object = object,
 >(
   value:
-    (LivePagedValue<Item, Meta, Q, QIn, LiveValueOrigin, C, NM> & V) | null,
+    (LivePagedValue<Item, Meta, Q, QIn, LiveValueOrigin, C, NM, S> & V) | null,
   ...args: ValueArgs<V, [query: NoInfer<QIn> | null, options: LivePagesOptions]>
-): WithMachine<NM, LivePagesResult<Item, NoInfer<C>>>;
+): WithMachine<NM, PagedSnapshotRead<S, LivePagesResult<Item, NoInfer<C>>>>;
 export function useLive<
   Item,
   Meta,
@@ -950,15 +960,16 @@ export function useLive<
   QIn,
   C extends string = never,
   NM extends MachineFeature | undefined = undefined,
+  S extends true | undefined = undefined,
 >(
-  value: LivePagedValue<Item, Meta, Q, QIn, LiveValueOrigin, C, NM>,
+  value: LivePagedValue<Item, Meta, Q, QIn, LiveValueOrigin, C, NM, S>,
   ...args: PagedArgs<
     QIn,
     [query: NoInfer<QIn> | null, options?: LiveValuePagesOptions]
   >
   // `NoInfer`: `C` is the declaration's — never widened by the result's
   // annotation (`LiveListResult<Item>` would infer `string`).
-): WithMachine<NM, LiveListResult<Item, NoInfer<C>>>;
+): WithMachine<NM, PagedSnapshotRead<S, LiveListResult<Item, NoInfer<C>>>>;
 /**
  * - `useLive(queryValue, query)` — a typed-query value
  *   (`liveValue(key, { query })`): the question is the schema's INPUT, encoded

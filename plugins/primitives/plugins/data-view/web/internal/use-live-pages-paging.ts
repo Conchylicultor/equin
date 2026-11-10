@@ -3,6 +3,7 @@ import {
   useLive,
   type LivePagesQuery,
   type LivePagesResult,
+  type LiveSnapshotRefresh,
   type LiveUnavailable,
   type WithMachine,
 } from "@plugins/network/plugins/live/web";
@@ -186,17 +187,24 @@ export function useLivePagedValuePaging<
   QIn,
   C extends string = never,
   NM extends MachineFeature | undefined = undefined,
+  S extends true | undefined = undefined,
 >(
-  value: LivePagedValue<Item, Meta, Q, QIn, LiveValueOrigin, C, NM> | null,
+  value: LivePagedValue<Item, Meta, Q, QIn, LiveValueOrigin, C, NM, S> | null,
   query: NoInfer<QIn> | null,
   options?: { resetKey?: string },
 ): {
-  pages: WithMachine<NM, LivePagesResult<Item, C>>;
+  /** A snapshot value's (`load: "snapshot"`) carries `refresh()`, on every arm. */
+  pages: WithMachine<
+    NM,
+    [S] extends [true]
+      ? LivePagesResult<Item, C> & LiveSnapshotRefresh
+      : LivePagesResult<Item, C>
+  >;
   paging: LivePagesPaging | null;
 } {
   const { viewport, sink } = usePagesViewport();
   const resetKey = options?.resetKey;
-  const pages = useLive<Item, Meta, Q, QIn, C, NM>(
+  const pages = useLive<Item, Meta, Q, QIn, C, NM, S>(
     value,
     query,
     resetKey === undefined ? { viewport } : { viewport, resetKey },

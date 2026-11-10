@@ -16,8 +16,10 @@ import {
   compilePagedValue,
   compileQueryValue,
   compileValue,
+  registerPagedValue,
   registerValue,
 } from "../../core/internal/compile-value";
+import { sliceRange } from "../../core/internal/key-order";
 import { serveValue } from "./serve-value";
 
 const Count = z.object({ n: z.number() });
@@ -143,7 +145,7 @@ describe("changes — types", () => {
     expect(typeof typeOnly).toBe("function");
   });
 
-  test('snapshot pairs with load: "snapshot", takes no revalidate, and is never preloaded or paged', () => {
+  test('snapshot pairs with load: "snapshot" (paged too), takes no revalidate, and is never preloaded', () => {
     const snap = liveValue(key("snap"), { schema: Count, load: "snapshot" });
     const plain = liveValue(key("plain"), { schema: Count });
     const snapQ = liveValue(key("snap-q"), {
@@ -160,6 +162,17 @@ describe("changes — types", () => {
         limit: 10,
         maxLimit: 20,
       },
+    });
+    const pagedSnap = liveValue(key("paged-snap"), {
+      query: Query,
+      paged: {
+        item: Item,
+        id: "id",
+        key: { of: (i) => [i.id], order: ["asc"] },
+        limit: 10,
+        maxLimit: 20,
+      },
+      load: "snapshot",
     });
     expect(snap).toMatchObject({ load: "on-demand", snapshot: true });
     const typeOnly = () => {
@@ -196,11 +209,28 @@ describe("changes — types", () => {
         changes: SNAPSHOT,
         loader: () => ({ n: 1 }),
       });
-      compilePagedValue(paged, {
+      // A paged snapshot: `{ snapshot }` exactly with `load: "snapshot"`.
+      compilePagedValue(pagedSnap, {
         source: "external",
-        // @ts-expect-error — a paged value is never a snapshot
         changes: SNAPSHOT,
         loader: () => [],
+      });
+      compilePagedValue(
+        // @ts-expect-error — a pushed paged value is never served as a snapshot
+        paged,
+        { source: "external", changes: SNAPSHOT, loader: () => [] },
+      );
+      compilePagedValue(
+        // @ts-expect-error — and a snapshot one is never "notified"
+        pagedSnap,
+        { source: "external", changes: "notified", loader: () => [] },
+      );
+      compilePagedValue(pagedSnap, {
+        source: "external",
+        changes: SNAPSHOT,
+        loader: () => [],
+        // @ts-expect-error — a snapshot has no change signal to watch
+        whileSubscribed: () => () => {},
       });
       // @ts-expect-error — a snapshot is never preloaded
       liveValue(key("x"), { schema: Count, load: "snapshot", preload: "boot" });
@@ -350,5 +380,119 @@ describe("snapshot — every HTTP read runs the loader", () => {
       kind: "snapshot",
       reason: "measured on demand",
     });
+  });
+});
+
+describe("paged snapshot — each page an HTTP read that runs the loader", () => {
+  test("pages are invalidate-mode (no window, no notify), checked against their range and minted their keys; the meta is a snapshot too", async () => {
+    const runtime = createResourceRuntime();
+    const v = liveValue(key("paged-http"), {
+      query: Query,
+      paged: {
+        item: Item,
+        id: "id",
+        key: { of: (i) => [i.id], order: ["asc"] },
+        limit: 2,
+        maxLimit: 4,
+        meta: Count,
+      },
+      load: "snapshot",
+    });
+    const items = ["a", "b", "c", "d", "e"].map((id) => ({ id }));
+    let runs = 0;
+    let metaRuns = 0;
+    const { resource, compiled, meta } = registerPagedValue(runtime, v, {
+      source: "external",
+      changes: SNAPSHOT,
+      loader: (_q, range) => {
+        runs++;
+        return sliceRange(v, items, range);
+      },
+      meta: () => ({ n: ++metaRuns }),
+    });
+    expect(resource.mode).toBe("invalidate");
+    expect(compiled.snapshot).toBe(true);
+    // No change signal: nothing to notify (the silent arm).
+    expect(compiled.changes).toEqual(SNAPSHOT);
+    expect(meta!.resource.mode).toBe("invalidate");
+    const read = async (params: Record<string, string>) => {
+      const res = await runtime.handleResourceHttp(
+        new Request(
+          `http://x/api/resources/${v.key}?${new URLSearchParams(params)}`,
+        ),
+        { key: v.key },
+      );
+      expect(res.status).toBe(200);
+      return (
+        (await res.json()) as { value: { id: string; $key: string | null }[] }
+      ).value;
+    };
+    const q = v.query.encodeQuery({ metric: "m" });
+    const head = await read({ q, limit: "2" });
+    expect(head.map((r) => r.id)).toEqual(["a", "b"]);
+    // The next key range, cut at the server-minted key.
+    const next = await read({ q, limit: "2", after: head[1]!.$key! });
+    expect(next.map((r) => r.id)).toEqual(["c", "d"]);
+    // Every read measures: the same page asked again runs the loader again.
+    await read({ q, limit: "2" });
+    expect(runs).toBe(3);
+
+    const metaRead = async () => {
+      const res = await runtime.handleResourceHttp(
+        new Request(
+          `http://x/api/resources/${v.meta.key}?${new URLSearchParams({ q })}`,
+        ),
+        { key: v.meta.key },
+      );
+      return ((await res.json()) as { value: { n: number } }).value.n;
+    };
+    expect(await metaRead()).toBe(1);
+    expect(await metaRead()).toBe(2);
+  });
+
+  test("an untyped caller: a pushed paged value served as a snapshot, or a snapshot one notified, is refused", () => {
+    const pushed = liveValue(key("rt-paged-pushed"), {
+      query: Query,
+      paged: {
+        item: Item,
+        id: "id",
+        key: { of: (i) => [i.id], order: ["asc"] },
+        limit: 2,
+        maxLimit: 4,
+      },
+    });
+    const snap = liveValue(key("rt-paged-snap"), {
+      query: Query,
+      paged: {
+        item: Item,
+        id: "id",
+        key: { of: (i) => [i.id], order: ["asc"] },
+        limit: 2,
+        maxLimit: 4,
+      },
+      load: "snapshot",
+    });
+    expect(() =>
+      untyped(pushed, {
+        source: "external",
+        changes: SNAPSHOT,
+        loader: () => [],
+      }),
+    ).toThrow(/needs the value declared `load: "snapshot"`/);
+    expect(() =>
+      untyped(snap, {
+        source: "external",
+        changes: "notified",
+        loader: () => [],
+      }),
+    ).toThrow(/declares `changes: \{ snapshot: \{ reason \} \}`/);
+    expect(() =>
+      untyped(snap, {
+        source: "external",
+        changes: SNAPSHOT,
+        loader: () => [],
+        whileSubscribed: () => () => {},
+      }),
+    ).toThrow(/reacts to a change signal/);
   });
 });

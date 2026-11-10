@@ -56,6 +56,9 @@ export type {
   LivePageError,
   LivePagePlaceholder,
   LivePagesResult,
+  LiveSnapshotListResult,
+  LiveSnapshotPagesResult,
+  LiveSnapshotRefresh,
   LiveValuePagesOptions,
 } from "./internal/use-pages";
 export type { LivePagesQuery } from "./internal/page-source";

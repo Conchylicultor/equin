@@ -82,8 +82,10 @@ the complement (minted only when the spec does NOT set it), and a dotted field
 (`paged.meta`) is read inside the spec's inline object of that name: a
 `liveValue` mints a plain `k` unless it is declared `paged`, when `k` is its
 pages — a keyed window (D3 of
-`research/2026-10-11-global-live-paging-unification.md`), never preloaded —
-plus `k:meta` when `paged` sets `meta`.
+`research/2026-10-11-global-live-paging-unification.md`), never preloaded,
+unless the spec also sets `load` (beside `paged` only ever `"snapshot"`: a
+plain on-demand read per page — `requires: ["paged", "load"]`, a list being
+every one of its fields) — plus `k:meta` when `paged` sets `meta`.
 
 **`mintsOf(entry, argsText, where)` is the one reading of `requires`** (A28 of
 `research/2026-10-01-global-scoped-change-routing-p5-p8-v2.md`), used by both

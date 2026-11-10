@@ -169,8 +169,9 @@ export function serveValueOn<T, P extends Record<string, string>>(
       `serveValue("${value.key}"): this host has no change feed — a follow is reached through the followed collection's routes, which only a host with one compiles.`,
     );
   }
-  // A paged value's pages are the one keyed value (a keyed window each).
-  if (value.keyed !== undefined) {
+  // A paged value: its pages (a keyed window each, or — a snapshot — one
+  // HTTP read each) and its meta.
+  if ((value as { paged?: unknown }).paged !== undefined) {
     return servePagedOn(
       rt,
       value as unknown as LivePagedValue<

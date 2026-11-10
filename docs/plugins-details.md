@@ -37171,6 +37171,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LivePagesResult`
           - `LiveReader`
           - `LiveRowResult`
+          - `LiveSnapshotListResult`
+          - `LiveSnapshotPagesResult`
+          - `LiveSnapshotRefresh`
           - `LiveSnapshotResult`
           - `LiveUnavailable`
           - `LiveValueListOptions`
@@ -37387,8 +37390,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LivePageBounds`
           - `LivePagedCodec`
           - `LivePagedKey`
+          - `LivePagedLoad`
           - `LivePagedPages`
           - `LivePagedParams`
+          - `LivePagedSnapshot`
+          - `LivePagedSnapshotBrand`
           - `LivePagedSpec`
           - `LivePagedValue`
           - `LivePagedValueSpec`
@@ -37444,7 +37450,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `NoFollows`
           - `NotCollectionRow`
           - `NotifyValue`
-          - `PagedChanges`
+          - `PagedSnapshotOf`
           - `RequireLabel`
           - `RowFieldState`
           - `RowKind`
@@ -46337,8 +46343,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ×4
           - `DataViewSlots.Setting` ×4
           - `IdKinds.Kind` ×2
-        - Uses: 141 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `network/live` ×23
+        - Uses: 142 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `network/live` ×24
           - `primitives/css/ui-kit` ×17
           - `primitives/data-view/view-core` ×11
           - `network/live/live-state` ×7

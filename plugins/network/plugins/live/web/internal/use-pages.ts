@@ -169,6 +169,29 @@ export type LivePagesResult<Row, C extends string = string> =
       };
     };
 
+/**
+ * What a read of a SNAPSHOT paged value (`load: "snapshot"`) adds to its
+ * result, on every arm: `refresh()` — re-measure every page the read holds
+ * live now (each an HTTP read that runs the loader); a page released off
+ * screen is measured again when it comes back. A snapshot is never told of a
+ * change, so this is the only way its pages move (the Refresh button).
+ */
+export interface LiveSnapshotRefresh {
+  refresh: () => Promise<void>;
+}
+
+/** {@link LivePagesResult} of a snapshot paged value: plus `refresh()`. */
+export type LiveSnapshotPagesResult<
+  Row,
+  C extends string = string,
+> = LivePagesResult<Row, C> & LiveSnapshotRefresh;
+
+/** The plain list result of a snapshot paged value read with no viewport: plus `refresh()`. */
+export type LiveSnapshotListResult<
+  Row,
+  C extends string = string,
+> = PagedResourceResult<Row, C> & LiveSnapshotRefresh;
+
 /** One row as the plan holds it: its id, its cut key and the wire row itself. */
 interface RowEntry extends PageEntry {
   row: unknown;
@@ -236,17 +259,21 @@ export function useViewportPages<Row, F, S extends string, Meta, Q, QIn>(
       "useLive(null, query, { viewport }): a query with no source — pass null for both to read nothing.",
     );
   }
-  return usePages(
-    // Either kind: `pageSourceOf` dispatches on the declaration itself, and
-    // the overloads have already paired each with its own query type.
-    pageSourceOf(source as LiveCollection<Row, F, S> | null),
-    query,
-    {
-      viewport: options.viewport,
-      resetKey: options.resetKey,
-      step: undefined,
-    },
-  ).pages;
+  // Either kind: `pageSourceOf` dispatches on the declaration itself, and
+  // the overloads have already paired each with its own query type.
+  const pageSource = pageSourceOf(source as LiveCollection<Row, F, S> | null);
+  const read = usePages(pageSource, query, {
+    viewport: options.viewport,
+    resetKey: options.resetKey,
+    step: undefined,
+  });
+  return useMemo(
+    () =>
+      pageSource.snapshot
+        ? { ...read.pages, refresh: read.refetch }
+        : read.pages,
+    [pageSource, read],
+  );
 }
 
 /**
@@ -415,12 +442,16 @@ export function useValuePages<Item, Meta, Q, QIn>(
       `useLive("${value.key}", query, { limit: ${limit} }): the limit is not an integer in 1..${maxLimit}`,
     );
   }
-  const read = usePages(pageSourceOf(value), query, {
+  const pageSource = pageSourceOf(value);
+  const read = usePages(pageSource, query, {
     viewport: null,
     resetKey: undefined,
     step: limit,
   });
-  return useMemo(() => listResultOf(read), [read]);
+  return useMemo(() => {
+    const list = listResultOf(read);
+    return pageSource.snapshot ? { ...list, refresh: read.refetch } : list;
+  }, [pageSource, read]);
 }
 
 /** A paged read with no viewport, as the plain list result. */
@@ -588,8 +619,10 @@ function usePages<Row, Q, P extends Record<string, string>>(
         tupleKeyOf.set(pk, tk);
         tuples.set(tk, {
           params,
+          // A snapshot page is read whole over HTTP: no seed (see
+          // `PageSource.snapshot`).
           derive:
-            seed === null
+            seed === null || source.snapshot
               ? null
               : {
                   from: seed.from.map((s) => ({
@@ -922,6 +955,19 @@ function usePages<Row, Q, P extends Record<string, string>>(
   const refetch = useCallback(async () => {
     await Promise.all(results.map((r) => r.refetch()));
   }, [results]);
+
+  // A snapshot is measured when its reader mounts. A first mount reads each
+  // page as it is first needed (an HTTP read on mount), but a remount over
+  // pages still cached would show the old measure as `ready` without asking —
+  // so a mount that finds the read already ready re-measures it once,
+  // keeping the cached rows on screen meanwhile (as a plain snapshot read's
+  // `useSnapshotRead`).
+  const [remeasure] = useState(() =>
+    source.snapshot && result.status === "ready" ? refetch : null,
+  );
+  useEffect(() => {
+    if (remeasure !== null) void remeasure();
+  }, [remeasure]);
   return useMemo(
     () => ({ pages: result, refetch, segments }),
     [result, refetch, segments],

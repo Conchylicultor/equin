@@ -530,7 +530,9 @@ collection's window, and a value declared `paged`. Design:
 - **D3 — one runtime path.** Every page is a keyed window membership entry;
   the source decides only how a change arrives (routed change for Postgres,
   `notify(q)` for an external value). Seeded split/merge and keyed deltas are
-  shared.
+  shared. The one exception is a paged value declared `load: "snapshot"`
+  (*Snapshot pages*): no change arrives, so each page is a plain HTTP read,
+  never seeded.
 
 ### Collections — every window
 
@@ -567,7 +569,7 @@ export const metricDetails = liveValue("metrics.details", {
 // server/ — external only; hooks take the DECODED question
 serveValue(metricDetails, {
   source: "external",
-  changes: "notified", // or { immutable | fixed }, never snapshot
+  changes: "notified", // or { immutable | fixed } (or { snapshot }, below)
   loader: (q, range) => readItems(q, range), // LiveKeyRange → readonly Item[]
   meta: (q) => ({ total: count(q) }), // exactly with `paged.meta`
   whileSubscribed: (q, notify) => watch(q, notify), // once per QUESTION
@@ -590,13 +592,65 @@ useLive(metricDetails.meta, selector); // ResourceResult<Meta>
   answer is checked (`pageRowsOf`). In-memory sources: `sliceRange(value,
   items, range)` (`server`); verify a source with `checkPagedSource`
   (`server/testing`).
-- No `schema`, `params`, `preload` or `load` (tsc + throw); pages are pushed
-  keyed windows. Meta is a per-QUESTION sibling (`<key>:meta`, tuple `{ q }`),
-  pending until known, never a page's.
+- No `schema`, `params` or `preload` (tsc + throw); pages are pushed keyed
+  windows — unless declared `load: "snapshot"` (below). Meta is a
+  per-QUESTION sibling (`<key>:meta`, tuple `{ q }`), pending until known,
+  never a page's.
 - `notify(q)` re-reads every subscribed page of `q` and its meta;
   `whileSubscribed` is refcounted per question across pages + meta.
 - Read options: no viewport → `limit` (`1..maxLimit`) is page 0's limit and
   the step; `limit` beside a viewport is a tsc error. No `{ first }`, no cursor.
+
+#### Snapshot pages — `load: "snapshot"` (a source with no change signal)
+
+For a source nothing can watch (a deployed box read over SSH): key-range
+pages are still well defined — a cut is a position, so a page measured once
+stays a page of the order, whatever is measured later.
+
+```ts
+// core/
+export const sessions = liveValue("deploy-analytics.sessions", {
+  query: SessionsQuestion,
+  paged: { item: Visit, id: "id", key: { of: (v) => [v.startedAt], order: ["desc"] }, limit: 50, maxLimit: 100, meta: Counts },
+  load: "snapshot", // LivePagedLoad — absent = pushed (never spelled "push")
+});
+// server/
+serveValue(sessions, {
+  source: "external",
+  changes: { snapshot: { reason: "the box has no change signal" } }, // ⇔ load: "snapshot" (tsc)
+  loader: (q, range) => sessionsOverSsh(q, range),
+  meta: (q) => countsOverSsh(q),
+});
+// web/ — unchanged reads; the result adds refresh() on every arm
+const { pages, paging } = useLivePagedValuePaging(sessions, question); // DataView auto-pages
+pages.refresh(); // re-measure
+```
+
+- **Pages are HTTP reads, not windows.** The page descriptor carries no
+  `keyed` and is `load: "on-demand"` (`snapshot: true`); the server registers
+  each page `invalidate`-mode with no membership and no lifecycle, and every
+  HTTP read runs the loader (the plain snapshot rule). The answer is still
+  checked against its range and minted its `$key`s (`pageRowsOf`), so the
+  client cuts at server keys exactly as for a pushed value.
+- **Each page measured when first needed**: page 0 on mount, a split's pages
+  when `loadMore` mints them, a released page when it comes back on screen
+  (released pages drop their cache, `release: "now"`). No seeds: a split or
+  merge never `derive`s (`PageSource.snapshot` — a seed is a socket answer
+  from server-held rows; a snapshot page is read whole), so a split re-reads
+  its known half too.
+- **`refresh()`** (`LiveSnapshotRefresh`, on every arm of `LiveSnapshotPagesResult`
+  / `LiveSnapshotListResult`) re-measures every page the read holds live now;
+  a remount over cached pages re-measures once (as `useSnapshotRead`). The meta
+  sibling is a snapshot value too (its own `refresh()`).
+- **Typed by the brand**: `LivePagedValue`'s `S` (`snapshot: true | undefined`,
+  a plain field so serve and read sites infer it); `serveValue` takes
+  `LivePagedValue<…, PagedSnapshotOf<C>>`, so `{ snapshot }` pairs with `load:
+  "snapshot"` both ways, and `NoChangeHooks` refuses `notify` /
+  `whileSubscribed` / `recomputeOn` / `follows` / `reads`. A paged value is
+  never plain `load: "on-demand"` (a page told of changes is pushed).
+- Tests: `web/__tests__/use-live-paged-snapshot.test.tsx` (the real compiled
+  page loader behind the HTTP read), `server/internal/serve-value-changes.test.ts`
+  (*paged snapshot*), `core/internal/query-value.test.ts`.
 
 ### The read — `useLive(source, query, { viewport? })`
 
@@ -624,6 +678,7 @@ useLive(metricDetails.meta, selector); // ResourceResult<Meta>
   - **Seeded pages.** The known part of a split and a merge carry a `seed`
     (`derive`): the server answers from the snapshots it holds (same
     `familyOf`, quiescent) with no load; the unknown part is always read.
+    Never for a snapshot source (`PageSource.snapshot`): every new page is read.
   - **Liveness.** Within one page of the screen: live; ≥3 away: released (rows
     kept stale, cache dropped via `release: "now"`); 2 away: unchanged. Live
     cost ≤ visible pages + 4.
@@ -1055,7 +1110,8 @@ useLive(folderListing, expanded.map((dir) => ({ dir })));
   `"push"` (default); `"on-demand"` — never shipped over the socket, tabs read
   over HTTP after each invalidate; `"snapshot"` — on-demand and never told of a
   change: re-measured on mount and by the read's `refresh()`; its serve must
-  declare `changes: { snapshot }`. Snapshot never with `preload` / `paged`.
+  declare `changes: { snapshot }`. Snapshot never with `preload`; with
+  `paged`, every page is such a read (*Snapshot pages*).
 - **`patches: true`** — a growing pushed value (a message being written):
   after the first frame each change ships as a `patch`
   (`packages/value-patch`); readers unchanged. Push only — not with
@@ -1455,6 +1511,9 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `LivePagesResult`
     - `LiveReader`
     - `LiveRowResult`
+    - `LiveSnapshotListResult`
+    - `LiveSnapshotPagesResult`
+    - `LiveSnapshotRefresh`
     - `LiveSnapshotResult`
     - `LiveUnavailable`
     - `LiveValueListOptions`
@@ -1671,8 +1730,11 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `LivePageBounds`
     - `LivePagedCodec`
     - `LivePagedKey`
+    - `LivePagedLoad`
     - `LivePagedPages`
     - `LivePagedParams`
+    - `LivePagedSnapshot`
+    - `LivePagedSnapshotBrand`
     - `LivePagedSpec`
     - `LivePagedValue`
     - `LivePagedValueSpec`
@@ -1728,7 +1790,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `NoFollows`
     - `NotCollectionRow`
     - `NotifyValue`
-    - `PagedChanges`
+    - `PagedSnapshotOf`
     - `RequireLabel`
     - `RowFieldState`
     - `RowKind`

@@ -48,9 +48,10 @@ export function mintsOf(
   where: { file: string; line: number },
 ): readonly MintedResource[] {
   const conditions = new Set(
-    entry.mints.flatMap((m) =>
-      [m.requires, m.unless].filter((f): f is string => f !== undefined),
-    ),
+    entry.mints.flatMap((m) => [
+      ...requiredOf(m),
+      ...(m.unless === undefined ? [] : [m.unless]),
+    ]),
   );
   const spec = conditions.size > 0 ? specBody(argsText, where) : null;
   if (spec !== null) {
@@ -63,8 +64,7 @@ export function mintsOf(
   const sets = (field: string): boolean => fieldSet(spec!, field, where);
   const kept = entry.mints.filter(
     (m) =>
-      (m.requires === undefined || sets(m.requires)) &&
-      (m.unless === undefined || !sets(m.unless)),
+      requiredOf(m).every(sets) && (m.unless === undefined || !sets(m.unless)),
   );
   const bySuffix = new Map<string, MintedResource>();
   for (const m of kept) {
@@ -73,13 +73,25 @@ export function mintsOf(
       throw new Error(
         `${where.file}:${where.line}: one declaration mints the key suffix ` +
           `${JSON.stringify(m.suffix)} twice — its spec sets both ` +
-          `\`${other.requires ?? "(always)"}\` and \`${m.requires ?? "(always)"}\`, ` +
+          `\`${conditionLabel(other)}\` and \`${conditionLabel(m)}\`, ` +
           "which mint the same resource and exclude each other. Keep one.",
       );
     }
     bySuffix.set(m.suffix, m);
   }
   return kept;
+}
+
+/** The fields a mint requires its spec to set, as a list (none: always). */
+function requiredOf(m: MintedResource): readonly string[] {
+  if (m.requires === undefined) return [];
+  return typeof m.requires === "string" ? [m.requires] : m.requires;
+}
+
+/** A mint's `requires` as an error message names it. */
+function conditionLabel(m: MintedResource): string {
+  const required = requiredOf(m);
+  return required.length === 0 ? "(always)" : required.join("` + `");
 }
 
 /**

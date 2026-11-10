@@ -456,7 +456,7 @@ export type ServePagedValueOptions<
   Meta,
   Q,
   R extends readonly ExternalServed[] = [],
-  C extends PagedChanges = "notified",
+  C extends LiveValueChanges = "notified",
   F extends FollowMap = NoFollows,
   W = unknown,
 > = ServeOptionsBase<
@@ -481,8 +481,16 @@ type MetaOption<Meta, Q, F> = [Meta] extends [undefined]
       meta: (query: Q, ...ctx: FollowArgs<F>) => Promise<Meta> | Meta;
     };
 
-/** A paged value's `changes`: never a snapshot (a paged value is never `load: "snapshot"`). */
-export type PagedChanges = Exclude<LiveValueChanges, { snapshot: unknown }>;
+/**
+ * The snapshot brand (`LivePagedValue`'s `S`) of the paged declaration a
+ * `changes` takes: `true` for `{ snapshot }` — a value declared `load:
+ * "snapshot"` — and `undefined` for every other arm (a pushed one). A paged
+ * serve's declaration is `LivePagedValue<…, PagedSnapshotOf<C>>`, so tsc
+ * pairs the two as `SnapshotPairing` does a plain value's — without an
+ * intersection, which would cost the paged overloads their inference of
+ * `Item` / `Meta`.
+ */
+export type PagedSnapshotOf<C> = IsSnapshot<C> extends true ? true : undefined;
 
 /**
  * A value's two-arg runtime options. This compilation never sets `reach`: a
@@ -526,6 +534,17 @@ export type PagedPageOptions<Item> = KeyedServerResourceOptions<
   LivePagedParams
 > &
   ExternalWindowPolicy<LivePagedParams>;
+
+/**
+ * A SNAPSHOT paged value's pages' runtime options: no window and no change
+ * signal — each page an `invalidate`-mode tuple the tab reads over HTTP,
+ * whose every read runs the loader (as a plain snapshot value's), so a page
+ * is measured when a read first needs it and re-measured by `refresh()`.
+ */
+export type SnapshotPageOptions<Item> = ServerResourceOptions<
+  Item[],
+  LivePagedParams
+> & { mode: "invalidate"; reach?: never };
 
 /**
  * The host-facing subset of a `ResourceRuntime` the live API registers on —
@@ -1132,13 +1151,28 @@ export function compileQueryValue<
  * page tuple, `tuplesOf(q)` the pages of `q` subscribed now) and — declared
  * `paged.meta` — its meta sibling's.
  */
-export type CompiledPagedValue<Item, Meta, Q> = Omit<
-  CompiledValue<Item[], LivePagedParams, Q>,
-  "options"
-> & {
-  options: PagedPageOptions<Item>;
+export type CompiledPagedValue<
+  Item,
+  Meta,
+  Q,
+  Snapshot extends boolean = false,
+> = Omit<CompiledValue<Item[], LivePagedParams, Q>, "options"> & {
+  /** Declared `load: "snapshot"` (served `changes: { snapshot }`). */
+  snapshot: Snapshot;
+  /** A pushed value's pages are keyed windows; a snapshot's, HTTP reads. */
+  options: Snapshot extends true
+    ? SnapshotPageOptions<Item>
+    : PagedPageOptions<Item>;
   meta: CompiledValue<Meta, LiveQueryParams, Q> | null;
 };
+
+/** A compiled paged value without its meta, per kind (a distributive `Omit`). */
+type PagesOnly<T> = T extends unknown ? Omit<T, "meta"> : never;
+
+/** {@link CompiledPagedValue} of either kind, erased — what the compilation builds. */
+type AnyCompiledPagedValue =
+  | CompiledPagedValue<unknown, unknown, unknown, true>
+  | CompiledPagedValue<unknown, unknown, unknown, false>;
 
 /** {@link compileValue} for a paged value: external only, its loader asked one key range. */
 export function compilePagedValue<
@@ -1148,12 +1182,21 @@ export function compilePagedValue<
   QIn,
   O extends LiveValueOrigin,
   const R extends readonly ExternalServed[] = [],
-  C extends PagedChanges = "notified",
+  C extends LiveValueChanges = "notified",
   K extends string = never,
   F extends FollowMap = NoFollows,
   W = unknown,
 >(
-  value: LivePagedValue<Item, Meta, Q, QIn, O, K>,
+  value: LivePagedValue<
+    Item,
+    Meta,
+    Q,
+    QIn,
+    O,
+    K,
+    undefined,
+    PagedSnapshotOf<C>
+  >,
   opts: ServePagedValueOptions<
     NoInfer<Item>,
     NoInfer<Meta>,
@@ -1163,7 +1206,7 @@ export function compilePagedValue<
     F,
     W
   >,
-): CompiledPagedValue<Item, Meta, Q> {
+): CompiledPagedValue<Item, Meta, Q, IsSnapshot<C>> {
   return compilePagedOf(
     value as unknown as LivePagedValue<
       unknown,
@@ -1173,7 +1216,7 @@ export function compilePagedValue<
       LiveValueOrigin
     >,
     opts as AnyServeOptions,
-  ) as unknown as CompiledPagedValue<Item, Meta, Q>;
+  ) as unknown as CompiledPagedValue<Item, Meta, Q, IsSnapshot<C>>;
 }
 
 /**
@@ -1183,7 +1226,7 @@ export function compilePagedValue<
 function compilePagedOf(
   value: LivePagedValue<unknown, unknown, unknown, unknown, LiveValueOrigin>,
   opts: AnyServeOptions,
-): CompiledPagedValue<unknown, unknown, unknown> {
+): AnyCompiledPagedValue {
   if (opts.source !== "external") {
     // Unreachable from typed code (a paged value's options are external only).
     throw new Error(
@@ -1218,6 +1261,9 @@ function compilePagedOf(
   }
   const codec = value.query;
   const metaKey = (q: string): LiveQueryParams => ({ q });
+  // A snapshot's pages have no window and no change signal (`checkChanges`
+  // refused every hook beside it): each page is read whole, over HTTP.
+  const snapshot = value.snapshot === true;
 
   // What each question holds subscribed now: its page tuples, and whether
   // its meta tuple is. A question is held while either is non-empty.
@@ -1350,47 +1396,60 @@ function compilePagedOf(
     ...ctx: unknown[]
   ) => Promise<readonly unknown[]> | readonly unknown[];
   const pagesDependsOn = compileRecomputeOn(value, recomputeOn, pageSubjects);
-  const compiledPages: Omit<
-    CompiledPagedValue<unknown, unknown, unknown>,
-    "meta"
-  > = {
-    options: {
-      // No mode: a page is keyed (the declaration's `keyed`), a window of
-      // the page codec's size whose family is its question — every page of
-      // one `q` cuts one order, whatever its range and limit, so one page
-      // may be seeded from another's items.
-      membership: {
-        kind: "window",
-        limitOf: (params) => codec.decode(params).range.limit,
-        familyOf: (params) => params.q,
-      },
-      loader: async (
-        params: LivePagedParams,
-        _ctx?: unknown,
-        run?: LoadRun,
-      ) => {
-        const { query, range } = codec.decode(params);
-        const items =
-          follows === null
-            ? await loader(query, range)
-            : await loader(query, range, {
-                followed: await follows.read(query, undefined, run?.follows),
-              });
-        return pageRowsOf(value, range, items);
-      },
-      ...(opts.throttleMs !== undefined ? { debounceMs: opts.throttleMs } : {}),
-      ...(pagesDependsOn.length > 0 ? { dependsOn: pagesDependsOn } : {}),
-      ...pageLifecycle,
-      ...followReached,
-      ...freshness,
-    },
-    external: true,
+  /** One page's answer: its range read, checked against it and minted its `$key`s. */
+  const loadPage = async (
+    params: LivePagedParams,
+    _ctx?: unknown,
+    run?: LoadRun,
+  ) => {
+    const { query, range } = codec.decode(params);
+    const items =
+      follows === null
+        ? await loader(query, range)
+        : await loader(query, range, {
+            followed: await follows.read(query, undefined, run?.follows),
+          });
+    return pageRowsOf(value, range, items);
+  };
+  const pagesCommon = {
+    external: true as const,
     ...(changes !== undefined ? { changes } : {}),
-    tuplesOf: (subject) => pageSubjects.tuplesOf(subject),
-    bindNotify(fn) {
+    tuplesOf: (subject: unknown) => pageSubjects.tuplesOf(subject),
+    bindNotify(
+      fn: (params: LivePagedParams, change?: ValueChange) => void,
+    ): void {
       notifyPage = fn;
     },
   };
+  const compiledPages: PagesOnly<AnyCompiledPagedValue> = snapshot
+    ? {
+        snapshot: true,
+        options: { mode: "invalidate", loader: loadPage, ...freshness },
+        ...pagesCommon,
+      }
+    : {
+        snapshot: false,
+        options: {
+          // No mode: a page is keyed (the declaration's `keyed`), a window
+          // of the page codec's size whose family is its question — every
+          // page of one `q` cuts one order, whatever its range and limit,
+          // so one page may be seeded from another's items.
+          membership: {
+            kind: "window",
+            limitOf: (params) => codec.decode(params).range.limit,
+            familyOf: (params) => params.q,
+          },
+          loader: loadPage,
+          ...(opts.throttleMs !== undefined
+            ? { debounceMs: opts.throttleMs }
+            : {}),
+          ...(pagesDependsOn.length > 0 ? { dependsOn: pagesDependsOn } : {}),
+          ...pageLifecycle,
+          ...followReached,
+          ...freshness,
+        },
+        ...pagesCommon,
+      };
 
   let compiledMeta: CompiledValue<unknown, LiveQueryParams, unknown> | null =
     null;
@@ -1442,7 +1501,10 @@ function compilePagedOf(
       },
     };
   }
-  return { ...compiledPages, meta: compiledMeta };
+  // Narrowed per kind, so each arm keeps its own options type.
+  return compiledPages.snapshot
+    ? { ...compiledPages, meta: compiledMeta }
+    : { ...compiledPages, meta: compiledMeta };
 }
 
 /**
@@ -1806,13 +1868,22 @@ export function registerPagedValue<
   QIn,
   O extends LiveValueOrigin,
   const R extends readonly ExternalServed[] = [],
-  C extends PagedChanges = "notified",
+  C extends LiveValueChanges = "notified",
   K extends string = never,
   F extends FollowMap = NoFollows,
   W = unknown,
 >(
   runtime: LiveRuntime,
-  value: LivePagedValue<Item, Meta, Q, QIn, O, K>,
+  value: LivePagedValue<
+    Item,
+    Meta,
+    Q,
+    QIn,
+    O,
+    K,
+    undefined,
+    PagedSnapshotOf<C>
+  >,
   opts: ServePagedValueOptions<
     NoInfer<Item>,
     NoInfer<Meta>,
@@ -1843,11 +1914,19 @@ export function registerPagedOf(
   opts: AnyServeOptions,
 ): RegisteredPaged<unknown, unknown, unknown> {
   const compiled = compilePagedOf(value, opts);
-  // A paged value's descriptor is a keyed contract (`keyed.keyOf`, its id).
-  const pages = runtime.defineExternalResource(
-    value as unknown as KeyedResourceContract<unknown[], LivePagedParams>,
-    compiled.options,
-  );
+  // A pushed paged value's descriptor is a keyed contract (`keyed.keyOf`,
+  // its id); a snapshot's is a plain one (no `keyed`: each page read whole).
+  const pages = compiled.snapshot
+    ? runtime.defineExternalResource(
+        value as unknown as ResourceContract<unknown[], LivePagedParams> & {
+          keyed?: never;
+        },
+        compiled.options,
+      )
+    : runtime.defineExternalResource(
+        value as unknown as KeyedResourceContract<unknown[], LivePagedParams>,
+        compiled.options,
+      );
   compiled.bindNotify((params, change) => pages.notify(params, change));
   const metaValue = value.meta as
     LiveQueryValue<unknown, unknown, unknown, LiveValueOrigin> | undefined;
@@ -1870,7 +1949,9 @@ export function registerPagedOf(
 /** What `registerPagedValue` returns: the pages' resource, the meta's, and their compiled options. */
 export interface RegisteredPaged<Item, Meta, Q> {
   resource: ExternalResource<Item[], LivePagedParams>;
-  compiled: CompiledPagedValue<Item, Meta, Q>;
+  compiled:
+    | CompiledPagedValue<Item, Meta, Q, false>
+    | CompiledPagedValue<Item, Meta, Q, true>;
   meta: {
     resource: ExternalResource<Meta, LiveQueryParams>;
     compiled: CompiledValue<Meta, LiveQueryParams, Q>;

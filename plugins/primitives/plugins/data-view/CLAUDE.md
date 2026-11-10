@@ -2208,8 +2208,8 @@ list, table and `primitives/tree` share it.
     - `DataViewSlots.Control` ×4
     - `DataViewSlots.Setting` ×4
     - `IdKinds.Kind` ×2
-  - Uses: 141 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `network/live` ×23
+  - Uses: 142 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `network/live` ×24
     - `primitives/css/ui-kit` ×17
     - `primitives/data-view/view-core` ×11
     - `network/live/live-state` ×7

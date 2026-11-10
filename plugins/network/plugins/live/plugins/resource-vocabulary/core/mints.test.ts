@@ -289,6 +289,32 @@ describe("mintsOf ≡ liveValue's runtime mints", () => {
     ).toEqual(runtimeValueMints(v));
   });
 
+  test("a snapshot paged value: its pages plain on-demand reads (no window), and its :meta sibling", () => {
+    const v = liveValue("test.mints.paged-snapshot", {
+      query: Question,
+      paged: {
+        item: Item,
+        id: "id",
+        key: { of: (i) => [i.at], order: ["desc"] },
+        limit: 2,
+        maxLimit: 4,
+        meta: z.object({ total: z.number() }),
+      },
+      load: "snapshot",
+    });
+    const scanned = scannedValueMints(
+      "test.mints.paged-snapshot",
+      `{ query: Question, paged: { item: Item, id: "id", key: { of: (i) => [i.at], order: ["desc"] }, limit: 2, maxLimit: 4, meta: z.object({ total: z.number() }) }, load: "snapshot" }`,
+    );
+    expect(scanned.map(({ key, keyed }) => ({ key, keyed }))).toEqual(
+      runtimeValueMints(v),
+    );
+    expect(scanned).toEqual([
+      { key: "test.mints.paged-snapshot", keyed: false, membership: null },
+      { key: "test.mints.paged-snapshot:meta", keyed: false, membership: null },
+    ]);
+  });
+
   test("a `meta` outside `paged` is not the sibling's", () => {
     expect(
       scannedValueMints(

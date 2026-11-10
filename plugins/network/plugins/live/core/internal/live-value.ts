@@ -237,8 +237,31 @@ export type LiveValue<
  */
 export type LiveValueLoad = "push" | "on-demand" | "snapshot";
 
-/** The loads a form that cannot be a snapshot takes (a preloaded or paged value). */
+/** The loads a form that cannot be a snapshot takes (a preloaded value). */
 type LiveStreamLoad = Exclude<LiveValueLoad, "snapshot">;
+
+/**
+ * The one `load` a paged value may declare: `"snapshot"`, for a source with
+ * no change signal (a remote box read over SSH) — each page measured over
+ * HTTP when a read first needs it, re-measured by the read's `refresh()`,
+ * never told of a change. Absent (never spelled `"push"`, so a scanner reads
+ * a paged value's kind off the field's presence — resource-vocabulary's
+ * `liveValue` mints): each page a keyed window pushed as deltas. Never
+ * `"on-demand"`: a page that is told of changes is pushed.
+ */
+export type LivePagedLoad = "snapshot";
+
+/**
+ * A paged value's snapshot brand, as a plain field: `true` for one declared
+ * `load: "snapshot"`, `undefined` for a pushed one — a type argument a serve
+ * or read site infers directly (a conditional brand would not be inferred,
+ * and would cost the paged overloads their inference of `Item` / `Meta`).
+ */
+export type LivePagedSnapshot<L extends LivePagedLoad | undefined> = [
+  L,
+] extends ["snapshot"]
+  ? true
+  : undefined;
 
 /**
  * The brand a value declared `load: "snapshot"` carries — a real field on the
@@ -566,6 +589,7 @@ export interface LivePagedValueSpec<
   Q,
   QIn,
   O extends LiveValueOrigin,
+  L extends LivePagedLoad | undefined = LivePagedLoad | undefined,
 > {
   schema?: never;
   query: LiveQuerySchema<Q, QIn>;
@@ -575,11 +599,13 @@ export interface LivePagedValueSpec<
   params?: never;
   preload?: never;
   /**
-   * None: a page is a keyed window, whose changes ship as keyed deltas (D3)
-   * — there is no `invalidate` of one for a tab to refetch over HTTP. The
-   * meta sibling is pushed like the pages.
+   * Absent: a page is a keyed window, whose changes ship as keyed deltas
+   * (D3); the meta sibling is pushed like the pages. `"snapshot"`: a source
+   * with no change signal — every page (and the meta) is read over HTTP when
+   * a read first needs it and re-measured by the read's `refresh()`; its
+   * serve declares `changes: { snapshot }` (tsc). See {@link LivePagedLoad}.
    */
-  load?: never;
+  load?: L;
   /** `"central"`: served by the central runtime (see {@link LiveValueOrigin}). */
   origin?: O;
 }
@@ -699,11 +725,22 @@ export type LivePagedValue<
   O extends LiveValueOrigin = "worktree",
   C extends string = never,
   NM extends MachineFeature | undefined = undefined,
+  S extends true | undefined = undefined,
 > = LivePagedPages<Item, Q, QIn, O> &
-  LivePagedMeta<Meta, Q, QIn, O, C> &
-  LiveSnapshotBrand<"push"> &
+  LivePagedMeta<Meta, Q, QIn, O, C, S> &
+  LivePagedSnapshotBrand<S> &
   LiveRefusalsBrand<C> &
   LivePagedMachineBrand<NM, Meta>;
+
+/**
+ * A paged value's snapshot brand (`S`, see {@link LivePagedSnapshot}): a
+ * plain field, so a serve or read site infers it — `{ snapshot: true }` is
+ * {@link LiveSnapshotBrand}`<"snapshot">`, and `{ snapshot: undefined }` is
+ * assignable wherever a non-snapshot declaration is asked.
+ */
+export interface LivePagedSnapshotBrand<S extends true | undefined> {
+  snapshot: S;
+}
 
 /**
  * A paged value without its meta sibling — what a read of its pages needs,
@@ -716,14 +753,18 @@ export type LivePagedPages<
   O extends LiveValueOrigin = "worktree",
 > = LiveValueBase<Item[], LivePagedParams, O> & {
   /**
-   * A page is a KEYED window (D3): each item identified by its `paged.id`,
-   * so a change reaches the page as a keyed delta and a page can be seeded
-   * from the items other pages of its question hold — exactly a
-   * collection's window.
+   * A pushed page is a KEYED window (D3): each item identified by its
+   * `paged.id`, so a change reaches the page as a keyed delta and a page can
+   * be seeded from the items other pages of its question hold — exactly a
+   * collection's window. Absent on a snapshot value's pages: each is read
+   * whole over HTTP, never a delta.
    */
-  keyed: { keyOf: (row: unknown) => string };
-  /** Always pushed: a keyed page ships deltas, never an `invalidate`. */
-  load?: never;
+  keyed?: { keyOf: (row: unknown) => string };
+  /**
+   * Absent on a pushed page (it ships deltas, never an `invalidate`);
+   * `"on-demand"` on a snapshot value's (read over HTTP).
+   */
+  load?: "on-demand";
   query: LivePagedCodec<Q, QIn>;
   paged: {
     /** The item field a page's items are identified by. */
@@ -752,10 +793,14 @@ type LivePagedMeta<
   QIn,
   O extends LiveValueOrigin,
   C extends string,
+  S extends true | undefined,
 > = [Meta] extends [undefined]
   ? { meta?: undefined }
   : {
-      meta: LiveQueryValue<Meta, Q, QIn, O> & {
+      // A snapshot value's meta is a snapshot too: measured with the pages,
+      // re-measured by its own read's `refresh()`.
+      meta: LiveQueryValue<Meta, Q, QIn, O> &
+        LivePagedSnapshotBrand<S> & {
         // `NoInfer`: a read of the PAGES infers `C` from the value's own
         // brand, never from here (a second candidate widens it to `string`);
         // erased once `C` is concrete, so a read of the meta infers it.
@@ -905,13 +950,14 @@ export function liveValue<
   O extends LiveValueOrigin = "worktree",
   C extends string = never,
   NM extends MachineFeature | undefined = undefined,
+  const L extends LivePagedLoad | undefined = undefined,
 >(
   key: string,
-  spec: LivePagedValueSpec<Item, Meta, Q, QIn, O> & {
+  spec: LivePagedValueSpec<Item, Meta, Q, QIn, O, L> & {
     paged: { meta: z.ZodType<Meta> };
   } & LiveRefusalsSpec<C> &
     LiveMachineSpec<NM>,
-): LivePagedValue<Item, Meta, Q, QIn, O, C, NM>;
+): LivePagedValue<Item, Meta, Q, QIn, O, C, NM, LivePagedSnapshot<L>>;
 export function liveValue<
   Item,
   Q,
@@ -919,13 +965,14 @@ export function liveValue<
   O extends LiveValueOrigin = "worktree",
   C extends string = never,
   NM extends MachineFeature | undefined = undefined,
+  const L extends LivePagedLoad | undefined = undefined,
 >(
   key: string,
-  spec: LivePagedValueSpec<Item, undefined, Q, QIn, O> & {
+  spec: LivePagedValueSpec<Item, undefined, Q, QIn, O, L> & {
     paged: { meta?: undefined };
   } & LiveRefusalsSpec<C> &
     LiveMachineSpec<NM>,
-): LivePagedValue<Item, undefined, Q, QIn, O, C, NM>;
+): LivePagedValue<Item, undefined, Q, QIn, O, C, NM, LivePagedSnapshot<L>>;
 export function liveValue<
   T,
   Q,
@@ -1325,25 +1372,20 @@ function loadFields(load: LiveValueLoad | undefined): {
 }
 
 /**
- * The snapshot combinations tsc refuses, for an untyped caller: a snapshot is
- * measured when a reader asks, so it is never preloaded (boot asks nothing)
- * and never paged (a page is a keyed window, pushed as deltas — it has no
- * HTTP refetch to re-measure).
+ * The snapshot combination tsc refuses, for an untyped caller: a snapshot is
+ * measured when a reader asks, so it is never preloaded (boot asks nothing).
+ * (A paged snapshot is fine: its pages are read over HTTP, each measured when
+ * a read first needs it — see {@link LivePagedLoad}.)
  */
 function checkSnapshotSpec(
   key: string,
-  spec: { load?: LiveValueLoad; preload?: unknown; paged?: unknown },
+  spec: { load?: LiveValueLoad; preload?: unknown },
 ): void {
   if (spec.load !== "snapshot") return;
   if (spec.preload !== undefined && spec.preload !== "none") {
     throw new Error(
       `liveValue("${key}"): a \`load: "snapshot"\` value cannot be preloaded — ` +
         `a snapshot is measured when a reader asks.`,
-    );
-  }
-  if (spec.paged !== undefined) {
-    throw new Error(
-      `liveValue("${key}"): a paged value cannot be \`load: "snapshot"\`.`,
     );
   }
 }
@@ -1426,6 +1468,7 @@ function pagedValue(
     live: "value";
     origin?: "central";
     load?: "on-demand";
+    snapshot?: true;
     refusals?: readonly string[];
     refuse?: (code: string, message: string) => ResourceRefusal;
     needsMachine?: MachineFeature;
@@ -1437,13 +1480,19 @@ function pagedValue(
         `declare \`paged.item\` (and \`paged.meta\`), not \`schema\`.`,
     );
   }
-  if (common.load !== undefined) {
-    // Unreachable from typed code (`load` is `never` beside `paged`).
+  // A pushed paged value's pages are keyed windows (deltas); a snapshot's
+  // are read whole over HTTP. Never plain on-demand (a page told of changes
+  // is pushed), and never a spelled-out "push" (absent is pushed — the one
+  // spelling a source scanner reads, see `LivePagedLoad`).
+  const declared = (s as { load?: unknown }).load;
+  if (declared !== undefined && declared !== "snapshot") {
+    // Unreachable from typed code (`load` is `LivePagedLoad` beside `paged`).
     throw new Error(
-      `liveValue("${key}"): a paged value takes no \`load\` — its pages are ` +
-        `keyed windows, pushed as deltas.`,
+      `liveValue("${key}"): a paged value's \`load\` is "snapshot" or absent ` +
+        `(pushed) — a page that is told of changes is pushed as deltas.`,
     );
   }
+  const snapshot = common.snapshot === true;
   const { item, id, key: order, meta, limit, maxLimit } = s.paged;
   if (!Number.isInteger(limit) || limit < 1) {
     throw new Error(
@@ -1489,9 +1538,13 @@ function pagedValue(
     schema: z.array(row),
     // The pages are the list's bound; the item's own lists are walked under `[]`.
     shape: valueShape(key, item, true),
-    keyed: {
-      keyOf: (r: unknown) => (r as Record<string, unknown>)[id] as string,
-    },
+    ...(snapshot
+      ? {}
+      : {
+          keyed: {
+            keyOf: (r: unknown) => (r as Record<string, unknown>)[id] as string,
+          },
+        }),
     params: ["q", "limit", "after", "until"],
     optionalParams: ["after", "until"],
     validateParams: (params: Record<string, string>) =>
@@ -1507,6 +1560,9 @@ function pagedValue(
               schema: meta,
               query: s.query,
               ...(common.origin !== undefined ? { origin: common.origin } : {}),
+              // …and is measured as the pages are: a snapshot's meta is a
+              // snapshot (re-measured by its own read's `refresh()`).
+              ...(snapshot ? { load: "snapshot" as const } : {}),
               // The meta loader answers the same question, so it refuses it
               // with the same codes as the pages.
               ...(s.refusals !== undefined ? { refusals: s.refusals } : {}),

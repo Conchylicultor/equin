@@ -89,12 +89,13 @@ export interface MintedResource {
    * A `liveCollection` declared without `default` is lookup-only: it mints
    * `k:rows` alone, so its window and groups carry `requires: "default"`; one
    * declared `all` mints `k` as the whole ordered set (`requires: "all"`) and
-   * `k:rows`. A scanner reads the field's PRESENCE from source text at the
+   * `k:rows`. A list is every one of them (a paged value's snapshot pages:
+   * `paged` and `load`). A scanner reads each field's PRESENCE from source text at the
    * spec's own depth, through {@link mintsOf} — never by hand — which also
    * refuses two kept mints of one key (a spec setting both `default` and
    * `all`).
    */
-  requires?: string;
+  requires?: string | readonly string[];
   /**
    * Minted only when the call's spec does NOT set this field — the
    * complement of `requires`, read the same way. A `liveValue` mints its key
@@ -290,6 +291,17 @@ export const resourceDescriptorFactories = {
         membership: "window",
         preloadable: false,
         requires: "paged",
+        unless: "load",
+      },
+      // …unless it declares `load` — beside `paged`, only ever `"snapshot"`
+      // (`LivePagedLoad`): its pages are then plain on-demand reads, one HTTP
+      // read each, with no window. Never preloaded.
+      {
+        suffix: "",
+        keyed: false,
+        membership: null,
+        preloadable: false,
+        requires: ["paged", "load"],
       },
       // Its per-question sibling (`paged.meta`): a plain typed-query value.
       {

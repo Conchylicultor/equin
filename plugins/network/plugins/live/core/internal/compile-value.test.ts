@@ -683,7 +683,7 @@ describe("paged values", () => {
     // One family per question, whatever the range and limit.
     expect(membership.familyOf!(head)).toBe(membership.familyOf!(tail));
     expect(membership.familyOf!(head)).not.toBe(membership.familyOf!(other));
-    expect(v.keyed.keyOf({ id: "a", at: "1", $key: null })).toBe("a");
+    expect(v.keyed!.keyOf({ id: "a", at: "1", $key: null })).toBe("a");
   });
 
   test("notify(q) reaches every subscribed page of that question and its meta, and none of another", async () => {

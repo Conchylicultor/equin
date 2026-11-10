@@ -39,7 +39,7 @@ import type {
   ExternalServed,
   LiveRuntime,
   LiveValueChanges,
-  PagedChanges,
+  PagedSnapshotOf,
   ServedFor,
   ServedValueBase,
   ServePagedValueOptions,
@@ -290,12 +290,21 @@ export interface ServeValueOverloads<H> {
     Q,
     QIn,
     const R extends readonly ExternalServed[] = [],
-    C extends PagedChanges = "notified",
+    C extends LiveValueChanges = "notified",
     K extends string = never,
     F extends FollowMap = NoFollows,
     W = unknown,
   >(
-    value: LivePagedValue<Item, Meta, Q, QIn, "worktree", K, PagedMachine<H>>,
+    value: LivePagedValue<
+      Item,
+      Meta,
+      Q,
+      QIn,
+      "worktree",
+      K,
+      PagedMachine<H>,
+      PagedSnapshotOf<C>
+    >,
     opts: ServePagedValueOptions<
       NoInfer<Item>,
       NoInfer<Meta>,
@@ -512,6 +521,14 @@ export interface ServeValueOverloads<H> {
 export const serveValue: ServeValueOverloads<LivePortableDecl> =
   serveAnyValue as ServeValueOverloads<LivePortableDecl>;
 
+/** A paged declaration (it carries `paged`) — pushed or snapshot alike. */
+function isPagedDecl(value: {
+  paged?: unknown;
+  // biome-ignore lint/suspicious/noExplicitAny: as in `serveAnyValue`'s union.
+}): value is LivePagedPages<any, any, any> {
+  return value.paged !== undefined;
+}
+
 /**
  * `serveValue`'s body, for a declaration of either kind — the one serving code
  * path `live/server` and `live/machine` both expose (typed by
@@ -536,8 +553,9 @@ export function serveAnyValue<T, P extends Record<string, string>>(
   | ServedExternalValue<T, P>
   | ServedPagedValue<unknown, unknown>
   | ServedSilentPagedValue<unknown> {
-  // A paged value's pages are the one keyed value (a keyed window each).
-  if (value.keyed !== undefined) {
+  // A paged value: its pages (a keyed window each, or — a snapshot — one
+  // HTTP read each) and its meta.
+  if (isPagedDecl(value)) {
     return servePaged(
       value as unknown as LivePagedValue<unknown, unknown, unknown, unknown>,
       opts,

@@ -221,25 +221,48 @@ describe("liveValue — paged", () => {
     expect(resourceDescriptorByKey(v.meta.key)).toBe(v.meta);
   });
 
-  test("a page is a keyed window: its descriptor is keyed by the item's id, and no `load` is declared beside `paged`", () => {
+  test("a page is a keyed window: its descriptor is keyed by the item's id, and a paged value is never plain on-demand", () => {
     const v = liveValue(key("paged-keyed"), {
       query: Selector,
       paged: paged(),
     });
     expect(v.load).toBeUndefined();
-    expect(v.keyed.keyOf({ id: "a", title: "A", at: "t1", $key: null })).toBe(
+    expect(v.snapshot).toBeUndefined();
+    expect(v.keyed!.keyOf({ id: "a", title: "A", at: "t1", $key: null })).toBe(
       "a",
     );
-    // A keyed page is always pushed (deltas): `load` is `never` beside `paged`.
+    // A page told of changes is pushed (deltas): never `load: "on-demand"`.
     const onDemand = {
       query: Selector,
       paged: paged(),
       load: "on-demand" as const,
     };
     expect(() =>
-      // @ts-expect-error — no overload takes `load` beside `paged`
+      // @ts-expect-error — a paged value's `load` is "snapshot" or absent
       liveValue(key("paged-on-demand"), onDemand),
-    ).toThrow(/a paged value takes no `load`/);
+    ).toThrow(/a paged value's `load` is "snapshot" or absent/);
+  });
+
+  test("a snapshot paged value's pages are read over HTTP: not keyed, on-demand, branded — and its meta is a snapshot too", () => {
+    const v = liveValue(key("paged-snapshot"), {
+      query: Selector,
+      paged: { ...paged(), meta: z.object({ total: z.number() }) },
+      load: "snapshot",
+    });
+    expect(v.keyed).toBeUndefined();
+    expect(v).toMatchObject({ load: "on-demand", snapshot: true });
+    expect(v.meta).toMatchObject({ load: "on-demand", snapshot: true });
+    // The brand is a type argument: a snapshot is `{ snapshot: true }`.
+    const brand: true = v.snapshot;
+    expect(brand).toBe(true);
+    // Never preloaded, as every snapshot (tsc: `preload` is `never` beside
+    // `paged`; an untyped caller is refused).
+    expect(() =>
+      (liveValue as (k: string, s: unknown) => unknown)(
+        key("paged-snapshot-preload"),
+        { query: Selector, paged: paged(), load: "snapshot", preload: "boot" },
+      ),
+    ).toThrow(/cannot be preloaded/);
   });
 
   test("page 0 is { q, limit }; a page tuple round-trips to its key range", () => {

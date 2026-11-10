@@ -21,7 +21,7 @@ import type {
   AnyServeOptions,
   ExternalServed,
   LiveValueChanges,
-  PagedChanges,
+  PagedSnapshotOf,
   ServedFor,
   ServePagedValueOptions,
   ServeValueOptions,
@@ -103,10 +103,19 @@ export function serveValue<
   Q,
   QIn,
   const R extends readonly ExternalServed[] = [],
-  C extends PagedChanges = "notified",
+  C extends LiveValueChanges = "notified",
   K extends string = never,
 >(
-  value: LivePagedValue<Item, Meta, Q, QIn, "central", K>,
+  value: LivePagedValue<
+    Item,
+    Meta,
+    Q,
+    QIn,
+    "central",
+    K,
+    undefined,
+    PagedSnapshotOf<C>
+  >,
   opts: ServePagedValueOptions<NoInfer<Item>, NoInfer<Meta>, NoInfer<Q>, R, C> &
     NoFollowsOnCentral,
 ): ServedFor<
