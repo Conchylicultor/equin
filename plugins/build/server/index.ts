@@ -4,7 +4,7 @@ import { TaskCategory } from "@plugins/tasks/plugins/task-category/server";
 import { IdKinds } from "@plugins/ids/server";
 import { buildRunIdKind } from "@plugins/build/plugins/run-ledger/core";
 import { buildHistoryServed } from "./internal/build-history-resource";
-import { buildConfig } from "../shared";
+import { buildConfig } from "../core";
 import { BUILD_CATEGORY_ID } from "../core";
 
 export default {

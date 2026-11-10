@@ -3,7 +3,7 @@ import { ActionBar } from "@plugins/shell/plugins/action-bar/web";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
 import { ConfigV2 } from "@plugins/config_v2/web";
-import { buildConfig } from "../shared/config";
+import { buildConfig } from "../core";
 import { BuildButton } from "./components/build-button";
 import { ReloadGlance } from "./components/reload-button";
 import { useBuildActivity } from "./hooks/use-build-activity";

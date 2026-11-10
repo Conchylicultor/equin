@@ -3,7 +3,11 @@ import { join } from "node:path";
 import type { Check } from "@plugins/framework/plugins/tooling/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 // Own plugin, so relative.
-import { GATEWAY_LOG_BOUND, SERVICE_LOGS_SUBDIR } from "../data-dirs";
+import {
+  DEPLOY_LOGS_SUBDIR,
+  GATEWAY_LOG_BOUND,
+  SERVICE_LOGS_SUBDIR,
+} from "../data-dirs";
 import { SERVICE_LOG_FD_FLAG } from "../core";
 
 /**
@@ -29,6 +33,14 @@ const PINS: ReadonlyArray<{
     read: (m) => m[1]!,
     ts: SERVICE_LOGS_SUBDIR,
     tsName: "SERVICE_LOGS_SUBDIR (launcher/gateway-logs data-dirs)",
+  },
+  {
+    file: "gateway/main_deploy.go",
+    goName: "deployLogsSubdir",
+    re: /\bdeployLogsSubdir\s*=\s*"([^"]+)"/,
+    read: (m) => m[1]!,
+    ts: DEPLOY_LOGS_SUBDIR,
+    tsName: "DEPLOY_LOGS_SUBDIR (launcher/gateway-logs data-dirs)",
   },
   {
     file: "gateway/logrelay.go",
@@ -65,7 +77,7 @@ const PINS: ReadonlyArray<{
 const serviceLogsInSyncCheck: Check = {
   id: "gateway-logs:in-sync",
   description:
-    "The gateway's service-log constants (serviceLogsSubdir, serviceLogFdFlag in gateway/logrelay.go; maxLogBytes, maxLogBackups in gateway/logwriter.go) equal their TypeScript twins (SERVICE_LOGS_SUBDIR, SERVICE_LOG_FD_FLAG, GATEWAY_LOG_BOUND)",
+    "The gateway's service-log constants (serviceLogsSubdir, serviceLogFdFlag in gateway/logrelay.go; deployLogsSubdir in gateway/main_deploy.go; maxLogBytes, maxLogBackups in gateway/logwriter.go) equal their TypeScript twins (SERVICE_LOGS_SUBDIR, SERVICE_LOG_FD_FLAG, DEPLOY_LOGS_SUBDIR, GATEWAY_LOG_BOUND)",
   async run() {
     const root = await getWorktreeRoot();
     const problems: string[] = [];

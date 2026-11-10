@@ -1,38 +1,58 @@
 # build
 
 Auto-build is a **convergence loop on "this checkout's HEAD is what is
-deployed"**, not a queue of push events: a request that arrives while a build is
-in flight is DROPPED — its claiming INSERT loses the in-flight index — so the
-request is re-derived rather than remembered. `reconcileDeployment` (`machine/internal/reconcile.ts`) is that
-re-derivation, and it **takes no argument** — there is no baseline to carry, so
-nothing is lost when a build kills the process that would have carried one.
+deployed"**, not a queue of push events, and **main's runs outside main's
+backend**. The gateway — the one process up whenever anything is — watches
+`refs/heads/main` and, on every advance (debounced), on its own boot, when its
+previous run exits with an edge pending, and when a backend asks, starts ONE
+`./equin build --allow-main --converge` in main's checkout
+(`gateway/main_deploy.go`). That run decides from durable state — git, the
+served dist, the `build_runs` ledger, config on disk — and builds what is
+wanted, looping until nothing is (`plugins/converge`, the loop in
+`framework/cli/build`'s `cli/internal/converge.ts`). The gateway holds no
+policy: the commit being deployed decides with its own code.
 
-It runs at five edges: the target moving (`buildRunJob`, on the durable
-`refAdvanced` trigger), a build reaching terminal (the build job's `onEnded`,
-`machine/internal/run-state.ts`), this backend starting (`onReady`), the
-`compositions` config changing (`watchConfig`), and the `build.composition-tick`
-cron. The decision is stateless and idempotent,
-so an extra edge is free and a missed edge degrades to "converges at the next
-edge". `buildRunDebouncedJob` re-derives it again before spawning, which makes
-the debounce a coalescing optimisation rather than a correctness mechanism.
+**Why it moved (2026-11-08).** Every edge of the old loop — the durable
+`refAdvanced` trigger, `build.run.debounced`, the boot / terminal / config
+reconciles — and its runner lived in main's backend, so "main can serve" was a
+precondition of "main gets redeployed": the fix 2baf0e2a3b sat on main for
+eleven minutes while main had no backend, until a person reloaded the gateway.
+Those jobs and `reconcileDeployment` are deleted, not kept as a second runner.
 
-The decision itself is NOT here — it is the pure `wantsBuild` in
-`plugins/deployment/core`, over the pins that plugin owns, plus the pure
-`compositionWantsRebuild` in `machine/internal/composition-trigger.ts` for the served
-compositions. `machine/internal/wants-build.ts` only binds them to db/config and to the
-main-only scope, in ONE `decideBuilds(now)` so every edge re-derives both halves
-from one read. Read `plugins/deployment/CLAUDE.md` before touching any of it.
+**No retry per commit.** A HEAD whose automatic build failed is decided, not
+re-run (`wantsBuild`'s termination); the next push is the next attempt. So
+while successive commits each fail to boot, main stays down until the first one
+that boots — healed by a push, never by a person. A convergence run that itself
+fails (cannot decide, cannot start) is a `main-deploy-failed` report the
+gateway files; nothing retries it before the next edge.
+
+**What the backend still does for the loop** (`machine/`) is optional and only
+what a backend alone sees: the `compositions` config changing, the
+`build.composition-tick` cadence, and a button build ending each `POST /gateway/deploy/converge`
+(`requestConvergence`, main only). An extra edge is free — the run re-derives the
+whole decision and the gateway runs one at a time — and none is needed for
+main's own recovery. And the bell: the convergence run's builds have no workflow
+in any backend, so `onAutoBuildTerminal` rings for an `auto` row when its exit
+marker lands (`onRunTerminal`) and, at boot, for each one that ended in the last
+day — a build that ended while main had no backend is told once main is back,
+at most once per run.
+
+The decision is NOT here — it is the pure `wantsBuild` in
+`plugins/deployment/core` and the pure `compositionWantsRebuild` in
+`plugins/converge`, bound to durable state by `decideConvergence`. Read
+`plugins/deployment/CLAUDE.md` and `plugins/converge/CLAUDE.md` before
+touching any of it.
 
 ## Two halves: what every host serves, and what runs builds
 
 `server/` is **portable**: the build-run id kind, the build
 config (`ConfigV2.Register`), the Build task category and the `build.history`
 collection — reads a host without the computer (the in-browser demo) serves on
-its own database. Everything that RUNS a build is `machine/`: the Build and
+its own database. Everything that RUNS a build from a backend is `machine/`: the Build and
 Serve routes (both endpoints declared `needsMachine`, so a host without the
 computer answers them "not available" and the Build button renders disabled),
-the jobs, the `refs/heads/main` trigger, the boot and config-watch reconcile
-(`onReady`), and the run-terminal watcher (`onRunTerminal`, the machine
+the supervised build job, the composition tick and config-watch edges, the bell
+for auto builds, and the run-terminal watcher (`onRunTerminal`, the machine
 barrel's one export). The claim-time settle of a dead in-flight holder is
 `run-ledger/machine`'s, for the same reason: it reads the disk.
 
@@ -55,15 +75,15 @@ Two things that look like omissions and are not:
   not MINT a namespace — claiming one provisions a gateway registry dir, a
   database and a spec dir, and pressing **Serve** is the only thing allowed to do
   that.
-- **Main only**, both halves. `refs/heads/main` is tracked by every backend on
-  the host, so a per-worktree scope would have every live agent worktree
-  rebuilding the same compositions off one push — the fan-out
-  `events.refresh-tick` refuses for its own cadence. The explicit Serve /
-  Rebuild buttons still work everywhere.
+- **Main only.** `refs/heads/main` moves under every checkout on the host, so a
+  per-checkout scope would have every live agent worktree rebuilding the same
+  compositions off one push — the fan-out `events.refresh-tick` refuses for
+  its own cadence. The gateway runs convergence for main alone, and
+  `decideConvergence` reads the compositions only on main's checkout. The
+  explicit Serve / Rebuild buttons still work everywhere.
 
-Main's own build wins when both want one: a build claims a single durable
-in-flight slot and the claim is target-blind, and the main build's terminal edge
-reconciles again, so the composition build follows rather than being lost.
+Main's own build wins when both want one: one build per pass, main first, and
+the convergence run loops — the composition build is the next pass, not lost.
 
 The commit gate answers "has the tree moved", so editing a composition's own
 manifest row (contributors, entry points, `extends`) is deliberately NOT an
@@ -84,7 +104,7 @@ names its own columns instead of going through drizzle's `.values()` (which name
 EVERY column in the table def), so a column added by this same build no longer
 breaks the CLI's write — see `run-ledger/CLAUDE.md`.
 
-`buildJob.enqueue({ trigger, compositions })` is what the Serve button reaches:
+`buildJob.enqueue({ trigger, compositions })` is what the Build and Serve buttons reach:
 it claims the same single in-flight slot and spawns `build --composition a b c`,
 which publishes each `<id>.<checkout>.localhost:9000` from THIS checkout. The
 field is a SET so N drifted compositions are one shared invocation, not N runs
@@ -102,9 +122,10 @@ moved. Do not "fix" it by scoping the index per target.
 `./equin build` is a **supervised job**
 (`@plugins/infra/plugins/jobs/plugins/supervised-job`) named
 `build.run.supervised`, declared once in `machine/internal/run-build.ts`. There is no
-`triggerBuild` any more and nothing calls a spawner directly: every request —
-the Build button, the Serve button, the auto-build debounce — is
-`buildJob.enqueue({ trigger, compositions? })`.
+`triggerBuild` any more and nothing calls a spawner directly: every backend request —
+the Build button, the Serve button — is
+`buildJob.enqueue({ trigger, compositions? })`. Main's auto-build is not one:
+the convergence run claims its row and runs its build itself (above).
 
 The wrapper composes `defineJob` + a `supervised-run` kind + `ctx.waitFor`, and
 the handler is short at both ends and empty in the middle: claim the row, spawn
@@ -118,8 +139,7 @@ What each arm of `machine/internal/run-build.ts` owns, and why the split is wher
 - **`claim`** — `claimBuildRun`, and the claiming INSERT against
   `build_runs_inflight_uniq` IS the lock. A request that loses returns `null`,
   the handler stops, and nothing is queued: auto-build is a convergence loop, so
-  the request is re-derived at the next edge. The `auto` "started" bell is rung
-  here, which is the last moment this plugin owns before the child exists.
+  the request is re-derived at the next edge.
 - **`argv`** — `--allow-main` before `--composition` (commander's variadic is
   greedy up to the next flag), plus the two env overrides that are ADDED to the
   backend's own environment: `EQUIN_BUILD_ID`, and
@@ -131,7 +151,10 @@ What each arm of `machine/internal/run-build.ts` owns, and why the split is wher
   workflow, and that is what stops a dead workflow from leaving the in-flight
   index held against every future build.
 - **`onEnded`** — the terminal WORK, exactly once, in the owning workflow: the
-  bell, `deploymentServed.notify()`, and `reconcileDeployment()`. **The row is
+  bell, `deploymentServed.notify()`, and on main an optional convergence edge
+  (`requestConvergence("a build ended")`): a push landing while a button build
+  held the in-flight slot made the gateway's run stop at its claim, so the run
+  is asked for again once the slot is free. **The row is
   already closed by the time this runs** — the CLI stamps its own row ~100 s
   before its child exits, and failing that `closeRow` runs before the
   announcement that resumes the handler. So nothing here is gated on
@@ -139,7 +162,7 @@ What each arm of `machine/internal/run-build.ts` owns, and why the split is wher
   ledger carries.
 
 `runAttempts` stays at the default **1**. A failed build stays failed and
-visible; whether to build again is the convergence loop's call, made from the
+visible; whether to build again is the convergence run's call, made from the
 state of the world, not a retry budget. And a non-zero exit code is DATA, not an
 exception: the handler records it and returns normally, so a failed build files
 no crash report and no dead-letter.
@@ -147,8 +170,8 @@ no crash report and no dead-letter.
 What that buys, and what moved:
 
 - **Nothing waits for a build.** A caller enqueues and returns. Everything that
-  used to sit after `await proc.exited` — the bell, the row's terminal stamp,
-  `reconcileDeployment` — is now the durable workflow's, resumed by whichever
+  used to sit after `await proc.exited` — the bell, the row's terminal stamp —
+  is now the durable workflow's, resumed by whichever
   backend is alive when the exit marker lands. **This is a repair, not a
   refactor:** the build restarts the backend that spawned it, so the process
   holding that await was routinely killed first. On `main`: 33 `Auto-build
@@ -183,25 +206,24 @@ What that buys, and what moved:
 
 ### Why the convergence loop still terminates
 
-The loop is `onEnded → reconcileDeployment → build.run.debounced →
-buildJob.enqueue → onEnded`, so the question is whether a finished build can
-immediately ask for itself again. It cannot, and the reason is an ORDERING that
-the migration preserves by construction: `closeRow` writes `finished_at` +
-`exit_code` **before** the `runEnded` announcement that resumes the workflow, so
-by the time `onEnded` reconciles, `lastClosedAttempt` already sees this build's
-own commit as an attempt and `wantsBuild` answers no. (Before the migration the
-same ordering held for a different reason — `finishBuild` stamped the row as its
-first statement and reconciled as its last.)
+The convergence run is `wait out the build lock → decide → claim → build →
+close the row → decide again`. A finished build cannot ask for itself again
+because its attempt is in the ledger before the next decision: the build closes
+its own row on every verdict, and the run closes it (first writer wins) when the
+build ended without one. `lastClosedRun` then names this build's commit and
+`wantsBuild` answers no — for an ok build and a failed one alike.
 
 The two other edges of the same argument:
 
-- A build whose SPAWN failed never reaches `onEnded` at all, so it never
-  reconciles — while `spawnClaimedRun` still closes its row with the hard-kill
-  sentinel. The attempt is recorded, `ok` is false, and the loop does not
-  re-derive it into a five-second retry storm.
-- A request that arrives mid-build is dropped by the claim, not queued, so N
-  edges firing during one build produce N cheap `instant` dispatches and one
-  build.
+- A pass that would repeat the build it just ran (same HEAD, same targets) means
+  the ledger did not record the attempt; the run throws rather than loop, and
+  the gateway files that as `main-deploy-failed`.
+- With no ledger at all (no `build_runs` table yet — a machine's first build),
+  nothing can record an attempt, so the run builds once and stops; the next edge
+  decides against the ledger that build created.
+
+A request that arrives mid-run is never dropped: the gateway remembers an edge
+that lands while a run goes and starts one more run after it — one at a time.
 
 ## The build history — `buildHistory`
 
@@ -335,7 +357,6 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
     - `resource.declare` "build.history"
     - `resource.declare` "build.history:groups"
     - `resource.declare` "build.history:rows"
-    - `trigger` "build.run"
   - Uses:
     - `build/run-ledger._buildRuns`
     - `config_v2.ConfigV2`
@@ -349,13 +370,10 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
 - Machine:
   - Uses:
     - `build/deployment.deploymentServed`
-    - `build/deployment.readDeployment`
     - `build/run-ledger.settleDeadInflightRun`
     - `infra/endpoints.implementMachine`
   - Exports (values): `onRunTerminal`
   - Register:
-    - `defineJob('build.run')`
-    - `defineJob('build.run.debounced')`
     - `defineJob('build.composition-tick')`
     - `defineSupervisedJob('build.run.supervised')`
     - `defineFileWatcher('build.run-terminal')`
@@ -366,7 +384,9 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
   - Uses:
     - `build/run-ledger.buildRunFields`
     - `build/run-ledger.buildRunsEntityRef`
+    - `config_v2.defineConfig`
     - `fields.fieldsToZodObject`
+    - `fields/bool/config.boolField`
     - `infra/endpoints.defineEndpoint`
     - `infra/namespace.MAIN_COMPOSITION_ID`
     - `network/live.liveCollection`
@@ -375,6 +395,7 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
   - Exports (values):
     - `BUILD_CATEGORY_ID`
     - `BUILD_LOG_CHANNEL`
+    - `buildConfig`
     - `buildDetailRoute`
     - `buildHistory`
     - `buildRoute`
@@ -403,16 +424,12 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
     - `build/build-info`
     - `build/build-logs`
     - `build/build-profiling`
+    - `build/converge`
     - `build/runs-arm`
     - `build/serve-composition`
     - `debug/reports`
     - `menu-bar`
   - Endpoint callers: `restart-skip`
-- Shared:
-  - Exports (types): `BuildRun`
-  - Exports (values):
-    - `buildConfig`
-    - `isMainCompositionBuild`
 - Sub-plugins:
   - **`build-commits`** — Commits included since the previous build, shown in the build detail pane.
   - **`build-fix`** — Launch-agent button in the build detail pane for failed builds, and the same launch as a Build failed notification's Fix (the fix-build notification action).
@@ -421,6 +438,7 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
   - **`build-profiling`** — Per-run build profiling Gantt section in the build detail pane.
   - **`build-status`** — Single source of truth for build-run status display metadata — label, badge variant, and dot color per BuildStatus.
   - **`build-termination`** — Per-run termination record, desktop-only: the build.run-termination live value — what the host-global signal-origin sink recorded about the death of one build run (which signal, and who sent it)…
+  - **`converge`** — Main-deploy-failed report renderer: a one-line Debug → Reports summary for the main-deploy-failed kind (how main's convergence run ended, what started it). The main-deploy-failed report kind — filed…
   - **`deployment`** — The client half of the deployment description: `useDeployment()` composes THIS tab's own baked pin in beside the server's two deployable carriers, and `<DeploymentChain/>` renders the four arms…
   - **`restart-skip`** [exempt] — The restart-skip-cannot-judge report kind — filed by `./equin build` through the report outbox when the backend or central it asked to adopt a deploy could not measure its own code (the closure walk…
     - Plugins:

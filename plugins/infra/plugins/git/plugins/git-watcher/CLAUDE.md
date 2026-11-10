@@ -88,7 +88,6 @@ Measure: `scripts/measure-ref-delivery.ts`; in the app, the
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/remote-deploy`
-    - `build`
     - `build/deployment`
     - `conversations/conversation-view/commits-graph`
     - `infra/launcher/gateway-drift`

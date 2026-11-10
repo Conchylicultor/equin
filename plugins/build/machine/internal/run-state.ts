@@ -1,9 +1,12 @@
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import type { UnfinishedRun } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
 import type { RunTerminal } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
-import { recordNotification } from "@plugins/shell/plugins/notifications/server";
+import {
+  _notifications,
+  recordNotification,
+} from "@plugins/shell/plugins/notifications/server";
 import { buildDetailRoute } from "@plugins/build/core";
 import {
   buildStatusOf,
@@ -13,8 +16,8 @@ import { _buildRuns } from "@plugins/build/plugins/run-ledger/server";
 import { settleDeadInflightRun } from "@plugins/build/plugins/run-ledger/machine";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { deploymentServed } from "@plugins/build/plugins/deployment/machine";
-import { reconcileDeployment } from "./reconcile";
 import { announceRunTerminal } from "./run-terminal";
+import { requestConvergence } from "./request-convergence";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const updatedIcon = symbol("update");
@@ -184,10 +187,8 @@ export async function closeBuildRow(
  * build that outlives three restarts still reaches its own verdict.
  *
  * **Idempotent, because a job retry re-runs it.** Both notifications carry a
- * `dedupeKey`, `deploymentServed.notify()` is a signal rather than a write,
- * and `reconcileDeployment` is a stateless re-derivation whose debounce is a
- * singleton — so running this twice costs one redundant wakeup and changes
- * nothing.
+ * `dedupeKey` and `deploymentServed.notify()` is a signal rather than a write,
+ * so running this twice changes nothing.
  */
 export async function onBuildEnded(buildId: string): Promise<void> {
   const [row] = await db
@@ -209,12 +210,108 @@ export async function onBuildEnded(buildId: string): Promise<void> {
 
   // The dist has been republished and the ledger row is closed, so the
   // deployment description has changed on both axes it can change on.
+  //
   deploymentServed.notify();
-  // The "a build reached terminal" convergence edge, and the single remaining
-  // copy of it. It terminates because the row it reads was closed BEFORE this
-  // ran: `lastClosedAttempt` sees this build's own commit as an attempt, so
-  // `wantsBuild` does not immediately ask for the same build again.
-  await reconcileDeployment();
+  // An optional edge of main's auto-build (`requestConvergence`, main only): a
+  // push that landed while this button build ran may have found the in-flight
+  // slot taken — the gateway's convergence run then stops rather than queue —
+  // so ask for one now that the slot is free.
+  await requestConvergence("a build ended");
+}
+
+/**
+ * A build main's convergence run started has ended — the bell, from the
+ * backend, for a build no backend owns.
+ *
+ * The convergence run is a gateway child (`./equin build --allow-main
+ * --converge`), so no supervised workflow of this backend waits on its builds
+ * and no `onEnded` rings for them. This does, at two edges: the run's exit
+ * marker landing (`onRunTerminal`, the watcher every backend of the namespace
+ * arms), and this backend's boot — every build that ended while main had no
+ * backend (the case the convergence run exists for) is told once main is back.
+ *
+ * Only `auto` rows: a `manual` one is a supervised build whose own workflow
+ * rings. Rings at most once per run: an existing `build-finish:<id>`
+ * notification means it was told, so a boot after it changes nothing.
+ */
+export async function onAutoBuildTerminal(buildId: BuildRunId): Promise<void> {
+  const read = async () =>
+    (
+      await db
+        .select({
+          trigger: _buildRuns.trigger,
+          startedAt: _buildRuns.startedAt,
+          finishedAt: _buildRuns.finishedAt,
+          exitCode: _buildRuns.exitCode,
+          commitHash: _buildRuns.commitHash,
+        })
+        .from(_buildRuns)
+        .where(eq(_buildRuns.id, buildRunIdKind.key(buildId)))
+    )[0];
+  let row = await read();
+  if (row === undefined || row.trigger !== "auto") return;
+  if (row.finishedAt === null) {
+    // Its marker is on disk but its row is open: the build ended without
+    // closing it (a throw, a signal) and the convergence run's backstop close
+    // has not landed yet. Settle it from the marker — the same rule the claim
+    // uses — rather than ring a bell about a run the ledger calls running.
+    await settleDeadInflightRun(db, runtimeNamespace());
+    row = await read();
+    if (row === undefined || row.finishedAt === null) return;
+  }
+  const finished = row;
+  // Check-then-ring as one step per run, across every backend of the
+  // namespace: the marker edge and the boot catch-up land together on a
+  // backend that boots as the build ends, and two backends overlap during a hot
+  // restart. Both saw "not told" and both rang (measured: count 2 on the
+  // end-to-end run). The bell is written in the same transaction, so the next
+  // holder of the lock reads it.
+  await db.transaction(async (tx) => {
+    await tx.execute(
+      sql`SELECT pg_advisory_xact_lock(hashtext('build.auto-bell'), hashtext(${buildId}))`,
+    );
+    const [rung] = await tx
+      .select({ id: _notifications.id })
+      .from(_notifications)
+      .where(eq(_notifications.dedupKey, finishDedupeKey(buildId)))
+      .limit(1);
+    if (rung === undefined) await notifyBuildFinished(buildId, finished, tx);
+  });
+  deploymentServed.notify();
+}
+
+/**
+ * How far back a booting backend looks for an `auto` run it has not rung for:
+ * long enough to cover any outage main recovers from by a push, short enough
+ * that a notification pruned long ago is not rung again.
+ */
+const BOOT_BELL_LOOKBACK_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * The `auto` runs of this namespace that ended in the last day, newest first —
+ * what a booting backend checks it has rung for (see
+ * {@link onAutoBuildTerminal}): every build that ended while main had no
+ * backend, not only the last. Bounded by the lookback and a page.
+ */
+export async function recentClosedAutoBuilds(): Promise<BuildRunId[]> {
+  const rows = await db
+    .select({ id: _buildRuns.id })
+    .from(_buildRuns)
+    .where(
+      and(
+        eq(_buildRuns.namespace, runtimeNamespace()),
+        eq(_buildRuns.trigger, "auto"),
+        gt(_buildRuns.finishedAt, new Date(Date.now() - BOOT_BELL_LOOKBACK_MS)),
+      ),
+    )
+    .orderBy(desc(_buildRuns.startedAt))
+    .limit(20);
+  return rows.map((row) => buildRunIdKind.key(row.id));
+}
+
+/** The bell's dedupe key: one notification per run, whoever rings it. */
+function finishDedupeKey(buildId: string): string {
+  return `build-finish:${buildId}`;
 }
 
 /**
@@ -246,30 +343,34 @@ async function notifyBuildFinished(
     exitCode: number | null;
     commitHash: string | null;
   },
+  conn: Parameters<typeof recordNotification>[1] = db,
 ): Promise<void> {
   const linkTo = buildDetailRoute.link(agentManagerApp, { runId: buildId });
   const seconds = Math.round(
     ((row.finishedAt ?? new Date()).getTime() - row.startedAt.getTime()) / 1000,
   );
-  const dedupeKey = `build-finish:${buildId}`;
+  const dedupeKey = finishDedupeKey(buildId);
   const status = buildStatusOf(row);
   // TODO(§6, research/2026-10-25-global-notifications-in-user-terms.md): the
   // subject is the conversation(s) whose pushes this build contains (their
   // commit trailers over prev..commitHash). Until that attribution lands,
   // "equin was updated" and "Build failed" carry no subject.
   if (status === "success") {
-    await recordNotification({
-      type: "build",
-      category: "updates",
-      icon: updatedIcon,
-      title: "equin was updated",
-      description: "",
-      detail: `${buildId} · ${row.commitHash?.slice(0, 9) ?? "no commit"} · ${seconds}s`,
-      variant: "success",
-      action: { kind: "reload", payload: {} },
-      linkTo,
-      dedupeKey,
-    });
+    await recordNotification(
+      {
+        type: "build",
+        category: "updates",
+        icon: updatedIcon,
+        title: "equin was updated",
+        description: "",
+        detail: `${buildId} · ${row.commitHash?.slice(0, 9) ?? "no commit"} · ${seconds}s`,
+        variant: "success",
+        action: { kind: "reload", payload: {} },
+        linkTo,
+        dedupeKey,
+      },
+      conn,
+    );
     return;
   }
   // Not a verdict about the code, so not the user's news: `superseded` (the
@@ -277,17 +378,20 @@ async function notifyBuildFinished(
   // signal from outside) and `interrupted` (its process vanished without
   // recording an outcome). Kept for a developer, each in its own sentence.
   if (status === "superseded") {
-    await recordNotification({
-      type: "build",
-      category: "updates",
-      audience: "developer",
-      title: "Build superseded",
-      description: `${row.commitHash?.slice(0, 9) ?? "the built commit"} was replaced mid-build — rebuilding`,
-      detail: buildId,
-      variant: "info",
-      linkTo,
-      dedupeKey,
-    });
+    await recordNotification(
+      {
+        type: "build",
+        category: "updates",
+        audience: "developer",
+        title: "Build superseded",
+        description: `${row.commitHash?.slice(0, 9) ?? "the built commit"} was replaced mid-build — rebuilding`,
+        detail: buildId,
+        variant: "info",
+        linkTo,
+        dedupeKey,
+      },
+      conn,
+    );
     return;
   }
   // `buildStatusOf` returns `killed` only for a non-null code above the signal
@@ -295,46 +399,55 @@ async function notifyBuildFinished(
   // because `killedSignalName` takes a number and a `?? 0` default here would
   // name a signal nobody sent.
   if (status === "killed" && row.exitCode !== null) {
-    await recordNotification({
-      type: "build",
-      category: "updates",
-      audience: "developer",
-      title: "Build ended from outside",
-      description: `${killedSignalName(row.exitCode)} arrived after ${seconds}s — see the run for who sent it`,
-      detail: buildId,
-      variant: "info",
-      linkTo,
-      dedupeKey,
-    });
+    await recordNotification(
+      {
+        type: "build",
+        category: "updates",
+        audience: "developer",
+        title: "Build ended from outside",
+        description: `${killedSignalName(row.exitCode)} arrived after ${seconds}s — see the run for who sent it`,
+        detail: buildId,
+        variant: "info",
+        linkTo,
+        dedupeKey,
+      },
+      conn,
+    );
     return;
   }
   if (status === "interrupted") {
     // The supervised-run hard-kill sentinel: no exit marker at all, which only a
     // SIGKILL (or the machine going down) can produce, since every other death
     // runs the shim's trap — and the sentence must not name a signal.
-    await recordNotification({
-      type: "build",
-      category: "updates",
-      audience: "developer",
-      title: "Build interrupted",
-      description: `The build's process disappeared after ${seconds}s without recording an outcome`,
-      detail: buildId,
-      variant: "info",
-      linkTo,
-      dedupeKey,
-    });
+    await recordNotification(
+      {
+        type: "build",
+        category: "updates",
+        audience: "developer",
+        title: "Build interrupted",
+        description: `The build's process disappeared after ${seconds}s without recording an outcome`,
+        detail: buildId,
+        variant: "info",
+        linkTo,
+        dedupeKey,
+      },
+      conn,
+    );
     return;
   }
-  await recordNotification({
-    type: "build",
-    category: "updates",
-    title: "Build failed",
-    description: "",
-    detail: `${buildId} · exited with code ${row.exitCode} after ${seconds}s`,
-    variant: "error",
-    // Fix: the build-fix plugin's investigate launch for this run.
-    action: { kind: "fix-build", payload: { runId: buildId } },
-    linkTo,
-    dedupeKey,
-  });
+  await recordNotification(
+    {
+      type: "build",
+      category: "updates",
+      title: "Build failed",
+      description: "",
+      detail: `${buildId} · exited with code ${row.exitCode} after ${seconds}s`,
+      variant: "error",
+      // Fix: the build-fix plugin's investigate launch for this run.
+      action: { kind: "fix-build", payload: { runId: buildId } },
+      linkTo,
+      dedupeKey,
+    },
+    conn,
+  );
 }

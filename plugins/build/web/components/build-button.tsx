@@ -20,7 +20,7 @@ import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popov
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { buildHistory, buildRoute } from "@plugins/build/core";
-import { isMainCompositionBuild, type BuildRun } from "../../shared";
+import { isMainCompositionBuild, type BuildRun } from "../../core";
 import {
   useReloadAdvice,
   useServerBehind,

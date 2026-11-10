@@ -459,6 +459,14 @@ export interface GatewayLaunchOptions {
    */
   defaultNamespace?: string;
   /**
+   * Main's checkout, passed as `-main-checkout`: the gateway watches its
+   * `refs/heads/main` and runs main's convergence (`./equin build --allow-main
+   * --converge`) there on every advance — main's auto-deploy, triggered from
+   * outside main's backend (gateway/main_deploy.go). Only the machine's dev
+   * gateway sets it; a release or `serve-app` deploys nothing.
+   */
+  mainCheckout?: string;
+  /**
    * Hostnames a deployed site is served under, passed as `-public-hosts` so the
    * gateway treats them as its own (a reverse proxy forwards the visitor's Host
    * unchanged). Omitted for a deployment with none.
@@ -578,6 +586,7 @@ export function gatewayLaunchFlags(
     ...(opts.publicHosts?.length
       ? ["-public-hosts", opts.publicHosts.join(",")]
       : []),
+    ...(opts.mainCheckout ? ["-main-checkout", opts.mainCheckout] : []),
     // Which of its own variables the gateway may hand its children. Required
     // by the gateway, and the same declaration as `env` below, so the two
     // boundaries (us → gateway, gateway → child) cannot disagree.

@@ -1,5 +1,5 @@
 import { buildStatusOf } from "@plugins/build/plugins/build-status/core";
-import type { BuildRun } from "../../shared";
+import type { BuildRun } from "../../core";
 
 /**
  * What the newest build run says right now: still `running` (no `finishedAt`),

@@ -440,10 +440,10 @@ Run with `./equin test plugins/plugin-meta/plugins/composition`.
     - `SERVE_MODES`
     - `serveModeLabel`
 - Cross-plugin:
-  - Imported by: 27 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 28 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×16
     - `framework` ×5
-    - `build` ×2
+    - `build` ×3
     - `plugin-meta` ×2
     - `conversations/workspace/worktree`
     - `infra/worktree/reclaim`

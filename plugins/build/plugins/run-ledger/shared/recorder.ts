@@ -1,4 +1,6 @@
 import { sql } from "drizzle-orm";
+import { z } from "zod";
+import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import { settleDeadInflightRun } from "./stale-holder";
@@ -66,9 +68,39 @@ export interface BuildRunRecorder {
   insertRun(r: InsertRunRow): Promise<"claimed" | "lost" | "unavailable">;
   /** Stamp a run terminal, first-writer-wins (guarded `where(isNull(finishedAt))`). */
   closeRun(id: string, exitCode: number): Promise<void>;
+  /**
+   * The newest CLOSED run of this namespace that answers for `target` — what
+   * the convergence decision reads as "already attempted". See
+   * {@link lastClosedRunOn}.
+   */
+  lastClosedRun(target: AttemptTarget): Promise<LastClosedRun>;
   /** Release the pool. */
   close(): Promise<void>;
 }
+
+/**
+ * Which runs answer for a target — the two predicates the convergence decision
+ * reads, and the asymmetry between them is the point:
+ *
+ * - `only` — a run whose `targets` is exactly `{id}`: a plain build of the
+ *   checkout's own app. A run that also published someone else's namespace is
+ *   not the attempt main's decision answers for.
+ * - `includes` — a run whose `targets` contains `id`: one
+ *   `build --composition a b` genuinely attempted both, and reading it as an
+ *   attempt for neither would break termination for both.
+ */
+export type AttemptTarget = { only: string } | { includes: string };
+
+/**
+ * The newest closed run for a target, or why there is none. `missing-ledger` is
+ * its own arm, not "no run": a namespace whose `build_runs` table does not
+ * exist yet has recorded nothing, and a decision built on it cannot terminate
+ * through the ledger — the caller has to know that (`build/converge`).
+ */
+export type LastClosedRun =
+  | { kind: "run"; commitHash: string | null; exitCode: number | null }
+  | { kind: "none" }
+  | { kind: "missing-ledger" };
 
 /** The index the claiming INSERT contends on — see `server/internal/tables.ts`. */
 const INFLIGHT_UQ = "build_runs_inflight_uniq";
@@ -239,5 +271,50 @@ export async function closeRunOn(
     `);
   } catch (err) {
     if (!isMissingLedger(err)) throw err;
+  }
+}
+
+/**
+ * `lastClosedRun`'s body over any drizzle handle: the newest run of
+ * `namespace` with `finished_at` set whose `targets` match `target`.
+ *
+ * Closed rows only, so the outcome is an outcome rather than a guess about a
+ * run still in flight. Scoped to `namespace`: a worktree DB is forked from
+ * main's and inherits its rows. Hand SQL like every statement here — it names
+ * only the columns it reads.
+ */
+export async function lastClosedRunOn(
+  db: NodePgDatabase,
+  namespace: Namespace,
+  target: AttemptTarget,
+): Promise<LastClosedRun> {
+  const match =
+    "only" in target
+      ? sql`"targets" = ${sql.param([target.only])}`
+      : sql`"targets" @> ${sql.param([target.includes])}`;
+  try {
+    const rows = await executeRows(db, {
+      label: "build_runs: last closed run",
+      row: z.object({
+        commit_hash: z.string().nullable(),
+        exit_code: z.number().int().nullable(),
+      }),
+      query: sql`
+        select "commit_hash", "exit_code" from "build_runs"
+        where "namespace" = ${namespace} and "finished_at" is not null and ${match}
+        order by "started_at" desc
+        limit 1
+      `,
+    });
+    const row = rows[0];
+    if (row === undefined) return { kind: "none" };
+    return {
+      kind: "run",
+      commitHash: row.commit_hash,
+      exitCode: row.exit_code,
+    };
+  } catch (err) {
+    if (isMissingLedger(err)) return { kind: "missing-ledger" };
+    throw err;
   }
 }

@@ -21,6 +21,7 @@ import {
 import { resolveBuildTargets } from "./internal/build-targets";
 import { deployNamespace } from "./internal/deploy-namespace";
 import { askAdoption } from "./internal/adopt";
+import { runConvergence } from "./internal/converge";
 import {
   adoptCentralDeploy,
   type AdoptVerdict,
@@ -481,7 +482,23 @@ interface BuildOptions {
   restart: boolean;
   skipChecks?: boolean;
   allowMain?: boolean;
+  converge?: boolean;
   minify: boolean;
+}
+
+/** Every flag set beside `--converge` other than `--allow-main`, by name. */
+function convergeConflicts(opts: BuildOptions): string[] {
+  const set: string[] = [];
+  if (opts.hermetic) set.push("--hermetic");
+  if (opts.composition !== undefined) set.push("--composition");
+  if (opts.migrationName !== undefined) set.push("--migration-name");
+  if (opts.resetMigration) set.push("--reset-migration");
+  if (opts.customMigration) set.push("--custom-migration");
+  if (opts.migrationAnswers !== undefined) set.push("--migration-answers");
+  if (!opts.restart) set.push("--no-restart");
+  if (opts.skipChecks) set.push("--skip-checks");
+  if (!opts.minify) set.push("--no-minify");
+  return set;
 }
 
 const run: CliAction<[], BuildOptions> = async (opts) => {
@@ -527,6 +544,19 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
       },
       minify: opts.minify,
     });
+  }
+
+  // Main's convergence run: it decides, then runs each build it wants as a
+  // child `build` of its own (the relay below, with the id its row was
+  // claimed under). Branched before anything is armed, because none of it is
+  // this process's: it builds nothing itself.
+  if (opts.converge) {
+    process.exit(
+      await runConvergence({
+        allowMain: opts.allowMain,
+        otherFlags: convergeConflicts(opts),
+      }),
+    );
   }
 
   // Every deploy build is a supervised run: its transcript (`runs/build-<id>.log`)

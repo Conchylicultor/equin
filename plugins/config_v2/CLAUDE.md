@@ -616,7 +616,7 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `validationIssues`
     - `withOverrideLegend`
 - Cross-plugin:
-  - Imported by: 139 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 140 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×39
     - `conversations` ×14
     - `backup` ×13
@@ -627,8 +627,8 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `tasks` ×6
     - `framework` ×4
     - `infra` ×4
+    - `build` ×3
     - `primitives` ×3
-    - `build` ×2
     - `integrations` ×2
     - `plugin-meta` ×2
     - `reports` ×2

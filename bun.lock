@@ -1642,6 +1642,10 @@
       "name": "@equin/plugin-build-build-termination",
       "version": "0.0.1",
     },
+    "plugins/build/plugins/converge": {
+      "name": "@equin/plugin-build-converge",
+      "version": "0.0.1",
+    },
     "plugins/build/plugins/deployment": {
       "name": "@equin/plugin-build-deployment",
       "version": "0.0.1",
@@ -8277,6 +8281,8 @@
     "@equin/plugin-build-build-status": ["@equin/plugin-build-build-status@workspace:plugins/build/plugins/build-status"],
 
     "@equin/plugin-build-build-termination": ["@equin/plugin-build-build-termination@workspace:plugins/build/plugins/build-termination"],
+
+    "@equin/plugin-build-converge": ["@equin/plugin-build-converge@workspace:plugins/build/plugins/converge"],
 
     "@equin/plugin-build-deployment": ["@equin/plugin-build-deployment@workspace:plugins/build/plugins/deployment"],
 

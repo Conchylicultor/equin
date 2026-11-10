@@ -318,6 +318,22 @@ export async function acquireArtifactLock(webDir: string): Promise<void> {
 }
 
 /**
+ * Wait until no build holds this checkout's build lock, and hold nothing:
+ * acquired under the same wait policy as {@link acquireArtifactLock}, then
+ * released at once. For main's convergence run, which must decide AFTER any
+ * build already running in the checkout has ended — its decision reads that
+ * build's ledger row and the dist it published — but must not hold the lock
+ * across the build it then starts, which takes it itself.
+ */
+export async function waitForArtifactLock(webDir: string): Promise<void> {
+  const release = await acquireCheckoutLock(resolve(webDir, ".build.lock"), {
+    what: "build",
+    observeHolder: observeBuildHolder,
+  });
+  release();
+}
+
+/**
  * What the current lock holder is doing, for the lock's wait policy and its
  * "still waiting" lines — read from the two durable host-global logs a build
  * writes: build-progress (its steps, keyed by pid) and the op log (its declared

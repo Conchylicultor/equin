@@ -2,7 +2,7 @@ import type { Activity } from "@plugins/primitives/plugins/css/plugins/activity-
 import { useNotificationsChannelStatuses } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { buildHistory } from "@plugins/build/core";
-import { isMainCompositionBuild } from "../../shared";
+import { isMainCompositionBuild } from "../../core";
 import { latestRunState } from "../internal/latest-run-state";
 import { useServerBehind } from "./use-reload-advice";
 

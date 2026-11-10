@@ -79,6 +79,15 @@ export default defineCliCommand({
         "DANGER: allow running build from the main branch. Agents MUST NOT pass this flag without explicit user approval in the current conversation.",
     },
     {
+      flags: "--converge",
+      description:
+        "Auto-build (with --allow-main, nothing else): decide from durable state whether this " +
+        "checkout's app — and on main, a served composition — is behind a commit it has not " +
+        "attempted, and build it, looping until nothing is wanted. What the gateway runs in " +
+        "main's checkout on every advance of refs/heads/main; safe by hand, it builds only what " +
+        "auto-build would.",
+    },
+    {
       flags: "--no-minify",
       description:
         "Skip esbuild minification (debugging). The minify flag is an artifact-hash input.",

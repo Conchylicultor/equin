@@ -5,6 +5,7 @@ import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import {
   closeRunOn,
   insertRunOn,
+  lastClosedRunOn,
   type BuildRunRecorder,
 } from "../../shared/recorder";
 
@@ -24,13 +25,15 @@ export function createBuildRunRecorder(namespace: Namespace): BuildRunRecorder {
       db: drizzle(pool),
     })));
 
-  // Nothing but the pool binding lives here: both writes are the exported
+  // Nothing but the pool binding lives here: every statement is the exported
   // db-parametrized bodies in `shared/recorder.ts`, so what the tests drive is
   // what the CLI runs.
   return {
     insertRun: async (r) => insertRunOn((await open()).db, namespace, r),
     closeRun: async (id, exitCode) =>
       closeRunOn((await open()).db, id, exitCode),
+    lastClosedRun: async (target) =>
+      lastClosedRunOn((await open()).db, namespace, target),
     close: async () => {
       if (opened === null) return;
       await (await opened).pool.end();

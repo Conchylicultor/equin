@@ -1,13 +1,9 @@
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { createSignedMemo } from "@plugins/infra/plugins/git/plugins/git-read-cache/server";
-import {
-  resolved,
-  unresolved,
-  type Resolvable,
-} from "@plugins/network/plugins/live/plugins/live-state/core";
+import { unresolved } from "@plugins/network/plugins/live/plugins/live-state/core";
 import { tryRunGit } from "@plugins/primitives/plugins/commit-list/server";
-import { chainTo, isAncestor, readTarget } from "./git-chain";
+import { chainTo, readTarget, webCarrier, withAncestry } from "./git-chain";
 import {
   getServerCommit,
   getServerGraphHash,
@@ -17,28 +13,9 @@ import {
   convergenceOf,
   deploymentOf,
   NO_CHAIN,
-  type Carrier,
   type Deployment,
   type DeploymentState,
 } from "../../core";
-
-/** Attach the ancestry fact to a carrier whose pin has just been read. */
-async function withAncestry(
-  carrier: Omit<Carrier, "ancestorOfTarget">,
-  target: Resolvable<string>,
-): Promise<Carrier> {
-  if (!target.resolved)
-    return { ...carrier, ancestorOfTarget: unresolved("no target") };
-  if (!carrier.commit.resolved)
-    return {
-      ...carrier,
-      ancestorOfTarget: unresolved(carrier.commit.reason),
-    };
-  return {
-    ...carrier,
-    ancestorOfTarget: await isAncestor(carrier.commit.value, target.value),
-  };
-}
 
 /**
  * The raw facts: where this checkout's HEAD is, and where each DEPLOYABLE
@@ -65,20 +42,7 @@ async function readCarriers(): Promise<Deployment> {
       },
       target,
     ),
-    withAncestry(
-      {
-        id: "web",
-        commit:
-          distCommit === null
-            ? unresolved("the served dist carries no .build-commit")
-            : resolved(distCommit),
-        graph:
-          distGraph === null
-            ? unresolved("the served dist carries no .build-graph")
-            : resolved(distGraph),
-      },
-      target,
-    ),
+    withAncestry(webCarrier(distCommit, distGraph), target),
   ]);
 
   return { target, deployable: [server, web] };
@@ -211,16 +175,19 @@ const deploymentMemo = createSignedMemo<DeploymentState>({
 // buys the per-key single-flight: the boot snapshot, a subscriber's first read
 // and a post-build notify can land together, and only one of them does the git
 // work.
-const MEMO_KEY = runtimeNamespace();
+//
+// Read at the call, not at module eval: the namespace is the PROCESS's, and a
+// process that imports this module without being a backend (a CLI) has none.
+const memoKey = (): string => runtimeNamespace();
 
 /** The bound signature probe, for the resource's `revalidate`. */
 export function deploymentEtag(): Promise<string> {
-  return deploymentMemo.signature(MEMO_KEY);
+  return deploymentMemo.signature(memoKey());
 }
 
 /** The wire payload, memoized. Feeds the resource loader. */
 export function readDeploymentState(): Promise<DeploymentState> {
-  return deploymentMemo.get(MEMO_KEY);
+  return deploymentMemo.get(memoKey());
 }
 
 /**

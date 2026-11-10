@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-build-converge",
+  "description": "Main's deploy, run from outside main's backend: the convergence decision (decideConvergence — is main's own app or a served composition behind a commit it has not attempted?) read from durable state by `./equin build --allow-main --converge`, the run the gateway starts on every advance of refs/heads/main; and the main-deploy-failed report kind the gateway files when that run itself fails.",
+  "private": true,
+  "version": "0.0.1"
+}

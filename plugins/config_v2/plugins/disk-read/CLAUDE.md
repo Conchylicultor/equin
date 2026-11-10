@@ -21,6 +21,7 @@
     - `readEffectiveConfigFromDiskSync`
 - Cross-plugin:
   - Imported by:
+    - `build/converge`
     - `build/serve-composition`
     - `framework/cli/build`
     - `framework/cli/deploy`

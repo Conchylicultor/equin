@@ -105,11 +105,11 @@ export const RUNTIME_WITHHELD_ENV = {
     "a host CPU admission grant, set by a grant holder for the subprocess it spawns (infra/host/host-admission grant.ts)",
   LANE: "the admission lane of a CLI op, set by the op for the subprocesses it spawns (cli/op-runtime lane.ts)",
   BUILD_ID:
-    "the build_runs row a UI-triggered build writes to, set by the backend for the build it spawns (build/server run-build.ts)",
+    "the build_runs row a build writes to, set for the build it spawns by whoever claimed that row: the backend (build/machine run-build.ts) or main's convergence run (cli/build converge.ts)",
   BUILD_RELAYED:
     "marks a hand-run build re-run under its own attached supervision (transcript + exit marker), so it mints its own build_runs row; set by that build for its child (cli/build run.ts)",
   BUILD_DETACHED:
-    "marks a supervised build that must outlive its backend, set by the backend for the build it spawns (build/server run-build.ts)",
+    "marks a build that must outlive the process that started it: set by the backend for the build it spawns (build/machine run-build.ts), and by the gateway for main's convergence run, which a gateway restart must not end (gateway/main_deploy.go)",
   FOREGROUND_DEADLINE:
     "the instant (epoch ms) an agent's foreground Bash call is cut off; a PreToolUse guard exports it into that one command, and the op hand-off takes it out of the env of the op it detaches (cli/op-runtime foreground-handoff.ts)",
   TEST_HEARTBEAT:

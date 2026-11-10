@@ -30,6 +30,7 @@ import {
 import {
   closeRunOn,
   insertRunOn,
+  lastClosedRunOn,
   type InsertRunRow,
 } from "../../shared/recorder";
 import { _buildRuns } from "./tables";
@@ -89,5 +90,13 @@ describe("a database with no build_runs table", () => {
     // stamp it performs when the table IS there is pinned in
     // `stale-holder.test.ts`, which owns the migrated database.
     await closeRunOn(t.db, row().id, 0);
+  });
+
+  test("lastClosedRun answers missing-ledger, not an empty history", async () => {
+    // "Nothing recorded" and "nowhere to record" are different facts to the
+    // convergence decision: only the first terminates through the ledger.
+    expect(
+      await lastClosedRunOn(t.db, NS, { only: MAIN_COMPOSITION_ID }),
+    ).toEqual({ kind: "missing-ledger" });
   });
 });

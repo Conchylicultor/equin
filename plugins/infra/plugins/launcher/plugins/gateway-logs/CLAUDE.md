@@ -7,8 +7,9 @@ the launcher imports them (a declaration in the launcher itself is a cycle).
 
 - `gatewayLogs` — the data dir, with its log claims for `paths:logs-claimed`:
   `gateway.log` and each namespace's `<name>.log` (deleted with the namespace,
-  `gateway/namespace_logs.go`), `services/<service>.log`, and the truncated
-  `gateway-stdio.log`.
+  `gateway/namespace_logs.go`), `services/<service>.log`, `deploy/main.log`
+  (main's convergence runs, `gateway/main_deploy.go`, rotated by the gateway
+  before a run), and the truncated `gateway-stdio.log`.
 - `GATEWAY_LOG_BOUND` — every channel's rotation (50 MB × 5), and
   `serviceLogFile(service)` — a supervised daemon's channel,
   `services/<service>.log` (`PG_LOG_FILE`, `PGBOUNCER_LOG_FILE`).

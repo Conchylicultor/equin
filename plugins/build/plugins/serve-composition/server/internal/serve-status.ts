@@ -39,8 +39,8 @@ export async function serveNamespaceOf(
  *
  * The third answer is about this BACKEND rather than the composition:
  * `autoTriggersHere` says whether the automatic serve modes are acted on here at
- * all. They run on main only — the durable `git.refAdvanced` event is emitted
- * only from main, and a per-worktree schedule would have every live agent
+ * all. They run on main only — the gateway runs main's convergence run alone
+ * (`build/converge`), and a per-worktree trigger would have every live agent
  * worktree rebuilding the same compositions — so a worktree's panel would
  * otherwise offer "On every push" and silently never act on it.
  *

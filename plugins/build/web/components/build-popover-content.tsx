@@ -27,7 +27,7 @@ import { RunsDataView } from "@plugins/runs/web";
 // reasoning wrong.
 import { BUILD_RUN_KIND } from "@plugins/build/plugins/run-ledger/core";
 import { DeploymentChain } from "@plugins/build/plugins/deployment/web";
-import type { BuildRun } from "../../shared";
+import type { BuildRun } from "../../core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 

@@ -17,6 +17,16 @@ import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/c
 export const SERVICE_LOGS_SUBDIR = "services";
 
 /**
+ * The subdir of {@link gatewayLogs} holding the output of main's convergence
+ * runs (`deploy/main.log`), which the gateway starts on every advance of
+ * `refs/heads/main` (`gateway/main_deploy.go`). A subdir for the reason
+ * `services/` is one: the boot sweep deletes a top-level `<name>.log` whose
+ * namespace has no registry dir, and a namespace may take any name. Pinned to
+ * the Go constant by `gateway-logs:in-sync`.
+ */
+export const DEPLOY_LOGS_SUBDIR = "deploy";
+
+/**
  * The gateway's log directory: its own rotating slog sink (`gateway.log`), the
  * per-worktree channel logs it writes, and the raw stdout/stderr capture the
  * launcher opens for the daemon (`gateway-stdio.log`).
@@ -49,6 +59,16 @@ export const gatewayLogs = defineDataDir({
     {
       pattern: `${SERVICE_LOGS_SUBDIR}/*.log`,
       bound: { kind: "gateway-rotating" },
+    },
+    // Main's convergence runs. Written by the run itself through a descriptor
+    // the gateway opens (so it outlives the gateway), hence not the rotating
+    // writer: the gateway rotates it before starting a run.
+    {
+      pattern: `${DEPLOY_LOGS_SUBDIR}/*.log`,
+      bound: {
+        kind: "rotates-itself",
+        how: "the gateway renames it to <file>.1 before starting a run once it is past mainDeployLogMax (16 MB), so at most two files of ~16 MB plus one run",
+      },
     },
   ],
 });

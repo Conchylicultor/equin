@@ -33,12 +33,10 @@ export interface CompositionRebuildInputs {
  * Pure, for the reason `derive.ts` is pure: the properties this loop rests on
  * have to be decidable — and testable — with no db / config / git singleton in
  * reach. The bound half (which manifest rows exist, which namespace each
- * resolves to, what the ledger says) is `decideBuilds`, next door.
+ * resolves to, what the ledger says) is `decideConvergence`, next door.
  *
- * `server/internal/` rather than `core/`, unlike `derive.ts`: nothing web-facing
- * asks this question, and `core/` is external to the `web` artifact — putting it
- * on that barrel would route the compositions manifest it imports into
- * `build/web`'s chunk for a predicate the browser never runs.
+ * Here, in the convergence run's `cli/`, rather than in `core/`: the only
+ * process that asks it is main's convergence run, and nothing web-facing does.
  *
  * A trigger mode adds exactly ONE thing to main's own auto-build policy: a rate
  * limit. Everything else is delegated to `wantsBuild`, so a served composition

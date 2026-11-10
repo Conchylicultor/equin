@@ -38,6 +38,10 @@ type Config struct {
 	DefaultNamespace  string
 	PublicHosts       string
 	PidFile           string
+	// MainCheckout is main's checkout, whose refs/heads/main the gateway
+	// watches to start main's convergence run (main_deploy.go). "" disables
+	// it: a release, serve-app or a hand-run gateway deploys nothing.
+	MainCheckout string
 
 	// Taskpolicy is the macOS priority tool background boots are demoted and
 	// promoted with (detectTaskpolicy), "" where there is none. Not a flag:
@@ -132,6 +136,10 @@ func parseFlags() (Config, string) {
 	// gateway launchd relaunches at login or after a crash would otherwise leave
 	// the file naming a dead generation. Empty ⇒ no pidfile (a hand-run gateway).
 	flag.StringVar(&cfg.PidFile, "pid-file", "", "file to write this process's pid to at boot")
+	// Main's checkout: the gateway starts main's convergence run there on every
+	// advance of refs/heads/main (main_deploy.go). Only the machine's dev
+	// gateway (./equin start) passes it.
+	flag.StringVar(&cfg.MainCheckout, "main-checkout", "", "main's checkout: run `./equin build --allow-main --converge` there on every advance of refs/heads/main, at boot, and on POST /gateway/deploy/converge (empty: no auto-deploy)")
 	// The environment names every child process may receive (see env.go).
 	// Required and deliberately default-less: the declaration lives in
 	// plugins/infra/plugins/launcher/core (runtimeEnvNames), and a default here
@@ -295,6 +303,19 @@ func main() {
 			"supervisor: start failed", err)
 	}
 
+	// Main's deploy trigger. After the services (its run needs Postgres), and a
+	// misconfigured checkout is fatal here rather than silent at the first push.
+	var deployer *mainDeployer
+	if cfg.MainCheckout != "" {
+		deployer, err = newMainDeployer(cfg.MainCheckout, cfg.ChildEnv, cfg.LogDir, cfg.ReportOutboxDir)
+		if err == nil {
+			err = deployer.Start(ctx)
+		}
+		if err != nil {
+			fatal(fmt.Sprintf("gateway: fatal: main deploy: %v", err), "main deploy: start failed", err)
+		}
+	}
+
 	// Eagerly spawn `central` so plugins that load on boot (auth, secrets) are
 	// ready before the first request lands. PG is up by this point, so
 	// central's plugins can connect immediately.
@@ -312,6 +333,7 @@ func main() {
 	}
 
 	proxy := NewProxy(reg, routes, sup, cfg.DefaultNamespace, newPanicReporter(cfg.ReportOutboxDir, panicReportWindow))
+	proxy.deployer = deployer
 	proxy.publicHosts = parsePublicHosts(cfg.PublicHosts)
 	srv := &http.Server{
 		Handler:           proxy,

@@ -98,15 +98,11 @@ export const buildJob = defineSupervisedJob({
 
     /**
      * The claim IS the lock, and it is taken inside the handler's memoized spawn
-     * step. A request that lost the race simply stops: auto-build is a convergence
-     * loop, so it is re-derived at the next edge rather than queued.
+     * step. A request that lost the race simply stops: nothing is queued.
      *
      * `getHeadCommit()` is sampled HERE rather than at the enqueue, so the row
      * names the tree the build actually starts on rather than whatever the
-     * checkout was on when the request was made. It is not a baseline anyone
-     * carries — the convergence decision is re-derived from durable state at every
-     * terminal edge (see `reconcileDeployment`), which is what survives this
-     * process being killed by its own build.
+     * checkout was on when the request was made.
      */
     claim: async (input) => {
       const buildId = buildRunIdKind.mint();

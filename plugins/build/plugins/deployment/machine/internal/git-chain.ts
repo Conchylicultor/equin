@@ -12,7 +12,7 @@ import {
   tryRunGit,
   WorktreeGoneError,
 } from "@plugins/primitives/plugins/commit-list/server";
-import { CHAIN_CAP, sameCommit, type Chain } from "../../core";
+import { CHAIN_CAP, sameCommit, type Carrier, type Chain } from "../../core";
 
 /**
  * The three git reads every chain question is built from, in one place: where
@@ -116,4 +116,45 @@ export async function chainTo(base: string, target: string): Promise<Chain> {
     await runGit(["log", `--format=${LOG_FORMAT}`, "-1", base], REPO_ROOT),
   );
   return { commits: [...ahead, ...baseRow], truncated: false };
+}
+
+/** Attach the ancestry fact to a carrier whose pin has just been read. */
+export async function withAncestry(
+  carrier: Omit<Carrier, "ancestorOfTarget">,
+  target: Resolvable<string>,
+): Promise<Carrier> {
+  if (!target.resolved)
+    return { ...carrier, ancestorOfTarget: unresolved("no target") };
+  if (!carrier.commit.resolved)
+    return {
+      ...carrier,
+      ancestorOfTarget: unresolved(carrier.commit.reason),
+    };
+  return {
+    ...carrier,
+    ancestorOfTarget: await isAncestor(carrier.commit.value, target.value),
+  };
+}
+
+/**
+ * The `web` carrier from the served dist's two trailers (`.build-commit`,
+ * `.build-graph`), before its ancestry is attached. One spelling for both
+ * readers: the backend's own deployment description and the read from outside
+ * any backend (`readServedDeployment`).
+ */
+export function webCarrier(
+  distCommit: string | null,
+  distGraph: string | null,
+): Omit<Carrier, "ancestorOfTarget"> {
+  return {
+    id: "web",
+    commit:
+      distCommit === null
+        ? unresolved("the served dist carries no .build-commit")
+        : resolved(distCommit),
+    graph:
+      distGraph === null
+        ? unresolved("the served dist carries no .build-graph")
+        : resolved(distGraph),
+  };
 }

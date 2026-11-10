@@ -13676,7 +13676,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `resource.declare` "build.history"
       - `resource.declare` "build.history:groups"
       - `resource.declare` "build.history:rows"
-      - `trigger` "build.run"
     - Uses:
       - `build/run-ledger._buildRuns`
       - `config_v2.ConfigV2`
@@ -13690,13 +13689,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Machine:
     - Uses:
       - `build/deployment.deploymentServed`
-      - `build/deployment.readDeployment`
       - `build/run-ledger.settleDeadInflightRun`
       - `infra/endpoints.implementMachine`
     - Exports (values): `onRunTerminal`
     - Register:
-      - `defineJob('build.run')`
-      - `defineJob('build.run.debounced')`
       - `defineJob('build.composition-tick')`
       - `defineSupervisedJob('build.run.supervised')`
       - `defineFileWatcher('build.run-terminal')`
@@ -13707,7 +13703,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Uses:
       - `build/run-ledger.buildRunFields`
       - `build/run-ledger.buildRunsEntityRef`
+      - `config_v2.defineConfig`
       - `fields.fieldsToZodObject`
+      - `fields/bool/config.boolField`
       - `infra/endpoints.defineEndpoint`
       - `infra/namespace.MAIN_COMPOSITION_ID`
       - `network/live.liveCollection`
@@ -13716,6 +13714,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Exports (values):
       - `BUILD_CATEGORY_ID`
       - `BUILD_LOG_CHANNEL`
+      - `buildConfig`
       - `buildDetailRoute`
       - `buildHistory`
       - `buildRoute`
@@ -13744,16 +13743,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `build/build-info`
       - `build/build-logs`
       - `build/build-profiling`
+      - `build/converge`
       - `build/runs-arm`
       - `build/serve-composition`
       - `debug/reports`
       - `menu-bar`
     - Endpoint callers: `restart-skip`
-  - Shared:
-    - Exports (types): `BuildRun`
-    - Exports (values):
-      - `buildConfig`
-      - `isMainCompositionBuild`
   - Plugins:
     - **`build-commits`** — Commits included since the previous build, shown in the build detail pane.
       - Web:
@@ -13965,6 +13960,30 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `describeTermination`
       - Cross-plugin:
         - Imported by: `build/build-info`
+    - **`converge`** — Main-deploy-failed report renderer: a one-line Debug → Reports summary for the main-deploy-failed kind (how main's convergence run ended, what started it). The main-deploy-failed report kind — filed by the gateway through the report outbox when main's convergence run (`./equin build --allow-main --converge`) fails to decide or start a build, drained by main once it is up: how it ended, what started it, and its last lines.
+      - Web:
+        - Contributes: `Reports.KindView` → `MainDeployFailedSummary`
+        - Uses:
+          - `primitives/css/badge.Badge`
+          - `primitives/css/inline.Inline`
+          - `reports.Reports`
+      - Server:
+        - Contributes: `report-kind` "main-deploy-failed"
+        - Uses: `reports.ReportKind`
+      - Core:
+        - Uses:
+          - `debug/backend-crash.CrashLineSchema`
+          - `debug/backend-crash.CrashTailSchema`
+        - Exports (types): `MainDeployFailedPayload`
+        - Exports (values):
+          - `describeMainDeployFailed`
+          - `MainDeployFailedPayloadSchema`
+      - Cli:
+        - Uses: `build/deployment.readServedDeployment`
+        - Exports (types): `ConvergenceDecision`
+        - Exports (values): `decideConvergence`
+      - Cross-plugin:
+        - Imported by: `framework/cli/build`
     - **`deployment`** — The client half of the deployment description: `useDeployment()` composes THIS tab's own baked pin in beside the server's two deployable carriers, and `<DeploymentChain/>` renders the four arms — one commit row when converged, the chain with a carrier chip on each carrier's own commit when behind, and the raw pins plus the reason when there is no line to draw. Also eagerly registers the boot-critical build.deployment resource descriptor so boot-snapshot can hydrate it before first paint.
       - Server:
         - Contributes:
@@ -14045,7 +14064,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-sm`
           - `ui/tokens/font-family --font-mono`
           - `ui/tokens/shape --spacing`
-        - Imported by: `build`
+        - Imported by:
+          - `build`
+          - `build/converge`
+      - Cli:
+        - Exports (values): `readServedDeployment`
     - **`restart-skip`** — The restart-skip-cannot-judge report kind — filed by `./equin build` through the report outbox when the backend or central it asked to adopt a deploy could not measure its own code (the closure walk refused it): the deploy restarts all the same, but restart-skip is off until the cause is fixed, so it is reported rather than left as one more 'restart needed' log line. Restart-skip, central's half: POST /api/restart-skip/central/adopt — main's deploy asks central before restarting it, and central answers adopted only when a process spawned now would run exactly its code (the same judgement as a backend's: same Bun and entry, nothing it loaded or could still load changed since it started).
       - Server:
         - Contributes: `report-kind` "restart-skip-cannot-judge"
@@ -14132,7 +14155,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Machine:
         - Exports (values): `settleDeadInflightRun`
       - Cli:
-        - Exports (types): `BuildRunRecorder`
+        - Exports (types):
+          - `AttemptTarget`
+          - `BuildRunRecorder`
+          - `LastClosedRun`
         - Exports (values): `createBuildRunRecorder`
     - **`runs-arm`** — The build arm's presence on the merged run surface: its rows' link into the existing build run-detail pane, and the status / targets / commit / exit-code columns only a build row has. The build arm of the merged run space: binds `build_runs` into the runs union, mapping the six-way BuildStatus taxonomy onto the shared outcome axis while keeping it whole as the `build.status` arm field, plus the targets, commit and exit code only a build row has.
       - Web:
@@ -14645,7 +14671,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `validationIssues`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Imported by: 139 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+    - Imported by: 140 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
       - `apps` ×39
       - `conversations` ×14
       - `backup` ×13
@@ -14656,8 +14682,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `tasks` ×6
       - `framework` ×4
       - `infra` ×4
+      - `build` ×3
       - `primitives` ×3
-      - `build` ×2
       - `integrations` ×2
       - `plugin-meta` ×2
       - `reports` ×2
@@ -14754,6 +14780,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readEffectiveConfigFromDiskSync`
       - Cross-plugin:
         - Imported by:
+          - `build/converge`
           - `build/serve-composition`
           - `framework/cli/build`
           - `framework/cli/deploy`
@@ -22591,6 +22618,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Uses tokens: `ui/tokens/color-palette --muted-foreground`
         - Imported by:
+          - `build/converge`
           - `debug/gateway-panic`
           - `debug/service-down`
     - **`backend-liveness`** — Backend-frozen report renderer: a one-line Debug → Reports summary for the backend-frozen kind. The backend-frozen report kind — filed by central's liveness probe through the report outbox, drained by main: every minute while a backend stays frozen, once when the episode ends (main's own freeze is filed as soon as its thread runs again). Plus a debug-only trigger that freezes a worktree backend's JS thread to reproduce it. Backend liveness probe (central): every 15 s asks each running backend for any HTTP answer on its own socket, and appends a frozen episode to the backend-liveness data dir when one stays unanswered for a minute of awake time (machine sleep never counts; a stopped process is paused, not frozen) — from outside the backend, so a frozen JS thread is noticed while it lasts.
@@ -28379,13 +28407,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `takeReexecBudget`
         - **`build`** — `./equin build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.
           - Cli:
-            - Uses: 53 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
+            - Uses: 54 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
               - `framework/cli/op-runtime` ×31
               - `framework/cli/bootstrap` ×4
               - `framework/tooling/web-artifacts` ×4
               - `framework/cli/migrations` ×3
               - `plugin-meta/plugin-records` ×3
               - `debug/profiling/op-log` ×2
+              - `build/converge.decideConvergence`
               - `build/run-ledger.createBuildRunRecorder`
               - `framework/cli/doctor.assertPrerequisites`
               - `framework/cli/git-artifacts.registerMergeDrivers`
@@ -28775,14 +28804,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `UNDOCUMENTED_RUNTIME_FOLDERS`
           - `VERIFYING_FOLDERS`
       - Cross-plugin:
-        - Imported by: 44 plugins — full list in [`plugins/framework/plugins/plugin-id/REFERENCE.md`](../plugins/framework/plugins/plugin-id/REFERENCE.md)
+        - Imported by: 45 plugins — full list in [`plugins/framework/plugins/plugin-id/REFERENCE.md`](../plugins/framework/plugins/plugin-id/REFERENCE.md)
           - `plugin-meta` ×20
           - `framework` ×10
           - `apps` ×4
+          - `build` ×2
           - `config_v2` ×2
           - `active-data/plugin-link`
           - `apps-core/tabs`
-          - `build/serve-composition`
           - `debug/mcp-tools`
           - `infra/background/catalog`
           - `primitives/data-view`
@@ -32872,13 +32901,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TriggerRowSchema`
           - `TriggersPayloadSchema`
       - Cross-plugin:
-        - Imported by: 39 plugins — full list in [`plugins/infra/plugins/events/REFERENCE.md`](../plugins/infra/plugins/events/REFERENCE.md)
+        - Imported by: 38 plugins — full list in [`plugins/infra/plugins/events/REFERENCE.md`](../plugins/infra/plugins/events/REFERENCE.md)
           - `conversations` ×11
           - `tasks` ×10
           - `apps` ×7
           - `infra` ×4
           - `page` ×4
-          - `build`
           - `debug/queue`
           - `wish`
       - Exemptions:
@@ -33255,7 +33283,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `apps/deploy/remote-deploy`
-              - `build`
               - `build/deployment`
               - `conversations/conversation-view/commits-graph`
               - `infra/launcher/gateway-drift`
@@ -34845,13 +34872,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `namespaceUrl`
           - `resolveNamespaceAlias`
       - Cross-plugin:
-        - Imported by: 73 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
+        - Imported by: 74 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
           - `framework` ×12
           - `debug` ×11
           - `apps` ×10
           - `infra` ×9
           - `conversations` ×7
-          - `build` ×5
+          - `build` ×6
           - `plugin-meta` ×3
           - `primitives` ×3
           - `tasks` ×3
@@ -38120,7 +38147,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `unresolved`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --destructive`
-            - Imported by: 299 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
+            - Imported by: 300 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
               - `apps` ×83
               - `conversations` ×48
               - `debug` ×29
@@ -38128,7 +38155,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks` ×22
               - `page` ×16
               - `primitives` ×14
-              - `build` ×8
+              - `build` ×9
               - `infra` ×8
               - `active-data` ×5
               - `plugin-meta` ×5
@@ -42557,10 +42584,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SERVE_MODES`
           - `serveModeLabel`
       - Cross-plugin:
-        - Imported by: 27 plugins — full list in [`plugins/plugin-meta/plugins/composition/REFERENCE.md`](../plugins/plugin-meta/plugins/composition/REFERENCE.md)
+        - Imported by: 28 plugins — full list in [`plugins/plugin-meta/plugins/composition/REFERENCE.md`](../plugins/plugin-meta/plugins/composition/REFERENCE.md)
           - `apps` ×16
           - `framework` ×5
-          - `build` ×2
+          - `build` ×3
           - `plugin-meta` ×2
           - `conversations/workspace/worktree`
           - `infra/worktree/reclaim`
@@ -44717,7 +44744,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×6
               - `ui/tokens/shape` ×3
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 180 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 181 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `apps` ×38
               - `debug` ×37
               - `conversations` ×28
@@ -44725,7 +44752,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives` ×10
               - `tasks` ×10
               - `plugin-meta` ×8
-              - `build` ×5
+              - `build` ×6
               - `infra` ×4
               - `review` ×4
               - `fields` ×3
@@ -45152,16 +45179,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 110 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+            - Imported by: 111 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
               - `apps` ×23
               - `debug` ×18
               - `reports` ×18
               - `primitives` ×12
               - `conversations` ×9
               - `page` ×6
+              - `build` ×4
               - `plugin-meta` ×4
               - `tasks` ×4
-              - `build` ×3
               - `ui` ×2
               - `active-data/go`
               - `audience/developer-mark`
@@ -52957,8 +52984,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`reports`** — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. The reports table and its live read (reports.list), the ReportKind / ReportNoiseRule slots every kind and rule contributes to, and the fan-out ceiling config; recording is the engine's (reports/plugins/engine).
   - Web:
     - Slots: `Reports.KindView`
-    - Slot contributors: 39 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `Reports.KindView` ×39
+    - Slot contributors: 40 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+      - `Reports.KindView` ×40
     - Contributes:
       - `IdKinds.Kind` "report|crash"
       - `ConfigV2.WebRegister` "reports"
@@ -53073,16 +53100,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `SERVER_REPORT_SOURCES`
       - `submitReport`
   - Cross-plugin:
-    - Imported by: 70 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+    - Imported by: 71 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
       - `reports` ×29
       - `debug` ×18
       - `conversations` ×6
       - `database` ×4
       - `infra` ×3
+      - `build` ×2
       - `framework` ×2
       - `active-data/report`
       - `backup`
-      - `build/restart-skip`
       - `network/live/boot-snapshot`
       - `page/place/google`
       - `stats/cost`

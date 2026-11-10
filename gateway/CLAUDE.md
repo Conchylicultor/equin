@@ -14,6 +14,7 @@ See the top-level [`CLAUDE.md`](../CLAUDE.md) for overall architecture and [`ser
 - Discovers worktrees from `~/.equin/worktrees/<name>/spec.json`
 - Exposes `/gateway/*` on every host as an API for apps to query gateway state
 - **Supervises configured services** (e.g. embedded Postgres) via a generic process supervisor. See "Service supervision" below.
+- **Triggers main's deploy** (`-main-checkout`): on every advance of `refs/heads/main` it runs `./equin build --allow-main --converge` in main's checkout, one run at a time. See "Main's deploy" below.
 
 ## Key Design Decisions
 
@@ -163,6 +164,7 @@ gateway/
 ├── crash_report.go # The report outbox writer; a backend's signal death as a backend-crash entry
 ├── exit_report.go # Every unrequested backend death filed (backend-exit for an exit code) and counted into crash loops (backend-crash-loop)
 ├── service_report.go # A supervised service's mid-session outage filed as a service-down report (same outbox writer)
+├── main_deploy.go # Main's deploy trigger: watches refs/heads/main, runs one convergence run at a time, files main-deploy-failed
 └── proxy.go       # http.Handler: routing, static serving, HTTP/WS proxy, /gateway API
 ```
 
@@ -227,6 +229,54 @@ its context ends, not only after its grace. Before, each step had its own clock:
 drain took its full 15 s whenever one proxied stream was open (a stream never
 ends on its own), then a backend's 5 s grace started — 15 + 5 = launchd's
 `ExitTimeOut`, so launchd killed the gateway mid-teardown (2026-11-08 18:05).
+
+## Main's deploy
+
+`main_deploy.go`. The gateway is the one process up whenever anything is, so
+main's auto-deploy is TRIGGERED here — and only triggered. Before, every edge
+and the runner lived in main's own backend, so a main that could not serve
+could not deploy the commit that fixed it (2026-11-08: the fix sat eleven
+minutes until a person reloaded this gateway).
+
+- **Enabled by `-main-checkout <path>`**, which only `./equin start`'s dev launch
+  passes (`devGatewayLaunchOptions`): a release, `serve-app` or a hand-run
+  gateway deploys nothing. A path that is not a main checkout (a `.git` dir and
+  an `equin` CLI) is fatal at boot, after the services start.
+- **No policy.** On an edge, with no run going, it starts ONE
+  `<checkout>/equin build --allow-main --converge` (cwd the checkout, the
+  declared child env plus `EQUIN_BUILD_DETACHED=1`). That run decides from
+  durable state whether anything is due and builds it
+  (`plugins/build/plugins/converge`) — the commit being deployed decides with
+  its own code.
+- **Edges:** `refs/heads/main` moved (trailing debounce, 5 s), this gateway's
+  boot, and `POST /gateway/deploy/converge {"cause": "…"}` (a backend: a
+  composition config change, the composition cadence tick). An edge during a
+  run is remembered and starts one more run when it exits; edges never queue
+  more than that.
+- **The watch** is fsnotify on `.git/refs/heads` and `.git` (loose ref and
+  `packed-refs`). ANY event there re-reads `refs/heads/main`, and only a changed
+  value is an edge: kqueue coalesces a directory's changes, so two quick
+  lock-and-renames can arrive as the first one's events alone. A 30 s re-read is
+  the backstop for an event never delivered — the registry's watch+reconcile
+  pattern, two small file reads a tick.
+- **The run outlives the gateway.** It is a deploy: its own process group, its
+  output written straight into `<log-dir>/deploy/main.log` (rotated to `.1`
+  past 16 MB before a run starts; not a pipe into this process), and
+  `EQUIN_BUILD_DETACHED` keeps the CLI's orphan guard from exiting it. A
+  restarted gateway's boot edge starts a run that waits behind it on the
+  checkout's build lock.
+- **Nothing retries.** A run that exits non-zero, is killed, or cannot start is
+  filed as a `main-deploy-failed` report (its causes, status and last 60 log
+  lines; kind `plugins/build/plugins/converge`, contract
+  `testdata/main-deploy-failed-entry.json`), and the next edge is the next try.
+  A failed BUILD is not a failed run: the run exits 0 and the build's row and
+  bell say so.
+- **API:** `GET /gateway/deploy` — the ref last seen, whether a run goes (and
+  its pid), the pending edges, the last run's causes, times and outcome.
+  `POST /gateway/deploy/converge` — an edge, `202`. Both `404` on a gateway
+  without `-main-checkout`.
+
+Changes here take effect only after `./equin start --force`.
 
 ## Service supervision
 

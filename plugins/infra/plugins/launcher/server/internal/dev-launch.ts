@@ -29,6 +29,9 @@ export function devGatewayLaunchOptions(opts: {
     port: DEV_GATEWAY_PORT,
     bindHost: devBindHost(),
     logLevel: opts.logLevel,
+    // The dev gateway is what deploys main: it runs main's convergence in
+    // main's checkout on every advance of refs/heads/main.
+    mainCheckout: opts.repoRoot,
   };
 }
 

@@ -33,6 +33,9 @@ type Proxy struct {
 	publicHosts map[string]bool
 	// panics files a handler panic as a report (handler_panic.go).
 	panics *panicReporter
+	// deployer runs main's convergence (main_deploy.go); nil when this gateway
+	// was started without -main-checkout.
+	deployer *mainDeployer
 }
 
 func NewProxy(reg *Registry, routes *CentralRoutesStore, sup *Supervisor, defaultNamespace string, panics *panicReporter) *Proxy {
@@ -362,6 +365,11 @@ func (p *Proxy) handleGatewayAPI(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if r.URL.Path == "/gateway/deploy" || r.URL.Path == "/gateway/deploy/converge" {
+		p.handleDeploy(w, r)
+		return
+	}
+
 	if r.URL.Path == "/gateway/worktrees" && r.Method == http.MethodGet {
 		list := p.reg.List()
 		out := make([]WorktreeStatus, 0, len(list))
@@ -605,4 +613,37 @@ func startReasonOf(r *http.Request) StartReason {
 
 func isWebSocketUpgrade(r *http.Request) bool {
 	return strings.EqualFold(r.Header.Get("Upgrade"), "websocket")
+}
+
+// handleDeploy serves main's deploy trigger (main_deploy.go):
+//
+//	GET  /gateway/deploy           its state: the ref seen, a run going, pending edges, the last run
+//	POST /gateway/deploy/converge  an edge, {"cause": "…"} — 202 once recorded
+//
+// Both answer 404 when this gateway deploys nothing (no -main-checkout), so a
+// backend asking an older or a release gateway is told rather than ignored.
+func (p *Proxy) handleDeploy(w http.ResponseWriter, r *http.Request) {
+	if p.deployer == nil {
+		http.Error(w, "this gateway runs no main deploy (started without -main-checkout); ./equin start --force installs the current one", http.StatusNotFound)
+		return
+	}
+	switch {
+	case r.URL.Path == "/gateway/deploy" && r.Method == http.MethodGet:
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(p.deployer.Status())
+	case r.URL.Path == "/gateway/deploy/converge" && r.Method == http.MethodPost:
+		var body struct {
+			Cause string `json:"cause"`
+		}
+		if err := json.NewDecoder(io.LimitReader(r.Body, 4096)).Decode(&body); err != nil || body.Cause == "" {
+			http.Error(w, `body must be {"cause": "<why>"}`, http.StatusBadRequest)
+			return
+		}
+		p.deployer.Trigger("requested: " + cutLine(body.Cause))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusAccepted)
+		_ = json.NewEncoder(w).Encode(p.deployer.Status())
+	default:
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
 }
