@@ -61,7 +61,9 @@ never reported as a loader failure.
   by their share (`pageShares`) — mapping each page through the log would
   squeeze late pages.
 - `journey.ts` — `journeyOf(session)`: a page lasts until the next pageview,
-  the exit page until the visit's end (`durationMs`); events belong to the
+  the exit page until the visit's end (`durationMs` — collect's one definition
+  of a visit's duration, background included; never re-derived here, so a
+  visit lasts as long in the tab as in the report); events belong to the
   pageview before them; `section_reach` hits (collect's `SECTION_REACH_EVENT`,
   section `<page>/<key>`) become the page's reached sections (first reach
   only), the rest its actions. "Read %" = sections reached ÷ the sections any

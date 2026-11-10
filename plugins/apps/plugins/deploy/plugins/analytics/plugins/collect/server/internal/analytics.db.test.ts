@@ -13,7 +13,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { and, eq, sql } from "drizzle-orm";
+import { TransactionRollbackError, and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import {
   createTestDb,
@@ -47,6 +47,7 @@ import { DimensionSchema } from "../../core/internal/dimensions";
 import { eventPropValue } from "../../core/internal/event-prop";
 import {
   rawDailyRows,
+  rollupDay,
   dailyTotalsRows,
   visitorCounts,
   type KeyedRow,
@@ -904,6 +905,135 @@ describe("sessions", () => {
         q: encodeSessionsQuery({ ...q, limit: 10_000 }),
       }).success,
     ).toBe(false);
+  });
+});
+
+describe("visit duration: one definition, report and sessions alike", () => {
+  const sessionsOf = async (
+    dbx: Parameters<typeof runSessionsQuery>[0],
+    day: string,
+  ) => {
+    const result = await runSessionsQuery(
+      dbx,
+      { range: "today", filters: [], shape: "all", limit: 50 },
+      at(day, "23:00"),
+    );
+    if (result.kind !== "sessions") throw new Error("expected sessions");
+    return result.sessions;
+  };
+  const totalDuration = (rows: KeyedRow[]) =>
+    rows.find((r) => r.dimension === "total")?.durationMs;
+
+  test("the exit page counts its background stretches; unrecorded ones add nothing", async () => {
+    const byEntry = new Map(
+      (await sessionsOf(t.db, DAY)).map((s) => [
+        `${s.entryPath}@${s.startedAt.slice(11, 16)}`,
+        s.durationMs,
+      ]),
+    );
+    expect(Object.fromEntries(byEntry)).toEqual({
+      // A: 5 min to /harness, then 60 s visible there; gaps never recorded.
+      "/@10:00": 5 * 60_000 + 60_000,
+      // B: one page, 5 s visible + 120 s in a background tab.
+      "/apps@10:30": 5_000 + 120_000,
+      "/@11:00": 0,
+      // C: 10 min to /story, no beacon there.
+      "/@12:00": 10 * 60_000,
+    });
+  });
+
+  test("the report's total — raw and stored — is the sum of the sessions' durations", async () => {
+    const sum = (await sessionsOf(t.db, DAY)).reduce(
+      (a, s) => a + s.durationMs,
+      0,
+    );
+    const raw = await rawDailyRows(t.db, {
+      from: DAY,
+      to: DAY,
+      filters: [],
+      onlyNotRolledUp: false,
+    });
+    const stored = await dailyTotalsRows(t.db, {
+      from: DAY,
+      to: DAY,
+      level: { kind: "unfiltered" },
+      dimensions: "total",
+    });
+    expect(totalDuration(raw)).toBe(sum);
+    expect(totalDuration(stored)).toBe(sum);
+  });
+
+  test("idle time is already visible time; earlier pages count wall-clock", async () => {
+    // A visit of its own on a day nothing else touches, rolled back after.
+    const day = "2026-09-20";
+    const D = { ip: "203.0.113.4", ua: UA.chromeMac };
+    const send = (
+      dbx: Parameters<typeof recordCollect>[0],
+      body: z.input<typeof CollectBodySchema>,
+      now: Date,
+    ) =>
+      recordCollect(
+        dbx,
+        CollectBodySchema.parse(body),
+        {
+          ip: D.ip,
+          userAgent: D.ua,
+          acceptLanguage: "en-US",
+          now,
+        },
+        (ip) => countries.lookup(ip),
+      );
+    expect(
+      t.db.transaction(async (tx) => {
+        await send(tx, { kind: "pageview", host, path: "/" }, at(day, "10:00"));
+        const exit = pageviewId(
+          await send(
+            tx,
+            { kind: "pageview", host, path: "/b" },
+            at(day, "10:02"),
+          ),
+        );
+        await send(
+          tx,
+          {
+            kind: "engagement",
+            pageviewId: exit,
+            engagedMs: 40_000,
+            gaps: [
+              { kind: "hidden", startMs: 10_000, endMs: 40_000 },
+              { kind: "idle", startMs: 50_000, endMs: 70_000 },
+            ],
+          },
+          at(day, "10:04"),
+        );
+        // 2 min on / (wall-clock) + 40 s visible on /b (its 20 s idle in)
+        // + its 30 s hidden.
+        const expected = 120_000 + 40_000 + 30_000;
+        const [session] = await sessionsOf(tx, day);
+        expect(session?.durationMs).toBe(expected);
+        const raw = await rawDailyRows(tx, {
+          from: day,
+          to: day,
+          filters: [],
+          onlyNotRolledUp: false,
+        });
+        expect(totalDuration(raw)).toBe(expected);
+        await rollupDay(tx, day);
+        const stored = await dailyTotalsRows(tx, {
+          from: day,
+          to: day,
+          level: { kind: "unfiltered" },
+          dimensions: "total",
+        });
+        expect(totalDuration(stored)).toBe(expected);
+        // Time on page stays the page's visible time.
+        expect(
+          raw.find((r) => r.dimension === "page" && r.value === "/b")
+            ?.durationMs,
+        ).toBe(40_000);
+        tx.rollback();
+      }),
+    ).rejects.toThrow(TransactionRollbackError);
   });
 });
 

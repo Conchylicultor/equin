@@ -73,15 +73,41 @@ const membershipValues = sql.join(
 );
 
 /**
- * `base` (the visits matching `where`, over alias `v`, with their duration)
- * and `m` (their memberships). Continue the WITH list after it.
+ * The ONE definition of a visit's duration, over visit alias `v`: wall-clock
+ * time from its start to the end of its exit page, every page on the same
+ * scale — background time included.
+ *
+ * Every page before the exit lasts until the next pageview (`exit_at −
+ * started_at`, wall-clock). The exit page has no next pageview, so its time is
+ * what its beacons measured: its visible time (`exit_engaged_ms`, idle
+ * included — idle is visible) plus its `hidden` stretches from the exit
+ * pageview's recorded `gaps`. An exit pageview whose gaps were never recorded
+ * (`NULL`: an older tracker, a visit from before `gaps` existed, no beacon
+ * yet) adds no background time — its visible time is all that is known.
+ *
+ * The report (every aggregate below) and the sessions list (`kept`'s
+ * `duration_ms`) both read it, so a visit lasts as long in one as in the other.
+ */
+const visitDurationMs = sql`(
+  (GREATEST(EXTRACT(EPOCH FROM (v.exit_at - v.started_at)) * 1000, 0))::bigint
+  + v.exit_engaged_ms
+  + COALESCE((
+      SELECT sum((g.value->>'endMs')::bigint - (g.value->>'startMs')::bigint)
+      FROM analytics_hits xh
+        CROSS JOIN LATERAL jsonb_array_elements(xh.gaps) AS g(value)
+      WHERE xh.id = v.exit_pageview_id AND g.value->>'kind' = 'hidden'
+    ), 0)::bigint
+)`;
+
+/**
+ * `base` (the visits matching `where`, over alias `v`, with their duration —
+ * {@link visitDurationMs}) and `m` (their memberships). Continue the WITH list
+ * after it.
  */
 function visitsAndMemberships(where: SQL): SQL {
   return sql`
     base AS (
-      SELECT v.*,
-        (GREATEST(EXTRACT(EPOCH FROM (v.exit_at - v.started_at)) * 1000, 0))::bigint
-          + v.exit_engaged_ms AS duration_ms
+      SELECT v.*, ${visitDurationMs} AS duration_ms
       FROM analytics_visits v
       WHERE ${where}
     ),

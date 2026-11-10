@@ -193,18 +193,19 @@ describe("stretches away", () => {
   });
 
   it("puts each page's stretches on it, and active = time on the pages minus every stretch", () => {
-    // Exit page: 20 s visible, 30 s in the background between.
+    // Exit page: 20 s visible, 30 s in the background between — the box's
+    // duration (collect's one definition) already holds both: 100 + 20 + 30.
     const j = journeyOf(
       session(
         [
           withGaps(pv(0, "/"), [gap(10, 40, "idle")]),
           withGaps(pv(100, "/vision", 20_000), [gap(5, 35, "hidden")]),
         ],
-        120_000,
+        150_000,
       ),
     );
     expect(j.pages[0]!.gaps).toEqual([{ kind: "idle", startS: 10, endS: 40 }]);
-    // The exit page's background time is added back to its visible time.
+    // The visit lasts what the report says; the page is never stretched past it.
     expect(j.pages[1]!.durationS).toBe(50);
     expect(j.durationS).toBe(150);
     expect(j.activeS).toBe(150 - 30 - 30);

@@ -90,7 +90,7 @@ export const analyticsVisits = pgTable(
     exitAt: timestamp("exit_at", { withTimezone: true }).notNull(),
     /** The exit pageview's hit; null for a visit that has only events. */
     exitPageviewId: uuid("exit_pageview_id"),
-    /** How long the exit page was visible. Duration = exitAt − startedAt + this. */
+    /** How long the exit page was visible. The visit's duration builds on it (`visitDurationMs` in aggregate-sql.ts). */
     exitEngagedMs: integer("exit_engaged_ms").notNull().default(0),
     pageviews: integer("pageviews").notNull().default(0),
     events: integer("events").notNull().default(0),

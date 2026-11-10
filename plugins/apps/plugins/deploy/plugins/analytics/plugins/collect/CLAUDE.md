@@ -37,6 +37,37 @@ the hourly chart are all built on it. That is why a report read from the daily
 totals equals the same report from raw rows — pinned by the parity test in
 `analytics.db.test.ts`.
 
+## Visit duration
+
+`visitDurationMs` (`server/internal/aggregate-sql.ts`) is the ONE definition of
+a visit's duration; `base.duration_ms` carries it to every aggregate (the
+report's `durationMs` / Visit duration KPI, the rollup's stored totals) and to
+the sessions list (`Session.durationMs`, which the Sessions tab draws as is —
+it never re-derives a duration). It is **wall-clock**, background included, on
+one scale for every page:
+
+- every page before the exit lasts until the next pageview — `exit_at −
+  started_at`;
+- the exit page has no next pageview, so it lasts what its beacons measured:
+  its visible time (`exit_engaged_ms`; idle time is visible, so it is in) **plus
+  its `hidden` stretches** from the exit pageview's `gaps`
+  (`exit_pageview_id`). Stretches under `MIN_GAP_MS` are not recorded, and a
+  merge past `MAX_GAPS` may label a little visible time hidden — both small;
+- an exit pageview with `gaps = NULL` (an older tracker, a visit from before
+  `gaps` existed, no beacon yet) adds no background: its visible time is all
+  that is known, which is exactly the definition those visits were counted
+  under before.
+
+A page row's `durationMs` is a different metric — time on page, the page's
+visible time only — and is unchanged.
+
+**Stored totals were kept, not recomputed** (2026-11-10). `gaps` landed that
+day and no deployed site had shipped it, so every visit in every stored
+`analytics_daily` / rollup day has `gaps = NULL` on its exit pageview — where
+the old and new definitions give the same number. Any day rolled up from now on
+uses this definition, and the nightly run re-rolls the last
+`ROLLUP_RECOMPUTE_DAYS` anyway.
+
 ## Event props
 
 An event's props are the `event_prop` hit dimension, valued

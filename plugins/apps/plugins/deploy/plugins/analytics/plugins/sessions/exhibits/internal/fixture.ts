@@ -355,7 +355,8 @@ export function fixtureSessions(now: number): Session[] {
     });
     const last = v.pages.at(-1)!;
     const exitAt = iso(at - last[1]);
-    // The exit page's visible time: what the report's duration counts of it.
+    // The exit page's visible time; with its background stretches, what the
+    // report's duration counts of it — so the visit lasts its whole wall-clock.
     const exitEngagedMs = hits.findLast(
       (h) => h.kind === "pageview",
     )!.engagedMs;
@@ -373,7 +374,7 @@ export function fixtureSessions(now: number): Session[] {
       exitPath: last[0],
       exitAt,
       exitEngagedMs,
-      durationMs: (at - last[1]) * 1000 + exitEngagedMs,
+      durationMs: at * 1000,
       engagedMs: at * 1000,
       pageviews,
       events: hits.length - pageviews,

@@ -80,11 +80,10 @@ function reachedSection(hit: SessionHit): string | null {
 
 /**
  * A visit's hits, as its pages. A page lasts until the next pageview's `ts`;
- * the exit page until the visit's end (the report's `durationMs`: exit −
- * start + the exit page's visible time) — plus, when its stretches are
- * recorded, the time its tab spent in the background, which the visible time
- * leaves out while every earlier page's wall-clock span counts it. Events
- * belong to the pageview before them (one before any pageview, to the first).
+ * the exit page until the visit's end — the report's `durationMs`, collect's
+ * one definition of a visit's duration (its background stretches already in),
+ * so a visit lasts as long here as in the report. Events belong to the
+ * pageview before them (one before any pageview, to the first).
  */
 export function journeyOf(session: Session): Journey {
   const start = ms(session.startedAt);
@@ -120,26 +119,20 @@ export function journeyOf(session: Session): Journey {
   const lastHitS = session.hits.length
     ? (ms(session.hits.at(-1)!.ts) - start) / 1000
     : 0;
-  let visitEndS = durationS;
   pages.forEach((page, i) => {
     // The last shown page of a truncated visit is NOT its exit page: it lasts
     // as far as its own hits say, never the rest of the visit.
     const last = i + 1 === pages.length;
-    let end = !last
+    const end = !last
       ? pages[i + 1]!.startS
       : session.hitsTruncated
         ? lastHitS
         : durationS;
-    if (last && !session.hitsTruncated && page.gaps !== null) {
-      // The exit page's visible time leaves its background stretches out.
-      end += sumS(page.gaps.filter((g) => g.kind === "hidden"));
-      visitEndS = end;
-    }
     page.durationS = Math.max(0, end - page.startS);
     if (page.gaps !== null) page.gaps = clipGaps(page.gaps, page.durationS);
   });
   const actionCount = pages.reduce((n, p) => n + p.actions.length, 0);
-  const totalS = Math.max(visitEndS, pages.at(-1)!.startS);
+  const totalS = Math.max(durationS, pages.at(-1)!.startS);
   const known = !session.hitsTruncated && pages.every((p) => p.gaps !== null);
   return {
     pages,
