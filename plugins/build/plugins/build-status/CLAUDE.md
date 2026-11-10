@@ -50,6 +50,7 @@ disappearing.
     - `ui/tokens/color-palette --success`
     - `ui/tokens/color-palette --warning`
   - Imported by:
+    - `apps/desktop/fullscreen-budget`
     - `build`
     - `build/build-fix`
     - `build/build-info`

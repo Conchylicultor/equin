@@ -419,6 +419,7 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
     - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by:
     - `active-data/build-run`
+    - `apps/desktop/fullscreen-budget`
     - `build/build-commits`
     - `build/build-fix`
     - `build/build-info`

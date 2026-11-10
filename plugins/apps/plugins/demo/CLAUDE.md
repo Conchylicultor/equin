@@ -58,6 +58,8 @@ other scripts answer any tip as it shows (`bootDemo` →
 ## Plugin reference
 
 - Description: Demo — a temporary sandbox app hosting the in-app demo (the Agent Manager on made-up data) while it is prototyped, before it ships on the website.
+- Cross-plugin:
+  - Imported by: `apps/desktop/fullscreen-budget`
 - Sub-plugins:
   - **`chrome`** — The demo before it runs, drawn for <DemoScope boot>: the equin logo over the logo's own colours, then the Enter equin button on every visit (a first visit downloads nothing before it; a return…
   - **`shell`** — App shell for the Demo sandbox: registers the /demo app entry — equin rendered in-process on made-up data (DemoScope + AppEmbed over the workspace demo's browser host), starting on its home app (the…

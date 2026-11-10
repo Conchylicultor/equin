@@ -234,6 +234,7 @@ new window of the focused window's app; F3 toggles the overview.
     - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/demo`
+    - `apps/desktop/fullscreen-budget`
     - `apps/desktop/launcher`
     - `apps/desktop/shelf`
     - `apps/desktop/switcher`

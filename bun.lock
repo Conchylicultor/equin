@@ -462,6 +462,10 @@
       "name": "@equin/plugin-apps-desktop",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/desktop/plugins/fullscreen-budget": {
+      "name": "@equin/plugin-apps-desktop-fullscreen-budget",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/desktop/plugins/launcher": {
       "name": "@equin/plugin-apps-desktop-launcher",
       "version": "0.0.1",
@@ -6656,6 +6660,10 @@
       "name": "@equin/plugin-reports-icon-family-gap",
       "version": "0.0.1",
     },
+    "plugins/reports/plugins/interaction-budget": {
+      "name": "@equin/plugin-reports-interaction-budget",
+      "version": "0.0.1",
+    },
     "plugins/reports/plugins/launch-fix": {
       "name": "@equin/plugin-reports-launch-fix",
       "version": "0.0.1",
@@ -7723,6 +7731,8 @@
     "@equin/plugin-apps-deploy-ssh-setup-hetzner": ["@equin/plugin-apps-deploy-ssh-setup-hetzner@workspace:plugins/apps/plugins/deploy/plugins/ssh-setup/plugins/hetzner"],
 
     "@equin/plugin-apps-desktop": ["@equin/plugin-apps-desktop@workspace:plugins/apps/plugins/desktop"],
+
+    "@equin/plugin-apps-desktop-fullscreen-budget": ["@equin/plugin-apps-desktop-fullscreen-budget@workspace:plugins/apps/plugins/desktop/plugins/fullscreen-budget"],
 
     "@equin/plugin-apps-desktop-launcher": ["@equin/plugin-apps-desktop-launcher@workspace:plugins/apps/plugins/desktop/plugins/launcher"],
 
@@ -10663,6 +10673,8 @@
     "@equin/plugin-reports-host-check": ["@equin/plugin-reports-host-check@workspace:plugins/reports/plugins/host-check"],
 
     "@equin/plugin-reports-icon-family-gap": ["@equin/plugin-reports-icon-family-gap@workspace:plugins/reports/plugins/icon-family-gap"],
+
+    "@equin/plugin-reports-interaction-budget": ["@equin/plugin-reports-interaction-budget@workspace:plugins/reports/plugins/interaction-budget"],
 
     "@equin/plugin-reports-launch-fix": ["@equin/plugin-reports-launch-fix@workspace:plugins/reports/plugins/launch-fix"],
 

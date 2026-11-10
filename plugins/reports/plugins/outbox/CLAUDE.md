@@ -176,6 +176,7 @@ pass the same `code` field.
     - `framework/tooling/checks/type-check`
     - `framework/tooling/checks/type-check/backstop`
     - `infra/launcher`
+    - `reports/interaction-budget`
 - Exemptions:
   - Exempts itself from:
     - `boundaries/no-platform-api` — `core/internal/file-report.ts`, `server/internal/drain.ts` (debt)

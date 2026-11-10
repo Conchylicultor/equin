@@ -159,6 +159,7 @@ tab bar, which an embed does not paint.
     - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps-core/surface`
+    - `apps/desktop/fullscreen-budget`
     - `apps/desktop/windows`
     - `apps/home/tour`
     - `hints/ask`

@@ -50,6 +50,7 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { openFloatingActionBar } from "@plugins/shell/plugins/global-action-bar/e2e";
 import { readDarwinBackground } from "@plugins/packages/plugins/spawn-priority/core";
+import { BIG_RECALC, styleRecalcs } from "./support/styled-elements";
 
 const path = arg("path", "/desktop/sonata");
 const rounds = numArg("rounds", 3);
@@ -107,9 +108,6 @@ type ProbeWindow = Window & {
     root: string[];
   };
 };
-
-/** A recalc restyling at least this many elements is a whole-document one. */
-const BIG_RECALC = 5000;
 
 const METRICS = [
   "TaskDuration",
@@ -372,19 +370,6 @@ await withBrowser(async (h) => {
   if (out !== undefined)
     console.log(`\nwrote ${out}-<enter|exit>-<round>.cpuprofile`);
 });
-
-/** Elements restyled by each style recalc (UpdateLayoutTree) in a trace. */
-function styleRecalcs(trace: Buffer): number[] {
-  const { traceEvents } = JSON.parse(trace.toString("utf8")) as {
-    traceEvents: TraceEvent[];
-  };
-  return traceEvents
-    .filter(
-      (e) => e.name === "UpdateLayoutTree" && (e.ph === "X" || e.ph === "E"),
-    )
-    .map((e) => e.args?.elementCount ?? e.args?.data?.elementCount ?? 0)
-    .filter((n) => n > 0);
-}
 
 /**
  * Each whole-document recalc with the latest `console.timeStamp` before it —

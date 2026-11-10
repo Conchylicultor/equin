@@ -73,8 +73,8 @@ before it) beside the total, worded by `formatReportActivity`
 - Description: Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. The reports table and its live read (reports.list), the ReportKind / ReportNoiseRule slots every kind and rule contributes to, and the fan-out ceiling config; recording is the engine's (reports/plugins/engine).
 - Web:
   - Slots: `Reports.KindView`
-  - Slot contributors: 40 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Reports.KindView` ×40
+  - Slot contributors: 41 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Reports.KindView` ×41
   - Contributes:
     - `IdKinds.Kind` "report|crash"
     - `ConfigV2.WebRegister` "reports"
@@ -189,8 +189,8 @@ before it) beside the total, worded by `formatReportActivity`
     - `SERVER_REPORT_SOURCES`
     - `submitReport`
 - Cross-plugin:
-  - Imported by: 72 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `reports` ×29
+  - Imported by: 73 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `reports` ×30
     - `debug` ×18
     - `conversations` ×7
     - `database` ×4
@@ -218,6 +218,7 @@ before it) beside the total, worded by `formatReportActivity`
   - **`engine`** [exempt] — Records server/frontend crashes as deduped reports (recordReport: per-fingerprint velocity, per-kind fan-out ceiling, duress shedding, bell notifications), files investigation tasks on demand, files…
   - **`host-check`** — Host-check report kind's Debug → Reports summary view: one line naming the failing host-scoped check and the first line of its message. Filed by main's hourly host audit through the report outbox…
   - **`icon-family-gap`** — Icon-family-gap collector: drains the icons plugin's iconFamilyGapReportSink into a deduped report whenever a scope whose icon family is strict draws a symbol the family does not map (it shows the…
+  - **`interaction-budget`** — Interaction-budget report kind's Debug → Reports summary view: one line naming the scenario, each case over budget against its budget, and the commit range. Filed by a scenario's budget run through…
   - **`launch-fix`** — Adds a Fix button to the plugin crash banner that launches an agent on the auto-created crash task with optional freeform context.
   - **`live-set-budget`** — Live-set-over-budget report renderer: a one-line Debug → Reports summary (the set's key, its rows against its budget). Live-set-over-budget report kind: drains network/live's liveSetOverBudgetSink…
   - **`live-state-stale-drop`** — Live-state stale-drop collector: drains the live-state primitive's httpStaleDropReportSink into a deduped report when a resource wedges on a stale HTTP body (3 consecutive drops, never applied — the…

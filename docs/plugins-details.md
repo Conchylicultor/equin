@@ -1853,6 +1853,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reports/engine`
               - `shell/notifications`
     - **`demo`** — Demo — a temporary sandbox app hosting the in-app demo (the Agent Manager on made-up data) while it is prototyped, before it ships on the website.
+      - Cross-plugin:
+        - Imported by: `apps/desktop/fullscreen-budget`
       - Plugins:
         - **`chrome`** — The demo before it runs, drawn for <DemoScope boot>: the equin logo over the logo's own colours, then the Enter equin button on every visit (a first visit downloads nothing before it; a return visit's host already starts behind it; a tab opened while the visitor is in the demo elsewhere joins it with no gate), drawn in the frame or maximized where the URL is, and once entered, while the host starts, one bar in the logo's gradient — what it is doing and how much it downloaded, weighed from the worker's progress (the starting data, then the plugins loaded). Also the demo's controls: Reset demo (confirmed; the host wipes its data and every tab starts again from the story), and the maximized demo's chrome — the Restore strip (revealed by the pointer at the page's top edge), a 'Press Esc to restore' notice that hides on its own, and Esc itself (page-wide, the lowest precedence: only when nothing inside the demo wants the key) — with Maximize / Restore run as a view transition (morphDemoFrame: the demo's box grows to the tab's surface and shrinks back). Shared by /demo and the website's demo band.
           - Web:
@@ -3497,6 +3499,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by: `apps/desktop/wallpaper`
       - Plugins:
+        - **`fullscreen-budget`** — The desktop.fullscreen-budget job: after each of main's successful builds, measures the elements the desktop ↔ full screen switch restyles (enter and exit, one window and four, on the demo's seeded data) and files an interaction-budget report naming the commit range when a case is over budget.
+          - Machine:
+            - Uses: `build.onRunTerminal`
+            - Register: `defineSupervisedJob('desktop.fullscreen-budget')`
         - **`launcher`** — The desktop's ⌘K launcher: a centred dialog over the windows listing every app as a grid (an empty query) or the matching apps and window commands (a query), with arrow-key selection, Shift+Enter for a new window and a right-click menu to keep an app in the dock. Exposes open / close / toggle for the shelf's launcher button.
           - Web:
             - Contributes:
@@ -3912,6 +3918,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shape --spacing`
             - Imported by:
               - `apps/demo`
+              - `apps/desktop/fullscreen-budget`
               - `apps/desktop/launcher`
               - `apps/desktop/shelf`
               - `apps/desktop/switcher`
@@ -13747,6 +13754,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ui/tokens/type-scale --font-weight-semibold`
     - Imported by:
       - `active-data/build-run`
+      - `apps/desktop/fullscreen-budget`
       - `build/build-commits`
       - `build/build-fix`
       - `build/build-info`
@@ -13930,6 +13938,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --success`
           - `ui/tokens/color-palette --warning`
         - Imported by:
+          - `apps/desktop/fullscreen-budget`
           - `build`
           - `build/build-fix`
           - `build/build-info`
@@ -14153,6 +14162,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `active-data/build-run`
+          - `apps/desktop/fullscreen-budget`
           - `build`
           - `build/build-commits`
           - `build/build-fix`
@@ -21666,8 +21676,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadedDatabaseConfig`
       - `readDatabaseConfigSync`
   - Cross-plugin:
-    - Imported by: 154 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
-      - `apps` ×42
+    - Imported by: 155 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+      - `apps` ×43
       - `conversations` ×19
       - `infra` ×15
       - `page` ×14
@@ -28508,13 +28518,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CLI_NAMES`
               - `isCliName`
           - Cross-plugin:
-            - Imported by: 23 plugins — full list in [`plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md)
+            - Imported by: 24 plugins — full list in [`plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md)
               - `framework` ×6
               - `infra` ×6
+              - `apps` ×2
               - `build` ×2
               - `debug` ×2
               - `plugin-meta` ×2
-              - `apps/deploy/deployments`
               - `database/admin`
               - `primitives/css/layout-harness`
               - `release`
@@ -30040,8 +30050,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards/module-extension.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 189 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
-              - `apps` ×56
+            - Imported by: 190 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+              - `apps` ×57
               - `primitives` ×28
               - `conversations` ×26
               - `page` ×26
@@ -34400,10 +34410,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `cliExecContext`
               - `runAttached`
           - Cross-plugin:
-            - Imported by: 28 plugins — full list in [`plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md`](../plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md)
+            - Imported by: 29 plugins — full list in [`plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md`](../plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md)
               - `framework` ×9
+              - `apps` ×5
               - `infra` ×5
-              - `apps` ×4
               - `build` ×3
               - `plugin-meta` ×2
               - `backup`
@@ -35030,7 +35040,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 128 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Imported by: 129 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `infra` ×31
           - `apps` ×20
           - `framework` ×19
@@ -35041,11 +35051,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta` ×4
           - `primitives` ×3
           - `release` ×3
+          - `reports` ×3
           - `code-explorer` ×2
           - `database` ×2
           - `integrations` ×2
           - `packages` ×2
-          - `reports` ×2
           - `stats` ×2
           - `config_v2`
           - `media/film`
@@ -35411,11 +35421,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/host-fs/user-path.asAppPath`
             - Exports (values): `REPO_ROOT`
           - Cross-plugin:
-            - Imported by: 43 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
+            - Imported by: 44 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
               - `framework` ×13
               - `infra` ×8
+              - `apps` ×6
               - `build` ×6
-              - `apps` ×5
               - `plugin-meta` ×3
               - `reports` ×2
               - `code-explorer`
@@ -35545,14 +35555,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runtimeNamespace`
           - `servingSocketPath`
       - Cross-plugin:
-        - Imported by: 68 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
+        - Imported by: 69 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
           - `infra` ×16
           - `debug` ×13
           - `conversations` ×9
           - `build` ×7
+          - `apps` ×4
           - `database` ×4
           - `tasks` ×4
-          - `apps` ×3
           - `backup` ×2
           - `framework` ×2
           - `release` ×2
@@ -35635,11 +35645,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SPAN_MEASURES`
           - `waitSplit`
       - Cross-plugin:
-        - Imported by: 69 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
+        - Imported by: 70 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
           - `infra` ×22
           - `debug` ×20
+          - `apps` ×6
           - `conversations` ×6
-          - `apps` ×5
           - `tasks` ×3
           - `database` ×2
           - `packages` ×2
@@ -39321,7 +39331,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/ticket-line.ts` (debt)
     - **`timed-fs`** — The file reads, listings, stats and glob scans every non-browser process makes, timed: node:fs's read calls under their own names and types (readFile / readdir / stat / lstat / access / realpath / readlink and their *Sync twins, existsSync) plus scanGlob / scanGlobSync over a Bun.Glob, each call metered while it runs (installFsWaitMeter — the backend's profiler shows one past FS_WAIT_FLOOR_MS in progress and charges it) and, once it returns past the floor, handed to onSlowFsCall subscribers, under a named wait layer (fs-read / fs-readdir / fs-stat / fs-glob) — so a disk stall names itself instead of reading as the caller's own work. A leaf (node builtins only), enforced by the timed-fs/no-untimed-fs-read lint.
       - Cross-plugin:
-        - Imported by: 160 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+        - Imported by: 161 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
           - `infra` ×47
           - `framework` ×24
           - `apps` ×15
@@ -39334,9 +39344,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build` ×4
           - `config_v2` ×3
           - `release` ×3
+          - `reports` ×3
           - `integrations` ×2
           - `primitives` ×2
-          - `reports` ×2
           - `code-explorer`
           - `hints/ask`
           - `stats/cost`
@@ -49210,8 +49220,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
-        - Imported by: 70 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
-          - `apps` ×12
+        - Imported by: 71 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
+          - `apps` ×13
           - `debug` ×10
           - `infra` ×10
           - `conversations` ×6
@@ -53021,8 +53031,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`reports`** — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. The reports table and its live read (reports.list), the ReportKind / ReportNoiseRule slots every kind and rule contributes to, and the fan-out ceiling config; recording is the engine's (reports/plugins/engine).
   - Web:
     - Slots: `Reports.KindView`
-    - Slot contributors: 40 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `Reports.KindView` ×40
+    - Slot contributors: 41 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+      - `Reports.KindView` ×41
     - Contributes:
       - `IdKinds.Kind` "report|crash"
       - `ConfigV2.WebRegister` "reports"
@@ -53137,8 +53147,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `SERVER_REPORT_SOURCES`
       - `submitReport`
   - Cross-plugin:
-    - Imported by: 72 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `reports` ×29
+    - Imported by: 73 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+      - `reports` ×30
       - `debug` ×18
       - `conversations` ×7
       - `database` ×4
@@ -53402,6 +53412,30 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `iconFamilyGapFingerprint`
           - `IconFamilyGapPayloadSchema`
+    - **`interaction-budget`** — Interaction-budget report kind's Debug → Reports summary view: one line naming the scenario, each case over budget against its budget, and the commit range. Filed by a scenario's budget run through the report outbox — no collector here. Interaction-budget report kind: one row per scenario (fingerprint = scenario id) whose measured work — a count such as elements restyled, not a time — went over its budget on main's deploy, filed through the report outbox by the scenario's budget run. Renders a task naming the commit range since the last run within budget, every case's median against its budget, and the command that reproduces it. Warning, re-arms every 6 h.
+      - Web:
+        - Contributes: `Reports.KindView` → `InteractionBudgetSummary`
+        - Uses: `reports.Reports`
+      - Server:
+        - Contributes: `report-kind` "interaction-budget"
+        - Uses:
+          - `reports.ReportKind`
+          - `reports.ReportRow`
+      - Cross-plugin:
+        - Imported by: `apps/desktop/fullscreen-budget`
+      - Core:
+        - Exports (types):
+          - `BudgetCase`
+          - `InteractionBudgetPayload`
+        - Exports (values):
+          - `BudgetCaseSchema`
+          - `budgetCommitRange`
+          - `INTERACTION_BUDGET_KIND`
+          - `interactionBudgetFingerprint`
+          - `interactionBudgetMessage`
+          - `InteractionBudgetPayloadSchema`
+          - `overBudget`
+          - `shortCommit`
     - **`launch-fix`** — Adds a Fix button to the plugin crash banner that launches an agent on the auto-created crash task with optional freeform context.
       - Web:
         - Contributes: `ErrorBoundary.Action` → `LaunchFixButton`
@@ -53613,6 +53647,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/tooling/checks/type-check`
           - `framework/tooling/checks/type-check/backstop`
           - `infra/launcher`
+          - `reports/interaction-budget`
       - Exemptions:
         - Exempts itself from:
           - `boundaries/no-platform-api` — `core/internal/file-report.ts`, `server/internal/drain.ts` (debt)
@@ -54544,6 +54579,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape --spacing`
         - Imported by:
           - `apps-core/surface`
+          - `apps/desktop/fullscreen-budget`
           - `apps/desktop/windows`
           - `apps/home/tour`
           - `hints/ask`

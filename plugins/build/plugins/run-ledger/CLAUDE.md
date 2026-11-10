@@ -188,6 +188,7 @@ from `build`, so both sides of an otherwise-cyclic edge can reach them.
 - Cross-plugin:
   - Imported by:
     - `active-data/build-run`
+    - `apps/desktop/fullscreen-budget`
     - `build`
     - `build/build-commits`
     - `build/build-fix`
