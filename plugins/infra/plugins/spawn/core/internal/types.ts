@@ -234,10 +234,41 @@ export interface SpawnPassthroughOptions {
   stdin?: "ignore" | "inherit";
   /** Called synchronously after spawn with `{ pid, kill }` (signal forwarding). */
   onSpawn?: (child: SpawnedChild) => void;
+  /**
+   * `"own"`: the child leads a process group of its own (pgid = its pid), and
+   * that group dies with it — everything the child started, at any depth, that
+   * did not leave the group. Once the child has exited, whatever is still in
+   * its group is named (the result's `leftBehind`) and SIGKILLed; when THIS
+   * process exits first, the exit reaper SIGKILLs the whole group instead of
+   * SIGTERMing the child alone.
+   *
+   * For a child whose descendants are not ours to keep: a test runner, whose
+   * suites spawn helpers that a failed or killed test never ends (2026-11-08:
+   * three socket-client.test helpers orphaned to pid 1 for 45 h). Not for a
+   * child that is itself an op CLI: its own exit hooks would get no SIGTERM.
+   *
+   * The one way out of the group is a descendant that starts a session of its
+   * own (`setsid`, `detached: true`) — the supervised / daemon spawns that are
+   * meant to outlive any call, each sanctioned by an exemption.
+   */
+  processGroup?: "own";
 }
 
-/** Options for `spawnToFile`: `spawnPassthrough`'s, plus the file its output goes to. */
-export interface SpawnToFileOptions extends SpawnPassthroughOptions {
+/** A process still in a `processGroup: "own"` child's group after the child exited. */
+export interface LeftBehindProcess {
+  pid: number;
+  /** Its command line, as `ps` printed it. */
+  command: string;
+}
+
+/**
+ * Options for `spawnToFile`: `spawnPassthrough`'s, plus the file its output goes
+ * to — minus `processGroup`, whose `leftBehind` its result has no place for.
+ */
+export interface SpawnToFileOptions extends Omit<
+  SpawnPassthroughOptions,
+  "processGroup"
+> {
   /** Appended to (created when missing) with the child's stdout and stderr, merged. */
   outputPath: AppPath;
 }
@@ -246,4 +277,13 @@ export interface SpawnPassthroughResult {
   exitCode: number;
   signalCode: string | null;
   resourceUsage: ChildResourceUsage;
+}
+
+/** A `processGroup: "own"` run's result: what it left behind in its group, now killed. */
+export interface SpawnGroupResult extends SpawnPassthroughResult {
+  /**
+   * The processes still in the child's group when it exited — SIGKILLed before
+   * this resolved. Empty when the child's descendants all ended with it.
+   */
+  leftBehind: LeftBehindProcess[];
 }

@@ -7,11 +7,13 @@
 
 export type {
   ChildResourceUsage,
+  LeftBehindProcess,
   SpawnBaseOptions,
   SpawnBound,
   SpawnOptions,
   SpawnResult,
   SpawnedChild,
+  SpawnGroupResult,
   SpawnPassthroughOptions,
   SpawnPassthroughResult,
   SpawnToFileOptions,

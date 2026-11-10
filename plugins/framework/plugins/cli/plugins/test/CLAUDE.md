@@ -67,6 +67,25 @@ so a machine that slept mid-run is not a stopped loop. darwin only (the awake
 clock); elsewhere the run says it is not watched. vitest is not watched: its
 tests run in its own worker pool.
 
+## A run leaves no process behind
+
+Each runner is spawned as the leader of its own process group
+(`spawnPassthrough`'s `processGroup: "own"`, `infra/spawn`). Whatever a suite
+starts — a helper server, a fixture's daemon, at any depth — stays in that
+group, so when the runner exits whatever is still in it is killed (SIGKILL),
+and if the CLI exits first its exit reaper kills the whole group. Before this
+only the runner itself was reaped: on 2026-11-08 three helper servers a
+failing `socket-client.test` never connected to sat reparented to pid 1 for
+45 h.
+
+What was killed is printed (`<runner> left N processes behind …`, pid and
+command line) and recorded per runner as `leftBehind` in the run's record.
+Not a failure — a helper a test is still tearing down can be caught mid-exit —
+but each names a suite that leaks a process; fix that suite. The one way out of
+the group is a descendant that starts its own session (`setsid` /
+`detached: true`), which this repo sanctions only by exemption. A CLI killed
+with SIGKILL runs no reaper: its runner and the runner's group outlive it.
+
 ## A run's scratch dirs die with the run
 
 Both runners get `TMPDIR` (and `TMP` / `TEMP`) pointed at a run-scoped root,

@@ -17,8 +17,13 @@ import { agentSocketPath } from "./paths";
 // is held open: every connection the client makes runs one `connect` listener
 // first that waits, synchronously, until the agent has gone — so the client's
 // own write comes after it, deterministically.
+//
+// It also exits when its stdin closes: the test holds the write end, so a
+// test that fails before connecting — or a test process that dies — ends it
+// too (2026-11-08: three of these, never connected to, sat orphaned for 45 h).
 const EXITING_AGENT = `
 const [path] = process.argv.slice(1);
+process.stdin.on("end", () => process.exit(0)).resume();
 require("node:net")
   .createServer(() => {
     require("node:fs").rmSync(path, { force: true });
@@ -61,13 +66,20 @@ void mock.module("node:net", () => ({
 }));
 const { AgentNotRunningError, helloAgent } = await import("./socket-client");
 
-async function startExitingAgent(path: string): Promise<Bun.Subprocess> {
+/** Every agent started, so `afterAll` ends the ones a failed test left. */
+const agents: Bun.Subprocess<"pipe", "pipe", "inherit">[] = [];
+
+async function startExitingAgent(
+  path: string,
+): Promise<Bun.Subprocess<"pipe", "pipe", "inherit">> {
   mkdirSync(dirname(path), { recursive: true });
   rmSync(path, { force: true });
   const child = Bun.spawn([process.execPath, "-e", EXITING_AGENT, path], {
+    stdin: "pipe",
     stdout: "pipe",
     stderr: "inherit",
   });
+  agents.push(child);
   const { value } = await child.stdout.getReader().read();
   expect(new TextDecoder().decode(value)).toContain("listening");
   return child;
@@ -78,7 +90,12 @@ describe("an agent that exits between our connect and our write", () => {
     resetRuntimeNamespaceForTest();
     declareRuntimeNamespace(namespace);
   });
-  afterAll(() => {
+  afterAll(async () => {
+    // Closing its stdin is what ends an agent nothing connected to.
+    for (const agent of agents.splice(0)) {
+      void agent.stdin.end();
+      await agent.exited;
+    }
     rmSync(dirname(agentSocketPath("conv-x")), {
       recursive: true,
       force: true,

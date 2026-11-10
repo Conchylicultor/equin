@@ -32,6 +32,14 @@ export interface TestRunnerOutcome {
    * new load crash shows up, so a comparison should diff it too.
    */
   unreported: string[];
+  /**
+   * The command lines of the processes still in this runner's process group
+   * when it exited — started by a suite and never ended — which the run
+   * killed. Not failures (a helper a test is still tearing down can be caught
+   * mid-exit), but each names a suite that leaks a process. Absent on records
+   * written before runners had a group of their own.
+   */
+  leftBehind?: string[];
 }
 
 /**

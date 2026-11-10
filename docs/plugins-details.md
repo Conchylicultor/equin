@@ -35739,9 +35739,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages/timed-fs.readFile`
         - Exports (types):
           - `ChildResourceUsage`
+          - `LeftBehindProcess`
           - `SpawnBaseOptions`
           - `SpawnBound`
           - `SpawnedChild`
+          - `SpawnGroupResult`
           - `SpawnOptions`
           - `SpawnPassthroughOptions`
           - `SpawnPassthroughResult`

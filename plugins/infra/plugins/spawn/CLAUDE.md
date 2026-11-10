@@ -65,6 +65,28 @@ both automatic for every `spawnCaptured` / `spawnPassthrough` call:
 Supervised and detached children (`defineDaemon`) spawn outside these two
 functions on purpose: they are meant to outlive any one call.
 
+### A child's whole tree: `processGroup: "own"`
+
+The two layers above cover the child we spawned, not what IT spawns. For a
+child whose descendants are not ours to keep — a test runner, whose suites
+start helpers a failed or killed test never ends (2026-11-08: three
+`socket-client.test` helpers orphaned to pid 1 for 45 h) —
+`spawnPassthrough(argv, { processGroup: "own" })` starts the child as the
+leader of a process group of its own (`detached`, pgid = its pid). Every
+descendant stays in that group unless it starts a session of its own, so:
+
+- **The child exits:** whatever is still in its group is listed (`ps -g`),
+  SIGKILLed, and returned as `leftBehind: { pid, command }[]` — the result
+  type (`SpawnGroupResult`) has the field only in this mode (an overload).
+- **The parent exits first:** the exit reaper SIGKILLs the whole group rather
+  than SIGTERMing the child alone. SIGKILL, so don't use this mode for a child
+  that is itself an op CLI with exit hooks of its own.
+
+The leader's pid cannot be reused while its group has members, so `-pgid`
+after the leader's reap reaches exactly what it left. The one way out is a
+descendant that calls `setsid` (`detached: true`) — the supervised / daemon
+spawns that are meant to outlive a call, each sanctioned by an exemption.
+
 ## API (`@plugins/infra/plugins/spawn/core`)
 
 - **`spawnCaptured(argv, opts) → Promise<SpawnResult>`** — capture-shaped
@@ -92,12 +114,13 @@ functions on purpose: they are meant to outlive any one call.
 - **`spawnExpectOk(argv, opts)`** — the same, but THROWS `SpawnFailedError`
   (carrying argv/exitCode/signalCode/stdout/stderr) on non-zero exit, so a
   failed command can never be read as empty success.
-- **`spawnPassthrough(argv, { cwd, env, tier, stdin, onSpawn }?)`** —
+- **`spawnPassthrough(argv, { cwd, env, tier, stdin, onSpawn, processGroup }?)`** —
   exec-shaped spawn: stdout/stderr `"inherit"`, stdin `"ignore"` unless
   `stdin: "inherit"` (only for a child that must be indistinguishable from the
   parent — the CLI's post-install re-exec). `onSpawn` exposes `{ pid, kill }`
   synchronously for signal forwarding. Returns
-  `{ exitCode, signalCode, resourceUsage }`.
+  `{ exitCode, signalCode, resourceUsage }` — plus `leftBehind` with
+  `processGroup: "own"` (see *A child's whole tree* above).
 - **`spawnToFile(argv, { outputPath, …spawnPassthrough's })`** — the same, with
   stdout AND stderr appended to one file (`>> path 2>&1`, a raw fd) instead of
   inherited: for a child whose output is a record a reader follows while it
@@ -247,9 +270,11 @@ presence only — **no re-exports**; import from `core/`.
     - `packages/timed-fs.readFile`
   - Exports (types):
     - `ChildResourceUsage`
+    - `LeftBehindProcess`
     - `SpawnBaseOptions`
     - `SpawnBound`
     - `SpawnedChild`
+    - `SpawnGroupResult`
     - `SpawnOptions`
     - `SpawnPassthroughOptions`
     - `SpawnPassthroughResult`

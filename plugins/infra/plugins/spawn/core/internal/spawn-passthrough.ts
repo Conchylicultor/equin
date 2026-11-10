@@ -10,9 +10,11 @@ import { holdParentLifeline } from "@plugins/packages/plugins/flock/core";
 import { spawnAtTier } from "@plugins/packages/plugins/spawn-priority/core";
 import { childEnv } from "./child-env";
 import { trackLiveChild } from "./live-children";
+import { endProcessGroup, killProcessGroup } from "./process-group";
 import { readResourceUsage } from "./resource-usage";
 import { signalName } from "./signal-code";
 import type {
+  SpawnGroupResult,
   SpawnPassthroughOptions,
   SpawnPassthroughResult,
   SpawnToFileOptions,
@@ -30,8 +32,16 @@ import type {
  */
 export function spawnPassthrough(
   argv: string[],
+  opts: SpawnPassthroughOptions & { processGroup: "own" },
+): Promise<SpawnGroupResult>;
+export function spawnPassthrough(
+  argv: string[],
+  opts?: SpawnPassthroughOptions,
+): Promise<SpawnPassthroughResult>;
+export function spawnPassthrough(
+  argv: string[],
   opts: SpawnPassthroughOptions = {},
-): Promise<SpawnPassthroughResult> {
+): Promise<SpawnPassthroughResult | SpawnGroupResult> {
   return runToCompletion(argv, opts, "inherit");
 }
 
@@ -71,7 +81,8 @@ async function runToCompletion(
   opts: SpawnPassthroughOptions,
   output: "inherit" | OwnedFd,
   afterSpawn?: () => void,
-): Promise<SpawnPassthroughResult> {
+): Promise<SpawnPassthroughResult | SpawnGroupResult> {
+  const ownGroup = opts.processGroup === "own";
   // The same two guarantees `spawnCaptured` gives: the child is SIGTERMed if
   // we exit first (live-children), and dies on its own if we are SIGKILLed and
   // it called `exitWithParent()` (the lifeline, in a dir private to this spawn).
@@ -86,18 +97,37 @@ async function runToCompletion(
           stdin: opts.stdin ?? "ignore",
           stdout: output === "inherit" ? output : output.fd,
           stderr: output === "inherit" ? output : output.fd,
+          // A new process group led by the child (pgid = its pid).
+          detached: ownGroup,
         }),
       );
       afterSpawn?.();
-      const untrack = trackLiveChild(proc);
+      // An own-group child takes its group with it when we exit first:
+      // SIGKILL, because what it left in there is nobody's to wind down.
+      const untrack = trackLiveChild(
+        ownGroup ? { kill: () => killProcessGroup(proc.pid, "SIGKILL") } : proc,
+      );
+      let exitCode: number | null = null;
       try {
         opts.onSpawn?.({ pid: proc.pid, kill: (signal) => proc.kill(signal) });
-        const exitCode = await proc.exited;
-        return {
-          exitCode,
-          signalCode: signalName(proc.signalCode),
-          resourceUsage: readResourceUsage(proc),
-        };
+        exitCode = await proc.exited;
+      } finally {
+        if (!ownGroup) untrack();
+        // Never reaped (`onSpawn` threw): the group dies now, not at our exit.
+        else if (exitCode === null) {
+          killProcessGroup(proc.pid, "SIGKILL");
+          untrack();
+        }
+        // Otherwise the exit reaper still covers the group until it is ended below.
+      }
+      const result: SpawnPassthroughResult = {
+        exitCode,
+        signalCode: signalName(proc.signalCode),
+        resourceUsage: readResourceUsage(proc),
+      };
+      if (!ownGroup) return result;
+      try {
+        return { ...result, leftBehind: await endProcessGroup(proc.pid) };
       } finally {
         untrack();
       }

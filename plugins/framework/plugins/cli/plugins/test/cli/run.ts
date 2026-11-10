@@ -108,13 +108,18 @@ async function runRunner(
   root: string,
   env: Record<string, string | undefined>,
   loop?: { heartbeatPath: string; samplePath: string },
-): Promise<{ exitCode: number; wedged: string | null }> {
+): Promise<RunnerRun> {
   console.log(`\n── ${name} ──`);
   // Set from `onSpawn`, a callback: a holder, so the reads below are not
   // narrowed to the initial null.
   const armed: { watch: LoopWatch | null } = { watch: null };
   try {
-    const { exitCode } = await spawnPassthrough(argv, {
+    // Its own process group: whatever a suite starts and leaves behind — a
+    // helper a failed or killed test never ended — is in it, and is killed
+    // once the runner exits (2026-11-08: three socket-client.test helpers sat
+    // reparented to pid 1 for 45 h). Named, so the leaking suite can be found.
+    const { exitCode, leftBehind } = await spawnPassthrough(argv, {
+      processGroup: "own",
       cwd: root,
       env:
         loop === undefined
@@ -125,10 +130,28 @@ async function runRunner(
       },
     });
     armed.watch?.cancel();
-    return { exitCode, wedged: (await armed.watch?.end()) ?? null };
+    if (leftBehind.length > 0) {
+      console.error(
+        `\n${name} left ${leftBehind.length} process${leftBehind.length === 1 ? "" : "es"} behind in its process group — killed:\n` +
+          leftBehind.map((p) => `  ${p.pid}  ${p.command}`).join("\n"),
+      );
+    }
+    return {
+      exitCode,
+      wedged: (await armed.watch?.end()) ?? null,
+      leftBehind: leftBehind.map((p) => p.command),
+    };
   } finally {
     armed.watch?.cancel();
   }
+}
+
+interface RunnerRun {
+  exitCode: number;
+  /** The loop-stopped sample's path when the runner was declared wedged, else null. */
+  wedged: string | null;
+  /** The command lines of the processes left in the runner's group, killed. */
+  leftBehind: string[];
 }
 
 interface LoopWatch {
@@ -249,8 +272,9 @@ function runnerOutcome(
   exitCode: number,
   files: readonly string[],
   reportPath: string,
-  wedged: string | null = null,
+  run: Pick<RunnerRun, "wedged" | "leftBehind">,
 ): TestRunnerOutcome {
+  const { wedged, leftBehind } = run;
   const failures: string[] = [];
   if (wedged !== null) {
     failures.push(
@@ -269,7 +293,14 @@ function runnerOutcome(
   }
   if (exitCode !== 0 && failures.length === 0)
     failures.push(`(${runner} exited ${exitCode})`);
-  return { runner, exitCode, files: files.length, failures, unreported };
+  return {
+    runner,
+    exitCode,
+    files: files.length,
+    failures,
+    unreported,
+    leftBehind,
+  };
 }
 
 /**
@@ -508,18 +539,14 @@ const run: CliAction<[string[]], object> = async (paths) => {
           bunExit !== null && bunExit !== 0 ? "bun:test" : null,
           domExit !== null && domExit !== 0 ? "vitest" : null,
         ].filter((name): name is string => name !== null);
-        if (bunExit !== null)
+        if (bunRun !== null)
           status.runners.push(
-            runnerOutcome(
-              "bun:test",
-              bunExit,
-              bun,
-              bunReport,
-              bunRun?.wedged ?? null,
-            ),
+            runnerOutcome("bun:test", bunRun.exitCode, bun, bunReport, bunRun),
           );
-        if (domExit !== null)
-          status.runners.push(runnerOutcome("vitest", domExit, dom, domReport));
+        if (domRun !== null)
+          status.runners.push(
+            runnerOutcome("vitest", domRun.exitCode, dom, domReport, domRun),
+          );
         status.status = failed.length === 0 ? "passed" : "failed";
         status.finishedAt = new Date().toISOString();
         writeTestStatus(slug, status);
