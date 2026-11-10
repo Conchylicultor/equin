@@ -779,9 +779,9 @@ describe("sessions", () => {
         .sort()
         .reverse();
       const first = await ask({ limit: 1 });
-      expect(first.sessions.map((s) => s.id)).toEqual([ids[0]]);
+      expect(first.sessions.map((s) => s.id)).toEqual(ids.slice(0, 1));
       const second = await ask({ limit: 1, after: keyOf(first.sessions[0]) });
-      expect(second.sessions.map((s) => s.id)).toEqual([ids[1]]);
+      expect(second.sessions.map((s) => s.id)).toEqual(ids.slice(1, 2));
       const third = await ask({ limit: 1, after: keyOf(second.sessions[0]) });
       expect(third.sessions[0]!.entryPath).toBe("/");
     } finally {
