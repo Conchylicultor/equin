@@ -296,7 +296,8 @@ await withBrowser(async (h) => {
   );
   r.ok(
     "after a maximized reload, the gate is drawn maximized over the tab",
-    gateBox.ok && (await overlay.getByRole("button", { name: /Enter equin/ }).count()) > 0,
+    gateBox.ok &&
+      (await overlay.getByRole("button", { name: /Enter equin/ }).count()) > 0,
     JSON.stringify(gateBox.value),
   );
   await snap(page, OUT, "6-maximized-gate");
@@ -306,7 +307,10 @@ await withBrowser(async (h) => {
     (n) => n > 0,
     { timeoutMs: BOOT_TIMEOUT_MS },
   );
-  r.ok("after a maximized reload, Enter opens the demo maximized, on Pages", inPlace.ok);
+  r.ok(
+    "after a maximized reload, Enter opens the demo maximized, on Pages",
+    inPlace.ok,
+  );
 
   // ── 8. a second tab while the visitor is in: no second Enter ────────
   const second = await page.context().newPage();
