@@ -10,8 +10,10 @@
 // bar is centred on the anchored header's line — also after that header is
 // made taller. Then opens the app gallery (Home, a surface with no top header,
 // so no anchor) through the app launcher and checks the bar is still painted
-// and hit-testable at the corner. Writes `<out>-docked.png`, `<out>-solo.png`,
-// `<out>-solo-tall.png`, `<out>-solo-home.png`.
+// and hit-testable at the corner. Last, opens the app in a desktop window and
+// checks the window's header (inside a `floating-bar-boundary`) reserves no
+// safe area. Writes `<out>-docked.png`, `<out>-solo.png`,
+// `<out>-solo-tall.png`, `<out>-solo-home.png`, `<out>-desktop.png`.
 //
 // Usage:
 //   ./equin run plugins/shell/plugins/global-action-bar/e2e/solo-safe-area.ts \
@@ -196,5 +198,37 @@ await withBrowser(async (h) => {
     JSON.stringify(homeHit),
   );
   await snap(page, out, "solo-home");
+
+  // A desktop window's content is a `floating-bar-boundary`: the header inside
+  // it is not at the viewport's corner, so the bar's reservation (still
+  // published: the bar floats over the desktop too) must not reach it.
+  await page.goto(pageUrl("/desktop/agents"));
+  await page
+    .getByRole("button", { name: "Full screen" })
+    .first()
+    .waitFor({ timeout: 60_000 });
+  await page.waitForTimeout(1500);
+  const bounded = await page.evaluate(() =>
+    [
+      ...document.querySelectorAll<HTMLElement>(
+        ".floating-bar-boundary .anchor-floating-bar-band",
+      ),
+    ]
+      .filter((el) => el.getBoundingClientRect().height > 0)
+      .map((el) =>
+        getComputedStyle(el).getPropertyValue("--floating-bar-safe-area"),
+      ),
+  );
+  t.ok(
+    "desktop: a header inside a window",
+    bounded.length > 0,
+    JSON.stringify(bounded),
+  );
+  t.ok(
+    "desktop: no safe area reserved inside a window",
+    bounded.every((v) => v.trim() === "" || v.trim() === "initial"),
+    JSON.stringify(bounded),
+  );
+  await snap(page, out, "desktop");
   await t.finish();
 });
