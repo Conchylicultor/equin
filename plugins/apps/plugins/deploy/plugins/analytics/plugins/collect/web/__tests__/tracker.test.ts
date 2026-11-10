@@ -8,10 +8,16 @@ import {
 import { MAX_GAPS } from "../../core/internal/gaps";
 import { landingSource } from "../internal/landing";
 import { isWithinApp } from "../internal/scope";
-import { createTracker, type TrackerDeps } from "../internal/tracker";
+import {
+  createTracker,
+  type LoadMilestones,
+  type TrackerDeps,
+} from "../internal/tracker";
 
 const PV_A = "00000000-0000-4000-8000-00000000000a";
 const PV_B = "00000000-0000-4000-8000-00000000000b";
+/** The load of a page whose browser measured nothing: still sent, every phase null. */
+const NO_LOAD = { ttfbMs: null, fcpMs: null, readyMs: null };
 
 /** A tracker over a fake clock and a recording send whose responses the test releases. */
 function harness(opts: { landing?: TrackerDeps["landing"] } = {}) {
@@ -23,6 +29,11 @@ function harness(opts: { landing?: TrackerDeps["landing"] } = {}) {
   let armed = 0;
   const sent: CollectBody[] = [];
   const pending: ((r: CollectResponse) => void)[] = [];
+  let milestones: LoadMilestones = {
+    firstByteAt: null,
+    firstContentfulPaintAt: null,
+    readyAt: null,
+  };
   const tracker = createTracker({
     host: "equin.dev",
     landing: opts.landing ?? {},
@@ -42,6 +53,7 @@ function harness(opts: { landing?: TrackerDeps["landing"] } = {}) {
       };
     },
     isMediaPlaying: () => mediaPlaying,
+    loadMilestones: () => milestones,
   });
   return {
     tracker,
@@ -61,6 +73,9 @@ function harness(opts: { landing?: TrackerDeps["landing"] } = {}) {
       mediaPlaying = v;
     },
     armedCount: () => armed,
+    setMilestones: (m: LoadMilestones) => {
+      milestones = m;
+    },
     setVisible: (v: boolean) => {
       visible = v;
     },
@@ -124,7 +139,13 @@ describe("engagement", () => {
     h.advance(500);
     h.tracker.hidden();
     expect(h.sent.slice(1)).toEqual([
-      { kind: "engagement", pageviewId: PV_A, engagedMs: 1000, gaps: [] },
+      {
+        kind: "engagement",
+        pageviewId: PV_A,
+        engagedMs: 1000,
+        gaps: [],
+        load: NO_LOAD,
+      },
       {
         kind: "engagement",
         pageviewId: PV_A,
@@ -151,7 +172,13 @@ describe("engagement", () => {
     h.advance(2000);
     h.tracker.pathChanged("/website/story");
     expect(h.sent.slice(1)).toEqual([
-      { kind: "engagement", pageviewId: PV_A, engagedMs: 2000, gaps: [] },
+      {
+        kind: "engagement",
+        pageviewId: PV_A,
+        engagedMs: 2000,
+        gaps: [],
+        load: NO_LOAD,
+      },
       { kind: "pageview", host: "equin.dev", path: "/website/story" },
     ]);
     await h.respond(2, { outcome: "pageview", pageviewId: PV_B });
@@ -177,6 +204,7 @@ describe("engagement", () => {
       pageviewId: PV_A,
       engagedMs: 400,
       gaps: [],
+      load: NO_LOAD,
     });
   });
 
@@ -202,6 +230,7 @@ describe("engagement", () => {
         pageviewId: PV_A,
         engagedMs: 0,
         gaps: [{ kind: "hidden", startMs: 0, endMs: 10_000 }],
+        load: NO_LOAD,
       },
     ]);
   });
@@ -354,6 +383,132 @@ describe("away stretches", () => {
     expect(new TextEncoder().encode(JSON.stringify(last)).length).toBeLessThan(
       MAX_COLLECT_BODY_BYTES,
     );
+  });
+});
+
+describe("load timing", () => {
+  const MILESTONES: LoadMilestones = {
+    firstByteAt: 107.1,
+    firstContentfulPaintAt: 1640.2,
+    readyAt: 1700,
+  };
+  const engagements = (sent: CollectBody[]) =>
+    sent.filter((b) => b.kind === "engagement");
+
+  it("rides the first beacon of the page load's first pageview, once", async () => {
+    const h = harness();
+    h.setMilestones(MILESTONES);
+    h.advance(2000);
+    h.tracker.pathChanged("/website");
+    await h.respond(0, { outcome: "pageview", pageviewId: PV_A });
+    h.advance(1000);
+    h.tracker.hidden();
+    h.setVisible(false);
+    h.advance(1000);
+    h.setVisible(true);
+    h.tracker.visible();
+    h.advance(1000);
+    h.tracker.pathChanged("/website/story");
+    await h.respond(3, { outcome: "pageview", pageviewId: PV_B });
+    h.advance(1000);
+    h.tracker.hidden();
+    const sent = engagements(h.sent);
+    expect(sent).toHaveLength(3);
+    // Whole ms, rounded up: a phase is never 0.
+    expect(sent[0]).toMatchObject({
+      pageviewId: PV_A,
+      load: { ttfbMs: 108, fcpMs: 1641, readyMs: 1700 },
+    });
+    expect(sent[1]).not.toHaveProperty("load");
+    // An in-app navigation has no load of its own.
+    expect(sent[2]).toMatchObject({ pageviewId: PV_B });
+    expect(sent[2]).not.toHaveProperty("load");
+  });
+
+  it("is sent even when nothing else changed (left at once, no visible time)", async () => {
+    const h = harness();
+    h.setMilestones(MILESTONES);
+    h.advance(2000);
+    h.tracker.pathChanged("/website");
+    await h.respond(0, { outcome: "pageview", pageviewId: PV_A });
+    h.tracker.hidden();
+    expect(engagements(h.sent)).toEqual([
+      {
+        kind: "engagement",
+        pageviewId: PV_A,
+        engagedMs: 0,
+        gaps: [],
+        load: { ttfbMs: 108, fcpMs: 1641, readyMs: 1700 },
+      },
+    ]);
+  });
+
+  it("waits with the beacon for the pageview id, then reads the load", async () => {
+    const h = harness();
+    h.tracker.pathChanged("/website");
+    h.tracker.hidden();
+    // Paint lands while the pageview's response is in flight.
+    h.setMilestones({ ...MILESTONES, firstContentfulPaintAt: null });
+    await h.respond(0, { outcome: "pageview", pageviewId: PV_A });
+    expect(engagements(h.sent)[0]).toMatchObject({
+      load: { ttfbMs: 108, fcpMs: null, readyMs: null },
+    });
+  });
+
+  it("a page loaded in a background tab keeps its first byte, not its paint", async () => {
+    const h = harness();
+    h.setVisible(false);
+    h.tracker.pathChanged("/website");
+    await h.respond(0, { outcome: "pageview", pageviewId: PV_A });
+    h.advance(60_000);
+    // Shown a minute later: that is when it painted.
+    h.setMilestones({
+      firstByteAt: 90,
+      firstContentfulPaintAt: 60_050,
+      readyAt: 60_100,
+    });
+    h.setVisible(true);
+    h.tracker.visible();
+    h.advance(1000);
+    h.tracker.hidden();
+    expect(engagements(h.sent)[0]).toMatchObject({
+      load: { ttfbMs: 90, fcpMs: null, readyMs: null },
+    });
+  });
+
+  it("a paint after the tab was first hidden is not load time", async () => {
+    const h = harness();
+    h.advance(500);
+    // Hidden before anything was tracked: the hide still counts.
+    h.tracker.hidden();
+    h.setVisible(false);
+    h.advance(10_000);
+    h.setVisible(true);
+    h.tracker.visible();
+    h.setMilestones({
+      firstByteAt: 90,
+      firstContentfulPaintAt: 300,
+      readyAt: 10_600,
+    });
+    h.tracker.pathChanged("/website");
+    await h.respond(0, { outcome: "pageview", pageviewId: PV_A });
+    h.tracker.hidden();
+    expect(engagements(h.sent)[0]).toMatchObject({
+      load: { ttfbMs: 90, fcpMs: 300, readyMs: null },
+    });
+  });
+
+  it("an unmeasured or implausible phase is null, never 0", async () => {
+    const h = harness();
+    h.setMilestones({
+      firstByteAt: 0,
+      firstContentfulPaintAt: 11 * 60 * 1000,
+      readyAt: null,
+    });
+    h.tracker.pathChanged("/website");
+    await h.respond(0, { outcome: "pageview", pageviewId: PV_A });
+    h.tracker.hidden();
+    expect(engagements(h.sent)[0]).toMatchObject({ load: NO_LOAD });
   });
 });
 

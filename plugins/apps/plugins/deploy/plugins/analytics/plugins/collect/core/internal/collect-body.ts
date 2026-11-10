@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { GapsSchema } from "./gaps";
+import { LoadTimingSchema } from "./load-timing";
 
 /**
  * What the tracker sends to `POST /api/analytics/collect`, and the limits the
@@ -111,6 +112,12 @@ export const EngagementBodySchema = z
      * recorded them.
      */
     gaps: GapsSchema.optional(),
+    /**
+     * How long the page load took (`load-timing.ts`): on the first beacon of
+     * the page load's first pageview only. The server keeps the first one it
+     * gets and ignores any later one.
+     */
+    load: LoadTimingSchema.optional(),
   })
   .strict();
 

@@ -6,6 +6,7 @@ import {
   stripQuery,
 } from "./collect-body";
 import { MAX_GAPS, MAX_GAP_OFFSET_MS, appendGap, type Gap } from "./gaps";
+import { MAX_LOAD_MS, loadMs } from "./load-timing";
 
 describe("stripQuery", () => {
   test("removes query and fragment", () => {
@@ -104,11 +105,51 @@ describe("engagement gaps", () => {
       startMs: MAX_GAP_OFFSET_MS - 100 + i * 2,
       endMs: MAX_GAP_OFFSET_MS - 100 + i * 2 + 1,
     }));
-    const body = { ...base, engagedMs: MAX_ENGAGED_MS, gaps };
+    const load = {
+      ttfbMs: MAX_LOAD_MS,
+      fcpMs: MAX_LOAD_MS,
+      readyMs: MAX_LOAD_MS,
+    };
+    const body = { ...base, engagedMs: MAX_ENGAGED_MS, gaps, load };
     expect(CollectBodySchema.safeParse(body).success).toBe(true);
     expect(new TextEncoder().encode(JSON.stringify(body)).length).toBeLessThan(
       MAX_COLLECT_BODY_BYTES,
     );
+  });
+});
+
+describe("engagement load", () => {
+  const base = {
+    kind: "engagement",
+    pageviewId: "00000000-0000-4000-8000-00000000000a",
+    engagedMs: 1000,
+  };
+  const ok = (load: unknown) =>
+    CollectBodySchema.safeParse({ ...base, load }).success;
+
+  test("optional, every phase nullable but present", () => {
+    expect(CollectBodySchema.safeParse(base).success).toBe(true);
+    expect(ok({ ttfbMs: 100, fcpMs: 900, readyMs: 1200 })).toBe(true);
+    expect(ok({ ttfbMs: null, fcpMs: null, readyMs: null })).toBe(true);
+    expect(ok({ ttfbMs: 100, fcpMs: null })).toBe(false);
+  });
+  test("strict, whole positive ms, bounded: never 0", () => {
+    expect(ok({ ttfbMs: 1, fcpMs: 1, readyMs: 1, lcpMs: 1 })).toBe(false);
+    expect(ok({ ttfbMs: 0, fcpMs: null, readyMs: null })).toBe(false);
+    expect(ok({ ttfbMs: 1.5, fcpMs: null, readyMs: null })).toBe(false);
+    expect(ok({ ttfbMs: MAX_LOAD_MS + 1, fcpMs: null, readyMs: null })).toBe(
+      false,
+    );
+  });
+  test("loadMs: whole ms rounded up, null when unmeasured or implausible", () => {
+    expect(loadMs(107.1)).toBe(108);
+    expect(loadMs(0.2)).toBe(1);
+    expect(loadMs(0)).toBeNull();
+    expect(loadMs(-3)).toBeNull();
+    expect(loadMs(null)).toBeNull();
+    expect(loadMs(Number.NaN)).toBeNull();
+    expect(loadMs(MAX_LOAD_MS)).toBe(MAX_LOAD_MS);
+    expect(loadMs(MAX_LOAD_MS + 0.5)).toBeNull();
   });
 });
 

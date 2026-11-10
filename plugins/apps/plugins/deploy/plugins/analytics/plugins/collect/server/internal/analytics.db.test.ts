@@ -194,18 +194,26 @@ beforeAll(async () => {
   );
   // B's tracker records away stretches. Beacons land out of order: a stale
   // smaller total changes nothing; the same total reaching further replaces.
+  // The first beacon carries the hard load's timing; a second load is ignored.
   await hit(
     {
       kind: "engagement",
       pageviewId: apps,
       engagedMs: 5_000,
       gaps: [{ kind: "hidden", startMs: 1_000, endMs: 61_000 }],
+      load: { ttfbMs: 120, fcpMs: 900, readyMs: 1_400 },
     },
     B,
     at(DAY, "10:31"),
   );
   await hit(
-    { kind: "engagement", pageviewId: apps, engagedMs: 3_000, gaps: [] },
+    {
+      kind: "engagement",
+      pageviewId: apps,
+      engagedMs: 3_000,
+      gaps: [],
+      load: { ttfbMs: 1, fcpMs: null, readyMs: null },
+    },
     B,
     at(DAY, "10:31"),
   );
@@ -334,6 +342,25 @@ describe("collect", () => {
     ).toBeNull();
     expect(
       hits.filter((h) => h.kind === "event").every((h) => h.gaps === null),
+    ).toBe(true);
+  });
+
+  test("load timing: the first one sent, null when never recorded", async () => {
+    const hits = await t.db
+      .select({
+        path: analyticsHits.path,
+        kind: analyticsHits.kind,
+        load: analyticsHits.load,
+      })
+      .from(analyticsHits);
+    expect(hits.find((h) => h.path === "/apps")?.load).toEqual({
+      ttfbMs: 120,
+      fcpMs: 900,
+      readyMs: 1_400,
+    });
+    // Every other hit: an older tracker's beacon, no beacon, or an event.
+    expect(
+      hits.filter((h) => h.path !== "/apps").every((h) => h.load === null),
     ).toBe(true);
   });
 
@@ -640,6 +667,12 @@ describe("sessions", () => {
     expect(b!.hits[0]!.gaps).toEqual([
       { kind: "hidden", startMs: 1_000, endMs: 121_000 },
     ]);
+    expect(a1!.hits.map((h) => h.load)).toEqual([null, null, null]);
+    expect(b!.hits[0]!.load).toEqual({
+      ttfbMs: 120,
+      fcpMs: 900,
+      readyMs: 1_400,
+    });
     expect(a1).toMatchObject({
       pageviews: 2,
       events: 1,

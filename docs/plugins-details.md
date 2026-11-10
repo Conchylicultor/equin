@@ -1981,6 +1981,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/networking/page-transport.pageTransport`
                   - `primitives/pane.currentRoutePath`
                   - `primitives/pane.usePathname`
+                  - `primitives/perfs/boot-trace.getBootTrace`
                 - Exports (values):
                   - `AnalyticsTracker`
                   - `observeSectionReach`
@@ -2014,6 +2015,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `GapKind`
                   - `Granularity`
                   - `HitDimension`
+                  - `LoadTiming`
                   - `Metrics`
                   - `OsFamily`
                   - `PageviewBody`
@@ -2081,12 +2083,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `HIT_DIMENSIONS`
                   - `IDENTITY_WINDOW_DAYS`
                   - `IDLE_AFTER_MS`
+                  - `loadMs`
+                  - `LoadTimingSchema`
                   - `MAX_COLLECT_BODY_BYTES`
                   - `MAX_ENGAGED_MS`
                   - `MAX_EVENT_PROP_VALUE_LENGTH`
                   - `MAX_EVENT_PROPS`
                   - `MAX_FILTERS`
                   - `MAX_HOST_LENGTH`
+                  - `MAX_LOAD_MS`
                   - `MAX_PATH_LENGTH`
                   - `MAX_REFERRER_LENGTH`
                   - `MAX_SESSION_HITS`
@@ -50401,6 +50406,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`boot-trace`** — Module-level boot-span store imported eagerly by the framework boot path. Captures one-clock boot spans (startBootSpan/markBootInstant/recordBootSpan) and folds in Navigation/Paint Timing plus the first React commit; getBootTrace() assembles the trace. Every span / instant is mirrored as a User Timing measure / mark named boot:<id>, so an outside reader (a Playwright script) reads it with performance.getEntriesByType.
           - Cross-plugin:
             - Imported by:
+              - `apps/deploy/analytics/collect`
               - `debug/boot-profile`
               - `debug/profiling/cold-start`
               - `debug/slow-ops`

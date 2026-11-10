@@ -63,6 +63,8 @@ export {
   gapsExtentMs,
 } from "./internal/gaps";
 export type { Gap, GapKind } from "./internal/gaps";
+export { LoadTimingSchema, MAX_LOAD_MS, loadMs } from "./internal/load-timing";
+export type { LoadTiming } from "./internal/load-timing";
 export { parseEventPropValue } from "./internal/event-prop";
 export type { EventProp } from "./internal/event-prop";
 export type {

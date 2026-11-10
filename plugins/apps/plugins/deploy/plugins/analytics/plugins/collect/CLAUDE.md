@@ -86,6 +86,22 @@ server keeps the newest beacon's list (larger `engagedMs`, or equal and
 reaching further). `NULL` = not recorded (an event, an older tracker, no
 beacon yet) — never "none", which is `[]`.
 
+## Load timing
+
+The page load's first pageview (the hard load; later ones are in-app
+navigations) carries `load` (`core/internal/load-timing.ts`) on its first
+engagement beacon — sent even if nothing else changed, no request of its own.
+Read from boot-trace in `web/internal/instance.ts` (every composition boots
+through `web-core`):
+
+- `ttfbMs` — document's first byte; `fcpMs` — first contentful paint.
+- `readyMs` — later of FCP and the `route-content-commit` instant. Not
+  `bootWindowEnd`: its first commit is the loading screen, so it repeats FCP.
+- A paint after the tab was first hidden is the tab being shown: `fcpMs` /
+  `readyMs` null. Read at beacon time (first hide / leave), so no subscription.
+- Whole positive ms or null, never 0. The server keeps the first load per hit;
+  `NULL` = not recorded.
+
 ## Runtime notes
 
 - The rollup and retention crons are `perWorktree: true` **on purpose**. A
@@ -150,6 +166,7 @@ beacon yet) — never "none", which is `[]`.
     - `primitives/networking/page-transport.pageTransport`
     - `primitives/pane.currentRoutePath`
     - `primitives/pane.usePathname`
+    - `primitives/perfs/boot-trace.getBootTrace`
   - Exports (values):
     - `AnalyticsTracker`
     - `observeSectionReach`
@@ -183,6 +200,7 @@ beacon yet) — never "none", which is `[]`.
     - `GapKind`
     - `Granularity`
     - `HitDimension`
+    - `LoadTiming`
     - `Metrics`
     - `OsFamily`
     - `PageviewBody`
@@ -250,12 +268,15 @@ beacon yet) — never "none", which is `[]`.
     - `HIT_DIMENSIONS`
     - `IDENTITY_WINDOW_DAYS`
     - `IDLE_AFTER_MS`
+    - `loadMs`
+    - `LoadTimingSchema`
     - `MAX_COLLECT_BODY_BYTES`
     - `MAX_ENGAGED_MS`
     - `MAX_EVENT_PROP_VALUE_LENGTH`
     - `MAX_EVENT_PROPS`
     - `MAX_FILTERS`
     - `MAX_HOST_LENGTH`
+    - `MAX_LOAD_MS`
     - `MAX_PATH_LENGTH`
     - `MAX_REFERRER_LENGTH`
     - `MAX_SESSION_HITS`

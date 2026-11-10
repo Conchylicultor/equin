@@ -2,11 +2,13 @@ import {
   IDLE_AFTER_MS,
   MAX_ENGAGED_MS,
   appendGap,
+  loadMs,
   stripQuery,
   type CollectBody,
   type CollectResponse,
   type Gap,
   type GapKind,
+  type LoadTiming,
 } from "../../core";
 import type { LandingSource } from "./landing";
 
@@ -31,6 +33,19 @@ export interface TrackerDeps {
   setDeadline: (delayMs: number, fire: () => void) => () => void;
   /** Whether a `<video>` / `<audio>` on the page is playing: watching is not idle. */
   isMediaPlaying: () => boolean;
+  /**
+   * The page load's milestones so far, as instants on the `now()` clock with
+   * the navigation's start at 0 (null = not measured, or not yet). Read when
+   * the load is sent: by the first hide or leave, the load is long done.
+   */
+  loadMilestones: () => LoadMilestones;
+}
+
+/** When the page load reached each phase of {@link LoadTiming}, on the `now()` clock. */
+export interface LoadMilestones {
+  firstByteAt: number | null;
+  firstContentfulPaintAt: number | null;
+  readyAt: number | null;
 }
 
 /** One pageview whose visible time is being counted. */
@@ -54,6 +69,8 @@ interface CurrentPage {
   away: { kind: GapKind; at: number } | null;
   /** The gaps last sent (as JSON), so an unchanged list is not re-sent. */
   sentGaps: string;
+  /** The page load's first pageview, whose first beacon still owes the load. */
+  loadOwed: boolean;
 }
 
 export interface Tracker {
@@ -87,7 +104,8 @@ export interface Tracker {
  * cumulative total on every hide and when the visitor leaves the path, with
  * the pageview's away stretches: `hidden` from a hide to the next show, `idle`
  * from the last input to the next one once {@link IDLE_AFTER_MS} pass without
- * any while visible and no media plays.
+ * any while visible and no media plays. The page load's first pageview — the
+ * hard load — carries how long the load took on its first beacon.
  *
  * One instance per page load (see instance.ts), so remounting the React
  * component — or mounting it in two tabs of the same document — can never count
@@ -96,6 +114,11 @@ export interface Tracker {
 export function createTracker(deps: TrackerDeps): Tracker {
   let current: CurrentPage | null = null;
   let landingSent = false;
+  /**
+   * When the page was first hidden (0 if it was hidden before the tracker
+   * watched): a paint after it is the tab being shown, not the load finishing.
+   */
+  let firstHiddenAt = deps.isVisible() ? Infinity : 0;
   /** The last input (or show, or path change): when an idle stretch would start. */
   let lastActivity = deps.now();
   let cancelDeadline: (() => void) | null = null;
@@ -159,11 +182,28 @@ export function createTracker(deps: TrackerDeps): Tracker {
       ),
     );
 
+  /** The load as sent: paint milestones reached only after a hide do not count. */
+  const loadTiming = (): LoadTiming => {
+    const m = deps.loadMilestones();
+    const beforeHide = (at: number | null) =>
+      at !== null && at < firstHiddenAt ? at : null;
+    return {
+      ttfbMs: loadMs(m.firstByteAt),
+      fcpMs: loadMs(beforeHide(m.firstContentfulPaintAt)),
+      readyMs: loadMs(beforeHide(m.readyAt)),
+    };
+  };
+
   const sendEngagement = (page: CurrentPage) => {
     const engagedMs = engaged(page);
     const gaps = gapsSoFar(page);
     const gapsJson = JSON.stringify(gaps);
-    if (engagedMs <= page.sentMs && gapsJson === page.sentGaps) return;
+    if (
+      engagedMs <= page.sentMs &&
+      gapsJson === page.sentGaps &&
+      !page.loadOwed
+    )
+      return;
     if (page.pageviewId === null) {
       // The pageview's response is still in flight: send once it names the id.
       page.owed = true;
@@ -172,11 +212,14 @@ export function createTracker(deps: TrackerDeps): Tracker {
     page.owed = false;
     page.sentMs = engagedMs;
     page.sentGaps = gapsJson;
+    const load = page.loadOwed ? { load: loadTiming() } : {};
+    page.loadOwed = false;
     void deps.send({
       kind: "engagement",
       pageviewId: page.pageviewId,
       engagedMs,
       gaps,
+      ...load,
     });
   };
 
@@ -197,6 +240,8 @@ export function createTracker(deps: TrackerDeps): Tracker {
         sendEngagement(current);
       }
       const visible = deps.isVisible();
+      // Hidden with no hide seen: it was hidden before anything watched.
+      if (!visible && firstHiddenAt === Infinity) firstHiddenAt = 0;
       const page: CurrentPage = {
         path,
         pageviewId: null,
@@ -208,6 +253,8 @@ export function createTracker(deps: TrackerDeps): Tracker {
         gaps: [],
         away: visible ? null : { kind: "hidden", at: now },
         sentGaps: "[]",
+        // The first pageview is the hard load; later ones are in-app navigations.
+        loadOwed: !landingSent,
       };
       current = page;
       // A new page is a fresh start for the idle clock.
@@ -225,6 +272,7 @@ export function createTracker(deps: TrackerDeps): Tracker {
         });
     },
     hidden() {
+      firstHiddenAt = Math.min(firstHiddenAt, deps.now());
       if (!current) return;
       stopDeadline();
       // Repeated (visibilitychange, then pagehide): the hidden stretch runs on.

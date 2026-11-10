@@ -398,6 +398,7 @@ async function recordEngagement(
         visitId: analyticsHits.visitId,
         engagedMs: analyticsHits.engagedMs,
         gaps: analyticsHits.gaps,
+        load: analyticsHits.load,
       })
       .from(analyticsHits)
       .where(
@@ -417,6 +418,8 @@ async function recordEngagement(
         ...(body.gaps && isNewerGaps(body.engagedMs, body.gaps, hit)
           ? { gaps: body.gaps }
           : {}),
+        // Sent once per page load; the first that lands is kept.
+        ...(body.load && hit.load === null ? { load: body.load } : {}),
       })
       .where(eq(analyticsHits.id, body.pageviewId));
     await tx

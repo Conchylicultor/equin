@@ -7,6 +7,7 @@ import {
 } from "./families";
 import { ChannelSchema } from "./channel";
 import { GapsSchema } from "./gaps";
+import { LoadTimingSchema } from "./load-timing";
 import {
   AnalyticsRangeSchema,
   RAW_RETENTION_DAYS,
@@ -113,6 +114,12 @@ export const SessionHitSchema = z
      * tracker) — never "none", which is `[]`.
      */
     gaps: GapsSchema.nullable(),
+    /**
+     * The pageview that was a hard page load: how long it took. Null = not
+     * recorded (an in-app navigation, an event, an older tracker, no beacon
+     * yet) — never 0.
+     */
+    load: LoadTimingSchema.nullable(),
   })
   .strict();
 export type SessionHit = z.infer<typeof SessionHitSchema>;

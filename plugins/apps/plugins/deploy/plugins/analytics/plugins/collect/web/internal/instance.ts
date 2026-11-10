@@ -1,13 +1,15 @@
 import { fetchEndpointOver } from "@plugins/infra/plugins/endpoints/web";
 import { pageTransport } from "@plugins/primitives/plugins/networking/plugins/page-transport/web";
 import { currentRoutePath } from "@plugins/primitives/plugins/pane/web";
+import { ROUTE_CONTENT_COMMIT_ID } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/core";
+import { getBootTrace } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/web";
 import {
   EVENT_NAME_PATTERN,
   collectEndpoint,
   type CollectBody,
 } from "../../core";
 import { landingSource } from "./landing";
-import { createTracker, type Tracker } from "./tracker";
+import { createTracker, type LoadMilestones, type Tracker } from "./tracker";
 
 // Page-wide telemetry: page-view analytics always reach the page's own server (D3).
 const fetchEndpoint = fetchEndpointOver(pageTransport);
@@ -64,6 +66,25 @@ function isMediaPlaying(): boolean {
 }
 
 /**
+ * The page load's milestones, from the framework's boot trace (one clock:
+ * `performance.now()`, navigation start = 0). Ready is the later of the first
+ * contentful paint and the commit showing the active app's content — not
+ * `bootWindowEnd`'s first commit, which on a site is its loading screen.
+ * Paint timing may be unsupported: its milestones then stay null.
+ */
+function loadMilestones(): LoadMilestones {
+  const trace = getBootTrace();
+  const fcp = trace.paint.firstContentfulPaintMs;
+  const content =
+    trace.spans.find((s) => s.id === ROUTE_CONTENT_COMMIT_ID)?.startMs ?? null;
+  return {
+    firstByteAt: trace.navigation?.responseStartMs ?? null,
+    firstContentfulPaintAt: fcp,
+    readyAt: content === null ? null : Math.max(content, fcp ?? 0),
+  };
+}
+
+/**
  * The page load's one tracker, created on first use. Module scope is the dedup
  * boundary: a remounted `<AnalyticsTracker />` (or two of them) reads the same
  * state, so a path is never counted twice. The landing source is read here, at
@@ -87,6 +108,7 @@ export function getTracker(): Tracker {
       return () => clearTimeout(timer);
     },
     isMediaPlaying,
+    loadMilestones,
   });
   const activity = () => tracker.activity();
   for (const type of [...INPUT_EVENTS, ...MEDIA_EVENTS])

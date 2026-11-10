@@ -40,6 +40,7 @@ export const RECORDED_COLUMNS = [
   "engagedMs",
   "exitEngagedMs",
   "gaps",
+  "load",
   "events",
   "eventName",
   "eventProps",
@@ -135,6 +136,12 @@ export const RECORDED_FIELDS = [
     description:
       "When each page sat in a background tab, or was visible with no input for 30 s and no media playing — offsets from the page's start, not what was on screen",
     columns: ["gaps"],
+  },
+  {
+    name: "load",
+    description:
+      "How long the page took to load when the visitor opened the site: server response, first paint, and the app ready",
+    columns: ["load"],
   },
   {
     name: "visitor_id",

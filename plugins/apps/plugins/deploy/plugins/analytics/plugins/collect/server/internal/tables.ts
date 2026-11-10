@@ -22,6 +22,7 @@ import {
   DeviceFamilySchema,
   FilterLevelSchema,
   GapsSchema,
+  LoadTimingSchema,
   OsFamilySchema,
 } from "../../core";
 
@@ -138,6 +139,12 @@ export const analyticsHits = pgTable(
      * is `[]`.
      */
     gaps: parsedJson("gaps", GapsSchema),
+    /**
+     * Pageviews only: how long the hard page load took, on the page load's
+     * first pageview — the first beacon that carried it. NULL = not recorded
+     * (an in-app navigation, an event, an older tracker, no beacon yet).
+     */
+    load: parsedJson("load", LoadTimingSchema),
   },
   (t) => [index("analytics_hits_visit_idx").on(t.visitId)],
 );
