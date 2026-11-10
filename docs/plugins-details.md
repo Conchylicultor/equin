@@ -20957,6 +20957,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations`
           - `conversations/conversation-view/status`
           - `conversations/conversations-view/data-view/queue`
+          - `tasks`
     - **`stop-gate`** — The stop-gate backend: the StopGate contribution (a plugin's check(conversationId) — block the agent's stop while it still owes the plugin something, with the reason it reads) and the StopWaiver contribution (waives(conversationId) — the agent may stop anyway, it will be woken), and the GET /api/conversations/:id/stop-gate endpoint the Stop hook asks: block iff some gate blocks and no waiver waives. Owns stop_gate_reminders, the machine half's backstop record.
       - Server:
         - Contributes: `trigger` "stop-gate.backstop"

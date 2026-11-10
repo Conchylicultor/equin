@@ -12,6 +12,17 @@ describe("stoppedEvents", () => {
     expect(e?.taskId).toBe("task-1");
   });
 
+  test("a launch that failed to start says so, with why", () => {
+    const [e] = stoppedEvents(
+      { taskId: "task-1", status: "attempted", previousStatus: "in_progress" },
+      "Starting the agent session failed: error: Unexpected",
+    );
+    expect(e?.kind).toBe("stopped");
+    expect(e?.summary).toBe(
+      "agent failed to start: Starting the agent session failed: error: Unexpected (in_progress → attempted)",
+    );
+  });
+
   test("entering held is `held`", () => {
     expect(
       stoppedEvents({

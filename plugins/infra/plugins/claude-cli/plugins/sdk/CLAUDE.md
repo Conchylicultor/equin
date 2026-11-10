@@ -19,7 +19,12 @@ the SDK runs the same build.
   type-check.
 - `claudeQuery({ env, bin?, prompt, options })` — the only `query()` call
   (agents, the usage probe, everything below). `bin` only for the sdk runtime's
-  agent (`bundledClaudeBin()` or its per-conversation hardlink).
+  agent (`bundledClaudeBin()` or its per-conversation clone). A `bin` is always
+  exec'd itself (`nativeSpawn`): the SDK picks a script runtime for a path
+  ending in `.js`/`.mjs`/`.ts`/`.tsx`/`.jsx`, and the clone's name ends in the
+  conversation's title — "… pglite-cluster.ts" had Bun parse the Mach-O as
+  TypeScript (2026-11-10). So a `bin` requires the caller's
+  `spawnClaudeCodeProcess` (tsc), which receives the native spawn.
 - `runClaudeTurn({ env, prompt, options, timeoutMs })` — one prompt to its
   result message, under a real deadline (aborted, and rejected through
   `withDeadline` whether or not the stream settles). Returns an error result

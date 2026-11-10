@@ -7,6 +7,7 @@ import {
 import { claudeAccountCredential } from "@plugins/infra/plugins/claude-cli/plugins/accounts/server";
 import { claudeCredentialEnv } from "@plugins/infra/plugins/claude-cli/plugins/accounts/core";
 import { pickHostEnv } from "@plugins/infra/plugins/launcher/plugins/runtime-env/core";
+import { nativeSpawn } from "./native-spawn";
 
 // Every Claude Code session a backend opens — an agent, a one-shot generation,
 // a probe — is opened here, through the Agent SDK, on an account chosen by its
@@ -48,33 +49,47 @@ export async function claudeSessionEnv(
   return env as ClaudeSessionEnv;
 }
 
-export interface ClaudeQueryInput {
+type SessionOptions = Omit<Options, "env" | "pathToClaudeCodeExecutable">;
+
+/** What one session is opened with. */
+export type ClaudeQueryInput = {
   /** From {@link claudeSessionEnv}: which account, under which environment. */
   env: ClaudeSessionEnv;
-  /**
-   * The Claude Code executable. Left out — every caller but one — the SDK runs
-   * its own bundled build, the one bun.lock pins. Named only by the sdk
-   * runtime's agent: `bundledClaudeBin()` (`claude-cli/sdk/machine`) or a
-   * hardlink to it, so its macOS prompts name the conversation.
-   */
-  bin?: string;
   prompt: string | AsyncIterable<SDKUserMessage>;
-  options: Omit<Options, "env" | "pathToClaudeCodeExecutable">;
-}
+} & (
+  | {
+      /** Left out — every caller but one — the SDK runs its own bundled build, the one bun.lock pins. */
+      bin?: undefined;
+      options: SessionOptions;
+    }
+  | {
+      /**
+       * The native Claude Code executable — named only by the sdk runtime's
+       * agent: `bundledClaudeBin()` (`claude-cli/sdk/machine`) or a named clone
+       * of it, so its macOS prompts name the conversation. Always exec'd
+       * itself ({@link nativeSpawn}): its name, which may end in a title,
+       * never decides how it runs. So the spawn is the caller's, and required.
+       */
+      bin: string;
+      options: SessionOptions &
+        Required<Pick<Options, "spawnClaudeCodeProcess">>;
+    }
+);
 
 /** Open one Agent SDK session — the only `query()` call outside the SDK. */
-export function claudeQuery({
-  env,
-  bin,
-  prompt,
-  options,
-}: ClaudeQueryInput): Query {
+export function claudeQuery(input: ClaudeQueryInput): Query {
+  const { env, prompt } = input;
+  if (input.bin === undefined)
+    return query({ prompt, options: { ...input.options, env } });
+  const { bin, options } = input;
   return query({
     prompt,
     options: {
       ...options,
       env,
-      ...(bin === undefined ? {} : { pathToClaudeCodeExecutable: bin }),
+      pathToClaudeCodeExecutable: bin,
+      spawnClaudeCodeProcess: (spawn) =>
+        options.spawnClaudeCodeProcess(nativeSpawn(bin, spawn)),
     },
   });
 }

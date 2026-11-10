@@ -33,6 +33,12 @@ export interface AgentProjection {
   /** When the agent wrote the event `working` / `backgroundTasks` rests on. */
   statusAt: Date | null;
   cliVersion: string | null;
+  /**
+   * The running process's Claude Code answered its initialize (`ready`).
+   * `started` resets it, so a launch waits on its own CLI coming up — never
+   * on `cliVersion`, which the SDK may leave out and which outlives a process.
+   */
+  cliReady: boolean;
   /** The live agent process (a held question's holder). */
   agentPid: number | null;
   /** The AskUserQuestion parked in `canUseTool`, if any. */
@@ -84,6 +90,7 @@ export const EMPTY_PROJECTION: AgentProjection = {
   rewindAnchorUuid: null,
   account: null,
   turnIds: false,
+  cliReady: false,
   stoppedAt: null,
   stopError: null,
 };
@@ -241,6 +248,8 @@ export function reduceEvents(
             // this line before recording it).
             effects.push({ kind: "turns-dropped", at });
             s.agentPid = p.pid;
+            // Its CLI has not answered its initialize yet.
+            s.cliReady = false;
             // A new process holds no question, runs no turn and has no
             // background task yet.
             s.working = false;
@@ -255,6 +264,7 @@ export function reduceEvents(
             break;
           case "ready":
             s.cliVersion = p.cliVersion;
+            s.cliReady = true;
             break;
           case "turn_started":
             s.working = true;

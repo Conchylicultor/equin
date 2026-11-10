@@ -47,6 +47,7 @@ const sdkAgentShape = defineExtensionShape({
     lastAssistantUuid: nullable(textField()),
     rewindAnchorUuid: nullable(textField()),
     turnIds: boolField(),
+    cliReady: boolField(),
   },
 });
 
@@ -54,9 +55,16 @@ export const sdkAgents = defineExtension(
   _conversations,
   "sdk_agent",
   sdkAgentShape,
-  // Rows written before the column existed hold no background task, and an
-  // agent started before turn ids.
-  { columns: { backgroundTasks: { default: 0 }, turnIds: { default: false } } },
+  // Rows written before the column existed hold no background task, an agent
+  // started before turn ids, and no word of their CLI's initialize (read only
+  // by a launch, of the process it just started).
+  {
+    columns: {
+      backgroundTasks: { default: 0 },
+      turnIds: { default: false },
+      cliReady: { default: false },
+    },
+  },
 );
 // Re-export the underlying pgTable so drizzle-kit's schema glob picks it up.
 export const _sdkAgentsTable = sdkAgents.table;

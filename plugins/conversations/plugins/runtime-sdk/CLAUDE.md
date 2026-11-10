@@ -41,7 +41,14 @@ agents without tmux, per-namespace paths, the Claude Code health row:
     waiters); `consumer-behind` (it answers at a seq past the row's cursor —
     reported as `sdk-consumer-stalled`, NOT thrown: the agent took the launch
     prompt, and a failed launch would release the turn to be sent twice); a
-    process exit still throws `AgentStartError`. `waitUntilReady` is the same
+    process exit still throws `AgentStartError`. A `ready` start then waits
+    for its Claude Code's initialize (the projection's `cliReady`, reset by
+    every `started`; the agent writes `ready` only after `started`) or the
+    agent's exit, bounded the same: a CLI that dies before initializing
+    (2026-11-10: a clone named for a title ending in ".ts" run by Bun as
+    TypeScript) fails the launch with its output — a spawn failure, "Failed to
+    start", and the task's watcher hears "agent failed to start: <why>" —
+    instead of a launch that succeeded and an agent that silently ended. `waitUntilReady` is the same
     wait with no launch in hand, and Stop's rewind relaunch goes through
     `launchAgent` too (it used to wait on `agentPid` alone, which the
     predecessor's unapplied pid satisfied). The agent writes `started` only

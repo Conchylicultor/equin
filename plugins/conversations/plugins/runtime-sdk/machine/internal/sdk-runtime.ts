@@ -48,6 +48,7 @@ import {
   nextLaunchAccount,
   readAgentOptions,
   startAgentProcess,
+  type StartedAgent,
 } from "./agent-process";
 import { recountAgentProcesses, runningAgentAccount } from "./agent-processes";
 import {
@@ -427,7 +428,65 @@ async function launchAgent(
     if (outcome.kind === "exited") {
       throw new AgentStartError(id, outcome.reason, await started.output());
     }
+    // Answering on its socket is not running: the agent then spawns its
+    // Claude Code, which can die before its initialize answers (2026-11-10: a
+    // clone named for a title ending in ".ts" was run by Bun as TypeScript).
+    // The agent then exits, so the launch fails here, with its output — the
+    // conversation reads "Failed to start" and the task's watcher hears why,
+    // instead of a launch that "succeeded" and an agent that silently ended.
+    // A slow start or a consumer behind is decided above; only a ready one
+    // waits on its CLI.
+    if (outcome.kind !== "ready") return;
+    const cli = await waitForCliInitialize(id, started);
+    // An agent can initialize and exit before this backend applied its
+    // `ready` (closed at once): applied now, it ran.
+    if (cli.kind === "exited" && !(await initializedAfterAll(id))) {
+      throw new AgentStartError(id, cli.reason, await started.output());
+    }
   });
+}
+
+/** Every line the exited agent wrote is applied, and its CLI had initialized. */
+async function initializedAfterAll(id: string): Promise<boolean> {
+  await catchUpNow(id);
+  return (await currentAgentRow(id))?.cliReady === true;
+}
+
+/**
+ * This start's Claude Code answered its initialize (the agent's `ready`,
+ * which the reducer records as the projection's `cliReady` — reset by every
+ * `started`), or the agent process ended first. Still initializing at
+ * {@link READY_TIMEOUT_MS} is `slow`: not a failure, as for the socket.
+ */
+async function waitForCliInitialize(
+  id: string,
+  started: StartedAgent,
+): Promise<{ kind: "ready" | "slow" } | { kind: "exited"; reason: string }> {
+  const stop = new AbortController();
+  try {
+    return await Promise.race([
+      waitForProjection(
+        id,
+        (s) => s.cliReady,
+        READY_TIMEOUT_MS,
+        "its Claude Code's initialize",
+        stop.signal,
+      ).then(
+        () => ({ kind: "ready" as const }),
+        (err: unknown) => {
+          if (
+            err instanceof ProjectionTimeoutError ||
+            err instanceof ProjectionWaitAbortedError
+          )
+            return { kind: "slow" as const };
+          throw err;
+        },
+      ),
+      started.exited.then((reason) => ({ kind: "exited" as const, reason })),
+    ]);
+  } finally {
+    stop.abort();
+  }
 }
 
 /**

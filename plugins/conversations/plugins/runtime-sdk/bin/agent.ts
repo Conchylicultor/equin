@@ -539,8 +539,17 @@ const session = claudeQuery({
 // with the first turn).
 let cliVersion: string | null = null;
 let ready = false;
-void session.initializationResult().then(
-  (init) => {
+let markStarted!: () => void;
+/**
+ * Settles once `started` is written: `ready` is written after it, since
+ * `started` resets what `ready` records (the projection's `cliVersion`, which
+ * a launch waits on).
+ */
+const startedWritten = new Promise<void>((resolve) => {
+  markStarted = resolve;
+});
+void Promise.all([session.initializationResult(), startedWritten]).then(
+  ([init]) => {
     cliVersion = init.claude_code_version ?? null;
     ready = true;
     emit({ kind: "agent", payload: { event: "ready", cliVersion } });
@@ -548,8 +557,9 @@ void session.initializationResult().then(
     measureContext();
   },
   (err: unknown) => {
-    log(`● initialize failed: ${err instanceof Error ? err.message : err}`);
-    shutdown("initialize failed");
+    const why = err instanceof Error ? err.message : String(err);
+    log(`● initialize failed: ${why}`);
+    shutdown(`initialize failed: ${why}`);
   },
 );
 
@@ -832,6 +842,7 @@ emit({
     turnIds: true,
   },
 });
+markStarted();
 // The pid file is what says "running" to every backend counting agents (and
 // on which account); a crash leaves it behind, so readers check the pid is
 // alive.

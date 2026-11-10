@@ -1,5 +1,11 @@
+import { desc, eq } from "drizzle-orm";
+import { db } from "@plugins/database/server";
 import { watchSource } from "@plugins/tasks/plugins/orchestration/plugins/watch/machine";
+import { spawnFailures } from "@plugins/conversations/plugins/spawn-failure/server";
+import { describeSpawnFailure } from "@plugins/conversations/plugins/spawn-failure/core";
 import {
+  _attempts,
+  _conversations,
   conversationCreated,
   taskCreated,
   taskStatusChanged,
@@ -75,19 +81,28 @@ const settledSource = watchSource({
 
 /** A task stopped short of settling: its agent ended without landing
  * (`stopped`, the task now `attempted`), or a person held it (`held`). Once
- * per transition into either status. */
-export function stoppedEvents(p: {
-  taskId: string;
-  status: TaskStatus;
-  previousStatus: TaskStatus;
-}): WatchEventInput[] {
+ * per transition into either status. `startFailure`: why its latest launch
+ * failed to start (the conversation's spawn failure, in words), when it did —
+ * an agent that never ran is not one that "ended without landing", and the
+ * watcher acts on the difference. */
+export function stoppedEvents(
+  p: {
+    taskId: string;
+    status: TaskStatus;
+    previousStatus: TaskStatus;
+  },
+  startFailure: string | null = null,
+): WatchEventInput[] {
   if (p.status === p.previousStatus) return [];
   if (p.status === "attempted")
     return [
       {
         kind: "stopped",
         taskId: p.taskId,
-        summary: `its agent ended without landing (${p.previousStatus} → attempted)`,
+        summary:
+          startFailure === null
+            ? `its agent ended without landing (${p.previousStatus} → attempted)`
+            : `agent failed to start: ${startFailure} (${p.previousStatus} → attempted)`,
       },
     ];
   if (p.status === "held")
@@ -101,10 +116,34 @@ export function stoppedEvents(p: {
   return [];
 }
 
+/**
+ * Why the task's latest conversation failed to start, or null when it did
+ * not (or the task has none). Its spawn failure is recorded before the
+ * conversation turns `gone`, so before the task turns `attempted`.
+ */
+async function latestStartFailure(taskId: string): Promise<string | null> {
+  const [latest] = await db
+    .select({ id: _conversations.id })
+    .from(_conversations)
+    .innerJoin(_attempts, eq(_attempts.id, _conversations.attemptId))
+    .where(eq(_attempts.taskId, taskId))
+    .orderBy(desc(_conversations.createdAt), desc(_conversations.id))
+    .limit(1);
+  if (latest === undefined) return null;
+  const failure = await spawnFailures.get(latest.id);
+  return failure === undefined ? null : describeSpawnFailure(failure);
+}
+
 const stoppedSource = watchSource({
   id: "tasks.stopped",
   on: taskStatusChanged,
-  toEvents: stoppedEvents,
+  toEvents: async (p) =>
+    stoppedEvents(
+      p,
+      p.status === "attempted" && p.status !== p.previousStatus
+        ? await latestStartFailure(p.taskId)
+        : null,
+    ),
 });
 
 export const tasksWatchSources = [
