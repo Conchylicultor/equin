@@ -209,7 +209,7 @@ function FloatingChrome({
   // set's viewport. Only where a solo placement is registered.
   //
   // The switch itself is a whole-surface commit (the wallpaper, shelf and every
-  // other window unmount), so it is not what the click does: the click only
+  // other window are hidden), so it is not what the click does: the click only
   // sets `growing`, the window sweeps out to the whole desk, and the switch
   // runs once it is there — where solo's container sits too, so the hand-off
   // is invisible. Reduced motion switches at once.
@@ -219,6 +219,10 @@ function FloatingChrome({
   const enterSolo = useCallback(() => {
     focusTab(win.activeTabId);
     setMode("solo");
+    // This chrome is only hidden by the switch, not unmounted (the surface
+    // keeps every visited mode's surfaces): end the grow in the same commit, so
+    // the window is back in its own box when the desktop is shown again.
+    setGrowing(false);
   }, [focusTab, setMode, win.activeTabId]);
   const goSolo = useCallback(() => {
     if (reducedMotion) enterSolo();

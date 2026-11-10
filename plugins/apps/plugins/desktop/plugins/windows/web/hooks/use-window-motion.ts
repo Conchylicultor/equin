@@ -251,7 +251,14 @@ export function useFloatingWindowStyle(
 
   useEffect(() => {
     const raf = requestAnimationFrame(() => setBoxReady(true));
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      cancelAnimationFrame(raf);
+      // Hidden, not unmounted, when the surface leaves the desktop (its modes'
+      // surfaces stay mounted with their effects torn down): the box must be
+      // un-ready again, so the window lands back in its box on the frame it is
+      // shown rather than tweening there from where the other mode had it.
+      setBoxReady(false);
+    };
   }, []);
 
   // React to a minimize/restore flip — in a LAYOUT effect, so the frame in

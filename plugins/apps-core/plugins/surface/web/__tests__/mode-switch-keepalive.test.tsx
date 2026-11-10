@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { useEffect, useState } from "react";
 import { cleanup, render } from "@testing-library/react";
 import {
   PluginProvider,
@@ -412,5 +413,92 @@ describe("a contained tab set", () => {
     expect(registerSpy.mock.calls[0]![0]).toMatchObject({
       defaultId: viewportDef.id,
     });
+  });
+});
+
+// A mode's OWN surfaces (its Backdrop, Foreground and per-tab Chrome) survive
+// a switch away from it too: they mount the first time the mode is active and
+// are then only hidden, so a switch back shows them instead of rebuilding them.
+// Hidden means effects torn down — what a mode does "while shown" (a shortcut
+// bridge, a pushed container style) must stop while another mode is active.
+describe("a mode's own surfaces stay mounted, hidden, while another mode is active", () => {
+  /** Mounts, unmounts, and effect runs / cleanups, per surface. */
+  const life = {
+    mounts: 0,
+    unmounts: 0,
+    effects: 0,
+    cleanups: 0,
+  };
+  afterEach(() => {
+    life.mounts = life.unmounts = life.effects = life.cleanups = 0;
+  });
+
+  function Probe({ name }: { name: string }) {
+    const [id] = useState(() => {
+      life.mounts++;
+      return `${name}-${life.mounts}`;
+    });
+    useEffect(() => {
+      life.effects++;
+      return () => {
+        life.cleanups++;
+      };
+    }, []);
+    return <div data-testid={`surface-${name}`} data-instance={id} />;
+  }
+
+  const surfacesDef: PlacementDef = {
+    ...windowDef,
+    id: "desk-ish",
+    Backdrop: () => <Probe name="backdrop" />,
+    Foreground: () => <Probe name="foreground" />,
+    Chrome: () => <Probe name="chrome" />,
+  };
+  const plugin = {
+    id: "surface-keepalive-test-mode-surfaces",
+    description: "a contained mode and one with its own surfaces",
+    contributions: [
+      Surface.Placement(containedDef),
+      Surface.Placement(surfacesDef),
+      Surface.Placement(viewportDef),
+    ],
+  } as unknown as LoadedPlugin;
+  const tree = () => (
+    <PluginProvider plugins={[plugin]}>
+      <SurfaceBody />
+    </PluginProvider>
+  );
+  const shown = (el: Element | null) =>
+    el !== null && (el as HTMLElement).style.display !== "none";
+
+  it("mounts a mode's surfaces only once it has been active", () => {
+    const { container } = render(tree());
+    expect(container.querySelector('[data-testid^="surface-"]')).toBeNull();
+  });
+
+  it("hides them on a switch away and shows the same nodes on the way back", () => {
+    tabsState.mode = surfacesDef.id;
+    const { container, rerender } = render(tree());
+    const nodes = ["backdrop", "foreground", "chrome"].map((n) =>
+      container.querySelector(`[data-testid="surface-${n}"]`),
+    );
+    expect(nodes.every(shown)).toBe(true);
+    expect(life).toMatchObject({ mounts: 3, effects: 3, cleanups: 0 });
+
+    tabsState.mode = viewportDef.id;
+    rerender(tree());
+    // Still in the DOM, the same nodes, hidden; effects torn down.
+    for (const [i, name] of ["backdrop", "foreground", "chrome"].entries()) {
+      const node = container.querySelector(`[data-testid="surface-${name}"]`);
+      expect(node).toBe(nodes[i]);
+      expect(shown(node)).toBe(false);
+    }
+    expect(life).toMatchObject({ mounts: 3, unmounts: 0, cleanups: 3 });
+
+    tabsState.mode = surfacesDef.id;
+    rerender(tree());
+    expect(nodes.every(shown)).toBe(true);
+    // Not rebuilt: no new instance, the effects simply re-run.
+    expect(life).toMatchObject({ mounts: 3, effects: 6, cleanups: 3 });
   });
 });

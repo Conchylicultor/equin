@@ -17,8 +17,10 @@ const fullscreenIcon = symbol("fullscreen");
  * Mutual exclusion with windows mode is guaranteed one level up, structurally:
  * the surface is in exactly ONE mode, and each mode renders every tab under its
  * own descriptor. Solo does not set `visibleWhenUnfocused`, so only the focused
- * tab is painted and it declares no Backdrop/Foreground — so entering solo drops
- * the desktop wallpaper + window dock. There is simply no window to overlap it.
+ * tab is painted and it declares no Backdrop/Foreground — so entering solo hides
+ * the desktop wallpaper + window dock (kept mounted, `display: none`, so leaving
+ * solo shows them again rather than rebuilding them). There is simply no window
+ * to overlap it.
  */
 export const soloDef: PlacementDef = {
   id: "solo",

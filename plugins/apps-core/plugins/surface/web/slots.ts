@@ -125,17 +125,29 @@ export interface PlacementDef {
   visibleWhenUnfocused?: boolean;
 
   /**
-   * Optional sibling overlay. NEVER a parent of `TabSurface`. May push dynamic
+   * Optional sibling overlay, one per tab. NEVER a parent of `TabSurface`. Kept
+   * mounted and hidden while another mode is active, like
+   * {@link PlacementDef.Backdrop}: hiding it runs its effect cleanups (so the
+   * style it pushed is cleared), showing it runs them again. May push dynamic
    * inline container/inset style to the host via {@link usePlacementStyle} —
    * this is how floating's geometry box lives in the floating plugin, not the
    * shared host.
    */
   Chrome?: ComponentType<PlacementChromeProps>;
-  /** Rendered once while this mode is active (e.g. desktop wallpaper). */
+  /**
+   * Rendered once, BELOW all tab containers (e.g. desktop wallpaper). Like
+   * {@link PlacementDef.Foreground} and {@link PlacementDef.Chrome}, it mounts
+   * the first time this mode is active and then stays mounted: while another
+   * mode is active it is hidden — its DOM `display: none` and its effects torn
+   * down (a React `<Activity>`) — so a mode switch shows and hides existing
+   * surfaces rather than rebuilding them. Anything it must do only while shown
+   * belongs in an effect; its state survives.
+   */
   Backdrop?: ComponentType;
   /**
-   * Optional overlay rendered ONCE, ABOVE all tab containers, while this mode is
-   * active. Symmetric with {@link PlacementDef.Backdrop} (which renders below).
+   * Optional overlay rendered ONCE, ABOVE all tab containers, shown while this
+   * mode is active (kept mounted, hidden, otherwise — see
+   * {@link PlacementDef.Backdrop}). Symmetric with {@link PlacementDef.Backdrop} (which renders below).
    * Receives two id sets so it stays decoupled from the host:
    *  - `tabIds` — the LIVE tabs only (still in the store). Dock / cycle act on
    *    these, so a closing window's chip disappears immediately and it can't be

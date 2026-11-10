@@ -3,12 +3,14 @@ import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import {
+  Activity,
   useEffect,
   useMemo,
   useRef,
   useState,
   type CSSProperties,
   type PointerEvent,
+  type ReactNode,
 } from "react";
 import { TabSurface } from "@plugins/apps-core/plugins/tab-surface/web";
 import { setFocusedSurfaceId } from "@plugins/primitives/plugins/shortcuts/web";
@@ -212,12 +214,16 @@ function SurfaceBodyReady({
   // mode declares an `exitDurationMs`, e.g. windows) before the host truly
   // unmounts it. Drives the render loop so a closing window animates out.
   const presence = useTabPresence(tabs, activeDef);
+  const liveIds = presence.filter((p) => !p.exiting).map((p) => p.tab.tabId);
+  const retainedIds = presence.map((p) => p.tab.tabId);
 
-  // Backdrop / Foreground belong to the ONE active mode (e.g. windows' wallpaper
-  // + dock). A mode without them (docked / solo) paints neither, so switching to
-  // solo instantly drops the desktop wallpaper and window dock — no leak.
-  const Backdrop = activeDef?.Backdrop;
-  const Foreground = activeDef?.Foreground;
+  // The modes whose own surfaces (Backdrop / Foreground / per-tab Chrome) are
+  // mounted: every mode the surface has been in, in the slot's order. A mode's
+  // surfaces mount the first time it is active and then STAY mounted, so a
+  // mode switch is a visibility change on elements that already exist — never
+  // the teardown and rebuild of a wallpaper, a shelf and every window's chrome.
+  // Only the active one is shown; see `ModeActivity` for what "hidden" means.
+  const mounted = useMountedModes(sorted, activeDef);
 
   // A placement whose containers are `fixed` (solo) needs the whole window AND
   // needs to out-paint the chrome beside the surface — see the class below. This
@@ -255,8 +261,8 @@ function SurfaceBodyReady({
     // placement's `fixed` containers (clipping a fullscreen tab to the content
     // area) AND trap their `z-overlay` inside the surface's own stacking layer
     // (so it would lose to the rail's `z-nav`). Nothing inside can leak while it
-    // is dropped: solo declares no Backdrop/Foreground and every unfocused tab
-    // is `display:none`. (An app's OWN `fixed` chrome stays bounded by the
+    // is dropped: solo declares no Backdrop/Foreground, a mounted inactive
+    // mode's are `display:none` (`ModeActivity`), and so is every unfocused tab. (An app's OWN `fixed` chrome stays bounded by the
     // per-tab content inset below, a different transform, in every mode.)
     //
     // No theme boundary here — the backdrop inherits the desktop `:root` theme.
@@ -274,12 +280,21 @@ function SurfaceBodyReady({
         !escapesSurface && "transform-gpu",
       )}
     >
-      {/* The active mode's optional backdrop (e.g. windows' desktop wallpaper). */}
-      {Backdrop && <Backdrop />}
+      {/* Each mounted mode's optional backdrop (e.g. windows' desktop
+          wallpaper); only the active mode's is shown. */}
+      {mounted.map(
+        (d) =>
+          d.Backdrop && (
+            <ModeActivity key={d.id} active={d === activeDef}>
+              <d.Backdrop />
+            </ModeActivity>
+          ),
+      )}
       {presence.map((p) => (
         <TabContainer
           key={p.tab.tabId}
           def={activeDef}
+          mounted={mounted}
           tab={p.tab}
           focused={p.tab.tabId === focusedTabId}
           exiting={p.exiting}
@@ -289,26 +304,84 @@ function SurfaceBodyReady({
           onExit={exitToPreviousMode}
         />
       ))}
-      {/* The active mode's optional foreground (e.g. windows' dock), rendered last
-          so it sits above the tab containers. Gets the tabIds so it stays
-          decoupled from the host — in a single mode, that's all the tabs. */}
-      {Foreground && (
-        <Foreground
-          // LIVE ids only: the dock chip disappears immediately on close, and a
-          // closing window can't be cycled / docked while it animates out.
-          tabIds={presence.filter((p) => !p.exiting).map((p) => p.tab.tabId)}
-          // LIVE + EXITING ids: store-prune keys on this so a window is not
-          // pruned out from under its still-animating Chrome.
-          retainedTabIds={presence.map((p) => p.tab.tabId)}
-        />
+      {/* Each mounted mode's optional foreground (e.g. windows' dock), rendered
+          last so it sits above the tab containers; only the active mode's is
+          shown. Gets the tabIds so it stays decoupled from the host — in a
+          single mode, that's all the tabs. */}
+      {mounted.map(
+        (d) =>
+          d.Foreground && (
+            <ModeActivity key={d.id} active={d === activeDef}>
+              <d.Foreground
+                // LIVE ids only: the dock chip disappears immediately on close,
+                // and a closing window can't be cycled / docked while it
+                // animates out.
+                tabIds={liveIds}
+                // LIVE + EXITING ids: store-prune keys on this so a window is
+                // not pruned out from under its still-animating Chrome.
+                retainedTabIds={retainedIds}
+              />
+            </ModeActivity>
+          ),
       )}
     </Clip>
   );
 }
 
+/**
+ * The modes whose own surfaces are mounted: the active one plus every one the
+ * surface has been in before, in the slot's layout order. Lazy — a mode the
+ * user never visits (the desktop, for a session spent in solo) mounts nothing,
+ * not even a hidden wallpaper — and sticky: once visited, a mode's surfaces
+ * stay mounted until its placement is unregistered. Recorded by id, so the
+ * contained set's remapped descriptors (see {@link useAvailablePlacements})
+ * are the same modes.
+ */
+function useMountedModes(
+  sorted: readonly PlacementDef[],
+  activeDef: PlacementDef | undefined,
+): readonly PlacementDef[] {
+  const [visited, setVisited] = useState<ReadonlySet<string>>(
+    () => new Set(activeDef ? [activeDef.id] : []),
+  );
+  // Adjusting state from a changed input during render (React's documented
+  // pattern for it): the newly active mode mounts in the SAME commit that
+  // shows it, never one render late.
+  if (activeDef && !visited.has(activeDef.id))
+    setVisited(new Set([...visited, activeDef.id]));
+  return useMemo(
+    () => sorted.filter((d) => d === activeDef || visited.has(d.id)),
+    [sorted, activeDef, visited],
+  );
+}
+
+/**
+ * One mode's own surface (its Backdrop, its Foreground, or its Chrome for one
+ * tab), kept mounted whether or not the mode is active. A React `<Activity>`:
+ * while the mode is inactive its subtree keeps its state and its DOM, but its
+ * host nodes are `display: none` (nothing of it paints, hit-tests, or overlaps
+ * the active mode — what solo promises) and its EFFECTS are torn down — the
+ * same lifecycle a mode's surfaces have always had, so whatever a mode does
+ * "while shown" (a shortcut bridge, a hint anchor, a store reconcile, the
+ * Chrome's pushed container style) still only happens while it is shown, with
+ * no `active` flag for a mode to forget to read. Showing it again re-runs the
+ * effects on the existing tree instead of building one.
+ */
+function ModeActivity({
+  active,
+  children,
+}: {
+  active: boolean;
+  children: ReactNode;
+}) {
+  return <Activity mode={active ? "visible" : "hidden"}>{children}</Activity>;
+}
+
 interface TabContainerProps {
   /** The ONE active surface-mode descriptor (undefined => empty registry). */
   def: PlacementDef | undefined;
+  /** Every mode whose surfaces are mounted — each one's `Chrome` is, too. */
+  mounted: readonly PlacementDef[];
   tab: Tab;
   focused: boolean;
   /** True while this tab has left the store but is retained for its exit tween. */
@@ -344,6 +417,7 @@ interface TabContainerProps {
  */
 function TabContainer({
   def,
+  mounted,
   tab,
   focused,
   exiting,
@@ -387,12 +461,19 @@ function TabContainer({
     def?.frameClassName,
   );
   const visibleWhenUnfocused = def?.visibleWhenUnfocused ?? false;
-  const Chrome = def?.Chrome;
 
   // Every tab stays mounted (keep-alive); only the visibility gate changes. A
   // mode that paints all tabs (`visibleWhenUnfocused`, i.e. windows) shows every
   // tab; docked / solo show only the focused one, so a non-focused tab is
   // display:none and can never overlap the visible one.
+  //
+  // `display: none`, not `content-visibility: hidden` (measured 2026-11-10 with
+  // the desktop's fullscreen-switch profile, 4 windows): keeping a hidden tab's
+  // styles buys nothing while a mode switch moves the app theme scope on and
+  // off `:root` — that swap rewrites every `[data-theme-scope="app:…"]` sheet,
+  // invalidating each hidden tab's styles anyway — and a skipped subtree is
+  // still restyled when anything reads it, so entering solo got 3 × 20k
+  // elements dearer. Revisit once the switch stops touching the root scope.
   const visible = visibleWhenUnfocused || focused;
 
   // The host ALWAYS owns focus-on-pointerdown (harmless for every mode); the
@@ -446,21 +527,27 @@ function TabContainer({
         <TabSurface tab={tab} />
       </div>
 
-      {/* Active placement's optional sibling Chrome overlay (never a parent of
-          TabSurface). Mounted only when the placement provides one; on unmount its
-          cleanup clears any pushed style so the container falls back to defaults. */}
-      {Chrome && (
-        <PlacementStyleProvider value={styleApi}>
-          <Chrome
-            tabId={tab.tabId}
-            appId={tab.appId}
-            title={title}
-            focused={focused}
-            exiting={exiting}
-            onClose={onClose}
-            onExit={onExit}
-          />
-        </PlacementStyleProvider>
+      {/* Each mounted mode's optional sibling Chrome overlay (never a parent of
+          TabSurface); only the active mode's is shown. Hiding one tears its
+          effects down, so its cleanup clears any pushed style and the container
+          falls back to defaults — showing it again re-pushes them. */}
+      {mounted.map(
+        (d) =>
+          d.Chrome && (
+            <ModeActivity key={d.id} active={d === def}>
+              <PlacementStyleProvider value={styleApi}>
+                <d.Chrome
+                  tabId={tab.tabId}
+                  appId={tab.appId}
+                  title={title}
+                  focused={focused}
+                  exiting={exiting}
+                  onClose={onClose}
+                  onExit={onExit}
+                />
+              </PlacementStyleProvider>
+            </ModeActivity>
+          ),
       )}
     </Theme>
   );

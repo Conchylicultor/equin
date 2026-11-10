@@ -110,6 +110,11 @@ export function SwitcherOverlay() {
       window.removeEventListener("keyup", onKeyUp);
       window.removeEventListener("keydown", onKeyDown, true);
       window.removeEventListener("blur", cancel);
+      // Torn down while still open: the desktop was hidden mid-session (a
+      // surface-mode switch keeps it mounted, its effects torn down), so the
+      // modifier's release can no longer be heard — cancel rather than come
+      // back to a session nothing would end.
+      cancel();
     };
   }, [open, commit]);
 

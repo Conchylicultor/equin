@@ -29,8 +29,8 @@ import { useDesktop } from "../internal/desktop-runtime";
  * ends rather than pruned out from under its chrome.
  *
  * The reconcile is a single keyed effect that runs WHILE MOUNTED — on mount and
- * whenever the retained set changes — never on unmount. This Foreground unmounts
- * on every surface-mode switch (it renders only in `floating` mode), which is NOT
+ * whenever the retained set changes — never on unmount. This Foreground is hidden
+ * (its effects torn down) on every switch away from `floating` mode, which is NOT
  * the same as "no floating windows exist", so no teardown may touch the geometry
  * store; a mode round-trip must leave every window's box intact to be restored on
  * re-entry. The while-mounted reconcile still covers both prune cases: a genuine
