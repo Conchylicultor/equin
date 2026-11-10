@@ -16,13 +16,15 @@ import { applyMenu, type CurrentMove, type MenuChanges } from "./transitions";
 
 /**
  * Read Claude Code's model menu (the Agent SDK's bundled build) and make it the catalog: each
- * family runs what its alias resolves to, every version the menu offers is
+ * family runs the newest version of it the menu offers, every version it offers is
  * known, and a known version the menu no longer offers is retired.
  *
- * Daily at 05:00 UTC, plus whenever the availability probe sees a Claude CLI
+ * Every 2 hours, plus whenever the availability probe sees a Claude CLI
  * version the catalog has not read (`startCliVersionTrigger`) — a CLI update is
  * exactly when the menu moves, so that trigger is the real freshness signal and
- * the cron covers a machine where nothing changes locally.
+ * the cron covers a machine where nothing changes locally, and a menu that
+ * changes without a CLI update (Fable 5.2 was first seen by the cron, under CLI 2.1.319).
+ * One run is a ~2 s CLI start-up with no model call, so 12 a day cost nothing.
  *
  * `perWorktree` is omitted: graphile's fleet-wide cron runs it on main only,
  * and the run itself is gated on `isHostSingleton()` so a manual or
@@ -38,7 +40,7 @@ export const modelsDiscoverJob = defineJob({
   input: z.object({}),
   event: z.never(),
   dedup: "singleton",
-  schedule: { cron: "0 5 * * *" }, // daily at 05:00 UTC
+  schedule: { cron: "0 */2 * * *" }, // every 2 hours — the menu can change without a CLI update
   async run({ ctx }) {
     await discoverModels(ctx.signal);
   },

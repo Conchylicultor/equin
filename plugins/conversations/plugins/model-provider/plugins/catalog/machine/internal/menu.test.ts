@@ -97,6 +97,16 @@ describe("readMenu", () => {
     expect(renamed.offered).toEqual([]);
   });
 
+  test("a family runs the newest version of it the menu offers, even before its alias moves", () => {
+    const menu = readMenu([
+      ...RECORDED,
+      alias(cliName("fable-5-2"), cliName("fable-5-2")),
+    ]);
+    expect(menu.current.fable).toBe(id("fable-5-2"));
+    expect(menu.offered).toContain(id("fable-5-1"));
+    expect(menu.problems).toEqual([]);
+  });
+
   test("a family the menu leaves out is reported", () => {
     const menu = readMenu(RECORDED.filter((m) => m.value !== "haiku"));
     expect(menu.current.haiku).toBeUndefined();

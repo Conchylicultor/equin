@@ -1,5 +1,6 @@
 import {
   MODEL_TIERS,
+  compareModelsNewestFirst,
   modelIdFromCliName,
   modelMeta,
   type ConversationModel,
@@ -23,7 +24,12 @@ export type MenuProblem =
 
 /** The menu, in the catalog's terms. */
 export interface CliMenu {
-  /** Each family alias the menu lists, with the version it resolves to — that family's current version. */
+  /**
+   * Each family the menu lists an alias for, with its current version: the
+   * NEWEST version of that family the menu offers — the alias's resolution or
+   * a newer one the CLI offers by name (Fable 5.2 while `fable` still resolves
+   * to 5.1). Launches pass the concrete version, never the alias.
+   */
   current: Partial<Record<ModelTier, ConversationModel>>;
   /** Every version the menu offers, deduplicated, in menu order. */
   offered: ConversationModel[];
@@ -35,10 +41,12 @@ function isFamily(value: string): value is ModelTier {
 }
 
 /**
- * Place every menu entry: a family alias sets that family's current version, a
- * CLI model name is a version the CLI still offers, `default` is ignored (it is
- * the CLI's pick of a family, already listed), and anything else is a
- * {@link MenuProblem}.
+ * Place every menu entry: a family alias names the family and offers the
+ * version it resolves to, a CLI model name is a version the CLI still offers,
+ * `default` is ignored (it is the CLI's pick of a family, already listed), and
+ * anything else is a {@link MenuProblem}. A listed family's current version is
+ * the newest of its offered versions, so a new release is picked up as soon as
+ * the CLI offers it, whether or not its alias has moved yet.
  */
 export function readMenu(models: readonly CliModel[]): CliMenu {
   const current: Partial<Record<ModelTier, ConversationModel>> = {};
@@ -64,6 +72,12 @@ export function readMenu(models: readonly CliModel[]): CliMenu {
       current[value] = id.id;
     }
     offered.add(id.id);
+  }
+  for (const version of [...offered].sort(compareModelsNewestFirst)) {
+    const family = modelMeta(version).family;
+    const now = current[family];
+    if (now !== undefined && compareModelsNewestFirst(version, now) < 0)
+      current[family] = version;
   }
   for (const family of MODEL_TIERS)
     if (current[family] === undefined)
