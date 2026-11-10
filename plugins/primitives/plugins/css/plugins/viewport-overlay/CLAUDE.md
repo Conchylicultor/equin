@@ -80,6 +80,11 @@ Both faults report to `viewportEscapeReportSink` and then throw under
 `plugins/reports/plugins/viewport-escape` is the consumer that files them as
 reports, and an app composition without it drops every production fault.
 
+`useViewportEscape` audits **after the next paint**, never in the commit that
+switched the box on: there the document's style is dirty, so each ancestor's
+`getComputedStyle` forces a full-document recalc (561 ms entering full screen).
+The dev throw lands one frame late — acceptable for an invariant check.
+
 `<ViewportOverlay>` audits its own chain in dev with `from: "parent"`. A portal
 to `<body>` escapes every ancestor *inside* the app — that is the point — but it
 cannot escape `body`/`html` themselves, so a global `filter`/`transform` there (a

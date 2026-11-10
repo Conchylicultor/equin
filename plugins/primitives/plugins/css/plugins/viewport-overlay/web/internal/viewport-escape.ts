@@ -291,8 +291,9 @@ function failLoudly(fault: ViewportEscapeFault): void {
 
 /**
  * Assert that a viewport-relative box can actually reach the viewport AND
- * out-paint the chrome beside it. Call it in a layout effect at the moment the
- * invariants start mattering — `useViewportEscape` is that call, wrapped.
+ * out-paint the chrome beside it. Call it once the invariants start mattering,
+ * with the document's style clean (it reads computed style up every ancestor) —
+ * `useViewportEscape` is that call, wrapped, run after the next paint.
  *
  * Returns the blocker it found, so a caller that wants to do something else with
  * it (log it, render a dev badge) is not forced to re-walk the chain; `null` is
