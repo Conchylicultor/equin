@@ -83,7 +83,9 @@ async function pidFileAgents(namespace: string): Promise<PidFileAgent[]> {
  */
 export async function runningAgentAccount(
   id: string,
-): Promise<{ kind: "not-running" } | { kind: "running"; account: string | null }> {
+): Promise<
+  { kind: "not-running" } | { kind: "running"; account: string | null }
+> {
   let text: string;
   try {
     text = await readFile(agentPidPath(id), "utf8");
@@ -93,7 +95,8 @@ export async function runningAgentAccount(
     throw err;
   }
   const read = parsePidFile(text);
-  if (read.kind !== "pid" || !pidAlive(read.pid)) return { kind: "not-running" };
+  if (read.kind !== "pid" || !pidAlive(read.pid))
+    return { kind: "not-running" };
   return { kind: "running", account: agentPidFileAccount(text) };
 }
 

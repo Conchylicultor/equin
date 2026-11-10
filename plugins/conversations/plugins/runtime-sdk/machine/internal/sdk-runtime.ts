@@ -49,10 +49,7 @@ import {
   readAgentOptions,
   startAgentProcess,
 } from "./agent-process";
-import {
-  recountAgentProcesses,
-  runningAgentAccount,
-} from "./agent-processes";
+import { recountAgentProcesses, runningAgentAccount } from "./agent-processes";
 import {
   AgentNotRunningError,
   AgentUnresponsiveError,
