@@ -314,6 +314,7 @@ marker is *additive* alongside it; nothing here reads or writes it.
     - `primitives/ui-context/element-picker`
     - `reports/crash`
     - `reports/launch-fix`
+    - `reports/main-thread-stall`
     - `reports/popover-anchor-lost`
     - `reports/render-loop`
     - `tasks/task-source-url`

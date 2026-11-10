@@ -81,6 +81,9 @@ export const CLIENT_REPORT_SOURCES = [
   // A browser tab's main thread froze (reports/main-thread-stall): filed by a
   // live tab of the origin on the frozen one's behalf.
   "client-main-thread-stall",
+  // A click / key press whose next paint came late (reports/main-thread-stall's
+  // slow interactions), filed by the tab itself.
+  "client-slow-interaction",
   "client-optimistic-divergence",
   // The server permanently rejected an optimistic op or a detached write
   // (reports/optimistic-rejection) — the user's edit was lost.
@@ -152,6 +155,7 @@ export const CLIENT_REPORT_SUBJECT: Record<
   "client-slow-op": "page",
   "client-render-loop": "page",
   "client-main-thread-stall": "page",
+  "client-slow-interaction": "page",
   "client-optimistic-divergence": "page",
   "client-optimistic-rejection": "page",
   "client-turn-unconfirmed": "page",

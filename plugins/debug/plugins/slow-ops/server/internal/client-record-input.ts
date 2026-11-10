@@ -28,6 +28,7 @@ export function toRecordInput(
     detail: item.detail,
     transportColdStart: item.transportColdStart,
     traceId,
+    ...(item.reportedBy !== undefined ? { reportedBy: item.reportedBy } : {}),
     // A signal filed after the fact names when it ended; never later than now
     // (a skewed client clock must not stamp a sample into the future).
     ...(item.endedAt !== undefined

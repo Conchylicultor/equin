@@ -82,6 +82,55 @@ it came back after a reload — then a visible one), which files it with
 (`debug/slow-ops/core`, with `endedAt` so the span lands where it happened),
 then acks. No live tab ⇒ it waits for the next attach.
 
+Its `main-thread` slow-op carries `reportedBy: "main-thread-stall"`: recorded
+and drawn, but no second `slow-op` report beside the stall's own.
+
+## Slow interactions: what was clicked, not where
+
+A stall is the thread going silent; a **slow interaction** is the delay a
+person felt between a click or key press and the next paint — 300–800 ms is
+already a bug, far under any stall bar. The desktop ↔ full-screen switch cost
+1–2.5 s (mostly style recalculation forced by layout reads in React's commit)
+for weeks, filed only as `slow-op:main-thread:sonata (root)` /
+`unattributed`. Design: [`research/2026-11-11-reports-slow-interaction.md`](../../../../research/2026-11-11-reports-slow-interaction.md).
+
+`web/internal/interaction-watch.ts`, installed by the tab watch (no worker:
+the tab was never frozen long enough to need one):
+
+- **Measure**: Event Timing entries with an `interactionId`, grouped per
+  interaction (the longest stands for it), judged 1 s after they arrive so the
+  long frames inside them are in (an id already judged is ignored: a key held
+  past the grace). Judged on its **own time** — processing + presentation,
+  not input delay: a click that waited on an unrelated long task is that
+  frame's slowness, never the clicked control's.
+- **Identify at dispatch**: a capture listener on pointerdown / click /
+  keydown resolves the target — and reads where the tab is (a click that
+  navigates is filed under the screen it was made on) — while it is still in
+  the document (a slow switch
+  remounts the very button; Event Timing's `target` is then null) — the
+  nearest control's ui-context element descriptor, its innermost contribution
+  (`plugin@slot`) and pane, its `data-ui-owner` component; a key as its class
+  (`char` for a printable key — never what was typed). Attributes and text
+  only, never computed style (it runs on the click path). Names: an
+  `aria-label`; a button's (switch's, checkbox's) title or text. Tab, menu
+  item, link, row and option text is the user's data (a page title, a task in
+  a menu) and never part of an identity.
+- **Split** (`interaction-judge.ts`, pure and tested): every LoAF script
+  clipped to the interaction → `script` / `forced-style-layout` (with
+  `forcedBy`, the function that forced the most) / `style-layout` (the
+  frame's own pass, less scripts run inside it — ResizeObserver callbacks) /
+  `other`; plus Event Timing's input delay / processing / presentation.
+- **File**: ≥ 200 ms → an `interaction` slow-op (operation = the target,
+  variant = `forced by …` or the top function, waits = the split, caller = the
+  route, `reportedBy: "slow-interaction"`); ≥ 800 ms own, or from the 3rd ≥ 300 ms
+  of the same target in this page load on → a `slow-interaction` report (each
+  occurrence grows its count; the bell re-alerts at most every 30 min),
+  fingerprinted by the target alone (never app, route or url). ≥ 5 s is the
+  stall's report; the interaction is then only recorded.
+- **One cause, one op**: a 1–5 s long frame overlapping a slow interaction is
+  the interaction's — `deferSlowFrame` waits the same grace and files the app +
+  route `main-thread` slow-op only when no interaction claimed it.
+
 ## Storage survives the worker
 
 An open stall is written to IndexedDB (`web/internal/stall-store.ts`) when it
@@ -119,11 +168,12 @@ renderer forever — so the script kills it with CDP `Page.crash`.
 
 ## Plugin reference
 
-- Description: Main-thread stall detector: a Core.Root controller that attaches each tab to one out-of-thread SharedWorker watchdog (1 Hz ping, Web Lock per tab, IndexedDB record of an open stall) and feeds it the tab's app, route pattern, visibility and LoAF long frames; a visible tab silent ≥5 s becomes a main-thread-stall report plus a slow-op span (recovered 1–5 s long frames: slow-op only). In-tab fallback without SharedWorker. Main-thread-stall report kind: validates the stall payload (tab, app, route pattern, duration, how it ended, LoAF attribution, cohort), fingerprints by app + route pattern + top attributed function, and renders the investigation task.
+- Description: Main-thread stall detector: a Core.Root controller that attaches each tab to one out-of-thread SharedWorker watchdog (1 Hz ping, Web Lock per tab, IndexedDB record of an open stall) and feeds it the tab's app, route pattern, visibility and LoAF long frames; a visible tab silent ≥5 s becomes a main-thread-stall report plus a slow-op span (recovered 1–5 s long frames: slow-op only). In-tab fallback without SharedWorker. Slow interactions: Event Timing (input → next paint) per click / key press, its target resolved at dispatch (element, contribution, pane, component), its time split by the long frames inside it; ≥200 ms is an `interaction` slow-op, severe (≥800 ms) or recurring (3× ≥300 ms) a slow-interaction report, and it owns the 1–5 s long frame it caused. Main-thread-stall report kind: validates the stall payload (tab, app, route pattern, duration, how it ended, LoAF attribution, cohort), fingerprints by app + route pattern + top attributed function, and renders the investigation task. Slow-interaction report kind: a click / key press whose next paint came late, fingerprinted by what was interacted with (element, contribution, pane, component — never the app or route), its time split into script / forced style-layout / style-layout / other with the function that forced it.
 - Web:
   - Contributes:
     - `Core.Root` → `MainThreadStallController`
     - `Reports.KindView` → `MainThreadStallKindView`
+    - `Reports.KindView` → `SlowInteractionKindView`
   - Uses:
     - `apps-core.useFocusedAppId`
     - `primitives/css/badge.Badge`
@@ -136,10 +186,14 @@ renderer forever — so the script kills it with CDP `Page.crash`.
     - `primitives/perfs/task-marks.onTaskMark`
     - `primitives/perfs/task-marks.runMarked`
     - `primitives/scope/tab-id.getTabId`
+    - `primitives/ui-context.collectLineage`
+    - `primitives/ui-context.nearestOwner`
     - `reports.report`
     - `reports.Reports`
 - Server:
-  - Contributes: `report-kind` "main-thread-stall"
+  - Contributes:
+    - `report-kind` "main-thread-stall"
+    - `report-kind` "slow-interaction"
   - Uses: `reports.ReportKind`
 - Cross-plugin:
   - Uses tokens:
@@ -147,15 +201,25 @@ renderer forever — so the script kills it with CDP `Page.crash`.
     - `ui/tokens/font-family --font-mono`
 - Core:
   - Exports (types):
+    - `InteractionBreakdown`
+    - `InteractionTarget`
     - `MainThreadStallPayload`
+    - `SlowInteractionPayload`
     - `StallFrame`
     - `StallFrameScript`
     - `StallTab`
     - `TaskMark`
   - Exports (values):
+    - `dominantLayer`
+    - `InteractionBreakdownSchema`
+    - `interactionTargetLabel`
+    - `InteractionTargetSchema`
     - `mainThreadStallFingerprint`
     - `MainThreadStallPayloadSchema`
     - `mainThreadStallSummary`
+    - `slowInteractionFingerprint`
+    - `SlowInteractionPayloadSchema`
+    - `slowInteractionSummary`
     - `StallFrameSchema`
     - `StallFrameScriptSchema`
     - `StallTabSchema`

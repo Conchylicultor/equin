@@ -98,4 +98,16 @@ describe("incidentsFor", () => {
     expect(burst.count).toBe(BURST_NAMED_CAP + 3);
     expect(burst.operations).toHaveLength(BURST_NAMED_CAP);
   });
+
+  test("an op whose alert another kind files is recorded, never reported", () => {
+    const incidents = incidentsFor([
+      item("click button", 900, {
+        operationKind: "interaction",
+        reportedBy: "slow-interaction",
+      }),
+      item("tasks", 1500),
+    ]);
+    expect(incidents).toHaveLength(1);
+    expect(incidents[0]!.map((r) => r.data.operation)).toEqual(["tasks"]);
+  });
 });

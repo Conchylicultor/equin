@@ -14,6 +14,7 @@ import {
 import type { TabToWorker, WorkerToTab } from "./protocol";
 import { fileSlowFrame, fileStall } from "./file-stall";
 import { installInTabFallback } from "./in-tab-fallback";
+import { installInteractionWatch } from "./interaction-watch";
 import {
   LOAF_ENTRY_TYPE,
   loafSupported,
@@ -228,10 +229,15 @@ export function installStallWatch(readTab: () => StallTab): StallWatch {
     if (ev.persisted && !session && !disposed && useWorker) attach();
   };
 
+  // Slow interactions (input → next paint): fed every long frame for their
+  // attribution, and the owner of any 1–5 s frame one overlaps.
+  const interactions = installInteractionWatch(readTab);
+
   let observer: PerformanceObserver | null = null;
   if (loafSupported()) {
     observer = new PerformanceObserver((list) => {
       for (const e of list.getEntries() as LoafEntry[]) {
+        interactions.onFrame(e);
         if (e.duration < STALL.FRAME_POST_MIN_MS) continue;
         onFrame(toStallFrame(e));
       }
@@ -255,7 +261,9 @@ export function installStallWatch(readTab: () => StallTab): StallWatch {
       frame.durationMs >= STALL.SLOW_OP_MIN_MS &&
       frame.durationMs < STALL.REPORT_MIN_MS
     )
-      fileSlowFrame(frame, tab);
+      // A slow interaction overlapping it owns it (it names what was clicked);
+      // otherwise it is the app + route's `main-thread` slow-op.
+      interactions.deferSlowFrame(frame, () => fileSlowFrame(frame, tab));
     fallback?.onFrame(frame, tab);
   }
 
@@ -276,6 +284,7 @@ export function installStallWatch(readTab: () => StallTab): StallWatch {
       disposed = true;
       uninstallMarks?.();
       observer?.disconnect();
+      interactions.dispose();
       fallback?.dispose();
       detach();
       document.removeEventListener("visibilitychange", postState);

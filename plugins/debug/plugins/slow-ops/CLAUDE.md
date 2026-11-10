@@ -165,6 +165,11 @@ only waited in the same cycle) and four client `update`s. Now:
   `slow-op:<kind>:burst` report did both wrong; its old rows still render.)
   Server spans reach the funnel one per batch, so each is its own incident.
   Design: `research/2026-10-31-global-slow-op-burst-incident.md`.
+- **A producer with its own report kind files the alert itself**
+  (`reportedBy` on `clientSlowOpSink`'s signal → the item → `RecordSlowOpInput`):
+  the item is recorded, aggregated and drawn on the Timeline like any other,
+  but `incidentsFor` files no `slow-op` report for it — its kind
+  (`slow-interaction`, `main-thread-stall`) already did, with a richer payload.
 - **A warm-up is judged once**, here, on its `bg` span (against its declared
   `budgetMs` or `DEFAULT_WARMUP_BUDGET_MS`); boot-budget no longer judges its
   boot span.

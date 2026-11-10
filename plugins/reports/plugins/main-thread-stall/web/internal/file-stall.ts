@@ -19,6 +19,8 @@ function emitSlowOp(opts: {
   durationMs: number;
   endedAt: number;
   topFunction: string | null;
+  // A filed stall is alerted by its own `main-thread-stall` report.
+  reportedBy?: "main-thread-stall";
 }): void {
   clientSlowOpSink.emit({
     operationKind: OPERATION_KIND,
@@ -28,6 +30,7 @@ function emitSlowOp(opts: {
     caller: { kind: "route", label: new URL(opts.tab.url).pathname },
     detail: { variant: opts.topFunction ?? "unattributed" },
     endedAt: Math.round(opts.endedAt),
+    ...(opts.reportedBy ? { reportedBy: opts.reportedBy } : {}),
   });
 }
 
@@ -44,6 +47,7 @@ export async function fileStall(
     durationMs: payload.durationMs,
     endedAt: payload.endedAt,
     topFunction: payload.topFunction,
+    reportedBy: "main-thread-stall",
   });
   const res = await report({
     kind: "main-thread-stall",

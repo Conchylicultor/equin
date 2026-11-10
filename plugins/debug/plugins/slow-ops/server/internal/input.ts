@@ -63,4 +63,8 @@ export interface RecordSlowOpInput {
   // replays with its true in-freeze instant (recentSamples atTime, marker
   // line, lastSeenAt) instead of the post-episode flush time. Callers omit it.
   occurredAt?: Date;
+  // The report kind that files this op's alert itself (a client producer with
+  // a richer payload — `slow-interaction`, `main-thread-stall`): recorded and
+  // markered like any op, but `incidentsFor` files no `slow-op` report for it.
+  reportedBy?: string;
 }

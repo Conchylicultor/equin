@@ -3,6 +3,7 @@ import { STALL } from "./constants";
 
 // The Long Animation Frames API entry (Chrome 123+), not yet in TS's DOM lib.
 interface LoafScript {
+  startTime: number;
   invokerType: string;
   invoker: string;
   sourceURL: string;

@@ -34,6 +34,8 @@ export function incidentsFor(
 ): SlowOpReport[][] {
   const byKind = new Map<string, Map<string, RecordSlowOpInput>>();
   for (const input of inputs) {
+    // Its own kind files the alert (see `reportedBy`): recorded, not reported.
+    if (input.reportedBy !== undefined) continue;
     let byOp = byKind.get(input.operationKind);
     if (!byOp) byKind.set(input.operationKind, (byOp = new Map()));
     const seen = byOp.get(input.operation);

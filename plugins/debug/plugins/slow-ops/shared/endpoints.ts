@@ -84,6 +84,10 @@ export const SlowOpClientItemSchema = z.object({
   // (clientSlowOpSink's `endedAt`): the sample lands at this instant instead of
   // the receipt time. Absent for every live signal.
   endedAt: z.number().optional(),
+  // The report kind that files this op's alert itself (clientSlowOpSink's
+  // `reportedBy`): the item is recorded — aggregated, on the Timeline — but
+  // files no `slow-op` report of its own. Absent for every other signal.
+  reportedBy: z.string().optional(),
   // Additive, backward-compatible client evidence for the `page-load` signal
   // (absent for the others and older clients): the browser's own boot
   // decomposition (perfs/boot-trace), trimmed by toClientBootSection so the

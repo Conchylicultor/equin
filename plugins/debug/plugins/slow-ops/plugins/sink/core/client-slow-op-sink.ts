@@ -12,6 +12,11 @@ import type { CallerRef } from "./caller-ref";
  * by another tab once it is gone): the sample then lands at its true instant,
  * so the Timeline draws the interval where it happened rather than at receipt.
  * Omitted ⇒ the server's receipt time, as for every other client signal.
+ *
+ * `reportedBy` names the report kind that files this op's alert itself (a
+ * slow interaction, a main-thread stall — each with its own richer payload):
+ * the op is still recorded and drawn, but files no `slow-op` report, so one
+ * cause rings once. Omitted ⇒ the op files its own `slow-op` report.
  */
 export interface ClientSlowOpSignal {
   operationKind: string;
@@ -22,6 +27,7 @@ export interface ClientSlowOpSignal {
   waits?: Record<string, number>;
   detail?: { variant?: string };
   endedAt?: number;
+  reportedBy?: string;
 }
 
 /**

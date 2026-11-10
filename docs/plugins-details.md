@@ -52294,6 +52294,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/ui-context/element-picker`
           - `reports/crash`
           - `reports/launch-fix`
+          - `reports/main-thread-stall`
           - `reports/popover-anchor-lost`
           - `reports/render-loop`
           - `tasks/task-source-url`
@@ -53494,11 +53495,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `liveStateStaleDropFingerprint`
           - `LiveStateStaleDropPayloadSchema`
-    - **`main-thread-stall`** — Main-thread stall detector: a Core.Root controller that attaches each tab to one out-of-thread SharedWorker watchdog (1 Hz ping, Web Lock per tab, IndexedDB record of an open stall) and feeds it the tab's app, route pattern, visibility and LoAF long frames; a visible tab silent ≥5 s becomes a main-thread-stall report plus a slow-op span (recovered 1–5 s long frames: slow-op only). In-tab fallback without SharedWorker. Main-thread-stall report kind: validates the stall payload (tab, app, route pattern, duration, how it ended, LoAF attribution, cohort), fingerprints by app + route pattern + top attributed function, and renders the investigation task.
+    - **`main-thread-stall`** — Main-thread stall detector: a Core.Root controller that attaches each tab to one out-of-thread SharedWorker watchdog (1 Hz ping, Web Lock per tab, IndexedDB record of an open stall) and feeds it the tab's app, route pattern, visibility and LoAF long frames; a visible tab silent ≥5 s becomes a main-thread-stall report plus a slow-op span (recovered 1–5 s long frames: slow-op only). In-tab fallback without SharedWorker. Slow interactions: Event Timing (input → next paint) per click / key press, its target resolved at dispatch (element, contribution, pane, component), its time split by the long frames inside it; ≥200 ms is an `interaction` slow-op, severe (≥800 ms) or recurring (3× ≥300 ms) a slow-interaction report, and it owns the 1–5 s long frame it caused. Main-thread-stall report kind: validates the stall payload (tab, app, route pattern, duration, how it ended, LoAF attribution, cohort), fingerprints by app + route pattern + top attributed function, and renders the investigation task. Slow-interaction report kind: a click / key press whose next paint came late, fingerprinted by what was interacted with (element, contribution, pane, component — never the app or route), its time split into script / forced style-layout / style-layout / other with the function that forced it.
       - Web:
         - Contributes:
           - `Core.Root` → `MainThreadStallController`
           - `Reports.KindView` → `MainThreadStallKindView`
+          - `Reports.KindView` → `SlowInteractionKindView`
         - Uses:
           - `apps-core.useFocusedAppId`
           - `primitives/css/badge.Badge`
@@ -53511,10 +53513,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/perfs/task-marks.onTaskMark`
           - `primitives/perfs/task-marks.runMarked`
           - `primitives/scope/tab-id.getTabId`
+          - `primitives/ui-context.collectLineage`
+          - `primitives/ui-context.nearestOwner`
           - `reports.report`
           - `reports.Reports`
       - Server:
-        - Contributes: `report-kind` "main-thread-stall"
+        - Contributes:
+          - `report-kind` "main-thread-stall"
+          - `report-kind` "slow-interaction"
         - Uses: `reports.ReportKind`
       - Cross-plugin:
         - Uses tokens:
@@ -53522,15 +53528,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/font-family --font-mono`
       - Core:
         - Exports (types):
+          - `InteractionBreakdown`
+          - `InteractionTarget`
           - `MainThreadStallPayload`
+          - `SlowInteractionPayload`
           - `StallFrame`
           - `StallFrameScript`
           - `StallTab`
           - `TaskMark`
         - Exports (values):
+          - `dominantLayer`
+          - `InteractionBreakdownSchema`
+          - `interactionTargetLabel`
+          - `InteractionTargetSchema`
           - `mainThreadStallFingerprint`
           - `MainThreadStallPayloadSchema`
           - `mainThreadStallSummary`
+          - `slowInteractionFingerprint`
+          - `SlowInteractionPayloadSchema`
+          - `slowInteractionSummary`
           - `StallFrameSchema`
           - `StallFrameScriptSchema`
           - `StallTabSchema`
