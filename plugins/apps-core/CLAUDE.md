@@ -28,6 +28,18 @@ its URL, its tab and its `app:<id>` scope. For an app opened at its URL by
 something outside equin: the menu-bar panel (`menuBarApp`, mounted at
 `/home/menu-bar`, inside Home's path — the longest base path wins).
 
+## Every app list has one order: the rail's
+
+`Apps.App` is a render slot, so its order is its authored reorder layout
+(`config/apps-core/app.jsonc`). Anything that lists apps — the Home gallery,
+the launcher popover, the Desktop's launcher, the menu-bar grid — reads
+`useListedApps()`: the listed apps (`useAppListing`) in that order, hidden ones
+left out, loading until both are known. Never map `Apps.App.useContributions()`
+into a list: its raw registration order is a function of which plugins the page
+loaded and when (a `<PluginScope>`'s on-demand plugins land after the page's
+own), so the same apps listed in a different order on main's `/demo` and on the
+standalone website's live demo. Raw contributions are for lookups by id.
+
 ## Two kinds of app entry: a tab app, or a surface-mode app
 
 `AppEntry` carries exactly one of two launches (`AppLaunch`, a union tsc keeps
@@ -120,6 +132,7 @@ so ⌘/middle-click opens a desktop in a new browser tab.
     - `Apps.TabBar` ← `apps-core.tab-bar`
   - Uses:
     - `audience.useAudience`
+    - `network/live/live-state.combineResources`
     - `network/live/live-state.mapResource`
     - `network/live/live-state.ResourceResult`
     - `primitives/pane.currentRoutePath`
@@ -128,6 +141,8 @@ so ⌘/middle-click opens a desktop in a new browser tab.
     - `primitives/pane/route-prefix.setRoutePrefixes`
     - `primitives/slot-render.defineRenderSlot`
     - `primitives/slot-render.RenderSlot`
+    - `reorder.isNodeData`
+    - `reorder.useReorderedEntries`
   - Exports (types):
     - `ActiveApp`
     - `AppEntry`
@@ -155,6 +170,7 @@ so ⌘/middle-click opens a desktop in a new browser tab.
     - `useFocusedAppId`
     - `useHomeApp`
     - `useInstallRoutePrefixes`
+    - `useListedApps`
     - `usePathname`
 - Cross-plugin:
   - Imported by: 58 plugins — full list in [REFERENCE.md](./REFERENCE.md)

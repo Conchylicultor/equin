@@ -167,8 +167,7 @@ Because the origin default is the materialized catalog, adding/removing a contri
   - Exports (values): `reorderDirectiveDescriptor`
 - Cross-plugin:
   - Imported by:
-    - `apps-core/app-launcher`
-    - `apps/desktop/launcher`
+    - `apps-core`
     - `conversations/conversation-view/artifacts`
     - `page/editor`
     - `reorder/slot-middleware`

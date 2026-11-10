@@ -14,7 +14,11 @@
  *  3. the page's theme stays out: the embed's tokens are the demo's own, the
  *     same on both pages (printed, and written to `tokens.json` under `--out`
  *     for a side-by-side) — never the website's;
- *  4. a song, Places and Files, as screenshots.
+ *  4. a song, Places and Files, as screenshots;
+ *  5. the apps list in one order: the Home gallery's tiles are the launcher's,
+ *     in the app rail's authored order (`useListedApps`) — never the raw
+ *     registration order, which put Settings first on the website (printed, and
+ *     written to `apps.json` under `--out`).
  *
  * Run it on both builds and compare the shots and `tokens.json`:
  *   ./equin run plugins/apps/plugins/demo/e2e/site-parity.ts --out /tmp/parity-main
@@ -24,7 +28,7 @@
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { Page } from "playwright";
+import type { Locator, Page } from "playwright";
 import {
   arg,
   flag,
@@ -34,6 +38,11 @@ import {
   waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import {
+  launcherTiles,
+  openLauncherGrid,
+  closeLauncherGrid,
+} from "@plugins/apps-core/plugins/app-launcher/e2e";
 import { ENTER_DEMO, RENDER_TIMEOUT_MS, demoPath } from "./internal/demo-pages";
 
 const OUT = arg("out") ?? "/tmp/demo-site-parity";
@@ -86,6 +95,13 @@ function embedTokens(page: Page): Promise<Record<string, string>> {
       );
     },
     TOKENS as unknown as string[],
+  );
+}
+
+/** The row keys (app ids) of `tiles`, in the order they are drawn. */
+function rowKeys(tiles: Locator): Promise<string[]> {
+  return tiles.evaluateAll((els) =>
+    els.map((e) => e.getAttribute("data-row-key") ?? ""),
   );
 }
 
@@ -155,5 +171,27 @@ await withBrowser(async (h) => {
     await page.waitForTimeout(2_000);
     await snap(page, OUT, `3-${app}`);
   }
+
+  // ── 5. one app order: Home's gallery is the launcher's ──────────────
+  await open(page, "/home", "home");
+  const embed = page.locator("[data-app-embed]").first();
+  const gallery = launcherTiles(embed);
+  await gallery.first().waitFor({ timeout: RENDER_TIMEOUT_MS });
+  const galleryApps = await rowKeys(gallery);
+  await snap(page, OUT, "4-home");
+  await open(page, "/pages", "pages");
+  const grid = await openLauncherGrid(page.locator("[data-app-embed]").first());
+  const launcherApps = await rowKeys(launcherTiles(grid));
+  await closeLauncherGrid(grid);
+  writeFileSync(
+    join(OUT, "apps.json"),
+    JSON.stringify({ gallery: galleryApps, launcher: launcherApps }, null, 2),
+  );
+  console.log(`Home gallery: ${galleryApps.join(", ")}`);
+  r.ok(
+    "the Home gallery lists the apps in the launcher's order",
+    galleryApps.join() === launcherApps.join(),
+    `launcher: ${launcherApps.join(", ")}`,
+  );
   await r.finish();
 });

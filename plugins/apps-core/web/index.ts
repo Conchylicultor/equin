@@ -22,6 +22,7 @@ export {
   type ResolvedApp,
 } from "./internal/resolve-app";
 export { useAppListing, type AppListing } from "./internal/use-app-listing";
+export { useListedApps } from "./internal/use-listed-apps";
 export { homeApp, useHomeApp, type HomeApp } from "./internal/home-app";
 export {
   routePrefixForMode,

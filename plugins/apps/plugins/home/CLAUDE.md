@@ -4,8 +4,8 @@ Entry-point app: a phone-home-screen launcher of every installed app, shown at
 `/home`. The root path `/` redirects here.
 
 - **The grid** (`app-cards`) is a `data-view` rendered in the `icons` view: one
-  tile per registered `Apps.App` (read through the generic
-  `Apps.App.useContributions()` collection API, minus Home itself), with the
+  tile per listed `Apps.App`, in the app rail's authored order (read
+  through apps-core's `useListedApps()`, minus Home itself), with the
   app's name underneath. The tile is the row's leading avatar field
   (`avatarFieldDef`, `shape: "squircle"`) drawn in the avatar's flat `tile`
   presentation: the app's declared icon colour, or one derived from its id when

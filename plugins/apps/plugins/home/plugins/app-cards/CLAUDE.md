@@ -1,8 +1,10 @@
 # app-cards
 
-Contributes the launcher grid to `Home.Section`: one tile per registered app
-(read generically via `Apps.App.useContributions()`, excluding the Home app
-itself via `useCurrentAppId()`).
+Contributes the launcher grid to `Home.Section`: one tile per listed app, in
+the app rail's authored order (read generically via apps-core's
+`useListedApps()`, excluding the Home app itself via `useCurrentAppId()`) —
+never the raw registration order, which follows which plugins the page loaded
+and when.
 
 The grid is a `DataView<ActiveApp>` in the `icons` view (the shared
 `primitives/data-view` surface), so it gets search, filter, sort, drag-to-reorder
@@ -23,9 +25,8 @@ one?" — opens the New app screen (`new-app`'s `newAppPane`).
 - Web:
   - Contributes: `Home.Section` "Apps" → `AppGrid`
   - Uses:
-    - `apps-core.Apps`
-    - `apps-core.useAppListing`
     - `apps-core.useCurrentAppId`
+    - `apps-core.useListedApps`
     - `apps-core/app-launcher.appRow`
     - `apps-core/app-launcher.AppRow`
     - `apps-core/app-launcher.appRowOverrides`

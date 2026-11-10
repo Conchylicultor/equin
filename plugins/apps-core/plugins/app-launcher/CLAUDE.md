@@ -61,11 +61,11 @@ never draw their own header (the shell places it; see
     - `FieldPresentation.Register` "collection:apps.installed-app"
     - `Fields.Identity` "app-icon"
     - `Hints.Hint` "app-launcher.switch-apps"
-  - Uses: 48 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 45 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps-core/tabs` ×6
     - `apps-core` ×5
-    - `network/live/live-state` ×4
     - `hints` ×3
+    - `network/live/live-state` ×3
     - `primitives/data-view` ×3
     - `apps-core/app-icon` ×2
     - `audience/developer-mark` ×2
@@ -73,7 +73,6 @@ never draw their own header (the shell places it; see
     - `primitives/css/fill` ×2
     - `primitives/css/theme-boundary` ×2
     - `primitives/css/ui-kit` ×2
-    - `reorder` ×2
     - `apps-core/chrome-theme.chromeThemeScope`
     - `fields.Fields`
     - `network/live.FieldPresentation`

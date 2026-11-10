@@ -3491,17 +3491,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `Desktop.Overlay` "Desktop overlay" → `LauncherOverlay`
               - `Shortcuts.Shortcut` "desktop.launcher (mod+k)"
-            - Uses: 51 symbols — full list in [`plugins/apps/plugins/desktop/plugins/launcher/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/launcher/REFERENCE.md)
+            - Uses: 47 symbols — full list in [`plugins/apps/plugins/desktop/plugins/launcher/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/launcher/REFERENCE.md)
               - `apps/desktop/windows` ×11
-              - `network/live/live-state` ×4
-              - `apps-core` ×3
+              - `network/live/live-state` ×3
               - `primitives/css/ui-kit` ×3
               - `primitives/shortcuts` ×3
+              - `apps-core` ×2
               - `apps/desktop/shell` ×2
               - `config_v2` ×2
               - `primitives/css/fill` ×2
               - `primitives/dom/scroll-reveal` ×2
-              - `reorder` ×2
               - `apps-core/tabs.useTabs`
               - `primitives/css/clip.Clip`
               - `primitives/css/cluster.Cluster`
@@ -5069,9 +5068,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Web:
             - Contributes: `Home.Section` "Apps" → `AppGrid`
             - Uses:
-              - `apps-core.Apps`
-              - `apps-core.useAppListing`
               - `apps-core.useCurrentAppId`
+              - `apps-core.useListedApps`
               - `apps-core/app-launcher.appRow`
               - `apps-core/app-launcher.AppRow`
               - `apps-core/app-launcher.appRowOverrides`
@@ -12174,6 +12172,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Apps.TabBar` ← `apps-core.tab-bar`
     - Uses:
       - `audience.useAudience`
+      - `network/live/live-state.combineResources`
       - `network/live/live-state.mapResource`
       - `network/live/live-state.ResourceResult`
       - `primitives/pane.currentRoutePath`
@@ -12182,6 +12181,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives/pane/route-prefix.setRoutePrefixes`
       - `primitives/slot-render.defineRenderSlot`
       - `primitives/slot-render.RenderSlot`
+      - `reorder.isNodeData`
+      - `reorder.useReorderedEntries`
     - Exports (types):
       - `ActiveApp`
       - `AppEntry`
@@ -12209,6 +12210,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useFocusedAppId`
       - `useHomeApp`
       - `useInstallRoutePrefixes`
+      - `useListedApps`
       - `usePathname`
   - Cross-plugin:
     - Imported by: 58 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
@@ -12305,11 +12307,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FieldPresentation.Register` "collection:apps.installed-app"
           - `Fields.Identity` "app-icon"
           - `Hints.Hint` "app-launcher.switch-apps"
-        - Uses: 48 symbols — full list in [`plugins/apps-core/plugins/app-launcher/REFERENCE.md`](../plugins/apps-core/plugins/app-launcher/REFERENCE.md)
+        - Uses: 45 symbols — full list in [`plugins/apps-core/plugins/app-launcher/REFERENCE.md`](../plugins/apps-core/plugins/app-launcher/REFERENCE.md)
           - `apps-core/tabs` ×6
           - `apps-core` ×5
-          - `network/live/live-state` ×4
           - `hints` ×3
+          - `network/live/live-state` ×3
           - `primitives/data-view` ×3
           - `apps-core/app-icon` ×2
           - `audience/developer-mark` ×2
@@ -12317,7 +12319,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/fill` ×2
           - `primitives/css/theme-boundary` ×2
           - `primitives/css/ui-kit` ×2
-          - `reorder` ×2
           - `apps-core/chrome-theme.chromeThemeScope`
           - `fields.Fields`
           - `network/live.FieldPresentation`
@@ -37198,11 +37199,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `MenuBar.Section` "Apps" → `MenuBarAppGrid`
           - `item-actions` "pin" → `PinAppAction`
-        - Uses: 26 symbols — full list in [`plugins/menu-bar/plugins/app-grid/REFERENCE.md`](../plugins/menu-bar/plugins/app-grid/REFERENCE.md)
+        - Uses: 25 symbols — full list in [`plugins/menu-bar/plugins/app-grid/REFERENCE.md`](../plugins/menu-bar/plugins/app-grid/REFERENCE.md)
           - `menu-bar` ×5
           - `primitives/data-view` ×5
-          - `apps-core` ×4
           - `apps-core/app-launcher` ×3
+          - `apps-core` ×3
           - `primitives/css/ui-kit` ×2
           - `apps-core/tabs.useActivateApp`
           - `network/live/live-state.mapResource`
@@ -52713,8 +52714,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:
     - Imported by:
-      - `apps-core/app-launcher`
-      - `apps/desktop/launcher`
+      - `apps-core`
       - `conversations/conversation-view/artifacts`
       - `page/editor`
       - `reorder/slot-middleware`

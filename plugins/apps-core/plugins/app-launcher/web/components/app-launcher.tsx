@@ -1,19 +1,15 @@
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 import { afterOpen } from "@plugins/primitives/plugins/link-gesture/core";
-import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import {
-  Apps,
-  useAppListing,
+  useListedApps,
   useHomeApp,
   useActiveApp,
   type ActiveApp,
 } from "@plugins/apps-core/web";
-import { isNodeData, useReorderedEntries } from "@plugins/reorder/web";
 import { Logo } from "@plugins/ui/plugins/logo/web";
 import {
   foldResource,
   mapResource,
-  combineResources,
   type ResourceResult,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
@@ -83,36 +79,16 @@ const LAUNCHER_TOOLBAR: HostedToolbar = {
 const NO_APPS: readonly AppRow[] = [];
 
 /**
- * Every installed app but the gallery, in the order the app rail shows them
- * (the `Apps.App` slot's reorder config, read through the same tree its
- * `Render` applies — so the two cannot disagree), apps the user hid included
- * in neither. Layout nodes (spacers, dividers) are the rail's, not apps.
+ * Every listed app but the gallery, in the rail's authored order
+ * (`useListedApps`).
  */
 function useLaunchableApps(
   galleryId: string | undefined,
 ): ResourceResult<ActiveApp[]> {
-  const apps = Apps.App.useContributions();
-  const listing = useAppListing();
-  // The contributions carry `_pluginId` + `id`, all the reorder key needs; they
-  // lack `_slot`, so widen through `unknown`.
-  // Both are reads: the rail's order is not known until its layout loads, and
-  // the raw registration order never stands in for it (it would show hidden
-  // apps, then reshuffle).
-  const order = useReorderedEntries(
-    Apps.App.id,
-    apps as unknown as Contribution[],
-  );
+  const listed = useListedApps();
   return useMemo(
-    () =>
-      mapResource(
-        combineResources({ order, listing }),
-        ({ order: { entries }, listing: isListed }) =>
-          entries
-            .filter((e) => !isNodeData(e))
-            .map((e) => e as unknown as ActiveApp)
-            .filter((a) => a.id !== galleryId && isListed(a)),
-      ),
-    [order, listing, galleryId],
+    () => mapResource(listed, (apps) => apps.filter((a) => a.id !== galleryId)),
+    [listed, galleryId],
   );
 }
 

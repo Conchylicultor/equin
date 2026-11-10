@@ -1,14 +1,11 @@
 import { useMemo } from "react";
-import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
-import { Apps, isTabApp, useAppListing } from "@plugins/apps-core/web";
+import { isTabApp, useListedApps } from "@plugins/apps-core/web";
 import {
   mapResource,
-  combineResources,
   type ResourceResult,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useTabs } from "@plugins/apps-core/plugins/tabs/web";
 import type { AppIcon } from "@plugins/apps-core/plugins/app-icon/core";
-import { isNodeData, useReorderedEntries } from "@plugins/reorder/web";
 import {
   useDesktop,
   useDesktops,
@@ -29,39 +26,23 @@ export interface LauncherApp {
 /**
  * Every launchable app — the apps that open in a tab, so not the desktop's own
  * surface-mode entry — in the order the app rail shows them (the `Apps.App`
- * slot's reorder layout, hidden and unlisted apps left out), each with its window count on
+ * slot's reorder layout, hidden and unlisted apps left out — `useListedApps`), each with its window count on
  * the active desktop.
  */
 export function useLauncherApps(): ResourceResult<LauncherApp[]> {
-  const contributions = Apps.App.useContributions();
-  const listing = useAppListing();
-  // The contributions carry `_pluginId` + `id`, all the reorder key needs; they
-  // lack `_slot`, so widen through `unknown` (as the app launcher popover does).
-  // Both are reads: the rail's order is not known until its layout loads, and
-  // the raw registration order never stands in for it.
-  const order = useReorderedEntries(
-    Apps.App.id,
-    contributions as unknown as Contribution[],
-  );
+  const listed = useListedApps();
   const counts = useWindowsOfApp();
   return useMemo(
     () =>
-      mapResource(
-        combineResources({ order, listing }),
-        ({ order: { entries }, listing: isListed }) =>
-          entries
-            .filter((e) => !isNodeData(e))
-            .map((e) => e as unknown as (typeof contributions)[number])
-            .filter(isTabApp)
-            .filter(isListed)
-            .map((a) => ({
-              id: a.id,
-              name: a.app.name,
-              icon: a.icon,
-              windows: counts.get(a.id)?.length ?? 0,
-            })),
+      mapResource(listed, (apps) =>
+        apps.filter(isTabApp).map((a) => ({
+          id: a.id,
+          name: a.app.name,
+          icon: a.icon,
+          windows: counts.get(a.id)?.length ?? 0,
+        })),
       ),
-    [order, listing, counts],
+    [listed, counts],
   );
 }
 

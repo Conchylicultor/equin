@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Apps, useAppListing, useCurrentAppId } from "@plugins/apps-core/web";
+import { useCurrentAppId, useListedApps } from "@plugins/apps-core/web";
 import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useActivateApp } from "@plugins/apps-core/plugins/tabs/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -54,24 +54,24 @@ export function AppGrid() {
   const openPane = useOpenPane();
   // Every way to make an app opens the New app screen.
   const newApp = openPane.to(newAppPane, {}, { mode: "root" });
-  const apps = Apps.App.useContributions();
   const currentId = useCurrentAppId();
   // Lands in the grid's OWN surface tab — in desktop mode multiple Home
   // windows can be open, so the global focused tab is the wrong target.
   const activate = useActivateApp();
   const galleryRef = useHintAnchor(homeGalleryAnchor);
-  const listing = useAppListing();
-  // The DataView renders the loading and failed states (`readiness`); only a
-  // known listing's rows reach the view.
+  // The listed apps in the rail's authored order — never the raw registration
+  // order, which depends on which plugins the page loaded and when. The
+  // DataView renders the loading and failed states (`readiness`); only a known
+  // list's rows reach the view.
+  const listed = useListedApps();
   const rows = useMemo(
     () =>
-      foldResource(listing, {
+      foldResource(listed, {
         loading: () => NO_APPS,
         error: () => NO_APPS,
-        ready: (isListed) =>
-          apps.filter((a) => a.id !== currentId && isListed(a)).map(appRow),
+        ready: (apps) => apps.filter((a) => a.id !== currentId).map(appRow),
       }),
-    [apps, currentId, listing],
+    [listed, currentId],
   );
 
   const creators: CreateOption[] = [
@@ -88,7 +88,7 @@ export function AppGrid() {
     <Stack gap="none" ref={galleryRef}>
       <DataView<AppRow>
         rows={rows}
-        readiness={listing}
+        readiness={listed}
         rowKey={(a) => a.id}
         // The same tile and name the app launcher draws; the client fields of
         // the kind (usage stats, …) join them.

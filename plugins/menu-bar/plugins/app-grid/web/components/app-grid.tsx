@@ -1,9 +1,8 @@
 import { useMemo } from "react";
 import {
-  Apps,
-  useAppListing,
   useCurrentAppId,
   useHomeApp,
+  useListedApps,
 } from "@plugins/apps-core/web";
 import { useActivateApp } from "@plugins/apps-core/plugins/tabs/web";
 import {
@@ -123,7 +122,6 @@ function installedAppIds(state: NativeAppsState): string[] | null {
  * tiles whose name contains it, as it is typed.
  */
 export function MenuBarAppGrid() {
-  const apps = Apps.App.useContributions();
   const currentId = useCurrentAppId();
   // The composition's home (the gallery) is what the footer opens, so it is
   // not a tile; nor is the app the panel itself is drawn in.
@@ -132,17 +130,16 @@ export function MenuBarAppGrid() {
   const activate = useActivateApp();
   const host = useNativeHost();
   const installed = useNativeApps();
-  const listing = useAppListing();
+  // The listed apps in the rail's authored order (`useListedApps`).
+  const listed = useListedApps();
   const [input] = usePanelInput();
   const query = input.trim();
   const rows = useMemo(
     () =>
-      mapResource(listing, (isListed) =>
-        apps
-          .filter((a) => a.id !== currentId && a.id !== homeId && isListed(a))
-          .map(appRow),
+      mapResource(listed, (apps) =>
+        apps.filter((a) => a.id !== currentId && a.id !== homeId).map(appRow),
       ),
-    [apps, currentId, homeId, listing],
+    [listed, currentId, homeId],
   );
   // The helper is still answering: a tile cannot know yet where it opens.
   if (host.kind === "pending")

@@ -11,11 +11,11 @@
   - Contributes:
     - `MenuBar.Section` "Apps" → `MenuBarAppGrid`
     - `item-actions` "pin" → `PinAppAction`
-  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `menu-bar` ×5
     - `primitives/data-view` ×5
-    - `apps-core` ×4
     - `apps-core/app-launcher` ×3
+    - `apps-core` ×3
     - `primitives/css/ui-kit` ×2
     - `apps-core/tabs.useActivateApp`
     - `network/live/live-state.mapResource`
