@@ -28,4 +28,6 @@ export const equationBlock = defineBlock({
   // TYPING-only: the `markdown` declaration above already owns `$$` on both
   // sides of the clipboard pipeline, and it reads `expression`, not `text`.
   typingPrefixes: ["$$"],
+  // A line converted into an equation keeps its words as the LaTeX source.
+  absorbText: (text) => ({ expression: text }),
 });

@@ -27,6 +27,7 @@ import {
   prevVisibleLine,
   nextVisibleLine,
   runsOfNode,
+  plainOf,
   runsLength,
   changedSpanEnd,
   runsEqual,
@@ -73,6 +74,7 @@ import {
 import { useBlockDocs } from "./internal/use-block-docs";
 import { liveRunsOf } from "./internal/live-runs";
 import { spliceOpenBlockDoc } from "./internal/block-text-write";
+import { runsWithoutSpan } from "./internal/runs-without-span";
 import type { ProjectTextFn } from "./internal/doc-sourced-runs";
 import type { RowTruth } from "./internal/row-truth";
 import {
@@ -2808,7 +2810,16 @@ export function BlockEditorProviderInner({
   // instead of wrapping it (losing its text, and 400ing on the callout's void
   // schema). Every caller reaching a type change must reach this decision.
   const convertRow = useCallback(
-    (blockId: string, type: string, data: RowData, expanded?: boolean) => {
+    (
+      blockId: string,
+      type: string,
+      data: RowData,
+      expanded?: boolean,
+      // The line's words as the conversion leaves them, when the caller already
+      // knows them better than a read here could (a strip that has not landed
+      // yet — see `convertStrippingText`). Read only for an `absorbText` target.
+      remainingRuns?: RichText,
+    ) => {
       // Converting INTO a `wrapOnConvert` type is a WRAP, not a type swap: mint
       // a container row and make THIS block its first child, keeping this
       // block's id, type, data (text projection included), children and rank.
@@ -2821,18 +2832,37 @@ export function BlockEditorProviderInner({
         wrapInContainer(blockId, type, target.empty?.() ?? {});
         return;
       }
+      // A void target with a text field of its own (`absorbText`) takes the
+      // line's words into it: typing ``` before `foo` makes a code block
+      // holding `foo`, rather than an empty one (the row's `text` cannot survive
+      // on a void row — `conformRowText` drops it). The words are the caller's
+      // `remainingRuns`, else read LIVE from the block's editor, else the row's
+      // (lagged) projection for an unmounted one.
+      const absorb =
+        target?.absorbText && !target.acceptsText ? target.absorbText : null;
+      const liveRuns = absorb
+        ? (remainingRuns ?? authority.surgeryOf(blockId)?.readRuns?.())
+        : undefined;
       commitRow(
         blockId,
-        (b) => ({
-          ...b,
-          type,
-          data: preserveText(b.data, data),
-          expanded: expanded ?? b.expanded,
-        }),
+        (b) => {
+          const words =
+            absorb && blockHandles.get(b.type)?.acceptsText
+              ? plainOf(liveRuns ?? runsOfNode(b))
+              : "";
+          const seeded =
+            absorb && words.length > 0 ? { ...data, ...absorb(words) } : data;
+          return {
+            ...b,
+            type,
+            data: preserveText(b.data, seeded),
+            expanded: expanded ?? b.expanded,
+          };
+        },
         { label: "Change block type" },
       );
     },
-    [commitRow, blockHandles, wrapInContainer],
+    [commitRow, blockHandles, wrapInContainer, authority],
   );
 
   // The doc half of every text-consuming commit. `deleteRange` is DISCRETE, so
@@ -2874,15 +2904,21 @@ export function BlockEditorProviderInner({
       data: RowData;
       expanded?: boolean;
     }) => {
+      // The line's words once the span is gone, cut from the LIVE runs before
+      // the strip: called from the `/` menu the strip is a nested update that
+      // lands only after this commit, so a read after it would still see the
+      // query. Only an `absorbText` target reads it.
+      const live = authority.surgeryOf(blockId)?.readRuns?.();
+      const remaining = live ? runsWithoutSpan(live, from, to) : undefined;
       // (1) The doc — see `stripText`.
       stripText({ blockId, from, to });
       // (2) The row. It states the TYPE and nothing about text: the stripped
       // content reaches `data.text` on its own, through the projection. Strictly
       // AFTER the strip — `/callout` must lose its `/callout` query from the
       // content doc before the block becomes a container's first child.
-      convertRow(blockId, type, data, expanded);
+      convertRow(blockId, type, data, expanded, remaining);
     },
-    [convertRow, stripText],
+    [convertRow, stripText, authority],
   );
 
   const makeBlockAPI = useCallback(

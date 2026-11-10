@@ -1600,6 +1600,13 @@ menu, gutter-`+` draft, markdown shortcuts):
 
 **The wrap-vs-swap decision belongs to `convertRow`, the shared half** (not
 `convertTo`). Strip strictly before the wrap. Spec: `e2e/convert-in-place-verify.ts`.
+
+**A void target with a text field keeps the line's words** (`BlockHandle.absorbText`,
+code block → `code`, equation → `expression`): `convertRow` merges
+`absorbText(plain)` over the seed, reading the words from the caller's
+`remainingRuns` (`convertStrippingText` cuts the span from the live runs BEFORE the
+strip — from the `/` menu the strip lands after the commit), else the live editor,
+else the row projection. Without it the text/void biconditional drops them.
 Backspace-reset / empty-Enter break-out strip nothing — plain `convertTo` with
 `emptyRowData()`.
 

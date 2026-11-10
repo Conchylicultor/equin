@@ -299,6 +299,21 @@ export interface BlockHandle<T> {
    */
   wrapOnConvert?: true;
   /**
+   * For a VOID type with a text field of its own (a code block's `code`, an
+   * equation's `expression`): the payload that holds a text line's words when
+   * that line is converted INTO this type — `{ code: text }`. Merged over the
+   * conversion's seed (`emptyRowData()`), so a line typed before its ``` ``` ``,
+   * or a paragraph turned into code, keeps its words instead of losing them to
+   * the text/void biconditional (`conformRowText` drops `data.text` on a void
+   * row). Called with the line's plain text after any consumed prefix or
+   * `/query` is stripped, and only when that text is non-empty.
+   *
+   * Generic — resolved in the editor's one conversion funnel (`convertRow`), so
+   * markdown shortcuts, the `/` menu and Turn-into all honour it. Declared in
+   * METHOD syntax (see the bivariance note on `text`).
+   */
+  absorbText?(text: string): Partial<T>;
+  /**
    * Who this block's content is FOR. Declared ONLY by annotation containers
    * (`page/annotations`' `defineAnnotationBlock`, which requires it); **absent
    * means ordinary page content, visible to everyone** — a paragraph is not
@@ -500,6 +515,7 @@ export function defineBlock<
   collapsible?: "always";
   anchor?: A;
   wrapOnConvert?: true;
+  absorbText?(text: string): Partial<z.infer<S>>;
   splitChildWhenExpanded?: { childType: string };
   authorFromData?(data: Partial<z.infer<S>>): BlockAuthor | undefined;
   refine?(data: z.infer<S>, ctx: z.RefinementCtx): void;
@@ -554,6 +570,7 @@ export function defineBlock<
     collapsible: opts.collapsible,
     anchor: opts.anchor,
     wrapOnConvert: opts.wrapOnConvert,
+    absorbText: opts.absorbText,
     splitChildWhenExpanded: opts.splitChildWhenExpanded,
     authorFromData: opts.authorFromData,
     refine: opts.refine,

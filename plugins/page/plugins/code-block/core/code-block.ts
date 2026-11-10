@@ -41,6 +41,9 @@ export const codeBlock = defineBlock({
   // TYPING-only: the markdown side of ``` is the `fence` above (a multi-line
   // region, not a line prefix), so this never feeds the clipboard pipeline.
   typingPrefixes: ["```"],
+  // A line converted into code — by ``` typed before its words, `/code` or
+  // Turn into — becomes the block's code rather than being dropped.
+  absorbText: (text) => ({ code: text }),
   // Not a doc-text block: the code sits at `Inset y="xs"` + the `<pre>`'s `p-md`,
   // on a fixed `leading-5` (1.25rem) line — so seat the rail on that first line.
   gutterFirstLineCenter: "calc(var(--space-xs) + var(--space-md) + 0.625rem)",
