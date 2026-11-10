@@ -51,6 +51,7 @@ export const dataViews: DataViewEntry[] = [
   { id: "debug.slow-ops.local", pluginId: "debug.slow-ops.pane" },
   { id: "debug.trace.events", pluginId: "debug.trace.pane" },
   { id: "debug.worktree-cleanup.worktrees", pluginId: "debug.worktree-cleanup" },
+  { id: "deploy-sessions", pluginId: "apps.deploy.analytics.sessions" },
   { id: "deploy.activity", pluginId: "apps.deploy.deploy-history" },
   { id: "deploy.deployment.history", pluginId: "apps.deploy.deploy-history" },
   { id: "deploy.deployment.overview-runs", pluginId: "apps.deploy.deploy-history" },

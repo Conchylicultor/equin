@@ -1,13 +1,7 @@
 import { useEffect, useRef, type RefObject } from "react";
 import { createInViewWatcher } from "@plugins/primitives/plugins/dom/plugins/in-view/web";
 import { track } from "./instance";
-
-/**
- * The one event every section-reach records: `section_reach`, its `section`
- * prop naming which — so the dashboard's Events panel shows one row, expanded
- * into a funnel of sections, instead of one event name per section.
- */
-export const SECTION_REACH_EVENT = "section_reach";
+import { SECTION_REACH_EVENT, SECTION_REACH_PROP } from "../../core";
 
 /**
  * Records `section_reach` once when `el` first reaches the upper half of the
@@ -27,7 +21,7 @@ export function observeSectionReach(el: Element, section: string): () => void {
     (entries) => {
       if (!entries.some((e) => e.isIntersecting)) return;
       watcher.disconnect();
-      track(SECTION_REACH_EVENT, { section });
+      track(SECTION_REACH_EVENT, { [SECTION_REACH_PROP]: section });
     },
     // the viewport, clipped by every scrolling ancestor (the pane included),
     // with its lower half cut off

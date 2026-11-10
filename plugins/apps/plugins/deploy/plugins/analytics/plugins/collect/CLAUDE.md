@@ -175,8 +175,10 @@ through `web-core`):
 - Core:
   - Uses:
     - `apps/deploy/analytics/host-only.HOST_ONLY_PREFIX`
+    - `framework/plugin-id.asPluginId`
     - `infra/endpoints.defineEndpoint`
     - `packages/list-bound.cappedList`
+    - `packages/list-bound.cappedRecord`
     - `packages/list-bound.wholeList`
   - Exports (types):
     - `AdditiveMetrics`
@@ -211,6 +213,7 @@ through `web-core`):
     - `ReportRow`
     - `ReportSource`
     - `SeriesPoint`
+    - `Session`
     - `SessionCounts`
     - `SessionHit`
     - `SessionKey`
@@ -243,6 +246,7 @@ through `web-core`):
     - `channelOf`
     - `CHANNELS`
     - `ChannelSchema`
+    - `COLLECT_PLUGIN_ID`
     - `collectEndpoint`
     - `CollectResponseSchema`
     - `conversionRate`
@@ -302,6 +306,8 @@ through `web-core`):
     - `reportRowGroup`
     - `ReportRowSchema`
     - `reportSourceFor`
+    - `SECTION_REACH_EVENT`
+    - `SECTION_REACH_PROP`
     - `SeriesPointSchema`
     - `SESSION_SHAPES`
     - `SessionCountsSchema`
@@ -327,6 +333,7 @@ through `web-core`):
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/analytics/dashboard`
+    - `apps/deploy/analytics/sessions`
     - `apps/deploy/site-messages/intake`
     - `apps/website/improve`
     - `apps/website/pages/download`

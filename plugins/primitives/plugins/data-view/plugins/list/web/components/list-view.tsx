@@ -14,6 +14,7 @@ import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   TREE_ROW_GROUP,
@@ -221,6 +222,10 @@ interface ListRowConfig {
   actionsAtRest: boolean;
   labelClassName: ((row: unknown) => ClassName | undefined) | undefined;
   detail: ListViewOptions<unknown>["detail"];
+  /** Activating the row toggles its detail (`ListViewOptions.detailOnActivate`). */
+  detailOnActivate: boolean;
+  /** The entry's box (`ListViewOptions.frame`). */
+  frame: ListViewOptions<unknown>["frame"];
   /** What the row's leading disclosure folds (`TreeLeading` in `Row`'s
    *  `lead`, the tree's own disclosure in the icon's place): its attached
    *  rows (`attach`, while any entry holds some), else its detail band;
@@ -444,6 +449,18 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
       "data-view list: `detail` needs the default row chrome — a tree-chrome row is one label line",
     );
   }
+  const detailOnActivate = options.detailOnActivate === true;
+  if (detailOnActivate && !detail) {
+    throw new Error(
+      "data-view list: `detailOnActivate` needs a `detail` to open",
+    );
+  }
+  const frame = options.frame;
+  if (frame && options.rowChrome === "tree") {
+    throw new Error(
+      "data-view list: `frame` needs the default row chrome — a tree-chrome row is the tree's",
+    );
+  }
   // The host hands a fresh `setExpanded` closure each render; only a click
   // calls it, so a stable identity keeps it out of the rows' memo key.
   const setExpanded = useEventCallback(props.setExpanded);
@@ -551,7 +568,14 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
       actionsAtRest,
       labelClassName,
       detail,
-      disclosure: anyAttached ? "attach" : detail ? "detail" : null,
+      detailOnActivate,
+      frame,
+      // A row that IS its detail's disclosure draws no glyph for it.
+      disclosure: anyAttached
+        ? "attach"
+        : detail && !detailOnActivate
+          ? "detail"
+          : null,
       disclosureVariant,
       rowActivation,
       rowTone,
@@ -579,6 +603,8 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     actionsAtRest,
     labelClassName,
     detail,
+    detailOnActivate,
+    frame,
     rowActivation,
     rowTone,
     revealed,
@@ -1297,7 +1323,20 @@ function listRowNode(
     ]);
   // A list with both `attach` and `detail` leads with the attached rows; the
   // detail's toggle then stays a cluster action.
-  const detailInCluster = detail != null && disclosure !== "detail";
+  const detailInCluster =
+    detail != null && disclosure !== "detail" && !config.detailOnActivate;
+  // The row's one activation: the surface's, or — `detailOnActivate` — the
+  // toggle of its own detail (the two never both: it would be two answers to
+  // one click).
+  const surfaceActivation = config.rowActivation?.(row);
+  if (config.detailOnActivate && surfaceActivation !== undefined) {
+    throw new Error(
+      "data-view list: `detailOnActivate` makes the row's activation its detail's toggle — the surface activates it too",
+    );
+  }
+  const activation = config.detailOnActivate
+    ? () => config.setExpanded([{ id: key, expanded: !open }])
+    : surfaceActivation;
   const rowNode = (
     <Row
       // The row's identity on the DOM: what the DataView measures the rows
@@ -1320,7 +1359,8 @@ function listRowNode(
       // put inside it. A non-activating row is a plain container, which is
       // what lets its body hold a real control. A link row also gets its
       // middle- / ⌘-click (`Row` forwards the gesture handlers).
-      {...activationProps(config.rowActivation?.(row))}
+      {...activationProps(activation)}
+      aria-expanded={config.detailOnActivate ? open : undefined}
       icon={disclosure ? undefined : glyph}
       lead={
         disclosure ? (
@@ -1489,6 +1529,14 @@ function listRowNode(
     ) : (
       rowNode
     );
+  if (config.frame === "card")
+    return (
+      <CardFrame
+        open={open}
+        row={withPrimary}
+        detail={detail ? detail(row) : null}
+      />
+    );
   if (!detail) return withPrimary;
   // The detail is the row's SIBLING, so it may hold controls of its own
   // whatever the row's activation is. It folds in and out under the row.
@@ -1501,6 +1549,45 @@ function listRowNode(
         </Inset>
       </FoldMotion>
     </Stack>
+  );
+}
+
+/**
+ * One entry as a card (`ListViewOptions.frame: "card"`): the row and its open
+ * detail in one raised surface, clipped to its radius so the row's hover fill
+ * keeps the card's corners. The spacing to the next card is padding INSIDE the
+ * entry's own box (never a margin, never the band's gap), so a windowed list —
+ * whose rows are positioned one by one — spaces its cards the same.
+ */
+function CardFrame({
+  open,
+  row,
+  detail,
+}: {
+  open: boolean;
+  row: ReactNode;
+  detail: ReactNode;
+}): ReactNode {
+  return (
+    <Inset b="sm">
+      <Surface
+        level="raised"
+        className={cn(
+          clipClasses({ axis: "both", fill: false }),
+          "transition-colors",
+          open && "border-primary/55",
+        )}
+      >
+        {row}
+        {detail !== null ? (
+          <FoldMotion open={open}>
+            <Inset pad="md" className="border-t border-border/60 bg-background">
+              {detail}
+            </Inset>
+          </FoldMotion>
+        ) : null}
+      </Surface>
+    </Inset>
   );
 }
 

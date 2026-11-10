@@ -43,7 +43,7 @@ the limit.
 
 `useShipsAnalytics` asks host-query's `useDeploymentShips` (over
 `plugin-meta/composition`'s `useCompositionIncludes`) whether the deployment's composition resolves to a closure containing the collect
-plugin (`web/internal/collect-plugin-id.ts`, pinned to the folder by a test). No
+plugin (collect's own `COLLECT_PLUGIN_ID`, pinned to its folder by a test there); the tab gate is host-query's shared `useShipsGate`, the same rule as the Sessions tab's. No
 composition is ever named. Loading keeps the card (with a loading body); a
 composition without collect hides it.
 
@@ -78,7 +78,6 @@ rendered after its note; Countries credits `IP_COUNTRY_SOURCE`.
   (`server/internal/query-over-ssh.test.ts` there).
 - `core/internal/analytics.test.ts` — a question within the filters budget
   always fits `LIVE_QUERY_MAX_BYTES`; over it, the schema refuses.
-- `web/internal/collect-plugin-id.test.ts` — the id names the collect folder.
 - `web/__tests__/filter-rules.test.tsx` — the chip rules (incl. the filter cap
   and the size budget), as rule and as UI;
   country labels and the Countries credit.
@@ -98,9 +97,9 @@ Run with `./equin test plugins/apps/plugins/deploy/plugins/analytics/plugins/das
     - `SiteTabs.View` "Analytics" → `AnalyticsSection`
     - `SiteOverview.Card` "traffic" → `TrafficCard`
     - `SiteOverview.Card` "top" → `TopCards`
-  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/deploy/deployments` ×6
-    - `apps/deploy/host-query` ×5
+    - `apps/deploy/host-query` ×6
     - `primitives/css/coords` ×2
     - `primitives/css/text` ×2
     - `primitives/css/ui-kit` ×2

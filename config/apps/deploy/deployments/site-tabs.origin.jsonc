@@ -1,4 +1,4 @@
-// @hash f3bab95b1d67
+// @hash 0bfcb9fea549
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -8,6 +8,7 @@
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
     "apps.deploy.analytics.dashboard:analytics",
+    "apps.deploy.analytics.sessions:sessions",
     "apps.deploy.deploy-history:deployments",
     "apps.deploy.deployments:overview",
     "apps.deploy.deployments:settings",

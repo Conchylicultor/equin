@@ -164,6 +164,7 @@ export {
   sessionsAvailableFor,
 } from "./internal/sessions";
 export type {
+  Session,
   SessionCounts,
   SessionHit,
   SessionKey,
@@ -171,3 +172,8 @@ export type {
   SessionsQuery,
   SessionsResult,
 } from "./internal/sessions";
+export {
+  COLLECT_PLUGIN_ID,
+  SECTION_REACH_EVENT,
+  SECTION_REACH_PROP,
+} from "./internal/plugin-id";

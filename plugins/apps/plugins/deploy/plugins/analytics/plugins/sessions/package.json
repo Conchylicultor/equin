@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-deploy-analytics-sessions",
+  "description": "Sessions tab of a deployment's page: one row per anonymous visit read over SSH from the box (a key-range-paged snapshot), its journey drawn on a shared log time axis and its timeline in detail — shown only when the deployment's composition ships the collect plugin.",
+  "private": true,
+  "version": "0.0.1"
+}

@@ -418,8 +418,8 @@ default, a left rail revealing each (`useRevealSection`).
     - `sitesIndexPane.Actions`
     - `sitePane.Actions`
     - `deploy-deployment-detail.actions`
-  - Slot contributors: 25 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `SiteTabs.View` ×4
+  - Slot contributors: 26 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `SiteTabs.View` ×5
     - `DeploymentDetail.Section` ×3
     - `SiteBanner` ×3
     - `SiteCheck` ×3
@@ -662,6 +662,7 @@ default, a left rail revealing each (`useRevealSection`).
     - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/deploy/analytics/dashboard`
+    - `apps/deploy/analytics/sessions`
     - `apps/deploy/composition`
     - `apps/deploy/deploy-history`
     - `apps/deploy/deploy-history/investigate-failure`

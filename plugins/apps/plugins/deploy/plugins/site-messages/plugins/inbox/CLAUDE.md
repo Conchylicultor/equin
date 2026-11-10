@@ -32,9 +32,9 @@ box. It stores nothing.
   - Contributes:
     - `SiteTabs.View` "Messages" → `MessagesSection`
     - `SiteOverview.Card` "messages" → `MessagesCard`
-  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/deploy/deployments` ×7
-    - `apps/deploy/host-query` ×3
+    - `apps/deploy/host-query` ×4
     - `primitives/data-view` ×3
     - `primitives/relative-time` ×2
     - `network/live/live-state.ResourceErrorInline`

@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { cappedList } from "@plugins/packages/plugins/list-bound/core";
+import {
+  cappedList,
+  cappedRecord,
+} from "@plugins/packages/plugins/list-bound/core";
 import {
   BrowserFamilySchema,
   DeviceFamilySchema,
@@ -8,6 +11,7 @@ import {
 import { ChannelSchema } from "./channel";
 import { GapsSchema } from "./gaps";
 import { LoadTimingSchema } from "./load-timing";
+import { MAX_EVENT_PROPS } from "./collect-body";
 import {
   AnalyticsRangeSchema,
   RAW_RETENTION_DAYS,
@@ -105,7 +109,7 @@ export const SessionHitSchema = z
     path: z.string(),
     /** Events only. */
     eventName: z.string().nullable(),
-    eventProps: z.record(z.string(), z.string()).nullable(),
+    eventProps: cappedRecord(z.string(), { max: MAX_EVENT_PROPS }).nullable(),
     /** Pageviews only: how long the page was visible. */
     engagedMs: z.number().int().nonnegative(),
     /**

@@ -374,6 +374,10 @@
       "name": "@equin/plugin-apps-deploy-analytics-ip-country",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions": {
+      "name": "@equin/plugin-apps-deploy-analytics-sessions",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/deploy/plugins/composition": {
       "name": "@equin/plugin-apps-deploy-composition",
       "version": "0.0.1",
@@ -7639,6 +7643,8 @@
     "@equin/plugin-apps-deploy-analytics-host-only": ["@equin/plugin-apps-deploy-analytics-host-only@workspace:plugins/apps/plugins/deploy/plugins/analytics/plugins/host-only"],
 
     "@equin/plugin-apps-deploy-analytics-ip-country": ["@equin/plugin-apps-deploy-analytics-ip-country@workspace:plugins/apps/plugins/deploy/plugins/analytics/plugins/ip-country"],
+
+    "@equin/plugin-apps-deploy-analytics-sessions": ["@equin/plugin-apps-deploy-analytics-sessions@workspace:plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions"],
 
     "@equin/plugin-apps-deploy-composition": ["@equin/plugin-apps-deploy-composition@workspace:plugins/apps/plugins/deploy/plugins/composition"],
 

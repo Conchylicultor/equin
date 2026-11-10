@@ -78,6 +78,24 @@ export interface ListViewOptions<TRow> {
    */
   detail?: (row: TRow) => ReactNode;
   /**
+   * The whole row is its detail's disclosure: activating the row (a click,
+   * Enter) opens or closes `detail(row)`, the row carries `aria-expanded`,
+   * and no disclosure glyph is drawn — for a list whose rows exist to be
+   * opened (a visit opening onto its timeline). Needs `detail`, and is the
+   * row's ONE activation: beside a surface's own row activation (or one a
+   * collection declares) it throws.
+   */
+  detailOnActivate?: boolean;
+  /**
+   * The box each entry is drawn in. Absent: rows sit flush in the list's band.
+   * `"card"`: each entry — the row and, while open, its detail — is ONE raised
+   * card (the theme's surface, radius and shadow), its border taking the
+   * primary tint while open, the detail on the page ground under a hairline,
+   * and the cards a `sm` step apart: rows that are records of their own
+   * (sessions, runs), each read as a unit with what it opens onto.
+   */
+  frame?: "card";
+  /**
    * The row's action cluster stays painted at rest, not only while the row
    * is hovered — for a short list whose item action IS the point of the row
    * (a page's places beside a map, each with its Save). The cluster keeps its

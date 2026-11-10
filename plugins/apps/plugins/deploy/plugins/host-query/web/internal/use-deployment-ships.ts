@@ -80,3 +80,17 @@ export function useDeploymentShips(
       }
   }
 }
+
+/**
+ * The tab / section gate for a feature that needs `pluginId` shipped
+ * (`SiteTabs.View`'s `useAvailable`): `true` unless the answer is `no` — so
+ * while loading the tab stays and shows its own loading state rather than
+ * popping in a frame late, and on a failed read it stays to show the failure.
+ * The one spelling of that rule, for every tab gated on the same plugin.
+ */
+export function useShipsGate(
+  deploymentId: string,
+  pluginId: PluginId,
+): boolean {
+  return useDeploymentShips(deploymentId, pluginId).kind !== "no";
+}

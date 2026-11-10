@@ -225,6 +225,16 @@ conditional hook.
   (the Queue: the status dot is `renderLeading`, the item drawn `dot={false}`).
 - `disclosureVariant?` — the disclosure look this list pins (see "Attached
   rows").
+- `detail?(row)` — the row's detail, drawn under it while open (the view's
+  expand map); every row then leads with the tree's disclosure.
+- `detailOnActivate?` — the whole row is its detail's disclosure: a click
+  toggles it, the row carries `aria-expanded`, no disclosure glyph is drawn.
+  Needs `detail`; beside a surface's own row activation it throws (one click,
+  one answer). The Sessions tab: a visit opens onto its timeline.
+- `frame?: "card"` — each entry (the row and its open detail) is one raised
+  card, primary-tinted border while open, the detail on the page ground under
+  a hairline, cards a `sm` step apart (padding inside the entry, so windowed
+  rows space the same). `CardFrame` in `list-view.tsx`. Default row chrome only.
 - `lines?` — rows per item, `1 | 2` (default: 2 when `line2` holds a field — see above).
 - `columnCaptions?` — a caption row over the list (title label, each trailing
   label over its slot). Default off; also the view type's `configSchema`
@@ -251,7 +261,7 @@ conditional hook.
 - Description: List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.
 - Web:
   - Contributes: `DataViewSlots.View` "List" → `ListView`
-  - Uses: 74 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 75 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×49
     - `primitives/rank-reorder` ×3
     - `primitives/tree` ×3
@@ -266,6 +276,7 @@ conditional hook.
     - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`
+    - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/dom/element-size.useResizeObserverSet`
@@ -275,9 +286,12 @@ conditional hook.
   - Exports (types): `ListViewOptions`
 - Cross-plugin:
   - Uses tokens:
+    - `ui/tokens/color-palette --background`
+    - `ui/tokens/color-palette --border`
     - `ui/tokens/color-palette --faint-foreground`
     - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --primary`
     - `ui/tokens/data-view --list-slot-gap`
     - `ui/tokens/data-view --list-time-ink`
     - `ui/tokens/density --chrome-pad-x`

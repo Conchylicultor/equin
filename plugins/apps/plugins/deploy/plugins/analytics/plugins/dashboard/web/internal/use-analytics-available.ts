@@ -1,8 +1,9 @@
 import {
   useDeploymentShips,
+  useShipsGate,
   type DeploymentShips,
 } from "@plugins/apps/plugins/deploy/plugins/host-query/web";
-import { COLLECT_PLUGIN_ID } from "./collect-plugin-id";
+import { COLLECT_PLUGIN_ID } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
 
 /**
  * Does this deployment's software record visits? Whether the resolved closure
@@ -13,15 +14,11 @@ export function useShipsAnalytics(deploymentId: string): DeploymentShips {
   return useDeploymentShips(deploymentId, COLLECT_PLUGIN_ID);
 }
 
-/**
- * The section gate. `true` while loading: the card shows its own loading state
- * rather than popping in a frame late (the detail-sections contract) — and
- * `true` when the answer failed, so the card can show that failure.
- */
+/** The Analytics tab's gate: host-query's shared rule over collect's id. */
 export function useAnalyticsAvailable({
   deploymentId,
 }: {
   deploymentId: string;
 }): boolean {
-  return useShipsAnalytics(deploymentId).kind !== "no";
+  return useShipsGate(deploymentId, COLLECT_PLUGIN_ID);
 }

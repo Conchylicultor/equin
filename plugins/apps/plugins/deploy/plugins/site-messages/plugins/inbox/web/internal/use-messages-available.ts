@@ -1,4 +1,7 @@
-import { useDeploymentShips } from "@plugins/apps/plugins/deploy/plugins/host-query/web";
+import {
+  useDeploymentShips,
+  useShipsGate,
+} from "@plugins/apps/plugins/deploy/plugins/host-query/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { useNow } from "@plugins/primitives/plugins/relative-time/web";
 import type { TabBadge } from "@plugins/primitives/plugins/tabbed-view/web";
@@ -15,7 +18,7 @@ export function useMessagesAvailable({
 }: {
   deploymentId: string;
 }): boolean {
-  return useDeploymentShips(deploymentId, INTAKE_PLUGIN_ID).kind !== "no";
+  return useShipsGate(deploymentId, INTAKE_PLUGIN_ID);
 }
 
 /** How far back the Messages tab's badge counts. */
