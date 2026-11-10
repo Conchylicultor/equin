@@ -4,8 +4,11 @@ A **page reference** is anything inside a page that names another page: the
 sub-page row, the link block, the inline `[[page]]` chip — three block types in
 three plugins, all answering the same questions. *Where does clicking me open
 that page?*, *what else can the user do with it?* and *is that page of a kind
-that looks different?* This plugin owns those answers and nothing else: it
-renders no reference, ships no action and declares no kind.
+that looks different?* This plugin owns those answers: it ships no action and
+declares no kind. It draws one thing — `PageReferenceRow`, the row every
+block-level reference (the sub-page row, the link block) is, so a page looks the
+same wherever it is referenced (an instructions page keeps its wash and its
+Global chip behind a link too). A block keeps only its own caret plumbing.
 
 ## Navigation is declared by the host, once
 
@@ -71,7 +74,7 @@ tie-break).
 Two reading hooks, because the surfaces differ in what they can afford:
 
 - `usePageReferenceDecoration(pageId, data)` → `{ tint, chip } | null`, the chip
-  already error-isolated — for a row that paints both (the sub-page row).
+  already error-isolated — for a row that paints both (`PageReferenceRow`, read internally).
 - `usePageReferenceTint()` → `(data) => tint | undefined`, one hook for a
   surface painting hundreds of rows and no chip (the Pages sidebar, through the
   tree's `rowAccent` layer).
@@ -93,7 +96,7 @@ carrying the same actions — a separate feature.
 
 ## Plugin reference
 
-- Description: The shared contract for a reference to another page rendered inside a page (sub-page row, link block, inline mention): the PageNavigation context a host declares once so no callback is threaded through the composite block store, the PageReference.Actions frontier whose contributions become the reference row's hover actions, the PageReference.Decoration seam through which a kind of page (read off its own data) tints its reference rows and adds a trailing chip, and the additive PageReference.Trailing slot whose contributions (a page's tags, …) every reference renders right after the title. Owns no reference, no action and no decoration of its own.
+- Description: The shared contract for a reference to another page rendered inside a page (sub-page row, link block, inline mention): the PageReferenceRow every block-level reference (sub-page row, link block) is drawn as, so a page looks the same wherever it is referenced; the PageNavigation context a host declares once so no callback is threaded through the composite block store, the PageReference.Actions frontier whose contributions become the reference row's hover actions, the PageReference.Decoration seam through which a kind of page (read off its own data) tints its reference rows and adds a trailing chip, and the additive PageReference.Trailing slot whose contributions (a page's tags, …) every reference renders right after the title. Owns no action and no decoration of its own.
 - Web:
   - Slots:
     - `PageReference.Actions`
@@ -105,8 +108,18 @@ carrying the same actions — a separate feature.
     - `PageReference.Decoration` ← `page.annotations.instructions.instructions-page`
     - `PageReference.Trailing` ← `page.tags`
   - Uses:
+    - `page/editor.PageIcon`
+    - `primitives/css/center.Center`
     - `primitives/css/inline.Inline`
     - `primitives/css/rigid.rigidClass`
+    - `primitives/css/row.Row`
+    - `primitives/css/row.RowFocus`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.cn`
+    - `primitives/css/yield.yieldClass`
+    - `primitives/link-gesture.activationProps`
+    - `primitives/row-actions.RowActions`
     - `primitives/slot-render.defineRenderSlot`
     - `primitives/slot-render.renderIsolated`
   - Exports (types):
@@ -115,16 +128,21 @@ carrying the same actions — a separate feature.
     - `PageReferenceChipProps`
     - `PageReferenceDecoration`
     - `PageReferenceDecorationContribution`
+    - `PageReferenceRowProps`
   - Exports (values):
     - `PageNavigationProvider`
     - `PageReference`
+    - `PageReferenceRow`
     - `PageReferenceTrailing`
     - `useOpenMadePage`
     - `usePageNavigation`
     - `usePageReferenceActions`
-    - `usePageReferenceDecoration`
     - `usePageReferenceTint`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-weight-medium`
   - Imported by:
     - `apps/pages/page-tree`
     - `page/annotations/agent-notes/agent-page`

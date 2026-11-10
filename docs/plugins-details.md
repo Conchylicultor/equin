@@ -40643,8 +40643,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape` ×2
           - `ui/tokens/font-family --font-mono`
           - `ui/tokens/shadow --shadow`
-        - Imported by: 90 plugins — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
-          - `page` ×60
+        - Imported by: 91 plugins — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
+          - `page` ×61
           - `apps` ×17
           - `reports` ×4
           - `active-data` ×3
@@ -41431,17 +41431,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`page-link`** — Link-to-page block type: references another page as a clickable block; feeds the backlinks index. Also registers the page-link `data` schema at the server write boundary, and supplies the target page's title to the `<page>` tag an agent reads.
       - Web:
         - Contributes: `Editor.Block` "page-link" → `PageLinkBlock`
-        - Uses: 25 symbols — full list in [`plugins/page/plugins/page-link/REFERENCE.md`](../plugins/page/plugins/page-link/REFERENCE.md)
-          - `page/editor` ×6
-          - `network/live/live-state` ×3
-          - `page/page-reference` ×3
-          - `network/live` ×2
-          - `primitives/css/center.Center`
+        - Uses:
+          - `network/live.LiveRowResult`
+          - `network/live.useLive`
+          - `network/live/live-state.matchResource`
+          - `network/live/live-state.ResourceError`
+          - `network/live/live-state.ResourceErrorInline`
+          - `page/editor.BlockRendererProps`
+          - `page/editor.Editor`
+          - `page/editor.PageOptionsList`
+          - `page/editor.useBlockActivate`
+          - `page/editor.usePageOptions`
+          - `page/page-reference.PageReferenceRow`
           - `primitives/css/placeholder.Placeholder`
           - `primitives/css/row.Row`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
-          - `primitives/link-gesture.activationProps`
           - `primitives/loading.Loading`
           - `primitives/overlay/popover.InlinePopover`
           - `primitives/search.SearchInput`
@@ -41473,11 +41478,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-md`
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --spacing`
-          - `ui/tokens/type-scale --font-weight-medium`
         - Imported by:
           - `page/annotations/instructions`
           - `page/inline-page-link`
-    - **`page-reference`** — The shared contract for a reference to another page rendered inside a page (sub-page row, link block, inline mention): the PageNavigation context a host declares once so no callback is threaded through the composite block store, the PageReference.Actions frontier whose contributions become the reference row's hover actions, the PageReference.Decoration seam through which a kind of page (read off its own data) tints its reference rows and adds a trailing chip, and the additive PageReference.Trailing slot whose contributions (a page's tags, …) every reference renders right after the title. Owns no reference, no action and no decoration of its own.
+    - **`page-reference`** — The shared contract for a reference to another page rendered inside a page (sub-page row, link block, inline mention): the PageReferenceRow every block-level reference (sub-page row, link block) is drawn as, so a page looks the same wherever it is referenced; the PageNavigation context a host declares once so no callback is threaded through the composite block store, the PageReference.Actions frontier whose contributions become the reference row's hover actions, the PageReference.Decoration seam through which a kind of page (read off its own data) tints its reference rows and adds a trailing chip, and the additive PageReference.Trailing slot whose contributions (a page's tags, …) every reference renders right after the title. Owns no action and no decoration of its own.
       - Web:
         - Slots:
           - `PageReference.Actions`
@@ -41489,8 +41493,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PageReference.Decoration` ← `page.annotations.instructions.instructions-page`
           - `PageReference.Trailing` ← `page.tags`
         - Uses:
+          - `page/editor.PageIcon`
+          - `primitives/css/center.Center`
           - `primitives/css/inline.Inline`
           - `primitives/css/rigid.rigidClass`
+          - `primitives/css/row.Row`
+          - `primitives/css/row.RowFocus`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.cn`
+          - `primitives/css/yield.yieldClass`
+          - `primitives/link-gesture.activationProps`
+          - `primitives/row-actions.RowActions`
           - `primitives/slot-render.defineRenderSlot`
           - `primitives/slot-render.renderIsolated`
         - Exports (types):
@@ -41499,16 +41513,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PageReferenceChipProps`
           - `PageReferenceDecoration`
           - `PageReferenceDecorationContribution`
+          - `PageReferenceRowProps`
         - Exports (values):
           - `PageNavigationProvider`
           - `PageReference`
+          - `PageReferenceRow`
           - `PageReferenceTrailing`
           - `useOpenMadePage`
           - `usePageNavigation`
           - `usePageReferenceActions`
-          - `usePageReferenceDecoration`
           - `usePageReferenceTint`
       - Cross-plugin:
+        - Uses tokens:
+          - `ui/tokens/color-palette --muted-foreground`
+          - `ui/tokens/shape --spacing`
+          - `ui/tokens/type-scale --font-weight-medium`
         - Imported by:
           - `apps/pages/page-tree`
           - `page/annotations/agent-notes/agent-page`
@@ -41891,18 +41910,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `Editor.Block` "page" → `SubPageBlock`
           - `Editor.BlockFrame` "page" → `SubPageFrame`
-        - Uses: 21 symbols — full list in [`plugins/page/plugins/sub-page/REFERENCE.md`](../plugins/page/plugins/sub-page/REFERENCE.md)
-          - `page/editor` ×5
-          - `page/page-reference` ×5
-          - `primitives/css/row` ×2
-          - `primitives/css/spacing` ×2
+        - Uses:
           - `page/container.ContainerBackdrop`
-          - `primitives/css/center.Center`
-          - `primitives/css/text.Text`
+          - `page/editor.BlockRendererProps`
+          - `page/editor.Editor`
+          - `page/editor.useCaretEscape`
+          - `page/editor.useVoidCaret`
+          - `page/page-reference.PageReferenceRow`
+          - `page/page-reference.usePageReferenceTint`
+          - `primitives/css/spacing.Inset`
           - `primitives/css/ui-kit.cn`
-          - `primitives/css/yield.yieldClass`
-          - `primitives/link-gesture.activationProps`
-          - `primitives/row-actions.RowActions`
         - Exports (values): `subPageBlock`
       - Core:
         - Uses:
@@ -41915,12 +41932,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `subPageBlock`
       - Cross-plugin:
         - Uses tokens:
-          - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/density --pad-row-y`
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
-          - `ui/tokens/shape --spacing`
-          - `ui/tokens/type-scale --font-weight-medium`
     - **`table`** — Table block type: a GFM pipe table edited in place like Notion's — click a cell and type, Tab between cells, grips to move / duplicate / delete rows and columns, insert points, add bars and column resizing (widths are display-only data, never in the markdown). Table block type: registers its `data` schema (column alignment, header cells, body rows) at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "table" → `TableBlock`
@@ -44677,10 +44691,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CenterProps`
             - Exports (values): `Center`
           - Cross-plugin:
-            - Imported by: 135 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
+            - Imported by: 134 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
               - `apps` ×44
               - `primitives` ×25
-              - `page` ×19
+              - `page` ×18
               - `conversations` ×9
               - `debug` ×6
               - `ui` ×5
@@ -45600,13 +45614,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 442 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 443 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×108
               - `conversations` ×80
               - `primitives` ×54
               - `debug` ×38
               - `ui` ×31
-              - `page` ×26
+              - `page` ×27
               - `plugin-meta` ×16
               - `tasks` ×14
               - `fields` ×9
@@ -45842,12 +45856,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 425 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 426 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×110
               - `conversations` ×87
               - `primitives` ×47
               - `debug` ×37
-              - `page` ×24
+              - `page` ×25
               - `ui` ×18
               - `plugin-meta` ×15
               - `tasks` ×15
@@ -46145,11 +46159,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 462 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 463 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×111
               - `apps` ×107
               - `conversations` ×53
-              - `page` ×26
+              - `page` ×27
               - `debug` ×24
               - `ui` ×23
               - `tasks` ×19
@@ -46274,7 +46288,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui` ×3
               - `fields` ×2
               - `infra/claude-cli`
-              - `page/sub-page`
+              - `page/page-reference`
               - `search/quick-find`
           - Web:
             - Exports (types): `YieldAxis`
@@ -48812,12 +48826,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `linkProps`
           - `openInBrowserTab`
       - Cross-plugin:
-        - Imported by: 77 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
+        - Imported by: 75 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
           - `conversations` ×21
           - `primitives` ×16
           - `apps` ×12
-          - `page` ×6
           - `tasks` ×5
+          - `page` ×4
           - `apps-core` ×3
           - `debug` ×2
           - `hints` ×2
@@ -50813,7 +50827,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `conversations/conversation-view/jsonl-viewer`
           - `conversations/conversation-view/jsonl-viewer/row-actions`
-          - `page/sub-page`
+          - `page/page-reference`
           - `primitives/breadcrumb`
           - `primitives/commit-list`
           - `primitives/css/control-panel`
@@ -59988,11 +60002,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --radius-chip-compact`
               - `ui/tokens/density --space-sm`
-            - Tokens used by: 395 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 396 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `conversations` ×87
               - `apps` ×82
               - `primitives` ×60
-              - `page` ×35
+              - `page` ×36
               - `debug` ×26
               - `ui` ×26
               - `tasks` ×11
@@ -60143,13 +60157,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `typeScaleGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --space-sm`
-            - Tokens used by: 233 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
+            - Tokens used by: 232 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
               - `apps` ×59
               - `conversations` ×42
               - `primitives` ×38
               - `debug` ×15
               - `plugin-meta` ×14
-              - `page` ×12
+              - `page` ×11
               - `tasks` ×9
               - `ui` ×8
               - `fields` ×4

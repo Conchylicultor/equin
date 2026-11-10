@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
-import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import {
   matchResource,
@@ -24,14 +22,9 @@ import {
   usePageOptions,
   useBlockActivate,
   PageOptionsList,
-  PageIcon,
   type BlockRendererProps,
 } from "@plugins/page/plugins/editor/web";
-import {
-  PageReferenceTrailing,
-  usePageNavigation,
-  usePageReferenceActions,
-} from "@plugins/page/plugins/page-reference/web";
+import { PageReferenceRow } from "@plugins/page/plugins/page-reference/web";
 import { pageLinkBlock } from "../../core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -155,10 +148,6 @@ function PagePicker({
 
 export function PageLinkBlock({ block, editor }: BlockRendererProps) {
   const { pageId } = pageLinkBlock.parse(block.data);
-  const nav = usePageNavigation();
-  // Only the RESOLVED link below gets actions: the picker row and the
-  // not-found row name no page, so there is nothing for an action to open.
-  const actions = usePageReferenceActions(pageId);
   const result = useLive(pagesTree, { id: pageId === "" ? null : pageId });
   const [pickerOpen, setPickerOpen] = useState(false);
 
@@ -249,34 +238,17 @@ export function PageLinkBlock({ block, editor }: BlockRendererProps) {
     );
   }
 
-  // Resolved link: a clickable row that opens the page through the host's
-  // declared navigation, with the contributed reference actions on hover. The
-  // page's own data rides on the union arm, so there is no second lookup here
-  // and no `!` claiming a row the type system cannot see.
-  const { data: targetData } = link;
-
+  // Resolved link: THE page-reference row the sub-page block draws too, so a
+  // linked page looks exactly like its original (an instructions page keeps its
+  // wash and Global chip). The page's own data rides on the union arm, so there
+  // is no second lookup here. A page with no icon shows the link glyph.
   return (
     <div className="px-md py-xs">
-      <Row
-        // A link (⌘/middle-click opens a browser tab); with no declared
-        // navigation, a plain row that opens nothing.
-        {...activationProps(nav?.open(pageId))}
-        actions={actions}
-        icon={
-          <Center as="span" className="size-4 text-muted-foreground">
-            <PageIcon
-              icon={targetData?.icon}
-              fallback={linkIcon}
-              className="size-4"
-            />
-          </Center>
-        }
-      >
-        <span className="truncate font-medium underline-offset-2 hover:underline">
-          {targetData?.title || "Untitled"}
-        </span>
-        <PageReferenceTrailing pageId={pageId} />
-      </Row>
+      <PageReferenceRow
+        pageId={pageId}
+        page={link.data}
+        fallbackIcon={linkIcon}
+      />
     </div>
   );
 }

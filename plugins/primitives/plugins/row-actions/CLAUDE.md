@@ -203,7 +203,7 @@ each, moved, never drawn twice — and unfolds once the row has room again.
   - Imported by:
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/row-actions`
-    - `page/sub-page`
+    - `page/page-reference`
     - `primitives/breadcrumb`
     - `primitives/commit-list`
     - `primitives/css/control-panel`

@@ -73,7 +73,7 @@ declared as its main axis. The disagreement is the design, not an oversight.
     - `ui` ×3
     - `fields` ×2
     - `infra/claude-cli`
-    - `page/sub-page`
+    - `page/page-reference`
     - `search/quick-find`
 - Web:
   - Exports (types): `YieldAxis`

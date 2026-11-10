@@ -7,10 +7,10 @@ import {
 import type { PageData } from "@plugins/page/plugins/editor/core";
 import {
   PageReference,
-  usePageReferenceDecoration,
   usePageReferenceTint,
   type PageReferenceChipProps,
 } from "../index";
+import { usePageReferenceDecoration } from "../internal/decoration";
 
 // The decoration seam's two reads, against a fixture kind of page. The renderers
 // (sub-page row, Pages sidebar) name no kind, so this is where "which kind wins"

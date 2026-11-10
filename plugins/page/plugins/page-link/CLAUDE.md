@@ -7,17 +7,22 @@
 - Description: Link-to-page block type: references another page as a clickable block; feeds the backlinks index. Also registers the page-link `data` schema at the server write boundary, and supplies the target page's title to the `<page>` tag an agent reads.
 - Web:
   - Contributes: `Editor.Block` "page-link" → `PageLinkBlock`
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `page/editor` ×6
-    - `network/live/live-state` ×3
-    - `page/page-reference` ×3
-    - `network/live` ×2
-    - `primitives/css/center.Center`
+  - Uses:
+    - `network/live.LiveRowResult`
+    - `network/live.useLive`
+    - `network/live/live-state.matchResource`
+    - `network/live/live-state.ResourceError`
+    - `network/live/live-state.ResourceErrorInline`
+    - `page/editor.BlockRendererProps`
+    - `page/editor.Editor`
+    - `page/editor.PageOptionsList`
+    - `page/editor.useBlockActivate`
+    - `page/editor.usePageOptions`
+    - `page/page-reference.PageReferenceRow`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/row.Row`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
-    - `primitives/link-gesture.activationProps`
     - `primitives/loading.Loading`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/search.SearchInput`
@@ -49,7 +54,6 @@
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --spacing`
-    - `ui/tokens/type-scale --font-weight-medium`
   - Imported by:
     - `page/annotations/instructions`
     - `page/inline-page-link`
