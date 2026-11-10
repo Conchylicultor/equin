@@ -1,6 +1,5 @@
-import { useEffect, useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
 import { navigate } from "@plugins/apps-core/plugins/tabs/web";
-import { usePluginScopeId } from "@plugins/framework/plugins/web-sdk/core";
 import type {
   GestureAdvance,
   Hint,
@@ -16,7 +15,9 @@ import {
   requestTip,
   stepTips,
   type TipQueue,
+  type TipRequest,
 } from "./tip-queue";
+import { inScope } from "./scope-key";
 import {
   beginTour,
   primaryMove,
@@ -59,7 +60,7 @@ const listeners = new Set<() => void>();
  * main) from restarting.
  */
 const answered = new Set<string>();
-/** How many mounted components hold each hint's moment (see `useHintMoment`). */
+/** How many mounted components hold each hint's moment, by hint id in its scope (see `useHintMoment`). */
 const momentHolders = new Map<string, number>();
 
 function set(next: EngineState): void {
@@ -88,65 +89,54 @@ export function useEngineState(): EngineState {
 
 // ── Tips ────────────────────────────────────────────────────────────────
 
-/**
- * Asks to show `hint` while `when` holds. The host shows it once its seen state
- * is known and unseen, its anchor is on the page and no tour runs — after the
- * settle window, lowest `order` first, one at a time. `when` turning false (or
- * the component unmounting) withdraws it without marking it seen.
- *
- * Several components may hold one hint's moment (every chip of a kind): the
- * request stays while ANY holds it, and is withdrawn when the last lets go.
- * `hint` may be absent — a generic component handed an optional tip asks nothing.
- *
- * A moment inside a `<PluginScope>` (the demo's embedded app) asks nothing:
- * the one host is the page's, at `Core.Root`, and records a shown tip as seen
- * through the PAGE's server — a demo visitor's moment would mark the page
- * user's hints seen. The scope is read from where the moment renders, so no
- * caller can forget it.
- */
-export function useHintMoment(
-  hint: Hint | null | undefined,
-  when: boolean,
-): void {
-  const foreignScope = usePluginScopeId() !== null;
-  useEffect(() => {
-    if (!hint || !when || foreignScope) return;
-    const holders = momentHolders.get(hint.id) ?? 0;
-    momentHolders.set(hint.id, holders + 1);
-    if (holders === 0) setTips(requestTip(state.tips, hint, Date.now()));
-    return () => {
-      const left = (momentHolders.get(hint.id) ?? 1) - 1;
-      if (left > 0) {
-        momentHolders.set(hint.id, left);
-        return;
-      }
-      momentHolders.delete(hint.id);
-      setTips(removeTip(state.tips, hint.id, Date.now()));
-    };
-  }, [hint, when, foreignScope]);
+/** A moment in `scope` asks for `hint` — counted per hint and scope (see `useHintMoment`). */
+export function requestTipFrom(scope: string | null, hint: Hint): void {
+  const key = inScope(scope, hint.id);
+  const holders = momentHolders.get(key) ?? 0;
+  momentHolders.set(key, holders + 1);
+  if (holders === 0) setTips(requestTip(state.tips, hint, Date.now(), scope));
+}
+
+/** That moment let go: the request goes with the last holder. */
+export function withdrawTipFrom(scope: string | null, hint: Hint): void {
+  const key = inScope(scope, hint.id);
+  const left = (momentHolders.get(key) ?? 1) - 1;
+  if (left > 0) {
+    momentHolders.set(key, left);
+    return;
+  }
+  momentHolders.delete(key);
+  setTips(removeTip(state.tips, key, Date.now()));
 }
 
 /** The host advances the queue at `now` against what is eligible. */
 export function stepTipQueue(
   now: number,
-  eligible: (hint: Hint) => boolean,
+  eligible: (hint: Hint, request: TipRequest) => boolean,
 ): void {
   setTips(stepTips(state.tips, now, eligible));
 }
 
-/** The active tip was answered (Got it / × / acted on): it leaves the queue for the session. */
-export function answerTip(id: string): void {
-  answered.add(id);
-  setTips(removeTip(state.tips, id, Date.now()));
+/**
+ * The active tip was answered (Got it / × / acted on): it leaves the queue for
+ * the session. `key` is the request's (the hint id in its scope).
+ */
+export function answerTip(key: string): void {
+  answered.add(key);
+  setTips(removeTip(state.tips, key, Date.now()));
 }
 
-export function isAnswered(id: string): boolean {
-  return answered.has(id);
+/** Answered this session: a tip by its request key, a tour by its id (the page's). */
+export function isAnswered(key: string): boolean {
+  return answered.has(key);
 }
 
-/** `resetHints` brings these ids back: forget that they were answered this session. */
-export function forgetAnswered(ids: readonly string[]): void {
-  for (const id of ids) answered.delete(id);
+/** `resetHints` brings these ids back in `scope`: forget that they were answered this session. */
+export function forgetAnswered(
+  scope: string | null,
+  ids: readonly string[],
+): void {
+  for (const id of ids) answered.delete(inScope(scope, id));
 }
 
 // ── Tours ───────────────────────────────────────────────────────────────

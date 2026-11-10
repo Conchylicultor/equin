@@ -107,7 +107,7 @@ function RevealedLauncher() {
               "[&:not(:focus-within,:has([aria-expanded=true]))]:pointer-events-none [&:not(:focus-within,:has([aria-expanded=true]))]:opacity-0",
           )}
         >
-          <AppLauncher form="icon" />
+          <AppLauncher form="icon" tip={false} />
         </div>
       </div>
     </Theme>

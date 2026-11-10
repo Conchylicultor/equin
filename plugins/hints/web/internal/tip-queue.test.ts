@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { defineHintAnchor } from "../../core/internal/anchors";
 import { defineHint } from "../../core/internal/declarations";
 import {
+  activeRequest,
   activeTip,
   emptyTipQueue,
   removeTip,
@@ -96,5 +97,20 @@ describe("tip queue", () => {
   test("a repeated request is idempotent", () => {
     const q = requestTip(requestTip(emptyTipQueue, tryIt, 0), tryIt, 5);
     expect(q.requests).toHaveLength(1);
+  });
+
+  test("the same tip asked from the page and from a scope is two requests, each with its own scope", () => {
+    let q = requestTip(emptyTipQueue, tryIt, 0);
+    q = requestTip(q, tryIt, 0, "demo");
+    expect(q.requests.map((r) => [r.scope, r.key])).toEqual([
+      [null, "try-it"],
+      ["demo", "demo\u0000try-it"],
+    ]);
+    // Only the demo's is eligible (the page's is seen): the demo's shows.
+    q = stepTips(q, SETTLE_MS, (_h, r) => r.scope === "demo");
+    expect(activeRequest(q)?.scope).toBe("demo");
+    // Answering it leaves the page's request waiting.
+    q = removeTip(q, "demo\u0000try-it", 1000);
+    expect(q.requests.map((r) => r.scope)).toEqual([null]);
   });
 });

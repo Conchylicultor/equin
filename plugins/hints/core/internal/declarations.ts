@@ -35,6 +35,13 @@ export interface Hint {
   readonly order?: number;
   /** The dismiss button's label. Default "Got it". */
   readonly gotIt?: string;
+  /**
+   * What on the anchor counts as acting on the tip (answered `acted`):
+   * `"press"` (default) — a pointerdown on it; `"hover"` — pointing at it as
+   * well, for a control whose hover is the gesture the tip teaches (the app
+   * launcher's grid opens on hover, under the tip's card).
+   */
+  readonly actOn?: "press" | "hover";
 }
 
 export function defineHint(def: Omit<Hint, "kind">): Hint {

@@ -1,6 +1,7 @@
 import {
   useCallback,
   useState,
+  type Ref,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
@@ -41,6 +42,8 @@ import {
 } from "./window-system-menu";
 import { WindowAppTile } from "./window-app-tile";
 import { FULLSCREEN_MS } from "../hooks/use-window-motion";
+import { useHintAnchor, useHintMoment } from "@plugins/hints/web";
+import { windowFullscreenAnchor, windowFullscreenHint } from "../../core";
 
 const closeIcon = symbol("close");
 const removeIcon = symbol("remove");
@@ -145,14 +148,17 @@ function TitlebarControl({
   label,
   onClick,
   className,
+  ref,
 }: {
   icon: IconRef;
   label: string;
   onClick: () => void;
   className?: string;
+  ref?: Ref<HTMLElement>;
 }) {
   return (
     <Center
+      ref={ref}
       as="button"
       aria-label={label}
       title={label}
@@ -341,6 +347,16 @@ export function WindowChrome({
   // reaching it insets its controls by the dot's published safe area.
   const underActionBar = geo.snap !== null && TOP_RIGHT_SNAPS.has(geo.snap);
 
+  // The way back to one app: the focused window's Full screen control carries
+  // the tip, asked for while a window is focused on the desktop (shown once —
+  // the first time a window is open). Only the focused window registers, so
+  // the tip points at the window the user is looking at.
+  const tipped = focused && onFullscreen !== undefined;
+  const fullscreenAnchorRef = useHintAnchor(
+    tipped ? windowFullscreenAnchor : undefined,
+  );
+  useHintMoment(tipped ? windowFullscreenHint : undefined, true);
+
   const controls = (
     <div
       // eslint-disable-next-line layout/no-adhoc-layout -- rigid trailing controls cluster pinned right in the titlebar's hand-rolled drag flex (see titlebar disable below)
@@ -371,6 +387,7 @@ export function WindowChrome({
       />
       {onFullscreen && (
         <TitlebarControl
+          ref={fullscreenAnchorRef}
           icon={fullscreenIcon}
           label="Full screen"
           onClick={onFullscreen}

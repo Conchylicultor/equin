@@ -15,7 +15,7 @@ the collection.
 |---|---|---|
 | Anchor — a UI target | `defineHintAnchor(id)`, or `defineHintAnchor(id, (p) => key)` for a family (`family.at(p)`) | `const ref = useHintAnchor(target)` on the element |
 | Signal — a typed app event | `defineHintSignal<T>(id)` | `emitHintSignal(signal, payload)` |
-| Tip | `defineHint({ id, anchor, title, body, placement?, order?, gotIt? })` | `Hints.Hint({ hint })` + `useHintMoment(hint, when)` |
+| Tip | `defineHint({ id, anchor, title, body, placement?, order?, gotIt?, actOn? })` | `Hints.Hint({ hint })` + `useHintMoment(hint, when)` |
 | Tour | `defineTour({ id, app, primary?, autoStart?, intro?, initialData, steps })` | `Hints.Tour({ tour })` + `startTour(id)` |
 | Seen state | `hintsSeen` (live collection), `markHintSeenEndpoint`, `resetHintsEndpoint` | `useHintSeen()`, `useResetHints()`, `useHintCatalog()` |
 
@@ -63,8 +63,22 @@ Several components may hold one hint's moment (every prototype chip on the
 page): the request stays until the last of them lets go. `hint` may be
 `undefined` — a generic component handed an optional tip asks nothing (id-chip's
 `idChip({ …, hint })` is one: its chips anchor and request the kind's tip).
-"Got it" / × marks `dismissed`; a `pointerdown` on the anchor marks `acted`.
+"Got it" / × marks `dismissed`; a `pointerdown` on the anchor marks `acted`
+(and, for a tip declared `actOn: "hover"` — a hover-revealed control like the
+app launcher — so does pointing at it).
 While the seen state is pending nothing shows (no flash on reload).
+
+**A tip is remembered where it was asked.** `useHintMoment` reads the seen
+state itself (`useHintSeen`) and hands the host the write (`useMarkHintSeen`)
+as its scope's **seen ledger** (`web/internal/seen-ledger.ts`). On the page
+that is the page's server; inside a `<PluginScope>` (the demo's embedded app,
+whose live reads and endpoints its worker answers) it is that scope's — so a
+demo visitor's tip is recorded in the demo's database, never the page user's,
+and the page's seen rows never silence the demo's. The request, its "answered
+this session" mark and the anchor (`useHintAnchor` registers in its scope) are
+all keyed by the scope (`inScope`), so the page and the demo each ask for, and
+point at, their own. The host stays one (one stage over the page); tours stay
+the page's.
 
 ## A tour
 
@@ -288,6 +302,8 @@ Exhibits: `hints/card`, `hints/caption`, `hints/spotlight`, `hints/welcome`.
     - `Hints.Tour`
   - Slot contributors:
     - `Hints.Hint` ← `active-data.prototype`
+    - `Hints.Hint` ← `apps-core.app-launcher`
+    - `Hints.Hint` ← `apps.desktop.windows`
     - `Hints.Hint` ← `apps.prototypes.canvas`
     - `Hints.Hint` ← `conversations.conversation-view.open-app`
     - `Hints.Hint` ← `conversations.conversation-view.push-and-exit`
@@ -429,9 +445,13 @@ Exhibits: `hints/card`, `hints/caption`, `hints/spotlight`, `hints/welcome`.
     - `active-data/id-chip`
     - `active-data/prototype`
     - `active-data/show-me`
+    - `apps-core/app-launcher`
+    - `apps/demo`
+    - `apps/desktop/windows`
     - `apps/home/app-cards`
     - `apps/home/tour`
     - `apps/prototypes/canvas`
+    - `apps/website/landing/screenshot`
     - `apps/website/promo-film`
     - `conversations/conversation-view/open-app`
     - `conversations/conversation-view/push-and-exit`

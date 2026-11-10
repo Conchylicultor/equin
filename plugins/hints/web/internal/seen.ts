@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from "react";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { usePluginScopeId } from "@plugins/framework/plugins/web-sdk/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 import {
   mapResource,
@@ -49,11 +50,12 @@ export function useMarkHintSeen(): (
  */
 export function useResetHints(): (ids: readonly string[]) => Promise<void> {
   const fetchEndpoint = useFetchEndpoint();
+  const scope = usePluginScopeId();
   return useCallback(
     async (ids) => {
       await fetchEndpoint(resetHintsEndpoint, {}, { body: { ids: [...ids] } });
-      forgetAnswered(ids);
+      forgetAnswered(scope, ids);
     },
-    [fetchEndpoint],
+    [fetchEndpoint, scope],
   );
 }

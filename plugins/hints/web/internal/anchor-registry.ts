@@ -5,7 +5,9 @@ import {
   type InViewWatcher,
 } from "@plugins/primitives/plugins/dom/plugins/in-view/web";
 import { useReportPopupOpen } from "@plugins/primitives/plugins/overlay/plugins/popup-open/web";
+import { usePluginScopeId } from "@plugins/framework/plugins/web-sdk/core";
 import { targetKey, type HintTarget } from "../../core";
+import { inScope } from "./scope-key";
 
 /**
  * The page's anchor registry: every element a `useHintAnchor` ref is attached
@@ -156,11 +158,16 @@ export function pulseAnchor(key: string, ms: number): void {
  * `null` / `undefined` registers nothing — for a generic component handed an
  * optional anchor by its host (the task-draft form's `hintAnchors`), so the
  * hook is still called unconditionally.
+ *
+ * Inside a `<PluginScope>` (the demo's embedded app) the key is the scope's
+ * ({@link inScope}): the demo's launcher is not the page's, and a tip the demo
+ * asked for points at the demo's.
  */
 export function useHintAnchor(
   target: HintTarget | null | undefined,
 ): (el: HTMLElement | null) => void {
-  const key = target ? targetKey(target) : null;
+  const scope = usePluginScopeId();
+  const key = target ? inScope(scope, targetKey(target)) : null;
   const [el, setEl] = useState<HTMLElement | null>(null);
   useEffect(
     () => (el && key !== null ? registerAnchor(key, el) : undefined),
@@ -189,7 +196,7 @@ export function useHintAnchor(
  * {@link useHintAnchor}.
  */
 export function useHintAnchorPulse(target: HintTarget): boolean {
-  const key = targetKey(target);
+  const key = inScope(usePluginScopeId(), targetKey(target));
   return useSyncExternalStore(
     subscribeAnchors,
     () => pulsing.has(key),

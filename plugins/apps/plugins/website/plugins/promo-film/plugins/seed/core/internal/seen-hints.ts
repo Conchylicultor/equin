@@ -17,4 +17,6 @@ export const FILM_SEEN_HINTS: readonly {
   { id: "push-and-exit.exit", outcome: "dismissed" },
   { id: "push-and-exit.go", outcome: "dismissed" },
   { id: "push-and-exit.drop-and-exit", outcome: "dismissed" },
+  { id: "app-launcher.switch-apps", outcome: "dismissed" },
+  { id: "desktop.window-fullscreen", outcome: "dismissed" },
 ];

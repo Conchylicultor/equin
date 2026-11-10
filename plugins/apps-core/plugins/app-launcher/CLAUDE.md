@@ -60,10 +60,12 @@ never draw their own header (the shell places it; see
     - `Apps.Overlay` "Overlay" → `FloatingAppLauncher`
     - `FieldPresentation.Register` "collection:apps.installed-app"
     - `Fields.Identity` "app-icon"
-  - Uses: 45 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Hints.Hint` "app-launcher.switch-apps"
+  - Uses: 48 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps-core/tabs` ×6
     - `apps-core` ×5
     - `network/live/live-state` ×4
+    - `hints` ×3
     - `primitives/data-view` ×3
     - `apps-core/app-icon` ×2
     - `audience/developer-mark` ×2
@@ -99,10 +101,14 @@ never draw their own header (the shell places it; see
     - `fields/json/config.jsonField`
     - `fields/text/config.enumTextField`
     - `fields/text/config.textField`
+    - `hints.defineHint`
+    - `hints.defineHintAnchor`
     - `network/live.rowKind`
     - `ui/icons.symbol`
   - Exports (values):
     - `appIconIdentity`
+    - `appLauncherAnchor`
+    - `appLauncherHint`
     - `installedApp`
 - Cross-plugin:
   - Uses tokens:

@@ -16,6 +16,8 @@ import {
   onFocusedDesktop,
 } from "./window-commands";
 import { Desktop } from "./slots";
+import { Hints } from "@plugins/hints/web";
+import { windowFullscreenHint } from "../core";
 import { peekFocusedDesktop } from "./internal/desktop-runtime";
 
 export { Desktop, type DesktopOverlayContribution } from "./slots";
@@ -53,6 +55,7 @@ export default {
   slots: Desktop,
   contributions: [
     Surface.Placement(floatingDef),
+    Hints.Hint({ hint: windowFullscreenHint }),
     // Keyboard window management — eligible only while the desktop is the
     // surface mode. Tiling uses the Ctrl+Alt window-manager modifier (free on
     // macOS, the primary target); minimize/close use the platform `mod` so they

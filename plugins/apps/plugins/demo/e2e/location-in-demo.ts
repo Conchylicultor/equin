@@ -67,7 +67,10 @@ const SANCTIONED: readonly RegExp[] = [
   /^\/api\/app-usage\/flush$/,
   /^\/api\/analytics\/collect$/,
   /^\/api\/reports$/,
-  /^\/api\/icons\/(sprite|symbols)\//,
+  // A sprite the PAGE's chrome wears, read by the page's sprite host from the
+  // page's server (`ui/icons/sprites`) — e.g. the hints stage's Rounded style,
+  // drawn over the demo when one of its tips shows. Formerly /api/icons/….
+  /^\/api\/resources\/icons\.sprite$/,
   /^\/api\/health(\/ready)?$/,
 ];
 

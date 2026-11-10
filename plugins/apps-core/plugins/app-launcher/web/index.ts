@@ -2,7 +2,8 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Apps } from "@plugins/apps-core/web";
 import { Fields } from "@plugins/fields/web";
 import { AppShell } from "@plugins/primitives/plugins/app-shell/web";
-import { appIconIdentity } from "../core";
+import { Hints } from "@plugins/hints/web";
+import { appIconIdentity, appLauncherHint } from "../core";
 import { AppBrand } from "./components/app-brand";
 import { FloatingAppLauncher } from "./components/floating-app-launcher";
 import { installedAppPresentation } from "./internal/installed-app";
@@ -22,5 +23,6 @@ export default {
     Apps.Overlay({ id: "floating-launcher", component: FloatingAppLauncher }),
     installedAppPresentation,
     Fields.Identity({ identity: appIconIdentity }),
+    Hints.Hint({ hint: appLauncherHint }),
   ],
 } satisfies PluginDefinition;

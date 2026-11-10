@@ -1,4 +1,5 @@
 import type { Hint } from "../../core";
+import { inScope } from "./scope-key";
 
 /**
  * How long the queue collects moment requests before it shows one. Several
@@ -8,8 +9,15 @@ import type { Hint } from "../../core";
  */
 export const SETTLE_MS = 700;
 
-interface TipRequest {
+export interface TipRequest {
   readonly hint: Hint;
+  /**
+   * The plugin scope that asked (`null`: the page) — whose server holds this
+   * tip's seen state, and whose anchors it points at.
+   */
+  readonly scope: string | null;
+  /** The hint id in its scope ({@link inScope}) — the request's identity. */
+  readonly key: string;
   /** Arrival order — the tie-break between equal `order`s. */
   readonly seq: number;
 }
@@ -21,6 +29,7 @@ interface TipRequest {
  */
 export interface TipQueue {
   readonly requests: readonly TipRequest[];
+  /** The active request's key. */
   readonly active: string | null;
   /** When the current settle window opened; null when nothing is waiting to show. */
   readonly settleFrom: number | null;
@@ -34,12 +43,21 @@ export const emptyTipQueue: TipQueue = {
   nextSeq: 0,
 };
 
-/** A component's moment came: ask to show `hint` (idempotent per id). */
-export function requestTip(q: TipQueue, hint: Hint, now: number): TipQueue {
-  if (q.requests.some((r) => r.hint.id === hint.id)) return q;
+/**
+ * A component's moment came: ask to show `hint` from `scope` (idempotent per
+ * hint and scope — the page and the demo each ask for their own).
+ */
+export function requestTip(
+  q: TipQueue,
+  hint: Hint,
+  now: number,
+  scope: string | null = null,
+): TipQueue {
+  const key = inScope(scope, hint.id);
+  if (q.requests.some((r) => r.key === key)) return q;
   return {
     ...q,
-    requests: [...q.requests, { hint, seq: q.nextSeq }],
+    requests: [...q.requests, { hint, scope, key, seq: q.nextSeq }],
     nextSeq: q.nextSeq + 1,
     settleFrom: q.active === null && q.settleFrom === null ? now : q.settleFrom,
   };
@@ -51,10 +69,10 @@ export function requestTip(q: TipQueue, hint: Hint, now: number): TipQueue {
  * tip, the next one gets a fresh settle window. The caller marks seen for an
  * answer; a withdrawal marks nothing.
  */
-export function removeTip(q: TipQueue, id: string, now: number): TipQueue {
-  const requests = q.requests.filter((r) => r.hint.id !== id);
+export function removeTip(q: TipQueue, key: string, now: number): TipQueue {
+  const requests = q.requests.filter((r) => r.key !== key);
   if (requests.length === q.requests.length) return q;
-  if (q.active !== id) return { ...q, requests };
+  if (q.active !== key) return { ...q, requests };
   return {
     ...q,
     requests,
@@ -73,21 +91,21 @@ export function removeTip(q: TipQueue, id: string, now: number): TipQueue {
 export function stepTips(
   q: TipQueue,
   now: number,
-  eligible: (hint: Hint) => boolean,
+  eligible: (hint: Hint, request: TipRequest) => boolean,
 ): TipQueue {
   if (q.active !== null) {
-    const active = q.requests.find((r) => r.hint.id === q.active);
-    if (active && eligible(active.hint)) return q;
+    const active = q.requests.find((r) => r.key === q.active);
+    if (active && eligible(active.hint, active)) return q;
     return stepTips({ ...q, active: null, settleFrom: now }, now, eligible);
   }
   if (q.settleFrom === null || now < q.settleFrom + SETTLE_MS) return q;
   const next = q.requests
-    .filter((r) => eligible(r.hint))
+    .filter((r) => eligible(r.hint, r))
     .sort(
       (a, b) => (a.hint.order ?? 0) - (b.hint.order ?? 0) || a.seq - b.seq,
     )[0];
   if (!next) return q;
-  return { ...q, active: next.hint.id, settleFrom: null };
+  return { ...q, active: next.key, settleFrom: null };
 }
 
 /** When the host should call {@link stepTips} again, or null if no window is pending. */
@@ -97,8 +115,13 @@ export function wakeAt(q: TipQueue): number | null {
     : null;
 }
 
+/** The active tip's request — its declaration and the scope that asked. */
+export function activeRequest(q: TipQueue): TipRequest | null {
+  if (q.active === null) return null;
+  return q.requests.find((r) => r.key === q.active) ?? null;
+}
+
 /** The active tip's declaration. */
 export function activeTip(q: TipQueue): Hint | null {
-  if (q.active === null) return null;
-  return q.requests.find((r) => r.hint.id === q.active)?.hint ?? null;
+  return activeRequest(q)?.hint ?? null;
 }

@@ -23,9 +23,9 @@ export {
   pointAt,
   setTourData,
   startTour,
-  useHintMoment,
   useTourRun,
 } from "./internal/engine-store";
+export { useHintMoment } from "./internal/moment";
 export type { TourRunView } from "./internal/engine-store";
 export type { PointAtOptions } from "./internal/pointer";
 export { useHints, useTours } from "./internal/registry";

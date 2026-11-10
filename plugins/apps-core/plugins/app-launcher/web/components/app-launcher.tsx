@@ -26,7 +26,8 @@ import {
   appRowOverrides,
   type AppRow,
 } from "../internal/installed-app";
-import { installedApp } from "../../core";
+import { appLauncherAnchor, appLauncherHint, installedApp } from "../../core";
+import { useHintAnchor, useHintMoment } from "@plugins/hints/web";
 import { HoverPopover } from "@plugins/primitives/plugins/overlay/plugins/hover-popover/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -143,8 +144,22 @@ function LauncherMark({
  * The button is drawn in the app it sits in, but the grid it opens is the
  * chrome (`PopupTheme`): switching apps belongs to the frame, so the grid looks
  * the same from every app — and the same as the action bar's popovers.
+ *
+ * `tip`: this launcher is the one an app's brand draws, so it carries the
+ * "Switch apps" tip — asked for while it is mounted (the host shows it once,
+ * the first time an app is open). The floating launcher passes `false`: it is
+ * transparent until the pointer nears its corner, so a tip there would point
+ * at nothing.
  */
-export function AppLauncher({ form }: { form: AppShellBrandForm }) {
+export function AppLauncher({
+  form,
+  tip,
+}: {
+  form: AppShellBrandForm;
+  tip: boolean;
+}) {
+  const anchorRef = useHintAnchor(tip ? appLauncherAnchor : undefined);
+  useHintMoment(tip ? appLauncherHint : undefined, true);
   const home = useHomeApp();
   const gallery = home.kind === "app" ? home.app : undefined;
   const launchable = useLaunchableApps(gallery?.id);
@@ -180,6 +195,7 @@ export function AppLauncher({ form }: { form: AppShellBrandForm }) {
             variant="ghost"
             aspect="icon"
             aria-label="All apps"
+            ref={anchorRef}
             {...galleryLink}
             className="aria-expanded:bg-hover-fill"
           >

@@ -32,6 +32,7 @@ import {
   withBrowser,
   type Report,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { answerTipsAsTheyShow } from "@plugins/hints/e2e";
 
 const OUT = arg("out") ?? "/tmp/website-live-demo";
 /** The demo's host: its module (`@browser-host/…`) and its worker tree. */
@@ -86,6 +87,8 @@ await withBrowser(async (h) => {
   });
 
   // ── 1. the gate ────────────────────────────────────────────────────
+  // The demo is met fresh: its tips would cover the controls under the frame.
+  await answerTipsAsTheyShow(page);
   await page.goto(pathUrl("/website"), { waitUntil: "domcontentloaded" });
   const band = page.locator("figure.website-demo").first();
   const frame = band.locator(".website-demo-frame").first();

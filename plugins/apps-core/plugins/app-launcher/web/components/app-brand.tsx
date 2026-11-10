@@ -21,11 +21,11 @@ export function AppBrand({ form }: { form: AppShellBrandForm }) {
   const active = useActiveApp();
   const store = usePaneStore();
   const go = useNavigate();
-  if (form === "icon" || !active) return <AppLauncher form={form} />;
+  if (form === "icon" || !active) return <AppLauncher form={form} tip />;
   const home = active.app.basePath;
   return (
     <Line className="gap-sidebar-brand">
-      <AppLauncher form={form} />
+      <AppLauncher form={form} tip />
       <Button
         variant="ghost"
         {...linkProps({

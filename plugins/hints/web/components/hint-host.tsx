@@ -40,7 +40,9 @@ import {
 import { useTours } from "../internal/registry";
 import { useHintSeen, useMarkHintSeen } from "../internal/seen";
 import { subscribeHintSignals } from "../internal/signal-bus";
-import { activeTip, wakeAt } from "../internal/tip-queue";
+import { activeRequest, wakeAt, type TipRequest } from "../internal/tip-queue";
+import { ledgerOf, subscribeLedgers } from "../internal/seen-ledger";
+import { inScope } from "../internal/scope-key";
 import {
   canGoBack,
   currentStep,
@@ -159,21 +161,22 @@ export function HintHost() {
   const tourRunning = engine.tour !== null;
   const pointing = engine.pointer !== null;
   const stepTips = useEventCallback(() => {
-    stepTipQueue(Date.now(), (hint: Hint) => {
-      if (tourRunning || pointing || seenRows === null) return false;
-      if (seenRows.has(hint.id) || isAnswered(hint.id)) return false;
+    stepTipQueue(Date.now(), (hint: Hint, request: TipRequest) => {
+      if (tourRunning || pointing) return false;
+      // The seen state of the scope that asked (the page's, or the demo's on
+      // its own worker) — not known yet: nothing shows.
+      const seen = ledgerOf(request.scope)?.seen ?? null;
+      if (seen === null) return false;
+      if (seen.has(hint.id) || isAnswered(request.key)) return false;
       // On screen: a tip on a scrolled-away anchor would point at nothing.
       return (
-        resolveAnchorElement(targetKey(hint.anchor), { onScreen: true }) !==
-        null
+        resolveAnchorElement(tipAnchorKey(request), { onScreen: true }) !== null
       );
     });
   });
   useEffect(() => subscribeAnchors(stepTips), [stepTips]);
-  useEffect(
-    () => stepTips(),
-    [stepTips, engine.tips, seenRows, tourRunning, pointing],
-  );
+  useEffect(() => subscribeLedgers(stepTips), [stepTips]);
+  useEffect(() => stepTips(), [stepTips, engine.tips, tourRunning, pointing]);
   useEffect(() => {
     const at = wakeAt(engine.tips);
     if (at === null) return;
@@ -182,7 +185,7 @@ export function HintHost() {
     return () => clearTimeout(timer);
   }, [engine.tips, stepTips]);
 
-  const tip = activeTip(engine.tips);
+  const tip = activeRequest(engine.tips);
 
   // ── Held anchors: what a tip or a step is on holds its popup scope open ──
   const heldKeys = heldKeysOf(engine.tour, tip);
@@ -198,14 +201,15 @@ export function HintHost() {
   const shownTip = run || pointer ? null : tip;
   const step = run && run.phase !== "intro" ? currentStep(run) : null;
   const stepTarget = run && step ? resolveStepAnchor(step, run.data) : null;
-  const targetKeyOf = stepTarget ?? shownTip?.anchor ?? null;
-  // A tip draws on an anchor the user can see (its eligibility); a tour step
-  // takes its anchor wherever it is and scrolls it into view. A one-off
-  // highlight (`pointAt`) brings its own element.
-  const anchorEl = useAnchorElement(
-    targetKeyOf ? targetKey(targetKeyOf) : null,
-    { onScreen: !run },
-  );
+  // A tip draws on an anchor the user can see (its eligibility), registered in
+  // the scope that asked; a tour step takes its anchor wherever it is and
+  // scrolls it into view. A one-off highlight (`pointAt`) brings its own element.
+  const anchorKey = stepTarget
+    ? targetKey(stepTarget)
+    : shownTip
+      ? tipAnchorKey(shownTip)
+      : null;
+  const anchorEl = useAnchorElement(anchorKey, { onScreen: !run });
   const el = pointer ? pointer.el : anchorEl;
   const rect = useTrackedRect(el);
   const cueEl = useAnchorElement(step?.cue ? targetKey(step.cue) : null);
@@ -213,12 +217,24 @@ export function HintHost() {
 
   const answerShownTip = (outcome: "acted" | "dismissed") => {
     if (!shownTip) return;
-    answerTip(shownTip.id);
-    markSeen(shownTip.id, outcome);
+    // Recorded on the server of the scope that asked — the moment showing it
+    // publishes that ledger, so it is there while the tip is. The one gap is
+    // an answer landing in the instant its last moment let go (the click that
+    // closes a window also unmounts its tip's moment, before this render
+    // caught up): the request is being withdrawn, so it is answered for the
+    // session only — the next moment asks again, and is recorded then.
+    answerTip(shownTip.key);
+    ledgerOf(shownTip.scope)?.mark(shownTip.hint.id, outcome);
   };
-  // Acting on a tip's target counts as "Got it".
+  // Acting on a tip's target counts as "Got it": pressing it, and — for a tip
+  // declared `actOn: "hover"` (a hover-revealed control) — pointing at it.
   useElementEvent(shownTip ? el : null, "pointerdown", () =>
     answerShownTip("acted"),
+  );
+  useElementEvent(
+    shownTip?.hint.actOn === "hover" ? el : null,
+    "pointerenter",
+    () => answerShownTip("acted"),
   );
   useStepEffects(run && step ? { run, step } : null, el);
   usePointerEffects(pointer, rect);
@@ -260,14 +276,20 @@ function boxAround(
   };
 }
 
+/** The anchor key a tip points at: its anchor, as registered in the scope that asked. */
+function tipAnchorKey(request: TipRequest): string {
+  return inScope(request.scope, targetKey(request.hint.anchor));
+}
+
 function tipScene(
-  hint: Hint,
+  request: TipRequest,
   el: HTMLElement | null,
   rect: HintRect | null,
   dismiss: () => void,
 ): StageScene {
   if (!el || !rect) return EMPTY_SCENE;
-  const box = boxAround(targetKey(hint.anchor), el, rect, ANCHOR_PADDING);
+  const hint = request.hint;
+  const box = boxAround(tipAnchorKey(request), el, rect, ANCHOR_PADDING);
   return {
     ...EMPTY_SCENE,
     halos: [box],
@@ -482,14 +504,14 @@ function useStepEffects(
   );
 }
 
-function heldKeysOf(run: TourRun | null, tip: Hint | null): string[] {
+function heldKeysOf(run: TourRun | null, tip: TipRequest | null): string[] {
   if (run) {
     if (run.phase === "intro") return [];
     const step = currentStep(run);
     const target = resolveStepAnchor(step, run.data);
     return [target, step.cue].flatMap((t) => (t ? [targetKey(t)] : []));
   }
-  return tip ? [targetKey(tip.anchor)] : [];
+  return tip ? [tipAnchorKey(tip)] : [];
 }
 
 /** Calls `handler` on `type` events of `el` (while both are set). */

@@ -3817,6 +3817,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Desktop.Overlay` ← `apps.desktop.switcher`
             - Contributes:
               - `Surface.Placement` "Desktop"
+              - `Hints.Hint` "desktop.window-fullscreen"
               - `Shortcuts.Shortcut` "desktop.overview (f3)"
               - `Shortcuts.Shortcut` "desktop.overview-exit (escape)"
               - `Shortcuts.Shortcut` "floating.close (mod+w)"
@@ -3831,12 +3832,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Shortcuts.Shortcut` "floating.toggle-pin (ctrl+alt+p)"
               - `Shortcuts.Shortcut` "floating.window-to-next-desktop (ctrl+alt+shift+pagedown)"
               - `Shortcuts.Shortcut` "floating.window-to-prev-desktop (ctrl+alt+shift+pageup)"
-            - Uses: 47 symbols — full list in [`plugins/apps/plugins/desktop/plugins/windows/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/windows/REFERENCE.md)
+            - Uses: 50 symbols — full list in [`plugins/apps/plugins/desktop/plugins/windows/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/windows/REFERENCE.md)
               - `primitives/css/ui-kit` ×8
               - `apps-core/surface` ×4
               - `apps/desktop/shell` ×4
               - `apps-core/tabs` ×3
               - `apps/desktop/wallpaper` ×3
+              - `hints` ×3
               - `primitives/shortcuts` ×3
               - `primitives/css/layer` ×2
               - `primitives/css/theme-boundary` ×2
@@ -3879,6 +3881,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useWorkAreaReserve`
               - `windowRectFraction`
               - `WindowSnapshot`
+          - Core:
+            - Uses:
+              - `hints.defineHint`
+              - `hints.defineHintAnchor`
+            - Exports (values):
+              - `windowFullscreenAnchor`
+              - `windowFullscreenHint`
           - Cross-plugin:
             - Uses tokens: 23 vars — full list in [`plugins/apps/plugins/desktop/plugins/windows/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/windows/REFERENCE.md)
               - `ui/tokens/color-palette` ×13
@@ -12265,10 +12274,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Apps.Overlay` "Overlay" → `FloatingAppLauncher`
           - `FieldPresentation.Register` "collection:apps.installed-app"
           - `Fields.Identity` "app-icon"
-        - Uses: 45 symbols — full list in [`plugins/apps-core/plugins/app-launcher/REFERENCE.md`](../plugins/apps-core/plugins/app-launcher/REFERENCE.md)
+          - `Hints.Hint` "app-launcher.switch-apps"
+        - Uses: 48 symbols — full list in [`plugins/apps-core/plugins/app-launcher/REFERENCE.md`](../plugins/apps-core/plugins/app-launcher/REFERENCE.md)
           - `apps-core/tabs` ×6
           - `apps-core` ×5
           - `network/live/live-state` ×4
+          - `hints` ×3
           - `primitives/data-view` ×3
           - `apps-core/app-icon` ×2
           - `audience/developer-mark` ×2
@@ -12304,10 +12315,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields/json/config.jsonField`
           - `fields/text/config.enumTextField`
           - `fields/text/config.textField`
+          - `hints.defineHint`
+          - `hints.defineHintAnchor`
           - `network/live.rowKind`
           - `ui/icons.symbol`
         - Exports (values):
           - `appIconIdentity`
+          - `appLauncherAnchor`
+          - `appLauncherHint`
           - `installedApp`
       - Cross-plugin:
         - Uses tokens:
@@ -30678,6 +30693,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Hints.Tour`
     - Slot contributors:
       - `Hints.Hint` ← `active-data.prototype`
+      - `Hints.Hint` ← `apps-core.app-launcher`
+      - `Hints.Hint` ← `apps.desktop.windows`
       - `Hints.Hint` ← `apps.prototypes.canvas`
       - `Hints.Hint` ← `conversations.conversation-view.open-app`
       - `Hints.Hint` ← `conversations.conversation-view.push-and-exit`
@@ -30819,9 +30836,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `active-data/id-chip`
       - `active-data/prototype`
       - `active-data/show-me`
+      - `apps-core/app-launcher`
+      - `apps/demo`
+      - `apps/desktop/windows`
       - `apps/home/app-cards`
       - `apps/home/tour`
       - `apps/prototypes/canvas`
+      - `apps/website/landing/screenshot`
       - `apps/website/promo-film`
       - `conversations/conversation-view/open-app`
       - `conversations/conversation-view/push-and-exit`

@@ -2,6 +2,7 @@
 // and reaching the demo's stored data the way a later build would find it.
 import type { Locator, Page } from "playwright";
 import { pickFromLauncher } from "@plugins/apps-core/plugins/app-launcher/e2e";
+import { answerTipsAsTheyShow } from "@plugins/hints/e2e";
 import {
   DEMO_FULL,
   demoApp,
@@ -40,6 +41,10 @@ export const ENTER_DEMO = 'button:has-text("Enter equin")';
  * `marker`. The gate shows on every visit: a browser holding no demo data
  * (every fresh e2e context) starts nothing until Enter equin; one that holds
  * it starts behind the gate.
+ *
+ * Every tip the demo shows on this page is answered as it appears: a fresh
+ * context's demo has met none, and their cards would take the clicks these
+ * scripts make on the apps.
  */
 export async function bootDemo(
   page: Page,
@@ -47,19 +52,21 @@ export async function bootDemo(
   opts: { marker: string; timeoutMs?: number },
 ): Promise<void> {
   const timeout = opts.timeoutMs ?? RENDER_TIMEOUT_MS;
+  await answerTipsAsTheyShow(page);
   await boot(page, url, { marker: ENTER_DEMO, timeoutMs: timeout });
   await enterDemo(page, opts);
 }
 
 /**
  * The demo page loaded (a reload, a `goto`, a new tab): wait for its gate,
- * Enter equin, and wait for `marker`.
+ * Enter equin, and wait for `marker` — answering its tips like `bootDemo`.
  */
 export async function enterDemo(
   page: Page,
   opts: { marker: string; timeoutMs?: number },
 ): Promise<void> {
   const timeout = opts.timeoutMs ?? RENDER_TIMEOUT_MS;
+  await answerTipsAsTheyShow(page);
   const gate = page.locator(ENTER_DEMO).first();
   await gate.waitFor({ timeout });
   await gate.click();
