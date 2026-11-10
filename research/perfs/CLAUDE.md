@@ -6,9 +6,9 @@ code.* Each session re-validates the prior session's conclusion against fresh da
 rather than inheriting it.
 
 > **MANDATORY:** before any perf investigation, profiling pass, or perf fix, agents
-> **MUST** follow the [`perfs-investigation`](../../.claude/skills/perfs-investigation/SKILL.md)
-> skill (perf as nested layers: split the cost, recurse into the biggest part, fix the
-> cause — never hide it). The summary below is the index; the skill is the philosophy.
+> **MUST** follow the [Debugging / Performance instruction](http://equin.localhost:9000/pages/page/block-76280bce-efc5-4bd5-ad07-c578636c19b9) page
+> (perf as nested layers: split the cost, recurse into the biggest part, fix the
+> cause — never hide it). The summary below is the index; the page is the philosophy.
 
 > **KEEP THESE DOCS CURRENT — non-negotiable.** This index **and** the per-issue docs are *living*
 > documents. Every time you make a new discovery — name a hotspot, kill a hypothesis (with the gate
@@ -26,7 +26,7 @@ rather than inheriting it.
 
 **Make the app feel instant: any page loads in < 1 s, including cold start.**
 
-## Method (non-negotiable) — see the [`perfs-investigation`](../../.claude/skills/perfs-investigation/SKILL.md) skill for the full procedure
+## Method (non-negotiable) — see the [Debugging / Performance instruction](http://equin.localhost:9000/pages/page/block-76280bce-efc5-4bd5-ad07-c578636c19b9) page for the full procedure
 
 1. **Front door first — situate the incident before you quantify.** Open
    **Debug → Reports** (is a report already filed, with a linked *View-trace*?)

@@ -28,7 +28,7 @@ high-rate work). Work-vs-wait split from the live loader profile:
 
 ### Open rate-axis suspicion (trace before any cost-axis fix)
 
-Per the [`perfs-investigation`](../../.claude/skills/perfs-investigation/SKILL.md) method, don't jump
+Per the [Debugging / Performance instruction](http://equin.localhost:9000/pages/page/block-76280bce-efc5-4bd5-ad07-c578636c19b9) method, don't jump
 to the cost axis ("parallelize/cache the git op") yet. The @parcel watcher
 (`watch-edited-files.ts`) recomputes on **every** fs event (debounced 200 ms, ceiling 2000 ms) and
 its unchanged-result early-return happens **after** paying the full ~1.3 s git compute (`recompute()`

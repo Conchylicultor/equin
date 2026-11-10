@@ -130,7 +130,7 @@ Legend: ✅ confirmed with data · ❌ discarded (with reason) · 🔬 open / ne
   resources. Layered fix: **boundary invariant** (trigger never invalidates on zero rows) + **origin
   cure** (fix the poller); persist-skip + one-time `VACUUM FULL` demoted to defense-in-depth.
   Extracted the method into the mandatory
-  [`perfs-investigation`](../../.claude/skills/perfs-investigation/SKILL.md) skill. **No code changes
+  [Debugging / Performance instruction](http://equin.localhost:9000/pages/page/block-76280bce-efc5-4bd5-ad07-c578636c19b9) page. **No code changes
   — handed off for implementation.**
 
 - **2026-06-29 (5) — [the layered fix implemented (boundary invariant + origin cure)](./archive/2026-06-29-noop-churn-fix-implemented.md).**

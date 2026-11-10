@@ -5,7 +5,7 @@
 changes** — handed off for an agent to implement the layered fix. Fix direction in
 `research/2026-06-29-global-noop-statement-invalidation-churn.md`.
 **Method note:** this session also extracted the investigation methodology into the
-[`perfs-investigation`](../../.claude/skills/perfs-investigation/SKILL.md) skill — the method
+[Debugging / Performance instruction](http://equin.localhost:9000/pages/page/block-76280bce-efc5-4bd5-ad07-c578636c19b9) page — the method
 that catches the very mistake the first three sessions (and this session's own first plan) made.
 
 ## TL;DR
@@ -91,5 +91,5 @@ Full plan: `research/2026-06-29-global-noop-statement-invalidation-churn.md`. Tw
 
 Each landed on *where time was spent*, never *what made the work happen so often* — they applied
 the sufficiency gate (or not even that) and skipped the legitimacy gate. That is now encoded as
-enforced phases + stopping gates in the [`perfs-investigation`](../../.claude/skills/perfs-investigation/SKILL.md)
+enforced phases + stopping gates in the [Debugging / Performance instruction](http://equin.localhost:9000/pages/page/block-76280bce-efc5-4bd5-ad07-c578636c19b9)
 skill, cross-linked as MANDATORY from this directory's `CLAUDE.md`.

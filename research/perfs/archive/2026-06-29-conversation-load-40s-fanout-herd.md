@@ -12,7 +12,7 @@
 **Status:** findings only — root cause confirmed beyond doubt (three converging lines).
 **No code changes.** Names fix altitudes; awaiting decision before any fix.
 **Trigger:** "Sometimes, loading a conversation takes 40+ secs." Started a fresh
-investigation per the [`perfs-investigation`](../../.claude/skills/perfs-investigation/SKILL.md)
+investigation per the [Debugging / Performance instruction](http://equin.localhost:9000/pages/page/block-76280bce-efc5-4bd5-ad07-c578636c19b9)
 method (re-validate, don't inherit).
 
 ## TL;DR

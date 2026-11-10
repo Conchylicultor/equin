@@ -5,7 +5,7 @@ affordances) blocks the UI spinner for a long time before the conversation pane 
 Observed **`POST /api/conversations` = 12.97 s** in a single live sample on `singularity`;
 the uncontended floor is **~3.8 s**. The launch is perceived as "very slow".
 
-> **Method:** follow the [`perfs-investigation`](../../.claude/skills/perfs-investigation/SKILL.md)
+> **Method:** follow the [Debugging / Performance instruction](http://equin.localhost:9000/pages/page/block-76280bce-efc5-4bd5-ad07-c578636c19b9)
 > skill. This doc is the living session log + Causes checklist for this issue. Status stays
 > **(Ongoing)** — a hotspot and a *sufficient* cause are named, but no fix has landed or been
 > re-validated on data.
