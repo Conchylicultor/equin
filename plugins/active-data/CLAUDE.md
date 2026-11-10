@@ -147,8 +147,8 @@ Behavior:
   - Contributes:
     - `MarkdownEnhancerSlot`
     - `InlineTextWalkerSlot`
-  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/markdown` ×6
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/markdown` ×7
     - `primitives/text-editor/inline-chip` ×5
     - `primitives/inline-text` ×4
     - `infra/endpoints` ×2

@@ -1,4 +1,10 @@
-import { createContext, useContext, useMemo, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  type ReactNode,
+} from "react";
 import type { Components, Options } from "react-markdown";
 
 /** Remark plugins an enhancer adds to the parse — see {@link MarkdownEnhancement.remarkPlugins}. */
@@ -55,4 +61,18 @@ export function useMarkdownEnhancement(
         : parent.remarkPlugins,
     };
   }, [parent, addition]);
+}
+
+/**
+ * The enhancers' transforms as one function, for a custom markdown element
+ * that renders words of the markdown as its children (an inline tag the remark
+ * pass made): the walkers leave a custom component opaque, so the element runs
+ * them on its own children — as the base `p` / `li` / `td` do.
+ */
+export function useMarkdownTransform(): (children: ReactNode) => ReactNode {
+  const { transforms } = useContext(ctx);
+  return useCallback(
+    (children: ReactNode) => transforms.reduce((acc, fn) => fn(acc), children),
+    [transforms],
+  );
 }

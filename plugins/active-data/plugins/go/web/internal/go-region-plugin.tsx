@@ -9,9 +9,12 @@ import { RAIL_WIDTH, setRails, type RailBox } from "./go-rails";
 // Painted onto the editor's own DOM — classes and the root's background, never
 // nodes — so the draft's text, and therefore what is sent, is untouched. The
 // same look the reply draws a Go in; the words keep their colour.
-// An inline region wears the reply's inline Go box (`GO_INLINE_BOX`).
-const INLINE_CLASSES = [
-  ...GO_INLINE_BOX.split(" "),
+// An inline region wears the reply's inline Go box (`GO_INLINE_BOX`) on each of
+// its nodes — a chip splits the words into several — and only the first opens
+// it (left hairline, rounded corner), so they read as ONE box up to the ✕ cap.
+const INLINE_CLASSES = GO_INLINE_BOX.split(" ");
+const INLINE_OPEN_CLASSES = [
+  ...INLINE_CLASSES,
   "border-l",
   "rounded-l-inline-code",
 ];
@@ -96,8 +99,12 @@ export function GoRegionPlugin() {
     for (const [el, classes] of marked.current) el.classList.remove(...classes);
     marked.current = [];
     for (const region of regions.current) {
-      const classes = region.block ? BLOCK_TEXT_CLASSES : INLINE_CLASSES;
-      for (const key of region.inner) {
+      for (const [i, key] of region.inner.entries()) {
+        const classes = region.block
+          ? BLOCK_TEXT_CLASSES
+          : i === 0
+            ? INLINE_OPEN_CLASSES
+            : INLINE_CLASSES;
         const el = editor.getElementByKey(key);
         if (!el) continue;
         if (classes.length > 0) el.classList.add(...classes);

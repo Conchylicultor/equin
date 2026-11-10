@@ -9,6 +9,7 @@ export {
 export {
   MarkdownEnhancementContext,
   useMarkdownEnhancement,
+  useMarkdownTransform,
 } from "./internal/enhancement-context";
 export type {
   MarkdownEnhancement,

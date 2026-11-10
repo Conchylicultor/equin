@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { z } from "zod";
+import { useMarkdownTransform } from "@plugins/primitives/plugins/markdown/web";
 import { ActiveData } from "../slots";
 
 const AttrsSchema = z.record(z.string(), z.string());
@@ -7,8 +8,10 @@ const AttrsSchema = z.record(z.string(), z.string());
 /**
  * The markdown element {@link remarkInlineTags} made from an inline tag: looks
  * the tag's `inline` renderer up in the registry and hands it the rendered
- * markdown between the tags. Reads the registry itself, never a prop — the
- * markdown renderer memoizes its whole element (see code-chain).
+ * markdown between the tags — with the enhancers' transforms run on it, since
+ * they leave a custom element opaque (so a `task-…` inside still chips). Reads
+ * the registry itself, never a prop — the markdown renderer memoizes its whole
+ * element (see code-chain).
  */
 export function ActiveDataInlineTag({
   children,
@@ -22,6 +25,7 @@ export function ActiveDataInlineTag({
   "data-attrs": string;
 }) {
   const contributions = ActiveData.Tag.useContributions();
+  const transform = useMarkdownTransform();
   const contrib = contributions.find(
     (c) => c.display === "block" && c.tag === tag && c.inline,
   );
@@ -38,7 +42,7 @@ export function ActiveDataInlineTag({
       content={content}
       attrs={AttrsSchema.parse(JSON.parse(attrs))}
     >
-      {children}
+      {transform(children)}
     </found.Inline>
   );
 }

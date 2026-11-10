@@ -74,6 +74,7 @@ Design rationale lives in:
     - `nodeToText`
     - `useMarkdownEnhancement`
     - `useMarkdownLoaded`
+    - `useMarkdownTransform`
 - Cross-plugin:
   - Uses tokens: 23 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/density` ×9
