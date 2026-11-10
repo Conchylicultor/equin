@@ -17,7 +17,6 @@ import {
   DismissReplySchema,
   type HelloReply,
   TurnReplySchema,
-  USAGE_LIMIT_ERROR,
 } from "../../core";
 import {
   continueRelaunchOptions,
@@ -490,14 +489,19 @@ async function waitForCliInitialize(
 }
 
 /**
- * An agent whose last turn stopped at its account's usage limit keeps that
- * account until its process restarts (the launch picks the account). So before
- * a turn reaches it, restart it on the session's end when a launch now would
- * pick another account — every turn (typed, Resume, Resume all) carries on
- * where an account with room is. When none has room, the turn goes to the
- * agent as is and the CLI answers with its limit notice again. Any other API
- * error (a server error, a lost connection) is not the account's: the turn
- * goes to the same agent.
+ * A running agent keeps the account it started on until its process restarts
+ * (the launch picks the account). So before a turn reaches an idle agent,
+ * restart it on its session's end when a launch now would pick another
+ * account — the user switched account, or auto-switch left a spent one —
+ * so every turn (typed, Resume, Resume all) runs where a launch runs now.
+ * When no account has room, the launch account is the agent's own: the turn
+ * goes to it as is and the CLI answers with its limit notice.
+ *
+ * Not only after the agent's own turn hit the limit: an agent idle since
+ * before its account ran out (waiting on the user) would otherwise take the
+ * user's next message on the spent account, answer with the limit notice, and
+ * move only on Resume (2026-11-11). An agent mid-turn or with background
+ * tasks in flight is never restarted under them; the turn goes to it as is.
  *
  * Which account the agent is on is read from its own pid file, never from the
  * stop row's copy: a stale copy naming the launch account would keep the
@@ -505,11 +509,10 @@ async function waitForCliInitialize(
  * (conv-1793965643-wr9rnk, 2026-11-10). An agent not running has nothing to
  * move — its next launch picks the account.
  */
-async function moveOffSpentAccount(id: string): Promise<void> {
+async function moveToLaunchAccount(id: string): Promise<void> {
   await catchUpNow(id);
   const row = await currentAgentRow(id);
-  if (row?.stopError !== USAGE_LIMIT_ERROR || !row.sessionId || row.working)
-    return;
+  if (!row?.sessionId || row.working || row.backgroundTasks > 0) return;
   const agent = await runningAgentAccount(id);
   if (agent.kind === "not-running") return;
   if ((await nextLaunchAccount()) === agent.account) return;
@@ -523,7 +526,7 @@ async function moveOffSpentAccount(id: string): Promise<void> {
 }
 
 async function sendTurn(id: string, turn: OutgoingTurn): Promise<void> {
-  await moveOffSpentAccount(id);
+  await moveToLaunchAccount(id);
   await commandAgent(
     id,
     { type: "turn", turnId: turn.turnId, text: turn.text },

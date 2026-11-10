@@ -7,8 +7,8 @@ import {
 } from "../../core";
 
 // Resume: one ordinary turn per conversation, whatever API error stopped it.
-// The sdk runtime's send moves an agent stopped at its account's usage limit
-// onto the account a launch picks now before typing it, so nothing here knows
+// The sdk runtime's send moves an idle agent running on another account than
+// the one a launch picks now onto that account before typing it, so nothing here knows
 // about accounts or kinds of failure. One at a time: each
 // restart is a process start, and a failure is told per conversation rather
 // than ending the rest.
