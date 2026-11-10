@@ -33,7 +33,6 @@ import type { Locator, Page, Request, WebSocket } from "playwright";
 import { pickFromLauncher } from "@plugins/apps-core/plugins/app-launcher/e2e";
 import {
   arg,
-  boot,
   pathUrl,
   report,
   snap,
@@ -46,6 +45,7 @@ import {
   AGENT_MANAGER_LOCATION,
   demoPath,
   onDemoPage,
+  bootDemo,
 } from "./internal/demo-pages";
 
 const OUT = arg("out") ?? "/tmp/demo-keyboard-party";
@@ -186,7 +186,7 @@ await withBrowser(async (h) => {
 
   /** /demo → launcher → Tap Tap Party; `pass` names the run. */
   const openParty = async (pass: string): Promise<void> => {
-    await boot(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
+    await bootDemo(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
       marker: 'button:has-text("Conversations")',
     });
     // Counted from once the page's OWN chrome has booted (its deferred tier

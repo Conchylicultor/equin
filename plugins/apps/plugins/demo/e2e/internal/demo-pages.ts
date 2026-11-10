@@ -8,6 +8,7 @@ import {
   demoAtRoute,
 } from "@plugins/apps/plugins/demo/plugins/shell/core";
 import {
+  boot,
   waitFor,
   type Report,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
@@ -30,6 +31,29 @@ export const ROOT_PAGES = [
  * workspace scenario's route, `website/demos/workspace`'s `scenario.ts`).
  */
 export const AGENT_MANAGER_LOCATION = "/agents/c/conv-demo-practice-timer";
+
+/** The gate's button: a browser holding no demo data waits on it (`DemoScope`'s gate). */
+export const ENTER_DEMO = 'button:has-text("Enter equin")';
+
+/**
+ * Open the demo page at `url` and wait for `marker` — through the gate when
+ * it shows: a browser holding no demo data (every fresh e2e context) starts
+ * nothing until Enter equin; one that holds it starts at once.
+ */
+export async function bootDemo(
+  page: Page,
+  url: string,
+  opts: { marker: string; timeoutMs?: number },
+): Promise<void> {
+  const timeout = opts.timeoutMs ?? RENDER_TIMEOUT_MS;
+  await boot(page, url, {
+    marker: `${opts.marker}, ${ENTER_DEMO}`,
+    timeoutMs: timeout,
+  });
+  const gate = page.locator(ENTER_DEMO).first();
+  if (await gate.isVisible()) await gate.click();
+  await page.locator(opts.marker).first().waitFor({ timeout });
+}
 
 /**
  * The demo page at `location` inside the demo (an app-rooted URL,

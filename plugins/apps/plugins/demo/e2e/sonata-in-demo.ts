@@ -53,7 +53,6 @@ import {
 } from "@plugins/apps-core/plugins/app-launcher/e2e";
 import {
   arg,
-  boot,
   pathUrl,
   report,
   snap,
@@ -67,6 +66,7 @@ import {
   AGENT_MANAGER_LOCATION,
   demoPath,
   onDemoPage,
+  bootDemo,
 } from "./internal/demo-pages";
 
 const OUT = arg("out") ?? "/tmp/demo-sonata";
@@ -243,7 +243,7 @@ await withBrowser(async (h) => {
     pass: string,
     { spaceFirst }: { spaceFirst: boolean },
   ): Promise<void> => {
-    await boot(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
+    await bootDemo(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
       marker: 'button:has-text("Conversations")',
     });
     await waitForNetworkIdle(page);

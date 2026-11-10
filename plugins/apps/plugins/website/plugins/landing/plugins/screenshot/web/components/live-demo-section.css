@@ -1,0 +1,37 @@
+/* The homepage's live demo: equin itself, in a frame where the desktop
+   picture was. Its frame grows in place when the visitor enters the demo —
+   out of the reading measure, nearly as wide and as tall as the window, the
+   page below moving down. Maximized, the component draws it through a
+   SurfaceOverlay instead (the tab's surface, above the site's header). */
+.website-demo {
+  margin: 0;
+  /* Where a reveal stops when the frame grows: GROWN_GAP below the page's
+     floating header (the pane's scroll padding). */
+  scroll-margin-top: 24px;
+}
+.website-demo-frame {
+  position: relative;
+  aspect-ratio: 16 / 9.4;
+  overflow: hidden;
+  border-radius: 1.125rem;
+  border: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
+  background: var(--background);
+  transition:
+    width 0.6s cubic-bezier(0.2, 0.8, 0.2, 1),
+    height 0.6s cubic-bezier(0.2, 0.8, 0.2, 1),
+    margin-left 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+/* Sized by the component once it is measured (grown or not), so the growth
+   animates between two lengths. */
+.website-demo-frame.is-sized {
+  aspect-ratio: auto;
+}
+.website-demo-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-top: var(--space-md);
+  min-height: 2rem;
+  transition: margin 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}

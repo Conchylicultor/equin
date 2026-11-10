@@ -19,7 +19,6 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import type { CDPSession } from "playwright";
 import {
   arg,
-  boot,
   flag,
   numArg,
   pathUrl,
@@ -32,6 +31,7 @@ import {
   MARKER,
   RENDER_TIMEOUT_MS,
   waitForStorageReleased,
+  bootDemo,
 } from "./internal/demo-pages";
 
 const OUT = arg("out");
@@ -156,7 +156,7 @@ await withBrowser(async (h) => {
   const url = pathUrl(demoPath(AGENT_MANAGER_LOCATION));
 
   // A first visit: the data stored, the assets in the HTTP cache.
-  await boot(page, url, { marker: MARKER, timeoutMs: RENDER_TIMEOUT_MS });
+  await bootDemo(page, url, { marker: MARKER, timeoutMs: RENDER_TIMEOUT_MS });
   await page.goto(pathUrl("/api/health"));
   await waitForStorageReleased(r, page, "the first visit's worker ended");
 

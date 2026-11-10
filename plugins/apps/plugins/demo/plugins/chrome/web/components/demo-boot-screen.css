@@ -1,0 +1,85 @@
+/* The demo's boot screen: the logo's own two colours, lit softly from the top
+   corners over the surface, behind the logo, the gate's button and the bar.
+   The colours are the logo's (`ui/logo`'s LOGO.gradient, set on the element
+   as --demo-boot-from / --demo-boot-to), never a hex here; the theme's
+   primary stands in should a page draw this without them. */
+.demo-boot {
+  position: relative;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-lg);
+  overflow: hidden;
+  background:
+    radial-gradient(45% 55% at 22% 0%, color-mix(in oklab, var(--demo-boot-from, var(--primary)) 22%, transparent), transparent 70%),
+    radial-gradient(45% 55% at 82% 8%, color-mix(in oklab, var(--demo-boot-to, var(--primary)) 20%, transparent), transparent 70%),
+    radial-gradient(60% 50% at 50% 115%, color-mix(in oklab, var(--demo-boot-to, var(--primary)) 12%, transparent), transparent 70%),
+    var(--background);
+}
+/* A hairline of light along the top edge. */
+.demo-boot::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, color-mix(in oklab, var(--foreground) 18%, transparent) 30%, color-mix(in oklab, var(--foreground) 18%, transparent) 70%, transparent);
+}
+.demo-boot-body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(380px, 100%);
+}
+.demo-boot-logo {
+  width: clamp(88px, 11vw, 132px);
+  height: clamp(88px, 11vw, 132px);
+}
+/* The button and the bar share one slot: Enter turns into the bar in place. */
+.demo-boot-slot {
+  margin-top: clamp(28px, 4vw, 48px);
+  width: 100%;
+  min-height: 72px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.demo-boot-enter {
+  background: var(--foreground);
+  color: var(--background);
+}
+.demo-boot-enter:hover {
+  background: color-mix(in oklab, var(--foreground) 88%, var(--background));
+}
+.demo-boot-sub {
+  margin-top: 14px;
+}
+.demo-boot-bar {
+  width: 100%;
+  animation: demo-boot-in 0.2s ease-out;
+}
+@keyframes demo-boot-in {
+  from { opacity: 0; transform: translateY(3px); }
+}
+.demo-boot-track {
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: color-mix(in oklab, var(--foreground) 10%, transparent);
+}
+.demo-boot-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--demo-boot-from, var(--primary)), var(--demo-boot-to, var(--primary)));
+  transition: width 0.2s linear;
+}
+.demo-boot-under {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+  font-variant-numeric: tabular-nums;
+}

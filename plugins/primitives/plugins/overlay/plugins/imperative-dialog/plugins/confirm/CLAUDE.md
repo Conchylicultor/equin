@@ -76,7 +76,7 @@ appears (YAGNI).
   - Exports (values): `useConfirmDialog`
 - Cross-plugin:
   - Imported by:
-    - `apps/demo/shell`
+    - `apps/demo/chrome`
     - `apps/deploy/deploy-history/rollback`
     - `apps/places/places-map`
     - `apps/prototypes/canvas`

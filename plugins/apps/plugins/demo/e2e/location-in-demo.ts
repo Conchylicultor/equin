@@ -9,18 +9,18 @@
  *     demo's moves are not the page's Back steps); a reload reopens the demo
  *     on that same page;
  *  3. ⌘-clicks the launcher mark (a link to the home app): a NEW tab opens the
- *     demo full screen there (`/demo/at/home;full=1`, no caption bar) — not
+ *     demo maximized there (`/demo/at/home;full=1`, no caption bar) — not
  *     the real app — and its Pages lists the page the first tab created (both
- *     tabs on the demo's one SharedWorker); full screen, the demo's moves are
+ *     tabs on the demo's one SharedWorker); maximized, the demo's moves are
  *     the tab's history: Back from Pages returns the demo to Home, Forward
  *     to Pages;
- *  4. Full screen, then Exit full screen (revealed by the pointer at the top
+ *  4. Maximize, then Restore (revealed by the pointer at the top
  *     edge): the URL gains and loses `;full=1`, and the embed stays the same
  *     element throughout (the demo never remounts);
- *  5. Full screen again, then another page from the sidebar: Back reopens
- *     the created page, a second Back leaves full screen for the frame, Forward comes
- *     back full screen — the same embed throughout;
- *  6. the desktop, full screen: Pages then Sonata from the shelf, each a
+ *  5. Maximize again, then another page from the sidebar: Back reopens
+ *     the created page, a second Back leaves maximized for the frame, Forward comes
+ *     back maximized — the same embed throughout;
+ *  6. the desktop, maximized: Pages then Sonata from the shelf, each a
  *     window; Back focuses the Pages window again and Forward the Sonata one
  *     — the URL following — with no window added or turned into another.
  *
@@ -33,7 +33,6 @@
 import type { Page, Request } from "playwright";
 import {
   arg,
-  boot,
   pathUrl,
   report,
   snap,
@@ -49,6 +48,7 @@ import {
   onDemoPage,
   RENDER_TIMEOUT_MS,
   showsApp,
+  bootDemo,
 } from "./internal/demo-pages";
 
 const OUT = arg("out") ?? "/tmp/demo-location";
@@ -151,7 +151,7 @@ await withBrowser(async (h) => {
   const TITLE = `Here ${Date.now().toString(36)}`;
 
   // ── 1. /demo starts on Home ───────────────────────────────────────────
-  await boot(page, pathUrl("/demo"), { marker: '[data-app-embed="home"]' });
+  await bootDemo(page, pathUrl("/demo"), { marker: '[data-app-embed="home"]' });
   await showsApp(r, page, "the demo starts on Home (the app gallery)", "home");
   await urlSettles(
     r,
@@ -192,7 +192,7 @@ await withBrowser(async (h) => {
   gate.on = true;
   await snap(page, OUT, "2-reloaded");
 
-  // ── 3. ⌘-click → a new tab, the demo full screen at that place ─────────
+  // ── 3. ⌘-click → a new tab, the demo maximized at that place ─────────
   await listed(r, page, "the sidebar lists the created page", TITLE, "some");
   const opened = context.waitForEvent("page", { timeout: RENDER_TIMEOUT_MS });
   // The launcher mark is a link to the home app: ⌘-click opens it in a new
@@ -208,11 +208,11 @@ await withBrowser(async (h) => {
   await urlSettles(
     r,
     tab,
-    "the new tab opens the demo at Home, full screen",
+    "the new tab opens the demo at Home, maximized",
     (p) => p === "/demo/at/home;full=1",
   );
   await showsApp(r, tab, "the new tab's demo shows Home", "home");
-  r.ok("the new tab is full screen: no caption bar", !(await framed(tab)));
+  r.ok("the new tab is maximized: no caption bar", !(await framed(tab)));
   // The new tab's page booted on its own: its chrome's reads settle first.
   await waitForNetworkIdle(tab);
   tabGate.on = true;
@@ -229,42 +229,42 @@ await withBrowser(async (h) => {
   await urlSettles(
     r,
     tab,
-    "the new tab's URL follows it, still full screen",
+    "the new tab's URL follows it, still maximized",
     (p) => p.startsWith("/demo/at/pages") && p.endsWith(";full=1"),
   );
   await snap(tab, OUT, "3-new-tab");
-  // Full screen, the demo is the tab: Back and Forward step through its moves.
+  // Maximized, the demo is the tab: Back and Forward step through its moves.
   await tab.goBack();
   await urlSettles(
     r,
     tab,
-    "full screen, Back returns the URL to Home",
+    "maximized, Back returns the URL to Home",
     (p) => p === "/demo/at/home;full=1",
   );
-  await showsApp(r, tab, "full screen, Back returns the demo to Home", "home");
+  await showsApp(r, tab, "maximized, Back returns the demo to Home", "home");
   await tab.goForward();
   await urlSettles(
     r,
     tab,
-    "full screen, Forward returns the URL to Pages",
+    "maximized, Forward returns the URL to Pages",
     (p) => p.startsWith("/demo/at/pages") && p.endsWith(";full=1"),
   );
-  await showsApp(r, tab, "full screen, Forward reopens Pages", "pages");
+  await showsApp(r, tab, "maximized, Forward reopens Pages", "pages");
   await tab.close();
 
-  // ── 4. Full screen and back, the embed never remounting ────────────────
+  // ── 4. Maximize and back, the embed never remounting ────────────────
   await tagEmbed(page);
-  await page.getByRole("button", { name: "Full screen" }).first().click();
-  await urlSettles(r, page, "Full screen: the URL gains ;full=1", (p) =>
+  await page.getByRole("button", { name: "Maximize" }).first().click();
+  await urlSettles(r, page, "Maximize: the URL gains ;full=1", (p) =>
     p.endsWith(";full=1"),
   );
-  r.ok("Full screen: no caption bar", !(await framed(page)));
-  r.ok("Full screen: the same embed (no remount)", await sameEmbed(page));
-  const exit = page.getByRole("button", { name: "Exit full screen" });
-  const strip = page.locator("[data-demo-exit-full-screen]");
+  r.ok("Maximize: no caption bar", !(await framed(page)));
+  r.ok("Maximize: the same embed (no remount)", await sameEmbed(page));
+  const exit = page.getByRole("button", { name: "Restore" });
+  const strip = page.locator("[data-demo-restore]");
   const box = await strip.boundingBox();
   r.ok(
-    "Full screen: the exit strip sits at the top edge",
+    "Maximize: the exit strip sits at the top edge",
     box !== null && box.y < 4,
     JSON.stringify(box),
   );
@@ -272,26 +272,21 @@ await withBrowser(async (h) => {
   await exit.waitFor({ state: "visible", timeout: RENDER_TIMEOUT_MS });
   await snap(page, OUT, "4-full-screen");
   await exit.click();
-  await urlSettles(
-    r,
-    page,
-    "Exit full screen: the URL loses ;full=1",
-    (p) => p === at,
-  );
-  r.ok("Exit full screen: framed again", await framed(page));
-  r.ok("Exit full screen: still the same embed", await sameEmbed(page));
+  await urlSettles(r, page, "Restore: the URL loses ;full=1", (p) => p === at);
+  r.ok("Restore: framed again", await framed(page));
+  r.ok("Restore: still the same embed", await sameEmbed(page));
   await showsPage(r, page, "the page is still open", TITLE);
 
-  // ── 5. Back / Forward full screen, and out of it ──────────────────────
-  await page.getByRole("button", { name: "Full screen" }).first().click();
-  await urlSettles(r, page, "Full screen again", (p) => p === `${at};full=1`);
+  // ── 5. Back / Forward maximized, and out of it ──────────────────────
+  await page.getByRole("button", { name: "Maximize" }).first().click();
+  await urlSettles(r, page, "Maximize again", (p) => p === `${at};full=1`);
   // Another page of the sidebar: a move inside Pages.
   await embedRoot(page).getByText("Journal", { exact: true }).first().click();
-  await showsPage(r, page, "full screen, the sidebar opens Journal", "Journal");
+  await showsPage(r, page, "maximized, the sidebar opens Journal", "Journal");
   await urlSettles(
     r,
     page,
-    "full screen, the URL follows to Journal",
+    "maximized, the URL follows to Journal",
     (p) =>
       p.startsWith("/demo/at/pages/") &&
       p.endsWith(";full=1") &&
@@ -301,26 +296,26 @@ await withBrowser(async (h) => {
   await urlSettles(
     r,
     page,
-    "Back: the URL returns to the page, full screen",
+    "Back: the URL returns to the page, maximized",
     (p) => p === `${at};full=1`,
   );
   await showsPage(r, page, "Back: the demo reopens the page", TITLE);
-  r.ok("Back: still full screen", !(await framed(page)));
+  r.ok("Back: still maximized", !(await framed(page)));
   await page.goBack();
-  await urlSettles(r, page, "Back again: out of full screen", (p) => p === at);
+  await urlSettles(r, page, "Back again: out of maximized", (p) => p === at);
   r.ok("Back again: framed", await framed(page));
   await page.goForward();
   await urlSettles(
     r,
     page,
-    "Forward: full screen again",
+    "Forward: maximized again",
     (p) => p === `${at};full=1`,
   );
   await showsPage(r, page, "Forward: the page is still open", TITLE);
   r.ok("Back / Forward: still the same embed", await sameEmbed(page));
   await snap(page, OUT, "5-back-forward");
 
-  // ── 6. the desktop, full screen: Back / Forward move between windows ──
+  // ── 6. the desktop, maximized: Back / Forward move between windows ──
   gate.on = false;
   await page.goto(pathUrl("/demo/at/desktop;full=1"));
   await waitForNetworkIdle(page);

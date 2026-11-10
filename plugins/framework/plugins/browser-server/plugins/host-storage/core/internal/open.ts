@@ -5,10 +5,9 @@
 // whether it is `fresh` (so the caller seeds it, or starts empty), `booted()`
 // once the host is up on it, `close()` and `wipe()`.
 //
-// A persistent storage `<name>` is, in IndexedDB:
-// - `equin-host--<name>--db` — PGlite's data dir (`idb://…`);
-// - `equin-host--<name>--stores` — the host stores' entries, keyed
-//   [store, key], and the lifecycle record (`meta`/`lifecycle`).
+// A persistent storage `<name>` is, in IndexedDB, laid out as `stored`'s
+// `layout.ts` says (PGlite's data dir and the stores' database, holding the
+// lifecycle record) — the leaf a page reads to know whether it is there.
 //
 // A storage may declare a starting SNAPSHOT (`./snapshot.ts`, built once by the
 // build): a fresh storage then loads it — the database's data directory and
@@ -35,6 +34,15 @@
 //   it (`HostStoreOptions.shiftTime`), and one not opened on that boot owes it
 //   until it is.
 
+import {
+  ENTRIES_STORE,
+  LIFECYCLE_KEY,
+  META_STORE,
+  storagePrefix,
+  storesDbName,
+  type Lifecycle,
+} from "@plugins/framework/plugins/browser-server/plugins/host-storage/plugins/stored/core";
+import { reportDataProgress } from "@plugins/framework/plugins/browser-server/core";
 import { idbDelete, idbDone, idbOpen, idbRequest } from "./idb";
 import { StorageNewerThanCodeError } from "./errors";
 import type {
@@ -106,20 +114,6 @@ export interface OpenedHostStorage extends HostStorage {
   wipe(): Promise<void>;
 }
 
-interface Lifecycle {
-  state: "seeding" | "ready";
-  migrations: string[];
-  snapshot?: { version: string; takenAt: number };
-  /** Store name → the shift (ms) its loaded values still owe. */
-  owedShift?: Record<string, number>;
-}
-
-const ENTRIES = "entries";
-const META = "meta";
-const LIFECYCLE_KEY = "lifecycle";
-
-const prefixOf = (name: string): string => `equin-host--${name}--`;
-
 export async function openHostStorage(
   spec: HostStorageSpec,
 ): Promise<OpenedHostStorage> {
@@ -169,23 +163,24 @@ async function openPersistent(
   start: HostStorageStart | undefined,
   ownership: Ownership,
 ): Promise<OpenedHostStorage> {
-  const prefix = prefixOf(name);
-  const storesName = `${prefix}stores`;
-  let db = await idbOpen(storesName, [ENTRIES, META]);
+  const prefix = storagePrefix(name);
+  const storesName = storesDbName(name);
+  let db = await idbOpen(storesName, [ENTRIES_STORE, META_STORE]);
 
   const readLifecycle = async (): Promise<Lifecycle | undefined> =>
     (await idbRequest(
-      db.transaction(META).objectStore(META).get(LIFECYCLE_KEY),
+      db.transaction(META_STORE).objectStore(META_STORE).get(LIFECYCLE_KEY),
     )) as Lifecycle | undefined;
 
   const wipeStored = async (): Promise<void> => {
     db.close();
     await deleteAll(prefix, storesName);
-    db = await idbOpen(storesName, [ENTRIES, META]);
+    db = await idbOpen(storesName, [ENTRIES_STORE, META_STORE]);
   };
   /** The snapshot `start` names, loaded and checked against this code's migrations. */
   const loadSnapshot = async (ref: HostSnapshotRef): Promise<HostSnapshot> => {
-    const snapshot = decodeHostSnapshot(await ref.load());
+    // The pages waiting for the host see the download as it arrives.
+    const snapshot = decodeHostSnapshot(await ref.load(reportDataProgress));
     const unknown = snapshot.migrations.filter((m) => !migrations.includes(m));
     const missing = migrations.filter((m) => !snapshot.migrations.includes(m));
     if (unknown.length > 0 || missing.length > 0) {
@@ -201,8 +196,8 @@ async function openPersistent(
   let current!: Lifecycle;
   const writeLifecycle = async (next: Lifecycle): Promise<void> => {
     current = next;
-    const tx = db.transaction(META, "readwrite");
-    tx.objectStore(META).put(next, LIFECYCLE_KEY);
+    const tx = db.transaction(META_STORE, "readwrite");
+    tx.objectStore(META_STORE).put(next, LIFECYCLE_KEY);
     await idbDone(tx);
   };
 
@@ -277,8 +272,8 @@ async function openPersistent(
       const owedShift: Record<string, number> = {};
       // The record, marked `seeding`, and the entries, in one transaction: a
       // tab closed before `booted()` leaves `seeding`, wiped next open.
-      const tx = db.transaction([ENTRIES, META], "readwrite");
-      const entries = tx.objectStore(ENTRIES);
+      const tx = db.transaction([ENTRIES_STORE, META_STORE], "readwrite");
+      const entries = tx.objectStore(ENTRIES_STORE);
       for (const [storeName, values] of Object.entries(snapshot.stores)) {
         owedShift[storeName] = shiftMs;
         const map = new Map<string, unknown>();
@@ -297,13 +292,13 @@ async function openPersistent(
         },
         owedShift,
       };
-      tx.objectStore(META).put(current, LIFECYCLE_KEY);
+      tx.objectStore(META_STORE).put(current, LIFECYCLE_KEY);
       await idbDone(tx);
       databaseStart = { from: "snapshot", dataDir: snapshot.database, shiftMs };
     } else {
       if (origin.kind === "empty") await writeLifecycle(current);
-      const tx = db.transaction(ENTRIES);
-      const store = tx.objectStore(ENTRIES);
+      const tx = db.transaction(ENTRIES_STORE);
+      const store = tx.objectStore(ENTRIES_STORE);
       const [keys, values] = await Promise.all([
         idbRequest(store.getAllKeys()),
         idbRequest(store.getAll()),
@@ -334,12 +329,12 @@ async function openPersistent(
       );
     }
     const tx = db.transaction(
-      opts.meta === true ? [ENTRIES, META] : ENTRIES,
+      opts.meta === true ? [ENTRIES_STORE, META_STORE] : ENTRIES_STORE,
       "readwrite",
     );
     apply(
-      tx.objectStore(ENTRIES),
-      opts.meta === true ? tx.objectStore(META) : null,
+      tx.objectStore(ENTRIES_STORE),
+      opts.meta === true ? tx.objectStore(META_STORE) : null,
     );
     const done = idbDone(tx);
     pending.add(done);

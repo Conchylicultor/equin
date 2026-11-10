@@ -296,12 +296,14 @@ data and seed; no app folder changes:
     - `demoWorktreePath`
     - `externalHosts`
     - `PRACTICE_TIMER_PAGE_WORK`
+    - `WORKSPACE_DEMO_STORAGE`
     - `workspaceDemo`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
   - Imported by:
     - `apps/demo`
     - `apps/demo/shell`
+    - `apps/website/landing/screenshot`
 - Structure:
   - Non-standard folders: `data/`
 

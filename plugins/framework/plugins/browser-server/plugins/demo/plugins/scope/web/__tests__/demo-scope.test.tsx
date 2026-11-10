@@ -167,6 +167,7 @@ const scenarioOf = (
     module: "@browser-host/test-host",
     start: channelHost(boot),
   },
+  storage: null,
 });
 
 /** A `note` value the host serves, its text changeable and announced with `notify()`. */
@@ -355,6 +356,36 @@ describe("<DemoScope>", () => {
       id: "x",
       doubled: 6,
     });
+  });
+
+  it("with a boot render and no stored data, nothing starts before the gate's enter", async () => {
+    const scenario = scenarioOf();
+    const start = vi.fn(scenario.host.start);
+    const gated = { ...scenario, host: { ...scenario.host, start } };
+    const seen: Record<string, unknown> = {};
+    let enter: (() => void) | null = null;
+    await renderAsync(
+      <PluginProvider plugins={PLUGINS}>
+        <DemoScope
+          scenario={gated}
+          boot={(state) => {
+            seen.boot = state.kind;
+            if (state.kind === "gate") enter = state.enter;
+            return null;
+          }}
+        >
+          <Probe
+            read={() => useLive(greeting, { who: "ada" })}
+            onRead={(r) => (seen.greeting = textOf(r))}
+          />
+        </DemoScope>
+      </PluginProvider>,
+    );
+    await waitFor(() => expect(seen.boot).toBe("gate"));
+    expect(start).not.toHaveBeenCalled();
+    act(() => enter!());
+    await waitFor(() => expect(seen.greeting).toBe("hello ada (demo)"));
+    expect(start).toHaveBeenCalledTimes(1);
   });
 
   it("a host whose boot throws reaches the error boundary", async () => {

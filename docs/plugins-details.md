@@ -1852,7 +1852,37 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `shell/notifications`
     - **`demo`** — Demo — a temporary sandbox app hosting the in-app demo (the Agent Manager on made-up data) while it is prototyped, before it ships on the website.
       - Plugins:
-        - **`shell`** — App shell for the Demo sandbox: registers the /demo app entry — equin rendered in-process on made-up data (DemoScope + AppEmbed over the workspace demo's browser host), starting on its home app (the app gallery). Where the visitor is inside the demo is the page's URL (/demo/at/<location>, e.g. /demo/at/agents/c/<id>), so a reload comes back to it; ;full=1 shows it full screen instead of framed under the caption bar (its Full screen button; a hover strip at the top edge exits), and a new browser tab opened from inside the demo opens it there, full screen, on the same data. Full screen, the demo is the tab: its moves are history entries (Back / Forward step through them, the embed following the URL); framed, they rewrite the current entry, so Back leaves the page. The /demo page's head script (DocumentHead.Fragment): starts the demo's browser host before the app boots, so its worker boots alongside the page's own bundle.
+        - **`chrome`** — The demo before it runs, drawn for <DemoScope boot>: the equin logo over the logo's own colours, then at the gate the Enter equin button (a first visit downloads nothing before it), and while the host starts one bar in the logo's gradient — what it is doing and how much it downloaded, weighed from the worker's progress (the starting data, then the plugins loaded). Also the demo's two controls: Reset demo (confirmed; the host wipes its data and every tab starts again from the story) and the Restore strip of a maximized demo (revealed by the pointer at the page's top edge). Shared by /demo and the website's demo band.
+          - Web:
+            - Uses:
+              - `framework/browser-server/demo/scope.useDemoHostControl`
+              - `primitives/css/pin.Pin`
+              - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.Button`
+              - `primitives/css/ui-kit.cn`
+              - `primitives/css/ui-kit.ControlSizeProvider`
+              - `primitives/hover-reveal.hoverRevealClass`
+              - `primitives/hover-reveal.useHoverReveal`
+              - `primitives/overlay/imperative-dialog/confirm.useConfirmDialog`
+              - `ui/icons.Icon`
+              - `ui/logo.Logo`
+            - Exports (values):
+              - `DemoBootScreen`
+              - `ResetDemoButton`
+              - `RestoreStrip`
+          - Cross-plugin:
+            - Uses tokens:
+              - `ui/tokens/color-palette --background`
+              - `ui/tokens/color-palette --foreground`
+              - `ui/tokens/color-palette --primary`
+              - `ui/tokens/density --space-lg`
+              - `ui/tokens/density --space-sm`
+              - `ui/tokens/density --space-xl`
+              - `ui/tokens/shape --spacing`
+            - Imported by:
+              - `apps/demo/shell`
+              - `apps/website/landing/screenshot`
+        - **`shell`** — App shell for the Demo sandbox: registers the /demo app entry — equin rendered in-process on made-up data (DemoScope + AppEmbed over the workspace demo's browser host), starting on its home app (the app gallery). Where the visitor is inside the demo is the page's URL (/demo/at/<location>, e.g. /demo/at/agents/c/<id>), so a reload comes back to it; ;full=1 shows it maximized instead of framed under the caption bar (its Maximize button; a hover strip at the top edge reveals Restore), and a new browser tab opened from inside the demo opens it there, maximized, on the same data. Maximized, the demo is the tab: its moves are history entries (Back / Forward step through them, the embed following the URL); framed, they rewrite the current entry, so Back leaves the page. The /demo page's head script (DocumentHead.Fragment): starts the demo's browser host before the app boots, so its worker boots alongside the page's own bundle.
           - Web:
             - Slots:
               - `start.actions`
@@ -1864,23 +1894,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Apps.App` "Demo" → `DemoLayout`
               - `Pane.Register` "demo-at"
               - `Pane.Register` "demo-start"
-            - Uses: 24 symbols — full list in [`plugins/apps/plugins/demo/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/demo/plugins/shell/REFERENCE.md)
+            - Uses: 22 symbols — full list in [`plugins/apps/plugins/demo/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/demo/plugins/shell/REFERENCE.md)
               - `apps-core` ×3
+              - `apps/demo/chrome` ×3
               - `primitives/pane` ×3
-              - `framework/browser-server/demo/scope` ×2
               - `primitives/css/ui-kit` ×2
-              - `primitives/hover-reveal` ×2
               - `apps-core/app-embed.AppEmbed`
+              - `framework/browser-server/demo/scope.DemoScope`
               - `layouts/full-pane.FullPane`
               - `primitives/bar.Bar`
               - `primitives/css/center.Center`
               - `primitives/css/inline.Inline`
-              - `primitives/css/pin.Pin`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/latest-ref.useLatestRef`
               - `primitives/loading.Loading`
-              - `primitives/overlay/imperative-dialog/confirm.useConfirmDialog`
               - `ui/icons.Icon`
           - Server:
             - Contributes: `DocumentHead.Fragment` "demo-prestart"
@@ -1901,10 +1929,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/color-palette --background`
               - `ui/tokens/density --space-lg`
-              - `ui/tokens/density --space-sm`
-              - `ui/tokens/density --space-xl`
               - `ui/tokens/shape --radius`
-              - `ui/tokens/shape --spacing`
             - Imported by: `apps/demo`
     - **`deploy`** — The Deploy task category: the category tasks filed from the Deploy app, such as a failed deploy's investigation, are grouped under.
       - Server:
@@ -11445,12 +11470,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `demoWorktreePath`
                   - `externalHosts`
                   - `PRACTICE_TIMER_PAGE_WORK`
+                  - `WORKSPACE_DEMO_STORAGE`
                   - `workspaceDemo`
               - Cross-plugin:
                 - Uses tokens: `ui/tokens/shadow --shadow`
                 - Imported by:
                   - `apps/demo`
                   - `apps/demo/shell`
+                  - `apps/website/landing/screenshot`
               - Structure:
                 - Non-standard folders: `data/`
         - **`improve`** — The website's Wish button: the header's call to action, a popover where a visitor describes a change to the page, watches a scripted replay of what equin would do with it, and files it as a prefilled GitHub issue.
@@ -11495,7 +11522,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --primary-text`
               - `ui/tokens/shape --spacing`
               - `ui/tokens/type-scale --font-weight-semibold`
-        - **`landing`** — Landing-page bands of the public website: the hero, the desktop screenshot, the three layers of equin, the story link, and the contact block.
+        - **`landing`** — Landing-page bands of the public website: the hero, the live demo, the three layers of equin, the story link, and the contact block.
           - Plugins:
             - **`contact`** — Getting in touch: the homepage's closing band — for anyone who wants to support the vision, the address in the sentence (copy on hover) and a Get in touch button that grows the card into a message form the site's server stores and emails on (sent, rate-limited and failed states said inline); for bug reports, feature requests and questions, GitHub issues.
               - Web:
@@ -11587,28 +11614,31 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/shape --radius`
                   - `ui/tokens/shape --spacing`
                   - `ui/tokens/type-scale --font-weight-semibold`
-            - **`screenshot`** — Landing screenshot band: a drawn picture of equin in desktop mode — the agent manager, a Pages document and Sonata breaking a song down into chords as three windows side by side on one surface — with its caption.
+            - **`screenshot`** — Landing demo band: equin itself, live, where the desktop picture was — its real server code in a worker on the workspace demo's data (DemoScope around AppEmbed), downloaded only when the visitor clicks Enter equin (a browser already holding the data starts it at once). Entering grows the frame in place, nearly as wide and tall as the window; once it runs, Maximize (the tab's surface, above the site; Restore at its top edge), Collapse / Expand and Reset demo sit under it.
               - Web:
-                - Contributes: `Website.Section` "Screenshot" → `ScreenshotSection`
+                - Contributes: `Website.Section` "Demo" → `LiveDemoSection`
                 - Uses:
+                  - `apps-core/app-embed.AppEmbed`
+                  - `apps/demo/chrome.DemoBootScreen`
+                  - `apps/demo/chrome.ResetDemoButton`
+                  - `apps/demo/chrome.RestoreStrip`
                   - `apps/website/shell.Website`
                   - `apps/website/shell.WebsiteBand`
-                  - `primitives/css/spacing.Stack`
+                  - `framework/browser-server/demo/scope.DemoBoot`
+                  - `framework/browser-server/demo/scope.DemoScope`
+                  - `primitives/css/inline.Inline`
                   - `primitives/css/text.Text`
+                  - `primitives/css/ui-kit.Button`
+                  - `primitives/css/ui-kit.cn`
+                  - `primitives/dom/element-size.useElementSize`
+                  - `primitives/dom/scroll-reveal.revealElement`
+                  - `primitives/overlay/surface-overlay.SurfaceOverlay`
+                  - `ui/icons.Icon`
               - Cross-plugin:
                 - Uses tokens:
-                  - `ui/tokens/chart --chart-1`
-                  - `ui/tokens/chart --chart-2`
                   - `ui/tokens/color-palette --background`
-                  - `ui/tokens/color-palette --border`
-                  - `ui/tokens/color-palette --card`
-                  - `ui/tokens/color-palette --destructive`
                   - `ui/tokens/color-palette --foreground`
-                  - `ui/tokens/color-palette --muted-foreground`
-                  - `ui/tokens/color-palette --primary`
-                  - `ui/tokens/color-palette --success`
-                  - `ui/tokens/color-palette --warning`
-                  - `ui/tokens/type-scale --font-weight-normal`
+                  - `ui/tokens/density --space-md`
             - **`story-link`** — Landing story-link band: the one quiet line between the layers and the contact block, offering the story page to a reader who wants the context behind the project.
               - Web:
                 - Contributes: `Website.Section` "Story link" → `StoryLinkSection`
@@ -12071,7 +12101,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AppEmbedLeave`
         - Exports (values): `AppEmbed`
       - Cross-plugin:
-        - Imported by: `apps/demo/shell`
+        - Imported by:
+          - `apps/demo/shell`
+          - `apps/website/landing/screenshot`
     - **`app-icon`** — Canonical, serializable app-icon descriptor (a Material Symbols glyph now, image variant later), drawn by the icons primitive.
       - Web:
         - Uses:
@@ -27910,6 +27942,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HostBoot`
           - `HostBooted`
           - `HostEndReason`
+          - `HostProgress`
           - `PageInput`
           - `PageInputRead`
           - `PageInputValue`
@@ -27927,6 +27960,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PortHostBootError`
           - `PortHostRefusedError`
           - `portRequester`
+          - `reportDataProgress`
+          - `reportingLoads`
           - `runtimeBrowserServer`
           - `serveHost`
           - `serveOverPort`
@@ -27954,7 +27989,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `trackHostGenerations`
               - Cross-plugin:
                 - Imported by: `framework/browser-server/demo/scope`
-            - **`scope`** — <DemoScope scenario>: renders its subtree against the scenario's browser host — real server code in a worker, on the scenario's seed — and scoped to the host's composition (<PluginScope>), so the page shows exactly the plugins the worker serves. Everything inside reaches the host only (the scope's transport): the build's coverage guard holds the host to serving every read, endpoint and config the scope uses, or declaring it needsMachine (answered unavailable); a key or endpoint it still does not serve fails loudly. A host that fails to boot throws to the error boundary. Connects to one SharedWorker per build (every tab of the demo shares its server and data), shows why when the host declines the page (data written by a newer version) or stops serving it (another tab took it over), and exposes Reset (useDemoHostControl) — the host wipes its data and every tab reconnects to a fresh one.
+            - **`scope`** — <DemoScope scenario>: renders its subtree against the scenario's browser host — real server code in a worker, on the scenario's seed — and scoped to the host's composition (<PluginScope>), so the page shows exactly the plugins the worker serves. Everything inside reaches the host only (the scope's transport): the build's coverage guard holds the host to serving every read, endpoint and config the scope uses, or declaring it needsMachine (answered unavailable); a key or endpoint it still does not serve fails loudly. A host that fails to boot throws to the error boundary. Until the host serves, an optional boot render draws where it is (DemoBoot: asking, the gate, starting with the worker's progress) and gates the start: a browser already holding the demo's data starts at once, a first visit only when the visitor asks (enter), since it downloads the whole server and its data. Connects to one SharedWorker per build (every tab of the demo shares its server and data), shows why when the host declines the page (data written by a newer version) or stops serving it (another tab took it over), and exposes Reset (useDemoHostControl) — the host wipes its data and every tab reconnects to a fresh one.
               - Web:
                 - Uses: 22 symbols — full list in [`plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/REFERENCE.md`](../plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/REFERENCE.md)
                   - `framework/browser-server` ×5
@@ -27971,7 +28006,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/log-channels.clientLog`
                   - `primitives/scope/render-origin.RenderOrigin`
                   - `ui/icons/sprites.ScopeIconSymbols`
-                - Exports (types): `DemoHostControl`
+                - Exports (types):
+                  - `DemoBoot`
+                  - `DemoHostControl`
                 - Exports (values):
                   - `DemoScope`
                   - `useDemoHostControl`
@@ -27980,15 +28017,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/density --space-lg`
                   - `ui/tokens/density --space-md`
                   - `ui/tokens/density --space-sm`
-                - Imported by: `apps/demo/shell`
+                - Imported by:
+                  - `apps/demo/chrome`
+                  - `apps/demo/shell`
+                  - `apps/website/landing/screenshot`
         - **`host-storage`** — Where a browser host keeps its state: in memory (lost with the worker) or persistent (IndexedDB, named), declared once by the worker's entry point before boot (declareHostStorage / hostStorage). Gives PGlite its data dir and each in-memory host store (config, transcripts, attachment bytes, data files) a write-through store loaded at open; owns the lifecycle (fresh → seeded, a dead seed wiped, data written by newer code refused), the one-owner Web Lock with the version handoff between builds, and the wipe behind Reset.
           - Core:
             - Uses:
               - `framework/browser-server.HostBooted`
               - `framework/browser-server.HostRefusedError`
               - `framework/browser-server.PortEnd`
+              - `framework/browser-server.reportDataProgress`
               - `framework/browser-server.ServedHost`
               - `framework/browser-server.serveHost`
+              - `framework/browser-server/host-storage/stored.ENTRIES_STORE`
+              - `framework/browser-server/host-storage/stored.Lifecycle`
+              - `framework/browser-server/host-storage/stored.LIFECYCLE_KEY`
+              - `framework/browser-server/host-storage/stored.META_STORE`
+              - `framework/browser-server/host-storage/stored.storagePrefix`
+              - `framework/browser-server/host-storage/stored.storesDbName`
             - Exports (types):
               - `BrowserHostStorage`
               - `DatabaseStart`
@@ -28022,6 +28069,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Test helpers:
             - Core: `@plugins/framework/plugins/browser-server/plugins/host-storage/core/testing`
               - `declareMemoryHostStorage` — Declare that this process's browser host keeps its state in memory — what a test that boots a browser graph (PGlite and the in-memory host stores) declares before `bootBrowserHost`, as a host's entry point declares its storage.
+          - Plugins:
+            - **`stored`** — Whether this browser already holds a persistent browser host's data (hostDataStored(name)), read without booting anything — and the IndexedDB layout it reads, shared with host-storage's open (the storage's database names, the lifecycle record). A leaf, so a page can ask before it starts the host: a demo's gate, its head script.
+              - Cross-plugin:
+                - Imported by:
+                  - `framework/browser-server/demo/prestart`
+                  - `framework/browser-server/demo/scope`
+                  - `framework/browser-server/host-storage`
+              - Core:
+                - Exports (types): `Lifecycle`
+                - Exports (values):
+                  - `ENTRIES_STORE`
+                  - `hostDataStored`
+                  - `LIFECYCLE_KEY`
+                  - `META_STORE`
+                  - `storagePrefix`
+                  - `storesDbName`
         - **`test-host`** — Test harness that boots a slice of the app's server registry as a portable host under bun test: the registry or portable dependsOn closure of some roots, plus — derived, never hand-listed — one host provider per service the graph's modules declare (to a fixpoint), the committed migrations and config read off disk, and in-memory host storage.
           - Test helpers:
             - Server: `@plugins/framework/plugins/browser-server/plugins/test-host/server/testing`
@@ -29735,8 +29798,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards/module-extension.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 187 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
-              - `apps` ×54
+            - Imported by: 188 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+              - `apps` ×55
               - `primitives` ×28
               - `conversations` ×26
               - `page` ×26
@@ -44821,8 +44884,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 109 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
-              - `apps` ×22
+            - Imported by: 110 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+              - `apps` ×23
               - `debug` ×18
               - `reports` ×18
               - `primitives` ×12
@@ -45400,8 +45463,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 442 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
-              - `apps` ×108
+            - Imported by: 441 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+              - `apps` ×107
               - `conversations` ×80
               - `primitives` ×54
               - `debug` ×38
@@ -45642,8 +45705,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 423 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
-              - `apps` ×108
+            - Imported by: 424 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+              - `apps` ×109
               - `conversations` ×87
               - `primitives` ×47
               - `debug` ×37
@@ -45945,9 +46008,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 459 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 461 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×111
-              - `apps` ×104
+              - `apps` ×106
               - `conversations` ×53
               - `page` ×26
               - `debug` ×24
@@ -47524,9 +47587,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useResizeObserver`
               - `useResizeObserverSet`
           - Cross-plugin:
-            - Imported by: 44 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
-              - `primitives` ×23
-              - `apps` ×10
+            - Imported by: 46 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
+              - `primitives` ×24
+              - `apps` ×11
               - `shell` ×2
               - `active-data/go`
               - `conversations/conversation-view/jsonl-viewer`
@@ -47640,8 +47703,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `revealElement`
               - `useRevealOnActive`
           - Cross-plugin:
-            - Imported by: 46 plugins — full list in [`plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md)
-              - `apps` ×16
+            - Imported by: 47 plugins — full list in [`plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md)
+              - `apps` ×17
               - `primitives` ×16
               - `page` ×6
               - `conversations` ×2
@@ -49743,7 +49806,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values): `useConfirmDialog`
               - Cross-plugin:
                 - Imported by:
-                  - `apps/demo/shell`
+                  - `apps/demo/chrome`
                   - `apps/deploy/deploy-history/rollback`
                   - `apps/places/places-map`
                   - `apps/prototypes/canvas`
@@ -49829,6 +49892,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `apps-core/tab-surface`
+              - `apps/website/landing/screenshot`
               - `plugin-meta/exhibits`
           - Exemptions:
             - Exempts itself from: `layout/no-adhoc-layout` — `web/internal/surface-overlay.tsx` (sanctioned)
@@ -49999,7 +50063,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `welcomePane.Actions` "title" → `PaneTitleItem`
           - `workflow-node.actions` "title" → `PaneTitleItem`
           - `worktreeCleanupPane.Actions` "title" → `PaneTitleItem`
-        - Uses: 43 symbols — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Uses: 44 symbols — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `primitives/css/ui-kit` ×4
           - `primitives/slot-render` ×4
           - `network/live/live-state` ×3
@@ -50020,6 +50084,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/theme-boundary.Theme`
           - `primitives/css/yield.yieldClass`
           - `primitives/dom/auto-scroll.useScrollAcrossReload`
+          - `primitives/dom/element-size.useElementSize`
           - `primitives/dom/gesture-origin.isChromeGesture`
           - `primitives/dom/in-view.useInView`
           - `primitives/hover-reveal.hoverRevealGroup`
@@ -57923,8 +57988,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useWantedStyleKeys`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 543 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
-          - `apps` ×152
+        - Imported by: 545 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+          - `apps` ×154
           - `conversations` ×83
           - `primitives` ×53
           - `page` ×52
@@ -58313,6 +58378,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/app-launcher`
           - `apps-core/tab-bar`
           - `apps/agent-manager/shell`
+          - `apps/demo/chrome`
           - `menu-bar`
     - **`segmented-progress-bar`** — Pluggable segmented progress bar with switchable visual variants.
       - Web:
@@ -59126,7 +59192,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Tokens used by:
               - `apps/deploy/analytics/dashboard`
-              - `apps/website/landing/screenshot`
               - `apps/website/pages/vision`
               - `apps/website/shell`
               - `primitives/css/ui-kit`
@@ -59206,8 +59271,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --space-sm`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 538 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
-              - `apps` ×117
+            - Tokens used by: 539 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+              - `apps` ×118
               - `conversations` ×98
               - `primitives` ×73
               - `debug` ×40
@@ -59352,8 +59417,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `densityGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --radius`
-            - Tokens used by: 346 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
-              - `apps` ×70
+            - Tokens used by: 348 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+              - `apps` ×72
               - `primitives` ×70
               - `conversations` ×53
               - `debug` ×28
@@ -59778,9 +59843,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --radius-chip-compact`
               - `ui/tokens/density --space-sm`
-            - Tokens used by: 393 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 394 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `conversations` ×87
-              - `apps` ×80
+              - `apps` ×81
               - `primitives` ×60
               - `page` ×35
               - `debug` ×26
@@ -59933,8 +59998,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `typeScaleGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --space-sm`
-            - Tokens used by: 233 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
-              - `apps` ×59
+            - Tokens used by: 232 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
+              - `apps` ×58
               - `conversations` ×42
               - `primitives` ×38
               - `debug` ×15

@@ -3,7 +3,9 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { DemoScope } from "@plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/web";
 import { demoScenario } from "../../core";
+import { DemoBootScreen } from "@plugins/apps/plugins/demo/plugins/chrome/web";
 import { useIsPhone } from "../hooks/use-is-phone";
+import { DemoFrame } from "./demo-at";
 
 const PHONE_NOTICE = "Apps are only available on desktop, not mobile.";
 
@@ -12,7 +14,7 @@ const PHONE_NOTICE = "Apps are only available on desktop, not mobile.";
  * workspace scenario's host: real server code in a worker, on the demo's
  * data kept in this browser) around the full-pane renderer, so the demo's
  * one screen (`demo-at`: the demo at the location the URL names, framed or
- * full screen) renders against it. The scope sits above the pane: settling
+ * maximized) renders against it. The scope sits above the pane: settling
  * `/demo` on its start location never restarts the host.
  *
  * On a phone it renders a notice instead: `DemoScope` never mounts, so its
@@ -30,7 +32,16 @@ export function DemoLayout() {
     );
   }
   return (
-    <DemoScope scenario={demoScenario}>
+    <DemoScope
+      scenario={demoScenario}
+      // Until the demo runs: its boot screen in the framed page, the caption
+      // bar kept — a first visit waits there for Enter equin.
+      boot={(state) => (
+        <DemoFrame full={false}>
+          <DemoBootScreen state={state} />
+        </DemoFrame>
+      )}
+    >
       <FullPane />
     </DemoScope>
   );

@@ -43,7 +43,7 @@ const PROPERTIES = [
  * inside the centred heading so each reads as a sentence, capped at 860px so
  * the row stays narrower than the reading measure. The film sits between the
  * lede and that row, so it reads as part of the claim — and the row keeps it
- * apart from the screenshot band's picture below.
+ * apart from the live demo below.
  */
 export function HeroSection() {
   return (

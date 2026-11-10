@@ -339,6 +339,10 @@
       "name": "@equin/plugin-apps-demo",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/demo/plugins/chrome": {
+      "name": "@equin/plugin-apps-demo-chrome",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/demo/plugins/shell": {
       "name": "@equin/plugin-apps-demo-shell",
       "version": "0.0.1",
@@ -3418,6 +3422,10 @@
     },
     "plugins/framework/plugins/browser-server/plugins/host-storage": {
       "name": "@equin/plugin-framework-browser-server-host-storage",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/browser-server/plugins/host-storage/plugins/stored": {
+      "name": "@equin/plugin-framework-browser-server-host-storage-stored",
       "version": "0.0.1",
     },
     "plugins/framework/plugins/browser-server/plugins/test-host": {
@@ -7616,6 +7624,8 @@
 
     "@equin/plugin-apps-demo": ["@equin/plugin-apps-demo@workspace:plugins/apps/plugins/demo"],
 
+    "@equin/plugin-apps-demo-chrome": ["@equin/plugin-apps-demo-chrome@workspace:plugins/apps/plugins/demo/plugins/chrome"],
+
     "@equin/plugin-apps-demo-shell": ["@equin/plugin-apps-demo-shell@workspace:plugins/apps/plugins/demo/plugins/shell"],
 
     "@equin/plugin-apps-deploy": ["@equin/plugin-apps-deploy@workspace:plugins/apps/plugins/deploy"],
@@ -9117,6 +9127,8 @@
     "@equin/plugin-framework-browser-server-demo-scope": ["@equin/plugin-framework-browser-server-demo-scope@workspace:plugins/framework/plugins/browser-server/plugins/demo/plugins/scope"],
 
     "@equin/plugin-framework-browser-server-host-storage": ["@equin/plugin-framework-browser-server-host-storage@workspace:plugins/framework/plugins/browser-server/plugins/host-storage"],
+
+    "@equin/plugin-framework-browser-server-host-storage-stored": ["@equin/plugin-framework-browser-server-host-storage-stored@workspace:plugins/framework/plugins/browser-server/plugins/host-storage/plugins/stored"],
 
     "@equin/plugin-framework-browser-server-test-host": ["@equin/plugin-framework-browser-server-test-host@workspace:plugins/framework/plugins/browser-server/plugins/test-host"],
 

@@ -36,7 +36,6 @@ import { tapSharedSocket } from "@plugins/primitives/plugins/networking/e2e";
 import { pickFromLauncher } from "@plugins/apps-core/plugins/app-launcher/e2e";
 import {
   arg,
-  boot,
   pathUrl,
   report,
   snap,
@@ -48,6 +47,7 @@ import {
   AGENT_MANAGER_LOCATION,
   demoPath,
   onDemoPage,
+  bootDemo,
 } from "./internal/demo-pages";
 
 const OUT = arg("out") ?? "/tmp/demo-app-switch";
@@ -102,7 +102,7 @@ await withBrowser(async (h) => {
   const { page, captured } = await h.session();
   const socketTap = await tapSharedSocket(page);
 
-  await boot(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
+  await bootDemo(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
     marker: 'button:has-text("Conversations")',
   });
   await page

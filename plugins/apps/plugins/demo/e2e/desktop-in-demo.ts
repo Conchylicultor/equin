@@ -33,7 +33,6 @@ import type { Locator, Page, Request, WebSocket } from "playwright";
 import { pickFromLauncher } from "@plugins/apps-core/plugins/app-launcher/e2e";
 import {
   arg,
-  boot,
   pathUrl,
   report,
   snap,
@@ -45,6 +44,7 @@ import {
   AGENT_MANAGER_LOCATION,
   demoPath,
   onDemoPage,
+  bootDemo,
 } from "./internal/demo-pages";
 
 const OUT = arg("out") ?? "/tmp/demo-desktop";
@@ -177,7 +177,7 @@ await withBrowser(async (h) => {
   const r = report("demo: the Desktop inside the embed");
   const { page, captured } = await h.session();
 
-  await boot(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
+  await bootDemo(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
     marker: 'button:has-text("Conversations")',
   });
 

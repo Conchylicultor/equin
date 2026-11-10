@@ -22,7 +22,6 @@
 import type { Page } from "playwright";
 import {
   arg,
-  boot,
   pathUrl,
   report,
   snap,
@@ -43,6 +42,7 @@ import {
   ROOT_PAGES,
   settledCount,
   waitForStorageReleased,
+  bootDemo,
 } from "./internal/demo-pages";
 
 const OUT = arg("out") ?? "/tmp/demo-snapshot";
@@ -68,7 +68,7 @@ async function openDemo(
     if (m.text().startsWith("[demo-scope]")) lines.push(m.text());
   };
   page.on("console", onConsole);
-  await boot(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
+  await bootDemo(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
     marker: MARKER,
   });
   const settled = await waitFor(

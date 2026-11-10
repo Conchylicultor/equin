@@ -13,7 +13,7 @@ import { WebsiteChrome } from "./components/website-chrome";
  * is declared once, by this plugin, and borrowed by all four pages.
  *
  * The body is the landing page itself: every `Website.Section` contribution
- * rendered top-to-bottom — the hero, the screenshot, the three layers, the story link, the contact band —
+ * rendered top-to-bottom — the hero, the live demo, the three layers, the story link, the contact band —
  * in the order authored in `config/apps/website/shell/section.jsonc`. That file,
  * not the plugin load order, is what fixes the page's reading order.
  */

@@ -1,4 +1,5 @@
-import { useRef, useState, type ReactNode } from "react";
+import { useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { useInView } from "@plugins/primitives/plugins/dom/plugins/in-view/web";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
@@ -24,6 +25,11 @@ import { PaneScroll } from "./pane-scroll";
  * the waterline has passed under the bar). The bar then masks with that
  * theme's own background, not the page's. `glass` frosts the mask instead of
  * painting it opaque.
+ *
+ * The bar's height is published on the scroll: as its `scroll-padding-top`,
+ * so a reveal inside (`revealElement`, `scrollIntoView`) lands below the bar
+ * rather than under it, and as `--pane-header-height`, for a page sizing
+ * something to what the bar leaves of the window.
  *
  * The body is sealed in its own stacking context (`isolate`), so the header
  * paints over it whatever z-index the page gives its own pieces: a page's
@@ -52,8 +58,10 @@ export function FloatingHeaderScroll({
   useInView(topRef, (entry) => setAtTop(entry.isIntersecting), {
     root: scrollRef,
   });
+  const [barRef, barSize] = useElementSize<HTMLDivElement>();
   const bar = (
     <Sticky
+      ref={barRef}
       mask={atTop ? false : glass ? "glass" : true}
       className={cn(
         "transition-colors",
@@ -66,7 +74,15 @@ export function FloatingHeaderScroll({
     </Sticky>
   );
   return (
-    <PaneScroll ref={scrollRef}>
+    <PaneScroll
+      ref={scrollRef}
+      style={
+        {
+          scrollPaddingTop: barSize.height,
+          "--pane-header-height": `${barSize.height}px`,
+        } as CSSProperties
+      }
+    >
       <div ref={topRef} aria-hidden />
       {theme === undefined ? (
         bar

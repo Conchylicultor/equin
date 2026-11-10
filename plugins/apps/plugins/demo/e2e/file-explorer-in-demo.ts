@@ -35,7 +35,6 @@ import { pickFromLauncher } from "@plugins/apps-core/plugins/app-launcher/e2e";
 import { DATA_DIR_NAME } from "@plugins/infra/plugins/paths/core";
 import {
   arg,
-  boot,
   pathUrl,
   report,
   snap,
@@ -47,6 +46,7 @@ import {
   AGENT_MANAGER_LOCATION,
   demoPath,
   onDemoPage,
+  bootDemo,
 } from "./internal/demo-pages";
 
 const OUT = arg("out") ?? "/tmp/demo-files";
@@ -159,7 +159,7 @@ await withBrowser(async (h) => {
     (await embedRoot(page).innerText()).replace(/\s+/g, " ");
 
   // ── 1. launcher → Files, opening on Home ────────────────────────────────
-  await boot(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
+  await bootDemo(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
     marker: 'button:has-text("Conversations")',
   });
   demoUp = true;

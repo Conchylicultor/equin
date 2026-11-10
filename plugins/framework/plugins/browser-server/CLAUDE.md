@@ -267,6 +267,7 @@ reaching the server, detach on unmount).
     - `HostBoot`
     - `HostBooted`
     - `HostEndReason`
+    - `HostProgress`
     - `PageInput`
     - `PageInputRead`
     - `PageInputValue`
@@ -284,6 +285,8 @@ reaching the server, detach on unmount).
     - `PortHostBootError`
     - `PortHostRefusedError`
     - `portRequester`
+    - `reportDataProgress`
+    - `reportingLoads`
     - `runtimeBrowserServer`
     - `serveHost`
     - `serveOverPort`

@@ -1,6 +1,6 @@
 {
   "name": "@equin/plugin-apps-website-landing",
-  "description": "Landing-page bands of the public website: the hero, the desktop screenshot, the three layers of equin, the story link, and the contact block.",
+  "description": "Landing-page bands of the public website: the hero, the live demo, the three layers of equin, the story link, and the contact block.",
   "private": true,
   "version": "0.0.1"
 }

@@ -25,7 +25,6 @@
  */
 import type { Page } from "playwright";
 import {
-  boot,
   numArg,
   pathUrl,
   report,
@@ -38,6 +37,7 @@ import {
   demoPath,
   MARKER,
   RENDER_TIMEOUT_MS,
+  bootDemo,
 } from "./internal/demo-pages";
 
 const RELOADS = numArg("reloads", 3);
@@ -152,7 +152,7 @@ await withBrowser(async (h) => {
   const url = pathUrl(demoPath(AGENT_MANAGER_LOCATION));
 
   const first = await timeLoad(r, page, "first visit", () =>
-    boot(page, url, { marker: MARKER, timeoutMs: RENDER_TIMEOUT_MS }),
+    bootDemo(page, url, { marker: MARKER, timeoutMs: RENDER_TIMEOUT_MS }),
   );
   console.info(describe("first visit", first));
   for (let i = 1; i <= RELOADS; i++) {

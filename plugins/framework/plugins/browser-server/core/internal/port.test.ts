@@ -3,7 +3,8 @@
  * (`portBrowserServer`) reads, subscribes and gets acks from a server served by
  * the worker side (`serveOverPort`) exactly as it would in-process; a boot that
  * throws rejects the page side with the worker's error; a port attached to the
- * worker answers requests too, the page's own sockets untouched.
+ * worker answers requests too, the page's own sockets untouched; what the
+ * boot reports before it is ready (plugins loaded) reaches the page.
  */
 
 import { describe, expect, test } from "bun:test";
@@ -22,6 +23,7 @@ import {
   portRequester,
   serveOverPort,
 } from "./port";
+import { reportingLoads, type HostProgress } from "./boot-progress";
 
 let seq = 0;
 const key = (name: string) => `test.browser-server-port.${name}.${seq++}`;
@@ -191,5 +193,30 @@ describe("a browser server over a port", () => {
     socket.close();
     server.dispose();
     side.port2.close();
+  });
+});
+
+describe("boot progress", () => {
+  test("the plugins a boot loads before it is ready reach the page", async () => {
+    const channel = new MessageChannel();
+    channel.port1.start();
+    channel.port2.start();
+    const entries = reportingLoads([
+      { loader: () => Promise.resolve({ default: 1 }) },
+      { loader: () => Promise.resolve({ default: 2 }) },
+    ]);
+    void serveOverPort(channel.port2, async () => {
+      for (const entry of entries) await entry.loader();
+      return {
+        server: greetingServer("hi"),
+        keys: new Set<string>(),
+        boot: BOOT,
+      };
+    });
+    const seen: HostProgress[] = [];
+    await portBrowserServer(channel.port1, {
+      onProgress: (progress) => seen.push(progress),
+    });
+    expect(seen.at(-1)?.plugins).toEqual({ loaded: 2, total: 2 });
   });
 });

@@ -47,7 +47,6 @@ import {
 } from "@plugins/apps/plugins/website/plugins/demos/plugins/workspace/core";
 import {
   arg,
-  boot,
   pathUrl,
   report,
   snap,
@@ -61,6 +60,7 @@ import {
   AGENT_MANAGER_LOCATION,
   demoPath,
   onDemoPage,
+  bootDemo,
 } from "./internal/demo-pages";
 
 const OUT = arg("out") ?? "/tmp/demo-places";
@@ -134,7 +134,7 @@ await withBrowser(async (h) => {
     viewport: { width: 1440, height: 900 },
   });
 
-  await boot(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
+  await bootDemo(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
     marker: 'button:has-text("Conversations")',
   });
   await waitForNetworkIdle(page);

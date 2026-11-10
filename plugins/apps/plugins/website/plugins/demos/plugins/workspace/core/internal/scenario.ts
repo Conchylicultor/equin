@@ -4,6 +4,9 @@ import { browserHost } from "../browser-host.generated";
 /** The conversation the demo opens at — its id is distinctive, so a leak to the real server is findable in its logs. */
 export const DEMO_CONVERSATION_ID = "conv-demo-practice-timer";
 
+/** Where the demo keeps its data in the browser: one IndexedDB storage, whatever the build. */
+export const WORKSPACE_DEMO_STORAGE = "demo-workspace";
+
 /**
  * The Agent Manager at one conversation (`/agents/c/<id>`): the sidebar's
  * queue and done list, and an agent waiting for review — nothing from the instance.
@@ -17,4 +20,5 @@ export const workspaceDemo: DemoScenario = {
   app: "agent-manager",
   route: `/c/${DEMO_CONVERSATION_ID}`,
   host: browserHost,
+  storage: WORKSPACE_DEMO_STORAGE,
 };

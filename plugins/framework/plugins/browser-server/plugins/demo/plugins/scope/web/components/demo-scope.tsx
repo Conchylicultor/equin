@@ -24,6 +24,7 @@ import {
   portBrowserServer,
   type BrowserServer,
   type HostEndReason,
+  type HostProgress,
   type PageInputValue,
   type PortEnd,
   type PortServer,
@@ -41,6 +42,7 @@ import {
   foldResource,
   NotificationsProvider,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
+import { hostDataStored } from "@plugins/framework/plugins/browser-server/plugins/host-storage/plugins/stored/core";
 import { clearStorageScope } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -118,6 +120,8 @@ interface ScopeStart {
   /** It stopped serving after it was ready. */
   onEnded(why: HostEndReason): void;
   onFailed(err: unknown): void;
+  /** How far its boot has come, until it is ready. */
+  onProgress(progress: HostProgress): void;
 }
 
 /**
@@ -171,7 +175,12 @@ function startScopeServer(
     const framing = attachFrameServing(end, mod.serviceWorkerUrl);
     let hosted: PortServer;
     try {
-      hosted = await portBrowserServer(end, { inputs });
+      hosted = await portBrowserServer(end, {
+        inputs,
+        onProgress: (progress) => {
+          if (!ended) report.onProgress(progress);
+        },
+      });
     } catch (err) {
       if (err instanceof PortHostRefusedError) {
         // Nothing will be served: the frames attached alongside go too.
@@ -247,7 +256,11 @@ export function useDemoHostControl(): DemoHostControl {
 }
 
 type ScopeState =
-  | { kind: "booting" }
+  /** Reading whether this browser holds the demo's data (the gate's question). */
+  | { kind: "asking" }
+  /** It does not: nothing starts until the visitor asks (`DemoBoot`'s `enter`). */
+  | { kind: "gate" }
+  | { kind: "booting"; progress: HostProgress | null }
   | { kind: "ready"; host: ScopeHost }
   /** The host will not serve this page: a message and a reload. */
   | { kind: "stopped"; message: string }
@@ -257,19 +270,42 @@ const SUPERSEDED_MESSAGE =
   "This demo was opened in another tab, or updated there. Reload this tab to continue here.";
 
 /**
+ * Where the scope is before its host serves, as a page draws it (`boot`):
+ * - `asking` — reading whether this browser holds the demo's data;
+ * - `gate` — it does not, so starting downloads the server and its data:
+ *   nothing starts until the visitor asks (`enter`);
+ * - `starting` — the host is booting, `progress` its worker's report so far
+ *   (`null` until the first arrives).
+ */
+export type DemoBoot =
+  | { kind: "asking" }
+  | { kind: "gate"; enter(): void }
+  | { kind: "starting"; progress: HostProgress | null };
+
+/**
  * Renders `children` against the scenario's browser host — real server code
  * in a worker, on the scenario's data — and scoped to the host's composition
- * (`<PluginScope>`), so the page shows exactly what the worker serves. The
- * host booting renders `<Loading/>`; a host that fails to boot throws to the
- * error boundary. A host that declines this page (its data written by a newer
- * version) or stops serving it (another tab took it over) shows why, with a
- * Reload; a Reset (`useDemoHostControl`, from any tab) boots it again.
+ * (`<PluginScope>`), so the page shows exactly what the worker serves.
+ *
+ * Until the host serves, `boot` draws where it is (`DemoBoot`) — and a page
+ * that draws it also decides when the host starts: where this browser holds
+ * the demo's data (`scenario.storage`, `hostDataStored`) at once, else when
+ * the visitor asks (the gate's `enter`), since the first start downloads the
+ * whole server and its data. Without `boot`, the host starts at once behind
+ * `<Loading/>`. A Reset never asks again: the visitor asked for the demo back.
+ *
+ * A host that fails to boot throws to the error boundary. A host that declines
+ * this page (its data written by a newer version) or stops serving it (another
+ * tab took it over) shows why, with a Reload; a Reset (`useDemoHostControl`,
+ * from any tab) boots it again.
  */
 export function DemoScope({
   scenario,
+  boot,
   children,
 }: {
   scenario: DemoScenario;
+  boot?: (state: DemoBoot) => ReactNode;
   children: ReactNode;
 }): ReactNode {
   // Whether the scope's telemetry is reported — to the page's own server, the
@@ -288,7 +324,38 @@ export function DemoScope({
   useEffect(() => {
     inputKeysRef.current = inputKeys;
   });
-  const [state, setState] = useState<ScopeState>({ kind: "booting" });
+  const gated = boot !== undefined;
+  // Whether the host may start: at once without a gate, else once this
+  // browser is found to hold the data or the visitor asks.
+  const [entered, setEntered] = useState(!gated);
+  const [state, setState] = useState<ScopeState>(
+    gated ? { kind: "asking" } : { kind: "booting", progress: null },
+  );
+  useEffect(() => {
+    if (entered) return;
+    let live = true;
+    const stored =
+      scenario.storage === null
+        ? Promise.resolve(false)
+        : hostDataStored(scenario.storage);
+    stored.then(
+      (held) => {
+        if (!live) return;
+        if (held) {
+          setState({ kind: "booting", progress: null });
+          setEntered(true);
+        } else {
+          setState({ kind: "gate" });
+        }
+      },
+      (error: unknown) => {
+        if (live) setState({ kind: "failed", error });
+      },
+    );
+    return () => {
+      live = false;
+    };
+  }, [entered, scenario.storage]);
   // Bumped when the host is reset, to start a fresh one (on the host
   // generation the reset moved every tab to).
   const [resets, setResets] = useState(0);
@@ -297,6 +364,7 @@ export function DemoScope({
     [scenario.id],
   );
   useEffect(() => {
+    if (!entered) return;
     // A reset throws away the scope's browser-side state with its data (the
     // drafts and view state its plugins kept in Web Storage, in every tab):
     // here, once the old subtree has unmounted and written its last.
@@ -310,20 +378,24 @@ export function DemoScope({
       onRefused: (message) => setState({ kind: "stopped", message }),
       onEnded: (why) => {
         if (why === "reset") {
-          setState({ kind: "booting" });
+          setState({ kind: "booting", progress: null });
           setResets((r) => r + 1);
         } else {
           setState({ kind: "stopped", message: SUPERSEDED_MESSAGE });
         }
       },
       onFailed: (error) => setState({ kind: "failed", error }),
+      onProgress: (progress) =>
+        setState((prev) =>
+          prev.kind === "booting" ? { kind: "booting", progress } : prev,
+        ),
     });
     return () => {
       stop();
       // The next server (a host still booting) is not this one.
-      setState({ kind: "booting" });
+      setState({ kind: "booting", progress: null });
     };
-  }, [scenario, generations, resets]);
+  }, [entered, scenario, generations, resets]);
   const host = state.kind === "ready" ? state.host : null;
   const declaredKeys = inputKeys.join("\n");
   useEffect(() => {
@@ -351,7 +423,25 @@ export function DemoScope({
   // A host that could not boot reaches the error boundary, never an empty app.
   if (state.kind === "failed") throw state.error;
   if (state.kind === "stopped") return <HostStopped message={state.message} />;
-  if (transport === null || control === null) return <Loading />;
+  if (transport === null || control === null) {
+    if (boot === undefined) return <Loading />;
+    return boot(
+      state.kind === "asking"
+        ? { kind: "asking" }
+        : state.kind === "gate"
+          ? {
+              kind: "gate",
+              enter: () => {
+                setState({ kind: "booting", progress: null });
+                setEntered(true);
+              },
+            }
+          : {
+              kind: "starting",
+              progress: state.kind === "booting" ? state.progress : null,
+            },
+    );
+  }
   return (
     <DemoHostControlContext.Provider value={control}>
       {/* Outside the scope's transport: each reads the page's own server. */}

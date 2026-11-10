@@ -1,4 +1,4 @@
-// @hash b3f781485c3f
+// @hash 029ec4de8d8c
 {
   "manifests": [
     {
@@ -390,6 +390,7 @@
       "entryPoints": [
         "apps.website.**",
         "!apps.website.demos.**",
+        "!apps.website.landing.screenshot",
         "!apps.website.promo-film.**"
       ],
       "selectedContributors": [],

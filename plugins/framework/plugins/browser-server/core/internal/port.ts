@@ -15,6 +15,7 @@
 // serving (another worker took its storage over, or the page reset it) tells
 // every end `ended`, after which the page rejects whatever it still waits on.
 
+import { watchHostProgress, type HostProgress } from "./boot-progress";
 import {
   declarePageInputs,
   receivePageInput,
@@ -90,6 +91,8 @@ type FromHost =
       notice: string | null;
     }
   | { t: "failed"; error: string }
+  /** How far the boot has come (`HostProgress`), posted to every page waiting for it until it settles. */
+  | { t: "progress"; progress: HostProgress }
   /** The host declined to boot, for a reason the page shows (`HostRefusedError`). */
   | { t: "refused"; message: string }
   | { t: "ended"; why: HostEndReason }
@@ -180,6 +183,16 @@ export function serveHost(opts: ServeHostOptions): ServedHost {
 
   /** Every page end being served, and the sockets each opened. */
   const ends = new Map<PortEnd, Map<number, BrowserServerSocket>>();
+  // How far the boot has come, to every page waiting for it — and, as it
+  // connects, to a page that arrives mid-boot.
+  let progress: HostProgress | null = null;
+  const stopProgress = watchHostProgress((next) => {
+    progress = next;
+    if (bootSettled) return;
+    for (const end of ends.keys())
+      end.postMessage({ t: "progress", progress: next } satisfies FromHost);
+  });
+  void booted.then(stopProgress, stopProgress);
   /** Ends attached by a page (a frame-serving Service Worker's): told `ended` too. */
   const attached = new Set<PortEnd>();
   let ended: HostEndReason | null = null;
@@ -204,6 +217,8 @@ export function serveHost(opts: ServeHostOptions): ServedHost {
         throw err;
       });
     });
+    if (announce && !bootSettled && progress !== null)
+      post({ t: "progress", progress });
     if (announce) void announceTo(post, !bootSettled);
   }
 
@@ -445,6 +460,8 @@ export interface PortServerOptions {
    * the host only when no connected page declares them.
    */
   inputs?: readonly string[];
+  /** Told how far the host's boot has come, until it is ready (`HostProgress`). */
+  onProgress?: (progress: HostProgress) => void;
 }
 
 /**
@@ -522,7 +539,7 @@ export function attachPort(worker: PortEnd, port: MessagePort): void {
  */
 export function portBrowserServer(
   port: PortEnd,
-  { inputs = [] }: PortServerOptions = {},
+  { inputs = [], onProgress }: PortServerOptions = {},
 ): Promise<PortServer> {
   let nextConn = 0;
   const peers = new Map<number, BrowserServerPeer>();
@@ -605,6 +622,9 @@ export function portBrowserServer(
           return;
         case "refused":
           reject(new PortHostRefusedError(msg.message));
+          return;
+        case "progress":
+          onProgress?.(msg.progress);
           return;
         case "ended":
           // Every socket is gone with the host; the requests are

@@ -37,7 +37,6 @@ import type { Frame, Locator, Page, Request } from "playwright";
 import {
   agentFetch,
   arg,
-  boot,
   pathUrl,
   report,
   snap,
@@ -66,6 +65,7 @@ import {
   AGENT_MANAGER_LOCATION,
   demoPath,
   onDemoPage,
+  bootDemo,
 } from "./internal/demo-pages";
 
 const OUT = arg("out") ?? "/tmp/demo-prototypes";
@@ -175,7 +175,7 @@ await withBrowser(async (h) => {
     viewport: { width: 1600, height: 1000 },
   });
 
-  await boot(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
+  await bootDemo(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
     marker: 'button:has-text("Conversations")',
   });
   await page

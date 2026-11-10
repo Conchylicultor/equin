@@ -22,7 +22,6 @@
 import type { Locator, Page } from "playwright";
 import {
   arg,
-  boot,
   pathUrl,
   report,
   snap,
@@ -44,6 +43,7 @@ import {
   settledCount,
   showsApp,
   sidebarEntries,
+  bootDemo,
 } from "./internal/demo-pages";
 
 const OUT = arg("out") ?? "/tmp/demo-persistence";
@@ -98,7 +98,7 @@ await withBrowser(async (h) => {
   const SECOND = `Shared ${stamp}`;
 
   // ── 1. a write ──────────────────────────────────────────────────────────
-  await boot(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
+  await bootDemo(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
     marker: MARKER,
   });
   await openPages(r, page, "first boot");

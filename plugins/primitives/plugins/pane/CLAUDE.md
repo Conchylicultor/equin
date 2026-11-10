@@ -824,7 +824,7 @@ with an empty route.
     - `welcomePane.Actions` "title" → `PaneTitleItem`
     - `workflow-node.actions` "title" → `PaneTitleItem`
     - `worktreeCleanupPane.Actions` "title" → `PaneTitleItem`
-  - Uses: 43 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 44 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×4
     - `primitives/slot-render` ×4
     - `network/live/live-state` ×3
@@ -845,6 +845,7 @@ with an empty route.
     - `primitives/css/theme-boundary.Theme`
     - `primitives/css/yield.yieldClass`
     - `primitives/dom/auto-scroll.useScrollAcrossReload`
+    - `primitives/dom/element-size.useElementSize`
     - `primitives/dom/gesture-origin.isChromeGesture`
     - `primitives/dom/in-view.useInView`
     - `primitives/hover-reveal.hoverRevealGroup`

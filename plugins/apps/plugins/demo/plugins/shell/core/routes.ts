@@ -10,13 +10,13 @@ import { defineRoute } from "@plugins/primitives/plugins/pane/core";
  *   URL without its leading slash (`/demo/at/agents/c/<id>`,
  *   `/demo/at/desktop/sonata`). The static `at/` keeps a location from
  *   reading as another pane's segment.
- * - `…;full=1` — the same place, full screen: the demo is the whole page
+ * - `…;full=1` — the same place, maximized: the demo is the whole page
  *   instead of a frame under the caption (what a new browser tab opened from
  *   inside the demo shows).
  */
 export const demoStartRoute = defineRoute({ id: "demo-start", segment: "" });
 
-/** The demo at one location, framed or (`;full=1`) full screen. */
+/** The demo at one location, framed or (`;full=1`) maximized. */
 export const demoAtRoute = defineRoute({
   id: "demo-at",
   segment: "at/:url*;full",

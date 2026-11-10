@@ -109,12 +109,14 @@ test("the website app seed takes the whole site subtree", () => {
   // `excludes` is read off the CONFIG ITEM, not off `m`: manifestItemToManifest
   // drops it deliberately (the closure engine never reads it).
   const entries = m.entryPoints.map(String);
-  // `!apps.website.promo-film.**` likewise: the showcase film is made from
-  // the whole app (its seed writes tasks and conversations), not part of the
-  // site.
+  // `!apps.website.landing.screenshot`: the homepage's demo band embeds a
+  // demo, so it goes with them, named. `!apps.website.promo-film.**` likewise:
+  // the showcase film is made from the whole app (its seed writes tasks and
+  // conversations), not part of the site.
   expect(entries).toEqual([
     "apps.website.**",
     "!apps.website.demos.**",
+    "!apps.website.landing.screenshot",
     "!apps.website.promo-film.**",
   ]);
   expect(site.excludes).toContain("agent-runtime");

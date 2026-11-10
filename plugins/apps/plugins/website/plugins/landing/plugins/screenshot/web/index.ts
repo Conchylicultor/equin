@@ -1,15 +1,15 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Website } from "@plugins/apps/plugins/website/plugins/shell/web";
-import { ScreenshotSection } from "./components/screenshot-section";
+import { LiveDemoSection } from "./components/live-demo-section";
 
 export default {
   description:
-    "Landing screenshot band: a drawn picture of equin in desktop mode — the agent manager, a Pages document and Sonata breaking a song down into chords as three windows side by side on one surface — with its caption.",
+    "Landing demo band: equin itself, live, where the desktop picture was — its real server code in a worker on the workspace demo's data (DemoScope around AppEmbed), downloaded only when the visitor clicks Enter equin (a browser already holding the data starts it at once). Entering grows the frame in place, nearly as wide and tall as the window; once it runs, Maximize (the tab's surface, above the site; Restore at its top edge), Collapse / Expand and Reset demo sit under it.",
   contributions: [
     Website.Section({
       id: "screenshot",
-      label: "Screenshot",
-      component: ScreenshotSection,
+      label: "Demo",
+      component: LiveDemoSection,
     }),
   ],
 } satisfies PluginDefinition;

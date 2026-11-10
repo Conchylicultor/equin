@@ -5,11 +5,15 @@
 // `@browser-host-snapshot/<pluginPath>`. Typed here rather than through a
 // tsconfig path: the module exists only in a built dist.
 declare module "@browser-host-snapshot/*" {
-  /** Which snapshot the build took (its file's hash), when, and its bytes. */
+  /** Which snapshot the build took (its file's hash), when, its size, and its bytes. */
   const snapshot: {
     readonly version: string;
     readonly takenAt: number;
-    load(): Promise<Uint8Array>;
+    readonly bytes: number;
+    /** The file's bytes, each chunk told to `onProgress` as it arrives (`url`, bytes received of `bytes`). */
+    load(
+      onProgress?: (url: string, received: number, total: number) => void,
+    ): Promise<Uint8Array>;
   };
   export default snapshot;
 }

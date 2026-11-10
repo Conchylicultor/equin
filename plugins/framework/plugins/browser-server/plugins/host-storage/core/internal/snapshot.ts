@@ -34,8 +34,13 @@ export interface HostSnapshotRef {
   version: string;
   /** When it was taken (epoch ms): a later one is newer. */
   takenAt: number;
-  /** The file's bytes (fetched from beside the module the build generated); throws when it cannot. */
-  load(): Promise<Uint8Array>;
+  /**
+   * The file's bytes (fetched from beside the module the build generated),
+   * each chunk told to `onProgress` as it arrives; throws when it cannot.
+   */
+  load(
+    onProgress?: (url: string, received: number, total: number) => void,
+  ): Promise<Uint8Array>;
 }
 
 const PAYLOAD = "$hostSnapshotPayload";

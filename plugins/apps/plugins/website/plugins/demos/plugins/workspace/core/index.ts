@@ -1,4 +1,4 @@
-export { workspaceDemo } from "./internal/scenario";
+export { WORKSPACE_DEMO_STORAGE, workspaceDemo } from "./internal/scenario";
 export {
   STORIES as DEMO_STORIES,
   DEMO_AGENTS,

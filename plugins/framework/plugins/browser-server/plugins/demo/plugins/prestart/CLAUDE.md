@@ -6,7 +6,9 @@ Which SharedWorker a demo's tabs share, and starting it before the page boots.
   Reset moved past it. The generation is page-wide in localStorage
   (`advanceHostGeneration` / `trackHostGenerations`); why it exists:
   `demo/scope`'s Reset.
-- **The head start** (`prestartDemoHost(scenarioId, hostModule)`): run by a
+- **The head start** (`prestartDemoHost(scenarioId, storage, hostModule)`), on a
+  return visit only (`host-storage/stored`'s `hostDataStored(storage)`: a first
+  visit waits for the gate's Enter, so nothing downloads ahead): run by a
   page's `<head>` script (`apps/demo/shell`'s `DocumentHead.Fragment` for
   `/demo`), which imports only this plugin and the host module
   (`DemoHost.module`). It calls the host module's `prestartShared(name)`, so the

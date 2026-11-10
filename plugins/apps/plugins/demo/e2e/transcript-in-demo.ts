@@ -24,14 +24,17 @@
 import type { Page } from "playwright";
 import {
   arg,
-  boot,
   pathUrl,
   report,
   snap,
   waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
-import { AGENT_MANAGER_LOCATION, demoPath } from "./internal/demo-pages";
+import {
+  AGENT_MANAGER_LOCATION,
+  demoPath,
+  bootDemo,
+} from "./internal/demo-pages";
 
 const OUT = arg("out") ?? "/tmp/demo-transcript";
 /** How long the worker's transcript read gets to render. */
@@ -82,7 +85,7 @@ await withBrowser(async (h) => {
   const r = report("demo: transcript tool cards");
   const { page, captured } = await h.session();
 
-  await boot(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
+  await bootDemo(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
     marker: 'button:has-text("Conversations")',
   });
 

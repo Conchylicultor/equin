@@ -46,4 +46,12 @@ export interface DemoScenario {
    * closed), an endpoint it does not implement is refused unsupported.
    */
   host: DemoHost;
+  /**
+   * The persistent storage its host keeps its data under in this browser
+   * (`host-storage`'s name), or `null` for a host that keeps nothing. A page
+   * reads it before starting the host (`stored`'s `hostDataStored`): a browser
+   * already holding the data starts the demo at once, one that does not waits
+   * for the visitor to ask — the first start downloads it all.
+   */
+  storage: string | null;
 }

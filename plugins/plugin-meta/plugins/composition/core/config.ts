@@ -570,8 +570,12 @@ export const compositionsConfig = defineConfig({
         // data, booted in its own worker as its own composition
         // (`agent-manager-demo`), so it hard-reaches the agent runtime this
         // site must ship without. The demos live here (each owns its data,
-        // `apps/website/demos`) but are not part of the site's bundle until a
-        // landing band embeds one — the sandbox `/demo` app renders it today.
+        // `apps/website/demos`). The homepage's demo band
+        // (`apps.website.landing.screenshot`) embeds one, so it goes with them
+        // (`!apps.website.landing.screenshot`, named so the cascade is chosen,
+        // not suffered): main's `/website` shows it live, this standalone site
+        // ships without it until the site's bundle can carry the demo's server
+        // halves into the browser instead of reaching the agent runtime.
         // `!apps.website.promo-film.**`: the showcase film is made FROM the
         // whole app (its seed writes tasks, conversations and places into the
         // `promo-film` composition below), not part of the site it advertises.
@@ -579,6 +583,7 @@ export const compositionsConfig = defineConfig({
           entryPoints: [
             "apps.website.**",
             "!apps.website.demos.**",
+            "!apps.website.landing.screenshot",
             "!apps.website.promo-film.**",
           ],
           excludes: ["agent-runtime", "auth"],

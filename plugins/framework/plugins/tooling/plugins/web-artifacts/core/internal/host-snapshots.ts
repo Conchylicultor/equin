@@ -5,7 +5,7 @@
 // graph, fills it (a demo's seed) and writes its whole state to the file it is
 // given. The worker imports it as `@browser-host-snapshot/<pluginPath>`, which
 // the worker tree links to the snapshot's store dir: `snapshot.bin` and an
-// `index.js` exporting `{ version, takenAt, load }`.
+// `index.js` exporting `{ version, takenAt, bytes, load }`.
 //
 // The address covers everything that can change the snapshot's BYTES — what
 // runs while it is taken, and what that code reads:
@@ -187,7 +187,9 @@ export async function hostSnapshotDirName(opts: {
   const script = `${dir}/${HOST_SNAPSHOT_ENTRY_REL}`;
   const h = createHash("sha256");
   h.update(`layout\t${SNAPSHOT_LAYOUT}\n`);
-  h.update(`module\t${snapshotModuleSource({ version: "", takenAt: 0 })}\n`);
+  h.update(
+    `module\t${snapshotModuleSource({ version: "", takenAt: 0, bytes: 0 })}\n`,
+  );
   h.update(`bun\t${Bun.version}\n`);
   const lock = await repo.read("bun.lock");
   if (lock === null)
@@ -305,21 +307,37 @@ export async function hostSnapshotLinks(opts: {
 /**
  * The module the worker imports as `@browser-host-snapshot/<pluginPath>`
  * (typed by host-storage's `browser-host-snapshot.d.ts`): which snapshot it
- * is, and its bytes, fetched from beside the module.
+ * is, its size, and its bytes, fetched from beside the module — streamed, each
+ * chunk told to `onProgress` (bytes received of the file's size: the size is
+ * the build's, since a compressed response's Content-Length is not).
  */
 function snapshotModuleSource(facts: {
   version: string;
   takenAt: number;
+  bytes: number;
 }): string {
   return [
     `const url = new URL(${JSON.stringify(`./${SNAPSHOT_FILE}`)}, import.meta.url);`,
     "export default {",
     `  version: ${JSON.stringify(facts.version)},`,
     `  takenAt: ${facts.takenAt},`,
-    "  async load() {",
+    `  bytes: ${facts.bytes},`,
+    "  async load(onProgress) {",
     "    const res = await fetch(url);",
-    '    if (!res.ok) throw new Error("[host-snapshot] fetching " + url + " answered " + res.status);',
-    "    return new Uint8Array(await res.arrayBuffer());",
+    '    if (!res.ok || res.body === null) throw new Error("[host-snapshot] fetching " + url + " answered " + res.status);',
+    `    const out = new Uint8Array(${facts.bytes});`,
+    "    const reader = res.body.getReader();",
+    "    let received = 0;",
+    "    for (;;) {",
+    "      const { done, value } = await reader.read();",
+    "      if (done) break;",
+    '      if (received + value.length > out.length) throw new Error("[host-snapshot] " + url + " is larger than the " + out.length + " bytes the build wrote");',
+    "      out.set(value, received);",
+    "      received += value.length;",
+    "      onProgress?.(url.href, received, out.length);",
+    "    }",
+    '    if (received !== out.length) throw new Error("[host-snapshot] " + url + " ended at " + received + " of its " + out.length + " bytes");',
+    "    return out;",
     "  },",
     "};",
     "",
@@ -424,7 +442,7 @@ export async function ensureHostSnapshot(opts: {
   const { takenAt } = decodeHostSnapshot(new Uint8Array(bytes));
   writeFileSync(
     joinAppPath(tmp, "index.js"),
-    snapshotModuleSource({ version, takenAt }),
+    snapshotModuleSource({ version, takenAt, bytes: bytes.length }),
   );
   const meta: ArtifactMeta = {
     specifier: null,
