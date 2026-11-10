@@ -28,6 +28,12 @@ Two knobs distinguish the producers, both passed to `runWebArtifactsPipeline`:
 
 Key invariants:
 
+- **A registry's on-demand entries are built, never preloaded.** A
+  composition's web registry also lists `webScopedEntries` (a bundled browser
+  host's page scope beyond its own plugins, codegen's `scopedOnlyWebPlugins`):
+  the fleet plans and maps them like `webEntries`, and the plan's
+  `deferredPaths` holds them, so they never join the boot's modulepreload
+  closure — the scope loads them when the visitor asks.
 - **Stale artifacts compile where the caller says, never all on one thread.**
   The pipeline builds through an `ArtifactBuilder`
   (`core/internal/artifact-builder.ts`). A request is plain data

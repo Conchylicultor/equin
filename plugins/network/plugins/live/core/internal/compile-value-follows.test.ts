@@ -920,6 +920,23 @@ describe("followsAtBind — follows built at the bind", () => {
     expect(built).toBe(1);
   });
 
+  test("a registry no plugin of the composition contributes to follows nothing — not an author's empty literal", async () => {
+    const v = liveValue(key("at-bind-empty"), {
+      schema: Count,
+      params: ["id"],
+    });
+    const follows = followsAtBind<{ id: string }, Record<string, Follow<Ws>>>(
+      () => ({}),
+    );
+    const compiled = compileValue(v, {
+      source: "db",
+      follows,
+      loader: (_p, { followed }) => ({ n: Object.keys(followed).length }),
+    });
+    expect(followsOf(v.key, follows)!.list).toEqual([]);
+    expect(await compiled.options.loader({ id: "c1" })).toEqual({ n: 0 });
+  });
+
   test("a paged value takes none", () => {
     const v = liveValue(key("at-bind-paged"), {
       query: z.object({}),

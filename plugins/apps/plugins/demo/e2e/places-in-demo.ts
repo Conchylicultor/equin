@@ -41,10 +41,8 @@
  */
 import type { Locator, Page, Request, WebSocket } from "playwright";
 import { pickFromLauncher } from "@plugins/apps-core/plugins/app-launcher/e2e";
-import {
-  DEMO_PLACES,
-  externalHosts,
-} from "@plugins/apps/plugins/website/plugins/demos/plugins/workspace/core";
+import { externalHosts } from "@plugins/apps/plugins/website/plugins/demos/plugins/workspace/core";
+import { DEMO_PLACES } from "@plugins/apps/plugins/website/plugins/demos/plugins/workspace/plugins/story/core";
 import {
   arg,
   pathUrl,

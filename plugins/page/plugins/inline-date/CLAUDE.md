@@ -56,7 +56,7 @@
     - `ui/tokens/color-palette --border`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/shape --spacing`
-  - Imported by: `apps/website/demos/workspace`
+  - Imported by: `apps/website/demos/workspace/story`
 - Exemptions:
   - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
 

@@ -1168,6 +1168,13 @@ export const webEntries: CollectedEntry[] = [
   { pluginPath: "wish", id: "wish", loader: () => import("@plugins/wish/web"), dependsOn: ["hints", "primitives/plugins/css/plugins/ui-kit", "primitives/plugins/slot-render", "shell/plugins/action-bar", "tasks/plugins/task-draft-form", "ui/plugins/icons"] },
 ];
 
+// The composition's ON-DEMAND plugins: the page scope of a browser host it
+// bundles, beyond its own plugins. Loaded when that scope asks for them
+// (`useScopePlugins`), visible only inside it; their other halves are the
+// host's worker, never this composition's backend.
+export const webScopedEntries: CollectedEntry[] = [
+];
+
 export interface CompositionIdentity {
   id: string;
   home: string | null;

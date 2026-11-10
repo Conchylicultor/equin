@@ -12,11 +12,11 @@ waiting for Demo's review; a prototype ready for review, a design question and a
 roster agent at work in the queue; two pushed) — tasks, categories, attempts,
 conversations, queue ranks, pushes, short titles, tracks, progress, notes, the
 agents roster and their launches, and each conversation's transcript as Claude
-Code JSONL (`core/internal/transcripts.ts`) the real parser reads: several
+Code JSONL (`story`'s `core/internal/transcripts.ts`) the real parser reads: several
 turns, tool calls in the real tools' input and result shapes (`Read` as
 `cat -n`, `./equin` as the CLI prints it), an ending that fits its state, and
 the page-tool calls the seed RAN, with their real results. The stories
-and agents are described once, in `core/internal/stories.ts`. The
+and agents are described once, in `story`'s `core/internal/stories.ts`. The
 demo owns its scenario, so the demo plugins (`framework/browser-server/demo`)
 never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope>`
 — the website's Live demo band and this plugin's exhibit
@@ -42,18 +42,29 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
   config, this plugin's `data/`, the npm resolutions and the Bun version. Any
   change to the seed, a story, a migration, the config, or server code the take
   runs (a warm-up, a job, a fixture writer) ships a new one.
+- **The scenario and the story are two plugins.** This plugin's `core/` is
+  only what a page embedding the demo needs — `workspaceDemo` (the app, the
+  route, the generated `browserHost` scope) and `externalHosts` — so the
+  website's live demo band bundles nothing the story names. The story is the
+  child plugin [`story`](plugins/story) (`core/` only, its prototype tags and
+  featured prototype for the boot test in `core/testing`): read by `bin/`
+  (seed, snapshot, boot test) and the demo e2e scripts, never by a page. The
+  standalone `website` composition negates it (`!apps.website.demos.workspace.story`)
+  and still ships the band: the demo's page scope is its web registry's
+  on-demand `webScopedEntries`, loaded on Enter, its server halves the worker's
+  (`research/2026-11-10-global-website-composition-carries-live-demo.md`).
 - **The demo owns its data; the apps own how it is written.** Everything the
-  demo shows is here — the stories and agents (`core/internal/stories.ts`),
-  Demo's workspace (`core/internal/pages.ts`, a Pages fixture whose prose is
+  demo shows is here — the stories and agents (`story`'s `core/internal/stories.ts`),
+  Demo's workspace (`story`'s `core/internal/pages.ts`, a Pages fixture whose prose is
   markdown runs, so the pages show every block type), what the
   practice-timer agent wrote (`PRACTICE_TIMER_PAGE_WORK`), the transcripts, the
   prototypes (`data/`, a Prototypes fixture) and their tags and pin
-  (`core/internal/prototypes.ts`), the Sonata songs (`core/internal/songs.ts`,
+  (`story`'s `core/internal/prototypes.ts`), the Sonata songs (`story`'s `core/internal/songs.ts`,
   a Sonata fixture), Demo's Places map — a real user's: ~350 well-known public places,
   most of them in Paris (Demo's city, across the arrondissements), plus the
   trips (Lisbon being planned, Tokyo next, Rome and New York been), on the
   starter tag tree plus Demo's "Trips › <city>", "Friends' tips" and "Home"
-  (`core/internal/places.ts`, a Places fixture; never a real user's saved
+  (`story`'s `core/internal/places.ts`, a Places fixture; never a real user's saved
   places), and Demo's home folder in Files (`data/home/`, written at
   `~` of the browser's file system: Documents — notes, code, an HTML recipe,
   the Lisbon trip's papers —, Music — a recording, a MIDI piece, the practice
@@ -219,7 +230,7 @@ its `server` (portable: nothing in its closure needs the computer) a writer that
 path — the same mutations a user's edit makes, deriving nothing itself. Write
 one if the app has none (`apps/pages/plugins/fixtures` is the model). Then:
 
-1. Put the demo's data for it in this plugin's `core/` (or `data/` for files,
+1. Put the demo's data for it in `story`'s `core/` (or this plugin's `data/` for files,
    bundled like `bin/bundled-prototypes.ts`), every id carrying `demo`.
 2. Call the writer from `bin/seed.ts`, then `await settleJobQueue()` if a later
    step or the page reads what it derives.
@@ -255,56 +266,20 @@ data and seed; no app folder changes:
 ## Plugin reference
 
 - Description: The workspace demo — the website's live demo of the Agent Manager, Pages, Prototypes, Sonata and Keyboard Party on Demo's own equin (core: workspaceDemo — the app, the route /c/conv-demo-practice-timer and its browser host: real server code in a Web Worker on PGlite, starting from a build-time snapshot of the demo's own data written through each app's fixture writer — agents at work on Demo's wishes, one waiting for review after adding a practice timer to Sonata, pages showing every block type, prototypes and songs, every id carrying `demo`) and its exhibit, the app rendered in-process on that host.
-- Core:
-  - Uses:
-    - `conversations.CONVERSATIONS_CATEGORY_ID`
-    - `conversations/agents.agentIdKind`
-    - `conversations/agents.agentLaunchIdKind`
-    - `conversations/model-provider.ConversationModelSchema`
-    - `infra/namespace.asNamespace`
-    - `infra/namespace.namespaceUrl`
-    - `packages/string-hash.hashHex`
-    - `page/editor.blockIdKind`
-    - `page/inline-date.dateToken`
-    - `page/inline-page-link.pageLinkToken`
-    - `page/prompt/link.PAGES_CATEGORY_ID`
-    - `ui/icons/emoji.EmojiSchema`
-    - `wish.WISHES_CATEGORY_ID`
-  - Exports (types):
-    - `DemoAgent`
-    - `DemoPageSession`
-    - `DemoPageToolCall`
-    - `DemoStory`
-  - Exports (values):
-    - `DEMO_AGENTS`
-    - `DEMO_PAGE_IDS`
-    - `DEMO_PAGES`
-    - `DEMO_PLACES`
-    - `DEMO_SONG_ID`
-    - `DEMO_SONGS`
-    - `DEMO_STORIES`
-    - `demoAgentId`
-    - `demoAgentLaunchId`
-    - `demoAttemptId`
-    - `demoConversationId`
-    - `demoPromptOf`
-    - `demoPrototypeFixture`
-    - `demoPushSha`
-    - `demoStoryByKey`
-    - `demoTaskId`
-    - `demoTranscriptJsonl`
-    - `demoWorktreePath`
-    - `externalHosts`
-    - `PRACTICE_TIMER_PAGE_WORK`
-    - `WORKSPACE_DEMO_STORAGE`
-    - `workspaceDemo`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
   - Imported by:
     - `apps/demo`
     - `apps/demo/shell`
     - `apps/website/landing/screenshot`
+- Core:
+  - Exports (values):
+    - `externalHosts`
+    - `WORKSPACE_DEMO_STORAGE`
+    - `workspaceDemo`
 - Structure:
   - Non-standard folders: `data/`
+- Sub-plugins:
+  - **`story`** — The workspace demo's story, as data: the agents' stories and transcripts, Demo's pages, prototypes' tags, songs and places — what the demo's build-time seed writes through each app's fixture writer…
 
 <!-- AUTOGENERATED:END -->

@@ -49,11 +49,6 @@ import {
   type PluginId,
 } from "@plugins/framework/plugins/plugin-id/core";
 import {
-  flattenManifest,
-  resolveComposition,
-} from "@plugins/plugin-meta/plugins/closure/core";
-import { manifestItemToManifest } from "@plugins/plugin-meta/plugins/composition/core";
-import {
   hostServicesByName,
   parseHostServiceDeclarations,
   providedServiceNames,
@@ -70,7 +65,11 @@ import {
   type HostRead,
 } from "./browser-host-coverage";
 import { hostProviderServerBarrels } from "./host-services";
-import { readCompositionManifestsFromDisk } from "./main-bundle";
+import {
+  discoverBrowserHosts,
+  resolveHostScope,
+  type BrowserHostDecl,
+} from "./browser-host-scope";
 import {
   resolveRegistryHome,
   resolveRegistryUnlisted,
@@ -81,68 +80,8 @@ import {
 import type { CodegenStep } from "./regen-pipeline";
 import { writeGenerated } from "./write-generated";
 
-const DECLARATION_RE =
-  /^plugins\/((?:[^/]+\/plugins\/)*[^/]+)\/bin\/browser-host\.composition\.ts$/;
-
 const SERVER_BARREL_RE =
   /^plugins\/((?:[^/]+\/plugins\/)*[^/]+)\/server\/index\.ts$/;
-
-/** One host: the plugin declaring it, its entry, and its generated file. */
-export interface BrowserHostDecl {
-  /** The declaring plugin's path (`apps/plugins/website/plugins/demos/plugins/workspace`). */
-  pluginPath: string;
-  /** Repo-relative `bin/browser-host.composition.ts`. */
-  declaration: string;
-  /** Repo-relative `bin/browser-host.ts` — the worker's entry. */
-  entry: string;
-  /**
-   * Repo-relative `bin/browser-host.snapshot.ts` — the script the build takes
-   * the host's starting snapshot with (web-artifacts' `host-snapshots.ts`).
-   * Its server barrels are roots too: it seeds the same graph the worker boots.
-   */
-  snapshotEntry: string;
-  /** Repo-relative `bin/browser-host.generated.ts` — the worker's graph. */
-  generated: string;
-  /** Repo-relative `core/browser-host.generated.ts` — the page's scope (`browserHost`). */
-  scopeGenerated: string;
-}
-
-/** Every browser host the repo declares. */
-export function discoverBrowserHosts(repo: RepoFiles): BrowserHostDecl[] {
-  const hosts: BrowserHostDecl[] = [];
-  for (const path of repo.all()) {
-    const m = DECLARATION_RE.exec(path);
-    if (m === null) continue;
-    hosts.push({
-      pluginPath: m[1]!,
-      declaration: path,
-      entry: path.replace(/\.composition\.ts$/, ".ts"),
-      snapshotEntry: path.replace(/\.composition\.ts$/, ".snapshot.ts"),
-      generated: path.replace(/\.composition\.ts$/, ".generated.ts"),
-      scopeGenerated: `plugins/${m[1]!}/core/browser-host.generated.ts`,
-    });
-  }
-  return hosts.sort((a, b) => a.pluginPath.localeCompare(b.pluginPath));
-}
-
-/**
- * The host's composition, read off the declaration's text: one string literal,
- * so the generator and the check read the same file through the run's file set
- * and never evaluate it.
- */
-async function declaredComposition(
-  repo: RepoFiles,
-  host: BrowserHostDecl,
-): Promise<string> {
-  const text = (await repo.read(host.declaration)) ?? "";
-  const m = /export const hostComposition = "([^"]+)";/.exec(text);
-  if (m === null) {
-    throw new Error(
-      `${host.declaration} must export \`export const hostComposition = "<composition name>";\` — one string literal.`,
-    );
-  }
-  return m[1]!;
-}
 
 /**
  * What `importClosures` answers that the derivation reads: the union of some
@@ -494,35 +433,10 @@ async function inferUncached(
   host: BrowserHostDecl,
 ): Promise<InferredBrowserHostGraph> {
   const repo = await ctx.repo();
-  const composition = await declaredComposition(repo, host);
-  const label = `${host.declaration} (composition "${composition}")`;
+  const { label, composition, row, resolved, webPlugins, negatedWebPlugins } =
+    await resolveHostScope(ctx, host);
   if (!repo.has(host.entry)) {
     throw new Error(`${label}: the host has no entry (${host.entry}).`);
-  }
-  const manifests = readCompositionManifestsFromDisk(ctx.root);
-  const row = manifests.find((m) => m.id === composition);
-  if (row === undefined) {
-    throw new Error(
-      `${label}: no composition "${composition}" in the manifests (plugins/plugin-meta/plugins/composition/core/config.ts).`,
-    );
-  }
-  const manifest = manifestItemToManifest(row);
-  // The composition says where it runs; a browser host only checks it says
-  // so. Resolved under its own declaration — never a host passed from here —
-  // so its closure follows no `machine/` or `central/` import.
-  if (!manifest.hosts.includes("browser")) {
-    throw new Error(
-      `${label}: the composition is declared for ${manifest.hosts.join(", ")}, not for the browser — a browser host serves only a composition whose \`hosts\` include "browser" (plugins/plugin-meta/plugins/composition/core/config.ts).`,
-    );
-  }
-  const resolved = resolveComposition(
-    ctx.graph,
-    flattenManifest(manifest, manifests.map(manifestItemToManifest)),
-  );
-  if (resolved.unsatisfiedExclusions.length > 0) {
-    throw new Error(
-      `${label}: the composition contradicts its own manifest — ${resolved.unsatisfiedExclusions.map((u) => u.target).join(", ")} still bundled despite a negative.`,
-    );
   }
   const own = ownOutputs(host);
   const barrelOf = (id: PluginId): string =>
@@ -545,10 +459,6 @@ async function inferUncached(
     // over the host's own outputs as they render empty (`ownOutputs`).
     closure: (entries) => bundledClosureOf(repo, entries, own),
   });
-  const hasWeb = (id: PluginId) =>
-    repo.has(`plugins/${asFsPath(id)}/web/index.ts`);
-  const webPlugins = [...resolved.bundle].filter(hasWeb).sort();
-  const negatedWebPlugins = [...resolved.negatedTargets].filter(hasWeb).sort();
   return {
     ...graph,
     label,

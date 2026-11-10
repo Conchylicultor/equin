@@ -27,9 +27,12 @@ export {
   SLOT_READ_TIMING_PREFIX,
   PluginScope,
   usePluginScopeId,
+  useScopePlugins,
 } from "./context";
 export type {
   CompositionIdentity,
+  OnDemandPlugins,
+  ScopePluginsState,
   ScopedComposition,
   SlotReadDetail,
 } from "./context";

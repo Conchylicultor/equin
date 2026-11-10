@@ -17,13 +17,13 @@ import {
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import {
   deriveBrowserHostGraph,
-  discoverBrowserHosts,
   inferBrowserHostGraph,
   renderBrowserHostScope,
   resolveHostGraph,
   type HostClosure,
   type HostGraphInputs,
 } from "./browser-host-gen";
+import { discoverBrowserHosts } from "./browser-host-scope";
 import { buildRegistryGenContext } from "./plugin-registry-gen";
 import { codegenPassOver } from "./codegen-pass";
 import {

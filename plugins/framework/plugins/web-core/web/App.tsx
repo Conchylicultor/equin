@@ -13,7 +13,9 @@ import {
 } from "@plugins/framework/plugins/web-sdk/core";
 import type {
   LoadedPlugin,
+  OnDemandPlugins,
   PluginLoadError,
+  PluginRegistry,
 } from "@plugins/framework/plugins/web-sdk/core";
 import { RenderCoreRoot } from "@plugins/primitives/plugins/slot-render/web";
 import { normalizeRoutePath } from "@plugins/primitives/plugins/pane/core";
@@ -37,7 +39,11 @@ import {
 } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/core";
 import type { BootPluginLoadDetail } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/core";
 import { report } from "@plugins/reports/web";
-import { composition, webEntries } from "@composition-web-registry";
+import {
+  composition,
+  webEntries,
+  webScopedEntries,
+} from "@composition-web-registry";
 import { PluginLoadErrors } from "./components/plugin-load-errors";
 import { BootScreen } from "./components/boot-screen";
 import {
@@ -69,6 +75,73 @@ function bootTasksOf(plugins: LoadedPlugin[]): BootTask[] {
       .filter((c) => c._slot === Core.Boot)
       .map((c) => c as unknown as BootTask),
   );
+}
+
+/**
+ * The page's on-demand plugins (`webScopedEntries`: a bundled browser host's
+ * page scope beyond the page's own plugins — empty on main, which bundles
+ * them all), loaded into `registry` when a `<PluginScope>` asks
+ * (`useScopePlugins`). Each loads once; a failed load rejects every caller
+ * waiting on it, and a later ask tries it again. None may contribute a
+ * `Core.Boot` task: it would run against the page's server, which does not
+ * serve the scope.
+ */
+function createOnDemandPlugins(
+  entries: readonly WebEntry[],
+  registry: PluginRegistry,
+): OnDemandPlugins {
+  const byId = new Map(entries.map((e) => [e.id, e]));
+  const loaded = new Set<string>();
+  const inFlight = new Map<string, Promise<void>>();
+  const loadBatch = async (batch: WebEntry[]): Promise<void> => {
+    const { plugins, errors } = await loadPlugins(batch);
+    const booting = plugins.filter((p) => bootTasksOf([p]).length > 0);
+    if (booting.length > 0) {
+      throw new Error(
+        `[plugins] on-demand plugin(s) contribute a Core.Boot task, which would run against the page's server: ${booting.map((p) => p.id).join(", ")}`,
+      );
+    }
+    registry.append(plugins);
+    markDeferredPluginsLoaded(plugins.map((p) => p.id));
+    for (const p of plugins) loaded.add(p.id);
+    if (errors.length > 0) {
+      recordErrors(errors);
+      throw new Error(
+        `[plugins] ${errors.length} on-demand plugin(s) failed to load: ${errors.map((e) => e.pluginPath).join(", ")}`,
+      );
+    }
+  };
+  return {
+    ids: new Set(byId.keys()),
+    isLoaded: (id) => loaded.has(id),
+    async load(ids) {
+      const batch: WebEntry[] = [];
+      const waits: Promise<void>[] = [];
+      for (const id of ids) {
+        if (loaded.has(id)) continue;
+        const running = inFlight.get(id);
+        if (running !== undefined) {
+          waits.push(running);
+          continue;
+        }
+        const entry = byId.get(id);
+        if (entry === undefined) {
+          throw new Error(
+            `[plugins] "${id}" is not one of this page's on-demand plugins`,
+          );
+        }
+        batch.push(entry);
+      }
+      if (batch.length > 0) {
+        const run = loadBatch(batch).finally(() => {
+          for (const e of batch) inFlight.delete(e.id);
+        });
+        for (const e of batch) inFlight.set(e.id, run);
+        waits.push(run);
+      }
+      await Promise.all(waits);
+    },
+  };
 }
 
 // A companion the repo provides that this bundle lacks (see
@@ -236,6 +309,9 @@ function PageApp() {
   // re-renders only the readers of the slots it changed, never App and never
   // the whole tree. Created once per App mount.
   const [registry] = useState(createPluginRegistry);
+  const [onDemand] = useState(() =>
+    createOnDemandPlugins(webScopedEntries, registry),
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -417,7 +493,11 @@ function PageApp() {
         <PluginLoadErrors errors={state.coreErrors} />
       )}
       <NotificationsProvider>
-        <PluginProvider registry={registry} composition={composition}>
+        <PluginProvider
+          registry={registry}
+          composition={composition}
+          onDemand={onDemand}
+        >
           <RenderCoreRoot />
         </PluginProvider>
       </NotificationsProvider>

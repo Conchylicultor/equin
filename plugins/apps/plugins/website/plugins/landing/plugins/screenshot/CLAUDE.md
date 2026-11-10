@@ -21,6 +21,12 @@ opening on its home app.
 - The frame's paint follows the site's theme tokens, as every website
   component does; the boot screen's colours are the logo's (`ui/logo`).
 
+- **The standalone site ships it too.** The `website` composition bundles
+  only the demo's scenario (`demos/workspace`'s `core`); the demo's page scope
+  is its web registry's on-demand entries, loaded on Enter beside the worker
+  and visible only inside the scope, so the site's own boot and backend are
+  unchanged (`research/2026-11-10-global-website-composition-carries-live-demo.md`).
+
 `e2e/live-demo.ts` drives a first visit: the gate (nothing of the host
 requested before it), the growth, the running demo, Maximize / Restore and
 Collapse, with a screenshot of each.

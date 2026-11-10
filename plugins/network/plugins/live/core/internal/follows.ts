@@ -341,7 +341,16 @@ export function followsOf(
     // Compiled on first use, which is the bind's (see `followsAtBind`).
     let inner: CompiledFollows | undefined;
     const now = () =>
-      (inner ??= compileFollows(key, follows as (b: typeof follow) => unknown));
+      (inner ??= compileFollows(
+        key,
+        follows as (b: typeof follow) => unknown,
+        // A registry's follows — every `followsAtBind` value (saved-icon
+        // sources, attachment owners, page links): a composition whose
+        // plugins contribute none (the standalone website registers no
+        // saved-icon source) follows nothing, which is an answer, never an
+        // author's empty literal (still refused below).
+        { registry: true },
+      ));
     const lazy: CompiledFollows = {
       atBind: true,
       get list() {
@@ -364,6 +373,7 @@ export function followsOf(
 function compileFollows(
   key: string,
   follows: (b: typeof follow) => unknown,
+  { registry = false }: { registry?: boolean } = {},
 ): CompiledFollows {
   const map = follows(follow);
   if (typeof map !== "object" || map === null) {
@@ -427,7 +437,7 @@ function compileFollows(
               ),
     };
   });
-  if (list.length === 0) {
+  if (list.length === 0 && !registry) {
     throw new Error(
       `serveValue("${key}"): \`follows\` names no follow — omit it.`,
     );

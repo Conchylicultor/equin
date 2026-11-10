@@ -252,6 +252,19 @@ and an out-of-composition read has no spelling inside the demo.
 - **Identity kept**: a read that filters nothing returns the parent array;
   `subscribe` delegates to the parent; nested scopes intersect; `replace`
   throws.
+- **A scope's plugins may be the page's on demand**: a composition bundling a
+  browser host's declaring plugin but not its whole scope (the standalone
+  website and its live demo) lists the rest in its web registry's
+  `webScopedEntries`. App.tsx hands them to `PluginProvider` as `onDemand`
+  (`OnDemandPlugins`): the page root's view leaves them out
+  (`excludingReader` — no root mount, app or action-bar item of theirs
+  reaches the page; `pageWide` slots excepted), `useScopePlugins(composition,
+  enabled)` loads them (`pending` → `ready`; `ready` at once when the scope
+  needs none, as on main), and a `PluginScope` narrows the WHOLE registry at
+  the root, its parent scope below it. A scope rendered before its on-demand
+  plugins are loaded throws; one contributing a `Core.Boot` task is refused
+  at load (it would run against the page's server). `DemoScope` calls it once
+  entered, alongside the host's boot.
 - **Limits**: the global `register` phase (module writes applied once per
   page — error-boundary, pending-turn) is not scopable; the first read of a
   slot from inside a scope records the scope's contributors in its
@@ -380,6 +393,7 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
     - `DeferredLoadState`
     - `DocMeta`
     - `LoadedPlugin`
+    - `OnDemandPlugins`
     - `PluginDefinition`
     - `PluginEntry`
     - `PluginLoadError`
@@ -388,6 +402,7 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
     - `RootContribution`
     - `RootSlot`
     - `ScopedComposition`
+    - `ScopePluginsState`
     - `SealContributions`
     - `SealedComponent`
     - `SealedMeta`
@@ -425,6 +440,7 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
     - `usePluginScopeId`
     - `useRawContributions`
     - `useScopedOutContributions`
+    - `useScopePlugins`
     - `webCollectedDir`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`

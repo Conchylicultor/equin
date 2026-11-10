@@ -304,3 +304,58 @@ export function scopedReader(
     },
   };
 }
+
+/**
+ * A read-only view of `parent` WITHOUT the plugins in `excluded`: every slot
+ * read drops their contributions, and `declared()` their slots. The page
+ * root's view of a registry that also holds on-demand plugins (a browser
+ * host's page scope, `PluginProvider`'s `onDemand`): loaded for a
+ * `<PluginScope>` that asks for them, they contribute to nothing outside it —
+ * no root mount, no app, no action-bar item of theirs reaches the page.
+ *
+ * - A `pageWide` slot passes unfiltered, as in {@link scopedReader}: its list
+ *   is a page-global definition set (`Pane.Register`), synced into one
+ *   module-global store from the page and from every scope alike.
+ * - Identity contract kept: a read that drops nothing returns the parent
+ *   array itself, so with nothing on demand this view IS the registry.
+ * - `scopedOut()` is empty: outside every scope nothing is "left out".
+ * - `replace` delegates: the root provider owns the plugin set.
+ */
+export function excludingReader(
+  parent: PluginRegistryReader,
+  excluded: ReadonlySet<string>,
+): PluginRegistryReader {
+  const filtered = new WeakMap<
+    readonly Contribution[],
+    readonly Contribution[]
+  >();
+  let declaredFrom: readonly SlotNamingEntry[] | undefined;
+  let declaredKept: readonly SlotNamingEntry[] = [];
+  return {
+    read(slot) {
+      const list = parent.read(slot);
+      if (slot.meta.pageWide || excluded.size === 0) return list;
+      let out = filtered.get(list);
+      if (!out) {
+        const kept = list.filter(
+          (c) => c._pluginId === undefined || !excluded.has(c._pluginId),
+        );
+        out = kept.length === list.length ? list : Object.freeze(kept);
+        filtered.set(list, out);
+      }
+      return out;
+    },
+    subscribe: (slot, listener) => parent.subscribe(slot, listener),
+    replace: (plugins) => parent.replace(plugins),
+    declared() {
+      const all = parent.declared();
+      if (excluded.size === 0) return all;
+      if (all !== declaredFrom) {
+        declaredFrom = all;
+        declaredKept = all.filter((e) => !excluded.has(e.pluginId));
+      }
+      return declaredKept;
+    },
+    scopedOut: () => NO_CONTRIBUTIONS,
+  };
+}

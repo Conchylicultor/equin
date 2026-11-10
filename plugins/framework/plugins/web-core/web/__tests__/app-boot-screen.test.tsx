@@ -17,6 +17,7 @@ const registry = await vi.hoisted(async () => {
     loader: () => Promise<{ default: unknown }>;
     dependsOn: string[];
   }[],
+    webScopedEntries: [],
     composition: { id: MAIN_COMPOSITION_ID, home: null },
   };
 });

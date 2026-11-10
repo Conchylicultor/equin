@@ -64,7 +64,7 @@ import {
   demoPushSha,
   type DemoPageSession,
   type DemoPageToolCall,
-} from "../core";
+} from "@plugins/apps/plugins/website/plugins/demos/plugins/workspace/plugins/story/core";
 
 /**
  * The demo's starting data, written into a LIVE host (`bootBrowserHost` seeds

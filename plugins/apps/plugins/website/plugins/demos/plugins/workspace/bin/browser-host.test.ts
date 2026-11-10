@@ -103,7 +103,7 @@ import {
   demoPromptOf,
   demoStoryByKey,
   demoTaskId,
-} from "../core";
+} from "@plugins/apps/plugins/website/plugins/demos/plugins/workspace/plugins/story/core";
 import type { ToolCallEvent } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { parsePageApplyReport } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/page-tools/core";
 import { readBlockAsMarkdown } from "@plugins/page/plugins/markdown-apply/server";
@@ -123,7 +123,7 @@ import { seed } from "./seed";
 import {
   DEMO_FEATURED_PROTOTYPE,
   DEMO_PROTOTYPE_TAGS,
-} from "../core/internal/prototypes";
+} from "@plugins/apps/plugins/website/plugins/demos/plugins/workspace/plugins/story/core/testing";
 import {
   parsePrototypeTree,
   prototypeFixtureVersionFingerprint,

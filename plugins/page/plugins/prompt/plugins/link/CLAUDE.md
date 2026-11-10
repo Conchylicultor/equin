@@ -106,7 +106,7 @@ and endpoint contract are consumed by this plugin's own `web` and `server` only.
 - Cross-plugin:
   - Imported by:
     - `apps/pages/prompt-origin`
-    - `apps/website/demos/workspace`
+    - `apps/website/demos/workspace/story`
     - `page/annotations/todo/task-link`
     - `page/prompt/block`
 - Core:

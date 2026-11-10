@@ -2,6 +2,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -13,6 +14,7 @@ import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/cor
 import type { Contribution, LoadedPlugin } from "./types";
 import {
   createPluginRegistry,
+  excludingReader,
   NO_CONTRIBUTIONS,
   readerOf,
   scopedReader,
@@ -24,6 +26,87 @@ import {
 // so a provider re-render or a plugin append never re-renders a reader through
 // the context. Not exported: the only read is `useRawContributions(slot)`.
 const PluginRegistryContext = createContext<PluginRegistryReader | null>(null);
+
+// The registry a `<PluginScope>` narrows: the enclosing scope's view, or — at
+// the page root — the WHOLE registry, on-demand plugins included, which the
+// root's own view (`PluginRegistryContext`) leaves out. Null under a provider
+// with nothing on demand: a scope then narrows its parent, as it always did.
+const PluginScopeBaseContext = createContext<PluginRegistryReader | null>(null);
+
+/**
+ * The web plugins a page carries ON DEMAND: listed in its registry beside its
+ * own (the web registry's `webScopedEntries` — a bundled browser host's page
+ * scope beyond the page's own plugins), loaded only when a `<PluginScope>`
+ * over them asks (`useScopePlugins`), and contributing to nothing outside
+ * such a scope.
+ */
+export interface OnDemandPlugins {
+  /** Every on-demand plugin id. */
+  ids: ReadonlySet<string>;
+  /** Whether `id` is loaded (in the registry). */
+  isLoaded(id: string): boolean;
+  /**
+   * Load those of `ids` not loaded yet; resolves once they are in the
+   * registry, rejects when one fails to load. Concurrent calls share the
+   * loads they have in common.
+   */
+  load(ids: readonly string[]): Promise<void>;
+}
+
+const OnDemandContext = createContext<OnDemandPlugins | null>(null);
+
+/** Where loading a scope's on-demand plugins is (`useScopePlugins`). */
+export type ScopePluginsState =
+  { kind: "pending" } | { kind: "ready" } | { kind: "failed"; error: unknown };
+
+/**
+ * Loads the on-demand plugins `composition`'s scope needs, once `enabled`:
+ * `ready` at once when it needs none (every plugin is the page's own — main,
+ * a test's provider), else `pending` until they are in the registry. A page
+ * renders `<PluginScope composition>` only once this is `ready`; the scope
+ * throws otherwise. `enabled` is the caller's "start now" (a demo's gate:
+ * nothing downloads before the visitor asks).
+ */
+export function useScopePlugins(
+  composition: ScopedComposition,
+  enabled: boolean,
+): ScopePluginsState {
+  const onDemand = useContext(OnDemandContext);
+  const missing = useMemo(
+    () =>
+      onDemand === null
+        ? []
+        : composition.plugins.filter(
+            (id) => onDemand.ids.has(id) && !onDemand.isLoaded(id),
+          ),
+    [onDemand, composition.plugins],
+  );
+  // The outcome of loading ONE missing set: a set that changes (another
+  // composition) is pending again until its own load settles.
+  const [settled, setSettled] = useState<{
+    of: readonly string[];
+    state: ScopePluginsState;
+  } | null>(null);
+  useEffect(() => {
+    if (!enabled || onDemand === null || missing.length === 0) return;
+    let live = true;
+    onDemand.load(missing).then(
+      () => {
+        if (live) setSettled({ of: missing, state: { kind: "ready" } });
+      },
+      (error: unknown) => {
+        if (live) setSettled({ of: missing, state: { kind: "failed", error } });
+      },
+    );
+    return () => {
+      live = false;
+    };
+  }, [enabled, onDemand, missing]);
+  if (missing.length === 0) return { kind: "ready" };
+  return settled !== null && settled.of === missing
+    ? settled.state
+    : { kind: "pending" };
+}
 
 /**
  * Prefix of the per-slot first-read User Timing marks: `slot-read:<slot id>`,
@@ -175,6 +258,12 @@ export function PluginProvider(
       | {
           registry: PluginRegistry;
           composition: CompositionIdentity;
+          /**
+           * The plugins the registry also holds on demand (`OnDemandPlugins`):
+           * left out of every read outside a `<PluginScope>` asking for them.
+           * The boot path always passes its own; absent = nothing on demand.
+           */
+          onDemand?: OnDemandPlugins;
           plugins?: never;
         }
       // Tests and standalone mounts provide one only when what they render reads it.
@@ -182,6 +271,7 @@ export function PluginProvider(
           plugins: LoadedPlugin[];
           composition?: CompositionIdentity;
           registry?: never;
+          onDemand?: never;
         }
     ),
 ) {
@@ -189,12 +279,19 @@ export function PluginProvider(
   const plugins = "plugins" in props ? props.plugins : undefined;
   // Created once: the registry is the ONE object the tree reads for the
   // provider's lifetime.
-  const [reader] = useState(() => {
+  const [whole] = useState(() => {
     if (props.registry) return readerOf(props.registry);
     const owned = readerOf(createPluginRegistry());
     owned.replace(plugins ?? []);
     return owned;
   });
+  const onDemand = props.onDemand ?? null;
+  // The page's own view: the whole registry minus what it holds on demand.
+  const [reader] = useState(() =>
+    onDemand === null || onDemand.ids.size === 0
+      ? whole
+      : excludingReader(whole, onDemand.ids),
+  );
   const applied = useRef(plugins);
   // A swapped `plugins` prop is applied after render (a registry write
   // notifies other components, which must not happen during this render); its
@@ -207,9 +304,13 @@ export function PluginProvider(
 
   return (
     <PluginRegistryContext.Provider value={reader}>
-      <CompositionContext.Provider value={composition}>
-        {children}
-      </CompositionContext.Provider>
+      <PluginScopeBaseContext.Provider value={reader === whole ? null : whole}>
+        <OnDemandContext.Provider value={onDemand}>
+          <CompositionContext.Provider value={composition}>
+            {children}
+          </CompositionContext.Provider>
+        </OnDemandContext.Provider>
+      </PluginScopeBaseContext.Provider>
     </PluginRegistryContext.Provider>
   );
 }
@@ -269,26 +370,50 @@ export function PluginScope({
   composition: ScopedComposition;
   children: ReactNode;
 }) {
-  const parent = useContext(PluginRegistryContext);
-  if (!parent) {
+  const view = useContext(PluginRegistryContext);
+  const base = useContext(PluginScopeBaseContext);
+  const onDemand = useContext(OnDemandContext);
+  if (!view) {
     throw new Error("PluginScope must be rendered within PluginProvider");
   }
+  // What the scope narrows: the whole registry at the page root (its
+  // on-demand plugins are the scope's to show), else the enclosing scope.
+  const parent = base ?? view;
   const { id, home, unlisted, plugins, negated } = composition;
-  const reader = useMemo(
-    () => scopedReader(parent, new Set(plugins), new Set(negated)),
-    [parent, plugins, negated],
-  );
+  const unloaded =
+    onDemand === null
+      ? []
+      : plugins.filter((p) => onDemand.ids.has(p) && !onDemand.isLoaded(p));
+  if (unloaded.length > 0) {
+    throw new Error(
+      `PluginScope "${id}": ${unloaded.length} of its plugins are on demand and not loaded (${unloaded.slice(0, 3).join(", ")}${unloaded.length > 3 ? ", …" : ""}) — render it once useScopePlugins(composition) is ready.`,
+    );
+  }
+  // Left out on purpose, never "scoped out": the composition's negatives,
+  // and — narrowing the whole registry at the root — every on-demand plugin
+  // another scope loaded that this one does not hold.
+  const reader = useMemo(() => {
+    const held = new Set(plugins);
+    const leftOut = new Set(negated);
+    if (base !== null && onDemand !== null) {
+      for (const p of onDemand.ids) if (!held.has(p)) leftOut.add(p);
+    }
+    return scopedReader(parent, held, leftOut);
+  }, [parent, base, onDemand, plugins, negated]);
   const identity = useMemo(
     () => (unlisted === undefined ? { id, home } : { id, home, unlisted }),
     [id, home, unlisted],
   );
   return (
     <PluginRegistryContext.Provider value={reader}>
-      <CompositionContext.Provider value={identity}>
-        <PluginScopeIdContext.Provider value={id}>
-          {children}
-        </PluginScopeIdContext.Provider>
-      </CompositionContext.Provider>
+      {/* A nested scope narrows this one. */}
+      <PluginScopeBaseContext.Provider value={null}>
+        <CompositionContext.Provider value={identity}>
+          <PluginScopeIdContext.Provider value={id}>
+            {children}
+          </PluginScopeIdContext.Provider>
+        </CompositionContext.Provider>
+      </PluginScopeBaseContext.Provider>
     </PluginRegistryContext.Provider>
   );
 }

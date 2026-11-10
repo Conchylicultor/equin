@@ -100,6 +100,17 @@ generator reports each host as three build-profiler spans
 `browserHostWrite:<host>`); `scripts/measure-browser-host-guard.ts` times the
 derivation the way build and a check pass pay for it.
 
+**A composition carries the page scope of every host it bundles**
+(`core/browser-host-scope.ts`): `resolveHostScope` is the derivation's cheap
+half (the host's composition resolved, `bundle ∩ web barrels`, memoized on the
+ctx), and `scopedOnlyWebPlugins(ctx, bundle)` is the scope of each host whose
+declaring plugin `bundle` holds, minus `bundle`. Every composition's web
+registry renders those as `webScopedEntries` beside `webEntries` (empty on
+main, which bundles every scope): web plugins loaded on demand by the scope
+(web-sdk's `useScopePlugins`), never in the composition's server, machine or
+central registries — the worker serves them. So the standalone website ships
+the live demo with `excludes: ["agent-runtime", "auth"]` intact.
+
 The page side comes from the same derivation: `core/browser-host.generated.ts`
 (`browserHost`: the composition's id, home, web plugins — bundle ∩ web barrels —
 and the worker's `start`), the scope `<PluginScope>` renders the host's subtree
@@ -211,7 +222,7 @@ wrapper fixpoint reads.
 
 - Description: Plugin doc generation and registry codegen
 - Core:
-  - Uses: 141 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 142 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `plugin-meta/parse-utils` ×19
     - `config_v2` ×15
     - `framework/plugin-id` ×13
@@ -219,9 +230,9 @@ wrapper fixpoint reads.
     - `plugin-meta/plugin-records` ×8
     - `framework/slot-declaration` ×6
     - `plugin-meta/barrel-import` ×6
+    - `plugin-meta/closure` ×6
     - `plugin-meta/composition` ×6
     - `packages/timed-fs` ×5
-    - `plugin-meta/closure` ×5
     - `plugin-meta/facets` ×5
     - `plugin-meta/plugin-records/evaluate` ×5
     - `framework/tooling/codegen/composition-registries` ×4

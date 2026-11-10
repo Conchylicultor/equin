@@ -54,7 +54,10 @@ import {
   TransportProvider,
   useTransport,
 } from "@plugins/primitives/plugins/networking/web";
-import { PluginScope } from "@plugins/framework/plugins/web-sdk/core";
+import {
+  PluginScope,
+  useScopePlugins,
+} from "@plugins/framework/plugins/web-sdk/core";
 import { RenderOrigin } from "@plugins/primitives/plugins/scope/plugins/render-origin/web";
 import { ScopeIconSymbols } from "@plugins/ui/plugins/icons/plugins/sprites/web";
 import {
@@ -396,6 +399,10 @@ export function DemoScope({
       setState({ kind: "booting", progress: null });
     };
   }, [entered, scenario, generations, resets]);
+  // The scope's web plugins this page holds on demand (a page whose own
+  // composition lacks the demo's apps — the standalone site), loaded alongside
+  // the host's boot, once the host may start: nothing before the gate.
+  const scopePlugins = useScopePlugins(scenario.host, entered);
   const host = state.kind === "ready" ? state.host : null;
   const declaredKeys = inputKeys.join("\n");
   useEffect(() => {
@@ -422,8 +429,13 @@ export function DemoScope({
   );
   // A host that could not boot reaches the error boundary, never an empty app.
   if (state.kind === "failed") throw state.error;
+  if (scopePlugins.kind === "failed") throw scopePlugins.error;
   if (state.kind === "stopped") return <HostStopped message={state.message} />;
-  if (transport === null || control === null) {
+  if (
+    transport === null ||
+    control === null ||
+    scopePlugins.kind === "pending"
+  ) {
     if (boot === undefined) return <Loading />;
     return boot(
       state.kind === "asking"

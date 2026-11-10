@@ -13,6 +13,10 @@ import type {
   InferredBrowserHostGraph,
 } from "./browser-host-gen";
 import {
+  scopedOnlyWebPlugins,
+  type BrowserHostScope,
+} from "./browser-host-scope";
+import {
   isTestCodePath,
   LEAF_FOLDERS,
   machineNode,
@@ -149,6 +153,7 @@ export interface RegistryGenContext {
 
 /** One browser host's memoized derivation halves (see `RegistryGenContext.browserHostGraphs`). */
 export interface BrowserHostGraphMemo {
+  scope?: Promise<BrowserHostScope>;
   inferred?: Promise<InferredBrowserHostGraph>;
   derived?: Promise<DerivedBrowserHostGraph>;
 }
@@ -591,7 +596,47 @@ export async function renderCollectedDirRegistry(opts: {
     entries,
     deps,
     def.membership === "composition" ? opts.composition : null,
+    def.dir === SCOPED_ENTRIES_DIR && def.membership === "composition"
+      ? await collectScopedEntries(ctx, def.dir, bundle)
+      : null,
   );
+}
+
+/**
+ * The dir whose registry also lists its composition's ON-DEMAND plugins
+ * (`scopedEntries`): a browser host's page scope is web plugins — its server
+ * halves are the host's worker, never the composition's backend.
+ */
+const SCOPED_ENTRIES_DIR = "web";
+
+/**
+ * The `scopedEntries` of `bundle`'s web registry: the page scope of every
+ * browser host a bundled plugin declares, minus the bundle's own plugins
+ * (`scopedOnlyWebPlugins`) — each with its `dependsOn` pruned to the plugins
+ * the registry lists (own ∪ scoped). Empty for main, which bundles every scope.
+ */
+async function collectScopedEntries(
+  ctx: RegistryGenContext,
+  dir: string,
+  bundle: Set<string>,
+): Promise<{ entries: CollectedRawEntry[]; deps: Map<string, string[]> }> {
+  const scoped = new Set<string>(await scopedOnlyWebPlugins(ctx, bundle));
+  if (scoped.size === 0) return { entries: [], deps: new Map() };
+  const { entries, deps } = await collectEntriesWithDeps(
+    ctx,
+    dir,
+    new Set([...bundle, ...scoped]),
+  );
+  const listed = entries.filter((e) => scoped.has(e.id));
+  return {
+    entries: listed,
+    deps: new Map(
+      listed.flatMap((e) => {
+        const d = deps.get(e.pluginPath);
+        return d === undefined ? [] : [[e.pluginPath, d] as const];
+      }),
+    ),
+  };
 }
 
 /**
@@ -604,7 +649,13 @@ export function renderEmptyCollectedDirRegistry(
   dir: string,
   composition: RegistryComposition,
 ): string {
-  return renderRegistry(dir, [], new Map(), composition);
+  return renderRegistry(
+    dir,
+    [],
+    new Map(),
+    composition,
+    dir === SCOPED_ENTRIES_DIR ? { entries: [], deps: new Map() } : null,
+  );
 }
 
 /**
@@ -696,6 +747,10 @@ function renderRegistry(
   entries: CollectedRawEntry[],
   deps: Map<string, string[]>,
   composition: RegistryComposition | null,
+  scoped: {
+    entries: CollectedRawEntry[];
+    deps: Map<string, string[]>;
+  } | null,
 ): string {
   const exportName = `${identifierForDir(dir)}Entries`;
 
@@ -711,24 +766,49 @@ function renderRegistry(
   if (warmsCore) lines.push("  core: (() => Promise<unknown>) | null;");
   lines.push("}");
   lines.push("");
-  lines.push(`export const ${exportName}: CollectedEntry[] = [`);
-  for (const e of entries) {
-    const entryDeps = deps.get(e.pluginPath) ?? [];
-    const depsLiteral =
-      entryDeps.length > 0
-        ? `[${entryDeps.map((d) => JSON.stringify(d)).join(", ")}]`
-        : "[]";
-    const id = COMPANION_DIRS[dir] === undefined ? e.id : machineNode(e.id);
-    const core = !warmsCore
-      ? ""
-      : e.coreImportPath === null
-        ? ", core: null"
-        : `, core: () => import(${JSON.stringify(e.coreImportPath)})`;
+  const pushEntries = (
+    name: string,
+    list: CollectedRawEntry[],
+    listDeps: Map<string, string[]>,
+  ) => {
+    lines.push(`export const ${name}: CollectedEntry[] = [`);
+    for (const e of list) {
+      const entryDeps = listDeps.get(e.pluginPath) ?? [];
+      const depsLiteral =
+        entryDeps.length > 0
+          ? `[${entryDeps.map((d) => JSON.stringify(d)).join(", ")}]`
+          : "[]";
+      const id = COMPANION_DIRS[dir] === undefined ? e.id : machineNode(e.id);
+      const core = !warmsCore
+        ? ""
+        : e.coreImportPath === null
+          ? ", core: null"
+          : `, core: () => import(${JSON.stringify(e.coreImportPath)})`;
+      lines.push(
+        `  { pluginPath: ${JSON.stringify(e.pluginPath)}, id: ${JSON.stringify(id)}, loader: () => import(${JSON.stringify(e.importPath)}), dependsOn: ${depsLiteral}${core} },`,
+      );
+    }
+    lines.push("];");
+  };
+  pushEntries(exportName, entries, deps);
+  if (scoped !== null) {
+    lines.push("");
     lines.push(
-      `  { pluginPath: ${JSON.stringify(e.pluginPath)}, id: ${JSON.stringify(id)}, loader: () => import(${JSON.stringify(e.importPath)}), dependsOn: ${depsLiteral}${core} },`,
+      "// The composition's ON-DEMAND plugins: the page scope of a browser host it",
+    );
+    lines.push(
+      "// bundles, beyond its own plugins. Loaded when that scope asks for them",
+    );
+    lines.push(
+      "// (`useScopePlugins`), visible only inside it; their other halves are the",
+    );
+    lines.push("// host's worker, never this composition's backend.");
+    pushEntries(
+      `${identifierForDir(dir)}ScopedEntries`,
+      scoped.entries,
+      scoped.deps,
     );
   }
-  lines.push("];");
   if (composition !== null) {
     lines.push("");
     lines.push("export interface CompositionIdentity {");

@@ -256,20 +256,32 @@ describe("planFleet with an injected fleet source", () => {
       },
       source: {
         webEntries: [{ pluginPath: "shell", id: "shell", dependsOn: [] }],
+        webScopedEntries: [{ pluginPath: "tasks", id: "tasks", dependsOn: [] }],
         deferredPaths,
         registryFile,
         registrySlug: "web-registry-testcomp",
       },
     });
 
+    // The on-demand entries are built and mapped like the composition's own…
     expect(plan.webTargets.map((t) => t.specifier)).toEqual([
       "@plugins/shell/web",
+      "@plugins/tasks/web",
     ]);
+    // …and never preloaded: a scope loads them when it asks.
+    expect(
+      eagerWebTargets(plan.webTargets, plan.deferredPaths).map(
+        (t) => t.specifier,
+      ),
+    ).toEqual(["@plugins/shell/web"]);
     expect(
       plan.registryTarget.dirName.startsWith("web-registry-testcomp.registry."),
     ).toBe(true);
     expect(plan.registryTarget.registryFile).toBe(registryFile);
-    expect(plan.deferredPaths).toBe(deferredPaths);
+    expect([...plan.deferredPaths].sort()).toEqual([
+      "some/deferred/path",
+      "tasks",
+    ]);
   });
 
   test("the registry store name is a pure function of source content + slug", async () => {
@@ -277,6 +289,7 @@ describe("planFleet with an injected fleet source", () => {
     writeFileSync(registryFile, "export const webEntries = [];\n");
     const source = {
       webEntries: [],
+      webScopedEntries: [],
       deferredPaths: new Set<string>(),
       registryFile,
       registrySlug: "web-registry-other",

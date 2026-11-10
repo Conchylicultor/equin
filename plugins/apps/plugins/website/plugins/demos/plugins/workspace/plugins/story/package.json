@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-website-demos-workspace-story",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The workspace demo's story, as data: the agents' stories and transcripts, Demo's pages, prototypes' tags, songs and places — what the demo's build-time seed writes through each app's fixture writer, kept apart from the demo's scenario so the page that embeds the demo never bundles the apps this data names."
+}

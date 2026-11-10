@@ -11536,57 +11536,67 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`demos`** — The website's live demos, one plugin each: a demo owns its story and its data (pages, prototypes, agent runs) and writes them into its own browser host through each app's fixture writer.
           - Plugins:
             - **`workspace`** — The workspace demo — the website's live demo of the Agent Manager, Pages, Prototypes, Sonata and Keyboard Party on Demo's own equin (core: workspaceDemo — the app, the route /c/conv-demo-practice-timer and its browser host: real server code in a Web Worker on PGlite, starting from a build-time snapshot of the demo's own data written through each app's fixture writer — agents at work on Demo's wishes, one waiting for review after adding a practice timer to Sonata, pages showing every block type, prototypes and songs, every id carrying `demo`) and its exhibit, the app rendered in-process on that host.
-              - Core:
-                - Uses:
-                  - `conversations.CONVERSATIONS_CATEGORY_ID`
-                  - `conversations/agents.agentIdKind`
-                  - `conversations/agents.agentLaunchIdKind`
-                  - `conversations/model-provider.ConversationModelSchema`
-                  - `infra/namespace.asNamespace`
-                  - `infra/namespace.namespaceUrl`
-                  - `packages/string-hash.hashHex`
-                  - `page/editor.blockIdKind`
-                  - `page/inline-date.dateToken`
-                  - `page/inline-page-link.pageLinkToken`
-                  - `page/prompt/link.PAGES_CATEGORY_ID`
-                  - `ui/icons/emoji.EmojiSchema`
-                  - `wish.WISHES_CATEGORY_ID`
-                - Exports (types):
-                  - `DemoAgent`
-                  - `DemoPageSession`
-                  - `DemoPageToolCall`
-                  - `DemoStory`
-                - Exports (values):
-                  - `DEMO_AGENTS`
-                  - `DEMO_PAGE_IDS`
-                  - `DEMO_PAGES`
-                  - `DEMO_PLACES`
-                  - `DEMO_SONG_ID`
-                  - `DEMO_SONGS`
-                  - `DEMO_STORIES`
-                  - `demoAgentId`
-                  - `demoAgentLaunchId`
-                  - `demoAttemptId`
-                  - `demoConversationId`
-                  - `demoPromptOf`
-                  - `demoPrototypeFixture`
-                  - `demoPushSha`
-                  - `demoStoryByKey`
-                  - `demoTaskId`
-                  - `demoTranscriptJsonl`
-                  - `demoWorktreePath`
-                  - `externalHosts`
-                  - `PRACTICE_TIMER_PAGE_WORK`
-                  - `WORKSPACE_DEMO_STORAGE`
-                  - `workspaceDemo`
               - Cross-plugin:
                 - Uses tokens: `ui/tokens/shadow --shadow`
                 - Imported by:
                   - `apps/demo`
                   - `apps/demo/shell`
                   - `apps/website/landing/screenshot`
+              - Core:
+                - Exports (values):
+                  - `externalHosts`
+                  - `WORKSPACE_DEMO_STORAGE`
+                  - `workspaceDemo`
               - Structure:
                 - Non-standard folders: `data/`
+              - Plugins:
+                - **`story`** — The workspace demo's story, as data: the agents' stories and transcripts, Demo's pages, prototypes' tags, songs and places — what the demo's build-time seed writes through each app's fixture writer, kept apart from the demo's scenario so the page that embeds the demo never bundles the apps this data names.
+                  - Core:
+                    - Uses:
+                      - `conversations.CONVERSATIONS_CATEGORY_ID`
+                      - `conversations/agents.agentIdKind`
+                      - `conversations/agents.agentLaunchIdKind`
+                      - `conversations/model-provider.ConversationModelSchema`
+                      - `infra/namespace.asNamespace`
+                      - `infra/namespace.namespaceUrl`
+                      - `packages/string-hash.hashHex`
+                      - `page/editor.blockIdKind`
+                      - `page/inline-date.dateToken`
+                      - `page/inline-page-link.pageLinkToken`
+                      - `page/prompt/link.PAGES_CATEGORY_ID`
+                      - `ui/icons/emoji.EmojiSchema`
+                      - `wish.WISHES_CATEGORY_ID`
+                    - Exports (types):
+                      - `DemoAgent`
+                      - `DemoPageSession`
+                      - `DemoPageToolCall`
+                      - `DemoStory`
+                    - Exports (values):
+                      - `DEMO_AGENTS`
+                      - `DEMO_PAGE_IDS`
+                      - `DEMO_PAGES`
+                      - `DEMO_PLACES`
+                      - `DEMO_SONG_ID`
+                      - `DEMO_SONGS`
+                      - `DEMO_STORIES`
+                      - `demoAgentId`
+                      - `demoAgentLaunchId`
+                      - `demoAttemptId`
+                      - `demoConversationId`
+                      - `demoPromptOf`
+                      - `demoPrototypeFixture`
+                      - `demoPushSha`
+                      - `demoStoryByKey`
+                      - `demoTaskId`
+                      - `demoTranscriptJsonl`
+                      - `demoWorktreePath`
+                      - `PRACTICE_TIMER_PAGE_WORK`
+                  - Cross-plugin:
+                    - Imported by: `apps/demo`
+                  - Test helpers:
+                    - Core: `@plugins/apps/plugins/website/plugins/demos/plugins/workspace/plugins/story/core/testing`
+                      - `DEMO_FEATURED_PROTOTYPE` — The prototype the demo's pages and transcripts point at (the photo grid).
+                      - `DEMO_PROTOTYPE_TAGS` — The demo's prototype tags, in gallery order, and which prototype carries which.
         - **`improve`** — The website's Wish button: the header's call to action, a popover where a visitor describes a change to the page, watches a scripted replay of what equin would do with it, and files it as a prefilled GitHub issue.
           - Web:
             - Contributes: `WebsiteHeader` "improve" → `ImproveNavItem`
@@ -15513,7 +15523,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-weight-semibold`
           - `ui/tokens/type-scale --line-height-body`
           - `ui/tokens/type-scale --line-height-title`
-        - Imported by: `apps/website/demos/workspace`
+        - Imported by: `apps/website/demos/workspace/story`
     - **`all-conversations`** — All-conversations app pane: a live DataView over the `conversations.all` collection (filter/sort/search over every conversation, kept fresh by the routed change feed) reachable from the agent-manager sidebar; and how the conversations entity's fields present in every conversation list (the optimistic status cell, the model filter's live catalog options). Serves the two conversation-list collections — `conversations.all` (system conversations hidden by a default scope) and `conversations.history` — over `_conversations` with the owner joins (attempt → task), routed: a conversation, attempt or task write refills only the rows it changes.
       - Web:
         - Slots: `allConversationsPane.Actions`
@@ -29616,7 +29626,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Uses: `framework/tooling/checks/type-check.readTypeCheckTree`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 141 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+            - Uses: 142 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
               - `plugin-meta/parse-utils` ×19
               - `config_v2` ×15
               - `framework/plugin-id` ×13
@@ -29624,9 +29634,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/plugin-records` ×8
               - `framework/slot-declaration` ×6
               - `plugin-meta/barrel-import` ×6
+              - `plugin-meta/closure` ×6
               - `plugin-meta/composition` ×6
               - `packages/timed-fs` ×5
-              - `plugin-meta/closure` ×5
               - `plugin-meta/facets` ×5
               - `plugin-meta/plugin-records/evaluate` ×5
               - `framework/tooling/codegen/composition-registries` ×4
@@ -30572,6 +30582,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DeferredLoadState`
           - `DocMeta`
           - `LoadedPlugin`
+          - `OnDemandPlugins`
           - `PluginDefinition`
           - `PluginEntry`
           - `PluginLoadError`
@@ -30580,6 +30591,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RootContribution`
           - `RootSlot`
           - `ScopedComposition`
+          - `ScopePluginsState`
           - `SealContributions`
           - `SealedComponent`
           - `SealedMeta`
@@ -30617,6 +30629,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `usePluginScopeId`
           - `useRawContributions`
           - `useScopedOutContributions`
+          - `useScopePlugins`
           - `webCollectedDir`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
@@ -41023,7 +41036,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --border`
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/shape --spacing`
-        - Imported by: `apps/website/demos/workspace`
+        - Imported by: `apps/website/demos/workspace/story`
       - Exemptions:
         - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
     - **`inline-page-link`** — Inline page links: type [[ in any text block (or paste a bare block id) to drop a clickable page reference — a pasted id into an empty block turns it into a link-to-page block; stored as a [[page:<pageId>]] token and fed into the backlinks index. Backlinks extractor for inline `[[page:<pageId>]]` page links embedded in any block's text.
@@ -41065,7 +41078,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
-          - `apps/website/demos/workspace`
+          - `apps/website/demos/workspace/story`
           - `apps/website/promo-film/seed`
           - `page/editor`
     - **`links`** — Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource. Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource, and the boot backfill (a warm-up enqueuing a job that reindexes every live page's outgoing links, off the serving-critical boot path).
@@ -41713,7 +41726,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `apps/pages/prompt-origin`
-              - `apps/website/demos/workspace`
+              - `apps/website/demos/workspace/story`
               - `page/annotations/todo/task-link`
               - `page/prompt/block`
           - Core:
@@ -58286,7 +58299,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/pages/content-search`
               - `apps/pages/history`
               - `apps/pages/page-tree`
-              - `apps/website/demos/workspace`
+              - `apps/website/demos/workspace/story`
               - `page/editor`
               - `page/links`
               - `page/read-only-view`
@@ -60460,7 +60473,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ui/tokens/color-palette --muted-foreground`
     - Imported by:
       - `apps/home/tour`
-      - `apps/website/demos/workspace`
+      - `apps/website/demos/workspace/story`
       - `apps/website/promo-film/seed`
       - `conversations/conversation-view/jsonl-viewer/investigate-event`
       - `hints/ask`

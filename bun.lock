@@ -1419,6 +1419,10 @@
       "name": "@equin/plugin-apps-website-demos-workspace",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/website/plugins/demos/plugins/workspace/plugins/story": {
+      "name": "@equin/plugin-apps-website-demos-workspace-story",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/website/plugins/improve": {
       "name": "@equin/plugin-apps-website-improve",
       "version": "0.0.1",
@@ -8143,6 +8147,8 @@
     "@equin/plugin-apps-website-demos": ["@equin/plugin-apps-website-demos@workspace:plugins/apps/plugins/website/plugins/demos"],
 
     "@equin/plugin-apps-website-demos-workspace": ["@equin/plugin-apps-website-demos-workspace@workspace:plugins/apps/plugins/website/plugins/demos/plugins/workspace"],
+
+    "@equin/plugin-apps-website-demos-workspace-story": ["@equin/plugin-apps-website-demos-workspace-story@workspace:plugins/apps/plugins/website/plugins/demos/plugins/workspace/plugins/story"],
 
     "@equin/plugin-apps-website-improve": ["@equin/plugin-apps-website-improve@workspace:plugins/apps/plugins/website/plugins/improve"],
 

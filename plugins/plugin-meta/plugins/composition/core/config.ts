@@ -566,24 +566,27 @@ export const compositionsConfig = defineConfig({
         // containment always carries the shared baseline (`apps-core.layout`,
         // `infra.health`, `shell.toast`, the token groups) that every app extends.
         // `excludes` names infra bundles — that is the whole vocabulary.
-        // `!apps.website.demos.**`: a live demo is the Agent Manager on made-up
-        // data, booted in its own worker as its own composition
-        // (`agent-manager-demo`), so it hard-reaches the agent runtime this
-        // site must ship without. The demos live here (each owns its data,
-        // `apps/website/demos`). The homepage's demo band
-        // (`apps.website.landing.screenshot`) embeds one, so it goes with them
-        // (`!apps.website.landing.screenshot`, named so the cascade is chosen,
-        // not suffered): main's `/website` shows it live, this standalone site
-        // ships without it until the site's bundle can carry the demo's server
-        // halves into the browser instead of reaching the agent runtime.
+        // The homepage's live demo band (`apps.website.landing.screenshot`)
+        // embeds the workspace demo (`apps.website.demos.workspace`): the
+        // Agent Manager, Pages, Sonata, … on made-up data, booted in its own
+        // worker as its own composition (`agent-manager-demo`). The site
+        // bundles only the demo's scenario; the demo's page side — its
+        // scope's web plugins — is carried by codegen as the web registry's
+        // on-demand `scopedEntries` (loaded on Enter, visible only inside the
+        // scope), and its server halves are the worker's, never this site's
+        // backend. So nothing of the agent runtime reaches the site, and
+        // `excludes` below holds with the band in.
+        // `!apps.website.demos.workspace.story`: the demo's story is the data
+        // its build-time seed writes into the worker's snapshot — it names
+        // the apps it fills, and is read only by the demo's `bin/` and the
+        // e2e scripts, never by the site.
         // `!apps.website.promo-film.**`: the showcase film is made FROM the
         // whole app (its seed writes tasks, conversations and places into the
         // `promo-film` composition below), not part of the site it advertises.
         app("website", {
           entryPoints: [
             "apps.website.**",
-            "!apps.website.demos.**",
-            "!apps.website.landing.screenshot",
+            "!apps.website.demos.workspace.story",
             "!apps.website.promo-film.**",
           ],
           excludes: ["agent-runtime", "auth"],

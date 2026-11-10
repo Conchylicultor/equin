@@ -66,6 +66,13 @@ export interface RegistryEntryRecord {
  */
 export interface FleetSource {
   webEntries: RegistryEntryRecord[];
+  /**
+   * The composition's on-demand web plugins (the registry's `webScopedEntries`:
+   * a bundled browser host's page scope beyond its own plugins). Built and
+   * mapped like `webEntries`, never preloaded — a scope loads them when it
+   * asks.
+   */
+  webScopedEntries: RegistryEntryRecord[];
   deferredPaths: ReadonlySet<string>;
   /** The registry module the registry artifact is built from (absolute path). */
   registryFile: AppPath;
@@ -81,14 +88,16 @@ export interface FleetSource {
 /** The committed full registry — the source every plain build plans from. */
 export async function defaultFleetSource(root: AppPath): Promise<FleetSource> {
   const registryFile = joinAppPath(root, WEB_SDK_CORE_REL, "web.generated.ts");
-  const { webEntries } = (await import(registryFile)) as {
+  const { webEntries, webScopedEntries } = (await import(registryFile)) as {
     webEntries: RegistryEntryRecord[];
+    webScopedEntries: RegistryEntryRecord[];
   };
   const { DEFERRED_PLUGIN_PATHS } = (await import(
     joinAppPath(root, WEB_SDK_CORE_REL, "web-tiers.generated.ts")
   )) as { DEFERRED_PLUGIN_PATHS: ReadonlySet<string> };
   return {
     webEntries,
+    webScopedEntries,
     deferredPaths: DEFERRED_PLUGIN_PATHS,
     registryFile,
     registrySlug: "composition-web-registry",
@@ -132,14 +141,16 @@ export async function compositionFleetSource(opts: {
         `via generateCompositionRegistry({ name: "${opts.name}" }).`,
     );
   }
-  const { webEntries } = (await import(registryFile)) as {
+  const { webEntries, webScopedEntries } = (await import(registryFile)) as {
     webEntries: RegistryEntryRecord[];
+    webScopedEntries: RegistryEntryRecord[];
   };
   const { DEFERRED_PLUGIN_PATHS } = (await import(
     joinAppPath(opts.root, WEB_SDK_CORE_REL, "web-tiers.generated.ts")
   )) as { DEFERRED_PLUGIN_PATHS: ReadonlySet<string> };
   return {
     webEntries,
+    webScopedEntries,
     deferredPaths: DEFERRED_PLUGIN_PATHS,
     registryFile,
     registrySlug: `web-registry-${opts.name}`,
@@ -256,7 +267,7 @@ export async function planFleet(opts: {
     "source",
     async () => opts.source ?? (await defaultFleetSource(root)),
   );
-  const { webEntries, registryFile } = source;
+  const { webEntries, webScopedEntries, registryFile } = source;
 
   const identity = await step("identity", async () =>
     computeBuilderIdentity({
@@ -308,7 +319,7 @@ export async function planFleet(opts: {
   // identity/dirName assignment is unchanged.
   const { webTargets, entryTarget } = await step("targets", async () => ({
     webTargets: await Promise.all(
-      webEntries.map((e) =>
+      [...webEntries, ...webScopedEntries].map((e) =>
         target(
           "web",
           e.pluginPath,
@@ -359,7 +370,12 @@ export async function planFleet(opts: {
   return {
     webEntries,
     hosts,
-    deferredPaths: source.deferredPaths,
+    // Never in the boot's preload closure: the deferred tier, and every
+    // on-demand plugin (loaded only when its scope asks).
+    deferredPaths: new Set([
+      ...source.deferredPaths,
+      ...webScopedEntries.map((e) => e.pluginPath),
+    ]),
     identity,
     webTargets,
     entryTarget,
