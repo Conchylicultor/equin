@@ -27,7 +27,11 @@ The website's homepage now carries the same demo in its landing band
 Both open on a gate (`DemoScope`'s `boot`, drawn by
 [`chrome`](plugins/chrome/CLAUDE.md)): a first visit downloads nothing until
 Enter equin; a browser already holding the demo's data starts it at once (and
-`/demo`'s head start runs only then).
+`/demo`'s head start runs only then). The gate is asked once per visit, which lasts
+while the visitor is in the demo in any tab of this browser: a tab opened
+meanwhile (a link from inside opened in a new tab) joins with no gate (a
+shared Web Lock per scenario, `DemoScope`'s `internal/presence.ts`). The gate
+is drawn where the demo will be: maximized when the URL is (`;full=1`).
 
 **Sealed.** Nothing inside the scope reaches the real server: there is no
 transportless fetcher (every call goes through the scope's transport), and the

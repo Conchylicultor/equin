@@ -11,7 +11,8 @@
  *     every visit);
  *  3. ⌘-clicks the launcher mark (a link to the home app): a NEW tab opens the
  *     demo maximized there (`/demo/at/home;full=1`, no caption bar) — not
- *     the real app — and its Pages lists the page the first tab created (both
+ *     the real app — joining it with no second Enter equin (the visitor is
+ *     in the demo in the first tab), and its Pages lists the page the first tab created (both
  *     tabs on the demo's one SharedWorker); maximized, the demo's moves are
  *     the tab's history: Back from Pages returns the demo to Home, Forward
  *     to Pages;
@@ -25,7 +26,8 @@
  *     back maximized — the same embed throughout; Esc in the page's title
  *     field stays the field's (still maximized), and Esc outside a field
  *     restores;
- *  6. the desktop, maximized: Pages then Sonata from the shelf, each a
+ *  6. the desktop, maximized, opened fresh (no other tab in the demo): its
+ *     gate shows maximized, no caption bar; then Pages then Sonata from the shelf, each a
  *     window; Back focuses the Pages window again and Forward the Sonata one
  *     — the URL following — with no window added or turned into another.
  *
@@ -55,9 +57,13 @@ import {
   showsApp,
   bootDemo,
   enterDemo,
+  ENTER_DEMO,
+  joinDemo,
 } from "./internal/demo-pages";
 
 const OUT = arg("out") ?? "/tmp/demo-location";
+/** The framed page's caption bar (`demo-at.tsx`'s caption): absent maximized. */
+const CAPTION_TEXT = "running in this page on made-up data";
 
 /** The page-origin `/api` routes a demo may still call — `no-leak.ts`'s list (D3). */
 const SANCTIONED: readonly RegExp[] = [
@@ -234,7 +240,10 @@ await withBrowser(async (h) => {
   const tabGate = { on: false };
   watchLeaks(tab, leaked, tabGate);
   await tab.waitForLoadState();
-  await enterDemo(tab, { marker: "[data-app-embed]" });
+  r.ok(
+    "the new tab joins the running demo with no second Enter equin",
+    await joinDemo(tab, { marker: "[data-app-embed]" }),
+  );
   await urlSettles(
     r,
     tab,
@@ -381,6 +390,16 @@ await withBrowser(async (h) => {
   // ── 6. the desktop, maximized: Back / Forward move between windows ──
   gate.on = false;
   await page.goto(pathUrl("/demo/at/desktop;full=1"));
+  // No other tab is in the demo: the gate shows — maximized, as the URL is.
+  await page
+    .locator(ENTER_DEMO)
+    .first()
+    .waitFor({ timeout: RENDER_TIMEOUT_MS });
+  r.ok(
+    "a maximized URL opened fresh shows its gate maximized (no caption bar)",
+    (await page.getByText(CAPTION_TEXT).count()) === 0,
+  );
+  await snap(page, OUT, "6-maximized-gate");
   await enterDemo(page, { marker: "[data-app-embed]" });
   await waitForNetworkIdle(page);
   gate.on = true;

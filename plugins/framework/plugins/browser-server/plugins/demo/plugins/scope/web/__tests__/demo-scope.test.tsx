@@ -245,6 +245,8 @@ const textOf = (r: { status: string; data?: { text: string } }) =>
 const consoleError = console.error;
 afterEach(() => {
   cleanup();
+  // A test's `stubLocks`, if any.
+  Reflect.deleteProperty(navigator, "locks");
   endpointErrorSink.register(null);
   console.error = consoleError;
 });
@@ -370,6 +372,8 @@ describe("<DemoScope>", () => {
   });
 
   it("with a boot render and no stored data, nothing starts before the gate's enter", async () => {
+    // No other tab of this browser is in the demo.
+    stubLocks([]);
     const scenario = scenarioOf();
     const start = vi.fn(scenario.host.start);
     const gated = { ...scenario, host: { ...scenario.host, start } };
@@ -400,6 +404,8 @@ describe("<DemoScope>", () => {
   });
 
   it("with stored data the host starts behind the gate, and the demo shows only on enter", async () => {
+    // No other tab of this browser is in the demo.
+    stubLocks([]);
     const scenario = scenarioOf();
     const start = vi.fn(scenario.host.start);
     const held: DemoScenario = {
@@ -430,10 +436,78 @@ describe("<DemoScope>", () => {
     // Started, yet still the gate: the visitor has not entered.
     await new Promise((r) => setTimeout(r, 50));
     expect(seen.greeting).toBeUndefined();
-    expect(new Set(seen.boots)).toEqual(new Set(["gate"]));
+    expect(new Set(seen.boots)).toEqual(new Set(["checking", "gate"]));
     act(() => enter!());
     await waitFor(() => expect(seen.greeting).toBe("hello ada (demo)"));
     expect(start).toHaveBeenCalledTimes(1);
+  });
+
+  it("a tab opened while the visitor is in the demo in another tab joins it, with no gate", async () => {
+    const scenario = scenarioOf();
+    const presence = `demo-visitor-in ${scenario.id}`;
+    // Another tab of this browser: its visitor is in the demo.
+    const locks = stubLocks([presence]);
+    try {
+      const seen: { boots: string[]; greeting?: string; entered: number } = {
+        boots: [],
+        entered: 0,
+      };
+      await renderAsync(
+        <PluginProvider plugins={PLUGINS}>
+          <DemoScope
+            scenario={scenario}
+            onEnter={() => (seen.entered += 1)}
+            boot={(state) => {
+              seen.boots.push(state.kind);
+              return null;
+            }}
+          >
+            <Probe
+              read={() => useLive(greeting, { who: "ada" })}
+              onRead={(r) => (seen.greeting = textOf(r))}
+            />
+          </DemoScope>
+        </PluginProvider>,
+      );
+      await waitFor(() => expect(seen.greeting).toBe("hello ada (demo)"));
+      expect(seen.boots).not.toContain("gate");
+      expect(seen.boots[0]).toBe("checking");
+      expect(seen.entered).toBe(1);
+      // This tab now says so too: the other may close, a third still joins.
+      expect(locks.held.get(presence)).toBe(2);
+      cleanup();
+      await waitFor(() => expect(locks.held.get(presence)).toBe(1));
+    } finally {
+      locks.restore();
+    }
+  });
+
+  it("entering at the gate makes this tab's visitor known to the others", async () => {
+    const scenario = scenarioOf();
+    const presence = `demo-visitor-in ${scenario.id}`;
+    const locks = stubLocks([]);
+    try {
+      let enter: (() => void) | null = null;
+      await renderAsync(
+        <PluginProvider plugins={PLUGINS}>
+          <DemoScope
+            scenario={scenario}
+            boot={(state) => {
+              if (state.kind === "gate") enter = state.enter;
+              return null;
+            }}
+          >
+            {null}
+          </DemoScope>
+        </PluginProvider>,
+      );
+      await waitFor(() => expect(enter).not.toBeNull());
+      expect(locks.held.has(presence)).toBe(false);
+      act(() => enter!());
+      await waitFor(() => expect(locks.held.get(presence)).toBe(1));
+    } finally {
+      locks.restore();
+    }
   });
 
   it("a host whose boot throws reaches the error boundary", async () => {
@@ -486,6 +560,41 @@ describe("<DemoScope>", () => {
     });
   });
 });
+
+/**
+ * Stub `navigator.locks` alone (jsdom has none), shared holds counted per
+ * name; `others` are held by other tabs from the start. Returns the holds and
+ * the restore.
+ */
+function stubLocks(others: readonly string[]): {
+  held: Map<string, number>;
+  restore(): void;
+} {
+  const held = new Map<string, number>(others.map((name) => [name, 1]));
+  const locks = {
+    request(name: string, _opts: unknown, hold: () => Promise<void>) {
+      held.set(name, (held.get(name) ?? 0) + 1);
+      return hold().then(() => {
+        const left = (held.get(name) ?? 1) - 1;
+        if (left === 0) held.delete(name);
+        else held.set(name, left);
+      });
+    },
+    query: () =>
+      Promise.resolve({
+        held: [...held.keys()].map((name) => ({ name })),
+        pending: [],
+      }),
+  };
+  Object.defineProperty(navigator, "locks", {
+    value: locks,
+    configurable: true,
+  });
+  return {
+    held,
+    restore: () => Reflect.deleteProperty(navigator, "locks"),
+  };
+}
 
 /** What the stubbed Service Worker was sent, and the registrations it holds. */
 interface FakeServiceWorkers {

@@ -15,10 +15,7 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { AppEmbed } from "@plugins/apps-core/plugins/app-embed/web";
 import { SurfaceOverlay } from "@plugins/primitives/plugins/overlay/plugins/surface-overlay/web";
-import {
-  DemoScope,
-  type DemoBoot,
-} from "@plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/web";
+import { DemoScope } from "@plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/web";
 import {
   DEMO_FRAME_ATTR,
   DemoBootScreen,
@@ -60,7 +57,10 @@ const FOOT_ROOM = 56;
  * Reset demo, drawn from inside the scope, into the row, through a portal.
  *
  * Where the visitor is inside the demo, and whether it is maximized, is the
- * homepage's URL (`useDemoPlace`), so a reload comes back there.
+ * homepage's URL (`useDemoPlace`), so a reload comes back there. A maximized
+ * URL draws the gate maximized too, so Enter opens the demo where it says;
+ * a tab opened while the visitor is in the demo in another tab joins it with
+ * no gate, its frame grown (`DemoScope`'s `onEnter`).
  */
 export function LiveDemoSection(): ReactNode {
   // Entered: the frame grows, and stays grown.
@@ -72,6 +72,7 @@ export function LiveDemoSection(): ReactNode {
   const [figure, setFigure] = useState<HTMLElement | null>(null);
   const [controls, setControls] = useState<HTMLElement | null>(null);
 
+  // The visitor came in (the gate's Enter, or joining another tab's demo).
   const grow = () => {
     setGrown(true);
     // The grown frame's top comes to the window's (its scroll margin: the gap).
@@ -108,9 +109,22 @@ export function LiveDemoSection(): ReactNode {
           >
             <DemoScope
               scenario={workspaceDemo}
-              boot={(state) => (
-                <DemoBootScreen state={enterGrows(state, grow)} />
-              )}
+              onEnter={grow}
+              // Until the demo runs: its boot screen where the demo will
+              // show — in the frame, or maximized over the tab's surface.
+              boot={(state) =>
+                maximized ? (
+                  <SurfaceOverlay
+                    {...frameMark}
+                    className="bg-background"
+                    data-website-demo-maximized=""
+                  >
+                    <DemoBootScreen state={state} />
+                  </SurfaceOverlay>
+                ) : (
+                  <DemoBootScreen state={state} />
+                )
+              }
             >
               {/* Maximized, the demo leaves the frame for the tab's whole
                   surface (above the site's sticky header); moving between
@@ -165,18 +179,6 @@ export function LiveDemoSection(): ReactNode {
       </div>
     </WebsiteBand>
   );
-}
-
-/** The gate's Enter also grows the frame: the demo arrives large. */
-function enterGrows(state: DemoBoot, grow: () => void): DemoBoot {
-  if (state.kind !== "gate") return state;
-  return {
-    kind: "gate",
-    enter: () => {
-      grow();
-      state.enter();
-    },
-  };
 }
 
 interface ViewportSize {

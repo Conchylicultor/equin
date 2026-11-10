@@ -74,6 +74,36 @@ export async function enterDemo(
 }
 
 /**
+ * A demo page opened while the visitor is in the demo in another tab (a link
+ * from inside opened in a new tab, a second tab of the page): it joins with
+ * no gate. Waits for `marker`; answers whether the gate never showed.
+ */
+export async function joinDemo(
+  page: Page,
+  opts: { marker: string; timeoutMs?: number },
+): Promise<boolean> {
+  const timeout = opts.timeoutMs ?? RENDER_TIMEOUT_MS;
+  // Whether a gate is drawn before the demo shows. The gate's wait outlives
+  // the race when the demo wins (it ends with its timeout or the page), so
+  // its failure is a value here, never an unhandled rejection.
+  const gated = page
+    .waitForSelector('[data-demo-boot="gate"]', { state: "attached", timeout })
+    .then(
+      () => ({ kind: "gate" as const }),
+      (error: unknown) => ({ kind: "no-gate" as const, error }),
+    );
+  const shown = page
+    .locator(opts.marker)
+    .first()
+    .waitFor({ timeout })
+    .then(() => ({ kind: "demo" as const }));
+  const first = await Promise.race([gated, shown]);
+  // Neither a gate nor the demo within the timeout: the gate's wait failed.
+  if (first.kind === "no-gate") throw first.error;
+  return first.kind === "demo";
+}
+
+/**
  * The demo page at `location` inside the demo (an app-rooted URL,
  * `/agents/c/x`), framed — or `full` screen — as the demo writes it.
  */

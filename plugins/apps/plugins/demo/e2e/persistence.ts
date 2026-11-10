@@ -45,6 +45,7 @@ import {
   sidebarEntries,
   bootDemo,
   enterDemo,
+  joinDemo,
 } from "./internal/demo-pages";
 
 const OUT = arg("out") ?? "/tmp/demo-persistence";
@@ -188,7 +189,10 @@ await withBrowser(async (h) => {
   // ── 3. a second tab shares the data, live ───────────────────────────────
   const second = await context.newPage();
   await second.goto(pathUrl(demoPath(AGENT_MANAGER_LOCATION)));
-  await enterDemo(second, { marker: MARKER });
+  r.ok(
+    "the second tab joins the demo the first is in, with no gate",
+    await joinDemo(second, { marker: MARKER }),
+  );
   await openPages(r, second, "second tab");
   await listed(
     r,

@@ -45,6 +45,7 @@ import {
 import { hostDataStored } from "@plugins/framework/plugins/browser-server/plugins/host-storage/plugins/stored/core";
 import { clearStorageScope } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
+import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -65,6 +66,7 @@ import {
   trackHostGenerations,
   type HostGenerations,
 } from "@plugins/framework/plugins/browser-server/plugins/demo/plugins/prestart/web";
+import { holdVisitorIn, visitorInElsewhere } from "../internal/presence";
 
 // ── The host ───────────────────────────────────────────────────────────
 
@@ -270,14 +272,18 @@ const SUPERSEDED_MESSAGE =
 /**
  * Where the scope is before the visitor is in the demo, as a page draws it
  * (`boot`):
+ * - `checking` — not known yet whether the visitor is already in this demo
+ *   in another tab of this browser (then this tab joins it, no gate): the
+ *   page draws neither the gate nor a boot (a few ms);
  * - `gate` — the visitor has not asked for the demo yet (`enter`), on every
- *   visit. Behind it the host may already be starting (this browser holds
+ *   visit — one that no other tab of this browser is in. Behind it the host may already be starting (this browser holds
  *   the demo's data, so starting downloads nothing large) or not (a first
  *   visit: entering downloads the server and its data);
  * - `starting` — the visitor entered and the host is still booting,
  *   `progress` its worker's report so far (`null` until the first arrives).
  */
 export type DemoBoot =
+  | { kind: "checking" }
   | { kind: "gate"; enter(): void }
   | { kind: "starting"; progress: HostProgress | null };
 
@@ -288,7 +294,11 @@ export type DemoBoot =
  *
  * A page that draws `boot` gates the demo: the visitor enters it (the gate's
  * `enter`) on every visit, and `boot` draws the gate, then the boot until the
- * host serves (`DemoBoot`). Behind the gate the host starts at once where
+ * host serves (`DemoBoot`). A visit lasts while the visitor is in the demo in
+ * any tab of this browser: a tab opened meanwhile — a link from inside opened
+ * in a new tab, a second tab of the page — joins it with no gate (each tab
+ * whose visitor is in holds a shared Web Lock, `internal/presence.ts`).
+ * `onEnter` hears the visitor come in either way. Behind the gate the host starts at once where
  * this browser holds the demo's data (`scenario.storage`, `hostDataStored`) —
  * so entering is instant — and only on `enter` otherwise, since the first
  * start downloads the whole server and its data. Without `boot`, the host
@@ -303,10 +313,13 @@ export type DemoBoot =
 export function DemoScope({
   scenario,
   boot,
+  onEnter,
   children,
 }: {
   scenario: DemoScenario;
   boot?: (state: DemoBoot) => ReactNode;
+  /** The visitor came in: entered at the gate, or joined the demo another tab is in. Gated scopes only. */
+  onEnter?: () => void;
   children: ReactNode;
 }): ReactNode {
   // Whether the scope's telemetry is reported — to the page's own server, the
@@ -326,9 +339,16 @@ export function DemoScope({
     inputKeysRef.current = inputKeys;
   });
   const gated = boot !== undefined;
-  // Whether the visitor is in the demo: at once without a gate, else once
-  // they ask (every visit).
-  const [entered, setEntered] = useState(!gated);
+  // Whether the visitor is in the demo: at once without a gate; else at once
+  // when they are in it in another tab of this browser (`checking` until
+  // known), or once they ask at the gate.
+  const [visitor, setVisitor] = useState<"checking" | "gate" | "in">(
+    gated ? "checking" : "in",
+  );
+  const [checkFailed, setCheckFailed] = useState<{ error: unknown } | null>(
+    null,
+  );
+  const cameIn = useEventCallback(() => onEnter?.());
   // Whether the host may start: once the visitor entered, or behind the gate
   // once this browser is found to hold the data (nothing large to download).
   const [started, setStarted] = useState(!gated);
@@ -350,6 +370,33 @@ export function DemoScope({
       live = false;
     };
   }, [started, scenario.storage]);
+  useEffect(() => {
+    if (visitor !== "checking") return;
+    let live = true;
+    visitorInElsewhere(scenario.id).then(
+      (elsewhere) => {
+        if (!live) return;
+        if (!elsewhere) {
+          setVisitor("gate");
+          return;
+        }
+        setVisitor("in");
+        setStarted(true);
+        cameIn();
+      },
+      (error: unknown) => {
+        if (live) setCheckFailed({ error });
+      },
+    );
+    return () => {
+      live = false;
+    };
+  }, [visitor, scenario.id, cameIn]);
+  // While the visitor is in, this tab says so to every other one.
+  useEffect(() => {
+    if (visitor !== "in") return;
+    return holdVisitorIn(scenario.id);
+  }, [visitor, scenario.id]);
   // Bumped when the host is reset, to start a fresh one (on the host
   // generation the reset moved every tab to).
   const [resets, setResets] = useState(0);
@@ -422,12 +469,16 @@ export function DemoScope({
   // Only a gated scope (`boot` set) is ever outside. The gate comes first: a
   // host started behind it (stored data) that failed or was declined says so
   // once the visitor enters, never in place of the gate.
-  if (!entered && boot !== undefined) {
+  if (checkFailed !== null) throw checkFailed.error;
+  if (visitor === "checking" && boot !== undefined)
+    return boot({ kind: "checking" });
+  if (visitor === "gate" && boot !== undefined) {
     return boot({
       kind: "gate",
       enter: () => {
-        setEntered(true);
+        setVisitor("in");
         setStarted(true);
+        cameIn();
       },
     });
   }

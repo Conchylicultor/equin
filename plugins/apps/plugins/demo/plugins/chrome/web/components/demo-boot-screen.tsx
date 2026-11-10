@@ -42,10 +42,13 @@ const isStarting = (progress: HostProgress | null): boolean =>
  * over the logo's own colours, then
  * - at the gate, the Enter button (nothing has downloaded yet: the first
  *   start downloads the whole server and its data);
+ * - while it is not known yet whether the visitor is already in the demo in
+ *   another tab (`checking`, a few ms), the logo alone;
  * - while it starts, one bar in the logo's gradient, what it is doing and
  *   how much it downloaded so far, in place of the button.
  *
- * It fills its box: the /demo frame, the website's demo band.
+ * It fills its box: the /demo frame, the website's demo band — or the whole
+ * page, where the URL it opens is maximized.
  */
 export function DemoBootScreen({ state }: { state: DemoBoot }): ReactNode {
   const colours = {

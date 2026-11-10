@@ -16,7 +16,11 @@
  *     own step); Restore (revealed at the top edge) also restores;
  *  6. a reload shows the gate again — the host now starting behind it, the
  *     data being stored — and Enter reopens the demo grown, on Pages, where
- *     the visitor was.
+ *     the visitor was;
+ *  7. maximized, a reload draws the gate maximized over the tab, and Enter
+ *     opens the demo there, on Pages;
+ *  8. a second tab opened at that URL while the visitor is in the demo joins
+ *     it — maximized, no gate.
  * Screenshots of each step go to `--out`.
  *
  * Manual only — nothing runs this automatically.
@@ -272,5 +276,56 @@ await withBrowser(async (h) => {
   );
   await page.waitForTimeout(700);
   await snap(page, OUT, "5-reloaded");
+
+  // ── 7. a maximized URL reloaded: the gate maximized, Enter in place ─
+  await page.getByRole("button", { name: "Maximize" }).click();
+  await overlay.waitFor({ timeout: 3_000 });
+  await urlSettles(r, page, "Maximize before the reload", (p) =>
+    p.includes(FULL_KEY),
+  );
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await gate.waitFor({ timeout: BOOT_TIMEOUT_MS });
+  const gateBox = await waitFor(
+    async () => (await overlay.boundingBox()) ?? null,
+    (box) =>
+      box !== null &&
+      viewport !== null &&
+      Math.abs(box.width - viewport.width) < 2 &&
+      box.y < 2,
+    { timeoutMs: 3_000 },
+  );
+  r.ok(
+    "after a maximized reload, the gate is drawn maximized over the tab",
+    gateBox.ok && (await overlay.getByRole("button", { name: /Enter equin/ }).count()) > 0,
+    JSON.stringify(gateBox.value),
+  );
+  await snap(page, OUT, "6-maximized-gate");
+  await gate.click();
+  const inPlace = await waitFor(
+    async () => overlay.locator('[data-app-embed="pages"]').count(),
+    (n) => n > 0,
+    { timeoutMs: BOOT_TIMEOUT_MS },
+  );
+  r.ok("after a maximized reload, Enter opens the demo maximized, on Pages", inPlace.ok);
+
+  // ── 8. a second tab while the visitor is in: no second Enter ────────
+  const second = await page.context().newPage();
+  await second.goto(page.url(), { waitUntil: "domcontentloaded" });
+  const secondOverlay = second.locator("[data-website-demo-maximized]").first();
+  const joined = await waitFor(
+    async () => ({
+      gates: await second.locator('[data-demo-boot="gate"]').count(),
+      embeds: await secondOverlay.locator('[data-app-embed="pages"]').count(),
+    }),
+    (v) => v.gates > 0 || v.embeds > 0,
+    { timeoutMs: BOOT_TIMEOUT_MS, intervalMs: 20 },
+  );
+  r.ok(
+    "a second tab joins the demo the first is in, maximized, with no gate",
+    joined.ok && joined.value.gates === 0 && joined.value.embeds > 0,
+    JSON.stringify(joined.value),
+  );
+  await snap(second, OUT, "7-joined");
+  await second.close();
   await r.finish();
 });
