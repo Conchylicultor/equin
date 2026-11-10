@@ -3,7 +3,7 @@ import {
   autocomplete,
   placeDetails,
   searchText,
-} from "@plugins/integrations/plugins/google-maps/plugins/places-api/server";
+} from "@plugins/integrations/plugins/google-maps/plugins/places-api/machine";
 import { billingMonthOf } from "@plugins/integrations/plugins/google-maps/plugins/usage/core";
 import {
   autoTagsFor,

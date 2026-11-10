@@ -13,7 +13,7 @@ import { defineDataDir } from "@plugins/infra/plugins/paths/core";
 export const googleMapsDir = defineDataDir({
   kind: "state",
   name: "google-maps",
-  owner: "integrations/google-maps",
+  owner: "integrations/google-maps/browser-config",
   description:
     "browser-config.json — the public Maps JavaScript API browser key the live map renders with, shared by every checkout",
   // The key was pasted by the user from their Google Cloud console and exists

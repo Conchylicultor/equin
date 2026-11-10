@@ -37,7 +37,10 @@ gardens, which Google files under "Entertainment and Recreation", are `nature`
 - Server:
   - Contributes: `report-kind` "place-google-unknown-type"
 - Machine:
-  - Uses: `integrations/google-maps.getPlacesClient`
+  - Uses:
+    - `integrations/google-maps.getPlacesClient`
+    - `integrations/google-maps/places-api.autocomplete`
+    - `integrations/google-maps/places-api.placeDetails`
   - Register: `definePlaceProvider('google')`
 - Cross-plugin:
   - Imported by: `apps/places/page-overlay`

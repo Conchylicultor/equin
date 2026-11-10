@@ -1,5 +1,5 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { MapsBrowserConfigSource } from "@plugins/integrations/plugins/google-maps/server";
+import { MapsBrowserConfigSource } from "@plugins/integrations/plugins/google-maps/plugins/browser-config/server";
 import { pageBrowserConfig } from "./internal/source";
 
 export default {

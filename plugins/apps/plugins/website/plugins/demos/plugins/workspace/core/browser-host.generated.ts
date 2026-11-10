@@ -480,6 +480,7 @@ export const browserHost = {
     "infra.paths.file-systems",
     "infra.trash",
     "integrations.google-maps",
+    "integrations.google-maps.browser-config",
     "integrations.google-maps.usage",
     "integrations.youtube",
     "layouts.full-pane",

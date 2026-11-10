@@ -103,6 +103,7 @@ export type ExemptableRuleId =
   | "live/where-declared"
   | "loading/no-shadcn-skeleton"
   | "log-channels/no-console-log"
+  | "map-google/maps-js-libraries"
   | "marker-scan-safety/no-adhoc-binding-scan"
   | "marker-scan-safety/no-adhoc-marker-scan"
   | "model-provider:no-raw-model-flags"

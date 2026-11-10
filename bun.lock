@@ -4628,6 +4628,14 @@
       "name": "@equin/plugin-integrations-google-maps",
       "version": "0.0.1",
     },
+    "plugins/integrations/plugins/google-maps/plugins/browser-config": {
+      "name": "@equin/plugin-integrations-google-maps-browser-config",
+      "version": "0.0.1",
+    },
+    "plugins/integrations/plugins/google-maps/plugins/browser-config/plugins/deployed-key": {
+      "name": "@equin/plugin-integrations-google-maps-browser-config-deployed-key",
+      "version": "0.0.1",
+    },
     "plugins/integrations/plugins/google-maps/plugins/page-config": {
       "name": "@equin/plugin-integrations-google-maps-page-config",
       "version": "0.0.1",
@@ -9701,6 +9709,10 @@
     "@equin/plugin-integrations-gmail": ["@equin/plugin-integrations-gmail@workspace:plugins/integrations/plugins/gmail"],
 
     "@equin/plugin-integrations-google-maps": ["@equin/plugin-integrations-google-maps@workspace:plugins/integrations/plugins/google-maps"],
+
+    "@equin/plugin-integrations-google-maps-browser-config": ["@equin/plugin-integrations-google-maps-browser-config@workspace:plugins/integrations/plugins/google-maps/plugins/browser-config"],
+
+    "@equin/plugin-integrations-google-maps-browser-config-deployed-key": ["@equin/plugin-integrations-google-maps-browser-config-deployed-key@workspace:plugins/integrations/plugins/google-maps/plugins/browser-config/plugins/deployed-key"],
 
     "@equin/plugin-integrations-google-maps-page-config": ["@equin/plugin-integrations-google-maps-page-config@workspace:plugins/integrations/plugins/google-maps/plugins/page-config"],
 

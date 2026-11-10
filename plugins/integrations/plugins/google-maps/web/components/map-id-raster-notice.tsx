@@ -2,7 +2,7 @@ import type { ReactElement } from "react";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useMachineAvailability } from "@plugins/infra/plugins/endpoints/web";
-import { setMapsMapId } from "../../core";
+import { setMapsMapId } from "@plugins/integrations/plugins/google-maps/plugins/browser-config/core";
 import { accountPane } from "@plugins/auth/web";
 import { LIVE_MAP_ACCOUNT_ID } from "../internal/live-map-account";
 

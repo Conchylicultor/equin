@@ -25,19 +25,19 @@ import {
   useFetchEndpoint,
   useMachineAvailability,
 } from "@plugins/infra/plugins/endpoints/web";
+import { BASEMAP_STYLE_JSON } from "../../core";
 import {
-  BASEMAP_STYLE_JSON,
   BROWSER_KEY_PATTERN,
   MAP_ID_PATTERN,
   clearMapsBrowserConfig,
   clearMapsMapId,
   setMapsBrowserConfig,
   setMapsMapId,
-} from "../../core";
+} from "@plugins/integrations/plugins/google-maps/plugins/browser-config/core";
 import {
   useMapsBrowserConfig,
   type MapsBrowserConfigState,
-} from "../internal/use-maps-browser-config";
+} from "@plugins/integrations/plugins/google-maps/plugins/browser-config/web";
 import { LiveMapSetup, type MapIdPreviewResult } from "../slots";
 
 const CONSOLE = "https://console.cloud.google.com";

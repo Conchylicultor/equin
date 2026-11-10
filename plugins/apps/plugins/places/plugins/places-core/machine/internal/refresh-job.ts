@@ -10,7 +10,7 @@ import {
   PlacesApiError,
   type PlaceSnapshot,
 } from "@plugins/integrations/plugins/google-maps/plugins/places-api/core";
-import { placeDetails } from "@plugins/integrations/plugins/google-maps/plugins/places-api/server";
+import { placeDetails } from "@plugins/integrations/plugins/google-maps/plugins/places-api/machine";
 import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import { _places } from "../../server/internal/tables";
 import {

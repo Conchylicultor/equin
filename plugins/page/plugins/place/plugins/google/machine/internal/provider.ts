@@ -6,7 +6,7 @@ import {
 import {
   autocomplete,
   placeDetails,
-} from "@plugins/integrations/plugins/google-maps/plugins/places-api/server";
+} from "@plugins/integrations/plugins/google-maps/plugins/places-api/machine";
 import { definePlaceProvider } from "@plugins/page/plugins/place/server";
 import {
   PlaceLookupRefusal,

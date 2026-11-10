@@ -193,6 +193,7 @@ export function MapDataView(props: DataViewRenderProps<unknown>): ReactNode {
         {...(options.onCameraRest === undefined
           ? {}
           : { onCameraRest: options.onCameraRest })}
+        {...(options.onNoMap === undefined ? {} : { onNoMap: options.onNoMap })}
         {...(options.fitRequest === undefined
           ? {}
           : { fitRequest: options.fitRequest })}

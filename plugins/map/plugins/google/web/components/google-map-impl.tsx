@@ -35,8 +35,8 @@ import { MapChrome, type MapRendererProps } from "@plugins/map/web";
 import {
   MapIdRasterNotice,
   MapsMapAccessAction,
-  useMapsBrowserConfig,
 } from "@plugins/integrations/plugins/google-maps/web";
+import { useMapsBrowserConfig } from "@plugins/integrations/plugins/google-maps/plugins/browser-config/web";
 import { BASEMAP_STYLE } from "@plugins/integrations/plugins/google-maps/core";
 import { useGoogleAuthRefused } from "../internal/auth-failure";
 import {

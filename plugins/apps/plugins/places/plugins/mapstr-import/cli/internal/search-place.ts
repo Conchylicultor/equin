@@ -1,4 +1,4 @@
-import { searchText } from "@plugins/integrations/plugins/google-maps/plugins/places-api/server";
+import { searchText } from "@plugins/integrations/plugins/google-maps/plugins/places-api/machine";
 import { requirePlacesClient, underQuota } from "./google";
 import { distanceM } from "./match";
 import type { SearchPlaceOptions } from "./options";

@@ -13,8 +13,8 @@
  *  2. draws the map: when this instance has a Maps browser key, Google's map
  *     draws in the embed (its script and tiles loaded from Google, with the
  *     key the page's chrome handed the worker — the demo's code never reads
- *     the page's server); without one, the map's set-up state says setting it
- *     up is not available here;
+ *     the page's server); without one, the map says it has no key and the
+ *     side panel lists every place (nothing is "in view" with no map);
  *  2b. opens on Paris, where most of the places are (the map's densest-area
  *     opening), not on the world its trips span;
  *  2c. picks each of Demo's saved presets (Want to go in Paris, Favorites,
@@ -35,10 +35,16 @@
  * checks against (D3): no `/api/…` request for the page's origin but the
  * sanctioned telemetry routes (the icons included — no exception), no page socket, no page or console error — and
  * that every request to another origin, the page's or the worker's, goes to a
- * host a scoped plugin declares (`externalHosts`, `ExternalHosts.Declare`).
+ * host a scoped plugin declares (`externalHosts`, `ExternalHosts.Declare`),
+ * and that no request reaches the Places API (the page's key draws the map
+ * only).
+ *
+ * `--site` drives the standalone website's live demo (a build of the
+ * `website` composition: `./equin build --composition website`, then
+ * `--composition website`) instead of `/demo`.
  *
  * Manual only — nothing runs this automatically.
- *   ./equin run plugins/apps/plugins/demo/e2e/places-in-demo.ts [--out /tmp/demo-places] [--headed]
+ *   ./equin run plugins/apps/plugins/demo/e2e/places-in-demo.ts [--out /tmp/demo-places] [--site --composition website] [--headed]
  */
 import type { Locator, Page, Request, WebSocket } from "playwright";
 import { pickFromLauncher } from "@plugins/apps-core/plugins/app-launcher/e2e";
@@ -48,6 +54,7 @@ import { externalHosts } from "@plugins/apps/plugins/website/plugins/demos/plugi
 import { DEMO_PLACES } from "@plugins/apps/plugins/website/plugins/demos/plugins/workspace/plugins/story/core";
 import {
   arg,
+  flag,
   pathUrl,
   report,
   snap,
@@ -65,6 +72,20 @@ import {
 } from "./internal/demo-pages";
 
 const OUT = arg("out") ?? "/tmp/demo-places";
+/** Drive the standalone website's live demo instead of `/demo`. */
+const SITE = flag("site");
+
+/** The demo at `location` (an app-rooted route), on this run's page. */
+function demoUrl(location: string): string {
+  return SITE
+    ? pathUrl(`/website;view.website.demo=${encodeURIComponent(location)}`)
+    : pathUrl(demoPath(location));
+}
+
+/** Whether `url` is still the page the demo is on. */
+function onPage(url: string): boolean {
+  return SITE ? new URL(url).pathname.startsWith("/website") : onDemoPage(url);
+}
 
 /** The page-origin `/api` routes a demo may still call — `no-leak.ts`'s list (D3). */
 const SANCTIONED: readonly RegExp[] = [
@@ -111,21 +132,30 @@ const RENDER_TIMEOUT_MS = 30_000;
 const GOOGLE_RASTER_FALLBACK =
   /^Attempted to load a Vector Map, but failed\. Falling back to Raster/;
 
-/** The one sentence every "not available" says (`unavailableMessage`). */
-const NOT_AVAILABLE = /isn't available in this version of the app/;
+/** What the map says where its page hands the demo no Maps key. */
+const NO_MAP_KEY = /The map can't be drawn here/;
+/**
+ * A Places API request (`places.googleapis.com`, or the Maps JavaScript API's
+ * own Places endpoints): never sent from the demo, whose only key is the
+ * page's browser key, for drawing the map.
+ */
+const PLACES_API =
+  /^places\.googleapis\.com\/|^maps\.googleapis\.com\/maps\/api\/place/;
 
 function embedRoot(page: Page): Locator {
   return page.locator("[data-app-embed]").first();
 }
 
 await withBrowser(async (h) => {
-  const r = report("demo: Places on the browser worker");
+  const r = report(
+    `demo: Places on the browser worker${SITE ? " (the website's live demo)" : ""}`,
+  );
   const worker = await tapSharedWorkerRequests(h.browser);
   const { page, captured } = await h.session({
     viewport: { width: 1440, height: 900 },
   });
 
-  await bootDemo(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
+  await bootDemo(page, demoUrl(AGENT_MANAGER_LOCATION), {
     marker: 'button:has-text("Conversations")',
   });
   await waitForNetworkIdle(page);
@@ -134,11 +164,14 @@ await withBrowser(async (h) => {
 
   const leaked: string[] = [];
   const offOrigin: string[] = [];
+  /** Every off-origin request as `host/path`. */
+  const offOriginUrls: string[] = [];
   const onRequest = (req: Request): void => {
     const url = new URL(req.url());
     if (url.protocol !== "http:" && url.protocol !== "https:") return;
     if (url.origin !== origin) {
       offOrigin.push(url.host);
+      offOriginUrls.push(`${url.host}${url.pathname}`);
       return;
     }
     if (!url.pathname.startsWith("/api/")) return;
@@ -187,7 +220,7 @@ await withBrowser(async (h) => {
     () => embedRoot(page).getByText("Lisbon", { exact: true }).count(),
     (n) => n > 0,
   );
-  r.ok("the page stays on the demo", onDemoPage(page.url()), page.url());
+  r.ok("the page stays on the demo", onPage(page.url()), page.url());
 
   // ── 1b. saved icons: the demo's own, drawn from the worker ──────────────
   // A place's icon (Demo's castle) and a tag's are saved icons: the scope's
@@ -209,12 +242,12 @@ await withBrowser(async (h) => {
 
   // ── 2. the map: Google's, with the key the page handed over ─────────────
   const map = await renders(
-    "the map draws Google's map, or says setting it up is not available",
+    "the map draws Google's map, or says it has no key",
     async () =>
       (await embedRoot(page).locator(".gm-style").count()) > 0
         ? "google"
-        : (await embedRoot(page).getByText(NOT_AVAILABLE).count()) > 0
-          ? "not-available"
+        : (await embedRoot(page).getByText(NO_MAP_KEY).count()) > 0
+          ? "no-key"
           : null,
     (v) => v !== null,
   );
@@ -224,6 +257,23 @@ await withBrowser(async (h) => {
       "Google's tiles loaded from Google",
       async () => offOrigin.filter((host) => host.endsWith("googleapis.com")),
       (hosts) => hosts.length > 0,
+    );
+  }
+  if (map.value === "no-key") {
+    // No map, so nothing is "in view": the list shows every place, never an
+    // empty list waiting on a camera that will not come.
+    await renders(
+      `without a map the list shows all ${PLACE_COUNT} places`,
+      () =>
+        embedRoot(page)
+          .getByRole("radio", { name: new RegExp(`^All ${PLACE_COUNT}`) })
+          .getAttribute("aria-checked"),
+      (checked) => checked === "true",
+    );
+    await renders(
+      `the list holds ${PLACE}`,
+      () => embedRoot(page).getByText(PLACE, { exact: true }).count(),
+      (n) => n > 0,
     );
   }
   await page.waitForTimeout(3_000);
@@ -400,13 +450,17 @@ await withBrowser(async (h) => {
     (n) => n > 0,
   );
   await snap(page, OUT, "5-full-screen");
-  await pickSurfaceMode(page, "Desktop");
-  await renders(
-    "the Layout control returns to the desktop",
-    () => shownWindowIds(embedRoot(page)),
-    (ids) => ids.length >= 1,
-  );
-  r.ok("the page stays on the demo", onDemoPage(page.url()), page.url());
+  // The Layout control is the page's action bar: `/demo`'s, never the
+  // website's (its page has none).
+  if (!SITE) {
+    await pickSurfaceMode(page, "Desktop");
+    await renders(
+      "the Layout control returns to the desktop",
+      () => shownWindowIds(embedRoot(page)),
+      (ids) => ids.length >= 1,
+    );
+  }
+  r.ok("the page stays on the demo", onPage(page.url()), page.url());
 
   page.off("request", onRequest);
   page.off("websocket", onSocket);
@@ -427,6 +481,15 @@ await withBrowser(async (h) => {
   r.eq(
     "every third-party host reached is declared (ExternalHosts.Declare)",
     reached.filter((host) => !declared.has(host)),
+    [],
+  );
+  const workerUrls = worker.requests
+    .map((req) => new URL(req.url))
+    .filter((url) => url.origin !== origin && url.protocol.startsWith("http"))
+    .map((url) => `${url.host}${url.pathname}`);
+  r.eq(
+    "no Places API request (the demo's key draws the map only)",
+    [...offOriginUrls, ...workerUrls].filter((u) => PLACES_API.test(u)),
     [],
   );
   r.eq("no page errors", captured.pageErrors, []);

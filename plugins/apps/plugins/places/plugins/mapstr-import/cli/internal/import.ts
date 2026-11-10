@@ -10,7 +10,7 @@ import { replaceAllPlaces } from "@plugins/apps/plugins/places/plugins/places-co
 import {
   placeDetails,
   searchText,
-} from "@plugins/integrations/plugins/google-maps/plugins/places-api/server";
+} from "@plugins/integrations/plugins/google-maps/plugins/places-api/machine";
 import {
   PlacesApiError,
   type PlaceSnapshot,

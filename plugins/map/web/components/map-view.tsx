@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
@@ -73,6 +73,13 @@ export interface MapViewProps {
    * is, and the area it shows — what a search biased to "this map area" reads.
    */
   onCameraRest?: (rest: CameraRest) => void;
+  /**
+   * No map can be drawn here — no renderer is installed, or the renderer is
+   * blocked (no key) — so no camera will rest until one can: what the map
+   * shows is not "nothing", it is no map. Called once each time the host
+   * lands on that state; a camera rest follows if the map becomes drawable.
+   */
+  onNoMap?: () => void;
   /**
    * Re-frame on demand: each time the number changes (not its value at
    * mount), the map frames its framed overlays as its Fit control does —
@@ -225,6 +232,7 @@ export function MapView({
   hoveredId = null,
   onHoverChange,
   onCameraRest: reportRest,
+  onNoMap,
   crowd,
   focusId = null,
   fitPadding = NO_MAP_PADDING,
@@ -270,6 +278,7 @@ export function MapView({
   if (renderer === undefined) {
     return (
       <Center className="size-full">
+        <ReportNoMap onNoMap={onNoMap} />
         <Placeholder tone="error">
           No map renderer is installed, so there is nothing to draw this map
           with.
@@ -326,6 +335,7 @@ export function MapView({
           props={props}
           notice={notice}
           tiles={tiles}
+          onNoMap={onNoMap}
         />
       </MarkHostProvider>
     </MapTilesProvider>
@@ -346,11 +356,13 @@ function MarkedRenderer({
   props,
   notice,
   tiles,
+  onNoMap,
 }: {
   renderer: RendererItem;
   props: UnmarkedProps;
   notice: ReactNode;
   tiles: MapTileScheme;
+  onNoMap: (() => void) | undefined;
 }) {
   const env = useMapMarkEnv(tiles);
   const matchPin = GeoMap.Pin.useMatch();
@@ -374,6 +386,7 @@ function MarkedRenderer({
       renderer={renderer}
       props={{ ...props, markPin, markCluster }}
       notice={notice}
+      onNoMap={onNoMap}
     />
   );
 }
@@ -383,6 +396,8 @@ interface GateProps {
   props: MapRendererProps;
   /** Floated over the mounted map (the empty notice, the host's controls), never over a set-up state. */
   notice: ReactNode;
+  /** `MapViewProps.onNoMap`: told when the renderer is blocked. */
+  onNoMap: (() => void) | undefined;
 }
 
 /**
@@ -391,7 +406,11 @@ interface GateProps {
  * express, and this still puts it through the slot's middleware chain — so a
  * renderer crash is contained to the map.
  */
-function renderRenderer({ renderer, props, notice }: GateProps): ReactNode {
+function renderRenderer({
+  renderer,
+  props,
+  notice,
+}: Omit<GateProps, "onNoMap">): ReactNode {
   return (
     <div className="relative size-full">
       {renderIsolated(
@@ -409,13 +428,14 @@ function renderRenderer({ renderer, props, notice }: GateProps): ReactNode {
  * contribution literal), so branching on it keeps both arms rules-of-hooks
  * clean — the shape the place block's provider gate uses.
  */
-function RendererGate({ renderer, props, notice }: GateProps) {
+function RendererGate({ renderer, props, notice, onNoMap }: GateProps) {
   if (renderer.useReadiness) {
     return (
       <GatedRenderer
         renderer={renderer}
         props={props}
         notice={notice}
+        onNoMap={onNoMap}
         useReadiness={renderer.useReadiness}
       />
     );
@@ -427,6 +447,7 @@ function GatedRenderer({
   renderer,
   props,
   notice,
+  onNoMap,
   useReadiness,
 }: GateProps & { useReadiness: Hook<() => MapRendererReadiness> }) {
   const readiness = useReadiness();
@@ -443,6 +464,7 @@ function GatedRenderer({
       const Action = renderer.AccessAction;
       return (
         <Center className="size-full">
+          <ReportNoMap onNoMap={onNoMap} />
           {Action ? (
             <Action />
           ) : (
@@ -456,4 +478,16 @@ function GatedRenderer({
       );
     }
   }
+}
+
+/**
+ * Tells the caller, once per mount, that no map is drawn where this renders
+ * (`MapViewProps.onNoMap`). Renders nothing.
+ */
+function ReportNoMap({ onNoMap }: { onNoMap: (() => void) | undefined }) {
+  const report = useLatestRef(onNoMap);
+  useEffect(() => {
+    report.current?.();
+  }, [report]);
+  return null;
 }

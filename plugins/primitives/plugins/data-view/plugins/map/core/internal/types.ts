@@ -102,6 +102,11 @@ export interface MapViewOptions<TRow> {
    */
   onCameraRest?: (rest: CameraRest) => void;
   /**
+   * No map can be drawn (no renderer, or it is blocked — the map primitive's
+   * `onNoMap`): no camera will rest until one can.
+   */
+  onNoMap?: () => void;
+  /**
    * Re-frame on demand (the map primitive's `fitRequest`): each time the
    * number changes — not its value at mount — the map frames its pins as its
    * Fit control does.

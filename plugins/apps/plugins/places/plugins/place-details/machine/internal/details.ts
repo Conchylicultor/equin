@@ -4,7 +4,7 @@ import {
   type PlaceRichDetails,
   type RichDetailsTier,
 } from "@plugins/integrations/plugins/google-maps/plugins/places-api/core";
-import { placeRichDetails } from "@plugins/integrations/plugins/google-maps/plugins/places-api/server";
+import { placeRichDetails } from "@plugins/integrations/plugins/google-maps/plugins/places-api/machine";
 import { mapsBudgetFor } from "@plugins/integrations/plugins/google-maps/plugins/usage/server";
 import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import { detailsTier, type PlaceDetailsResult } from "../../core";

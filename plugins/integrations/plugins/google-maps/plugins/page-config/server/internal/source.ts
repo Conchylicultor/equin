@@ -2,11 +2,11 @@ import { pageInput } from "@plugins/framework/plugins/browser-server/core";
 import {
   mapsBrowserConfig,
   MapsBrowserConfigValueSchema,
-} from "@plugins/integrations/plugins/google-maps/core";
-import type { MapsBrowserConfigSourceImpl } from "@plugins/integrations/plugins/google-maps/server";
+} from "@plugins/integrations/plugins/google-maps/plugins/browser-config/core";
+import type { MapsBrowserConfigSourceImpl } from "@plugins/integrations/plugins/google-maps/plugins/browser-config/server";
 
 // The page's own browser config, handed over by the page's chrome
-// (`google-maps/web`'s `HostInputs.Supply`). Kept in memory by the host,
+// (`google-maps/browser-config/web`'s `HostInputs.Supply`). Kept in memory by the host,
 // never in its storage — so never in a build-time snapshot.
 const fromPage = pageInput(mapsBrowserConfig.key);
 

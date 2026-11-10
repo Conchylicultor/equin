@@ -20,6 +20,19 @@ throws, so a new field gets its price written down). Autocomplete is
 ledger and the budgets — is `google-maps/usage`'s; the broker hands out the
 metered client (`getPlacesClient`).
 
+## Only the computer calls Places (`machine/`)
+
+The client is the `machine` barrel, never `server/`: a browser host (the
+in-page demo on main's `/demo` and on the public website) boots portable
+`server/` code only, so no in-browser server can load it, and `server/` /
+`web/` code cannot import it at all (the boundary table). That is what makes
+"the website's demo never calls the Places API" a structural fact rather than a
+convention: the only key a browser ever holds is the public browser key, for
+drawing the map (`google-maps/browser-config`), and the page-side code may not
+load the Maps JavaScript API's `places` library either (`map/google`'s
+`maps-js-libraries` lint). Google's own API restriction on that key (Maps
+JavaScript API only) is the last line, since a key in a page is public.
+
 ## Why separate from the broker
 
 The parent plugin reads the key out of auth/central. This plugin is the opposite
@@ -92,7 +105,7 @@ is correct here — do not "fix" it later.
 
 ## Plugin reference
 
-- Description: Stateless typed Google Places API (New) client: places:autocomplete, places:searchText (pro, or rich with rating, price and this week's hours; biased to a circle or a box), place details, the separately priced rich details (photos, hours, rating, phone, website, summary) and place photos, mapped to the neutral PlaceSuggestion / PlaceSnapshot / PlaceCandidate shapes. Every call takes a PlacesClient — the key and the meter it is counted on, its SKU derived from its field mask (skuFor) — and never touches auth or storage.
+- Description: Stateless typed Google Places API (New) client, on the computer only (machine/ — a browser host never loads it, so no in-browser server can call Places): places:autocomplete, places:searchText (pro, or rich with rating, price and this week's hours; biased to a circle or a box), place details, the separately priced rich details (photos, hours, rating, phone, website, summary) and place photos, mapped to the neutral PlaceSuggestion / PlaceSnapshot / PlaceCandidate shapes. Every call takes a PlacesClient — the key and the meter it is counted on, its SKU derived from its field mask (skuFor) — and never touches auth or storage.
 - Core:
   - Uses: `packages/list-bound.wholeList`
   - Exports (types):
@@ -136,7 +149,7 @@ is correct here — do not "fix" it later.
     - `apps/website/promo-film/seed`
     - `integrations/google-maps/usage`
     - `page/place/google`
-- Server:
+- Machine:
   - Exports (types):
     - `SearchTextBias`
     - `SearchTextDetail`

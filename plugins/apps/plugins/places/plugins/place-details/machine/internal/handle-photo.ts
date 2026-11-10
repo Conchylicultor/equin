@@ -3,7 +3,7 @@ import {
   PHOTO_NAME_PATTERN,
   PlacesApiError,
 } from "@plugins/integrations/plugins/google-maps/plugins/places-api/core";
-import { placePhoto } from "@plugins/integrations/plugins/google-maps/plugins/places-api/server";
+import { placePhoto } from "@plugins/integrations/plugins/google-maps/plugins/places-api/machine";
 import { mapsBudgetNow } from "@plugins/integrations/plugins/google-maps/plugins/usage/server";
 import { PHOTO_WIDTH } from "../../core";
 

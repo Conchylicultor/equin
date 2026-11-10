@@ -1,4 +1,4 @@
-import type { SearchTextBias } from "@plugins/integrations/plugins/google-maps/plugins/places-api/server";
+import type { SearchTextBias } from "@plugins/integrations/plugins/google-maps/plugins/places-api/machine";
 import type { PlaceBounds } from "../../core";
 
 /** Google refuses a rectangle bias wider than this, in degrees of longitude. */

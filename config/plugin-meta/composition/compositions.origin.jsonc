@@ -1,4 +1,4 @@
-// @hash 0953f3875b5b
+// @hash 99515e183595
 {
   "manifests": [
     {
@@ -388,7 +388,8 @@
       "entryPoints": [
         "apps.website.**",
         "!apps.website.demos.workspace.story",
-        "!apps.website.promo-film.**"
+        "!apps.website.promo-film.**",
+        "integrations.google-maps.browser-config"
       ],
       "selectedContributors": [],
       "extends": [

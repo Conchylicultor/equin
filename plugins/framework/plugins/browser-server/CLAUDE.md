@@ -231,7 +231,7 @@ reaching the server, detach on unmount).
     - `HostInputs.Supply`
     - `ExternalHosts.Declare`
   - Slot contributors:
-    - `HostInputs.Supply` ← `integrations.google-maps`
+    - `HostInputs.Supply` ← `integrations.google-maps.browser-config`
     - `ExternalHosts.Declare` ← `apps.prototypes.canvas`
     - `ExternalHosts.Declare` ← `apps.sonata.audio.piano`
     - `ExternalHosts.Declare` ← `apps.sonata.audio.soundfont`
@@ -256,7 +256,7 @@ reaching the server, detach on unmount).
     - `apps/sonata/audio/soundfont`
     - `framework/browser-server/demo/scope`
     - `framework/browser-server/host-storage`
-    - `integrations/google-maps`
+    - `integrations/google-maps/browser-config`
     - `integrations/google-maps/page-config`
     - `map/google`
 - Core:

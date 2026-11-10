@@ -137,6 +137,9 @@ its own.
   - Uses:
     - `infra/endpoints.implementMachine`
     - `integrations/google-maps.getPlacesClient`
+    - `integrations/google-maps/places-api.autocomplete`
+    - `integrations/google-maps/places-api.placeDetails`
+    - `integrations/google-maps/places-api.searchText`
     - `network/live.serveValue`
   - Exports (values): `searchPlaces`
   - Register: `defineJob('places.refresh-details')`

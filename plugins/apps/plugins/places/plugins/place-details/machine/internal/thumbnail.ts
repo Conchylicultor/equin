@@ -5,7 +5,7 @@ import { PlacesApiError } from "@plugins/integrations/plugins/google-maps/plugin
 import {
   placeFirstPhotoName,
   placePhoto,
-} from "@plugins/integrations/plugins/google-maps/plugins/places-api/server";
+} from "@plugins/integrations/plugins/google-maps/plugins/places-api/machine";
 import { mapsBudgetNow } from "@plugins/integrations/plugins/google-maps/plugins/usage/server";
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
 import { GOOGLE_PLACE_ID_PATTERN } from "../../core";

@@ -2465,6 +2465,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/deploy-secrets/approvals`
               - `apps/deploy/site-messages/intake`
               - `framework/cli/deploy`
+              - `integrations/google-maps/browser-config`
+              - `integrations/google-maps/browser-config/deployed-key`
           - Exemptions:
             - Exempts itself from: `user-path/no-unproven-claim` — `machine/internal/read-credential.ts` (sanctioned)
           - Plugins:
@@ -6569,6 +6571,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `infra/endpoints.machineHandler`
               - `integrations/google-maps.getPlacesClient`
+              - `integrations/google-maps/places-api.placeFirstPhotoName`
+              - `integrations/google-maps/places-api.placePhoto`
+              - `integrations/google-maps/places-api.placeRichDetails`
               - `network/live.serveValue`
             - Routes:
               - `GET /api/places/photo`
@@ -6682,6 +6687,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `infra/endpoints.implementMachine`
               - `integrations/google-maps.getPlacesClient`
+              - `integrations/google-maps/places-api.autocomplete`
+              - `integrations/google-maps/places-api.placeDetails`
+              - `integrations/google-maps/places-api.searchText`
               - `network/live.serveValue`
             - Exports (values): `searchPlaces`
             - Register: `defineJob('places.refresh-details')`
@@ -12033,6 +12041,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/prototypes/fixtures.readPrototypeFixtureDir`
                   - `infra/endpoints.implementMachine`
                   - `integrations/google-maps.getPlacesClient`
+                  - `integrations/google-maps/places-api.placeDetails`
                 - Routes: `POST /api/promo-film/seed`
               - Core:
                 - Uses: `infra/endpoints.defineEndpoint`
@@ -28062,7 +28071,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HostInputs.Supply`
           - `ExternalHosts.Declare`
         - Slot contributors:
-          - `HostInputs.Supply` ← `integrations.google-maps`
+          - `HostInputs.Supply` ← `integrations.google-maps.browser-config`
           - `ExternalHosts.Declare` ← `apps.prototypes.canvas`
           - `ExternalHosts.Declare` ← `apps.sonata.audio.piano`
           - `ExternalHosts.Declare` ← `apps.sonata.audio.soundfont`
@@ -28087,7 +28096,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/sonata/audio/soundfont`
           - `framework/browser-server/demo/scope`
           - `framework/browser-server/host-storage`
-          - `integrations/google-maps`
+          - `integrations/google-maps/browser-config`
           - `integrations/google-maps/page-config`
           - `map/google`
       - Core:
@@ -32567,7 +32576,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 248 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 249 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×73
           - `conversations` ×35
           - `infra` ×23
@@ -32580,12 +32589,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `auth` ×5
           - `build` ×3
           - `framework` ×3
+          - `integrations` ×3
           - `network` ×3
           - `active-data` ×2
           - `apps-core` ×2
           - `config_v2` ×2
           - `history` ×2
-          - `integrations` ×2
           - `screenshot` ×2
           - `tag-tree` ×2
           - `backup`
@@ -33075,7 +33084,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps` ×2
           - `config_v2`
           - `framework/cli/await`
-          - `integrations/google-maps`
+          - `integrations/google-maps/browser-config`
           - `plugin-meta/plugin-tree`
           - `release`
           - `reports/outbox`
@@ -35579,7 +35588,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `auth`
           - `build`
           - `config_v2`
-          - `integrations/google-maps`
+          - `integrations/google-maps/browser-config`
           - `network/live/change-feed`
           - `plugin-meta/plugin-tree`
           - `primitives/log-channels`
@@ -36247,20 +36256,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `GMAIL_SCOPES`
           - `GOOGLE_PROVIDER_ID`
-    - **`google-maps`** — Google Maps Platform access broker (web): per-capability readiness (Places lookups vs the live map), the public browser config read, the 'set up Google Maps' / 'set up the live map' affordances consumers render in place of routing the user to Settings, and the Live map setup — the Google Maps 'Live map' row of Settings → Accounts, rendered inline in its account pane — (browser key, plus the optional vector-map Map ID, checked live by a preview map the renderer plugin draws into the setup's LiveMapSetup.MapIdPreview slot). Google Maps Platform access broker (server, portable): serves the public browser config (the Maps JavaScript API key and the vector map's Map ID) as the google-maps.browser-config live value, read from the host's MapsBrowserConfigSource — the host-global file on the computer, the page's own config on a browser host.
+    - **`google-maps`** — Google Maps Platform access broker (web): per-capability readiness (Places lookups vs the live map), the public browser config read, the 'set up Google Maps' / 'set up the live map' affordances consumers render in place of routing the user to Settings, and the Live map setup — the Google Maps 'Live map' row of Settings → Accounts, rendered inline in its account pane — (browser key, plus the optional vector-map Map ID, checked live by a preview map the renderer plugin draws into the setup's LiveMapSetup.MapIdPreview slot).
       - Web:
         - Slots: `LiveMapSetup.MapIdPreview`
         - Slot contributors: `LiveMapSetup.MapIdPreview` ← `map.google`
-        - Contributes:
-          - `HostInputs.Supply` "google-maps.browser-config"
-          - `Auth.Integration` "Live map"
-        - Uses: 31 symbols — full list in [`plugins/integrations/plugins/google-maps/REFERENCE.md`](../plugins/integrations/plugins/google-maps/REFERENCE.md)
+        - Contributes: `Auth.Integration` "Live map"
+        - Uses: 32 symbols — full list in [`plugins/integrations/plugins/google-maps/REFERENCE.md`](../plugins/integrations/plugins/google-maps/REFERENCE.md)
           - `primitives/setup-steps` ×10
           - `network/live/live-state` ×5
           - `auth` ×3
           - `infra/endpoints` ×3
+          - `integrations/google-maps/browser-config` ×2
           - `primitives/css/ui-kit` ×2
-          - `framework/browser-server.HostInputs`
           - `network/live.useLive`
           - `primitives/css/clip.Clip`
           - `primitives/css/spacing.Stack`
@@ -36275,7 +36282,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `MapsAccess`
           - `MapsAccessBlocker`
           - `MapsAccessCapability`
-          - `MapsBrowserConfigState`
         - Exports (values):
           - `LiveMapSetup`
           - `MapIdRasterNotice`
@@ -36283,48 +36289,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `MapsAccessAction`
           - `MapsMapAccessAction`
           - `useMapsAccess`
-          - `useMapsBrowserConfig`
-      - Server:
-        - Contributes:
-          - `resource.declare` "google-maps.browser-config"
-          - `host-service:google-maps.browser-config` "google-maps.browser-config"
-        - Uses: `network/live.serveValue`
-        - Exports (types): `MapsBrowserConfigSourceImpl`
-        - Exports (values):
-          - `mapsBrowserConfigServed`
-          - `MapsBrowserConfigSource`
-        - Resources: `google-maps.browser-config` (push, notified)
-      - Machine:
-        - Uses: `infra/endpoints.implementMachine`
-        - Exports (types): `PlacesClientResult`
-        - Exports (values): `getPlacesClient`
-        - Register: `defineFileWatcher('google-maps.browser-config')`
-        - Routes:
-          - `POST /api/google-maps/browser-config`
-          - `DELETE /api/google-maps/browser-config`
-          - `POST /api/google-maps/map-id`
-          - `DELETE /api/google-maps/map-id`
-      - Core:
-        - Uses:
-          - `infra/endpoints.defineEndpoint`
-          - `network/live.liveValue`
-        - Exports (types):
-          - `MapsBrowserConfigInput`
-          - `MapsBrowserConfigValue`
-          - `MapsMapIdInput`
-        - Exports (values):
-          - `BASEMAP_STYLE`
-          - `BASEMAP_STYLE_JSON`
-          - `BROWSER_KEY_PATTERN`
-          - `clearMapsBrowserConfig`
-          - `clearMapsMapId`
-          - `MAP_ID_PATTERN`
-          - `mapsBrowserConfig`
-          - `MapsBrowserConfigInputSchema`
-          - `MapsBrowserConfigValueSchema`
-          - `MapsMapIdInputSchema`
-          - `setMapsBrowserConfig`
-          - `setMapsMapId`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --destructive`
@@ -36337,15 +36301,80 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/places/places-core`
           - `apps/places/places-map`
           - `apps/website/promo-film/seed`
-          - `integrations/google-maps/page-config`
           - `map/google`
           - `page/place/google`
+      - Machine:
+        - Exports (types): `PlacesClientResult`
+        - Exports (values): `getPlacesClient`
+      - Core:
+        - Exports (values):
+          - `BASEMAP_STYLE`
+          - `BASEMAP_STYLE_JSON`
       - Plugins:
+        - **`browser-config`** — The Maps browser config, read (useMapsBrowserConfig: loading / error / unset / set { browserKey, mapId }) and handed to a browser host as a page input (HostInputs.Supply): a page rendering the demo — main's /demo or the public website — gives it the key its own server serves, so the demo's map draws without the demo ever reaching that server. Light on purpose (no auth), so the website carries it. The Maps browser config, served (portable): the google-maps.browser-config live value (the Maps JavaScript API key and the vector map's Map ID), read from the host's MapsBrowserConfigSource — the deploy secret or the host-global file on the computer, the page's own config on a browser host.
+          - Web:
+            - Contributes: `HostInputs.Supply` "google-maps.browser-config"
+            - Uses:
+              - `framework/browser-server.HostInputs`
+              - `network/live.useLive`
+            - Exports (types): `MapsBrowserConfigState`
+            - Exports (values): `useMapsBrowserConfig`
+          - Server:
+            - Contributes:
+              - `resource.declare` "google-maps.browser-config"
+              - `host-service:google-maps.browser-config` "google-maps.browser-config"
+            - Uses: `network/live.serveValue`
+            - Exports (types): `MapsBrowserConfigSourceImpl`
+            - Exports (values):
+              - `mapsBrowserConfigServed`
+              - `MapsBrowserConfigSource`
+            - Resources: `google-maps.browser-config` (push, notified)
+          - Machine:
+            - Uses: `infra/endpoints.implementMachine`
+            - Register: `defineFileWatcher('google-maps.browser-config')`
+            - Routes:
+              - `POST /api/google-maps/browser-config`
+              - `DELETE /api/google-maps/browser-config`
+              - `POST /api/google-maps/map-id`
+              - `DELETE /api/google-maps/map-id`
+          - Core:
+            - Uses:
+              - `infra/endpoints.defineEndpoint`
+              - `network/live.liveValue`
+            - Exports (types):
+              - `MapsBrowserConfigInput`
+              - `MapsBrowserConfigValue`
+              - `MapsMapIdInput`
+            - Exports (values):
+              - `BROWSER_KEY_PATTERN`
+              - `clearMapsBrowserConfig`
+              - `clearMapsMapId`
+              - `MAP_ID_PATTERN`
+              - `mapsBrowserConfig`
+              - `MapsBrowserConfigInputSchema`
+              - `MapsBrowserConfigValueSchema`
+              - `MapsMapIdInputSchema`
+              - `setMapsBrowserConfig`
+              - `setMapsMapId`
+          - Cross-plugin:
+            - Imported by:
+              - `integrations/google-maps`
+              - `integrations/google-maps/page-config`
+              - `map/google`
+          - Plugins:
+            - **`deployed-key`** — GOOGLE_MAPS_BROWSER_KEY: the deploy secret a deployed site draws its maps with.
+              - Core:
+                - Uses: `apps/deploy/deploy-secrets.defineDeploySecret`
+                - Exports (values): `GOOGLE_MAPS_BROWSER_KEY`
+              - Cross-plugin:
+                - Imported by: `integrations/google-maps/browser-config`
+              - Deploy-secrets:
+                - Deploy secrets: `GOOGLE_MAPS_BROWSER_KEY` — The Google Maps browser key the deployed site draws its maps with: restricted to the site's domains (HTTP referrers) and to the Maps JavaScript API only.
         - **`page-config`** (excluded) — The Maps browser config of a browser host: provides the MapsBrowserConfigSource host service from the page around the host — the key the real app already sends that page, handed over by the page's chrome as a page input (never read from a server by the host's own code, never stored). A page that supplies none reads as unset, so the map shows its set-up state, whose writes need the computer. Never booted by the desktop.
           - Server:
             - Contributes: `host-service:google-maps.browser-config` "google-maps.browser-config"
-            - Uses: `integrations/google-maps.MapsBrowserConfigSource`
-        - **`places-api`** — Stateless typed Google Places API (New) client: places:autocomplete, places:searchText (pro, or rich with rating, price and this week's hours; biased to a circle or a box), place details, the separately priced rich details (photos, hours, rating, phone, website, summary) and place photos, mapped to the neutral PlaceSuggestion / PlaceSnapshot / PlaceCandidate shapes. Every call takes a PlacesClient — the key and the meter it is counted on, its SKU derived from its field mask (skuFor) — and never touches auth or storage.
+            - Uses: `integrations/google-maps/browser-config.MapsBrowserConfigSource`
+        - **`places-api`** — Stateless typed Google Places API (New) client, on the computer only (machine/ — a browser host never loads it, so no in-browser server can call Places): places:autocomplete, places:searchText (pro, or rich with rating, price and this week's hours; biased to a circle or a box), place details, the separately priced rich details (photos, hours, rating, phone, website, summary) and place photos, mapped to the neutral PlaceSuggestion / PlaceSnapshot / PlaceCandidate shapes. Every call takes a PlacesClient — the key and the meter it is counted on, its SKU derived from its field mask (skuFor) — and never touches auth or storage.
           - Core:
             - Uses: `packages/list-bound.wholeList`
             - Exports (types):
@@ -36389,7 +36418,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/website/promo-film/seed`
               - `integrations/google-maps/usage`
               - `page/place/google`
-          - Server:
+          - Machine:
             - Exports (types):
               - `SearchTextBias`
               - `SearchTextDetail`
@@ -36950,12 +36979,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ExternalHosts.Declare` "maps.googleapis.com, maps.gstatic.com, mapsresources-pa.googleapis.com, fonts.googleapis.com, fonts.gstatic.com"
           - `LiveMapSetup.MapIdPreview` → `MapIdPreview`
         - Uses: 26 symbols — full list in [`plugins/map/plugins/google/REFERENCE.md`](../plugins/map/plugins/google/REFERENCE.md)
-          - `integrations/google-maps` ×6
+          - `integrations/google-maps` ×5
           - `map` ×4
           - `map/pin-layer` ×3
           - `config_v2` ×2
           - `primitives/css/spacing` ×2
           - `framework/browser-server.ExternalHosts`
+          - `integrations/google-maps/browser-config.useMapsBrowserConfig`
           - `primitives/css/center.Center`
           - `primitives/css/motion.useTransitionHold`
           - `primitives/css/surface.Surface`
@@ -37691,7 +37721,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
           - `sliceRange`
       - Cross-plugin:
-        - Imported by: 338 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 339 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×86
           - `conversations` ×70
           - `debug` ×33
@@ -37706,6 +37736,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta` ×4
           - `review` ×4
           - `auth` ×3
+          - `integrations` ×3
           - `reports` ×3
           - `ui` ×3
           - `apps-core` ×2
@@ -37714,7 +37745,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database` ×2
           - `hints` ×2
           - `history` ×2
-          - `integrations` ×2
           - `release` ×2
           - `search` ×2
           - `fields/secret/config`
@@ -41730,7 +41760,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Server:
             - Contributes: `report-kind` "place-google-unknown-type"
           - Machine:
-            - Uses: `integrations/google-maps.getPlacesClient`
+            - Uses:
+              - `integrations/google-maps.getPlacesClient`
+              - `integrations/google-maps/places-api.autocomplete`
+              - `integrations/google-maps/places-api.placeDetails`
             - Register: `definePlaceProvider('google')`
           - Cross-plugin:
             - Imported by: `apps/places/page-overlay`

@@ -132,12 +132,13 @@ The only map-vendor code in the repo. Everything else draws maps through
     - `ExternalHosts.Declare` "maps.googleapis.com, maps.gstatic.com, mapsresources-pa.googleapis.com, fonts.googleapis.com, fonts.gstatic.com"
     - `LiveMapSetup.MapIdPreview` → `MapIdPreview`
   - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `integrations/google-maps` ×6
+    - `integrations/google-maps` ×5
     - `map` ×4
     - `map/pin-layer` ×3
     - `config_v2` ×2
     - `primitives/css/spacing` ×2
     - `framework/browser-server.ExternalHosts`
+    - `integrations/google-maps/browser-config.useMapsBrowserConfig`
     - `primitives/css/center.Center`
     - `primitives/css/motion.useTransitionHold`
     - `primitives/css/surface.Surface`

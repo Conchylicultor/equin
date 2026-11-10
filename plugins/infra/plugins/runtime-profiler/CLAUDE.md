@@ -607,7 +607,7 @@ remaining allocations are one flat band array per completed entry span, and what
     - `auth`
     - `build`
     - `config_v2`
-    - `integrations/google-maps`
+    - `integrations/google-maps/browser-config`
     - `network/live/change-feed`
     - `plugin-meta/plugin-tree`
     - `primitives/log-channels`

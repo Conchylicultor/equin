@@ -99,12 +99,23 @@ const LAYOUT_OPTIONS = [
   },
 ] as const;
 
+/**
+ * What the map beside the panel shows, as far as "In view" goes: not known
+ * yet (the camera has not rested), no map at all (no renderer, or it is
+ * blocked — so nothing is in view and the panel lists every place), or the
+ * part of the map the chrome leaves uncovered.
+ */
+export type PanelMapView =
+  | { kind: "pending" }
+  | { kind: "no-map" }
+  | { kind: "visible"; bounds: MapBounds };
+
 export interface PlacesPanelProps {
   /** Every saved place: the active preset's rows are read over them. */
   places: readonly Place[];
   tags: readonly PlaceTag[];
-  /** The part of the map the chrome leaves uncovered; null until the camera first rests. */
-  visible: MapBounds | null;
+  /** What the map shows: the part the chrome leaves uncovered, not yet known, or no map. */
+  view: PanelMapView;
   layout: PanelLayout;
   onLayoutChange: (layout: PanelLayout) => void;
   scope: PanelScope;
@@ -189,7 +200,7 @@ function PanelList(
   },
 ): ReactNode {
   const {
-    visible,
+    view,
     layout,
     onLayoutChange,
     scope,
@@ -198,13 +209,18 @@ function PanelList(
     preset,
     onFit,
   } = props;
-  const scoped = useMemo(
-    () =>
-      visible === null
-        ? null
-        : scopePlaces(rows, visible, scope, (p) => p.location),
-    [rows, visible, scope],
-  );
+  // Without a map nothing is in view: every place is listed.
+  const noMap = view.kind === "no-map";
+  const scoped = useMemo(() => {
+    switch (view.kind) {
+      case "pending":
+        return null;
+      case "no-map":
+        return { shown: rows, inView: 0, outside: 0 };
+      case "visible":
+        return scopePlaces(rows, view.bounds, scope, (p) => p.location);
+    }
+  }, [rows, view, scope]);
 
   const showAll = (
     <Button variant="link" onClick={() => onScopeChange("all")}>
@@ -229,7 +245,7 @@ function PanelList(
         No place matches <strong>{preset}</strong>.
       </PanelEmpty>
     );
-  } else if (scoped.shown.length === 0) {
+  } else if (!noMap && scoped.shown.length === 0) {
     body = (
       <Stack gap="sm" className="p-md">
         <PanelEmpty icon={outOfViewIcon}>
@@ -246,7 +262,7 @@ function PanelList(
     );
   } else {
     body = <PanelRows {...props} shown={scoped.shown} />;
-    if (scope === "in-view" && scoped.outside > 0) {
+    if (!noMap && scope === "in-view" && scoped.outside > 0) {
       footer = (
         <Line className="gap-xs border-t px-sm py-xs">
           <Fill>
@@ -269,21 +285,34 @@ function PanelList(
         <Line className="gap-xs border-b p-xs">
           <SegmentedControl<PanelScope>
             label="Which places"
-            value={scope}
+            value={noMap ? "all" : scope}
             onChange={onScopeChange}
-            options={[
-              {
-                id: "in-view",
-                label: scoped === null ? "In view" : `In view ${scoped.inView}`,
-                tooltip:
-                  "The places the map shows — follows the map as you move it",
-              },
-              {
-                id: "all",
-                label: `All ${rows.length}`,
-                tooltip: `Every place of ${preset}`,
-              },
-            ]}
+            options={
+              noMap
+                ? [
+                    {
+                      id: "all",
+                      label: `All ${rows.length}`,
+                      tooltip: `Every place of ${preset} — there is no map here, so none is "in view"`,
+                    },
+                  ]
+                : [
+                    {
+                      id: "in-view",
+                      label:
+                        scoped === null
+                          ? "In view"
+                          : `In view ${scoped.inView}`,
+                      tooltip:
+                        "The places the map shows — follows the map as you move it",
+                    },
+                    {
+                      id: "all",
+                      label: `All ${rows.length}`,
+                      tooltip: `Every place of ${preset}`,
+                    },
+                  ]
+            }
           />
           <Fill />
           <SegmentedControl<"list" | "gallery">

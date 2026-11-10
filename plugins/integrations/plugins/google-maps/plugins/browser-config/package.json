@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-integrations-google-maps-browser-config",
+  "description": "The public Maps browser config (the Maps JavaScript API key and the vector map's Map ID): its live value, where each host reads it from, and the page input that hands it to the in-page demo.",
+  "private": true,
+  "version": "0.0.1"
+}

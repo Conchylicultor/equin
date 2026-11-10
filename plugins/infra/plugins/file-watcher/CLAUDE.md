@@ -410,7 +410,7 @@ re-created is watched again (a `rescan` on each appearing or going).
     - `apps` ×2
     - `config_v2`
     - `framework/cli/await`
-    - `integrations/google-maps`
+    - `integrations/google-maps/browser-config`
     - `plugin-meta/plugin-tree`
     - `release`
     - `reports/outbox`

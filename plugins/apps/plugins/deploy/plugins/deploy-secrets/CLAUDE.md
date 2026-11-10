@@ -167,6 +167,8 @@ failure notice.
     - `apps/deploy/deploy-secrets/approvals`
     - `apps/deploy/site-messages/intake`
     - `framework/cli/deploy`
+    - `integrations/google-maps/browser-config`
+    - `integrations/google-maps/browser-config/deployed-key`
 - Exemptions:
   - Exempts itself from: `user-path/no-unproven-claim` — `machine/internal/read-credential.ts` (sanctioned)
 - Sub-plugins:

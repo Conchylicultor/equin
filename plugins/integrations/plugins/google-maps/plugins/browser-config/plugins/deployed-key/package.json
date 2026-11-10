@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-integrations-google-maps-browser-config-deployed-key",
+  "description": "GOOGLE_MAPS_BROWSER_KEY: the deploy secret a deployed site draws its maps with.",
+  "private": true,
+  "version": "0.0.1"
+}

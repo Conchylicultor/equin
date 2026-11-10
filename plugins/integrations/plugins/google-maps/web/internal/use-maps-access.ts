@@ -5,8 +5,8 @@ import {
   type ResourceError,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useMachineAvailability } from "@plugins/infra/plugins/endpoints/web";
-import { setMapsBrowserConfig } from "../../core";
-import { useMapsBrowserConfig } from "./use-maps-browser-config";
+import { setMapsBrowserConfig } from "@plugins/integrations/plugins/google-maps/plugins/browser-config/core";
+import { useMapsBrowserConfig } from "@plugins/integrations/plugins/google-maps/plugins/browser-config/web";
 
 /**
  * What a Maps surface needs to work. The two use DIFFERENT credentials, and
@@ -135,7 +135,9 @@ function useMapAccess(): MapsAccess {
   const config = useMapsBrowserConfig();
   const configured = config.kind === "set";
   // A host without the computer draws with the key its page hands it, and
-  // cannot store one: with none, it says so rather than offering a set-up.
+  // cannot store one: with none, it says what is missing — a key — rather
+  // than offering a set-up (or blaming the missing computer, which is not what
+  // stops the map: a page that hands a key draws it).
   const writable = useMachineAvailability(setMapsBrowserConfig);
   return {
     configured,
@@ -145,9 +147,13 @@ function useMapAccess(): MapsAccess {
     refetch: config.kind === "error" ? config.refetch : noRefetch,
     blocker: config.kind === "unset" ? "no-browser-key" : null,
     unavailable:
-      config.kind === "unset" && !writable.available ? writable.message : null,
+      config.kind === "unset" && !writable.available ? NO_PAGE_KEY : null,
   };
 }
+
+/** Why a host that cannot store a key (the in-page demo) draws no map. */
+const NO_PAGE_KEY =
+  "The map can't be drawn here: this version of the app has no Google Maps key.";
 
 /** Nothing to retry: the browser-config read has not failed. */
 async function noRefetch(): Promise<void> {}

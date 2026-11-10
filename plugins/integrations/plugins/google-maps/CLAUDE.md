@@ -68,40 +68,11 @@ exists for hidden places; step 3 asks the user to look at the same preview. A
 Map ID that Google draws as raster also shows `MapIdRasterNotice` on the real
 map, local to the renderer. There is no page-global report store.
 
-### Where the browser config lives, and why
+### Where the browser config lives
 
-A host-global JSON file, `state/google-maps/browser-config.json`
-(`{ browserKey, mapId? }`), declared in `data-dirs/`. Shared by every checkout
-— main and every agent worktree — exactly like the Places key. The
-alternatives each fail one way:
-
-- **Not the secrets store.** The value is public by design; serving it to
-  browsers from there would break that store's rule that secrets never leave
-  the server.
-- **Not config_v2.** Its user layer is per worktree namespace, so every agent
-  worktree would show "set up the live map" again.
-- **Not central.** Central runs main's code, so the feature could not be
-  exercised from a branch.
-
-It is served as the `google-maps.browser-config` live value (external source)
-from the host's `MapsBrowserConfigSource` host service (`server/`, portable):
-on the computer `machine/` provides it from this file; a browser host (the
-demo) gets it from `page-config`, which reads the page input the page's chrome
-hands over (`HostInputs.Supply` in `web/`, `framework/browser-server`) — the
-key the real app already sends that page, never read from a server by the
-host's own code and never stored, so never in a build-time snapshot. A page
-that supplies none reads `unset`. On the computer:
-a write through `POST` / `DELETE /api/google-maps/browser-config` (the key;
-deleting it removes the Map ID too) or `/api/google-maps/map-id` (the Map ID,
-refused with 409 while no key is stored) notifies its
-own backend, and every backend with a subscribed tab watches the directory
-(`infra/file-watcher`) so a write from another checkout — or a hand edit —
-reaches every tab live. No polling.
-
-Nothing verifies the browser key on write. A referrer-restricted key cannot be
-checked honestly from the server (no referrer ⇒ refused; a forged one proves
-nothing about a real page), so a stored key is not a verified one: the map
-renderer's `gm_authFailure`, raised in the real page, is the verifier.
+The browser config (its live value, its sources, the page input that hands it
+to the demo) is the light child [`browser-config`](plugins/browser-config/CLAUDE.md)
+— no `auth`, so the public website carries it.
 
 ## Public API
 
@@ -118,11 +89,9 @@ Google adapter, the live map renderer) go through it and **never** import
     never an `""` key, and never the bare key (a call made with it would go
     uncounted). Lets `AuthCentralOfflineError` propagate, and throws on any
     other central failure (fail loudly).
-- **`core`** — `mapsBrowserConfig` (the live value), `setMapsBrowserConfig` /
-  `clearMapsBrowserConfig` and `setMapsMapId` / `clearMapsMapId` (the
-  endpoints, `needsMachine`: a host without the computer cannot change the
-  key — its set-up surfaces say so, never a "paste your key" prompt), `BROWSER_KEY_PATTERN`, `MAP_ID_PATTERN`, `BASEMAP_STYLE` /
-  `BASEMAP_STYLE_JSON` (the one "hide Google's places" rule).
+- **`core`** — `BASEMAP_STYLE` / `BASEMAP_STYLE_JSON` (the one "hide Google's
+  places" rule). The browser config's value, endpoints and patterns are
+  `browser-config/core`.
 - **`web`** (`@plugins/integrations/plugins/google-maps/web`)
   - `useMapsAccess(capability: "places" | "map"): MapsAccess` — reactive
     `{ configured, ready, loading, blocker }` for ONE capability. `configured`
@@ -132,8 +101,6 @@ Google adapter, the live map renderer) go through it and **never** import
   - `blocker: "not-configured" | "no-browser-key" | null` — the ONE next unmet
     prerequisite. `"not-configured"` arises only for `"places"`,
     `"no-browser-key"` only for `"map"`. Pending is `loading`, never a blocker.
-  - `useMapsBrowserConfig(): MapsBrowserConfigState` — `loading` / `unset` /
-    `set { browserKey, mapId }`, for the renderer.
   - `LiveMapSetup.MapIdPreview` — the slot a map renderer fills with the
     Map ID preview map. `MapIdRasterNotice` — the map's
     "this Map ID isn't a vector map" affordance (opens the Live map account pane).
@@ -157,6 +124,11 @@ over:
 
 ## Sub-plugins
 
+- **`browser-config`** — the public browser config: the
+  `google-maps.browser-config` live value, where each host reads it from (a
+  deployed box's deploy secret, the host-global file, the page around a browser
+  host), and `useMapsBrowserConfig`.
+
 - **`places-api`** — the stateless typed Places API (New) client. It takes a
   `PlacesClient` (key + meter) per call and touches no storage, which is what
   keeps this broker (which reads auth) and the transport free of an import
@@ -168,20 +140,18 @@ over:
 
 ## Plugin reference
 
-- Description: Google Maps Platform access broker (web): per-capability readiness (Places lookups vs the live map), the public browser config read, the 'set up Google Maps' / 'set up the live map' affordances consumers render in place of routing the user to Settings, and the Live map setup — the Google Maps 'Live map' row of Settings → Accounts, rendered inline in its account pane — (browser key, plus the optional vector-map Map ID, checked live by a preview map the renderer plugin draws into the setup's LiveMapSetup.MapIdPreview slot). Google Maps Platform access broker (server, portable): serves the public browser config (the Maps JavaScript API key and the vector map's Map ID) as the google-maps.browser-config live value, read from the host's MapsBrowserConfigSource — the host-global file on the computer, the page's own config on a browser host.
+- Description: Google Maps Platform access broker (web): per-capability readiness (Places lookups vs the live map), the public browser config read, the 'set up Google Maps' / 'set up the live map' affordances consumers render in place of routing the user to Settings, and the Live map setup — the Google Maps 'Live map' row of Settings → Accounts, rendered inline in its account pane — (browser key, plus the optional vector-map Map ID, checked live by a preview map the renderer plugin draws into the setup's LiveMapSetup.MapIdPreview slot).
 - Web:
   - Slots: `LiveMapSetup.MapIdPreview`
   - Slot contributors: `LiveMapSetup.MapIdPreview` ← `map.google`
-  - Contributes:
-    - `HostInputs.Supply` "google-maps.browser-config"
-    - `Auth.Integration` "Live map"
-  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Contributes: `Auth.Integration` "Live map"
+  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/setup-steps` ×10
     - `network/live/live-state` ×5
     - `auth` ×3
     - `infra/endpoints` ×3
+    - `integrations/google-maps/browser-config` ×2
     - `primitives/css/ui-kit` ×2
-    - `framework/browser-server.HostInputs`
     - `network/live.useLive`
     - `primitives/css/clip.Clip`
     - `primitives/css/spacing.Stack`
@@ -196,7 +166,6 @@ over:
     - `MapsAccess`
     - `MapsAccessBlocker`
     - `MapsAccessCapability`
-    - `MapsBrowserConfigState`
   - Exports (values):
     - `LiveMapSetup`
     - `MapIdRasterNotice`
@@ -204,48 +173,6 @@ over:
     - `MapsAccessAction`
     - `MapsMapAccessAction`
     - `useMapsAccess`
-    - `useMapsBrowserConfig`
-- Server:
-  - Contributes:
-    - `resource.declare` "google-maps.browser-config"
-    - `host-service:google-maps.browser-config` "google-maps.browser-config"
-  - Uses: `network/live.serveValue`
-  - Exports (types): `MapsBrowserConfigSourceImpl`
-  - Exports (values):
-    - `mapsBrowserConfigServed`
-    - `MapsBrowserConfigSource`
-  - Resources: `google-maps.browser-config` (push, notified)
-- Machine:
-  - Uses: `infra/endpoints.implementMachine`
-  - Exports (types): `PlacesClientResult`
-  - Exports (values): `getPlacesClient`
-  - Register: `defineFileWatcher('google-maps.browser-config')`
-  - Routes:
-    - `POST /api/google-maps/browser-config`
-    - `DELETE /api/google-maps/browser-config`
-    - `POST /api/google-maps/map-id`
-    - `DELETE /api/google-maps/map-id`
-- Core:
-  - Uses:
-    - `infra/endpoints.defineEndpoint`
-    - `network/live.liveValue`
-  - Exports (types):
-    - `MapsBrowserConfigInput`
-    - `MapsBrowserConfigValue`
-    - `MapsMapIdInput`
-  - Exports (values):
-    - `BASEMAP_STYLE`
-    - `BASEMAP_STYLE_JSON`
-    - `BROWSER_KEY_PATTERN`
-    - `clearMapsBrowserConfig`
-    - `clearMapsMapId`
-    - `MAP_ID_PATTERN`
-    - `mapsBrowserConfig`
-    - `MapsBrowserConfigInputSchema`
-    - `MapsBrowserConfigValueSchema`
-    - `MapsMapIdInputSchema`
-    - `setMapsBrowserConfig`
-    - `setMapsMapId`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --destructive`
@@ -258,12 +185,19 @@ over:
     - `apps/places/places-core`
     - `apps/places/places-map`
     - `apps/website/promo-film/seed`
-    - `integrations/google-maps/page-config`
     - `map/google`
     - `page/place/google`
+- Machine:
+  - Exports (types): `PlacesClientResult`
+  - Exports (values): `getPlacesClient`
+- Core:
+  - Exports (values):
+    - `BASEMAP_STYLE`
+    - `BASEMAP_STYLE_JSON`
 - Sub-plugins:
+  - **`browser-config`** — The Maps browser config, read (useMapsBrowserConfig: loading / error / unset / set { browserKey, mapId }) and handed to a browser host as a page input (HostInputs.Supply): a page rendering the demo…
   - **`page-config`** (excluded) — The Maps browser config of a browser host: provides the MapsBrowserConfigSource host service from the page around the host — the key the real app already sends that page, handed over by the page's…
-  - **`places-api`** — Stateless typed Google Places API (New) client: places:autocomplete, places:searchText (pro, or rich with rating, price and this week's hours; biased to a circle or a box), place details, the…
+  - **`places-api`** — Stateless typed Google Places API (New) client, on the computer only (machine/ — a browser host never loads it, so no in-browser server can call Places): places:autocomplete, places:searchText (pro…
   - **`usage`** — Registers the Google Maps usage budgets (per-SKU monthly call budgets inside Google's free allowance) for Settings → Config, and reads them against this month's live counts (useMapsBudget).…
 
 <!-- AUTOGENERATED:END -->

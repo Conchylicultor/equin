@@ -2,8 +2,11 @@ import { defineFileWatcher } from "@plugins/infra/plugins/file-watcher/server";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { implementMachine } from "@plugins/infra/plugins/endpoints/machine";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
+import { readDeploySecret } from "@plugins/apps/plugins/deploy/plugins/deploy-secrets/server";
 import { googleMapsDir } from "../../data-dirs";
+import { GOOGLE_MAPS_BROWSER_KEY } from "@plugins/integrations/plugins/google-maps/plugins/browser-config/plugins/deployed-key/core";
 import {
+  BROWSER_KEY_PATTERN,
   clearMapsBrowserConfig,
   clearMapsMapId,
   setMapsBrowserConfig,
@@ -34,12 +37,29 @@ export const mapsBrowserConfigWatcher = defineFileWatcher({
 });
 
 /**
- * The computer's browser config: the one host-global file. A write through
- * any checkout's endpoint notifies that backend directly; every other backend
+ * The computer's browser config. A deployed box answers its approved
+ * `GOOGLE_MAPS_BROWSER_KEY` deploy secret (its own key, restricted to the
+ * site's domains; no Map ID, so the raster map) — fixed for the process's
+ * life, since a changed credential restarts the service. Everywhere else
+ * (no such credential) it is the one host-global file: a write through any
+ * checkout's endpoint notifies that backend directly; every other backend
  * learns of it from its own watcher on the directory while a tab reads it.
  */
 export const browserConfigFile: MapsBrowserConfigSourceImpl = {
-  read: () => readBrowserConfig(),
+  async read() {
+    const deployed = await readDeploySecret(GOOGLE_MAPS_BROWSER_KEY);
+    if (deployed.kind === "set") {
+      const browserKey = deployed.value.trim();
+      // A credential that is not a key is a broken deploy, not "no map".
+      if (!BROWSER_KEY_PATTERN.test(browserKey)) {
+        throw new Error(
+          `The ${GOOGLE_MAPS_BROWSER_KEY.key} deploy secret is not a Google API key (expected AIza…).`,
+        );
+      }
+      return { kind: "set", browserKey, mapId: null };
+    }
+    return readBrowserConfig();
+  },
   async watch(changed) {
     // Following a file in a missing directory fails; creating it is free.
     // The staging sibling a write renames from is not followed.
@@ -58,9 +78,23 @@ export const browserConfigFile: MapsBrowserConfigSourceImpl = {
   },
 };
 
+/**
+ * A box drawing with its deploy secret has no key to set here: a write to the
+ * file would be shadowed by the secret, so it is refused rather than lost.
+ */
+async function refuseOnDeployedKey(): Promise<void> {
+  if ((await readDeploySecret(GOOGLE_MAPS_BROWSER_KEY)).kind === "set") {
+    throw new HttpError(
+      409,
+      `This deployment draws its maps with its ${GOOGLE_MAPS_BROWSER_KEY.key} deploy secret; change the key in the Deploy app's Secrets.`,
+    );
+  }
+}
+
 export const handleSetBrowserConfig = implementMachine(
   setMapsBrowserConfig,
   async ({ body }) => {
+    await refuseOnDeployedKey();
     await writeBrowserKey(body.browserKey);
     mapsBrowserConfigServed.notify();
   },
@@ -69,6 +103,7 @@ export const handleSetBrowserConfig = implementMachine(
 export const handleSetMapId = implementMachine(
   setMapsMapId,
   async ({ body }) => {
+    await refuseOnDeployedKey();
     try {
       await writeMapId(body.mapId);
     } catch (err) {
@@ -81,6 +116,7 @@ export const handleSetMapId = implementMachine(
 );
 
 export const handleClearMapId = implementMachine(clearMapsMapId, async () => {
+  await refuseOnDeployedKey();
   await clearMapId();
   mapsBrowserConfigServed.notify();
 });
@@ -88,6 +124,7 @@ export const handleClearMapId = implementMachine(clearMapsMapId, async () => {
 export const handleClearBrowserConfig = implementMachine(
   clearMapsBrowserConfig,
   async () => {
+    await refuseOnDeployedKey();
     await clearBrowserConfig();
     mapsBrowserConfigServed.notify();
   },

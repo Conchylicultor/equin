@@ -83,6 +83,7 @@ export const lintEntries: CollectedEntry[] = [
   { pluginPath: "infra/plugins/spawn", id: "infra.spawn", loader: () => import("@plugins/infra/plugins/spawn/lint"), dependsOn: [] },
   { pluginPath: "infra/plugins/spawn/plugins/daemon", id: "infra.spawn.daemon", loader: () => import("@plugins/infra/plugins/spawn/plugins/daemon/lint"), dependsOn: [] },
   { pluginPath: "infra/plugins/worktree", id: "infra.worktree", loader: () => import("@plugins/infra/plugins/worktree/lint"), dependsOn: [] },
+  { pluginPath: "map/plugins/google", id: "map.google", loader: () => import("@plugins/map/plugins/google/lint"), dependsOn: [] },
   { pluginPath: "network/plugins/live", id: "network.live", loader: () => import("@plugins/network/plugins/live/lint"), dependsOn: [] },
   { pluginPath: "network/plugins/live/plugins/live-state", id: "network.live.live-state", loader: () => import("@plugins/network/plugins/live/plugins/live-state/lint"), dependsOn: [] },
   { pluginPath: "packages/plugins/error-subject", id: "packages.error-subject", loader: () => import("@plugins/packages/plugins/error-subject/lint"), dependsOn: [] },

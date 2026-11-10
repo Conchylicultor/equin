@@ -631,11 +631,17 @@ export const compositionsConfig = defineConfig({
         // `!apps.website.promo-film.**`: the showcase film is made FROM the
         // whole app (its seed writes tasks, conversations and places into the
         // `promo-film` composition below), not part of the site it advertises.
+        // `integrations.google-maps.browser-config`: the site serves its own
+        // Maps browser key (a deployed box's GOOGLE_MAPS_BROWSER_KEY deploy
+        // secret) and hands it to the demo as a page input, so the demo's
+        // Places draws its map. Map rendering only: the Places API client is
+        // `machine/`, which the demo's worker never boots.
         app("website", {
           entryPoints: [
             "apps.website.**",
             "!apps.website.demos.workspace.story",
             "!apps.website.promo-film.**",
+            "integrations.google-maps.browser-config",
           ],
           excludes: ["agent-runtime", "auth"],
         }),

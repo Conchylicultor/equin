@@ -97,7 +97,7 @@ import { GooglePlaceCard, type DetailedHit } from "./google-place-card";
 import { UniversalSearchPanel } from "./universal-search";
 import { PlaceCard } from "./place-card";
 import { PANEL_WIDTH, PLACE_CARD_WIDTH, type CardFrame } from "./card-frame";
-import { PlacesPanel } from "./places-panel";
+import { PlacesPanel, type PanelMapView } from "./places-panel";
 import {
   PAGE_OVERLAY_UNREPORTED,
   PageOverlayPanel,
@@ -310,8 +310,8 @@ function PlacesSurface({
   const [searchOpen, setSearchOpen] = useState(false);
   const [bounds, setBounds] = useState<MapBounds | null>(null);
   // The part of the map the chrome leaves uncovered: what the side panel's
-  // "In view" lists.
-  const [visible, setVisible] = useState<MapBounds | null>(null);
+  // "In view" lists — or no map at all, when none can be drawn.
+  const [mapView, setMapView] = useState<PanelMapView>({ kind: "pending" });
   // The panel's Fit map: each bump frames the preset's places.
   const [fitRequest, setFitRequest] = useState(0);
   // The page the camera last framed: once per page laid over the map, as
@@ -726,8 +726,9 @@ function PlacesSurface({
         hover: ghostHover,
         onCameraRest: (rest) => {
           setBounds(rest.bounds);
-          setVisible(rest.visible);
+          setMapView({ kind: "visible", bounds: rest.visible });
         },
+        onNoMap: () => setMapView({ kind: "no-map" }),
         fitRequest,
       } satisfies MapViewOptions<Place>,
     }),
@@ -1080,7 +1081,7 @@ function PlacesSurface({
                 <PlacesPanel
                   places={places}
                   tags={tags}
-                  visible={visible}
+                    view={mapView}
                   layout={panelLayout}
                   onLayoutChange={setPanelLayout}
                   scope={panelScope}

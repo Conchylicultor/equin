@@ -4,7 +4,7 @@ import {
   type ResourceResult,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { IntegrationStatus } from "@plugins/auth/web";
-import { mapsBrowserConfig } from "../../core";
+import { mapsBrowserConfig } from "@plugins/integrations/plugins/google-maps/plugins/browser-config/core";
 
 /** The live map's Accounts row status: whether a browser key is stored, and which map it draws. */
 export function useLiveMapStatus(): ResourceResult<IntegrationStatus> {

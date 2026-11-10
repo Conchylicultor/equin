@@ -90,6 +90,9 @@ budget (above).
   - Uses:
     - `infra/endpoints.machineHandler`
     - `integrations/google-maps.getPlacesClient`
+    - `integrations/google-maps/places-api.placeFirstPhotoName`
+    - `integrations/google-maps/places-api.placePhoto`
+    - `integrations/google-maps/places-api.placeRichDetails`
     - `network/live.serveValue`
   - Routes:
     - `GET /api/places/photo`
