@@ -134,8 +134,11 @@ what it decides. Prototype: `proto-1794189254-saewzy` (`open=balanced`).
   resolves the style change, which a long task in the same commit can push
   back or eat, so a scroll on a clock of its own would drift from the widths.
   The motion ends when the width transitions report finished.
-- A column that narrows keeps its old inner width (clipped by its box) until
-  the motion ends, so its content does not re-wrap every frame.
+- Every pane takes its final inner width at the motion's first frame and the
+  box glides around it (a growing box uncovers it, a narrowing one closes the
+  gap after it): content re-wraps once, at the start, where the eye expects
+  change — never per frame, and never in a late snap after the motion looks
+  done (a narrowing column used to hold its old width to the end, then jump).
 - `prefers-reduced-motion`: no transition, the scroll lands at once. The first
   paint lands in place.
 - **Enter / leave / swap** (`ColumnMotion`) ride on top: a newcomer mounts at

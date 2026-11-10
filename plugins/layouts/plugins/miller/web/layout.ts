@@ -230,20 +230,6 @@ export function scrollTarget(
   return restore === undefined ? end : Math.min(end, Math.max(0, restore));
 }
 
-/**
- * The inner width a column's pane keeps during a motion: a column that
- * narrows keeps the width it had (clipped by its box) until the motion ends,
- * so its content does not re-wrap every frame; one growing lays out at its
- * target at once and is revealed as its box grows.
- */
-export function heldInner(
-  now: ColumnBox,
-  before: ColumnBox | undefined,
-): number {
-  if (!before || before.bar || now.bar) return now.inner;
-  return Math.max(now.inner, before.inner);
-}
-
 /** What identifies a route for zoom: its pane instances, in order. */
 export function routeKey(ids: readonly string[]): string {
   return ids.join("|");

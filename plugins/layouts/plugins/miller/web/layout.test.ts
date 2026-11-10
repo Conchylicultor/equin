@@ -7,7 +7,6 @@ import {
   SHARE_MIN,
   dragLayout,
   effectiveZoom,
-  heldInner,
   layoutColumns,
   moveZoom,
   routeKey,
@@ -200,26 +199,6 @@ describe("scrollTarget", () => {
     const l = layoutColumns(cols(4), 1000, null);
     expect(scrollTarget(l, 1000, 140)).toBe(140);
     expect(scrollTarget(l, 1000, 5000)).toBe(1000);
-  });
-});
-
-describe("heldInner", () => {
-  const [a] = layoutColumns([col("a", 300), col("b", 300)], 0, null).columns;
-  const wide = layoutColumns([col("a", 700)], 0, null).columns[0]!;
-
-  it("a narrowing column keeps its old inner width", () => {
-    expect(heldInner(a!, wide)).toBe(700);
-  });
-
-  it("a growing column lays out at its target at once", () => {
-    expect(heldInner(wide, a)).toBe(700);
-  });
-
-  it("nothing is held from or into a bar, or for a newcomer", () => {
-    const bar = layoutColumns([col("a", 700, true), col("b", 1)], 0, null)
-      .columns[0]!;
-    expect(heldInner(a!, bar)).toBe(a!.inner);
-    expect(heldInner(a!, undefined)).toBe(a!.inner);
   });
 });
 

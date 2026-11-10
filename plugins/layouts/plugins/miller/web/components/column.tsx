@@ -17,9 +17,6 @@ interface ColumnProps {
   entry: MatchEntry;
   /** What the row's layout decided for this column. */
   box: ColumnBox;
-  /** The pane's width inside the box — `box.inner`, or the wider width it
-   *  had while the box narrows (clipped until the motion ends). */
-  inner: number;
   /** A motion is running: the box's width transitions. */
   moving: boolean;
   /** This motion turned the column into a bar, or back into its pane. */
@@ -48,7 +45,6 @@ interface ColumnProps {
 export function Column({
   entry,
   box,
-  inner,
   moving,
   fadeIn,
   isFirst,
@@ -94,9 +90,12 @@ export function Column({
 
   return (
     // The column box: its width is the layout's, transitioned while a motion
-    // runs (a drag or a row resize follows at once). The pane inside keeps its
-    // own pixel width, so a narrowing box clips it rather than re-wrapping it
-    // every frame; the divider sits on the box's right edge, inside its width.
+    // runs (a drag or a row resize follows at once). The pane inside takes its
+    // FINAL pixel width at the motion's first frame — one re-wrap, hidden in
+    // the frame where everything starts moving — and the box's width glides
+    // around it: a growing box uncovers it, a narrowing one closes the gap
+    // after it. Never re-wrapped per frame, never snapped once the motion has
+    // visibly ended. The divider sits on the box's right edge, in its width.
     <div
       // eslint-disable-next-line layout/no-adhoc-layout -- JS-sized rigid column box in miller's row (width from the row layout)
       className="relative flex h-full shrink-0"
@@ -140,11 +139,11 @@ export function Column({
               // motion starts.
               style={
                 box.bar
-                  ? { width: inner, contentVisibility: "hidden" }
-                  : { width: inner }
+                  ? { width: box.inner, contentVisibility: "hidden" }
+                  : { width: box.inner }
               }
               // A rigid flex-col clip pane at the pixel width the layout gives
-              // it (wider than the box while it narrows).
+              // it (narrower than the box while it narrows, wider while it grows).
               // eslint-disable-next-line layout/no-adhoc-layout -- JS-sized rigid pane body inside miller's column clip
               className="flex h-full shrink-0 flex-col overflow-hidden"
             />

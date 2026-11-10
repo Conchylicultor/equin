@@ -36,7 +36,6 @@ import {
   MOTION_EASING,
   MOTION_MS,
   effectiveZoom,
-  heldInner,
   dragLayout,
   layoutColumns,
   moveZoom,
@@ -410,7 +409,6 @@ export function MillerColumns() {
                           <Column
                             entry={entry}
                             box={box}
-                            inner={moving ? heldInner(box, before) : box.inner}
                             moving={moving}
                             fadeIn={fadeIn}
                             isFirst={i === 0}
