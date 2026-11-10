@@ -8,7 +8,7 @@ export type EdgeActionsProps = {
   sourceTaskId: string;
   targetTaskId: string;
   targetFolderId: string | null;
-  onNavigate: (taskId: string) => void;
+  onTaskCreated: (taskId: string) => void;
 };
 
 /**
@@ -20,7 +20,7 @@ export function EdgeActions({
   sourceTaskId,
   targetTaskId,
   targetFolderId,
-  onNavigate,
+  onTaskCreated,
 }: EdgeActionsProps) {
   const [inserting, setInserting] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -37,7 +37,7 @@ export function EdgeActions({
           {},
           { body: { sourceTaskId, targetTaskId, targetFolderId } },
         );
-        onNavigate(newTask.id);
+        onTaskCreated(newTask.id);
       } finally {
         setInserting(false);
       }
@@ -47,7 +47,7 @@ export function EdgeActions({
       sourceTaskId,
       targetTaskId,
       targetFolderId,
-      onNavigate,
+      onTaskCreated,
       fetchEndpoint,
     ],
   );

@@ -1,3 +1,4 @@
+import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { type ReactNode } from "react";
 import {
   Button,
@@ -169,7 +170,12 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
         {creators?.length ? (
           <Stack align="center" gap="sm">
             {creators.map((c) => (
-              <Button key={c.id} onClick={() => void c.onSelect()}>
+              <Button
+                key={c.id}
+                {...(c.activation !== undefined
+                  ? activationProps(c.activation)
+                  : { onClick: () => void c.onSelect() })}
+              >
                 {c.icon}
                 {c.label}
               </Button>

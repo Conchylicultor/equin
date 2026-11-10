@@ -2179,12 +2179,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `SiteTabs.View` "Analytics" → `AnalyticsSection`
                   - `SiteOverview.Card` "traffic" → `TrafficCard`
                   - `SiteOverview.Card` "top" → `TopCards`
-                - Uses: 39 symbols — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md)
+                - Uses: 40 symbols — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md)
                   - `apps/deploy/deployments` ×6
                   - `apps/deploy/host-query` ×6
                   - `primitives/css/coords` ×2
                   - `primitives/css/text` ×2
                   - `primitives/css/ui-kit` ×2
+                  - `primitives/link-gesture` ×2
                   - `network/live/live-state.ResourceErrorInline`
                   - `network/live.useLive`
                   - `primitives/collapsible.FoldMotion`
@@ -2202,7 +2203,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/switch.Switch`
                   - `primitives/css/toggle-chip.SegmentedControl`
                   - `primitives/icon-button.IconButton`
-                  - `primitives/link-gesture.linkProps`
                   - `primitives/loading.Loading`
                   - `primitives/relative-time.RelativeTime`
                   - `ui/icons.Icon`
@@ -44892,7 +44892,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `history/dialog`
         - **`control-panel`** — The control-panel vocabulary: ControlPanel plus its closed set of members (Section, Subhead, Row, Setting, Block, Group, RuleList, RuleRow, Field, Footer, Empty, Stack, LabelMark) and its three surfaces: ControlPanelPopover (a menu of choices), ControlPanelPane (a settings pane) and ControlPanelCard (a titled settings card under a gear — sections drawn as headings over prose). The container draws the hairlines, the row is a grid so every label starts at one x, selection has one language per meaning, and width is a role rather than a measurement.
           - Web:
-            - Uses: 25 symbols — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
+            - Uses: 26 symbols — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
               - `primitives/css/ui-kit` ×12
               - `primitives/row-actions` ×2
               - `primitives/css/fill.Fill`
@@ -44905,6 +44905,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/dom/scroll-reveal.focusElement`
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useEventCallback`
+              - `primitives/link-gesture.linkProps`
               - `ui/icons.Icon`
             - Exports (types):
               - `ControlPanelBlockProps`
@@ -46506,7 +46507,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ×4
           - `DataViewSlots.Setting` ×4
           - `IdKinds.Kind` ×2
-        - Uses: 142 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Uses: 143 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `network/live` ×24
           - `primitives/css/ui-kit` ×17
           - `primitives/data-view/view-core` ×11
@@ -46554,6 +46555,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/dom/in-view.createInViewWatcher`
           - `primitives/dom/scroll-reveal.focusElement`
           - `primitives/icon-button.IconButton`
+          - `primitives/link-gesture.activationProps`
           - `primitives/overlay/popover.InlinePopover`
           - `primitives/overlay/tooltip.Kbd`
           - `primitives/pane.usePaneViewParam`
@@ -48892,9 +48894,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `linkProps`
           - `openInBrowserTab`
       - Cross-plugin:
-        - Imported by: 75 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
+        - Imported by: 76 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
           - `conversations` ×21
-          - `primitives` ×17
+          - `primitives` ×18
           - `apps` ×12
           - `page` ×4
           - `tasks` ×4

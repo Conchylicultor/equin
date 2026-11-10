@@ -18,6 +18,7 @@ import {
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { DATA_VIEW_PICKS } from "@plugins/ui/plugins/tokens/plugins/data-view/core";
 import { dataPart, type CreateOption, type ToolbarPartForms } from "../../core";
+import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -143,14 +144,22 @@ export function CreatorsControl({
     ? ({ variant: "default", shape: "pill" } as const)
     : {};
 
-  const run = async (c: CreateOption): Promise<void> => {
+  const run = async (
+    onSelect: () => void | Promise<unknown>,
+  ): Promise<void> => {
     setBusy(true);
     try {
-      await c.onSelect();
+      await onSelect();
     } finally {
       setBusy(false);
     }
   };
+  // A link creator gets the link gestures (no busy state: it navigates); an
+  // action creator runs under the shared busy flag.
+  const pressProps = (c: CreateOption) =>
+    c.activation !== undefined
+      ? activationProps(c.activation)
+      : { onClick: () => void run(c.onSelect) };
 
   if (creators.length === 1) {
     const c = creators[0]!;
@@ -163,7 +172,7 @@ export function CreatorsControl({
           icon={addIcon}
           label={c.label}
           disabled={busy}
-          onClick={() => run(c)}
+          {...pressProps(c)}
           {...roundProps}
           {...dataPart("dv.create")}
         />
@@ -174,7 +183,7 @@ export function CreatorsControl({
         label={c.label}
         icon={c.icon ?? false}
         disabled={busy}
-        onClick={() => run(c)}
+        {...pressProps(c)}
       />
     );
   }
@@ -201,11 +210,7 @@ export function CreatorsControl({
       />
       <DropdownMenuContent align="end">
         {creators.map((c) => (
-          <DropdownMenuItem
-            key={c.id}
-            disabled={busy}
-            onClick={() => void run(c)}
-          >
+          <DropdownMenuItem key={c.id} disabled={busy} {...pressProps(c)}>
             {c.icon}
             <Stack gap="none">
               <Text variant="label">{c.label}</Text>

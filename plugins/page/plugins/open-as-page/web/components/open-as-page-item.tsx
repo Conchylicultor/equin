@@ -2,10 +2,7 @@ import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-pa
 import { PAGE_BLOCK_TYPE, type Block } from "@plugins/page/plugins/editor/core";
 import { useEditorScope } from "@plugins/page/plugins/editor/web";
 import { usePageNavigation } from "@plugins/page/plugins/page-reference/web";
-import {
-  PLAIN_GESTURE,
-  runActivation,
-} from "@plugins/primitives/plugins/link-gesture/core";
+import { afterOpen } from "@plugins/primitives/plugins/link-gesture/core";
 import { navIcons } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -40,12 +37,9 @@ export function OpenAsPageItem({
     <ControlPanel.Row
       keepFocus
       icon={<Icon icon={navIcons.sidePane} />}
-      onSelect={() => {
-        // A menu pick has no link gesture to read (the row is a menu item, and
-        // keyboard-selectable): it opens in place.
-        runActivation(openBlock(block.id), PLAIN_GESTURE);
-        close();
-      }}
+      // Opened here, the panel closes behind it; ⌘/middle-click opens the
+      // page in a new browser tab and leaves the panel where it is.
+      activation={afterOpen(openBlock(block.id), close)}
     >
       Open as page
     </ControlPanel.Row>

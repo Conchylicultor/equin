@@ -14,11 +14,7 @@ import {
 } from "@plugins/ui/plugins/theme-engine/web";
 import { QuickTheme } from "../slots";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import {
-  PLAIN_GESTURE,
-  runActivation,
-  type Activation,
-} from "@plugins/primitives/plugins/link-gesture/core";
+import { type Activation } from "@plugins/primitives/plugins/link-gesture/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -119,11 +115,7 @@ export function QuickThemePanel({
       </QuickTheme.Section.Render>
       <ComponentVariantSection />
       <ControlPanel.Footer>
-        <ControlPanel.Row
-          icon={<Icon icon={tuneIcon} />}
-          // A panel row selects; it has no link gestures to spread yet.
-          onSelect={() => runActivation(editor, PLAIN_GESTURE)}
-        >
+        <ControlPanel.Row icon={<Icon icon={tuneIcon} />} activation={editor}>
           Open theme editor
         </ControlPanel.Row>
       </ControlPanel.Footer>

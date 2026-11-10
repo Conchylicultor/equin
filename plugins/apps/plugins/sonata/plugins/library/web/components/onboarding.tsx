@@ -1,5 +1,4 @@
 import { useState } from "react";
-import type { CreateOption } from "@plugins/primitives/plugins/data-view/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
@@ -9,7 +8,10 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useSourceCreators } from "../internal/use-source-creators";
+import {
+  useSourceCreators,
+  type ActionCreateOption,
+} from "../internal/use-source-creators";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -39,7 +41,7 @@ export function SonataOnboarding() {
   // hydrates (no `createOption`) can't seed a first song, so it's skipped.
   const creators = useSourceCreators();
 
-  const run = async (c: CreateOption): Promise<void> => {
+  const run = async (c: ActionCreateOption): Promise<void> => {
     setBusy(true);
     try {
       await c.onSelect();

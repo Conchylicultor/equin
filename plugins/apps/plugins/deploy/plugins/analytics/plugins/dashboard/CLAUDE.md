@@ -97,12 +97,13 @@ Run with `./equin test plugins/apps/plugins/deploy/plugins/analytics/plugins/das
     - `SiteTabs.View` "Analytics" → `AnalyticsSection`
     - `SiteOverview.Card` "traffic" → `TrafficCard`
     - `SiteOverview.Card` "top" → `TopCards`
-  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/deploy/deployments` ×6
     - `apps/deploy/host-query` ×6
     - `primitives/css/coords` ×2
     - `primitives/css/text` ×2
     - `primitives/css/ui-kit` ×2
+    - `primitives/link-gesture` ×2
     - `network/live/live-state.ResourceErrorInline`
     - `network/live.useLive`
     - `primitives/collapsible.FoldMotion`
@@ -120,7 +121,6 @@ Run with `./equin test plugins/apps/plugins/deploy/plugins/analytics/plugins/das
     - `primitives/css/switch.Switch`
     - `primitives/css/toggle-chip.SegmentedControl`
     - `primitives/icon-button.IconButton`
-    - `primitives/link-gesture.linkProps`
     - `primitives/loading.Loading`
     - `primitives/relative-time.RelativeTime`
     - `ui/icons.Icon`

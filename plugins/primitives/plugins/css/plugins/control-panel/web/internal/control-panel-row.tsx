@@ -10,6 +10,8 @@ import {
   RowActions,
   rowActionsAnchor,
 } from "@plugins/primitives/plugins/row-actions/web";
+import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
+import { linkProps } from "@plugins/primitives/plugins/link-gesture/web";
 import type React from "react";
 import { useCallback, useContext, useId } from "react";
 
@@ -159,8 +161,11 @@ interface ControlPanelRowCommon {
 }
 
 /**
- * What activating the row does — at most one of three, so a row cannot both
- * navigate and push. `push` is the panel-stack arm: the row opens a page of
+ * What activating the row does — at most one of four, so a row cannot both
+ * navigate and push. A row that opens an in-app destination is an
+ * `activation` (a `LinkTarget`), never an `onSelect` that runs one: only a
+ * link gets ⌘/Ctrl- and middle-click (a new browser tab), which a bare
+ * callback cannot give. `push` is the panel-stack arm: the row opens a page of
  * the panel it sits in, and says so with a trailing `chevron-right` after its
  * value. Pushing through `push` rather than calling `usePanelStack().push` from
  * `onSelect` is what makes a drill row without its chevron unspellable.
@@ -171,6 +176,18 @@ type ControlPanelRowTarget =
       onSelect?: () => void;
       /** Makes the row an `<a>`. */
       href?: string;
+      push?: never;
+      activation?: never;
+    }
+  | {
+      /**
+       * Makes the row a `<button>` that runs this activation: a link opens
+       * here on a plain click (or Enter), in a new browser tab on ⌘/Ctrl- or
+       * middle-click; a plain action runs as `onSelect` would.
+       */
+      activation: Activation;
+      onSelect?: never;
+      href?: never;
       push?: never;
     }
   | {
@@ -183,6 +200,7 @@ type ControlPanelRowTarget =
       push: PanelStackEntry;
       onSelect?: never;
       href?: never;
+      activation?: never;
     };
 
 /**
@@ -337,6 +355,7 @@ export function ControlPanelRow({
   onSelect: onSelectProp,
   href,
   push,
+  activation,
   className,
   ref,
   children,
@@ -353,8 +372,12 @@ export function ControlPanelRow({
   }
   const onSelect = push !== undefined ? () => stack?.push(push) : onSelectProp;
   const isLink = href != null;
-  const isButton = !isLink && (onSelect != null || disabled != null);
-  const press = selectHandlers(onSelect, keepFocus);
+  const isButton =
+    !isLink && (onSelect != null || activation != null || disabled != null);
+  const press =
+    activation != null
+      ? linkPressHandlers(activation, keepFocus)
+      : selectHandlers(onSelect, keepFocus);
   const interactive = isLink || isButton;
   const hasActions = actions != null || restingActions != null;
 
@@ -794,6 +817,7 @@ const SELECT_ROLE: Record<
 type SelectHandlers = {
   onClick?: React.MouseEventHandler<HTMLElement>;
   onMouseDown?: React.MouseEventHandler<HTMLElement>;
+  onAuxClick?: React.MouseEventHandler<HTMLElement>;
 };
 
 /**
@@ -817,5 +841,31 @@ function selectHandlers(
     onClick: (e) => {
       if (e.detail === 0) onSelect?.();
     },
+  };
+}
+
+/**
+ * How a link row selects: `linkProps`' gestures (plain click here, ⌘/Ctrl- and
+ * middle-click in a new browser tab), and — `keepFocus` — the primary press run
+ * on `mousedown` with the default prevented, as {@link selectHandlers} does;
+ * the press carries the modifiers, so ⌘-press still opens elsewhere.
+ */
+function linkPressHandlers(
+  target: Activation,
+  keepFocus: boolean | undefined,
+): SelectHandlers {
+  if (typeof target === "function") return selectHandlers(target, keepFocus);
+  const link = linkProps(target);
+  if (!keepFocus) return link;
+  return {
+    onMouseDown: (e) => {
+      if (e.button !== 0) return link.onMouseDown(e);
+      e.preventDefault();
+      link.onClick(e);
+    },
+    onClick: (e) => {
+      if (e.detail === 0) link.onClick(e);
+    },
+    onAuxClick: link.onAuxClick,
   };
 }

@@ -40,7 +40,10 @@ import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type { AssetPath } from "@plugins/infra/plugins/endpoints/core";
 import type { ColorTokenRef } from "@plugins/ui/plugins/tokens/plugins/color-ref/core";
-import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
+import type {
+  Activation,
+  LinkTarget,
+} from "@plugins/primitives/plugins/link-gesture/core";
 import type { LiveDataSource, LiveTreeDataSource } from "./live-data-source";
 
 export type FieldValue = string | number | boolean | Date | null | undefined;
@@ -297,7 +300,26 @@ export interface LiveTreeAliases {
  * of these in the toolbar (1 → `Button`, N → `+` menu) and threads them to
  * views for opt-in surfaces (gallery trailing card + empty-state CTA).
  */
-export interface CreateOption {
+export type CreateOption = CreateOptionBase &
+  (
+    | {
+        /** Run the create action. May be async — the host tracks in-flight busy state. */
+        onSelect: () => void | Promise<unknown>;
+        activation?: never;
+      }
+    | {
+        /**
+         * A creator that OPENS somewhere (a "new app" flow, a create form in
+         * its own pane) rather than creating in place: a link, so ⌘/Ctrl- and
+         * middle-click open it in a new browser tab. Never an `onSelect` that
+         * runs a `LinkTarget` — that drops every gesture but the plain click.
+         */
+        activation: LinkTarget;
+        onSelect?: never;
+      }
+  );
+
+interface CreateOptionBase {
   /** Stable id (used as the React key in the menu / button list). */
   id: string;
   /** Action label, e.g. "New story", "Import MIDI". */
@@ -312,8 +334,6 @@ export interface CreateOption {
    * other chrome, which has one create affordance for the whole surface.
    */
   views?: readonly string[];
-  /** Run the create action. May be async — the host tracks in-flight busy state. */
-  onSelect: () => void | Promise<unknown>;
 }
 
 /**
@@ -2362,7 +2382,7 @@ export interface DataViewBaseProps<TRow> extends PlacementSpec {
    * Typed create affordances. The host renders them in the toolbar (1 → a
    * `Button`, N → a "+" dropdown menu, with host-owned in-flight busy state) and
    * threads them to views (gallery trailing card + empty-state CTA). Domain-pure
-   * — a `CreateOption` carries only `id`/`label`/`icon`/`description`/`onSelect`.
+   * — a `CreateOption` carries only `id`/`label`/`icon`/`description` and what it does (`onSelect` or `activation`).
    */
   creators?: CreateOption[];
   /**

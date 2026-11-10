@@ -91,7 +91,7 @@ function buildGraph(
   closure: readonly TaskListItem[],
   allTasks: readonly TaskListItem[],
   selectedId: string,
-  onNavigate: (taskId: string) => void,
+  onTaskCreated: (taskId: string) => void,
 ): {
   nodes: GraphCanvasNode[];
   edges: GraphCanvasEdge[];
@@ -142,7 +142,7 @@ function buildGraph(
             sourceTaskId={dep}
             targetTaskId={t.id}
             targetFolderId={t.folderId ?? null}
-            onNavigate={onNavigate}
+            onTaskCreated={onTaskCreated}
           />
         ),
       });
@@ -196,7 +196,7 @@ export function TaskGraph({ taskId }: { taskId: string }) {
   );
   // A task the edge's "+" just created opens after the mutation settles: no
   // gesture to read, so the plain open.
-  const onNavigate = useCallback(
+  const onTaskCreated = useCallback(
     (id: string) => taskTarget(id).open(PLAIN_GESTURE),
     [taskTarget],
   );
@@ -213,8 +213,8 @@ export function TaskGraph({ taskId }: { taskId: string }) {
   const graph = useMemo(
     () =>
       closure &&
-      buildGraph(closure.closure, closure.allTasks, taskId, onNavigate),
-    [closure, taskId, onNavigate],
+      buildGraph(closure.closure, closure.allTasks, taskId, onTaskCreated),
+    [closure, taskId, onTaskCreated],
   );
 
   // Only reachable while the task list is still loading: `useAvailable` keeps

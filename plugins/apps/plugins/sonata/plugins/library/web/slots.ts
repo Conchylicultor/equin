@@ -98,7 +98,10 @@ export type SongCoverAnswer =
   | { kind: "failed"; message: string };
 
 /** A source's create affordance: a data-view `CreateOption` whose `onSelect` takes the {@link SourceContext}. */
-export type SourceCreateOption = Omit<CreateOption, "onSelect"> & {
+export type SourceCreateOption = Omit<
+  CreateOption,
+  "onSelect" | "activation"
+> & {
   onSelect: (ctx: SourceContext) => void | Promise<unknown>;
 };
 

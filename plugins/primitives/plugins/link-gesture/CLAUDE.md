@@ -87,6 +87,19 @@ a function literal returning a link where its contextual return is exactly
 expected (`onClick={go}`). Fix: spread `openPane.link(…)`, pass the target as
 an `activation`, or — with no gesture to read — call `openPane(…)` itself.
 
+**A link run through a callback is a lint error: `link-gesture/no-dropped-gesture`**
+(closed, `lint/`). `PLAIN_GESTURE` means "no gesture to read"; inside a
+clickable `on*` handler (`onSelect={() => runActivation(link, PLAIN_GESTURE)}`,
+`onAction`, `onFilterRow`, …) it is a link forced through a component that only
+takes a callback — the Configure gear, Open theme editor, Open as page, New app
+and the analytics overview rows all shipped that way. Keyed on the gesture
+being discarded, not on the prop name, so it reaches what `no-click-navigate`'s
+fixed prop list cannot. Allowed: key handlers, value changes, past-tense events
+(`onCreated`, `onDeleted` — an open after a mutation). Fix: give the component
+an `activation` (an `Activation` / `LinkTarget`) it spreads `activationProps` /
+`linkProps` from — as `ControlPanel.Row`, DataView's `CreateOption` and the
+ui-kit `MenuRowAction` take.
+
 `LinkChip` makes it a type: `onClick?: never` / `onAuxClick?: never`, so a chip's
 click is its `activation` (a plain function for a chip that does something other
 than navigate — still isolated from its container).
@@ -122,9 +135,9 @@ resolver returning one. Fix: spread `openPane.link(…)`, or pass `openPane.to(�
     - `linkProps`
     - `openInBrowserTab`
 - Cross-plugin:
-  - Imported by: 75 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 76 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×21
-    - `primitives` ×17
+    - `primitives` ×18
     - `apps` ×12
     - `page` ×4
     - `tasks` ×4

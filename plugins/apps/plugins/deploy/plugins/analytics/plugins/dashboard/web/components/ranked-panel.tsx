@@ -23,6 +23,8 @@ import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
+import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
+import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { clickRow, isFilterOn } from "../internal/filters";
 import { dimensionValueLabel, formatCount } from "../internal/format";
 import type { DataCredit, PanelDef, PanelTab } from "../internal/panels";
@@ -112,13 +114,26 @@ function Credit({ credit }: { credit: DataCredit }): ReactNode {
 
 /**
  * A short, read-only excerpt of a ranked list (the site Overview's Top pages /
- * Top sources): the first `limit` rows and the primary column only, each row
- * activating — with `openTitle` as its tooltip — instead of filtering.
+ * Top sources): the first `limit` rows and the primary column only, each row a
+ * LINK to `open` — with `openTitle` as its tooltip — instead of a filter, so
+ * ⌘/middle-click opens it in a new browser tab.
  */
 export interface RankedListExcerpt {
   limit: number;
   openTitle: string;
+  open: LinkTarget;
 }
+
+/**
+ * What a ranked row does: filter the dashboard by its value, or — an excerpt —
+ * open where the excerpt links to. One or the other, never both.
+ */
+type RankedListMode =
+  | {
+      onFilterRow: (dimension: Dimension, value: string) => void;
+      excerpt?: never;
+    }
+  | { excerpt: RankedListExcerpt; onFilterRow?: never };
 
 export function RankedList({
   tab,
@@ -132,9 +147,7 @@ export function RankedList({
   report: AnalyticsReport;
   source: ReportSource;
   filters: readonly AnalyticsFilter[];
-  onFilterRow: (dimension: Dimension, value: string) => void;
-  excerpt?: RankedListExcerpt;
-}): ReactNode {
+} & RankedListMode): ReactNode {
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
   const rows = report.rows[tab.dimension].slice(0, excerpt?.limit);
   if (rows.length === 0) {
@@ -147,7 +160,17 @@ export function RankedList({
       if (!next.delete(value)) next.add(value);
       return next;
     });
-  const rowProps = { tab, report, source, filters, onFilterRow, excerpt };
+  const rowProps = {
+    tab,
+    report,
+    source,
+    filters,
+    excerpt,
+    activate: (dimension: Dimension, value: string) =>
+      excerpt
+        ? activationProps(excerpt.open)
+        : { onClick: () => onFilterRow(dimension, value) },
+  };
   const list = (
     <Stack gap="none">
       <Line className="px-sm">
@@ -259,7 +282,7 @@ function RankedRow({
   report,
   source,
   filters,
-  onFilterRow,
+  activate,
   dimension,
   row,
   label,
@@ -271,7 +294,11 @@ function RankedRow({
   report: AnalyticsReport;
   source: ReportSource;
   filters: readonly AnalyticsFilter[];
-  onFilterRow: (dimension: Dimension, value: string) => void;
+  /** The row's click props: a filter toggle, or an excerpt's link gestures. */
+  activate: (
+    dimension: Dimension,
+    value: string,
+  ) => ReturnType<typeof activationProps>;
   dimension: Dimension;
   row: ReportRow;
   label: string;
@@ -296,7 +323,7 @@ function RankedRow({
             ? "Remove this filter"
             : `Filter by ${label}`
       }
-      onClick={() => onFilterRow(dimension, row.value)}
+      {...activate(dimension, row.value)}
       indent={nested ? NESTED_INDENT_PX : undefined}
       className="relative"
     >
