@@ -232,7 +232,7 @@ function ComposeView({
           minRows={4}
           autoFocus
           namespace="website-improve"
-          placeholder="e.g. Show a 20-second demo under the headline"
+          placeholder="Report a bug, share an idea, ask for a change…"
           insertRef={insertRef}
         />
         {/* The whole page is pickable while this is up, so the popover hides
