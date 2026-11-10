@@ -237,7 +237,9 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   `--account <id>`; `bin/agent.ts` fetches that account's token from the
   secrets store itself and gives it to Claude Code only, as
   `CLAUDE_CODE_OAUTH_TOKEN` in the SDK's `env`. A running agent keeps its
-  account until its process restarts.
+  account until its process restarts. Which account a running agent is on is
+  read from its pid file (`runningAgentAccount`), never from the stop row's
+  `account` copy, which can be stale.
 - Usage limits: every agent turn's `rate_limit_event` carries
   `rate_limit_info.unifiedWindows` (`five_hour`, `seven_day`: utilization and
   reset) — not in the SDK's types, so `core/claude-usage.ts` parses it. The

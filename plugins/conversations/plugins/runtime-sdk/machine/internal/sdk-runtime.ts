@@ -49,7 +49,10 @@ import {
   readAgentOptions,
   startAgentProcess,
 } from "./agent-process";
-import { recountAgentProcesses } from "./agent-processes";
+import {
+  recountAgentProcesses,
+  runningAgentAccount,
+} from "./agent-processes";
 import {
   AgentNotRunningError,
   AgentUnresponsiveError,
@@ -439,13 +442,21 @@ async function launchAgent(
  * agent as is and the CLI answers with its limit notice again. Any other API
  * error (a server error, a lost connection) is not the account's: the turn
  * goes to the same agent.
+ *
+ * Which account the agent is on is read from its own pid file, never from the
+ * stop row's copy: a stale copy naming the launch account would keep the
+ * agent on its spent one, every Resume answered by the limit notice again
+ * (conv-1793965643-wr9rnk, 2026-11-10). An agent not running has nothing to
+ * move — its next launch picks the account.
  */
 async function moveOffSpentAccount(id: string): Promise<void> {
   await catchUpNow(id);
   const row = await currentAgentRow(id);
   if (row?.stopError !== USAGE_LIMIT_ERROR || !row.sessionId || row.working)
     return;
-  if ((await nextLaunchAccount()) === row.account) return;
+  const agent = await runningAgentAccount(id);
+  if (agent.kind === "not-running") return;
+  if ((await nextLaunchAccount()) === agent.account) return;
   const relaunch = continueRelaunchOptions(
     await readAgentOptions(id),
     row.sessionId,

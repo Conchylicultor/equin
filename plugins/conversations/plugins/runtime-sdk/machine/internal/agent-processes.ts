@@ -23,7 +23,7 @@ import {
 } from "../../core";
 import { sdkAgentPidsDir } from "../../data-dirs";
 import { sdkConversationIdsOf } from "../../server/internal/rows";
-import { agentPidsRoot } from "./paths";
+import { agentPidPath, agentPidsRoot } from "./paths";
 
 const PID_SUFFIX = ".pid";
 
@@ -72,6 +72,29 @@ async function pidFileAgents(namespace: string): Promise<PidFileAgent[]> {
     });
   }
   return agents;
+}
+
+/**
+ * The Claude account `id`'s running agent signs in as, read from the pid file
+ * the agent itself wrote — the one authority on it (the stop row's `account`
+ * is the consumer's copy, and a copy can be stale). `not-running` while no
+ * live pid is named; `account: null` for an agent started before pid files
+ * named their account.
+ */
+export async function runningAgentAccount(
+  id: string,
+): Promise<{ kind: "not-running" } | { kind: "running"; account: string | null }> {
+  let text: string;
+  try {
+    text = await readFile(agentPidPath(id), "utf8");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT")
+      return { kind: "not-running" };
+    throw err;
+  }
+  const read = parsePidFile(text);
+  if (read.kind !== "pid" || !pidAlive(read.pid)) return { kind: "not-running" };
+  return { kind: "running", account: agentPidFileAccount(text) };
 }
 
 /** The conversation ids of `namespace`'s agents whose pid file names a live pid. */
