@@ -56,6 +56,22 @@ The dashboard's Events panel expands an event into these rows.
   days plus raw rows for the rest (today, a missed night), at most one filter. A
   second filter gets `{ kind: "refused" }`, never an approximation.
 
+## Sessions
+
+`analyticsSessionsEndpoint` (host-only, `server/internal/sessions.ts`) lists
+individual visits with their hits for the deploy app's Sessions tab. Raw rows
+only, so `12m` is refused (`sessionsAvailableFor`). It filters with the
+report's own membership SQL (`keptVisitsWith` in `aggregate-sql.ts`) — never a
+second filter dialect — plus a shape (all / actions / multi / bounced, counted
+over the whole range on every answer).
+
+Paging is a key range of `(started_at desc, id desc)`: `after` exclusive,
+`until` inclusive, at most `limit` (≤ `MAX_SESSIONS_LIMIT`) — the shape
+network/live's paged value asks its loader for; fewer rows than `limit` is the
+end. `startedAt` is spelled as `toISOString()` so its text order is its time
+order. The visitor id never leaves the box: `visitor` is the first 8 hex of
+its sha256. Design: `research/2026-11-10-deploy-sessions-tab.md`.
+
 ## Runtime notes
 
 - The rollup and retention crons are `perWorktree: true` **on purpose**. A
@@ -83,7 +99,7 @@ The dashboard's Events panel expands an event into these rows.
 
 ## Plugin reference
 
-- Description: The cookieless visit tracker a deployed site mounts: <AnalyticsTracker app={…} /> records one pageview per path change under that app (landing referrer and utm tags on the first only) and the visible time on each; track(name, props?) records a custom event on the current page; useSectionReach(section) / observeSectionReach(el, section) record section_reach once when a section reaches the upper half of the screen, its section prop (<page>/<key>) giving a per-section reach funnel. Owns the analytics tables (daily salts kept 30 days with the hash → visitor links that let a returning visitor keep one id, 90-day visits and hits, forever daily totals at every single-filter level and forever per-visit memberships for exact unique visitors over any range), the public collect endpoint, the host-only report query, the nightly analytics.rollup job and the visits retention sweep that refuses to delete a day not yet rolled up.
+- Description: The cookieless visit tracker a deployed site mounts: <AnalyticsTracker app={…} /> records one pageview per path change under that app (landing referrer and utm tags on the first only) and the visible time on each; track(name, props?) records a custom event on the current page; useSectionReach(section) / observeSectionReach(el, section) record section_reach once when a section reaches the upper half of the screen, its section prop (<page>/<key>) giving a per-section reach funnel. Owns the analytics tables (daily salts kept 30 days with the hash → visitor links that let a returning visitor keep one id, 90-day visits and hits, forever daily totals at every single-filter level and forever per-visit memberships for exact unique visitors over any range), the public collect endpoint, the host-only report and sessions queries (individual visits with their hits, by key range), the nightly analytics.rollup job and the visits retention sweep that refuses to delete a day not yet rolled up.
 - Server:
   - Contributes:
     - `change-feed-exclusion` "analytics_hits"
@@ -112,6 +128,7 @@ The dashboard's Events panel expands an event into these rows.
   - Routes:
     - `POST /api/analytics/collect`
     - `GET /api/host-only/analytics/query`
+    - `GET /api/host-only/analytics/sessions`
 - Web:
   - Uses:
     - `infra/endpoints.fetchEndpointOver`
@@ -160,6 +177,12 @@ The dashboard's Events panel expands an event into these rows.
     - `ReportRow`
     - `ReportSource`
     - `SeriesPoint`
+    - `SessionCounts`
+    - `SessionHit`
+    - `SessionKey`
+    - `SessionShape`
+    - `SessionsQuery`
+    - `SessionsResult`
     - `UtmTags`
     - `VisitDimension`
   - Exports (values):
@@ -174,6 +197,7 @@ The dashboard's Events panel expands an event into these rows.
     - `AnalyticsQuerySchema`
     - `AnalyticsRangeSchema`
     - `AnalyticsReportSchema`
+    - `analyticsSessionsEndpoint`
     - `averageTimeOnPageMs`
     - `averageVisitDurationMs`
     - `BASE64URL_PATTERN`
@@ -194,6 +218,7 @@ The dashboard's Events panel expands an event into these rows.
     - `DeviceFamilySchema`
     - `DIMENSIONS`
     - `encodeAnalyticsQuery`
+    - `encodeSessionsQuery`
     - `EngagementBodySchema`
     - `EVENT_NAME_PATTERN`
     - `EVENT_PROP_KEY_PATTERN`
@@ -213,6 +238,8 @@ The dashboard's Events panel expands an event into these rows.
     - `MAX_HOST_LENGTH`
     - `MAX_PATH_LENGTH`
     - `MAX_REFERRER_LENGTH`
+    - `MAX_SESSION_HITS`
+    - `MAX_SESSIONS_LIMIT`
     - `MAX_TOTALS_FILTERS`
     - `MAX_UTM_LENGTH`
     - `MetricsSchema`
@@ -235,6 +262,17 @@ The dashboard's Events panel expands an event into these rows.
     - `ReportRowSchema`
     - `reportSourceFor`
     - `SeriesPointSchema`
+    - `SESSION_SHAPES`
+    - `SessionCountsSchema`
+    - `SessionHitSchema`
+    - `SessionKeySchema`
+    - `SESSIONS_PAGE`
+    - `sessionsAvailableFor`
+    - `SessionSchema`
+    - `SessionShapeSchema`
+    - `SessionsQueryParamSchema`
+    - `SessionsQuerySchema`
+    - `SessionsResultSchema`
     - `SiteHostSchema`
     - `stripQuery`
     - `TOTAL_DIMENSION`

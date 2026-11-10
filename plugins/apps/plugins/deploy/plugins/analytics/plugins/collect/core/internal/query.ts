@@ -205,13 +205,14 @@ export type AnalyticsQueryResult = z.infer<typeof AnalyticsQueryResultSchema>;
 export const BASE64URL_PATTERN = /^[A-Za-z0-9_-]+$/;
 
 /**
- * The query travels as ONE base64url query-string value. base64url's alphabet
- * (`A-Z a-z 0-9 - _`) needs no quoting in a URL nor in the remote shell
- * `sshRun` joins its argv into, so the dashboard can curl it over SSH as-is.
+ * A host-only question travels as ONE base64url query-string value.
+ * base64url's alphabet (`A-Z a-z 0-9 - _`) needs no quoting in a URL nor in
+ * the remote shell `sshRun` joins its argv into, so the dashboard can curl it
+ * over SSH as-is.
  */
-export function encodeAnalyticsQuery(query: AnalyticsQuery): string {
+export function encodeBase64UrlJson(value: unknown): string {
   let binary = "";
-  for (const byte of new TextEncoder().encode(JSON.stringify(query))) {
+  for (const byte of new TextEncoder().encode(JSON.stringify(value))) {
     binary += String.fromCharCode(byte);
   }
   return btoa(binary)
@@ -220,8 +221,8 @@ export function encodeAnalyticsQuery(query: AnalyticsQuery): string {
     .replace(/=+$/, "");
 }
 
-/** The JSON text inside an encoded query. Throws on a value that is not base64url. */
-export function decodeAnalyticsQueryJson(encoded: string): string {
+/** The JSON text inside an encoded question. Throws on a value that is not base64url. */
+export function decodeBase64UrlJson(encoded: string): string {
   if (!BASE64URL_PATTERN.test(encoded)) {
     throw new Error("analytics query: not base64url");
   }
@@ -231,29 +232,40 @@ export function decodeAnalyticsQueryJson(encoded: string): string {
   );
 }
 
-/** The `?q=` query-string schema: decodes and validates in one step. */
-export const AnalyticsQueryParamSchema = z
-  .object({
-    q: z
-      .string()
-      .max(4096)
-      .regex(BASE64URL_PATTERN)
-      .transform((encoded, ctx) => {
-        try {
-          return JSON.parse(decodeAnalyticsQueryJson(encoded)) as unknown;
-        } catch (err) {
-          // atob's malformed-length DOMException, JSON.parse's SyntaxError:
-          // both are a bad request, not a server fault.
-          if (!(err instanceof SyntaxError || err instanceof DOMException)) {
-            throw err;
+/** The `?q=` query-string schema of a question `schema`: decodes and validates in one step. */
+export function base64UrlJsonParamSchema<S extends z.ZodType>(schema: S) {
+  return z
+    .object({
+      q: z
+        .string()
+        .max(4096)
+        .regex(BASE64URL_PATTERN)
+        .transform((encoded, ctx) => {
+          try {
+            return JSON.parse(decodeBase64UrlJson(encoded)) as unknown;
+          } catch (err) {
+            // atob's malformed-length DOMException, JSON.parse's SyntaxError:
+            // both are a bad request, not a server fault.
+            if (!(err instanceof SyntaxError || err instanceof DOMException)) {
+              throw err;
+            }
+            ctx.addIssue({
+              code: "custom",
+              message: "q is not base64url-encoded JSON",
+            });
+            return z.NEVER;
           }
-          ctx.addIssue({
-            code: "custom",
-            message: "q is not base64url-encoded JSON",
-          });
-          return z.NEVER;
-        }
-      })
-      .pipe(AnalyticsQuerySchema),
-  })
-  .strict();
+        })
+        .pipe(schema),
+    })
+    .strict();
+}
+
+/** The report's question on the wire (see {@link encodeBase64UrlJson}). */
+export function encodeAnalyticsQuery(query: AnalyticsQuery): string {
+  return encodeBase64UrlJson(query);
+}
+
+/** The report endpoint's `?q=` schema. */
+export const AnalyticsQueryParamSchema =
+  base64UrlJsonParamSchema(AnalyticsQuerySchema);

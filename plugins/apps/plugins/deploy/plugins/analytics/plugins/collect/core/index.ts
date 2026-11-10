@@ -133,4 +133,32 @@ export {
   RECORDED_FIELDS,
 } from "./internal/recorded-fields";
 export type { RecordedColumn, RecordedField } from "./internal/recorded-fields";
-export { analyticsQueryEndpoint, collectEndpoint } from "./internal/endpoints";
+export {
+  analyticsQueryEndpoint,
+  analyticsSessionsEndpoint,
+  collectEndpoint,
+} from "./internal/endpoints";
+export {
+  MAX_SESSION_HITS,
+  MAX_SESSIONS_LIMIT,
+  SESSION_SHAPES,
+  SESSIONS_PAGE,
+  SessionCountsSchema,
+  SessionHitSchema,
+  SessionKeySchema,
+  SessionSchema,
+  SessionShapeSchema,
+  SessionsQueryParamSchema,
+  SessionsQuerySchema,
+  SessionsResultSchema,
+  encodeSessionsQuery,
+  sessionsAvailableFor,
+} from "./internal/sessions";
+export type {
+  SessionCounts,
+  SessionHit,
+  SessionKey,
+  SessionShape,
+  SessionsQuery,
+  SessionsResult,
+} from "./internal/sessions";

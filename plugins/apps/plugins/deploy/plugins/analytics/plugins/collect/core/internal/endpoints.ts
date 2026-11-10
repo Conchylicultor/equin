@@ -2,6 +2,7 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { HOST_ONLY_PREFIX } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/host-only/core";
 import { CollectBodySchema, CollectResponseSchema } from "./collect-body";
 import { AnalyticsQueryParamSchema, AnalyticsQueryResultSchema } from "./query";
+import { SessionsQueryParamSchema, SessionsResultSchema } from "./sessions";
 
 /**
  * Public ingest. The tracker posts one body per pageview / event / engagement
@@ -29,5 +30,17 @@ export const analyticsQueryEndpoint = defineEndpoint({
     "GET /api/host-only/analytics/query" satisfies `GET ${typeof HOST_ONLY_PREFIX}${string}`,
   query: AnalyticsQueryParamSchema,
   response: AnalyticsQueryResultSchema,
+  dedupe: true,
+});
+
+/**
+ * Individual visits with their hits, newest first, one key range at a time —
+ * host-only like the report, read over SSH by the deploy app's Sessions tab.
+ */
+export const analyticsSessionsEndpoint = defineEndpoint({
+  route:
+    "GET /api/host-only/analytics/sessions" satisfies `GET ${typeof HOST_ONLY_PREFIX}${string}`,
+  query: SessionsQueryParamSchema,
+  response: SessionsResultSchema,
   dedupe: true,
 });

@@ -1944,7 +1944,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`analytics`** — Umbrella for cookieless site analytics on deployed compositions: the host-only route guard, the collect half that ships inside the deployed site (ingest, tables, nightly rollup, retention, host-only report query), and the dashboard half in the local deploy app.
           - Plugins:
-            - **`collect`** — The cookieless visit tracker a deployed site mounts: <AnalyticsTracker app={…} /> records one pageview per path change under that app (landing referrer and utm tags on the first only) and the visible time on each; track(name, props?) records a custom event on the current page; useSectionReach(section) / observeSectionReach(el, section) record section_reach once when a section reaches the upper half of the screen, its section prop (<page>/<key>) giving a per-section reach funnel. Owns the analytics tables (daily salts kept 30 days with the hash → visitor links that let a returning visitor keep one id, 90-day visits and hits, forever daily totals at every single-filter level and forever per-visit memberships for exact unique visitors over any range), the public collect endpoint, the host-only report query, the nightly analytics.rollup job and the visits retention sweep that refuses to delete a day not yet rolled up.
+            - **`collect`** — The cookieless visit tracker a deployed site mounts: <AnalyticsTracker app={…} /> records one pageview per path change under that app (landing referrer and utm tags on the first only) and the visible time on each; track(name, props?) records a custom event on the current page; useSectionReach(section) / observeSectionReach(el, section) record section_reach once when a section reaches the upper half of the screen, its section prop (<page>/<key>) giving a per-section reach funnel. Owns the analytics tables (daily salts kept 30 days with the hash → visitor links that let a returning visitor keep one id, 90-day visits and hits, forever daily totals at every single-filter level and forever per-visit memberships for exact unique visitors over any range), the public collect endpoint, the host-only report and sessions queries (individual visits with their hits, by key range), the nightly analytics.rollup job and the visits retention sweep that refuses to delete a day not yet rolled up.
               - Server:
                 - Contributes:
                   - `change-feed-exclusion` "analytics_hits"
@@ -1973,6 +1973,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Routes:
                   - `POST /api/analytics/collect`
                   - `GET /api/host-only/analytics/query`
+                  - `GET /api/host-only/analytics/sessions`
               - Web:
                 - Uses:
                   - `infra/endpoints.fetchEndpointOver`
@@ -2021,6 +2022,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ReportRow`
                   - `ReportSource`
                   - `SeriesPoint`
+                  - `SessionCounts`
+                  - `SessionHit`
+                  - `SessionKey`
+                  - `SessionShape`
+                  - `SessionsQuery`
+                  - `SessionsResult`
                   - `UtmTags`
                   - `VisitDimension`
                 - Exports (values):
@@ -2035,6 +2042,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `AnalyticsQuerySchema`
                   - `AnalyticsRangeSchema`
                   - `AnalyticsReportSchema`
+                  - `analyticsSessionsEndpoint`
                   - `averageTimeOnPageMs`
                   - `averageVisitDurationMs`
                   - `BASE64URL_PATTERN`
@@ -2055,6 +2063,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `DeviceFamilySchema`
                   - `DIMENSIONS`
                   - `encodeAnalyticsQuery`
+                  - `encodeSessionsQuery`
                   - `EngagementBodySchema`
                   - `EVENT_NAME_PATTERN`
                   - `EVENT_PROP_KEY_PATTERN`
@@ -2074,6 +2083,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `MAX_HOST_LENGTH`
                   - `MAX_PATH_LENGTH`
                   - `MAX_REFERRER_LENGTH`
+                  - `MAX_SESSION_HITS`
+                  - `MAX_SESSIONS_LIMIT`
                   - `MAX_TOTALS_FILTERS`
                   - `MAX_UTM_LENGTH`
                   - `MetricsSchema`
@@ -2096,6 +2107,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ReportRowSchema`
                   - `reportSourceFor`
                   - `SeriesPointSchema`
+                  - `SESSION_SHAPES`
+                  - `SessionCountsSchema`
+                  - `SessionHitSchema`
+                  - `SessionKeySchema`
+                  - `SESSIONS_PAGE`
+                  - `sessionsAvailableFor`
+                  - `SessionSchema`
+                  - `SessionShapeSchema`
+                  - `SessionsQueryParamSchema`
+                  - `SessionsQuerySchema`
+                  - `SessionsResultSchema`
                   - `SiteHostSchema`
                   - `stripQuery`
                   - `TOTAL_DIMENSION`

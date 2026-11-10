@@ -167,6 +167,19 @@ function keptVisits(filters: readonly AnalyticsFilter[]): SQL {
   )`;
 }
 
+/**
+ * `WITH base, m, kept`: the visits matching `where` (alias `v`) that have
+ * EVERY filter's value, under the report's own membership definition — `kept`
+ * is `analytics_visits` columns plus `duration_ms`. For readers of individual
+ * visits (the sessions list), so they filter exactly as the report counts.
+ */
+export function keptVisitsWith(
+  where: SQL,
+  filters: readonly AnalyticsFilter[],
+): SQL {
+  return sql`WITH ${visitsAndMemberships(where)}, ${keptVisits(filters)}`;
+}
+
 const isRolledUp = sql`EXISTS (
   SELECT 1 FROM analytics_daily d
   WHERE d.day = v.day AND d.filter_dim = ${UNFILTERED_LEVEL}

@@ -34,7 +34,14 @@ import {
   type AnalyticsQuery,
   type AnalyticsReport,
   type CollectResponse,
+  type SessionsQuery,
 } from "../../core";
+import {
+  MAX_SESSION_HITS,
+  type Session,
+  SessionsQueryParamSchema,
+  encodeSessionsQuery,
+} from "../../core/internal/sessions";
 import { CollectBodySchema } from "../../core/internal/collect-body";
 import { DimensionSchema } from "../../core/internal/dimensions";
 import { eventPropValue } from "../../core/internal/event-prop";
@@ -47,6 +54,7 @@ import {
 } from "./aggregate-sql";
 import { firstIdentityDay, recordCollect } from "./collect";
 import { runAnalyticsQuery } from "./report";
+import { runSessionsQuery } from "./sessions";
 import { assertDaysRolledUp } from "./retention";
 import { runRollup } from "./rollup";
 import {
@@ -546,6 +554,276 @@ describe("report", () => {
       current.series.find((p) => p.bucket === `${DAY}T10:00:00Z`)?.metrics
         .visits,
     ).toBe(2);
+  });
+});
+
+describe("sessions", () => {
+  // The seeded day, seen that evening: its four visits, none still live.
+  const now = at(DAY, "23:00");
+  const ask = async (q: Partial<SessionsQuery>) => {
+    const result = await runSessionsQuery(
+      t.db,
+      { range: "today", filters: [], shape: "all", limit: 50, ...q },
+      now,
+    );
+    if (result.kind !== "sessions") throw new Error("expected sessions");
+    return result;
+  };
+  const entries = (sessions: Session[]) =>
+    sessions.map((s) => `${s.entryPath}@${s.startedAt.slice(11, 16)}`);
+  const keyOf = (s: Session | undefined) => {
+    if (!s) throw new Error("no session");
+    return { startedAt: s.startedAt, id: s.id };
+  };
+
+  test("newest first, with each visit's hits in order and every shape counted", async () => {
+    const { sessions, counts } = await ask({});
+    expect(entries(sessions)).toEqual([
+      "/@12:00", // C
+      "/@11:00", // A, second visit
+      "/apps@10:30", // B
+      "/@10:00", // A, first visit
+    ]);
+    expect(counts).toEqual({ all: 4, actions: 2, multi: 2, bounced: 2 });
+    const [c, a2, b, a1] = sessions;
+    expect(a1!.hits.map((h) => [h.kind, h.path, h.eventName])).toEqual([
+      ["pageview", "/", null],
+      ["pageview", "/harness", null],
+      ["event", "/harness", "improve_open"],
+    ]);
+    expect(a1!.hits[2]!.eventProps).toEqual({ from: "nav" });
+    expect(a1!.hits[1]!.engagedMs).toBe(60_000);
+    expect(a1).toMatchObject({
+      pageviews: 2,
+      events: 1,
+      channel: "Social",
+      country: "FR",
+      returning: false,
+      live: false,
+      hitsTruncated: false,
+      durationMs: 5 * 60_000 + 60_000,
+    });
+    expect(a2!.returning).toBe(true);
+    expect(c!.hits).toHaveLength(4);
+    expect(b!.hits).toHaveLength(1);
+  });
+
+  test("the visitor id leaves the box only as a short display hash", async () => {
+    const { sessions } = await ask({});
+    const stored = await t.db
+      .select({ id: analyticsVisits.id, visitorId: analyticsVisits.visitorId })
+      .from(analyticsVisits);
+    const ids = new Set(stored.map((v) => v.visitorId));
+    for (const s of sessions) {
+      expect(s.visitor).toMatch(/^[0-9a-f]{8}$/);
+      expect(ids.has(s.visitor)).toBe(false);
+      expect(JSON.stringify(s)).not.toContain(
+        stored.find((v) => v.id === s.id)!.visitorId,
+      );
+    }
+    const [, a2, b, a1] = sessions;
+    expect(a1!.visitor).toBe(a2!.visitor);
+    expect(b!.visitor).not.toBe(a1!.visitor);
+  });
+
+  test("key-range paging: after is exclusive, until inclusive, limit bounds", async () => {
+    const all = (await ask({})).sessions;
+    const first = await ask({ limit: 2 });
+    expect(first.sessions.map((s) => s.id)).toEqual(
+      all.slice(0, 2).map((s) => s.id),
+    );
+    // The counts never depend on the window.
+    expect(first.counts).toEqual((await ask({})).counts);
+    const second = await ask({ limit: 2, after: keyOf(first.sessions[1]) });
+    expect(second.sessions.map((s) => s.id)).toEqual(
+      all.slice(2, 4).map((s) => s.id),
+    );
+    expect((await ask({ after: keyOf(all[3]) })).sessions).toEqual([]);
+    const bounded = await ask({
+      after: keyOf(all[0]),
+      until: keyOf(all[2]),
+    });
+    expect(bounded.sessions.map((s) => s.id)).toEqual(
+      all.slice(1, 3).map((s) => s.id),
+    );
+    // A cut whose own row is gone still bounds the range by its key: the
+    // largest id at all[1]'s instant sorts just before it.
+    const gone = {
+      ...keyOf(all[1]),
+      id: "ffffffff-ffff-4fff-bfff-ffffffffffff",
+    };
+    expect((await ask({ after: gone })).sessions.map((s) => s.id)).toEqual(
+      all.slice(1).map((s) => s.id),
+    );
+  });
+
+  test("shape filters", async () => {
+    expect(entries((await ask({ shape: "actions" })).sessions)).toEqual([
+      "/@12:00",
+      "/@10:00",
+    ]);
+    expect(entries((await ask({ shape: "multi" })).sessions)).toEqual([
+      "/@12:00",
+      "/@10:00",
+    ]);
+    const bounced = await ask({ shape: "bounced" });
+    expect(entries(bounced.sessions)).toEqual(["/@11:00", "/apps@10:30"]);
+    expect(bounced.counts).toEqual({
+      all: 4,
+      actions: 2,
+      multi: 2,
+      bounced: 2,
+    });
+  });
+
+  test("the report's filters: a hit dimension keeps visits with such a hit, filters stack", async () => {
+    const harness = await ask({
+      filters: [{ dimension: "page", value: "/harness" }],
+    });
+    expect(entries(harness.sessions)).toEqual(["/@10:00"]);
+    expect(harness.counts).toEqual({
+      all: 1,
+      actions: 1,
+      multi: 1,
+      bounced: 0,
+    });
+    // The whole visit comes back, not only the matching hits.
+    expect(harness.sessions[0]!.hits).toHaveLength(3);
+    const stacked = await ask({
+      filters: [
+        { dimension: "event", value: "improve_open" },
+        { dimension: "channel", value: "Search" },
+      ],
+    });
+    expect(entries(stacked.sessions)).toEqual(["/@12:00"]);
+    const prop = await ask({
+      filters: [
+        {
+          dimension: "event_prop",
+          value: eventPropValue("improve_open", "from", "nav"),
+        },
+      ],
+    });
+    expect(entries(prop.sessions)).toEqual(["/@10:00"]);
+  });
+
+  test("a visit's hits are capped, and a live visit says so", async () => {
+    const started = at(DAY, "22:50");
+    const [visit] = await t.db
+      .insert(analyticsVisits)
+      .values({
+        visitorId: "cap-test",
+        day: DAY,
+        startedAt: started,
+        lastAt: at(DAY, "22:59"),
+        host,
+        entryPath: "/",
+        exitPath: "/",
+        exitAt: started,
+        events: MAX_SESSION_HITS + 5,
+        channel: "Direct",
+        device: "Desktop",
+        browser: "Chrome",
+        os: "macOS",
+      })
+      .returning({ id: analyticsVisits.id });
+    try {
+      await t.db.insert(analyticsHits).values(
+        Array.from({ length: MAX_SESSION_HITS + 5 }, (_, i) => ({
+          visitId: visit!.id,
+          ts: new Date(started.getTime() + i * 1000),
+          kind: "event" as const,
+          path: "/",
+          eventName: `e${i}`,
+        })),
+      );
+      const { sessions } = await ask({ limit: 1 });
+      const [s] = sessions;
+      expect(s!.id).toBe(visit!.id);
+      expect(s!.live).toBe(true);
+      expect(s!.hitsTruncated).toBe(true);
+      expect(s!.hits).toHaveLength(MAX_SESSION_HITS);
+      expect(s!.hits[0]!.eventName).toBe("e0");
+      expect(s!.hits.at(-1)!.eventName).toBe(`e${MAX_SESSION_HITS - 1}`);
+    } finally {
+      await t.db
+        .delete(analyticsVisits)
+        .where(eq(analyticsVisits.id, visit!.id));
+    }
+  });
+
+  test("visits that started at the same instant are ordered, and paged, by id", async () => {
+    const started = at(DAY, "22:40");
+    const twins = await t.db
+      .insert(analyticsVisits)
+      .values(
+        [0, 1].map(() => ({
+          visitorId: "tie-test",
+          day: DAY,
+          startedAt: started,
+          lastAt: started,
+          host,
+          entryPath: "/tie",
+          exitPath: "/tie",
+          exitAt: started,
+          channel: "Direct" as const,
+          device: "Desktop" as const,
+          browser: "Chrome" as const,
+          os: "macOS" as const,
+        })),
+      )
+      .returning({ id: analyticsVisits.id });
+    try {
+      const ids = twins
+        .map((v) => v.id)
+        .sort()
+        .reverse();
+      const first = await ask({ limit: 1 });
+      expect(first.sessions.map((s) => s.id)).toEqual([ids[0]]);
+      const second = await ask({ limit: 1, after: keyOf(first.sessions[0]) });
+      expect(second.sessions.map((s) => s.id)).toEqual([ids[1]]);
+      const third = await ask({ limit: 1, after: keyOf(second.sessions[0]) });
+      expect(third.sessions[0]!.entryPath).toBe("/");
+    } finally {
+      for (const { id } of twins) {
+        await t.db.delete(analyticsVisits).where(eq(analyticsVisits.id, id));
+      }
+    }
+  });
+
+  test("a range past the raw window is refused", async () => {
+    expect(
+      await runSessionsQuery(
+        t.db,
+        { range: "12m", filters: [], shape: "all", limit: 50 },
+        now,
+      ),
+    ).toEqual({
+      kind: "refused",
+      reason: "beyond-raw-window",
+      rawWindowDays: 90,
+    });
+  });
+
+  test("the question round-trips its wire encoding; an oversized limit is malformed", () => {
+    const q: SessionsQuery = {
+      range: "30d",
+      filters: [{ dimension: "page", value: "/é" }],
+      shape: "actions",
+      after: {
+        startedAt: "2026-09-10T10:00:00.000Z",
+        id: "00000000-0000-4000-8000-000000000000",
+      },
+      limit: 50,
+    };
+    expect(
+      SessionsQueryParamSchema.parse({ q: encodeSessionsQuery(q) }).q,
+    ).toEqual(q);
+    expect(
+      SessionsQueryParamSchema.safeParse({
+        q: encodeSessionsQuery({ ...q, limit: 10_000 }),
+      }).success,
+    ).toBe(false);
   });
 });
 
