@@ -1,4 +1,11 @@
-import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
@@ -15,7 +22,16 @@ import {
   type EmbeddedTabSet,
 } from "@plugins/apps-core/plugins/tabs/web";
 import { AppTabsBody } from "@plugins/apps-core/plugins/tab-surface/web";
-import type { HistoryMode } from "@plugins/primitives/plugins/pane/web";
+import {
+  usePaneViews,
+  type HistoryMode,
+} from "@plugins/primitives/plugins/pane/web";
+import {
+  EMBED_MAXIMIZED,
+  EMBED_MAXIMIZED_SURFACE,
+  EMBED_PLACE_SURFACE,
+} from "@plugins/primitives/plugins/pane/core";
+import { withActiveRoutePrefix } from "@plugins/primitives/plugins/pane/plugins/route-prefix/web";
 import { REVEAL_BOUNDARY_ATTR } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 
@@ -66,13 +82,17 @@ const refuseLeave: AppEmbedLeave = () => {
  *   not take the keyboard when it mounts — the user moves into it by pointing
  *   at it. One that `fills` the page (the page shows nothing but it) takes it
  *   at mount, as the app's own surface does, so its shortcuts answer at once.
- * - **Its location, for the host to keep.** `onLocationChange` is told the
- *   focused tab's app-rooted URL (under the surface mode's prefix) as it
- *   moves, and whether the app's own tab would have pushed a history entry
- *   for the move or replaced the current one; handed back as `url`, it
- *   reopens the embed there — a host page keeps it in its own URL, so a
- *   reload comes back to it. A `url` the host changes later (its page's Back
- *   / Forward) moves the open embed there.
+ * - **Its place, in the page's URL — by itself.** Where the embed is (the
+ *   focused tab's app-rooted URL under its surface mode's prefix) and whether
+ *   its host maximized it are the enclosing pane's embed tail:
+ *   `<the page's URL>/at/<location>[;full=1]` (`pane/core`'s
+ *   `splitEmbedTail`) — so a reload, a bookmark or a link comes back to it,
+ *   and a host writes no URL code. Framed, a move rewrites the current
+ *   history entry (the embed is a box on a page: Back leaves the page);
+ *   maximized it is the tab, so each move is the entry the app's own tab
+ *   would write, and Back / Forward move the embed back there. Outside any
+ *   pane (no address to hold it) the place is kept in memory only. One embed
+ *   per pane instance: two would share the tail.
  * - **Its title, for the host to take.** `onTitleChange` is told the focused
  *   tab's title as the app's own tab is titled (`<Entity> — <App>`) as it
  *   changes, and `undefined` when the embed unmounts. A host page that is
@@ -83,17 +103,17 @@ const refuseLeave: AppEmbedLeave = () => {
  *   (`scroll-reveal`): a row revealing itself inside (a selected item, a
  *   deep link) scrolls the embed's own containers, never the page around it.
  * - **Its new browser tabs.** A ⌘-click or an Open in a new tab inside opens
- *   `browserTabUrl(location there)` when given (the host's page showing the
- *   embed at that place), else the path on the host's origin (the real app).
+ *   this page with the embed at that place, maximized — the same embed, never
+ *   the real app at that path.
  *
- * Size it with `className` (it fills its box). `app` / `route` seed the
- * first tab only; `url` seeds it and is then followed.
+ * The host's chrome reads and toggles maximized, and resets the place, with
+ * {@link useEmbedPlace}. Size it with `className` (it fills its box). `app` /
+ * `route` seed the first tab when the URL names no place yet; with neither,
+ * it opens on the composition's home app.
  */
 export function AppEmbed({
   onLeave = refuseLeave,
   fills,
-  onLocationChange,
-  browserTabUrl,
   onTitleChange,
   className,
   ...at
@@ -108,30 +128,67 @@ export function AppEmbed({
    * a bigger page.
    */
   fills?: "page" | "viewport";
-  /** See {@link EmbeddedTabSet.onLocationChange}. */
-  onLocationChange?: (url: string, history: HistoryMode) => void;
-  /** See {@link EmbeddedTabSet.browserTabUrl}. */
-  browserTabUrl?: (url: string) => string;
   /** Told the embed's title as it changes, `undefined` once it unmounts (see above). */
   onTitleChange?: (title: string | undefined) => void;
   className?: string;
 }): ReactNode {
   const fillsPage = fills !== undefined;
-  // The seed is read once, at the tab set's first render.
+  const views = usePaneViews();
+  const location = views?.values[EMBED_PLACE_SURFACE];
+  const maximized = views?.values[EMBED_MAXIMIZED_SURFACE] === EMBED_MAXIMIZED;
+  // The seed is read once, at the tab set's first render: the URL's place
+  // first, else the host's app / route, else the composition's home app.
   const seed: EmbeddedAt =
-    at.app !== undefined ? { app: at.app, route: at.route } : { url: at.url };
+    location !== undefined
+      ? { url: location }
+      : at.app !== undefined
+        ? { app: at.app, route: at.route }
+        : { url: undefined };
   const [embeddedAt] = useState(seed);
-  const location = at.url;
+  const latest = useLatestRef({ views, location, maximized });
+  const bound = views !== null;
+  const onLocationChange = useCallback(
+    (next: string, history: HistoryMode) => {
+      const now = latest.current;
+      if (now.views === null || next === now.location) return;
+      now.views.set(
+        { [EMBED_PLACE_SURFACE]: next },
+        now.maximized ? history : "replace",
+      );
+    },
+    [latest],
+  );
+  const browserTabUrl = useCallback(
+    (place: string) => {
+      const now = latest.current;
+      if (now.views === null)
+        throw new Error("An unbound embed addresses no browser tab.");
+      return withActiveRoutePrefix(
+        now.views.href({
+          [EMBED_PLACE_SURFACE]: place,
+          [EMBED_MAXIMIZED_SURFACE]: EMBED_MAXIMIZED,
+        }),
+      );
+    },
+    [latest],
+  );
   const embedded = useMemo<EmbeddedTabSet>(
     () => ({
       at: embeddedAt,
       location,
       onLeave,
       fillsPage,
+      ...(bound ? { onLocationChange, browserTabUrl } : {}),
+    }),
+    [
+      embeddedAt,
+      location,
+      onLeave,
+      fillsPage,
+      bound,
       onLocationChange,
       browserTabUrl,
-    }),
-    [embeddedAt, location, onLeave, fillsPage, onLocationChange, browserTabUrl],
+    ],
   );
   return (
     <TabsProvider embedded={embedded}>
@@ -145,14 +202,65 @@ export function AppEmbed({
 }
 
 /**
- * Where the embed opens: an app at its app-relative route (`/c/<id>`), or an
- * app-rooted URL as `onLocationChange` reports one (`/agents/c/x`,
- * `/desktop/sonata`) — `undefined`, or one no app in scope owns, opens the
+ * Where the embed opens when the page's URL names no place for it yet: an
+ * app at its app-relative route (`/c/<id>`), or — neither given — the
  * composition's home app.
  */
 export type AppEmbedAt =
-  | { app: string; route: string; url?: never }
-  | { url: string | undefined; app?: never; route?: never };
+  { app: string; route: string } | { app?: never; route?: never };
+
+/** The host's handle on its embed's place (see {@link useEmbedPlace}). */
+export interface EmbedPlace {
+  /**
+   * The URL names a place for the embed (`/at/…`, or maximized): the visitor
+   * was in it (a reload, a shared link, a tab opened from inside).
+   */
+  named: boolean;
+  /** The URL says the embed is maximized (`;full=1`). */
+  maximized: boolean;
+  /**
+   * Maximize or restore it — the page's own step, a pushed history entry, so
+   * Back from maximized returns to the frame.
+   */
+  setMaximized: (on: boolean) => void;
+  /**
+   * Forget where the embed was (after something that may have erased it, a
+   * demo's Reset): it reopens on its seed the next time it mounts.
+   */
+  reset: () => void;
+}
+
+/**
+ * The place of the `<AppEmbed>` in the calling pane instance, for its host's
+ * chrome (Maximize / Restore, Reset): read from and written to the same URL
+ * the embed keeps itself in. Throws outside a pane that can hold it.
+ */
+export function useEmbedPlace(): EmbedPlace {
+  const views = usePaneViews();
+  if (views === null)
+    throw new Error(
+      "useEmbedPlace: no pane instance here can hold an embed's place in the URL.",
+    );
+  const maximized = views.values[EMBED_MAXIMIZED_SURFACE] === EMBED_MAXIMIZED;
+  const named = maximized || views.values[EMBED_PLACE_SURFACE] !== undefined;
+  const set = views.set;
+  const setMaximized = useCallback(
+    (on: boolean) =>
+      set(
+        { [EMBED_MAXIMIZED_SURFACE]: on ? EMBED_MAXIMIZED : undefined },
+        "push",
+      ),
+    [set],
+  );
+  const reset = useCallback(
+    () => set({ [EMBED_PLACE_SURFACE]: undefined }),
+    [set],
+  );
+  return useMemo(
+    () => ({ named, maximized, setMaximized, reset }),
+    [named, maximized, setMaximized, reset],
+  );
+}
 
 /** The embed's box, themed by the focused tab's app, holding the surface. */
 function EmbedFrame({

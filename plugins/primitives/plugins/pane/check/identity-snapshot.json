@@ -319,12 +319,6 @@
       "parent": null
     },
     {
-      "paneId": "demo-at",
-      "segment": "at/:url*;full",
-      "appIndex": false,
-      "parent": null
-    },
-    {
       "paneId": "demo-start",
       "segment": "",
       "appIndex": true,

@@ -48,7 +48,12 @@ import {
   openLauncherGrid,
   closeLauncherGrid,
 } from "@plugins/apps-core/plugins/app-launcher/e2e";
-import { ENTER_DEMO, RENDER_TIMEOUT_MS, demoPath } from "./internal/demo-pages";
+import {
+  ENTER_DEMO,
+  RENDER_TIMEOUT_MS,
+  demoPath,
+  websiteDemoPath,
+} from "./internal/demo-pages";
 
 const OUT = arg("out") ?? "/tmp/demo-site-parity";
 /** Drive the standalone website's live demo instead of `/demo`. */
@@ -70,7 +75,7 @@ const TOKENS = [
 /** The demo at `location` (an app-rooted route), on this run's page. */
 function demoUrl(location: string): string {
   return SITE
-    ? pathUrl(`/about;view.website.demo=${encodeURIComponent(location)}`)
+    ? pathUrl(websiteDemoPath(location))
     : pathUrl(demoPath(location));
 }
 

@@ -1,9 +1,11 @@
 /**
- * Where the visitor is inside the demo is the page's own URL
- * (`apps/demo/shell`'s routes). In `/demo`, in one fresh browser context, it:
+ * Where the visitor is inside the demo is the page's own URL, kept by the
+ * embed itself (`apps-core/app-embed`'s embed tail). In `/demo`, in one fresh
+ * browser context, it:
  *
- *  1. opens the bare `/demo`: the demo starts on Home (the app gallery), and
- *     the URL settles on `/demo/at/home`, framed under the caption bar;
+ *  1. opens the bare `/demo`: the demo starts on Home (the app gallery),
+ *     framed under the caption bar, and the URL stays `/demo` — the embed
+ *     writes no place no one chose;
  *  2. opens Pages and creates a page there: the URL follows the embed
  *     (`/demo/at/pages/…`), rewriting the current history entry (framed, the
  *     demo's moves are not the page's Back steps); a reload reopens the demo
@@ -63,7 +65,7 @@ import {
 } from "./internal/demo-pages";
 
 const OUT = arg("out") ?? "/tmp/demo-location";
-/** The framed page's caption bar (`demo-at.tsx`'s caption): absent maximized. */
+/** The framed page's caption bar (`demo-page.tsx`'s caption): absent maximized. */
 const CAPTION_TEXT = "running in this page on made-up data";
 
 /** The page-origin `/api` routes a demo may still call — `no-leak.ts`'s list (D3). */
@@ -191,8 +193,8 @@ await withBrowser(async (h) => {
   await urlSettles(
     r,
     page,
-    "the URL settles on /demo/at/home",
-    (p) => p === "/demo/at/home",
+    "the URL stays /demo (no place written until the visitor moves)",
+    (p) => p === "/demo",
   );
   r.ok("it opens framed, under the caption bar", await framed(page));
   await waitForNetworkIdle(page);

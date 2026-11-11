@@ -20,13 +20,15 @@ opening on its home app.
   tab's surface, above the site, through a `SurfaceOverlay` —
   `apps/demo/chrome`'s `morphDemoFrame`, and its `MaximizedChrome`: Restore at
   the top edge, the Esc notice, Esc) and Reset demo.
-- **Its place is the homepage's URL** (`web/internal/demo-place.ts`): the
-  embed's location and whether it is maximized are two surface view keys of
-  the landing pane (`;view.website.demo=…;view.website.demo.full=1`), so a
-  reload comes back there — /demo's rule: framed, moves rewrite the current
-  entry; maximized, they are the tab's history (`usePaneViewParam`'s `set(v,
-  "push")`); Maximize / Restore are pushed steps. A new browser tab opened
-  from inside opens this page there, maximized.
+- **Its place is the homepage's URL**, kept by the embed itself
+  (`apps-core/app-embed`'s embed tail, the same grammar as `/demo`):
+  `/about/at/<location>[;full=1]`, so a reload comes back there — framed,
+  moves rewrite the current entry; maximized, they are the tab's history;
+  Maximize / Restore are pushed steps (`useEmbedPlace`). A new browser tab
+  opened from inside opens this page there, maximized. The band writes no URL
+  code. Old links (`;view.website.demo=…;view.website.demo.full=1`) are
+  rewritten onto the tail before the band renders
+  (`web/internal/legacy-demo-place.ts`, temporary).
 - The frame's paint follows the site's theme tokens, as every website
   component does; the boot screen's colours are the logo's (`ui/logo`).
 
@@ -45,24 +47,23 @@ gate again, the host behind it, back on the same place), with screenshots.
 
 ## Plugin reference
 
-- Description: Landing demo band: equin itself, live, where the desktop picture was — its real server code in a worker on the workspace demo's data (DemoScope around AppEmbed), entered through Enter equin on every visit (a first visit downloads nothing before it; a browser already holding the data starts the host behind it; a maximized URL shows the gate maximized; a tab opened while the visitor is in the demo in another tab joins it with no gate, its frame grown). Entering grows the frame in place for good, nearly as wide and tall as the window; once it runs, Maximize (a view transition over the tab's surface, above the site; Restore at its top edge, a 'Press Esc to restore' notice, Esc) and Reset demo sit under it. Where the visitor is inside the demo, and whether it is maximized, is the homepage's URL (two surface view keys of the landing pane), following /demo's history rule: framed, moves rewrite the current entry; maximized, they are the tab's history.
+- Description: Landing demo band: equin itself, live, where the desktop picture was — its real server code in a worker on the workspace demo's data (DemoScope around AppEmbed), entered through Enter equin on every visit (a first visit downloads nothing before it; a browser already holding the data starts the host behind it; a maximized URL shows the gate maximized; a tab opened while the visitor is in the demo in another tab joins it with no gate, its frame grown). Entering grows the frame in place for good, nearly as wide and tall as the window; once it runs, Maximize (a view transition over the tab's surface, above the site; Restore at its top edge, a 'Press Esc to restore' notice, Esc) and Reset demo sit under it. Where the visitor is inside the demo, and whether it is maximized, is the homepage's URL, kept by the embed itself (/website/at/<location>[;full=1]; old /website;view.website.demo=… links are rewritten onto it), with the embed's history rule: framed, moves rewrite the current entry; maximized, they are the tab's history.
 - Web:
   - Contributes: `Website.Section` "Demo" → `LiveDemoSection`
-  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/demo/chrome` ×5
-    - `apps/website/shell` ×3
-    - `primitives/pane` ×3
+    - `apps-core/app-embed` ×2
+    - `apps/website/shell` ×2
     - `framework/browser-server/demo/scope` ×2
     - `primitives/css/ui-kit` ×2
     - `primitives/dom/render-mode` ×2
-    - `apps-core/app-embed.AppEmbed`
     - `apps-core/tabs.useClaimTabTitle`
     - `primitives/css/inline.Inline`
     - `primitives/css/text.Text`
     - `primitives/dom/element-size.useElementSize`
     - `primitives/dom/scroll-reveal.revealElement`
-    - `primitives/latest-ref.useLatestRef`
     - `primitives/overlay/surface-overlay.SurfaceOverlay`
+    - `primitives/pane.usePaneViews`
     - `ui/icons.Icon`
 - Cross-plugin:
   - Uses tokens:

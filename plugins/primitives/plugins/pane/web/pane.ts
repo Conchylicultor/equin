@@ -15,6 +15,8 @@ import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { defineInstallSink } from "@plugins/primitives/plugins/scope/plugins/install-sink/web";
 import { splitRoutePrefix } from "@plugins/primitives/plugins/pane/plugins/route-prefix/web";
 import {
+  EMBED_MAXIMIZED_PARAMS,
+  embedTailStarts,
   fillSegment,
   indexKeyedSuffix,
   isKeyedOnlySegment,
@@ -23,6 +25,7 @@ import {
   MissingRouteParamError,
   normalizeRoutePath,
   parseSegmentParts,
+  readEmbedTail,
   readIndexKeyedParams,
   readKeyedParams,
   onlySurfaceViews,
@@ -30,10 +33,13 @@ import {
   segmentMatchPatterns,
   segmentParamNames,
   segmentRequiredParamNames,
+  splitEmbedMaximized,
+  splitEmbedTail,
   splitKeyedPart,
   splitSurfaceViewPart,
   surfaceViewKey,
   surfaceViewsOf,
+  withEmbedMaximized,
   withoutSurfaceViews,
   type AppRef,
   type PositionalRouteParams,
@@ -631,7 +637,12 @@ export type ParsedRoute =
 
 export function parseUrl(pathname: string): ParsedRoute {
   const normalized = pathname === "/" ? "" : pathname.replace(/^\/+|\/+$/g, "");
-  const urlSegments = normalized ? normalized.split("/") : [];
+  // The URL's last part may end in an embed's maximized flag (`;full=1`,
+  // `splitEmbedTail`): read it off first, for the route's last instance.
+  const { parts: urlSegments, maximized } = splitEmbedMaximized(
+    normalized ? normalized.split("/") : [],
+  );
+  const flag = maximized ? EMBED_MAXIMIZED_PARAMS : NO_PARAMS;
   // A first part with nothing before its `;` is the app's LANDING pane's keyed
   // suffix, written on the base path (`/sonata;view.sonata.library=all` → `;view.sonata.library=all`): the
   // index pane has no URL part of its own to carry it.
@@ -640,14 +651,67 @@ export function parseUrl(pathname: string): ParsedRoute {
       ? readIndexKeyedParams(urlSegments.shift()!.slice(1))
       : NO_PARAMS;
 
-  // Longest match first, falling back to a shorter one only when the longer
-  // leaves a remainder no chain of panes can match. Two segments can both claim
-  // the same start of a URL — `t/:taskId` and `t/:pluginId/:tableName`, or one
-  // ending in an optional `:name?` — and taking the longer blindly turned a
-  // perfectly parseable URL into `unresolved`. Whether the rest of the URL
-  // parses from a cursor does not depend on how we got there, so a cursor that
-  // failed once is remembered and never searched again: linear in the URL, not
-  // exponential in the alternatives.
+  /** The chain matched, with `extra` (the embed's place) on its last instance. */
+  const matched = (
+    chain: Array<{ paneId: string; params: Record<string, string> }>,
+    extra: Record<string, string>,
+  ): ParsedRoute => {
+    const last = chain[chain.length - 1];
+    if (last) last.params = { ...last.params, ...extra };
+    return {
+      status: "matched",
+      slots: chain.map((s) => createSlot(s.paneId, s.params)),
+      index: last ? index : nonEmptyIndex({ ...index, ...extra }),
+    };
+  };
+
+  const parsed = parseChain(urlSegments);
+  if (parsed) return matched(parsed, flag);
+
+  // No chain matches the whole URL: it may end in an embed tail
+  // (`…/at/agents/c/x;full=1` — `splitEmbedTail`), owned by the instance
+  // before it: the last pane of the chain that matches the parts before the
+  // first `at` that leaves one, or the landing pane when that chain is empty.
+  // Tried only after the plain parse, so a route with a real `at` segment
+  // (`/files/<fs>/at/<path>`) keeps meaning itself.
+  for (const at of embedTailStarts(urlSegments)) {
+    const tail = readEmbedTail(urlSegments, at);
+    if (tail === null) continue;
+    const head = parseChain(urlSegments.slice(0, at));
+    if (!head) continue;
+    return matched(head, { ...tail, ...flag });
+  }
+
+  // No chain of registered panes matches the whole URL: it is not resolvable at
+  // this moment. `rawPath` is the normalized (slash-trimmed) app-relative path so
+  // a consumer can seed a pending route (deferred plugin still loading) or, once
+  // loading has settled, surface a not-found. Kept distinct from `matched []`.
+  //
+  // A bare app root (basePath-stripped pathname is "/") yields an EMPTY MATCHED
+  // route — explicitly a match, not an unresolved URL. The index/landing pane is
+  // NOT injected here: it is a main-area-renderer concern, resolved by
+  // `useIndexMatch` (see below) and rendered only by MillerColumns. Keeping it
+  // out of the route store means an overlay host (e.g. Sonata's PaneOverlayHost)
+  // sees "nothing opened" at a bare root and renders no overlay, instead of
+  // inheriting another app's index pane.
+  return { status: "unresolved", rawPath: normalized };
+}
+
+/**
+ * The chain of registered panes matching ALL of `urlSegments`, or `null`.
+ *
+ * Longest match first, falling back to a shorter one only when the longer
+ * leaves a remainder no chain of panes can match. Two segments can both claim
+ * the same start of a URL — `t/:taskId` and `t/:pluginId/:tableName`, or one
+ * ending in an optional `:name?` — and taking the longer blindly turned a
+ * perfectly parseable URL into `unresolved`. Whether the rest of the URL
+ * parses from a cursor does not depend on how we got there, so a cursor that
+ * failed once is remembered and never searched again: linear in the URL, not
+ * exponential in the alternatives.
+ */
+function parseChain(
+  urlSegments: string[],
+): Array<{ paneId: string; params: Record<string, string> }> | null {
   const failed = new Set<number>();
   const parseFrom = (
     cursor: number,
@@ -674,23 +738,7 @@ export function parseUrl(pathname: string): ParsedRoute {
     failed.add(cursor);
     return null;
   };
-
-  const parsed = parseFrom(0);
-  // No chain of registered panes matches the whole URL: it is not resolvable at
-  // this moment. `rawPath` is the normalized (slash-trimmed) app-relative path so
-  // a consumer can seed a pending route (deferred plugin still loading) or, once
-  // loading has settled, surface a not-found. Kept distinct from `matched []`.
-  if (!parsed) return { status: "unresolved", rawPath: normalized };
-  const route = parsed.map((s) => createSlot(s.paneId, s.params));
-
-  // A bare app root (basePath-stripped pathname is "/") yields an EMPTY MATCHED
-  // route — explicitly a match, not an unresolved URL. The index/landing pane is
-  // NOT injected here: it is a main-area-renderer concern, resolved by
-  // `useIndexMatch` (see below) and rendered only by MillerColumns. Keeping it
-  // out of the route store means an overlay host (e.g. Sonata's PaneOverlayHost)
-  // sees "nothing opened" at a bare root and renders no overlay, instead of
-  // inheriting another app's index pane.
-  return { status: "matched", slots: route, index };
+  return parseFrom(0);
 }
 
 const NO_PARAMS: Record<string, string> = Object.freeze({}) as Record<
@@ -720,19 +768,32 @@ export function buildRouteUrl(
   index: Record<string, string> = NO_PARAMS,
   indexPane?: PaneInternal,
 ): string {
+  // The route's last instance — its last slot, or the landing pane when it
+  // has none — spells an embed's place as the URL's tail (`/at/…`).
+  const lastIdx = route.length - 1;
+  const indexTail = lastIdx < 0 ? splitEmbedTail(index) : undefined;
+  let maximized = indexTail?.maximized ?? false;
   const suffix = indexKeyedSuffix(
-    index,
+    indexTail?.params ?? index,
     indexPane ? segmentKeyedParamNames(indexPane.segment) : [],
   );
   const parts: string[] = suffix ? [suffix] : [];
-  for (const slot of route) {
+  let tail = indexTail?.tail ?? [];
+  route.forEach((slot, i) => {
     const pane = registry.get(slot.paneId);
     if (!pane) throw new Error(`Unknown pane: ${slot.paneId}`);
+    let params = slot.params;
+    // A segment ending in a wildcard or an optional part would read a tail
+    // after it as its own value: the place keeps the plain `;view.…` spelling.
+    const open = parseSegmentParts(pane.segment).at(-1)?.kind;
+    if (i === lastIdx && open !== "wildcard" && open !== "optional")
+      ({ params, tail, maximized } = splitEmbedTail(params));
     // `fillSegment` owns the `:name`/`:name*`/encode/missing-param logic — the
     // single source of truth shared with `RouteDef.path`.
-    parts.push(...fillSegment(pane.segment, slot.params, { ownSlot: true }));
-  }
-  return joinUrlParts(parts);
+    parts.push(...fillSegment(pane.segment, params, { ownSlot: true }));
+  });
+  const url = joinUrlParts([...parts, ...tail]);
+  return maximized ? withEmbedMaximized(url) : url;
 }
 
 /**
@@ -902,20 +963,26 @@ export interface PaneStore {
    */
   getIndexParams(): Record<string, string>;
   /**
-   * Set (or, with `undefined`, clear) ONE keyed param of an instance in place,
-   * REPLACING the history entry unless `history` is `"push"` — the write half
-   * of {@link usePaneViewParam}.
+   * Set (or, with `undefined`, clear) keyed params of an instance in place —
+   * all of `values` in ONE history write, REPLACING the entry unless
+   * `history` is `"push"` — the write half of {@link usePaneViewParam} and
+   * {@link usePaneViews}.
    * `instanceId` may be the app's index pane, whose params live beside the
    * route ({@link getIndexParams}). Keeps every other param, the instance and
    * the panes to its right, like `setParams`.
    */
-  setKeyedParam(
+  setKeyedParams(
     internal: PaneInternal,
     instanceId: number,
-    name: string,
-    value: string | undefined,
+    values: Readonly<Record<string, string | undefined>>,
     history?: HistoryMode,
   ): void;
+  /** The URL {@link setKeyedParams} would write for `values` (base path included). */
+  keyedParamsHref(
+    internal: PaneInternal,
+    instanceId: number,
+    values: Readonly<Record<string, string | undefined>>,
+  ): string;
   /**
    * Seed an unresolved (pending) route from a raw app-relative path — NO
    * url/history side-effects. Used at boot and for background tabs, where the URL
@@ -1444,39 +1511,59 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     setRoute(next, replace, currentIndex);
   }
 
-  function setKeyedParam(
+  /** The route and index with `values` written on one instance; `null`: nothing changes. */
+  function withKeyedParams(
     internal: PaneInternal,
     instanceId: number,
-    name: string,
-    value: string | undefined,
-    history: HistoryMode = "replace",
-  ): void {
-    const replace = history === "replace";
-    const withValue = (params: Record<string, string>) => {
+    values: Readonly<Record<string, string | undefined>>,
+  ): { route: PaneSlot[]; index: Record<string, string> } | null {
+    const apply = (params: Record<string, string>) => {
       const next = { ...params };
-      if (value === undefined) delete next[name];
-      else next[name] = value;
+      for (const [name, value] of Object.entries(values)) {
+        if (value === undefined) delete next[name];
+        else next[name] = value;
+      }
       return next;
     };
-    if (internal.appIndex && instanceId === indexInstanceIdFor(internal.id)) {
-      const index = nonEmptyIndex(withValue(currentIndex));
-      if (sameParams(index, currentIndex)) return;
-      setRoute(currentSlots(), replace, index);
-      return;
-    }
     const route = currentSlots();
+    if (internal.appIndex && instanceId === indexInstanceIdFor(internal.id)) {
+      const index = nonEmptyIndex(apply(currentIndex));
+      return sameParams(index, currentIndex) ? null : { route, index };
+    }
     const idx = route.findIndex((s) => s.instanceId === instanceId);
     if (idx < 0) {
       throw new Error(
-        `Pane "${internal.id}": setKeyedParam on instance ${instanceId}, which is not in the route.`,
+        `Pane "${internal.id}": setKeyedParams on instance ${instanceId}, which is not in the route.`,
       );
     }
     const slot = route[idx]!;
-    const params = withValue(slot.params);
-    if (sameParams(params, slot.params)) return;
+    const params = apply(slot.params);
+    if (sameParams(params, slot.params)) return null;
     const next = [...route];
     next[idx] = { ...slot, params };
-    setRoute(next, replace, currentIndex);
+    return { route: next, index: currentIndex };
+  }
+
+  function setKeyedParams(
+    internal: PaneInternal,
+    instanceId: number,
+    values: Readonly<Record<string, string | undefined>>,
+    history: HistoryMode = "replace",
+  ): void {
+    const next = withKeyedParams(internal, instanceId, values);
+    if (next === null) return;
+    setRoute(next.route, history === "replace", next.index);
+  }
+
+  function keyedParamsHref(
+    internal: PaneInternal,
+    instanceId: number,
+    values: Readonly<Record<string, string | undefined>>,
+  ): string {
+    const next = withKeyedParams(internal, instanceId, values);
+    return next === null
+      ? routeUrl(currentSlots(), currentIndex)
+      : routeUrl(next.route, next.index);
   }
 
   const store: PaneStore = {
@@ -1485,7 +1572,8 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     getRouteState: () => currentState,
     getRouteStateSnapshot: () => currentState,
     getIndexParams: () => currentIndex,
-    setKeyedParam,
+    setKeyedParams,
+    keyedParamsHref,
     subscribeRoute: (cb) => {
       routeListeners.add(cb);
       return () => routeListeners.delete(cb);
@@ -2565,10 +2653,49 @@ export interface PaneViewParam {
  * its view however it did before.
  */
 export function usePaneViewParam(surface: string): PaneViewParam | null {
+  const views = usePaneViews();
+  const value = views?.values[surface];
+  const set = views?.set;
+  return useMemo(
+    () =>
+      set === undefined
+        ? null
+        : {
+            value,
+            set: (next: string | undefined, history?: HistoryMode) =>
+              set({ [surface]: next }, history),
+          },
+    [surface, value, set],
+  );
+}
+
+/** Several surface views of the enclosing pane instance, bound for read and write. */
+export interface PaneViews {
+  /** Every surface view the URL names for this instance, by surface. */
+  values: Readonly<Record<string, string>>;
+  /**
+   * Write several views at once (`undefined` clears one) in ONE history
+   * write — replacing the entry by default, `"push"` to add one — as
+   * {@link PaneViewParam.set} does for one.
+   */
+  set: (
+    views: Readonly<Record<string, string | undefined>>,
+    history?: HistoryMode,
+  ) => void;
+  /** The URL that {@link set} would write — this page with those views (a link, a new tab). */
+  href: (views: Readonly<Record<string, string | undefined>>) => string;
+}
+
+/**
+ * {@link usePaneViewParam} for several surfaces at once: the enclosing pane
+ * instance's surface views, a write of several in one history entry, and the
+ * URL such a write would produce. `null` where there is no address to hold
+ * them (the same rule as {@link usePaneViewParam}).
+ */
+export function usePaneViews(): PaneViews | null {
   const match = useContext(PaneMatchContext);
   const instanceId = useContext(PaneInstanceContext);
   const store = useContext(PaneStoreContext);
-  const key = surfaceViewKey(surface);
   const entry =
     match && instanceId !== undefined
       ? match.panes.find((e) => e.instanceId === instanceId)
@@ -2578,20 +2705,46 @@ export function usePaneViewParam(surface: string): PaneViewParam | null {
     store !== null &&
     entry !== undefined &&
     pane !== undefined &&
+    instanceId !== undefined &&
     (parseSegmentParts(pane.segment).length > 0 ||
       (pane.appIndex && instanceId === indexInstanceIdFor(pane.id)));
 
+  const keyed = useCallback(
+    (views: Readonly<Record<string, string | undefined>>) =>
+      Object.fromEntries(
+        Object.entries(views).map(([surface, value]) => [
+          surfaceViewKey(surface),
+          value,
+        ]),
+      ),
+    [],
+  );
   const set = useCallback(
-    (value: string | undefined, history?: HistoryMode) => {
+    (
+      views: Readonly<Record<string, string | undefined>>,
+      history?: HistoryMode,
+    ) => {
       if (store === null || pane === undefined || instanceId === undefined) {
         return;
       }
-      store.setKeyedParam(pane, instanceId, key, value, history);
+      store.setKeyedParams(pane, instanceId, keyed(views), history);
     },
-    [store, pane, instanceId, key],
+    [store, pane, instanceId, keyed],
   );
-  const value = bound ? entry.views[surface] : undefined;
-  return useMemo(() => (bound ? { value, set } : null), [bound, value, set]);
+  const href = useCallback(
+    (views: Readonly<Record<string, string | undefined>>) => {
+      if (store === null || pane === undefined || instanceId === undefined) {
+        throw new Error("usePaneViews().href outside a bound pane instance");
+      }
+      return store.keyedParamsHref(pane, instanceId, keyed(views));
+    },
+    [store, pane, instanceId, keyed],
+  );
+  const values = bound ? entry.views : undefined;
+  return useMemo(
+    () => (values === undefined ? null : { values, set, href }),
+    [values, set, href],
+  );
 }
 
 // ---------------------------------------------------------------------------

@@ -36,7 +36,6 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "apps.chord.trainer.chord-trainer.actions", pluginId: "apps.chord.trainer", configName: "chord-trainer.actions" },
   { slotId: "apps.debug.shell.sidebar", pluginId: "apps.debug.shell", configName: "sidebar" },
   { slotId: "apps.debug.shell.toolbar", pluginId: "apps.debug.shell", configName: "toolbar" },
-  { slotId: "apps.demo.shell.at.actions", pluginId: "apps.demo.shell", configName: "at.actions" },
   { slotId: "apps.demo.shell.start.actions", pluginId: "apps.demo.shell", configName: "start.actions" },
   { slotId: "apps.deploy.deploy-history.deploy-activity.actions", pluginId: "apps.deploy.deploy-history", configName: "deploy-activity.actions" },
   { slotId: "apps.deploy.deploy-history.item-actions", pluginId: "apps.deploy.deploy-history", configName: "item-actions" },

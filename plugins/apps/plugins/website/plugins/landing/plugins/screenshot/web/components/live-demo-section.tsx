@@ -16,7 +16,10 @@ import {
 import { revealElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
-import { AppEmbed } from "@plugins/apps-core/plugins/app-embed/web";
+import {
+  AppEmbed,
+  useEmbedPlace,
+} from "@plugins/apps-core/plugins/app-embed/web";
 import { useClaimTabTitle } from "@plugins/apps-core/plugins/tabs/web";
 import { SurfaceOverlay } from "@plugins/primitives/plugins/overlay/plugins/surface-overlay/web";
 import {
@@ -32,7 +35,7 @@ import {
 } from "@plugins/apps/plugins/demo/plugins/chrome/web";
 import { workspaceDemo } from "@plugins/apps/plugins/website/plugins/demos/plugins/workspace/core";
 import { WebsiteBand } from "@plugins/apps/plugins/website/plugins/shell/web";
-import { useDemoPlace } from "../internal/demo-place";
+import { useLegacyDemoPlace } from "../internal/legacy-demo-place";
 import "./live-demo-section.css";
 
 const NO_WINDOW: ViewportSize = { width: 0, height: 0 };
@@ -66,13 +69,14 @@ const FOOT_ROOM = 56;
  * Reset demo, drawn from inside the scope, into the row, through a portal.
  *
  * Where the visitor is inside the demo, and whether it is maximized, is the
- * homepage's URL (`useDemoPlace`), so a reload comes back there: a URL that
+ * homepage's URL (`/about/at/agents/c/x;full=1`) — kept by the embed itself
+ * (`AppEmbed`, `useEmbedPlace`), so a reload comes back there: a URL that
  * names the demo opens it with no gate (`DemoScope`'s `resume`), its frame
  * grown — or maximized — showing only its loading until it runs. The plain
- * page names nothing and stays so: the demo writes no place it opened at by
- * itself (`AppEmbed` reports none), and shows the gate even while the
- * visitor is in the demo in another tab — the URL alone decides; a tab
- * opened from inside the demo carries its place, so it resumes.
+ * page names nothing and stays so: the embed writes no place it opened at by
+ * itself, and the gate shows even while the visitor is in the demo in
+ * another tab — the URL alone decides; a tab opened from inside the demo
+ * carries its place, so it resumes.
  *
  * Nothing moves the page but the visitor: only Enter at the gate scrolls to
  * the grown frame — a resumed demo is grown from the start, and the embed
@@ -80,10 +84,14 @@ const FOOT_ROOM = 56;
  * titled by the app inside it (the embed's title, claimed for this tab).
  */
 export function LiveDemoSection(): ReactNode {
-  const place = useDemoPlace();
-  const { maximized, setMaximized } = place;
+  // An old link's place is moved onto the embed's before the band renders.
+  return useLegacyDemoPlace() ? null : <LiveDemoBand />;
+}
+
+function LiveDemoBand(): ReactNode {
+  const { named, maximized, setMaximized, reset } = useEmbedPlace();
   // The URL names the demo (a reload, a shared link): the visitor is in it.
-  const [resume] = useState(place.location !== undefined || maximized);
+  const [resume] = useState(named);
   // Entered: the frame grows, and stays grown.
   const [grown, setGrown] = useState(resume);
   const claimTitle = useClaimTabTitle();
@@ -110,9 +118,6 @@ export function LiveDemoSection(): ReactNode {
   );
   const embed = (
     <AppEmbed
-      url={place.location}
-      onLocationChange={place.move}
-      browserTabUrl={place.maximizedUrl}
       fills={maximized ? "viewport" : undefined}
       onTitleChange={claimTitle}
     />
@@ -179,7 +184,7 @@ export function LiveDemoSection(): ReactNode {
                       <Icon icon={symbol("fullscreen")} />
                       Maximize
                     </Button>
-                    <ResetDemoButton onReset={place.restart} />
+                    <ResetDemoButton onReset={reset} />
                   </Inline>,
                   controls,
                 )}

@@ -327,6 +327,12 @@ describe("surface view keys", () => {
     );
   });
 
+  test("no route may declare `full` (an embed's maximized flag)", () => {
+    expect(() =>
+      defineRoute({ id: "rv-full", segment: "t/:id;full" }),
+    ).toThrow(/maximized flag/);
+  });
+
   test("are the `view.<surface>` family, nothing else", () => {
     expect(surfaceViewKey("deploy.deployment.history")).toBe(
       "view.deploy.deployment.history",

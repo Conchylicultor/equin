@@ -423,6 +423,144 @@ export function onlySurfaceViews(
   );
 }
 
+// ---------------------------------------------------------------------------
+// The embed tail — `<the page's URL>/at/<location>` and `;full=1`: where an
+// app embedded in a pane (`apps-core/app-embed`) is, and whether its host
+// maximized it, kept in the page's own URL so a reload, a link or a new tab
+// comes back to it.
+//
+// It is two reserved surface views of the pane instance hosting the embed
+// (`view.embed`, `view.embed.full`), so it rides every path a surface view
+// rides (the store, history snapshots, persisted tabs, restores). Only its
+// SPELLING differs: on the route's last instance — its last slot, or its
+// landing pane when it has none — the location is written after everything
+// else as `/at/<location parts>` (each part encoded, so a raw `;` in it is
+// always ours), and maximized as `;full=1` on the URL's very last part,
+// with or without a location (`/demo;full=1`, `/demo/at/pages;full=1`) —
+// instead of as `;view.…` pairs. Anywhere else (a pane that is not the last,
+// one whose segment ends open) the keys keep the plain `;view.…` spelling;
+// both read back to the same route. No route may declare `full`
+// (`assertKeyedParams`), so the flag means one thing in every URL.
+// ---------------------------------------------------------------------------
+
+/** The surface whose view is an embed's location (an app-rooted URL, `/agents/c/x`). */
+export const EMBED_PLACE_SURFACE = "embed";
+/** The surface whose view says the embed is maximized ({@link EMBED_MAXIMIZED}). */
+export const EMBED_MAXIMIZED_SURFACE = "embed.full";
+/** {@link EMBED_MAXIMIZED_SURFACE}'s one value. */
+export const EMBED_MAXIMIZED = "1";
+
+/** The URL part that starts an embed tail. */
+const EMBED_TAIL_MARK = "at";
+/** The keyed name of the maximized flag — reserved: no route may declare it. */
+const RESERVED_FULL_NAME = "full";
+/** The maximized flag, on the URL's last part. */
+const EMBED_TAIL_FULL = `;${RESERVED_FULL_NAME}=${EMBED_MAXIMIZED}`;
+
+const EMBED_PLACE_KEY = SURFACE_VIEW_PREFIX + EMBED_PLACE_SURFACE;
+const EMBED_MAXIMIZED_KEY = SURFACE_VIEW_PREFIX + EMBED_MAXIMIZED_SURFACE;
+
+/**
+ * Split the embed place off the params of the route's LAST instance: the
+ * params left to write as usual, the location's URL parts (`[]` for none),
+ * and whether the URL ends in the maximized flag.
+ */
+export function splitEmbedTail(params: Record<string, string>): {
+  params: Record<string, string>;
+  tail: string[];
+  maximized: boolean;
+} {
+  const location = params[EMBED_PLACE_KEY];
+  const parts =
+    location === undefined ? [] : wildcardParts(location.replace(/^\/+/, ""));
+  const maximized = params[EMBED_MAXIMIZED_KEY] === EMBED_MAXIMIZED;
+  if (parts.length === 0 && !maximized) return { params, tail: [], maximized };
+  const rest = { ...params };
+  // The root ("/") has no part to spell: it keeps its plain key.
+  if (parts.length > 0) delete rest[EMBED_PLACE_KEY];
+  if (maximized) delete rest[EMBED_MAXIMIZED_KEY];
+  return {
+    params: rest,
+    tail: parts.length > 0 ? [EMBED_TAIL_MARK, ...parts] : [],
+    maximized,
+  };
+}
+
+/**
+ * `url` (an app-relative URL from `joinUrlParts`) with the maximized flag on
+ * its last part — the bare root's `/;full=1` joins its base path itself
+ * (`/demo;full=1`), as a landing pane's keyed suffix does.
+ */
+export function withEmbedMaximized(url: string): string {
+  return url + EMBED_TAIL_FULL;
+}
+
+/**
+ * Read the maximized flag off a URL's last part: the parts without it, and
+ * whether it was there (a part left empty by it is dropped).
+ */
+export function splitEmbedMaximized(parts: readonly string[]): {
+  parts: string[];
+  maximized: boolean;
+} {
+  const last = parts[parts.length - 1];
+  if (last === undefined || !last.endsWith(EMBED_TAIL_FULL))
+    return { parts: [...parts], maximized: false };
+  const rest = last.slice(0, -EMBED_TAIL_FULL.length);
+  return {
+    parts: [...parts.slice(0, -1), ...(rest === "" ? [] : [rest])],
+    maximized: true,
+  };
+}
+
+/** The surface-view param the maximized flag reads back as. */
+export const EMBED_MAXIMIZED_PARAMS: Readonly<Record<string, string>> = {
+  [EMBED_MAXIMIZED_KEY]: EMBED_MAXIMIZED,
+};
+
+/**
+ * Read an embed location back: `parts` (a URL's `/`-split parts, its
+ * maximized flag already split off) at `at` — the index of an `at` part — as
+ * the surface-view param it spells, or `null` when `at` does not start one
+ * (no location after it).
+ */
+export function readEmbedTail(
+  parts: readonly string[],
+  at: number,
+): Record<string, string> | null {
+  if (parts[at] !== EMBED_TAIL_MARK || at + 1 >= parts.length) return null;
+  const location =
+    "/" +
+    parts
+      .slice(at + 1)
+      .map((p) => decodeURIComponent(p))
+      .join("/")
+      .replace(/^\/+/, "");
+  return { [EMBED_PLACE_KEY]: location };
+}
+
+/**
+ * The embed tail an app-relative URL ends with for an embed at `location`
+ * (`/at/agents/c/x`, `;full=1` when `maximized`) — appended to the URL of the
+ * page hosting it. For a script that addresses an embed from outside (an
+ * e2e); the app writes it through the route (`splitEmbedTail`).
+ */
+export function embedTailPath(
+  location: string,
+  opts?: { maximized?: boolean },
+): string {
+  const { tail } = splitEmbedTail({ [EMBED_PLACE_KEY]: location });
+  if (tail.length === 0)
+    throw new Error(`embedTailPath("${location}"): no tail spells the root.`);
+  const path = "/" + tail.join("/");
+  return opts?.maximized === true ? path + EMBED_TAIL_FULL : path;
+}
+
+/** The indexes of the parts that may start an embed tail, left to right. */
+export function embedTailStarts(parts: readonly string[]): number[] {
+  return parts.flatMap((p, i) => (p === EMBED_TAIL_MARK ? [i] : []));
+}
+
 /**
  * The keyed names a pane's OWN URL part carries for `params`: its declared
  * ones, then the surface view keys `params` holds, sorted.
@@ -524,6 +662,12 @@ function assertKeyedParams(id: string, segment: string): void {
     if (!KEYED_NAME.test(name)) {
       throw new Error(
         `Route "${id}": keyed param ";${name}" in segment "${segment}" is not an identifier.`,
+      );
+    }
+    if (name === RESERVED_FULL_NAME) {
+      throw new Error(
+        `Route "${id}": keyed param ";${name}" in segment "${segment}" is reserved — it is ` +
+          `an embedded app's maximized flag (the embed tail, see splitEmbedTail).`,
       );
     }
     if (name === RESERVED_VIEW_NAME) {

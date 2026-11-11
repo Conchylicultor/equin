@@ -4,24 +4,22 @@
 
 ## Plugin reference
 
-- Description: App shell for the Demo sandbox: registers the /demo app entry — equin rendered in-process on made-up data (DemoScope + AppEmbed over the workspace demo's browser host), starting on its home app (the app gallery). Where the visitor is inside the demo is the page's URL (/demo/at/<location>, e.g. /demo/at/agents/c/<id>), so a reload comes back to it; ;full=1 shows it maximized instead of framed under the caption bar (its Maximize button; a hover strip at the top edge reveals Restore, and Esc restores when nothing inside the demo wants it — both run as a view transition, and a 'Press Esc to restore' notice shows a few seconds), and a new browser tab opened from inside the demo opens it there, maximized, on the same data — with no second Enter equin, since the visitor is in the demo already. A maximized URL opened fresh (a reload) shows its gate maximized, so Enter opens the demo in place. Maximized, the demo is the tab: its moves are history entries (Back / Forward step through them, the embed following the URL); framed, they rewrite the current entry, so Back leaves the page. The /demo page's head script (DocumentHead.Fragment): starts the demo's browser host before the app boots, so its worker boots alongside the page's own bundle.
+- Description: App shell for the Demo sandbox: registers the /demo app entry — equin rendered in-process on made-up data (DemoScope + AppEmbed over the workspace demo's browser host), starting on its home app (the app gallery). Where the visitor is inside the demo is the page's URL, kept by the embed itself (its embed tail: /demo/at/<location>, e.g. /demo/at/agents/c/<id>), so a reload comes back to it; ;full=1 shows it maximized instead of framed under the caption bar (its Maximize button; a hover strip at the top edge reveals Restore, and Esc restores when nothing inside the demo wants it — both run as a view transition, and a 'Press Esc to restore' notice shows a few seconds), and a new browser tab opened from inside the demo opens it there, maximized, on the same data — with no second Enter equin, since the visitor is in the demo already. A maximized URL opened fresh (a reload) shows its gate maximized, so Enter opens the demo in place. Maximized, the demo is the tab: its moves are history entries (Back / Forward step through them, the embed following the URL); framed, they rewrite the current entry, so Back leaves the page. The /demo page's head script (DocumentHead.Fragment): starts the demo's browser host before the app boots, so its worker boots alongside the page's own bundle.
 - Web:
-  - Slots:
-    - `start.actions`
-    - `at.actions`
-  - Slot contributors:
-    - `start.actions` ← `primitives.pane`
-    - `at.actions` ← `primitives.pane`
+  - Slots: `start.actions`
+  - Slot contributors: `start.actions` ← `primitives.pane`
   - Contributes:
     - `Apps.App` "Demo" → `DemoLayout`
-    - `Pane.Register` "demo-at"
     - `Pane.Register` "demo-start"
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps/demo/chrome` ×5
-    - `apps-core` ×3
-    - `primitives/pane` ×3
-    - `primitives/css/ui-kit` ×2
+  - Uses:
+    - `apps-core.Apps`
     - `apps-core/app-embed.AppEmbed`
+    - `apps-core/app-embed.useEmbedPlace`
+    - `apps/demo/chrome.DEMO_FRAME_ATTR`
+    - `apps/demo/chrome.DemoBootScreen`
+    - `apps/demo/chrome.MaximizedChrome`
+    - `apps/demo/chrome.morphDemoFrame`
+    - `apps/demo/chrome.ResetDemoButton`
     - `framework/browser-server/demo/scope.DemoScope`
     - `layouts/full-pane.FullPane`
     - `primitives/bar.Bar`
@@ -29,8 +27,10 @@
     - `primitives/css/inline.Inline`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/latest-ref.useLatestRef`
+    - `primitives/css/ui-kit.Button`
+    - `primitives/css/ui-kit.cn`
     - `primitives/loading.Loading`
+    - `primitives/pane.Pane`
     - `ui/icons.Icon`
 - Server:
   - Contributes: `DocumentHead.Fragment` "demo-prestart"
@@ -42,11 +42,9 @@
     - `primitives/pane.defineRoute`
     - `ui/icons.symbol`
   - Exports (values):
-    - `DEMO_FULL`
     - `demoApp`
-    - `demoAtRoute`
+    - `demoRoute`
     - `demoScenario`
-    - `demoStartRoute`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --background`

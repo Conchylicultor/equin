@@ -17,6 +17,7 @@ export {
   usePaneMatch,
   useCurrentPane,
   usePaneViewParam,
+  usePaneViews,
   PaneMatchContext,
   PaneInstanceContext,
   PaneBasePathContext,

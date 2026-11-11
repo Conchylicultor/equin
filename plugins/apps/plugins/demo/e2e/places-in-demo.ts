@@ -67,6 +67,7 @@ import {
 import {
   AGENT_MANAGER_LOCATION,
   demoPath,
+  websiteDemoPath,
   onDemoPage,
   bootDemo,
 } from "./internal/demo-pages";
@@ -78,7 +79,7 @@ const SITE = flag("site");
 /** The demo at `location` (an app-rooted route), on this run's page. */
 function demoUrl(location: string): string {
   return SITE
-    ? pathUrl(`/about;view.website.demo=${encodeURIComponent(location)}`)
+    ? pathUrl(websiteDemoPath(location))
     : pathUrl(demoPath(location));
 }
 

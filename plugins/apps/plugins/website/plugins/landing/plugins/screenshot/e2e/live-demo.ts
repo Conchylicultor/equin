@@ -20,7 +20,10 @@
  *  7. maximized, a reload draws the gate maximized over the tab, and Enter
  *     opens the demo there, on Pages;
  *  8. a second tab opened at that URL while the visitor is in the demo joins
- *     it — maximized, no gate.
+ *     it — maximized, no gate;
+ *  9. an old link (`/website;view.website.demo=…;view.website.demo.full=1`,
+ *     from before the site moved to /about and the embed kept its own place)
+ *     is rewritten onto the embed's own tail, and opens there.
  * Screenshots of each step go to `--out`.
  *
  * Manual only — nothing runs this automatically.
@@ -42,9 +45,9 @@ const OUT = arg("out") ?? "/tmp/website-live-demo";
 /** The demo's host: its module (`@browser-host/…`) and its worker tree. */
 const HOST_REQUEST = /\/(artifacts\/[^/]*browser-host|artifacts\/worker-tree)/;
 const BOOT_TIMEOUT_MS = 60_000;
-/** The homepage URL's key holding the demo's location (`demo-place.ts`). */
-const LOCATION_KEY = "view.website.demo=";
-const FULL_KEY = "view.website.demo.full=1";
+/** Where the homepage's URL holds the demo's place: the embed's own tail (`app-embed`). */
+const LOCATION_KEY = "/about/at";
+const FULL_KEY = ";full=1";
 
 /** The page's URL path, decoded. */
 function pathOf(page: Page): string {
@@ -331,5 +334,31 @@ await withBrowser(async (h) => {
   );
   await snap(second, OUT, "7-joined");
   await second.close();
+
+  // ── 9. an old link: rewritten onto the embed's tail ─────────────────
+  const old = await page.context().newPage();
+  await old.goto(
+    pathUrl(
+      `/website;view.website.demo=${encodeURIComponent("/pages")};view.website.demo.full=1`,
+    ),
+    { waitUntil: "domcontentloaded" },
+  );
+  await urlSettles(
+    r,
+    old,
+    "an old link is rewritten onto /about/at/pages;full=1",
+    (p) => p === `${LOCATION_KEY}/pages${FULL_KEY}`,
+  );
+  const oldOpened = await waitFor(
+    async () =>
+      old
+        .locator("[data-website-demo-maximized]")
+        .locator('[data-app-embed="pages"]')
+        .count(),
+    (n) => n > 0,
+    { timeoutMs: BOOT_TIMEOUT_MS },
+  );
+  r.ok("an old link opens the demo there, maximized", oldOpened.ok);
+  await old.close();
   await r.finish();
 });

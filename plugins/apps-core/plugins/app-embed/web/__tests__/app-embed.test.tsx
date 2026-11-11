@@ -13,13 +13,30 @@ import {
   useNavigate,
   useTabs,
 } from "@plugins/apps-core/plugins/tabs/web";
-import { useRouteState } from "@plugins/primitives/plugins/pane/web";
+import {
+  Pane,
+  PaneInstanceContext,
+  PaneSurfaceProvider,
+  setLiveStore,
+  useIndexMatch,
+  usePaneViews,
+  useRouteState,
+} from "@plugins/primitives/plugins/pane/web";
+import {
+  createTestSurfaceStore,
+  defaultStore,
+} from "@plugins/primitives/plugins/pane/web/testing";
+import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { ErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import {
   getFocusedSurfaceId,
   setFocusedSurfaceId,
 } from "@plugins/primitives/plugins/shortcuts/web";
-import { AppEmbed, type AppEmbedAt } from "../components/app-embed";
+import {
+  AppEmbed,
+  useEmbedPlace,
+  type EmbedPlace,
+} from "../components/app-embed";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 
@@ -258,82 +275,105 @@ describe("<AppEmbed>", () => {
     expect(focused).toBeDefined();
   });
 
-  describe("its location", () => {
-    function mountAt(
-      at: AppEmbedAt,
-      opts: {
-        browserTabUrl?: (url: string) => string;
-        onTitleChange?: (title: string | undefined) => void;
-      } = {},
-    ) {
-      const onLocationChange = vi.fn();
-      window.history.replaceState(null, "", "/host/page");
+  describe("its place, in the page's URL", () => {
+    // The host page: an app at `/host` whose landing pane holds the embed.
+    const hostApp = defineApp({
+      id: "host",
+      name: "Host",
+      basePath: "/host",
+      icon: symbol("home"),
+    });
+    type PaneViews = NonNullable<ReturnType<typeof usePaneViews>>;
+    let place: EmbedPlace | null = null;
+    let views: PaneViews | null = null;
+    /** Hands the host's handles to the test (the view-param suite's pattern). */
+    function capture(p: EmbedPlace, v: PaneViews | null) {
+      place = p;
+      views = v;
+    }
+    function PlaceProbe() {
+      capture(useEmbedPlace(), usePaneViews());
+      return null;
+    }
+    const hostPane = Pane.define({
+      route: defineRoute({ id: "app-embed-test-host", segment: "" }),
+      app: hostApp,
+      appIndex: true,
+      component: () => (
+        <>
+          <PlaceProbe />
+          <AppEmbed fills="page" />
+        </>
+      ),
+    });
+    const hostPlugin = {
+      id: "app-embed-test-host",
+      description: "the page hosting the embed",
+      contributions: [Pane.Register({ pane: hostPane })],
+    } as unknown as LoadedPlugin;
+
+    /** The landing pane's one instance, rendered as a layout renders it. */
+    function HostLayout() {
+      const match = useIndexMatch("/host");
+      const entry = match?.panes[0];
+      if (!entry) return null;
+      const Body = entry.pane.component;
+      return (
+        <PaneInstanceContext.Provider value={entry.instanceId}>
+          <Body />
+        </PaneInstanceContext.Provider>
+      );
+    }
+
+    function mountHost(path: string) {
+      window.history.replaceState(null, "", path);
+      const store = createTestSurfaceStore();
+      render(
+        <PluginProvider
+          plugins={[slotsPlugin, appsPlugin, otherPlugin, hostPlugin]}
+          composition={{ id: "app-embed-test", home: "emb" }}
+        >
+          <PaneSurfaceProvider store={store} basePath="/host">
+            <HostLayout />
+          </PaneSurfaceProvider>
+        </PluginProvider>,
+      );
+      return store;
+    }
+
+    afterEach(() => {
+      place = null;
+      views = null;
+      setLiveStore(defaultStore);
+    });
+
+    it("opens on the composition's home app, and writes no place no one chose", () => {
+      mountHost("/host");
+      expect(screen.getByTestId("app").textContent).toBe("emb");
+      expect(window.location.pathname).toBe("/host");
+      // The user's first move is the first place written.
+      goTo("/other/c/x");
+      expect(window.location.pathname).toBe("/host/at/other/c/x");
+    });
+
+    it("a maximize before any move is the flag alone", () => {
+      mountHost("/host");
+      act(() => place!.setMaximized(true));
+      expect(window.location.pathname).toBe("/host;full=1");
+      goTo("/other/c/x");
+      expect(window.location.pathname).toBe("/host/at/other/c/x;full=1");
+    });
+
+    it("hands its title to the host as it moves, and takes it back when it unmounts", () => {
+      const onTitleChange = vi.fn();
       render(
         <PluginProvider
           plugins={[slotsPlugin, appsPlugin, otherPlugin]}
           composition={{ id: "app-embed-test", home: "emb" }}
         >
-          <AppEmbed
-            {...at}
-            fills="page"
-            onLocationChange={onLocationChange}
-            browserTabUrl={opts.browserTabUrl}
-            onTitleChange={opts.onTitleChange}
-          />
+          <AppEmbed fills="page" onTitleChange={onTitleChange} />
         </PluginProvider>,
       );
-      return onLocationChange;
-    }
-    const last = (fn: ReturnType<typeof vi.fn>) => fn.mock.calls.at(-1)?.[0];
-
-    it("opens at an app-rooted URL, resolved to its app", () => {
-      mountAt({ url: "/other/c/x" });
-      expect(screen.getByTestId("app").textContent).toBe("other");
-      expect(screen.getByTestId("route").textContent).toBe("pending:c/x");
-    });
-
-    it("opens on the composition's home app without one, or with a URL no app owns", () => {
-      mountAt({ url: undefined });
-      expect(screen.getByTestId("app").textContent).toBe("emb");
-      expect(screen.getByTestId("route").textContent).toBe("resolved");
-      cleanup();
-      mountAt({ url: "/nowhere/x" });
-      expect(screen.getByTestId("app").textContent).toBe("emb");
-    });
-
-    it("tells the host where it is, as the URL that reopens it there", () => {
-      const onLocationChange = mountAt({ url: "/emb/c/one" });
-      expect(last(onLocationChange)).toBe("/emb/c/one");
-      goTo("/other/c/x");
-      expect(last(onLocationChange)).toBe("/other/c/x");
-      expect(window.location.pathname).toBe("/host/page");
-    });
-
-    it("says how each move would reach history: its first report corrects, a link pushes", () => {
-      const onLocationChange = mountAt({ url: "/emb/c/one" });
-      expect(onLocationChange.mock.calls.at(-1)).toEqual([
-        "/emb/c/one",
-        "replace",
-      ]);
-      goTo("/other/c/x");
-      expect(onLocationChange.mock.calls.at(-1)).toEqual([
-        "/other/c/x",
-        "push",
-      ]);
-    });
-
-    it("never tells a host keeping no location the place it opened at — only the user's moves", () => {
-      // The host's address names no place: the embed's default is not one.
-      const onLocationChange = mountAt({ url: undefined });
-      expect(onLocationChange).not.toHaveBeenCalled();
-      goTo("/other/c/x");
-      expect(onLocationChange.mock.calls).toEqual([["/other/c/x", "push"]]);
-      expect(window.location.pathname).toBe("/host/page");
-    });
-
-    it("hands its title to the host as it moves, and takes it back when it unmounts", () => {
-      const onTitleChange = vi.fn();
-      mountAt({ url: undefined }, { onTitleChange });
       expect(onTitleChange.mock.calls.at(-1)).toEqual(["Embedded"]);
       goTo("/other/c/x");
       expect(onTitleChange.mock.calls.at(-1)).toEqual(["Other"]);
@@ -341,56 +381,66 @@ describe("<AppEmbed>", () => {
       expect(onTitleChange.mock.calls.at(-1)).toEqual([undefined]);
     });
 
+    it("opens where the page's URL says", () => {
+      mountHost("/host/at/other/c/x");
+      expect(screen.getByTestId("app").textContent).toBe("other");
+      expect(screen.getByTestId("route").textContent).toBe("pending:c/x");
+    });
+
+    it("framed, a move rewrites the current entry", () => {
+      mountHost("/host/at/emb/c/one");
+      const length = window.history.length;
+      goTo("/other/c/x");
+      expect(window.location.pathname).toBe("/host/at/other/c/x");
+      expect(window.history.length).toBe(length);
+    });
+
+    it("maximized, a move is the entry the app's own tab would write", () => {
+      mountHost("/host/at/emb/c/one;full=1");
+      expect(place!.maximized).toBe(true);
+      const length = window.history.length;
+      goTo("/other/c/x");
+      expect(window.location.pathname).toBe("/host/at/other/c/x;full=1");
+      expect(window.history.length).toBe(length + 1);
+    });
+
+    it("Maximize and Restore are the page's own steps (pushed)", () => {
+      mountHost("/host/at/emb/c/one");
+      const length = window.history.length;
+      act(() => place!.setMaximized(true));
+      expect(window.location.pathname).toBe("/host/at/emb/c/one;full=1");
+      expect(window.history.length).toBe(length + 1);
+      act(() => place!.setMaximized(false));
+      expect(window.location.pathname).toBe("/host/at/emb/c/one");
+    });
+
     it("is a reveal boundary: a reveal inside never scrolls its host page", () => {
-      mountAt({ url: undefined });
+      mountHost("/host");
       expect(
         screen.getByTestId("app").closest("[data-reveal-boundary]"),
       ).not.toBeNull();
     });
 
-    it("follows a url its host changes (Back / Forward), not its own echo", () => {
-      const onLocationChange = vi.fn();
-      const tree = (url: string) => (
-        <PluginProvider
-          plugins={[slotsPlugin, appsPlugin, otherPlugin]}
-          composition={{ id: "app-embed-test", home: "emb" }}
-        >
-          <AppEmbed
-            url={url}
-            fills="page"
-            onLocationChange={onLocationChange}
-          />
-        </PluginProvider>
-      );
-      const { rerender } = render(tree("/emb/c/one"));
+    it("follows the page's URL when it changes under it (Back / Forward)", () => {
+      mountHost("/host/at/emb/c/one");
       goTo("/other/c/x");
-      // The host writes the report back: an echo, nothing moves.
-      rerender(tree("/other/c/x"));
       expect(screen.getByTestId("app").textContent).toBe("other");
-      const reports = onLocationChange.mock.calls.length;
-      // The host goes Back: the embed returns to where it was.
-      rerender(tree("/emb/c/one"));
+      act(() => views!.set({ embed: "/emb/c/one" }));
       expect(screen.getByTestId("app").textContent).toBe("emb");
-      expect(last(onLocationChange)).toBe("/emb/c/one");
-      expect(onLocationChange.mock.calls.length).toBeGreaterThan(reports);
-      // Forward again.
-      rerender(tree("/other/c/x"));
-      expect(screen.getByTestId("app").textContent).toBe("other");
-      expect(window.location.pathname).toBe("/");
+      expect(screen.getByTestId("route").textContent).toBe("pending:c/one");
     });
 
-    it("addresses a new browser tab opened inside it as its host says", () => {
-      mountAt(
-        { url: "/emb/c/one" },
-        { browserTabUrl: (url) => `/host/page/at${url}` },
-      );
+    it("addresses a new browser tab as this page there, maximized", () => {
+      mountHost("/host/at/emb/c/one");
       expect(peekFocusedTabSet()?.browserTabUrl("/other/c/x")).toBe(
-        "/host/page/at/other/c/x",
+        "/host/at/other/c/x;full=1",
       );
     });
 
-    it("without an address of its own, a new tab is the path on this origin", () => {
-      mountAt({ url: "/emb/c/one" });
+    it("outside any pane, keeps its place to itself", () => {
+      mount({ fillsPage: true });
+      goTo("/other/c/x");
+      expect(window.location.pathname).toBe("/host/page");
       expect(peekFocusedTabSet()?.browserTabUrl("/other/c/x")).toBe(
         "/other/c/x",
       );

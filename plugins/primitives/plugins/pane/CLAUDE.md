@@ -132,6 +132,20 @@ address can hold it.
 - `set` **replaces** the history entry (a view switch is not a navigation).
 - `set(undefined)` removes the key.
 - DataView binds it automatically (data-view CLAUDE.md, "Addressable views").
+- `usePaneViews()` → `{ values, set(views, history?), href(views) }` is the
+  several-surfaces form: one history write for several keys, and the URL
+  such a write would produce (a link, a new tab).
+- **The embed tail.** Two surfaces are reserved for an embedded app's place
+  (`EMBED_PLACE_SURFACE` `embed`, `EMBED_MAXIMIZED_SURFACE` `embed.full`,
+  bound by `apps-core/app-embed`). On the route's last instance (its last
+  slot, or the landing pane with none) they are spelled as the URL's tail —
+  `<the page's URL>/at/<location parts>`, and `;full=1` on the URL's last
+  part with or without a location (`splitEmbedTail`) — instead of `;view.…`
+  pairs; anywhere else (or on a last segment ending open), plainly. No route
+  may declare `full`. `parseUrl` tries the
+  plain chain first and reads a tail only when that fails, so a route with a
+  real `at` segment keeps matching. `embedTailPath(location)` spells one for
+  a script addressing an embed from outside.
 
 ## Read params
 
@@ -695,7 +709,7 @@ with an empty route.
   - Slots: `Pane.Register`
   - Slot contributors: 94 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `Pane.Register` ×94
-  - Contributes: 125 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Contributes: 124 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `FileBrowserHeader` "title" → `PaneTitleItem`
     - `FilePreviewHeader` "title" → `PaneTitleItem`
     - `SlotRender.ListMiddleware`
@@ -708,7 +722,6 @@ with an empty route.
     - `agentsRootPane.Actions` "title" → `PaneTitleItem`
     - `allConversationsPane.Actions` "title" → `PaneTitleItem`
     - `app-preview.actions` "title" → `PaneTitleItem`
-    - `at.actions` "title" → `PaneTitleItem`
     - `attemptPane.Actions` "title" → `PaneTitleItem`
     - `automation-detail.actions` "title" → `PaneTitleItem`
     - `automations.actions` "title" → `PaneTitleItem`
@@ -952,6 +965,7 @@ with an empty route.
     - `usePaneTitle`
     - `usePaneToggle`
     - `usePaneViewParam`
+    - `usePaneViews`
     - `usePathname`
     - `useRenderSync`
     - `useReservesFloatingBar`
@@ -971,13 +985,13 @@ with an empty route.
     - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-md`
     - `ui/tokens/shape --spacing`
-  - Imported by: 199 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×72
+  - Imported by: 201 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×73
     - `conversations` ×32
     - `debug` ×27
     - `active-data` ×13
     - `tasks` ×10
-    - `apps-core` ×6
+    - `apps-core` ×7
     - `plugin-meta` ×6
     - `primitives` ×6
     - `layouts` ×4
@@ -1019,6 +1033,12 @@ with an empty route.
     - `APP_COLOR_MODES`
     - `defineApp`
     - `defineRoute`
+    - `EMBED_MAXIMIZED`
+    - `EMBED_MAXIMIZED_PARAMS`
+    - `EMBED_MAXIMIZED_SURFACE`
+    - `EMBED_PLACE_SURFACE`
+    - `embedTailPath`
+    - `embedTailStarts`
     - `fillSegment`
     - `indexKeyedSuffix`
     - `isKeyedOnlySegment`
@@ -1028,16 +1048,20 @@ with an empty route.
     - `normalizeRoutePath`
     - `onlySurfaceViews`
     - `parseSegmentParts`
+    - `readEmbedTail`
     - `readIndexKeyedParams`
     - `readKeyedParams`
     - `segmentKeyedParamNames`
     - `segmentMatchPatterns`
     - `segmentParamNames`
     - `segmentRequiredParamNames`
+    - `splitEmbedMaximized`
+    - `splitEmbedTail`
     - `splitKeyedPart`
     - `splitSurfaceViewPart`
     - `surfaceViewKey`
     - `surfaceViewsOf`
+    - `withEmbedMaximized`
     - `withoutSurfaceViews`
 - Test helpers:
   - Web: `@plugins/primitives/plugins/pane/web/testing`

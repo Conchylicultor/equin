@@ -6,11 +6,12 @@ prototyped: equin rendered in-process on made-up data, starting on its Home
 (`framework/browser-server/demo/scope`) around `<AppEmbed>`
 (`apps-core/app-embed`).
 
-**Its location is the page's URL** (`shell`'s routes): `/demo` settles on
-`/demo/at/<location>` — the embed's app-rooted URL, `/demo/at/agents/c/<id>`,
-`/demo/at/desktop/sonata` — rewritten in place as the visitor moves (one pane
-instance, history replaced, the embed never remounting), so a reload comes
-back there. `;full=1` is the same place maximized: the embed is the whole
+**Its location is the page's URL**, kept by the embed itself (`AppEmbed`'s
+embed tail — the same grammar on every page that embeds an app): `/demo`
+settles on `/demo/at/<location>` — the embed's app-rooted URL,
+`/demo/at/agents/c/<id>`, `/demo/at/desktop/sonata` — rewritten in place as
+the visitor moves (the one landing pane, history replaced, the embed never
+remounting), so a reload comes back there. The page writes no URL code. `;full=1` is the same place maximized: the embed is the whole
 page, no caption bar (the caption's Maximize button; Restore is
 revealed by the pointer at the page's top edge). A new browser tab opened from
 inside (⌘/middle-click, Open in a new tab) opens `/demo/at/<there>;full=1` —

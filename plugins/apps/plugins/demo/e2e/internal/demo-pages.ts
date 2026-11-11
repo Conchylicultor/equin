@@ -4,11 +4,10 @@ import type { Locator, Page } from "playwright";
 import { pickFromLauncher } from "@plugins/apps-core/plugins/app-launcher/e2e";
 import { answerTipsAsTheyShow } from "@plugins/hints/e2e";
 import {
-  DEMO_FULL,
   demoApp,
-  demoAtRoute,
   demoScenario,
 } from "@plugins/apps/plugins/demo/plugins/shell/core";
+import { embedTailPath } from "@plugins/primitives/plugins/pane/core";
 import {
   appThemeScope,
   qualifyThemeScope,
@@ -122,10 +121,15 @@ export async function joinDemo(
  * `/agents/c/x`), framed — or `full` screen — as the demo writes it.
  */
 export function demoPath(location: string, opts?: { full?: boolean }): string {
-  return demoAtRoute.link(demoApp, {
-    url: location.replace(/^\/+/, ""),
-    full: opts?.full === true ? DEMO_FULL : undefined,
-  });
+  return demoApp.basePath + embedTailPath(location, { maximized: opts?.full });
+}
+
+/**
+ * The website's homepage with its live demo at `location`, framed — the
+ * embed's own place in the page's URL (`/about/at/agents/c/x`).
+ */
+export function websiteDemoPath(location: string): string {
+  return "/about" + embedTailPath(location);
 }
 
 /**
