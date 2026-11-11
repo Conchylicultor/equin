@@ -148,6 +148,7 @@ functions in `core/internal/coherence.ts` over `readWorkspace(files)` (a check r
     - `infra/deps/updates.OutdatedWaiting`
     - `infra/deps/updates.utcDay`
   - Exports (types):
+    - `Group`
     - `NpmClosure`
     - `Packument`
     - `Plan`

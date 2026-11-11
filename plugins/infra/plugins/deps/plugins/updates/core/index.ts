@@ -9,10 +9,12 @@ export type {
   OutdatedWaiting,
   PlanOptions,
   Updater,
+  UpdaterPlan,
   UpdaterSmoke,
 } from "./internal/updater";
 export { isActionable } from "./internal/updater";
 export { AWAIT_MAX_DAYS, boundedRows } from "./internal/awaiting";
+export { cooldownEnd } from "./internal/cooldown";
 export type { Hold } from "./internal/hold";
 export {
   HOLD_MAX_DAYS,

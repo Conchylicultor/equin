@@ -8,15 +8,17 @@ import { basename, dirname, join } from "node:path";
 import { z } from "zod";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import {
+  cooldownEnd,
   heldBy,
   heldWaiting,
   isActionable,
   utcDay,
   type Cooldown,
   type Hold,
-  type Move,
   type Outdated,
+  type OutdatedWaiting,
   type Updater,
+  type UpdaterPlan,
   type UpdaterSmoke,
 } from "@plugins/infra/plugins/deps/plugins/updates/core";
 import {
@@ -296,6 +298,75 @@ export function projectHolds(holds: readonly Hold[], label: string): Hold[] {
     .filter((h) => h.names.length > 0);
 }
 
+/** A release still inside its cooldown, published at `published` (ISO instant). */
+const cooling = (pkg: string, published: string): OutdatedWaiting => ({
+  kind: "awaiting",
+  on: {
+    kind: "cooldown",
+    of: [pkg],
+    until: cooldownEnd(published, UV_COOLDOWN_DAYS),
+  },
+});
+
+const pypiRelease = z.object({
+  urls: z.array(z.object({ upload_time_iso_8601: z.string() })),
+});
+
+/**
+ * When `pkg` `version` became installable from PyPI (every uv project resolves
+ * from it): its LAST file's upload, so the cooldown it ends is never reported
+ * shorter than uv's `exclude-newer`, which judges each file by its own upload.
+ */
+async function pypiPublished(pkg: string, version: string): Promise<string> {
+  const url = `https://pypi.org/pypi/${encodeURIComponent(pkg)}/${encodeURIComponent(version)}/json`;
+  const res = await fetch(url, { signal: AbortSignal.timeout(MINUTE) });
+  if (!res.ok) throw new Error(`PyPI ${url} answered ${res.status}`);
+  const times = pypiRelease
+    .parse(await res.json())
+    .urls.map((u) => new Date(u.upload_time_iso_8601).toISOString());
+  if (times.length === 0)
+    throw new Error(`PyPI lists no file of ${pkg} ${version}`);
+  return times.sort().at(-1)!;
+}
+
+/**
+ * The interpreter's row for one project, or none when it is on its newest
+ * release: a move to the newest CPython past the cooldown and the holds, else
+ * the newest one still inside its cooldown (WAITING, with when it is not), else
+ * a held one — so a run moving nothing never reads as "on its latest release"
+ * while one waits.
+ */
+export function cpythonRow(args: {
+  name: string;
+  pinned: string;
+  downloads: readonly CpythonDownload[];
+  now: Date;
+  cooldown: Cooldown;
+  holds: readonly Hold[];
+}): Outdated | null {
+  const { name, pinned, downloads, now, cooldown, holds } = args;
+  const row = (latest: string) => ({ name, current: pinned, latest });
+  const cutoff = uvCutoff(now, cooldown);
+  const target = newestCpython(downloads, cutoff, holds);
+  if (target !== null && isNewerRelease(target, pinned)) return row(target);
+  const everything = uvCutoff(now, "skip");
+  const fresh = newestCpython(downloads, everything, holds);
+  if (fresh !== null && isNewerRelease(fresh, pinned)) {
+    const published = downloads.find((d) => d.version === fresh)!.published;
+    return {
+      ...row(fresh),
+      waiting: cooling(CPYTHON, `${published}T00:00:00.000Z`),
+    };
+  }
+  const newest = newestCpython(downloads, everything, []);
+  if (newest !== null && isNewerRelease(newest, pinned)) {
+    // Nothing to move to but a held release: listed, so a hold is never silent.
+    const hold = heldBy(holds, CPYTHON, newest, compareReleases)!;
+    return { ...row(newest), waiting: heldWaiting(hold, utcDay(now)) };
+  }
+  return null;
+}
+
 /** What every project could move to under `cooldown` (detection: always `honour`). */
 async function detectUnder(
   root: AppPath,
@@ -303,46 +374,59 @@ async function detectUnder(
 ): Promise<Outdated[]> {
   const now = new Date();
   const cutoff = uvCutoff(now, cooldown);
+  const everything = uvCutoff(now, "skip");
   const today = utcDay(now);
   const downloads = await cpythonDownloads(root);
-  const newest = newestCpython(downloads, cutoff, []);
   const out: Outdated[] = [];
   for (const project of await uvProjects(root)) {
     const holds = projectHolds(UV_HOLDS, project.label);
-    const cpython = newestCpython(downloads, cutoff, holds);
     const pinned = (
       await readFile(pythonVersionFile(root, project), "utf8")
     ).trim();
-    if (cpython !== null && isNewerRelease(cpython, pinned)) {
-      out.push({
-        name: moveName(project, CPYTHON),
-        current: pinned,
-        latest: cpython,
-      });
-    } else if (newest !== null && isNewerRelease(newest, pinned)) {
-      // Nothing to move to but a held release: listed, so a hold is never silent.
-      const hold = heldBy(holds, CPYTHON, newest, compareReleases)!;
-      out.push({
-        name: moveName(project, CPYTHON),
-        current: pinned,
-        latest: newest,
-        waiting: heldWaiting(hold, today),
-      });
-    }
-    const output = await uvLock(root, project, [
-      "--upgrade",
-      "--dry-run",
-      "--exclude-newer",
-      cutoff,
-    ]);
-    for (const u of parseLockUpdates(output)) {
-      if (!isNewerRelease(u.to, u.from)) continue;
+    const interpreter = cpythonRow({
+      name: moveName(project, CPYTHON),
+      pinned,
+      downloads,
+      now,
+      cooldown,
+      holds,
+    });
+    if (interpreter !== null) out.push(interpreter);
+    const upgrades = async (before: string) =>
+      parseLockUpdates(
+        await uvLock(root, project, [
+          "--upgrade",
+          "--dry-run",
+          "--exclude-newer",
+          before,
+        ]),
+      ).filter((u) => isNewerRelease(u.to, u.from));
+    const listed = new Set<string>();
+    for (const u of await upgrades(cutoff)) {
       const hold = heldBy(holds, u.pkg, u.to, compareReleases);
+      listed.add(u.pkg);
       out.push({
         name: moveName(project, u.pkg),
         current: u.from,
         latest: u.to,
         ...(hold === undefined ? {} : { waiting: heldWaiting(hold, today) }),
+      });
+    }
+    if (cutoff === everything) continue;
+    // A package whose every newer release is still inside the cooldown: the
+    // resolution past it would take one. Listed WAITING, so a run moving
+    // nothing never reads as "on its latest release" while one cools down.
+    for (const u of await upgrades(everything)) {
+      if (listed.has(u.pkg)) continue;
+      const hold = heldBy(holds, u.pkg, u.to, compareReleases);
+      out.push({
+        name: moveName(project, u.pkg),
+        current: u.from,
+        latest: u.to,
+        waiting:
+          hold === undefined
+            ? cooling(u.pkg, await pypiPublished(u.pkg, u.to))
+            : heldWaiting(hold, today),
       });
     }
   }
@@ -374,7 +458,7 @@ export const uvUpdater: Updater = {
 
   detect: (root) => detectUnder(root, "honour"),
 
-  async plan(root, { only, cooldown }): Promise<Move[]> {
+  async plan(root, { only, cooldown }): Promise<UpdaterPlan> {
     const outdated = await detectUnder(root, cooldown);
     if (only !== undefined) {
       const known = new Set(
@@ -387,15 +471,19 @@ export const uvUpdater: Updater = {
         );
       }
     }
-    return outdated
-      .filter(isActionable)
-      .filter(
-        (o) =>
-          only === undefined ||
-          only.includes(o.name) ||
-          only.includes(o.name.split(":")[1] ?? ""),
-      )
-      .map((o) => ({ name: o.name, from: o.current, to: o.latest }));
+    // Every move is one package: no lockstep partners to widen `only` to.
+    const picked = outdated.filter(
+      (o) =>
+        only === undefined ||
+        only.includes(o.name) ||
+        only.includes(o.name.split(":")[1] ?? ""),
+    );
+    return {
+      moves: picked
+        .filter(isActionable)
+        .map((o) => ({ name: o.name, from: o.current, to: o.latest })),
+      outdated: picked,
+    };
   },
 
   // Nothing to undo: `apply` only rewrites `uv.lock` / `.python-version`, and

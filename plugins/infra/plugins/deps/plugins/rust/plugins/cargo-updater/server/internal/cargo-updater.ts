@@ -7,6 +7,7 @@ import { basename, dirname, join } from "node:path";
 import { z } from "zod";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import {
+  cooldownEnd,
   heldBy,
   heldWaiting,
   utcDay,
@@ -15,6 +16,7 @@ import {
   type Move,
   type Outdated,
   type Updater,
+  type UpdaterPlan,
   type UpdaterSmoke,
 } from "@plugins/infra/plugins/deps/plugins/updates/core";
 import {
@@ -272,6 +274,7 @@ async function detectCrate(
   root: AppPath,
   crate: Crate,
   cutoff: string,
+  everything: string,
   today: string,
 ): Promise<CrateRow[]> {
   const lock = parseCargoLock(
@@ -298,37 +301,67 @@ async function detectCrate(
     if (compareCrateVersions(u.to, u.from) <= 0) continue;
     const releases = await crateReleases(u.pkg);
     const name = moveName(crate, u.pkg, u.from, (count.get(u.pkg) ?? 0) > 1);
-    const target = pickRelease(
+    const row = crateRow({
+      name,
+      pkg: u.pkg,
+      from: u.from,
+      ceiling: u.to,
       releases,
-      u.pkg,
-      u.from,
-      u.to,
       cutoff,
-      CARGO_HOLDS,
-    );
-    const newest = pickRelease(releases, u.pkg, u.from, u.to, cutoff, []);
-    if (target !== null) {
-      out.push({
-        outdated: { name, current: u.from, latest: target },
-        pkg: u.pkg,
-        from: u.from,
-      });
-    } else if (newest !== null) {
-      // Nothing to move to but a held release: listed, so a hold is never silent.
-      const hold = heldBy(CARGO_HOLDS, u.pkg, newest, compareCrateVersions)!;
-      out.push({
-        outdated: {
-          name,
-          current: u.from,
-          latest: newest,
-          waiting: heldWaiting(hold, today),
-        },
-        pkg: u.pkg,
-        from: u.from,
-      });
-    }
+      everything,
+      holds: CARGO_HOLDS,
+      today,
+    });
+    if (row !== null) out.push({ outdated: row, pkg: u.pkg, from: u.from });
   }
   return out;
+}
+
+/**
+ * One lock entry's row, or none when it is on its newest release: a move to
+ * the newest release past the cooldown and the holds (`cutoff`), else the
+ * newest one still inside its cooldown (WAITING, with when it is not), else a
+ * held one — so a run moving nothing never reads as "on its latest release"
+ * while one waits. `everything`: the cutoff that takes every release so far.
+ */
+export function crateRow(args: {
+  name: string;
+  pkg: string;
+  from: string;
+  ceiling: string;
+  releases: readonly CrateRelease[];
+  cutoff: string;
+  everything: string;
+  holds: readonly Hold[];
+  today: string;
+}): Outdated | null {
+  const { name, pkg, from, ceiling, releases, cutoff, everything, holds } =
+    args;
+  const pick = (before: string, holds: readonly Hold[]) =>
+    pickRelease(releases, pkg, from, ceiling, before, holds);
+  const row = (latest: string) => ({ name, current: from, latest });
+  const target = pick(cutoff, holds);
+  if (target !== null) return row(target);
+  const fresh = pick(everything, holds);
+  if (fresh !== null) {
+    const published = releases.find((r) => r.num === fresh)!.createdAt;
+    return {
+      ...row(fresh),
+      waiting: {
+        kind: "awaiting",
+        on: {
+          kind: "cooldown",
+          of: [pkg],
+          until: cooldownEnd(published, CARGO_COOLDOWN_DAYS),
+        },
+      },
+    };
+  }
+  const newest = pick(everything, []);
+  if (newest === null) return null;
+  // Nothing to move to but a held release: listed, so a hold is never silent.
+  const hold = heldBy(holds, pkg, newest, compareCrateVersions)!;
+  return { ...row(newest), waiting: heldWaiting(hold, args.today) };
 }
 
 /** What `cargo update -p <pkg>@<from> --precise <to> --dry-run` answered for one row. */
@@ -339,10 +372,14 @@ export type CargoProbe =
     }
   | { ok: false; error: string };
 
-/** How one movable row lands: in a unit with the rows it drags, or not now. */
+/**
+ * How one movable row lands: in a unit with the rows it drags, or not now.
+ * Either way `unit` names its lockstep unit (absent for a row on its own), so
+ * naming one member names the unit — what moves together waits together.
+ */
 export type CargoRowFate =
   | { kind: "moves"; unit: string | undefined }
-  | { kind: "blocked"; prerequisite: string };
+  | { kind: "blocked"; prerequisite: string; unit: string | undefined };
 
 /**
  * Group the movable rows of one lock by what cargo really moves. A `--precise`
@@ -409,6 +446,7 @@ export function cargoRowFates(
     }
     members.sort();
     const stuck = members.find((m) => blocked.has(m));
+    const unit = members.length > 1 ? members[0] : undefined;
     for (const m of members) {
       if (stuck !== undefined) {
         fates.set(m, {
@@ -417,12 +455,10 @@ export function cargoRowFates(
             m === stuck
               ? blocked.get(m)!
               : `moves together with ${members.filter((x) => x !== m).join(", ")}; ${stuck}: ${blocked.get(stuck)!}`,
+          unit,
         });
       } else {
-        fates.set(m, {
-          kind: "moves",
-          unit: members.length > 1 ? members[0] : undefined,
-        });
+        fates.set(m, { kind: "moves", unit });
       }
     }
   }
@@ -434,9 +470,10 @@ async function analyzeCrate(
   root: AppPath,
   crate: Crate,
   cutoff: string,
+  everything: string,
   today: string,
 ): Promise<Array<{ outdated: Outdated; unit: string | undefined }>> {
-  const rows = await detectCrate(root, crate, cutoff, today);
+  const rows = await detectCrate(root, crate, cutoff, everything, today);
   const movable = rows.filter((r) => r.outdated.waiting === undefined);
   const probes = new Map<string, CargoProbe>();
   for (const r of movable) {
@@ -495,7 +532,7 @@ async function analyzeCrate(
           ...r.outdated,
           waiting: { kind: "blocked", prerequisite: fate.prerequisite },
         },
-        unit: undefined,
+        unit: fate.unit,
       };
     }
     return { outdated: r.outdated, unit: fate.unit };
@@ -509,10 +546,11 @@ async function analyze(
 ): Promise<Array<{ outdated: Outdated; unit: string | undefined }>> {
   const now = new Date();
   const cutoff = cargoCutoff(now, cooldown);
+  const everything = cargoCutoff(now, "skip");
   const today = utcDay(now);
   const out: Array<{ outdated: Outdated; unit: string | undefined }> = [];
   for (const crate of await cargoCrates(root)) {
-    out.push(...(await analyzeCrate(root, crate, cutoff, today)));
+    out.push(...(await analyzeCrate(root, crate, cutoff, everything, today)));
   }
   return out;
 }
@@ -538,7 +576,7 @@ export const cargoUpdater: Updater = {
     return (await analyze(root, "honour")).map((r) => r.outdated);
   },
 
-  async plan(root, { only, cooldown }): Promise<Move[]> {
+  async plan(root, { only, cooldown }): Promise<UpdaterPlan> {
     const rows = await analyze(root, cooldown);
     const outdated = rows.map((r) => r.outdated);
     if (only !== undefined) {
@@ -556,25 +594,27 @@ export const cargoUpdater: Updater = {
       only === undefined ||
       only.includes(name) ||
       only.includes(moveCrate(name));
-    // A unit lands whole: naming one member with --only moves the unit.
+    // A unit lands (or waits) whole: naming one member names the unit.
     const units = new Set(
       rows
         .filter((r) => r.unit !== undefined && picked(r.outdated.name))
         .map((r) => r.unit),
     );
-    return rows
-      .filter((r) => r.outdated.waiting === undefined)
-      .filter(
-        (r) =>
-          picked(r.outdated.name) ||
-          (r.unit !== undefined && units.has(r.unit)),
-      )
-      .map((r) => ({
-        name: r.outdated.name,
-        from: r.outdated.current,
-        to: r.outdated.latest,
-        ...(r.unit !== undefined ? { unit: r.unit } : {}),
-      }));
+    const selected = rows.filter(
+      (r) =>
+        picked(r.outdated.name) || (r.unit !== undefined && units.has(r.unit)),
+    );
+    return {
+      moves: selected
+        .filter((r) => r.outdated.waiting === undefined)
+        .map((r): Move => ({
+          name: r.outdated.name,
+          from: r.outdated.current,
+          to: r.outdated.latest,
+          ...(r.unit !== undefined ? { unit: r.unit } : {}),
+        })),
+      outdated: selected.map((r) => r.outdated),
+    };
   },
 
   // Nothing to undo: `apply` only rewrites `Cargo.lock`, and every build is

@@ -6,7 +6,10 @@ project's `uv.lock` and its exact `.python-version` (CPython) pin, under a
 broken — the shared bounded `Hold` of `infra/deps/updates` (a `reviewBy` at most
 90 days out, held by `deps-uv:holds`; honoured until deleted, and past
 `reviewBy` the upgrade refuses to run until it is reviewed). A held release is
-still detected, as a HELD row.
+still detected, as a HELD row; a newer release still inside the cooldown, as a
+WAITING one (`awaiting` `{ kind: "cooldown", until }`) — a package's from a
+second `uv lock --dry-run` with no cooldown and its PyPI upload time (the
+release's last file), the interpreter's from its build day (`cpythonRow`).
 
 It is a sub-plugin rather than part of `deps/python` so the installer kind
 (`pythonEnv`, `runPython`) carries no edge to the updater registry, which

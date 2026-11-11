@@ -32618,9 +32618,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes: `updater` "mise"
             - Uses: `infra/deps/updates.UpdaterDeclare`
           - Core:
-            - Uses: 22 symbols — full list in [`plugins/infra/plugins/deps/plugins/mise/REFERENCE.md`](../plugins/infra/plugins/deps/plugins/mise/REFERENCE.md)
+            - Uses: 23 symbols — full list in [`plugins/infra/plugins/deps/plugins/mise/REFERENCE.md`](../plugins/infra/plugins/deps/plugins/mise/REFERENCE.md)
               - `toolchain` ×12
-              - `infra/deps/updates` ×6
+              - `infra/deps/updates` ×7
               - `infra/host-fs/user-path` ×2
               - `infra/spawn.spawnCaptured`
               - `packages/timed-fs.readFile`
@@ -32650,6 +32650,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/deps/updates.OutdatedWaiting`
               - `infra/deps/updates.utcDay`
             - Exports (types):
+              - `Group`
               - `NpmClosure`
               - `Packument`
               - `Plan`
@@ -32840,10 +32841,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `OutdatedWaiting`
               - `PlanOptions`
               - `Updater`
+              - `UpdaterPlan`
               - `UpdaterSmoke`
             - Exports (values):
               - `AWAIT_MAX_DAYS`
               - `boundedRows`
+              - `cooldownEnd`
               - `DEPS_UPGRADE_PROMPT`
               - `hasUpgradeWork`
               - `heldBy`

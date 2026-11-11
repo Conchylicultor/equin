@@ -10,8 +10,9 @@ broken — the shared bounded `Hold` of `infra/deps/updates` (held by
   move to within its `Cargo.toml` requirements; crates.io's versions API says
   when each release was published. A move goes to the newest release above the
   lock's, at most cargo's ceiling, published before the cooldown cutoff, not
-  yanked, not a pre-release, not held. A held release is still detected, as a
-  HELD row. Only crates.io packages move; a git or path dependency is pinned
+  yanked, not a pre-release, not held (`crateRow`). A newer release still
+  inside the cooldown is detected as a WAITING row (`awaiting` `{ kind:
+  "cooldown", until }`), a held one as a HELD row — never dropped. Only crates.io packages move; a git or path dependency is pinned
   by hand. Requirements (`Cargo.toml`) are never moved — a new semver major is
   a code change.
 - **Units**: each candidate is probed on its own (`cargo update -p

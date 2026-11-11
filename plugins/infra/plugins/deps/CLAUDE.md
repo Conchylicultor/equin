@@ -186,10 +186,13 @@ module eval).
   `cli/` barrel, shared CLI machinery: baseline gates → move → candidate gates
   → retry-to-confirm → narrow → prove → verdict `current | waiting | upgraded |
   partial | regressed | aborted | holds-to-review`), lifted from `plugins/toolchain`.
-  Every run also lists what each updater sees newer but does not move to (its
-  `detect` rows with a reason, minus the planned moves: receipt `waiting`); a
-  run that moves nothing while something waits ends `waiting`, never
-  `current`. **`--skip-cooldown`** is the supported bypass of the release
+  Every run also lists what each updater sees newer but does not move to
+  (`plan` answers `{ moves, outdated }` for its selection — `--only` widened to
+  the named packages' lockstep partners — and the rows with a reason, minus
+  the planned moves, are the receipt's `waiting`); a run that moves nothing
+  while something waits ends `waiting`, never `current`. Every updater with a
+  cooldown reports a release still inside it as WAITING (`awaiting` `{ kind:
+  "cooldown", until }`, `until` from `cooldownEnd`), never drops it. **`--skip-cooldown`** is the supported bypass of the release
   cooldown (npm, uv, cargo): the runner hands `cooldown: "skip"` to every
   updater's `plan` and `apply` (the `Cooldown` type, `updates/core`), the
   receipt records it, and the gates prove every move as usual. Detection

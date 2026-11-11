@@ -14,6 +14,7 @@ export {
   workspaceManifests,
 } from "./internal/workspace";
 export type { Packument, Plan } from "./internal/plan";
+export type { Group } from "./internal/policy";
 export { planNpm } from "./internal/plan";
 export {
   groupProblems,

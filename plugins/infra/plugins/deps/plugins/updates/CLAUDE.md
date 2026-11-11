@@ -69,10 +69,12 @@ delete it once none can be open.
     - `OutdatedWaiting`
     - `PlanOptions`
     - `Updater`
+    - `UpdaterPlan`
     - `UpdaterSmoke`
   - Exports (values):
     - `AWAIT_MAX_DAYS`
     - `boundedRows`
+    - `cooldownEnd`
     - `DEPS_UPGRADE_PROMPT`
     - `hasUpgradeWork`
     - `heldBy`

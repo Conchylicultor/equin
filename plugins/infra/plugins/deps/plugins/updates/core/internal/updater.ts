@@ -108,6 +108,24 @@ export interface Move {
  */
 export type Cooldown = "honour" | "skip";
 
+/**
+ * What `Updater.plan` answers for its selection (`PlanOptions.only`, widened
+ * to the lockstep partners of every name in it — they move together, so they
+ * wait together too).
+ */
+export interface UpdaterPlan {
+  /** The exact moves an upgrade makes now. */
+  moves: Move[];
+  /**
+   * Every newer release of the selection, as `detect` reports it but under the
+   * plan's cooldown — so a skipped cooldown lists no cooldown wait. The rows
+   * carrying a `waiting` are the releases this upgrade does not take; the
+   * runner lists them on the receipt, so a run that moves nothing never reads
+   * as "on its latest release" while a release cools down, is held or waits.
+   */
+  outdated: Outdated[];
+}
+
 /** What `Updater.plan` is asked for. */
 export interface PlanOptions {
   /** Names this updater knows to restrict the plan to (an unknown one throws); every outdated input when undefined. */
@@ -140,10 +158,11 @@ export interface Updater {
    */
   detect(root: AppPath): Promise<Outdated[]>;
   /**
-   * The exact moves an upgrade would make now, restricted to `opts.only`,
-   * under `opts.cooldown`. Read-only.
+   * The exact moves an upgrade would make now and what else is newer,
+   * restricted to `opts.only` (and its lockstep partners), under
+   * `opts.cooldown`. Read-only.
    */
-  plan(root: AppPath, opts: PlanOptions): Promise<Move[]>;
+  plan(root: AppPath, opts: PlanOptions): Promise<UpdaterPlan>;
   /**
    * Make the moves in `root`'s files, under the `cooldown` they were planned
    * with (an updater that re-resolves — uv — must not drop a fresh release the

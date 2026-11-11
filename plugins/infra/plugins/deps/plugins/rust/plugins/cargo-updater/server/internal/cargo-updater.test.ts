@@ -5,6 +5,7 @@ import {
   cargoRowFates,
   type CargoProbe,
   compareCrateVersions,
+  crateRow,
   moveCrate,
   parseCargoLock,
   parseCargoUpdates,
@@ -112,6 +113,83 @@ describe("cargo updater choice", () => {
     expect(
       pickRelease(releases, "serde", "1.0.200", "1.0.209", cutoff, holds),
     ).toBe("1.0.205");
+  });
+
+  describe("a lock entry's row", () => {
+    const now = new Date("2026-10-24T15:00:00Z");
+    const args = {
+      name: "menu-bar:serde",
+      pkg: "serde",
+      releases,
+      cutoff,
+      everything: cargoCutoff(now, "skip"),
+      holds: [] as Hold[],
+      today: "2026-10-24",
+    };
+
+    test("moves to the newest release past the cooldown", () => {
+      expect(
+        crateRow({ ...args, from: "1.0.205", ceiling: "1.0.209" }),
+      ).toEqual({
+        name: "menu-bar:serde",
+        current: "1.0.205",
+        latest: "1.0.208",
+      });
+    });
+
+    test("a release only inside its cooldown is WAITING, until the day it is old enough", () => {
+      expect(
+        crateRow({ ...args, from: "1.0.208", ceiling: "1.0.209" }),
+      ).toEqual({
+        name: "menu-bar:serde",
+        current: "1.0.208",
+        latest: "1.0.209",
+        waiting: {
+          kind: "awaiting",
+          on: {
+            kind: "cooldown",
+            of: ["serde"],
+            until: "2026-10-27T00:00:00.000Z",
+          },
+        },
+      });
+    });
+
+    test("a held newest release is HELD, cooling down or not", () => {
+      const holds: Hold[] = [
+        {
+          names: ["serde"],
+          version: "1.0.209",
+          reason: "r",
+          reviewBy: "2026-12-01",
+        },
+      ];
+      expect(
+        crateRow({ ...args, holds, from: "1.0.208", ceiling: "1.0.209" })
+          ?.waiting?.kind,
+      ).toBe("held");
+    });
+
+    test("on its newest release: no row", () => {
+      expect(
+        crateRow({ ...args, from: "1.0.209", ceiling: "1.0.209" }),
+      ).toBeNull();
+    });
+
+    test("a skipped cooldown moves to the fresh release", () => {
+      expect(
+        crateRow({
+          ...args,
+          cutoff: args.everything,
+          from: "1.0.208",
+          ceiling: "1.0.209",
+        }),
+      ).toEqual({
+        name: "menu-bar:serde",
+        current: "1.0.208",
+        latest: "1.0.209",
+      });
+    });
   });
 
   test("versions order by their numbers", () => {

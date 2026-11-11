@@ -13,9 +13,9 @@ import { loadRepoFiles } from "@plugins/framework/plugins/tooling/core";
 import {
   utcDay,
   type Cooldown,
-  type Move,
   type Outdated,
   type Updater,
+  type UpdaterPlan,
 } from "@plugins/infra/plugins/deps/plugins/updates/core";
 import {
   installedVersions,
@@ -25,6 +25,7 @@ import {
   readWorkspace,
   upstreamRows,
   workspaceManifests,
+  type Group,
   type Packument,
   type Plan,
   type Workspace,
@@ -237,6 +238,43 @@ async function regenGenerated(
     );
 }
 
+const groupsOf = (ws: Workspace): Group[] =>
+  ws.policies.flatMap((p) => p.policy.groups ?? []);
+
+/**
+ * Every row under `cooldown`: the plan's, plus the upstream releases of the
+ * wrappers we publish (for the groups `wanted` keeps) — the registry cannot
+ * show one nobody has wrapped yet. An upstream row has no move to make.
+ */
+async function rowsUnder(
+  root: AppPath,
+  cooldown: Cooldown,
+  wanted: (g: Group) => boolean,
+): Promise<{ plan: Plan; upstream: Outdated[] }> {
+  const { plan, ws, packuments, now } = await planNow(root, cooldown);
+  const groups = groupsOf(ws).filter(wanted);
+  const upstream = new Map<string, { release: string; taggedAt: string }>();
+  for (const g of groups) {
+    if (g.wraps === undefined) continue;
+    const newest = newestTag(g.id, g.wraps, await fetchTags(g.wraps.tags.repo));
+    upstream.set(g.id, {
+      release: newest.version,
+      taggedAt: await fetchTagDate(g.wraps.tags.repo, newest.tag),
+    });
+  }
+  return {
+    plan,
+    upstream: upstreamRows({
+      groups,
+      packuments,
+      installed: new Map(installedVersions(ws).map((i) => [i.name, i.current])),
+      upstream,
+      holds: ws.policies.flatMap((p) => p.policy.holds ?? []),
+      today: utcDay(now),
+    }),
+  };
+}
+
 /**
  * Every directly declared npm package, across every workspace package.json, as
  * one updater: `bun.lock` and the specs that name each release. Moves to the
@@ -253,56 +291,37 @@ export const npmUpdater: Updater = {
     "bun.lock",
   ],
 
-  // Plus the upstream releases of the wrappers we publish: the registry cannot
-  // show one nobody has wrapped yet. Only detection asks — an upstream row has
-  // no move for `plan` to make.
   async detect(root): Promise<Outdated[]> {
-    const { plan, ws, packuments, now } = await planNow(root, "honour");
-    const groups = ws.policies.flatMap((p) => p.policy.groups ?? []);
-    const upstream = new Map<string, { release: string; taggedAt: string }>();
-    for (const g of groups) {
-      if (g.wraps === undefined) continue;
-      const newest = newestTag(
-        g.id,
-        g.wraps,
-        await fetchTags(g.wraps.tags.repo),
-      );
-      upstream.set(g.id, {
-        release: newest.version,
-        taggedAt: await fetchTagDate(g.wraps.tags.repo, newest.tag),
-      });
-    }
-    return [
-      ...plan.outdated,
-      ...upstreamRows({
-        groups,
-        packuments,
-        installed: new Map(
-          installedVersions(ws).map((i) => [i.name, i.current]),
-        ),
-        upstream,
-        holds: ws.policies.flatMap((p) => p.policy.holds ?? []),
-        today: utcDay(now),
-      }),
-    ];
+    const { plan, upstream } = await rowsUnder(root, "honour", () => true);
+    return [...plan.outdated, ...upstream];
   },
 
-  async plan(root, { only, cooldown }): Promise<Move[]> {
-    const { plan, ws } = await planNow(root, cooldown);
-    if (only === undefined) return plan.moves;
-    const known = new Set(ws.declared.map((d) => d.name));
-    const unknown = only.filter((n) => !known.has(n));
-    if (unknown.length > 0)
-      throw new Error(
-        `Unknown npm package ${unknown.join(", ")}: no package.json declares it.`,
-      );
-    // A lockstep group moves whole or not at all: naming one member names it.
-    const groups = ws.policies.flatMap((p) => p.policy.groups ?? []);
-    const named = new Set(only);
-    for (const g of groups)
-      if (g.members.some((m) => named.has(m)))
-        for (const m of g.members) named.add(m);
-    return plan.moves.filter((m) => named.has(m.name));
+  async plan(root, { only, cooldown }): Promise<UpdaterPlan> {
+    let named: ReadonlySet<string> | undefined;
+    if (only !== undefined) {
+      const ws = await workspaceAt(root);
+      const known = new Set(ws.declared.map((d) => d.name));
+      const unknown = only.filter((n) => !known.has(n));
+      if (unknown.length > 0)
+        throw new Error(
+          `Unknown npm package ${unknown.join(", ")}: no package.json declares it.`,
+        );
+      // A lockstep group moves (and waits) whole: naming one member names it.
+      const wide = new Set(only);
+      for (const g of groupsOf(ws))
+        if (g.members.some((m) => only.includes(m)))
+          for (const m of g.members) wide.add(m);
+      named = wide;
+    }
+    const picked = (name: string) => named === undefined || named.has(name);
+    // The upstream rows are already only the picked groups'.
+    const { plan, upstream } = await rowsUnder(root, cooldown, (g) =>
+      g.members.some(picked),
+    );
+    return {
+      moves: plan.moves.filter((m) => picked(m.name)),
+      outdated: [...plan.outdated.filter((o) => picked(o.name)), ...upstream],
+    };
   },
 
   // Two installs, so the lock lands on exactly the planned release: the exact

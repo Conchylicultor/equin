@@ -22,6 +22,7 @@ import type {
   Move,
   Outdated,
   Updater,
+  UpdaterPlan,
   UpdaterSmoke,
 } from "../../core/internal/updater";
 import { boundedRows } from "../../core/internal/awaiting";
@@ -147,25 +148,19 @@ function writeReceipt(path: string, receipt: UpgradeReceipt): void {
 }
 
 /**
- * What `updater` sees newer but this run does not move to: its detection's
- * rows (every wait bounded on `now`) that carry a reason, minus the moves
- * planned, restricted to `only`. Read after `plan`, so a `--skip-cooldown`
- * run lists no cooldown wait it is about to take.
+ * What `updater` sees newer but this run does not move to: the plan's rows of
+ * its selection (every wait bounded on `now`) that carry a reason, minus the
+ * moves planned. The plan is made under the run's cooldown, so a
+ * `--skip-cooldown` run lists no cooldown wait it is about to take.
  */
-async function waitingOf(
+function waitingOf(
   updater: Updater,
-  root: AppPath,
-  only: readonly string[] | undefined,
-  moves: readonly Move[],
+  plan: UpdaterPlan,
   now: Date,
-): Promise<UpdaterWaiting[]> {
-  const moved = new Set(moves.map((m) => m.name));
-  const named = (name: string) =>
-    only === undefined ||
-    only.some((n) => name === n || name.endsWith(`:${n}`));
-  return boundedRows(await updater.detect(root), now)
-    .filter((o) => o.waiting !== undefined)
-    .filter((o) => !moved.has(o.name) && named(o.name))
+): UpdaterWaiting[] {
+  const moved = new Set(plan.moves.map((m) => m.name));
+  return boundedRows(plan.outdated, now)
+    .filter((o) => o.waiting !== undefined && !moved.has(o.name))
     .map((o) => ({ updater: updater.id, ...o }));
 }
 
@@ -374,8 +369,9 @@ async function upgrade(args: {
       receipt.notes[updater.id] = { ...(await updater.prepare(root, log)) };
       save();
     }
-    const moves = await updater.plan(root, { only, cooldown });
-    const waiting = await waitingOf(updater, root, only, moves, now);
+    const plan = await updater.plan(root, { only, cooldown });
+    const moves = plan.moves;
+    const waiting = waitingOf(updater, plan, now);
     receipt.waiting.push(...waiting);
     if (moves.length === 0)
       log(

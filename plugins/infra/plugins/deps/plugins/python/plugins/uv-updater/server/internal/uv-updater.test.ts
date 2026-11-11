@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { Hold } from "@plugins/infra/plugins/deps/plugins/updates/core";
 import {
+  cpythonRow,
   isNewerRelease,
   newestCpython,
   parseCpythonDownloads,
@@ -132,6 +133,65 @@ describe("uv updater interpreter", () => {
     const cutoff = "2026-09-27T00:00:00.000Z";
     for (const reviewBy of ["2026-11-01", "2026-10-16"])
       expect(newestCpython(downloads, cutoff, [hold(reviewBy)])).toBe("3.14.7");
+  });
+
+  describe("a project's interpreter row", () => {
+    const downloads = [
+      { version: "3.14.6", published: "2026-08-04" },
+      { version: "3.14.7", published: "2026-09-24" },
+    ];
+    const args = {
+      name: "audio-analysis:cpython",
+      downloads,
+      now: new Date("2026-09-25T10:00:00Z"),
+      cooldown: "honour" as const,
+      holds: [] as Hold[],
+    };
+
+    test("moves to the newest release past the cooldown", () => {
+      expect(cpythonRow({ ...args, pinned: "3.14.5" })).toEqual({
+        name: "audio-analysis:cpython",
+        current: "3.14.5",
+        latest: "3.14.6",
+      });
+    });
+
+    test("a release only inside its cooldown is WAITING, until the day it is old enough", () => {
+      expect(cpythonRow({ ...args, pinned: "3.14.6" })).toEqual({
+        name: "audio-analysis:cpython",
+        current: "3.14.6",
+        latest: "3.14.7",
+        waiting: {
+          kind: "awaiting",
+          on: {
+            kind: "cooldown",
+            of: ["cpython"],
+            until: "2026-09-27T00:00:00.000Z",
+          },
+        },
+      });
+    });
+
+    test("a held newest release is HELD", () => {
+      const holds: Hold[] = [
+        {
+          names: ["cpython"],
+          version: "3.14.7",
+          reason: "r",
+          reviewBy: "2026-11-01",
+        },
+      ];
+      expect(
+        cpythonRow({ ...args, holds, pinned: "3.14.6" })?.waiting?.kind,
+      ).toBe("held");
+    });
+
+    test("on its newest release: no row; a skipped cooldown moves", () => {
+      expect(cpythonRow({ ...args, pinned: "3.14.7" })).toBeNull();
+      expect(
+        cpythonRow({ ...args, cooldown: "skip", pinned: "3.14.6" })?.latest,
+      ).toBe("3.14.7");
+    });
   });
 
   test("an exact pin is older than a newer patch, and a loose one is too", () => {

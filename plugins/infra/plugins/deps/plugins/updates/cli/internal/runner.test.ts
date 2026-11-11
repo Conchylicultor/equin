@@ -26,15 +26,17 @@ beforeEach(() => {
 });
 afterEach(() => rmSync(root, { recursive: true, force: true }));
 
+const outdatedOf = (moves: readonly Move[]): Outdated[] =>
+  moves.map((m) => ({ name: m.name, current: m.from, latest: m.to }));
+
 /** An updater that moves `pkg` in `fake.lock` from 1 to 2 (or nothing). */
 function fakeUpdater(moves: Move[], holds: readonly Hold[] = []): Updater {
   return {
     id: "fake",
     description: "a test updater",
     files: async () => ["fake.lock"],
-    detect: async () =>
-      moves.map((m) => ({ name: m.name, current: m.from, latest: m.to })),
-    plan: async () => moves,
+    detect: async () => outdatedOf(moves),
+    plan: async () => ({ moves, outdated: outdatedOf(moves) }),
     apply: async (r, planned) => {
       for (const m of planned)
         writeFileSync(join(r, "fake.lock"), `${m.name} = ${m.to}\n`);
@@ -113,7 +115,12 @@ describe("runUpgrade verdicts", () => {
     const gates = fakeGates({ before: clean, after: clean });
     const receipt = await runUpgrade({
       selection: [
-        { updater: { ...fakeUpdater([]), detect: async () => [cooling] } },
+        {
+          updater: {
+            ...fakeUpdater([]),
+            plan: async () => ({ moves: [], outdated: [cooling] }),
+          },
+        },
       ],
       root,
       receiptPath: join(root, "receipt.json"),
@@ -137,7 +144,9 @@ describe("runUpgrade verdicts", () => {
     const receipt = await run(
       {
         ...fakeUpdater(PKG_MOVE),
-        detect: async () => [
+        plan: async () => ({
+          moves: PKG_MOVE,
+          outdated: [
           {
             name: "pkg",
             current: "1",
@@ -151,7 +160,8 @@ describe("runUpgrade verdicts", () => {
               },
             },
           },
-        ],
+          ],
+        }),
       },
       gates,
     );
@@ -285,7 +295,7 @@ describe("runUpgrade verdicts", () => {
       ]),
       plan: async () => {
         planned = true;
-        return PKG_MOVE;
+        return { moves: PKG_MOVE, outdated: [] };
       },
     };
     const gates = fakeGates({ before: clean, after: clean });
@@ -314,7 +324,7 @@ describe("runUpgrade verdicts", () => {
       },
       plan: async () => {
         touched = true;
-        return PKG_MOVE;
+        return { moves: PKG_MOVE, outdated: [] };
       },
     };
     const gates = fakeGates({ before: clean, after: clean });
@@ -356,7 +366,10 @@ describe("runUpgrade verdicts", () => {
       ...fakeUpdater([]),
       id: "other",
       files: async () => ["other.lock"],
-      plan: async () => [{ name: "dep", from: "a", to: "b" }],
+      plan: async () => ({
+        moves: [{ name: "dep", from: "a", to: "b" }],
+        outdated: [],
+      }),
       apply: async (r) => writeFileSync(join(r, "other.lock"), "dep = b\n"),
       sync: async () => {
         syncs.push("other");
@@ -422,7 +435,7 @@ describe("runUpgrade narrows a regressed batch down", () => {
       description: "a test updater of many packages",
       files: async () => ["many.lock"],
       detect: async () => [],
-      plan: async () => moves,
+      plan: async () => ({ moves, outdated: [] }),
       apply: async (r, planned) => {
         const lock = readLock(r);
         for (const m of planned) lock.set(m.name, m.to);

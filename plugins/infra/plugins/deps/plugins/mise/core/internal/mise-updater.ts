@@ -25,6 +25,7 @@ import {
   type Move,
   type Outdated,
   type Updater,
+  type UpdaterPlan,
 } from "@plugins/infra/plugins/deps/plugins/updates/core";
 import { mise } from "./mise";
 
@@ -160,7 +161,7 @@ export const miseUpdater: Updater = {
   },
 
   // No release cooldown: `opts.cooldown` changes nothing.
-  async plan(root, { only }): Promise<Move[]> {
+  async plan(root, { only }): Promise<UpdaterPlan> {
     const unknown = only?.filter((t) => !TOOLS.some((s) => s.name === t)) ?? [];
     if (unknown.length > 0) {
       throw new Error(
@@ -184,7 +185,12 @@ export const miseUpdater: Updater = {
         );
       if (to !== from) moves.push({ name: spec.name, from, to });
     }
-    return moves;
+    // No cooldown, so the plan's rows are detection's: mise itself rides only
+    // in an unrestricted run (no tool names it).
+    const outdated = (await miseUpdater.detect(root)).filter(
+      (o) => only === undefined || only.includes(o.name),
+    );
+    return { moves, outdated };
   },
 
   // Install side by side (nothing is uninstalled: main and every other

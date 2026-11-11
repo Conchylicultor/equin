@@ -9,9 +9,9 @@
   - Contributes: `updater` "mise"
   - Uses: `infra/deps/updates.UpdaterDeclare`
 - Core:
-  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `toolchain` ×12
-    - `infra/deps/updates` ×6
+    - `infra/deps/updates` ×7
     - `infra/host-fs/user-path` ×2
     - `infra/spawn.spawnCaptured`
     - `packages/timed-fs.readFile`
