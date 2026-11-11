@@ -59,8 +59,9 @@ anchor does) and no tour runs. A tip **never lands with the screen it is
 about**: the first request on a quiet queue waits a **1.2 s orientation
 window** (`ORIENT_MS` — the moment is usually a screen that just appeared, a
 window opened or an app launched, and the user first needs to see where they
-are), and every tip then waits for a **0.4 s pause in the user's input**
-(`QUIET_MS` — no pointer move, press, wheel or key; never mid-gesture). Requests
+are), and every tip then waits for a **pause in the user's input** (no
+pointer move, press, wheel or key; never mid-gesture) — **0.4 s** for that
+first tip (`FIRST_QUIET_MS`), **1 s** for the ones after (`QUIET_MS`). Requests
 are collected over that window, then the lowest `order` (ties: first asked)
 shows — one at a time; the next gets a short **700 ms** window (`SETTLE_MS`)
 after an answer, the user already reading tips. `when` → false or unmount **withdraws** it without marking it seen.

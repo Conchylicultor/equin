@@ -7,6 +7,7 @@ import {
   emptyTipQueue,
   isSuperseded,
   ORIENT_MS,
+  FIRST_QUIET_MS,
   QUIET_MS,
   removeTip,
   requestTip,
@@ -98,15 +99,25 @@ describe("tip queue", () => {
     );
   });
 
-  test("a tip waits for the user to pause: input inside QUIET_MS defers it", () => {
+  test("the first tip waits for a short pause: input inside FIRST_QUIET_MS defers it", () => {
     const q = requestTip(emptyTipQueue, tryIt, 0);
     // The user is still moving just before the window ends.
     const movedAt = ORIENT_MS - 100;
-    expect(wakeAt(q, movedAt)).toBe(movedAt + QUIET_MS);
+    expect(wakeAt(q, movedAt)).toBe(movedAt + FIRST_QUIET_MS);
     expect(stepTips(q, ORIENT_MS, all, movedAt).active).toBeNull();
-    expect(stepTips(q, movedAt + QUIET_MS, all, movedAt).active).toBe("try-it");
+    expect(stepTips(q, movedAt + FIRST_QUIET_MS, all, movedAt).active).toBe(
+      "try-it",
+    );
     // Input long before the window ends does not push it back.
     expect(wakeAt(q, 0)).toBe(ORIENT_MS);
+  });
+
+  test("the tips after an answer wait for the full QUIET_MS pause", () => {
+    let q = requestTip(requestTip(emptyTipQueue, tryIt, 0), main, 0);
+    q = stepTips(q, ORIENT_MS, all);
+    q = removeTip(q, "try-it", 3000);
+    const movedAt = 3000 + SETTLE_MS - 100;
+    expect(wakeAt(q, movedAt)).toBe(movedAt + QUIET_MS);
   });
 
   test("a request arriving while another waits keeps the window", () => {

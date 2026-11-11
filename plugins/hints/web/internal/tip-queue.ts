@@ -24,7 +24,15 @@ export const SETTLE_MS = 700;
  * key) before a tip shows: a card never lands mid-gesture — while the user is
  * reaching for something, or typing — only in the pause after.
  */
-export const QUIET_MS = 400;
+export const QUIET_MS = 1000;
+
+/**
+ * The shorter pause asked of the FIRST tip on a quiet queue (after
+ * {@link ORIENT_MS}): it already waited for the user to see where they are,
+ * and a full {@link QUIET_MS} on top made it feel late. The tips that follow
+ * an answer keep the full pause.
+ */
+export const FIRST_QUIET_MS = 400;
 
 export interface TipRequest {
   readonly hint: Hint;
@@ -53,6 +61,12 @@ export interface TipQueue {
    * it opened); null when nothing is waiting to show.
    */
   readonly readyAt: number | null;
+  /**
+   * The pause in the user's input the waiting window asks for:
+   * {@link FIRST_QUIET_MS} for the first tip on a quiet queue, else
+   * {@link QUIET_MS}.
+   */
+  readonly quietMs: number;
   readonly nextSeq: number;
 }
 
@@ -60,6 +74,7 @@ export const emptyTipQueue: TipQueue = {
   requests: [],
   active: null,
   readyAt: null,
+  quietMs: QUIET_MS,
   nextSeq: 0,
 };
 
@@ -80,8 +95,9 @@ export function requestTip(
     requests: [...q.requests, { hint, scope, key, seq: q.nextSeq }],
     nextSeq: q.nextSeq + 1,
     // The first request on a quiet queue: its screen just came — orient first.
-    readyAt:
-      q.active === null && q.readyAt === null ? now + ORIENT_MS : q.readyAt,
+    ...(q.active === null && q.readyAt === null
+      ? { readyAt: now + ORIENT_MS, quietMs: FIRST_QUIET_MS }
+      : null),
   };
 }
 
@@ -100,13 +116,14 @@ export function removeTip(q: TipQueue, key: string, now: number): TipQueue {
     requests,
     active: null,
     readyAt: requests.length > 0 ? now + SETTLE_MS : null,
+    quietMs: QUIET_MS,
   };
 }
 
 /**
  * Advances the queue at `now`: an active tip that stopped being eligible is
  * hidden (and a short window reopens); once the window has elapsed and the
- * user has been still for {@link QUIET_MS} since `lastInputAt`, the eligible
+ * user has been still for the window's `quietMs` since `lastInputAt`, the eligible
  * request with the lowest `order` (then the earliest) becomes active.
  * Nothing eligible keeps the window open — so a seen state still loading
  * shows nothing, and the first tip appears as soon as it is known.
@@ -121,7 +138,7 @@ export function stepTips(
     const active = q.requests.find((r) => r.key === q.active);
     if (active && eligible(active.hint, active)) return q;
     return stepTips(
-      { ...q, active: null, readyAt: now + SETTLE_MS },
+      { ...q, active: null, readyAt: now + SETTLE_MS, quietMs: QUIET_MS },
       now,
       eligible,
       lastInputAt,
@@ -147,7 +164,7 @@ export function wakeAt(
   lastInputAt: number = Number.NEGATIVE_INFINITY,
 ): number | null {
   if (q.active !== null || q.readyAt === null) return null;
-  return Math.max(q.readyAt, lastInputAt + QUIET_MS);
+  return Math.max(q.readyAt, lastInputAt + q.quietMs);
 }
 
 /** The active tip's request — its declaration and the scope that asked. */
