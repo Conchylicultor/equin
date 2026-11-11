@@ -3,6 +3,7 @@ import {
   cappedList,
   wholeList,
 } from "@plugins/packages/plugins/list-bound/core";
+import { AudienceSchema, DEFAULT_AUDIENCE } from "./audience";
 import { DIMENSIONS, DimensionSchema, type Dimension } from "./dimensions";
 import { parseEventPropValue } from "./event-prop";
 import {
@@ -40,6 +41,12 @@ export const AnalyticsQuerySchema = z
     /** Also compute the previous, equally long period. */
     compare: z.boolean(),
     filters: z.array(AnalyticsFilterSchema).max(MAX_FILTERS),
+    /**
+     * Whose visits (`audience.ts`). Absent = {@link DEFAULT_AUDIENCE}, which
+     * the encoder also leaves out — so a site released before audiences still
+     * answers the default question.
+     */
+    audience: AudienceSchema.default(DEFAULT_AUDIENCE),
   })
   .strict()
   .refine(
@@ -49,6 +56,18 @@ export const AnalyticsQuerySchema = z
     { message: "duplicate filter" },
   );
 export type AnalyticsQuery = z.infer<typeof AnalyticsQuerySchema>;
+
+/**
+ * Whether `source` can answer `audience`: the daily totals hold visitors only
+ * (the rollup leaves the owner's visits out), so a `totals` report answers the
+ * default audience and nothing else.
+ */
+export function audienceAvailable(
+  source: ReportSource,
+  audience: AnalyticsQuery["audience"],
+): boolean {
+  return source === "raw" || audience === DEFAULT_AUDIENCE;
+}
 
 export const REPORT_SOURCES = ["raw", "totals"] as const;
 export type ReportSource = (typeof REPORT_SOURCES)[number];
@@ -199,6 +218,13 @@ export const AnalyticsQueryResultSchema = z.discriminatedUnion("kind", [
       rawWindowDays: z.literal(RAW_RETENTION_DAYS),
     })
     .strict(),
+  z
+    .object({
+      kind: z.literal("refused"),
+      reason: z.literal("audience-beyond-raw-window"),
+      rawWindowDays: z.literal(RAW_RETENTION_DAYS),
+    })
+    .strict(),
 ]);
 export type AnalyticsQueryResult = z.infer<typeof AnalyticsQueryResultSchema>;
 
@@ -265,7 +291,20 @@ export function base64UrlJsonParamSchema<S extends z.ZodType>(schema: S) {
 
 /** The report's question on the wire (see {@link encodeBase64UrlJson}). */
 export function encodeAnalyticsQuery(query: AnalyticsQuery): string {
-  return encodeBase64UrlJson(query);
+  return encodeBase64UrlJson(withoutDefaultAudience(query));
+}
+
+/**
+ * `query` without its `audience` when it is the default, which the schema
+ * fills back in: a site released before audiences refuses the unknown key, and
+ * still answers the default question.
+ */
+export function withoutDefaultAudience<Q extends { audience: string }>(
+  query: Q,
+): Omit<Q, "audience"> | Q {
+  if (query.audience !== DEFAULT_AUDIENCE) return query;
+  const { audience: _default, ...rest } = query;
+  return rest;
 }
 
 /** The report endpoint's `?q=` schema. */

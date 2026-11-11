@@ -1,6 +1,6 @@
 {
-  "id": "67c18c9b-e327-4d46-8134-4b3b4dddb922",
-  "prevId": "e7a19f00-9c2a-4230-a842-9a231aaa0e1e",
+  "id": "02d58d8b-b43b-41a2-90a4-406508e43580",
+  "prevId": "67c18c9b-e327-4d46-8134-4b3b4dddb922",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1287,6 +1287,13 @@
           "primaryKey": false,
           "notNull": true
         },
+        "owner": {
+          "name": "owner",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "dim": {
           "name": "dim",
           "type": "text",
@@ -1418,6 +1425,13 @@
         },
         "returning": {
           "name": "returning",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "owner": {
+          "name": "owner",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,

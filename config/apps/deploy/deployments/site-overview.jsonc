@@ -1,4 +1,4 @@
-// @hash bae307c61c7d
+// @hash 96ab1c997a2c
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -27,6 +27,7 @@
     "apps.deploy.analytics.dashboard:traffic",
     "apps.deploy.analytics.dashboard:top",
     "apps.deploy.site-messages.inbox:messages",
-    "apps.deploy.deploy-history:deployments"
+    "apps.deploy.deploy-history:deployments",
+    "apps.deploy.analytics.dashboard:owner-devices"
   ]
 }

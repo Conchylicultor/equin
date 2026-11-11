@@ -117,6 +117,7 @@ export {
   REPORT_SOURCES,
   ReportRowSchema,
   SeriesPointSchema,
+  audienceAvailable,
   encodeAnalyticsQuery,
   reportRowGroup,
   reportSourceFor,
@@ -179,6 +180,18 @@ export type {
   SessionsQuery,
   SessionsResult,
 } from "./internal/sessions";
+export {
+  AUDIENCES,
+  AUDIENCE_LABEL,
+  AUDIENCE_OPTIONS,
+  AudienceSchema,
+  DEFAULT_AUDIENCE,
+  OWNER_MARK_FRAGMENT,
+  OWNER_UNMARK_FRAGMENT,
+  ownerMarkUrl,
+  ownerUnmarkUrl,
+} from "./internal/audience";
+export type { Audience } from "./internal/audience";
 export {
   COLLECT_PLUGIN_ID,
   SECTION_REACH_EVENT,

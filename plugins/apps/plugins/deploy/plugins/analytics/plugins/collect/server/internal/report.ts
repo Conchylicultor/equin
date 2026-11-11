@@ -8,12 +8,14 @@ import {
   ZERO_ADDITIVE_METRICS,
   addMetrics,
   addMonths,
+  audienceAvailable,
   planPeriods,
   reportSourceFor,
   type AdditiveMetrics,
   type AnalyticsFilter,
   type AnalyticsQuery,
   type AnalyticsQueryResult,
+  type Audience,
   type AnalyticsReport,
   type Dimension,
   type PeriodReport,
@@ -58,10 +60,18 @@ export async function runAnalyticsQuery(
       rawWindowDays: RAW_RETENTION_DAYS,
     };
   }
+  if (!audienceAvailable(source, query.audience)) {
+    return {
+      kind: "refused",
+      reason: "audience-beyond-raw-window",
+      rawWindowDays: RAW_RETENTION_DAYS,
+    };
+  }
   const periods = planPeriods(query.range, now);
-  const current = await periodData(dbx, source, periods.current, query.filters);
+  const ask = { source, audience: query.audience, filters: query.filters };
+  const current = await periodData(dbx, ask, periods.current);
   const previous = query.compare
-    ? await periodData(dbx, source, periods.previous, query.filters)
+    ? await periodData(dbx, ask, periods.previous)
     : null;
   const report: AnalyticsReport = {
     source,
@@ -81,25 +91,33 @@ interface PeriodData {
   rows: Record<Dimension, ReportRow[]>;
 }
 
+/** What every read of one report shares: its store, whose visits, which filters. */
+interface ReportAsk {
+  source: ReportSource;
+  audience: Audience;
+  filters: readonly AnalyticsFilter[];
+}
+
 async function periodData(
   dbx: AnalyticsDb,
-  source: ReportSource,
+  ask: ReportAsk,
   period: ReportPeriod,
-  filters: readonly AnalyticsFilter[],
 ): Promise<PeriodData> {
+  const { source, audience, filters } = ask;
   const visitors = (groupBy: VisitorGrouping) =>
     visitorCounts(dbx, {
       from: period.from,
       to: period.to,
+      audience,
       filters,
       source,
       groupBy,
     });
   const [daily, hourly, summaryVisitors, rowVisitors, bucketVisitors] =
     await Promise.all([
-      dailyRows(dbx, source, period, filters),
+      dailyRows(dbx, ask, period),
       period.granularity === "hour"
-        ? rawHourlyTotals(dbx, { day: period.from, filters })
+        ? rawHourlyTotals(dbx, { day: period.from, audience, filters })
         : null,
       visitors({ kind: "total" }),
       visitors({ kind: "dimension" }),
@@ -122,14 +140,14 @@ async function periodData(
 
 function dailyRows(
   dbx: AnalyticsDb,
-  source: ReportSource,
+  { source, audience, filters }: ReportAsk,
   period: ReportPeriod,
-  filters: readonly AnalyticsFilter[],
 ): Promise<KeyedRow[]> {
   if (source === "raw") {
     return rawDailyRows(dbx, {
       from: period.from,
       to: period.to,
+      audience,
       filters,
       onlyNotRolledUp: false,
     });
@@ -153,9 +171,11 @@ async function totalsSourceRows(
       level: filter ? { kind: "filter", filter } : { kind: "unfiltered" },
       dimensions: "all",
     }),
+    // The stored totals hold visitors only, so the raw half counts them too.
     rawDailyRows(dbx, {
       from: period.from,
       to: period.to,
+      audience: "visitors",
       filters,
       onlyNotRolledUp: true,
     }),

@@ -20,11 +20,13 @@ import {
   planPeriods,
   type AnalyticsRange,
 } from "./periods";
+import { AudienceSchema, DEFAULT_AUDIENCE } from "./audience";
 import {
   AnalyticsFilterSchema,
   MAX_FILTERS,
   base64UrlJsonParamSchema,
   encodeBase64UrlJson,
+  withoutDefaultAudience,
 } from "./query";
 
 /**
@@ -79,6 +81,8 @@ export const SessionsQuerySchema = z
     /** The report's filters, applied by the report's own membership SQL. */
     filters: z.array(AnalyticsFilterSchema).max(MAX_FILTERS),
     shape: SessionShapeSchema,
+    /** Whose visits (`audience.ts`); absent = the default, as in the report. */
+    audience: AudienceSchema.default(DEFAULT_AUDIENCE),
     /** Exclusive: only visits ordered after (older than) this key. Absent = from the newest. */
     after: SessionKeySchema.optional(),
     /** Inclusive: no visit ordered after (older than) this key. Absent = no lower bound. */
@@ -145,6 +149,11 @@ export const SessionSchema = z
     id: z.uuid(),
     visitor: z.string().regex(/^[0-9a-f]{8}$/),
     returning: z.boolean(),
+    /**
+     * The visit came from a device the site's owner marked as theirs
+     * (`audience.ts`). Absent from an older release, which had no mark.
+     */
+    owner: z.boolean().default(false),
     day: z.string(),
     startedAt: z.iso.datetime(),
     lastAt: z.iso.datetime(),
@@ -218,7 +227,7 @@ export type SessionsResult = z.infer<typeof SessionsResultSchema>;
 
 /** The sessions question on the wire — the report's base64url encoding. */
 export function encodeSessionsQuery(query: SessionsQuery): string {
-  return encodeBase64UrlJson(query);
+  return encodeBase64UrlJson(withoutDefaultAudience(query));
 }
 
 /** The sessions endpoint's `?q=` schema. */

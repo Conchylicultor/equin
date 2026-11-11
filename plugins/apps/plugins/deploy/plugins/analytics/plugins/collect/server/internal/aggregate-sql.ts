@@ -9,6 +9,7 @@ import {
   VISIT_DIMENSIONS,
   type AdditiveMetrics,
   type AnalyticsFilter,
+  type Audience,
   type DailyDimension,
   type Granularity,
   type VisitDimension,
@@ -181,6 +182,21 @@ const DailyRowSchema = z.object({
 /** Additive metrics of one (key, dimension, value); `key` is a UTC day or an hour bucket. */
 export type KeyedRow = z.infer<typeof DailyRowSchema>;
 
+/**
+ * Over visit alias `v`: the visit belongs to `audience` — the owner's own
+ * visits (`analytics_visits.owner`) are `you`, everyone else's `visitors`.
+ */
+export function audienceCondition(audience: Audience): SQL {
+  switch (audience) {
+    case "visitors":
+      return sql`NOT v.owner`;
+    case "you":
+      return sql`v.owner`;
+    case "all":
+      return sql`TRUE`;
+  }
+}
+
 /** Keep the visits that have EVERY filter's value. */
 function keptVisits(filters: readonly AnalyticsFilter[]): SQL {
   const conditions = filters.map(
@@ -194,25 +210,26 @@ function keptVisits(filters: readonly AnalyticsFilter[]): SQL {
 }
 
 /**
- * `WITH base, m, kept`: the visits matching `where` (alias `v`) that have
- * EVERY filter's value, under the report's own membership definition — `kept`
+ * `WITH base, m, kept`: the visits matching `where` (alias `v`) of `audience`
+ * that have EVERY filter's value, under the report's own membership definition — `kept`
  * is `analytics_visits` columns plus `duration_ms`. For readers of individual
  * visits (the sessions list), so they filter exactly as the report counts.
  */
 export function keptVisitsWith(
   where: SQL,
+  audience: Audience,
   filters: readonly AnalyticsFilter[],
 ): SQL {
-  return sql`WITH ${visitsAndMemberships(where)}, ${keptVisits(filters)}`;
+  return sql`WITH ${visitsAndMemberships(sql`(${where}) AND ${audienceCondition(audience)}`)}, ${keptVisits(filters)}`;
 }
 
+/**
+ * Over visit alias `v`: its day is rolled up. Memberships are the marker, not
+ * the daily totals: the rollup writes every visit's memberships (the owner's
+ * included) but sums visitors only, so a day whose only visits were the
+ * owner's has memberships and no totals — and is still summed.
+ */
 const isRolledUp = sql`EXISTS (
-  SELECT 1 FROM analytics_daily d
-  WHERE d.day = v.day AND d.filter_dim = ${UNFILTERED_LEVEL}
-    AND d.filter_value = '' AND d.dimension = ${TOTAL_DIMENSION}
-)`;
-
-const hasMembers = sql`EXISTS (
   SELECT 1 FROM analytics_visit_members s WHERE s.day = v.day
 )`;
 
@@ -226,11 +243,12 @@ export async function rawDailyRows(
   opts: {
     from: string;
     to: string;
+    audience: Audience;
     filters: readonly AnalyticsFilter[];
     onlyNotRolledUp: boolean;
   },
 ): Promise<KeyedRow[]> {
-  const where = sql`v.day BETWEEN ${opts.from} AND ${opts.to}${
+  const where = sql`v.day BETWEEN ${opts.from} AND ${opts.to} AND ${audienceCondition(opts.audience)}${
     opts.onlyNotRolledUp ? sql` AND NOT ${isRolledUp}` : sql``
   }`;
   return executeRows(dbx, {
@@ -248,13 +266,17 @@ export async function rawDailyRows(
 /** Raw `total` rows per UTC hour (`YYYY-MM-DDTHH:00:00Z`) of visit start, for one day. */
 export async function rawHourlyTotals(
   dbx: AnalyticsDb,
-  opts: { day: string; filters: readonly AnalyticsFilter[] },
+  opts: {
+    day: string;
+    audience: Audience;
+    filters: readonly AnalyticsFilter[];
+  },
 ): Promise<KeyedRow[]> {
   return executeRows(dbx, {
     label: "analytics.rawHourlyTotals",
     row: DailyRowSchema,
     query: sql`
-      WITH ${visitsAndMemberships(sql`v.day = ${opts.day}`)}, ${keptVisits(opts.filters)}
+      WITH ${visitsAndMemberships(sql`v.day = ${opts.day} AND ${audienceCondition(opts.audience)}`)}, ${keptVisits(opts.filters)}
       SELECT to_char(date_trunc('hour', k.started_at AT TIME ZONE 'UTC'), 'YYYY-MM-DD"T"HH24":00:00Z"') AS "key",
         mm.dim AS "dimension", mm.value AS "value", ${metricColumns}
       FROM m mm JOIN kept k ON k.id = mm.visit_id
@@ -300,7 +322,9 @@ export async function dailyTotalsRows(
 /**
  * Replace `day`'s daily totals — every level (unfiltered and every single
  * filter a visit that day had) — and its visit memberships with a fresh sum of
- * its raw rows, atomically. Safe to rerun; a day with no visits ends with no
+ * its raw rows, atomically. The totals sum the `visitors` audience only (the
+ * owner's own visits are left out); the memberships keep every visit, each
+ * with its `owner` flag, and mark the day rolled up. Safe to rerun; a day with no visits ends with no
  * rows.
  */
 export async function rollupDay(dbx: AnalyticsDb, day: string): Promise<void> {
@@ -308,7 +332,7 @@ export async function rollupDay(dbx: AnalyticsDb, day: string): Promise<void> {
     await tx.delete(analyticsDaily).where(eq(analyticsDaily.day, day));
     // sql-writes:hand-written — set-based INSERT … SELECT over the WITH aggregation of a day's raw visits
     await tx.execute(sql`
-      WITH ${visitsAndMemberships(sql`v.day = ${day}`)}
+      WITH ${visitsAndMemberships(sql`v.day = ${day} AND ${audienceCondition("visitors")}`)}
       INSERT INTO analytics_daily
         (day, filter_dim, filter_value, dimension, value,
          visits, pageviews, bounces, returning_visits, duration_ms, events)
@@ -324,8 +348,8 @@ export async function rollupDay(dbx: AnalyticsDb, day: string): Promise<void> {
     // sql-writes:hand-written — set-based INSERT … SELECT over the WITH aggregation of a day's raw visits
     await tx.execute(sql`
       WITH ${visitsAndMemberships(sql`v.day = ${day}`)}
-      INSERT INTO analytics_visit_members (visit_id, day, visitor_id, dim, value)
-      SELECT DISTINCT mm.visit_id, b.day, b.visitor_id, mm.dim, mm.value
+      INSERT INTO analytics_visit_members (visit_id, day, visitor_id, owner, dim, value)
+      SELECT DISTINCT mm.visit_id, b.day, b.visitor_id, b.owner, mm.dim, mm.value
       FROM m mm JOIN base b ON b.id = mm.visit_id
       WHERE mm.dim <> ${UNFILTERED_LEVEL}`);
   });
@@ -366,12 +390,18 @@ export async function visitorCounts(
   opts: {
     from: string;
     to: string;
+    audience: Audience;
     filters: readonly AnalyticsFilter[];
     source: MembershipSource;
     groupBy: VisitorGrouping;
   },
 ): Promise<VisitorRow[]> {
-  const inSpan = sql`v.day BETWEEN ${opts.from} AND ${opts.to}`;
+  // The stored half must count the same visits as the daily totals beside it.
+  if (opts.source === "totals" && opts.audience !== "visitors")
+    throw new Error(
+      `analytics: the daily totals hold visitors only, not ${opts.audience}`,
+    );
+  const inSpan = sql`v.day BETWEEN ${opts.from} AND ${opts.to} AND ${audienceCondition(opts.audience)}`;
   const rawArm = sql`
     SELECT mm.visit_id, b.day, b.started_at, b.visitor_id, mm.dim, mm.value
     FROM m mm JOIN base b ON b.id = mm.visit_id
@@ -383,7 +413,7 @@ export async function visitorCounts(
         mem AS (
           SELECT s.visit_id, s.day, NULL::timestamptz AS started_at, s.visitor_id, s.dim, s.value
           FROM analytics_visit_members s
-          WHERE s.day BETWEEN ${opts.from} AND ${opts.to}
+          WHERE s.day BETWEEN ${opts.from} AND ${opts.to} AND NOT s.owner
           UNION ALL ${rawArm}
         )`;
   const kept = opts.filters.map(
@@ -443,8 +473,8 @@ function bucketKey(granularity: Granularity, source: MembershipSource): SQL {
 const DayRow = z.object({ day: z.string() });
 
 /**
- * Completed days (before `today`) that have visits but no summary row or no
- * memberships: a night the rollup did not run (or ran before memberships
+ * Completed days (before `today`) that have visits but are not rolled up (no
+ * memberships): a night the rollup did not run (or ran before memberships
  * existed). The rollup backfills them.
  */
 export async function daysMissingTotals(
@@ -457,13 +487,13 @@ export async function daysMissingTotals(
     query: sql`
       SELECT DISTINCT v.day::text AS day FROM analytics_visits v
       WHERE v.day < ${today}
-        AND (NOT ${isRolledUp} OR NOT ${hasMembers})
+        AND NOT ${isRolledUp}
       ORDER BY 1`,
   });
   return rows.map((r) => r.day);
 }
 
-/** Which of `days` have their summary row and their memberships. */
+/** Which of `days` are rolled up (have their memberships; see {@link isRolledUp}). */
 export async function rolledUpDays(
   dbx: AnalyticsDb,
   days: readonly string[],
@@ -473,11 +503,8 @@ export async function rolledUpDays(
     label: "analytics.rolledUpDays",
     row: DayRow,
     query: sql`
-      SELECT v.day::text AS day FROM analytics_daily v
-      WHERE v.filter_dim = ${UNFILTERED_LEVEL} AND v.filter_value = ''
-        AND v.dimension = ${TOTAL_DIMENSION}
-        AND ${hasMembers}
-        AND v.day IN (${sql.join(
+      SELECT DISTINCT v.day::text AS day FROM analytics_visit_members v
+      WHERE v.day IN (${sql.join(
           days.map((d) => sql`${d}`),
           sql`, `,
         )})`,

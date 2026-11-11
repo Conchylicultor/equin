@@ -48,6 +48,8 @@ export const RECORDED_COLUMNS = [
   // identity while the visitor keeps returning
   "visitorId",
   "returning",
+  // the site owner's own visits
+  "owner",
 ] as const;
 export type RecordedColumn = (typeof RECORDED_COLUMNS)[number];
 
@@ -156,12 +158,18 @@ export const RECORDED_FIELDS = [
       "A random id, found again on each return through a hash of IP + browser + site + that day's salt, and whether the visit is such a return; forgotten after 30 days without a visit",
     columns: ["visitorId", "returning"],
   },
+  {
+    name: "owner",
+    description:
+      "Whether the visit came from a device the site's owner marked as their own, so their reading never counts as a visitor",
+    columns: ["owner"],
+  },
 ] as const satisfies readonly RecordedField[];
 
 /** What is never stored, in the panel's words. */
 export const NEVER_RECORDED = [
   "IP addresses or the full user-agent string",
-  "Cookies, localStorage, or anything left on the visitor's device",
+  "Cookies, localStorage, or anything left on a visitor's device — only the owner's marked devices keep a flag",
   "Who someone is after 30 days away: older salts are deleted, so a returning visitor gets a new id",
   "Query strings, form input, or page content",
 ] as const;

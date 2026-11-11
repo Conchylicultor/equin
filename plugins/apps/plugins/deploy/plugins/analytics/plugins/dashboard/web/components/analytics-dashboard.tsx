@@ -1,10 +1,12 @@
 import { useId, useState, type ReactNode } from "react";
 import {
+  AUDIENCE_OPTIONS,
   reportSourceFor,
   type AnalyticsFilter,
   type AnalyticsQuery,
   type AnalyticsRange,
   type AnalyticsReport,
+  type Audience,
   type Dimension,
   type ReportSource,
 } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
@@ -58,11 +60,14 @@ export function AnalyticsDashboard({
   const [range, setRange] = useState<AnalyticsRange>("30d");
   const [compare, setCompare] = useState(true);
   const [filters, setFilters] = useState<AnalyticsFilter[]>([]);
+  // Whose visits: everyone but the site's owner by default, so reading your
+  // own site never inflates it (collect's `audience.ts`).
+  const [audience, setAudience] = useState<Audience>("visitors");
   const [metric, setMetric] = useState<KpiId>("visits");
   const [tabs, setTabs] = useState<Record<string, string>>({});
   const compareLabelId = useId();
 
-  const query: AnalyticsQuery = { range, compare, filters };
+  const query: AnalyticsQuery = { range, compare, filters, audience };
   // Decided client-side with the same function the server uses, so a second
   // filter is disabled BEFORE asking rather than refused after.
   const source = reportSourceFor(query, new Date());
@@ -87,6 +92,12 @@ export function AnalyticsDashboard({
           options={RANGE_OPTIONS}
           value={range}
           onChange={setRange}
+        />
+        <SegmentedControl
+          label="Whose visits"
+          options={AUDIENCE_OPTIONS}
+          value={audience}
+          onChange={setAudience}
         />
         <Inline gap="xs">
           <Switch
@@ -146,6 +157,7 @@ export function AnalyticsDashboard({
           result={answer.data}
           filters={filters}
           onKeepFirstFilter={() => setFilters((f) => f.slice(0, 1))}
+          onVisitorsOnly={() => setAudience("visitors")}
         />
       )}
 

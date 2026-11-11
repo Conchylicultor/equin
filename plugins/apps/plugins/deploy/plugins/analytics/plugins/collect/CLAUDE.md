@@ -87,6 +87,29 @@ The dashboard's Events panel expands an event into these rows.
   days plus raw rows for the rest (today, a missed night), at most one filter. A
   second filter gets `{ kind: "refused" }`, never an approximation.
 
+## The owner's own visits
+
+The site's owner marks each browser they read it in by opening
+`https://<site>/#equin-me` once (`#equin-not-me` unmarks; `core/internal/audience.ts`).
+The tracker (`web/internal/owner-mark.ts`) keeps the mark in a page-wide
+web-storage store and sends `owner: true` on every pageview and event from a
+marked browser; the visit's `owner` column is set when it opens or on its first
+marked hit, never unset. The deploy app's Overview carries the link and its QR
+code ("Your devices"), so a phone is one scan.
+
+Every question names an **audience** — `visitors` (default: everyone but the
+owner), `you`, or `all` — applied as `audienceCondition` on the visits every
+aggregate reads (`aggregate-sql.ts`), so the report and the sessions list cut
+the same way. The encoders leave the default off the wire, so a site released
+before audiences still answers the default question.
+
+The **daily totals hold visitors only**: `rollupDay` sums `NOT owner` visits
+into `analytics_daily`, but writes every visit's memberships with its `owner`
+flag. So "rolled up" is read from the memberships (`isRolledUp`) — a day whose
+only visits were the owner's has no totals and is still summed, and retention
+can sweep it. A `totals` report answers `visitors` only; any other audience is
+refused `audience-beyond-raw-window` (`audienceAvailable`, called on both sides).
+
 ## Sessions
 
 `analyticsSessionsEndpoint` (host-only, `server/internal/sessions.ts`) lists
@@ -221,6 +244,8 @@ Without it the box knows only the sections someone reached.
   - Uses:
     - `infra/endpoints.fetchEndpointOver`
     - `primitives/dom/in-view.createInViewWatcher`
+    - `primitives/dom/web-storage.defineStore`
+    - `primitives/dom/web-storage.Store`
     - `primitives/networking/page-transport.pageTransport`
     - `primitives/pane.currentRoutePath`
     - `primitives/pane.usePathname`
@@ -245,6 +270,7 @@ Without it the box knows only the sections someone reached.
     - `AnalyticsQueryResult`
     - `AnalyticsRange`
     - `AnalyticsReport`
+    - `Audience`
     - `BrowserFamily`
     - `Channel`
     - `CollectBody`
@@ -295,6 +321,11 @@ Without it the box knows only the sections someone reached.
     - `AnalyticsReportSchema`
     - `analyticsSessionsEndpoint`
     - `appendGap`
+    - `AUDIENCE_LABEL`
+    - `AUDIENCE_OPTIONS`
+    - `audienceAvailable`
+    - `AUDIENCES`
+    - `AudienceSchema`
     - `averageTimeOnPageMs`
     - `averageVisitDurationMs`
     - `BASE64URL_PATTERN`
@@ -312,6 +343,7 @@ Without it the box knows only the sections someone reached.
     - `DailyDimensionSchema`
     - `DAY_PATTERN`
     - `DaySchema`
+    - `DEFAULT_AUDIENCE`
     - `DEVICE_FAMILIES`
     - `DeviceFamilySchema`
     - `DIMENSIONS`
@@ -355,6 +387,10 @@ Without it the box knows only the sections someone reached.
     - `normalizeHost`
     - `OS_FAMILIES`
     - `OsFamilySchema`
+    - `OWNER_MARK_FRAGMENT`
+    - `OWNER_UNMARK_FRAGMENT`
+    - `ownerMarkUrl`
+    - `ownerUnmarkUrl`
     - `PagePathSchema`
     - `PageSectionsSchema`
     - `PageviewBodySchema`

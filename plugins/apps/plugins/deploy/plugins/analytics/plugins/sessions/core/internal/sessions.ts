@@ -3,6 +3,7 @@ import { liveValue } from "@plugins/network/plugins/live/core";
 import { HOST_QUERY_FAILURE_ARMS } from "@plugins/apps/plugins/deploy/plugins/host-query/core";
 import {
   AnalyticsRangeSchema,
+  AudienceSchema,
   MAX_SESSIONS_LIMIT,
   RAW_RETENTION_DAYS,
   SESSIONS_PAGE,
@@ -23,6 +24,8 @@ export const DeploymentSessionsQuestionSchema = z
     deploymentId: z.string().min(1).max(DEPLOYMENT_ID_MAX_LENGTH),
     range: AnalyticsRangeSchema,
     shape: SessionShapeSchema,
+    /** Whose visits: everyone but the site's owner, the owner's own, or both. */
+    audience: AudienceSchema,
   })
   .strict();
 export type DeploymentSessionsQuestion = z.infer<

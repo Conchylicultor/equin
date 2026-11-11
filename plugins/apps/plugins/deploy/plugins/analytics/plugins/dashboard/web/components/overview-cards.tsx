@@ -39,6 +39,7 @@ const OVERVIEW_QUERY: AnalyticsQuery = {
   range: "30d",
   compare: true,
   filters: [],
+  audience: "visitors",
 };
 
 const NO_FILTERS: AnalyticsQuery["filters"] = [];
@@ -137,6 +138,7 @@ function LoadedReport({
             result={answer.data}
             filters={NO_FILTERS}
             onKeepFirstFilter={ignore}
+            onVisitorsOnly={ignore}
           />
         )}
       </SiteCardBody>

@@ -79,6 +79,13 @@ export const analyticsVisits = pgTable(
      * changes; a first visit is `false`.
      */
     returning: boolean("returning").notNull().default(false),
+    /**
+     * A hit of the visit came from a device the site's owner marked as theirs
+     * (the tracker's `owner` flag). Set when it opens or on the first such hit,
+     * never unset. The daily totals leave these visits out (`rollupDay`), so
+     * the owner reading their own site never counts as a visitor.
+     */
+    owner: boolean("owner").notNull().default(false),
     /** UTC day the visit started on — the day every report attributes it to. */
     day: date("day", { mode: "string" }).notNull(),
     startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
@@ -170,6 +177,8 @@ export const analyticsVisitMembers = pgTable(
     visitId: uuid("visit_id").notNull(),
     day: date("day", { mode: "string" }).notNull(),
     visitorId: text("visitor_id").notNull(),
+    /** The visit is the site owner's (`analyticsVisits.owner`): left out of the visitors' counts. */
+    owner: boolean("owner").notNull().default(false),
     dim: parsedText("dim", DailyDimensionSchema).notNull(),
     value: text("value").notNull(),
   },
@@ -190,7 +199,7 @@ export const analyticsVisitMembers = pgTable(
  * - `dimension = "total"`, `value = ""`: the level's summary line.
  *
  * Every column is additive (see `AdditiveMetrics` in core), so any range is a
- * SUM. Unique visitors are not additive and are counted from
+ * SUM. Visitors only: the owner's own visits are never summed here. Unique visitors are not additive and are counted from
  * {@link analyticsVisitMembers} instead.
  */
 export const analyticsDaily = pgTable(

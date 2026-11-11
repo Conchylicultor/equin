@@ -10,6 +10,11 @@ import {
   type CollectBody,
 } from "../../core";
 import { landingSource } from "./landing";
+import {
+  applyOwnerFragment,
+  isOwnerMarked,
+  ownerMarkStore,
+} from "./owner-mark";
 import { createPageSectionRegistry } from "./page-sections";
 import { createTracker, type LoadMilestones, type Tracker } from "./tracker";
 
@@ -97,6 +102,11 @@ function loadMilestones(): LoadMilestones {
   };
 }
 
+/** Applies a mark link's fragment to this browser (`owner-mark.ts`). */
+function readOwnerFragment(): void {
+  applyOwnerFragment(window.location.hash, ownerMarkStore);
+}
+
 /**
  * The page load's one tracker, created on first use. Module scope is the dedup
  * boundary: a remounted `<AnalyticsTracker />` (or two of them) reads the same
@@ -105,6 +115,10 @@ function loadMilestones(): LoadMilestones {
  */
 export function getTracker(): Tracker {
   if (instance) return instance;
+  // A mark link (`#equin-me`) is read before the first pageview, so that
+  // pageview is already the owner's.
+  readOwnerFragment();
+  window.addEventListener("hashchange", readOwnerFragment);
   const host = window.location.host;
   const tracker = createTracker({
     host,
@@ -113,6 +127,7 @@ export function getTracker(): Tracker {
       search: window.location.search,
       siteHost: host,
     }),
+    isOwner: () => isOwnerMarked(ownerMarkStore),
     send,
     now: () => performance.now(),
     isVisible: () => document.visibilityState === "visible",

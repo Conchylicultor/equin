@@ -20,7 +20,9 @@ const PV_B = "00000000-0000-4000-8000-00000000000b";
 const NO_LOAD = { ttfbMs: null, fcpMs: null, readyMs: null };
 
 /** A tracker over a fake clock and a recording send whose responses the test releases. */
-function harness(opts: { landing?: TrackerDeps["landing"] } = {}) {
+function harness(
+  opts: { landing?: TrackerDeps["landing"]; owner?: () => boolean } = {},
+) {
   let clock = 0;
   let visible = true;
   let mediaPlaying = false;
@@ -38,6 +40,7 @@ function harness(opts: { landing?: TrackerDeps["landing"] } = {}) {
   const tracker = createTracker({
     host: "equin.dev",
     landing: opts.landing ?? {},
+    isOwner: opts.owner ?? (() => false),
     send: (body) => {
       sent.push(body);
       return new Promise((resolve) => pending.push(resolve));
@@ -95,6 +98,33 @@ function harness(opts: { landing?: TrackerDeps["landing"] } = {}) {
     },
   };
 }
+
+describe("owner mark", () => {
+  it("a marked browser's pageviews and events carry owner, from the moment it is marked", () => {
+    let owner = false;
+    const h = harness({ owner: () => owner });
+    h.tracker.pathChanged("/website");
+    owner = true;
+    h.tracker.track("film_play", undefined, "/website");
+    h.tracker.pathChanged("/website/story");
+    expect(h.sent.filter((b) => b.kind !== "engagement")).toEqual([
+      { kind: "pageview", host: "equin.dev", path: "/website" },
+      {
+        kind: "event",
+        host: "equin.dev",
+        path: "/website",
+        name: "film_play",
+        owner: true,
+      },
+      {
+        kind: "pageview",
+        host: "equin.dev",
+        path: "/website/story",
+        owner: true,
+      },
+    ]);
+  });
+});
 
 describe("pageviews", () => {
   it("records one pageview per distinct path, query stripped", () => {

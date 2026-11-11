@@ -5,6 +5,7 @@ import {
 } from "@plugins/apps/plugins/deploy/plugins/deployments/web";
 import { TopCards, TrafficCard } from "./components/overview-cards";
 import { AnalyticsSection } from "./components/analytics-section";
+import { OwnerDevicesCard } from "./components/owner-devices-card";
 import { useAnalyticsAvailable } from "./internal/use-analytics-available";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
@@ -28,5 +29,11 @@ export default {
       component: TrafficCard,
     }),
     SiteOverview.Card({ id: "top", column: "main", component: TopCards }),
+    // How the owner marks their own browsers, so their reading never counts.
+    SiteOverview.Card({
+      id: "owner-devices",
+      column: "side",
+      component: OwnerDevicesCard,
+    }),
   ],
 } satisfies PluginDefinition;

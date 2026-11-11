@@ -1,7 +1,9 @@
 import { useMemo, useState, type ReactNode } from "react";
 import {
+  AUDIENCE_OPTIONS,
   SESSION_SHAPES,
   type AnalyticsRange,
+  type Audience,
   type Session,
   type SessionShape,
 } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
@@ -120,7 +122,14 @@ export function SessionsSection({
 function SessionsTab({ deploymentId }: { deploymentId: string }): ReactNode {
   const [range, setRange] = useState<Exclude<AnalyticsRange, "12m">>("7d");
   const [shape, setShape] = useState<SessionShape>("all");
-  const question: DeploymentSessionsQuestion = { deploymentId, range, shape };
+  // The report's own default: the site owner's visits are left out.
+  const [audience, setAudience] = useState<Audience>("visitors");
+  const question: DeploymentSessionsQuestion = {
+    deploymentId,
+    range,
+    shape,
+    audience,
+  };
   // Each read is an SSH session to the box, so nothing re-asks on its own:
   // the pages are measured as the list needs them, Refresh re-measures both.
   const meta = useLive(deploymentSessions.meta, question);
@@ -141,6 +150,12 @@ function SessionsTab({ deploymentId }: { deploymentId: string }): ReactNode {
             options={RANGES}
             value={range}
             onChange={setRange}
+          />
+          <SegmentedControl
+            label="Whose visits"
+            options={AUDIENCE_OPTIONS}
+            value={audience}
+            onChange={setAudience}
           />
           <Fill />
           {meta.status === "ready" && meta.data.kind === "sessions" && (

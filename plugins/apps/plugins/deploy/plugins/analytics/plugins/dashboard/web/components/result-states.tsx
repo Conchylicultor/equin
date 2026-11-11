@@ -27,14 +27,28 @@ export function ResultState({
   result,
   filters,
   onKeepFirstFilter,
+  onVisitorsOnly,
 }: {
   result: NonReport;
   filters: readonly AnalyticsFilter[];
   onKeepFirstFilter: () => void;
+  /** Back to the default audience — the one the stored totals hold. */
+  onVisitorsOnly: () => void;
 }): ReactNode {
   if (result.kind !== "refused") {
     return (
       <HostQueryFailureState failure={result} subject={ANALYTICS_SUBJECT} />
+    );
+  }
+  if (result.reason === "audience-beyond-raw-window") {
+    return (
+      <HostQueryErrorState
+        title={`Past the last ${result.rawWindowDays} days only visitors are kept — your own visits are left out of the stored totals.`}
+      >
+        <Button variant="outline" onClick={onVisitorsOnly}>
+          Show visitors
+        </Button>
+      </HostQueryErrorState>
     );
   }
   const first = filters[0];

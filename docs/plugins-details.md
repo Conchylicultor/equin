@@ -1987,6 +1987,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses:
                   - `infra/endpoints.fetchEndpointOver`
                   - `primitives/dom/in-view.createInViewWatcher`
+                  - `primitives/dom/web-storage.defineStore`
+                  - `primitives/dom/web-storage.Store`
                   - `primitives/networking/page-transport.pageTransport`
                   - `primitives/pane.currentRoutePath`
                   - `primitives/pane.usePathname`
@@ -2011,6 +2013,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `AnalyticsQueryResult`
                   - `AnalyticsRange`
                   - `AnalyticsReport`
+                  - `Audience`
                   - `BrowserFamily`
                   - `Channel`
                   - `CollectBody`
@@ -2061,6 +2064,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `AnalyticsReportSchema`
                   - `analyticsSessionsEndpoint`
                   - `appendGap`
+                  - `AUDIENCE_LABEL`
+                  - `AUDIENCE_OPTIONS`
+                  - `audienceAvailable`
+                  - `AUDIENCES`
+                  - `AudienceSchema`
                   - `averageTimeOnPageMs`
                   - `averageVisitDurationMs`
                   - `BASE64URL_PATTERN`
@@ -2078,6 +2086,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `DailyDimensionSchema`
                   - `DAY_PATTERN`
                   - `DaySchema`
+                  - `DEFAULT_AUDIENCE`
                   - `DEVICE_FAMILIES`
                   - `DeviceFamilySchema`
                   - `DIMENSIONS`
@@ -2121,6 +2130,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `normalizeHost`
                   - `OS_FAMILIES`
                   - `OsFamilySchema`
+                  - `OWNER_MARK_FRAGMENT`
+                  - `OWNER_UNMARK_FRAGMENT`
+                  - `ownerMarkUrl`
+                  - `ownerUnmarkUrl`
                   - `PagePathSchema`
                   - `PageSectionsSchema`
                   - `PageviewBodySchema`
@@ -2187,7 +2200,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `SiteTabs.View` "Analytics" → `AnalyticsSection`
                   - `SiteOverview.Card` "traffic" → `TrafficCard`
                   - `SiteOverview.Card` "top" → `TopCards`
-                - Uses: 40 symbols — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md)
+                  - `SiteOverview.Card` "owner-devices" → `OwnerDevicesCard`
+                - Uses: 42 symbols — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md)
                   - `apps/deploy/deployments` ×6
                   - `apps/deploy/host-query` ×6
                   - `primitives/css/coords` ×2
@@ -2199,6 +2213,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/collapsible.FoldMotion`
                   - `primitives/css/badge.Badge`
                   - `primitives/css/card.Card`
+                  - `primitives/css/center.Center`
                   - `primitives/css/cluster.Cluster`
                   - `primitives/css/fill.Fill`
                   - `primitives/css/grid.Grid`
@@ -2211,6 +2226,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/switch.Switch`
                   - `primitives/css/toggle-chip.SegmentedControl`
                   - `primitives/icon-button.IconButton`
+                  - `primitives/link-gesture/new-tab.NewTabLink`
                   - `primitives/loading.Loading`
                   - `primitives/relative-time.RelativeTime`
                   - `ui/icons.Icon`
@@ -2335,6 +2351,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Core:
                 - Uses:
                   - `apps/deploy/analytics/collect.AnalyticsRangeSchema`
+                  - `apps/deploy/analytics/collect.AudienceSchema`
                   - `apps/deploy/analytics/collect.MAX_SESSIONS_LIMIT`
                   - `apps/deploy/analytics/collect.RAW_RETENTION_DAYS`
                   - `apps/deploy/analytics/collect.SessionCountsSchema`
@@ -45204,8 +45221,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CenterProps`
             - Exports (values): `Center`
           - Cross-plugin:
-            - Imported by: 134 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
-              - `apps` ×44
+            - Imported by: 135 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
+              - `apps` ×45
               - `primitives` ×25
               - `page` ×18
               - `conversations` ×9
@@ -48529,9 +48546,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useStore`
               - `WebStorageSlots`
           - Cross-plugin:
-            - Imported by: 49 plugins — full list in [`plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md)
+            - Imported by: 50 plugins — full list in [`plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md)
               - `primitives` ×15
-              - `apps` ×12
+              - `apps` ×13
               - `conversations` ×6
               - `apps-core` ×2
               - `framework` ×2
@@ -49496,8 +49513,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `NewTabLink`
               - `NewTabMenuItem`
           - Cross-plugin:
-            - Imported by: 21 plugins — full list in [`plugins/primitives/plugins/link-gesture/plugins/new-tab/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/plugins/new-tab/REFERENCE.md)
-              - `apps` ×11
+            - Imported by: 22 plugins — full list in [`plugins/primitives/plugins/link-gesture/plugins/new-tab/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/plugins/new-tab/REFERENCE.md)
+              - `apps` ×12
               - `conversations` ×3
               - `page` ×2
               - `primitives` ×2

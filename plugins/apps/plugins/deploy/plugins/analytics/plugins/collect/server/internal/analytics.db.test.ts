@@ -474,6 +474,7 @@ describe("rollup", () => {
       const raw = await rawDailyRows(t.db, {
         from: DAY,
         to: DAY,
+        audience: "visitors",
         filters,
         onlyNotRolledUp: false,
       });
@@ -485,6 +486,7 @@ describe("rollup", () => {
         visitorCounts(t.db, {
           from: DAY,
           to: DAY,
+          audience: "visitors",
           filters,
           source,
           groupBy: { kind: "dimension" },
@@ -506,6 +508,7 @@ describe("report", () => {
       {
         range: "7d",
         compare: true,
+        audience: "visitors",
         filters: [{ dimension: "channel", value: "Search" }],
       },
       now,
@@ -535,7 +538,7 @@ describe("report", () => {
     const value = eventPropValue("improve_open", "from", "nav");
     const all = await runAnalyticsQuery(
       t.db,
-      { range: "30d", compare: false, filters: [] },
+      { range: "30d", compare: false, audience: "visitors", filters: [] },
       now,
     );
     if (all.kind !== "report") throw new Error("expected a report");
@@ -547,6 +550,7 @@ describe("report", () => {
       {
         range: "30d",
         compare: false,
+        audience: "visitors",
         filters: [{ dimension: "event_prop", value }],
       },
       now,
@@ -564,6 +568,7 @@ describe("report", () => {
       {
         range: "30d",
         compare: false,
+        audience: "visitors",
         filters: [
           { dimension: "event", value: "improve_open" },
           { dimension: "browser", value: "Chrome" },
@@ -583,12 +588,12 @@ describe("report", () => {
     const filter = { dimension: "page", value: "/" } as const;
     const raw = await runAnalyticsQuery(
       t.db,
-      { range: "30d", compare: false, filters: [filter] },
+      { range: "30d", compare: false, audience: "visitors", filters: [filter] },
       now,
     );
     const totals = await runAnalyticsQuery(
       t.db,
-      { range: "12m", compare: false, filters: [filter] },
+      { range: "12m", compare: false, audience: "visitors", filters: [filter] },
       now,
     );
     if (raw.kind !== "report" || totals.kind !== "report")
@@ -603,6 +608,7 @@ describe("report", () => {
       {
         range: "12m",
         compare: false,
+        audience: "visitors",
         filters: [filter, { dimension: "os", value: "macOS" }],
       },
       now,
@@ -619,7 +625,7 @@ describe("report", () => {
     await hit({ kind: "pageview", host, path: "/" }, C, at(NEXT, "08:00"));
     const result = await runAnalyticsQuery(
       t.db,
-      { range: "12m", compare: false, filters: [] },
+      { range: "12m", compare: false, audience: "visitors", filters: [] },
       now,
     );
     if (result.kind !== "report") throw new Error("expected a report");
@@ -629,7 +635,7 @@ describe("report", () => {
   test("today is hourly, and the hours add up to the day's visits", async () => {
     const result = await runAnalyticsQuery(
       t.db,
-      { range: "today", compare: false, filters: [] },
+      { range: "today", compare: false, audience: "visitors", filters: [] },
       at(DAY, "23:00"),
     );
     if (result.kind !== "report") throw new Error("expected a report");
@@ -651,7 +657,14 @@ describe("sessions", () => {
   const ask = async (q: Partial<SessionsQuery>) => {
     const result = await runSessionsQuery(
       t.db,
-      { range: "today", filters: [], shape: "all", limit: 50, ...q },
+      {
+        range: "today",
+        filters: [],
+        shape: "all",
+        audience: "visitors",
+        limit: 50,
+        ...q,
+      },
       now,
     );
     if (result.kind !== "sessions") throw new Error("expected sessions");
@@ -899,7 +912,13 @@ describe("sessions", () => {
     expect(
       await runSessionsQuery(
         t.db,
-        { range: "12m", filters: [], shape: "all", limit: 50 },
+        {
+          range: "12m",
+          filters: [],
+          shape: "all",
+          audience: "visitors",
+          limit: 50,
+        },
         now,
       ),
     ).toEqual({
@@ -914,6 +933,7 @@ describe("sessions", () => {
       range: "30d",
       filters: [{ dimension: "page", value: "/é" }],
       shape: "actions",
+      audience: "you",
       after: {
         startedAt: "2026-09-10T10:00:00.000Z",
         id: "00000000-0000-4000-8000-000000000000",
@@ -923,6 +943,11 @@ describe("sessions", () => {
     expect(
       SessionsQueryParamSchema.parse({ q: encodeSessionsQuery(q) }).q,
     ).toEqual(q);
+    // The default audience is left off the wire and filled back in.
+    const visitors = { ...q, audience: "visitors" as const };
+    expect(
+      SessionsQueryParamSchema.parse({ q: encodeSessionsQuery(visitors) }).q,
+    ).toEqual(visitors);
     expect(
       SessionsQueryParamSchema.safeParse({
         q: encodeSessionsQuery({ ...q, limit: 10_000 }),
@@ -938,7 +963,13 @@ describe("visit duration: one definition, report and sessions alike", () => {
   ) => {
     const result = await runSessionsQuery(
       dbx,
-      { range: "today", filters: [], shape: "all", limit: 50 },
+      {
+        range: "today",
+        filters: [],
+        shape: "all",
+        audience: "visitors",
+        limit: 50,
+      },
       at(day, "23:00"),
     );
     if (result.kind !== "sessions") throw new Error("expected sessions");
@@ -973,6 +1004,7 @@ describe("visit duration: one definition, report and sessions alike", () => {
     const raw = await rawDailyRows(t.db, {
       from: DAY,
       to: DAY,
+      audience: "visitors",
       filters: [],
       onlyNotRolledUp: false,
     });
@@ -1037,6 +1069,7 @@ describe("visit duration: one definition, report and sessions alike", () => {
         const raw = await rawDailyRows(tx, {
           from: day,
           to: day,
+          audience: "visitors",
           filters: [],
           onlyNotRolledUp: false,
         });
@@ -1057,6 +1090,130 @@ describe("visit duration: one definition, report and sessions alike", () => {
         tx.rollback();
       }),
     ).rejects.toThrow(TransactionRollbackError);
+  });
+});
+
+describe("the owner's own visits", () => {
+  // Days nothing else touches, each scenario rolled back after.
+  const day = "2026-09-22";
+  const ownerOnlyDay = "2026-09-23";
+  const OWNER = { ip: "203.0.113.5", ua: UA.chromeMac };
+  const VISITOR = { ip: "203.0.113.6", ua: UA.safariIphone };
+  const send = (
+    dbx: Parameters<typeof recordCollect>[0],
+    who: { ip: string; ua: string },
+    body: z.input<typeof CollectBodySchema>,
+    now: Date,
+  ) =>
+    recordCollect(
+      dbx,
+      CollectBodySchema.parse(body),
+      { ip: who.ip, userAgent: who.ua, acceptLanguage: "en-US", now },
+      (ip) => countries.lookup(ip),
+    );
+  const visits = (rows: KeyedRow[]) =>
+    rows.find((r) => r.dimension === "total")?.visits ?? 0;
+
+  test("a device marked mid-visit makes the visit the owner's; only visitors are counted by default", async () => {
+    expect(
+      t.db.transaction(async (tx) => {
+        // The owner opens the site, then marks the device on the next hit.
+        await send(
+          tx,
+          OWNER,
+          { kind: "pageview", host, path: "/" },
+          at(day, "09:00"),
+        );
+        await send(
+          tx,
+          OWNER,
+          { kind: "event", host, path: "/", name: "film_play", owner: true },
+          at(day, "09:01"),
+        );
+        await send(
+          tx,
+          VISITOR,
+          { kind: "pageview", host, path: "/" },
+          at(day, "09:05"),
+        );
+        const raw = (audience: "visitors" | "you" | "all") =>
+          rawDailyRows(tx, {
+            from: day,
+            to: day,
+            audience,
+            filters: [],
+            onlyNotRolledUp: false,
+          });
+        expect(visits(await raw("visitors"))).toBe(1);
+        expect(visits(await raw("you"))).toBe(1);
+        expect(visits(await raw("all"))).toBe(2);
+
+        const sessions = await runSessionsQuery(
+          tx,
+          {
+            range: "today",
+            filters: [],
+            shape: "all",
+            audience: "all",
+            limit: 50,
+          },
+          at(day, "23:00"),
+        );
+        if (sessions.kind !== "sessions") throw new Error("expected sessions");
+        expect(sessions.sessions.map((s) => s.owner).sort()).toEqual([
+          false,
+          true,
+        ]);
+
+        // The stored totals hold the visitor only; the memberships keep both.
+        await rollupDay(tx, day);
+        const stored = await dailyTotalsRows(tx, {
+          from: day,
+          to: day,
+          level: { kind: "unfiltered" },
+          dimensions: "total",
+        });
+        expect(visits(stored)).toBe(1);
+        const storedVisitors = await visitorCounts(tx, {
+          from: day,
+          to: day,
+          audience: "visitors",
+          filters: [],
+          source: "totals",
+          groupBy: { kind: "total" },
+        });
+        expect(storedVisitors[0]?.visitors).toBe(1);
+        tx.rollback();
+      }),
+    ).rejects.toThrow(TransactionRollbackError);
+  });
+
+  test("a day of owner visits only is still rolled up, so retention may sweep it", async () => {
+    expect(
+      t.db.transaction(async (tx) => {
+        await send(
+          tx,
+          OWNER,
+          { kind: "pageview", host, path: "/", owner: true },
+          at(ownerOnlyDay, "09:00"),
+        );
+        await rollupDay(tx, ownerOnlyDay);
+        await assertDaysRolledUp(tx, [ownerOnlyDay]);
+        tx.rollback();
+      }),
+    ).rejects.toThrow(TransactionRollbackError);
+  });
+
+  test("past the raw window, only the visitors can be answered", async () => {
+    const result = await runAnalyticsQuery(
+      t.db,
+      { range: "12m", compare: false, audience: "you", filters: [] },
+      at(day, "12:00"),
+    );
+    expect(result).toMatchObject({
+      kind: "refused",
+      reason: "audience-beyond-raw-window",
+    });
   });
 });
 
@@ -1137,7 +1294,12 @@ describe("sliding identity", () => {
     await night(addDays(START, 40));
     const filters = [{ dimension: "page", value: "/daily" }] as const;
     const month = await report(
-      { range: "30d", compare: false, filters: [...filters] },
+      {
+        range: "30d",
+        compare: false,
+        audience: "visitors",
+        filters: [...filters],
+      },
       now,
     );
     expect(month.source).toBe("raw");
@@ -1146,7 +1308,12 @@ describe("sliding identity", () => {
     expect(month.rows.page.find((r) => r.value === "/daily")?.visitors).toBe(1);
 
     const year = await report(
-      { range: "12m", compare: false, filters: [...filters] },
+      {
+        range: "12m",
+        compare: false,
+        audience: "visitors",
+        filters: [...filters],
+      },
       now,
     );
     expect(year.source).toBe("totals");
@@ -1265,6 +1432,7 @@ describe("sliding identity", () => {
       {
         range: "12m",
         compare: false,
+        audience: "visitors",
         filters: [{ dimension: "channel", value: "Search" }],
       },
       at(addDays(S, 2), "12:00"),

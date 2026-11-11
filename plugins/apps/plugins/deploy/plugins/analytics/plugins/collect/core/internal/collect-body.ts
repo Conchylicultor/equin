@@ -83,6 +83,11 @@ export const PageviewBodySchema = z
     referrer: z.string().max(MAX_REFERRER_LENGTH).optional(),
     /** `utm_*` tags on the landing URL, first pageview only. */
     utm: UtmTagsSchema.optional(),
+    /**
+     * The browser is marked as the site owner's (`audience.ts`): the visit is
+     * theirs. Absent for everyone else — never `false`.
+     */
+    owner: z.literal(true).optional(),
   })
   .strict();
 
@@ -93,6 +98,11 @@ export const EventBodySchema = z
     path: PagePathSchema,
     name: z.string().regex(EVENT_NAME_PATTERN),
     props: EventPropsSchema.optional(),
+    /**
+     * The browser is marked as the site owner's (`audience.ts`): the visit is
+     * theirs. Absent for everyone else — never `false`.
+     */
+    owner: z.literal(true).optional(),
   })
   .strict();
 

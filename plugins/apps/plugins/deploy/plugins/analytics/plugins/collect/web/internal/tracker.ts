@@ -21,6 +21,11 @@ export interface TrackerDeps {
   host: string;
   /** The landing URL's source, sent with the first pageview only. */
   landing: LandingSource;
+  /**
+   * Whether this browser is marked as the site owner's (`owner-mark.ts`), read
+   * on every pageview and event so a mark made mid-visit counts from then on.
+   */
+  isOwner: () => boolean;
   /** Posts one body. A rejection is left to surface; see `send` in instance.ts. */
   send: (body: CollectBody) => Promise<CollectResponse>;
   now: () => number;
@@ -133,6 +138,10 @@ export function createTracker(deps: TrackerDeps): Tracker {
   let cancelDeadline: (() => void) | null = null;
 
   const offset = (page: CurrentPage, at: number) => at - page.startedAt;
+
+  /** `owner: true` on a marked browser's pageviews and events; nothing otherwise. */
+  const ownerFlag = (): { owner?: true } =>
+    deps.isOwner() ? { owner: true } : {};
 
   /** Ends the running away stretch at `at`, keeping it if long enough. */
   const endAway = (page: CurrentPage, at: number) => {
@@ -280,7 +289,13 @@ export function createTracker(deps: TrackerDeps): Tracker {
       const source = landingSent ? {} : deps.landing;
       landingSent = true;
       void deps
-        .send({ kind: "pageview", host: deps.host, path, ...source })
+        .send({
+          kind: "pageview",
+          host: deps.host,
+          path,
+          ...source,
+          ...ownerFlag(),
+        })
         .then((response) => {
           // `ignored` (a bot) has no id: nothing to attach engagement to.
           if (response.outcome !== "pageview") return;
@@ -322,6 +337,7 @@ export function createTracker(deps: TrackerDeps): Tracker {
         path: current?.path ?? stripQuery(fallbackPath),
         name,
         ...(props !== undefined ? { props } : {}),
+        ...ownerFlag(),
       });
     },
     currentPath: () => current?.path ?? null,

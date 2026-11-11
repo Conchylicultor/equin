@@ -12,7 +12,7 @@ opened, the visit's timeline. Timeline only: no session replay. Design:
 
 `deploy-analytics.sessions` (`core/internal/sessions.ts`) is a **key-range
 paged** live value with `load: "snapshot"` (network/live, *Snapshot pages*):
-question `{ deploymentId, range, shape }`, items collect's `Session`, key
+question `{ deploymentId, range, shape, audience }`, items collect's `Session`, key
 `[startedAt, id]` both **desc** — collect orders `(started_at desc, id desc)`,
 and the primitive's own tie-break (id ascending) would disagree with the box on
 two visits started in the same millisecond. Page `limit` 50, `maxLimit` 100
@@ -37,6 +37,9 @@ never reported as a loader failure.
 
 - **Gate**: `useShipsGate(deploymentId, COLLECT_PLUGIN_ID)` — host-query's one
   rule over collect's own id, the same as the Analytics tab's.
+- **Audience** (Visitors / You / All — collect's audiences, Visitors by
+  default): part of the server question; an owner's visit carries a "You"
+  badge in its row.
 - **Range** (Today / 7d / 30d — collect's ranges inside the 90-day raw window)
   and **shape** (All / With actions / 2+ pages / Bounced, each with its count
   from the meta) are the server question; the search filters the loaded rows.
@@ -131,6 +134,7 @@ Background / idle stretches and load time are recorded but not drawn yet
 - Core:
   - Uses:
     - `apps/deploy/analytics/collect.AnalyticsRangeSchema`
+    - `apps/deploy/analytics/collect.AudienceSchema`
     - `apps/deploy/analytics/collect.MAX_SESSIONS_LIMIT`
     - `apps/deploy/analytics/collect.RAW_RETENTION_DAYS`
     - `apps/deploy/analytics/collect.SessionCountsSchema`

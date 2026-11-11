@@ -246,6 +246,7 @@ async function openVisit(
     path: string;
     referrer: string | undefined;
     utm: PageviewBody["utm"];
+    owner: boolean;
     ctx: CollectContext;
     lookupCountry: CountryLookup;
   },
@@ -257,6 +258,7 @@ async function openVisit(
     .values({
       visitorId: opts.visitor.visitorId,
       returning: opts.visitor.known,
+      owner: opts.owner,
       day: utcDay(ctx.now),
       startedAt: ctx.now,
       lastAt: ctx.now,
@@ -300,6 +302,7 @@ async function recordPageview(
         path: body.path,
         referrer: body.referrer,
         utm: body.utm,
+        owner: body.owner === true,
         ctx,
         lookupCountry,
       }));
@@ -317,6 +320,8 @@ async function recordPageview(
         exitPageviewId: hit.id,
         exitEngagedMs: 0,
         lastAt: ctx.now,
+        // A device marked mid-visit makes the whole visit the owner's.
+        ...(body.owner ? { owner: true } : {}),
       })
       .where(eq(analyticsVisits.id, visitId));
     return { outcome: "pageview", pageviewId: hit.id };
@@ -345,6 +350,7 @@ async function recordEvent(
         path: body.path,
         referrer: undefined,
         utm: undefined,
+        owner: body.owner === true,
         ctx,
         lookupCountry,
       }));
@@ -358,7 +364,11 @@ async function recordEvent(
     });
     await tx
       .update(analyticsVisits)
-      .set({ events: sql`${analyticsVisits.events} + 1`, lastAt: ctx.now })
+      .set({
+        events: sql`${analyticsVisits.events} + 1`,
+        lastAt: ctx.now,
+        ...(body.owner ? { owner: true } : {}),
+      })
       .where(eq(analyticsVisits.id, visitId));
     return { outcome: "event" };
   });

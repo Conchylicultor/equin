@@ -385,6 +385,7 @@ export function fixtureSessions(now: number): Session[] {
       id: uuid(n + 1),
       visitor: (0x1a2b3c4d + n * 7919).toString(16).slice(-8).padStart(8, "0"),
       returning: v.returning,
+      owner: false,
       day: iso(0).slice(0, 10),
       startedAt: iso(0),
       lastAt: iso(at),

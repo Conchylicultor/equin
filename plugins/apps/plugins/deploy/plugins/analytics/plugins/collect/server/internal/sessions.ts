@@ -102,7 +102,7 @@ async function shapeCounts(
     label: "analytics.sessionCounts",
     row: CountsRow,
     query: sql`
-      ${keptVisitsWith(inRange, query.filters)}
+      ${keptVisitsWith(inRange, query.audience, query.filters)}
       SELECT ${shaped("all")} AS "all", ${shaped("actions")} AS "actions",
         ${shaped("multi")} AS "multi", ${shaped("bounced")} AS "bounced"
       FROM kept v`,
@@ -131,6 +131,7 @@ const VisitRow = z.object({
   id: z.string(),
   visitor: z.string(),
   returning: z.boolean(),
+  owner: z.boolean(),
   day: z.string(),
   startedAt: instant,
   lastAt: instant,
@@ -179,11 +180,11 @@ async function pageOfVisits(
     label: "analytics.sessionsPage",
     row: VisitRow,
     query: sql`
-      ${keptVisitsWith(where, query.filters)}
+      ${keptVisitsWith(where, query.audience, query.filters)}
       SELECT k.id::text AS "id",
         -- The visitor id never leaves the box: a short one-way display hash only.
         left(encode(sha256(convert_to(k.visitor_id, 'UTF8')), 'hex'), 8) AS "visitor",
-        k.returning, k.day::text AS "day",
+        k.returning, k.owner, k.day::text AS "day",
         ${iso("k.started_at")} AS "startedAt", ${iso("k.last_at")} AS "lastAt",
         (k.last_at > ${liveVisitCutoff(now).toISOString()}::timestamptz) AS "live",
         k.host, k.entry_path AS "entryPath", k.exit_path AS "exitPath",

@@ -53,6 +53,7 @@ function session(hits: SessionHit[], durationMs: number): Session {
     id: "00000000-0000-4000-8000-000000000001",
     visitor: "0a1b2c3d",
     returning: false,
+    owner: false,
     day: "2026-11-10",
     startedAt: at(0),
     lastAt: hits.at(-1)!.ts,

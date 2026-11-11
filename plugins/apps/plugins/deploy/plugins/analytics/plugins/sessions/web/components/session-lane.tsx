@@ -58,6 +58,11 @@ export function SessionLane({ session }: { session: Session }): ReactNode {
           >
             {timeOfDay(session.startedAt)}
           </Text>
+          {session.owner && (
+            <Badge variant="primary" shape="pill">
+              You
+            </Badge>
+          )}
           {session.live && (
             <Badge variant="success" shape="pill">
               Live

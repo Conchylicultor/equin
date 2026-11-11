@@ -61,6 +61,13 @@ a second filter is refused before asking and the chip bar says why in one line;
 a raw report stacks at most collect's `MAX_FILTERS` (8). A `refused` answer (e.g. the range was widened with two filters on) renders as
 an error with "keep only the first filter".
 
+The **Visitors / You / All** switch picks the question's audience (collect's
+CLAUDE.md § The owner's own visits); Visitors is the default, so the owner's
+own reading never counts. On a range past the raw window only Visitors can be
+answered — the refusal offers "Show visitors". The Overview's **Your devices**
+card (`owner-devices-card.tsx`) carries the mark link and its QR code (`uqr`,
+drawn dark-on-light whatever the theme, for phone cameras).
+
 Panels are ranked top-N readouts of one fetched report, rendered as `Row`s with
 a named `no-adhoc-row-list` disable: the order is the server's ranking and each
 row is a filter toggle. "What one visit records" renders collect's
@@ -97,7 +104,8 @@ Run with `./equin test plugins/apps/plugins/deploy/plugins/analytics/plugins/das
     - `SiteTabs.View` "Analytics" → `AnalyticsSection`
     - `SiteOverview.Card` "traffic" → `TrafficCard`
     - `SiteOverview.Card` "top" → `TopCards`
-  - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `SiteOverview.Card` "owner-devices" → `OwnerDevicesCard`
+  - Uses: 42 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/deploy/deployments` ×6
     - `apps/deploy/host-query` ×6
     - `primitives/css/coords` ×2
@@ -109,6 +117,7 @@ Run with `./equin test plugins/apps/plugins/deploy/plugins/analytics/plugins/das
     - `primitives/collapsible.FoldMotion`
     - `primitives/css/badge.Badge`
     - `primitives/css/card.Card`
+    - `primitives/css/center.Center`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/fill.Fill`
     - `primitives/css/grid.Grid`
@@ -121,6 +130,7 @@ Run with `./equin test plugins/apps/plugins/deploy/plugins/analytics/plugins/das
     - `primitives/css/switch.Switch`
     - `primitives/css/toggle-chip.SegmentedControl`
     - `primitives/icon-button.IconButton`
+    - `primitives/link-gesture/new-tab.NewTabLink`
     - `primitives/loading.Loading`
     - `primitives/relative-time.RelativeTime`
     - `ui/icons.Icon`

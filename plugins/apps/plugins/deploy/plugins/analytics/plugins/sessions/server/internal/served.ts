@@ -41,6 +41,7 @@ export function sessionsQueryOf(
     range: q.range,
     filters: [],
     shape: q.shape,
+    audience: q.audience,
     ...(after ? { after } : {}),
     ...(until ? { until } : {}),
     limit: range.limit,
