@@ -94,7 +94,6 @@ function LiveDemoBand(): ReactNode {
   const [resume] = useState(named);
   // Entered: the frame grows, and stays grown.
   const [grown, setGrown] = useState(resume);
-  const claimTitle = useClaimTabTitle();
   const [columnRef, column] = useElementSize<HTMLDivElement>();
   // A static render has no window; its frame is never grown (no click runs),
   // and only the grown frame reads the window's size.
@@ -116,12 +115,7 @@ function LiveDemoBand(): ReactNode {
     () => morphDemoFrame(() => setMaximized(false)),
     [setMaximized],
   );
-  const embed = (
-    <AppEmbed
-      fills={maximized ? "viewport" : undefined}
-      onTitleChange={claimTitle}
-    />
-  );
+  const embed = <TitledEmbed fills={maximized ? "viewport" : undefined} />;
   // The demo's box (what a Maximize grows): the frame, or maximized the
   // overlay — one of the two at a time.
   const frameMark = { [DEMO_FRAME_ATTR]: "" };
@@ -211,6 +205,17 @@ function LiveDemoBand(): ReactNode {
       </div>
     </WebsiteBand>
   );
+}
+
+/**
+ * The demo's embed, titling this browser tab with the app inside it while it
+ * runs. Its own component, so the title is claimed only where the embed
+ * mounts — inside a tab, in a live page; a static render (the crawlable
+ * snapshot) shows the gate and has no tab to title.
+ */
+function TitledEmbed({ fills }: { fills: "viewport" | undefined }): ReactNode {
+  const claimTitle = useClaimTabTitle();
+  return <AppEmbed fills={fills} onTitleChange={claimTitle} />;
 }
 
 /**

@@ -328,9 +328,9 @@ describe("surface view keys", () => {
   });
 
   test("no route may declare `full` (an embed's maximized flag)", () => {
-    expect(() =>
-      defineRoute({ id: "rv-full", segment: "t/:id;full" }),
-    ).toThrow(/maximized flag/);
+    expect(() => defineRoute({ id: "rv-full", segment: "t/:id;full" })).toThrow(
+      /maximized flag/,
+    );
   });
 
   test("are the `view.<surface>` family, nothing else", () => {

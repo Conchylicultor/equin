@@ -1891,24 +1891,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/demo/shell`
               - `apps/website/landing/screenshot`
-        - **`shell`** — App shell for the Demo sandbox: registers the /demo app entry — equin rendered in-process on made-up data (DemoScope + AppEmbed over the workspace demo's browser host), starting on its home app (the app gallery). Where the visitor is inside the demo is the page's URL (/demo/at/<location>, e.g. /demo/at/agents/c/<id>), so a reload comes back to it; ;full=1 shows it maximized instead of framed under the caption bar (its Maximize button; a hover strip at the top edge reveals Restore, and Esc restores when nothing inside the demo wants it — both run as a view transition, and a 'Press Esc to restore' notice shows a few seconds), and a new browser tab opened from inside the demo opens it there, maximized, on the same data — with no second Enter equin, since the visitor is in the demo already. A maximized URL opened fresh (a reload) shows its gate maximized, so Enter opens the demo in place. Maximized, the demo is the tab: its moves are history entries (Back / Forward step through them, the embed following the URL); framed, they rewrite the current entry, so Back leaves the page. The /demo page's head script (DocumentHead.Fragment): starts the demo's browser host before the app boots, so its worker boots alongside the page's own bundle.
+        - **`shell`** — App shell for the Demo sandbox: registers the /demo app entry — equin rendered in-process on made-up data (DemoScope + AppEmbed over the workspace demo's browser host), starting on its home app (the app gallery). Where the visitor is inside the demo is the page's URL, kept by the embed itself (its embed tail: /demo/at/<location>, e.g. /demo/at/agents/c/<id>), so a reload comes back to it; ;full=1 shows it maximized instead of framed under the caption bar (its Maximize button; a hover strip at the top edge reveals Restore, and Esc restores when nothing inside the demo wants it — both run as a view transition, and a 'Press Esc to restore' notice shows a few seconds), and a new browser tab opened from inside the demo opens it there, maximized, on the same data — with no second Enter equin, since the visitor is in the demo already. A maximized URL opened fresh (a reload) shows its gate maximized, so Enter opens the demo in place. Maximized, the demo is the tab: its moves are history entries (Back / Forward step through them, the embed following the URL); framed, they rewrite the current entry, so Back leaves the page. The /demo page's head script (DocumentHead.Fragment): starts the demo's browser host before the app boots, so its worker boots alongside the page's own bundle.
           - Web:
-            - Slots:
-              - `start.actions`
-              - `at.actions`
-            - Slot contributors:
-              - `start.actions` ← `primitives.pane`
-              - `at.actions` ← `primitives.pane`
+            - Slots: `start.actions`
+            - Slot contributors: `start.actions` ← `primitives.pane`
             - Contributes:
               - `Apps.App` "Demo" → `DemoLayout`
-              - `Pane.Register` "demo-at"
               - `Pane.Register` "demo-start"
-            - Uses: 24 symbols — full list in [`plugins/apps/plugins/demo/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/demo/plugins/shell/REFERENCE.md)
-              - `apps/demo/chrome` ×5
-              - `apps-core` ×3
-              - `primitives/pane` ×3
-              - `primitives/css/ui-kit` ×2
+            - Uses:
+              - `apps-core.Apps`
               - `apps-core/app-embed.AppEmbed`
+              - `apps-core/app-embed.useEmbedPlace`
+              - `apps/demo/chrome.DEMO_FRAME_ATTR`
+              - `apps/demo/chrome.DemoBootScreen`
+              - `apps/demo/chrome.MaximizedChrome`
+              - `apps/demo/chrome.morphDemoFrame`
+              - `apps/demo/chrome.ResetDemoButton`
               - `framework/browser-server/demo/scope.DemoScope`
               - `layouts/full-pane.FullPane`
               - `primitives/bar.Bar`
@@ -1916,8 +1914,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/inline.Inline`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
-              - `primitives/latest-ref.useLatestRef`
+              - `primitives/css/ui-kit.Button`
+              - `primitives/css/ui-kit.cn`
               - `primitives/loading.Loading`
+              - `primitives/pane.Pane`
               - `ui/icons.Icon`
           - Server:
             - Contributes: `DocumentHead.Fragment` "demo-prestart"
@@ -1929,11 +1929,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/pane.defineRoute`
               - `ui/icons.symbol`
             - Exports (values):
-              - `DEMO_FULL`
               - `demoApp`
-              - `demoAtRoute`
+              - `demoRoute`
               - `demoScenario`
-              - `demoStartRoute`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --background`
@@ -11949,24 +11947,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/shape --radius`
                   - `ui/tokens/shape --spacing`
                   - `ui/tokens/type-scale --font-weight-semibold`
-            - **`screenshot`** — Landing demo band: equin itself, live, where the desktop picture was — its real server code in a worker on the workspace demo's data (DemoScope around AppEmbed), entered through Enter equin on every visit (a first visit downloads nothing before it; a browser already holding the data starts the host behind it; a maximized URL shows the gate maximized; a tab opened while the visitor is in the demo in another tab joins it with no gate, its frame grown). Entering grows the frame in place for good, nearly as wide and tall as the window; once it runs, Maximize (a view transition over the tab's surface, above the site; Restore at its top edge, a 'Press Esc to restore' notice, Esc) and Reset demo sit under it. Where the visitor is inside the demo, and whether it is maximized, is the homepage's URL (two surface view keys of the landing pane), following /demo's history rule: framed, moves rewrite the current entry; maximized, they are the tab's history.
+            - **`screenshot`** — Landing demo band: equin itself, live, where the desktop picture was — its real server code in a worker on the workspace demo's data (DemoScope around AppEmbed), entered through Enter equin on every visit (a first visit downloads nothing before it; a browser already holding the data starts the host behind it; a maximized URL shows the gate maximized; a tab opened while the visitor is in the demo in another tab joins it with no gate, its frame grown). Entering grows the frame in place for good, nearly as wide and tall as the window; once it runs, Maximize (a view transition over the tab's surface, above the site; Restore at its top edge, a 'Press Esc to restore' notice, Esc) and Reset demo sit under it. Where the visitor is inside the demo, and whether it is maximized, is the homepage's URL, kept by the embed itself (/about/at/<location>[;full=1]; old ;view.website.demo=… links are rewritten onto it), with the embed's history rule: framed, moves rewrite the current entry; maximized, they are the tab's history.
               - Web:
                 - Contributes: `Website.Section` "Demo" → `LiveDemoSection`
-                - Uses: 26 symbols — full list in [`plugins/apps/plugins/website/plugins/landing/plugins/screenshot/REFERENCE.md`](../plugins/apps/plugins/website/plugins/landing/plugins/screenshot/REFERENCE.md)
+                - Uses: 23 symbols — full list in [`plugins/apps/plugins/website/plugins/landing/plugins/screenshot/REFERENCE.md`](../plugins/apps/plugins/website/plugins/landing/plugins/screenshot/REFERENCE.md)
                   - `apps/demo/chrome` ×5
-                  - `apps/website/shell` ×3
-                  - `primitives/pane` ×3
+                  - `apps-core/app-embed` ×2
+                  - `apps/website/shell` ×2
                   - `framework/browser-server/demo/scope` ×2
                   - `primitives/css/ui-kit` ×2
                   - `primitives/dom/render-mode` ×2
-                  - `apps-core/app-embed.AppEmbed`
                   - `apps-core/tabs.useClaimTabTitle`
                   - `primitives/css/inline.Inline`
                   - `primitives/css/text.Text`
                   - `primitives/dom/element-size.useElementSize`
                   - `primitives/dom/scroll-reveal.revealElement`
-                  - `primitives/latest-ref.useLatestRef`
                   - `primitives/overlay/surface-overlay.SurfaceOverlay`
+                  - `primitives/pane.usePaneViews`
                   - `ui/icons.Icon`
               - Cross-plugin:
                 - Uses tokens:
@@ -12463,7 +12460,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Web: `@plugins/apps-core/web/testing`
       - `getFocusedAppId`
   - Plugins:
-    - **`app-embed`** — <AppEmbed app route | url onLeave? fills? onLocationChange? browserTabUrl? />: the app rendered in-process inside its own box — an embedded tab set (TabsProvider embedded: seeded with app + route or an app-rooted URL — undefined: the composition's home app — non-live stores never touching the page URL, history or storage, none of the page's signals) and the same surface body the app's layout renders, so pane opens, app switches and the Desktop (its windows the embed's own tabs) work as in the app. Its navigation boundary resolves URLs against the apps in scope: an app's URL moves the embed, a surface-mode app's base path switches its mode, anything else is onLeave (default: a toast). Its theme scope is the focused tab's app's (transform-gpu, so fixed chrome stays in the embed); solo fills the embed box, and it opens docked. It tells its host its location (the focused tab's app-rooted URL, mode prefix included) so the host can keep it and reopen there, and a new browser tab opened inside it is addressed by the host (browserTabUrl) when given. fills: page | viewport: it is all the page shows (takes the keyboard at mount); a viewport-filling one hosts the page's floating action bar. Knows nothing about demos or where data comes from.
+    - **`app-embed`** — <AppEmbed app? route? onLeave? fills? onTitleChange? />: the app rendered in-process inside its own box — an embedded tab set (TabsProvider embedded: seeded from the page URL's place, else app + route, else the composition's home app — non-live stores never touching the page URL, history or storage, none of the page's signals) and the same surface body the app's layout renders, so pane opens, app switches and the Desktop (its windows the embed's own tabs) work as in the app. Its navigation boundary resolves URLs against the apps in scope: an app's URL moves the embed, a surface-mode app's base path switches its mode, anything else is onLeave (default: a toast). Its theme scope is the focused tab's app's (transform-gpu, so fixed chrome stays in the embed); solo fills the embed box, and it opens docked. It keeps its own place in the page URL — the enclosing pane's embed tail, <the page URL>/at/<location>[;full=1] — so a host writes no URL code — never a place no one chose (nothing is written until the user moves it); framed, a move rewrites the current history entry; maximized, each move is the entry the app's own tab would write; Back / Forward move it back; a new browser tab opened inside opens this page there, maximized. useEmbedPlace() gives the host's chrome maximized / setMaximized (a pushed entry) / reset. fills: page | viewport: it is all the page shows (takes the keyboard at mount); a viewport-filling one hosts the page's floating action bar. Its box is a reveal boundary (a reveal inside never scrolls the host page), and onTitleChange hands the host its focused tab's title (<Entity> — <App>). Knows nothing about demos or where data comes from.
       - Web:
         - Uses:
           - `apps-core.Apps`
@@ -12477,13 +12474,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/dom/scroll-reveal.REVEAL_BOUNDARY_ATTR`
           - `primitives/error-boundary.PluginErrorBoundary`
           - `primitives/latest-ref.useLatestRef`
+          - `primitives/pane.HistoryMode`
+          - `primitives/pane.usePaneViews`
+          - `primitives/pane/route-prefix.withActiveRoutePrefix`
           - `primitives/scope/render-origin.RenderOrigin`
           - `primitives/slot-render.renderIsolated`
           - `shell/toast.showToast`
         - Exports (types):
           - `AppEmbedAt`
           - `AppEmbedLeave`
-        - Exports (values): `AppEmbed`
+          - `EmbedPlace`
+        - Exports (values):
+          - `AppEmbed`
+          - `useEmbedPlace`
       - Cross-plugin:
         - Imported by:
           - `apps/demo/shell`
@@ -31062,10 +31065,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `webCollectedDir`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 120 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+        - Imported by: 119 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
           - `primitives` ×23
           - `reports` ×20
-          - `apps` ×19
+          - `apps` ×18
           - `ui` ×7
           - `apps-core` ×6
           - `debug` ×5
@@ -49311,9 +49314,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `seekPredicate`
     - **`latest-ref`** — Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), and useEventCallback(fn) is the stable-identity callback built on it. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
       - Cross-plugin:
-        - Imported by: 85 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
+        - Imported by: 83 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
           - `primitives` ×33
-          - `apps` ×26
+          - `apps` ×24
           - `page` ×5
           - `conversations` ×3
           - `apps-core` ×2
@@ -50736,7 +50739,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots: `Pane.Register`
         - Slot contributors: 94 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `Pane.Register` ×94
-        - Contributes: 125 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Contributes: 124 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `FileBrowserHeader` "title" → `PaneTitleItem`
           - `FilePreviewHeader` "title" → `PaneTitleItem`
           - `SlotRender.ListMiddleware`
@@ -50749,7 +50752,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `agentsRootPane.Actions` "title" → `PaneTitleItem`
           - `allConversationsPane.Actions` "title" → `PaneTitleItem`
           - `app-preview.actions` "title" → `PaneTitleItem`
-          - `at.actions` "title" → `PaneTitleItem`
           - `attemptPane.Actions` "title" → `PaneTitleItem`
           - `automation-detail.actions` "title" → `PaneTitleItem`
           - `automations.actions` "title" → `PaneTitleItem`
@@ -50993,6 +50995,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `usePaneTitle`
           - `usePaneToggle`
           - `usePaneViewParam`
+          - `usePaneViews`
           - `usePathname`
           - `useRenderSync`
           - `useReservesFloatingBar`
@@ -51012,13 +51015,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-2xs`
           - `ui/tokens/density --space-md`
           - `ui/tokens/shape --spacing`
-        - Imported by: 199 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `apps` ×72
+        - Imported by: 201 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `apps` ×73
           - `conversations` ×32
           - `debug` ×27
           - `active-data` ×13
           - `tasks` ×10
-          - `apps-core` ×6
+          - `apps-core` ×7
           - `plugin-meta` ×6
           - `primitives` ×6
           - `layouts` ×4
@@ -51060,6 +51063,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `APP_COLOR_MODES`
           - `defineApp`
           - `defineRoute`
+          - `EMBED_MAXIMIZED`
+          - `EMBED_MAXIMIZED_PARAMS`
+          - `EMBED_MAXIMIZED_SURFACE`
+          - `EMBED_PLACE_SURFACE`
+          - `embedTailPath`
+          - `embedTailStarts`
           - `fillSegment`
           - `indexKeyedSuffix`
           - `isKeyedOnlySegment`
@@ -51069,16 +51078,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `normalizeRoutePath`
           - `onlySurfaceViews`
           - `parseSegmentParts`
+          - `readEmbedTail`
           - `readIndexKeyedParams`
           - `readKeyedParams`
           - `segmentKeyedParamNames`
           - `segmentMatchPatterns`
           - `segmentParamNames`
           - `segmentRequiredParamNames`
+          - `splitEmbedMaximized`
+          - `splitEmbedTail`
           - `splitKeyedPart`
           - `splitSurfaceViewPart`
           - `surfaceViewKey`
           - `surfaceViewsOf`
+          - `withEmbedMaximized`
           - `withoutSurfaceViews`
       - Test helpers:
         - Web: `@plugins/primitives/plugins/pane/web/testing`
@@ -51090,6 +51103,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `apps-core`
+              - `apps-core/app-embed`
               - `apps-core/tab-origin`
               - `apps-core/tabs`
               - `primitives/link-gesture`
@@ -53235,8 +53249,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. Applies each slot's committed layout (order, hidden items, spacers, dividers, groups) everywhere slots render; a layout is edited in its config file or the Config pane's reorder-tree field. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 281 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×281
+    - Contributes: 280 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×280
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfigResult`
@@ -53259,8 +53273,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useLayoutOrder`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 280 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×280
+    - Contributes: 279 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×279
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:

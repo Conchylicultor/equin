@@ -50,10 +50,12 @@ export const AGENT_MANAGER_LOCATION = "/agents/c/conv-demo-practice-timer";
 export const ENTER_DEMO = 'button:has-text("Enter equin")';
 
 /**
- * Open the demo page at `url`, enter it through the gate, and wait for
- * `marker`. The gate shows on every visit: a browser holding no demo data
- * (every fresh e2e context) starts nothing until Enter equin; one that holds
- * it starts behind the gate.
+ * Open the demo page at `url`, enter it through the gate when it shows, and
+ * wait for `marker`. On /demo the gate shows on every visit: a browser
+ * holding no demo data (every fresh e2e context) starts nothing until Enter
+ * equin; one that holds it starts behind the gate. The website's band skips
+ * it for a URL that names the demo (`DemoScope`'s `resume`): the demo then
+ * shows with no gate.
  *
  * Every tip the demo shows on this page is answered as it appears: a fresh
  * context's demo has met none, and their cards would take the clicks these
@@ -66,7 +68,15 @@ export async function bootDemo(
 ): Promise<void> {
   const timeout = opts.timeoutMs ?? RENDER_TIMEOUT_MS;
   await answerTipsAsTheyShow(page);
-  await boot(page, url, { marker: ENTER_DEMO, timeoutMs: timeout });
+  await boot(page, url, {
+    marker: `${ENTER_DEMO}, ${opts.marker}`,
+    timeoutMs: timeout,
+  });
+  if ((await page.locator(opts.marker).count()) > 0) {
+    // A resumed demo never moves the page: bring it into view, as a visitor would.
+    await page.locator(opts.marker).first().scrollIntoViewIfNeeded();
+    return;
+  }
   await enterDemo(page, opts);
 }
 

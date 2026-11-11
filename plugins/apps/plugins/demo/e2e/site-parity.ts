@@ -81,15 +81,21 @@ function demoUrl(location: string): string {
 
 /** Open the demo at `location` and wait for the embed to render `app`. */
 async function open(page: Page, location: string, app: string): Promise<void> {
+  const marker = `[data-app-embed="${app}"]`;
   await page.goto(demoUrl(location), { waitUntil: "domcontentloaded" });
+  // The website resumes a URL naming the demo with no gate; /demo gates.
   const gate = page.locator(ENTER_DEMO).first();
-  await gate.waitFor({ timeout: RENDER_TIMEOUT_MS });
-  await gate.scrollIntoViewIfNeeded();
-  await gate.click();
   await page
-    .locator(`[data-app-embed="${app}"]`)
+    .locator(`${ENTER_DEMO}, ${marker}`)
     .first()
     .waitFor({ timeout: RENDER_TIMEOUT_MS * 2 });
+  if ((await page.locator(marker).count()) === 0) {
+    await gate.scrollIntoViewIfNeeded();
+    await gate.click();
+  }
+  await page.locator(marker).first().waitFor({ timeout: RENDER_TIMEOUT_MS * 2 });
+  // A resumed demo never moves the page: bring it into view, as a visitor would.
+  await page.locator(marker).first().scrollIntoViewIfNeeded();
 }
 
 /** The listed tokens' computed values on the embed's first pane. */

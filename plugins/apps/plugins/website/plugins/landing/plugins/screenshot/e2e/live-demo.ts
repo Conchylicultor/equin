@@ -14,11 +14,9 @@
  *     notice; Esc brings it back into its frame, also as a view transition;
  *     Maximize again, then Back returns to the frame (Maximize is the page's
  *     own step); Restore (revealed at the top edge) also restores;
- *  6. a reload shows the gate again — the host now starting behind it, the
- *     data being stored — and Enter reopens the demo grown, on Pages, where
- *     the visitor was;
- *  7. maximized, a reload draws the gate maximized over the tab, and Enter
- *     opens the demo there, on Pages;
+ *  6. a reload: the URL names the demo, so it resumes grown, on Pages, where
+ *     the visitor was, with no gate;
+ *  7. maximized, a reload resumes it maximized over the tab, on Pages;
  *  8. a second tab opened at that URL while the visitor is in the demo joins
  *     it — maximized, no gate;
  *  9. an old link (`/website;view.website.demo=…;view.website.demo.full=1`,
@@ -250,70 +248,54 @@ await withBrowser(async (h) => {
   await page.getByRole("button", { name: "Restore" }).click();
   await restoredInFrame("Restore puts the demo back in its frame");
 
-  // ── 6. a reload: the gate again, then back where the visitor was ───
-  const requestedBefore = hostRequests.length;
+  // ── 6. a reload: the URL names the demo, so it resumes — no gate ────
   await page.reload({ waitUntil: "domcontentloaded" });
-  await gate.waitFor({ timeout: BOOT_TIMEOUT_MS });
-  r.ok("after a reload, the gate shows again", await gate.isVisible());
-  const behind = await waitFor(
-    async () => hostRequests.length,
-    (n) => n > requestedBefore,
-    { timeoutMs: 10_000 },
-  );
-  r.ok(
-    "after a reload, the host starts behind the gate (the data is stored)",
-    behind.ok,
-    `${behind.value - requestedBefore} request(s)`,
-  );
-  await band.scrollIntoViewIfNeeded();
-  await gate.click();
   const reopened = await waitFor(
-    async () => frame.locator('[data-app-embed="pages"]').count(),
-    (n) => n > 0,
-    { timeoutMs: BOOT_TIMEOUT_MS },
+    async () => ({
+      gates: await gate.count(),
+      embeds: await frame.locator('[data-app-embed="pages"]').count(),
+    }),
+    (v) => v.embeds > 0,
+    { timeoutMs: BOOT_TIMEOUT_MS, intervalMs: 50 },
   );
-  r.ok("after a reload, Enter reopens the demo on Pages", reopened.ok);
   r.ok(
-    "after a reload, entering grows the frame",
+    "after a reload, the demo resumes on Pages with no gate (the URL names it)",
+    reopened.ok && reopened.value.gates === 0,
+    JSON.stringify(reopened.value),
+  );
+  r.ok(
+    "after a reload, the resumed frame is grown",
     ((await frame.boundingBox())?.width ?? 0) > before + 100,
   );
   await page.waitForTimeout(700);
   await snap(page, OUT, "5-reloaded");
 
-  // ── 7. a maximized URL reloaded: the gate maximized, Enter in place ─
+  // ── 7. a maximized URL reloaded: it resumes maximized, no gate ──────
   await page.getByRole("button", { name: "Maximize" }).click();
   await overlay.waitFor({ timeout: 3_000 });
   await urlSettles(r, page, "Maximize before the reload", (p) =>
     p.includes(FULL_KEY),
   );
   await page.reload({ waitUntil: "domcontentloaded" });
-  await gate.waitFor({ timeout: BOOT_TIMEOUT_MS });
-  const gateBox = await waitFor(
-    async () => (await overlay.boundingBox()) ?? null,
-    (box) =>
-      box !== null &&
-      viewport !== null &&
-      Math.abs(box.width - viewport.width) < 2 &&
-      box.y < 2,
-    { timeoutMs: 3_000 },
-  );
-  r.ok(
-    "after a maximized reload, the gate is drawn maximized over the tab",
-    gateBox.ok &&
-      (await overlay.getByRole("button", { name: /Enter equin/ }).count()) > 0,
-    JSON.stringify(gateBox.value),
-  );
-  await snap(page, OUT, "6-maximized-gate");
-  await gate.click();
   const inPlace = await waitFor(
-    async () => overlay.locator('[data-app-embed="pages"]').count(),
-    (n) => n > 0,
-    { timeoutMs: BOOT_TIMEOUT_MS },
+    async () => ({
+      gates: await gate.count(),
+      embeds: await overlay.locator('[data-app-embed="pages"]').count(),
+      box: await overlay.boundingBox(),
+    }),
+    (v) => v.embeds > 0,
+    { timeoutMs: BOOT_TIMEOUT_MS, intervalMs: 50 },
   );
   r.ok(
-    "after a maximized reload, Enter opens the demo maximized, on Pages",
-    inPlace.ok,
+    "after a maximized reload, the demo resumes maximized over the tab, on Pages, with no gate",
+    inPlace.ok &&
+      inPlace.value.gates === 0 &&
+      viewport !== null &&
+      inPlace.value.box !== null &&
+      Math.abs(inPlace.value.box.width - viewport.width) < 2,
+    JSON.stringify(inPlace.value),
   );
+  await snap(page, OUT, "6-maximized-reload");
 
   // ── 8. a second tab while the visitor is in: no second Enter ────────
   const second = await page.context().newPage();
