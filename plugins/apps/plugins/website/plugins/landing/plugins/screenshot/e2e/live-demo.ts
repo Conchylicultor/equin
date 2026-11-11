@@ -19,8 +19,9 @@
  *  7. maximized, a reload resumes it maximized over the tab, on Pages;
  *  8. a second tab opened at that URL while the visitor is in the demo joins
  *     it — maximized, no gate;
- *  9. an old link (`/website;view.website.demo=…;view.website.demo.full=1`,
- *     from before the site moved to /about and the embed kept its own place)
+ *  9. an old link's keys (`;view.website.demo=…;view.website.demo.full=1`,
+ *     from before the embed kept its own place; an older `/website…` one
+ *     reaches `/about` through the gateway's 301 first)
  *     is rewritten onto the embed's own tail, and opens there.
  * Screenshots of each step go to `--out`.
  *
@@ -321,7 +322,7 @@ await withBrowser(async (h) => {
   const old = await page.context().newPage();
   await old.goto(
     pathUrl(
-      `/website;view.website.demo=${encodeURIComponent("/pages")};view.website.demo.full=1`,
+      `/about;view.website.demo=${encodeURIComponent("/pages")};view.website.demo.full=1`,
     ),
     { waitUntil: "domcontentloaded" },
   );

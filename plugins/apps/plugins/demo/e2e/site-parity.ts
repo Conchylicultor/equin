@@ -93,7 +93,10 @@ async function open(page: Page, location: string, app: string): Promise<void> {
     await gate.scrollIntoViewIfNeeded();
     await gate.click();
   }
-  await page.locator(marker).first().waitFor({ timeout: RENDER_TIMEOUT_MS * 2 });
+  await page
+    .locator(marker)
+    .first()
+    .waitFor({ timeout: RENDER_TIMEOUT_MS * 2 });
   // A resumed demo never moves the page: bring it into view, as a visitor would.
   await page.locator(marker).first().scrollIntoViewIfNeeded();
 }
