@@ -2,12 +2,29 @@ import type { Hint } from "../../core";
 import { inScope } from "./scope-key";
 
 /**
- * How long the queue collects moment requests before it shows one. Several
- * tips' moments often come together (a conversation opens: its rocket and its
- * main button both qualify); waiting a beat lets the lowest-`order` one win
+ * How long a tip waits after its moment comes before it shows, when no tip
+ * was on screen: the moment is usually a screen that just appeared (a window
+ * opened on the desktop, an app launched), and a card landing in the same
+ * instant asks to be read before the user has seen where they are. Waiting
+ * also collects every moment that comes together (a conversation opens: its
+ * rocket and its main button both qualify), so the lowest `order` wins
  * instead of whichever component mounted first.
  */
+export const ORIENT_MS = 2500;
+
+/**
+ * The shorter wait for the next tip once one was answered (or hid because its
+ * anchor left the screen): the user is already reading tips on a screen they
+ * know — waiting a beat is enough.
+ */
 export const SETTLE_MS = 700;
+
+/**
+ * How long the user must have been still (no pointer move, press, wheel or
+ * key) before a tip shows: a card never lands mid-gesture — while the user is
+ * reaching for something, or typing — only in the pause after.
+ */
+export const QUIET_MS = 1000;
 
 export interface TipRequest {
   readonly hint: Hint;
@@ -25,21 +42,24 @@ export interface TipRequest {
 /**
  * The contextual-tip queue, as a pure value. At most ONE tip is active; the
  * rest wait. Every transition is a function below, so the host only owns the
- * clock (one settle timer at {@link wakeAt}) and what counts as eligible.
+ * clock (one timer at {@link wakeAt}) and what counts as eligible.
  */
 export interface TipQueue {
   readonly requests: readonly TipRequest[];
   /** The active request's key. */
   readonly active: string | null;
-  /** When the current settle window opened; null when nothing is waiting to show. */
-  readonly settleFrom: number | null;
+  /**
+   * When the waiting window ends ({@link ORIENT_MS} or {@link SETTLE_MS} after
+   * it opened); null when nothing is waiting to show.
+   */
+  readonly readyAt: number | null;
   readonly nextSeq: number;
 }
 
 export const emptyTipQueue: TipQueue = {
   requests: [],
   active: null,
-  settleFrom: null,
+  readyAt: null,
   nextSeq: 0,
 };
 
@@ -59,14 +79,16 @@ export function requestTip(
     ...q,
     requests: [...q.requests, { hint, scope, key, seq: q.nextSeq }],
     nextSeq: q.nextSeq + 1,
-    settleFrom: q.active === null && q.settleFrom === null ? now : q.settleFrom,
+    // The first request on a quiet queue: its screen just came — orient first.
+    readyAt:
+      q.active === null && q.readyAt === null ? now + ORIENT_MS : q.readyAt,
   };
 }
 
 /**
  * The moment left (its `when` turned false, or its component unmounted) — or
  * the tip was answered. Either way the request goes; if it was the active
- * tip, the next one gets a fresh settle window. The caller marks seen for an
+ * tip, the next one gets a short window. The caller marks seen for an
  * answer; a withdrawal marks nothing.
  */
 export function removeTip(q: TipQueue, key: string, now: number): TipQueue {
@@ -77,14 +99,15 @@ export function removeTip(q: TipQueue, key: string, now: number): TipQueue {
     ...q,
     requests,
     active: null,
-    settleFrom: requests.length > 0 ? now : null,
+    readyAt: requests.length > 0 ? now + SETTLE_MS : null,
   };
 }
 
 /**
  * Advances the queue at `now`: an active tip that stopped being eligible is
- * hidden (and the window reopens); once the settle window has elapsed, the
- * eligible request with the lowest `order` (then the earliest) becomes active.
+ * hidden (and a short window reopens); once the window has elapsed and the
+ * user has been still for {@link QUIET_MS} since `lastInputAt`, the eligible
+ * request with the lowest `order` (then the earliest) becomes active.
  * Nothing eligible keeps the window open — so a seen state still loading
  * shows nothing, and the first tip appears as soon as it is known.
  */
@@ -92,27 +115,39 @@ export function stepTips(
   q: TipQueue,
   now: number,
   eligible: (hint: Hint, request: TipRequest) => boolean,
+  lastInputAt: number = Number.NEGATIVE_INFINITY,
 ): TipQueue {
   if (q.active !== null) {
     const active = q.requests.find((r) => r.key === q.active);
     if (active && eligible(active.hint, active)) return q;
-    return stepTips({ ...q, active: null, settleFrom: now }, now, eligible);
+    return stepTips(
+      { ...q, active: null, readyAt: now + SETTLE_MS },
+      now,
+      eligible,
+      lastInputAt,
+    );
   }
-  if (q.settleFrom === null || now < q.settleFrom + SETTLE_MS) return q;
+  const at = wakeAt(q, lastInputAt);
+  if (at === null || now < at) return q;
   const next = q.requests
     .filter((r) => eligible(r.hint, r))
     .sort(
       (a, b) => (a.hint.order ?? 0) - (b.hint.order ?? 0) || a.seq - b.seq,
     )[0];
   if (!next) return q;
-  return { ...q, active: next.key, settleFrom: null };
+  return { ...q, active: next.key, readyAt: null };
 }
 
-/** When the host should call {@link stepTips} again, or null if no window is pending. */
-export function wakeAt(q: TipQueue): number | null {
-  return q.active === null && q.settleFrom !== null
-    ? q.settleFrom + SETTLE_MS
-    : null;
+/**
+ * When the host should call {@link stepTips} again — the window's end, or
+ * later while the user is still moving — or null if no window is pending.
+ */
+export function wakeAt(
+  q: TipQueue,
+  lastInputAt: number = Number.NEGATIVE_INFINITY,
+): number | null {
+  if (q.active !== null || q.readyAt === null) return null;
+  return Math.max(q.readyAt, lastInputAt + QUIET_MS);
 }
 
 /** The active tip's request — its declaration and the scope that asked. */

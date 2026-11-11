@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "@plugins/apps-core/plugins/tabs/web";
 import { useFocusedAppId } from "@plugins/apps-core/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
@@ -69,12 +69,19 @@ import {
 const EXIT_PULSE_MS = 3000;
 /** How long the farewell toast stays. */
 const FAREWELL_MS = 4800;
+/** What counts as the user doing something — a tip waits for a pause in them. */
+const INPUT_EVENTS = [
+  "pointermove",
+  "pointerdown",
+  "wheel",
+  "keydown",
+] as const;
 
 /**
  * The one hints host, at `Core.Root` — outside every tab, so a tour crosses
  * apps. Mounted at the page root and in every plugin scope; one of them runs
  * (`useElectedHintHost`): the page's, else — on a page that holds the hints
- * plugin only for a scope — the scope's. It owns the engine's effects: stepping the tip queue (one settle
+ * plugin only for a scope — the scope's. It owns the engine's effects: stepping the tip queue (one waiting-window
  * timer), resolving `startTour` / `autoStart` against the declared tours, the
  * single tour-exit path, routing signals to the running tour, and declaring
  * which anchors are held. It draws the one active tip, or the running tour's
@@ -165,32 +172,59 @@ function ElectedHintHost() {
     if (due) runTour(due);
   }, [engine.tour, seenRows, tours, focusedApp]);
 
-  // ── The tip queue: step on every input change, and at the settle deadline ──
+  // ── The tip queue: step on every input change, and at the window's deadline ──
   const tourRunning = engine.tour !== null;
   const pointing = engine.pointer !== null;
+  // When the user last moved, pressed, scrolled or typed — a tip waits for a
+  // pause (QUIET_MS). Heard only while a tip is waiting (below).
+  const lastInputAt = useRef(Number.NEGATIVE_INFINITY);
   const stepTips = useEventCallback(() => {
-    stepTipQueue(Date.now(), (hint: Hint, request: TipRequest) => {
-      if (tourRunning || pointing) return false;
-      // The seen state of the scope that asked (the page's, or the demo's on
-      // its own worker) — not known yet: nothing shows.
-      const seen = ledgerOf(request.scope)?.seen ?? null;
-      if (seen === null) return false;
-      if (seen.has(hint.id) || isAnswered(request.key)) return false;
-      // On screen: a tip on a scrolled-away anchor would point at nothing.
-      return (
-        resolveAnchorElement(tipAnchorKey(request), { onScreen: true }) !== null
-      );
-    });
+    stepTipQueue(
+      Date.now(),
+      (hint: Hint, request: TipRequest) => {
+        if (tourRunning || pointing) return false;
+        // The seen state of the scope that asked (the page's, or the demo's on
+        // its own worker) — not known yet: nothing shows.
+        const seen = ledgerOf(request.scope)?.seen ?? null;
+        if (seen === null) return false;
+        if (seen.has(hint.id) || isAnswered(request.key)) return false;
+        // On screen: a tip on a scrolled-away anchor would point at nothing.
+        return (
+          resolveAnchorElement(tipAnchorKey(request), { onScreen: true }) !==
+          null
+        );
+      },
+      lastInputAt.current,
+    );
   });
   useEffect(() => subscribeAnchors(stepTips), [stepTips]);
   useEffect(() => subscribeLedgers(stepTips), [stepTips]);
   useEffect(() => stepTips(), [stepTips, engine.tips, tourRunning, pointing]);
   useEffect(() => {
-    const at = wakeAt(engine.tips);
-    if (at === null) return;
-    // The settle window's deadline — one timer per window, not a poll.
-    const timer = setTimeout(stepTips, Math.max(0, at - Date.now()));
-    return () => clearTimeout(timer);
+    const tips = engine.tips;
+    if (wakeAt(tips) === null) return;
+    // The waiting window's deadline — one timer, re-armed by the user's
+    // input (a tip lands in the pause after a gesture), never a poll.
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const arm = () => {
+      clearTimeout(timer);
+      const at = wakeAt(tips, lastInputAt.current);
+      if (at !== null)
+        timer = setTimeout(stepTips, Math.max(0, at - Date.now()));
+    };
+    const onInput = () => {
+      lastInputAt.current = Date.now();
+      arm();
+    };
+    const opts = { capture: true, passive: true } as const;
+    for (const type of INPUT_EVENTS)
+      window.addEventListener(type, onInput, opts);
+    arm();
+    return () => {
+      clearTimeout(timer);
+      for (const type of INPUT_EVENTS)
+        window.removeEventListener(type, onInput, opts);
+    };
   }, [engine.tips, stepTips]);
 
   const tip = activeRequest(engine.tips);
@@ -242,7 +276,7 @@ function ElectedHintHost() {
   const hoverAnchor = shownTip?.hint.actOn === "hover" ? el : null;
   useElementEvent(hoverAnchor, "pointerenter", () => answerShownTip("acted"));
   // …including a pointer already resting on it when the tip arrives (it
-  // shows after its settle window): no `pointerenter` will come, and the card
+  // shows after its waiting window): no `pointerenter` will come, and the card
   // would land over what the hover opened (the launcher's grid) — teaching
   // the gesture the user is making, and taking a click meant for the grid.
   const answerIfHovered = useEventCallback((anchor: HTMLElement) => {

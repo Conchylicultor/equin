@@ -109,12 +109,13 @@ export function withdrawTipFrom(scope: string | null, hint: Hint): void {
   setTips(removeTip(state.tips, key, Date.now()));
 }
 
-/** The host advances the queue at `now` against what is eligible. */
+/** The host advances the queue at `now` against what is eligible, the user still since `lastInputAt`. */
 export function stepTipQueue(
   now: number,
   eligible: (hint: Hint, request: TipRequest) => boolean,
+  lastInputAt: number,
 ): void {
-  setTips(stepTips(state.tips, now, eligible));
+  setTips(stepTips(state.tips, now, eligible, lastInputAt));
 }
 
 /**

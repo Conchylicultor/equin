@@ -9,7 +9,8 @@ import { holdLedger, updateLedger } from "./seen-ledger";
 /**
  * Asks to show `hint` while `when` holds. The host shows it once its seen state
  * is known and unseen, its anchor is on the page and no tour runs — after the
- * settle window, lowest `order` first, one at a time. `when` turning false (or
+ * waiting window (a few seconds to orient, then a pause in the user's input),
+ * lowest `order` first, one at a time. `when` turning false (or
  * the component unmounting) withdraws it without marking it seen.
  *
  * Several components may hold one hint's moment (every chip of a kind): the

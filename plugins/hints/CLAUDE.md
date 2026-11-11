@@ -55,10 +55,15 @@ function OpenAppButton({ conv }) {
 host shows it when the seen state is **known** and has no row for it, it was
 not answered this session, its anchor is on the page **and on screen** (one
 page-wide in-view watcher; scrolled away, the tip hides and comes back when the
-anchor does) and no tour runs. Requests
-are collected over a **700 ms settle window**, then the lowest `order` (ties:
-first asked) shows — one at a time; the next gets a fresh window after an
-answer. `when` → false or unmount **withdraws** it without marking it seen.
+anchor does) and no tour runs. A tip **never lands with the screen it is
+about**: the first request on a quiet queue waits a **2.5 s orientation
+window** (`ORIENT_MS` — the moment is usually a screen that just appeared, a
+window opened or an app launched, and the user first needs to see where they
+are), and every tip then waits for a **1 s pause in the user's input**
+(`QUIET_MS` — no pointer move, press, wheel or key; never mid-gesture). Requests
+are collected over that window, then the lowest `order` (ties: first asked)
+shows — one at a time; the next gets a short **700 ms** window (`SETTLE_MS`)
+after an answer, the user already reading tips. `when` → false or unmount **withdraws** it without marking it seen.
 Several components may hold one hint's moment (every prototype chip on the
 page): the request stays until the last of them lets go. `hint` may be
 `undefined` — a generic component handed an optional tip asks nothing (id-chip's

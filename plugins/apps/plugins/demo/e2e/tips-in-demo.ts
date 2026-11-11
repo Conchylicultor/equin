@@ -44,8 +44,8 @@ import {
 } from "./internal/demo-pages";
 
 const OUT = arg("out") ?? "/tmp/demo-tips";
-/** Long enough for a tip's settle window (700 ms) and a seen read, many times over. */
-const NO_TIP_WAIT_MS = 4_000;
+/** Long enough for a tip's waiting window (2.5 s orientation + 1 s pause) and a seen read, with room. */
+const NO_TIP_WAIT_MS = 6_000;
 
 const SHOWN_TIP = '.hint-card[data-variant="tip"][data-on="true"]';
 const SHOWN_HALO = '.hint-halo[data-on="true"]';
