@@ -32,6 +32,7 @@ import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { companionsVisible } from "./companions-visible";
 import { keysDefined } from "./keys-defined";
 import { rootMountsReached } from "./root-mounts-reached";
+import { pageHostsOnDemand } from "./page-hosts-on-demand";
 import { companionsInSync } from "./companions-in-sync";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
@@ -274,6 +275,17 @@ const check: Check = {
       // entries/contributors unioned), so a profile's `extends` packs are checked
       // in the app's real bundle context.
       const flat = flattenManifest(m, manifests);
+      // The negatives this composition writes itself (its own row and its
+      // `extends` chain) — the inherited base row's are not, unless the chain
+      // writes them too. Naming a plugin the base row negates is the
+      // documented way to take it back (`expandEntrySeeds`' opt-out), so only
+      // an own negative can contradict a named positive (3b-b).
+      const ownEntries = new Set(
+        flattenManifest(
+          m,
+          manifests.filter((x) => x.name !== BASE_EXCLUSIONS_ID),
+        ).entryPoints,
+      );
 
       // 3b. Negative-pattern validity, evaluated on the FLATTENED manifest so a
       //     negative from one composition (its `extends` chain, or the inherited
@@ -317,8 +329,11 @@ const check: Check = {
         // (b) Contradictory negative: its base is also an explicit positive entry.
         //     A negative can never cancel a named positive (positives are protected),
         //     so `!X` alongside `X` is a self-cancelling no-op — reject it loudly
-        //     rather than silently keeping the positive.
-        if (namedBases.has(p.base)) {
+        //     rather than silently keeping the positive. Only for a negative the
+        //     composition writes itself: one it inherits from the base row is
+        //     taken back by naming its base (the website names the report
+        //     channel `base-exclusions` keeps out of every other composition).
+        if (namedBases.has(p.base) && ownEntries.has(p.raw)) {
           return fail(
             `composition "${m.name}" has a contradictory negative entry "${p.raw}": its base "${p.base}" is also an explicit positive entry`,
             "A negative may only trim ids pulled in implicitly by a `.**` subtree glob — it can never cancel an id named as a positive entry (positives always win). Remove the negative, or remove the conflicting positive.",
@@ -642,5 +657,6 @@ export default [
   companionsVisible,
   keysDefined,
   rootMountsReached,
+  pageHostsOnDemand,
   companionsInSync,
 ];

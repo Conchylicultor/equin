@@ -403,6 +403,7 @@ wrapper fixpoint reads.
     - `resolveOriginAnnotations`
     - `resolveOriginDefaults`
     - `resolveRegistryHome`
+    - `scopedOnlyWebPlugins`
     - `seedAuthoredOverrides`
     - `serverBarrelBlockers`
     - `setDefaultOriginAnnotations`

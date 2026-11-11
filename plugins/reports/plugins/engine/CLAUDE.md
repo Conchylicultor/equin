@@ -24,7 +24,7 @@ interchangeable:
 
 - **Per fingerprint** (`server/internal/velocity.ts`) — one fingerprint firing
   repeatedly still gets its row and its count; only the bell churn is skipped.
-- **Across fingerprints, per kind** (`server/internal/fan-out.ts`) — how many
+- **Across fingerprints, per kind** (`reports/server/internal/fan-out.ts`, the portable parent's — the website's public intake admits through the same gate) — how many
   DISTINCT fingerprints of one kind may each raise their own alert per window
   (`reports.fanOutPerWindow`, default 20). Past the budget a newly-alerting
   fingerprint writes no row and no notification; it folds into one
@@ -244,14 +244,13 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `fork-data-exclusion` "report_fixes"
     - `fork-data-exclusion` "reports"
     - `restart-skip.adopted` "the report fixes the adopted commit contains (deployed)"
-  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `reports` ×8
+  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `reports` ×10
     - `shell/notifications` ×4
     - `build/server-build-id` ×3
     - `infra/host/duress/shed` ×2
     - `primitives/commit-list` ×2
     - `build/restart-skip/hooks.RestartSkip`
-    - `config_v2.getConfig`
     - `database/admin.ExcludeFromFork`
     - `database.db`
     - `ids.idRef`
@@ -266,8 +265,6 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `RecordReportResult`
     - `RestateOccurrence`
     - `RestateResult`
-    - `StormRosterEntry`
-    - `StormSummary`
   - Exports (values):
     - `DEFAULT_REPORT_DEBOUNCE_MS`
     - `investigateReport`

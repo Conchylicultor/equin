@@ -616,7 +616,7 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `validationIssues`
     - `withOverrideLegend`
 - Cross-plugin:
-  - Imported by: 141 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 140 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×39
     - `conversations` ×14
     - `backup` ×13
@@ -631,7 +631,6 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `primitives` ×3
     - `integrations` ×2
     - `plugin-meta` ×2
-    - `reports` ×2
     - `shell` ×2
     - `stats` ×2
     - `audience`
@@ -639,6 +638,7 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `hints/ask`
     - `map/google`
     - `reorder`
+    - `reports`
     - `review/code-review`
 - Exemptions:
   - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/config-registrations.ts`, `check/overrides-authored.ts` (debt)
@@ -651,7 +651,7 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
 - Sub-plugins:
   - **`browser-store`** (excluded) — The user config layer of a host without the computer (a browser worker host): held in memory (ConfigStore) and written through to the host's declared storage (kept across reloads when it is…
   - **`bundled-layer`** (excluded) — The committed config layer bundled as text: provides the ConfigGitLayer host service from the repo's config/ inlined at build time, for a host without the repo on disk (a browser worker host). Never…
-  - **`config-link`** — Deep-link affordances from any config-backed surface to its settings section. useConfigLink() links a descriptor to its config pane; ConfigGearButton and ConfigPopoverHeader surface it as a gear…
+  - **`config-link`** [exempt] — Deep-link affordances from any config-backed surface to its settings section. useConfigLink() links a descriptor to its config pane; ConfigGearButton and ConfigPopoverHeader surface it as a gear…
   - **`disk-read`** [exempt] — A config's resolved value read straight off disk, with no server runtime and no build tooling: readEffectiveConfigFromDisk (this checkout's git layer as propagation will write it, under a…
   - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
   - **`git-defaults-preview`** — The git-defaults preview, for developers: a switch in the action bar's view-options popover makes this tab read every config from the committed layer (what a brand-new user sees) instead of the…

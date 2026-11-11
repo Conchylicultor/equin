@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-deploy-site-reports-channel",
+  "description": "The website's report channel: report() on a site page sends through it to the site's public intake — deduped by fingerprint, capped per visit, batched, backed off, anonymous.",
+  "private": true,
+  "version": "0.0.1"
+}

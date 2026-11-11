@@ -1,4 +1,4 @@
-// @hash e6d2de0b4ff7
+// @hash 158801470507
 {
   "manifests": [
     {
@@ -47,7 +47,8 @@
       "entryPoints": [
         "!review.plugin-changes.**",
         "!primitives.dom.static-render.**",
-        "!apps.website.crawlable.snapshot-render.**"
+        "!apps.website.crawlable.snapshot-render.**",
+        "!apps.deploy.site-reports.channel.**"
       ],
       "selectedContributors": [],
       "extends": [],
@@ -407,11 +408,15 @@
         "apps.website.**",
         "!apps.website.demos.workspace.story",
         "!apps.website.promo-film.**",
-        "integrations.google-maps.browser-config"
+        "integrations.google-maps.browser-config",
+        "reports.crash",
+        "apps.deploy.site-reports.intake",
+        "apps.deploy.site-reports.channel"
       ],
       "selectedContributors": [],
       "extends": [
-        "served-baseline"
+        "served-baseline",
+        "reporters"
       ],
       "excludes": [
         "agent-runtime",

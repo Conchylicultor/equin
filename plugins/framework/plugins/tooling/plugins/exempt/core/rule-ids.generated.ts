@@ -127,6 +127,7 @@ export type ExemptableRuleId =
   | "page-editor/no-model-focus-ring"
   | "page-editor/no-unfiltered-blocks-read"
   | "page-editor/no-unhistoried-block-field"
+  | "page-hosts-on-demand"
   | "pane/no-adhoc-pane-toolbar"
   | "pane/no-core-define-route-in-web"
   | "pane/no-pane-header-bar"

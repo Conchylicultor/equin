@@ -48,6 +48,7 @@ plugin ships on the box, and SSH must not.
     - `apps/deploy/deploy-secrets`
     - `apps/deploy/host-query`
     - `apps/deploy/site-messages/intake`
+    - `apps/deploy/site-reports/intake`
     - `framework/cli/deploy`
 - Server:
   - Exports (values):

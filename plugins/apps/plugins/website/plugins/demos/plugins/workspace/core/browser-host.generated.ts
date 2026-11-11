@@ -885,6 +885,7 @@ export const browserHost = {
   ],
   negated: [
     "active-data.event-source",
+    "apps.deploy.site-reports.channel",
     "apps.desktop.wallpaper.openverse",
     "apps.home.tour",
     "apps.sonata.transcription",

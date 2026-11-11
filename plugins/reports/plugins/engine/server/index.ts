@@ -45,7 +45,6 @@ export { investigateReport } from "./internal/investigate";
 export type { RecordReportResult } from "./internal/record-report";
 export { recordReportDebounced } from "./internal/record-report-debounced";
 export { DEFAULT_REPORT_DEBOUNCE_MS } from "./internal/debounce";
-export type { StormSummary, StormRosterEntry } from "./internal/fan-out";
 
 // The reports ENGINE: everything that writes the `reports` table, and the
 // process-level crash capture that feeds it. Its parent's server barrel

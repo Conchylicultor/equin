@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-deploy-site-reports",
+  "description": "Umbrella for the error reports a deployed site's visitors' browsers send: the intake that ships inside the site (public bounded endpoint, aggregated table, host-only list) and the page channel that sends them (deduped, capped, batched).",
+  "private": true,
+  "version": "0.0.1"
+}

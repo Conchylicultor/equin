@@ -15,4 +15,11 @@ export default [
     reason:
       "A streaming child: the sign-in is read live and written to live, so after-exit capture cannot run it. `auth login`'s output is a file descriptor onto a watched file (never a pipe) and the code pasted from another device goes to its stdin, a write-only sink with no stream pull; `setup-token` is a terminal UI, run under Bun's pseudo-terminal, whose output Bun pushes to a callback and whose input is the terminal's write.",
   },
+  {
+    rule: "page-hosts-on-demand",
+    paths: ["web/index.ts"],
+    kind: "sanctioned",
+    reason:
+      "Machine-only (agent-runtime, excluded from the standalone website): a public site's visitor has no computer to sign Claude in on.",
+  },
 ] satisfies Exemptions;

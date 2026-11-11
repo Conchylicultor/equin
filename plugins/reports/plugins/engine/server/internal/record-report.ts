@@ -24,11 +24,12 @@ import { isNoiseReport } from "./noise";
 import { noiseInputOf } from "./noise-input";
 import {
   _reports,
+  createFanOutGate,
   ReportKind,
   reportRecordedSignal,
+  type StormSummary,
 } from "@plugins/reports/server";
 import { pickIncidentBell } from "./incident";
-import { createFanOutGate, type StormSummary } from "./fan-out";
 import { ringBell, type Bell } from "./bell";
 import { fixedReportOccurrenceSink } from "./occurrence-sink";
 import {
@@ -158,7 +159,7 @@ function stormMessage(s: StormSummary): string {
   );
 }
 
-// Cross-fingerprint fan-out ceiling (see fan-out.ts). The per-fingerprint
+// Cross-fingerprint fan-out ceiling (see reports/server's fan-out.ts). The per-fingerprint
 // velocity throttle below cannot see a burst that is spread ACROSS
 // fingerprints — the 2026-09-02 incident, where 422 distinct slow-op
 // fingerprints alerted in 24 s and every guard on the path keyed on the

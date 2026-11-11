@@ -496,6 +496,7 @@ See `research/2026-09-29-global-scoped-change-routing.md`.
     - `apps/chord/video-availability`
     - `apps/deploy/analytics/collect`
     - `apps/deploy/site-messages/intake`
+    - `apps/deploy/site-reports/intake`
     - `conversations/runtime-sdk`
     - `conversations/usage`
     - `debug/latency-ledger`

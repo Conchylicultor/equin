@@ -21,6 +21,19 @@ export type {
 } from "./internal/report-kinds";
 
 export { getReportTitle } from "./internal/get-report-title";
+// The cross-fingerprint fan-out ceiling: the engine's alert gate, and the
+// website's public intake's admission of a new fingerprint (one gate, one
+// config, every host that records reports).
+export { createFanOutGate } from "./internal/fan-out";
+export type {
+  AlertAdmission,
+  FanOutAdmitInput,
+  FanOutConfigValues,
+  FanOutGate,
+  FanOutGateOptions,
+  StormRosterEntry,
+  StormSummary,
+} from "./internal/fan-out";
 
 // The portable half of reports: the table, its live read and the contracts the
 // kinds and the engine meet on — every host boots it. Writing reports is the

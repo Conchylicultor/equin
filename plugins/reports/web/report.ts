@@ -1,9 +1,62 @@
 import { fetchEndpointOver } from "@plugins/infra/plugins/endpoints/web";
 import { pageTransport } from "@plugins/primitives/plugins/networking/plugins/page-transport/web";
 import { getTabId } from "@plugins/primitives/plugins/scope/plugins/tab-id/web";
+import { defineRequestSink } from "@plugins/primitives/plugins/report-sink/core";
 import { submitReport, type ReportBody, type ReportResult } from "../core";
 
 export type { ReportResult };
+
+/**
+ * What became of one `report()` call, as far as the page can say: the server's
+ * answer (`ReportResult`); `batched` — a channel that batches (the website's)
+ * took the report and will send it with others, so there is no row id yet; or
+ * `dropped` — that channel refused it over its own per-visit caps (counted on
+ * the page). `null` is "not delivered" (warned to the console).
+ */
+export type ClientReportOutcome =
+  ReportResult | { outcome: "batched" } | { outcome: "dropped" };
+
+/**
+ * Where a stamped report goes. The default sends it to the page's own reports
+ * engine (`POST /api/reports`, one request per report, retried). A composition
+ * whose server has no engine — the standalone website, whose visitors are
+ * anonymous — installs its own channel at register time
+ * (`apps/deploy/site-reports/channel`): bounded, batched, deduped, to its own
+ * public intake. A channel that throws is caught by report(), which warns.
+ */
+export type ReportChannel = (body: ReportBody) => Promise<ClientReportOutcome>;
+
+// Retry budget for one report: 6 retries sleeping 0.5, 1, 2, 4, 8, 16 s
+// (backoffMs * 2^attempt, ±15% jitter) — about 31.5 s across 7 attempts, enough
+// to outlast a backend hot restart or a host-overload stall. Only a network
+// error or a 502/503/504 is retried; a 4xx is the server rejecting the report
+// and is final. A retry after a lost response cannot duplicate a row: reports
+// dedupe by fingerprint, so a second landing only bumps the existing row's count.
+const REPORT_RETRY = { retries: 6, backoffMs: 500 };
+
+async function sendToEngine(body: ReportBody): Promise<ClientReportOutcome> {
+  // Reports are page-wide telemetry (window.onerror, boot, the crash beacon):
+  // they belong to the page and always reach the page's own server, whatever
+  // subtree raised them.
+  const fetchEndpoint = fetchEndpointOver(pageTransport);
+  return await fetchEndpoint(
+    submitReport,
+    {},
+    { body, keepalive: true, report: false, retry: REPORT_RETRY },
+  );
+}
+
+/**
+ * Where every report() on this page goes, when a composition says otherwise
+ * (a request sink: one handler, its answer returned). Nobody registered →
+ * report() sends to the page's reports engine. The website's channel
+ * (`apps/deploy/site-reports/channel`) registers in its register phase —
+ * before anything renders, so no report of the page goes elsewhere first.
+ */
+export const reportChannel = defineRequestSink<
+  ReportBody,
+  Promise<ClientReportOutcome>
+>();
 
 // The caller-supplied portion of a report: the browser picks the kind, the
 // source (client-reportable only — enforced by ReportBodySchema's enum), the
@@ -28,28 +81,16 @@ export interface ReportContext {
   taskId: string | null;
 }
 
-// Retry budget for one report: 6 retries sleeping 0.5, 1, 2, 4, 8, 16 s
-// (backoffMs * 2^attempt, ±15% jitter) — about 31.5 s across 7 attempts, enough
-// to outlast a backend hot restart or a host-overload stall. Only a network
-// error or a 502/503/504 is retried; a 4xx is the server rejecting the report
-// and is final. A retry after a lost response cannot duplicate a row: reports
-// dedupe by fingerprint, so a second landing only bumps the existing row's count.
-const REPORT_RETRY = { retries: 6, backoffMs: 500 };
-
-// POST to /api/reports via the typed endpoint. Never throws: we're in an error
-// path already. `keepalive: true` lets the request survive page unload.
-// `report: false` stops fetchEndpoint from invoking the error-reporter, which
-// would recurse (a failing report beacon must not file a report about itself).
-// Returns null if every attempt failed (warned to the console, so a report the
-// server never received still leaves a trace) or the request was discarded
-// during unload.
+// Stamp the report and send it through the registered channel
+// (`reportChannel`;
+// by default POST /api/reports via the typed endpoint, `keepalive: true` so it
+// survives page unload, `report: false` so a failing report beacon never files
+// a report about itself). Never throws: we're in an error path already.
+// Returns null if the channel failed (warned to the console, so a report the
+// server never received still leaves a trace).
 export async function report(
   body: ClientReportBody,
-): Promise<ReportResult | null> {
-  // Reports are page-wide telemetry (window.onerror, boot, the crash beacon):
-  // they belong to the page and always reach the page's own server, whatever
-  // subtree raised them.
-  const fetchEndpoint = fetchEndpointOver(pageTransport);
+): Promise<ClientReportOutcome | null> {
   try {
     const stamped = {
       ...body,
@@ -67,11 +108,7 @@ export async function report(
       // undefined both mean "cannot name it".
       commit: import.meta.env.VITE_BUILD_COMMIT || null,
     };
-    return await fetchEndpoint(
-      submitReport,
-      {},
-      { body: stamped, keepalive: true, report: false, retry: REPORT_RETRY },
-    );
+    return await (reportChannel.emit(stamped) ?? sendToEngine(stamped));
     // eslint-disable-next-line promise-safety/no-absorbed-failure -- this is called during crash/error handling (keepalive fetch at page unload); propagating here would hide the original error and crash the error handler itself. The failure is not silent: it is warned below, after the retries above ran out
   } catch (err) {
     const cause = err instanceof Error ? err.message : String(err);

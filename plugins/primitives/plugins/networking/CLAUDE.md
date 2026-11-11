@@ -254,6 +254,7 @@ built on them — see
   - Exempted by:
     - `apps-core/app-usage` (0 debt)
     - `apps/deploy/analytics/collect` (0 debt)
+    - `apps/deploy/site-reports/channel` (0 debt)
     - `debug/latency-ledger` (0 debt)
     - `debug/slow-ops` (0 debt)
     - `framework/web-core` (0 debt)

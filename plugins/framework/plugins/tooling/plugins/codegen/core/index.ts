@@ -259,7 +259,10 @@ export {
   generateClaudeSettings,
   renderClaudeSettings,
 } from "./claude-settings-gen";
-export { discoverBrowserHosts } from "./browser-host-scope";
+export {
+  discoverBrowserHosts,
+  scopedOnlyWebPlugins,
+} from "./browser-host-scope";
 export type { BrowserHostDecl } from "./browser-host-scope";
 export {
   deriveBrowserHostGraph,

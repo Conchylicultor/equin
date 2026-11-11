@@ -85,10 +85,14 @@ before it) beside the total, worded by `formatReportActivity`
     - `primitives/networking/page-transport.pageTransport`
     - `primitives/scope/tab-id.getTabId`
     - `primitives/slot-render.defineDispatchSlot`
-  - Exports (types): `ReportContext`
+  - Exports (types):
+    - `ClientReportOutcome`
+    - `ReportChannel`
+    - `ReportContext`
   - Exports (values):
     - `investigate`
     - `report`
+    - `reportChannel`
     - `Reports`
 - Server:
   - Contributes:
@@ -99,6 +103,7 @@ before it) beside the total, worded by `formatReportActivity`
     - `ConfigV2.Register` "reports"
   - Uses:
     - `config_v2.ConfigV2`
+    - `config_v2.getConfig`
     - `database.db`
     - `ids.IdKinds`
     - `infra/entities.defaultNow`
@@ -106,14 +111,22 @@ before it) beside the total, worded by `formatReportActivity`
     - `network/live.serveCollection`
   - DB schema: `plugins/reports/server/internal/tables.ts`
   - Exports (types):
+    - `AlertAdmission`
+    - `FanOutAdmitInput`
+    - `FanOutConfigValues`
+    - `FanOutGate`
+    - `FanOutGateOptions`
     - `InvestigationTaskRequest`
     - `ReportKindSpec`
     - `ReportKindVariant`
     - `ReportNoiseInput`
     - `ReportNoiseRuleSpec`
     - `ReportRow`
+    - `StormRosterEntry`
+    - `StormSummary`
   - Exports (values):
     - `_reports`
+    - `createFanOutGate`
     - `getReportTitle`
     - `isReportKindRegistered`
     - `reportInvestigationSink`
@@ -189,13 +202,14 @@ before it) beside the total, worded by `formatReportActivity`
     - `SERVER_REPORT_SOURCES`
     - `submitReport`
 - Cross-plugin:
-  - Imported by: 75 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 77 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `reports` ×30
     - `debug` ×18
     - `conversations` ×7
     - `database` ×4
     - `infra` ×4
     - `build` ×3
+    - `apps` ×2
     - `framework` ×2
     - `active-data/report`
     - `backup`

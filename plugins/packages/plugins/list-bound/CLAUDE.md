@@ -95,8 +95,8 @@ tuples, intersections, malformed tags).
     - `wholeRecord`
     - `wholeTuple`
 - Cross-plugin:
-  - Imported by: 124 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×26
+  - Imported by: 125 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×27
     - `debug` ×18
     - `conversations` ×15
     - `infra` ×15

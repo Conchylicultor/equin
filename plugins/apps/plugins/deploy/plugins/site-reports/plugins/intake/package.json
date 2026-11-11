@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-deploy-site-reports-intake",
+  "description": "Error reports on a deployed site: the public POST /api/site-reports endpoint (body cap, per-visitor and global budgets, the reports fan-out ceiling), aggregated one row per fingerprint, drops counted, a row cap and a 30-day sweep, and the host-only list.",
+  "private": true,
+  "version": "0.0.1"
+}

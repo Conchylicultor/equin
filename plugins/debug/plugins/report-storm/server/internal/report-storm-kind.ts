@@ -1,6 +1,6 @@
 import { ReportKind } from "@plugins/reports/server";
 import type { ReportRow } from "@plugins/reports/server";
-import type { StormSummary } from "@plugins/reports/plugins/engine/server";
+import type { StormSummary } from "@plugins/reports/server";
 import { ReportStormPayloadSchema, type ReportStormPayload } from "../../core";
 
 // Compile-time drift guard: the reports engine files `data: { ...summary }`

@@ -450,6 +450,18 @@
       "name": "@equin/plugin-apps-deploy-site-messages-intake",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/deploy/plugins/site-reports": {
+      "name": "@equin/plugin-apps-deploy-site-reports",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/deploy/plugins/site-reports/plugins/channel": {
+      "name": "@equin/plugin-apps-deploy-site-reports-channel",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/deploy/plugins/site-reports/plugins/intake": {
+      "name": "@equin/plugin-apps-deploy-site-reports-intake",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/deploy/plugins/ssh-setup": {
       "name": "@equin/plugin-apps-deploy-ssh-setup",
       "version": "0.0.1",
@@ -7752,6 +7764,12 @@
     "@equin/plugin-apps-deploy-site-messages-inbox": ["@equin/plugin-apps-deploy-site-messages-inbox@workspace:plugins/apps/plugins/deploy/plugins/site-messages/plugins/inbox"],
 
     "@equin/plugin-apps-deploy-site-messages-intake": ["@equin/plugin-apps-deploy-site-messages-intake@workspace:plugins/apps/plugins/deploy/plugins/site-messages/plugins/intake"],
+
+    "@equin/plugin-apps-deploy-site-reports": ["@equin/plugin-apps-deploy-site-reports@workspace:plugins/apps/plugins/deploy/plugins/site-reports"],
+
+    "@equin/plugin-apps-deploy-site-reports-channel": ["@equin/plugin-apps-deploy-site-reports-channel@workspace:plugins/apps/plugins/deploy/plugins/site-reports/plugins/channel"],
+
+    "@equin/plugin-apps-deploy-site-reports-intake": ["@equin/plugin-apps-deploy-site-reports-intake@workspace:plugins/apps/plugins/deploy/plugins/site-reports/plugins/intake"],
 
     "@equin/plugin-apps-deploy-ssh-setup": ["@equin/plugin-apps-deploy-ssh-setup@workspace:plugins/apps/plugins/deploy/plugins/ssh-setup"],
 

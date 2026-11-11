@@ -5,7 +5,8 @@ import { reportsConfig } from "../core";
 import { IdKinds } from "@plugins/ids/web";
 import { reportIdKind } from "../core";
 
-export { report } from "./report";
+export { report, reportChannel } from "./report";
+export type { ClientReportOutcome, ReportChannel } from "./report";
 export { investigate } from "./investigate";
 export type { ReportContext } from "./report";
 export { Reports } from "./slots";

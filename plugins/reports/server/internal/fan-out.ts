@@ -1,5 +1,5 @@
 import { getConfig } from "@plugins/config_v2/server";
-import { reportsConfig } from "@plugins/reports/core";
+import { reportsConfig } from "../../core";
 
 // The reports engine's cross-fingerprint fan-out ceiling — the twin of
 // velocity.ts. velocity.ts is the per-fingerprint half of the throttle (one
@@ -256,6 +256,14 @@ export interface FanOutGate {
 export interface FanOutGateOptions {
   /** Files the rollup. Called once per storm, from the one-shot timer. */
   onStorm: (summary: StormSummary) => void;
+  /**
+   * Where the ceiling is read per admit. Absent: the live `reportsConfig`
+   * (Settings → Config). A caller with its own fixed bounds (a test, a
+   * suite driving the website's intake) passes them.
+   */
+  config?: () => FanOutConfigValues;
+  /** The clock windows are measured on. Absent: `Date.now`. */
+  now?: () => number;
 }
 
 function readCfg(): FanOutConfigValues {
@@ -292,10 +300,11 @@ function resolveBudget(
 export function createFanOutGate(opts: FanOutGateOptions): FanOutGate {
   const core = createFanOutCore();
   const armed = new Set<string>();
+  const now = opts.now ?? Date.now;
 
   function onStormTimer(kind: string): void {
     armed.delete(kind);
-    const summary = core.takeStorm(kind, Date.now());
+    const summary = core.takeStorm(kind, now());
     if (!summary) return;
     // Throwing here would reject nothing (a timer callback): the consumer is
     // recordReport's own filing hook, whose failures are already loud through
@@ -305,15 +314,9 @@ export function createFanOutGate(opts: FanOutGateOptions): FanOutGate {
 
   return {
     admit({ kind, fingerprint, message, fanOutPerWindow }) {
-      const cfg = readCfg();
+      const cfg = opts.config?.() ?? readCfg();
       const budget = resolveBudget(cfg, kind, fanOutPerWindow);
-      const admission = core.admit(
-        kind,
-        fingerprint,
-        message,
-        Date.now(),
-        budget,
-      );
+      const admission = core.admit(kind, fingerprint, message, now(), budget);
       if (!armed.has(kind) && core.stormOwed(kind)) {
         armed.add(kind);
         stormTimer.set(() => onStormTimer(kind), budget.windowMs);

@@ -283,6 +283,14 @@ and an out-of-composition read has no spelling inside the demo.
   it (`DemoScope`: `<Theme name={PLUGIN_SCOPE_ROOT_THEME}>`), so popups below
   never inherit a forwarded page token. Design:
   `research/2026-11-10-global-plugin-scope-hosts.md`.
+- **A `"page"` host of an on-demand plugin runs nowhere on that page.** The
+  check `page-hosts-on-demand` (composition-closure) lists, per composition,
+  every `scope: "page"` root mount of a plugin the composition holds only on
+  demand. It fails unless the plugin exempts itself with a reason (`./equin
+  exempt list --rule page-hosts-on-demand`). The other answers: the
+  composition holds the plugin as its own (the website holds the error
+  collectors, `research/2026-11-11-global-website-demo-error-reports.md`), or
+  the host serves each scope (`"each"`).
 - **Limits**: the global `register` phase (module writes applied once per
   page — error-boundary, pending-turn) is not scopable; the first read of a
   slot from inside a scope records the scope's contributors in its
@@ -393,8 +401,8 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
   - Slots:
     - `Core.Root`
     - `Core.Boot`
-  - Slot contributors: 52 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Core.Root` ×51
+  - Slot contributors: 53 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Core.Root` ×52
     - `Core.Boot` ← `network.live.boot-snapshot`
 - Core:
   - Uses:
@@ -463,10 +471,10 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
     - `webCollectedDir`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
-  - Imported by: 119 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 120 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×23
     - `reports` ×20
-    - `apps` ×18
+    - `apps` ×19
     - `ui` ×7
     - `apps-core` ×6
     - `debug` ×5

@@ -467,6 +467,7 @@ Exhibits: `hints/card`, `hints/caption`, `hints/spotlight`, `hints/welcome`.
     - `active-data/show-me`
     - `apps-core/app-launcher`
     - `apps/demo`
+    - `apps/deploy/site-reports`
     - `apps/desktop/windows`
     - `apps/home/app-cards`
     - `apps/home/tour`

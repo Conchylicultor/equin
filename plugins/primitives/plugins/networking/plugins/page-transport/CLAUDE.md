@@ -35,6 +35,7 @@ to itself).
   - Imported by:
     - `apps-core/app-usage`
     - `apps/deploy/analytics/collect`
+    - `apps/deploy/site-reports/channel`
     - `debug/latency-ledger`
     - `debug/slow-ops`
     - `framework/web-core`

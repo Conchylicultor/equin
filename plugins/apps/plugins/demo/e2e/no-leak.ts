@@ -120,6 +120,10 @@ const SANCTIONED: readonly RegExp[] = [
   /^\/api\/app-usage\/flush$/,
   /^\/api\/analytics\/collect$/,
   /^\/api\/reports$/,
+  // A site page's error reports (its report channel, the standalone website):
+  // the page's collectors catch the demo's errors and send them to the site's
+  // own public intake — reports/web's `reportChannel`.
+  /^\/api\/site-reports$/,
   /^\/api\/health(\/ready)?$/,
 ];
 

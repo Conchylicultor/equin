@@ -359,6 +359,12 @@ export const compositionsConfig = defineConfig({
         // browser registry — holds it (static-render's htmlparser2 and
         // react-dom/static included).
         //
+        // `!apps.deploy.site-reports.channel.**`: the website's report channel
+        // replaces where report() sends (a public, bounded intake instead of the
+        // reports engine). Only a site whose server has no engine wants that,
+        // so no composition holds it unless it names it (the website does);
+        // everywhere else report() keeps reaching the engine.
+        //
         // The host-service providers of a host without the computer (the PGlite
         // driver, the in-process job queue, the guest host account, …) are not
         // listed here: a plugin whose portable `server/` provides a host service
@@ -374,6 +380,7 @@ export const compositionsConfig = defineConfig({
             "!review.plugin-changes.**",
             "!primitives.dom.static-render.**",
             "!apps.website.crawlable.snapshot-render.**",
+            "!apps.deploy.site-reports.channel.**",
           ],
           selectedContributors: [] as string[],
           extends: [] as string[],
@@ -672,13 +679,25 @@ export const compositionsConfig = defineConfig({
         // secret) and hands it to the demo as a page input, so the demo's
         // Places draws its map. Map rendering only: the Places API client is
         // `machine/`, which the demo's worker never boots.
+        // `reporters` + `reports.crash`: the error collectors are page chrome
+        // (`scope: "page"` root hosts listening page-wide), so the site holds
+        // them as its own plugins — held only on demand they would never mount
+        // on the site, and the errors a visitor hits in the live demo would be
+        // lost. They report through `apps.deploy.site-reports.channel` to the
+        // site's own public intake (`…site-reports.intake`): the site's server
+        // has no reports engine. Design:
+        // research/2026-11-11-global-website-demo-error-reports.md.
         app("website", {
           entryPoints: [
             "apps.website.**",
             "!apps.website.demos.workspace.story",
             "!apps.website.promo-film.**",
             "integrations.google-maps.browser-config",
+            "reports.crash",
+            "apps.deploy.site-reports.intake",
+            "apps.deploy.site-reports.channel",
           ],
+          extraExtends: ["reporters"],
           excludes: ["agent-runtime", "auth"],
           // The public site: its build snapshots every page for robots.
           crawlable: true,

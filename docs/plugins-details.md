@@ -2261,6 +2261,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/deploy/deploy-secrets`
                   - `apps/deploy/host-query`
                   - `apps/deploy/site-messages/intake`
+                  - `apps/deploy/site-reports/intake`
                   - `framework/cli/deploy`
               - Server:
                 - Exports (values):
@@ -3444,6 +3445,72 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/website/landing/contact`
               - Deploy-secrets:
                 - Deploy secrets: `RESEND_API_KEY` — Resend API key the site uses to email you each message a visitor sends through its contact form.
+        - **`site-reports`** — Umbrella for the error reports a deployed site's visitors' browsers send: the intake that ships inside the site (public bounded endpoint, aggregated table, host-only list) and the page channel that sends them (deduped, capped, batched).
+          - Plugins:
+            - **`channel`** (excluded) — The website's report channel: registers itself as reports' reportChannel at register time, so report() on a site page — the page's collectors, which also catch what the live demo raises — sends to the site's own public intake (POST /api/site-reports) instead of a reports engine the site does not have: deduped by fingerprint (a repeat only counted), at most 20 fingerprints and 10 POSTs per visit, batched 5 s, backed off on failure (stopping after 5), anonymous (no client id or user agent, the pathname only, strings clamped). Excluded from every composition by default (base-exclusions); the website names it.
+              - Web:
+                - Contributes: `Core.Root` → `FlushReportsOnPagehide`
+                - Uses:
+                  - `infra/endpoints.fetchEndpointOver`
+                  - `primitives/networking/page-transport.pageTransport`
+                  - `reports.reportChannel`
+              - Exemptions:
+                - Exempts itself from: `networking/no-page-transport` — `web/internal/channel.ts` (sanctioned)
+            - **`intake`** — Owns site_reports and site_report_drops: the public POST /api/site-reports endpoint a site page's report channel posts batches to (body capped at 64 KB, at most 10 reports; per-visitor and global batch budgets per minute keyed by a per-process salted IP hash, never stored; each report identified by its ReportKind's own schema and fingerprint and a new fingerprint admitted through the reports fan-out ceiling), aggregated in memory and flushed once a minute as one upsert per fingerprint, the table capped at 2,000 rows, every refusal counted per minute and reason, a 30-day sweep, and the host-only list the deploy app reads over SSH.
+              - Server:
+                - Contributes:
+                  - `change-feed-exclusion` "site_report_drops"
+                  - `change-feed-exclusion` "site_reports"
+                - Uses:
+                  - `apps/deploy/analytics/host-only.capBodySize`
+                  - `apps/deploy/analytics/host-only.hostOnly`
+                  - `apps/deploy/analytics/host-only.requestClientIp`
+                  - `database.db`
+                  - `database/sql-column.parsedJson`
+                  - `database/sql-column.parsedText`
+                  - `infra/endpoints.implement`
+                  - `infra/endpoints.rawEndpointHandler`
+                  - `infra/retention.defineRetention`
+                  - `network/live/change-feed.ExcludeFromChangeFeed`
+                  - `reports.createFanOutGate`
+                  - `reports.ReportKind`
+                - DB schema: `plugins/apps/plugins/deploy/plugins/site-reports/plugins/intake/server/internal/tables.ts`
+                - Register:
+                  - `defineJob('retention.site_reports')`
+                  - `defineJob('retention.site_report_drops')`
+                - Routes:
+                  - `POST /api/site-reports`
+                  - `GET /api/host-only/site-reports`
+              - Core:
+                - Uses:
+                  - `infra/endpoints.defineEndpoint`
+                  - `packages/list-bound.cappedList`
+                  - `reports.CLIENT_REPORT_SOURCES`
+                - Exports (types):
+                  - `SiteReportDropReason`
+                  - `SiteReportDropRecord`
+                  - `SiteReportEntry`
+                  - `SiteReportRecord`
+                  - `SiteReportsBody`
+                  - `SiteReportsListQuery`
+                  - `SiteReportsPage`
+                  - `SiteReportsResponse`
+                - Exports (values):
+                  - `SITE_REPORT_DROP_REASONS`
+                  - `SITE_REPORT_LIMITS`
+                  - `SITE_REPORTS_PAGE_DEFAULT`
+                  - `SITE_REPORTS_PAGE_MAX`
+                  - `SiteReportDropRecordSchema`
+                  - `SiteReportRecordSchema`
+                  - `siteReportsEndpoint`
+                  - `siteReportsListEndpoint`
+                  - `SiteReportsListQuerySchema`
+                  - `SiteReportsPageSchema`
+              - Cross-plugin:
+                - Imported by:
+                  - `apps/deploy/site-reports`
+                  - `apps/deploy/site-reports/channel`
+                - Endpoint callers: `channel`
         - **`ssh-setup`** — SSH setup for deploy servers: owns the whole key flow (generate / paste-and-derive / fingerprint / install command / verify the connection / replace) as a collapsible section that always renders, and decorates it with the matched SshProvider's console prose when the server's console URL identifies one.
           - Web:
             - Slots: `SshProvider`
@@ -12668,7 +12735,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by: `apps/home/usage-fields`
       - Exemptions:
-        - Exempts itself from: `networking/no-page-transport` — `web/components/app-usage-recorder.tsx` (sanctioned)
+        - Exempts itself from:
+          - `networking/no-page-transport` — `web/components/app-usage-recorder.tsx` (sanctioned)
+          - `page-hosts-on-demand` — `web/index.ts` (sanctioned)
     - **`chrome-theme`** — The app chrome's fixed theme (graphite): the rail, tab bar, action bar and toasts wear it whichever app is focused, so the frame stays the same while the app inside changes.
       - Web:
         - Contributes: `ThemeEngine.FixedTheme` "Chrome"
@@ -12719,6 +12788,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/pane.peekRoute`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/color-palette --background`
+      - Exemptions:
+        - Exempts itself from: `page-hosts-on-demand` — `web/index.ts` (sanctioned)
     - **`surface`** — Generic surface dispatcher: renders every open tab at once under the ONE surface mode (docked / windows / solo) selected from the Surface.Placement registry, so the modes are mutually exclusive. Owns the surface body and the mode control; each mode (docked / floating / solo) is a self-contained sub-plugin.
       - Web:
         - Slots: `Surface.Placement`
@@ -14846,7 +14917,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `validationIssues`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Imported by: 141 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+    - Imported by: 140 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
       - `apps` ×39
       - `conversations` ×14
       - `backup` ×13
@@ -14861,7 +14932,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives` ×3
       - `integrations` ×2
       - `plugin-meta` ×2
-      - `reports` ×2
       - `shell` ×2
       - `stats` ×2
       - `audience`
@@ -14869,6 +14939,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `hints/ask`
       - `map/google`
       - `reorder`
+      - `reports`
       - `review/code-review`
   - Exemptions:
     - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/config-registrations.ts`, `check/overrides-authored.ts` (debt)
@@ -14938,6 +15009,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `integrations/google-maps/usage`
           - `stats/commits`
           - `tasks/launch-options`
+      - Exemptions:
+        - Exempts itself from: `page-hosts-on-demand` — `web/index.ts` (sanctioned)
     - **`disk-read`** — A config's resolved value read straight off disk, with no server runtime and no build tooling: readEffectiveConfigFromDisk (this checkout's git layer as propagation will write it, under a namespace's user overrides; async for a backend, readEffectiveConfigFromDiskSync for a CLI step).
       - Core:
         - Uses:
@@ -20588,6 +20661,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/claude-cli`
           - `primitives/launch`
           - `stats/cost`
+      - Exemptions:
+        - Exempts itself from: `page-hosts-on-demand` — `web/index.ts` (sanctioned)
       - Plugins:
         - **`catalog`** — The model catalog every launch reads: getModelCatalog() over the ModelCatalogSource host service (the desktop's discovered catalog.json, or the code baseline on a host without the computer), and the model-provider.catalog live value served from it.
           - Server:
@@ -21833,8 +21908,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadedDatabaseConfig`
       - `readDatabaseConfigSync`
   - Cross-plugin:
-    - Imported by: 155 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
-      - `apps` ×43
+    - Imported by: 156 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+      - `apps` ×44
       - `conversations` ×19
       - `infra` ×15
       - `page` ×14
@@ -22659,8 +22734,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens: `ui/tokens/color-palette --muted-foreground`
     - **`sql-column`** — Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union, or a jsonb shape, that nothing verifies. `withWire` declares a column type's JSON wire form (a codec applied in JS by whatever projects the column onto the wire), carried on the built column's type so a row schema must match it.
       - Cross-plugin:
-        - Imported by: 24 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
-          - `apps` ×6
+        - Imported by: 25 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
+          - `apps` ×7
           - `fields` ×5
           - `infra` ×4
           - `conversations` ×2
@@ -28673,6 +28748,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by:
                   - `apps/website/promo-film/seed`
                   - `tasks/task-draft-form`
+              - Exemptions:
+                - Exempts itself from: `page-hosts-on-demand` — `web/index.ts` (sanctioned)
         - **`check`** — `./equin check` — run the repo validation checks (all, a named subset, or one scope). The only in-process caller of runChecks(): `build` and `push` each spawn it as a subprocess, so their `checks ✓` is one claim.
           - Cli:
             - Uses:
@@ -30127,6 +30204,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `resolveOriginAnnotations`
               - `resolveOriginDefaults`
               - `resolveRegistryHome`
+              - `scopedOnlyWebPlugins`
               - `seedAuthoredOverrides`
               - `serverBarrelBlockers`
               - `setDefaultOriginAnnotations`
@@ -30237,8 +30315,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards/module-extension.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 190 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
-              - `apps` ×57
+            - Imported by: 191 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+              - `apps` ×58
               - `primitives` ×28
               - `conversations` ×26
               - `page` ×26
@@ -30897,8 +30975,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots:
           - `Core.Root`
           - `Core.Boot`
-        - Slot contributors: 52 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
-          - `Core.Root` ×51
+        - Slot contributors: 53 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+          - `Core.Root` ×52
           - `Core.Boot` ← `network.live.boot-snapshot`
       - Core:
         - Uses:
@@ -30967,10 +31045,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `webCollectedDir`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 119 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+        - Imported by: 120 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
           - `primitives` ×23
           - `reports` ×20
-          - `apps` ×18
+          - `apps` ×19
           - `ui` ×7
           - `apps-core` ×6
           - `debug` ×5
@@ -31163,6 +31241,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `active-data/show-me`
       - `apps-core/app-launcher`
       - `apps/demo`
+      - `apps/deploy/site-reports`
       - `apps/desktop/windows`
       - `apps/home/app-cards`
       - `apps/home/tour`
@@ -32151,6 +32230,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/launch`
               - `tasks`
               - `tasks/task-triage`
+          - Exemptions:
+            - Exempts itself from: `page-hosts-on-demand` — `web/index.ts` (sanctioned)
         - **`sdk`** — The one way a backend opens a Claude Code session: through the Agent SDK, on an account its caller chose. claudeSessionEnv(account) is the environment (the host facts plus an added account's credential, through claudeCredentialEnv; branded, so no session skips the choice), claudeQuery opens the session, runClaudeTurn runs one prompt to its result under a real deadline, readClaudeInitialize reads the version, the signed-in account and the model menu without a turn. Its lint rules reject a direct query() and a spawn of the resolved claude binary anywhere else.
           - Server:
             - Uses: `infra/claude-cli/accounts.claudeAccountCredential`
@@ -32254,6 +32335,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from:
               - `claude-sdk/no-claude-bin-spawn` — `machine/internal/run.ts` (sanctioned)
               - `spawn-safety/no-raw-bun-spawn` — `machine/internal/run.ts` (sanctioned)
+              - `page-hosts-on-demand` — `web/index.ts` (sanctioned)
     - **`codesign`** — Stable code signing for the binaries this machine builds (the gateway): signBinary signs with a configured keychain identity (/usr/bin/codesign) or the machine's own self-signed one (PEM under state/codesign, via the pinned rcodesign dependency), so macOS permission grants survive rebuilds.
       - Deps:
         - Uses:
@@ -32843,8 +32925,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 251 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
-          - `apps` ×74
+        - Imported by: 253 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+          - `apps` ×76
           - `conversations` ×35
           - `infra` ×23
           - `page` ×19
@@ -35754,8 +35836,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `getTableGrowthBounds`
           - `markCascadeBounded`
       - Cross-plugin:
-        - Imported by: 22 plugins — full list in [`plugins/infra/plugins/retention/REFERENCE.md`](../plugins/infra/plugins/retention/REFERENCE.md)
-          - `apps` ×5
+        - Imported by: 23 plugins — full list in [`plugins/infra/plugins/retention/REFERENCE.md`](../plugins/infra/plugins/retention/REFERENCE.md)
+          - `apps` ×6
           - `debug` ×5
           - `infra` ×3
           - `page` ×3
@@ -35873,10 +35955,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SPAN_MEASURES`
           - `waitSplit`
       - Cross-plugin:
-        - Imported by: 71 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
+        - Imported by: 72 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
           - `infra` ×22
           - `debug` ×20
-          - `apps` ×6
+          - `apps` ×7
           - `conversations` ×6
           - `tasks` ×3
           - `build` ×2
@@ -38211,6 +38293,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/chord/video-availability`
               - `apps/deploy/analytics/collect`
               - `apps/deploy/site-messages/intake`
+              - `apps/deploy/site-reports/intake`
               - `conversations/runtime-sdk`
               - `conversations/usage`
               - `debug/latency-ledger`
@@ -39084,6 +39167,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`keyed-mutex`** — Keyed FIFO mutex: createKeyedMutex().run(key, fn) runs fn once every earlier run for the same key has settled, in arrival order, while different keys run concurrently; a key's entry is dropped the moment its queue drains.
       - Cross-plugin:
         - Imported by:
+          - `apps/deploy/site-reports/intake`
           - `apps/mail/sync`
           - `config_v2`
           - `conversations`
@@ -39130,8 +39214,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `wholeRecord`
           - `wholeTuple`
       - Cross-plugin:
-        - Imported by: 124 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
-          - `apps` ×26
+        - Imported by: 125 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
+          - `apps` ×27
           - `debug` ×18
           - `conversations` ×15
           - `infra` ×15
@@ -39502,8 +39586,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withForegroundPriority`
     - **`string-hash`** — Portable string hashes in plain JS (no node:crypto, no Bun.hash), so every host — the Bun server, central and a browser page — computes the same value: hash53 (cyrb53, a 53-bit number, optionally seeded), hashHex (two seeded cyrb53s, ~106 bits as hex), hash64 (a 64-bit bigint), sha256Hex (a synchronous SHA-256, identical to node:crypto's hex digest), createSha256 (the same SHA-256, incremental over strings and bytes) and sha1Hex (SHA-1 for values already stored as one).
       - Cross-plugin:
-        - Imported by: 37 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
-          - `apps` ×10
+        - Imported by: 38 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
+          - `apps` ×11
           - `network` ×5
           - `database` ×4
           - `framework` ×3
@@ -50055,6 +50139,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempted by:
           - `apps-core/app-usage` (0 debt)
           - `apps/deploy/analytics/collect` (0 debt)
+          - `apps/deploy/site-reports/channel` (0 debt)
           - `debug/latency-ledger` (0 debt)
           - `debug/slow-ops` (0 debt)
           - `framework/web-core` (0 debt)
@@ -50102,6 +50187,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps-core/app-usage`
               - `apps/deploy/analytics/collect`
+              - `apps/deploy/site-reports/channel`
               - `debug/latency-ledger`
               - `debug/slow-ops`
               - `framework/web-core`
@@ -52381,6 +52467,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks` ×3
               - `primitives` ×2
               - `screenshot/draw-on-app`
+          - Exemptions:
+            - Exempts itself from: `page-hosts-on-demand` — `web/index.ts` (debt)
         - **`token-extension`** — The inline-token primitive's synchronously-loadable half: the declaration TYPES of a token family, the tokenExtension pairing of pattern and node, THE line scan, and the lazy-source host registry. Imports lexical for types only — the class factory lives in the `node` sub-plugin.
           - Cross-plugin:
             - Imported by:
@@ -53380,10 +53468,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives/networking/page-transport.pageTransport`
       - `primitives/scope/tab-id.getTabId`
       - `primitives/slot-render.defineDispatchSlot`
-    - Exports (types): `ReportContext`
+    - Exports (types):
+      - `ClientReportOutcome`
+      - `ReportChannel`
+      - `ReportContext`
     - Exports (values):
       - `investigate`
       - `report`
+      - `reportChannel`
       - `Reports`
   - Server:
     - Contributes:
@@ -53394,6 +53486,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ConfigV2.Register` "reports"
     - Uses:
       - `config_v2.ConfigV2`
+      - `config_v2.getConfig`
       - `database.db`
       - `ids.IdKinds`
       - `infra/entities.defaultNow`
@@ -53401,14 +53494,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `network/live.serveCollection`
     - DB schema: `plugins/reports/server/internal/tables.ts`
     - Exports (types):
+      - `AlertAdmission`
+      - `FanOutAdmitInput`
+      - `FanOutConfigValues`
+      - `FanOutGate`
+      - `FanOutGateOptions`
       - `InvestigationTaskRequest`
       - `ReportKindSpec`
       - `ReportKindVariant`
       - `ReportNoiseInput`
       - `ReportNoiseRuleSpec`
       - `ReportRow`
+      - `StormRosterEntry`
+      - `StormSummary`
     - Exports (values):
       - `_reports`
+      - `createFanOutGate`
       - `getReportTitle`
       - `isReportKindRegistered`
       - `reportInvestigationSink`
@@ -53484,13 +53585,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `SERVER_REPORT_SOURCES`
       - `submitReport`
   - Cross-plugin:
-    - Imported by: 75 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+    - Imported by: 77 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
       - `reports` ×30
       - `debug` ×18
       - `conversations` ×7
       - `database` ×4
       - `infra` ×4
       - `build` ×3
+      - `apps` ×2
       - `framework` ×2
       - `active-data/report`
       - `backup`
@@ -53644,14 +53746,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fork-data-exclusion` "report_fixes"
           - `fork-data-exclusion` "reports"
           - `restart-skip.adopted` "the report fixes the adopted commit contains (deployed)"
-        - Uses: 30 symbols — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
-          - `reports` ×8
+        - Uses: 31 symbols — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
+          - `reports` ×10
           - `shell/notifications` ×4
           - `build/server-build-id` ×3
           - `infra/host/duress/shed` ×2
           - `primitives/commit-list` ×2
           - `build/restart-skip/hooks.RestartSkip`
-          - `config_v2.getConfig`
           - `database/admin.ExcludeFromFork`
           - `database.db`
           - `ids.idRef`
@@ -53666,8 +53767,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RecordReportResult`
           - `RestateOccurrence`
           - `RestateResult`
-          - `StormRosterEntry`
-          - `StormSummary`
         - Exports (values):
           - `DEFAULT_REPORT_DEBOUNCE_MS`
           - `investigateReport`
@@ -54943,6 +55042,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/home/tour`
           - `hints/ask`
           - `shell/notifications`
+      - Exemptions:
+        - Exempts itself from: `page-hosts-on-demand` — `web/index.ts` (sanctioned)
     - **`health-report`** — Unified health report: one dot merging every HealthReport.Row contribution (critical > attention > unknown > ok, with a count of rows needing a look), opening a popover that lists info rows first, then status rows in the slot's reorder layout order. Owns the slot, and contributes its button as the action bar's leading mark (ActionBar.Lead); knows no contributor.
       - Web:
         - Slots: `HealthReport.Row`
