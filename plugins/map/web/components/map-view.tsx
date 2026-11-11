@@ -137,8 +137,9 @@ export interface MapViewProps {
    * What the map's first framing frames (not the Fit control, which always
    * frames every overlay): every overlay (`"all"`, the default), or
    * `"densest"` — the area holding the most pins (`densestPinIds`: a fixed
-   * ~50 km grid, the densest 3×3 block), so a set spread over a home city and
-   * a few trips opens on the city, not on the world. The user zooms out or
+   * ~50 km grid, the densest 3×3 block, less its outlying pins), so a set
+   * spread over a home city, its day trips and a few trips opens on the city,
+   * not on its region or the world. The user zooms out or
    * presses Fit for the rest. With `focusIds`, those are framed instead.
    */
   opening?: "all" | "densest";

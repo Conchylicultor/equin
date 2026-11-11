@@ -28,10 +28,16 @@ describe("densestPinIds", () => {
   const tokyo = around("tokyo", 35.68, 139.7, 10);
   const versailles = pin("versailles", 48.8049, 2.1204);
 
-  test("a home city and a few trips: the home city and its day trips", () => {
+  test("a home city and a few trips: the home city, without its day trips", () => {
     expect(
       sorted(densestPinIds([...lisbon, ...paris, versailles, ...tokyo])),
-    ).toEqual(sorted([...paris, versailles].map((p) => p.id)));
+    ).toEqual(sorted(paris.map((p) => p.id)));
+  });
+
+  test("one area with a day trip: the city alone", () => {
+    expect(sorted(densestPinIds([...paris, versailles]))).toEqual(
+      sorted(paris.map((p) => p.id)),
+    );
   });
 
   test("the answer does not depend on the pins' order", () => {
