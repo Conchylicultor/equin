@@ -7,6 +7,15 @@ import {
   type Theme,
 } from "../../core";
 import { renderThemeHead } from "./theme-head";
+import { ROOT_SCHEME_SELECTORS } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
+
+const script = (scheme: string) =>
+  `<script>document.documentElement.setAttribute("data-color-scheme",${scheme})</script>`;
+const DARK_SCRIPT = script('"dark"');
+const LIGHT_SCRIPT = script('"light"');
+const SYSTEM_SCRIPT = script(
+  'matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"',
+);
 
 const palette = defineTokenGroup("palette", {
   primary: { default: "blue" },
@@ -23,7 +32,7 @@ const ink = defineTheme({
   fragments: [
     palette.fragment({
       light: { primary: "black", background: "ivory" },
-      dark: {},
+      dark: { background: "charcoal" },
     }),
   ],
 });
@@ -55,16 +64,16 @@ describe("renderThemeHead", () => {
     // :root is the desktop's theme everywhere — never re-rooted on the app…
     for (const entry of [head[""], head["/pages"]]) {
       expect(entry).toContain(
-        '<style id="theme-engine-palette">:root {\n  --primary: blue;',
+        `<style id="theme-engine-palette">${ROOT_SCHEME_SELECTORS.light} {\n  --primary: blue;`,
       );
       // …and the app's own theme is on its scope, on every path.
       expect(entry).toContain(
         '<style id="theme-scope-app:pages-palette">[data-theme-scope="app:pages"] {\n  --primary: black;',
       );
     }
-    // Only the canvas follows the app the path opens.
+    // Only the canvas follows the app the path opens, in its (dark) scheme.
     expect(head["/pages"]).toContain(
-      '<style id="theme-engine-canvas">body {\n  background-color: ivory;',
+      '<style id="theme-engine-canvas">body {\n  background-color: charcoal;',
     );
     expect(head[""]).toContain(
       '<style id="theme-engine-canvas">body {\n  background-color: white;',
@@ -85,25 +94,19 @@ describe("renderThemeHead", () => {
     expect(head[""]).toContain('<style id="theme-scope-app:desktop-palette">');
   });
 
-  it("ends every entry with the configured .dark class, resolving system in the page", () => {
+  it("ends every entry with the desktop's scheme on <html>, resolving system in the page", () => {
     const render = (colorMode: "light" | "dark" | "system") =>
       renderThemeHead(sources, apps, {
         baseThemeId: DEFAULT_THEME_ID,
         colorMode,
         scopes: [],
       })[""];
-    expect(render("dark")).toEndWith(
-      '<script>document.documentElement.classList.toggle("dark",true)</script>',
-    );
-    expect(render("light")).toEndWith(
-      '<script>document.documentElement.classList.toggle("dark",false)</script>',
-    );
-    expect(render("system")).toEndWith(
-      '<script>document.documentElement.classList.toggle("dark",matchMedia("(prefers-color-scheme: dark)").matches)</script>',
-    );
+    expect(render("dark")).toEndWith(DARK_SCRIPT);
+    expect(render("light")).toEndWith(LIGHT_SCRIPT);
+    expect(render("system")).toEndWith(SYSTEM_SCRIPT);
   });
 
-  it("roots an app whose scheme differs from the global one at its base path, in its scheme", () => {
+  it("paints the canvas of an app whose scheme differs from the global one in its scheme, <html> keeping the desktop's", () => {
     const head = renderThemeHead(
       sources,
       [...apps, { id: "panel", basePath: "/home/panel", colorMode: "system" }],
@@ -116,21 +119,20 @@ describe("renderThemeHead", () => {
     expect(Object.keys(head).sort()).toEqual(["", "/home/panel", "/pages"]);
     // No theme document of its own: the desktop's theme at :root and canvas…
     expect(head["/home/panel"]).toContain(
-      '<style id="theme-engine-palette">:root {\n  --primary: blue;',
+      `<style id="theme-engine-palette">${ROOT_SCHEME_SELECTORS.light} {\n  --primary: blue;`,
     );
     expect(head["/home/panel"]).toContain(
       '<style id="theme-scope-app:pages-palette">',
     );
-    // …in its own scheme, while every other entry keeps the global one.
-    expect(head["/home/panel"]).toEndWith(
-      '<script>document.documentElement.classList.toggle("dark",matchMedia("(prefers-color-scheme: dark)").matches)</script>',
+    // …its canvas in its own scheme; <html> keeps the desktop's on every path.
+    expect(head["/home/panel"]).toContain(
+      "@media (prefers-color-scheme: dark)",
     );
-    expect(head["/pages"]).toEndWith(
-      '<script>document.documentElement.classList.toggle("dark",true)</script>',
-    );
+    expect(head["/home/panel"]).toEndWith(DARK_SCRIPT);
+    expect(head["/pages"]).toEndWith(DARK_SCRIPT);
   });
 
-  it("paints a themed app in its own scheme", () => {
+  it("paints a themed app's canvas in its own scheme", () => {
     const head = renderThemeHead(
       sources,
       [{ id: "pages", basePath: "/pages", colorMode: "light" }],
@@ -140,12 +142,9 @@ describe("renderThemeHead", () => {
         scopes: [{ scopeId: "app:pages", themeId: "ink" }],
       },
     );
-    expect(head["/pages"]).toEndWith(
-      '<script>document.documentElement.classList.toggle("dark",false)</script>',
-    );
-    expect(head[""]).toEndWith(
-      '<script>document.documentElement.classList.toggle("dark",true)</script>',
-    );
+    expect(head["/pages"]).not.toContain("@media (prefers-color-scheme");
+    expect(head["/pages"]).toEndWith(DARK_SCRIPT);
+    expect(head[""]).toEndWith(DARK_SCRIPT);
   });
 
   it("never lets a stored value close its <style> element", () => {

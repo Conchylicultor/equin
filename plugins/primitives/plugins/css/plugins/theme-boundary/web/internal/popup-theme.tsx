@@ -1,5 +1,6 @@
 import { PortalThemeScopeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type React from "react";
+import { ColorSchemeProvider, usePublishedColorScheme } from "./color-scheme";
 
 export interface PopupThemeProps {
   /** Scope token the popups opened from here wear — `fixedThemeScope(…)`,
@@ -22,9 +23,14 @@ export interface PopupThemeProps {
  * portal re-stamps (`OverlayPanel`).
  */
 export function PopupTheme({ name, children }: PopupThemeProps) {
+  // The popups wear the scope's scheme too (the chrome's dark), re-stamped
+  // with its token; the region keeps its own.
+  const scheme = usePublishedColorScheme(name);
   return (
     <PortalThemeScopeProvider scope={name} popupsOnly>
-      {children}
+      <ColorSchemeProvider scheme={scheme} reach="popups">
+        {children}
+      </ColorSchemeProvider>
     </PortalThemeScopeProvider>
   );
 }

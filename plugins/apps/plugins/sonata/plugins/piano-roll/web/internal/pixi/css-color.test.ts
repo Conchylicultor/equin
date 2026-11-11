@@ -1,6 +1,6 @@
 /**
  * Pure-parser tests for `parseComputedColor` — the DOM-free half of the CSS
- * color resolver. `resolveCssColor` / `watchThemeColors` need a real browser
+ * color resolver. `resolveCssColor` needs a real browser
  * (probe element + getComputedStyle) and are exercised by the e2e flows, not
  * here; importing the module must NOT require a DOM, which this file also
  * implicitly verifies by running under plain `bun test`.

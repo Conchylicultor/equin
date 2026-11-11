@@ -14,6 +14,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewport-overlay/web";
 import { Layer } from "@plugins/primitives/plugins/css/plugins/layer/web";
+import { ColorSchemeRegion } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import {
   placedClasses,
@@ -778,17 +779,14 @@ function ViewerFrame({
       onKeyDown={onKeyDown}
       onPointerMove={wake}
     >
-      {/* Image viewers are dark by convention, whatever the app's theme: the
-          photo is the content and the chrome should recede. There is no scoped
-          color-mode primitive (per-scope dark is deferred — see the theme
-          skill), so this box opts into the theme's own `.dark` token block by
-          class: the global dark palette ThemeInjector emits is selected on
-          `.dark`, which re-declares every token on this element, and `dark:`
-          variants key on a `.dark` ancestor. It sits INSIDE the portal root
-          (which may carry an app's `data-theme-scope` block at equal
-          specificity) so it wins by being the nearer declaration. */}
-      <Layer
-        className="dark group/viewer text-foreground"
+      {/* Image viewers are dark by convention, whatever the app's scheme: the
+          photo is the content and the chrome should recede. A scheme region:
+          the desktop's tokens in dark on this box, its `color-scheme`, every
+          `dark:` variant inside and the popups opened from it follow it. */}
+      <ColorSchemeRegion
+        as={Layer}
+        scheme="dark"
+        className="group/viewer text-foreground"
         data-phase={phase}
         data-chrome={phase !== "open" || idle || slideshow ? "hidden" : "shown"}
         data-zoomed={zoomed}
@@ -916,7 +914,7 @@ function ViewerFrame({
             <Minimap image={shown.image} ctl={ctl} lifted={stripShown} />
           )}
         </ControlSizeProvider>
-      </Layer>
+      </ColorSchemeRegion>
     </ViewportOverlay>
   );
 }

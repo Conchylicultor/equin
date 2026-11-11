@@ -1,9 +1,11 @@
 // Pure serialization of a token group's resolved values into the
-// `:root{…}.dark{…}` CSS text painted per group. One function for both painters
+// light-and-dark CSS text painted per group. One function for both painters
 // — the browser's ThemeInjector and the server that renders the first frame's
 // CSS into the HTML (see paint.ts) — so the browser adopts the server's
 // elements without rewriting them: the no-flash first frame depends on that
 // identity.
+
+import { ROOT_SCHEME_SELECTORS } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 
 type VarsDescriptor = { vars: Record<string, string> };
 
@@ -25,14 +27,15 @@ export function buildVarsBlock(
 /**
  * The full `<light>{…}<dark>{…}` block for one token group, given resolved values.
  *
- * `selectors` defaults to the global `:root` / `.dark` pair. Scoped callers (per-window desktop overrides) pass a `[data-theme-scope]`
- * pair instead, e.g. `{ light: '[data-theme-scope="app:x"]', dark: '.dark [data-theme-scope="app:x"]' }`.
+ * `selectors` defaults to the desktop's base pair — `:root` and every colour
+ * scheme carrier, in its scheme (ui-kit's `ROOT_SCHEME_SELECTORS`). Scoped
+ * callers pass a `[data-theme-scope]` pair instead (`themeScopeSelectors`).
  */
 export function renderGroupBlock(
   descriptor: VarsDescriptor,
   light: Record<string, string>,
   dark: Record<string, string>,
-  selectors: { light: string; dark: string } = { light: ":root", dark: ".dark" },
+  selectors: { light: string; dark: string } = ROOT_SCHEME_SELECTORS,
 ): string {
   return `${selectors.light} {\n${buildVarsBlock(descriptor, light)}\n}\n${selectors.dark} {\n${buildVarsBlock(descriptor, dark)}\n}`;
 }

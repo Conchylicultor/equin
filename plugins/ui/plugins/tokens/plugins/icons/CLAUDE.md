@@ -49,6 +49,7 @@ primitive.
     - `primitives/css/row.Row`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/css/theme-boundary.usePublishedColorScheme`
     - `primitives/css/toggle-chip.SegmentedControl`
     - `primitives/loading.Loading`
     - `ui/icons.Icon`
@@ -57,7 +58,7 @@ primitive.
     - `ui/icons.usePublishIconStyle`
     - `ui/icons.usePublishIconStyleLayer`
     - `ui/theme-engine.ThemeEngine`
-    - `ui/theme-engine.useResolvedColorMode`
+    - `ui/theme-engine.useColorMode`
     - `ui/theme-engine.useResolvedTheme`
     - `ui/theme-engine/theme-customizer.ThemeCustomizer`
     - `ui/theme-engine/theme-customizer.useTokenGroupEditor`

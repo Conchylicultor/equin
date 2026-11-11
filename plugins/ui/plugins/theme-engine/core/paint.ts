@@ -34,6 +34,7 @@ import {
   type ThemeId,
 } from "./theme";
 import { transformValues } from "./transform";
+import type { ConfiguredColorMode } from "./config";
 
 /**
  * The `<style>` id a token group's block is painted under: `theme-engine-<group>`
@@ -240,6 +241,13 @@ export interface ThemePaintSelection {
    * costs nothing, unlike re-rooting the tokens.
    */
   canvasThemeId: ThemeId;
+  /**
+   * The scheme the canvas is painted in: that same app's (`effectiveColorMode`),
+   * the desktop's with no app. `<html>` always carries the desktop's scheme, so
+   * the canvas cannot read it from there — it is baked into the block
+   * (`system` as a `prefers-color-scheme` query).
+   */
+  canvasColorMode: ConfiguredColorMode;
 }
 
 /**
@@ -271,7 +279,7 @@ export interface ThemePainter {
  */
 export function themePainter(sources: ThemePaintSources): ThemePainter {
   const scopes = new Map<string, Record<string, string>>();
-  const canvases = new Map<ThemeId, string>();
+  const canvases = new Map<string, string>();
   let regions: Record<string, string> | undefined;
 
   const scope = (themeId: ThemeId, scopeToken?: string) => {
@@ -291,10 +299,15 @@ export function themePainter(sources: ThemePaintSources): ThemePainter {
       for (const { appId, themeId } of selection.appThemes) {
         Object.assign(styles, scope(themeId, appThemeScope(appId)));
       }
-      let canvas = canvases.get(selection.canvasThemeId);
+      const canvasKey = `${selection.canvasThemeId}\u0000${selection.canvasColorMode}`;
+      let canvas = canvases.get(canvasKey);
       if (canvas === undefined) {
-        canvas = paintCanvasStyle(sources, selection.canvasThemeId);
-        canvases.set(selection.canvasThemeId, canvas);
+        canvas = paintCanvasStyle(
+          sources,
+          selection.canvasThemeId,
+          selection.canvasColorMode,
+        );
+        canvases.set(canvasKey, canvas);
       }
       styles[CANVAS_STYLE_ID] = canvas;
       Object.assign(styles, (regions ??= paintRegionStyles(sources)));
@@ -315,14 +328,17 @@ export const CANVAS_STYLE_ID = themeStyleId("canvas");
 const CANVAS_VAR = "--background";
 
 /**
- * The document canvas block: `<body>`'s background in the theme's light and
- * dark `--background`, written out as values (not `var()`), because `<body>`
- * sits outside every app boundary and reads `:root`'s tokens. A value that is
- * itself a `var()` resolves against `:root` — the desktop's theme.
+ * The document canvas block: `<body>`'s background in the theme's
+ * `--background`, in the scheme `colorMode` names — `system` as both values,
+ * switched by a `prefers-color-scheme` query. Written out as values (not
+ * `var()`), because `<body>` sits outside every app boundary and reads `:root`'s
+ * tokens. A value that is itself a `var()` resolves against `:root` — the
+ * desktop's theme, in the desktop's scheme.
  */
 export function renderCanvasBlock(
   groups: readonly TokenGroupSpec[],
   theme: ResolvedTheme,
+  colorMode: ConfiguredColorMode,
 ): string {
   if (groups.some((g) => g.id === "canvas")) {
     throw new Error(
@@ -341,16 +357,22 @@ export function renderCanvasBlock(
   const values = theme.groups[group.id]!;
   const light = transformValues(values.light, theme.colorAdjust)[key];
   const dark = transformValues(values.dark, theme.colorAdjust)[key];
-  return `body {\n  background-color: ${light};\n}\n.dark body {\n  background-color: ${dark};\n}`;
+  const body = (value: string | undefined) =>
+    `body {\n  background-color: ${value};\n}`;
+  if (colorMode === "system") {
+    return `${body(light)}\n@media (prefers-color-scheme: dark) {\n${body(dark)}\n}`;
+  }
+  return body(colorMode === "dark" ? dark : light);
 }
 
 function paintCanvasStyle(
   sources: ThemePaintSources,
   themeId: ThemeId,
+  colorMode: ConfiguredColorMode,
 ): string {
   const painted = sources.themesById.has(themeId) ? themeId : DEFAULT_THEME_ID;
   const { theme } = resolveTheme(painted, sources.themesById, sources.groups);
-  return renderCanvasBlock(sources.groups, theme);
+  return renderCanvasBlock(sources.groups, theme, colorMode);
 }
 
 /** One scope's blocks — `:root` without a token, else `[data-theme-scope=…]` — for the theme it selects. */

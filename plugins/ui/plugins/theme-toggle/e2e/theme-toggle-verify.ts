@@ -1,11 +1,13 @@
 // Drives the light/dark switch against the deployed app and prints what the page
-// actually did: the `<html>.dark` class and the switch's own checked state,
-// before and after one click.
+// actually did: the scheme the focused app's region wears (the computed
+// `color-scheme` of its visible pane, which follows the nearest
+// `data-color-scheme` carrier) and the switch's own checked state, before and
+// after one click.
 //
 // It exists because the toggle's read and its write are two different config
 // calls, and when they name different scopes the switch still renders, still
 // looks clickable, and changes nothing on screen — a failure no static check
-// sees. Reading the class is what makes that visible.
+// sees. Reading the region's scheme is what makes that visible.
 //
 // The control now lives INSIDE the quick-theme popover, so the script opens the
 // popover first — which also covers the other way this can break: the row is a
@@ -29,12 +31,18 @@ await withBrowser(async (h) => {
 
   const row = () => page.getByRole("switch", { name: "Dark mode" }).first();
   const isDark = () =>
-    page.evaluate(() => document.documentElement.classList.contains("dark"));
+    page.evaluate(() => {
+      const pane = Array.from(document.querySelectorAll("[data-pane-id]")).find(
+        (el) => el.getClientRects().length > 0,
+      );
+      if (pane === undefined) throw new Error("no visible pane");
+      return getComputedStyle(pane).colorScheme === "dark";
+    });
   const checked = async () =>
     (await row().getAttribute("aria-checked")) === "true";
 
   // On a cold cache the pre-paint script paints the OS's scheme as a floor and
-  // the class applier corrects it once React mounts and config hydrates — around
+  // the scheme publisher corrects it once React mounts and config hydrates — around
   // 3s in, which a fixed wait straddles. So wait for the two to AGREE rather than
   // for a duration; if they never do, the poll gives up and the assertions below
   // report the disagreement as the failure it is.
@@ -63,7 +71,7 @@ await withBrowser(async (h) => {
 
   const darkBefore = await isDark();
   const checkedBefore = await checked();
-  console.log(`before: html.dark=${darkBefore} switch=${checkedBefore}`);
+  console.log(`before: app.dark=${darkBefore} switch=${checkedBefore}`);
   await snap(page, OUT, "before");
 
   await row().click();
@@ -72,7 +80,7 @@ await withBrowser(async (h) => {
 
   const darkAfter = await isDark();
   const checkedAfter = await checked();
-  console.log(`after:  html.dark=${darkAfter} switch=${checkedAfter}`);
+  console.log(`after:  app.dark=${darkAfter} switch=${checkedAfter}`);
   await snap(page, OUT, "after");
 
   // The switch describes the scheme on screen, so both must move together: a
@@ -82,7 +90,7 @@ await withBrowser(async (h) => {
   r.ok(
     "one click flips the page",
     darkAfter !== darkBefore,
-    `html.dark stayed ${darkBefore}`,
+    `the app's scheme stayed ${darkBefore ? "dark" : "light"}`,
   );
   r.eq("switch before describes the page", checkedBefore, darkBefore);
   r.eq("switch after describes the page", checkedAfter, darkAfter);

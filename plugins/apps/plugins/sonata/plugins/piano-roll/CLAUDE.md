@@ -58,7 +58,7 @@ frames at all. The contract lives in `web/internal/pixi/render-scheduler.ts`:
     - `ConfigV2.WebRegister` "config"
     - `Sonata.ViewOption` "piano-roll"
     - `Sonata.ViewSection` "piano-roll-fx" → `FxViewSection`
-  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/sonata/player` ×4
     - `apps/sonata/track-mixer` ×3
     - `config_v2` ×3
@@ -78,6 +78,7 @@ frames at all. The contract lives in `web/internal/pixi/render-scheduler.ts`:
     - `primitives/css/pin.Pin`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/css/theme-boundary.useColorScheme`
     - `primitives/css/ui-kit.cn`
     - `primitives/dom/element-size.useElementSize`
     - `primitives/latest-ref.useLatestRef`

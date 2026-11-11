@@ -56,7 +56,6 @@ setting. Neither forks the app's theme.
     - `ui/theme-engine.ColorModeSetting`
     - `ui/theme-engine.useColorModeSetting`
     - `ui/theme-engine.useColorModeSettingFor`
-    - `ui/theme-engine.useResolvedColorMode`
     - `ui/theme-engine.useSetAppColorMode`
     - `ui/theme-engine.useSetGlobalColorMode`
     - `ui/theme-engine/quick-theme.QuickTheme`

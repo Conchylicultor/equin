@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!-- First-frame color scheme floor. The theme itself arrives with this
          document: the gateway splices the server-rendered theme CSS (and the
-         configured `.dark` class) in at the end of the head — see
+         desktop's `data-color-scheme`) in at the end of the head — see
          shell/document-head and theme-engine/server — so nothing here reads
          browser storage. This only covers a shell served without that
          fragment (a backend that has never booted): it paints the neutral
          loading floor (app.css: html { background: Canvas }) dark — the
          configured color mode's default — until ThemeInjector mounts. -->
     <script>
-      document.documentElement.classList.add("dark");
+      document.documentElement.setAttribute("data-color-scheme", "dark");
     </script>
     <!-- React commit bridge. Generic, passive — NO profiler logic here.
          React's renderer reads `window.__REACT_DEVTOOLS_GLOBAL_HOOK__` exactly

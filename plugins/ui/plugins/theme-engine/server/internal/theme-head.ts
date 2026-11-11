@@ -1,4 +1,7 @@
-import { isAppThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
+import {
+  COLOR_SCHEME_ATTR,
+  isAppThemeScope,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import {
   themePainter,
   type ConfiguredColorMode,
@@ -10,7 +13,7 @@ import {
 export interface ThemeHeadSelections {
   /** The desktop's theme (the base document). */
   baseThemeId: ThemeId;
-  /** The global light/dark setting — what a path no app owns wears. */
+  /** The global light/dark setting — what `<html>` wears on every path. */
   colorMode: ConfiguredColorMode;
   /** Every app scope (`app:<id>`) with its own theme document, and its theme. */
   scopes: readonly { scopeId: string; themeId: ThemeId }[];
@@ -39,14 +42,15 @@ export interface ThemeHeadApp {
  * `ThemePaintSelection`), each themed app's scoped blocks, the sub-themes' and
  * the fixed themes'. So the browser adopts them unchanged on any path. What
  * differs per path is only what the page around the app wears before it
- * mounts: the canvas (`<body>`'s background, from the app's theme) and the
- * `.dark` class (the app's scheme).
+ * mounts: the canvas — `<body>`'s background, in the app's theme and scheme.
+ * `<html>`'s scheme (`data-color-scheme`) is the desktop's on every path: an
+ * app wears its own on its own boundary, so the page never flips it.
  *
- * One entry per page-opened app that differs from the desktop in either —
- * its own theme document, or a scheme other than the global one — keyed by its
- * base path, plus the `""` entry for every other path. The `.dark` class comes
- * from the setting rather than its resolution: `system` is resolved against
- * the OS by the page itself.
+ * One entry per page-opened app whose canvas differs from the desktop's — its
+ * own theme document, or a scheme other than the global one — keyed by its
+ * base path, plus the `""` entry for every other path. Schemes come from the
+ * setting rather than its resolution: `system` is resolved against the OS by
+ * the page itself (a `matchMedia` test, a `prefers-color-scheme` query).
  */
 export function renderThemeHead(
   sources: ThemePaintSources,
@@ -73,8 +77,9 @@ export function renderThemeHead(
         baseThemeId: selections.baseThemeId,
         appThemes,
         canvasThemeId,
+        canvasColorMode: colorMode,
       }),
-    ) + colorModeScript(colorMode);
+    ) + colorSchemeScript(selections.colorMode);
 
   const head: Record<string, string> = {
     "": entry(selections.baseThemeId, selections.colorMode),
@@ -108,10 +113,11 @@ function escapeStyleText(css: string): string {
   return css.replaceAll("<", "\\3c ");
 }
 
-function colorModeScript(mode: ConfiguredColorMode): string {
-  const dark =
+/** `<html>`'s scheme: the desktop's (the global setting). */
+function colorSchemeScript(mode: ConfiguredColorMode): string {
+  const scheme =
     mode === "system"
-      ? 'matchMedia("(prefers-color-scheme: dark)").matches'
-      : String(mode === "dark");
-  return `<script>document.documentElement.classList.toggle("dark",${dark})</script>`;
+      ? 'matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"'
+      : JSON.stringify(mode);
+  return `<script>document.documentElement.setAttribute("${COLOR_SCHEME_ATTR}",${scheme})</script>`;
 }

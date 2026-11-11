@@ -13,7 +13,11 @@
 
 @source "../../../../../../../../plugins/";
 
-@custom-variant dark (&:is(.dark *));
+/* `dark:` follows the NEAREST scheme carrier (self included), never "a dark
+   <html>": a light app inside a dark desktop is light all the way down. The
+   selector is ui-kit core's DARK_SCHEME, written out (Tailwind cannot import
+   it); `web/__tests__/color-scheme.test.ts` fails when the two disagree. */
+@custom-variant dark (&:is([data-color-scheme="dark"], [data-color-scheme="dark"] *):where(:not([data-color-scheme="dark"] [data-color-scheme="light"], [data-color-scheme="dark"] [data-color-scheme="light"] *), :is([data-color-scheme="dark"] [data-color-scheme="light"] [data-color-scheme="dark"], [data-color-scheme="dark"] [data-color-scheme="light"] [data-color-scheme="dark"] *):not([data-color-scheme="dark"] [data-color-scheme="light"] [data-color-scheme="dark"] [data-color-scheme="light"], [data-color-scheme="dark"] [data-color-scheme="light"] [data-color-scheme="dark"] [data-color-scheme="light"] *)));
 
 @theme {
     --font-sans: 'Inter Variable', sans-serif;
@@ -24,7 +28,7 @@
     --text-3xs: 0.625rem;
     --text-3xs--line-height: 0.875rem;
     /* Semantic z-layer scale — structural, NOT runtime-themeable, so it lives in
-       the static @theme block (not :root/.dark). One ordered ladder for every
+       the static @theme block (not the theme blocks). One ordered ladder for every
        stacking decision; consume via the z-* @utility classes below. */
     --z-under:  -1;    /* full-bleed hit-areas / decorative fills painted BENEATH
                           their own element's content. Only meaningful inside an
@@ -276,21 +280,27 @@
 }
 
 /* Token VALUES are declared solely by the token-group descriptors, emitted at
-   runtime by ThemeInjector (one <style> per group). The only thing :root/.dark
-   carry here is color-scheme — the UA hint for native surfaces. */
+   runtime by ThemeInjector (one <style> per group). The only thing the scheme
+   carriers get here is color-scheme — the UA hint for native surfaces. */
 :root {
     /* Tell the UA which scheme to paint native surfaces in (form controls,
-       scrollbars, canvas). Inherited; `.dark` flips it below. */
+       scrollbars, canvas, light-dark()). Inherited, so each scheme carrier
+       (<html>, an app boundary, a re-stamped popup — ui-kit core's
+       theme-scope.ts) sets it for its own region and the nearest one wins. */
     color-scheme: light;
 }
 
-.dark {
+[data-color-scheme="light"] {
+    color-scheme: light;
+}
+
+[data-color-scheme="dark"] {
     color-scheme: dark;
 }
 
 /* Agent-worktree deploy frame. The class is stamped into the served index.html
    by `./equin build` (CLI: experimental-marker.ts) — the same JS-sets /
-   CSS-styles split as `.dark`. Compositions and releases never carry it, and
+   CSS-styles split as `data-color-scheme`. Compositions and releases never carry it, and
    neither does a chromeless `?embed=1` document (its host already does).
    `experimental-marks-off` is the user's Show experimental marks setting
    (cli/build/experimental-marks). */
@@ -2736,7 +2746,7 @@
     /* Neutral, theme-free loading floor for the cold-cache first paint (no
        localStorage theme cache yet — first-ever visit, incognito, cleared
        storage). `Canvas` is a CSS system color that follows `color-scheme`
-       (set on :root/.dark above), so the floor is light under light and dark
+       (set on :root and every scheme carrier above), so the floor is light under light and dark
        under dark. It is a CONSUMED system color, not a declared token, so the
        css-vars-single-owner check is unaffected. `body`'s `bg-background` paints
        over it the moment ThemeInjector (or the pre-paint replay) supplies

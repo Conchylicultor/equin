@@ -5,23 +5,17 @@
   --diff-selection-background-color: var(--accent);
   --diff-selection-text-color: var(--accent-foreground);
 
-  --diff-code-insert-background-color: #e6ffec;
-  --diff-code-delete-background-color: #ffebe9;
-  --diff-gutter-insert-background-color: #ccffd8;
-  --diff-gutter-delete-background-color: #ffd7d5;
-  --diff-code-insert-edit-background-color: #abf2bc;
-  --diff-code-delete-edit-background-color: #ff9492;
+  /* light-dark(): resolved where the colour is used, against the nearest
+     scheme carrier's `color-scheme` — so a diff in a light app is light even
+     inside a dark desktop. */
+  --diff-code-insert-background-color: light-dark(#e6ffec, rgba(63, 185, 80, 0.15));
+  --diff-code-delete-background-color: light-dark(#ffebe9, rgba(248, 81, 73, 0.15));
+  --diff-gutter-insert-background-color: light-dark(#ccffd8, rgba(63, 185, 80, 0.3));
+  --diff-gutter-delete-background-color: light-dark(#ffd7d5, rgba(248, 81, 73, 0.3));
+  --diff-code-insert-edit-background-color: light-dark(#abf2bc, rgba(63, 185, 80, 0.4));
+  --diff-code-delete-edit-background-color: light-dark(#ff9492, rgba(248, 81, 73, 0.4));
   --diff-code-selected-background-color: color-mix(in oklab, var(--accent) 60%, transparent);
   --diff-gutter-selected-background-color: color-mix(in oklab, var(--accent) 80%, transparent);
-}
-
-.dark .diff-view {
-  --diff-code-insert-background-color: rgba(63, 185, 80, 0.15);
-  --diff-code-delete-background-color: rgba(248, 81, 73, 0.15);
-  --diff-gutter-insert-background-color: rgba(63, 185, 80, 0.3);
-  --diff-gutter-delete-background-color: rgba(248, 81, 73, 0.3);
-  --diff-code-insert-edit-background-color: rgba(63, 185, 80, 0.4);
-  --diff-code-delete-edit-background-color: rgba(248, 81, 73, 0.4);
 }
 
 .diff-view .diff-gutter {

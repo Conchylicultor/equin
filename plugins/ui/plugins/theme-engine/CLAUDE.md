@@ -12,14 +12,32 @@ an app's is its own `config/ui/theme-engine/@app/<id>/theme.jsonc`. The base
 document also holds the GLOBAL `colorMode`; an app's light/dark is its own
 (below), and a `colorMode` in an app's theme document is never read.
 
-## Light/dark: one scheme per document, chosen by the focused app
+## Light/dark: one scheme per region
 
-`<html>.dark` is one class per page, so a document wears ONE scheme: that of
-the focused full-surface app (`useRootThemeScopeState`), or the desktop when no
-single app fills the surface. Unlike the theme tokens (which never re-root —
-see Painting), the class does follow the focused app; it flips only when that
-app's scheme differs from the desktop's (an app declaring `light` / `dark`, or
-a per-app override), and each flip restyles the whole document. What that scope wears is
+Every app wears its OWN scheme, on its own boundary — whichever app is
+focused, in every surface mode. A **scheme carrier** is an element stamped
+`data-color-scheme="light|dark"` (ui-kit core's `theme-scope.ts`):
+
+- `<html>` carries the desktop's — the global setting, never an app's;
+- every app's `<Theme name="app:<id>">` boundary (tab containers, a pane's
+  `PaneBox`) carries its app's effective scheme;
+- every fixed theme's boundary carries the fixed theme's `scheme`;
+- a popup is re-stamped with the scheme of the region it opened from (the
+  portal forward), a `<ColorSchemeRegion scheme>` forces one (the image viewer).
+
+An element wears its NEAREST carrier's scheme, self included: `color-scheme`
+by inheritance; the token blocks' dark halves and Tailwind's `dark:` variant by
+`DARK_SCHEME` (an enumerated nearest-carrier selector — up to four alternations
+from the outermost dark carrier, and a deeper nesting throws in theme-boundary's
+`ColorSchemeProvider` rather than render wrong). Every carrier also re-declares
+the desktop's base tokens in its scheme (`ROOT_SCHEME_SELECTORS`), so an app
+without a theme of its own wears the desktop's theme in its own scheme. Because
+no focus or surface-mode change alters any region's scheme, neither restyles
+anything for light/dark: only the canvas (below) follows the focused app.
+
+`ColorSchemePublisher` (a root host of every scope) publishes each scope's
+scheme into theme-boundary's store — which the boundaries read and stamp — and,
+on the page, puts the desktop's on `<html>`. What a scope wears is
 `effectiveColorMode` (`core/config.ts`), the one resolution both runtimes call:
 
 1. the user's per-app override, `appColorModeConfig` (`color-mode`, its own
@@ -29,19 +47,20 @@ a per-app override), and each flip restyles the whole document. What that scope 
    (`global` | `system` | `light` | `dark`, omitted = `global`);
 3. `global` = the base document's `colorMode` (dark by default).
 
-`system` follows `prefers-color-scheme` live. Readers: `useColorModeSetting`
-(every layer, for the root scope, with its writer `setColorMode` — the focused
-app's override, or the global with no app; a state, `{ known: false }` until
-the surface says which app fills it, so no control shows or writes the
-desktop's setting meanwhile), `useColorModeSettingFor(appId)` (a named app —
-the customizer), `useResolvedColorMode` / `useColorMode` (light|dark —
-prop-themed widgets). Other writers: `useSetAppColorMode(appId)`,
-`useSetGlobalColorMode`. The class applier waits while the surface has not yet
-said which app fills it (`useRootThemeScopeState`), so it never paints the
-desktop's answer over the server's first frame. A second app visible at once
-(an unfocused floating window) wears the root's scheme: per-region schemes are
-deferred. The controls are `ui/theme-toggle`'s (quick-theme switches, the
-customizer's Color mode section).
+`system` follows `prefers-color-scheme` live. Readers: `useColorMode()` — the
+scheme of the REGION a component renders in (theme-boundary's
+`useColorScheme`), for prop-themed widgets (sonner, charts, code highlighting);
+`useColorModeSetting` — the setting the light/dark controls show and write: the
+focused full-surface app's (its override), else the global one, with what it
+resolves to now; a state, `{ known: false }` until the surface says which app
+fills it, so no control shows or writes the desktop's setting meanwhile;
+`useColorModeSettingFor(appId)` (a named app — the customizer). Other writers:
+`useSetAppColorMode(appId)`, `useSetGlobalColorMode`. The customizer previews a
+mode with `usePreviewColorScheme(appId, mode)` — the scope wears it while
+mounted, the setting untouched. The controls are `ui/theme-toggle`'s
+(quick-theme switches, the customizer's Color mode section). Plain CSS that
+differs by scheme uses `light-dark()`, which resolves against the nearest
+`color-scheme`; there is no `.dark` class anywhere.
 
 An app without its own document shows the desktop's theme, whole. Nothing is
 stored per token group, so an app cannot own part of a look and inherit the
@@ -183,20 +202,25 @@ the surface between the desktop and full screen used to pay when `:root` was
 re-rooted on the focused full-surface app. Only an edit of the desktop's theme
 rewrites `:root`.
 
-- `ThemeInjector` paints the desktop's theme into `:root` / `.dark`.
+- `ThemeInjector` paints the desktop's theme on `:root` and every scheme
+  carrier, light and dark halves (`ROOT_SCHEME_SELECTORS`, zero specificity, so
+  an app's own blocks on the same element win).
 - `AppScopeThemes` paints a `[data-theme-scope="app:<id>"]` block for EVERY app
   with its own theme document — focused or not, visible or not, in every
   surface mode. Every tab container is a `<Theme name="app:<id>"
   surface="canvas">` (`apps-core/surface`), which also forwards the scope to
   popups portaled out of it, so an app looks the same docked, solo or in a
   desktop window, and a focus or mode change writes no token block. An app
-  without its own document inherits `:root` whole.
+  without its own document wears the desktop's base blocks, re-declared on its
+  boundary in its own scheme.
 - `SubThemeStyles` paints one sparse `[data-theme-scope="sub:<id>"]` block per
   sub-theme fragment, `FixedThemeStyles` a complete
   `[data-theme-scope="fixed:<id>"]` block per fixed theme.
 - **The document canvas** (`DocumentCanvas`, `CANVAS_STYLE_ID`) is `<body>`'s
-  background, in the focused full-surface app's `--background` (the desktop's
-  when no single app fills the surface) — what shows before the app mounts,
+  background, in the focused full-surface app's `--background` and scheme (the
+  desktop's when no single app fills the surface; the scheme is baked into the
+  block, `system` as a `prefers-color-scheme` query, since `<html>` carries the
+  desktop's) — what shows before the app mounts,
   so a page load never flashes the desktop's canvas under a themed app. One
   non-inherited property on one element, so following the focused app restyles
   `<body>` alone. It is held (adopting the server's element, writing nothing)
@@ -221,12 +245,13 @@ token stamped inside a scope is qualified by the scope's id
 (`qualifyThemeScope`: `<scope>/app:sonata`), by `<Theme>` and the portal
 forward alike, so a block the page paints never matches there and the scope's
 never matches the page. Inside a scope the painters never touch `:root` or
-`<html>.dark`: `ThemeInjector` paints the scope's base theme on its root
+`<html>`'s scheme: `ThemeInjector` paints the scope's base theme on its root
 boundary (`PLUGIN_SCOPE_ROOT_THEME`, drawn by `DemoScope`), complete over
 every group the scope registers, and `AppScopeThemes` paints a complete block
 for EVERY scope app (its own theme, else the base) — a popup portaled out of
-the scope's DOM re-stamps only its app's token. Light/dark stays the page's
-one class.
+the scope's DOM re-stamps only its app's token. The scope's own
+`ColorSchemePublisher` publishes the scope's schemes (its root boundary wears
+the scope's global setting).
 
 Picking a theme is `theme-gallery`'s job.
 
@@ -253,9 +278,10 @@ It re-renders on any config-dir change and on each source's change signal.
 Every entry holds the same token blocks (`:root` in the desktop's theme, every
 themed app's scoped blocks — a surface-mode app's, the desktop's own, included
 — the sub-themes', the fixed themes'). What differs per path is only what the
-page around the app wears before it mounts: the canvas (from the theme of the
-app a page load opens there) and the `.dark` script (its scheme — `system` as
-a `matchMedia` test). A tab app gets an entry at its base path when it has its
+page around the app wears before it mounts: the canvas (in the theme and
+scheme of the app a page load opens there). Every entry ends with the same
+script putting the desktop's scheme on `<html>` (`system` as a `matchMedia`
+test). A tab app gets an entry at its base path when it has its
 own theme document OR its effective scheme is not the global one; every other
 path is the `""` entry.
 
@@ -263,7 +289,7 @@ path is the `""` entry.
 
 ## Plugin reference
 
-- Description: Paints each scope's selected theme: the token-group, theme and theme-source slots, the theme selection config, the injector that resolves one theme per scope into CSS variables, and the document's light/dark: the focused full-surface app's effective color mode (the app's declared default from defineApp, the user's per-app override, else the global setting), read and written through useColorModeSetting (a state: not known until the surface says which app fills it). :root always wears the desktop's theme; each app's theme is painted on its own scope. Registers the theme selection and per-app color-mode configs, and paints the first frame: renders every app's theme CSS into the SPA shell's head (DocumentHead.Fragment) from the generated theme declarations, the ThemeEngine.Source themes, the selections and each app's effective light/dark (its declared default and the user's override), re-rendered when any of them changes.
+- Description: Paints each scope's selected theme: the token-group, theme and theme-source slots, the theme selection config, the injector that resolves one theme per scope into CSS variables, and light/dark per region: every app wears its own effective color mode (the app's declared default from defineApp, the user's per-app override, else the global setting) on its own boundary, published for theme-boundary to stamp (ColorSchemePublisher), each fixed theme its own scheme, and <html> the desktop's — so a focus or surface-mode change flips no scheme. The light/dark controls read and write the focused full-surface app's setting through useColorModeSetting (a state: not known until the surface says which app fills it); useColorMode is the scheme of the region a component renders in. :root always wears the desktop's theme; each app's theme is painted on its own scope. Registers the theme selection and per-app color-mode configs, and paints the first frame: renders every app's theme CSS into the SPA shell's head (DocumentHead.Fragment) from the generated theme declarations, the ThemeEngine.Source themes, the selections and each app's effective light/dark (its declared default and the user's override), re-rendered when any of them changes.
 - Web:
   - Slots:
     - `ThemeEngine.VariantGroup`
@@ -280,6 +306,7 @@ path is the `""` entry.
     - `ThemeEngine.FixedTheme` ×4
     - `ThemeEngine.ThemeSource` ×2
   - Contributes:
+    - `Core.Root` → `ColorSchemePublisher`
     - `Core.Root` → `ThemeInjector`
     - `Core.Root` → `AppScopeThemes`
     - `Core.Root` → `SubThemeStyles`
@@ -300,6 +327,8 @@ path is the `""` entry.
     - `config_v2.useSetConfig`
     - `fields/dynamic-enum/config.DynamicEnum`
     - `network/live/live-state.foldResource`
+    - `primitives/css/theme-boundary.useColorScheme`
+    - `primitives/css/theme-boundary.usePublishColorScheme`
     - `primitives/dom/web-storage.defineStore`
     - `primitives/slot-render.defineRenderSlot`
   - Exports (types):
@@ -326,7 +355,7 @@ path is the `""` entry.
     - `useColorMode`
     - `useColorModeSetting`
     - `useColorModeSettingFor`
-    - `useResolvedColorMode`
+    - `usePreviewColorScheme`
     - `useResolvedTheme`
     - `useSetAppColorMode`
     - `useSetGlobalColorMode`
@@ -358,6 +387,7 @@ path is the `""` entry.
     - `packages/list-bound.wholeRecord`
     - `primitives/css/ui-kit.appThemeScope`
     - `primitives/css/ui-kit.fixedThemeScope`
+    - `primitives/css/ui-kit.ROOT_SCHEME_SELECTORS`
     - `primitives/css/ui-kit.subThemeScope`
     - `primitives/css/ui-kit.themeScopeSelectors`
     - `primitives/pane.APP_COLOR_MODES`

@@ -76,6 +76,7 @@ const scopesOnly = median(
       paintThemeStyles(bare, {
         baseThemeId,
         canvasThemeId: baseThemeId,
+        canvasColorMode: "dark",
         appThemes: [],
       }),
     ),
@@ -86,7 +87,12 @@ const withSub = median(
     time(() =>
       paintThemeStyles(
         { ...bare, subThemes },
-        { baseThemeId, canvasThemeId: baseThemeId, appThemes: [] },
+        {
+          baseThemeId,
+          canvasThemeId: baseThemeId,
+          canvasColorMode: "dark",
+          appThemes: [],
+        },
       ),
     ),
   ),
@@ -96,7 +102,12 @@ const withFixed = median(
     time(() =>
       paintThemeStyles(
         { ...bare, fixedThemes },
-        { baseThemeId, canvasThemeId: baseThemeId, appThemes: [] },
+        {
+          baseThemeId,
+          canvasThemeId: baseThemeId,
+          canvasColorMode: "dark",
+          appThemes: [],
+        },
       ),
     ),
   ),

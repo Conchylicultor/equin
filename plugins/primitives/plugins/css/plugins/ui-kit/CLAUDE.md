@@ -657,16 +657,21 @@ yes/no guard: `useConfirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `surface/no-adhoc-surface` — `web/components/ui` (sanctioned)
     - `viewport-overlay/no-adhoc-viewport-overlay` — `web/components/ui` (sanctioned)
 - Core:
-  - Exports (types): `ClassName`
+  - Exports (types):
+    - `ClassName`
+    - `ColorScheme`
   - Exports (values):
     - `APP_STYLESHEET_PATH`
     - `appThemeScope`
     - `bareThemeScope`
+    - `COLOR_SCHEME_ATTR`
     - `fixedThemeScope`
     - `isAppThemeScope`
     - `isSubThemeScope`
+    - `MAX_SCHEME_ALTERNATIONS`
     - `PLUGIN_SCOPE_ROOT_THEME`
     - `qualifyThemeScope`
+    - `ROOT_SCHEME_SELECTORS`
     - `subThemeScope`
     - `themeScopeSelectors`
 

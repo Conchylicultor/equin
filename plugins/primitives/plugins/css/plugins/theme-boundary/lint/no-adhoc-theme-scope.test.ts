@@ -53,6 +53,11 @@ ruleTester.run("no-adhoc-theme-scope", rule, {
       },
     ],
     invalid: [
+    // A raw scheme carrier: no forward to popups, no JS readers told.
+    {
+      code: `const el = <Layer data-color-scheme="dark">{body}</Layer>;`,
+      errors: [{ messageId: "adhocColorScheme" }],
+    },
       // The bug shape: attribute with no paint and no forward (app-tabs-body).
       {
         code: `const el = <div data-theme-scope={appThemeScope(tab.appId)} className="absolute inset-0">{body}</div>;`,

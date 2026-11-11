@@ -10,6 +10,13 @@ import {
 } from "./paint";
 import { defineSubTheme } from "./sub-theme";
 import { DEFAULT_THEME_ID, defineTheme, type Theme } from "./theme";
+import {
+  ROOT_SCHEME_SELECTORS,
+  themeScopeSelectors,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
+
+const ROOT_LIGHT = ROOT_SCHEME_SELECTORS.light;
+const ROOT_DARK = ROOT_SCHEME_SELECTORS.dark;
 
 const palette = defineTokenGroup("palette", {
   primary: { default: "blue" },
@@ -58,6 +65,7 @@ describe("paintThemeStyles", () => {
     const styles = paintThemeStyles(sources, {
       baseThemeId: "red",
       canvasThemeId: "red",
+      canvasColorMode: "light" as const,
       appThemes: [{ appId: "home", themeId: DEFAULT_THEME_ID }],
     });
     expect(Object.keys(styles)).toEqual([
@@ -71,7 +79,7 @@ describe("paintThemeStyles", () => {
       "theme-scope-fixed:chrome-shape",
     ]);
     expect(styles["theme-engine-palette"]).toBe(
-      ":root {\n  --primary: red;\n  --background: white;\n}\n.dark {\n  --primary: blue;\n  --background: black;\n}",
+      `${ROOT_LIGHT} {\n  --primary: red;\n  --background: white;\n}\n${ROOT_DARK} {\n  --primary: blue;\n  --background: black;\n}`,
     );
     expect(styles["theme-scope-app:home-palette"]).toStartWith(
       '[data-theme-scope="app:home"] {\n  --primary: blue;',
@@ -83,13 +91,31 @@ describe("paintThemeStyles", () => {
       baseThemeId: DEFAULT_THEME_ID,
       appThemes: [],
       canvasThemeId: "red",
+      canvasColorMode: "light" as const,
     });
     expect(styles[CANVAS_STYLE_ID]).toBe(
-      "body {\n  background-color: white;\n}\n.dark body {\n  background-color: black;\n}",
+      "body {\n  background-color: white;\n}",
+    );
+    // The scheme is baked in: <html> carries the desktop's, not the app's.
+    const dark = paintThemeStyles(sources, {
+      baseThemeId: DEFAULT_THEME_ID,
+      appThemes: [],
+      canvasThemeId: "red",
+      canvasColorMode: "dark",
+    });
+    expect(dark[CANVAS_STYLE_ID]).toBe("body {\n  background-color: black;\n}");
+    const system = paintThemeStyles(sources, {
+      baseThemeId: DEFAULT_THEME_ID,
+      appThemes: [],
+      canvasThemeId: "red",
+      canvasColorMode: "system",
+    });
+    expect(system[CANVAS_STYLE_ID]).toBe(
+      "body {\n  background-color: white;\n}\n@media (prefers-color-scheme: dark) {\nbody {\n  background-color: black;\n}\n}",
     );
     // The canvas never re-roots the tokens: :root stays the base theme's.
     expect(styles["theme-engine-palette"]).toStartWith(
-      ":root {\n  --primary: blue;",
+      `${ROOT_LIGHT} {\n  --primary: blue;`,
     );
   });
 
@@ -97,10 +123,11 @@ describe("paintThemeStyles", () => {
     const styles = paintThemeStyles(sources, {
       baseThemeId: DEFAULT_THEME_ID,
       canvasThemeId: DEFAULT_THEME_ID,
+      canvasColorMode: "light" as const,
       appThemes: [],
     });
     expect(styles[themeStyleId("shape", "sub:card")]).toBe(
-      '[data-theme-scope="sub:card"] {\n  --radius: 1rem;\n  --pad: var(--radius);\n}\n.dark [data-theme-scope="sub:card"] {\n  --radius: 1rem;\n  --pad: var(--radius);\n}',
+      `[data-theme-scope="sub:card"] {\n  --radius: 1rem;\n  --pad: var(--radius);\n}\n${themeScopeSelectors("sub:card").dark} {\n  --radius: 1rem;\n  --pad: var(--radius);\n}`,
     );
   });
 
@@ -108,10 +135,11 @@ describe("paintThemeStyles", () => {
     const styles = paintThemeStyles(sources, {
       baseThemeId: DEFAULT_THEME_ID,
       canvasThemeId: DEFAULT_THEME_ID,
+      canvasColorMode: "light" as const,
       appThemes: [],
     });
     expect(styles["theme-scope-fixed:chrome-palette"]).toBe(
-      '[data-theme-scope="fixed:chrome"] {\n  --primary: grey;\n  --background: black;\n}\n.dark [data-theme-scope="fixed:chrome"] {\n  --primary: grey;\n  --background: black;\n}',
+      `[data-theme-scope="fixed:chrome"] {\n  --primary: grey;\n  --background: black;\n}\n${themeScopeSelectors("fixed:chrome").dark} {\n  --primary: grey;\n  --background: black;\n}`,
     );
   });
 
@@ -119,11 +147,13 @@ describe("paintThemeStyles", () => {
     const missing = paintThemeStyles(sources, {
       baseThemeId: "gone",
       canvasThemeId: "gone",
+      canvasColorMode: "light" as const,
       appThemes: [],
     });
     const fallback = paintThemeStyles(sources, {
       baseThemeId: DEFAULT_THEME_ID,
       canvasThemeId: DEFAULT_THEME_ID,
+      canvasColorMode: "light" as const,
       appThemes: [],
     });
     expect(missing).toEqual(fallback);
@@ -144,7 +174,12 @@ describe("paintThemeStyles", () => {
     };
     const styles = paintThemeStyles(
       { ...sources, themesById: new Map([...themesById, ["tinted", tinted]]) },
-      { baseThemeId: "tinted", canvasThemeId: "tinted", appThemes: [] },
+      {
+        baseThemeId: "tinted",
+        canvasThemeId: "tinted",
+        canvasColorMode: "light" as const,
+        appThemes: [],
+      },
     );
     expect(styles["theme-engine-palette"]).toContain(
       "--primary: oklch(0.5000 0.1000 110.00);",
@@ -160,13 +195,14 @@ describe("paintThemeStyles", () => {
       {
         baseThemeId: DEFAULT_THEME_ID,
         canvasThemeId: DEFAULT_THEME_ID,
+        canvasColorMode: "light" as const,
         appThemes: [],
       },
     );
     // `--inset: initial` is the guaranteed-invalid value: every
     // `var(--inset, fallback)` takes its fallback, i.e. the consumer's own.
     expect(styles["theme-engine-opt-in"]).toBe(
-      ":root {\n  --inset: initial;\n}\n.dark {\n  --inset: initial;\n}",
+      `${ROOT_LIGHT} {\n  --inset: initial;\n}\n${ROOT_DARK} {\n  --inset: initial;\n}`,
     );
   });
 });
@@ -178,12 +214,19 @@ describe("themePainter", () => {
       {
         baseThemeId: DEFAULT_THEME_ID,
         canvasThemeId: DEFAULT_THEME_ID,
+        canvasColorMode: "light" as const,
         appThemes: [{ appId: "a", themeId: "red" }],
       },
-      { baseThemeId: "red", canvasThemeId: "red", appThemes: [] },
+      {
+        baseThemeId: "red",
+        canvasThemeId: "red",
+        canvasColorMode: "light" as const,
+        appThemes: [],
+      },
       {
         baseThemeId: DEFAULT_THEME_ID,
         canvasThemeId: DEFAULT_THEME_ID,
+        canvasColorMode: "light" as const,
         appThemes: [
           { appId: "b", themeId: "red" },
           { appId: "a", themeId: "red" },
@@ -192,6 +235,7 @@ describe("themePainter", () => {
       {
         baseThemeId: "missing",
         canvasThemeId: "missing",
+        canvasColorMode: "light" as const,
         appThemes: [{ appId: "a", themeId: "missing" }],
       },
     ];

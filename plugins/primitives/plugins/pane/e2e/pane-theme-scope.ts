@@ -169,8 +169,8 @@ await withBrowser(async (h) => {
   );
 
   // The config-independent half: inject the exact block a forked app emits —
-  // BOTH selectors, because the engine's dark variant is `.dark [data-theme-scope=…]`
-  // and a single-attribute rule would lose to it on specificity in dark mode.
+  // with a selector that outweighs both of the engine's halves (its dark half
+  // is `[data-theme-scope=…]` + the nearest-dark-carrier condition).
   const painted = await injectAndRead(page, GUEST_SCOPE);
   r.eq(
     "guest: a Pages-scoped token reaches the pane",
@@ -271,8 +271,8 @@ async function injectAndRead(
     ({ scope, probe }) => {
       const style = document.createElement("style");
       style.textContent =
-        `[data-theme-scope="${scope}"], .dark [data-theme-scope="${scope}"] ` +
-        `{ --background: ${probe}; }`;
+        `[data-theme-scope="${scope}"][data-theme-scope="${scope}"][data-theme-scope="${scope}"] ` +
+        `{ --background: ${probe} !important; }`;
       document.head.appendChild(style);
       const token = (el: Element | null) =>
         el ? getComputedStyle(el).getPropertyValue("--background").trim() : "";

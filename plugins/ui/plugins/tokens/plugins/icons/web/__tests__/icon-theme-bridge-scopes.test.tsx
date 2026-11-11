@@ -45,7 +45,7 @@ vi.mock("@plugins/ui/plugins/theme-engine/web", async (importOriginal) => ({
     SubTheme: { useContributions: () => [sub] },
     TokenGroup: { useContributions: () => [] },
   },
-  useResolvedColorMode: () => "light",
+  useColorMode: () => "light",
   useResolvedTheme: (scopeId: string | undefined) => ({
     pending: false,
     theme: {

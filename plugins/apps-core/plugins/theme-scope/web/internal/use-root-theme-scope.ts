@@ -22,9 +22,10 @@ export type RootThemeScopeState =
  *   active; `undefined` when no single app fills the surface (desktop /
  *   floating focus → global `:root`).
  *
- * It decides what the page AROUND the apps wears — the document's light/dark
- * (`<html>.dark`) and its canvas (`<body>`'s background), via theme-engine —
- * and which app the light/dark controls edit. It does NOT decide the `:root`
+ * It decides what the page AROUND the apps wears — the document canvas
+ * (`<body>`'s background, in that app's theme and scheme), via theme-engine —
+ * and which app the light/dark controls edit. It does NOT decide any scheme:
+ * each app wears its own on its own boundary and `<html>` the desktop's. It does NOT decide the `:root`
  * tokens: those are always the desktop's, and each app wears its own theme on
  * its own `<Theme name="app:<id>">` boundary, so a focus or surface-mode change
  * never rewrites the inherited tokens of the whole document. The app chrome

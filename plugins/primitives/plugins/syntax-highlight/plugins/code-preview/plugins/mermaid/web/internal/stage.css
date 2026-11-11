@@ -22,7 +22,7 @@
   background: var(--mmd-surface);
   color: var(--foreground);
 }
-:root.dark .mmd-stage {
+.mmd-stage[data-stage-dark] {
   --mmd-l: 0.74;
   --mmd-c: 0.13;
   --mmd-card-lift: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 8px 24px -12px rgb(0 0 0 / 0.6);

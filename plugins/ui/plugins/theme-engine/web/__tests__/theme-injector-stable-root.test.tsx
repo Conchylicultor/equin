@@ -40,8 +40,12 @@ vi.mock("@plugins/config_v2/web", async (importOriginal) => ({
   }),
 }));
 
+// The website is light, the desktop dark: the canvas takes the focused app's.
 vi.mock("../use-color-mode", () => ({
-  useDocumentColorMode: () => undefined,
+  appIdOf: (scopeId: string | undefined) => scopeId?.slice("app:".length),
+  useColorModeSettingFor: (appId: string | undefined) => ({
+    effective: appId === "website" ? "light" : "dark",
+  }),
 }));
 
 const palette = vi.hoisted(() => ({ group: null as unknown }));
@@ -167,7 +171,7 @@ describe("ThemeInjector", () => {
     root.state = { known: true, scopeId: "app:website" };
     rerender(<ThemeInjector />);
     expect(canvas.textContent).toBe(
-      "body {\n  background-color: bg-app:website;\n}\n.dark body {\n  background-color: bg-app:website;\n}",
+      "body {\n  background-color: bg-app:website;\n}",
     );
 
     root.state = { known: true, scopeId: undefined };

@@ -16,9 +16,10 @@ import {
 } from "@plugins/ui/plugins/theme-engine/core";
 import {
   ThemeEngine,
-  useResolvedColorMode,
+  useColorMode,
   useResolvedTheme,
 } from "@plugins/ui/plugins/theme-engine/web";
+import { usePublishedColorScheme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import {
   usePublishIconStyle,
   usePublishIconStyleLayer,
@@ -86,12 +87,14 @@ function AppScope({ appId, always }: { appId: string; always: boolean }) {
   return <SelectedScope themeScope={scope} publishAs={scope} />;
 }
 
-/** The icon values of the theme `themeScope` selects, in the current color mode (null while pending). */
+/** The icon values of the theme `themeScope` selects, in the scheme that scope
+ *  wears — the root's outside every boundary (null while pending). */
 function useSelectedIconValues(
   themeScope: string | undefined,
 ): Record<string, string> | null {
   const resolved = useResolvedTheme(themeScope);
-  const mode = useResolvedColorMode();
+  const outside = useColorMode();
+  const mode = usePublishedColorScheme(themeScope) ?? outside;
   if (resolved.pending) return null;
   return resolved.theme.groups[iconsGroup.id]![mode];
 }
@@ -134,7 +137,9 @@ function SubLayer({
   sub: SubTheme;
   fragment: TokenGroupFragment;
 }) {
-  const mode = useResolvedColorMode();
+  // A sub-theme keeps the scheme of the region around it, which this
+  // page-wide bridge cannot know: the desktop's.
+  const mode = useColorMode();
   const layer = readIconTokenLayer(fragment[mode]);
   usePublishIconStyleLayer(subThemeScope(sub), layer);
   return null;

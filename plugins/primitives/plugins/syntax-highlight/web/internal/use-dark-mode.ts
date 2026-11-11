@@ -1,18 +1,10 @@
-import { useEffect, useState } from "react";
+import { useColorScheme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 
-function isDark(): boolean {
-  return document.documentElement.classList.contains("dark");
-}
-
+/**
+ * Whether the region this component renders in is dark — the nearest scheme
+ * boundary's, not `<html>`'s: a light app inside a dark desktop highlights its
+ * code light.
+ */
 export function useDarkMode(): boolean {
-  const [dark, setDark] = useState(isDark);
-  useEffect(() => {
-    const obs = new MutationObserver(() => setDark(isDark()));
-    obs.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class"],
-    });
-    return () => obs.disconnect();
-  }, []);
-  return dark;
+  return useColorScheme() === "dark";
 }

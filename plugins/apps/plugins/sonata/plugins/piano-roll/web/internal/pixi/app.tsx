@@ -34,7 +34,7 @@ import type { NoteVisual } from "../../components/geometry";
 import type { BarMarker } from "./grid";
 import { createPianoRollScene, type PianoRollScene } from "./scene";
 import { loadLabelFonts } from "./labels";
-import { watchThemeColors } from "./css-color";
+import { useColorScheme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 
 export interface PianoRollCanvasProps {
   /** Lane size in CSS px (from the lane's ResizeObserver). */
@@ -225,7 +225,7 @@ export function PianoRollCanvas(props: PianoRollCanvasProps) {
       clientLog("piano-roll", `pixi backend: ${app.renderer.name}`);
       app.canvas.style.pointerEvents = "none";
       host.appendChild(app.canvas);
-      liveScene = createPianoRollScene(app);
+      liveScene = createPianoRollScene(app, host);
       setScene(liveScene);
       onSceneReadyRef.current({ scene: liveScene, app });
       // Self-heal a spontaneous GPU loss: Pixi won't, so we ask the parent to
@@ -305,10 +305,14 @@ export function PianoRollCanvas(props: PianoRollCanvasProps) {
     scene.setSpread(spread);
   }, [scene, spread]);
 
+  // The region's scheme flips the token values behind the track colours.
+  const scheme = useColorScheme();
+  const resolvedScheme = useRef(scheme);
   useEffect(() => {
-    if (!scene) return;
-    return watchThemeColors(() => scene.refreshColors());
-  }, [scene]);
+    if (!scene || resolvedScheme.current === scheme) return;
+    resolvedScheme.current = scheme;
+    scene.refreshColors();
+  }, [scene, scheme]);
 
   return (
     // Pixi canvas host: the full-bleed inert layer the appended <canvas> fills.

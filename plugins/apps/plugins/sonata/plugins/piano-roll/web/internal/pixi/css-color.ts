@@ -120,33 +120,37 @@ export function parseComputedColor(s: string): number | null {
   return null;
 }
 
-// Singleton probe, created lazily on first resolve (NOT at module load — this
-// module must stay importable in DOM-less environments like `bun test`). It
-// lives on `documentElement` (not `body`) so it sits inside the `.dark` class
-// scope where the theme tokens are defined, and is fully inert: hidden, zero
-// footprint, no pointer events.
-let probe: HTMLDivElement | null = null;
+// One probe per host element, created lazily on first resolve (NOT at module
+// load — this module must stay importable in DOM-less environments like
+// `bun test`). It lives INSIDE the element whose colours it resolves, so the
+// tokens it reads are that region's — its app's theme, in its app's scheme
+// (the nearest `data-color-scheme` carrier) — not `<html>`'s, which is the
+// desktop's. Fully inert: hidden, zero footprint, no pointer events.
+const probes = new WeakMap<Element, HTMLDivElement>();
 
-function getProbe(): HTMLDivElement {
-  if (probe && probe.isConnected) return probe;
-  probe = document.createElement("div");
+function getProbe(host: Element): HTMLDivElement {
+  const existing = probes.get(host);
+  if (existing && existing.isConnected) return existing;
+  const probe = document.createElement("div");
   probe.style.position = "fixed";
   probe.style.visibility = "hidden";
   probe.style.pointerEvents = "none";
   probe.style.width = "0";
   probe.style.height = "0";
-  document.documentElement.appendChild(probe);
+  host.appendChild(probe);
+  probes.set(host, probe);
   return probe;
 }
 
 /**
  * Resolve any CSS color EXPRESSION (`var(--primary)`, `oklch(…)`, `#abc`, …)
- * to packed 0xRRGGBB via the browser's own evaluator. Throws — never returns a
+ * to packed 0xRRGGBB via the browser's own evaluator, as it computes inside
+ * `host` (the region's tokens and scheme). Throws — never returns a
  * silent black — when the expression doesn't parse as a color at all, or when
  * its computed serialization is a form `parseComputedColor` doesn't know.
  */
-export function resolveCssColor(expr: string): number {
-  const el = getProbe();
+export function resolveCssColor(expr: string, host: Element): number {
+  const el = getProbe(host);
   // Reset-then-set: an invalid value leaves the property untouched, so an
   // empty `style.color` after assignment means the browser REJECTED the
   // expression — surface that instead of reading a stale/inherited color.
@@ -166,20 +170,4 @@ export function resolveCssColor(expr: string): number {
     );
   }
   return parsed;
-}
-
-/**
- * Watch for theme flips — i.e. `documentElement` class changes (light/dark and
- * theme presets both toggle root classes; the token VALUES behind `var(--…)`
- * change with them). Push-based per the no-polling rule, mirroring the
- * MutationObserver pattern in syntax-highlight's `use-dark-mode.ts`. Returns
- * the disconnect function; callers re-run `resolveCssColor` on change.
- */
-export function watchThemeColors(onChange: () => void): () => void {
-  const obs = new MutationObserver(onChange);
-  obs.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ["class"],
-  });
-  return () => obs.disconnect();
 }

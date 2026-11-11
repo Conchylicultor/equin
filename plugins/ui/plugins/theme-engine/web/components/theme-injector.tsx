@@ -16,7 +16,7 @@ import {
   subThemeScope,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { usePluginScopeId } from "@plugins/framework/plugins/web-sdk/core";
-import { useDocumentColorMode, type ColorMode } from "../use-color-mode";
+import { appIdOf, useColorModeSettingFor } from "../use-color-mode";
 import { ThemeEngine } from "../slots";
 import type { TokenGroupContribution } from "../slots";
 import {
@@ -210,26 +210,9 @@ function useReportFaults(faults: ThemeResolutionFault[]): void {
   }, [faultsKey]);
 }
 
-// Toggles the document's `<html>.dark` class from the resolved colour mode of
-// the focused full-surface app (use-color-mode: that app's
-// effective mode, or the global setting). `undefined` while that scope is not
-// known yet: the class the server's first frame set stays untouched, rather
-// than the desktop's answer flashing for a frame.
-//
-// An insertion effect for the same reason as usePaintedStyle: the class must be
-// on `<html>` before any layout effect of the commit can force a style recalc.
-function ColorModeApplier({ resolved }: { resolved: ColorMode | undefined }) {
-  useInsertionEffect(() => {
-    if (resolved === undefined) return;
-    document.documentElement.classList.toggle("dark", resolved === "dark");
-  }, [resolved]);
-
-  return null;
-}
-
 /**
  * The base layer. A root host of every scope (`scope: "each"`): on the page it
- * owns `:root`, `<html>.dark` and the document canvas; inside a
+ * owns `:root` and the document canvas; inside a
  * `<PluginScope>` it touches none of them and paints the scope's base theme on
  * the scope's root boundary (`PLUGIN_SCOPE_ROOT_THEME`, qualified) — every
  * token group the SCOPE registers, resolved complete from the scope's own
@@ -256,16 +239,13 @@ function PageThemeInjector() {
   // theme wears it on its own boundary instead (AppScopeThemes below; every tab
   // container is a `<Theme name="app:<id>">`). Only an edit of the desktop's
   // theme changes `:root`.
+  // `<html>`'s light/dark is the desktop's too (ColorSchemePublisher): every
+  // app wears its own scheme on its own boundary, so focus never flips it.
   const root = useRootThemeScopeState();
-  // `<html>.dark` still follows the focused full-surface app's scheme
-  // (use-color-mode): a document has one. It flips only where that app's
-  // scheme differs from the desktop's — per-region schemes are deferred.
-  const resolved = useDocumentColorMode();
   useDropRetiredThemeCache();
 
   return (
     <>
-      <ColorModeApplier resolved={resolved} />
       <ScopeStyles scopeId={undefined} />
       <DocumentCanvas root={root} />
     </>
@@ -274,18 +254,22 @@ function PageThemeInjector() {
 
 /**
  * The document canvas: `<body>`'s background, in the focused full-surface app's
- * `--background` (the desktop's when no single app fills the surface). It is
- * what shows before the app mounts — the server paints the same block for the
- * app a page opens — so a page load never flashes the desktop's canvas under an
- * app with a theme of its own. One non-inherited property on one element, so
- * following the focused app costs a restyle of `<body>` alone.
+ * `--background` and scheme (the desktop's when no single app fills the
+ * surface). It is what shows before the app mounts — the server paints the
+ * same block for the app a page opens — so a page load never flashes the
+ * desktop's canvas under an app with a theme or a scheme of its own. One
+ * non-inherited property on one element, so following the focused app costs a
+ * restyle of `<body>` alone; the scheme is baked into the block because
+ * `<html>` carries the desktop's.
  *
  * Held (adopting the server's element, writing nothing) until the surface says
  * which app owns it, and while that app's theme is pending.
  */
 function DocumentCanvas({ root }: { root: RootThemeScopeState }) {
   const groups = ThemeEngine.TokenGroup.useContributions();
-  const resolved = useResolvedTheme(root.known ? root.scopeId : undefined);
+  const scopeId = root.known ? root.scopeId : undefined;
+  const resolved = useResolvedTheme(scopeId);
+  const colorMode = useColorModeSettingFor(appIdOf(scopeId)).effective;
   const text = useMemo(
     () =>
       !root.known || resolved.pending
@@ -293,8 +277,9 @@ function DocumentCanvas({ root }: { root: RootThemeScopeState }) {
         : renderCanvasBlock(
             groups.map((g) => g.descriptor),
             resolved.theme,
+            colorMode,
           ),
-    [root.known, resolved, groups],
+    [root.known, resolved, groups, colorMode],
   );
   usePaintedStyle(CANVAS_STYLE_ID, text);
   return null;
@@ -314,8 +299,8 @@ function DocumentCanvas({ root }: { root: RootThemeScopeState }) {
 // It reuses the same resolution, color adjustment and completeness backstop as
 // the `:root` path (all live in ScopeStyles / GroupStyle) — only the selector and
 // style id differ (via `scopeToken`). The server paints the same blocks into the
-// first frame's HTML. Deliberately omits ColorModeApplier: a document has one
-// scheme.
+// first frame's HTML. Its light/dark half is chosen per element by the nearest
+// `data-color-scheme` carrier (the app's boundary stamps its own scheme).
 //
 // Mounted centrally (one per registered app via AppScopeThemes at Core.Root),
 // not per open surface — so the degraded `AppTabsBody` fallback and the real

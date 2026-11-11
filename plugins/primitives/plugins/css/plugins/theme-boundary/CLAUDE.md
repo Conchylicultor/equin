@@ -74,6 +74,27 @@ Reading them from the nearest app boundary (via `apps-core/theme-scope`'s
 `useAppSettingsScope`) makes them follow the same region the colours do: a pane
 wears its home app's settings in whichever app hosts it.
 
+### The colour scheme it carries
+
+A boundary also says which colour scheme its region wears: `<Theme>` stamps
+`data-color-scheme` with the scheme its scope wears — an app's effective
+light/dark, a fixed theme's own — as the theme engine published it
+(`usePublishColorScheme`, one publisher per scope; `ColorSchemePublisher` is the
+one). It forwards the scheme to popups the way it forwards the token, and
+provides it in React: `useColorScheme()` is the nearest region's scheme (the
+root's — the desktop's — outside every boundary), for whatever themes itself in
+JS. A sub-theme or an undefined `name` keeps the scheme around it.
+
+What an element wears is its NEAREST carrier's (ui-kit core's
+`theme-scope.ts`): `color-scheme` by inheritance, token blocks and Tailwind
+`dark:` by `DARK_SCHEME`. That selector resolves a bounded number of
+light/dark alternations, so `ColorSchemeProvider` throws past it.
+
+`<ColorSchemeRegion scheme>` is a region that always wears one scheme — the
+theme around it, in `scheme` (the image viewer's dark). The lint below bans a
+raw `data-color-scheme` attribute: a hand-stamped carrier forwards nothing and
+tells no JS reader.
+
 ### `<PopupTheme name>`: only the popups
 
 `<PopupTheme name={…}>` themes the popups opened from inside it — popovers,
@@ -149,6 +170,8 @@ hand-writable halves of the contract:
   `aria-safety/no-orphan-composite-role` makes on `role=`), and a tag allowlist
   fails open, which is why `no-adhoc-surface` and `no-adhoc-viewport-overlay`
   both deleted theirs.
+- a raw **`data-color-scheme` JSX attribute** — a scheme carrier is `<Theme>`'s
+  or `<ColorSchemeRegion>`'s;
 - an import of **`PortalThemeScopeProvider`**, keyed on the imported *name*
   rather than the module path, so a deep path or a re-export cannot fail open.
   Reading the forwarded scope (`usePortalThemeScope`) is a read, not a boundary
@@ -172,36 +195,43 @@ the code:
 
 ## Plugin reference
 
-- Description: Theme-boundary primitive: <Theme name surface> is the one element that says 'everything below here wears theme X', complete — the data-theme-scope attribute, the PortalThemeScopeProvider that carries it across portals, and the canvas it paints, which no site can now forget because `surface` is required. And <PopupTheme name>: the popups opened from a region wear theme X while the region keeps its own. Plus the no-adhoc-theme-scope lint rule that keeps the three halves from being hand-assembled apart again.
+- Description: Theme-boundary primitive: <Theme name surface> is the one element that says 'everything below here wears theme X', complete — the data-theme-scope attribute, the PortalThemeScopeProvider that carries it across portals, the colour scheme its scope wears (data-color-scheme, published by the theme engine, forwarded to popups; useColorScheme reads the nearest region's in JS), and the canvas it paints, which no site can now forget because `surface` is required. <ColorSchemeRegion scheme> is a region that always wears one scheme (the image viewer's dark). And <PopupTheme name>: the popups opened from a region wear theme X while the region keeps its own. Plus the no-adhoc-theme-scope lint rule that keeps the three halves from being hand-assembled apart again.
 - Web:
   - Uses:
     - `primitives/css/ui-kit.cn`
+    - `primitives/css/ui-kit.PortalForwardProvider`
     - `primitives/css/ui-kit.PortalThemeScopeProvider`
     - `primitives/css/ui-kit.SURFACE_LEVELS`
     - `ui/icons.IconScopeProvider`
   - Exports (types):
+    - `ColorSchemeRegionProps`
     - `PopupThemeProps`
     - `ThemeProps`
     - `ThemeSurface`
   - Exports (values):
+    - `ColorSchemeRegion`
     - `PopupTheme`
     - `Theme`
+    - `useColorScheme`
     - `useEnclosingAppThemeScope`
+    - `usePublishColorScheme`
+    - `usePublishedColorScheme`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/sidebar-palette --sidebar`
     - `ui/tokens/sidebar-palette --sidebar-accent`
-  - Imported by: 25 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×8
+  - Imported by: 30 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×9
     - `apps-core` ×7
+    - `primitives` ×3
     - `hints` ×2
     - `shell` ×2
+    - `ui` ×2
     - `framework/browser-server/demo/scope`
     - `layouts/miller`
     - `map`
     - `media/player`
     - `plugin-meta/exhibits`
-    - `primitives/pane`
 - Exemptions:
   - Exempts itself from: `theme-boundary/no-adhoc-theme-scope` — `.` (sanctioned)
   - Exempted by: `primitives/css/theme-boundary` (0 debt)

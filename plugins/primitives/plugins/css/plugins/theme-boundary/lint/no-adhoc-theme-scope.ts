@@ -56,7 +56,7 @@ export default createRule({
     type: "problem",
     docs: {
       description:
-        "Disallow hand-assembling a theme boundary — a raw `data-theme-scope` attribute on any host element, or an import of `PortalThemeScopeProvider` — outside the <Theme> primitive, which owns the attribute, the portal forward, and the painted canvas as one required-complete unit.",
+        "Disallow hand-assembling a theme boundary — a raw `data-theme-scope` or `data-color-scheme` attribute on any host element, or an import of `PortalThemeScopeProvider` — outside the <Theme> primitive, which owns the attribute, the portal forward, and the painted canvas as one required-complete unit.",
     },
     schema: [],
     messages: {
@@ -69,6 +69,14 @@ export default createRule({
         '("canvas" | "chrome" | "sunken" | "none") is required so the paint cannot be ' +
         "forgotten. If this is genuinely bespoke, " +
         "`// eslint-disable-next-line theme-boundary/no-adhoc-theme-scope -- <reason>`.",
+      adhocColorScheme:
+        "Raw `data-color-scheme`. A scheme carrier re-declares the desktop's tokens in its " +
+        "scheme, sets `color-scheme` and flips every `dark:` variant below it — and must be " +
+        "forwarded to the popups opened from it and published to JS readers " +
+        "(`useColorScheme`). An app's boundary gets its scheme from `<Theme>`; a region that " +
+        "always wears one scheme is `<ColorSchemeRegion scheme>` from " +
+        "`@plugins/primitives/plugins/css/plugins/theme-boundary/web`. If this is genuinely " +
+        "bespoke, `// eslint-disable-next-line theme-boundary/no-adhoc-theme-scope -- <reason>`.",
       adhocPortalThemeScope:
         "`PortalThemeScopeProvider` is the portal-forwarding HALF of a theme boundary — on " +
         "its own it keeps portaled content on a theme the surrounding element neither stamps " +
@@ -90,6 +98,12 @@ export default createRule({
           node.name.name === "data-theme-scope"
         ) {
           context.report({ node, messageId: "adhocThemeScope" });
+        }
+        if (
+          node.name.type === "JSXIdentifier" &&
+          node.name.name === "data-color-scheme"
+        ) {
+          context.report({ node, messageId: "adhocColorScheme" });
         }
       },
 

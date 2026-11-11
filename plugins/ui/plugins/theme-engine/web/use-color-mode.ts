@@ -2,11 +2,13 @@ import { useCallback, useEffect, useState } from "react";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { Apps } from "@plugins/apps-core/web";
 import { useRootThemeScopeState } from "@plugins/apps-core/plugins/theme-scope/web";
+import { useColorScheme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import {
   appThemeScope,
   isAppThemeScope,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import type { AppColorMode } from "@plugins/primitives/plugins/pane/core";
+import type { ColorScheme } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import {
   appColorModeConfig,
   effectiveColorMode,
@@ -17,25 +19,26 @@ import {
   type ConfiguredColorMode,
 } from "../core";
 
-export type ColorMode = "light" | "dark";
+export type ColorMode = ColorScheme;
 export type { ConfiguredColorMode };
 
-// WHO decides light/dark. `<html>.dark` is one class per document, and the
-// `color-scheme` property it drives is a document-level thing, so a document
-// has ONE colour scheme: that of the focused
-// full-surface app (`useRootThemeScopeState`), or the desktop when no single app
-// fills the surface. Every reader below resolves at that scope, the class
-// applier and the prop-themed widgets (sonner, charts, editors) alike, so they
-// cannot render different schemes on one screen. (They once did: each call
-// site picked its own scope, and a global `dark` beside an app-scoped `light`
-// shipped a white first paint that flipped to dark once React mounted.)
+// Light/dark is PER REGION. Each app wears its own effective scheme on its own
+// boundary (`<Theme name="app:<id>">` stamps `data-color-scheme`, published by
+// `ColorSchemePublisher`), each fixed theme its own, and `<html>` the
+// desktop's (the global setting). Nothing follows focus: focusing an app or
+// switching the surface mode changes no region's scheme, so it restyles
+// nothing — only the document canvas (`<body>`'s background) follows the
+// focused full-surface app, as one non-inherited property on one element.
 //
-// WHAT it is: `effectiveColorMode` (core) — the app's override if the user set
-// one, else its declared default (`defineApp({ colorMode })`), `global`
-// meaning the base document's setting. The server's first frame calls the same
-// function for the app a page opens. A surface showing several apps at once
-// (an unfocused floating window) wears the root's scheme: per-region schemes
-// are still deferred.
+// WHAT a scope wears: `effectiveColorMode` (core) — the app's override if the
+// user set one, else its declared default (`defineApp({ colorMode })`),
+// `global` meaning the base document's setting. The server's first frame calls
+// the same function.
+//
+// Readers: `useColorMode()` is the scheme of the REGION a component renders in
+// (the nearest boundary's — theme-boundary's `useColorScheme`), for whatever
+// themes itself in JS. `useColorModeSetting()` is the setting the light/dark
+// controls show and edit: the focused full-surface app's, else the global one.
 
 /** The colour-mode setting of one scope, every layer of it. */
 export interface ColorModeSetting {
@@ -77,7 +80,7 @@ export function useColorModeSettingFor(
 }
 
 /** The app an `app:<id>` root scope names; undefined for the desktop. */
-function appIdOf(scopeId: string | undefined): string | undefined {
+export function appIdOf(scopeId: string | undefined): string | undefined {
   return scopeId !== undefined && isAppThemeScope(scopeId)
     ? scopeId.slice(scopeId.indexOf(":") + 1)
     : undefined;
@@ -100,6 +103,8 @@ export type RootColorModeSetting =
   | {
       known: true;
       setting: ColorModeSetting;
+      /** What that scope wears now: `system` collapsed against the OS, live. */
+      resolved: ColorMode;
       setColorMode: (mode: ConfiguredColorMode) => void;
     };
 
@@ -120,12 +125,18 @@ export function useColorModeSetting(): RootColorModeSetting {
     },
     [app, setGlobal, setApp],
   );
+  const systemDark = useSystemDark(setting.effective === "system");
   if (!root.known) return { known: false };
-  return { known: true, setting, setColorMode };
+  return {
+    known: true,
+    setting,
+    resolved: resolveColorMode(setting.effective, systemDark),
+    setColorMode,
+  };
 }
 
 /** Whether the OS prefers dark, live — subscribed only while `active`. */
-function useSystemDark(active: boolean): boolean {
+export function useSystemDark(active: boolean): boolean {
   const [systemDark, setSystemDark] = useState(
     () =>
       typeof window !== "undefined" &&
@@ -142,45 +153,25 @@ function useSystemDark(active: boolean): boolean {
   return systemDark;
 }
 
-function resolve(mode: ConfiguredColorMode, systemDark: boolean): ColorMode {
+/** A configured mode as worn: `system` collapsed against the OS. */
+export function resolveColorMode(
+  mode: ConfiguredColorMode,
+  systemDark: boolean,
+): ColorMode {
   return mode === "dark" || (mode === "system" && systemDark)
     ? "dark"
     : "light";
 }
 
 /**
- * The document's resolved scheme, or `undefined` before the surface has said
- * which app owns `:root`. The class applier waits that window out — the
- * server's first frame already set the class for the app the page opens, and
- * applying the desktop's answer meanwhile would flash.
+ * The colour scheme of the region this component renders in — the nearest
+ * scheme boundary's (an app's, a fixed theme's, a forced region's), else the
+ * desktop's. Feed it to whatever themes itself through a prop
+ * (`<Sonner theme={useColorMode()} />`, a chart, a highlighter) so it matches
+ * the CSS around it.
  */
-export function useDocumentColorMode(): ColorMode | undefined {
-  const root = useRootThemeScopeState();
-  const setting = useColorModeSettingFor(
-    root.known ? appIdOf(root.scopeId) : undefined,
-  );
-  const systemDark = useSystemDark(setting.effective === "system");
-  return root.known ? resolve(setting.effective, systemDark) : undefined;
-}
-
-// Resolves the effective light/dark mode, collapsing the `system` setting against
-// the OS `prefers-color-scheme` (with a live listener). Both the `.dark` class
-// applier and prop-themed third-party components (sonner, charts, editors)
-// consume this resolution, so the class, the `color-scheme` property, and every
-// JS widget agree. Before the owning scope is known it answers the scheme the
-// document already wears (the class the server's first frame set), which is
-// exactly what is on screen.
-export function useResolvedColorMode(): ColorMode {
-  const mode = useDocumentColorMode();
-  if (mode !== undefined) return mode;
-  return document.documentElement.classList.contains("dark") ? "dark" : "light";
-}
-
-// The resolved color mode — the same value driving the global `.dark` class. Use
-// this to feed any component that themes itself via a prop (e.g.
-// `<Sonner theme={useColorMode()} />`) instead of reading the class.
 export function useColorMode(): ColorMode {
-  return useResolvedColorMode();
+  return useColorScheme();
 }
 
 /**

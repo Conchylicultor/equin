@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { lazyComponent } from "@plugins/primitives/plugins/lazy-component/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { useDarkMode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { parseMermaid, type Flowchart as FlowchartModel } from "../../core";
 import { SequenceDiagram } from "./sequence/sequence-diagram";
 import "./stage.css";
@@ -33,11 +34,13 @@ const MermaidSvg = lazyComponent<{ source: string }>(
  */
 export function MermaidPreview({ source }: { source: string }) {
   const parsed = useMemo(() => parseMermaid(source), [source]);
+  // The stage's dark ramp follows the region's scheme (stage.css).
+  const dark = useDarkMode();
   switch (parsed.kind) {
     case "sequence":
     case "flowchart":
       return (
-        <div className="mmd-stage">
+        <div className="mmd-stage" data-stage-dark={dark || undefined}>
           <Scroll axis="x">
             <Inset pad="xl">
               {parsed.kind === "sequence" ? (

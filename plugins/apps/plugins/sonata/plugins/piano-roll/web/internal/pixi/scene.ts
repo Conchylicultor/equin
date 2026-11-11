@@ -112,7 +112,11 @@ export interface PianoRollScene {
   destroy(): void;
 }
 
-export function createPianoRollScene(app: Application): PianoRollScene {
+export function createPianoRollScene(
+  app: Application,
+  /** The element whose tokens the track colours resolve against (the canvas host). */
+  colorHost: Element,
+): PianoRollScene {
   // --- scene graph ---------------------------------------------------------
   const fxBelow = new Container();
   const fxAbove = new Container();
@@ -161,7 +165,7 @@ export function createPianoRollScene(app: Application): PianoRollScene {
   const resolveColor = (expr: string): number => {
     let color = colorCache.get(expr);
     if (color === undefined) {
-      color = resolveCssColor(expr);
+      color = resolveCssColor(expr, colorHost);
       colorCache.set(expr, color);
     }
     return color;

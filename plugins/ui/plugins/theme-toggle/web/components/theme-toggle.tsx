@@ -1,9 +1,6 @@
 import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import {
-  useColorModeSetting,
-  useResolvedColorMode,
-} from "@plugins/ui/plugins/theme-engine/web";
+import { useColorModeSetting } from "@plugins/ui/plugins/theme-engine/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -23,8 +20,8 @@ const systemIcon = symbol("contrast");
  * control used to pick the scope itself and wrote one the class never read.
  *
  * "Dark mode" reads the RESOLVED mode (`system` collapsed against the OS, live),
- * which is what the class applier uses — so it always describes the scheme on
- * screen, and one click flips it (to an explicit light / dark, leaving `system`).
+ * which is what that scope's boundary wears — so it always describes the scheme
+ * on screen, and one click flips it (to an explicit light / dark, leaving `system`).
  * "Match system" is on while the effective setting is `system`.
  *
  * Until the surface has said which app owns the document, which scope the
@@ -36,10 +33,10 @@ const systemIcon = symbol("contrast");
  * ⚙ has the icon column open regardless.
  */
 export function ThemeToggle() {
-  const dark = useResolvedColorMode() === "dark";
   const root = useColorModeSetting();
   if (!root.known) return <Loading variant="rows" count={2} />;
   const { setting, setColorMode } = root;
+  const dark = root.resolved === "dark";
   const following = setting.effective === "system";
 
   return (

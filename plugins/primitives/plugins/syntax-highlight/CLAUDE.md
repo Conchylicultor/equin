@@ -9,6 +9,7 @@
   - Uses:
     - `primitives/css/scroll.Scroll`
     - `primitives/css/text.Text`
+    - `primitives/css/theme-boundary.useColorScheme`
     - `primitives/css/ui-kit.cn`
     - `primitives/dom/scroll-reveal.revealElement`
     - `primitives/select-scope.ContentScope`

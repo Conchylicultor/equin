@@ -12,6 +12,7 @@ import {
   FixedThemeStyles,
 } from "./components/theme-injector";
 import { ThemeSelectionsCollector } from "./theme-selections";
+import { ColorSchemePublisher } from "./components/color-scheme-publisher";
 import { ThemeEngine } from "./slots";
 import { defaultTheme } from "./default-theme";
 import { useThemeOptions } from "./internal/theme-options";
@@ -41,10 +42,10 @@ export {
   useColorMode,
   useColorModeSetting,
   useColorModeSettingFor,
-  useResolvedColorMode,
   useSetAppColorMode,
   useSetGlobalColorMode,
 } from "./use-color-mode";
+export { usePreviewColorScheme } from "./components/color-scheme-publisher";
 export type {
   ColorMode,
   ColorModeSetting,
@@ -54,8 +55,9 @@ export type {
 
 export default {
   description:
-    "Paints each scope's selected theme: the token-group, theme and theme-source slots, the theme selection config, the injector that resolves one theme per scope into CSS variables, and the document's light/dark: the focused full-surface app's effective color mode (the app's declared default from defineApp, the user's per-app override, else the global setting), read and written through useColorModeSetting (a state: not known until the surface says which app fills it). :root always wears the desktop's theme; each app's theme is painted on its own scope.",
+    "Paints each scope's selected theme: the token-group, theme and theme-source slots, the theme selection config, the injector that resolves one theme per scope into CSS variables, and light/dark per region: every app wears its own effective color mode (the app's declared default from defineApp, the user's per-app override, else the global setting) on its own boundary, published for theme-boundary to stamp (ColorSchemePublisher), each fixed theme its own scheme, and <html> the desktop's — so a focus or surface-mode change flips no scheme. The light/dark controls read and write the focused full-surface app's setting through useColorModeSetting (a state: not known until the surface says which app fills it); useColorMode is the scheme of the region a component renders in. :root always wears the desktop's theme; each app's theme is painted on its own scope.",
   contributions: [
+    Core.Root({ component: ColorSchemePublisher, scope: "each" }),
     Core.Root({ component: ThemeInjector, scope: "each" }),
     Core.Root({ component: AppScopeThemes, scope: "each" }),
     Core.Root({ component: SubThemeStyles, scope: "each" }),

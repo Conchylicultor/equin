@@ -9,6 +9,7 @@ import type { Passthrough } from "@plugins/primitives/plugins/passthrough/core";
 import { IconScopeProvider } from "@plugins/ui/plugins/icons/web";
 import type React from "react";
 import { AppThemeScopeProvider } from "./app-theme-scope";
+import { ColorSchemeProvider, usePublishedColorScheme } from "./color-scheme";
 
 /**
  * What a boundary PAINTS. Custom properties cascade *down* but paint does not
@@ -158,6 +159,12 @@ export function Theme({
   const pluginScope = usePluginScopeId();
   const stamped =
     name === undefined ? undefined : qualifyThemeScope(pluginScope, name);
+  // The scheme this scope wears (an app's effective light/dark, a fixed
+  // theme's own), as its theme hosts published it. Stamped on the element —
+  // the region's `color-scheme`, token halves and `dark:` variants follow the
+  // nearest carrier — so a focus or surface-mode change, which changes no
+  // scope's scheme, restyles nothing. A sub-theme keeps the scheme around it.
+  const scheme = usePublishedColorScheme(name);
   return (
     <Comp
       ref={ref}
@@ -171,6 +178,7 @@ export function Theme({
       // plugin's own files by path — it is the one sanctioned home for the raw
       // attribute, and `reportUnusedDisableDirectives` is an error.)
       data-theme-scope={stamped}
+      data-color-scheme={scheme}
       // NO display class here, unlike `<Surface>`, and the difference is the
       // point. A surface is a contained BOX, so it owns `block` and `as` is
       // purely a tag choice. A theme boundary is a REGION of layout that already
@@ -183,9 +191,13 @@ export function Theme({
       className={cn(THEME_SURFACES[surface], className)}
     >
       <PortalThemeScopeProvider scope={name}>
-        <IconScopeProvider scope={name}>
-          <AppThemeScopeProvider scope={name}>{children}</AppThemeScopeProvider>
-        </IconScopeProvider>
+        <ColorSchemeProvider scheme={scheme}>
+          <IconScopeProvider scope={name}>
+            <AppThemeScopeProvider scope={name}>
+              {children}
+            </AppThemeScopeProvider>
+          </IconScopeProvider>
+        </ColorSchemeProvider>
       </PortalThemeScopeProvider>
     </Comp>
   );

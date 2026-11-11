@@ -2,7 +2,7 @@ import {
   foldResource,
   ResourceErrorInline,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { useScopeMembership } from "@plugins/config_v2/web";
@@ -19,6 +19,7 @@ import { themeSelectionConfig } from "@plugins/ui/plugins/theme-engine/core";
 import {
   ThemeEngine,
   ThemeScopeProvider,
+  usePreviewColorScheme,
 } from "@plugins/ui/plugins/theme-engine/web";
 import { themeCustomizerPane } from "../panes";
 import { ThemeCustomizer } from "../slots";
@@ -137,30 +138,18 @@ function CustomizeForAppToggle({
 export function ThemeCustomizerBody() {
   const [search, setSearch] = useState("");
   const [tokenMode, setTokenMode] = useState<TokenMode>("both");
-  const originalDark = useRef(
-    document.documentElement.classList.contains("dark"),
-  );
-
   const appId = useCurrentAppId();
   const scopeId = appId ? `app:${appId}` : undefined;
   // "Has its own theme" = this app has its own theme selection document
   // (committed git scope OR runtime fork). The toggle means that membership.
   const membership = useScopeMembership(themeSelectionConfig, scopeId);
 
-  useEffect(() => {
-    if (tokenMode === "dark") {
-      document.documentElement.classList.add("dark");
-    } else if (tokenMode === "light") {
-      document.documentElement.classList.remove("dark");
-    }
-  }, [tokenMode]);
-
-  useEffect(() => {
-    const wasDark = originalDark.current;
-    return () => {
-      document.documentElement.classList.toggle("dark", wasDark);
-    };
-  }, []);
+  // Editing one mode's tokens shows the app being edited (the desktop with
+  // none) in that mode, without writing its setting; "both" shows it as set.
+  usePreviewColorScheme(
+    appId ?? undefined,
+    tokenMode === "both" ? undefined : tokenMode,
+  );
 
   // Which scope an edit lands in is exactly what membership decides, so nothing
   // is editable until it is known (preloaded: settled after a successful boot).
