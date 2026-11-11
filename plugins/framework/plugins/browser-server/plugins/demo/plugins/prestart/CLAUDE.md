@@ -4,9 +4,13 @@ Which SharedWorker a demo's tabs share, and starting it before the page boots.
 
 - **The name** (`hostWorkerName`): the scenario id, then `@<generation>` once a
   Reset — or a retiring worker — moved past it. The generation is page-wide in
-  localStorage (`advanceHostGeneration` / `trackHostGenerations`); why it
-  exists: `demo/scope`'s Reset, and a worker that is closing can still be
-  matched by its name.
+  localStorage (`{ current, highest }`: `advanceHostGeneration` /
+  `joinHostGeneration` / `trackHostGenerations`); why it exists: `demo/scope`'s
+  Reset, and a worker that is closing can still be matched by its name.
+  Moving on reaches the generation the other tabs already moved to, else a
+  name no tab used (`highest` + 1) — never one that is closing or that told a
+  tab to join another; joining (a worker declined: the same host serves at
+  another generation) moves `current` back to that one.
 - **Connecting** (`connectDemoHost(scenarioId, hostModule, generations)` →
   `{ connection, generation }`): `browser-server`'s `connectSharedHost` at the
   current generation's name; a worker of that name retiring (its last tab
@@ -49,9 +53,7 @@ Which SharedWorker a demo's tabs share, and starting it before the page boots.
     - `DemoHostConnection`
     - `HostGenerations`
   - Exports (values):
-    - `advanceHostGeneration`
     - `connectDemoHost`
-    - `hostGeneration`
     - `hostWorkerName`
     - `prestartDemoHost`
     - `trackHostGenerations`

@@ -30,8 +30,14 @@ export async function answerTipsAsTheyShow(page: Page): Promise<void> {
     // A click dispatched on the button, never a pointer move: the script may
     // be holding the pointer somewhere (hovering the launcher to open its
     // grid), and moving it off would undo what it was doing.
-    async (btn) => {
-      await btn.dispatchEvent("click");
+    // Clicked in the page, never waited for: a tip is the demo's shared
+    // data, so another tab answering it takes the card off this one too —
+    // a button gone by now is answered already.
+    async () => {
+      await page.evaluate((selector) => {
+        for (const button of document.querySelectorAll<HTMLElement>(selector))
+          button.click();
+      }, SHOWN_TIP_BUTTON);
     },
   );
 }

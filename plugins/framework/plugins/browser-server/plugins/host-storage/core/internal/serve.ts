@@ -31,6 +31,8 @@ export interface WorkerScope extends PortEnd {
   close(): void;
   /** A SharedWorker's name (what its pages connect by); a dedicated worker's, unused. */
   readonly name: string;
+  /** The worker's script URL: which build it runs (content-addressed). */
+  readonly location: { readonly href: string };
 }
 
 export type BrowserHostStorage =
@@ -61,8 +63,10 @@ function originLabel(origin: HostStorageOrigin): string {
  * as a SharedWorker (`"onconnect" in self`), else the worker's own port — gets
  * the host `boot` returns, booted on the `storage` declared before it runs.
  * `boot` sees where the storage's data comes from (`origin`). A page's Reset
- * wipes the storage and ends the worker (the pages reconnect to a fresh one);
- * a newer build claiming the storage ends serving here first.
+ * wipes the storage and ends the worker (the pages reconnect to a fresh one).
+ * When the same host already serves the storage as another SharedWorker, this
+ * one declines (`{ kind: "join", worker }`) and its pages connect to that one;
+ * another build claiming the storage ends serving here first (`updated`).
  *
  * As a SharedWorker, the host outlives its last tab (the page starts it with
  * `extendedLifetime`) and retires once no page holds it: every request
@@ -100,7 +104,13 @@ export function serveBrowserHost(opts: {
           ? opts.storage
           : {
               ...opts.storage,
-              onSuperseded: async () => served.end("superseded"),
+              // A tab of the same host joins this one (`ownership.ts`): only
+              // a SharedWorker can be joined, by its name.
+              identity: {
+                build: scope.location.href,
+                worker: shared ? scope.name : null,
+              },
+              onSuperseded: async (why) => served.end(why),
             },
       );
       declareHostStorage(storage);
@@ -137,10 +147,11 @@ export function serveBrowserHost(opts: {
       }
       await storage.wipe();
     },
-    // Reset: a closing worker is never matched by a new SharedWorker, so the
-    // pages that reconnect start a fresh one.
-    onEnded: (why) => {
-      if (why === "reset") scope.close();
+    // A dedicated worker closes here, whatever ended it (its page starts
+    // another, or shows why); a SharedWorker retires instead, under its
+    // retire lock.
+    onEnded: () => {
+      if (!shared) scope.close();
     },
     retire: shared
       ? {

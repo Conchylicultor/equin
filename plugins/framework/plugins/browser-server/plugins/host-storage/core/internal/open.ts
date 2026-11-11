@@ -53,7 +53,12 @@ import type {
   HostStore,
 } from "./host-storage";
 import { memoryHostStorage } from "./host-storage";
-import { acquireOwnership, type Ownership } from "./ownership";
+import {
+  acquireOwnership,
+  type OwnerIdentity,
+  type Ownership,
+  type YieldReason,
+} from "./ownership";
 import {
   decodeHostSnapshot,
   type HostSnapshot,
@@ -94,12 +99,14 @@ export type HostStorageSpec =
       migrations: readonly string[];
       /** The snapshot a fresh storage starts from; absent, it starts empty. */
       start?: HostStorageStart;
+      /** Which code this worker runs, and the SharedWorker name it serves under (`ownership.ts`). */
+      identity: OwnerIdentity;
       /**
-       * Newer (or the same) code claimed the storage from this worker: end
-       * serving — tell the tabs, answer nothing more. The storage closes once
-       * it resolves.
+       * Another build — or, without SharedWorker, another tab — claimed the
+       * storage from this worker (`why`): end serving — tell the tabs, answer
+       * nothing more. The storage closes once it resolves.
        */
-      onSuperseded: () => Promise<void>;
+      onSuperseded: (why: YieldReason) => Promise<void>;
     };
 
 /** An open storage, as its worker's entry point holds it. */
@@ -131,15 +138,16 @@ export async function openHostStorage(
     name: spec.name,
     migrations: spec.migrations,
     snapshotTakenAt: spec.start?.snapshot.takenAt,
+    identity: spec.identity,
     // Claims are answered only once the storage booted (`booted()`), so it is
     // open by then.
-    onSuperseded: async () => {
+    onSuperseded: async (why) => {
       if (opened === null) {
         throw new Error(
           `[host-storage] ${spec.name}: superseded before it opened`,
         );
       }
-      await spec.onSuperseded();
+      await spec.onSuperseded(why);
       await opened.close();
     },
   });
@@ -223,7 +231,7 @@ async function openPersistent(
       );
       if (unknown.length > 0) {
         throw new StorageNewerThanCodeError(
-          `This demo's saved data was updated by a newer version (it has ${unknown.length} migration${unknown.length === 1 ? "" : "s"} this page does not know). Reload this tab to continue.`,
+          `its stored data has ${unknown.length} migration${unknown.length === 1 ? "" : "s"} this code does not know`,
         );
       }
       const stored = lifecycle.snapshot;
@@ -233,7 +241,7 @@ async function openPersistent(
         stored.takenAt > start.snapshot.takenAt
       ) {
         throw new StorageNewerThanCodeError(
-          "This demo's saved data comes from a newer version. Reload this tab to continue.",
+          "its stored data started from a newer snapshot than this code's",
         );
       }
     }

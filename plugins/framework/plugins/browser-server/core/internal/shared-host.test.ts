@@ -158,6 +158,7 @@ function sharedWorkers() {
             keys: new Set<string>(),
             boot: { plugins: 0, stages: [], slowest: [] },
           }),
+        reset: () => Promise.resolve(),
         retire: {
           lock: retireLockName(name),
           async run() {
@@ -257,11 +258,27 @@ describe("a SharedWorker host's end of life", () => {
     const workers = sharedWorkers();
     const a = await connect(workers, { at: 0 });
     const worker = workers.live.get(workers.base)!;
-    worker.served.end("superseded");
-    expect(await a.host.ended).toBe("superseded");
-    await until(() => worker.retiring, "the superseded host retires");
+    worker.served.end("updated");
+    expect(await a.host.ended).toBe("updated");
+    await until(() => worker.retiring, "the host taken over retires");
     worker.closing.open();
     a.connection.leave();
+  });
+
+  test("a Reset closes the worker under the retire lock: a stale page connecting by its name moves on", async () => {
+    const workers = sharedWorkers();
+    const generation = { at: 0 };
+    const a = await connect(workers, generation);
+    const old = workers.live.get(workers.base)!;
+    a.host.reset();
+    expect(await a.host.ended).toBe("reset");
+    await until(() => old.retiring, "the reset host retires");
+    // A tab that never heard of the Reset still asks for the old name.
+    const stale = await connect(workers, { at: 0 });
+    expect(stale.connection.name).toBe(`${workers.base}@1`);
+    old.closing.open();
+    a.connection.leave();
+    stale.connection.leave();
   });
 
   test("a request still being answered when its page leaves is finished first", async () => {

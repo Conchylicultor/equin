@@ -63,8 +63,10 @@ version skew ("App updated — reload"). See `resource-runtime`'s `keySet`.
 - **`serveHost({ accept, boot, reset?, onEnded? })`** (worker side): serves
   the host on every page END `accept` hands over — a dedicated worker's `self`
   once, or each connection of a SharedWorker (several tabs, one server). Each
-  end is told `ready`, or `refused` (the boot threw a `HostRefusedError`: a
-  reason for the person, e.g. data written by a newer version) or `failed`.
+  end is told `ready`, or `refused` (the boot threw a `HostRefusedError`,
+  carrying a typed `HostRefusal`: `outdated` — its data is from newer code —
+  or `join` — the same host already serves it as another SharedWorker, which
+  the page connects to instead) or `failed`.
   Every end is told `accepted` first. An end whose page holds a Web Lock says
   so (`hello`, sent by `connectSharedHost`); the host drops that end's sockets
   when the lock is released (the tab went away). `retire: { lock, run }` (a
@@ -72,10 +74,13 @@ version skew ("App updated — reload"). See `resource-runtime`'s `keySet`.
   answering settled, it takes `lock` exclusively and, still with no end, ends
   `retired` and runs `run` — see *A SharedWorker host's end of life* below.
   `reset` (a page's
-  Reset) runs `opts.reset`, then every end is told `ended: "reset"`; the
-  returned `end(why)` tells every end `ended` from the worker's side (another
-  worker took the storage over: `"superseded"`), after which the host answers
-  nothing. `browser-server/host-storage`'s `serveBrowserHost` builds on it.
+  Reset) runs `opts.reset`, then every end is told `ended: "reset"` (and a
+  host with `retire` then retires, under its lock — a SharedWorker closes only
+  so); the returned `end(why)` tells every end `ended` from the worker's side,
+  after which the host answers nothing. `HostEndReason` is a closed union, one
+  arm per cause — `reset`, `retired` (followed by the page), `updated`
+  (another build took the storage), `unshared` (no SharedWorker: another
+  tab's own worker took it) — so a page decides by the cause. `browser-server/host-storage`'s `serveBrowserHost` builds on it.
 - **`serveOverPort(port, boot)`** (worker side, `port` = the worker's `self`):
   serves the `{ server, keys, boot }` `boot` resolves to over the port — `ready`
   with its keys, its boot report (`HostBoot`: stages, plugin count, slowest
@@ -88,7 +93,7 @@ version skew ("App updated — reload"). See `resource-runtime`'s `keySet`.
   `port`) → `Promise<{ server, keys, boot, readyAtMs, ended, reset }>`:
   a `BrowserServer` over that port, so `browserServerTransport` and the whole
   app path are unchanged. Rejects with `PortHostBootError` when the worker
-  reports `failed`, `PortHostRefusedError` (its `message` for the page) when
+  reports `failed`, `PortHostRefusedError` (its `refusal`) when
   `refused`. `ended` resolves with the reason the host stopped serving; every
   request still waiting, and every later one, rejects `HostEndedError`.
   `reset()` asks the host to wipe its data.
@@ -301,6 +306,7 @@ reaching the server, detach on unmount).
     - `HostBooted`
     - `HostEndReason`
     - `HostProgress`
+    - `HostRefusal`
     - `PageInput`
     - `PageInputRead`
     - `PageInputValue`

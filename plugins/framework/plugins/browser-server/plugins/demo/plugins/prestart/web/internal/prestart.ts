@@ -83,9 +83,8 @@ async function connectAtGeneration(
  *
  * Nothing to start where the browser has no SharedWorker: the scope then
  * starts a dedicated worker of its own. A connection whose generation another
- * tab's Reset moved past by the time the scope connects is left; the scope's
- * own worker then takes the storage over (one owner at a time), so only the
- * head start is lost.
+ * tab's Reset moved past by the time the scope connects is left, and the
+ * scope connects to the current one — only the head start is lost.
  */
 export async function prestartDemoHost(
   scenarioId: string,

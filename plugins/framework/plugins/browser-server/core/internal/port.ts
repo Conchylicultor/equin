@@ -55,14 +55,36 @@ interface WireResponse {
   body: ArrayBuffer;
 }
 
-/** Why a host stopped serving. */
+/**
+ * Why a host stopped serving. Each arm is a different cause with its own way
+ * out, so a page decides by it (an exhaustive switch), never by a catch-all.
+ */
 export type HostEndReason =
-  /** Another worker (a newer build, or another tab without SharedWorker) took the host's storage over. */
-  | "superseded"
   /** A page reset the host: its data is wiped, a fresh host boots on reconnect. */
   | "reset"
   /** No page held the host any more: it closed its storage and the worker. */
-  | "retired";
+  | "retired"
+  /** Another version of the host's code (a newer build, loaded in another tab) took its storage over. */
+  | "updated"
+  /**
+   * The same host in another tab's own worker took its storage over: the
+   * browser has no SharedWorker, so its tabs cannot share one host.
+   */
+  | "unshared";
+
+/**
+ * Why a host declined to boot for a page — on purpose, not a crash. Each arm
+ * is decided by its cause, like `HostEndReason`.
+ */
+export type HostRefusal =
+  /** The host's data (or the host holding it) is from newer code than this worker's. */
+  | { kind: "outdated" }
+  /**
+   * The same host already serves the storage, as the SharedWorker named
+   * `worker`: the page connects to it instead (a tab joins the running host,
+   * never takes it).
+   */
+  | { kind: "join"; worker: string };
 
 /** Page → worker. */
 export type ToHost =
@@ -105,22 +127,25 @@ export type FromHost =
   | { t: "failed"; error: string }
   /** How far the boot has come (`HostProgress`), posted to every page waiting for it until it settles. */
   | { t: "progress"; progress: HostProgress }
-  /** The host declined to boot, for a reason the page shows (`HostRefusedError`). */
-  | { t: "refused"; message: string }
+  /** The host declined to boot (`HostRefusedError`), for `refusal`. */
+  | { t: "refused"; refusal: HostRefusal }
   | { t: "ended"; why: HostEndReason }
   | { t: "response"; id: number; response: WireResponse }
   | { t: "deliver"; conn: number; frame: string }
   | { t: "closed"; conn: number; code: number; reason: string };
 
 /**
- * A boot the host declines on purpose, with a message for the person in front
- * of the page (data written by a newer version, another tab holding it) — not
- * a crash. Thrown by a host's `boot`; the page receives it as
- * `PortHostRefusedError` and shows the message rather than an error boundary.
+ * A boot the host declines on purpose (`HostRefusal`: its data is newer than
+ * its code, or the same host already serves it elsewhere) — not a crash.
+ * Thrown by a host's `boot`; the page receives it as `PortHostRefusedError`
+ * and acts on `refusal` rather than reaching an error boundary.
  */
 export class HostRefusedError extends Error {
-  constructor(message: string) {
-    super(message);
+  constructor(
+    readonly refusal: HostRefusal,
+    detail: string,
+  ) {
+    super(`the host declined to boot (${refusal.kind}): ${detail}`);
     this.name = "HostRefusedError";
   }
 }
@@ -159,7 +184,11 @@ export interface ServeHostOptions {
    * to reset, and a `reset` throws.
    */
   reset?: () => Promise<void>;
-  /** After every end was told `ended` — where the worker closes itself. */
+  /**
+   * After every end was told `ended`. A host with `retire` closes there (its
+   * worker closes only under the retire lock, a Reset's end included); one
+   * without closes its worker here.
+   */
   onEnded?: (why: HostEndReason) => void;
   /**
    * A SharedWorker host's end of life: once its last end has left (its page's
@@ -258,7 +287,7 @@ export function serveHost(opts: ServeHostOptions): ServedHost {
       host = await booted;
     } catch (err) {
       if (err instanceof HostRefusedError) {
-        post({ t: "refused", message: err.message });
+        post({ t: "refused", refusal: err.refusal });
       } else {
         const error =
           err instanceof Error ? (err.stack ?? err.message) : String(err);
@@ -388,16 +417,18 @@ export function serveHost(opts: ServeHostOptions): ServedHost {
   /**
    * Retire when nothing holds the host: no end, no request being answered,
    * booted (a failed boot closed its storage itself; the worker retires all
-   * the same) — or once it ended other than by a Reset (another worker took
-   * its storage over: its pages are told, and the worker still has to go).
-   * A Reset closes the worker itself, on a name no page asks for again. Asks
-   * for the retire lock; whatever arrives while it waits takes the ask back or
-   * is checked again once it is granted.
+   * the same) — or once it ended, whatever ended it (a Reset's wipe done, or
+   * another worker took its storage over: its pages are told, and the worker
+   * still has to go). Always under the retire lock, so a page connecting by
+   * this name meanwhile — a stale tab — moves on to the next one instead of
+   * reaching a closing worker. Asks for the retire lock; whatever arrives
+   * while it waits takes the ask back or is checked again once it is granted.
    */
   function maybeRetire(): void {
     const retire = opts.retire;
     if (retire === undefined || retiring !== null || retired) return;
-    if (stopping || ended === "reset") return;
+    // Mid-Reset: the wipe is running; it ends the host, which retires then.
+    if (stopping && ended === null) return;
     const held = (): boolean =>
       ended === null && (ends.size > 0 || inFlight.size > 0 || !bootSettled);
     if (held()) return;
@@ -406,7 +437,7 @@ export function serveHost(opts: ServeHostOptions): ServedHost {
     void navigator.locks
       .request(retire.lock, { signal: ask.signal }, async () => {
         if (retiring === ask) retiring = null;
-        if (held() || stopping || retired) return;
+        if (held() || (stopping && ended === null) || retired) return;
         retired = true;
         if (ended === null) endAll("retired");
         await retire.run().catch((err: unknown) => {
@@ -470,10 +501,10 @@ export class PortHostBootError extends Error {
   }
 }
 
-/** The host declined to boot (`HostRefusedError` in the worker): `message` is for the page to show. */
+/** The host declined to boot (`HostRefusedError` in the worker), for `refusal`. */
 export class PortHostRefusedError extends Error {
-  constructor(message: string) {
-    super(message);
+  constructor(readonly refusal: HostRefusal) {
+    super(`the browser server declined to boot (${refusal.kind})`);
     this.name = "PortHostRefusedError";
   }
 }
@@ -691,7 +722,7 @@ export function portBrowserServer(
           reject(new PortHostBootError(msg.error));
           return;
         case "refused":
-          reject(new PortHostRefusedError(msg.message));
+          reject(new PortHostRefusedError(msg.refusal));
           return;
         case "progress":
           onProgress?.(msg.progress);

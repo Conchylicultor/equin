@@ -76,12 +76,18 @@ serveBrowserHost({
   and applies the pending files in one transaction (a failure leaves the data
   untouched). Proven on a reopened on-disk PGlite by
   `database/pglite`'s `stored-data.test.ts`.
-- **One owner** (`ownership.ts`): the exclusive Web Lock `equin-host:<name>`,
-  held while open. A worker that finds it held claims it over a BroadcastChannel
-  with its migrations: the holder yields when the claimant knows every
-  migration it knows (it ends serving — its tabs show reload — closes, releases),
-  else refuses (the claimant fails `StorageNewerThanCodeError`). No timeout:
-  the claimant waits on the lock itself.
+- **One owner; tabs join it, never take it** (`ownership.ts`): the exclusive
+  Web Lock `equin-host:<name>`, held while open. A worker that finds it held
+  claims it over a BroadcastChannel, saying which code it runs (migrations,
+  snapshot, its script URL — the build) and its SharedWorker name. The holder
+  answers by cause (`answerClaim`, pure): older code → refuse (the claimant
+  fails `StorageNewerThanCodeError`, `{ kind: "outdated" }`); the same build,
+  both SharedWorkers — another tab whose worker got another generation's name
+  — → `join` at once (the claimant fails `{ kind: "join", worker }` and its
+  pages connect to the holder); another build → yield once serving, its tabs
+  told `updated`; dedicated workers (no SharedWorker) → yield, `unshared`.
+  No timeout: the claimant waits on the lock itself. Design:
+  `research/2026-11-11-framework-demo-tabs-join-never-take.md`.
 - **Several tabs** share one SharedWorker per build (the page's
   `startShared(name)`; `serveBrowserHost` accepts every connection). A tab that
   goes away is noticed through the Web Lock its page holds for its end
@@ -97,11 +103,12 @@ serveBrowserHost({
   and opens what this one wrote.
 - **Reset** (`ToHost` `reset`): `wipe()` — close, then delete every IndexedDB
   database of the storage — every tab is told `ended: "reset"`, the worker
-  closes itself, and the tabs reconnect to a fresh one (under a new name: a
+  retires (under the retire lock, so a stale tab asking for its name moves
+  on), and the tabs reconnect to a fresh one (under a new name: a
   closing SharedWorker can still be matched by its old one — `demo/scope`),
   which starts from the snapshot again. From the wipe's start the holder
   answers no claim: a fresh worker started meanwhile waits on the lock and
-  opens the wiped storage, rather than ending this host `superseded`.
+  opens the wiped storage, rather than taking this one over.
 - **The boot report says where the data came from** (`HostBoot.data`:
   `stored`, `snapshot`, …) and what opening the storage cost (a `storage`
   stage), in the page's `demo-host-boot` log line.

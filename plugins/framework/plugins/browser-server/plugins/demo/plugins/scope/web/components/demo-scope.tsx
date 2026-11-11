@@ -23,7 +23,6 @@ import {
   PortHostRefusedError,
   portBrowserServer,
   type BrowserServer,
-  type HostEndReason,
   type HostProgress,
   type PageInputValue,
   type PortEnd,
@@ -117,13 +116,30 @@ interface ScopeHost {
   declareInputs(keys: readonly string[]): void;
 }
 
+/**
+ * Why the host will not serve this page any more, each with its own message
+ * (`STOPPED_MESSAGES`) — decided by the cause, never a catch-all.
+ */
+type StopReason =
+  /** Another version of equin, loaded in another tab, holds the demo's data (or wrote it). */
+  | "updated"
+  /** This browser has no SharedWorker, and another tab's own host took the data. */
+  | "unshared";
+
+const STOPPED_MESSAGES: Record<StopReason, string> = {
+  updated:
+    "equin was updated in another tab. Reload this tab to continue on the new version.",
+  unshared:
+    "This browser cannot run the demo in two tabs at once, and it is now open in another tab. Reload to continue in this one.",
+};
+
 /** What one start of the scope's host comes to. */
 interface ScopeStart {
   onReady(host: ScopeHost): void;
-  /** The host declined to boot (`PortHostRefusedError`): show `message`. */
-  onRefused(message: string): void;
-  /** It stopped serving after it was ready. */
-  onEnded(why: HostEndReason): void;
+  /** The host will not serve this page (it declined, or another took its data): show why. */
+  onStopped(why: StopReason): void;
+  /** It ended under this page in a way the page follows (a Reset, a retirement): start again. */
+  onFollow(why: "reset" | "retired"): void;
   onFailed(err: unknown): void;
   /** How far its boot has come, until it is ready. */
   onProgress(progress: HostProgress): void;
@@ -192,38 +208,58 @@ function startScopeServer(
     const asked = performance.now();
     const mod = await scenario.host.start();
     if (ended) return;
-    const { end, start, generation, stop } = await connectHost(
-      scenario,
-      mod,
-      generations,
-    );
-    stopEnd = stop;
-    if (ended) {
-      stop();
-      return;
-    }
-    const framing = attachFrameServing(end, mod.serviceWorkerUrl);
+    let connected: Awaited<ReturnType<typeof connectHost>>;
+    let framing: Promise<FrameServing>;
     let hosted: PortServer;
-    try {
-      const serving = portBrowserServer(end, {
-        inputs,
-        onProgress: (progress) => {
-          if (!ended) report.onProgress(progress);
-        },
-      });
-      // Listening now: what the host posted meanwhile is delivered.
-      start();
-      hosted = await serving;
-    } catch (err) {
-      if (err instanceof PortHostRefusedError) {
-        // Nothing will be served: the frames attached alongside go too.
-        const frames = await framing;
-        if (frames.kind === "serving") frames.detach();
-        if (!ended) report.onRefused(err.message);
+    // Until a worker serves this page: one that declines because the same
+    // host already serves the data as another worker (`join`) sends this tab
+    // there — a tab joins the running host, never takes it.
+    for (;;) {
+      connected = await connectHost(scenario, mod, generations);
+      const { end, start, stop } = connected;
+      stopEnd = stop;
+      if (ended) {
+        stop();
         return;
       }
-      throw err;
+      framing = attachFrameServing(end, mod.serviceWorkerUrl);
+      try {
+        const serving = portBrowserServer(end, {
+          inputs,
+          onProgress: (progress) => {
+            if (!ended) report.onProgress(progress);
+          },
+        });
+        // Listening now: what the host posted meanwhile is delivered.
+        start();
+        hosted = await serving;
+        break;
+      } catch (err) {
+        if (!(err instanceof PortHostRefusedError)) throw err;
+        // Nothing will be served on this end: the frames attached alongside go too.
+        const frames = await framing;
+        if (frames.kind === "serving") frames.detach();
+        stop();
+        stopEnd = null;
+        if (ended) return;
+        const refusal = err.refusal;
+        switch (refusal.kind) {
+          case "join": {
+            const from = connected.generation;
+            if (generations.join(refusal.worker) === from) {
+              throw new Error(
+                `[demo-scope] ${scenario.id}: the host at generation ${from} told this tab to join itself`,
+              );
+            }
+            continue;
+          }
+          case "outdated":
+            report.onStopped("updated");
+            return;
+        }
+      }
     }
+    const { generation } = connected;
     const frames: FrameServing = await framing;
     if (frames.kind === "serving") {
       if (ended) frames.detach();
@@ -241,11 +277,22 @@ function startScopeServer(
     clientLog(BOOT_LOG_CHANNEL, line);
     served = hosted.server;
     void hosted.ended.then((why) => {
-      // Past this generation in every tab told so, whichever sent the Reset
-      // (or: the worker retired — none of its pages should see that, but a
-      // name it closed under is never asked for again either way).
-      if (why === "reset" || why === "retired") generations.advance(generation);
-      if (!ended) report.onEnded(why);
+      switch (why) {
+        case "reset":
+        case "retired":
+          // Past this generation in every tab told so, whichever sent the
+          // Reset (or: the worker retired — none of its pages should see
+          // that, but a name it closed under is never asked for again
+          // either way); then follow to the next host, on the same data or
+          // the fresh one.
+          generations.advance(generation);
+          if (!ended) report.onFollow(why);
+          return;
+        case "updated":
+        case "unshared":
+          if (!ended) report.onStopped(why);
+          return;
+      }
     });
     report.onReady({
       server: served,
@@ -294,12 +341,9 @@ type ScopeState =
   | { kind: "idle" }
   | { kind: "booting"; progress: HostProgress | null }
   | { kind: "ready"; host: ScopeHost }
-  /** The host will not serve this page: a message and a reload. */
-  | { kind: "stopped"; message: string }
+  /** The host will not serve this page: why, and a reload. */
+  | { kind: "stopped"; why: StopReason }
   | { kind: "failed"; error: unknown };
-
-const SUPERSEDED_MESSAGE =
-  "This demo was opened in another tab, or updated there. Reload this tab to continue here.";
 
 /**
  * Where the scope is before the visitor is in the demo, as a page draws it
@@ -349,10 +393,13 @@ export type DemoEntry = "gate" | "joined";
  * starts at once behind `<Loading/>`. A Reset never asks again: the visitor
  * asked for the demo back.
  *
- * A host that fails to boot throws to the error boundary. A host that declines
- * this page (its data written by a newer version) or stops serving it (another
- * tab took it over) shows why, with a Reload; a Reset (`useDemoHostControl`,
- * from any tab) boots it again.
+ * Every tab shares the running host: a worker that finds the same host
+ * already serving the data (another tab's, under another generation's name)
+ * sends this tab to it (`join`), and a Reset or a retirement is followed to
+ * the next host — never a screen. A host that fails to boot throws to the
+ * error boundary. Only a cause the tab cannot follow stops it, each with its
+ * own message and a Reload (`StopReason`): equin was updated in another tab,
+ * or a browser without SharedWorker opened the demo in another tab.
  */
 export function DemoScope({
   scenario,
@@ -481,17 +528,11 @@ export function DemoScope({
     // discarded render never ends).
     const stop = startScopeServer(scenario, generations, inputKeysRef.current, {
       onReady: (host) => setState({ kind: "ready", host }),
-      onRefused: (message) => setState({ kind: "stopped", message }),
-      onEnded: (why) => {
-        if (why === "reset") {
-          setState({ kind: "booting", progress: null });
-          setResets((r) => r + 1);
-        } else if (why === "retired") {
-          setState({ kind: "booting", progress: null });
-          setReconnects((r) => r + 1);
-        } else {
-          setState({ kind: "stopped", message: SUPERSEDED_MESSAGE });
-        }
+      onStopped: (why) => setState({ kind: "stopped", why }),
+      onFollow: (why) => {
+        setState({ kind: "booting", progress: null });
+        if (why === "reset") setResets((r) => r + 1);
+        else setReconnects((r) => r + 1);
       },
       onFailed: (error) => setState({ kind: "failed", error }),
       onProgress: (progress) =>
@@ -553,7 +594,7 @@ export function DemoScope({
   // A host that could not boot reaches the error boundary, never an empty app.
   if (state.kind === "failed") throw state.error;
   if (scopePlugins.kind === "failed") throw scopePlugins.error;
-  if (state.kind === "stopped") return <HostStopped message={state.message} />;
+  if (state.kind === "stopped") return <HostStopped why={state.why} />;
   if (
     transport === null ||
     control === null ||
@@ -632,13 +673,13 @@ function PageInputFeed({
   return null;
 }
 
-/** Why the host does not serve this page, and the way out. */
-function HostStopped({ message }: { message: string }): ReactNode {
+/** Why the host does not serve this page, and the way out. `data-demo-stopped`: the cause, for e2e. */
+function HostStopped({ why }: { why: StopReason }): ReactNode {
   return (
-    <Center className="h-full p-lg">
+    <Center className="h-full p-lg" data-demo-stopped={why}>
       <Stack gap="md" align="center">
         <Text as="p" variant="body" tone="muted">
-          {message}
+          {STOPPED_MESSAGES[why]}
         </Text>
         <Button onClick={() => window.location.reload()}>Reload</Button>
       </Stack>

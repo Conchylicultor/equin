@@ -45,6 +45,7 @@ import {
 } from "@plugins/framework/plugins/web-sdk/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import {
+  HostRefusedError,
   portRequester,
   type BrowserServer,
 } from "@plugins/framework/plugins/browser-server/core";
@@ -54,6 +55,7 @@ import {
   type InRealmServerOptions,
 } from "@plugins/framework/plugins/browser-server/core/testing";
 import type { DemoScenario } from "@plugins/framework/plugins/browser-server/plugins/demo/core";
+import { trackHostGenerations } from "@plugins/framework/plugins/browser-server/plugins/demo/plugins/prestart/web";
 import {
   defineEndpoint,
   implement,
@@ -592,6 +594,59 @@ describe("<DemoScope>", () => {
         "migration 42 failed",
       ),
     );
+    expect(view.queryByText("never")).toBeNull();
+  });
+
+  it("a host declining because the same host serves elsewhere sends the tab there: it joins, no screen", async () => {
+    let boots = 0;
+    const view = await renderAsync(
+      <PluginProvider plugins={PLUGINS}>
+        <Boundary>
+          <DemoScope
+            scenario={scenarioOf(() => {
+              boots += 1;
+              if (boots === 1) {
+                throw new HostRefusedError(
+                  { kind: "join", worker: "joining@1" },
+                  "the same host serves it as joining@1",
+                );
+              }
+              return storyServer();
+            }, "joining")}
+          >
+            <p>in the demo</p>
+          </DemoScope>
+        </Boundary>
+      </PluginProvider>,
+    );
+    await waitFor(() => expect(view.getByText("in the demo")).toBeTruthy());
+    expect(boots).toBe(2);
+    // Every later tab connects to the host it joined.
+    expect(trackHostGenerations("joining").current()).toBe(1);
+    localStorage.clear();
+  });
+
+  it("a host whose data is from newer code says equin was updated, with a Reload", async () => {
+    const view = await renderAsync(
+      <PluginProvider plugins={PLUGINS}>
+        <Boundary>
+          <DemoScope
+            scenario={scenarioOf(() => {
+              throw new HostRefusedError(
+                { kind: "outdated" },
+                "its stored data started from a newer snapshot",
+              );
+            }, "outdated")}
+          >
+            <p>never</p>
+          </DemoScope>
+        </Boundary>
+      </PluginProvider>,
+    );
+    await waitFor(() =>
+      expect(view.getByText(/equin was updated in another tab/)).toBeTruthy(),
+    );
+    expect(view.getByText("Reload")).toBeTruthy();
     expect(view.queryByText("never")).toBeNull();
   });
 

@@ -9,7 +9,9 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   advanceHostGeneration,
   hostGeneration,
+  generationOfWorker,
   hostWorkerName,
+  joinHostGeneration,
   trackHostGenerations,
 } from "../internal/host-generation";
 
@@ -32,9 +34,20 @@ describe("host generation", () => {
 
   it("never goes back, and keeps scenarios apart", () => {
     advanceHostGeneration("s", 4);
-    // A tab still on an older generation moves past the stored one, not to it.
+    // A tab still on an older generation moves to where the others went.
     expect(advanceHostGeneration("s", 1)).toBe(5);
     expect(hostGeneration("other")).toBe(0);
+  });
+
+  it("joining an older generation keeps every later move on a fresh name", () => {
+    // A tab moved to 2 (its retiring worker skipped), whose worker then told
+    // it to join the host serving at 1.
+    advanceHostGeneration("s", 0);
+    advanceHostGeneration("s", 1);
+    joinHostGeneration("s", 1);
+    expect(hostGeneration("s")).toBe(1);
+    // 1 retires: the next name is past 2 — never the worker that declined.
+    expect(advanceHostGeneration("s", 1)).toBe(3);
   });
 });
 
@@ -49,5 +62,41 @@ describe("trackHostGenerations", () => {
     // The store lost (cleared, unreadable): this tab stays past what it left.
     localStorage.clear();
     expect(tab.current()).toBe(2);
+  });
+});
+
+describe("a worker's generation", () => {
+  it("reads back from its name, and refuses another scenario's", () => {
+    expect(generationOfWorker("s", hostWorkerName("s", 0))).toBe(0);
+    expect(generationOfWorker("s", hostWorkerName("s", 7))).toBe(7);
+    expect(() => generationOfWorker("s", "other@2")).toThrow();
+  });
+
+  it("a tab joins the generation a declining worker names", () => {
+    const tab = trackHostGenerations("s");
+    tab.advance(0);
+    tab.advance(1);
+    expect(tab.join(hostWorkerName("s", 1))).toBe(1);
+    expect(tab.current()).toBe(1);
+  });
+});
+
+describe("a join the store refuses", () => {
+  it("keeps the tab on the generation it joined, never back to the one that sent it", () => {
+    const tab = trackHostGenerations("s");
+    advanceHostGeneration("s", 0);
+    advanceHostGeneration("s", 1);
+    expect(tab.current()).toBe(2);
+    // The store refuses every write from now on: it keeps saying 2.
+    const setItem = Storage.prototype.setItem;
+    Storage.prototype.setItem = () => {
+      throw new DOMException("full", "QuotaExceededError");
+    };
+    try {
+      tab.join(hostWorkerName("s", 1));
+      expect(tab.current()).toBe(1);
+    } finally {
+      Storage.prototype.setItem = setItem;
+    }
   });
 });
