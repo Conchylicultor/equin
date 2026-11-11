@@ -62,13 +62,12 @@ vi.mock("../block-store", async (importOriginal) => {
   return {
     ...actual,
     // One page's feed: pending until the test publishes a settled store for it.
-    useServerBlockStore: (pageId: string) =>
-      useSyncExternalStore(
-        feeds.subscribe,
-        () =>
-          (feeds.stores.get(pageId) as BlockStore | undefined) ??
-          actual.PENDING_BLOCK_STORE,
-      ),
+    useServerBlockStore: (pageId: string) => {
+      const read = () =>
+        (feeds.stores.get(pageId) as BlockStore | undefined) ??
+        actual.PENDING_BLOCK_STORE;
+      return useSyncExternalStore(feeds.subscribe, read, read);
+    },
   };
 });
 

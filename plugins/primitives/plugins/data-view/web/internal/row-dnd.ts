@@ -522,14 +522,15 @@ export function useRowDropState<TRow>(
   key: string,
 ): RowDropEdge | "inside" | null {
   const store = dnd?.store ?? NO_STORE;
-  return useSyncExternalStore(store.subscribe, () => {
+  const read = (): RowDropEdge | "inside" | null => {
     const over = store.get();
     if (over?.kind !== "row") return null;
     if (over.key === key) return over.edge;
     return over.edge === "into" && dnd?.isWithin(key, over.key)
       ? "inside"
       : null;
-  });
+  };
+  return useSyncExternalStore(store.subscribe, read, read);
 }
 
 /** Is the drag over this section's empty space, which accepts it? */
@@ -538,10 +539,11 @@ export function useIsBackgroundDropTarget<TRow>(
   group: string | null,
 ): boolean {
   const store = dnd?.store ?? NO_STORE;
-  return useSyncExternalStore(store.subscribe, () => {
+  const read = (): boolean => {
     const over = store.get();
     return over?.kind === "background" && over.group === group;
-  });
+  };
+  return useSyncExternalStore(store.subscribe, read, read);
 }
 
 /**

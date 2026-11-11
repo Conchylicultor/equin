@@ -15,6 +15,10 @@ function set(next: boolean): void {
   for (const l of listeners) l();
 }
 
+function isRequested(): boolean {
+  return requested;
+}
+
 function subscribe(listener: () => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
@@ -32,5 +36,5 @@ export function settleAccountMenuRequest(): void {
 
 /** Whether a request to open the account menu is pending. */
 export function useAccountMenuRequested(): boolean {
-  return useSyncExternalStore(subscribe, () => requested);
+  return useSyncExternalStore(subscribe, isRequested, isRequested);
 }

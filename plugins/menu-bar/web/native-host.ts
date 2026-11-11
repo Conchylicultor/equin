@@ -155,6 +155,13 @@ function probe(): ProbeState {
   return state;
 }
 
+// A server render (a static render to HTML) is hosted by no helper: there is
+// no window to carry a bridge, and nothing will ever inject one.
+const ABSENT: ProbeState = { kind: "absent" };
+function serverProbe(): ProbeState {
+  return ABSENT;
+}
+
 function subscribe(cb: () => void): () => void {
   listeners.add(cb);
   return () => listeners.delete(cb);
@@ -167,7 +174,7 @@ function subscribe(cb: () => void): () => void {
  * boundary instead of guessing at a host it cannot trust.
  */
 export function useNativeHost(): NativeHost {
-  const current = useSyncExternalStore(subscribe, probe);
+  const current = useSyncExternalStore(subscribe, probe, serverProbe);
   if (current.kind === "failed") throw current.error;
   return current;
 }

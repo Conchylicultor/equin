@@ -57,11 +57,15 @@ export function useRail(
   closeKey: string,
 ): RailBox | undefined {
   const store = storeOf(editor);
+  const read = () => store.rails.get(closeKey);
+  // The rails are in memory: a static render reads what is measured now
+  // (nothing, there — no layout runs — as before the first measure live).
   return useSyncExternalStore(
     (listener) => {
       store.listeners.add(listener);
       return () => store.listeners.delete(listener);
     },
-    () => store.rails.get(closeKey),
+    read,
+    read,
   );
 }

@@ -96,6 +96,13 @@ function probe(): ProbeState {
   return state;
 }
 
+// A server render (a static render to HTML) is no app window: there is no
+// window to carry a bridge, and nothing will ever inject one.
+const ABSENT: ProbeState = { kind: "absent" };
+function serverProbe(): ProbeState {
+  return ABSENT;
+}
+
 function subscribe(cb: () => void): () => void {
   listeners.add(cb);
   return () => listeners.delete(cb);
@@ -109,7 +116,7 @@ function subscribe(cb: () => void): () => void {
  * here, inside the caller's error boundary.
  */
 export function useNativeFileDrag(): NativeFileDrag | null {
-  const current = useSyncExternalStore(subscribe, probe);
+  const current = useSyncExternalStore(subscribe, probe, serverProbe);
   if (current.kind === "failed") throw current.error;
   return current.kind === "ready" ? current.fileDrag : null;
 }

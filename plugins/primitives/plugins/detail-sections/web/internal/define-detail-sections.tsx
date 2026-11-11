@@ -4,7 +4,6 @@ import {
   useEffect,
   useRef,
   useState,
-  useSyncExternalStore,
   type ComponentType,
   type ReactNode,
 } from "react";
@@ -25,6 +24,7 @@ import {
   type Store,
 } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { z } from "zod";
+import { createRevealStore, usePendingReveal } from "./reveal-store";
 import { SectionCard } from "@plugins/primitives/plugins/section-card/web";
 import {
   defineRenderSlot,
@@ -314,26 +314,14 @@ export function defineDetailSections<
     return [stored ?? false, setStored];
   }
 
-  // The one pending reveal for this pane's sections — module state, because the
-  // link asking for it and the card answering it live in different subtrees
-  // (often different panes), and the card may not exist yet. A store with
-  // subscribers, never a poll.
-  let reveal: { sectionId: string; at: number } | null = null;
-  const revealListeners = new Set<() => void>();
-  function setReveal(next: typeof reveal): void {
-    reveal = next;
-    for (const l of revealListeners) l();
-  }
-  function subscribeReveal(l: () => void): () => void {
-    revealListeners.add(l);
-    return () => revealListeners.delete(l);
-  }
+  // The one pending reveal for this pane's sections (see `createRevealStore`).
+  const reveals = createRevealStore();
 
   function useRevealSection(): (sectionId: string) => void {
     const store = useStore(sectionOpenStore);
     return (sectionId: string) => {
       writeOpen(store, sectionId);
-      setReveal({ sectionId, at: Date.now() });
+      reveals.set({ sectionId, at: Date.now() });
     };
   }
 
@@ -406,10 +394,10 @@ export function defineDetailSections<
 
     // A pending reveal of THIS section scrolls its card into view once mounted.
     const ref = useRef<HTMLElement>(null);
-    const pending = useSyncExternalStore(subscribeReveal, () => reveal);
+    const pending = usePendingReveal(reveals);
     useEffect(() => {
       if (pending === null || pending.sectionId !== section.id) return;
-      setReveal(null);
+      reveals.set(null);
       if (Date.now() - pending.at > REVEAL_TTL_MS) return;
       revealElement(ref.current, { block: "start", behavior: "smooth" });
     }, [pending, section.id]);

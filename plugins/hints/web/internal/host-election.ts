@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { usePluginScopeId } from "@plugins/framework/plugins/web-sdk/core";
 
 /**
@@ -41,5 +41,6 @@ export function useElectedHintHost(): boolean {
       emit();
     };
   }, [id, page]);
-  return useSyncExternalStore(subscribe, () => elected() === id);
+  const isElected = useCallback(() => elected() === id, [id]);
+  return useSyncExternalStore(subscribe, isElected, isElected);
 }

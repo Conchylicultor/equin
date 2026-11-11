@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
 import type { VariantValue } from "@plugins/fields/plugins/variant/core";
@@ -15,8 +15,8 @@ import {
   type ResolvedViewInstance,
 } from "./resolve-instances";
 import { useViewsConfig, type ViewsConfigHandle } from "./use-views-config";
-import { cleanView, type DraftMap, sameView, withDraft } from "./draft-values";
-import { useSurfaceDrafts } from "./view-drafts";
+import { cleanView, sameView, withDraft } from "./draft-values";
+import { NO_DRAFTS, useDraftMap, useSurfaceDrafts } from "./view-drafts";
 import { useActiveViewId } from "@plugins/primitives/plugins/view-switcher/web";
 import { resolveActiveId } from "./resolve-active-id";
 import { usableTypes } from "./usable-types";
@@ -188,9 +188,6 @@ export function activeViewUrlValue(
   return activeId === staticDefault ? undefined : activeId;
 }
 
-const NO_DRAFTS: DraftMap = Object.freeze({});
-const noSubscription = () => () => {};
-
 /**
  * The single generic view model: config-authored instances, raw view read/write,
  * full instance actions. active-id stays device-local via `useActiveViewId`.
@@ -225,14 +222,7 @@ export function useViewModel<T extends ViewTypeMeta>(
 
   // The surface's working copies — the tab's shared map (every mount of this
   // surface reads the same one), or none without drafts.
-  const drafted = useSyncExternalStore(
-    useCallback(
-      (onChange: () => void) =>
-        draftsOn ? surfaceDrafts.subscribe(onChange) : noSubscription(),
-      [draftsOn, surfaceDrafts],
-    ),
-    () => (draftsOn ? surfaceDrafts.read() : NO_DRAFTS),
-  );
+  const drafted = useDraftMap(surfaceDrafts, draftsOn);
 
   // A drafted view renders its working copy: its instance is rebuilt from the
   // copy (so a drafted option or type change shows), every other one is the

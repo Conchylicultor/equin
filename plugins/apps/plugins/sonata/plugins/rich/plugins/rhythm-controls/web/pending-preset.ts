@@ -63,5 +63,5 @@ export function usePendingPreset(songId: string | null): PendingPreset {
         : NO_PENDING_PRESET,
     [songId],
   );
-  return useSyncExternalStore(subscribe, getSnapshot);
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }

@@ -169,6 +169,7 @@ describe("the health dot", () => {
           return () => listeners.delete(l);
         },
         () => current,
+        () => current,
       );
     renderReport([
       status("ready", { state: "ok", summary: "fine" }),

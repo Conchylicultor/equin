@@ -1,4 +1,4 @@
-import { useInsertionEffect, useSyncExternalStore } from "react";
+import { useCallback, useInsertionEffect, useSyncExternalStore } from "react";
 import { Apps } from "@plugins/apps-core/web";
 import { usePluginScopeId } from "@plugins/framework/plugins/web-sdk/core";
 import { usePublishColorScheme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
@@ -33,12 +33,11 @@ function subscribePreviews(listener: () => void): () => void {
   return () => previewListeners.delete(listener);
 }
 
-function usePreview(appId: string | undefined): ColorMode | undefined {
+/** The scheme a mounted preview shows scope `appId` in, or undefined. */
+export function usePreview(appId: string | undefined): ColorMode | undefined {
   const key = appId ?? ROOT_PREVIEW;
-  return useSyncExternalStore(
-    subscribePreviews,
-    () => previews.get(key)?.at(-1)?.mode,
-  );
+  const read = useCallback(() => previews.get(key)?.at(-1)?.mode, [key]);
+  return useSyncExternalStore(subscribePreviews, read, read);
 }
 
 /**

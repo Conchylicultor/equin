@@ -65,5 +65,5 @@ export function untrackToast(id: string): void {
 
 /** Number of toasts currently painted, as this plugin put them there. */
 export function useLiveToastCount(): number {
-  return useSyncExternalStore(subscribe, getSnapshot);
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }

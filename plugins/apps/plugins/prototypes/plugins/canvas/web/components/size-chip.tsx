@@ -34,6 +34,7 @@ import {
   type FrameLayout,
 } from "../internal/layout";
 import { usePrototypeDetail } from "../context";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useWindowSize } from "../internal/use-window-size";
 import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -222,6 +223,9 @@ function SizePopoverBody({ layout, noWholePage }: SizeChipProps): ReactElement {
   const { size, zoom } = canvas;
   const wholePage = canvas.wholePage && !noWholePage;
   const browserWindow = useWindowSize();
+  // The This window row names the window's size, which a server render does
+  // not have.
+  if (browserWindow === null) return <Loading />;
   const percent = Math.round(layout.scale * 100);
   const setSize = (next: CanvasSize) =>
     dispatch({ type: "setSize", size: next });

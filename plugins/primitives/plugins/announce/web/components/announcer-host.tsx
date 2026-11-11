@@ -16,7 +16,11 @@ import { getSnapshot, subscribe } from "../internal/announcer-store";
  * space and perturbs no rect any layout, drag or measurement code reads.
  */
 export function AnnouncerHost() {
-  const { polite, assertive } = useSyncExternalStore(subscribe, getSnapshot);
+  const { polite, assertive } = useSyncExternalStore(
+    subscribe,
+    getSnapshot,
+    getSnapshot,
+  );
 
   return (
     <>

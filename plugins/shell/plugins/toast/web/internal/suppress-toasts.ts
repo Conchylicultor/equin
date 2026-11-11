@@ -16,6 +16,10 @@ function publish(): void {
   for (const listener of listeners) listener();
 }
 
+function isSuppressed(): boolean {
+  return suppressed;
+}
+
 function subscribe(listener: () => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
@@ -41,5 +45,5 @@ export function useSuppressToasts(): void {
 
 /** Whether a mounted surface has turned the page's toasts off. */
 export function useToastsSuppressed(): boolean {
-  return useSyncExternalStore(subscribe, () => suppressed);
+  return useSyncExternalStore(subscribe, isSuppressed, isSuppressed);
 }

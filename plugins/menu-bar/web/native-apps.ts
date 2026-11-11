@@ -111,7 +111,7 @@ export function useNativeApps(): NativeAppsState {
   const host = useNativeHost();
   const apps = host.kind === "present" ? host.apps : null;
   const pinApp = host.kind === "present" ? host.pinApp : null;
-  const current = useSyncExternalStore(subscribe, snapshot);
+  const current = useSyncExternalStore(subscribe, snapshot, snapshot);
   useEffect(() => {
     // The host (and so its methods) is one per document: bound once.
     if (apps === null || helper !== null) return;

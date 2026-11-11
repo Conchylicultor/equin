@@ -72,7 +72,7 @@ const getSnapshot = () => snapshot;
  * `ThemeSelectionsCollector` reports, so it is cheap to call anywhere.
  */
 export function useThemeSelections(): ThemeSelectionsState {
-  return useSyncExternalStore(subscribe, getSnapshot);
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
 
 /**

@@ -121,7 +121,7 @@ tab bar, which an embed does not paint.
     - `Apps.TabBarActions` "Tab bar actions" → `DockedActionBarHost`
     - `ActionBar.Item` → `ViewOptionsButton`
     - `ConfigV2.WebRegister` "config"
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps-core/tabs` ×3
     - `audience/developer-mark` ×2
     - `config_v2` ×2
@@ -139,6 +139,7 @@ tab bar, which an embed does not paint.
     - `primitives/embed.isChromelessDocument`
     - `primitives/error-boundary.PluginErrorBoundary`
     - `primitives/icon-button.IconButton`
+    - `primitives/loading.Loading`
     - `primitives/slot-render.SlotItemLayout`
     - `shell/action-bar.ActionBar`
   - Exports (values): `useActionBarPinned`

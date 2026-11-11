@@ -142,7 +142,11 @@ export function defineScopedStore<S>(
 
   function useStore(): S {
     const store = useStoreApi();
-    return useSyncExternalStore(store.subscribe, store.getState);
+    return useSyncExternalStore(
+      store.subscribe,
+      store.getState,
+      store.getState,
+    );
   }
 
   function useSelector<T>(
@@ -180,7 +184,7 @@ export function defineScopedStore<S>(
       return next;
     };
 
-    return useSyncExternalStore(store.subscribe, getSnapshot);
+    return useSyncExternalStore(store.subscribe, getSnapshot, getSnapshot);
   }
 
   return { Provider, useStoreApi, useStore, useSelector };

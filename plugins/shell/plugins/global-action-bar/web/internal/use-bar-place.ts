@@ -57,11 +57,19 @@ export function useBarPlace(): [BarPlace, (place: BarPlace) => void] {
   return [place, setPlace];
 }
 
-/** The viewport's size, following window resizes. */
-export function useViewportSize(): { w: number; h: number } {
-  const key = useSyncExternalStore(subscribeResize, viewportKey);
+/**
+ * The viewport's size, following window resizes. `null` where there is no
+ * viewport (a static render to HTML): unknown, never a made-up size.
+ */
+export function useViewportSize(): { w: number; h: number } | null {
+  const key = useSyncExternalStore(subscribeResize, viewportKey, noViewport);
+  if (key === null) return null;
   const [w, h] = key.split("x").map(Number);
   return { w: w!, h: h! };
+}
+
+function noViewport(): null {
+  return null;
 }
 
 function subscribeResize(onChange: () => void): () => void {

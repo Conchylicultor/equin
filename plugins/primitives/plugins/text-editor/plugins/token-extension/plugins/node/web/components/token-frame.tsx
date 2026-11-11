@@ -110,7 +110,10 @@ export function TokenFrame({
  * Whether the token is selected: the selected object itself (Lexical's
  * NodeSelection), or inside a non-collapsed text selection that spans it.
  */
-function useTokenSelected(editor: LexicalEditor, nodeKey: NodeKey): boolean {
+export function useTokenSelected(
+  editor: LexicalEditor,
+  nodeKey: NodeKey,
+): boolean {
   const subscribe = useCallback(
     (onChange: () => void) => editor.registerUpdateListener(onChange),
     [editor],
@@ -126,5 +129,6 @@ function useTokenSelected(editor: LexicalEditor, nodeKey: NodeKey): boolean {
       }),
     [editor, nodeKey],
   );
-  return useSyncExternalStore(subscribe, read);
+  // The editor state is in memory: a static render reads the same selection.
+  return useSyncExternalStore(subscribe, read, read);
 }

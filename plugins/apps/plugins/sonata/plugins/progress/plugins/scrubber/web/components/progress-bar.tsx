@@ -33,7 +33,8 @@ import {
 } from "../rail-geometry";
 import { railSegments, segmentAt, segmentFill, snapBeat } from "../lane-layout";
 import { formatTime } from "./format-time";
-import { createHoverStore, HoverPreview } from "./hover-preview";
+import { HoverPreview } from "./hover-preview";
+import { createHoverStore } from "./hover-store";
 import { LabelLane } from "./label-lane";
 
 /** Gap between neighbouring rail segments (chapters), in px. */

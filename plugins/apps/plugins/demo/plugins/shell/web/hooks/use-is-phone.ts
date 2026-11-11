@@ -14,8 +14,14 @@ function getSnapshot() {
   return window.matchMedia(PHONE_QUERY).matches;
 }
 
+// A server render (a static render to HTML) has no screen to ask: unknown.
+function getServerSnapshot(): null {
+  return null;
+}
+
 /** Whether the page is on a phone — read synchronously on first render, so a
- *  phone never mounts what this gates. */
-export function useIsPhone() {
-  return useSyncExternalStore(subscribe, getSnapshot);
+ *  phone never mounts what this gates. `null` where there is no screen (a
+ *  static render to HTML): unknown, never a guess. */
+export function useIsPhone(): boolean | null {
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }

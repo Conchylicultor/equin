@@ -19,10 +19,8 @@ const NOTHING_HOVERED = (): null => null;
 export function useHoveredId(
   hover: LinkedHover | null | undefined,
 ): string | null {
-  return useSyncExternalStore(
-    hover?.subscribe ?? NO_SUBSCRIPTION,
-    hover?.get ?? NOTHING_HOVERED,
-  );
+  const read = hover?.get ?? NOTHING_HOVERED;
+  return useSyncExternalStore(hover?.subscribe ?? NO_SUBSCRIPTION, read, read);
 }
 
 /**
@@ -33,7 +31,7 @@ export function useIsHovered(
   hover: LinkedHover | null | undefined,
   id: string,
 ): boolean {
-  return useSyncExternalStore(hover?.subscribe ?? NO_SUBSCRIPTION, () =>
-    hover === null || hover === undefined ? false : hover.get() === id,
-  );
+  const read = (): boolean =>
+    hover === null || hover === undefined ? false : hover.get() === id;
+  return useSyncExternalStore(hover?.subscribe ?? NO_SUBSCRIPTION, read, read);
 }

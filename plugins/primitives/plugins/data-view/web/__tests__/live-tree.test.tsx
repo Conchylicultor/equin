@@ -68,6 +68,7 @@ vi.mock("@plugins/network/plugins/live/web", async (importOriginal) => {
           return () => fake.listeners.delete(l);
         },
         () => fake.results.get(key) ?? fake.LOADING,
+        () => fake.results.get(key) ?? fake.LOADING,
       );
     },
   };
@@ -93,7 +94,11 @@ vi.mock("../internal/use-data-view-model", async () => {
   const React = await import("react");
   return {
     useDataViewModel: () =>
-      React.useSyncExternalStore(modelStore.subscribe, modelStore.get),
+      React.useSyncExternalStore(
+        modelStore.subscribe,
+        modelStore.get,
+        modelStore.get,
+      ),
   };
 });
 
@@ -393,6 +398,7 @@ function mount(
     // The selection is the host's, re-read on every model publish.
     const selectedRowId = useSyncExternalStore(
       modelStore.subscribe,
+      () => selection,
       () => selection,
     );
     return renderBundle({

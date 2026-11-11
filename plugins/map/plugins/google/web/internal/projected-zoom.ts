@@ -10,6 +10,11 @@ import { useSyncExternalStore } from "react";
  * projects each pin on every `draw()`).
  */
 export function usePlanZoom(map: google.maps.Map | null): number | undefined {
+  const read = (): number | undefined => {
+    if (map?.getProjection() == null) return undefined;
+    const zoom = map.getZoom();
+    return zoom === undefined ? undefined : Math.round(zoom);
+  };
   return useSyncExternalStore(
     (onChange) => {
       if (map === null) return () => {};
@@ -20,11 +25,8 @@ export function usePlanZoom(map: google.maps.Map | null): number | undefined {
         for (const l of listeners) l.remove();
       };
     },
-    () => {
-      if (map?.getProjection() == null) return undefined;
-      const zoom = map.getZoom();
-      return zoom === undefined ? undefined : Math.round(zoom);
-    },
+    read,
+    read,
   );
 }
 
@@ -36,12 +38,15 @@ export function usePlanZoom(map: google.maps.Map | null): number | undefined {
 export function useMapProjection(
   map: google.maps.Map | null,
 ): google.maps.Projection | null {
+  const read = (): google.maps.Projection | null =>
+    map?.getProjection() ?? null;
   return useSyncExternalStore(
     (onChange) => {
       if (map === null) return () => {};
       const l = map.addListener("projection_changed", onChange);
       return () => l.remove();
     },
-    () => map?.getProjection() ?? null,
+    read,
+    read,
   );
 }

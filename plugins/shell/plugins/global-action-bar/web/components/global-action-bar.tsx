@@ -3,6 +3,7 @@ import {
   FloatingActionFadeIn,
 } from "@plugins/primitives/plugins/overlay/plugins/floating-action/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   type ControlSize,
   cn,
@@ -256,6 +257,10 @@ function FloatingBar({
     },
   });
 
+  // A bar placed free is drawn at a fraction of the viewport: with no viewport
+  // (a static render) where it goes is not known.
+  if (place.kind === "free" && viewport === null) return <Loading />;
+
   // Where the bar is drawn when it is not at home: its collapsed footprint's
   // top-left corner, kept inside the viewport.
   let box: { left: number; top: number } | null = null;
@@ -265,7 +270,7 @@ function FloatingBar({
       left: drag.cx - footprint.width / 2,
       top: drag.cy - footprint.height / 2,
     };
-  else if (place.kind === "free")
+  else if (place.kind === "free" && viewport !== null)
     box = {
       left: clamp(
         place.x * viewport.w - footprint.width / 2,
@@ -281,7 +286,9 @@ function FloatingBar({
   // The open row grows away from the nearer screen edge: leftward at home and
   // on the right half, rightward on the left half.
   const growFrom: GrowFrom =
-    box && box.left + footprint.width / 2 < viewport.w / 2 ? "left" : "right";
+    box && viewport && box.left + footprint.width / 2 < viewport.w / 2
+      ? "left"
+      : "right";
 
   return (
     <>

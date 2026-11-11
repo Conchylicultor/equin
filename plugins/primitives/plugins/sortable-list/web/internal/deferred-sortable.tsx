@@ -106,9 +106,11 @@ function SortableRegistrar({
     transition,
     isDragging,
   } = useSortable({ id });
+  const readNode = (): HTMLElement | null => store.node(id);
   const node = useSyncExternalStore(
     useCallback((cb: () => void) => store.subscribe(id, cb), [store, id]),
-    () => store.node(id),
+    readNode,
+    readNode,
   );
   useLayoutEffect(() => {
     setNodeRef(node);

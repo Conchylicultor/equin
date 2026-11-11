@@ -134,6 +134,9 @@ function PresentedFrame({
   const [page, setPage] = useState<{ id: FrameId; extent: PageExtent } | null>(
     null,
   );
+  // The layout reads the window's size (the This window size), which a server
+  // render does not have.
+  if (browserWindow === null) return <Loading variant="block" />;
   const frame: CanvasFrame | null =
     canvas.frames.find((f) => f.id === frameId) ?? frameA(canvas.frames);
   if (frame === null) {

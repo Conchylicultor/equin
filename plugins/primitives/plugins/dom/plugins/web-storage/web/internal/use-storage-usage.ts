@@ -16,7 +16,11 @@ function getSnapshot(): StoreUsage[] {
   return snapshot;
 }
 
-/** Every declared owner's footprint and counters, re-read on every change. */
+/**
+ * Every declared owner's footprint and counters, re-read on every change.
+ * Read from the owners' in-memory counters, never the storage area itself, so
+ * a server render (a static render to HTML) reads them as they stand.
+ */
 export function useStorageUsage(): StoreUsage[] {
-  return useSyncExternalStore(subscribe, getSnapshot);
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }

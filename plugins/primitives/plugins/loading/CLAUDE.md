@@ -90,7 +90,7 @@ naming the pane, the path and the component path.
     - `ui/tokens/type-scale --font-size-body`
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-body`
-  - Imported by: 228 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 229 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×71
     - `conversations` ×23
     - `ui` ×23
@@ -104,12 +104,12 @@ naming the pane, the path and the component path.
     - `apps-core` ×3
     - `auth` ×3
     - `infra` ×3
+    - `shell` ×3
     - `active-data` ×2
     - `integrations` ×2
     - `map` ×2
     - `menu-bar` ×2
     - `network` ×2
-    - `shell` ×2
     - `audience/view-option`
     - `backup`
     - `code-explorer/commit-detail`

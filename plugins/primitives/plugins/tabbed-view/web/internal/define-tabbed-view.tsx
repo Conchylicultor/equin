@@ -2,7 +2,6 @@ import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import {
   useLayoutEffect,
   useState,
-  useSyncExternalStore,
   type ComponentType,
   type ReactNode,
 } from "react";
@@ -11,6 +10,11 @@ import type {
   SealContributions,
 } from "@plugins/framework/plugins/web-sdk/core";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
+import {
+  createProbeStore,
+  useProbes,
+  type ProbeStore as ProbeStoreOf,
+} from "./probe-store";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import {
   Inset,
@@ -86,50 +90,7 @@ export interface TabbedView<ViewProps> {
   Host: ComponentType<TabbedHostProps<ViewProps>>;
 }
 
-interface ProbeSnapshot {
-  available: ReadonlyMap<string, boolean>;
-  badge: ReadonlyMap<string, TabBadge | null>;
-}
-
-/**
- * One host's per-tab hook answers. Hooks can't run in a filter, so each tab's
- * `useAvailable` / `useBadge` runs in its own probe component (the
- * detail-sections gate technique) that reports here from a layout effect — a
- * store write, so the host re-renders before the browser paints.
- */
-function createProbeStore() {
-  let snapshot: ProbeSnapshot = { available: new Map(), badge: new Map() };
-  const listeners = new Set<() => void>();
-  function set<K extends keyof ProbeSnapshot>(
-    key: K,
-    id: string,
-    value: ProbeSnapshot[K] extends ReadonlyMap<string, infer V> ? V : never,
-  ): void {
-    const current = snapshot[key] as ReadonlyMap<string, unknown>;
-    if (current.has(id) && current.get(id) === value) return;
-    const next = new Map(current);
-    next.set(id, value);
-    snapshot = { ...snapshot, [key]: next };
-    for (const l of listeners) l();
-  }
-  function remove(key: keyof ProbeSnapshot, id: string): void {
-    if (!snapshot[key].has(id)) return;
-    const next = new Map(snapshot[key] as ReadonlyMap<string, unknown>);
-    next.delete(id);
-    snapshot = { ...snapshot, [key]: next };
-    for (const l of listeners) l();
-  }
-  return {
-    set,
-    remove,
-    subscribe: (l: () => void) => {
-      listeners.add(l);
-      return () => listeners.delete(l);
-    },
-    getSnapshot: () => snapshot,
-  };
-}
-type ProbeStore = ReturnType<typeof createProbeStore>;
+type ProbeStore = ProbeStoreOf<TabBadge>;
 
 export function defineTabbedView<ViewProps extends object>(
   id: string,
@@ -199,8 +160,8 @@ export function defineTabbedView<ViewProps extends object>(
     });
 
     const stored = useActiveViewId(id);
-    const [store] = useState(createProbeStore);
-    const probes = useSyncExternalStore(store.subscribe, store.getSnapshot);
+    const [store] = useState(createProbeStore<TabBadge>);
+    const probes = useProbes(store);
 
     // A gated tab whose probe has not reported yet exists only for the render
     // before the probes' layout effects — never painted. It counts as shown
@@ -246,8 +207,13 @@ export function defineTabbedView<ViewProps extends object>(
         ) : (
           <Loading />
         )
+      ) : !gatesSettled ? (
+        // Not every gate has answered: which tab shows is not known yet. Live,
+        // this render is never painted (the probes report before paint); in a
+        // static render no probe ever reports, and the loading state fails it
+        // loudly rather than shipping an empty body.
+        <Loading />
       ) : (
-        gatesSettled &&
         activeView &&
         renderIsolated(
           View,

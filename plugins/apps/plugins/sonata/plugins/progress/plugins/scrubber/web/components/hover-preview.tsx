@@ -1,6 +1,6 @@
 import { useSlotOrder } from "@plugins/primitives/plugins/slot-render/web";
 import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
-import { Fragment, useSyncExternalStore } from "react";
+import { Fragment } from "react";
 import type { ReactNode, RefObject } from "react";
 import type {
   Score,
@@ -12,39 +12,7 @@ import { FloatingSurface } from "@plugins/primitives/plugins/overlay/plugins/flo
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { SonataProgress } from "../slots";
 import { formatTime } from "./format-time";
-
-/** Where the pointer is over the track: the (possibly snapped) beat and its
- *  [0,1] position. `null` = not hovering. */
-export type HoverPoint = { beat: number; fraction: number };
-
-/**
- * A one-value store the scrubber's pointer handlers write and only the preview
- * reads — so a pointer move re-renders the small preview box, never the bar
- * (its rail, markers and labels stay put).
- */
-export type HoverStore = {
-  get: () => HoverPoint | null;
-  set: (p: HoverPoint | null) => void;
-  subscribe: (listener: () => void) => () => void;
-};
-
-export function createHoverStore(): HoverStore {
-  let value: HoverPoint | null = null;
-  const listeners = new Set<() => void>();
-  return {
-    get: () => value,
-    set: (p) => {
-      value = p;
-      for (const l of listeners) l();
-    },
-    subscribe: (l) => {
-      listeners.add(l);
-      return () => {
-        listeners.delete(l);
-      };
-    },
-  };
-}
+import { useHoverPoint, type HoverStore } from "./hover-store";
 
 /** A described value worth printing — contributors return null/false for
  *  "nothing to say here". */
@@ -81,7 +49,7 @@ export function HoverPreview({
   /** The slider column (rail + label lane) the preview sits beside. */
   columnRef: RefObject<HTMLElement | null>;
 }) {
-  const point = useSyncExternalStore(store.subscribe, store.get);
+  const point = useHoverPoint(store);
   // Nothing until the describers' order is known (it orders the lines); a
   // failed refresh keeps the last-known order.
   const describes = foldResource(useSlotOrder(SonataProgress.Describe), {

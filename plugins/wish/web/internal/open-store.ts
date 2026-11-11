@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from "react";
 import {
   draftInsert,
   draftSeed,
@@ -28,6 +29,7 @@ interface WishOpenState {
   insert: TaskDraftInsert | undefined;
 }
 
+// eslint-disable-next-line scoped-store/no-module-mutable-store -- one Wish popover per page: the global action bar mounts its button once (its two hosts are mutually exclusive), and every caller targets that one draft
 let state: WishOpenState = { open: false, insert: undefined };
 const listeners = new Set<() => void>();
 
@@ -68,7 +70,7 @@ export function setWishOpen(open: boolean): void {
 }
 
 /** `useSyncExternalStore` subscribe. */
-export function subscribeWishOpen(listener: () => void): () => void {
+function subscribeWishOpen(listener: () => void): () => void {
   listeners.add(listener);
   return () => {
     listeners.delete(listener);
@@ -76,6 +78,19 @@ export function subscribeWishOpen(listener: () => void): () => void {
 }
 
 /** `useSyncExternalStore` snapshot — the current open state (stable ref between changes). */
-export function getWishOpenState(): WishOpenState {
+function getWishOpenState(): WishOpenState {
   return state;
+}
+
+/**
+ * The popover's open state and pending insertion, re-rendering on change. A
+ * static render reads the store as it stands (closed, unless something opened
+ * it): it is never hydrated, so there is no client value to match.
+ */
+export function useWishOpenState(): WishOpenState {
+  return useSyncExternalStore(
+    subscribeWishOpen,
+    getWishOpenState,
+    getWishOpenState,
+  );
 }

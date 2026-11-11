@@ -93,7 +93,11 @@ function fixtureServer<T>(): FixtureServer<T> {
       for (const listener of listeners) listener();
     },
     useValue(songId) {
-      return useSyncExternalStore(subscribe, () => values.get(songId));
+      return useSyncExternalStore(
+        subscribe,
+        () => values.get(songId),
+        () => values.get(songId),
+      );
     },
   };
 }

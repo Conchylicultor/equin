@@ -131,9 +131,11 @@ export function DeferredSortableItem({
     throw new Error(
       `DeferredSortableItem "${id}" rendered outside a DeferredSortableList (an ItemBindingProvider)`,
     );
+  const readDrag = (): ItemDrag | null => store.drag(id);
   const drag = useSyncExternalStore(
     useCallback((cb: () => void) => store.subscribe(id, cb), [store, id]),
-    () => store.drag(id),
+    readDrag,
+    readDrag,
   );
   const ref = useCallback(
     (el: HTMLDivElement | null) => {

@@ -88,7 +88,13 @@ export function useCaretOwner(
   id: string,
 ): { isCaretOwner: boolean; publish: (trigger: string, triggerIndex: number | null) => void } {
   const arbiter = getArbiter(editor);
-  const isCaretOwner = useSyncExternalStore(arbiter.subscribe, () => arbiter.getOwner() === id);
+  const isOwner = useCallback(() => arbiter.getOwner() === id, [arbiter, id]);
+  // The arbiter is in memory: a static render reads the same owner.
+  const isCaretOwner = useSyncExternalStore(
+    arbiter.subscribe,
+    isOwner,
+    isOwner,
+  );
   const publish = useCallback(
     (trigger: string, triggerIndex: number | null) => arbiter.publish(id, trigger, triggerIndex),
     [arbiter, id],

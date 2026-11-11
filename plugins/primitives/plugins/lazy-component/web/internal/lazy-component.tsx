@@ -149,7 +149,10 @@ export function useLazyReady<P extends object>(
     },
     [chunk],
   );
-  const state = useSyncExternalStore(subscribe, chunk.state);
+  // A server render (a static render to HTML) reads where the chunk stands
+  // now: it subscribes to nothing, so it starts no load — a chunk not loaded
+  // before it holds the host's loading state.
+  const state = useSyncExternalStore(subscribe, chunk.state, chunk.state);
   if (state.kind === "failed") throw state.error;
   return state.kind === "loaded";
 }

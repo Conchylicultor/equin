@@ -181,6 +181,9 @@ function ReadyBody({ browser }: { browser: FileBrowserReady }): ReactNode {
       />
     );
 
+  // The split follows the viewport, which a server render does not have.
+  if (phone === null || narrow === null) return <Loading />;
+
   // At 640px and under an open file replaces the listing.
   if (preview !== null && phone) return preview;
 

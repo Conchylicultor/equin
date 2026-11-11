@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 import { defineInstallSink } from "@plugins/primitives/plugins/scope/plugins/install-sink/web";
 import {
   getFocusedSurfaceId,
@@ -113,10 +113,12 @@ export function useFocusedTabSet(): {
   mode: Placement | undefined;
 } {
   const activeId = activeTabSet.useValue();
-  const handle = useSyncExternalStore(
-    subscribe,
+  const readHandle = useCallback(
     () => tabSets.get(activeId) ?? tabSets.get(PAGE_TAB_SET_ID),
+    [activeId],
   );
-  const mode = useSyncExternalStore(subscribe, () => handle?.mode());
+  const handle = useSyncExternalStore(subscribe, readHandle, readHandle);
+  const readMode = useCallback(() => handle?.mode(), [handle]);
+  const mode = useSyncExternalStore(subscribe, readMode, readMode);
   return { handle, mode };
 }

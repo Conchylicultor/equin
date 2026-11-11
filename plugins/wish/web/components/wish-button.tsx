@@ -4,13 +4,9 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
-import { Fragment, useSyncExternalStore } from "react";
+import { Fragment } from "react";
 import { TaskDraftPopover } from "@plugins/tasks/plugins/task-draft-form/web";
-import {
-  getWishOpenState,
-  setWishOpen,
-  subscribeWishOpen,
-} from "../internal/open-store";
+import { setWishOpen, useWishOpenState } from "../internal/open-store";
 import {
   WISHES_CATEGORY_ID,
   wishButtonAnchor,
@@ -45,10 +41,7 @@ const closeWish = () => setWishOpen(false);
  * brighten on hover.
  */
 export function WishButton() {
-  const { open, insert } = useSyncExternalStore(
-    subscribeWishOpen,
-    getWishOpenState,
-  );
+  const { open, insert } = useWishOpenState();
   const segments = WishSlots.Segment.useContributions();
   const headerActions = WishSlots.HeaderAction.useContributions();
   const anchorRef = useHintAnchor(wishButtonAnchor);

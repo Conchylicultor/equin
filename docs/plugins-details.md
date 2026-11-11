@@ -49312,7 +49312,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 228 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+        - Imported by: 229 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
           - `apps` ×71
           - `conversations` ×23
           - `ui` ×23
@@ -49326,12 +49326,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core` ×3
           - `auth` ×3
           - `infra` ×3
+          - `shell` ×3
           - `active-data` ×2
           - `integrations` ×2
           - `map` ×2
           - `menu-bar` ×2
           - `network` ×2
-          - `shell` ×2
           - `audience/view-option`
           - `backup`
           - `code-explorer/commit-detail`
@@ -54759,7 +54759,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Apps.TabBarActions` "Tab bar actions" → `DockedActionBarHost`
           - `ActionBar.Item` → `ViewOptionsButton`
           - `ConfigV2.WebRegister` "config"
-        - Uses: 25 symbols — full list in [`plugins/shell/plugins/global-action-bar/REFERENCE.md`](../plugins/shell/plugins/global-action-bar/REFERENCE.md)
+        - Uses: 26 symbols — full list in [`plugins/shell/plugins/global-action-bar/REFERENCE.md`](../plugins/shell/plugins/global-action-bar/REFERENCE.md)
           - `apps-core/tabs` ×3
           - `audience/developer-mark` ×2
           - `config_v2` ×2
@@ -54777,6 +54777,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/embed.isChromelessDocument`
           - `primitives/error-boundary.PluginErrorBoundary`
           - `primitives/icon-button.IconButton`
+          - `primitives/loading.Loading`
           - `primitives/slot-render.SlotItemLayout`
           - `shell/action-bar.ActionBar`
         - Exports (values): `useActionBarPinned`

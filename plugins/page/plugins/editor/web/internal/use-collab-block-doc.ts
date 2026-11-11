@@ -689,7 +689,7 @@ function useProviderFactory(
  * On the local transport this is permanently {@link IDLE_SAVE_STATE} — nothing
  * to save, nothing to retry — which the cloud aggregates to silence.
  */
-function useSaveState(
+export function useSaveState(
   blockId: string,
   { ensure, peek }: CollabDocHold,
 ): Pick<CollabBlockDoc, "saveState" | "retrySave"> {
@@ -703,7 +703,14 @@ function useSaveState(
       peek()?.owner.provider.getSaveState() ?? IDLE_SAVE_STATE,
     [peek],
   );
-  const saveState = useSyncExternalStore(subscribeSaveState, getSaveState);
+  // The provider's save state is in memory: a static render reads it as it
+  // stands (no session started there — nothing is mounted to start one — so
+  // there is nothing to save).
+  const saveState = useSyncExternalStore(
+    subscribeSaveState,
+    getSaveState,
+    getSaveState,
+  );
   const retrySave = useEventCallback((): void => {
     peek()?.owner.provider.retryFlush();
   });
@@ -775,9 +782,15 @@ function useRehydration(
  * field actually moved; `ATTACHING_SNAPSHOT` covers "no session yet"), so
  * `useSyncExternalStore` cannot loop.
  */
-function useHydrationState(hold: CollabDocHold): HydrationSnapshot {
+export function useHydrationState(hold: CollabDocHold): HydrationSnapshot {
   const { hydrationState, subscribeHydration } = hold;
-  return useSyncExternalStore(subscribeHydration, hydrationState);
+  // In memory: a static render reads the session as it stands — attaching,
+  // before any effect started one.
+  return useSyncExternalStore(
+    subscribeHydration,
+    hydrationState,
+    hydrationState,
+  );
 }
 
 // The row read as what the provider should merge: see the call site.

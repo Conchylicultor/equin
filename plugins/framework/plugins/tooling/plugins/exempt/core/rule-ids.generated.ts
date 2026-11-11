@@ -184,6 +184,7 @@ export type ExemptableRuleId =
   | "sql-writes:fit:dynamic"
   | "sql-writes:fit:hand-written"
   | "sql-writes:fit:schema"
+  | "static-render/sync-external-store-server-snapshot"
   | "surface/no-adhoc-surface"
   | "test-layout/bun-sync-settle-matchers"
   | "text/no-adhoc-typography"

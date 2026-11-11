@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   chordKeyPlan,
   chordSound,
@@ -36,7 +36,6 @@ import {
   YouTubePlayer,
   useYouTubePlayer,
   useYouTubePlayerState,
-  type YouTubePlayerController,
 } from "@plugins/integrations/plugins/youtube/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useLive } from "@plugins/network/plugins/live/web";
@@ -60,7 +59,6 @@ import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import {
-  boxAt,
   clearBackward,
   desiredShare,
   emptySheet,
@@ -73,9 +71,9 @@ import {
   type Box,
   type DealtLoop,
   type DesiredShares,
-  type Round,
 } from "../../core";
 import { rareKeyFor, useChordKeys } from "../internal/use-chord-keys";
+import { useSoundingBox } from "../internal/use-sounding-box";
 import { useHeardClock } from "../internal/use-heard-clock";
 import { usePianoFollow } from "../internal/use-piano-follow";
 import {
@@ -718,28 +716,5 @@ function Trainer({
         play={playNotes}
       />
     </>
-  );
-}
-
-const noSubscription = () => () => {};
-
-/**
- * The position of the box sounding now, re-rendering only when it changes
- * (not every frame). Watched only while `active` (once the round is checked:
- * before, nothing on screen shows it).
- */
-function useSoundingBox(
-  player: YouTubePlayerController,
-  round: Round | null,
-  active: boolean,
-): number | null {
-  const watching = active && round !== null;
-  return useSyncExternalStore(
-    watching ? player.subscribePlayhead : noSubscription,
-    () => {
-      if (!watching) return null;
-      const t = player.getPlayhead();
-      return t === null ? null : (boxAt(round.boxes, t)?.position ?? null);
-    },
   );
 }

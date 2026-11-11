@@ -1,6 +1,7 @@
 import { FullPane } from "@plugins/layouts/plugins/full-pane/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { DemoScope } from "@plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/web";
 import { DEMO_FULL, demoScenario } from "../../core";
 import { DemoBootScreen } from "@plugins/apps/plugins/demo/plugins/chrome/web";
@@ -27,6 +28,8 @@ const PHONE_NOTICE = "Apps are only available on desktop, not mobile.";
 export function DemoLayout() {
   const isPhone = useIsPhone();
   const full = demoAtPane.useRouteEntry()?.params.full === DEMO_FULL;
+  // No screen to ask yet (a static render): what to mount is not known.
+  if (isPhone === null) return <Loading />;
   if (isPhone) {
     return (
       <Center className="h-full bg-background p-lg">

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { VariantValue } from "@plugins/fields/plugins/variant/core";
-import { useMemo } from "react";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
 import {
   defineStore,
   useStore,
@@ -83,4 +83,29 @@ function surfaceDrafts(store: DraftStore, storageKey: string): SurfaceDrafts {
 export function useSurfaceDrafts(storageKey: string): SurfaceDrafts {
   const store = useStore(viewDrafts);
   return useMemo(() => surfaceDrafts(store, storageKey), [store, storageKey]);
+}
+
+/** A surface without drafts: no working copies, ever. */
+export const NO_DRAFTS: DraftMap = Object.freeze({});
+const noSubscription = () => () => {};
+// A server render (a static render to HTML) belongs to no tab, so no tab's
+// working copies apply: it reads the saved views. (The drafts live in session
+// storage, which does not exist outside a browser — it must not be read there.)
+const readServerDrafts = (): DraftMap => NO_DRAFTS;
+
+/**
+ * The surface's working copies, re-rendering on every write — the tab's shared
+ * map (every mount of the surface reads the same one), or {@link NO_DRAFTS}
+ * when the surface keeps none (`on` false).
+ */
+export function useDraftMap(drafts: SurfaceDrafts, on: boolean): DraftMap {
+  return useSyncExternalStore(
+    useCallback(
+      (onChange: () => void) =>
+        on ? drafts.subscribe(onChange) : noSubscription(),
+      [on, drafts],
+    ),
+    () => (on ? drafts.read() : NO_DRAFTS),
+    readServerDrafts,
+  );
 }

@@ -40,9 +40,11 @@ import {
   roomPerFrame,
   type FrameBox,
   type FrameLayout,
+  type Room,
 } from "../internal/layout";
 import { GEOMETRY_MOTION } from "../internal/geometry-motion";
 import { useWindowSize } from "../internal/use-window-size";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   pageHeightOf,
   sameExtent,
@@ -69,9 +71,22 @@ import { CANVAS_GROUND } from "./canvas-ground";
  * presentation shows.
  */
 export function Canvas({ meta }: { meta: PrototypeMeta }): ReactElement {
+  // The layout reads the window's size (the This window size), which a server
+  // render does not have.
+  const browserWindow = useWindowSize();
+  if (browserWindow === null) return <Loading />;
+  return <CanvasBoard meta={meta} browserWindow={browserWindow} />;
+}
+
+function CanvasBoard({
+  meta,
+  browserWindow,
+}: {
+  meta: PrototypeMeta;
+  browserWindow: Room;
+}): ReactElement {
   const { canvas } = usePrototypeDetail();
   const [roomRef, room] = useElementSize<HTMLDivElement>();
-  const browserWindow = useWindowSize();
   // Each prototype frame's extent, for Whole page: the frames are fitted to
   // the tallest page.
   const [extents, setExtents] = useState<ReadonlyMap<FrameId, PageExtent>>(

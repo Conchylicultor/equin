@@ -19,7 +19,11 @@ export function useYouTubePlayer(): YouTubePlayerController {
 export function useYouTubePlayerState(
   controller: YouTubePlayerController,
 ): YouTubePlayerState {
-  return useSyncExternalStore(controller.subscribe, controller.getSnapshot);
+  return useSyncExternalStore(
+    controller.subscribe,
+    controller.getSnapshot,
+    controller.getSnapshot,
+  );
 }
 
 const noSubscription = () => () => {};
@@ -46,5 +50,5 @@ export function useYouTubePlayhead(
     () => (active ? controller.getPlayhead() : null),
     [controller, active],
   );
-  return useSyncExternalStore(subscribe, getSnapshot);
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }

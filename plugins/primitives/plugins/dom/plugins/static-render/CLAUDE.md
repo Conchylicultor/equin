@@ -79,6 +79,29 @@ socket until `connect()`, portals rendered in place, no DOM globals in render.
   static render resolved to the app's index pane). The app never hydrates
   server markup, so there is no mismatch for a constant to protect.
 
+### Every `useSyncExternalStore` passes a server snapshot (lint)
+
+`useSyncExternalStore(subscribe, getSnapshot)` without its third argument
+throws in a server render, so the first website component reaching one would
+fail only at snapshot-take time, far from the cause. The
+`static-render/sync-external-store-server-snapshot` rule (`lint/`, repo-wide,
+no exemptions) requires the third argument at every call. What to pass is a
+per-store decision:
+
+- **An in-memory store passes its own snapshot again** — the static render is
+  never hydrated, so what the store holds now IS that render's truth.
+- **A store filled by the same tree's effects** (probes, measurements) never
+  fills in a static render: its empty start is the truth only where empty
+  means "nothing to draw" (no rail, no elected host). Where it means "not
+  answered yet", the reader renders `<Loading>` (tabbed-view's gates).
+- **A store reading a browser global** (window, matchMedia, storage) answers
+  without it: "not known" stays a loading/unknown state (`null`, and the
+  caller renders `<Loading>`, which itself fails a static render loudly),
+  never a stand-in value. A fact that is known in a static render is answered
+  as such (no native helper hosts it: the menu-bar bridge is `absent`).
+- Each fix carries a test reaching the store through `renderToStaticMarkup`
+  (bun, no DOM — so a browser-global read fails the test).
+
 ## `semanticHtml` — the document under the markup
 
 Keeps `h1`–`h6`, `p`, `a[href]`, `ul`/`ol`/`li`, `blockquote`, `pre`/`code`,

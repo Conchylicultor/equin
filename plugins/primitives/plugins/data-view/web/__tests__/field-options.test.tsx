@@ -31,6 +31,7 @@ function useModelOptions(): LiveFieldOptionsRead {
       };
     },
     () => current,
+    () => current,
   );
 }
 
