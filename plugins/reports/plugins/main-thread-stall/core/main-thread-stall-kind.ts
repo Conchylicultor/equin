@@ -1,4 +1,11 @@
 import { z } from "zod";
+import {
+  dominantLayer,
+  InteractionBreakdownSchema,
+  interactionTargetKey,
+  interactionTargetLabel,
+  InteractionTargetSchema,
+} from "./interaction-target";
 
 // The `main-thread-stall` report payload: a browser tab's main thread stopped
 // answering for seconds. Filed by a live tab of the same origin on behalf of the
@@ -13,6 +20,9 @@ export const StallFrameScriptSchema = z.object({
   sourceURL: z.string(),
   sourceFunctionName: z.string(),
   sourceCharPosition: z.number(),
+  // When the script began, in ms from its frame's start — what clips it to an
+  // interaction's window. Null on frames recorded before it was kept.
+  startMs: z.number().nullable().default(null),
   durationMs: z.number(),
   forcedStyleAndLayoutDurationMs: z.number(),
   pauseDurationMs: z.number(),
@@ -56,6 +66,25 @@ export const StallTabSchema = z.object({
 });
 export type StallTab = z.infer<typeof StallTabSchema>;
 
+// The user interaction a freeze started from: a click, tap or key press the tab
+// had dispatched, whose next paint had not come yet when the thread went
+// silent. Posted to the watchdog AT DISPATCH (before any handler runs), so a
+// tab that froze inside the interaction had already said what was clicked.
+export const StallInteractionSchema = z.object({
+  // What was interacted with — the same identity a slow-interaction report
+  // carries (no typed text, no user-data labels).
+  target: InteractionTargetSchema,
+  // The dispatched event (pointerdown, click, keydown), and its epoch ms.
+  eventType: z.string(),
+  startedAt: z.number(),
+  // Where the time from the input to the stall's end went, from the long
+  // frames the watchdog holds (all `other` when none arrived: gone / unknown).
+  breakdown: InteractionBreakdownSchema,
+  // The script that forced the most style/layout inside it, if any.
+  forcedBy: z.string().nullable(),
+});
+export type StallInteraction = z.infer<typeof StallInteractionSchema>;
+
 export const MainThreadStallPayloadSchema = StallTabSchema.extend({
   // Epoch ms. `endedAt` is when the thread answered again (recovered), when
   // the tab went away (gone), or the last instant it was seen still frozen
@@ -93,6 +122,10 @@ export const MainThreadStallPayloadSchema = StallTabSchema.extend({
   // task the thread froze in (LoAF names only its entry point, and a socket's
   // port handler runs every frame). Null: it froze outside every marked task.
   frozenIn: TaskMarkSchema.nullable().default(null),
+  // The user interaction the freeze started from (its handlers or the render
+  // they led to never reached a paint), when one did. Absent on reports filed
+  // before it existed, and on freezes no interaction started.
+  interaction: StallInteractionSchema.nullable().default(null),
   // Other tabs that froze with it (same renderer process): victims, not causes.
   cohort: z.array(StallTabSchema),
   // The longest-running script of `stallFrame` — or, without one, summed over
@@ -105,15 +138,19 @@ export type MainThreadStallPayload = z.infer<
 >;
 
 /**
- * App + route pattern + the top attributed function (or `unattributed`), then
- * the frozen task's mark (`source:what`) when it set one — LoAF's entry point
- * alone lumps every frame a socket handler runs together. No ids, durations or
- * end kinds: the same freeze on the same screen is one row whose `count`
- * grows, and its `data` is the newest sighting.
+ * A freeze a user interaction started: the interaction's target alone — the
+ * same control freezing again is the same row, on whatever screen, through
+ * whichever function. Otherwise app + route pattern + the top attributed
+ * function (or `unattributed`), then the frozen task's mark (`source:what`)
+ * when it set one — LoAF's entry point alone lumps every frame a socket
+ * handler runs together. No ids, durations or end kinds: the same freeze is
+ * one row whose `count` grows, and its `data` is the newest sighting.
  */
 export function mainThreadStallFingerprint(
   data: MainThreadStallPayload,
 ): string {
+  if (data.interaction)
+    return `main-thread-stall:interaction:${interactionTargetKey(data.interaction.target)}`;
   const task = data.frozenIn
     ? `|${data.frozenIn.source}:${data.frozenIn.what}`
     : "";
@@ -125,6 +162,16 @@ export function mainThreadStallSummary(data: MainThreadStallPayload): string {
   const secs = (data.durationMs / 1000).toFixed(1);
   const at = `${data.app ?? "?"} ${data.routePattern}`;
   const who = data.topFunction ?? "unattributed";
+  const frozen = `Main thread frozen ${data.durationIsLowerBound ? "≥" : ""}${secs}s (${data.ended})`;
+  const i = data.interaction;
+  if (i) {
+    const top = dominantLayer(i.breakdown);
+    const fn =
+      i.forcedBy && top.layer === "forced style/layout"
+        ? i.forcedBy
+        : data.topFunction;
+    return `${frozen} after ${interactionTargetLabel(i.target)} — ${at} — ${top.layer} ${top.ms} ms${fn ? ` (${fn})` : ""}`;
+  }
   const task = data.frozenIn
     ? ` in ${data.frozenIn.source} ${data.frozenIn.what}`
     : "";

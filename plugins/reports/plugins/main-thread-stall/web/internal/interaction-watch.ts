@@ -5,6 +5,7 @@ import type {
   StallFrame,
   StallTab,
 } from "../../core";
+import { STALL } from "./constants";
 import { fileSlowInteraction } from "./file-slow-interaction";
 import {
   INTERACTION,
@@ -12,6 +13,7 @@ import {
   frameClaimed,
   judgeInteraction,
   longestEntry,
+  type InteractionBegin,
   phasesOf,
   type EventTimingLike,
   type InteractionWindow,
@@ -58,6 +60,15 @@ interface Origin {
 interface Dispatched extends Origin {
   kind: InteractionTarget["kind"];
   timeStamp: number;
+  begin: InteractionBegin;
+  /** A person's input (not a script's synthetic event). */
+  trusted: boolean;
+  /**
+   * Epoch ms when its handlers began running (this capture listener) — inside
+   * the frame that ran them, unlike its hardware timeStamp, which precedes the
+   * frame by the input delay.
+   */
+  ranAt: number;
 }
 
 interface Pending {
@@ -73,6 +84,11 @@ export interface InteractionWatch {
    * grace, unless a slow interaction overlapping it owns it by then.
    */
   deferSlowFrame(frame: StallFrame, file: () => void): void;
+  /**
+   * The latest interaction dispatched while `frame` ran (its handlers ran
+   * inside it): what a recovered freeze the tab saw itself started from.
+   */
+  beganIn(frame: StallFrame): InteractionBegin | null;
   dispose(): void;
 }
 
@@ -93,6 +109,11 @@ const JUDGED_RING = 64;
  */
 export function installInteractionWatch(
   readTab: () => StallTab,
+  /**
+   * Every trusted interaction, at dispatch — before any of its handlers run —
+   * so the stall watchdog already knows what was clicked if it freezes.
+   */
+  onBegin: (begin: InteractionBegin) => void,
 ): InteractionWatch {
   const frames: RawFrame[] = [];
   const dispatched: Dispatched[] = [];
@@ -125,13 +146,24 @@ export function installInteractionWatch(
     const kind = DISPATCHED[ev.type];
     if (!kind) return;
     const key = ev instanceof KeyboardEvent ? keyClass(ev) : null;
+    const target = interactionTarget(ev.target, kind, key);
+    const begin: InteractionBegin = {
+      target,
+      eventType: ev.type,
+      at: Math.round(performance.timeOrigin + ev.timeStamp),
+    };
     dispatched.push({
       kind,
       timeStamp: ev.timeStamp,
-      target: interactionTarget(ev.target, kind, key),
+      target,
       tab: readTab(),
+      begin,
+      trusted: ev.isTrusted,
+      ranAt: performance.timeOrigin + performance.now(),
     });
     if (dispatched.length > INTERACTION.DISPATCH_RING) dispatched.shift();
+    // A script's synthetic event is not something a person did.
+    if (ev.isTrusted) onBegin(begin);
   };
 
   // Matched as the entry arrives (right after its paint), while its dispatch is
@@ -173,11 +205,19 @@ export function installInteractionWatch(
     const count =
       (recur.get(recurKey) ?? 0) + (ownMs >= INTERACTION.RECUR_MIN_MS ? 1 : 0);
     recur.set(recurKey, count);
-    const verdict = judgeInteraction(ownMs, count);
-    const a = attribute(
-      { start: e.startTime, end: e.startTime + e.duration },
-      frames,
+    const w = { start: e.startTime, end: e.startTime + e.duration };
+    // A long frame at the stall bar inside its OWN time (handlers → paint):
+    // the stall detector's report names this interaction — one cause, one
+    // report. Not its input delay: a click that waited out an unrelated
+    // freeze was dispatched after it, so no stall names it.
+    const frozen = frames.some(
+      (f) =>
+        f.start < w.end &&
+        f.end > e.processingStart &&
+        f.end - f.start >= STALL.REPORT_MIN_MS,
     );
+    const verdict = judgeInteraction(ownMs, count, frozen);
+    const a = attribute(w, frames);
     const payload: SlowInteractionPayload = {
       target,
       eventType: e.name,
@@ -275,6 +315,16 @@ export function installInteractionWatch(
       after(INTERACTION.GRACE_MS, () => {
         if (!frameClaimed(w, slow)) file();
       });
+    },
+    beganIn(frame) {
+      const end = frame.startedAt + frame.durationMs;
+      for (let i = dispatched.length - 1; i >= 0; i--) {
+        const d = dispatched[i]!;
+        // A frame's start and length are rounded to the ms.
+        if (d.trusted && d.ranAt <= end + 1 && d.ranAt >= frame.startedAt - 1)
+          return d.begin;
+      }
+      return null;
     },
     dispose() {
       for (const t of timers) clearTimeout(t);

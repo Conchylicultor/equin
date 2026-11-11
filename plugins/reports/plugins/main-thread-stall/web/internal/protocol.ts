@@ -2,6 +2,7 @@
 // artifact (the worker script is content-addressed beside the tab code), so a
 // tab only ever talks to a worker of its own build; `proto` is a tripwire.
 
+import type { InteractionBegin } from "./interaction-judge";
 import type {
   MainThreadStallPayload,
   StallFrame,
@@ -32,6 +33,14 @@ export type TabToWorker =
   | { kind: "mark"; id: number; mark: TaskMark }
   /** Task `id` (and the microtasks it queued itself) ran to the end. */
   | { kind: "mark-end"; id: number }
+  /**
+   * A user interaction was dispatched — sent from the capture listener,
+   * BEFORE any handler runs: if it freezes the thread, no
+   * `interaction-end` follows and the stall names what was clicked.
+   */
+  | { kind: "interaction"; id: number; interaction: InteractionBegin }
+  /** Interaction `id` reached its next paint. */
+  | { kind: "interaction-end"; id: number }
   /** The tab filed the stall it was handed (`ok: false`: it could not). */
   | { kind: "filed"; id: string; ok: boolean }
   /** pagehide / unmount: the port is leaving. */

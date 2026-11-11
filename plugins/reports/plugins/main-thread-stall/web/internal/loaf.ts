@@ -52,6 +52,7 @@ export function toStallFrame(e: LoafEntry): StallFrame {
         sourceURL: cap(s.sourceURL),
         sourceFunctionName: cap(s.sourceFunctionName),
         sourceCharPosition: s.sourceCharPosition,
+        startMs: Math.round(s.startTime - e.startTime),
         durationMs: Math.round(s.duration),
         forcedStyleAndLayoutDurationMs: Math.round(
           s.forcedStyleAndLayoutDuration,

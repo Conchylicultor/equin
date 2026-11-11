@@ -2,11 +2,14 @@ import { describe, expect, test } from "bun:test";
 import {
   mainThreadStallFingerprint,
   mainThreadStallSummary,
+  slowInteractionFingerprint,
+  type InteractionTarget,
   type StallFrame,
   type StallTab,
   type TaskMark,
 } from "../../core";
 import { STALL } from "./constants";
+import type { InteractionBegin } from "./interaction-judge";
 import {
   createStallMachine,
   needsClock,
@@ -48,6 +51,7 @@ function frame(startedAt: number, durationMs: number, fn = "spin"): StallFrame {
         sourceURL: "http://x/app.js",
         sourceFunctionName: fn,
         sourceCharPosition: 10,
+        startMs: 0,
         durationMs,
         forcedStyleAndLayoutDurationMs: 0,
         pauseDurationMs: 0,
@@ -373,6 +377,7 @@ describe("endings", () => {
           topFunction: null,
           marks: [],
           frozenIn: null,
+          interaction: null,
         },
       },
     });
@@ -672,5 +677,187 @@ describe("cohort", () => {
     run(m, T0 + 2000, T0 + 6000, []);
     // a stopped after T0, b after T0+1000: within COHORT_WINDOW_MS ⇒ one.
     expect(m.incidents.size).toBe(1);
+  });
+});
+
+const BUTTON: InteractionTarget = {
+  kind: "click",
+  key: null,
+  element: "button — Full screen",
+  contribution: "desktop@ActionBar.Item",
+  pane: null,
+  owner: "FullscreenButton",
+};
+
+let interactionIds = 0;
+function interact(
+  m: StallMachine,
+  portId: string,
+  at: number,
+  target = BUTTON,
+): InteractionBegin {
+  const interaction = { target, eventType: "pointerdown", at };
+  step(m, { type: "interaction", portId, id: ++interactionIds, interaction });
+  return interaction;
+}
+/** The port's latest interaction reached its next paint. */
+const painted = (m: StallMachine, portId: string) =>
+  step(m, { type: "interaction-end", portId, id: interactionIds });
+
+/** A frame whose one script is mostly forced style/layout. */
+function forcedFrame(startedAt: number, durationMs: number): StallFrame {
+  const f = frame(startedAt, durationMs, "onToggle");
+  return {
+    ...f,
+    styleAndLayoutStartMs: durationMs - 100,
+    scripts: [
+      {
+        ...f.scripts[0]!,
+        invokerType: "event-listener",
+        invoker: "BUTTON.onpointerdown",
+        startMs: 10,
+        durationMs: durationMs - 200,
+        forcedStyleAndLayoutDurationMs: durationMs - 1200,
+      },
+    ],
+  };
+}
+
+describe("interactions", () => {
+  test("a click whose handler froze the tab: the report is keyed by the control, its breakdown from the frozen frame", () => {
+    const m = machine();
+    attach(m, "a", tab("A", { focused: true }));
+    step(m, { type: "pong", portId: "a", now: T0 });
+    interact(m, "a", T0 + 300);
+    run(m, T0 + 1000, T0 + 8000, []);
+    step(m, { type: "pong", portId: "a", now: T0 + 8500 });
+    step(m, {
+      type: "frame",
+      portId: "a",
+      frame: forcedFrame(T0 + 300, 8000),
+      now: T0 + 8600,
+    });
+    const d = of(run(m, T0 + 11_000, T0 + 11_000, ["a"]), "deliver")[0]
+      ?.payload;
+    expect(d?.interaction?.target).toEqual(BUTTON);
+    expect(d?.interaction?.startedAt).toBe(T0 + 300);
+    expect(d?.interaction?.forcedBy).toBe("onToggle (BUTTON.onpointerdown)");
+    expect(d?.interaction?.breakdown).toEqual({
+      scriptMs: 1000,
+      forcedStyleLayoutMs: 6800,
+      styleLayoutMs: 100,
+      otherMs: 100,
+    });
+    expect(mainThreadStallFingerprint(d!)).toBe(
+      "main-thread-stall:interaction:click|desktop@ActionBar.Item|-|FullscreenButton|button — Full screen",
+    );
+    // The same identity as the control's slow-interaction rows.
+    expect(mainThreadStallFingerprint(d!).split(":interaction:")[1]).toBe(
+      slowInteractionFingerprint({ target: BUTTON } as never).split(
+        "slow-interaction:",
+      )[1],
+    );
+    expect(mainThreadStallSummary(d!)).toContain(
+      "after click button — Full screen in desktop@ActionBar.Item (FullscreenButton)",
+    );
+    expect(mainThreadStallSummary(d!)).toContain(
+      "forced style/layout 6800 ms (onToggle (BUTTON.onpointerdown))",
+    );
+  });
+
+  test("the same control freezing on another screen is the same report", () => {
+    // Gone, filed through the other live tab.
+    const rec = (t: StallTab) => {
+      const m = machine();
+      attach(m, "a", t);
+      attach(m, "b", tab("B"));
+      step(m, { type: "pong", portId: "a", now: T0 });
+      interact(m, "a", T0 + 100);
+      run(m, T0 + 1000, T0 + 7000, ["b"]);
+      return of(
+        step(m, { type: "gone", portId: "a", now: T0 + 7100 }),
+        "deliver",
+      )[0]!.payload;
+    };
+    const a = rec(tab("A"));
+    const b = rec(tab("A", { app: "sonata", routePattern: "(root)" }));
+    expect(mainThreadStallFingerprint(a)).toBe(mainThreadStallFingerprint(b));
+    // Gone: no frame came back, so all of its time is `other`.
+    expect(a.interaction?.breakdown).toEqual({
+      scriptMs: 0,
+      forcedStyleLayoutMs: 0,
+      styleLayoutMs: 0,
+      otherMs: 7000,
+    });
+  });
+
+  test("an interaction that painted before an unrelated freeze is not blamed", () => {
+    const m = machine();
+    attach(m, "a", tab("A"));
+    attach(m, "b", tab("B"));
+    step(m, { type: "pong", portId: "a", now: T0 });
+    interact(m, "a", T0 + 100);
+    painted(m, "a");
+    run(m, T0 + 1000, T0 + 8000, ["b"]);
+    const d = of(
+      step(m, { type: "gone", portId: "a", now: T0 + 8100 }),
+      "deliver",
+    )[0]?.payload;
+    expect(d?.interaction).toBeNull();
+    expect(mainThreadStallFingerprint(d!)).toBe(
+      "main-thread-stall:agent-manager|conversation|unattributed",
+    );
+  });
+
+  test("a late end of an earlier interaction does not close a later one", () => {
+    const m = machine();
+    attach(m, "a", tab("A"));
+    attach(m, "b", tab("B"));
+    step(m, { type: "pong", portId: "a", now: T0 });
+    interact(m, "a", T0 + 100);
+    const earlier = interactionIds;
+    interact(m, "a", T0 + 120);
+    step(m, { type: "interaction-end", portId: "a", id: earlier });
+    run(m, T0 + 1000, T0 + 8000, ["b"]);
+    const d = of(
+      step(m, { type: "gone", portId: "a", now: T0 + 8100 }),
+      "deliver",
+    )[0]?.payload;
+    expect(d?.interaction?.startedAt).toBe(T0 + 120);
+  });
+
+  test("a marked task begun after the interaction and still open is the freeze, not the click", () => {
+    const m = machine();
+    attach(m, "a", tab("A"));
+    attach(m, "b", tab("B"));
+    step(m, { type: "pong", portId: "a", now: T0 });
+    interact(m, "a", T0 + 100);
+    const frozen = mark(m, "a", T0 + 150, "update tasks.v2:rows");
+    run(m, T0 + 1000, T0 + 8000, ["b"]);
+    const d = of(
+      step(m, { type: "gone", portId: "a", now: T0 + 8100 }),
+      "deliver",
+    )[0]?.payload;
+    expect(d?.interaction).toBeNull();
+    expect(d?.frozenIn).toEqual(frozen);
+  });
+
+  test("an interaction is not a sign of life", () => {
+    const m = machine();
+    attach(m, "a", tab("A"));
+    run(m, T0, T0 + 3000, []);
+    interact(m, "a", T0 + 3100);
+    run(m, T0 + 4000, T0 + 4000, []);
+    expect([...m.incidents.values()][0]?.phase).toBe("open");
+  });
+
+  test("an open stall's persisted record already names the interaction", () => {
+    const m = machine();
+    attach(m, "a", tab("A"));
+    step(m, { type: "pong", portId: "a", now: T0 });
+    interact(m, "a", T0 + 100);
+    const [rec] = of(run(m, T0 + 1000, T0 + 6000, []), "persist");
+    expect(rec?.record.payload.ended).toBe("unknown");
+    expect(rec?.record.payload.interaction?.target).toEqual(BUTTON);
   });
 });

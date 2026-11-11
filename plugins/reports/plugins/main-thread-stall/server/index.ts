@@ -17,7 +17,7 @@ import {
 
 export default {
   description:
-    "Main-thread-stall report kind: validates the stall payload (tab, app, route pattern, duration, how it ended, LoAF attribution, cohort), fingerprints by app + route pattern + top attributed function, and renders the investigation task. Slow-interaction report kind: a click / key press whose next paint came late, fingerprinted by what was interacted with (element, contribution, pane, component — never the app or route), its time split into script / forced style-layout / style-layout / other with the function that forced it.",
+    "Main-thread-stall report kind: validates the stall payload (tab, app, route pattern, duration, how it ended, LoAF attribution, cohort), fingerprints by the interaction's target when a click / key press started the freeze, else by app + route pattern + top attributed function, and renders the investigation task. Slow-interaction report kind: a click / key press whose next paint came late, fingerprinted by what was interacted with (element, contribution, pane, component — never the app or route), its time split into script / forced style-layout / style-layout / other with the function that forced it.",
   contributions: [
     ReportKind({
       kind: "main-thread-stall",

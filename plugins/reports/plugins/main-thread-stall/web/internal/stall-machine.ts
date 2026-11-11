@@ -16,6 +16,7 @@ import type {
   TaskMark,
 } from "../../core";
 import { STALL } from "./constants";
+import { stallInteraction, type InteractionBegin } from "./interaction-judge";
 
 export interface PortState {
   readonly portId: string;
@@ -30,6 +31,11 @@ export interface PortState {
   marks: TaskMark[];
   /** The marked task running now: begun, its `mark-end` not yet received. */
   open: { id: number; mark: TaskMark } | null;
+  /**
+   * The user interaction (click, key press) dispatched and not yet painted:
+   * posted at dispatch, closed by `interaction-end` after its next paint.
+   */
+  interaction: { id: number; begin: InteractionBegin } | null;
   /** A suppressed (hidden / frozen) stale stretch was already logged. */
   suppressedLogged: boolean;
   /**
@@ -57,6 +63,12 @@ interface Incident {
    * then, and what the tab runs once it is back is not the freeze.
    */
   readonly frozenIn: TaskMark | null;
+  /**
+   * The primary's unpainted interaction when the stall opened: the freeze
+   * started from it (its handlers, or the render they led to, never reached
+   * a paint). Taken at onset, like `frozenIn`.
+   */
+  readonly interaction: InteractionBegin | null;
   startedAt: number;
   phase: "open" | "settling";
   endedAt: number | null;
@@ -115,6 +127,15 @@ export type StallEvent =
   | { type: "mark"; portId: string; id: number; mark: TaskMark }
   /** Only the matching id closes the open mark: a late end never closes a later one. */
   | { type: "mark-end"; portId: string; id: number }
+  /** A user interaction was dispatched (before any of its handlers ran). */
+  | {
+      type: "interaction";
+      portId: string;
+      id: number;
+      interaction: InteractionBegin;
+    }
+  /** Its next paint happened. Only the matching id closes it. */
+  | { type: "interaction-end"; portId: string; id: number }
   /** The tab's port is gone: its liveness lock was granted to us, or it detached. */
   | { type: "gone"; portId: string; now: number }
   | { type: "tick"; now: number }
@@ -170,6 +191,7 @@ export function step(m: StallMachine, ev: StallEvent): StallEffect[] {
         crumbs: [],
         marks: [],
         open: null,
+        interaction: null,
         suppressedLogged: false,
         covered: false,
       });
@@ -201,6 +223,19 @@ export function step(m: StallMachine, ev: StallEvent): StallEffect[] {
     case "mark-end": {
       const p = m.ports.get(ev.portId);
       if (p?.open?.id === ev.id) p.open = null;
+      break;
+    }
+    case "interaction": {
+      // Not a sign of life either: it is posted from the very task that may
+      // freeze. A later interaction replaces an earlier one (pointerdown, then
+      // its click).
+      const p = m.ports.get(ev.portId);
+      if (p) p.interaction = { id: ev.id, begin: ev.interaction };
+      break;
+    }
+    case "interaction-end": {
+      const p = m.ports.get(ev.portId);
+      if (p?.interaction?.id === ev.id) p.interaction = null;
       break;
     }
     case "gone":
@@ -448,6 +483,7 @@ function openStalls(m: StallMachine, now: number, out: StallEffect[]): void {
       (k) => k.at >= primary.lastPong - STALL.CRUMB_WINDOW_MS,
     ),
     frozenIn: primary.open?.mark ?? null,
+    interaction: causingInteraction(primary),
     startedAt: primary.lastPong,
     phase: "open",
     endedAt: null,
@@ -564,6 +600,13 @@ function payloadOf(
     topFunction: stallTopFunction(inc, endedAt),
     marks,
     frozenIn: inc.frozenIn,
+    interaction: inc.interaction
+      ? stallInteraction(
+          inc.interaction,
+          inc.stallFrame ? [inc.stallFrame, ...inc.during] : inc.during,
+          endedAt,
+        )
+      : null,
   };
 }
 
@@ -617,6 +660,19 @@ function incidentOf(m: StallMachine, portId: string): Incident | undefined {
   for (const i of m.incidents.values())
     if (i.primary === portId || i.cohort.has(portId)) return i;
   return undefined;
+}
+
+/**
+ * The interaction a stall opening on `p` started from: its unpainted one —
+ * unless a marked task began since and is still open: the thread is then
+ * inside that task (a live-state frame, …), an entry point of its own that
+ * merely delayed the interaction's paint.
+ */
+function causingInteraction(p: PortState): InteractionBegin | null {
+  const i = p.interaction;
+  if (!i) return null;
+  if (p.open && p.open.mark.at >= i.begin.at) return null;
+  return i.begin;
 }
 
 /** A frame at least OPEN_AFTER_MS long overlapping the stall window is the stall itself. */

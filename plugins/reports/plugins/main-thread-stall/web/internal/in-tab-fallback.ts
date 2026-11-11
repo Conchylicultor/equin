@@ -8,6 +8,7 @@ import {
   type StallTab,
 } from "../../core";
 import { STALL } from "./constants";
+import { stallInteraction, type InteractionBegin } from "./interaction-judge";
 import { fileStall } from "./file-stall";
 import { topFunction } from "./stall-machine";
 import { LOG_CHANNEL } from "./log-channel";
@@ -34,7 +35,12 @@ const markerStore = defineStore({
 
 /** File what the previous page of this tab left open, then keep a heartbeat. Returns the disposer. */
 export function installInTabFallback(readTab: () => StallTab): {
-  onFrame(frame: StallFrame, tab: StallTab): void;
+  /** `beganIn`: the interaction dispatched while the frame ran, if any. */
+  onFrame(
+    frame: StallFrame,
+    tab: StallTab,
+    beganIn: () => InteractionBegin | null,
+  ): void;
   dispose(): void;
 } {
   const now = Date.now();
@@ -87,17 +93,14 @@ export function installInTabFallback(readTab: () => StallTab): {
   window.addEventListener("pageshow", onPageShow);
 
   return {
-    onFrame(frame, tab) {
+    onFrame(frame, tab, beganIn) {
       if (frame.durationMs < STALL.REPORT_MIN_MS || !tab.visible) return;
-      void fileStall(
-        payload(
-          tab,
-          frame.startedAt,
-          frame.startedAt + frame.durationMs,
-          "recovered",
-          frame,
-        ),
-      );
+      const endedAt = frame.startedAt + frame.durationMs;
+      const begin = beganIn();
+      void fileStall({
+        ...payload(tab, frame.startedAt, endedAt, "recovered", frame),
+        interaction: begin ? stallInteraction(begin, [frame], endedAt) : null,
+      });
     },
     dispose() {
       onPageHide();
@@ -134,5 +137,6 @@ function payload(
     // Marks need a holder on another thread; the fallback has none.
     marks: [],
     frozenIn: null,
+    interaction: null,
   };
 }

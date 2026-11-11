@@ -199,6 +199,17 @@ function boot(): void {
           case "mark-end":
             feed({ type: "mark-end", portId, id: m.id });
             return;
+          case "interaction":
+            feed({
+              type: "interaction",
+              portId,
+              id: m.id,
+              interaction: m.interaction,
+            });
+            return;
+          case "interaction-end":
+            feed({ type: "interaction-end", portId, id: m.id });
+            return;
           case "filed":
             feed({ type: "filed", id: m.id, ok: m.ok });
             return;

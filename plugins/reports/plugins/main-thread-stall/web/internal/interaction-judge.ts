@@ -1,4 +1,9 @@
-import type { InteractionBreakdown, StallFrame } from "../../core";
+import type {
+  InteractionBreakdown,
+  InteractionTarget,
+  StallFrame,
+  StallInteraction,
+} from "../../core";
 import { STALL } from "./constants";
 
 // Tunables of the slow-interaction detector (see ../../CLAUDE.md, "Slow
@@ -142,19 +147,79 @@ export function attribute(
   };
 }
 
+/**
+ * A frame as the watchdog holds it (wall clock) as a raw frame on the same
+ * clock: the worker has no LoAF entry, only what the tab posted. A script
+ * recorded without its start is placed at its frame's start.
+ */
+export function rawFrameOf(f: StallFrame): RawFrame {
+  return {
+    start: f.startedAt,
+    end: f.startedAt + f.durationMs,
+    styleAndLayoutStart:
+      f.styleAndLayoutStartMs === null
+        ? 0
+        : f.startedAt + f.styleAndLayoutStartMs,
+    scripts: f.scripts.map((s) => {
+      const fn = s.sourceFunctionName || "(anonymous)";
+      return {
+        start: f.startedAt + (s.startMs ?? 0),
+        duration: s.durationMs,
+        forced: s.forcedStyleAndLayoutDurationMs,
+        label: s.invoker ? `${fn} (${s.invoker})` : fn,
+      };
+    }),
+    frame: f,
+  };
+}
+
+/** A user interaction as the tab tells the watchdog at dispatch (before any handler runs). */
+export interface InteractionBegin {
+  target: InteractionTarget;
+  eventType: string;
+  /** Epoch ms of the event (timeOrigin + its timeStamp). */
+  at: number;
+}
+
+/**
+ * The interaction a freeze started from, its time from the input to the
+ * freeze's end split by the long frames held for it (wall clock). None held
+ * (the tab never came back): all of it is `other`.
+ */
+export function stallInteraction(
+  begin: InteractionBegin,
+  frames: readonly StallFrame[],
+  endedAt: number,
+): StallInteraction {
+  const a = attribute(
+    { start: begin.at, end: Math.max(begin.at, endedAt) },
+    frames.map(rawFrameOf),
+  );
+  return {
+    target: begin.target,
+    eventType: begin.eventType,
+    startedAt: begin.at,
+    breakdown: a.breakdown,
+    forcedBy: a.forcedBy,
+  };
+}
+
 export type InteractionVerdict = "record" | "report";
 
 /**
  * What one slow interaction becomes, given how many interactions of at least
  * RECUR_MIN_MS its target has had in this page load (this one included):
  * always a slow-op; a report when severe or recurring — except a freeze of the
- * stall detector's size, which files its own report.
+ * stall detector's size (`frozen`: a long frame inside it reached the stall
+ * bar, which is the bar the stall detector applies), whose own report names
+ * this interaction.
  */
 export function judgeInteraction(
   durationMs: number,
   recurCount: number,
+  frozen: boolean,
 ): InteractionVerdict {
-  if (durationMs >= STALL.REPORT_MIN_MS) return "record";
+  if (frozen || durationMs >= STALL.REPORT_MIN_MS) return "record";
   if (durationMs >= INTERACTION.SEVERE_MS) return "report";
   if (
     durationMs >= INTERACTION.RECUR_MIN_MS &&

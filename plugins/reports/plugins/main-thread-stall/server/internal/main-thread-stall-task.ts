@@ -1,5 +1,7 @@
 import type { ReportRow } from "@plugins/reports/server";
 import {
+  dominantLayer,
+  interactionTargetLabel,
   MainThreadStallPayloadSchema,
   mainThreadStallSummary,
   type MainThreadStallPayload,
@@ -54,6 +56,26 @@ function renderDescription(row: ReportRow, d: MainThreadStallPayload): string {
   lines.push(
     `A browser tab's **main thread stopped answering for ${d.durationIsLowerBound ? "at least " : ""}${(d.durationMs / 1000).toFixed(1)} s** while it was visible: the UI was frozen — no input, no paint. Ended: **${d.ended}** (${ENDED[d.ended]}).`,
   );
+  if (d.interaction) {
+    const i = d.interaction;
+    const t = i.target;
+    const b = i.breakdown;
+    const top = dominantLayer(b);
+    const offset = ((d.startedAt - i.startedAt) / 1000).toFixed(1);
+    lines.push("");
+    lines.push("**What was clicked — the freeze started from it**");
+    lines.push(
+      `The tab told the watchdog, as it dispatched the \`${i.eventType}\` and before any handler ran, that a person had interacted with **${interactionTargetLabel(t)}**; that interaction never reached its next paint before the thread went silent (${offset} s later). Its handlers — or the render, commit and effects they led to — are the freeze. This report is keyed by that control: the same control freezing again, on any screen, lands here.`,
+    );
+    lines.push(`- **Element:** \`${t.element}\``);
+    if (t.key) lines.push(`- **Key:** \`${t.key}\``);
+    lines.push(`- **Contribution:** \`${t.contribution ?? "-"}\``);
+    lines.push(`- **Pane:** \`${t.pane ?? "-"}\``);
+    lines.push(`- **Component:** \`${t.owner ?? "-"}\``);
+    lines.push(
+      `- **Where the time went** (input → end of the freeze, from the long frames the watchdog holds): script ${b.scriptMs} ms · forced style/layout ${b.forcedStyleLayoutMs} ms${i.forcedBy ? ` (forced by \`${i.forcedBy}\`)` : ""} · style/layout ${b.styleLayoutMs} ms · other ${b.otherMs} ms — mostly **${top.layer}**.${d.stallFrame || d.during.length > 0 ? "" : " No long frame came back from the frozen tab, so all of it is `other`."}`,
+    );
+  }
   lines.push("");
   lines.push("**Where**");
   lines.push(`- **App:** \`${d.app ?? "?"}\``);

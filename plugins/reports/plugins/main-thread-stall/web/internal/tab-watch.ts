@@ -14,6 +14,7 @@ import {
 import type { TabToWorker, WorkerToTab } from "./protocol";
 import { fileSlowFrame, fileStall } from "./file-stall";
 import { installInTabFallback } from "./in-tab-fallback";
+import type { InteractionBegin } from "./interaction-judge";
 import { installInteractionWatch } from "./interaction-watch";
 import {
   LOAF_ENTRY_TYPE,
@@ -229,9 +230,36 @@ export function installStallWatch(readTab: () => StallTab): StallWatch {
     if (ev.persisted && !session && !disposed && useWorker) attach();
   };
 
+  // Every user interaction goes to the watchdog at dispatch, before its
+  // handlers run, and is closed after its next paint: a stall that opens
+  // while one is unpainted started from it, and its report names the control
+  // (the frozen tab could not say so later). Like marks: only while attached
+  // and visible, never queued; an end only for a begin that was sent.
+  let interactionId = 0;
+  const onInteraction = (begin: InteractionBegin): void => {
+    const s = session;
+    if (!s?.attached || document.visibilityState !== "visible") return;
+    const id = ++interactionId;
+    s.worker.port.postMessage({
+      kind: "interaction",
+      id,
+      interaction: begin,
+    } satisfies TabToWorker);
+    afterNextPaint(() => {
+      if (s === session)
+        s.worker.port.postMessage({
+          kind: "interaction-end",
+          id,
+        } satisfies TabToWorker);
+    });
+  };
+
   // Slow interactions (input → next paint): fed every long frame for their
   // attribution, and the owner of any 1–5 s frame one overlaps.
-  const interactions = installInteractionWatch(readTab);
+  const interactions = installInteractionWatch(
+    readTab,
+    useWorker ? onInteraction : () => {},
+  );
 
   let observer: PerformanceObserver | null = null;
   if (loafSupported()) {
@@ -264,7 +292,7 @@ export function installStallWatch(readTab: () => StallTab): StallWatch {
       // A slow interaction overlapping it owns it (it names what was clicked);
       // otherwise it is the app + route's `main-thread` slow-op.
       interactions.deferSlowFrame(frame, () => fileSlowFrame(frame, tab));
-    fallback?.onFrame(frame, tab);
+    fallback?.onFrame(frame, tab, () => interactions.beganIn(frame));
   }
 
   if (useWorker) {
@@ -296,4 +324,19 @@ export function installStallWatch(readTab: () => StallTab): StallWatch {
       window.removeEventListener("pageshow", onPageShow);
     },
   };
+}
+
+/**
+ * Run `fn` once the next frame has painted: the first task after the
+ * rendering step that follows the next animation frame callback. One-shot.
+ */
+function afterNextPaint(fn: () => void): void {
+  requestAnimationFrame(() => {
+    const ch = new MessageChannel();
+    ch.port1.onmessage = () => {
+      ch.port1.close();
+      fn();
+    };
+    ch.port2.postMessage(null);
+  });
 }

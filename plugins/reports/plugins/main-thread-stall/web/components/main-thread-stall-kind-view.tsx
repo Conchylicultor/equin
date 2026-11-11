@@ -1,10 +1,13 @@
 import type { Report } from "@plugins/reports/core";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { MainThreadStallPayloadSchema } from "../../core";
+import {
+  interactionTargetLabel,
+  MainThreadStallPayloadSchema,
+} from "../../core";
 
 // One-line Debug → Reports summary: how the stall ended, how long, where (app +
-// route pattern), what ran (or `unattributed`), and how many tabs froze with it.
+// route pattern), the interaction it started from, what ran (or `unattributed`), and how many tabs froze with it.
 export function MainThreadStallKindView({ report }: { report: Report }) {
   const parsed = MainThreadStallPayloadSchema.safeParse(report.data);
   if (!parsed.success) return <>{report.message}</>;
@@ -20,6 +23,11 @@ export function MainThreadStallKindView({ report }: { report: Report }) {
         {d.durationIsLowerBound ? "≥" : ""}
         {secs}s
       </span>
+      {d.interaction && (
+        <span className="truncate font-mono">
+          {interactionTargetLabel(d.interaction.target)}
+        </span>
+      )}
       <span className="truncate font-mono" title={d.url}>
         {d.app ?? "?"} {d.routePattern}
       </span>

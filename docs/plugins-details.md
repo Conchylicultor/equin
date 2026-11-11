@@ -53495,7 +53495,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `liveStateStaleDropFingerprint`
           - `LiveStateStaleDropPayloadSchema`
-    - **`main-thread-stall`** — Main-thread stall detector: a Core.Root controller that attaches each tab to one out-of-thread SharedWorker watchdog (1 Hz ping, Web Lock per tab, IndexedDB record of an open stall) and feeds it the tab's app, route pattern, visibility and LoAF long frames; a visible tab silent ≥5 s becomes a main-thread-stall report plus a slow-op span (recovered 1–5 s long frames: slow-op only). In-tab fallback without SharedWorker. Slow interactions: Event Timing (input → next paint) per click / key press, its target resolved at dispatch (element, contribution, pane, component), its time split by the long frames inside it; ≥200 ms is an `interaction` slow-op, severe (≥800 ms) or recurring (3× ≥300 ms) a slow-interaction report, and it owns the 1–5 s long frame it caused. Main-thread-stall report kind: validates the stall payload (tab, app, route pattern, duration, how it ended, LoAF attribution, cohort), fingerprints by app + route pattern + top attributed function, and renders the investigation task. Slow-interaction report kind: a click / key press whose next paint came late, fingerprinted by what was interacted with (element, contribution, pane, component — never the app or route), its time split into script / forced style-layout / style-layout / other with the function that forced it.
+    - **`main-thread-stall`** — Main-thread stall detector: a Core.Root controller that attaches each tab to one out-of-thread SharedWorker watchdog (1 Hz ping, Web Lock per tab, IndexedDB record of an open stall) and feeds it the tab's app, route pattern, visibility and LoAF long frames; a visible tab silent ≥5 s becomes a main-thread-stall report plus a slow-op span (recovered 1–5 s long frames: slow-op only). In-tab fallback without SharedWorker. Slow interactions: Event Timing (input → next paint) per click / key press, its target resolved at dispatch (element, contribution, pane, component), its time split by the long frames inside it; ≥200 ms is an `interaction` slow-op, severe (≥800 ms) or recurring (3× ≥300 ms) a slow-interaction report, and it owns the 1–5 s long frame it caused. Main-thread-stall report kind: validates the stall payload (tab, app, route pattern, duration, how it ended, LoAF attribution, cohort), fingerprints by the interaction's target when a click / key press started the freeze, else by app + route pattern + top attributed function, and renders the investigation task. Slow-interaction report kind: a click / key press whose next paint came late, fingerprinted by what was interacted with (element, contribution, pane, component — never the app or route), its time split into script / forced style-layout / style-layout / other with the function that forced it.
       - Web:
         - Contributes:
           - `Core.Root` → `MainThreadStallController`
@@ -53534,11 +53534,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SlowInteractionPayload`
           - `StallFrame`
           - `StallFrameScript`
+          - `StallInteraction`
           - `StallTab`
           - `TaskMark`
         - Exports (values):
           - `dominantLayer`
           - `InteractionBreakdownSchema`
+          - `interactionTargetKey`
           - `interactionTargetLabel`
           - `InteractionTargetSchema`
           - `mainThreadStallFingerprint`
@@ -53549,6 +53551,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `slowInteractionSummary`
           - `StallFrameSchema`
           - `StallFrameScriptSchema`
+          - `StallInteractionSchema`
           - `StallTabSchema`
     - **`mutation-errors`** — Warning toast and persistent notification for unhandled TanStack Query mutation errors.
       - Web:

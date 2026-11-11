@@ -105,18 +105,25 @@ describe("attribute", () => {
 
 describe("judgeInteraction", () => {
   test("severe reports at once", () => {
-    expect(judgeInteraction(INTERACTION.SEVERE_MS, 1)).toBe("report");
+    expect(judgeInteraction(INTERACTION.SEVERE_MS, 1, false)).toBe("report");
   });
   test("under the severe bar, reported once its target recurs", () => {
-    expect(judgeInteraction(400, 1)).toBe("record");
-    expect(judgeInteraction(400, INTERACTION.RECUR_COUNT - 1)).toBe("record");
-    expect(judgeInteraction(400, INTERACTION.RECUR_COUNT)).toBe("report");
+    expect(judgeInteraction(400, 1, false)).toBe("record");
+    expect(judgeInteraction(400, INTERACTION.RECUR_COUNT - 1, false)).toBe(
+      "record",
+    );
+    expect(judgeInteraction(400, INTERACTION.RECUR_COUNT, false)).toBe(
+      "report",
+    );
   });
   test("under the recurrence bar, only recorded however often", () => {
-    expect(judgeInteraction(250, 10)).toBe("record");
+    expect(judgeInteraction(250, 10, false)).toBe("record");
   });
   test("a freeze of stall size is the stall detector's report", () => {
-    expect(judgeInteraction(6000, 1)).toBe("record");
+    expect(judgeInteraction(6000, 1, false)).toBe("record");
+    // Event Timing measured it just under the bar, but a long frame inside it
+    // reached it: the stall detector files it (naming this interaction).
+    expect(judgeInteraction(4990, 1, true)).toBe("record");
   });
 });
 
