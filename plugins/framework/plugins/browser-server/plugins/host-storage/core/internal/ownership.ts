@@ -46,13 +46,14 @@ export interface Ownership {
   /** The storage serves: answer claims from now on (one that came earlier is answered now). */
   answerClaims(): void;
   /**
-   * The storage is being wiped (Reset): answer no claim from now on — a
-   * claimant (the next host generation's worker, started by a tab opened
-   * mid-wipe) waits on the lock, granted when the wipe releases it, and opens
-   * the wiped storage. Yielding to it would end this host `superseded`
-   * instead of `reset` and close the storage under the wipe.
+   * The storage is being closed (the host retires) or wiped (Reset): answer
+   * no claim from now on — a claimant (the next host generation's worker,
+   * started by a tab opened meanwhile) waits on the lock, granted when the
+   * close or wipe releases it, and opens what it left. Yielding to it would
+   * end this host `superseded` instead and close the storage under the close
+   * or wipe already running.
    */
-  wiping(): void;
+  closing(): void;
   /** Release the lock (the storage is closed); idempotent. */
   release(): void;
 }
@@ -124,7 +125,7 @@ export async function acquireOwnership(opts: {
   let answering = false;
   let waiting: string | null = null;
   let yielding = false;
-  let wiping = false;
+  let closing = false;
   const yieldTo = (): void => {
     yielding = true;
     void opts
@@ -143,7 +144,7 @@ export async function acquireOwnership(opts: {
   };
   channel.onmessage = (event: MessageEvent<OwnershipMessage>) => {
     const msg = event.data;
-    if (msg.t !== "claim" || yielding || wiping) return;
+    if (msg.t !== "claim" || yielding || closing) return;
     const olderSnapshot =
       opts.snapshotTakenAt !== undefined &&
       msg.snapshotTakenAt !== null &&
@@ -166,10 +167,10 @@ export async function acquireOwnership(opts: {
   return {
     answerClaims() {
       answering = true;
-      if (waiting !== null && !yielding && !wiping) yieldTo();
+      if (waiting !== null && !yielding && !closing) yieldTo();
     },
-    wiping() {
-      wiping = true;
+    closing() {
+      closing = true;
     },
     release() {
       channel.close();

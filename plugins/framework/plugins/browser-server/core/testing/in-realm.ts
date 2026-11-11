@@ -68,14 +68,11 @@ export function channelHost(
 ): () => Promise<{
   start(): Worker;
   startShared(name: string): SharedWorker;
-  prestartShared(name: string): void;
   serviceWorkerUrl: string;
 }> {
   return () =>
     Promise.resolve({
       serviceWorkerUrl,
-      // Nothing boots ahead in a realm: `startShared` starts a channel anyway.
-      prestartShared: () => {},
       // The same in-realm "worker", as a SharedWorker's connection: its
       // `port` is the page end, `close()` ends it.
       startShared: () => {
@@ -83,6 +80,7 @@ export function channelHost(
         const port = {
           postMessage: worker.postMessage,
           addEventListener: worker.addEventListener,
+          removeEventListener: worker.removeEventListener,
           start: () => {},
           close: worker.terminate,
         };
@@ -94,6 +92,10 @@ export function channelHost(
   function startChannel(): {
     postMessage(message: unknown, transfer?: Transferable[]): void;
     addEventListener(
+      type: "message",
+      listener: (event: MessageEvent) => void,
+    ): void;
+    removeEventListener(
       type: "message",
       listener: (event: MessageEvent) => void,
     ): void;
@@ -123,6 +125,10 @@ export function channelHost(
             type: "message",
             listener: (event: MessageEvent) => void,
           ) => channel.port1.addEventListener(type, listener),
+      removeEventListener: (
+        type: "message",
+        listener: (event: MessageEvent) => void,
+      ) => channel.port1.removeEventListener(type, listener),
           terminate: () => {
             served?.dispose();
             channel.port1.close();

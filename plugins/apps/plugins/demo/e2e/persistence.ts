@@ -12,7 +12,18 @@
  *     too (one SharedWorker, one database) — then creates another page there,
  *     which the first tab's sidebar shows live;
  *  4. Reset demo (in the first tab): both tabs come back on the seed alone —
- *     neither created page is listed, the seeded pages are.
+ *     neither created page is listed, the seeded pages are;
+ *  5. creates a page, then renames it and closes EVERY tab of the demo the
+ *     instant the demo's worker has answered the rename — no wait — then
+ *     opens a new one: the page is listed under its new name. The worker
+ *     outlives its last tab long enough to flush the write, then retires
+ *     (`browser-server`'s end of life), and the new tab connects to the next
+ *     worker, which opens what it wrote. Before, Chromium ended the worker
+ *     with its last tab, so a write still on its way to IndexedDB could be
+ *     lost — a window of tens of ms after the answer, shorter than closing a
+ *     tab over CDP takes: this step passes against the old code too
+ *     (2026-11-10), so it guards the end of life, not that window, which
+ *     `framework/browser-server`'s `shared-host.test.ts` holds by construction.
  *
  * And, throughout: the page stays on the demo, no page error, no console error.
  *
@@ -20,6 +31,11 @@
  *   ./equin run plugins/apps/plugins/demo/e2e/persistence.ts [--out /tmp/demo-persistence] [--headed]
  */
 import type { Locator, Page } from "playwright";
+import {
+  armHostAnswers,
+  hostRequestsUnanswered,
+  recordHostRequests,
+} from "@plugins/framework/plugins/browser-server/e2e";
 import {
   arg,
   pathUrl,
@@ -98,6 +114,12 @@ await withBrowser(async (h) => {
   const stamp = Date.now().toString(36);
   const FIRST = `Kept ${stamp}`;
   const SECOND = `Shared ${stamp}`;
+  const DRAFT = `Draft ${stamp}`;
+  const CLOSED = `Closed ${stamp}`;
+
+  // Before the page connects to the demo's worker: its answers are observed
+  // as the port carries them (step 5 waits for them).
+  await recordHostRequests(page);
 
   // ── 1. a write ──────────────────────────────────────────────────────────
   await bootDemo(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
@@ -263,7 +285,51 @@ await withBrowser(async (h) => {
     );
   }
   await snap(page, OUT, "4-reset");
-
   r.ok("the page stays on the demo", onDemoPage(page.url()), page.url());
+
+  // ── 5. a write survives closing the demo's last tab at once ─────────────
+  await createPage(page, DRAFT);
+  await listed(r, page, "the page to rename is listed", DRAFT, "some");
+  // Everything so far answered (the list can show the page before): the
+  // rename below is the one write in flight when the tabs close.
+  const quiet = await waitFor(
+    () => hostRequestsUnanswered(page),
+    (n) => n === 0,
+    { timeoutMs: RENDER_TIMEOUT_MS },
+  );
+  r.ok(
+    "the demo's worker has answered every request of the tab",
+    quiet.ok,
+    `${quiet.value} unanswered (waited ${quiet.waitedMs} ms)`,
+  );
+  const answered = await armHostAnswers(page);
+  const titleField = embedRoot(page)
+    .locator('[data-pane-id="page-detail"]')
+    .last()
+    .locator('input[aria-label="Page title"]')
+    .first();
+  await titleField.fill(CLOSED);
+  await titleField.press("Enter");
+  await answered();
+  // The instant the worker answered the rename: answered, not flushed.
+  await Promise.all([page.close(), second.close()]);
+  const reopened = await context.newPage();
+  await bootDemo(reopened, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
+    marker: MARKER,
+  });
+  await openPages(r, reopened, "after every tab closed");
+  await listed(
+    r,
+    reopened,
+    "after closing every tab the instant the rename was answered, the page has its new name",
+    CLOSED,
+    "some",
+  );
+  await snap(reopened, OUT, "5-reopened");
+  r.ok(
+    "the reopened tab stays on the demo",
+    onDemoPage(reopened.url()),
+    reopened.url(),
+  );
   await r.finish();
 });

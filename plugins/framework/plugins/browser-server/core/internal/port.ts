@@ -14,6 +14,11 @@
 // told `ready` (or why the host could not boot) on its own; a host that stops
 // serving (another worker took its storage over, or the page reset it) tells
 // every end `ended`, after which the page rejects whatever it still waits on.
+//
+// A SharedWorker host outlives its last tab (`extendedLifetime`), so what the
+// tab asked for is finished and flushed, then RETIRES itself (`retire`): see
+// `shared-host.ts` for the lock that keeps a connecting page off a worker that
+// is closing.
 
 import { watchHostProgress, type HostProgress } from "./boot-progress";
 import {
@@ -55,10 +60,12 @@ export type HostEndReason =
   /** Another worker (a newer build, or another tab without SharedWorker) took the host's storage over. */
   | "superseded"
   /** A page reset the host: its data is wiped, a fresh host boots on reconnect. */
-  | "reset";
+  | "reset"
+  /** No page held the host any more: it closed its storage and the worker. */
+  | "retired";
 
 /** Page → worker. */
-type ToHost =
+export type ToHost =
   | { t: "request"; id: number; request: WireRequest }
   | { t: "open"; conn: number }
   | { t: "frame"; conn: number; frame: string }
@@ -82,7 +89,13 @@ type ToHost =
   | { t: "reset" };
 
 /** Worker → page. */
-type FromHost =
+export type FromHost =
+  /**
+   * The first message on every connection: the host has taken this end in,
+   * and will not retire while it stays (`connectSharedHost` holds the retire
+   * lock until it hears this).
+   */
+  | { t: "accepted" }
   | {
       t: "ready";
       keys: string[];
@@ -148,6 +161,17 @@ export interface ServeHostOptions {
   reset?: () => Promise<void>;
   /** After every end was told `ended` — where the worker closes itself. */
   onEnded?: (why: HostEndReason) => void;
+  /**
+   * A SharedWorker host's end of life: once its last end has left (its page's
+   * `hello` lock released) and every request it was handling has settled, the
+   * host takes `lock` (`retireLockName` of the worker's name) exclusively —
+   * granted only while no page is connecting to it (`connectSharedHost`) — and,
+   * still with no end, ends `retired` and runs `run` (close the storage, then
+   * the worker), holding the lock until the worker is gone. A connection that
+   * arrives first takes the ask back. Absent: the host never retires (a
+   * dedicated worker, which ends with its page).
+   */
+  retire?: { lock: string; run: () => Promise<void> };
 }
 
 /** A host being served: end it from the worker's side. */
@@ -206,9 +230,16 @@ export function serveHost(opts: ServeHostOptions): ServedHost {
   /** Answer every message `end` sends; its sockets are its own. */
   function serveEnd(end: PortEnd, announce: boolean): void {
     const sockets = new Map<number, BrowserServerSocket>();
-    if (announce) ends.set(end, sockets);
+    if (announce) {
+      ends.set(end, sockets);
+      // Before `accepted`: the page stops holding the retire lock once it
+      // hears it, so no retirement asked for earlier may still be waiting.
+      retiring?.abort();
+      retiring = null;
+    }
     const post = (msg: FromHost, transfer?: Transferable[]) =>
       end.postMessage(msg, transfer);
+    if (announce) post({ t: "accepted" });
     end.addEventListener("message", (event: MessageEvent) => {
       const msg = event.data as ToHost;
       void handle(msg, end, sockets, post).catch((err: unknown) => {
@@ -270,6 +301,7 @@ export function serveHost(opts: ServeHostOptions): ServedHost {
         async () => {
           dropSockets(sockets);
           ends.delete(end);
+          maybeRetire();
         },
       );
       return;
@@ -307,12 +339,23 @@ export function serveHost(opts: ServeHostOptions): ServedHost {
     switch (msg.t) {
       case "request": {
         const { method, url, headers, body } = msg.request;
-        const res = await server.request(
-          new Request(url, { method, headers, body }),
-        );
-        if (ended !== null) return;
-        const response = await toWireResponse(res);
-        post({ t: "response", id: msg.id, response }, [response.body]);
+        // Counted until answered: a retirement waits for it, so a request
+        // whose page has already gone still finishes and is flushed.
+        const answering = (async () => {
+          const res = await server.request(
+            new Request(url, { method, headers, body }),
+          );
+          if (ended !== null) return;
+          const response = await toWireResponse(res);
+          post({ t: "response", id: msg.id, response }, [response.body]);
+        })();
+        inFlight.add(answering);
+        try {
+          await answering;
+        } finally {
+          inFlight.delete(answering);
+          maybeRetire();
+        }
         return;
       }
       case "open": {
@@ -334,6 +377,55 @@ export function serveHost(opts: ServeHostOptions): ServedHost {
     }
   }
 
+  /** Requests being answered (`request` messages), for a retirement to wait on. */
+  const inFlight = new Set<Promise<void>>();
+  /** The retire lock asked for, while it is: aborted by a new end. */
+  let retiring: AbortController | null = null;
+
+  /** The retirement began (its lock granted, nothing holding the host): never asked for again. */
+  let retired = false;
+
+  /**
+   * Retire when nothing holds the host: no end, no request being answered,
+   * booted (a failed boot closed its storage itself; the worker retires all
+   * the same) — or once it ended other than by a Reset (another worker took
+   * its storage over: its pages are told, and the worker still has to go).
+   * A Reset closes the worker itself, on a name no page asks for again. Asks
+   * for the retire lock; whatever arrives while it waits takes the ask back or
+   * is checked again once it is granted.
+   */
+  function maybeRetire(): void {
+    const retire = opts.retire;
+    if (retire === undefined || retiring !== null || retired) return;
+    if (stopping || ended === "reset") return;
+    const held = (): boolean =>
+      ended === null && (ends.size > 0 || inFlight.size > 0 || !bootSettled);
+    if (held()) return;
+    const ask = new AbortController();
+    retiring = ask;
+    void navigator.locks
+      .request(retire.lock, { signal: ask.signal }, async () => {
+        if (retiring === ask) retiring = null;
+        if (held() || stopping || retired) return;
+        retired = true;
+        if (ended === null) endAll("retired");
+        await retire.run().catch((err: unknown) => {
+          // Loud — the worker's uncaught error — and the lock still held.
+          reportError(err);
+        });
+        // Held until the worker is gone, even when closing failed: a page
+        // that finds it held connects to another worker, never to this
+        // closing one.
+        await new Promise<never>(() => {});
+      })
+      .catch((err: unknown) => {
+        if (ask.signal.aborted) return;
+        console.error("[browser-server] the host failed to retire:", err);
+        throw err;
+      });
+  }
+  void booted.then(maybeRetire, maybeRetire);
+
   function endAll(why: HostEndReason): void {
     if (ended !== null) return;
     ended = why;
@@ -348,6 +440,8 @@ export function serveHost(opts: ServeHostOptions): ServedHost {
     }
     attached.clear();
     opts.onEnded?.(why);
+    // Ended, so nothing it serves holds it any more: it goes (`retire`).
+    maybeRetire();
   }
 
   opts.accept((end) => serveEnd(end, true));
@@ -519,9 +613,8 @@ export function attachPort(worker: PortEnd, port: MessagePort): void {
  * when its boot failed. `dispose` closes every socket from the server's side
  * and lets the host forget this page; ending the worker is the caller's.
  *
- * Where the page has Web Locks, it holds one for this end until `dispose`
- * and tells the host its name (`hello`), so a SharedWorker drops this page's
- * sockets when the tab goes away without saying so.
+ * A SharedWorker's connection is made by `connectSharedHost`, which also
+ * tells the host when this page goes away (`hello`).
  */
 export function portBrowserServer(
   port: PortEnd,
@@ -530,13 +623,6 @@ export function portBrowserServer(
   let nextConn = 0;
   const peers = new Map<number, BrowserServerPeer>();
 
-  let releaseLock: (() => void) | null = null;
-  if (typeof navigator !== "undefined" && navigator.locks !== undefined) {
-    const lock = `equin-port:${globalThis.crypto.randomUUID()}`;
-    const held = new Promise<void>((resolve) => (releaseLock = resolve));
-    void navigator.locks.request(lock, { mode: "exclusive" }, () => held);
-    port.postMessage({ t: "hello", lock } satisfies ToHost);
-  }
   // Before any request: a read of an input is answered knowing who supplies it.
   port.postMessage({ t: "inputs", keys: [...inputs] } satisfies ToHost);
 
@@ -577,7 +663,6 @@ export function portBrowserServer(
         } satisfies ToHost);
         peer.closed(1001, "browser server disposed");
       }
-      releaseLock?.();
     },
   };
 
@@ -622,6 +707,9 @@ export function portBrowserServer(
           return;
         case "response":
           // `portRequester`'s.
+          return;
+        case "accepted":
+          // `connectSharedHost`'s, where it connected.
           return;
         case "deliver":
           peers.get(msg.conn)?.deliver(msg.frame);

@@ -25,6 +25,8 @@ export type {
   ServeHostOptions,
 } from "./internal/port";
 export { runtimeBrowserServer } from "./internal/runtime-socket";
+export { connectSharedHost, retireLockName } from "./internal/shared-host";
+export type { SharedHostConnection } from "./internal/shared-host";
 export { pageInput } from "./internal/page-inputs";
 export type {
   PageInput,

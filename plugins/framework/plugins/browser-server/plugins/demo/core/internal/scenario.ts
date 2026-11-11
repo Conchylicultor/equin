@@ -19,10 +19,8 @@ export type DemoHost = ScopedComposition & {
   start(): Promise<{
     /** The host in a dedicated worker: this page's alone. */
     start(): Worker;
-    /** The host in a SharedWorker named `name`: one per build, every tab connected to it. */
+    /** The host in a SharedWorker named `name`: one per build, every tab connected to it (through `connectSharedHost`). */
     startShared(name: string): SharedWorker;
-    /** Start that SharedWorker before the page asks for it; the next `startShared(name)` is handed it. */
-    prestartShared(name: string): void;
     serviceWorkerUrl: string;
   }>;
 };

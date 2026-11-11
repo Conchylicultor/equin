@@ -57,7 +57,7 @@ serveBrowserHost({
   use, never at module evaluation; reading it undeclared throws. A test that
   boots a graph declares `memoryHostStorage()` (one stateless instance).
 - **What persists**: the database (`database/pglite`, `relaxedDurability`,
-  flushed before anything is recorded durable) and the four in-memory host
+  flushed before anything is recorded durable, and when the host retires) and the four in-memory host
   stores, each a working copy in memory written through to `store(name)`:
   `config` (`config_v2/browser-store`), `transcripts`
   (`conversations/transcript-source/memory`), `attachment-blobs`
@@ -86,6 +86,15 @@ serveBrowserHost({
   `startShared(name)`; `serveBrowserHost` accepts every connection). A tab that
   goes away is noticed through the Web Lock its page holds for its end
   (`browser-server`'s `hello`).
+- **End of life** (a SharedWorker host): the worker outlives its last tab
+  (`extendedLifetime`), then retires — every request it was answering
+  settled, `close()` (PGlite flushed and closed, every store write settled,
+  the lock released), then the worker closes (`serveHost`'s `retire`, under
+  `browser-server`'s retire lock, so no page connects to it meanwhile: a page
+  moves to the next name). A write the tab made just before it closed or
+  reloaded is kept. From the start of a close, as of a wipe, the holder
+  answers no claim (`ownership.closing()`): the next worker waits on the lock
+  and opens what this one wrote.
 - **Reset** (`ToHost` `reset`): `wipe()` — close, then delete every IndexedDB
   database of the storage — every tab is told `ended: "reset"`, the worker
   closes itself, and the tabs reconnect to a fresh one (under a new name: a
@@ -108,6 +117,7 @@ serveBrowserHost({
     - `framework/browser-server.HostRefusedError`
     - `framework/browser-server.PortEnd`
     - `framework/browser-server.reportDataProgress`
+    - `framework/browser-server.retireLockName`
     - `framework/browser-server.ServedHost`
     - `framework/browser-server.serveHost`
     - `framework/browser-server/host-storage/stored.ENTRIES_STORE`

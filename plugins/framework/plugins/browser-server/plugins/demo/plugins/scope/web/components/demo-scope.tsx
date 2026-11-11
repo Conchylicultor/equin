@@ -64,7 +64,7 @@ import {
 import { RenderOrigin } from "@plugins/primitives/plugins/scope/plugins/render-origin/web";
 import { ScopeIconSymbols } from "@plugins/ui/plugins/icons/plugins/sprites/web";
 import {
-  hostWorkerName,
+  connectDemoHost,
   trackHostGenerations,
   type HostGenerations,
 } from "@plugins/framework/plugins/browser-server/plugins/demo/plugins/prestart/web";
@@ -132,22 +132,43 @@ interface ScopeStart {
 /**
  * The page's end of the scenario's host: ONE SharedWorker per build and host
  * generation for every tab of the demo (one server, one database — what keeps
- * a persistent host's data whole across tabs; `demo/prestart`'s `host-generation.ts` for why a
- * Reset moves to the next name), or, where the browser has none, a dedicated
+ * a persistent host's data whole across tabs; `demo/prestart`'s
+ * `connectDemoHost` for why a Reset, or a worker retiring once its last tab
+ * went, moves to the next name), or, where the browser has none, a dedicated
  * worker of this page's own (the host's storage lock keeps a single owner).
+ * The end is not started: the caller starts it once it listens.
  */
-function connectHost(
+async function connectHost(
+  scenario: DemoScenario,
   mod: Awaited<ReturnType<DemoScenario["host"]["start"]>>,
-  workerName: string,
-): { end: PortEnd; stop(): void } {
+  generations: HostGenerations,
+): Promise<{
+  end: PortEnd;
+  start(): void;
+  generation: number;
+  stop(): void;
+}> {
   if (typeof SharedWorker === "function") {
-    const shared = mod.startShared(workerName);
-    // `addEventListener` alone does not start a MessagePort.
-    shared.port.start();
-    return { end: shared.port, stop: () => shared.port.close() };
+    const { connection, generation } = await connectDemoHost(
+      scenario.id,
+      mod,
+      generations,
+    );
+    return {
+      end: connection.port,
+      // `addEventListener` alone does not start a MessagePort.
+      start: () => connection.port.start(),
+      generation,
+      stop: connection.leave,
+    };
   }
   const worker = mod.start();
-  return { end: worker, stop: () => worker.terminate() };
+  return {
+    end: worker,
+    start: () => {},
+    generation: generations.current(),
+    stop: () => worker.terminate(),
+  };
 }
 
 /**
@@ -171,21 +192,28 @@ function startScopeServer(
     const asked = performance.now();
     const mod = await scenario.host.start();
     if (ended) return;
-    const generation = generations.current();
-    const { end, stop } = connectHost(
+    const { end, start, generation, stop } = await connectHost(
+      scenario,
       mod,
-      hostWorkerName(scenario.id, generation),
+      generations,
     );
     stopEnd = stop;
+    if (ended) {
+      stop();
+      return;
+    }
     const framing = attachFrameServing(end, mod.serviceWorkerUrl);
     let hosted: PortServer;
     try {
-      hosted = await portBrowserServer(end, {
+      const serving = portBrowserServer(end, {
         inputs,
         onProgress: (progress) => {
           if (!ended) report.onProgress(progress);
         },
       });
+      // Listening now: what the host posted meanwhile is delivered.
+      start();
+      hosted = await serving;
     } catch (err) {
       if (err instanceof PortHostRefusedError) {
         // Nothing will be served: the frames attached alongside go too.
@@ -213,8 +241,10 @@ function startScopeServer(
     clientLog(BOOT_LOG_CHANNEL, line);
     served = hosted.server;
     void hosted.ended.then((why) => {
-      // Past this generation in every tab told so, whichever sent the Reset.
-      if (why === "reset") generations.advance(generation);
+      // Past this generation in every tab told so, whichever sent the Reset
+      // (or: the worker retired — none of its pages should see that, but a
+      // name it closed under is never asked for again either way).
+      if (why === "reset" || why === "retired") generations.advance(generation);
       if (!ended) report.onEnded(why);
     });
     report.onReady({
@@ -402,6 +432,11 @@ export function DemoScope({
   // Bumped when the host is reset, to start a fresh one (on the host
   // generation the reset moved every tab to).
   const [resets, setResets] = useState(0);
+  /** The resets whose browser-side state was already thrown away. */
+  const clearedResets = useRef(0);
+  // Bumped when the host retired under this page (none should), to connect
+  // to the next one — on the same data.
+  const [reconnects, setReconnects] = useState(0);
   const generations = useMemo(
     () => trackHostGenerations(scenario.id),
     [scenario.id],
@@ -411,7 +446,10 @@ export function DemoScope({
     // A reset throws away the scope's browser-side state with its data (the
     // drafts and view state its plugins kept in Web Storage, in every tab):
     // here, once the old subtree has unmounted and written its last.
-    if (resets > 0) clearStorageScope(scenario.host.id);
+    if (resets > clearedResets.current) {
+      clearStorageScope(scenario.host.id);
+      clearedResets.current = resets;
+    }
     // Started here, not in a useState initialiser: the host is a disposable
     // resource owned by this mount, so StrictMode's mount → unmount → mount
     // ends the first and keeps the second (an initialiser would start one a
@@ -423,6 +461,9 @@ export function DemoScope({
         if (why === "reset") {
           setState({ kind: "booting", progress: null });
           setResets((r) => r + 1);
+        } else if (why === "retired") {
+          setState({ kind: "booting", progress: null });
+          setReconnects((r) => r + 1);
         } else {
           setState({ kind: "stopped", message: SUPERSEDED_MESSAGE });
         }
@@ -441,7 +482,7 @@ export function DemoScope({
       // The next server (a host still booting) is not this one.
       setState({ kind: "booting", progress: null });
     };
-  }, [started, scenario, generations, resets]);
+  }, [started, scenario, generations, resets, reconnects]);
   // The scope's web plugins this page holds on demand (a page whose own
   // composition lacks the demo's apps — the standalone site), loaded alongside
   // the host's boot, once the host may start: nothing before the gate on a

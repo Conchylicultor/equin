@@ -65,8 +65,13 @@ version skew ("App updated — reload"). See `resource-runtime`'s `keySet`.
   once, or each connection of a SharedWorker (several tabs, one server). Each
   end is told `ready`, or `refused` (the boot threw a `HostRefusedError`: a
   reason for the person, e.g. data written by a newer version) or `failed`.
-  An end whose page holds a Web Lock says so (`hello`); the host drops that
-  end's sockets when the lock is released (the tab went away). `reset` (a page's
+  Every end is told `accepted` first. An end whose page holds a Web Lock says
+  so (`hello`, sent by `connectSharedHost`); the host drops that end's sockets
+  when the lock is released (the tab went away). `retire: { lock, run }` (a
+  SharedWorker host): once its last end left and every request it was
+  answering settled, it takes `lock` exclusively and, still with no end, ends
+  `retired` and runs `run` — see *A SharedWorker host's end of life* below.
+  `reset` (a page's
   Reset) runs `opts.reset`, then every end is told `ended: "reset"`; the
   returned `end(why)` tells every end `ended` from the worker's side (another
   worker took the storage over: `"superseded"`), after which the host answers
@@ -86,18 +91,44 @@ version skew ("App updated — reload"). See `resource-runtime`'s `keySet`.
   reports `failed`, `PortHostRefusedError` (its `message` for the page) when
   `refused`. `ended` resolves with the reason the host stopped serving; every
   request still waiting, and every later one, rejects `HostEndedError`.
-  `reset()` asks the host to wipe its data. Where the page has Web Locks it
-  holds one for the end until `dispose` (`hello`).
+  `reset()` asks the host to wipe its data.
 - **`attachPort(worker, port)`** hands the worker one more end (`ToHost`'s
   `attach` arm, the port transferred) that `serveOverPort` answers exactly as
   its own (requests queue until the graph is up); **`portRequester(end)`** is
   the requesting half over any such end — what `portBrowserServer` and the
   frame-serving Service Worker both send requests through.
 
+## core/: a SharedWorker host's end of life (`shared-host.ts`)
+
+A SharedWorker host is started with `extendedLifetime` (the host module's
+`startShared`): Chromium would otherwise terminate it the instant its last tab
+closes or reloads, losing whatever it was still answering or flushing (the
+demo's PGlite runs with `relaxedDurability`; dropping it costs ~25 ms a write
+and ~8 ms a read — `research/2026-11-10-framework-browser-host-end-of-life.md`).
+Left alone, an extended worker never ends, so it RETIRES itself: when no page
+holds it, it finishes its requests, closes its storage and then the worker.
+
+A worker that has called `close()` is still matched by `new SharedWorker(url,
+name)` until the browser process hears of it, and a page matched to it waits
+for good (no message, no error, no port `close`). So retiring is done under
+the Web Lock `retireLockName(name)`: the worker takes it EXCLUSIVELY, and only
+with no end; a page connects only through **`connectSharedHost({ open, name,
+passed })`**, which takes it SHARED with `ifAvailable` and holds it until the
+worker's `accepted`. Found taken, the name is retiring: `passed(name)` moves
+`name()` on (the demo: the next host generation) and it tries again. The
+connection (`{ name, port, leave }`, port not started) also holds the page's
+presence lock and sends `hello`. Without Web Locks (a test realm) it just
+connects. Limits: a browser without `extendedLifetime` (Firefox, Safari) still
+ends the worker with its last tab; a tab killed between `new SharedWorker` and
+its `hello` reaching the worker leaves an end that never leaves (the worker
+then lives until the browser ends it); a head start no scope ever takes holds
+the retire lock shared until its tab goes.
+
 The worker itself is a plugin's `bin/browser-host.ts`, built by web-artifacts
 (`browser-hosts.ts`) and imported by the page as `@browser-host/<pluginPath>`
 (typed by `core/browser-host.d.ts`: `start(): Worker`, `startShared(name):
-SharedWorker` — one worker per build and name, every tab connected to it — and
+SharedWorker` — one worker per build and name, every tab connected to it,
+through `connectSharedHost` — and
 `serviceWorkerUrl`, the frame-serving Service Worker built beside it).
 Where its state lives (memory, or IndexedDB across reloads, tabs and builds) is
 the `host-storage` sub-plugin's.
@@ -255,6 +286,7 @@ reaching the server, detach on unmount).
     - `apps/prototypes/canvas`
     - `apps/sonata/audio/piano`
     - `apps/sonata/audio/soundfont`
+    - `framework/browser-server/demo/prestart`
     - `framework/browser-server/demo/scope`
     - `framework/browser-server/host-storage`
     - `integrations/google-maps/browser-config`
@@ -277,8 +309,10 @@ reaching the server, detach on unmount).
     - `PortServerOptions`
     - `ServedHost`
     - `ServeHostOptions`
+    - `SharedHostConnection`
   - Exports (values):
     - `attachPort`
+    - `connectSharedHost`
     - `HostEndedError`
     - `HostRefusedError`
     - `pageInput`
@@ -288,6 +322,7 @@ reaching the server, detach on unmount).
     - `portRequester`
     - `reportDataProgress`
     - `reportingLoads`
+    - `retireLockName`
     - `runtimeBrowserServer`
     - `serveHost`
     - `serveOverPort`

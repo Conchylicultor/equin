@@ -13,7 +13,11 @@ the computer names it to take it back.
   `browser-server/host-storage`'s `hostStorage`): in memory, or — a
   persistent storage — its `idb://` dir, opened with `relaxedDurability` and
   adopted by the storage, which flushes it (`syncToFs`) before it records
-  anything durable and closes it before a wipe or a handoff. No `storage`: in
+  anything durable and closes it before a wipe, a handoff or the host's
+  retirement (its last tab gone — `host-storage`'s end of life). Durable mode
+  was measured and rejected: ~25 ms a write and ~8 ms a read, since IDBFS's
+  sync walks the whole data dir after every query
+  (`research/2026-11-10-framework-browser-host-end-of-life.md`). No `storage`: in
   memory (a test). `server/internal/stored-data.test.ts` reopens an on-disk
   database (`nodefs`) and applies the next version's migrations over it — a
   phased group with claimed data — keeping its rows.

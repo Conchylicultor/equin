@@ -3,18 +3,27 @@
 Which SharedWorker a demo's tabs share, and starting it before the page boots.
 
 - **The name** (`hostWorkerName`): the scenario id, then `@<generation>` once a
-  Reset moved past it. The generation is page-wide in localStorage
-  (`advanceHostGeneration` / `trackHostGenerations`); why it exists:
-  `demo/scope`'s Reset.
+  Reset — or a retiring worker — moved past it. The generation is page-wide in
+  localStorage (`advanceHostGeneration` / `trackHostGenerations`); why it
+  exists: `demo/scope`'s Reset, and a worker that is closing can still be
+  matched by its name.
+- **Connecting** (`connectDemoHost(scenarioId, hostModule, generations)` →
+  `{ connection, generation }`): `browser-server`'s `connectSharedHost` at the
+  current generation's name; a worker of that name retiring (its last tab
+  went, it is flushing and closing — `host-storage`'s end of life) is skipped
+  by moving the generation past it, so a tab never waits on a dying worker.
+  The head start's connection is handed over when there is one, still at the
+  current generation.
 - **The head start** (`prestartDemoHost(scenarioId, storage, hostModule)`), on a
   return visit only (`host-storage/stored`'s `hostDataStored(storage)`: a first
   visit waits for the gate's Enter, so nothing downloads ahead): run by a
   page's `<head>` script (`apps/demo/shell`'s `DocumentHead.Fragment` for
   `/demo`), which imports only this plugin and the host module
-  (`DemoHost.module`). It calls the host module's `prestartShared(name)`, so the
-  worker boots while the app's bundle loads; `<DemoScope>`'s `startShared` of
-  that name is handed the same worker. No SharedWorker: nothing (the scope
-  starts a dedicated worker).
+  (`DemoHost.module`). It connects as above and keeps the connection (module
+  state — the head script and the scope import this barrel by one specifier),
+  so the worker boots while the app's bundle loads; `<DemoScope>`'s
+  `connectDemoHost` is handed it. No SharedWorker: nothing (the scope starts a
+  dedicated worker).
 - Kept apart from `demo/scope` so the head script loads none of the scope's UI.
 - Limit: the worker starts only when the page's own load lets it, wherever the
   script sits. Measured 2026-11-10 (warm reloads, the shell's HTML rewritten
@@ -33,12 +42,15 @@ Which SharedWorker a demo's tabs share, and starting it before the page boots.
 
 ## Plugin reference
 
-- Description: Which SharedWorker a demo's tabs share — its name, the scenario and its Reset generation (kept page-wide, so a Reset moves every tab past the closing worker) — and starting it before the page boots (prestartDemoHost, run by the demo page's head script), so the host boots alongside the page's own bundle. Kept apart from demo/scope so that head script loads only this, not the scope's UI.
+- Description: Which SharedWorker a demo's tabs share — its name, the scenario and its Reset generation (kept page-wide, so a Reset moves every tab past the closing worker) — and connecting a tab to it (connectDemoHost: never to a worker that is retiring — its generation is skipped — and the head start's connection when there is one), started before the page boots where the page says so (prestartDemoHost, run by the demo page's head script), so the host boots alongside the page's own bundle. Kept apart from demo/scope so that head script loads only this, not the scope's UI.
 - Web:
   - Uses: `primitives/dom/web-storage.defineStore`
-  - Exports (types): `HostGenerations`
+  - Exports (types):
+    - `DemoHostConnection`
+    - `HostGenerations`
   - Exports (values):
     - `advanceHostGeneration`
+    - `connectDemoHost`
     - `hostGeneration`
     - `hostWorkerName`
     - `prestartDemoHost`

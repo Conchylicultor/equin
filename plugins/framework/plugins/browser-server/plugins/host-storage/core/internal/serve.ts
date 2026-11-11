@@ -8,6 +8,7 @@
 // build took, a local app's empty — and what it tells the person about a boot.
 
 import {
+  retireLockName,
   serveHost,
   type HostBooted,
   type PortEnd,
@@ -28,6 +29,8 @@ export interface WorkerScope extends PortEnd {
     listener: (event: MessageEvent) => void,
   ): void;
   close(): void;
+  /** A SharedWorker's name (what its pages connect by); a dedicated worker's, unused. */
+  readonly name: string;
 }
 
 export type BrowserHostStorage =
@@ -60,6 +63,11 @@ function originLabel(origin: HostStorageOrigin): string {
  * `boot` sees where the storage's data comes from (`origin`). A page's Reset
  * wipes the storage and ends the worker (the pages reconnect to a fresh one);
  * a newer build claiming the storage ends serving here first.
+ *
+ * As a SharedWorker, the host outlives its last tab (the page starts it with
+ * `extendedLifetime`) and retires once no page holds it: every request
+ * finished, the storage closed — everything flushed to IndexedDB, its lock
+ * released — then the worker (`serveHost`'s `retire`).
  */
 export function serveBrowserHost(opts: {
   scope: WorkerScope;
@@ -70,10 +78,11 @@ export function serveBrowserHost(opts: {
   // entry ran is fetching and evaluating the worker's module graph.
   const scriptMs = Math.round(performance.now());
   const { scope } = opts;
+  const shared = "onconnect" in scope;
   let storage: OpenedHostStorage | null = null;
   const served: ServedHost = serveHost({
     accept(serve) {
-      if ("onconnect" in scope) {
+      if (shared) {
         scope.addEventListener("connect", (event: MessageEvent) => {
           const port = event.ports[0]!;
           serve(port);
@@ -133,5 +142,19 @@ export function serveBrowserHost(opts: {
     onEnded: (why) => {
       if (why === "reset") scope.close();
     },
+    retire: shared
+      ? {
+          lock: retireLockName(scope.name),
+          async run() {
+            try {
+              // Everything flushed, then the lock released: the next worker
+              // opens what this one wrote.
+              await storage?.close();
+            } finally {
+              scope.close();
+            }
+          },
+        }
+      : undefined,
   });
 }

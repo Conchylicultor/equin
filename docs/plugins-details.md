@@ -28309,6 +28309,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/prototypes/canvas`
           - `apps/sonata/audio/piano`
           - `apps/sonata/audio/soundfont`
+          - `framework/browser-server/demo/prestart`
           - `framework/browser-server/demo/scope`
           - `framework/browser-server/host-storage`
           - `integrations/google-maps/browser-config`
@@ -28331,8 +28332,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PortServerOptions`
           - `ServedHost`
           - `ServeHostOptions`
+          - `SharedHostConnection`
         - Exports (values):
           - `attachPort`
+          - `connectSharedHost`
           - `HostEndedError`
           - `HostRefusedError`
           - `pageInput`
@@ -28342,6 +28345,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `portRequester`
           - `reportDataProgress`
           - `reportingLoads`
+          - `retireLockName`
           - `runtimeBrowserServer`
           - `serveHost`
           - `serveOverPort`
@@ -28362,12 +28366,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DemoHost`
               - `DemoScenario`
           - Plugins:
-            - **`prestart`** — Which SharedWorker a demo's tabs share — its name, the scenario and its Reset generation (kept page-wide, so a Reset moves every tab past the closing worker) — and starting it before the page boots (prestartDemoHost, run by the demo page's head script), so the host boots alongside the page's own bundle. Kept apart from demo/scope so that head script loads only this, not the scope's UI.
+            - **`prestart`** — Which SharedWorker a demo's tabs share — its name, the scenario and its Reset generation (kept page-wide, so a Reset moves every tab past the closing worker) — and connecting a tab to it (connectDemoHost: never to a worker that is retiring — its generation is skipped — and the head start's connection when there is one), started before the page boots where the page says so (prestartDemoHost, run by the demo page's head script), so the host boots alongside the page's own bundle. Kept apart from demo/scope so that head script loads only this, not the scope's UI.
               - Web:
                 - Uses: `primitives/dom/web-storage.defineStore`
-                - Exports (types): `HostGenerations`
+                - Exports (types):
+                  - `DemoHostConnection`
+                  - `HostGenerations`
                 - Exports (values):
                   - `advanceHostGeneration`
+                  - `connectDemoHost`
                   - `hostGeneration`
                   - `hostWorkerName`
                   - `prestartDemoHost`
@@ -28412,6 +28419,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/browser-server.HostRefusedError`
               - `framework/browser-server.PortEnd`
               - `framework/browser-server.reportDataProgress`
+              - `framework/browser-server.retireLockName`
               - `framework/browser-server.ServedHost`
               - `framework/browser-server.serveHost`
               - `framework/browser-server/host-storage/stored.ENTRIES_STORE`

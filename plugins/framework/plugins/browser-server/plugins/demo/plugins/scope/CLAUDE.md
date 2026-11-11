@@ -18,9 +18,11 @@ seed — so the unchanged app reads demo data through `useLive` /
   `browserServerTransport` over `portBrowserServer(end)`, with
   `<TransportProvider>` + `<NotificationsProvider>` around the children. The
   end is the host's SharedWorker (`startShared(scenario.id)`: every tab of
-  the demo on one server and one database), or a dedicated worker where the
-  browser has no SharedWorker. Unmount disposes the server and closes this
-  page's end. A host that fails to boot throws to the error boundary.
+  the demo on one server and one database) — connected through
+  `demo/prestart`'s `connectDemoHost`, never to a worker that is retiring (its
+  last tab went: it flushes and closes; the tab moves to the next host
+  generation) — or a dedicated worker where the browser has no SharedWorker.
+  Unmount disposes the server and leaves the connection. A host that fails to boot throws to the error boundary.
 - **A gate, where the page draws the boot** (`boot={(state) => …}`,
   `DemoBoot`: `gate` → `starting` with the worker's `HostProgress`). The
   visitor enters through the gate on every visit. Behind it, the scope asks
@@ -35,8 +37,8 @@ seed — so the unchanged app reads demo data through `useLive` /
 - **Started before the page boots, where the page says so**: a page that
   always opens a demo runs `demo/prestart`'s `prestartDemoHost` from
   its `<head>` (the /demo page: `apps/demo/shell`'s head fragment) — on a
-  return visit only, where the data is stored — so the worker boots alongside the page's own bundle; the scope's `startShared` is
-  then handed that worker (the host module's `prestartShared`).
+  return visit only, where the data is stored — so the worker boots alongside the page's own bundle; the scope's `connectDemoHost` is
+  then handed that connection.
 - **When the host will not serve this page** — it refused (its data was
   written by a newer version) or ended (`superseded`: another tab, or a newer
   build, took its storage over) — the scope shows why, with Reload; it never

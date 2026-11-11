@@ -364,6 +364,8 @@ async function openPersistent(
   let closing: Promise<void> | null = null;
   const closeKeepingLock = (): Promise<void> =>
     (closing ??= (async () => {
+      // No claim is answered from here: a claimant waits for the lock.
+      ownership.closing();
       closed = true;
       try {
         for (const r of resources) await r.close();
@@ -435,7 +437,7 @@ async function openPersistent(
     },
     close,
     async wipe() {
-      ownership.wiping();
+      ownership.closing();
       try {
         // Marked first: a wipe cut short (the tab closed) is a dead first
         // boot to the next open, which wipes again — never a `ready` record

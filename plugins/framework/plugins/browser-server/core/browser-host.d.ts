@@ -11,16 +11,11 @@ declare module "@browser-host/*" {
   /**
    * The host as a SharedWorker named `name`: every tab of this build that
    * asks for the same name connects to ONE worker (one boot, one database).
+   * Started with `extendedLifetime`, so it outlives its last tab until it
+   * retires; connect through `connectSharedHost`, never to a retiring one.
    * Only where `SharedWorker` exists — the caller checks.
    */
   export function startShared(name: string): SharedWorker;
-  /**
-   * Start the SharedWorker named `name` now, before the page asks for it, so
-   * the host boots while the page's own code still loads; the next
-   * `startShared(name)` is handed this worker. Only where `SharedWorker`
-   * exists — the caller checks.
-   */
-  export function prestartShared(name: string): void;
   /** The absolute URL of the host's frame-serving Service Worker script. */
   export const serviceWorkerUrl: string;
 }

@@ -4,6 +4,8 @@
  * see them), importable as `@plugins/framework/plugins/browser-server/e2e`.
  */
 export {
+  armHostAnswers,
   recordHostRequests,
   hostRequestsAnswered,
+  hostRequestsUnanswered,
 } from "./internal/host-requests";

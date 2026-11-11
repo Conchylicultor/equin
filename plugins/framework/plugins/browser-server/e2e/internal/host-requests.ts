@@ -10,6 +10,12 @@ import { endpointPath } from "@plugins/infra/plugins/endpoints/e2e";
  */
 interface HostRequestLog {
   answered: { method: string; pathname: string }[];
+  /** Requests sent and not answered yet, on any port. */
+  unanswered: number;
+  /** Told when `unanswered` drops back to 0 (`armHostAnswers`). */
+  onSettled: (() => void)[];
+  /** The armed wait, once `armHostAnswers` set it. */
+  armed?: Promise<void>;
 }
 
 declare global {
@@ -34,7 +40,11 @@ export async function recordHostRequests(page: Page): Promise<void> {
   if (recording.has(page)) return;
   recording.add(page);
   await page.addInitScript(() => {
-    const log: HostRequestLog = { answered: [] };
+    const log: HostRequestLog = {
+      answered: [],
+      unanswered: 0,
+      onSettled: [],
+    };
     window.__equinHostRequests = log;
     // Per port: the request ids the page posted, by id — ids are per requester.
     const sent = new WeakMap<
@@ -69,6 +79,7 @@ export async function recordHostRequests(page: Page): Promise<void> {
           method: String(m.request.method),
           pathname: new URL(m.request.url).pathname,
         });
+        log.unanswered += 1;
       }
       return (post as (...a: unknown[]) => void).call(this, message, ...rest);
     } as typeof MessagePort.prototype.postMessage;
@@ -84,7 +95,10 @@ export async function recordHostRequests(page: Page): Promise<void> {
       const req = sentOn(port).get(d.id);
       if (req === undefined) return;
       sentOn(port).delete(d.id);
+      log.unanswered -= 1;
       log.answered.push(req);
+      if (log.unanswered === 0)
+        for (const told of log.onSettled.splice(0)) told();
     };
     const add = MessagePort.prototype.addEventListener;
     MessagePort.prototype.addEventListener = function (
@@ -133,4 +147,48 @@ export async function hostRequestsAnswered<
     },
     [method, pathname] as const,
   );
+}
+
+/**
+ * How many requests the page's current document sent a browser host that it
+ * has not answered yet (`recordHostRequests` must be on). Zero: the host has
+ * every write the page made so far.
+ */
+export async function hostRequestsUnanswered(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const log = window.__equinHostRequests;
+    if (log === undefined)
+      throw new Error(
+        "host requests are not recorded on this page: call recordHostRequests before it loads",
+      );
+    return log.unanswered;
+  });
+}
+
+/**
+ * Arm a wait, in the page, for the NEXT time every request sent to a browser
+ * host from now on has been answered (`recordHostRequests` must be on); the
+ * returned function waits for it. Arm before an action, act, then await it:
+ * it resolves inside the page the instant the host's last answer arrives — no
+ * polling between the answer and whatever the script does next (closing the
+ * tab "at once").
+ */
+export async function armHostAnswers(page: Page): Promise<() => Promise<void>> {
+  await page.evaluate(() => {
+    const log = window.__equinHostRequests;
+    if (log === undefined)
+      throw new Error(
+        "host requests are not recorded on this page: call recordHostRequests before it loads",
+      );
+    const sentBefore = log.unanswered;
+    if (sentBefore !== 0)
+      throw new Error(
+        `armHostAnswers: ${sentBefore} request(s) still unanswered — arm once the host has answered them`,
+      );
+    log.armed = new Promise<void>((resolve) => log.onSettled.push(resolve));
+  });
+  return () =>
+    page.evaluate(async () => {
+      await window.__equinHostRequests!.armed;
+    });
 }
