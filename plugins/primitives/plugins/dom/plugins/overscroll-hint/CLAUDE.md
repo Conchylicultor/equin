@@ -32,7 +32,15 @@ ignored. Style and geometry are read once per frame, never on the wheel path.
 
 Gestures consumed on purpose (`defaultPrevented` — the window bubble listener
 runs after everyone else's, so it is final; e.g. graph zoom / canvas pan) and
-pinch-zoom (`ctrlKey`) are ignored.
+pinch-zoom (`ctrlKey`) are ignored. So is a touch the page claimed with
+`touch-action` — a dial, a slider, a seek bar, a canvas (`none`, or `pan-y` for
+a sideways drag): the browser never pans for it and nothing cancels its
+`touchmove` (pointer events do the work), so without this check every drag on
+such a control read as a wasted scroll and bounced the panel around it (the
+media player's speed dial shook its whole settings sheet on a phone). The
+effective `touch-action` is the intersection up the ancestor chain
+(`web/internal/touch-action.ts`); a drag control needs nothing beyond the
+`touch-action` it already declares.
 
 The surface that bounces is the nearest scroller on the chain that really
 scrolls on the axis (`scrollHeight > clientHeight` — the one the gesture ran out

@@ -397,5 +397,106 @@ await withBrowser(async (h) => {
     `top ${siteBefore.rail} → ${siteDuring.rail}`,
   );
 
+  // --- touch: a drag the page claimed with `touch-action` is not wasted ---
+  // A phone session (touch events exist), on a surface whose content fits so
+  // every unclaimed drag is wasted by construction.
+  const phone = await h.session({ touch: true });
+  await boot(phone.page, pathUrl("/"));
+  const touch = await phone.page.evaluate(async () => {
+    const frames = (n: number): Promise<void> =>
+      new Promise((res) => {
+        let left = n;
+        const step = (): void => {
+          left -= 1;
+          if (left <= 0) res();
+          else requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+      });
+    const tick = (ms: number): Promise<void> =>
+      new Promise((res) => setTimeout(() => res(), ms));
+    const pulled = (el: HTMLElement): boolean =>
+      /translate/.test(el.style.transform || "") ||
+      (el.style.top !== "" && el.style.top !== "0px") ||
+      (el.style.left !== "" && el.style.left !== "0px");
+    // A sideways or downward finger drag on `target`, held down at the end.
+    const drag = async (target: Element, dx: number, dy: number) => {
+      const at = (x: number, y: number): Touch =>
+        new Touch({ identifier: 1, target, clientX: x, clientY: y });
+      const fire = (type: string, t: Touch | null): void => {
+        target.dispatchEvent(
+          new TouchEvent(type, {
+            bubbles: true,
+            cancelable: true,
+            touches: t ? [t] : [],
+            changedTouches: [t ?? at(100 + dx * 6, 100 + dy * 6)],
+          }),
+        );
+      };
+      fire("touchstart", at(100, 100));
+      for (let i = 1; i <= 6; i++) {
+        fire("touchmove", at(100 + dx * i, 100 + dy * i));
+        await frames(1);
+      }
+      await frames(2);
+    };
+    const release = (target: Element): void => {
+      target.dispatchEvent(
+        new TouchEvent("touchend", { bubbles: true, touches: [] }),
+      );
+    };
+    const sheet = (): { box: HTMLElement; child: HTMLElement } => {
+      const box = document.createElement("div");
+      box.style.cssText =
+        "position:fixed;top:0;left:0;width:300px;height:200px;overflow:auto;z-index:99999;";
+      const child = document.createElement("div");
+      child.style.cssText = "height:50px;";
+      box.appendChild(child);
+      document.body.appendChild(box);
+      return { box, child };
+    };
+    const run = async (
+      touchAction: string,
+      dx: number,
+      dy: number,
+    ): Promise<boolean> => {
+      const { box, child } = sheet();
+      const control = document.createElement("div");
+      control.style.cssText = `height:40px;touch-action:${touchAction};`;
+      child.appendChild(control);
+      await drag(control, dx, dy);
+      const moved = pulled(child);
+      release(control);
+      await tick(600);
+      box.remove();
+      return moved;
+    };
+    // The control: an unclaimed drag bounces — retried until the hint is
+    // mounted (its Core.Root controller can land after boot resolves).
+    const until = performance.now() + 15_000;
+    let free = false;
+    while (!free && performance.now() < until) free = await run("auto", 0, -12);
+    return {
+      free,
+      freeSideways: await run("auto", -12, 0),
+      none: await run("none", -12, 0),
+      noneVertical: await run("none", 0, -12),
+      panYSideways: await run("pan-y", -12, 0),
+      panYVertical: await run("pan-y", 0, -12),
+    };
+  });
+  r.ok("touch: an unclaimed drag that scrolls nothing bounces", touch.free);
+  r.ok("touch: …sideways too", touch.freeSideways);
+  r.ok(
+    "touch: a drag on touch-action:none (a dial) never bounces",
+    !touch.none && !touch.noneVertical,
+    JSON.stringify(touch),
+  );
+  r.ok(
+    "touch: on touch-action:pan-y, a sideways drag is the page's own",
+    !touch.panYSideways,
+  );
+  r.ok("touch: …while a vertical one still bounces", touch.panYVertical);
+
   await r.finish();
 });

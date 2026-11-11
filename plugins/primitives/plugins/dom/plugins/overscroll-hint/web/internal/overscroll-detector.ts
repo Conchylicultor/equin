@@ -26,6 +26,7 @@ import {
   type BounceSurface,
 } from "./bounce-surface";
 import { createRubberBand, type RubberBand } from "./rubber-band";
+import { touchMayPan } from "./touch-action";
 
 /** Minimum dominant-axis delta (px) for a frame's batch to count. */
 const MIN_DELTA = 2;
@@ -38,6 +39,8 @@ interface Batch {
   deltaY: number;
   /** The latest gesture's target — the chain the batch is judged on. */
   target: Element;
+  /** The latest gesture was a touch (its `touch-action` says whose it is). */
+  touch: boolean;
   /** A scroller on the target's chain scrolled during the frame. */
   scrolled: boolean;
 }
@@ -97,6 +100,9 @@ export function installOverscrollHint(): () => void {
     const axis: Axis = Math.abs(b.deltaX) > Math.abs(b.deltaY) ? "x" : "y";
     const delta = axis === "x" ? b.deltaX : b.deltaY;
     if (Math.abs(delta) < MIN_DELTA) return 0;
+    // A touch the page claimed (a dial, a slider: `touch-action` forbids the
+    // pan) never scrolls by design — the touch twin of `defaultPrevented`.
+    if (b.touch && !touchMayPan(b.target, axis)) return 0;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return 0;
     if (hasRoomToScroll(b.target, axis, delta)) return 0;
 
@@ -123,12 +129,14 @@ export function installOverscrollHint(): () => void {
     deltaX: number,
     deltaY: number,
     target: EventTarget | null,
+    touch: boolean,
   ): void {
     if (!(target instanceof Element)) return;
     batch = {
       deltaX: (batch?.deltaX ?? 0) + deltaX,
       deltaY: (batch?.deltaY ?? 0) + deltaY,
       target,
+      touch,
       scrolled: batch?.scrolled ?? false,
     };
     schedule();
@@ -139,7 +147,7 @@ export function installOverscrollHint(): () => void {
   // purpose (graph zoom, canvas pan) is not a wasted one.
   function onWheel(event: WheelEvent): void {
     if (event.ctrlKey || event.defaultPrevented) return; // ctrlKey: pinch-zoom
-    record(event.deltaX, event.deltaY, event.target);
+    record(event.deltaX, event.deltaY, event.target, false);
   }
 
   function onScroll(event: Event): void {
@@ -169,7 +177,7 @@ export function installOverscrollHint(): () => void {
     const deltaY = touchY - t.clientY;
     touchX = t.clientX;
     touchY = t.clientY;
-    record(deltaX, deltaY, event.target);
+    record(deltaX, deltaY, event.target, true);
   }
 
   function onTouchEnd(event: TouchEvent): void {
