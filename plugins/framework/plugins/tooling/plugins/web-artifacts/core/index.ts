@@ -37,6 +37,10 @@ export type {
 export { pruneWebArtifactCaches } from "./internal/lease";
 export type { PruneReport } from "./internal/lease";
 export { runWebArtifactsPipeline } from "./internal/pipeline";
+export {
+  discoverStaticHostTake,
+  STATIC_HOST_ENTRY_REL,
+} from "./internal/crawl-snapshot";
 export type {
   WebArtifactsPipelineOptions,
   WebArtifactsPipelineResult,

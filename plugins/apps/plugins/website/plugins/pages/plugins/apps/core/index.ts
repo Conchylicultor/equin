@@ -1,0 +1,1 @@
+export { appsPage } from "./page";

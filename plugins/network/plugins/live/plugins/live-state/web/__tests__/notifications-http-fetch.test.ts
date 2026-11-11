@@ -123,6 +123,7 @@ describe("NotificationsClient — HTTP fetch path", () => {
       fetchImpl,
     });
     clients.push(client);
+    client.connect();
     await flush(); // elected → worktree socket created (connecting)
     const socket = hub.server.all()[0]!;
     socket.open(); // leader socket open

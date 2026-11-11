@@ -13,6 +13,7 @@ import {
   formatGenerated,
   renderBrowserHost,
   renderBrowserHostScope,
+  renderStaticHostFile,
   codegenPassOver,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { discoverCollectedDirsIn } from "@plugins/framework/plugins/tooling/plugins/collected-dir/plugins/discovery/core";
@@ -180,6 +181,23 @@ const check: Check = {
         message: `${host.generated} is out of sync with the graph inferred from the "${graph.composition}" composition (${host.declaration})${moved.length > 0 ? `:\n    ${moved.join("\n    ")}` : " — the same plugins on both sides, so what differs is their `dependsOn` edges, the providers, or the formatting."}`,
         hint: "Run `./equin build` and commit the regenerated file.",
       };
+    }
+
+    // The crawlable compositions' static-host graphs
+    // (`bin/static-host.generated.ts`), from the same derivation.
+    const staticHost = await renderStaticHostFile(ctx);
+    if (staticHost !== null) {
+      const expected = await formatGenerated({
+        file: join(root, staticHost.host.generated),
+        content: staticHost.content,
+      });
+      if ((await repo.read(staticHost.host.generated)) !== expected) {
+        return {
+          ok: false,
+          message: `${staticHost.host.generated} is missing or out of sync with the graphs inferred from the crawlable compositions (${staticHost.host.entry})`,
+          hint: "Run `./equin build` and commit the regenerated file.",
+        };
+      }
     }
     return { ok: true };
   },

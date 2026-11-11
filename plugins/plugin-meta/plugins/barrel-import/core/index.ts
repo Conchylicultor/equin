@@ -4,6 +4,7 @@ export {
   importBarrel,
   setPreBarrelImportGuard,
 } from "./internal/stubs";
+export { inlineAssetImports } from "./internal/inline-assets";
 export {
   AUTO_STUB_PACKAGES,
   AUTO_STUB_CSS,

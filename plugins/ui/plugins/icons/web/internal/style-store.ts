@@ -166,11 +166,12 @@ function chainStyleSnapshot(
   return style;
 }
 
+// Every read below is of this module's in-memory map, so a server render (a
+// static render to HTML) reads it as it stands — what its publishers wrote.
 export function useScopeIconStyle(chain: readonly string[]): IconStyle {
   const pluginScope = usePluginScopeId();
-  return useSyncExternalStore(subscribe, () =>
-    chainStyleSnapshot(pluginScope, chain),
-  );
+  const read = () => chainStyleSnapshot(pluginScope, chain);
+  return useSyncExternalStore(subscribe, read, read);
 }
 
 /**
@@ -188,7 +189,8 @@ export function useScopeIconStyles(
   // The snapshot itself is the answer, re-read on every publish. (A useMemo
   // keyed on a version it never reads is a dependency the React Compiler
   // drops: the styles froze at the first render, before any publish.)
-  return useSyncExternalStore(subscribe, () => scopeStylesSnapshot(key));
+  const read = () => scopeStylesSnapshot(key);
+  return useSyncExternalStore(subscribe, read, read);
 }
 
 const scopeStylesCache = new Map<
@@ -236,5 +238,5 @@ function wantedStyleKeys(): readonly StyleKey[] {
 
 /** Every sprite some scope can draw from right now (always including the default style's). */
 export function useWantedStyleKeys(): readonly StyleKey[] {
-  return useSyncExternalStore(subscribe, wantedStyleKeys);
+  return useSyncExternalStore(subscribe, wantedStyleKeys, wantedStyleKeys);
 }

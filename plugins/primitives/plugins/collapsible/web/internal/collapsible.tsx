@@ -23,6 +23,7 @@ import { startFold } from "./fold-clock";
 import { prefersReducedMotion } from "@plugins/primitives/plugins/css/plugins/motion/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { renderMode } from "@plugins/primitives/plugins/dom/plugins/render-mode/core";
 
 const chevronRightIcon = symbol("chevron-right");
 
@@ -229,6 +230,14 @@ export interface FoldMotionProps extends ComponentProps<"div"> {
    * into view). Not called for a fold-away, nor for content that starts open.
    */
   onOpened?: () => void;
+  /**
+   * What the closed content is. `"disclosure"` (default): content a reader
+   * opens — so a static render, which nothing can open, writes it into the
+   * markup, hidden. `"state"`: one state of a flow the fold swaps between (a
+   * form and the confirmation that replaces it once sent) — closed, it does
+   * not exist yet, so a static render leaves it out, as a live page does.
+   */
+  kind?: "disclosure" | "state";
 }
 
 /**
@@ -248,20 +257,32 @@ export function FoldMotion({
   open,
   warm = false,
   onOpened,
+  kind = "disclosure",
   children,
   ...props
 }: FoldMotionProps) {
   const { ref, present } = useFoldMotion(open, onOpened);
+  // A static render (HTML for robots, never hydrated) has no click to open a
+  // fold with, so a closed disclosure's content is written into the markup,
+  // hidden. A closed state is not content: it is left out, as live.
+  const staticRender = renderMode() === "static" && kind === "disclosure";
   // Warm and closed: the same element, so opening keeps the mounted children.
-  if (!present && !warm) return null;
+  if (!present && !warm && !staticRender) return null;
   return (
     <div
       {...props}
       ref={ref}
       data-state={open ? "open" : "closed"}
-      // Warm and closed: mounted, laid out nowhere. Inline, so no class on
-      // the box can out-rank it.
-      style={present ? props.style : { ...props.style, display: "none" }}
+      // Closed and still mounted: laid out nowhere. Static: the `hidden`
+      // attribute (the static snapshot is hidden whole anyway, so its text is
+      // what counts). Warm: an inline `display: none`, so no class on the box
+      // can out-rank it.
+      hidden={!present && staticRender ? true : undefined}
+      style={
+        present || staticRender
+          ? props.style
+          : { ...props.style, display: "none" }
+      }
       // Folding away: still painted, no longer there for focus or a reader.
       inert={!open}
     >

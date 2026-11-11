@@ -98,7 +98,12 @@ function useSavedSymbols(saved: SavedIconSprites, store: RuntimeSymbolStore) {
   );
   useEffect(() => store.installLoader(loader.request), [loader, store]);
 
-  const batches = useSyncExternalStore(loader.subscribe, loader.batches);
+  // In memory: a server render reads the batches asked for so far (none).
+  const batches = useSyncExternalStore(
+    loader.subscribe,
+    loader.batches,
+    loader.batches,
+  );
   const reads = useLive(
     runtimeSymbolsValue,
     batches.map((b) => ({

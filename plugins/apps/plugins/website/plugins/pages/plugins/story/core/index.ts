@@ -1,0 +1,1 @@
+export { storyPage } from "./page";

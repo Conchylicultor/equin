@@ -57,6 +57,7 @@ describe("NotificationsClient — heartbeat pushStallMs", () => {
       makeSocket: hub.makeSocket(tab),
     });
     clients.push(client);
+    client.connect();
     await flush(); // elected → worktree socket created (connecting)
     const socket = hub.server.all()[0]!;
     socket.open();
@@ -132,6 +133,7 @@ describe("NotificationsClient — heartbeat pushStallMs", () => {
       makeSocket: hub.makeSocket(tabA),
     });
     clients.push(first);
+    first.connect();
     await flush();
     const socket = hub.server.all()[0]!;
     socket.open();
@@ -141,6 +143,7 @@ describe("NotificationsClient — heartbeat pushStallMs", () => {
       makeSocket: hub.makeSocket(tabB),
     });
     clients.push(second);
+    second.connect();
     await flush(); // B attached to the same worker socket
     expect(second.debugSnapshot().transport.worktree.attachedTabs).toBe(2);
 

@@ -207,6 +207,28 @@ Key invariants:
   with the re-take frequency this costs).
   `map-in-sync` derives the same links (`hostSnapshotLinks`) and reports a
   snapshot the store lacks as missing.
+- **A crawlable composition's dist carries its pages' static snapshot, keyed
+  like a host snapshot** (`internal/crawl-snapshot.ts`, stage
+  `artifacts:crawl-snapshot`). Only when the build CLI passes `crawl` — a
+  composition whose row says `crawlable: true` — so every other build skips
+  the stage (0 s). The take is the repo's one `bin/static-host.ts`
+  (`discoverStaticHostTake`; codegen's `static-host-gen.ts` writes its graph
+  beside it), run once per address in a fresh Bun process with the
+  composition, an out dir and the initialized PGlite cluster
+  (`ensurePgliteCluster`, shared with the host snapshots). Its address: the
+  module-graph Merkle keys of the take, of every web barrel of the
+  composition's fleet and of every web barrel under the take's own plugin
+  (its build-only render half, in no composition) — the take loads both
+  through barrel-import, an edge no graph sees —, the files under every glob
+  root those modules declare (what the take's disk swaps read in place of the
+  bundled providers), all read off the build's repo snapshot: the working
+  tree, so an uncommitted or untracked config edit moves the address
+  (`crawl-snapshot.test.ts`), the npm
+  resolutions, `patches/`, the Bun version, the cluster's address and the
+  composition. Published as `<composition>.crawl-snapshot.<hash>`; compose
+  links it under `artifacts/` (a prune root) and each of its top-level entries
+  (`snapshot/`) at the dist root through that link — copied for a
+  materialized dist. An unchanged tree is a cache hit: no process runs.
 - **A browser host's inputs are recorded under the address they hash to.** The
   host artifact's address is the content of every repo file its build loaded
   (vite's module list), their directories' listings, each `import.meta.glob`

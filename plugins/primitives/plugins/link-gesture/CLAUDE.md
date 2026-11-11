@@ -22,6 +22,15 @@ is what keeps every such control agreeing on what a ⌘-click means.
   `undefined` nothing). `isolate: true` stops propagation of `click` and
   `auxclick` (never `mousedown` — editor drag/selection need it) before acting:
   the one answer for a chip inside a clickable row or the page editor.
+- **In a static render, `href()` runs during render** and lands in the markup as
+  `data-link` (`linkProps`, and so `activationProps` with a `LinkTarget`,
+  isolated or not, `appLinkProps`, `openPane.link`). That HTML (the website's
+  crawlable snapshot, `dom/render-mode`) is never hydrated, so no click ever
+  computes the destination; the snapshot's filter turns `[data-link]` into
+  `<a href>`. A throwing `href()` fails that render. On a live page there is no
+  `data-link` and `href()` still runs only on click. A component that forwards
+  link props by picking handlers one by one drops it — spread the whole bag
+  (`LinkChip` spreads it, then chains the handlers).
 - `linkGestureProps(open)` is the low-level form — `open({ elsewhere })` decides
   what "elsewhere" means. Only for a control whose elsewhere is not a browser tab
   at an app path (open-app's button, whose default flips between a browser tab
@@ -46,7 +55,7 @@ an explicit menu entry (`navigate(url, { newTab: true })`).
   full-screen demo at that place). Until installed, the page's route prefix.
 
 A leaf on purpose (imports only React's `MouseEvent` type, the
-`scope/install-sink` leaf, and the `pane/route-prefix` leaf, whose prefix
+`scope/install-sink` leaf, the `dom/render-mode` leaf, and the `pane/route-prefix` leaf, whose prefix
 `openInBrowserTab` puts in front of an in-app path by default so a desktop's
 link opens a desktop), so both the pane
 primitive (`useOpenPane().link`, Promote) and `apps-core/tabs`' `appLinkProps`

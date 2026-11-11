@@ -82,6 +82,7 @@ describe("C39 — an old tab's non-keyed `agent-notes-authors` read, handed the 
       makeSocket: hub.makeSocket(hub.tab()),
     });
     clients.push(client);
+    client.connect();
     await flush();
     const socket = hub.server.all()[0]!;
     socket.open();

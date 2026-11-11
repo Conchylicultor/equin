@@ -27,9 +27,16 @@ function subscribePreview(onChange: () => void): () => void {
   return previewStore.subscribe("", onChange);
 }
 
+// A server render (a static render to HTML) belongs to no tab, so no tab's
+// preview applies: it reads the user's config. (The store is session storage,
+// which does not exist outside a browser — it must not be read there.)
+function readServerPreview(): boolean {
+  return false;
+}
+
 /** Whether this tab reads the git defaults instead of the user's config. */
 export function useConfigPreview(): boolean {
-  return useSyncExternalStore(subscribePreview, readPreview);
+  return useSyncExternalStore(subscribePreview, readPreview, readServerPreview);
 }
 
 /** Turn this tab's git-defaults preview on or off. */

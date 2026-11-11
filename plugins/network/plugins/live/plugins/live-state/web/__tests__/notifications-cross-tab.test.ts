@@ -66,6 +66,7 @@ describe("NotificationsClient — cross-tab (H6)", () => {
       tabId: "tab-A",
     });
     clients.push(clientA);
+    clientA.connect();
     await flush(); // A attached → S1 connecting
     const s1 = hub.server.all()[0]!;
     s1.open();
@@ -77,6 +78,7 @@ describe("NotificationsClient — cross-tab (H6)", () => {
       tabId: "tab-B",
     });
     clients.push(clientB);
+    clientB.connect();
     await flush(); // B attached to the same open S1
     return { hub, qcA, qcB, clientA, clientB, tabA, s1 };
   }
@@ -150,6 +152,7 @@ describe("NotificationsClient — cross-tab (H6)", () => {
       tabId: "tab-A",
     });
     clients.push(clientA);
+    clientA.connect();
     await flush();
     const s1 = hub.server.all()[0]!;
     s1.open();
@@ -160,6 +163,7 @@ describe("NotificationsClient — cross-tab (H6)", () => {
       tabId: "tab-B",
     });
     clients.push(clientB);
+    clientB.connect();
     await flush();
 
     clientA.observe("kA", {}, undefined, { schema: pushSchema });

@@ -17,4 +17,7 @@ export { openHostStorage } from "./internal/open";
 export { StorageNewerThanCodeError } from "./internal/errors";
 export type { BrowserHostStorage, WorkerScope } from "./internal/serve";
 export { serveBrowserHost } from "./internal/serve";
-export { takeHostSnapshot } from "./internal/take-snapshot";
+export {
+  declareInitializedMemoryStorage,
+  takeHostSnapshot,
+} from "./internal/take-snapshot";

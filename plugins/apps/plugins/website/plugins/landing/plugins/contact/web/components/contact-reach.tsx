@@ -181,7 +181,10 @@ export function ContactReach() {
           onKeyDown={onKeyDown}
           noValidate
         >
-          <FoldMotion open={phase.kind === "compose"}>
+          {/* The form and its confirmation are two states of one flow, not
+              content a reader opens: a static render writes only the one
+              the flow is in. */}
+          <FoldMotion open={phase.kind === "compose"} kind="state">
             <Stack gap="sm">
               <Textarea
                 ref={messageRef}
@@ -253,7 +256,7 @@ export function ContactReach() {
               </Stack>
             </Stack>
           </FoldMotion>
-          <FoldMotion open={phase.kind === "sent"}>
+          <FoldMotion open={phase.kind === "sent"} kind="state">
             <SentNote replyTo={sentTo} onAnother={sendAnother} />
           </FoldMotion>
         </form>

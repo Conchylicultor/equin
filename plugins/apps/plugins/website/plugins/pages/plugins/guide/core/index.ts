@@ -1,0 +1,1 @@
+export { guidePage } from "./page";

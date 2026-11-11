@@ -4,24 +4,20 @@ import {
   readEndpointResponse,
 } from "@plugins/infra/plugins/endpoints/core";
 import { pageTransport } from "@plugins/primitives/plugins/networking/plugins/page-transport/web";
-import {
-  hydrateResource,
-  resourceDescriptorByKey,
-} from "@plugins/network/plugins/live/plugins/live-state/web";
 import { recordBootSpan } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/web";
 import { report } from "@plugins/reports/web";
 import { bootSnapshot } from "../../core";
+import { hydrateBootSnapshot } from "./hydrate";
 
 // Boot-readiness task: fetch every boot-critical resource in ONE request and seed the
 // live-state cache before first paint (no `pending` flash, no WS round-trip).
 //
 // The snapshot ships ONLY boot-critical resources (the single source is the shared
 // descriptor's `preload`, which `Resource.Declare` derives) and omits any whose loader failed this
-// boot, so ITS KEYS are the authoritative set to hydrate. We resolve each key to its
-// client descriptor via the live-state descriptor registry (populated when each
-// descriptor module is evaluated, which happens before boot tasks run). A snapshot key
-// with no registered descriptor means a boot-critical resource whose descriptor was not
-// in the eager web import graph — a real bug, surfaced loudly rather than silently lost.
+// boot, so ITS KEYS are the authoritative set to hydrate (`hydrateBootSnapshot`). A
+// snapshot key with no registered descriptor means a boot-critical resource whose
+// descriptor was not in the eager web import graph — a real bug, surfaced loudly rather
+// than silently lost.
 export async function runBootSnapshot(): Promise<void> {
   const reqStart = performance.now();
   // Boot belongs to the page: the snapshot always hydrates from the page's own
@@ -52,45 +48,7 @@ export async function runBootSnapshot(): Promise<void> {
       detail: t?.source,
     });
   }
-  const missing: string[] = [];
-  const failed: string[] = [];
-  // One bad entry (a value its client schema rejects) must not stop every
-  // entry after it: each hydrate is isolated, and a failure is reported.
-  const hydrate = (
-    d: NonNullable<ReturnType<typeof resourceDescriptorByKey>>,
-    params: Record<string, string> | undefined,
-    value: unknown,
-  ) => {
-    try {
-      hydrateResource(d, params, value);
-    } catch (err) {
-      failed.push(
-        `${d.key} ${JSON.stringify(params ?? {})}: ${err instanceof Error ? err.message : String(err)}`,
-      );
-    }
-  };
-  for (const key of Object.keys(resources)) {
-    const d = resourceDescriptorByKey(key);
-    if (!d) {
-      missing.push(key);
-      continue;
-    }
-    // A descriptor with defaultParams (a windowed resource's default window)
-    // hydrates at that tuple — the same one the server's fallback loader used
-    // and the one a bare useLive(c) subscribes to. Plain global resources
-    // keep the param-less tuple.
-    hydrate(d, d.defaultParams, resources[key]);
-  }
-  // An enumerated preload (a parameterized value) ships every tuple with its
-  // params — canonical, the same tuple its readers subscribe.
-  for (const [key, entries] of Object.entries(tuples)) {
-    const d = resourceDescriptorByKey(key);
-    if (!d) {
-      missing.push(key);
-      continue;
-    }
-    for (const e of entries) hydrate(d, e.params, e.value);
-  }
+  const { missing, failed } = hydrateBootSnapshot({ resources, tuples });
   // The "first commit after boot snapshot" instant (FIRST_DATA_COMMIT_ID) is
   // armed by App itself, right before it swaps the boot screen for the app: the
   // boot screen commits too (its elapsed clock), so "the next commit after this

@@ -20,7 +20,7 @@ installer beside another's source. The installer's steps are written out in
 
 ## Plugin reference
 
-- Description: The download page of the equin website: the /website/download pane with the one install command (or, for an agent, a prompt with deep links into Claude Code and the Claude app), what to do once it runs, and its Download nav link.
+- Description: The download page of the equin website: the /website/download pane with the one install command (or, for an agent, a prompt with deep links into Claude Code and the Claude app), what to do once it runs, and its Download nav link. The download page of the equin website on the server: its sitemap entry (WebsitePages.Page).
 - Web:
   - Contributes:
     - `Pane.Register` "website-download"
@@ -44,6 +44,12 @@ installer beside another's source. The installer's steps are written out in
     - `primitives/css/toggle-chip.SegmentedControl`
     - `ui/icons.Icon`
   - Exports (values): `downloadPane`
+- Server:
+  - Contributes: `apps.website.crawlable.page` "/website/download"
+  - Uses: `apps/website/crawlable.WebsitePages`
+- Core:
+  - Uses: `apps/website/crawlable.defineWebsitePage`
+  - Exports (values): `downloadPage`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --border`

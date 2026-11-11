@@ -1522,6 +1522,16 @@ func newReverseProxy(socketPath string) *httputil.ReverseProxy {
 	origDirector := rp.Director
 	rp.Director = func(r *http.Request) {
 		origDirector(r)
+		// The backend is addressed as "backend", so the Host the visitor typed
+		// travels as X-Forwarded-Host (always the gateway's own word: a
+		// client's value is overwritten) and the scheme as X-Forwarded-Proto —
+		// kept when a TLS proxy in front (Caddy) set it, else http, the only
+		// scheme the gateway speaks. What a backend that writes absolute URLs
+		// (crawlable's robots.txt / sitemap.xml) builds its origin from.
+		r.Header.Set(forwardedHostHeader, r.Host)
+		if r.Header.Get(forwardedProtoHeader) == "" {
+			r.Header.Set(forwardedProtoHeader, "http")
+		}
 		r.Host = target.Host
 	}
 	rp.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {

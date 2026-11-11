@@ -1,0 +1,1 @@
+export { visionPage } from "./page";

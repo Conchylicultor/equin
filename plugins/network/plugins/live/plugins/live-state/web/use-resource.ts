@@ -111,6 +111,12 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   const slot = pipelines.of(transport);
   const pipeline = slot.get();
   useEffect(() => slot.retain(), [slot]);
+  // Open the socket in an effect, never at render: a static render of this
+  // tree (no effects) reads its hydrated cache with no socket. Idempotent —
+  // the page's pipeline was already connected by the boot hoist.
+  useEffect(() => {
+    pipeline.client.connect();
+  }, [pipeline]);
   return createElement(NotificationsClientProvider, {
     client: pipeline.client,
     children,
@@ -245,8 +251,10 @@ export function useLiveSocketKindOf(): (
 let pageSlot: PipelineSlot | null = null;
 
 // Transport hoist: construct the page's NotificationsClient at the VERY start
-// of boot — before any plugin chunk is evaluated — so its leader-election
-// `navigator.locks.request` is queued at t≈0. The lock grant callback (which
+// of boot — before any plugin chunk is evaluated — and the page root calls
+// `.connect()` on it at once, so its leader-election `navigator.locks.request`
+// is queued at t≈0 (constructing alone opens no socket: a static render builds
+// this pipeline too, and must not connect). The lock grant callback (which
 // calls `new WebSocket()` inside SharedWebSocket) then fires during the first
 // main-thread yield (a `loadPlugins` await gap) and the socket opens *during*
 // boot instead of ~8s later, after the full app mount. It is the pipeline of

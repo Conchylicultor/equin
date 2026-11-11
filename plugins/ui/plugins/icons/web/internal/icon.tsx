@@ -180,25 +180,28 @@ export function Icon({ icon, active = false, title, ...rest }: IconProps) {
   const subscribe = useSubscribeIconStores(runtime);
   const resolve = () => resolveIconDrawing(icon, style, active, runtime);
   // Plain strings out of the store: an icon re-renders only when what it
-  // draws, or what it waits for, changes.
-  const id = useSyncExternalStore(
-    subscribe,
-    () => resolve().drawing?.id ?? null,
-  );
-  const wanted = useSyncExternalStore(subscribe, () =>
-    wantsKey(resolve().wants),
-  );
-  const inline = useSyncExternalStore(subscribe, () =>
-    inlineGlyphMarkup(resolve().drawing?.source),
-  );
+  // draws, or what it waits for, changes. Every store `resolve` reads is in
+  // memory, so a server render (a static render to HTML) reads each as it
+  // stands — the same getter serves both.
+  const readId = () => resolve().drawing?.id ?? null;
+  const id = useSyncExternalStore(subscribe, readId, readId);
+  const readWanted = () => wantsKey(resolve().wants);
+  const wanted = useSyncExternalStore(subscribe, readWanted, readWanted);
+  const readInline = () => inlineGlyphMarkup(resolve().drawing?.source);
+  const inline = useSyncExternalStore(subscribe, readInline, readInline);
   // The `<use>`d symbol's masks are rendered only while an icon draws it.
   useSheetResources(inline === null ? id : null);
   // An id no other icon has, for an inline active form's masks.
   const maskIds = `icon-${useId().replace(/[^\w-]/g, "")}`;
-  const gapFamily = useSyncExternalStore(subscribe, () => {
+  const readGapFamily = () => {
     const source = resolve().drawing?.source;
     return source?.kind === "gap" ? source.family : null;
-  });
+  };
+  const gapFamily = useSyncExternalStore(
+    subscribe,
+    readGapFamily,
+    readGapFamily,
+  );
   useEffect(() => {
     if (gapFamily === null || icon.kind !== "symbol" || previewing) return;
     reportIconFamilyGap({ family: gapFamily, name: icon.name });

@@ -246,6 +246,16 @@ the list into the composition identity (`{ id, home, unlisted }`, only spelled
 when non-empty) of every registry and browser-host scope. Engine-opaque:
 `manifestItemToManifest` drops it.
 
+## `crawlable` — whether a build snapshots the composition's pages
+
+`crawlable` (a bool field, `false` on every row but `website`) declares that a
+build of the composition takes a static snapshot of its pages for robots
+(`apps/website/crawlable`; web-artifacts' crawl-snapshot stage). Codegen
+derives the take's graph for exactly these rows (`static-host-gen.ts`), and
+the build CLI passes `crawl` for exactly these compositions — so main's build
+and an ordinary worktree's pay nothing. Engine-opaque:
+`manifestItemToManifest` drops it.
+
 ## Studio data: server + web runtimes
 
 Beyond the registry, this plugin ships the **Studio closure data**:

@@ -1,3 +1,4 @@
+import { renderMode } from "@plugins/primitives/plugins/dom/plugins/render-mode/core";
 import { withActiveRoutePrefix } from "@plugins/primitives/plugins/pane/plugins/route-prefix/web";
 import { defineInstallSink } from "@plugins/primitives/plugins/scope/plugins/install-sink/web";
 import type { MouseEvent } from "react";
@@ -35,6 +36,14 @@ export interface LinkGestureProps {
   onClick(e: MouseEvent): void;
   onAuxClick(e: MouseEvent): void;
   onMouseDown(e: MouseEvent): void;
+  /**
+   * The destination's app path, written into the markup ONLY in a static
+   * render (`dom/render-mode`): that HTML is never hydrated, so no click ever
+   * runs `href()`, and a robot reading it learns where the control leads from
+   * this attribute (the snapshot turns `[data-link]` into `<a href>`). Absent
+   * on a live page, where `href()` stays a click-time thunk.
+   */
+  "data-link"?: string;
 }
 
 /**
@@ -47,12 +56,20 @@ export interface LinkGestureProps {
  * relative to what is on screen (a pane pushed beside the caller) is computed
  * against the screen the user clicked on, not the one this control rendered in.
  * It returns an app path (`/agents/c/42`), resolved against this origin.
+ *
+ * The one exception: in a static render (`dom/render-mode`) — HTML that is
+ * never hydrated, so never clicked — `href()` runs during render and lands in
+ * `data-link`, since the markup is all a robot reads.
  */
 export function linkProps({ open, href }: LinkTarget): LinkGestureProps {
-  return linkGestureProps(({ elsewhere, gesture }) => {
+  const handlers = linkGestureProps(({ elsewhere, gesture }) => {
     if (elsewhere) openInBrowserTab(href());
     else open(gesture);
   });
+  // A static render is never clicked: the destination goes in the markup, the
+  // one place a robot can read it. A throwing href() fails that render loudly.
+  if (renderMode() === "static") return { ...handlers, "data-link": href() };
+  return handlers;
 }
 
 /**
@@ -104,6 +121,9 @@ export function activationProps(
       props.onAuxClick(e);
     },
     onMouseDown: props.onMouseDown,
+    ...(props["data-link"] === undefined
+      ? {}
+      : { "data-link": props["data-link"] }),
   };
 }
 

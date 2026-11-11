@@ -6,6 +6,7 @@ import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { useTransitionHold } from "@plugins/primitives/plugins/css/plugins/motion/web";
+import { renderMode } from "@plugins/primitives/plugins/dom/plugins/render-mode/core";
 import "./loading.css";
 
 export type LoadingVariant = "text" | "spinner" | "rows" | "cards" | "block";
@@ -18,6 +19,25 @@ export interface LoadingProps {
   /** Skeleton item count for `rows` (default 6) and `cards` (default 8). */
   count?: number;
   className?: string;
+}
+
+/**
+ * A loading state reached a static render (`dom/render-mode`: HTML for
+ * robots, written once and never hydrated). Nothing will ever replace it there,
+ * so the page would ship "Loading…" as its content: the render fails instead,
+ * and the static renderer names the pane and the component path.
+ */
+export class StaticLoadingError extends Error {
+  constructor(variant: LoadingVariant, label: ReactNode) {
+    const what =
+      typeof label === "string" || typeof label === "number"
+        ? ` ("${label}")`
+        : "";
+    super(
+      `<Loading variant="${variant}">${what} rendered in a static render: what it waits for is not there, and a static render is never hydrated, so the loading state would ship as the page's content. Give the static render the data (the boot snapshot) or render the content without waiting.`,
+    );
+    this.name = "StaticLoadingError";
+  }
 }
 
 /** The atomic shimmer block every skeleton variant is built from. */
@@ -41,6 +61,9 @@ function Shimmer({ className }: { className?: string }) {
  * holds an open view transition (`useTransitionHold` — a pane morph), so the
  * morph grows into the content once it lands, within the morph's budget,
  * rather than into a box that fills in after.
+ *
+ * In a static render it throws `StaticLoadingError`: a loading state there
+ * would never be replaced.
  */
 export function Loading({
   variant = "text",
@@ -48,6 +71,7 @@ export function Loading({
   count,
   className,
 }: LoadingProps): ReactNode {
+  if (renderMode() === "static") throw new StaticLoadingError(variant, label);
   useTransitionHold(true);
   switch (variant) {
     case "text":

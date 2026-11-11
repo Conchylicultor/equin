@@ -105,6 +105,14 @@ export interface HostGraphInputs {
   bundleBarrels: readonly string[];
   /** The host providers' server barrels (`hostProviderServerBarrels`). */
   candidateBarrels: readonly string[];
+  /**
+   * Whether a portable server barrel the graph's code loads joins the graph
+   * (to a fixpoint) instead of failing the guard. A browser host's graph is
+   * its page's scope, so a barrel outside the composition is an error there;
+   * a static host renders the composition and boots whatever its graph's code
+   * needs (a provider's own dependencies), so it admits them.
+   */
+  admitReached?: boolean;
   read(path: string): Promise<string | null>;
   /**
    * Which server barrels are portable, and why one is not
@@ -298,14 +306,27 @@ export async function resolveHostGraph(
       provides: providedServiceNames(await source(barrel)),
     });
   }
-  // Providers to a fixpoint: a provider's own code may declare a service.
+  // Providers to a fixpoint: a provider's own code may declare a service
+  // (and, when admitted, a portable barrel the graph loads may too).
   for (;;) {
     const names = hostServicesByName(declared.values());
-    const added = candidates.filter(
-      (c) => !members.has(c.barrel) && c.provides.some((n) => names.has(n)),
-    );
+    const added = candidates
+      .filter(
+        (c) => !members.has(c.barrel) && c.provides.some((n) => names.has(n)),
+      )
+      .map((c) => c.barrel);
+    if (inputs.admitReached) {
+      for (const module of reached.keys()) {
+        if (
+          SERVER_BARREL_RE.test(module) &&
+          !members.has(module) &&
+          portable(module)
+        )
+          added.push(module);
+      }
+    }
     if (added.length === 0) break;
-    for (const c of added) members.add(c.barrel);
+    for (const b of added) members.add(b);
     await measure();
   }
 
@@ -507,6 +528,21 @@ export async function renderBrowserHost(
   );
 }
 
+/**
+ * One host graph entry as a `ServerRegistryEntry` literal: its server barrel
+ * behind a static `import()` thunk (so a module graph walking the file sees
+ * every barrel the host can boot), `dependsOn` kept to the graph.
+ */
+export function hostEntryLiteral({
+  pluginPath,
+  dependsOn,
+}: {
+  pluginPath: string;
+  dependsOn: readonly string[];
+}): string {
+  return `{ pluginPath: ${JSON.stringify(pluginPath)}, id: ${JSON.stringify(pluginPath.split("/plugins/").join("."))}, loader: () => import(${JSON.stringify(`@plugins/${pluginPath}/server`)}), dependsOn: ${JSON.stringify(dependsOn)}, core: null }`;
+}
+
 /** {@link renderBrowserHost}'s text, from the graph's entries and providers. */
 function renderHostGraphFile(
   composition: string,
@@ -522,11 +558,7 @@ function renderHostGraphFile(
   ];
   // `core: null` throughout: the host is one bundle, every module it can reach
   // is already in it, so there is no cold core barrel to warm.
-  for (const { pluginPath, dependsOn } of entries) {
-    lines.push(
-      `  { pluginPath: ${JSON.stringify(pluginPath)}, id: ${JSON.stringify(pluginPath.split("/plugins/").join("."))}, loader: () => import(${JSON.stringify(`@plugins/${pluginPath}/server`)}), dependsOn: ${JSON.stringify(dependsOn)}, core: null },`,
-    );
-  }
+  for (const entry of entries) lines.push(`  ${hostEntryLiteral(entry)},`);
   lines.push(
     "];",
     "",
@@ -743,7 +775,7 @@ function ownOutputs(host: BrowserHostDecl): ReadonlyMap<string, string> {
  * `written` overlays files whose content is not the file set's. Every module
  * is a member of the file set: an import resolving to none throws, naming it.
  */
-async function bundledClosureOf(
+export async function bundledClosureOf(
   repo: RepoFiles,
   entries: readonly string[],
   written: ReadonlyMap<string, string>,

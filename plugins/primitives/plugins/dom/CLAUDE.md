@@ -17,6 +17,8 @@ Reach for:
 | To bring an element into view **because it just became the active one** | `scroll-reveal` |
 | To put on the clipboard what an element **stands for**, not what it shows | `copy-source-text` |
 | To know whether a **gesture a chrome surface caught is its own** (not bubbled from a portal, not in text entry) | `gesture-origin` |
+| To know whether there is a **live document at all**, or this is one static render to HTML for robots (never hydrated) | `render-mode` |
+| To **render a pane once to HTML** for robots, and filter it to its semantic document | `static-render` |
 
 Five of the seven are the single sanctioned home for an idiom a lint rule bans everywhere
 else, so a new need is a reason to extend the primitive, never to hand-roll a copy beside

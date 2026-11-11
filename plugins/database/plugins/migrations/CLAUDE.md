@@ -725,6 +725,7 @@ only agreement that matters.
   - Imported by:
     - `database`
     - `database/migrations/bundled-source`
+    - `framework/browser-server/bun-host`
     - `framework/cli/migrations`
     - `framework/cli/regen-migrations`
 - Exemptions:

@@ -9,6 +9,7 @@ import { zLayerClass } from "@plugins/primitives/plugins/css/plugins/z-layers/we
 import type { ZStackLayer } from "@plugins/primitives/plugins/css/plugins/z-layers/plugins/stack/web";
 import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { PortalHost } from "@plugins/primitives/plugins/overlay/plugins/portal-host/web";
+import { renderMode } from "@plugins/primitives/plugins/dom/plugins/render-mode/core";
 import { useViewportEscape } from "./use-viewport-escape";
 import { useZStackIndex } from "./use-z-stack-index";
 
@@ -69,11 +70,17 @@ export interface ViewportOverlayProps extends OverlayBodyProps {
  * needs something else entirely (see the co-located
  * `web/__tests__/portal-toggle-remounts.test.tsx` and the
  * `no-portal-toggle` rule).
+ *
+ * **In a static render** (`dom/render-mode`: HTML for robots, never hydrated)
+ * it draws nothing: there is no `document.body` to portal into, and what floats
+ * over the viewport (a scrim, a popover panel, a picker) is not the page's
+ * content.
  */
 export function ViewportOverlay({
   layer = "popover",
   ...props
 }: ViewportOverlayProps) {
+  if (renderMode() === "static") return null;
   return typeof layer === "string" ? (
     <OverlayRoot layerClass={zLayerClass(layer)} name={layer} {...props} />
   ) : (

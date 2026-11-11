@@ -32,6 +32,7 @@ See the top-level [`CLAUDE.md`](../CLAUDE.md) for overall architecture and [`ser
 /gateway/*       → gateway's own API (intercepted before proxying)
 /api/*           → proxy to backend (lazy-spawn if needed)
 /ws/*            → proxy to backend (WebSocket upgrade via http.Hijacker)
+/robots.txt, /sitemap.xml → proxy to backend (exact paths only: backendRootPaths)
 everything else  → static file from web/dist (SPA fallback for extensionless paths);
                    serving the shell to a document navigation also starts the backend in the background
 ```
@@ -44,6 +45,47 @@ everything else  → static file from web/dist (SPA fallback for extensionless p
 carries an ETag hashed from them (still `no-cache`: unchanged → 304). No file,
 or one this gateway cannot read (logged at error) → the plain shell. An
 explicit `/index.html` still gets `http.ServeFile`'s redirect.
+
+**A crawlable composition's shell carries its page's static snapshot**
+(`snapshot.go`; design: `research/2026-11-10-global-website-crawlable-v3.md`).
+When `<web>/snapshot/manifest.json` (crawlable's `SnapshotManifestSchema`,
+mirrored strictly: unknown fields refused) lists the request path — cleaned,
+trailing slash dropped, query ignored — `serveShell` replaces the shell's
+`<title>`, adds `<meta name="description">`, `<link rel="canonical">` (origin
+from `Host` + `X-Forwarded-Proto`, http by default; the href is the manifest
+key) and the hiding rule (`html.js #equin-snapshot{display:none}` plus the
+script setting `js`) before `</head>`, and the fragment file wrapped in
+`<div id="equin-snapshot">` right after `<div id="root"></div>`. Title,
+description and href are HTML-escaped; the fragment is the build's own HTML,
+inserted verbatim (UTF-8). It composes with the document head (both splices,
+one ETag over the final bytes, prefix `sh-`). The manifest and every fragment
+are read together from the RESOLVED dist (`EvalSymlinks` of the `web`
+symlink) and cached per web dir until the resolved dist or the manifest's
+inode/mtime changes — a build is a symlink swap, so it is always a miss; a
+shell request otherwise costs a readlink and a stat. No manifest → the plain
+shell. **An unusable snapshot is a 500, never the plain shell** (logged once
+per revision): a malformed manifest fails every shell of that dist (which
+paths it lists is unknowable), a listed page whose fragment is missing fails
+that path only, as does a listed page on a shell with no root div. Serving the
+plain shell instead would look fine in a browser while silently hiding the
+page from every crawler. The build must write the fragments before the
+manifest (renamed into place), inside one dist. **Bare `/` is a 301 to the
+manifest's `home`** (the composition's home app's base path, query kept),
+when it names one: the app redirects `/` only once its JS runs, so a crawler
+would otherwise read an empty shell at the site's most-linked address. `home`
+is checked as strictly as the schema: a page path other than `/` that `pages`
+lists (null refused; absent = no redirect).
+
+`/robots.txt` and `/sitemap.xml` are forwarded to the backend whatever the
+dist holds (the `crawlable` server plugin answers, 404 with no pages). Every
+proxied HTTP request carries `X-Forwarded-Host` (the visitor's `Host`,
+overwriting a client value — the backend itself is addressed as `backend`) and
+`X-Forwarded-Proto` (a front proxy's value kept, else `http`); see
+`newReverseProxy`.
+
+The running gateway is a shared binary `./equin build` does not rebuild: these
+take effect locally only once the user runs `./equin start --force` (a release
+bundle carries its own gateway).
 
 `/api/*` and `/ws/*` are the same prefixes as the Vite dev proxy in `web/vite.config.ts`.
 
@@ -158,6 +200,7 @@ gateway/
 ├── logrelay.go    # Relay mode (`gateway -log-relay <path>`): a supervised daemon's output through a rotating writer
 ├── namespace_logs.go # A namespace's log channel deleted with its registry dir (on unregister, and a boot sweep)
 ├── document_head.go # The backend-rendered <head> fragment spliced into the SPA shell
+├── snapshot.go    # A crawlable dist's static page snapshot (manifest + fragments) spliced into the shell
 ├── encoding.go    # Content-encoding of statics: precompressed-sidecar negotiation, on-the-fly gzip of the spliced shell
 ├── principal.go   # principalOf: owner/anonymous verdict, X-Equin-Principal stamp, cross-site refusal
 ├── content.go     # the content host: <item>.content.localhost/<ns>/api/… stamped `content`, nothing else served

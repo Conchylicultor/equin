@@ -28,6 +28,12 @@ plugin:
   there is no second list to keep in sync and the old silent-drift class (forget a
   client `Hydrate` and that list quietly loses pre-paint hydration) is gone.
 
+**One hydrate path — `hydrateBootSnapshot(snapshot)`** (web): resolves every
+snapshot key, hydrates it, and returns `{ missing, failed }` for the caller to
+surface. The boot task reports them; a static render
+(`primitives/dom/static-render`) throws on `failed`. A snapshot never reaches the
+cache any other way.
+
 **Invariant:** a boot-critical resource's descriptor must sit in the **eager web
 import graph** so it is registered before the boot task runs. This holds today
 because a boot-critical resource is, by definition, read by boot-mounted UI, which
@@ -117,6 +123,10 @@ How it works:
     - `primitives/networking/page-transport.pageTransport`
     - `primitives/perfs/boot-trace.recordBootSpan`
     - `reports.report`
+  - Exports (types):
+    - `BootSnapshotHydration`
+    - `BootSnapshotValues`
+  - Exports (values): `hydrateBootSnapshot`
 - Server:
   - Uses:
     - `infra/endpoints.implement`
@@ -130,7 +140,9 @@ How it works:
   - Exports (types): `BootSnapshotSource`
   - Exports (values): `bootSnapshot`
 - Cross-plugin:
-  - Imported by: `debug/profiling/boot-bench`
+  - Imported by:
+    - `debug/profiling/boot-bench`
+    - `primitives/dom/static-render`
   - Endpoint callers:
     - `boot-bench`
     - `live-state`

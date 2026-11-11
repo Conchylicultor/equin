@@ -29,6 +29,14 @@ this primitive (a hand-rolled skeleton is not marked). The agent browser's recor
 (`infra/mcp/browser`, `server/internal/record-call.ts`) before filming a call's
 result.
 
+## In a static render: an error, never markup
+
+In a static render (`dom/render-mode`: the crawlable website's HTML, never
+hydrated) `Loading` throws a `StaticLoadingError` naming its variant and label
+— nothing would ever replace the loading state there, so it would ship as the
+page's content. The static renderer turns it into its `StaticRenderError`,
+naming the pane, the path and the component path.
+
 ## Division of labor
 
 - **`Loading`** — the loading state (this plugin).

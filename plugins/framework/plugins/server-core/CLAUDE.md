@@ -670,13 +670,13 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `validatePersistedValue`
     - `withNotifyBatch`
 - Cross-plugin:
-  - Imported by: 109 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 110 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra` ×27
     - `debug` ×13
     - `conversations` ×11
     - `tasks` ×10
     - `database` ×9
-    - `apps` ×6
+    - `apps` ×7
     - `network` ×5
     - `reports` ×5
     - `page` ×3

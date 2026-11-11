@@ -171,6 +171,8 @@ export function useManifestActions(): ManifestActions {
           // a bundle with apps but no home, so the gap is loud, not load order.
           home: "",
           unlisted: [],
+          // A new composition takes no crawl snapshot; set it via config edit.
+          crawlable: false,
           ...fields,
         };
         next = [...items, newItem];

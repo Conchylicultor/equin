@@ -165,7 +165,12 @@ export function useAssetSrcs(
   const transport = useTransport();
   const store = blobAssets.of(transport);
   // The answer is read from this snapshot, never from the store: see BlobAssets.
-  const states = useSyncExternalStore(store.subscribe, store.snapshot);
+  // The snapshot is in memory, so a server render reads it as it stands.
+  const states = useSyncExternalStore(
+    store.subscribe,
+    store.snapshot,
+    store.snapshot,
+  );
   // The paths to fetch, as one string: the effect follows the paths, never the
   // identity of an array or of AssetPath objects a render rebuilt.
   const toFetch = assets

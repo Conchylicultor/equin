@@ -34,7 +34,9 @@ export function Timeline({
         currentTime={currentTime}
         duration={duration}
         buffered={buffered}
-        video={el instanceof HTMLVideoElement ? el : null}
+        // `el` first: no element (a static render) means no DOM, and no
+        // `HTMLVideoElement` class to test against.
+        video={el !== null && el instanceof HTMLVideoElement ? el : null}
         onSeek={onSeek}
         onDragChange={onSeekDrag}
       />

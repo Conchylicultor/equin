@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import {
   Button,
   ControlSizeProvider,
+  cn,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -17,9 +18,15 @@ import {
   requestPipWindow,
 } from "../internal/document-pip";
 import { mediaPlayerThemeScope } from "../internal/theme";
-import { createPlayerHost, placeHost, removeHost } from "../internal/media-ops";
+import {
+  createPlayerHost,
+  placeHost,
+  PLAYER_HOST_CLASS,
+  removeHost,
+} from "../internal/media-ops";
 import { Player } from "./player";
 import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
+import { renderMode } from "@plugins/primitives/plugins/dom/plugins/render-mode/core";
 
 const pipIcon = symbol("picture-in-picture-alt");
 
@@ -53,8 +60,63 @@ export interface MediaPlayerProps {
  * into a Document Picture-in-Picture window, and the page keeps a
  * placeholder with "Bring back". Where the browser has no such window or
  * refuses it, the video's own picture in picture is used instead.
+ *
+ * In a static render (`dom/render-mode`: HTML for robots, never hydrated) only
+ * the media is written, in place, captioned by its label — no portal, no
+ * controls, no picture in picture: there is no document to mint the host in,
+ * no window to ask what it offers, and no playback for a control to report.
  */
-export function MediaPlayer({
+export function MediaPlayer(props: MediaPlayerProps) {
+  return renderMode() === "static" ? (
+    <StaticMediaPlayer {...props} />
+  ) : (
+    <LiveMediaPlayer {...props} />
+  );
+}
+
+/**
+ * The player in a static render: the media itself — its file, its poster, its
+ * label as the caption — and none of the controls. A control's readout (the
+ * pill's times, the seek bar) is the state of a playback that never happens in
+ * HTML nobody hydrates; to a robot it is noise, not content.
+ */
+function StaticMediaPlayer({
+  kind,
+  src,
+  label,
+  poster,
+  className,
+}: MediaPlayerProps) {
+  return (
+    <div className="mp-slot">
+      <figure
+        className={cn(PLAYER_HOST_CLASS, "mp", className)}
+        data-kind={kind}
+      >
+        {kind === "video" ? (
+          <video
+            className="mp-media"
+            src={src}
+            poster={poster}
+            aria-label={label}
+            preload="none"
+            playsInline
+          />
+        ) : (
+          <audio
+            className="mp-media"
+            src={src}
+            aria-label={label}
+            preload="none"
+          />
+        )}
+        <figcaption className="sr-only">{label}</figcaption>
+      </figure>
+    </div>
+  );
+}
+
+function LiveMediaPlayer({
   kind,
   src,
   label,

@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-primitives-dom-render-mode",
+  "description": "Whether this process renders the app live in a browser or once, statically, to HTML for robots (never hydrated): renderMode() is \"live\" unless a static-render process declared \"static\" (declareRenderMode) before loading any app module.",
+  "private": true,
+  "version": "0.0.1"
+}

@@ -46,6 +46,7 @@ describe("NotificationsClient — patch frames", () => {
       makeSocket: hub.makeSocket(hub.tab()),
     });
     clients.push(client);
+    client.connect();
     await flush();
     const socket = hub.server.all()[0]!;
     socket.open();

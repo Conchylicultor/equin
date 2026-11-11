@@ -86,6 +86,7 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
       makeSocket: hub.makeSocket(tab),
     });
     clients.push(client);
+    client.connect();
     await flush(); // elected → startLeading → worktree socket created (connecting)
     const socket = hub.server.all()[0]!;
     socket.open(); // leader socket open → replaySubs (no subs yet)
@@ -375,6 +376,7 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
       tabId: "tab-X",
     });
     clients.push(client);
+    client.connect();
     await flush();
     const socket = hub.server.all()[0]!;
     socket.open();
@@ -412,6 +414,7 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
       makeSocket: hub.makeSocket(tab),
     });
     clients.push(client);
+    client.connect();
     await flush();
     const socket = hub.server.all()[0]!;
     socket.open();

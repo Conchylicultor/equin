@@ -20,6 +20,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { PopupOpenScope } from "@plugins/primitives/plugins/overlay/plugins/popup-open/web";
+import { renderMode } from "@plugins/primitives/plugins/dom/plugins/render-mode/core";
 import {
   BarFormsContext,
   BarRegionAttrsContext,
@@ -57,6 +58,10 @@ export interface AdaptiveBarItemProps {
  *   a primitive nobody composes, and a host that wraps its actions in
  *   `AdaptiveBar.Item` unconditionally (a pane header does) must render the
  *   same thing outside a bar.
+ * - **a static render** (`dom/render-mode`: HTML for robots, never hydrated) —
+ *   the occupant's container rendered IN PLACE, at its natural (slot) order, at
+ *   full form. Nothing will ever measure or relocate it, so there is nothing to
+ *   portal for — and a static render has no DOM to mint the container in.
  * - **otherwise** — the portalled host below.
  *
  * Crossing between transparent and portalled remounts the widget. That is not
@@ -71,6 +76,13 @@ export function AdaptiveBarItem({
 }: AdaptiveBarItemProps): ReactElement {
   const registry = useContext(BarRegistryContext);
   if (registry === null) return <>{children}</>;
+  if (renderMode() === "static") {
+    return (
+      <StaticBarItem id={id} className={className}>
+        {children}
+      </StaticBarItem>
+    );
+  }
   return (
     <PortaledBarItem registry={registry} id={id} className={className}>
       {children}
@@ -108,6 +120,28 @@ export function AdaptiveBarItem({
 function occupantClass(): string {
   // eslint-disable-next-line layout/no-adhoc-layout -- the portal container is a raw DOM node (no React element to host a layout primitive); its flex column is what keeps an occupant off a line box
   return cn(rigidClass(), "flex flex-col");
+}
+
+/**
+ * The occupant in a static render: the same container the live item portals
+ * into (same classes, same `data-adaptive-bar-item`), written where the live
+ * bar would dock it — before its anchor, in the host's own order. No action-form
+ * channel, so every widget renders `"full"`: there is no width to fit.
+ */
+function StaticBarItem({
+  id,
+  className,
+  children,
+}: {
+  id: string;
+  className: string | undefined;
+  children: ReactNode;
+}): ReactElement {
+  return (
+    <div className={cn(occupantClass(), className)} data-adaptive-bar-item={id}>
+      {children}
+    </div>
+  );
 }
 
 function PortaledBarItem({

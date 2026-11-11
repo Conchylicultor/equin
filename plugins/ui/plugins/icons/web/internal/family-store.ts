@@ -65,5 +65,10 @@ export function iconFamily(id: IconFamilyId): IconFamily | undefined {
 
 /** Every contributed family, sorted by id. */
 export function useIconFamilies(): readonly IconFamily[] {
-  return useSyncExternalStore(subscribeFamilies, () => snapshot);
+  // In memory: a server render reads the families published so far.
+  return useSyncExternalStore(
+    subscribeFamilies,
+    () => snapshot,
+    () => snapshot,
+  );
 }

@@ -53,6 +53,7 @@ describe("NotificationsClient — the frame protocol", () => {
         },
       });
       clients.push(client);
+      client.connect();
       return client;
     };
     const a = tabClient();

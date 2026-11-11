@@ -1,5 +1,6 @@
 import { Pane, defineRoute } from "@plugins/primitives/plugins/pane/web";
 import { websiteApp } from "@plugins/apps/plugins/website/plugins/shell/core";
+import { storyPage } from "../core";
 import {
   WebsiteChrome,
   WebsiteHeader,
@@ -21,6 +22,7 @@ export const storyPane = Pane.define({
   route: defineRoute({ id: "website-story", segment: "story" }),
   app: websiteApp,
   actions: WebsiteHeader,
+  title: storyPage.title,
   component: StoryBody,
 });
 

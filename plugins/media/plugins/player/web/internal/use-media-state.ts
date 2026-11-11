@@ -121,7 +121,10 @@ function useElementSnapshot<T extends object>(
     },
     [el, events, read, current],
   );
-  return useSyncExternalStore(subscribe, current);
+  // `current` reads the cache, never the element: in a server render (no
+  // element was ever mounted) it answers `initial`, as before the element
+  // appears in a browser.
+  return useSyncExternalStore(subscribe, current, current);
 }
 
 /** Playing, length and level. */

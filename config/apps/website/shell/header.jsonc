@@ -27,9 +27,10 @@
 // At most one spacer per slot.
 {
   // The shared site header — ONE row worn by every page, read left to right: the
-  // wordmark is the brand and stays at the leading edge, then the pane's own
-  // title item (these panes set no title, so it paints nothing and simply holds
-  // the slack).
+  // wordmark is the brand and stays at the leading edge. The pane's own title
+  // item is hidden: every page declares a title (`defineWebsitePage`) for its
+  // browser tab and its snapshot, but the page's heading already says it, so the
+  // header shows the wordmark alone.
   //
   // After the spacer, the site's pages — Vision, Apps, Foundations, Story, then
   // the Guide and Download for a reader ready to run it — then the source on
@@ -38,7 +39,7 @@
   // about.
   "items": [
     "apps.website.shell:wordmark",
-    "primitives.pane:title",
+    { "item": "primitives.pane:title", "hidden": true },
     { "type": "spacer", "id": "spacer-1" },
     "apps.website.pages.vision:vision",
     "apps.website.pages.apps:apps",

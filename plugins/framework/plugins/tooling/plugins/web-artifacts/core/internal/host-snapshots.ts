@@ -359,7 +359,7 @@ function snapshotModuleSource(facts: {
  * (one initdb, in a fresh Bun process: PGlite is the script's own dependency),
  * and answer its file.
  */
-async function ensurePgliteCluster(opts: {
+export async function ensurePgliteCluster(opts: {
   root: AppPath;
   dirName: string;
   log: (line: string) => void;

@@ -382,8 +382,9 @@ function PageApp() {
       // pipeline NOW, before any plugin evaluation, so its leader-election lock
       // request is queued at t≈0 and the socket opens during a loadPlugins await
       // gap instead of ~8s later. The root NotificationsProvider (under the
-      // same transport) reuses this pipeline.
-      ensureNotificationsClient(pageTransport);
+      // same transport) reuses this pipeline. Constructing it opens nothing;
+      // `connect()` opens the worktree socket now.
+      ensureNotificationsClient(pageTransport).connect();
 
       // Layer 3 — partition the registry into the eager substrate (chrome,
       // providers, app shells) and deferred app content.

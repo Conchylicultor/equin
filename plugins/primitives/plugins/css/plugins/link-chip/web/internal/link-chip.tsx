@@ -122,7 +122,7 @@ export function LinkChip({
       colorClass="bg-muted"
       className={cn(CHIP_CHROME, textClass, className)}
       {...rest}
-      {...chainHandlers(activationProps(activation, { isolate: true }), {
+      {...withChainedHandlers(activationProps(activation, { isolate: true }), {
         onClick: rest.onClick,
         onAuxClick: rest.onAuxClick,
         onMouseDown: rest.onMouseDown,
@@ -132,6 +132,19 @@ export function LinkChip({
     </Badge>
   );
 }
+
+/**
+ * The chip's own link props (a static render's `data-link` included), with its
+ * gesture handlers chained after the passthrough's: see {@link chainHandlers}.
+ */
+function withChainedHandlers(
+  own: Partial<LinkGestureProps>,
+  theirs: Record<GestureHandler, unknown>,
+): Partial<LinkGestureProps> {
+  return { ...own, ...chainHandlers(own, theirs) };
+}
+
+type GestureHandler = "onClick" | "onAuxClick" | "onMouseDown";
 
 /**
  * The chip's own gesture handlers, each run AFTER the passthrough's handler of
@@ -146,7 +159,7 @@ export function LinkChip({
  */
 function chainHandlers(
   own: Partial<LinkGestureProps>,
-  theirs: Record<keyof LinkGestureProps, unknown>,
+  theirs: Record<GestureHandler, unknown>,
 ): Partial<LinkGestureProps> {
   const chained: Partial<LinkGestureProps> = {};
   for (const key of ["onClick", "onAuxClick", "onMouseDown"] as const) {

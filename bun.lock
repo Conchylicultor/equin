@@ -1415,6 +1415,14 @@
       "name": "@equin/plugin-apps-website",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/website/plugins/crawlable": {
+      "name": "@equin/plugin-apps-website-crawlable",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/website/plugins/crawlable/plugins/snapshot-render": {
+      "name": "@equin/plugin-apps-website-crawlable-snapshot-render",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/website/plugins/demos": {
       "name": "@equin/plugin-apps-website-demos",
       "version": "0.0.1",
@@ -3426,6 +3434,10 @@
     },
     "plugins/framework/plugins/browser-server": {
       "name": "@equin/plugin-framework-browser-server",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/browser-server/plugins/bun-host": {
+      "name": "@equin/plugin-framework-browser-server-bun-host",
       "version": "0.0.1",
     },
     "plugins/framework/plugins/browser-server/plugins/demo": {
@@ -6022,9 +6034,20 @@
       "name": "@equin/plugin-primitives-dom-overscroll-hint",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/dom/plugins/render-mode": {
+      "name": "@equin/plugin-primitives-dom-render-mode",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/dom/plugins/scroll-reveal": {
       "name": "@equin/plugin-primitives-dom-scroll-reveal",
       "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/dom/plugins/static-render": {
+      "name": "@equin/plugin-primitives-dom-static-render",
+      "version": "0.0.1",
+      "dependencies": {
+        "htmlparser2": "^12.0.0",
+      },
     },
     "plugins/primitives/plugins/dom/plugins/tree-focus": {
       "name": "@equin/plugin-primitives-dom-tree-focus",
@@ -8186,6 +8209,10 @@
 
     "@equin/plugin-apps-website": ["@equin/plugin-apps-website@workspace:plugins/apps/plugins/website"],
 
+    "@equin/plugin-apps-website-crawlable": ["@equin/plugin-apps-website-crawlable@workspace:plugins/apps/plugins/website/plugins/crawlable"],
+
+    "@equin/plugin-apps-website-crawlable-snapshot-render": ["@equin/plugin-apps-website-crawlable-snapshot-render@workspace:plugins/apps/plugins/website/plugins/crawlable/plugins/snapshot-render"],
+
     "@equin/plugin-apps-website-demos": ["@equin/plugin-apps-website-demos@workspace:plugins/apps/plugins/website/plugins/demos"],
 
     "@equin/plugin-apps-website-demos-workspace": ["@equin/plugin-apps-website-demos-workspace@workspace:plugins/apps/plugins/website/plugins/demos/plugins/workspace"],
@@ -9177,6 +9204,8 @@
     "@equin/plugin-framework": ["@equin/plugin-framework@workspace:plugins/framework"],
 
     "@equin/plugin-framework-browser-server": ["@equin/plugin-framework-browser-server@workspace:plugins/framework/plugins/browser-server"],
+
+    "@equin/plugin-framework-browser-server-bun-host": ["@equin/plugin-framework-browser-server-bun-host@workspace:plugins/framework/plugins/browser-server/plugins/bun-host"],
 
     "@equin/plugin-framework-browser-server-demo": ["@equin/plugin-framework-browser-server-demo@workspace:plugins/framework/plugins/browser-server/plugins/demo"],
 
@@ -10380,7 +10409,11 @@
 
     "@equin/plugin-primitives-dom-overscroll-hint": ["@equin/plugin-primitives-dom-overscroll-hint@workspace:plugins/primitives/plugins/dom/plugins/overscroll-hint"],
 
+    "@equin/plugin-primitives-dom-render-mode": ["@equin/plugin-primitives-dom-render-mode@workspace:plugins/primitives/plugins/dom/plugins/render-mode"],
+
     "@equin/plugin-primitives-dom-scroll-reveal": ["@equin/plugin-primitives-dom-scroll-reveal@workspace:plugins/primitives/plugins/dom/plugins/scroll-reveal"],
+
+    "@equin/plugin-primitives-dom-static-render": ["@equin/plugin-primitives-dom-static-render@workspace:plugins/primitives/plugins/dom/plugins/static-render"],
 
     "@equin/plugin-primitives-dom-tree-focus": ["@equin/plugin-primitives-dom-tree-focus@workspace:plugins/primitives/plugins/dom/plugins/tree-focus"],
 

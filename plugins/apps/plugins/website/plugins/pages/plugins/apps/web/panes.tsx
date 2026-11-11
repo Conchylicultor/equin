@@ -1,6 +1,7 @@
-import { useState } from "react";
 import { Pane, defineRoute } from "@plugins/primitives/plugins/pane/web";
 import { websiteApp } from "@plugins/apps/plugins/website/plugins/shell/core";
+import { useState } from "react";
+import { appsPage } from "../core";
 import {
   WebsiteBand,
   WebsiteChrome,
@@ -22,6 +23,7 @@ export const appsPane = Pane.define({
   route: defineRoute({ id: "website-apps", segment: "apps" }),
   app: websiteApp,
   actions: WebsiteHeader,
+  title: appsPage.title,
   component: AppsBody,
 });
 

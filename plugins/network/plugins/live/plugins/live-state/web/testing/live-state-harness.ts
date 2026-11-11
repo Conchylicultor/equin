@@ -69,6 +69,8 @@ export function createLiveStateHarness(
       fetchImpl: (input, init) => given.fetch(input, init),
     },
   );
+  // What `NotificationsProvider`'s effect does: construction opens no socket.
+  notifications.connect();
   let disposed = false;
   const dispose = () => {
     if (disposed) return;

@@ -3,10 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
-	"hash/fnv"
 	"log/slog"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -123,37 +120,16 @@ func spliceHead(index []byte, fragment string) ([]byte, bool) {
 	return out, true
 }
 
-// serveShellWithHead serves index.html with the namespace's head fragment for
-// this path spliced in, and reports whether it did. It declines (false) when
-// there is nothing to splice, leaving the caller's plain file serve.
-//
-// The bytes now vary by path and by the fragment, so the file's own
-// validators no longer describe them: the ETag is a hash of the bytes served,
-// which keeps an unchanged page a bodiless 304 and makes a theme change a 200.
-func serveShellWithHead(w http.ResponseWriter, r *http.Request, wt *Worktree, indexPath string) bool {
+// documentHeadFragment is the namespace's head fragment for this request path
+// (document-head.json's entry, matchDocumentHead), or "" when there is none to
+// splice: no file, one this gateway cannot read (logged), or no entry.
+func documentHeadFragment(wt *Worktree, urlPath string) string {
 	if wt.cfg == nil || wt.cfg.RegistryDir == "" {
-		return false
+		return ""
 	}
 	head, ok := readDocumentHead(filepath.Join(wt.cfg.RegistryDir, wt.Name, documentHeadFile))
 	if !ok {
-		return false
+		return ""
 	}
-	fragment := matchDocumentHead(head.Entries, r.URL.Path)
-	if fragment == "" {
-		return false
-	}
-	index, err := os.ReadFile(indexPath)
-	if err != nil {
-		// The plain serve reports it the way it always has.
-		return false
-	}
-	body, ok := spliceHead(index, fragment)
-	if !ok {
-		slog.Error("document head: shell has no </head>", "index", indexPath)
-		return false
-	}
-	sum := fnv.New64a()
-	_, _ = sum.Write(body)
-	serveBytes(w, r, "index.html", fmt.Sprintf(`"dh-%x"`, sum.Sum64()), body)
-	return true
+	return matchDocumentHead(head.Entries, urlPath)
 }

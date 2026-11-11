@@ -1,5 +1,6 @@
 import { Pane, defineRoute } from "@plugins/primitives/plugins/pane/web";
 import { websiteApp } from "@plugins/apps/plugins/website/plugins/shell/core";
+import { guidePage } from "../core";
 import {
   WebsiteChrome,
   WebsiteHeader,
@@ -19,6 +20,7 @@ export const guidePane = Pane.define({
   route: defineRoute({ id: "website-guide", segment: "guide" }),
   app: websiteApp,
   actions: WebsiteHeader,
+  title: guidePage.title,
   component: GuideBody,
 });
 

@@ -246,6 +246,30 @@ async function globRootsOfFiles(
   return [...roots].sort();
 }
 
+/**
+ * The repo-relative files under every glob root `modules` (repo-relative
+ * module paths) declare, sorted — what those modules would inline, and what a
+ * process reading the same data off disk reads (a crawl take's disk swaps for
+ * the bundled providers). Each module's patterns come from the memo.
+ */
+export async function globFilesOfModules(
+  sources: OwnSources,
+  modules: Iterable<string>,
+): Promise<string[]> {
+  const { snapshot } = sources;
+  const roots = await globRootsOfFiles(
+    sources,
+    [...modules].map((rel) => join(snapshot.root, rel)),
+  );
+  const files = new Set<string>();
+  for (const rel of roots) {
+    const abs = join(snapshot.root, rel);
+    for (const p of snapshot.under(rel))
+      if (isHashedFile([abs], join(snapshot.root, p))) files.add(p);
+  }
+  return [...files].sort();
+}
+
 /** One artifact's address inputs, as `ownHashFor` read them off the snapshot. */
 export interface OwnAddress {
   ownHash: string;

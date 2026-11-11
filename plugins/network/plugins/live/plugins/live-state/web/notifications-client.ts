@@ -638,12 +638,17 @@ function nowReceipt(): FrameReceipt {
 }
 
 export class NotificationsClient {
-  // Lazily-populated: the worktree channel is opened eagerly in the constructor,
-  // but the central channel is created only when a central-origin resource is
-  // first observed (see `channelFor`). An app with no central resources (a
-  // self-contained release with `auth` excluded) therefore never opens
-  // /ws/central-notifications — a release ships no central runtime, so that
-  // socket would otherwise 404 and reconnect forever, pinning the overall status.
+  // Lazily-populated: constructing a client opens NO socket. A channel is
+  // created on first need (see `channelFor`): the worktree one by `connect()`
+  // (the page's boot hoist, a provider's effect) or the first worktree-origin
+  // observe() / requestAcks(); the central one only when a central-origin
+  // resource is first observed. So a client built where nothing will ever
+  // subscribe — a static render of the provider tree, which runs no effect —
+  // reads its boot-hydrated cache with no socket at all. An app with no central
+  // resources (a self-contained release with `auth` excluded) therefore never
+  // opens /ws/central-notifications — a release ships no central runtime, so
+  // that socket would otherwise 404 and reconnect forever, pinning the overall
+  // status.
   private channels: Partial<Record<SocketKind, SocketChannel>> = {};
   private nextMsgId = 1;
   /**
@@ -803,7 +808,7 @@ export class NotificationsClient {
       telemetry?: boolean;
     },
   ) {
-    // Socket factory must be set before channelFor (openChannel reads it).
+    // Socket factory: read by openChannel on a channel's first need.
     const makeSocket =
       hooks?.makeSocket ??
       ((u: string, options: SharedWebSocketOptions) =>
@@ -823,9 +828,6 @@ export class NotificationsClient {
     this.fetchImpl = hooks?.fetchImpl ?? ((...a) => fetch(...a));
     this.tabId = hooks?.tabId ?? REALM_HOLDER_ID;
     this.telemetry = hooks?.telemetry ?? true;
-    // Open the worktree channel eagerly (always used). Central stays lazy —
-    // opened on the first central-origin observe() via channelFor.
-    this.channelFor("worktree");
     this.unsubscribeFromBus = subscribeWsStatus(({ url, status }) => {
       const kind = this.socketKindOf(url);
       if (kind === null) return;
@@ -878,6 +880,20 @@ export class NotificationsClient {
     this.unsubscribeFromQueryCache = this.queryClient
       .getQueryCache()
       .subscribe((event) => this.noteQueryError(event));
+  }
+
+  /**
+   * Open the worktree socket now, ahead of the first subscribe — idempotent
+   * (the channel is created once; a later call, or the first observe(), reuses
+   * it). The construction itself opens nothing, so a client a static render
+   * builds never touches the network; the live app warms its socket here
+   * instead: the page's boot hoist calls it at t≈0 (web-core's `App.tsx`, so
+   * the handshake overlaps plugin loading) and `NotificationsProvider` in an
+   * effect (a scoped pipeline, e.g. the demo's). The central socket stays
+   * lazy — opened only by a central-origin observe().
+   */
+  connect(): void {
+    this.channelFor("worktree");
   }
 
   /**
@@ -1323,8 +1339,8 @@ export class NotificationsClient {
     if (read) this.reads.set(key, read);
     if (keyOf) this.keyedKeyOf.set(key, keyOf);
     const kind = socketKindFor(origin);
-    // The ONLY path that may lazily create a channel: the first central-origin
-    // observe() opens the central socket; every read-only path below only reads.
+    // Opens the origin's socket on first need (unless `connect()` already did);
+    // every read-only path below only reads.
     const channel = this.channelFor(kind);
     const pk = paramsKey(params);
     const id = `${key}\0${pk}`;
@@ -2020,11 +2036,12 @@ export class NotificationsClient {
 
   /**
    * Lazily create + open + cache the channel for `kind`, returning the cached
-   * one on every subsequent call. The worktree channel is created eagerly in the
-   * constructor; the central channel is created only on the first central-origin
-   * `observe()` — the single deliberate creation point (every read-only accessor
-   * reads `this.channels[kind]` directly and tolerates its absence). An app with
-   * no central resources never opens /ws/central-notifications this way.
+   * one on every subsequent call — the single deliberate creation point, called
+   * only by `connect()` (worktree), `observe()` and `requestAcks()`; every
+   * read-only accessor reads `this.channels[kind]` directly and tolerates its
+   * absence (status reads "connecting" until a channel reports). Nothing opens
+   * at construction, and an app with no central resources never opens
+   * /ws/central-notifications.
    */
   private channelFor(kind: SocketKind): SocketChannel {
     const existing = this.channels[kind];

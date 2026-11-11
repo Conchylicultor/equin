@@ -67,6 +67,7 @@ describe("NotificationsClient — failing reads", () => {
       makeSocket: hub.makeSocket(tab),
     });
     clients.push(client);
+    client.connect();
     await flush();
     const socket = hub.server.all()[0]!;
     socket.open();

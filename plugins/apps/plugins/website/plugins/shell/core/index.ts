@@ -7,3 +7,4 @@ export {
   LOCAL_APP_HOST,
   LOCAL_APP_URL,
 } from "./site";
+export { landingPage } from "./pages";

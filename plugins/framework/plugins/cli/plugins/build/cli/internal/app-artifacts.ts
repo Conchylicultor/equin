@@ -10,6 +10,7 @@ import {
   buildBarrelFreeTree,
   buildRegistryGenContext,
   generateCompositionRegistry,
+  readCompositionManifestsFromDisk,
   regenerateManifestCodegen,
   regenerateRegistryCodegen,
   seedAuthoredOverrides,
@@ -1225,6 +1226,15 @@ export async function buildAndPublishWebDist(
       const source = composition
         ? await compositionFleetSource({ root, name: composition })
         : undefined;
+      // A composition declared `crawlable: true` (the public site) also gets
+      // its pages snapshotted for robots (web-artifacts' crawl-snapshot
+      // stage); every other build passes nothing and pays nothing. Read off
+      // the committed manifests, as codegen read them for the take's graph.
+      const crawlable =
+        composition !== null &&
+        readCompositionManifestsFromDisk(root).some(
+          (m) => m.id === composition && m.crawlable,
+        );
       // The artifact compiles run on a pool of worker threads (about two per
       // three cores, measured — see web-artifacts' pooled-builder.ts), clamped
       // to the grant; the pipeline is admitted for that many units, so the
@@ -1246,6 +1256,7 @@ export async function buildAndPublishWebDist(
               buildId,
               buildCommit: opts.headAtStart,
               source,
+              ...(crawlable ? { crawl: { composition } } : {}),
               materialize: opts.materialize,
               addressDir,
               log: (line) => lines.push({ text: line, stream: "stdout" }),

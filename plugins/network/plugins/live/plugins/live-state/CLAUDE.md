@@ -245,6 +245,26 @@ frames, which still reach **all** tabs — hence the gates below.
   - `unserved` (a closed-key-set host doesn't serve the key) is never skew:
     reads as `loader-failed` naming the key.
 
+## The socket opens on first need, never at construction
+
+Constructing a `NotificationsClient` (and so rendering
+`NotificationsProvider`) opens no socket. A channel is created by `channelFor`,
+called only from:
+
+- `connect()` — the worktree socket, ahead of any subscribe. The page root
+  calls `ensureNotificationsClient(pageTransport).connect()` at t≈0 so the
+  handshake overlaps plugin loading (the boot hoist; `ensureNotificationsClient`
+  alone builds the pipeline without connecting). `NotificationsProvider` calls
+  it in an effect (a no-op for the page's; a scoped pipeline's opens there).
+- the first `observe()` / `requestAcks()` of an origin (central stays lazy:
+  only a central-origin read opens it).
+
+So a static render (`renderToStaticMarkup`, no effects) of the real provider
+tree reads its boot-hydrated cache with no socket; status reads `connecting`.
+A transport suite that drives the socket before observing calls `connect()`
+itself; `createLiveStateHarness` connects. Pinned by
+`notifications-lazy-socket.test.tsx`.
+
 ## Scoped pipelines — a subtree talking to another backend
 
 `NotificationsProvider` reads `useTransport()` (`primitives/networking`) and

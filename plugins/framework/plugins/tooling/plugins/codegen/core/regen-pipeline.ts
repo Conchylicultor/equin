@@ -2,6 +2,7 @@ import { setPreBarrelImportGuard } from "@plugins/plugin-meta/plugins/barrel-imp
 import type { CodegenPass } from "./codegen-pass";
 import { generateBarrelStubs } from "./barrel-stubs-gen";
 import { generateBrowserHosts } from "./browser-host-gen";
+import { generateStaticHosts } from "./static-host-gen";
 import { generateConfigOrigins } from "./config-origin-gen";
 import { stampOverrideLegends } from "./override-legend-stamp";
 import { generatePluginDocs } from "./docgen";
@@ -141,6 +142,8 @@ export async function regenerateRegistryCodegen({
   // Not wrapped in one span: the generator opens its own per-phase spans
   // (inference, coverage guard, write), which a wrapping span would nest.
   const browserHosts = await generateBrowserHosts(ctx, onStep);
+  // The crawlable compositions' static-host graphs (`static-host-gen.ts`).
+  await generateStaticHosts(ctx, onStep);
   return { renamedPackages, browserHosts };
 }
 

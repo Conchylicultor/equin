@@ -37,12 +37,19 @@ export function spriteMarkup(key: SpriteKey): string | undefined {
   return sprites.get(key);
 }
 
+// Every read here is of this module's in-memory state, so a server render (a
+// static render to HTML) reads the sprites provided before it ran.
 export function useSpriteLoaded(key: SpriteKey): boolean {
-  return useSyncExternalStore(subscribe, () => sprites.has(key));
+  const read = () => sprites.has(key);
+  return useSyncExternalStore(subscribe, read, read);
 }
 
 export function useSprites(): readonly (readonly [SpriteKey, string])[] {
-  return useSyncExternalStore(subscribe, () => snapshot);
+  return useSyncExternalStore(
+    subscribe,
+    () => snapshot,
+    () => snapshot,
+  );
 }
 
 // Sprites no theme scope asks for but some mounted icon needs: a sprite that is
@@ -68,5 +75,9 @@ export function wantSprite(key: SpriteKey): void {
 
 /** Every sprite some mounted icon has asked for (beyond the theme scopes' styles). */
 export function useWantedSprites(): readonly SpriteKey[] {
-  return useSyncExternalStore(subscribeWanted, () => wantedSnapshot);
+  return useSyncExternalStore(
+    subscribeWanted,
+    () => wantedSnapshot,
+    () => wantedSnapshot,
+  );
 }

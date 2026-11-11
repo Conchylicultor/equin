@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hash/fnv"
 	"io"
 	"log/slog"
 	"net"
@@ -179,17 +180,93 @@ func serveArtifact(w http.ResponseWriter, r *http.Request, file string) {
 // serveShell serves the SPA shell, and on a document load starts the backend
 // alongside it (prestartBackend). The only place handleStatic serves the shell,
 // so the direct hit and the SPA fallback cannot disagree about prestarting or
-// about the head the backend rendered for the first frame (document_head.go:
-// the theme's CSS for this path, spliced in before </head>).
-func serveShell(w http.ResponseWriter, r *http.Request, wt *Worktree, indexPath string) {
+// about what is spliced into the shell for this path:
+//
+//   - the head the backend rendered for the first frame (document_head.go: the
+//     theme's CSS, before </head>);
+//   - the page's static snapshot, when the dist's snapshot manifest lists the
+//     path (snapshot.go: title, description, canonical, the hiding rule, and
+//     the fragment after the root div).
+//
+// Bare `/` of a dist whose snapshot manifest names a home is a 301 to it
+// (query kept): the app redirects `/` to its home app only once its JS runs,
+// so without this a crawler would read an empty shell at the site's
+// most-linked address.
+//
+// Both compose. The bytes then vary by path, theme and build, so the file's own
+// validators no longer describe them: the ETag is a hash of the bytes served,
+// which keeps an unchanged page a bodiless 304 and makes any change a 200.
+//
+// A snapshot that is listed but cannot be served (unusable manifest, missing
+// fragment, a shell without the root div) is a 500 naming the cause, never the
+// plain shell: the plain shell would silently hide the page's text from every
+// crawler while looking fine in a browser.
+func serveShell(w http.ResponseWriter, r *http.Request, wt *Worktree, webDir string) {
+	indexPath := filepath.Join(webDir, indexURL)
 	prestartBackend(r, wt)
 	w.Header().Set("Cache-Control", "no-cache")
 	// An explicit /index.html is redirected to the directory form by the plain
 	// serve (http.ServeFile); the document itself is only ever served at a path.
-	if !strings.HasSuffix(r.URL.Path, indexURL) && serveShellWithHead(w, r, wt, indexPath) {
+	if strings.HasSuffix(r.URL.Path, indexURL) {
+		serveIndex(w, r, indexPath)
 		return
 	}
-	serveIndex(w, r, indexPath)
+
+	headFragment := documentHeadFragment(wt, r.URL.Path)
+	var page *snapshotPage
+	pagePath := snapshotRequestPath(r.URL.Path)
+	if set, ok := readSnapshot(webDir); ok {
+		if set.err != nil {
+			http.Error(w, "static snapshot unusable: "+set.err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if r.URL.Path == "/" && set.home != "" {
+			target := set.home
+			if r.URL.RawQuery != "" {
+				target += "?" + r.URL.RawQuery
+			}
+			http.Redirect(w, r, target, http.StatusMovedPermanently)
+			return
+		}
+		if p, listed := set.pages[pagePath]; listed {
+			if p.err != nil {
+				http.Error(w, "static snapshot of "+pagePath+" unusable: "+p.err.Error(), http.StatusInternalServerError)
+				return
+			}
+			page = &p
+		}
+	}
+	if headFragment == "" && page == nil {
+		serveIndex(w, r, indexPath)
+		return
+	}
+
+	body, err := os.ReadFile(indexPath)
+	if err != nil {
+		// The plain serve reports it the way it always has.
+		serveIndex(w, r, indexPath)
+		return
+	}
+	if headFragment != "" {
+		if spliced, ok := spliceHead(body, headFragment); ok {
+			body = spliced
+		} else {
+			slog.Error("document head: shell has no </head>", "index", indexPath)
+		}
+	}
+	if page != nil {
+		canonical := requestOrigin(r.Host, r.Header.Get(forwardedProtoHeader)) + pagePath
+		spliced, err := spliceSnapshot(body, *page, canonical)
+		if err != nil {
+			slog.Error("snapshot: cannot splice", "index", indexPath, "path", pagePath, "err", err)
+			http.Error(w, "static snapshot of "+pagePath+": "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		body = spliced
+	}
+	sum := fnv.New64a()
+	_, _ = sum.Write(body)
+	serveBytes(w, r, "index.html", fmt.Sprintf(`"sh-%x"`, sum.Sum64()), body)
 }
 
 // prestartBackend starts the backend, at browser priority, when a browser
@@ -241,7 +318,7 @@ func (p *Proxy) handleStatic(w http.ResponseWriter, r *http.Request, wt *Worktre
 	info, err := os.Stat(full)
 	if err == nil && !info.IsDir() {
 		if upath == indexURL {
-			serveShell(w, r, wt, full)
+			serveShell(w, r, wt, webDir)
 			return
 		}
 		if strings.HasPrefix(upath, "/artifacts/") {
@@ -263,7 +340,7 @@ func (p *Proxy) handleStatic(w http.ResponseWriter, r *http.Request, wt *Worktre
 	// The client router decides whether it's a real route or a 404.
 	indexPath := filepath.Join(webDir, indexURL)
 	if _, ierr := os.Stat(indexPath); ierr == nil {
-		serveShell(w, r, wt, indexPath)
+		serveShell(w, r, wt, webDir)
 		return
 	}
 	http.NotFound(w, r)
@@ -582,8 +659,19 @@ var hostAliases = map[string]string{
 	"equin": "singularity",
 }
 
+// backendRootPaths are the exact root paths, outside /api/ and /ws/, the
+// backend answers: the crawlable plugin's robots.txt and sitemap.xml, built per
+// request from the composition's declared website pages (404 when it has none,
+// which a crawler reads as allow-all). Exact matches only — `/robots.txt.bak`
+// or `/sitemap.xml/x` stay static paths. Forwarded whether or not the dist has
+// a snapshot: the backend, not the gateway, knows the pages.
+var backendRootPaths = map[string]bool{
+	"/robots.txt":  true,
+	"/sitemap.xml": true,
+}
+
 func isBackendPath(p string) bool {
-	return strings.HasPrefix(p, "/api/") || strings.HasPrefix(p, "/ws/")
+	return strings.HasPrefix(p, "/api/") || strings.HasPrefix(p, "/ws/") || backendRootPaths[p]
 }
 
 // startCause describes the request that asks for a backend, for the spawn's

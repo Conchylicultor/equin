@@ -63,6 +63,7 @@ import { openBuildLease, type BuildLease } from "./lease";
 import { ensureBrowserHost } from "./browser-hosts";
 import {
   ensureHostSnapshot,
+  ensurePgliteCluster,
   hostSnapshotLinks,
   pgliteClusterDirName,
 } from "./host-snapshots";
@@ -82,6 +83,11 @@ import {
 } from "./worker-link";
 import { composeDist } from "./compose";
 import {
+  crawlSnapshotDirName,
+  ensureCrawlSnapshot,
+  stageCrawlSnapshot,
+} from "./crawl-snapshot";
+import {
   createArtifactBuildHandler,
   type ArtifactBuilder,
 } from "./artifact-builder";
@@ -100,6 +106,13 @@ export interface WebArtifactsPipelineOptions {
   buildCommit: string | null;
   /** Fleet source (entry set + registry); defaults to the committed full registry. */
   source?: FleetSource;
+  /**
+   * Take the crawl snapshot of this composition (its pages rendered once for
+   * robots, `crawl-snapshot.ts`) and stage it into the dist. Set by the build
+   * CLI only for a composition declared `crawlable: true`, so every other
+   * build pays nothing.
+   */
+  crawl?: { composition: string };
   /**
    * A precomputed vendor set to reuse instead of resolving one from this
    * fleet's own requests. A composition dist passes MAIN's full-fleet set: its
@@ -506,6 +519,45 @@ async function runPipeline(
     },
   );
 
+  // ── Stage 4a': crawl snapshot ──────────────────────────────────────
+  // A crawlable composition's pages, rendered once per address
+  // (`crawl-snapshot.ts`: keyed on the take's code, the composition's web
+  // code and the data they read) and staged into the dist by compose below.
+  const crawl = await stage(
+    "artifacts:crawl-snapshot",
+    "crawl snapshot",
+    async () => {
+      if (opts.crawl === undefined) return null;
+      const { composition } = opts.crawl;
+      const clusterDirName = await pgliteClusterDirName(sources.snapshot);
+      const { dirName, take } = await crawlSnapshotDirName({
+        sources,
+        composition,
+        webPlugins: plan.webTargets.map((t) => t.pluginPath!),
+        clusterDirName,
+      });
+      const took = await ensureCrawlSnapshot({
+        root,
+        composition,
+        dirName,
+        take,
+        cluster: () =>
+          ensurePgliteCluster({
+            root,
+            dirName: clusterDirName,
+            log,
+            pin: (paths) => lease.pin(paths),
+          }),
+        log,
+        pin: (paths) => lease.pin(paths),
+      });
+      log(
+        `crawl snapshot ${composition}: ${took ? "taken" : "cache hit"} (${dirName})`,
+      );
+      return { dirName };
+    },
+  );
+
   // ── Stage 4b: worker trees ──────────────────────────────────────────
   // Each host's closure, linked for the worker (`worker-link.ts`), under ONE
   // tree entry per build: the page maps each host's worker entry into it.
@@ -681,6 +733,13 @@ async function runPipeline(
         ...eagerSeeds,
       ];
 
+      if (crawl !== null) {
+        links.push({
+          linkName: crawl.dirName,
+          storePath: artifactStorePath(crawl.dirName),
+        });
+      }
+
       const { importMap, preloads, graphHash } = composeDist({
         stagingDir: opts.stagingDir,
         webSrcDir,
@@ -697,6 +756,14 @@ async function runPipeline(
         entryUrl,
         preloadSeeds,
       });
+      if (crawl !== null) {
+        const staged = stageCrawlSnapshot({
+          stagingDir: opts.stagingDir,
+          dirName: crawl.dirName,
+          materialize: opts.materialize ?? false,
+        });
+        log(`crawl snapshot: staged ${staged.join(", ")} into the dist`);
+      }
       // The shell's own files (index.html, public/): every other served file
       // came out of a cache entry published with its sidecars.
       await precompressFiles(

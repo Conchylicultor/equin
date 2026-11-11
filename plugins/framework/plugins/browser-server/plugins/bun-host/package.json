@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-framework-browser-server-bun-host",
+  "version": "0.0.1",
+  "private": true,
+  "description": "A browser host's server graph as Bun boots it (a build's snapshot take, a boot test): withDiskProviders swaps the two providers whose data is bundled text through vite's import.meta.glob, which Bun cannot evaluate — the migration history (migrations/bundled-source) and the committed config layer (config_v2/bundled-layer) — for the same files read off disk; diskMigrationList is that history."
+}

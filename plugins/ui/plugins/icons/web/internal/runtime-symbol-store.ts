@@ -182,8 +182,10 @@ const NO_SPRITES: readonly SpriteKey[] = [];
 export function useWantedScopeSprites(
   store: RuntimeSymbolStore,
 ): readonly SpriteKey[] {
+  // In memory: a server render reads what the store holds.
   return useSyncExternalStore(
     store.subscribeWantedSprites,
+    store.wantedSprites,
     store.wantedSprites,
   );
 }
@@ -192,7 +194,7 @@ export function useWantedScopeSprites(
 export function useRuntimeSymbolChunks(
   store: RuntimeSymbolStore,
 ): readonly (readonly [string, string])[] {
-  return useSyncExternalStore(store.subscribe, store.chunks);
+  return useSyncExternalStore(store.subscribe, store.chunks, store.chunks);
 }
 
 /**

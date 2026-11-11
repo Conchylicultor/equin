@@ -42,6 +42,7 @@ import { defineMandate } from "@plugins/tasks/plugins/orchestration/plugins/mand
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import { beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { declareMemoryHostStorage } from "@plugins/framework/plugins/browser-server/plugins/host-storage/core/testing";
+import * as fs from "node:fs";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -62,7 +63,7 @@ import { injectFrameAgent } from "@plugins/primitives/plugins/embed/plugins/fram
 import {
   appScopeId,
   committedDocument,
-  committedFilesFromMap,
+  readCommittedFilesSync,
   configConflict,
   configConflictLocations,
   configGitValues,
@@ -118,7 +119,7 @@ import { settleJobQueue } from "@plugins/infra/plugins/jobs/plugins/in-process/s
 import { hostReads } from "../core/browser-host.generated";
 import { conversationTurns } from "@plugins/conversations/plugins/turn-ledger/core";
 import { DEMO_CONVERSATION_ID } from "../core/internal/scenario";
-import { bunHostEntries, diskConfigFiles, diskDemoData } from "./bun-host";
+import { bunHostEntries, diskDemoData } from "./bun-host";
 import { seed } from "./seed";
 import {
   DEMO_FEATURED_PROTOTYPE,
@@ -140,7 +141,8 @@ const TEST_MANDATE = defineMandate({ id: "interactive", label: "Interactive" });
 
 setDefaultTimeout(300_000);
 
-const committedFiles = committedFilesFromMap(diskConfigFiles());
+// The committed layer the bundled layer inlines, read off disk.
+const committedFiles = readCommittedFilesSync(join(REPO_ROOT, "config"), fs);
 
 const IN_CHILD = process.env.DEMO_HOST_BOOT_CHILD === "1";
 

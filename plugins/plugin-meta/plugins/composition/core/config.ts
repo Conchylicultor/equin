@@ -1,6 +1,7 @@
 import { defineConfig } from "@plugins/config_v2/core";
 import { listField } from "@plugins/fields/plugins/list/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { enumField } from "@plugins/fields/plugins/enum/plugins/config/core";
 import { stringListField } from "@plugins/fields/plugins/string-list/plugins/config/core";
 import { tagsField } from "@plugins/fields/plugins/tags/plugins/config/core";
@@ -237,6 +238,15 @@ export const compositionsConfig = defineConfig({
         // which every launcher reads. Engine-opaque — `manifestItemToManifest`
         // DROPS it.
         unlisted: stringListField({ label: "Unlisted apps" }),
+        // WHETHER a build of this composition takes a static snapshot of its
+        // pages for robots (`apps/website/crawlable`): the composition's own
+        // server graph booted in-process, every page its `WebsitePages.Page`
+        // collection declares rendered once to semantic HTML, linked into its
+        // dist as `snapshot/` (web-artifacts' crawl-snapshot stage). Off
+        // everywhere but the public site, so main's build and an ordinary
+        // worktree's pay nothing. Engine-opaque — `manifestItemToManifest`
+        // DROPS it.
+        crawlable: boolField({ label: "Crawlable" }),
       },
       default: [
         // ── The main app ────────────────────────────────────────────────────────
@@ -280,6 +290,7 @@ export const compositionsConfig = defineConfig({
           // Main lands on the app gallery.
           home: "home",
           unlisted: [] as string[],
+          crawlable: false,
         },
 
         // ── The showcase film's instance ────────────────────────────────────────
@@ -304,6 +315,7 @@ export const compositionsConfig = defineConfig({
           serve: "manual",
           home: "home",
           unlisted: [] as string[],
+          crawlable: false,
         },
 
         // ── The global exclusions ───────────────────────────────────────────────
@@ -339,6 +351,14 @@ export const compositionsConfig = defineConfig({
         // exactly as the disabled closure did. One mechanism decides membership now,
         // and it is this one.
         //
+        // `!primitives.dom.static-render.**` and
+        // `!apps.website.crawlable.snapshot-render.**`: build-only code. The
+        // crawlable snapshot's take (`apps/website/crawlable/bin/static-host.ts`)
+        // renders the site's pages to HTML once, in Bun, loading the render
+        // half by path; no browser ever runs it, so no composition — and no
+        // browser registry — holds it (static-render's htmlparser2 and
+        // react-dom/static included).
+        //
         // The host-service providers of a host without the computer (the PGlite
         // driver, the in-process job queue, the guest host account, …) are not
         // listed here: a plugin whose portable `server/` provides a host service
@@ -350,13 +370,18 @@ export const compositionsConfig = defineConfig({
           name: BASE_EXCLUSIONS_ID,
           category: "pack" as const,
           hosts: ["desktop"],
-          entryPoints: ["!review.plugin-changes.**"],
+          entryPoints: [
+            "!review.plugin-changes.**",
+            "!primitives.dom.static-render.**",
+            "!apps.website.crawlable.snapshot-render.**",
+          ],
           selectedContributors: [] as string[],
           extends: [] as string[],
           excludes: [] as string[],
           serve: "off",
           home: "",
           unlisted: [] as string[],
+          crawlable: false,
         },
 
         // ── Profiles: the agent-manager worked example (full vs. lean) ──────────
@@ -377,6 +402,7 @@ export const compositionsConfig = defineConfig({
           serve: "off",
           home: "agent-manager",
           unlisted: [] as string[],
+          crawlable: false,
         },
         {
           id: "agent-manager-lean",
@@ -390,6 +416,7 @@ export const compositionsConfig = defineConfig({
           serve: "off",
           home: "agent-manager",
           unlisted: [] as string[],
+          crawlable: false,
         },
 
         // ── Profile: the agent manager as its in-page demo serves it ─────────────
@@ -559,6 +586,7 @@ export const compositionsConfig = defineConfig({
           serve: "off",
           home: "home",
           unlisted: [] as string[],
+          crawlable: false,
         },
 
         // ── Apps: lean baseline (entry only) for every other top-level app ──────
@@ -652,6 +680,8 @@ export const compositionsConfig = defineConfig({
             "integrations.google-maps.browser-config",
           ],
           excludes: ["agent-runtime", "auth"],
+          // The public site: its build snapshots every page for robots.
+          crawlable: true,
         }),
 
         // ── Subsystems: infra closures as building blocks / inspection lenses ───
@@ -695,6 +725,7 @@ export const compositionsConfig = defineConfig({
           serve: "off",
           home: "",
           unlisted: [] as string[],
+          crawlable: false,
         },
         subsystem("page-editor", { entryPoints: ["page.**"] }),
         subsystem("fields", { entryPoints: ["fields.**"] }),
@@ -862,6 +893,7 @@ function app(
     entryPoints: string[];
     extraExtends?: string[];
     excludes?: string[];
+    crawlable?: boolean;
   },
 ) {
   return {
@@ -877,6 +909,7 @@ function app(
     // An app row's name IS its `defineApp` id — the app it ships is its home.
     home: name,
     unlisted: [] as string[],
+    crawlable: opts.crawlable ?? false,
   };
 }
 
@@ -894,6 +927,7 @@ function subsystem(name: string, opts: { entryPoints: string[] }) {
     serve: "off",
     home: "",
     unlisted: [] as string[],
+    crawlable: false,
   };
 }
 
@@ -911,5 +945,6 @@ function pack(name: string, opts: { selectedContributors: string[] }) {
     serve: "off",
     home: "",
     unlisted: [] as string[],
+    crawlable: false,
   };
 }

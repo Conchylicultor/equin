@@ -91,6 +91,7 @@ describe("C39 — an old tab's non-keyed `sonata-track-view` read, handed the sc
       makeSocket: hub.makeSocket(hub.tab()),
     });
     clients.push(client);
+    client.connect();
     await flush();
     const socket = hub.server.all()[0]!;
     socket.open();

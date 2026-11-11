@@ -272,6 +272,12 @@ export type {
   DerivedBrowserHostGraph,
   InferredBrowserHostGraph,
 } from "./browser-host-gen";
+export {
+  discoverStaticHost,
+  generateStaticHosts,
+  renderStaticHostFile,
+} from "./static-host-gen";
+export type { StaticHostDecl } from "./static-host-gen";
 // The browser host's coverage guard: everything its scoped page reads, calls
 // or registers has an answer on the host (served, or `needsMachine`). The
 // static arms run inside `deriveBrowserHostGraph`; the config and

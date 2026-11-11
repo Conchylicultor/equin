@@ -84,6 +84,7 @@ describe("C39 — an old tab's non-keyed `page-blocks` read, handed the scoped s
       makeSocket: hub.makeSocket(hub.tab()),
     });
     clients.push(client);
+    client.connect();
     await flush();
     const socket = hub.server.all()[0]!;
     socket.open();

@@ -50,10 +50,13 @@ export function setMediaLoop(el: HTMLMediaElement, loop: boolean): void {
   el.loop = loop;
 }
 
+/** The class of the player's host element (live: the portal container; static: the same box in place). */
+export const PLAYER_HOST_CLASS = "mp-host";
+
 /** The element the player renders into: a portal container `MediaPlayer` moves between documents. */
 export function createPlayerHost(): HTMLDivElement {
   const host = document.createElement("div");
-  host.className = "mp-host";
+  host.className = PLAYER_HOST_CLASS;
   return host;
 }
 

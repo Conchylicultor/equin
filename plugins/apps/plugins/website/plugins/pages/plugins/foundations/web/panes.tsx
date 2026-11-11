@@ -1,5 +1,6 @@
 import { Pane, defineRoute } from "@plugins/primitives/plugins/pane/web";
 import { websiteApp } from "@plugins/apps/plugins/website/plugins/shell/core";
+import { foundationsPage } from "../core";
 import {
   WebsiteChrome,
   WebsiteHeader,
@@ -20,6 +21,7 @@ export const foundationsPane = Pane.define({
   route: defineRoute({ id: "website-foundations", segment: "foundations" }),
   app: websiteApp,
   actions: WebsiteHeader,
+  title: foundationsPage.title,
   component: FoundationsBody,
 });
 

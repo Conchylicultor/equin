@@ -110,7 +110,7 @@ renders below the zoom.
 
 ## Plugin reference
 
-- Description: The vision page of the equin website: the /website/vision pane on the vision for applications — one Powers of Ten zoom-out on a dark starfield, six chapter cards scrolling over a pinned stage (an idea, an app that reshapes itself, apps that integrate, a personal OS, apps shared between people, every app rebuilt) with a layer strip under the header — its Vision nav link, and the WebsiteVision.Section slot for sections below it.
+- Description: The vision page of the equin website: the /website/vision pane on the vision for applications — one Powers of Ten zoom-out on a dark starfield, six chapter cards scrolling over a pinned stage (an idea, an app that reshapes itself, apps that integrate, a personal OS, apps shared between people, every app rebuilt) with a layer strip under the header — its Vision nav link, and the WebsiteVision.Section slot for sections below it. The vision page of the equin website on the server: its sitemap entry (WebsitePages.Page).
 - Web:
   - Slots: `WebsiteVision.Section`
   - Contributes:
@@ -133,6 +133,12 @@ renders below the zoom.
   - Exports (values):
     - `visionPane`
     - `WebsiteVision`
+- Server:
+  - Contributes: `apps.website.crawlable.page` "/website/vision"
+  - Uses: `apps/website/crawlable.WebsitePages`
+- Core:
+  - Uses: `apps/website/crawlable.defineWebsitePage`
+  - Exports (values): `visionPage`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/chart --chart-1`

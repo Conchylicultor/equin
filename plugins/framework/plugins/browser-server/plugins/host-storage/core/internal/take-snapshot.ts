@@ -69,3 +69,25 @@ export async function takeHostSnapshot(opts: {
     ),
   });
 }
+
+/**
+ * Declare that this process — a build-time host that reads its booted state
+ * and keeps none (the crawlable website's static snapshot) — keeps its state
+ * in memory, its database opening from the initialized cluster the build
+ * hands over, as a snapshot take's does (so it never runs initdb). Its stores
+ * open empty and their writes go nowhere. Call once, before the graph boots.
+ */
+export function declareInitializedMemoryStorage(cluster: Blob): void {
+  const noStore: HostStore<never> = {
+    loaded: new Map<string, never>(),
+    put: () => {},
+    delete: () => {},
+  };
+  declareHostStorage({
+    kind: "memory",
+    databaseDir: undefined,
+    databaseStart: { from: "initialized", dataDir: cluster },
+    store: <V>() => noStore as HostStore<V>,
+    adopt: () => {},
+  });
+}

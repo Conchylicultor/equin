@@ -861,7 +861,7 @@ export type RouteState =
 
 // Stable module-const empties so snapshot identity never churns between
 // mutations: `getRoute()` returns this exact array for any unresolved state, and
-// the server / initial snapshot of `useRouteState()` is this exact object.
+// a fresh store's state is this exact object.
 const EMPTY: PaneSlot[] = [];
 const RESOLVED_EMPTY: RouteState = { kind: "resolved", slots: EMPTY };
 
@@ -1822,14 +1822,17 @@ function useRouteSlots(): PaneSlot[] {
   return useSyncExternalStore(
     store.subscribeRoute,
     store.getRouteSnapshot,
-    () => [],
+    // The store is the route's one truth on either side: a static render to
+    // HTML (no browser, never hydrated) reads the route its store resolved,
+    // not an empty one. The app never hydrates server markup, so there is no
+    // first-render mismatch for a constant to protect.
+    store.getRouteSnapshot,
   );
 }
 
 /**
  * The context surface's tri-state route state (resolved slots vs unresolved
- * rawPath), reactive over the same store subscription as {@link useRoute}. The
- * server / initial snapshot is the module-const resolved-empty. Consumers fold
+ * rawPath), reactive over the same store subscription as {@link useRoute}. Consumers fold
  * the public pending / not-found distinction from this plus the deferred-load
  * signal (see {@link usePaneRoute} and the layout's fallback surface).
  */
@@ -1838,7 +1841,8 @@ export function useRouteState(): RouteState {
   return useSyncExternalStore(
     store.subscribeRoute,
     store.getRouteStateSnapshot,
-    () => RESOLVED_EMPTY,
+    // As `useRouteSlots`: the store's own state on the server too.
+    store.getRouteStateSnapshot,
   );
 }
 
@@ -3687,7 +3691,8 @@ export function useIndexMatch(basePath: string): PaneMatch | null {
   const index = useSyncExternalStore(
     store.subscribeRoute,
     store.getIndexParams,
-    () => NO_PARAMS,
+    // As `useRouteSlots`: the store's own params on the server too.
+    store.getIndexParams,
   );
   return useMemo(() => {
     const pane = indexPaneFor(basePath);

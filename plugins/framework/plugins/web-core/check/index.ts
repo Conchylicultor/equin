@@ -12,6 +12,15 @@ type Check = {
 
 const INDEX_HTML = "plugins/framework/plugins/web-core/web/index.html";
 
+async function readShell(): Promise<string> {
+  const root = await getWorktreeRoot();
+  return readFileSync(join(root, INDEX_HTML), "utf8");
+}
+
+function occurrences(html: string, needle: string): number {
+  return html.split(needle).length - 1;
+}
+
 /**
  * Two things splice into the shell before its FIRST `</head>`: the build's
  * compose (the import map, CSS link and preloads — `web-artifacts`) and the
@@ -27,9 +36,8 @@ const check: Check = {
     "web-core's index.html contains `</head>` exactly once, so compose and the gateway splice into the real head",
   alwaysRun: true,
   async run() {
-    const root = await getWorktreeRoot();
-    const html = readFileSync(join(root, INDEX_HTML), "utf8");
-    const count = html.split("</head>").length - 1;
+    const html = await readShell();
+    const count = occurrences(html, "</head>");
     if (count === 1) return { ok: true };
     return {
       ok: false,
@@ -39,4 +47,41 @@ const check: Check = {
   },
 };
 
-export default check;
+/** The exact bytes the gateway splices the page's static snapshot after. */
+const ROOT_DIV = '<div id="root"></div>';
+
+/**
+ * The gateway (`gateway/snapshot.go`) inserts a crawlable page's static
+ * snapshot (`apps/website/crawlable`) right after the exact bytes
+ * `<div id="root"></div>`. Reformatting the mount point (an attribute, a space,
+ * a self-closing tag) or mentioning it a second time — in the head, a comment —
+ * moves or drops the snapshot silently: every page still boots, and robots read
+ * an empty body again.
+ */
+const rootDivCheck: Check = {
+  id: "shell-root-div-unique",
+  description:
+    'web-core\'s index.html contains `<div id="root"></div>` exactly once, in its body, so the gateway splices the static snapshot beside the real mount point',
+  alwaysRun: true,
+  async run() {
+    const html = await readShell();
+    const count = occurrences(html, ROOT_DIV);
+    if (count !== 1) {
+      return {
+        ok: false,
+        message: `${INDEX_HTML} contains ${JSON.stringify(ROOT_DIV)} ${count} times; it must contain it exactly once`,
+        hint: "Keep the mount point spelled exactly so (no attributes, no whitespace inside), and spell it differently in comments and scripts.",
+      };
+    }
+    const headClose = html.indexOf("</head>");
+    if (headClose === -1 || html.indexOf(ROOT_DIV) < headClose) {
+      return {
+        ok: false,
+        message: `${INDEX_HTML}: ${JSON.stringify(ROOT_DIV)} is not in the body (it comes before \`</head>\`)`,
+      };
+    }
+    return { ok: true };
+  },
+};
+
+export default [check, rootDivCheck];

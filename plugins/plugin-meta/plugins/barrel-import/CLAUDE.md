@@ -106,6 +106,7 @@ barrel written after its folder was first read would not be found.
     - `barrelLoadInputs`
     - `BarrelLoadReadError`
     - `importBarrel`
+    - `inlineAssetImports`
     - `registerBarrelStubs`
     - `setPreBarrelImportGuard`
 - Cross-plugin:

@@ -86,6 +86,7 @@ describe("NotificationsClient — unanswered subs", () => {
       tabId: "tab-a",
     });
     clients.push(client);
+    client.connect();
     await flush();
     const socket = hub.server.all()[0]!;
     if (opts.open) {
@@ -194,6 +195,7 @@ describe("NotificationsClient — unanswered subs", () => {
       tabId: "tab-b",
     });
     clients.push(tabB);
+    tabB.connect();
     await flush();
     expect(hub.server.all()).toHaveLength(1); // one shared socket
 

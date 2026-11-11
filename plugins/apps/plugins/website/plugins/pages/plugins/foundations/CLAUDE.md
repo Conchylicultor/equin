@@ -82,7 +82,7 @@ variables.
 
 ## Plugin reference
 
-- Description: The technical foundations page of the equin website: the /website/foundations pane drawing what equin brings on top of Claude as an iceberg — ten layers from the apps at sea level down to the loop that builds them, each piece a pill that opens in place into a card (many with a live drawing), with a depth gauge, a Components / Harness filter and Expand all — and its Foundations nav link.
+- Description: The technical foundations page of the equin website: the /website/foundations pane drawing what equin brings on top of Claude as an iceberg — ten layers from the apps at sea level down to the loop that builds them, each piece a pill that opens in place into a card (many with a live drawing), with a depth gauge, a Components / Harness filter and Expand all — and its Foundations nav link. The technical foundations page of the equin website on the server: its sitemap entry (WebsitePages.Page).
 - Web:
   - Contributes:
     - `Pane.Register` "website-foundations"
@@ -106,6 +106,12 @@ variables.
     - `primitives/shortcuts.useSurfaceShortcuts`
     - `ui/theme-engine.ThemeEngine`
   - Exports (values): `foundationsPane`
+- Server:
+  - Contributes: `apps.website.crawlable.page` "/website/foundations"
+  - Uses: `apps/website/crawlable.WebsitePages`
+- Core:
+  - Uses: `apps/website/crawlable.defineWebsitePage`
+  - Exports (values): `foundationsPage`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/density --chrome-pane-h`

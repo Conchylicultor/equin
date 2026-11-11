@@ -163,10 +163,10 @@ function useFullscreenOf(
     },
     [doc],
   );
-  return useSyncExternalStore(
-    subscribe,
-    () => root !== null && doc?.fullscreenElement === root,
-  );
+  // Reads only the elements handed in — none in a server render, which no
+  // fullscreen can hold — so it serves a server render too.
+  const read = () => root !== null && doc?.fullscreenElement === root;
+  return useSyncExternalStore(subscribe, read, read);
 }
 
 /** The focusable controls of the pill, in tab order. */

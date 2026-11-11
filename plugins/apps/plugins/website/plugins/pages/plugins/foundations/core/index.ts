@@ -1,0 +1,1 @@
+export { foundationsPage } from "./page";

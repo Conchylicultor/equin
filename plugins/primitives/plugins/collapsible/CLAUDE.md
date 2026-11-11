@@ -125,6 +125,22 @@ leaving (or blur) lets it go: a closed section's content is mounted only while
 its trigger is under the pointer or focused, never left live in the
 background.
 
+## Closed content: unmounted live, in the markup statically
+
+- **Live, by default, closed content is unmounted** (warm aside, above): a
+  transcript of closed tool-call cards, a tree of closed nodes, a mail card's
+  HTML frame cost nothing while closed.
+- **In a static render** (`dom/render-mode`: the website's crawlable snapshot,
+  never hydrated, so nothing can open a fold) a closed fold's content is
+  rendered, under the `hidden` attribute, so a robot reads its text. React 19
+  writes `hidden` only as a boolean (`hidden=""`, never `until-found`); the
+  snapshot is hidden whole anyway, so the text is what counts.
+- **…unless the fold swaps states, not content** (`FoldMotion kind="state"`):
+  a form and the confirmation that replaces it once sent, say. A closed state
+  does not exist yet — "Message sent" before anything was — so a static render
+  leaves it out, as a live page does. The default, `"disclosure"`, is content
+  a reader opens.
+
 The clock costs no frame — its callback runs before the very next paint — so a
 fold that starts late is waiting on the commit's own work. Measure before
 blaming the motion: `e2e/fold-latency.ts` (`--path /agents/c/<conv> --trigger
