@@ -55,8 +55,8 @@ A leaf (its one import is `user-path/core`'s types), so `tooling/lint/core`'s
     - `infra/host-fs/user-path.asAppPath`
   - Exports (values): `REPO_ROOT`
 - Cross-plugin:
-  - Imported by: 44 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `framework` ×13
+  - Imported by: 45 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `framework` ×14
     - `infra` ×8
     - `apps` ×6
     - `build` ×6

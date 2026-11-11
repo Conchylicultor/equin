@@ -281,8 +281,12 @@ async function growGraph(
   };
   const resolveFrom = async (
     fromRel: string,
-    spec: string,
+    rawSpec: string,
   ): Promise<string | null> => {
+    // A bundler query (`./clip.mp4?inline`, `?raw`, `?url`) loads the file it
+    // names: the module is that file, keyed by its bytes like any other.
+    const query = rawSpec.indexOf("?");
+    const spec = query === -1 ? rawSpec : rawSpec.slice(0, query);
     const base = spec.startsWith(PLUGINS_ALIAS)
       ? relJoin("plugins", spec.slice(PLUGINS_ALIAS.length))
       : relJoin(relDirname(fromRel), spec);

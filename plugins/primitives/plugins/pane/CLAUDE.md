@@ -971,7 +971,7 @@ with an empty route.
     - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-md`
     - `ui/tokens/shape --spacing`
-  - Imported by: 197 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 198 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×72
     - `conversations` ×32
     - `debug` ×27
@@ -979,8 +979,8 @@ with an empty route.
     - `tasks` ×10
     - `apps-core` ×6
     - `plugin-meta` ×6
+    - `primitives` ×5
     - `layouts` ×4
-    - `primitives` ×4
     - `infra` ×2
     - `page` ×2
     - `reports` ×2

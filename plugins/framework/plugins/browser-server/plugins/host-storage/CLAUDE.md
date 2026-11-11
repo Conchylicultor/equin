@@ -130,6 +130,7 @@ serveBrowserHost({
     - `OpenedHostStorage`
     - `WorkerScope`
   - Exports (values):
+    - `declareInitializedMemoryStorage`
     - `decodeHostSnapshot`
     - `encodeHostSnapshot`
     - `hostStorage`

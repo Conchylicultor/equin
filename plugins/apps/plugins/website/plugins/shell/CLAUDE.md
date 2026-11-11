@@ -75,7 +75,7 @@ hover.
 
 ## Plugin reference
 
-- Description: App shell for the Website (equin public site). Registers the /website app entry, owns the shared site header (wordmark + nav) and the band/page/footer chrome every page wears, defines the Website.Section landing slot, and contributes the site's own theme (equin: palette, chart ramp, font), which the website app selects, plus the equin-document sub-theme (type scale, density, shape) every page wears and the equin-page-hero sub-theme an inner page's heading wears.
+- Description: App shell for the Website (equin public site). Registers the /website app entry, owns the shared site header (wordmark + nav) and the band/page/footer chrome every page wears, defines the Website.Section landing slot, and contributes the site's own theme (equin: palette, chart ramp, font), which the website app selects, plus the equin-document sub-theme (type scale, density, shape) every page wears and the equin-page-hero sub-theme an inner page's heading wears. The website's landing page on the server: its sitemap entry (WebsitePages.Page).
 - Web:
   - Slots:
     - `Website.Section`
@@ -132,8 +132,13 @@ hover.
     - `WebsiteHero`
     - `WebsiteNavLink`
     - `WebsiteSoon`
+- Server:
+  - Contributes: `apps.website.crawlable.page` "/website"
+  - Uses: `apps/website/crawlable.WebsitePages`
 - Core:
   - Uses:
+    - `apps/website/crawlable.defineWebsitePage`
+    - `apps/website/crawlable.WEBSITE_BASE_PATH`
     - `framework/product-name.SOURCE_REPO`
     - `framework/product-name.SOURCE_REPO_URL`
     - `infra/namespace.MAIN_WORKTREE_NAME`
@@ -146,6 +151,7 @@ hover.
     - `CONTACT_MAILTO`
     - `INSTALL_COMMAND`
     - `ISSUES_URL`
+    - `landingPage`
     - `LOCAL_APP_HOST`
     - `LOCAL_APP_URL`
     - `websiteApp`

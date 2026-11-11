@@ -261,7 +261,6 @@ export type {
   FollowIdsSource,
   FollowIdsTarget,
   FollowMap,
-  FollowsAtBindOptions,
   FollowsFn,
   FollowWhere,
   FollowWhereSource,

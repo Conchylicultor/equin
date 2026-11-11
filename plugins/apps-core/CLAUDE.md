@@ -172,9 +172,18 @@ so ⌘/middle-click opens a desktop in a new browser tab.
     - `useInstallRoutePrefixes`
     - `useListedApps`
     - `usePathname`
+- Core:
+  - Uses: `framework/product-name.PRODUCT_NAME`
+  - Exports (types):
+    - `AppDeclaration`
+    - `Placement`
+    - `RailFramingProps`
+  - Exports (values):
+    - `APP_RAIL_WIDTH`
+    - `documentTitle`
 - Cross-plugin:
-  - Imported by: 58 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×27
+  - Imported by: 59 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×28
     - `apps-core` ×14
     - `ui` ×6
     - `config_v2` ×2
@@ -189,12 +198,6 @@ so ⌘/middle-click opens a desktop in a new browser tab.
   - Exempted by: `apps-core/layout` (0 debt)
 - Server:
   - Exports (values): `declaredApps`
-- Core:
-  - Exports (types):
-    - `AppDeclaration`
-    - `Placement`
-    - `RailFramingProps`
-  - Exports (values): `APP_RAIL_WIDTH`
 - Test helpers:
   - Web: `@plugins/apps-core/web/testing`
     - `getFocusedAppId`

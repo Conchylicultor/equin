@@ -407,6 +407,7 @@ Run with `./equin test plugins/plugin-meta/plugins/composition`.
 - Core:
   - Uses:
     - `config_v2.defineConfig`
+    - `fields/bool/config.boolField`
     - `fields/enum/config.enumField`
     - `fields/list/config.listField`
     - `fields/string-list/config.stringListField`

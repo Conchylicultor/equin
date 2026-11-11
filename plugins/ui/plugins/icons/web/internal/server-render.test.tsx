@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
-import { symbol, type SpriteKey } from "../../core";
+import { DEFAULT_ICON_STYLE, symbol, type SpriteKey } from "../../core";
 import { Icon } from "./icon";
 import { useIconFamilies } from "./family-store";
 import {
@@ -15,7 +15,6 @@ import {
   useWantedSprites,
 } from "./sprite-store";
 import {
-  iconStyleOf,
   useScopeIconStyle,
   useScopeIconStyles,
   useWantedStyleKeys,
@@ -37,7 +36,7 @@ describe("icon stores under a server render", () => {
     const key = "server-render-test" as SpriteKey;
     provideSprite(key, "<svg></svg>");
     function Probe() {
-      const style = useScopeIconStyle(undefined);
+      const style = useScopeIconStyle([]);
       const styles = useScopeIconStyles([undefined]);
       return (
         <i>
@@ -56,7 +55,7 @@ describe("icon stores under a server render", () => {
       );
     }
     expect(renderToStaticMarkup(<Probe />)).toBe(
-      `<i>${iconStyleOf(undefined).family},1,true,0,true,true,0,0,0</i>`,
+      `<i>${DEFAULT_ICON_STYLE.family},1,true,0,true,true,0,0,0</i>`,
     );
   });
 });

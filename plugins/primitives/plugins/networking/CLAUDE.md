@@ -233,9 +233,9 @@ built on them — see
     - `useTransport`
     - `useTransportScoped`
 - Cross-plugin:
-  - Imported by: 39 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 40 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×11
-    - `primitives` ×6
+    - `primitives` ×7
     - `conversations` ×5
     - `network` ×4
     - `framework` ×3
@@ -260,6 +260,7 @@ built on them — see
     - `infra/endpoints` (0 debt)
     - `infra/health` (0 debt)
     - `network/live/boot-snapshot` (0 debt)
+    - `primitives/dom/static-render` (0 debt)
     - `primitives/log-channels` (0 debt)
     - `primitives/networking` (0 debt)
     - `primitives/networking/page-transport` (0 debt)

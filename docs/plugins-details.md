@@ -11599,6 +11599,50 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/plugin-view`
     - **`website`** — Website — the public-facing site of equin: the homepage's claim, a picture of it and the three layers of the project, a gallery of its apps, placeholder pages for the vision, the foundations and the story, and how to get in touch.
       - Plugins:
+        - **`crawlable`** — The website's pages on the server: the WebsitePages.Page collection every page plugin contributes its defineWebsitePage declaration to, and the public /robots.txt (allow all, pointing at the sitemap) and /sitemap.xml (one URL per page) built from it per request, origin from the request's X-Forwarded-Host (else Host) and X-Forwarded-Proto; both 404 in a composition with no pages.
+          - Server:
+            - Uses: `infra/endpoints.rawEndpointHandler`
+            - Exports (values): `WebsitePages`
+            - Routes:
+              - `GET /robots.txt`
+              - `GET /sitemap.xml`
+          - Core:
+            - Uses:
+              - `infra/endpoints.blob`
+              - `infra/endpoints.defineEndpoint`
+            - Exports (types):
+              - `SnapshotManifest`
+              - `SnapshotPage`
+              - `SnapshotTaken`
+              - `WebsitePage`
+            - Exports (values):
+              - `defineWebsitePage`
+              - `fragmentText`
+              - `robotsTxtEndpoint`
+              - `sitemapXmlEndpoint`
+              - `SNAPSHOT_MANIFEST_PATH`
+              - `snapshotFileOf`
+              - `snapshotFiles`
+              - `SnapshotManifestSchema`
+              - `SnapshotPageError`
+              - `SnapshotPageSchema`
+              - `WEBSITE_BASE_PATH`
+              - `WebsitePageError`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/website/crawlable/snapshot-render`
+              - `apps/website/pages/apps`
+              - `apps/website/pages/download`
+              - `apps/website/pages/foundations`
+              - `apps/website/pages/guide`
+              - `apps/website/pages/story`
+              - `apps/website/pages/vision`
+              - `apps/website/shell`
+          - Plugins:
+            - **`snapshot-render`** (excluded) — The crawlable snapshot's render half, build-only: renderSiteSnapshot renders each declared website page once by its path through the real app (static-render over the composition's plugins and a boot snapshot), filters it to semantic HTML, titles it as the live app titles its tab, and returns the snapshot manifest (with the composition's home) and fragments — loaded by the snapshot take in Bun by path, and in no composition (base-exclusions), so no browser registry holds it.
+              - Web:
+                - Uses: `primitives/dom/static-render.createStaticRenderer`
+                - Exports (values): `renderSiteSnapshot`
         - **`demos`** — The website's live demos, one plugin each: a demo owns its story and its data (pages, prototypes, agent runs) and writes them into its own browser host through each app's fixture writer.
           - Plugins:
             - **`workspace`** — The workspace demo — the website's live demo of the Agent Manager, Pages, Prototypes, Sonata and Keyboard Party on Demo's own equin (core: workspaceDemo — the app, the route /c/conv-demo-practice-timer and its browser host: real server code in a Web Worker on PGlite, starting from a build-time snapshot of the demo's own data written through each app's fixture writer — agents at work on Demo's wishes, one waiting for review after adding a practice timer to Sonata, pages showing every block type, prototypes and songs, every id carrying `demo`) and its exhibit, the app rendered in-process on that host.
@@ -11849,7 +11893,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by: `apps/website/landing/hero`
         - **`pages`** — The inner pages of the public website: the apps gallery, the vision for applications, the technical foundations, the story of how equin came to be, the getting-started guide, and how to install it.
           - Plugins:
-            - **`apps`** — The apps gallery of the equin website: the /website/apps pane listing every app equin ships, searchable and grouped by category (harness, daily life, tools, coming next), each card's Install and the 'Missing an app?' band going to the download page, the vision and foundations pages offered at its end, and its Apps nav link.
+            - **`apps`** — The apps gallery of the equin website: the /website/apps pane listing every app equin ships, searchable and grouped by category (harness, daily life, tools, coming next), each card's Install and the 'Missing an app?' band going to the download page, the vision and foundations pages offered at its end, and its Apps nav link. The apps gallery of the equin website on the server: its sitemap entry (WebsitePages.Page).
               - Web:
                 - Contributes:
                   - `Pane.Register` "website-apps"
@@ -11879,6 +11923,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/shortcuts.useSurfaceShortcuts`
                   - `ui/theme-engine.ThemeEngine`
                 - Exports (values): `appsPane`
+              - Server:
+                - Contributes: `apps.website.crawlable.page` "/website/apps"
+                - Uses: `apps/website/crawlable.WebsitePages`
+              - Core:
+                - Uses: `apps/website/crawlable.defineWebsitePage`
+                - Exports (values): `appsPage`
               - Cross-plugin:
                 - Uses tokens:
                   - `ui/tokens/color-palette --background`
@@ -11894,7 +11944,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/type-scale --font-weight-normal`
                   - `ui/tokens/type-scale --font-weight-semibold`
                 - Imported by: `apps/website/landing/layers`
-            - **`download`** — The download page of the equin website: the /website/download pane with the one install command (or, for an agent, a prompt with deep links into Claude Code and the Claude app), what to do once it runs, and its Download nav link.
+            - **`download`** — The download page of the equin website: the /website/download pane with the one install command (or, for an agent, a prompt with deep links into Claude Code and the Claude app), what to do once it runs, and its Download nav link. The download page of the equin website on the server: its sitemap entry (WebsitePages.Page).
               - Web:
                 - Contributes:
                   - `Pane.Register` "website-download"
@@ -11918,6 +11968,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/toggle-chip.SegmentedControl`
                   - `ui/icons.Icon`
                 - Exports (values): `downloadPane`
+              - Server:
+                - Contributes: `apps.website.crawlable.page` "/website/download"
+                - Uses: `apps/website/crawlable.WebsitePages`
+              - Core:
+                - Uses: `apps/website/crawlable.defineWebsitePage`
+                - Exports (values): `downloadPage`
               - Cross-plugin:
                 - Uses tokens:
                   - `ui/tokens/color-palette --border`
@@ -11930,7 +11986,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/shape --spacing`
                   - `ui/tokens/type-scale --font-weight-semibold`
                 - Imported by: `apps/website/pages/apps`
-            - **`foundations`** — The technical foundations page of the equin website: the /website/foundations pane drawing what equin brings on top of Claude as an iceberg — ten layers from the apps at sea level down to the loop that builds them, each piece a pill that opens in place into a card (many with a live drawing), with a depth gauge, a Components / Harness filter and Expand all — and its Foundations nav link.
+            - **`foundations`** — The technical foundations page of the equin website: the /website/foundations pane drawing what equin brings on top of Claude as an iceberg — ten layers from the apps at sea level down to the loop that builds them, each piece a pill that opens in place into a card (many with a live drawing), with a depth gauge, a Components / Harness filter and Expand all — and its Foundations nav link. The technical foundations page of the equin website on the server: its sitemap entry (WebsitePages.Page).
               - Web:
                 - Contributes:
                   - `Pane.Register` "website-foundations"
@@ -11954,6 +12010,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/shortcuts.useSurfaceShortcuts`
                   - `ui/theme-engine.ThemeEngine`
                 - Exports (values): `foundationsPane`
+              - Server:
+                - Contributes: `apps.website.crawlable.page` "/website/foundations"
+                - Uses: `apps/website/crawlable.WebsitePages`
+              - Core:
+                - Uses: `apps/website/crawlable.defineWebsitePage`
+                - Exports (values): `foundationsPage`
               - Cross-plugin:
                 - Uses tokens:
                   - `ui/tokens/density --chrome-pane-h`
@@ -11963,7 +12025,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by:
                   - `apps/website/landing/layers`
                   - `apps/website/pages/apps`
-            - **`guide`** — The getting-started guide of the equin website: the /website/guide pane on the first tasks, agents and changes once equin is installed (a placeholder heading for now), its Guide nav link, and the WebsiteGuide.Section slot the guide is written into.
+            - **`guide`** — The getting-started guide of the equin website: the /website/guide pane on the first tasks, agents and changes once equin is installed (a placeholder heading for now), its Guide nav link, and the WebsiteGuide.Section slot the guide is written into. The getting-started guide of the equin website on the server: its sitemap entry (WebsitePages.Page).
               - Web:
                 - Slots: `WebsiteGuide.Section`
                 - Contributes:
@@ -11982,9 +12044,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values):
                   - `guidePane`
                   - `WebsiteGuide`
+              - Server:
+                - Contributes: `apps.website.crawlable.page` "/website/guide"
+                - Uses: `apps/website/crawlable.WebsitePages`
+              - Core:
+                - Uses: `apps/website/crawlable.defineWebsitePage`
+                - Exports (values): `guidePage`
               - Cross-plugin:
                 - Imported by: `apps/website/pages/download`
-            - **`story`** — The story page of the equin website: the /website/story pane answering 'how did equin come to be?', its Story nav link, and the WebsiteStory.Section slot the story is written into.
+            - **`story`** — The story page of the equin website: the /website/story pane answering 'how did equin come to be?', its Story nav link, and the WebsiteStory.Section slot the story is written into. The story page of the equin website on the server: its sitemap entry (WebsitePages.Page).
               - Web:
                 - Slots: `WebsiteStory.Section`
                 - Contributes:
@@ -12003,9 +12071,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values):
                   - `storyPane`
                   - `WebsiteStory`
+              - Server:
+                - Contributes: `apps.website.crawlable.page` "/website/story"
+                - Uses: `apps/website/crawlable.WebsitePages`
+              - Core:
+                - Uses: `apps/website/crawlable.defineWebsitePage`
+                - Exports (values): `storyPage`
               - Cross-plugin:
                 - Imported by: `apps/website/landing/story-link`
-            - **`vision`** — The vision page of the equin website: the /website/vision pane on the vision for applications — one Powers of Ten zoom-out on a dark starfield, six chapter cards scrolling over a pinned stage (an idea, an app that reshapes itself, apps that integrate, a personal OS, apps shared between people, every app rebuilt) with a layer strip under the header — its Vision nav link, and the WebsiteVision.Section slot for sections below it.
+            - **`vision`** — The vision page of the equin website: the /website/vision pane on the vision for applications — one Powers of Ten zoom-out on a dark starfield, six chapter cards scrolling over a pinned stage (an idea, an app that reshapes itself, apps that integrate, a personal OS, apps shared between people, every app rebuilt) with a layer strip under the header — its Vision nav link, and the WebsiteVision.Section slot for sections below it. The vision page of the equin website on the server: its sitemap entry (WebsitePages.Page).
               - Web:
                 - Slots: `WebsiteVision.Section`
                 - Contributes:
@@ -12028,6 +12102,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values):
                   - `visionPane`
                   - `WebsiteVision`
+              - Server:
+                - Contributes: `apps.website.crawlable.page` "/website/vision"
+                - Uses: `apps/website/crawlable.WebsitePages`
+              - Core:
+                - Uses: `apps/website/crawlable.defineWebsitePage`
+                - Exports (values): `visionPage`
               - Cross-plugin:
                 - Uses tokens:
                   - `ui/tokens/chart --chart-1`
@@ -12074,7 +12154,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by: `apps/website/promo-film`
               - Structure:
                 - Non-standard folders: `data/`
-        - **`shell`** — App shell for the Website (equin public site). Registers the /website app entry, owns the shared site header (wordmark + nav) and the band/page/footer chrome every page wears, defines the Website.Section landing slot, and contributes the site's own theme (equin: palette, chart ramp, font), which the website app selects, plus the equin-document sub-theme (type scale, density, shape) every page wears and the equin-page-hero sub-theme an inner page's heading wears.
+        - **`shell`** — App shell for the Website (equin public site). Registers the /website app entry, owns the shared site header (wordmark + nav) and the band/page/footer chrome every page wears, defines the Website.Section landing slot, and contributes the site's own theme (equin: palette, chart ramp, font), which the website app selects, plus the equin-document sub-theme (type scale, density, shape) every page wears and the equin-page-hero sub-theme an inner page's heading wears. The website's landing page on the server: its sitemap entry (WebsitePages.Page).
           - Web:
             - Slots:
               - `Website.Section`
@@ -12131,8 +12211,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `WebsiteHero`
               - `WebsiteNavLink`
               - `WebsiteSoon`
+          - Server:
+            - Contributes: `apps.website.crawlable.page` "/website"
+            - Uses: `apps/website/crawlable.WebsitePages`
           - Core:
             - Uses:
+              - `apps/website/crawlable.defineWebsitePage`
+              - `apps/website/crawlable.WEBSITE_BASE_PATH`
               - `framework/product-name.SOURCE_REPO`
               - `framework/product-name.SOURCE_REPO_URL`
               - `infra/namespace.MAIN_WORKTREE_NAME`
@@ -12145,6 +12230,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CONTACT_MAILTO`
               - `INSTALL_COMMAND`
               - `ISSUES_URL`
+              - `landingPage`
               - `LOCAL_APP_HOST`
               - `LOCAL_APP_URL`
               - `websiteApp`
@@ -12237,9 +12323,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useInstallRoutePrefixes`
       - `useListedApps`
       - `usePathname`
+  - Core:
+    - Uses: `framework/product-name.PRODUCT_NAME`
+    - Exports (types):
+      - `AppDeclaration`
+      - `Placement`
+      - `RailFramingProps`
+    - Exports (values):
+      - `APP_RAIL_WIDTH`
+      - `documentTitle`
   - Cross-plugin:
-    - Imported by: 58 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
-      - `apps` ×27
+    - Imported by: 59 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
+      - `apps` ×28
       - `apps-core` ×14
       - `ui` ×6
       - `config_v2` ×2
@@ -12254,12 +12349,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Exempted by: `apps-core/layout` (0 debt)
   - Server:
     - Exports (values): `declaredApps`
-  - Core:
-    - Exports (types):
-      - `AppDeclaration`
-      - `Placement`
-      - `RailFramingProps`
-    - Exports (values): `APP_RAIL_WIDTH`
   - Test helpers:
     - Web: `@plugins/apps-core/web/testing`
       - `getFocusedAppId`
@@ -14690,7 +14779,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `validationIssues`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Imported by: 140 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+    - Imported by: 141 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
       - `apps` ×39
       - `conversations` ×14
       - `backup` ×13
@@ -14699,7 +14788,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `config_v2` ×8
       - `auth` ×6
       - `tasks` ×6
-      - `framework` ×4
+      - `framework` ×5
       - `infra` ×4
       - `build` ×3
       - `primitives` ×3
@@ -22317,6 +22406,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `database`
           - `database/migrations/bundled-source`
+          - `framework/browser-server/bun-host`
           - `framework/cli/migrations`
           - `framework/cli/regen-migrations`
       - Exemptions:
@@ -26106,7 +26196,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boolField`
               - `boolSample`
           - Cross-plugin:
-            - Imported by: 77 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
+            - Imported by: 78 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
               - `apps` ×25
               - `backup` ×12
               - `debug` ×11
@@ -26121,6 +26211,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/build/experimental-marks`
               - `history/engine`
               - `integrations/gmail`
+              - `plugin-meta/composition`
               - `primitives/data-view/list`
               - `release`
               - `reports`
@@ -28205,6 +28296,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `inRealmServer` — A browser server over a resource runtime in this realm, wired as a browser host is (`bootBrowserHost` + `runtimeBrowserServer`): the served declarations, the given routes and `/api/resources/:key` through the shared router, any other `/api` request the unsupported refusal (`unmatchedApiResponse`).
           - Types: `InRealmServerOptions`
       - Plugins:
+        - **`bun-host`** — A browser host's server graph as Bun boots it (a build's snapshot take, a boot test): withDiskProviders swaps the two providers whose data is bundled text through vite's import.meta.glob, which Bun cannot evaluate — the migration history (migrations/bundled-source) and the committed config layer (config_v2/bundled-layer) — for the same files read off disk; diskMigrationList is that history.
+          - Cli:
+            - Exports (values):
+              - `diskMigrationList`
+              - `withDiskProviders`
         - **`demo`** — Demo scenarios for a browser server (core only): DemoScenario — the app, the route, and the browser host (DemoHost: the composition scope the page renders the demo in, and the worker whose real server code serves the story).
           - Core:
             - Exports (types):
@@ -28283,6 +28379,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `OpenedHostStorage`
               - `WorkerScope`
             - Exports (values):
+              - `declareInitializedMemoryStorage`
               - `decodeHostSnapshot`
               - `encodeHostSnapshot`
               - `hostStorage`
@@ -29098,13 +29195,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `validatePersistedValue`
           - `withNotifyBatch`
       - Cross-plugin:
-        - Imported by: 109 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
+        - Imported by: 110 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
           - `infra` ×27
           - `debug` ×13
           - `conversations` ×11
           - `tasks` ×10
           - `database` ×9
-          - `apps` ×6
+          - `apps` ×7
           - `network` ×5
           - `reports` ×5
           - `page` ×3
@@ -29382,7 +29479,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/guards` (11 debt)
               - `framework/tooling/import-closure` (1 debt)
               - `framework/tooling/lint` (2 debt)
-              - `framework/tooling/web-artifacts` (20 debt)
+              - `framework/tooling/web-artifacts` (21 debt)
               - `framework/web-core` (1 debt)
               - `infra/asset-mirror/bundle` (1 debt)
               - `infra/corpus-index` (3 debt)
@@ -29763,7 +29860,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Uses: `framework/tooling/checks/type-check.readTypeCheckTree`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 142 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+            - Uses: 143 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
               - `plugin-meta/parse-utils` ×19
               - `config_v2` ×15
               - `framework/plugin-id` ×13
@@ -29783,12 +29880,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/collected-dir/discovery` ×2
               - `framework/tooling/format` ×2
               - `framework/tooling/lint` ×2
+              - `framework/tooling/web-artifacts` ×2
               - `infra/paths` ×2
               - `network/live/resource-protocol` ×2
               - `plugin-meta/plugin-tree` ×2
               - `fields/reorder-tree.REORDER_NODE_LEGEND`
               - `framework/tooling/guards/agent-policy.agentPolicySettings`
-              - `framework/tooling/web-artifacts.COMPOSITION_SPECIFIERS`
               - `framework/tooling.noteRepoWrites`
               - `infra/namespace.MAIN_COMPOSITION_ID`
               - `packages/macrotask-yield.yieldMacrotask`
@@ -29827,6 +29924,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `RegistryComposition`
               - `RegistryGenContext`
               - `ReorderableSlotEntry`
+              - `StaticHostDecl`
               - `WatchedSlotHit`
               - `WebSlotContribution`
             - Exports (values):
@@ -29860,6 +29958,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `declareSlotsFromBarrels`
               - `deriveBrowserHostGraph`
               - `discoverBrowserHosts`
+              - `discoverStaticHost`
               - `eagerTierManifestPath`
               - `evaluateAllBarrels`
               - `evaluateWebBarrels`
@@ -29883,6 +29982,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `generatePluginRegistry`
               - `generateReorderableSlots`
               - `generateSpaceRamp`
+              - `generateStaticHosts`
               - `generateTokenGroupVars`
               - `iconManifestPath`
               - `inferBrowserHostGraph`
@@ -29930,6 +30030,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `renderPluginReferenceMd`
               - `renderReorderableSlotsManifest`
               - `renderSpaceRamp`
+              - `renderStaticHostFile`
               - `renderThemeDeclarationsManifest`
               - `renderTokenGroupVarsManifest`
               - `reorderableSlotsManifestPath`
@@ -30598,6 +30699,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `computePreloadClosure`
               - `createArtifactBuildHandler`
               - `defaultFleetSource`
+              - `discoverStaticHostTake`
               - `findUnmappedDynamicWarnings`
               - `findUnmappedSpecifiers`
               - `firstSegmentOf`
@@ -30616,6 +30718,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `runWebArtifactsPipeline`
               - `sha256Hex`
               - `SHARED_ROOT`
+              - `STATIC_HOST_ENTRY_REL`
               - `WORKER_ASSETS_DIR`
           - Cli:
             - Uses: `packages/thread-pool.createThreadPool`
@@ -30634,12 +30737,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/web-artifacts/prune`
           - Exemptions:
             - Exempts itself from:
-              - `boundaries/no-platform-api` — `core/hash.ts`, `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/global-css.ts`, `core/internal/host-snapshots.ts`, `core/internal/identity.ts`, `core/internal/lease.ts`, `core/internal/own-files.ts`, `core/internal/package-assets.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/tailwind-candidates.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts`, `core/internal/worker-link.ts` (debt)
+              - `boundaries/no-platform-api` — `core/hash.ts`, `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/global-css.ts`, `core/internal/host-snapshots.ts`, `core/internal/crawl-snapshot.ts`, `core/internal/identity.ts`, `core/internal/lease.ts`, `core/internal/own-files.ts`, `core/internal/package-assets.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/tailwind-candidates.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts`, `core/internal/worker-link.ts` (debt)
               - `user-path/no-unproven-claim` — `core/internal/identity.ts`, `core/internal/plan.ts`, `core/internal/vendors.ts` (sanctioned)
               - `user-path/no-unproven-claim` — `core/internal/vendor-cache.ts` (sanctioned)
               - `user-path/no-unproven-claim` — `core/internal/global-css.ts`, `core/internal/package-assets.ts`, `core/internal/staged-verify.ts` (sanctioned)
               - `repo-walk-safety/no-adhoc-repo-listing` — `core/internal/pipeline.ts` (sanctioned)
-              - `blocking-fs/sync-named` — `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/global-css.ts`, `core/internal/host-snapshots.ts`, `core/internal/identity.ts`, `core/internal/lease.ts`, `core/internal/package-assets.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts`, `core/internal/worker-link.ts` (sanctioned)
+              - `blocking-fs/sync-named` — `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/global-css.ts`, `core/internal/host-snapshots.ts`, `core/internal/crawl-snapshot.ts`, `core/internal/identity.ts`, `core/internal/lease.ts`, `core/internal/package-assets.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts`, `core/internal/worker-link.ts` (sanctioned)
           - Plugins:
             - **`prune`** — The hourly web-artifacts.prune job: prunes the shared write-once web caches (artifact store, vendor sets, CSS cache, package assets) off every build's path — dist links read unlocked, only changed dists re-read under the store lock.
               - Server:
@@ -30776,8 +30879,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `webCollectedDir`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 117 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
-          - `primitives` ×22
+        - Imported by: 118 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+          - `primitives` ×23
           - `reports` ×20
           - `apps` ×18
           - `ui` ×7
@@ -32647,8 +32750,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 250 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
-          - `apps` ×73
+        - Imported by: 251 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+          - `apps` ×74
           - `conversations` ×35
           - `infra` ×23
           - `page` ×19
@@ -35040,10 +35143,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 129 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Imported by: 130 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `infra` ×31
           - `apps` ×20
-          - `framework` ×19
+          - `framework` ×20
           - `debug` ×13
           - `conversations` ×7
           - `build` ×5
@@ -35421,8 +35524,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/host-fs/user-path.asAppPath`
             - Exports (values): `REPO_ROOT`
           - Cross-plugin:
-            - Imported by: 44 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
-              - `framework` ×13
+            - Imported by: 45 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
+              - `framework` ×14
               - `infra` ×8
               - `apps` ×6
               - `build` ×6
@@ -36839,6 +36942,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/sonata/shell`
           - `apps/website/shell`
           - `layouts/host`
+          - `primitives/dom/static-render`
     - **`host`** — Mixing host that dispatches each active pane to Full-pane or Miller per the app's own full-surface pane list. Reads the surface's already-resolved match.
       - Web:
         - Uses:
@@ -37880,6 +37984,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/networking/page-transport.pageTransport`
               - `primitives/perfs/boot-trace.recordBootSpan`
               - `reports.report`
+            - Exports (types):
+              - `BootSnapshotHydration`
+              - `BootSnapshotValues`
+            - Exports (values): `hydrateBootSnapshot`
           - Server:
             - Uses:
               - `infra/endpoints.implement`
@@ -37893,7 +38001,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `BootSnapshotSource`
             - Exports (values): `bootSnapshot`
           - Cross-plugin:
-            - Imported by: `debug/profiling/boot-bench`
+            - Imported by:
+              - `debug/profiling/boot-bench`
+              - `primitives/dom/static-render`
             - Endpoint callers:
               - `boot-bench`
               - `live-state`
@@ -38194,14 +38304,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `unresolved`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --destructive`
-            - Imported by: 300 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
+            - Imported by: 301 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
               - `apps` ×83
               - `conversations` ×48
               - `debug` ×29
               - `ui` ×25
               - `tasks` ×22
               - `page` ×16
-              - `primitives` ×14
+              - `primitives` ×15
               - `build` ×9
               - `infra` ×8
               - `active-data` ×5
@@ -39331,9 +39441,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/ticket-line.ts` (debt)
     - **`timed-fs`** — The file reads, listings, stats and glob scans every non-browser process makes, timed: node:fs's read calls under their own names and types (readFile / readdir / stat / lstat / access / realpath / readlink and their *Sync twins, existsSync) plus scanGlob / scanGlobSync over a Bun.Glob, each call metered while it runs (installFsWaitMeter — the backend's profiler shows one past FS_WAIT_FLOOR_MS in progress and charges it) and, once it returns past the floor, handed to onSlowFsCall subscribers, under a named wait layer (fs-read / fs-readdir / fs-stat / fs-glob) — so a disk stall names itself instead of reading as the caller's own work. A leaf (node builtins only), enforced by the timed-fs/no-untimed-fs-read lint.
       - Cross-plugin:
-        - Imported by: 161 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+        - Imported by: 162 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
           - `infra` ×47
-          - `framework` ×24
+          - `framework` ×25
           - `apps` ×15
           - `debug` ×14
           - `backup` ×12
@@ -42443,6 +42553,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `barrelLoadInputs`
           - `BarrelLoadReadError`
           - `importBarrel`
+          - `inlineAssetImports`
           - `registerBarrelStubs`
           - `setPreBarrelImportGuard`
       - Cross-plugin:
@@ -42588,6 +42699,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Uses:
           - `config_v2.defineConfig`
+          - `fields/bool/config.boolField`
           - `fields/enum/config.enumField`
           - `fields/list/config.listField`
           - `fields/string-list/config.stringListField`
@@ -48060,6 +48172,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`overscroll-hint`** — Wasted-scroll hint: a single invisible global controller (mounted via Core.Root) that plays a small native-feeling rubber-band bounce on a surface when a wheel/trackpad/touch gesture scrolls nothing (not scrollable, or already at the edge). Gestures are batched per frame and a batch is wasted when no scroller on its chain scrolled or has room left; a two-stage physics (a saturating pull, drawn through a critically damped spring) turns bursty trackpad input into one smooth out-and-back.
           - Web:
             - Contributes: `Core.Root` → `OverscrollHintController`
+        - **`render-mode`** — Whether this process renders the app live in a browser or once, statically, to HTML for robots (never hydrated): renderMode() is "live" unless a static-render process declared "static" (declareRenderMode) before loading any app module.
+          - Cross-plugin:
+            - Imported by:
+              - `media/player`
+              - `primitives/adaptive-bar`
+              - `primitives/collapsible`
+              - `primitives/css/viewport-overlay`
+              - `primitives/dom/static-render`
+              - `primitives/link-gesture`
+              - `primitives/loading`
+          - Core:
+            - Exports (types): `RenderMode`
+            - Exports (values):
+              - `declareRenderMode`
+              - `renderMode`
+          - Test helpers:
+            - Core: `@plugins/primitives/plugins/dom/plugins/render-mode/core/testing`
+              - `declareRenderMode` — Declare this process a static render.
         - **`scroll-reveal`** — Reveal-on-activation primitive: useRevealOnActive() scrolls an element into view only when it TRANSITIONS active (or on explicit revealOnMount intent), never because it remounted already-active — so background data churn can't move the user's scroll. revealElement() is the imperative funnel for event handlers. focusElement(el, { reveal }) is the one spelling of element.focus(): focus never scrolls (preventScroll), and a reveal is stated at every call (true / RevealOptions when focus follows the user's navigation, false when focus is moved for them).
           - Web:
             - Uses:
@@ -48090,6 +48220,36 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `scroll-safety/no-adhoc-scroll-into-view` — `web/internal/use-reveal-on-active.ts` (sanctioned)
               - `scroll-safety/no-adhoc-scroll-write` — `web/internal/use-reveal-on-active.ts` (sanctioned)
               - `scroll-safety/no-scrolling-focus` — `web/internal/focus-element.ts` (sanctioned)
+        - **`static-render`** (excluded) — One static render of a pane to HTML for robots (never hydrated): createStaticRenderer declares the process a static render, loads the composition's plugins, hydrates a boot snapshot through the boot task's own hydrate path, and renders a path through the real provider stack and a static pane store, failing loudly with the pane and the component path.
+          - Web:
+            - Uses:
+              - `layouts/full-pane.FullPane`
+              - `network/live/boot-snapshot.BootSnapshotValues`
+              - `network/live/boot-snapshot.hydrateBootSnapshot`
+              - `network/live/live-state.ensureNotificationsClient`
+              - `network/live/live-state.NotificationsProvider`
+              - `primitives/networking.TransportProvider`
+              - `primitives/pane.AnyPane`
+              - `primitives/pane.createPaneStore`
+              - `primitives/pane.MatchEntry`
+              - `primitives/pane.Pane`
+              - `primitives/pane.PaneSurfaceProvider`
+              - `primitives/pane.stripBasePath`
+              - `primitives/pane.usePaneMatch`
+              - `primitives/pane.usePaneTitle`
+            - Exports (types):
+              - `StaticPage`
+              - `StaticRenderer`
+            - Exports (values):
+              - `createStaticRenderer`
+              - `StaticRenderError`
+              - `StaticRenderNetworkError`
+          - Cross-plugin:
+            - Imported by: `apps/website/crawlable/snapshot-render`
+          - Exemptions:
+            - Exempts itself from: `networking/no-page-transport` — `web/internal/static-renderer.tsx` (sanctioned)
+          - Core:
+            - Exports (values): `semanticHtml`
         - **`tree-focus`** — Whether DOM focus is inside a component's REACT tree, portals included: useTreeFocus() → { onFocusCapture, holdsFocus() }. Spread onFocusCapture on the component's root; holdsFocus() is true while the focused element is one whose focus event reached it — a popover or menu it opened (portaled to the body, outside it in the DOM) counts as inside. The question a focus-pull guard asks before taking focus back; never `root.contains(document.activeElement)`, which a portal defeats.
           - Cross-plugin:
             - Imported by: `page/editor`
@@ -49718,9 +49878,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useTransport`
           - `useTransportScoped`
       - Cross-plugin:
-        - Imported by: 39 plugins — full list in [`plugins/primitives/plugins/networking/REFERENCE.md`](../plugins/primitives/plugins/networking/REFERENCE.md)
+        - Imported by: 40 plugins — full list in [`plugins/primitives/plugins/networking/REFERENCE.md`](../plugins/primitives/plugins/networking/REFERENCE.md)
           - `apps` ×11
-          - `primitives` ×6
+          - `primitives` ×7
           - `conversations` ×5
           - `network` ×4
           - `framework` ×3
@@ -49745,6 +49905,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints` (0 debt)
           - `infra/health` (0 debt)
           - `network/live/boot-snapshot` (0 debt)
+          - `primitives/dom/static-render` (0 debt)
           - `primitives/log-channels` (0 debt)
           - `primitives/networking` (0 debt)
           - `primitives/networking/page-transport` (0 debt)
@@ -50590,7 +50751,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-2xs`
           - `ui/tokens/density --space-md`
           - `ui/tokens/shape --spacing`
-        - Imported by: 197 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Imported by: 198 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `apps` ×72
           - `conversations` ×32
           - `debug` ×27
@@ -50598,8 +50759,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks` ×10
           - `apps-core` ×6
           - `plugin-meta` ×6
+          - `primitives` ×5
           - `layouts` ×4
-          - `primitives` ×4
           - `infra` ×2
           - `page` ×2
           - `reports` ×2

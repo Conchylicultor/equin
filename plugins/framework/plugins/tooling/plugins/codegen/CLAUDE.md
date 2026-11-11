@@ -222,7 +222,7 @@ wrapper fixpoint reads.
 
 - Description: Plugin doc generation and registry codegen
 - Core:
-  - Uses: 142 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 143 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `plugin-meta/parse-utils` ×19
     - `config_v2` ×15
     - `framework/plugin-id` ×13
@@ -242,12 +242,12 @@ wrapper fixpoint reads.
     - `framework/tooling/collected-dir/discovery` ×2
     - `framework/tooling/format` ×2
     - `framework/tooling/lint` ×2
+    - `framework/tooling/web-artifacts` ×2
     - `infra/paths` ×2
     - `network/live/resource-protocol` ×2
     - `plugin-meta/plugin-tree` ×2
     - `fields/reorder-tree.REORDER_NODE_LEGEND`
     - `framework/tooling/guards/agent-policy.agentPolicySettings`
-    - `framework/tooling/web-artifacts.COMPOSITION_SPECIFIERS`
     - `framework/tooling.noteRepoWrites`
     - `infra/namespace.MAIN_COMPOSITION_ID`
     - `packages/macrotask-yield.yieldMacrotask`
@@ -286,6 +286,7 @@ wrapper fixpoint reads.
     - `RegistryComposition`
     - `RegistryGenContext`
     - `ReorderableSlotEntry`
+    - `StaticHostDecl`
     - `WatchedSlotHit`
     - `WebSlotContribution`
   - Exports (values):
@@ -319,6 +320,7 @@ wrapper fixpoint reads.
     - `declareSlotsFromBarrels`
     - `deriveBrowserHostGraph`
     - `discoverBrowserHosts`
+    - `discoverStaticHost`
     - `eagerTierManifestPath`
     - `evaluateAllBarrels`
     - `evaluateWebBarrels`
@@ -342,6 +344,7 @@ wrapper fixpoint reads.
     - `generatePluginRegistry`
     - `generateReorderableSlots`
     - `generateSpaceRamp`
+    - `generateStaticHosts`
     - `generateTokenGroupVars`
     - `iconManifestPath`
     - `inferBrowserHostGraph`
@@ -389,6 +392,7 @@ wrapper fixpoint reads.
     - `renderPluginReferenceMd`
     - `renderReorderableSlotsManifest`
     - `renderSpaceRamp`
+    - `renderStaticHostFile`
     - `renderThemeDeclarationsManifest`
     - `renderTokenGroupVarsManifest`
     - `reorderableSlotsManifestPath`

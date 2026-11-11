@@ -1224,9 +1224,9 @@ useLive(folderListing, expanded.map((dir) => ({ dir })));
     names no contributor (`attachments.by-owner` follows each owner's
     `Attachments.Link` set). Nothing calls `follows` before the bind; the
     value is deferred. Not on a paged value (a throw). A bind building no
-    follow throws like an empty `follows`, unless the registry declares it
-    may hold none on some host — `followsAtBind(fn, { mayBeNone: { reason } })`
-    (`sprites.saved`: a graph booting no followed saved-icon source).
+    follow follows nothing — a registry no plugin of the composition
+    contributes to (`sprites.saved` on a graph booting no followed saved-icon
+    source) is an answer, unlike an author's empty `follows` literal (a throw).
   - **`followed[name]`** — the tuple's rows (`readonly Row[]`), read through
     the collection's own read (resource-runtime's `loadResourceFresh`) —
     for a TRACKED tuple through the runtime's held rows (`HeldFollows`): a
