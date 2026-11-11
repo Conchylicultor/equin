@@ -260,16 +260,17 @@ export function Player({
 
   const settingsOpen = settings !== null;
   const volumeOpen = volumeAt !== null;
-  // Touch: the controls stay up while paused (a tap is the only way to bring
-  // them back, so they never leave a paused picture bare) and hide after a
-  // short spell of no taps (TOUCH_HIDE_MS).
-  const { idle, wake, rest } = useIdle(
-    touch
-      ? settingsOpen || seeking || media.paused
+  // Touch: paused, no timer hides the controls (a paused picture is never left
+  // bare on its own), but a tap still does; playing, they hide after a short
+  // spell of no taps (TOUCH_HIDE_MS).
+  const { idle, wake, rest } = useIdle({
+    keepUp: touch
+      ? settingsOpen || seeking
       : settingsOpen || volumeOpen || seeking,
-    kind === "video",
-    touch ? TOUCH_HIDE_MS : undefined,
-  );
+    noTimer: touch && media.paused,
+    enabled: kind === "video",
+    quietMs: touch ? TOUCH_HIDE_MS : undefined,
+  });
 
   useEffect(() => {
     if (el) setMediaLoop(el, loop);

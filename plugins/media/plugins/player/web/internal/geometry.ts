@@ -65,7 +65,7 @@ export const TOUCH_QUERY = "(hover: none) and (pointer: coarse)";
  * Shorter than YouTube's ~3 s on purpose: the picture is the point on a small
  * screen, and every tap on the chrome restarts the clock.
  */
-export const TOUCH_HIDE_MS = 1000;
+export const TOUCH_HIDE_MS = 1500;
 /** One centre ± button, or one tap of a side double-tap: media seconds. */
 export const TOUCH_SKIP_SECONDS = 10;
 /** A second tap on the same side within this is a double-tap (a seek), not two taps. */

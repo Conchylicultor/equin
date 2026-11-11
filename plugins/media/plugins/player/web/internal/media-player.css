@@ -651,12 +651,19 @@ html[data-pip] .mp-fs {
   inset: 0;
 }
 
+/* The fade runs on the leaves — the scrim and each `.mp-t-fade` item — never on
+   .mp-t-chrome or a row: an ancestor below opacity 1 becomes the glass
+   buttons' backdrop root, so their blur sees nothing until the fade ends and
+   pops in late. */
 .mp-t-chrome {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.18s ease;
+}
+.mp-t-chrome::before {
+  content: "";
+  position: absolute;
+  inset: 0;
   /* The prototype's scrim: rgb(0 0 0 / .45) top, .5 bottom, .18 all over. */
   background:
     linear-gradient(
@@ -671,8 +678,16 @@ html[data-pip] .mp-fs {
     ),
     color-mix(in oklab, var(--background) 18%, transparent);
 }
-.mp-t-chrome[data-shown] {
+.mp-t-chrome::before,
+.mp-t-chrome .mp-t-fade {
+  opacity: 0;
+  /* Fade out slowly, so the chrome eases away; fade in quickly (below), so a tap answers at once. */
+  transition: opacity 0.45s ease;
+}
+.mp-t-chrome[data-shown]::before,
+.mp-t-chrome[data-shown] .mp-t-fade {
   opacity: 1;
+  transition-duration: 0.18s;
 }
 .mp-t-chrome[data-shown] button {
   pointer-events: auto;
@@ -864,9 +879,7 @@ html[data-pip] .mp-fs {
 .mp-t-seek[data-dragging] .mp-t-bubble {
   opacity: 1;
 }
-.mp:has(.mp-t-seek[data-dragging]) .mp-t-top,
-.mp:has(.mp-t-seek[data-dragging]) .mp-t-center,
-.mp:has(.mp-t-seek[data-dragging]) .mp-t-bottom {
+.mp:has(.mp-t-seek[data-dragging]) .mp-t-chrome .mp-t-fade {
   opacity: 0;
   transition: opacity 0.12s ease;
 }
@@ -876,11 +889,12 @@ html[data-pip] .mp-fs {
   inset: auto 18px max(12px, env(safe-area-inset-bottom)) 18px;
   height: 22px;
   opacity: 0;
-  transition: opacity 0.18s ease;
+  transition: opacity 0.45s ease;
 }
 .mp:fullscreen:has(.mp-t-chrome[data-shown]) .mp-t-seek,
 .mp[data-filling]:has(.mp-t-chrome[data-shown]) .mp-t-seek {
   opacity: 1;
+  transition-duration: 0.18s;
 }
 .mp:fullscreen .mp-t-trackclip,
 .mp[data-filling] .mp-t-trackclip {

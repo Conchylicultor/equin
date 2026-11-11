@@ -159,7 +159,7 @@ export function TouchControls(props: TouchControlsProps) {
         <Ripple side="right" run={run} />
         <div className="mp-t-chrome" data-shown={shown || undefined}>
           <div className="mp-t-top">
-            <Text variant="body" className="mp-t-title">
+            <Text variant="body" className="mp-t-title mp-t-fade">
               {label}
             </Text>
             <TouchButton
@@ -167,9 +167,10 @@ export function TouchControls(props: TouchControlsProps) {
                 volumeGlyph(volume) === "off" ? volumeOffIcon : volumeUpIcon
               }
               label={muteLabel}
+              className="mp-t-fade"
               onClick={press(onMute)}
             />
-            <span ref={gearRef} className="mp-gear">
+            <span ref={gearRef} className="mp-gear mp-t-fade">
               <TouchButton
                 icon={settingsIcon}
                 label="Settings"
@@ -188,19 +189,19 @@ export function TouchControls(props: TouchControlsProps) {
             <TouchButton
               icon={backIcon}
               label={`Back ${TOUCH_SKIP_SECONDS} seconds`}
-              className={cn("mp-t-skip", GLASS)}
+              className={cn("mp-t-skip mp-t-fade", GLASS)}
               onClick={press(() => onSkip(-TOUCH_SKIP_SECONDS))}
             />
             <TouchButton
               icon={ended ? replayIcon : paused ? playIcon : pauseIcon}
               label={ended ? "Replay" : paused ? "Play" : "Pause"}
-              className={cn("mp-t-play", GLASS)}
+              className={cn("mp-t-play mp-t-fade", GLASS)}
               onClick={press(onPlay)}
             />
             <TouchButton
               icon={forwardIcon}
               label={`Forward ${TOUCH_SKIP_SECONDS} seconds`}
-              className={cn("mp-t-skip", GLASS)}
+              className={cn("mp-t-skip mp-t-fade", GLASS)}
               onClick={press(() => onSkip(TOUCH_SKIP_SECONDS))}
             />
           </div>
@@ -214,7 +215,7 @@ export function TouchControls(props: TouchControlsProps) {
             <TouchButton
               icon={fullscreen ? fullscreenExitIcon : fullscreenIcon}
               label={fullscreen ? "Exit full screen" : "Full screen"}
-              className="mp-fs"
+              className="mp-fs mp-t-fade"
               onClick={press(onFullscreen)}
             />
           </div>
@@ -301,7 +302,7 @@ function TouchTime({
   return (
     <button
       type="button"
-      className="mp-t-time"
+      className="mp-t-time mp-t-fade"
       aria-label={remaining ? "Show the total" : "Show the time left"}
       onClick={(e) => {
         e.stopPropagation();
