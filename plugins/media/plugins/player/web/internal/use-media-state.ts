@@ -14,6 +14,8 @@ import { bufferedEnd } from "./math";
  */
 export interface MediaState {
   paused: boolean;
+  /** Played to the end (a seek back clears it). */
+  ended: boolean;
   /** `NaN` until the metadata loads. */
   duration: number;
   volume: number;
@@ -31,6 +33,7 @@ const STATE_EVENTS = [
   "pause",
   "playing",
   "ended",
+  "seeked",
   "loadedmetadata",
   "durationchange",
   "volumechange",
@@ -48,6 +51,7 @@ const TIME_EVENTS = [
 
 const INITIAL_STATE: MediaState = {
   paused: true,
+  ended: false,
   duration: Number.NaN,
   volume: 1,
   muted: false,
@@ -57,6 +61,7 @@ const INITIAL_TIME: MediaTime = { currentTime: 0, buffered: 0 };
 function readState(el: HTMLMediaElement): MediaState {
   return {
     paused: el.paused,
+    ended: el.ended,
     duration: el.duration,
     volume: el.volume,
     muted: el.muted,

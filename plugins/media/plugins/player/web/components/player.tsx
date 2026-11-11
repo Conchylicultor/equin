@@ -31,7 +31,12 @@ import {
 } from "@plugins/primitives/plugins/shortcuts/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
-import { SLIM, VOLUME_CLOSE_MS } from "../internal/geometry";
+import {
+  SLIM,
+  TOUCH_HIDE_MS,
+  TOUCH_QUERY,
+  VOLUME_CLOSE_MS,
+} from "../internal/geometry";
 import {
   PLAYER_KEYS,
   matchesKeys,
@@ -67,6 +72,8 @@ import { VolumeCapsule } from "./volume-capsule";
 import type { SetRate } from "./speed-dial";
 import "../internal/media-player.css";
 import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
+import { useMediaQuery } from "@plugins/primitives/plugins/dom/plugins/render-mode/web";
+import { TouchControls } from "./touch-controls";
 
 const playIcon = symbol("play-arrow");
 const pauseIcon = symbol("pause");
@@ -225,8 +232,16 @@ export function Player({
   const [flash, setFlash] = useState<Flash | null>(null);
   // The document the player is in now: the page, or its own window.
   const doc = root?.ownerDocument ?? null;
-  const fullscreen = useFullscreenOf(root, doc);
+  const nativeFullscreen = useFullscreenOf(root, doc);
+  // Where the browser cannot put an element in full screen (an iPhone: only a
+  // <video> itself, with the browser's own controls), the player fills the
+  // window instead, its controls with it.
+  const [filling, setFilling] = useState(false);
+  const fullscreen = nativeFullscreen || filling;
   const surface = useSurfaceTabId();
+  // A touch screen gets the touch controls (`TouchControls`): a tap shows
+  // them rather than playing. Audio keeps its bar — it has no picture to tap.
+  const touch = useMediaQuery(TOUCH_QUERY, false) && kind === "video";
 
   // Moving between the page and the picture-in-picture window closes the
   // panels: each was placed, and listens, in the document it opened in.
@@ -245,9 +260,15 @@ export function Player({
 
   const settingsOpen = settings !== null;
   const volumeOpen = volumeAt !== null;
+  // Touch: the controls stay up while paused (a tap is the only way to bring
+  // them back, so they never leave a paused picture bare) and hide after a
+  // longer spell — no pointer rests on a phone to say the user is done.
   const { idle, wake, rest } = useIdle(
-    settingsOpen || volumeOpen || seeking,
+    touch
+      ? settingsOpen || seeking || media.paused
+      : settingsOpen || volumeOpen || seeking,
     kind === "video",
+    touch ? TOUCH_HIDE_MS : undefined,
   );
 
   useEffect(() => {
@@ -278,14 +299,18 @@ export function Player({
 
   const toggleFullscreen = () => {
     if (root === null || doc === null) return;
-    if (doc.fullscreenElement) void doc.exitFullscreen();
-    else void root.requestFullscreen();
+    if (filling) setFilling(false);
+    else if (doc.fullscreenElement) void doc.exitFullscreen();
+    else if (doc.fullscreenEnabled) void root.requestFullscreen();
+    else setFilling(true);
   };
 
   const openSettings = (open: boolean) => {
     const pill = pillRef.current;
     const gear = gearRef.current;
-    if (open && root && pill && gear) {
+    // The touch sheet sits at the bottom of the screen: nothing to place.
+    if (open && touch) setSettings({});
+    else if (open && root && pill && gear) {
       setSettings(placeAbove(root, pill, gear, "right", 0));
     } else setSettings(null);
     wake();
@@ -477,6 +502,17 @@ export function Player({
     run(hit.action);
   };
 
+  // A seek-bar drag pauses the media and resumes it after.
+  const onSeekDrag = (dragging: boolean) => {
+    if (!el) return;
+    if (dragging) {
+      resumeAfterSeek.current = !el.paused;
+      el.pause();
+    } else if (resumeAfterSeek.current) playMedia(el);
+    setSeeking(dragging);
+    wake();
+  };
+
   const setRootRef = (node: HTMLElement | null) => {
     setRoot(node);
     rootRef(node);
@@ -517,13 +553,16 @@ export function Player({
       data-idle={idle || undefined}
       data-settings-open={settingsOpen || undefined}
       data-volume-open={volumeOpen || undefined}
+      data-touch={touch || undefined}
+      data-filling={filling || undefined}
       className={cn(
         "mp",
         kind === "video" && "rounded-xl bg-background shadow-lg",
         className,
       )}
-      onPointerMove={wake}
-      onPointerLeave={rest}
+      // Touch has no resting pointer: taps show and hide the controls.
+      onPointerMove={touch ? undefined : wake}
+      onPointerLeave={touch ? undefined : rest}
       onKeyDown={onKeyDown}
     >
       <PortalHost>
@@ -532,21 +571,63 @@ export function Player({
             {...common}
             poster={poster}
             playsInline
-            onClick={() => {
-              if (settingsOpen) return openSettings(false);
-              run({ kind: "toggle" });
-            }}
-            onDoubleClick={toggleFullscreen}
+            onClick={
+              touch
+                ? undefined
+                : () => {
+                    if (settingsOpen) return openSettings(false);
+                    run({ kind: "toggle" });
+                  }
+            }
+            onDoubleClick={touch ? undefined : toggleFullscreen}
           />
         ) : (
           <audio {...common} />
         )}
-        {kind === "video" && (
+        {kind === "video" && <CenterFlash flash={flash} />}
+        {touch ? (
           <>
-            <CenterFlash flash={flash} />
-            <BigPlay onPlay={toggle} />
+            <TouchControls
+              el={el}
+              label={label}
+              shown={!idle}
+              paused={media.paused && !seeking}
+              ended={media.ended}
+              duration={media.duration}
+              volume={volume}
+              rate={rate}
+              remaining={remaining}
+              fullscreen={fullscreen}
+              settingsOpen={settingsOpen}
+              onTap={() => (idle ? wake() : rest())}
+              onWake={wake}
+              onPlay={toggle}
+              onSkip={(seconds) => {
+                if (el)
+                  seekMedia(
+                    el,
+                    skipTarget(el.currentTime, seconds, el.duration),
+                  );
+              }}
+              onMute={() => run({ kind: "mute" })}
+              onToggleRemaining={() => setRemaining((r) => !r)}
+              onSettings={() => openSettings(!settingsOpen)}
+              onFullscreen={toggleFullscreen}
+              onSeek={(t) => {
+                if (el) seekMedia(el, t);
+              }}
+              onSeekDrag={onSeekDrag}
+              gearRef={gearRef}
+            />
+            <div
+              className="mp-t-scrim"
+              data-open={settingsOpen || undefined}
+              aria-hidden
+            />
           </>
-        )}
+        ) : (
+          <>
+            {kind === "video" && <BigPlay onPlay={toggle} />}
         <ControlPill
           ref={pillRef}
           kind={kind}
@@ -564,15 +645,7 @@ export function Player({
           onSeek={(t) => {
             if (el) seekMedia(el, t);
           }}
-          onSeekDrag={(dragging) => {
-            if (!el) return;
-            if (dragging) {
-              resumeAfterSeek.current = !el.paused;
-              el.pause();
-            } else if (resumeAfterSeek.current) playMedia(el);
-            setSeeking(dragging);
-            wake();
-          }}
+              onSeekDrag={onSeekDrag}
           onToggleRemaining={() => setRemaining((r) => !r)}
           onSettings={() => openSettings(!settingsOpen)}
           onFullscreen={toggleFullscreen}
@@ -605,6 +678,8 @@ export function Player({
               openVolume(false);
           }}
         />
+          </>
+        )}
         <SettingsPanel
           ref={settingsRef}
           open={settingsOpen}
@@ -614,6 +689,7 @@ export function Player({
           setRate={setRate}
           loop={loop}
           onLoop={() => setLoop((l) => !l)}
+          sheet={touch}
           pip={
             kind === "video" && pip
               ? { open: pip.open, onToggle: () => run({ kind: "pip" }) }

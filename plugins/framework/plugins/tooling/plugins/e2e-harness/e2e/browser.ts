@@ -63,6 +63,12 @@ export interface SessionOptions {
   deviceScaleFactor?: number;
   /** Defaults to the host OS appearance so screenshots match what the user sees. */
   colorScheme?: ColorScheme;
+  /**
+   * A phone: a touch screen with no hover (`(hover: none) and (pointer:
+   * coarse)` match, taps are touches) and the page's meta viewport honoured.
+   * A fresh context only — an attached session's tab cannot become one.
+   */
+  touch?: boolean;
   /** Prefix for captured-error lines, e.g. "A" / "B" in a convergence test. */
   label?: string;
   /** Set false to skip the pageerror/console/requestfailed listeners. */
@@ -401,6 +407,8 @@ async function runBrowser<T>(
             viewport: opts.viewport ?? { ...DEFAULT_VIEWPORT },
             deviceScaleFactor: opts.deviceScaleFactor,
             colorScheme: opts.colorScheme ?? detectOsColorScheme(),
+            hasTouch: opts.touch === true,
+            isMobile: opts.touch === true,
             // Provenance, declared once for the whole harness. `extraHTTPHeaders`
             // applies to EVERY request the context issues — including the SPA's
             // own `fetch` calls — so this single line marks all existing scripts,
@@ -538,6 +546,10 @@ async function withAttachedBrowser<T>(
             );
           }
           handedOut = true;
+          if (opts.touch === true)
+            throw new Error(
+              "--attach drives the agent browser's tab, which cannot become a touch screen. Run it without --attach.",
+            );
           await page.setViewportSize(opts.viewport ?? { ...DEFAULT_VIEWPORT });
           await page.emulateMedia({
             colorScheme: opts.colorScheme ?? detectOsColorScheme(),

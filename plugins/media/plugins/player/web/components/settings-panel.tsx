@@ -33,12 +33,18 @@ export interface SettingsPanelProps {
   onLoop(): void;
   /** `null` = no picture in picture here (audio, or a browser offering none). */
   pip: { open: boolean; onToggle(): void } | null;
+  /**
+   * Touch: a sheet rising from the bottom of the screen (the inline player is
+   * too short to hold the panel), at a finger's size, without key caps.
+   */
+  sheet: boolean;
   ref?: Ref<HTMLElement>;
 }
 
 /**
- * The settings panel over the gear: the speed (readout, reset, the dial,
- * preset chips), then Loop and Picture in picture. Drawn at the pill's scale
+ * The settings panel over the gear (on touch, a sheet from the bottom of the
+ * screen): the speed (readout, reset, the dial, preset chips), then Loop and
+ * Picture in picture. Drawn at the pill's scale
  * (`mediaSettingsTheme`). Always mounted, so it fades and scales out as it
  * fades in.
  */
@@ -51,6 +57,7 @@ export function SettingsPanel({
   loop,
   onLoop,
   pip,
+  sheet,
   ref,
 }: SettingsPanelProps) {
   const atOne = sameRate(rate, 1);
@@ -64,7 +71,8 @@ export function SettingsPanel({
       aria-hidden={!open}
       inert={!open}
       data-open={open || undefined}
-      style={place}
+      style={sheet ? undefined : place}
+      data-sheet={sheet || undefined}
       className={cn(SURFACE_LEVELS.overlay, "mp-pop mp-settings")}
     >
       <section className="mp-settings-section">
@@ -121,7 +129,7 @@ export function SettingsPanel({
           <Text variant="body" className="mp-item-label">
             Loop
           </Text>
-          <Kbd>R</Kbd>
+          {!sheet && <Kbd>R</Kbd>}
           <SwitchIndicator checked={loop} />
         </button>
         {pip && (
@@ -130,7 +138,7 @@ export function SettingsPanel({
             <Text variant="body" className="mp-item-label">
               {pip.open ? "Back to the page" : "Picture in picture"}
             </Text>
-            <Kbd>P</Kbd>
+            {!sheet && <Kbd>P</Kbd>}
           </button>
         )}
       </div>

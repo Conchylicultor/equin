@@ -48,6 +48,36 @@ measure for measure, animations included. Plan:
   Loop (R) and Picture in picture (P). The gear turns while it is open and
   wears the speed as a badge when it is not 1×.
 
+## Touch
+
+On a touch-first screen (`(hover: none) and (pointer: coarse)`, read live
+through `dom/render-mode`'s `useMediaQuery`) a video draws the touch
+controls instead of the pill — the prototype `proto-1794361798-f9dak8`,
+YouTube's model (`components/touch-controls.tsx`):
+
+- A **tap on the picture shows or hides the controls**; it never plays or
+  pauses. Playing, they hide after `TOUCH_HIDE_MS` (3 s); paused, they stay.
+- The **centre** holds −10 s · play/pause (replay at the end) · +10 s, small
+  float-glass circles (32 / 48 px inline, 40 / 60 px in full screen).
+- A **double-tap on a side** (left / right ~38 %) seeks 10 s, with a shaded
+  half-moon counting the seconds; each further tap on that side within
+  `SEEK_RUN_MS` seeks 10 s more. The tap grammar is pure (`internal/taps.ts`).
+- **Top**: the title (full screen only), mute, settings. **Bottom**: the time
+  (tap: what is left) and **full screen alone in its corner**, away from the
+  centre.
+- **The bar is flush on the bottom edge**, there whether the controls show or
+  not; only its track is clipped to the player's corners (its ends follow the
+  curve), the thumb sits outside the clip. A drag seeks live with the time in
+  a bubble. In full screen it rises off the edge, inset, shown with the
+  controls.
+- **Settings** open as a sheet from the bottom of the screen, over a scrim
+  (the inline player is too short to hold the panel): the same panel at
+  `--k: 1`, without key caps.
+
+Audio keeps its bar on touch. Where the browser cannot put an element in full
+screen (`document.fullscreenEnabled` false — an iPhone), Full screen makes the
+player **fill the window** (`data-filling`) instead, on any device.
+
 ## Keyboard
 
 Space / K play · ← → 5 s of watching (media time × the speed: 1.25 s at
@@ -119,7 +149,7 @@ so a size or glass option later is one set switched as a whole.
     - `ThemeEngine.FixedTheme` "Media player controls"
     - `ThemeEngine.SubTheme` "Media player settings panel"
     - `ThemeEngine.SubTheme` "Media player volume"
-  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×6
     - `primitives/shortcuts` ×3
     - `primitives/latest-ref` ×2
@@ -127,6 +157,7 @@ so a size or glass option later is one set switched as a whole.
     - `primitives/css/switch.SwitchIndicator`
     - `primitives/css/text.Text`
     - `primitives/css/theme-boundary.Theme`
+    - `primitives/dom/render-mode.useMediaQuery`
     - `primitives/dom/scroll-reveal.focusElement`
     - `primitives/icon-button.IconButton`
     - `primitives/overlay/portal-host.PortalHost`

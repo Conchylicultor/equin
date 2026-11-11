@@ -55,3 +55,20 @@ export function previewSize(
   }
   return { width: Math.round(w), height: Math.round(h) };
 }
+
+// ── Touch (`proto-1794361798-f9dak8`) ───────────────────────────────────
+
+/** The media query a touch-first screen answers: no hover, a coarse pointer. */
+export const TOUCH_QUERY = "(hover: none) and (pointer: coarse)";
+/** How long the touch controls stay up after the last tap, while playing. */
+export const TOUCH_HIDE_MS = 3000;
+/** One centre ± button, or one tap of a side double-tap: media seconds. */
+export const TOUCH_SKIP_SECONDS = 10;
+/** A second tap on the same side within this is a double-tap (a seek), not two taps. */
+export const DOUBLE_TAP_MS = 280;
+/** Once a side seek runs, each tap on that side within this seeks again. */
+export const SEEK_RUN_MS = 750;
+/** Where a side starts: a tap left of this fraction of the width is the left side… */
+export const SIDE_LEFT = 0.38;
+/** …and right of this one the right side; between them, the middle. */
+export const SIDE_RIGHT = 0.62;

@@ -30,7 +30,8 @@
 // By default the screenshot inherits the host OS appearance (macOS dark/light)
 // so a `colorMode: "system"` app renders exactly as the user sees it. Pass
 // `--color-scheme dark|light` to force one. Other flags: --wait <ms> (extra
-// settle after the page has painted, default 1000), --viewport <WxH>, --headed.
+// settle after the page has painted, default 1000), --viewport <WxH>, --touch
+// (a phone: touch screen, no hover), --headed.
 //
 // Example:
 //   ./equin run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts \
@@ -43,7 +44,7 @@
 // for richer flows (multi-click, assertions, etc.).
 
 import type { Locator } from "playwright";
-import { arg, numArg } from "./args";
+import { arg, flag, numArg } from "./args";
 import { pageUrl } from "./target";
 import { withBrowser } from "./browser";
 import { detectOsColorScheme, type ColorScheme } from "./color-scheme";
@@ -69,7 +70,11 @@ console.log(`url:          ${url}`);
 console.log(`color-scheme: ${colorScheme}`);
 
 await withBrowser(async (h) => {
-  const { page } = await h.session({ viewport, colorScheme });
+  const { page } = await h.session({
+    viewport,
+    colorScheme,
+    touch: flag("touch"),
+  });
 
   await page.goto(url, { waitUntil: "domcontentloaded" });
   // On a loaded machine (builds holding the CPU) the app can take well over

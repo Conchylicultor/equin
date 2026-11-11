@@ -15,7 +15,8 @@ export interface Idle {
 }
 
 /**
- * The controls' idle fade: they go after `IDLE_MS` of a resting pointer, but
+ * The controls' idle fade: they go after `quietMs` (`IDLE_MS` by default) of
+ * a resting pointer, but
  * never while `keepUp` — a panel open, the seek bar dragged — and
  * never when `enabled` is false (an audio bar has no picture to clear).
  *
@@ -23,7 +24,11 @@ export interface Idle {
  * pointer moving IS the change signal. A wake is cheap — no render unless the
  * controls were actually faded.
  */
-export function useIdle(keepUp: boolean, enabled: boolean): Idle {
+export function useIdle(
+  keepUp: boolean,
+  enabled: boolean,
+  quietMs: number = IDLE_MS,
+): Idle {
   const [asleep, setAsleep] = useState(false);
   // A change of what holds the controls up is itself a wake: playing again
   // after a pause shows the controls for a full spell, never already faded.
@@ -40,7 +45,7 @@ export function useIdle(keepUp: boolean, enabled: boolean): Idle {
   const arm = useEventCallback(() => {
     clearTimeout(timer.current);
     if (!hold.current)
-      timer.current = setTimeout(() => setAsleep(true), IDLE_MS);
+      timer.current = setTimeout(() => setAsleep(true), quietMs);
   });
 
   // Every change of what holds the controls up restarts the quiet spell: a

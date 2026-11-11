@@ -595,3 +595,407 @@ html[data-pip] .mp-fs {
   width: 32px;
   height: 32px;
 }
+
+/* ── Full screen without the browser's: the player fills the window ── */
+.mp[data-filling] {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-popover);
+  border-radius: 0;
+  max-height: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mp[data-filling] .mp-media {
+  height: 100%;
+  max-height: 100dvh;
+}
+
+/* ── Touch (`proto-1794361798-f9dak8`) ──
+   The picture and everything drawn over it are clipped to the player's rounded
+   corners by `.mp-t-frame`; the bar sits outside that clip, so its thumb is
+   never cut. A tap on `.mp-t-surface` shows or hides `.mp-t-chrome`, which lets
+   taps through while hidden. */
+.mp[data-touch] {
+  --t-ic: 20px;
+  --t-tap: 36px;
+  --t-skip: 32px;
+  --t-skip-ic: 19px;
+  --t-play: 48px;
+  --t-play-ic: 30px;
+  overflow: visible;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.mp[data-touch]:fullscreen,
+.mp[data-touch][data-filling] {
+  --t-ic: 22px;
+  --t-tap: 40px;
+  --t-skip: 40px;
+  --t-skip-ic: 23px;
+  --t-play: 60px;
+  --t-play-ic: 36px;
+}
+.mp[data-touch] .mp-media {
+  border-radius: inherit;
+}
+.mp-t-frame {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+}
+.mp-t-surface {
+  position: absolute;
+  inset: 0;
+}
+
+.mp-t-chrome {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+  /* The prototype's scrim: rgb(0 0 0 / .45) top, .5 bottom, .18 all over. */
+  background:
+    linear-gradient(
+      to bottom,
+      color-mix(in oklab, var(--background) 45%, transparent),
+      transparent 30%
+    ),
+    linear-gradient(
+      to top,
+      color-mix(in oklab, var(--background) 50%, transparent),
+      transparent 30%
+    ),
+    color-mix(in oklab, var(--background) 18%, transparent);
+}
+.mp-t-chrome[data-shown] {
+  opacity: 1;
+}
+.mp-t-chrome[data-shown] button {
+  pointer-events: auto;
+}
+.mp-t-chrome svg,
+.mp-t-ripple svg {
+  filter: drop-shadow(0 1px 1.5px var(--glyph-shadow));
+}
+.mp-t-title,
+.mp-t-time {
+  text-shadow: 0 1px 2px var(--glyph-shadow);
+}
+
+.mp-t-btn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--t-tap);
+  height: var(--t-tap);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--foreground);
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+.mp-t-btn:active {
+  background: color-mix(in oklab, var(--fg-tint) 16%, transparent);
+}
+.mp-t-btn svg {
+  width: var(--t-ic);
+  height: var(--t-ic);
+}
+
+.mp-t-top {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  right: 4px;
+  display: flex;
+  align-items: center;
+}
+.mp-t-title {
+  flex: 1;
+  min-width: 0;
+  padding-left: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+  visibility: hidden;
+}
+.mp:fullscreen .mp-t-top,
+.mp[data-filling] .mp-t-top {
+  top: max(6px, env(safe-area-inset-top));
+  left: 10px;
+  right: 10px;
+}
+.mp:fullscreen .mp-t-title,
+.mp[data-filling] .mp-t-title {
+  visibility: visible;
+}
+
+/* The centre: −10 · play · +10, small, so they hide little of the picture. */
+.mp-t-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(28px, 11vw, 64px);
+}
+.mp-t-center .mp-t-btn {
+  border-color: color-mix(in oklab, var(--fg-tint) 12%, transparent);
+  box-shadow: none;
+}
+.mp-t-skip {
+  width: var(--t-skip);
+  height: var(--t-skip);
+}
+.mp-t-skip svg {
+  width: var(--t-skip-ic);
+  height: var(--t-skip-ic);
+}
+.mp-t-play {
+  width: var(--t-play);
+  height: var(--t-play);
+}
+.mp-t-play svg {
+  width: var(--t-play-ic);
+  height: var(--t-play-ic);
+}
+
+/* The bottom: time ……… full screen, just above the bar. */
+.mp-t-bottom {
+  position: absolute;
+  left: 10px;
+  right: 4px;
+  bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.mp:fullscreen .mp-t-bottom,
+.mp[data-filling] .mp-t-bottom {
+  left: 18px;
+  right: 10px;
+  bottom: calc(max(14px, env(safe-area-inset-bottom)) + 22px);
+}
+.mp-t-time {
+  padding: 6px 0;
+  border: 0;
+  background: transparent;
+  color: var(--foreground);
+  cursor: pointer;
+}
+.mp-t-dur {
+  color: var(--muted-foreground);
+}
+
+/* The bar: flush on the bottom edge, there whether the controls show or not.
+   `.mp-t-seek` spans the player and takes its corners, so the track's clip
+   follows them; only the bottom strip (`.mp-t-hit`) takes touches, and only
+   while the controls show. */
+.mp-t-seek {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.mp-t-trackclip {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+}
+.mp-t-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: color-mix(in oklab, var(--fg-tint) 28%, transparent);
+  transition: height 0.12s ease;
+}
+.mp-t-hit {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 22px;
+  touch-action: none;
+  cursor: pointer;
+  outline: none;
+}
+.mp:has(.mp-t-chrome[data-shown]) .mp-t-hit {
+  pointer-events: auto;
+}
+.mp-t-seek[data-dragging] .mp-t-track {
+  height: 5px;
+}
+.mp-t-thumb {
+  position: absolute;
+  bottom: 1.5px;
+  width: 12px;
+  height: 12px;
+  margin: 0 0 -6px -6px;
+  border-radius: 50%;
+  background: var(--foreground);
+  box-shadow: 0 1px 4px color-mix(in oklab, var(--background) 35%, transparent);
+  transform: scale(0);
+  transition: transform 0.15s ease;
+}
+.mp:has(.mp-t-chrome[data-shown]) .mp-t-thumb {
+  transform: scale(1);
+}
+.mp-t-seek[data-dragging] .mp-t-thumb {
+  transform: scale(1.4);
+  bottom: 2.5px;
+}
+.mp-t-bubble {
+  position: absolute;
+  bottom: 30px;
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity 0.1s ease;
+  pointer-events: none;
+}
+.mp-t-seek[data-dragging] .mp-t-bubble {
+  opacity: 1;
+}
+.mp:has(.mp-t-seek[data-dragging]) .mp-t-top,
+.mp:has(.mp-t-seek[data-dragging]) .mp-t-center,
+.mp:has(.mp-t-seek[data-dragging]) .mp-t-bottom {
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+/* Full screen: the bar rises off the edge, inset like the rest, shown with them. */
+.mp:fullscreen .mp-t-seek,
+.mp[data-filling] .mp-t-seek {
+  inset: auto 18px max(12px, env(safe-area-inset-bottom)) 18px;
+  height: 22px;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+.mp:fullscreen:has(.mp-t-chrome[data-shown]) .mp-t-seek,
+.mp[data-filling]:has(.mp-t-chrome[data-shown]) .mp-t-seek {
+  opacity: 1;
+}
+.mp:fullscreen .mp-t-trackclip,
+.mp[data-filling] .mp-t-trackclip {
+  overflow: visible;
+}
+.mp:fullscreen .mp-t-track,
+.mp[data-filling] .mp-t-track {
+  bottom: 9px;
+  border-radius: 9999px;
+}
+.mp:fullscreen .mp-t-thumb,
+.mp[data-filling] .mp-t-thumb {
+  bottom: 10.5px;
+}
+.mp:fullscreen .mp-t-seek[data-dragging] .mp-t-thumb,
+.mp[data-filling] .mp-t-seek[data-dragging] .mp-t-thumb {
+  bottom: 11.5px;
+}
+
+/* A side seek: a shaded half-moon on its side, chevrons running, the seconds. */
+.mp-t-ripple {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 40%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  pointer-events: none;
+  opacity: 0;
+  background: color-mix(in oklab, var(--fg-tint) 12%, transparent);
+  transition: opacity 0.22s ease;
+}
+.mp-t-ripple[data-side="left"] {
+  left: 0;
+  border-radius: 0 50% 50% 0 / 0 50% 50% 0;
+}
+.mp-t-ripple[data-side="right"] {
+  right: 0;
+  border-radius: 50% 0 0 50% / 50% 0 0 50%;
+}
+.mp-t-ripple[data-on] {
+  opacity: 1;
+  transition: opacity 0.06s ease;
+}
+.mp-t-chevrons {
+  display: flex;
+}
+.mp-t-ripple[data-side="left"] .mp-t-chevrons {
+  flex-direction: row-reverse;
+}
+.mp-t-chevrons svg {
+  width: 16px;
+  height: 16px;
+  opacity: 0.3;
+  animation: mp-t-chevron 0.9s infinite;
+}
+.mp-t-chevrons svg:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.mp-t-chevrons svg:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes mp-t-chevron {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  30% {
+    opacity: 1;
+  }
+}
+.mp-t-ripple-label {
+  font-weight: 600;
+}
+
+/* Settings on touch: a sheet rising from the bottom of the screen, over a scrim. */
+.mp-t-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-popover);
+  background: color-mix(in oklab, var(--background) 40%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+.mp-t-scrim[data-open] {
+  opacity: 1;
+  pointer-events: auto;
+}
+.mp-settings[data-sheet] {
+  --k: 1;
+  position: fixed;
+  z-index: var(--z-popover);
+  left: 8px;
+  right: 8px;
+  bottom: max(8px, env(safe-area-inset-bottom));
+  width: auto;
+  max-width: 420px;
+  max-height: calc(100dvh - 16px);
+  margin: 0 auto;
+  overflow: auto;
+  border-radius: 22px;
+  opacity: 1;
+  transform: translateY(calc(100% + 24px));
+  transition: transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.mp-settings[data-sheet][data-open] {
+  transform: none;
+}
+.mp-settings[data-sheet] .mp-chip {
+  height: 34px;
+}
+.mp-settings[data-sheet] .mp-item {
+  height: 48px;
+}
