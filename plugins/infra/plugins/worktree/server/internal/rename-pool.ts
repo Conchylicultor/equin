@@ -97,6 +97,36 @@ export async function takeNewest(
   return null;
 }
 
+/** Whether any published entry within the age bound still waits. */
+export async function hasWaiting(
+  pool: RenamePool,
+  now: number,
+): Promise<boolean> {
+  return (await listPublished(pool.dir)).some(
+    (entry) => now - madeAtMs(entry)! <= pool.maxAgeMs,
+  );
+}
+
+/** Whether `entry` is still published under its own name (nobody has claimed it). */
+export async function isStillPublished(
+  pool: RenamePool,
+  entry: string,
+): Promise<boolean> {
+  return (await listNames(pool.dir)).includes(entry);
+}
+
+/**
+ * A fresh transient name in the pool for a payload this process is still
+ * writing; the sweep deletes it once its grace has passed (a crashed writer).
+ */
+export function transientPath(
+  pool: RenamePool,
+  label: string,
+  now: number,
+): string {
+  return join(pool.dir, `${STAGING_PREFIX}${now}-${label}-${randomUUID()}`);
+}
+
 /** Give a taken entry back to the pool under its published name. */
 export async function putBack(
   pool: RenamePool,

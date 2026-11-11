@@ -8,7 +8,9 @@ import {
   readFileSync,
   realpathSync,
   renameSync,
+  readlinkSync,
   rmSync,
+  symlinkSync,
   utimesSync,
   writeFileSync,
 } from "node:fs";
@@ -161,18 +163,62 @@ describe("adoptDepStore", () => {
     expect(poolNames()).toEqual(["1000-att-1"]);
   });
 
-  test("two adopters of one store: one wins, the other installs cold and leaves no node_modules", async () => {
+  test("the last store stays as the seed: the checkout gets a file-by-file copy", async () => {
+    await harvestDepStore(repo, installedCheckout("att-1", "a@1.0.0"), 1000);
+    const fresh = emptyCheckout("fresh");
+    expect(await adoptDepStore(repo, fresh, 2000)).toEqual({
+      kind: "cloned",
+      entry: "1000-att-1",
+      ageMs: 1000,
+    });
+    const file = join(fresh, "node_modules", ".bun", "a@1.0.0", "index.js");
+    expect(readFileSync(file, "utf8")).toBe("// a@1.0.0\n");
+    expect(existsSync(join(fresh, "node_modules", ".equin-deps"))).toBe(false);
+    // The seed is untouched and still waits; no transient copy is left behind.
+    expect(poolNames()).toEqual(["1000-att-1"]);
+    // A copy, not a link: editing it leaves the seed as it was.
+    writeFileSync(file, "// edited\n");
+    const second = emptyCheckout("second");
+    expect((await adoptDepStore(repo, second, 3000)).kind).toBe("cloned");
+    expect(
+      readFileSync(
+        join(second, "node_modules", ".bun", "a@1.0.0", "index.js"),
+        "utf8",
+      ),
+    ).toBe("// a@1.0.0\n");
+  });
+
+  test("copies symlinks as links", async () => {
+    const checkout = installedCheckout("att-1", "a@1.0.0");
+    symlinkSync(
+      "../a@1.0.0",
+      join(checkout, "node_modules", ".bun", "link-to-a"),
+    );
+    await harvestDepStore(repo, checkout, 1000);
+    const fresh = emptyCheckout("fresh");
+    await adoptDepStore(repo, fresh, 2000);
+    expect(readlinkSync(join(fresh, "node_modules", ".bun", "link-to-a"))).toBe(
+      "../a@1.0.0",
+    );
+  });
+
+  test("two adopters of the last store: neither takes it, and each gets a copy or installs cold", async () => {
     await harvestDepStore(repo, installedCheckout("att-1"), 1000);
     const a = emptyCheckout("a");
     const b = emptyCheckout("b");
-    const [ra, rb] = await Promise.all([
+    const results = await Promise.all([
       adoptDepStore(repo, a, 2000),
       adoptDepStore(repo, b, 2000),
     ]);
-    expect([ra.kind, rb.kind].sort()).toEqual(["adopted", "none"]);
-    const loser = ra.kind === "none" ? a : b;
-    expect(existsSync(join(loser, "node_modules"))).toBe(false);
-    expect(poolNames()).toEqual([]);
+    expect(results.some((r) => r.kind === "cloned")).toBe(true);
+    for (const [r, c] of [
+      [results[0]!, a],
+      [results[1]!, b],
+    ] as const) {
+      expect(r.kind === "cloned" || r.kind === "none").toBe(true);
+      expect(existsSync(join(c, "node_modules"))).toBe(r.kind === "cloned");
+    }
+    expect(poolNames()).toEqual(["1000-att-1"]);
   });
 
   test("never takes an entry a delete has claimed", async () => {

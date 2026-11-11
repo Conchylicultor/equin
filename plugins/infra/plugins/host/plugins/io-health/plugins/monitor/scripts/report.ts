@@ -1,6 +1,8 @@
 /**
  * Summarise the fs-latency monitor's history, per UTC hour: cold lstat /
- * readdir per tier, slowest op, stalls, vnode churn, disk read ops/s, MB/s and
+ * readdir per tier, slowest metadata op (lstat / readdir), slowest rename,
+ * stalls (any op over the threshold — a rename included, as the monitor
+ * counts them), vnode churn, disk read ops/s, MB/s and
  * device ms/op, fseventsd %CPU, and the file cache's lifetime (the smallest
  * canary age whose median residency fell below 50 %); then the window's p50s.
  * Reads the rotated archives (`fs-latency-archive/*.jsonl.gz`) and the live log.
@@ -23,6 +25,19 @@ import {
   FS_LATENCY_LOG_NAME,
   type WrittenTick,
 } from "@plugins/infra/plugins/host/plugins/io-health/core";
+
+/**
+ * The slowest rename of a tick; null on a tick written before the monitor
+ * probed renames (2026-11-05 00:37 UTC).
+ */
+const renameMs = (r: WrittenTick): number | null =>
+  typeof r.fg.rename_max === "number" || typeof r.bg.rename_max === "number"
+    ? Math.max(r.fg.rename_max ?? 0, r.bg.rename_max ?? 0)
+    : null;
+
+/** The tick's slowest op of every kind — what its `stall` was decided on. */
+const slowestMs = (r: WrittenTick): number =>
+  Math.max(r.max_op_ms, renameMs(r) ?? 0);
 
 function arg(name: string): string | undefined {
   const i = process.argv.indexOf(name);
@@ -94,6 +109,11 @@ function lifetime(ts: WrittenTick[]): string {
   return `>${ages.at(-1)}s`;
 }
 
+function maxOf(xs: (number | null)[]): number | null {
+  const s = xs.filter((x): x is number => x !== null);
+  return s.length === 0 ? null : Math.max(...s);
+}
+
 const f = (v: number | null) =>
   v === null ? "-" : v < 100 ? v.toFixed(2) : v.toFixed(0);
 const col = (v: string | number, w: number) => String(v).padStart(w);
@@ -106,7 +126,7 @@ for (const r of ticks) {
 
 console.log(
   `${"hour (UTC)".padEnd(13)} ${col("n", 4)} ${col("fg lstat", 8)} ${col("bg lstat", 8)} ${col("fg rd500", 8)} ${col("bg rd500", 8)} ${col("bg rdmax", 8)} ` +
-    `${col("max op", 8)} ${col("stalls", 6)} ${col("newvn/s", 7)} ${col("rd ops/s", 8)} ${col("rd MB/s", 7)} ${col("ms/op", 6)} ${col("fsev%", 5)} ${col("cache", 7)}`,
+    `${col("max md", 8)} ${col("max rn", 8)} ${col("stalls", 6)} ${col("newvn/s", 7)} ${col("rd ops/s", 8)} ${col("rd MB/s", 7)} ${col("ms/op", 6)} ${col("fsev%", 5)} ${col("cache", 7)}`,
 );
 for (const [h, ts] of hours) {
   console.log(
@@ -145,7 +165,7 @@ for (const [h, ts] of hours) {
         ),
         8,
       )} ` +
-      `${col(f(Math.max(...ts.map((r) => r.bg.readdir500))), 8)} ${col(f(Math.max(...ts.map((r) => r.max_op_ms))), 8)} ` +
+      `${col(f(Math.max(...ts.map((r) => r.bg.readdir500))), 8)} ${col(f(Math.max(...ts.map((r) => r.max_op_ms))), 8)} ${col(f(maxOf(ts.map(renameMs))), 8)} ` +
       `${col(ts.filter((r) => r.stall).length, 6)} ${col(
         f(
           pct(
@@ -193,7 +213,16 @@ for (const [h, ts] of hours) {
   );
 }
 if (ticks.length > 0) {
-  const worst = ticks.reduce((a, b) => (b.max_op_ms > a.max_op_ms ? b : a));
+  const slowest = (ms: (r: WrittenTick) => number | null) => {
+    const withMs = ticks.filter((r) => ms(r) !== null);
+    if (withMs.length === 0) return "-";
+    const w = withMs.reduce((a, b) => (ms(b)! > ms(a)! ? b : a));
+    return `${ms(w)!.toFixed(0)} ms at ${w.iso}`;
+  };
+  const stalls = ticks.filter((r) => r.stall);
+  const renameStalls = stalls.filter(
+    (r) => (renameMs(r) ?? 0) > r.max_op_ms,
+  ).length;
   const p50 = (pick: (r: WrittenTick) => number | null | undefined) =>
     pct(ticks.map(pick), 0.5);
   console.log(
@@ -202,8 +231,10 @@ if (ticks.length > 0) {
       `fseventsd %CPU ${p50((r) => r.daemon_cpu?.fseventsd)}`,
   );
   console.log(
-    `window: ${ticks.length} ticks, stalls (> threshold) ${ticks.filter((r) => r.stall).length}, ` +
-      `slowest op ${worst.max_op_ms.toFixed(0)} ms at ${worst.iso}, cache lifetime ${lifetime(ticks)}`,
+    `window: ${ticks.length} ticks, stalls (> threshold) ${stalls.length} ` +
+      `(${stalls.length - renameStalls} metadata, ${renameStalls} rename), ` +
+      `slowest op ${slowest(slowestMs)}; metadata ${slowest((r) => r.max_op_ms)}, ` +
+      `rename ${slowest(renameMs)}; cache lifetime ${lifetime(ticks)}`,
   );
   if (ticks.some((r) => typeof r.disk_read_attributed_mb_s === "number"))
     console.log(
@@ -213,5 +244,6 @@ if (ticks.length > 0) {
     );
 }
 console.log(
-  "(latencies in ms; lstat = p50 of 40 cold lstats; rd500 = one cold 500-entry readdir)",
+  "(latencies in ms; lstat = p50 of 40 cold lstats; rd500 = one cold 500-entry readdir; " +
+    "max md = slowest lstat/readdir; max rn = slowest of each tier's rename burst)",
 );

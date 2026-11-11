@@ -149,6 +149,12 @@ install, at any tier. It ran per launch, and the reap then deleted the same
   `node_modules` takes the newest entry under 7 days old as its
   `node_modules/.bun`; the install (no stamp came with it) re-links it, cloning
   only what the lock changed.
+- **The last store stays, as the seed** — when the store taken is the only one
+  waiting, it goes back and the checkout gets a copy (`cloneSeed`: `cp -cR` —
+  per-file APFS clones, which hold no rename lock — staged under a transient
+  pool name, moved in by one rename). Without it the pool ran dry most days,
+  and the cold installs held renames for seconds. A copy of a seed claimed
+  mid-copy (gone from its name) is discarded. macOS only.
 - **No count bound — supply is demand, 72 h late.** A store is made when its
   checkout is reaped, and the reaper takes a finished checkout only at 72 h
   old (all 260 harvests of 11-05..08 came from checkouts made 72–80 h before);

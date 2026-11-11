@@ -124,7 +124,8 @@ Replay an archive with `gunzip -c <archive> > "$EQUIN_SCRATCH/x.jsonl"` and the 
 tail -1 ~/.equin/logs/monitors/fs-latency.jsonl
 ```
 
-Per hour: cold lstat / readdir per tier, slowest op, stall count, vnode churn,
+Per hour: cold lstat / readdir per tier, slowest metadata op and slowest rename
+(the window line names both, and splits the stall count by kind), vnode churn,
 disk read ops/s, MB/s and device ms/op, fseventsd %CPU, and the cache lifetime;
 then the window's p50s. The exit criterion "no file-metadata stall over 1 s
 across a day" is `stalls 0` over 24 h. `census.py` (who churns, without root)
