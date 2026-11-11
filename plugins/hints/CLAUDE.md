@@ -62,7 +62,7 @@ window opened or an app launched, and the user first needs to see where they
 are), and every tip then waits for a **0.4 s pause in the user's input**
 (`QUIET_MS` — no pointer move, press, wheel or key; never mid-gesture). Requests
 are collected over that window, then the lowest `order` (ties: first asked)
-shows — one at a time; the next gets a short **500 ms** window (`SETTLE_MS`)
+shows — one at a time; the next gets a short **700 ms** window (`SETTLE_MS`)
 after an answer, the user already reading tips. `when` → false or unmount **withdraws** it without marking it seen.
 Several components may hold one hint's moment (every prototype chip on the
 page): the request stays until the last of them lets go. `hint` may be

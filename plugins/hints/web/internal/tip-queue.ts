@@ -17,7 +17,7 @@ export const ORIENT_MS = 1200;
  * anchor left the screen): the user is already reading tips on a screen they
  * know — waiting a beat is enough.
  */
-export const SETTLE_MS = 500;
+export const SETTLE_MS = 700;
 
 /**
  * How long the user must have been still (no pointer move, press, wheel or
