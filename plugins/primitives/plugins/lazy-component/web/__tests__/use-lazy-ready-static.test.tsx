@@ -7,9 +7,11 @@ function Body() {
   return <b>body</b>;
 }
 
-// A static render to HTML (react-dom/server) reads where the chunk stands as
-// it renders: it must not throw, and it starts no load.
-describe("useLazyReady under a server render", () => {
+// A server render (react-dom/server) of a live page — no static render
+// declared — reads where the chunk stands as it renders: it must not throw, and
+// it starts no load. A static render waits for the chunk instead
+// (use-lazy-ready-prerender.test.tsx).
+describe("useLazyReady under a server render of a live page", () => {
   test("answers ready for a chunk loaded before the render", async () => {
     const Lazy = lazyComponent(() => Promise.resolve({ default: Body }));
     function Host() {

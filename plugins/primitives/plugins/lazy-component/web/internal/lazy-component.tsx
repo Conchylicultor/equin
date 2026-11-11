@@ -1,6 +1,7 @@
 import {
   lazy,
   Suspense,
+  use,
   useCallback,
   useState,
   useSyncExternalStore,
@@ -8,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { renderMode } from "@plugins/primitives/plugins/dom/plugins/render-mode/core";
 
 export interface LazyComponentOptions {
   /**
@@ -129,7 +131,8 @@ export function lazyComponent<P extends object>(
  * change once shown: it holds its own loading state until the chunk is in, so
  * the lazy component inside renders at once rather than popping in after a
  * first paint drawn without it. A failed load throws here, into the host's
- * error boundary.
+ * error boundary. In a static render it suspends until the chunk is in, so
+ * it answers ready.
  *
  * `component` must be one `lazyComponent` returned.
  */
@@ -149,12 +152,21 @@ export function useLazyReady<P extends object>(
     },
     [chunk],
   );
-  // A server render (a static render to HTML) reads where the chunk stands
-  // now: it subscribes to nothing, so it starts no load — a chunk not loaded
-  // before it holds the host's loading state.
+  // A server render subscribes to nothing, so it reads where the chunk stands
+  // now and starts no load from here.
   const state = useSyncExternalStore(subscribe, chunk.state, chunk.state);
   if (state.kind === "failed") throw state.error;
-  return state.kind === "loaded";
+  if (state.kind === "loaded") return true;
+  // A static render (one render to HTML, never hydrated — `dom/render-mode`)
+  // has no later paint to pop the chunk into: it suspends on the load (the
+  // prerender waits for Suspense) and renders the host ready, rather than
+  // writing its loading state into the page. `load` is memoized, so every
+  // retry reads the same promise; a failed load throws here, like above.
+  if (renderMode() === "static") {
+    use(chunk.load());
+    return true;
+  }
+  return false;
 }
 
 /**
