@@ -26,7 +26,7 @@ function siblingRefs(text: string, siblings: string[]): string[] {
 describe("validatePrototypeFolder — references to a sibling folder", () => {
   test("a path into a sibling is a problem", () => {
     expect(siblingRefs(`fetch("${OTHER}/data.json")`, [OTHER])).toEqual([
-      `references another prototype's folder (\`${OTHER}/\`)`,
+      `references another prototype's folder, ${OTHER}`,
     ]);
     expect(siblingRefs(`<img src="/${OTHER}/a.png">`, [OTHER])).toHaveLength(1);
   });
@@ -53,8 +53,8 @@ describe("validatePrototypeFolder — references to a sibling folder", () => {
   test("one problem per referenced sibling, in sibling order", () => {
     const third = "proto-1790000002-cccc";
     expect(siblingRefs(`${third}/a ${OTHER}/b`, [OTHER, third])).toEqual([
-      `references another prototype's folder (\`${OTHER}/\`)`,
-      `references another prototype's folder (\`${third}/\`)`,
+      `references another prototype's folder, ${OTHER}`,
+      `references another prototype's folder, ${third}`,
     ]);
   });
 });

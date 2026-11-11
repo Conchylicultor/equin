@@ -265,12 +265,25 @@ export function problemsOf(
       if (referenced) {
         problems.push({
           path: file.name,
-          detail: `references another prototype's folder (\`${sibling}/\`)`,
+          detail: siblingReferenceDetail(sibling),
         });
       }
     }
   }
   return problems;
+}
+
+/**
+ * How a reference to another prototype's folder is worded. A minted id is
+ * written bare — no quoting, no trailing `/` — so every surface that shows a
+ * problem through the inline-text walkers (the canvas's problem banner) draws
+ * it as the prototype id chip: its title, opening that prototype. A hand-made
+ * folder name is no id and stays quoted.
+ */
+function siblingReferenceDetail(sibling: string): string {
+  return protoIdKind.is(sibling)
+    ? `references another prototype's folder, ${sibling}`
+    : `references another prototype's folder (\`${sibling}/\`)`;
 }
 
 /**

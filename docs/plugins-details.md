@@ -7088,7 +7088,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PrototypeFrameActions` "close" → `CloseFrameAction`
               - `PrototypeVersionActions` "compare" → `CompareVersionAction`
               - `PrototypeVersionActions` "open-conversation" → `OpenVersionConversation`
-            - Uses: 94 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md)
+            - Uses: 95 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md)
               - `primitives/css/ui-kit` ×9
               - `primitives/data-view` ×6
               - `infra/endpoints` ×5
@@ -7134,6 +7134,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/dom/scroll-reveal.useRevealOnActive`
               - `primitives/embed.isEmbeddedDocument`
               - `primitives/error-boundary.PluginErrorBoundary`
+              - `primitives/inline-text.InlineText`
               - `primitives/launch.LaunchAgentPopover`
               - `primitives/loading.Loading`
               - `primitives/networking.useTransport`
@@ -49329,6 +49330,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `active-data`
           - `active-data/go`
+          - `apps/prototypes/canvas`
           - `conversations/conversation-view/markdown-extensions`
           - `infra/claude-cli`
           - `primitives/text-editor/paste-images`

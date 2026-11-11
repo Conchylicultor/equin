@@ -464,7 +464,7 @@ navigation, so it starts from nothing remembered.
     - `PrototypeFrameActions` "close" → `CloseFrameAction`
     - `PrototypeVersionActions` "compare" → `CompareVersionAction`
     - `PrototypeVersionActions` "open-conversation" → `OpenVersionConversation`
-  - Uses: 94 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 95 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×9
     - `primitives/data-view` ×6
     - `infra/endpoints` ×5
@@ -510,6 +510,7 @@ navigation, so it starts from nothing remembered.
     - `primitives/dom/scroll-reveal.useRevealOnActive`
     - `primitives/embed.isEmbeddedDocument`
     - `primitives/error-boundary.PluginErrorBoundary`
+    - `primitives/inline-text.InlineText`
     - `primitives/launch.LaunchAgentPopover`
     - `primitives/loading.Loading`
     - `primitives/networking.useTransport`

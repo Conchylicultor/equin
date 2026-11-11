@@ -11,6 +11,7 @@ import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { InlineText } from "@plugins/primitives/plugins/inline-text/web";
 import {
   Inset,
   Stack,
@@ -190,6 +191,9 @@ function DeletedBanner({ name }: { name: string }): ReactNode {
  * notice when there is one. Prototypes are user
  * content, not code, so the self-contained contract is enforced when the
  * folder is read and reported here — in front of the person who just wrote it.
+ * Each line goes through the inline-text walkers, so a prototype id a problem
+ * names (another prototype's folder) reads as that prototype's chip — its
+ * title, opening it.
  */
 function ProblemBanner({ meta }: { meta: PrototypeMeta }): ReactElement | null {
   if (meta.problems.length === 0) return null;
@@ -209,7 +213,9 @@ function ProblemBanner({ meta }: { meta: PrototypeMeta }): ReactElement | null {
                 variant="caption"
                 tone="muted"
               >
-                {p.path === "" ? p.detail : `${p.path} — ${p.detail}`}
+              <InlineText
+                text={p.path === "" ? p.detail : `${p.path} — ${p.detail}`}
+              />
               </Text>
             ))}
           </Stack>

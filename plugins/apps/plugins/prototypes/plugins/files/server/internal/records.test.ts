@@ -134,7 +134,7 @@ describe("PrototypeRecords", () => {
     expect(metas.find((m) => m.name === B)?.problems).toEqual([
       {
         path: "index.html",
-        detail: `references another prototype's folder (\`${C}/\`)`,
+        detail: `references another prototype's folder, ${C}`,
       },
     ]);
   });

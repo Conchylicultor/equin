@@ -62,6 +62,7 @@ Walkers register elsewhere (the primitive itself contributes none):
   - Imported by:
     - `active-data`
     - `active-data/go`
+    - `apps/prototypes/canvas`
     - `conversations/conversation-view/markdown-extensions`
     - `infra/claude-cli`
     - `primitives/text-editor/paste-images`
