@@ -44,7 +44,6 @@
     - `apps/file-explorer/browser`
     - `apps/file-explorer/folder-peek`
     - `apps/file-explorer/places`
-    - `apps/website`
     - `conversations/conversation-view/code/file-pane`
     - `conversations/conversation-view/explorer`
 

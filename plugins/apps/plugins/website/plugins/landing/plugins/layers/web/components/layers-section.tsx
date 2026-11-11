@@ -59,6 +59,7 @@ const CATEGORIES: Category[] = [
       { name: "Pages", body: "Notion-like editor and agentic wiki" },
       { name: "Sonata", body: "Piano learning app" },
       { name: "Events", body: "Social events from many sources, in one place" },
+      { name: "Maps", body: "Places to go and places been, on one map" },
     ],
   },
   {
@@ -70,10 +71,6 @@ const CATEGORIES: Category[] = [
       {
         name: "Finance",
         body: "Every account in one place: a personal finance aggregator",
-      },
-      {
-        name: "Maps",
-        body: "Places you've been, and a smarter wishlist of where to go",
       },
     ],
   },

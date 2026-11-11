@@ -60,7 +60,6 @@ documented with the mockup variable it is.
     - `apps/prototypes/files`
     - `apps/prototypes/gallery`
     - `apps/prototypes/present`
-    - `apps/website`
     - `conversations/conversation-view/artifacts/prototype`
     - `page/prototype`
 

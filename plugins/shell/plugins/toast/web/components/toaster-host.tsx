@@ -90,6 +90,9 @@ function Toasts() {
           // eslint-disable-next-line layout/no-adhoc-layout -- viewport-corner fixed strip, anchored to the same inset as sonner's own fixed toast list
           className="fixed"
           style={{ right: VIEWPORT_OFFSET, bottom: VIEWPORT_OFFSET }}
+          // The stack's own chrome, named so a screenshot that leaves the
+          // toasts out leaves it out too (e2e-harness's TOAST_STRIP).
+          data-toast-strip=""
         >
           <DismissAllButton />
         </div>

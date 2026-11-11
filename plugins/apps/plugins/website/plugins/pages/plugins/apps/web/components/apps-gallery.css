@@ -24,6 +24,64 @@
   box-shadow: 0 24px 48px -28px oklch(0 0 0 / 90%);
 }
 
+/* A card that opens the live demo is a link as a whole: a full-bleed button
+ * behind its content (`.website-app-open`), which lets every press through to
+ * it but Install's, so Install stays a control of its own above the link. */
+.website-app-card.is-live {
+  position: relative;
+  cursor: pointer;
+}
+
+.website-app-open {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  cursor: pointer;
+}
+
+.website-app-open:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.website-app-card.is-live .website-app-body {
+  position: relative;
+  pointer-events: none;
+}
+
+.website-app-card.is-live .website-app-install {
+  pointer-events: auto;
+}
+
+/* The picture's "Try it live" chip: always there (a touch screen never
+ * hovers), quiet at rest, filled in the brand colour while its card is hovered
+ * or its link focused. */
+.website-app-live {
+  position: absolute;
+  right: 0.625rem;
+  bottom: 0.625rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.625rem 0.25rem 0.4375rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 18%, transparent);
+  background: color-mix(in srgb, var(--background) 78%, transparent);
+  backdrop-filter: blur(6px);
+  color: var(--foreground);
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.website-app-card.is-live:hover .website-app-live,
+.website-app-card.is-live:has(.website-app-open:focus-visible) .website-app-live {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-foreground);
+}
+
 /* A read-next card's link line: underlined in the small print's grey, coming up
  * to the foreground while its card is hovered or keyboard-focused. */
 .website-app-next-go {

@@ -645,10 +645,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/icons.symbol`
             - Exports (values): `agentManagerApp`
           - Cross-plugin:
-            - Imported by: 34 plugins — full list in [`plugins/apps/plugins/agent-manager/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/agent-manager/plugins/shell/REFERENCE.md)
+            - Imported by: 33 plugins — full list in [`plugins/apps/plugins/agent-manager/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/agent-manager/plugins/shell/REFERENCE.md)
               - `conversations` ×17
               - `tasks` ×6
-              - `apps` ×4
+              - `apps` ×3
               - `active-data/plugin-link`
               - `build`
               - `code-explorer/commit-detail`
@@ -2176,6 +2176,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/deploy/analytics/sessions`
                   - `apps/deploy/site-messages/intake`
                   - `apps/website/improve`
+                  - `apps/website/pages/apps`
                   - `apps/website/pages/download`
                   - `apps/website/pages/foundations`
                   - `apps/website/pages/vision`
@@ -5158,7 +5159,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/file-explorer/browser`
               - `apps/file-explorer/folder-peek`
               - `apps/file-explorer/places`
-              - `apps/website`
               - `conversations/conversation-view/code/file-pane`
               - `conversations/conversation-view/explorer`
     - **`home`** — Home — app launcher and entry point. The Apps task category: the category tasks filed from the Home app's cards, such as building a new app, are grouped under.
@@ -6404,7 +6404,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/pages/trash`
               - `apps/pages/welcome`
               - `apps/places/places-map`
-              - `apps/website`
               - `page/inline-date`
         - **`starred`** — Favorites/starred pages for the Pages app: presents the exposed `starred` field of the Pages sidebar DataView (Favorites is a filtered list view) plus star toggles on page-tree rows and the page header. Starred-pages side-table (page_blocks_ext_starred): presence-only marker plus the star toggle endpoint, and its presence exposed as the `starred` field of every list whose rows are blocks (LiveColumns.Expose).
           - Web:
@@ -7722,7 +7721,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/prototypes/files`
               - `apps/prototypes/gallery`
               - `apps/prototypes/present`
-              - `apps/website`
               - `conversations/conversation-view/artifacts/prototype`
               - `page/prototype`
         - **`state`** — Per-instance prototype state, web half: registers the prototype tag id kind (`prtag-…`), and the hooks reading and writing a prototype's Done / tag state (usePrototypeStates, usePrototypeState, useSetPrototypeState). Per-instance prototype state in the DB: the prototype_state table (Done, one tag per prototype, deletedAt) and its PATCH, the delete / restore endpoints (deleted is a field — the folder stays), the prototypes' tag tree (prototype_tags, served through the tag-tree engine; a deleted tag's prototypes move to its parent) and both live collections, on every host. The adoption of the old _trash/<id>/ folders is the machine/ half's.
@@ -9994,8 +9992,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shadow --shadow-cover-hover`
               - `ui/tokens/shadow --shadow-float`
               - `ui/tokens/shadow --shadow-popover`
-            - Imported by: 33 plugins — full list in [`plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md)
-              - `apps` ×33
+            - Imported by: 32 plugins — full list in [`plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md)
+              - `apps` ×32
         - **`songsheet`** — Sonata Display: a chord-over-lyrics songsheet. Renders the score's lyric lines with chords printed over each column, grouped by section, highlighting and auto-scrolling the line under the playback cursor. A reading view (no time-axis / pitch-plane capabilities); click a line to seek.
           - Web:
             - Contributes: `SonataPlayer.Display` "Songsheet" → `Songsheet`
@@ -12007,11 +12005,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `WebsiteHeader` "apps" → `AppsNavItem`
                   - `ThemeEngine.SubTheme` "equin closing"
                   - `ThemeEngine.SubTheme` "equin gallery"
-                - Uses: 32 symbols — full list in [`plugins/apps/plugins/website/plugins/pages/plugins/apps/REFERENCE.md`](../plugins/apps/plugins/website/plugins/pages/plugins/apps/REFERENCE.md)
+                - Uses: 35 symbols — full list in [`plugins/apps/plugins/website/plugins/pages/plugins/apps/REFERENCE.md`](../plugins/apps/plugins/website/plugins/pages/plugins/apps/REFERENCE.md)
                   - `apps/website/shell` ×5
                   - `primitives/css/ui-kit` ×4
                   - `primitives/pane` ×4
                   - `primitives/avatar` ×2
+                  - `apps-core/tabs.useAppLinkProps`
+                  - `apps/deploy/analytics/collect.track`
                   - `apps/website/pages/download.downloadPane`
                   - `apps/website/pages/foundations.foundationsPane`
                   - `apps/website/pages/vision.visionPane`
@@ -12028,6 +12028,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/filter-chips.FilterChip`
                   - `primitives/search.SearchInput`
                   - `primitives/shortcuts.useSurfaceShortcuts`
+                  - `ui/icons.Icon`
                   - `ui/theme-engine.ThemeEngine`
                 - Exports (values): `appsPane`
               - Server:
@@ -12035,7 +12036,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses: `apps/website/crawlable.WebsitePages`
               - Core:
                 - Uses: `apps/website/crawlable.defineWebsitePage`
-                - Exports (values): `appsPage`
+                - Exports (values):
+                  - `APP_DEMO_PLACES`
+                  - `appsPage`
               - Cross-plugin:
                 - Uses tokens:
                   - `ui/tokens/color-palette --background`
@@ -12050,7 +12053,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/shape --spacing`
                   - `ui/tokens/type-scale --font-weight-normal`
                   - `ui/tokens/type-scale --font-weight-semibold`
-                - Imported by: `apps/website/landing/layers`
+                - Imported by:
+                  - `apps/website`
+                  - `apps/website/landing/layers`
             - **`download`** — The download page of the equin website: the /about/download pane with the one install command (or, for an agent, a prompt with deep links into Claude Code and the Claude app), what to do once it runs, and its Download nav link. The download page of the equin website on the server: its sitemap entry (WebsitePages.Page).
               - Web:
                 - Contributes:
@@ -12359,6 +12364,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-semibold`
             - Imported by:
               - `apps/deploy/site-messages/intake`
+              - `apps/website`
               - `apps/website/improve`
               - `apps/website/landing/contact`
               - `apps/website/landing/hero`
@@ -12986,8 +12992,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSurfaceMode`
           - `useTabs`
       - Cross-plugin:
-        - Imported by: 38 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
-          - `apps` ×14
+        - Imported by: 39 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
+          - `apps` ×15
           - `apps-core` ×8
           - `debug` ×3
           - `hints` ×2
@@ -51015,8 +51021,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-2xs`
           - `ui/tokens/density --space-md`
           - `ui/tokens/shape --spacing`
-        - Imported by: 201 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `apps` ×73
+        - Imported by: 202 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `apps` ×74
           - `conversations` ×32
           - `debug` ×27
           - `active-data` ×13

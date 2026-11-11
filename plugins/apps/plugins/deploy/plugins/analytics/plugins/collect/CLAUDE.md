@@ -435,6 +435,7 @@ Without it the box knows only the sections someone reached.
     - `apps/deploy/analytics/sessions`
     - `apps/deploy/site-messages/intake`
     - `apps/website/improve`
+    - `apps/website/pages/apps`
     - `apps/website/pages/download`
     - `apps/website/pages/foundations`
     - `apps/website/pages/vision`

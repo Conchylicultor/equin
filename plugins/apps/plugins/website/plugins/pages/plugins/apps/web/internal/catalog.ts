@@ -2,12 +2,16 @@ import type { AvatarColor } from "@plugins/primitives/plugins/avatar/core";
 import { symbol, type SymbolRef } from "@plugins/ui/plugins/icons/core";
 // The apps' screenshots, taken by `plugins/apps/plugins/website/e2e/app-screenshots.ts`
 // and cut down to card size (640px JPEG): a web artifact inlines every image it
-// imports, so the files stay small. Only apps whose screenshot is fit to publish
-// have one; the rest are drawn.
-import agentManagerShot from "../shots/app-agent-manager.jpg";
+// imports, so the files stay small. An app the live demo carries is shot in the
+// demo, at the place its card opens (`APP_DEMO_PLACES`); only apps whose
+// screenshot is fit to publish have one; the rest are drawn.
+import agentsShot from "../shots/app-agents.jpg";
 import chordShot from "../shots/app-chord.jpg";
+import filesShot from "../shots/app-files.jpg";
+import mapsShot from "../shots/app-maps.jpg";
 import pagesShot from "../shots/app-pages.jpg";
 import prototypesShot from "../shots/app-prototypes.jpg";
+import sonataShot from "../shots/app-sonata.jpg";
 
 export type AppCategoryId = "harness" | "daily" | "tools" | "next";
 
@@ -53,7 +57,7 @@ export const CATEGORIES: readonly AppCategory[] = [
 export const APPS: readonly CatalogApp[] = [
   {
     id: "agents",
-    shot: agentManagerShot,
+    shot: agentsShot,
     name: "Agent manager",
     category: "harness",
     icon: symbol("chat-bubble"),
@@ -91,6 +95,7 @@ export const APPS: readonly CatalogApp[] = [
   },
   {
     id: "sonata",
+    shot: sonataShot,
     name: "Sonata",
     category: "daily",
     icon: symbol("piano"),
@@ -106,6 +111,16 @@ export const APPS: readonly CatalogApp[] = [
     color: "orange",
     description:
       "Social events from many sources, in one place, on a map and a calendar.",
+  },
+  {
+    id: "maps",
+    shot: mapsShot,
+    name: "Maps",
+    category: "daily",
+    icon: symbol("location-on"),
+    color: "teal",
+    description:
+      "The places you want to go and have been, on one map, sorted by a tree of tags.",
   },
   {
     id: "chord",
@@ -128,6 +143,7 @@ export const APPS: readonly CatalogApp[] = [
   },
   {
     id: "files",
+    shot: filesShot,
     name: "Files",
     category: "tools",
     icon: symbol("folder"),
@@ -153,14 +169,5 @@ export const APPS: readonly CatalogApp[] = [
     color: "emerald",
     soon: true,
     description: "Every account in one place: a personal finance aggregator.",
-  },
-  {
-    id: "maps",
-    name: "Maps",
-    category: "next",
-    icon: symbol("map"),
-    color: "teal",
-    soon: true,
-    description: "Places you've been, and a smarter wishlist of where to go.",
   },
 ];

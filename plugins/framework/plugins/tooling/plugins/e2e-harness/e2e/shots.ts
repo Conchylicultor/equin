@@ -5,7 +5,7 @@
 import type { Page } from "playwright";
 import { pushDiagnostic } from "./diagnostics";
 import { flatness, hexColor } from "./pixels";
-import { TOAST } from "./toasts";
+import { TOAST, TOAST_STRIP } from "./toasts";
 
 /**
  * Cap on a single capture. Playwright's own default is 30s, and it awaits
@@ -59,7 +59,12 @@ export async function snap(
       path,
       timeout: opts.timeoutMs ?? DEFAULT_SNAP_TIMEOUT_MS,
       ...(opts.hideToasts && {
-        style: `${TOAST} { visibility: hidden !important; }`,
+        // Out of the render tree, not just invisible: under `visibility:
+        // hidden` a descendant that sets its own `visibility: visible` (a
+        // notification toast's Fix button) still paints, and sonner drives a
+        // toast's opacity inline, which a stylesheet cannot outrank. The
+        // stack's Dismiss all strip goes with them.
+        style: `${TOAST}, ${TOAST_STRIP} { display: none !important; }`,
       }),
     });
     if (!opts.allowBlank) {

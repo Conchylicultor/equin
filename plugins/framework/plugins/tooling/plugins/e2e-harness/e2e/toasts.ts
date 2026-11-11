@@ -42,6 +42,9 @@ import { waitFor, type Settled } from "./wait";
  */
 export const TOAST = "[data-sonner-toast]";
 
+/** The stack's Dismiss all strip (`shell/toast`'s host), shown beside 2+ toasts. */
+export const TOAST_STRIP = "[data-toast-strip]";
+
 /**
  * Default budget. Generous against a toast's own few-second lifetime, because a
  * healthy run pays nothing: the wait returns the moment the stack is empty, and
