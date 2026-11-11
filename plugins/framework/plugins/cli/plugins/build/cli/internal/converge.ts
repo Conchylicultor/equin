@@ -1,4 +1,5 @@
 import { resolve } from "node:path";
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import {
   actAsCheckoutNamespace,
@@ -14,6 +15,17 @@ import {
   buildRunIdKind,
 } from "@plugins/build/plugins/run-ledger/core";
 import { decideConvergence } from "@plugins/build/plugins/converge/cli";
+import type {
+  GatewayFollowOutcome,
+  followMainGateway,
+} from "@plugins/infra/plugins/launcher/plugins/gateway-drift/cli";
+
+/** The follow step's barrel — imported at its call (see `runConvergence`). */
+const GATEWAY_FOLLOW_MODULE =
+  "@plugins/infra/plugins/launcher/plugins/gateway-drift/cli";
+interface GatewayFollowModule {
+  followMainGateway: typeof followMainGateway;
+}
 import { readCheckoutCompositions } from "./build-targets";
 import { waitForArtifactLock } from "./app-artifacts";
 
@@ -65,6 +77,17 @@ export interface ConvergeOptions {
  * deployment is behind a commit it has not attempted", which is also what lets
  * a throwaway clone stand in for main end to end without touching main.
  *
+ * Then, on main's checkout, the GATEWAY follows main (`followMainGateway`,
+ * `infra/launcher/gateway-drift`): when what main would install differs from
+ * the machine's running gateway, it is installed and the login service
+ * reloaded — rolled back to the previous launch if the new one does not
+ * listen. It runs after the builds (a build's backend restart goes through
+ * whichever gateway is up) and whatever their verdict, since the gateway's
+ * source does not depend on the app building. This run outlives the gateway
+ * it replaces (its own process group, `EQUIN_BUILD_DETACHED`), so its exit
+ * status reaches no one after a restart: a restart that fails files its own
+ * report.
+ *
  * D12 (main from a frozen per-commit copy) plugs in here: materialize the
  * commit, build there, and the gateway swap is unchanged.
  */
@@ -84,11 +107,73 @@ export async function runConvergence(opts: ConvergeOptions): Promise<number> {
   }
   const root = await getWorktreeRoot();
   const checkout = await checkoutRef(root);
+  const log = (line: string): void =>
+    console.log(`[converge ${new Date().toISOString()}] ${line}`);
+  let builds: { ok: true; code: number } | { ok: false; error: unknown };
+  try {
+    builds = { ok: true, code: await convergeBuilds(root, checkout, log) };
+  } catch (error) {
+    builds = { ok: false, error };
+  }
+  if (checkout.kind !== "main") {
+    if (!builds.ok) throw builds.error;
+    return builds.code;
+  }
+  let followed: GatewayFollowOutcome;
+  try {
+    // Loaded at the call, through a computed specifier: its closure reaches
+    // server barrels and the login-services registry, which `build`'s own
+    // codegen regenerates — a static edge would put them in `build`'s run
+    // closure and freeze them there (`cli:codegen-manifests-not-frozen`). A
+    // convergence run regenerates nothing itself (its builds are child
+    // processes), so loading them here, after its builds, freezes nothing.
+    const followModule: string = GATEWAY_FOLLOW_MODULE;
+    const { followMainGateway } = (await import(
+      followModule
+    )) as GatewayFollowModule;
+    followed = await followMainGateway({ checkout: root, log });
+  } catch (error) {
+    if (builds.ok) throw error;
+    throw new AggregateError(
+      [builds.error, error],
+      "[converge] the builds and the gateway follow both failed",
+    );
+  }
+  log(`gateway: ${describeFollow(followed)}`);
+  if (!builds.ok) throw builds.error;
+  // A refused or failed follow filed its own gateway-restart-failed report;
+  // a non-zero exit would add a main-deploy-failed one for the same event.
+  return builds.code;
+}
+
+function describeFollow(o: GatewayFollowOutcome): string {
+  switch (o.kind) {
+    case "not-applicable":
+      return `not followed — ${o.reason}`;
+    case "current":
+      return "current";
+    case "already-attempted":
+      return `out of date, this launch already attempted at ${o.at} (${o.outcome})`;
+    case "restarted":
+      return `restarted onto main's (PID ${o.pid})`;
+    case "refused":
+      return `not restarted — ${o.reason}`;
+    case "failed":
+      return o.rolledBack
+        ? "main's gateway did not come up; rolled back"
+        : "main's gateway did not come up, and the rollback failed";
+  }
+}
+
+/** The build loop: decide, build, until the decision is empty. */
+async function convergeBuilds(
+  root: AppPath,
+  checkout: Awaited<ReturnType<typeof checkoutRef>>,
+  log: (line: string) => void,
+): Promise<number> {
   const namespace = await actAsCheckoutNamespace(root);
   const webDir = resolve(root, WEB_CORE_RELATIVE);
   const recorder = createBuildRunRecorder(namespace);
-  const log = (line: string): void =>
-    console.log(`[converge ${new Date().toISOString()}] ${line}`);
   try {
     let previous: string | null = null;
     for (;;) {

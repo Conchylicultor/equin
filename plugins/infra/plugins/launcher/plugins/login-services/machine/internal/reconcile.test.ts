@@ -145,6 +145,12 @@ function fakeService(
     installedJob: async () => {
       throw new Error("not under test");
     },
+    readDefinition: async () => {
+      throw new Error("not under test");
+    },
+    restoreDefinition: async () => {
+      throw new Error("not under test");
+    },
     remove: async () => {
       throw new Error("not under test");
     },

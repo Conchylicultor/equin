@@ -28858,6 +28858,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `framework/cli/doctor.assertPrerequisites`
               - `infra/jobs/supervised-job.cliExecContext`
+              - `infra/launcher/gateway-drift.adoptGatewayLaunch`
+              - `infra/launcher/gateway-drift.holdGatewayBuild`
+              - `infra/launcher/gateway-drift.PreparedGateway`
+              - `infra/launcher/gateway-drift.prepareMainGateway`
+              - `infra/launcher/gateway-drift.withGatewayFollowLock`
         - **`stop`** — `./equin stop` — stop the gateway daemon (and with it every backend); `--disable` also stops it starting at login.
         - **`test`** — `./equin test` — the ONLY way to run tests: both runners (bun:test for co-located logic suites, vitest for jsdom suites), with a summary naming both buckets so a green-but-partial result is impossible.
           - Core:
@@ -32362,6 +32367,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DepSource`
           - `DepTarget`
           - `EnsureOptions`
+          - `HeldDep`
           - `InstallContext`
           - `Ready`
           - `ReadyNow`
@@ -32376,6 +32382,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `depState`
           - `ensureDep`
           - `ensureDepViaCli`
+          - `heldDep`
           - `holdDep`
           - `hostTarget`
           - `readyNow`
@@ -34022,8 +34029,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`user-path`** — Which host paths a synchronous fs call may touch: AppPath (a path the app owns — its data dirs, its checkout; the only kind a sync fs call in runtime code may take) and UserPath (one the user or their config chose), with the type-aware lint that refuses a sync fs call on any path not proven app-owned — so a macOS Files & Folders prompt can never freeze a backend's JS thread, whether or not anyone marked the user's path.
           - Cross-plugin:
             - Imported by: 105 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
-              - `infra` ×35
-              - `framework` ×21
+              - `infra` ×36
+              - `framework` ×20
               - `apps` ×8
               - `debug` ×7
               - `packages` ×6
@@ -34537,10 +34544,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `cliExecContext`
               - `runAttached`
           - Cross-plugin:
-            - Imported by: 29 plugins — full list in [`plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md`](../plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md)
+            - Imported by: 30 plugins — full list in [`plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md`](../plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md)
               - `framework` ×9
+              - `infra` ×6
               - `apps` ×5
-              - `infra` ×5
               - `build` ×3
               - `plugin-meta` ×2
               - `backup`
@@ -34688,8 +34695,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `unsetEnv`
           - Cross-plugin:
             - Imported by: 46 plugins — full list in [`plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md`](../plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md)
-              - `framework` ×18
-              - `infra` ×11
+              - `framework` ×17
+              - `infra` ×12
               - `database` ×4
               - `packages` ×4
               - `debug` ×3
@@ -34704,42 +34711,71 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Test helpers:
             - Core: `@plugins/infra/plugins/launcher/plugins/env-names/core/testing`
               - `withEnv` — Runs `fn` with `values` set in `process.env` (undefined = unset), then puts back exactly what was there before — the save / set / restore a test of an env reader needs.
-        - **`gateway-drift`** — Gateway drift, shown: the health report's Gateway row — attention while the machine's login-service gateway (installed or running) differs from what ./equin start --force would install now from main, in one line, with an Update remedy launching an agent briefed with each difference (binary, -listen and the other flags, cwd, signature) to run it; folded with Connection, Database and Live reads while current.
+        - **`gateway-drift`** — Gateway drift, shown: the health report's Gateway row — attention while the machine's login-service gateway (installed or running) differs from what ./equin start --force would install now from main, in one line, with an Update remedy launching an agent briefed with each difference (binary, -listen and the other flags, cwd, signature) to run it; folded with Connection, Database and Live reads while current. Main's convergence run brings the gateway onto main by itself (gateway-drift/cli), so the row is stale after a push only until that run's follow step — or until a launch that was refused or failed is fixed; the gateway-restart-failed report summary (Debug → Reports) says which. The gateway-restart-failed report kind — filed through the report outbox by main's convergence run when its follow-main step could not bring the machine's gateway onto main's (the new gateway did not come up, rolled back or not, or it refused because it could not have gone back).
           - Web:
-            - Contributes: `HealthReport.Row` "Gateway"
+            - Contributes:
+              - `HealthReport.Row` "Gateway"
+              - `Reports.KindView` → `GatewayRestartFailedSummary`
             - Uses:
               - `network/live.useLive`
+              - `primitives/css/badge.Badge`
+              - `primitives/css/inline.Inline`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/launch.LaunchAgentPopover`
+              - `reports.Reports`
               - `shell/health-report.HealthReport`
               - `ui/icons.Icon`
           - Server:
-            - Contributes: `resource.declare` "gateway-drift"
+            - Contributes:
+              - `report-kind` "gateway-restart-failed"
+              - `resource.declare` "gateway-drift"
+            - Uses: `reports.ReportKind`
             - Resources: `gateway-drift` (push, notified, whole: one phrase per kind of difference (binary, each changed flag, cwd, signature, running vs installed) — a fixed handful)
           - Machine:
             - Uses:
               - `infra/launcher/login-services.APP_BUNDLE_ID`
               - `infra/launcher/login-services.bundleOfExecutable`
               - `infra/launcher/login-services.installedAppComponents`
+              - `infra/launcher/login-services.InstalledJob`
               - `infra/launcher/login-services.loginService`
+              - `infra/launcher/login-services.LoginService`
               - `infra/launcher/login-services.machineMacosAppHost`
               - `infra/launcher/login-services.MacosAppHost`
               - `infra/launcher/login-services.plannedServiceExecutable`
               - `network/live.serveValue`
+            - Exports (types): `GatewayLaunchComparison`
+            - Exports (values): `compareGatewayLaunch`
             - Register: `defineRefReaction('launcher.gateway-drift (refs/heads/main)')`
           - Core:
             - Uses:
               - `network/live.liveValue`
               - `packages/list-bound.wholeList`
-            - Exports (types): `GatewayDrift`
+            - Exports (types):
+              - `GatewayDrift`
+              - `GatewayRestartFailedPayload`
             - Exports (values):
+              - `describeGatewayRestartFailed`
+              - `errorLines`
               - `GATEWAY_REFRESH_COMMAND`
               - `gatewayDrift`
               - `GatewayDriftSchema`
+              - `GatewayRestartFailedPayloadSchema`
+          - Cli:
+            - Uses: `infra/jobs/supervised-job.cliExecContext`
+            - Exports (types):
+              - `GatewayFollowOutcome`
+              - `PreparedGateway`
+            - Exports (values):
+              - `adoptGatewayLaunch`
+              - `followMainGateway`
+              - `holdGatewayBuild`
+              - `prepareMainGateway`
+              - `withGatewayFollowLock`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
+            - Imported by: `framework/cli/start`
         - **`gateway-logs`** — The gateway's log directory (logs/gateway: its slog sink, each namespace's channel, each supervised service's channel under services/) with the bound every channel rotates at, and the service log relay's contract: the --log-fd flag a service's start command receives its relay fd by (serviceLogTarget), and the one-shot move of a daemon's pre-relay log file into its channel's rotation (adoptLegacyLog). A leaf importing only infra/paths and host-fs/user-path, so the database plugins the launcher boots can import it without a cycle.
           - Cross-plugin:
             - Imported by:
@@ -34752,6 +34788,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/serve-app`
               - `framework/cli/start`
               - `infra/launcher`
+              - `infra/launcher/gateway-drift`
           - Core:
             - Exports (types): `ServiceLogTarget`
             - Exports (values):
@@ -38896,8 +38933,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `holdParentLifeline`
           - `waitForFlock`
       - Cross-plugin:
-        - Imported by: 21 plugins — full list in [`plugins/packages/plugins/flock/REFERENCE.md`](../plugins/packages/plugins/flock/REFERENCE.md)
-          - `infra` ×8
+        - Imported by: 22 plugins — full list in [`plugins/packages/plugins/flock/REFERENCE.md`](../plugins/packages/plugins/flock/REFERENCE.md)
+          - `infra` ×9
           - `framework` ×5
           - `packages` ×3
           - `apps/chord/song-index`
@@ -44929,7 +44966,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×6
               - `ui/tokens/shape` ×3
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 181 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 182 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `apps` ×38
               - `debug` ×37
               - `conversations` ×28
@@ -44938,7 +44975,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks` ×10
               - `plugin-meta` ×8
               - `build` ×6
-              - `infra` ×4
+              - `infra` ×5
               - `review` ×4
               - `fields` ×3
               - `page` ×3
@@ -45364,7 +45401,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 111 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+            - Imported by: 112 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
               - `apps` ×23
               - `debug` ×18
               - `reports` ×18
@@ -45374,6 +45411,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `build` ×4
               - `plugin-meta` ×4
               - `tasks` ×4
+              - `infra` ×2
               - `ui` ×2
               - `active-data/go`
               - `audience/developer-mark`
@@ -45381,7 +45419,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2/settings`
               - `database/query-deadline`
               - `fields/bool/table`
-              - `infra/host/io-health`
               - `network/live/live-state`
               - `reorder/editor`
               - `runs/run-outcome`
@@ -53255,8 +53292,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`reports`** — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. The reports table and its live read (reports.list), the ReportKind / ReportNoiseRule slots every kind and rule contributes to, and the fan-out ceiling config; recording is the engine's (reports/plugins/engine).
   - Web:
     - Slots: `Reports.KindView`
-    - Slot contributors: 41 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `Reports.KindView` ×41
+    - Slot contributors: 42 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+      - `Reports.KindView` ×42
     - Contributes:
       - `IdKinds.Kind` "report|crash"
       - `ConfigV2.WebRegister` "reports"
@@ -53371,12 +53408,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `SERVER_REPORT_SOURCES`
       - `submitReport`
   - Cross-plugin:
-    - Imported by: 73 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+    - Imported by: 74 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
       - `reports` ×30
       - `debug` ×18
       - `conversations` ×7
       - `database` ×4
-      - `infra` ×3
+      - `infra` ×4
       - `build` ×2
       - `framework` ×2
       - `active-data/report`
@@ -53889,6 +53926,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/tooling/checks/type-check`
           - `framework/tooling/checks/type-check/backstop`
           - `infra/launcher`
+          - `infra/launcher/gateway-drift`
           - `reports/interaction-budget`
       - Exemptions:
         - Exempts itself from:

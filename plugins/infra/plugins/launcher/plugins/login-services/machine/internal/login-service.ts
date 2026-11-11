@@ -50,6 +50,16 @@ export interface LoginService {
    * starter's) but can compare the launch: the gateway's drift row.
    */
   installedJob(): Promise<InstalledJob | null>;
+  /**
+   * The written definition, verbatim (null: none written) — what
+   * {@link restoreDefinition} puts back. For a reload that must be able to
+   * undo itself exactly, environment included: the gateway's follow-main
+   * restart, whose rollback reinstates the job the old binary ran with (a new
+   * job may carry a flag the old binary does not know).
+   */
+  readDefinition(): Promise<string | null>;
+  /** Write back a definition {@link readDefinition} returned, byte for byte. */
+  restoreDefinition(content: string): Promise<void>;
   /** Delete the definition, so the service no longer starts by itself. */
   remove(): Promise<boolean>;
   /**

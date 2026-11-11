@@ -118,7 +118,7 @@ The CLI is `./equin <verb>`. Its old name is still a shim at the repo root (`LEG
 
 Always deploy after changes: `./equin build`, from the worktree directory (not the main repo root). It regenerates DB migrations from `schema.ts` (applied on server restart), builds frontend and server, restarts the server and registers the worktree with the gateway (`http://<worktree>.localhost:9000`).
 
-> **NEVER run `./equin start` / `stop`** (install / stop the gateway as the machine's launchd service) unless the user explicitly asks.
+> **NEVER run `./equin start` / `stop`** (install / stop the gateway as the machine's launchd service) unless the user explicitly asks. A pushed gateway change needs neither: main's deploy rebuilds and restarts the gateway itself once the change lands (rolling back if the new one does not come up), and the health report's Gateway row says when it is still out of date (`gateway/CLAUDE.md` § "The gateway follows main").
 
 ### Check
 

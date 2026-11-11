@@ -398,6 +398,7 @@ torch.
     - `DepSource`
     - `DepTarget`
     - `EnsureOptions`
+    - `HeldDep`
     - `InstallContext`
     - `Ready`
     - `ReadyNow`
@@ -412,6 +413,7 @@ torch.
     - `depState`
     - `ensureDep`
     - `ensureDepViaCli`
+    - `heldDep`
     - `holdDep`
     - `hostTarget`
     - `readyNow`

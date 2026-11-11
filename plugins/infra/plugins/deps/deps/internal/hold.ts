@@ -1,7 +1,7 @@
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { exists, readdir } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
-import type { DepSource, Ready } from "./dep";
+import { mintReady, type Dep, type DepSource, type Ready } from "./dep";
 import { defaultStore, installPaths, type DepStore } from "./store";
 
 const HOLDER = /^[a-z][a-z0-9-]*$/;
@@ -44,4 +44,31 @@ export async function holdDep(
 /** Whether anything holds this install (see {@link holdDep}). */
 export async function isHeld(paths: { holds: string }): Promise<boolean> {
   return (await exists(paths.holds)) && (await readdir(paths.holds)).length > 0;
+}
+
+/** What {@link heldDep} found: the install `holder` holds, or none. */
+export type HeldDep<S extends DepSource> =
+  { kind: "held"; ready: Ready<S> } | { kind: "none" };
+
+/**
+ * The install of `dep` that `holder` holds (see {@link holdDep}) — the build
+ * something outside any checkout runs, e.g. the gateway launchd relaunches —
+ * when it is still installed and complete. A reload that must be able to go
+ * back to what ran before reads it (the gateway's follow-main rollback).
+ */
+export async function heldDep<S extends DepSource>(
+  dep: Dep<S>,
+  holder: string,
+  opts: { store?: DepStore } = {},
+): Promise<HeldDep<S>> {
+  const store = opts.store ?? (await defaultStore());
+  const idDir = join(store.cacheRoot, dep.id);
+  if (!(await exists(idDir))) return { kind: "none" };
+  for (const identity of await readdir(idDir)) {
+    const paths = installPaths(store, dep.id, identity);
+    if (!(await exists(join(paths.holds, holder)))) continue;
+    if (!(await exists(paths.ready))) continue;
+    return { kind: "held", ready: mintReady(dep, paths.env, identity) };
+  }
+  return { kind: "none" };
 }

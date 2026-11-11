@@ -22,6 +22,19 @@ is the policy, run by the commit being deployed:
   is a cross-language contract pinned by
   `gateway/testdata/main-deploy-failed-entry.json`.
 
+## Then the gateway
+
+After the build loop, on main's checkout, the run calls `followMainGateway`
+(`infra/launcher/gateway-drift`, `cli/`; wired in `framework/cli/build`'s
+`converge.ts`): the machine's gateway is rebuilt and restarted when main's
+launch differs from it, rolled back when the new one does not come up, and
+tried once per launch. It runs whatever the builds' verdict (the gateway's
+source does not depend on the app building). Once it restarted the gateway the
+run's exit status reaches no one — the gateway that would read it is gone — so
+its own failures file a `gateway-restart-failed` report, not a
+`main-deploy-failed` one; an error thrown before any restart still exits
+non-zero and is filed by the gateway as before.
+
 ## Why it is not in main's backend
 
 Every edge of the old loop — the `git.refAdvanced` trigger, the debounce job,

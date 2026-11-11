@@ -147,6 +147,10 @@ function launchdService(id: LoginServiceId): LoginService {
       const content = await readDefinition(plistPath());
       return content === null ? null : parseLaunchAgentPlist(content);
     },
+    readDefinition: () => readDefinition(plistPath()),
+    restoreDefinition: async (content) => {
+      await writeDefinition(plistPath(), content);
+    },
     remove: () => removeDefinition(plistPath()),
     load,
     // launchd SIGTERMs it (SIGKILL after the plist's ExitTimeOut). The plist

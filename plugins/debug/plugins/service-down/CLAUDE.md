@@ -46,8 +46,9 @@ fails. Postgres logs that in its own log.
 the outbox envelope and this kind's strict schema. The tail bounds are
 `backend-crash`'s (`CrashTailSchema`), pinned to the Go constants by its test.
 
-**Takes effect on a gateway restart** (`./equin start --force`): `./equin
-build` neither rebuilds nor restarts the gateway.
+**Takes effect on a gateway restart**: a worktree's `./equin build` neither
+rebuilds nor restarts the gateway; main's deploy does, once the change lands
+(`gateway/CLAUDE.md` § "The gateway follows main").
 
 Literals `service-down` (the kind, the Go `serviceDownKind`) and the
 fingerprint `service-down:<service>:<outcome>` are persisted — do not rename.

@@ -56,7 +56,7 @@ function renderDescription(row: ReportRow, d: GatewayPanicPayload): string {
     `**What to do:** the stack names the line. Reproduce it in a Go test in ` +
       `\`gateway/\` first. The gateway's own log (\`${gatewayLogs.file("gateway.log")}\`) ` +
       `has every panic at error (\`gateway handler panicked\`). A fix takes ` +
-      `effect only once the gateway is restarted (\`./equin start --force\`).`,
+      `effect once the gateway is restarted — main's deploy restarts it after the push that lands the fix.`,
   );
   lines.push("");
   lines.push(`**Occurrences:** ${row.count}`);

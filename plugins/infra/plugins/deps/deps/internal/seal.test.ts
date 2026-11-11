@@ -23,7 +23,7 @@ import {
   type TargetedSource,
 } from "./dep";
 import { depState, ensureDep, readyNow, removeDep } from "./ensure";
-import { holdDep } from "./hold";
+import { heldDep, holdDep } from "./hold";
 import { sealDep } from "./seal";
 import { readSealedManifest, SEALED_MANIFEST } from "./sealed";
 import { identityOf, installPaths, type DepStore } from "./store";
@@ -344,5 +344,46 @@ describe("holdDep", () => {
     expect(existsSync(installPaths(store, dep.id, second.identity).root)).toBe(
       true,
     );
+  });
+});
+
+describe("heldDep", () => {
+  test("reads back the install a holder holds, and follows the hold", async () => {
+    const box = { v: "1" };
+    const dep = defineDep({
+      id: "read-held-dep",
+      owner: "infra/deps",
+      description: "",
+      sizeHint: "",
+      source: {
+        kind: "fake",
+        label: "",
+        identityInputs: async () => ({ v: box.v }),
+        async install(ctx) {
+          mkdirSync(ctx.dir, { recursive: true });
+        },
+      } satisfies DepSource<"fake">,
+      updates: { none: "a test fixture" },
+    });
+    expect((await heldDep(dep, "machine-gateway", { store })).kind).toBe(
+      "none",
+    );
+    const first = await ensureDep(dep, exec, { root: base, store });
+    expect((await heldDep(dep, "machine-gateway", { store })).kind).toBe(
+      "none",
+    );
+    await holdDep(first, "machine-gateway", { store });
+    box.v = "2";
+    const second = await ensureDep(dep, exec, { root: base, store });
+
+    // Main moved on, the hold did not: the held build is still the first.
+    const held = await heldDep(dep, "machine-gateway", { store });
+    expect(held.kind === "held" && held.ready.identity).toBe(first.identity);
+    expect(held.kind === "held" && held.ready.dir).toBe(first.dir);
+    expect((await heldDep(dep, "other-holder", { store })).kind).toBe("none");
+
+    await holdDep(second, "machine-gateway", { store });
+    const moved = await heldDep(dep, "machine-gateway", { store });
+    expect(moved.kind === "held" && moved.ready.identity).toBe(second.identity);
   });
 });

@@ -56,6 +56,7 @@ export const dataDirsEntries: CollectedEntry[] = [
   { pluginPath: "infra/plugins/host/plugins/host-admission", id: "infra.host.host-admission", loader: () => import("@plugins/infra/plugins/host/plugins/host-admission/data-dirs"), dependsOn: [] },
   { pluginPath: "infra/plugins/jobs", id: "infra.jobs", loader: () => import("@plugins/infra/plugins/jobs/data-dirs"), dependsOn: [] },
   { pluginPath: "infra/plugins/launcher", id: "infra.launcher", loader: () => import("@plugins/infra/plugins/launcher/data-dirs"), dependsOn: [] },
+  { pluginPath: "infra/plugins/launcher/plugins/gateway-drift", id: "infra.launcher.gateway-drift", loader: () => import("@plugins/infra/plugins/launcher/plugins/gateway-drift/data-dirs"), dependsOn: [] },
   { pluginPath: "infra/plugins/launcher/plugins/gateway-logs", id: "infra.launcher.gateway-logs", loader: () => import("@plugins/infra/plugins/launcher/plugins/gateway-logs/data-dirs"), dependsOn: [] },
   { pluginPath: "infra/plugins/launcher/plugins/login-services", id: "infra.launcher.login-services", loader: () => import("@plugins/infra/plugins/launcher/plugins/login-services/data-dirs"), dependsOn: [] },
   { pluginPath: "infra/plugins/mcp/plugins/browser", id: "infra.mcp.browser", loader: () => import("@plugins/infra/plugins/mcp/plugins/browser/data-dirs"), dependsOn: [] },

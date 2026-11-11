@@ -30,6 +30,8 @@ import {
   loginService,
   machineMacosAppHost,
   plannedServiceExecutable,
+  type InstalledJob,
+  type LoginService,
   type MacosAppHost,
 } from "@plugins/infra/plugins/launcher/plugins/login-services/machine";
 import type { GatewayDrift } from "../../core";
@@ -38,19 +40,60 @@ import { binaryIdentity, diffGatewayFlags, flagValue } from "./diff";
 const PS_TIMEOUT_MS = 10_000;
 
 /**
+ * The machine's gateway against what `./equin start --force` would install
+ * now: {@link compareGatewayLaunch}'s differences, plus whether the running
+ * gateway stamps the principal — read off THIS backend's own argv, so only a
+ * backend can say it (the follow-main restart in a CLI does not ask).
+ */
+export async function checkGatewayDrift(): Promise<GatewayDrift> {
+  const compared = await compareGatewayLaunch();
+  if (compared.kind === "not-applicable") return compared;
+  const differences = [...compared.differences];
+  // The running gateway's own declaration, as this backend received it: no
+  // --principal-stamped means it predates the principal stamp, so this
+  // backend serves every route ungated (framework/principal, core/stamp.ts).
+  if (principalStamp() === "unstamped") {
+    differences.push(
+      "the running gateway does not stamp the principal: cross-site requests are not refused",
+    );
+  }
+  return differences.length === 0
+    ? { kind: "current" }
+    : { kind: "stale", differences };
+}
+
+/** What {@link compareGatewayLaunch} found. */
+export type GatewayLaunchComparison =
+  | { kind: "not-applicable"; reason: string }
+  | {
+      kind: "compared";
+      /** The gateway's login service, bound to its installed label. */
+      service: LoginService;
+      /** The installed definition's launch, read back. */
+      installed: InstalledJob;
+      /** Main's checkout: what `start` builds the gateway from and runs it in. */
+      repoRoot: AppPath;
+      /** The installed `-log-level` (a `start` flag), kept by a reinstall. */
+      logLevel: string;
+      /** One short phrase per difference; empty when current. */
+      differences: string[];
+    };
+
+/**
  * Compare the machine's gateway with what `./equin start --force` would
  * install now: the installed service definition's argv and cwd against main's
  * (`devGatewayLaunchOptions` + `gatewayLaunchFlags` — the derivation `start`
  * writes, with `-log-level` taken from the installed argv since it is
  * `start`'s flag), its binary against main's `gateway-binary` build, the
  * binary's signature, and the running gateway's command line against the
- * installed one.
+ * installed one. The one definition of "current" — the health report's row
+ * and main's follow-main restart (`gateway-drift/cli`) both ask it.
  *
  * The environment is not compared: the definition's is the STARTER's
  * (`pickRuntimeEnv` of the shell that ran `start`), which no backend can
  * rebuild. A newly declared runtime name still shows, through `-child-env`.
  */
-export async function checkGatewayDrift(): Promise<GatewayDrift> {
+export async function compareGatewayLaunch(): Promise<GatewayLaunchComparison> {
   if (isRelease()) {
     return notApplicable("A release runs the gateway its bundle sealed");
   }
@@ -71,15 +114,13 @@ export async function checkGatewayDrift(): Promise<GatewayDrift> {
 
   const repoRoot = await getMainRepoRoot();
   const [installedBinary = "", ...installedFlags] = installed.argv;
+  const logLevel =
+    flagValue(installedFlags, "-log-level") ?? DEV_GATEWAY_LOG_LEVEL;
   const expectedFlags = gatewayLaunchFlags(
-    devGatewayLaunchOptions({
-      repoRoot,
-      logLevel:
-        flagValue(installedFlags, "-log-level") ?? DEV_GATEWAY_LOG_LEVEL,
-    }),
+    devGatewayLaunchOptions({ repoRoot, logLevel }),
   );
   // A definition naming another data root's pidfile is not the gateway this
-  // backend runs behind (a preview under its own EQUIN_DIR).
+  // process runs beside (a preview under its own EQUIN_DIR).
   if (
     flagValue(installedFlags, "-pid-file") !==
     flagValue(expectedFlags, "-pid-file")
@@ -113,23 +154,20 @@ export async function checkGatewayDrift(): Promise<GatewayDrift> {
   } else if (signature === "no-identity") {
     differences.push("no stable signing identity on this machine yet");
   }
-  // The running gateway's own declaration, as this backend received it: no
-  // --principal-stamped means it predates the principal stamp, so this
-  // backend serves every route ungated (framework/principal, core/stamp.ts).
-  if (principalStamp() === "unstamped") {
-    differences.push(
-      "the running gateway does not stamp the principal: cross-site requests are not refused",
-    );
-  }
   const running = await runningCommand();
   if (running !== null && running !== installed.argv.join(" ")) {
     differences.push(
       `the running gateway was started with another command than the installed ${service.manager} one`,
     );
   }
-  return differences.length === 0
-    ? { kind: "current" }
-    : { kind: "stale", differences };
+  return {
+    kind: "compared",
+    service,
+    installed,
+    repoRoot,
+    logLevel,
+    differences,
+  };
 }
 
 /**
@@ -222,6 +260,9 @@ async function runningCommand(): Promise<string | null> {
   return res.exitCode === 0 ? res.stdout.trim() : null;
 }
 
-function notApplicable(reason: string): GatewayDrift {
+function notApplicable(reason: string): {
+  kind: "not-applicable";
+  reason: string;
+} {
   return { kind: "not-applicable", reason };
 }

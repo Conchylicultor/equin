@@ -47,9 +47,13 @@ explicitly, through the same `LoginService`.
 Every declared service a `start` registered **follows main by itself**: main's
 backend reconciles it against main's build of its dependency, at boot and on
 every advance of main (see the sub-plugin's
-`CLAUDE.md`). The gateway does not — restarting it restarts every backend — but
-a plain `start` reports it stale (`LoginService.isCurrent`) with the command
-that swaps it: `./equin start --only <gateway-label> --force`.
+`CLAUDE.md`). The gateway follows main too, but not from main's backend —
+restarting it restarts every backend, main's included: main's convergence run
+(outside every backend) does it after its builds, with a rollback to the
+previous launch (`gateway-drift`'s `followMainGateway`, `gateway/CLAUDE.md` §
+"The gateway follows main"). A plain `start` still reports it stale
+(`LoginService.isCurrent`) with the command that swaps it by hand:
+`./equin start --only <gateway-label> --force`.
 The health report says so too, without anyone running `start`: the
 `gateway-drift` sub-plugin's **Gateway** row compares the installed definition
 and the running gateway with main's launch (binary, flags, cwd, signature) and
@@ -195,8 +199,8 @@ Two boundaries, one declaration:
 
 1. **Starter → gateway.** `gatewayLaunchSpec` sets
    `pickRuntimeEnv(process.env)` — for the detached spawn, and baked into the
-   launchd plist on macOS dev hosts (so a change reaches that gateway on the
-   next `start --force`). It filters the **live** `process.env`, so the
+   launchd plist on macOS dev hosts (a change reaches that gateway on the
+   next restart — main's follow-main, or `start --force`). It filters the **live** `process.env`, so the
    release launcher's mutations (`launch.ts`'s relocation variables, the release
    identity `bootSelfContainedApp` stamps) still arrive — each is a forwarded
    name. Every launch path (`./equin start`, the release `launch` binary,
@@ -229,8 +233,9 @@ that snapshots PATH once and spawns backends against it for weeks. That is how
 every backend on this host ran Bun 1.3.13 (a symlink resolved in May 2026) long
 after `mise.toml` could have said otherwise, and Bun 1.3.13 closes pooled
 Postgres sockets out from under live queries. Backends pick up a `mise.lock` change on
-their next restart; a change to this PATH rule itself needs `./equin start --force`
-to reach the already-running gateway.
+their next restart; a change to this PATH rule itself reaches the already-running gateway once it
+lands on main: main's follow-main step renders the whole job (environment
+included) and restarts the gateway when it differs.
 
 A shim resolves from its **cwd**, so the shims alone are not enough. With no
 `mise.toml` above the directory a tool runs in, mise runs the next non-mise copy

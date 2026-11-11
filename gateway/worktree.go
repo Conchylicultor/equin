@@ -78,9 +78,10 @@ type Spec struct {
 	// gateway round-trips a spec: dropping an unknown field here would erase it.
 	// Carried, not decomposed — exactly like Name.
 	//
-	// Deliberately NOT passed as an env var to the spawned backend. `./equin
-	// build` does not rebuild this Go binary (only `./equin start` does), so
-	// a running gateway is routinely older than the backend it spawns; a backend
+	// Deliberately NOT passed as an env var to the spawned backend. A
+	// worktree's `./equin build` does not rebuild this Go binary (main's deploy
+	// does, once a change lands), so a running gateway is routinely older than
+	// the backend it spawns; a backend
 	// that depended on a new env line would silently fall back to the full
 	// registry and boot the whole app under a composition's own namespace and
 	// database. Reading the file the gateway already read removes the hop that

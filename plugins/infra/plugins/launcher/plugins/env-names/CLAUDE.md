@@ -28,8 +28,8 @@
     - `unsetEnv`
 - Cross-plugin:
   - Imported by: 46 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `framework` ×18
-    - `infra` ×11
+    - `framework` ×17
+    - `infra` ×12
     - `database` ×4
     - `packages` ×4
     - `debug` ×3

@@ -30,8 +30,9 @@ per site, whatever the request rate.
 the outbox envelope and this kind's strict schema. The value and stack bounds
 are `backend-crash`'s (`CrashLineSchema`, `CrashTailSchema`).
 
-**Takes effect on a gateway restart** (`./equin start --force`): `./equin
-build` neither rebuilds nor restarts the gateway.
+**Takes effect on a gateway restart**: a worktree's `./equin build` neither
+rebuilds nor restarts the gateway; main's deploy does, once the change lands
+(`gateway/CLAUDE.md` § "The gateway follows main").
 
 Literals `gateway-panic` (the kind, the Go `gatewayPanicKind`) and the
 fingerprint `gateway-panic:<site>` are persisted — do not rename.

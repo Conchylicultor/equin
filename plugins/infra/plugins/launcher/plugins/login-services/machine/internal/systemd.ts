@@ -183,6 +183,10 @@ function systemdService(id: LoginServiceId): LoginService {
       const content = await readDefinition(unitPath());
       return content === null ? null : parseSystemdUserUnit(content);
     },
+    readDefinition: () => readDefinition(unitPath()),
+    restoreDefinition: async (content) => {
+      await writeDefinition(unitPath(), content);
+    },
     remove,
     load,
     // `systemctl stop` blocks until the unit is inactive — up to

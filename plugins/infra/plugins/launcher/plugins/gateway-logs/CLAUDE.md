@@ -40,6 +40,7 @@ output: the log relay". The Go constants are pinned here by
     - `framework/cli/serve-app`
     - `framework/cli/start`
     - `infra/launcher`
+    - `infra/launcher/gateway-drift`
 - Core:
   - Exports (types): `ServiceLogTarget`
   - Exports (values):

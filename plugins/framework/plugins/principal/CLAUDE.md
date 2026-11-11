@@ -79,8 +79,10 @@ records it once, at bind; `principalStamp()` reads it back
   not stamp the principal" as a difference, and the cross-site probe fails
   with "gateway not stamping".
 
-**The protection takes effect only once the gateway is restarted:
-`./equin start --force`.** `principal:header-in-sync` pins the Go flag
+**The protection takes effect once the gateway is restarted** — main's
+deploy does that by itself after the push that changes it
+(`gateway/CLAUDE.md` § "The gateway follows main"; by hand,
+`./equin start --force`). `principal:header-in-sync` pins the Go flag
 (`principalStampedFlag`) to `PRINCIPAL_STAMPED_FLAG` as well as the header.
 
 ## Where it is enforced

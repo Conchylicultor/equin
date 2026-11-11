@@ -31,7 +31,8 @@ export { ensureDepViaCli } from "./internal/via-cli";
 export { sealDep } from "./internal/seal";
 export type { SealOutcome } from "./internal/seal";
 export { SEALED_MANIFEST } from "./internal/sealed";
-export { holdDep } from "./internal/hold";
+export { heldDep, holdDep } from "./internal/hold";
+export type { HeldDep } from "./internal/hold";
 export { sweepUnusedDeps } from "./internal/sweep";
 export type { SweepReport } from "./internal/sweep";
 export {

@@ -15,6 +15,7 @@ See the top-level [`CLAUDE.md`](../CLAUDE.md) for overall architecture and [`ser
 - Exposes `/gateway/*` on every host as an API for apps to query gateway state
 - **Supervises configured services** (e.g. embedded Postgres) via a generic process supervisor. See "Service supervision" below.
 - **Triggers main's deploy** (`-main-checkout`): on every advance of `refs/heads/main` it runs `./equin build --allow-main --converge` in main's checkout, one run at a time. See "Main's deploy" below.
+- **Is replaced by main's deploy when main changes it**: that same run rebuilds this binary and restarts it — no one runs `./equin start --force` for a pushed gateway change. See "The gateway follows main" below.
 
 ## Key Design Decisions
 
@@ -83,8 +84,9 @@ overwriting a client value — the backend itself is addressed as `backend`) and
 `X-Forwarded-Proto` (a front proxy's value kept, else `http`); see
 `newReverseProxy`.
 
-The running gateway is a shared binary `./equin build` does not rebuild: these
-take effect locally only once the user runs `./equin start --force` (a release
+The running gateway is main's: a worktree's `./equin build` does not rebuild
+it, so a gateway change takes effect once it lands on main — main's deploy
+restarts the gateway on its own (see "The gateway follows main"; a release
 bundle carries its own gateway).
 
 `/api/*` and `/ws/*` are the same prefixes as the Vite dev proxy in `web/vite.config.ts`.
@@ -112,7 +114,7 @@ the shell is `no-cache`.
 4. No `Sec-Fetch-Site`, `Origin` == `http://<Host>` or `https://<Host>` -> owner (old browsers).
 5. Otherwise anonymous (cross-site, sibling namespace, `Origin: null`).
 
-**The handshake.** Every backend (central included) gets the bare `--principal-stamped` at the end of its argv (`principalStampedFlag`, `backendLaunch`): "this gateway stamps the header". A backend enforces fail-closed — a missing header is anonymous — only when it sees the flag (`readPrincipalStamp`, `plugins/framework/plugins/principal`). The gateway binary is a shared dependency `./equin build` neither rebuilds nor restarts, so a backend can boot behind a gateway older than the stamp; without the handshake it would refuse everything, this gateway's own readiness probe included, and every namespace would stay down. Behind such a gateway the backend serves ungated (the pre-principal status quo), logs `[principal] this gateway predates the principal stamp …` at boot, and the health report's Gateway row turns stale. **The protection takes effect only once the gateway is restarted: `./equin start --force`.** The flag and the Go constant are pinned to the TS one by `principal:header-in-sync`.
+**The handshake.** Every backend (central included) gets the bare `--principal-stamped` at the end of its argv (`principalStampedFlag`, `backendLaunch`): "this gateway stamps the header". A backend enforces fail-closed — a missing header is anonymous — only when it sees the flag (`readPrincipalStamp`, `plugins/framework/plugins/principal`). The gateway binary is a shared dependency a worktree's `./equin build` neither rebuilds nor restarts (main's deploy restarts it once a change lands — "The gateway follows main"), so a backend can boot behind a gateway older than the stamp; without the handshake it would refuse everything, this gateway's own readiness probe included, and every namespace would stay down. Behind such a gateway the backend serves ungated (the pre-principal status quo), logs `[principal] this gateway predates the principal stamp …` at boot, and the health report's Gateway row turns stale. **The protection takes effect once the gateway is restarted — which main's deploy does by itself after the push that changes it (by hand: `./equin start --force`).** The flag and the Go constant are pinned to the TS one by `principal:header-in-sync`.
 
 Design: [`research/2026-10-28-global-http-edge-principal.md`](../research/2026-10-28-global-http-edge-principal.md).
 
@@ -319,7 +321,61 @@ minutes until a person reloaded this gateway).
   `POST /gateway/deploy/converge` — an edge, `202`. Both `404` on a gateway
   without `-main-checkout`.
 
-Changes here take effect only after `./equin start --force`.
+## The gateway follows main
+
+Main's deploy also replaces the gateway itself — no person, no approval
+(decided 2026-11-11: fixes in `gateway/` sat inert for days until someone ran
+`./equin start --force`). After its builds, whatever their verdict, the
+convergence run calls `followMainGateway` (`plugins/infra/plugins/launcher/plugins/gateway-drift`,
+`cli/`):
+
+- **When.** Only in main's checkout, only for the machine's login-service
+  gateway, and only when this checkout is the one it deploys
+  (`-main-checkout`). It builds main's `gateway-binary` (a hash when
+  unchanged), then asks the health row's own comparison
+  (`compareGatewayLaunch`: binary identity, every flag, cwd, signature,
+  running vs installed) plus the whole rendered job (`LoginService.isCurrent`
+  — the environment, which this run starts from: the gateway's own declared
+  one). Current → nothing. So it covers everything the binary
+  or its launch spec is built from: `gateway/**/*.go`, `go.mod`/`go.sum`, Go
+  itself, and any flag derivation (`gatewayLaunchFlags` — a new `-child-env`
+  name, a new data dir flag, the PATH rule).
+- **How.** `start --force`'s path: install main's build into the equin app,
+  write the job, `reloadService` (unload, wait out the old process, load),
+  then `awaitGatewayReady` (alive and listening — and listening implies every
+  supervised service came up). Every backend stops with the old gateway (the
+  "Shutdown fits one budget" teardown) and cold-starts on its next request,
+  central eagerly. What outlives it: agents (detached), Postgres / PgBouncer and
+  their log relays (reattached), and this run (its own process group —
+  measured 2026-11-11 on macOS 26: `launchctl bootout` kills the job's process
+  group and leaves a child that `setpgid`'d alone, reparented to pid 1; systemd
+  is `KillMode=process`). One window remains: a run killed between the unload
+  and the load leaves the job unloaded until the next login. A tab
+  reconnects its socket; an agent's build that POSTs its restart in the gap
+  finds no gateway, which it treats as "spawns on the next request".
+- **Never no gateway.** Before touching anything it captures the way back: the
+  job definition verbatim (`LoginService.readDefinition`; a new job may carry a
+  flag the old binary rejects) and the build the `machine-gateway` holder keeps
+  (`heldDep`) — the hold moves to the new build only once it answers. No held
+  build: it refuses. A new gateway that does not come up is replaced by the
+  previous one (reinstalled, definition restored, reloaded, awaited).
+- **Once per launch.** The launch's key (a hash of the build, argv, cwd and
+  the environment's names — never its values, which this run inherits and a
+  value differing run to run would mint a key per boot) is
+  recorded in `state/gateway-follow/last-attempt.json` before the swap and never
+  tried twice, whatever its outcome — every gateway boot starts a convergence
+  run, so a failing launch would otherwise be retried by its own rollback's
+  boot forever. A machine-wide flock (`follow.lock`) makes the successor's
+  boot-edge run wait for this one, then find the gateway current.
+- **Serialized with `start`.** `./equin start` takes the same `follow.lock`
+  around its gateway half.
+- **Loud.** A refusal or failure files a `gateway-restart-failed` report itself
+  (the gateway that would have filed the run's exit is the one it replaced),
+  and the health report's Gateway row stays Out of date until a later launch
+  succeeds.
+
+`./equin start --force` remains the by-hand path (first install, a
+`gateway-restart-failed` fixed outside main, a host with main's deploy off).
 
 ## Service supervision
 
@@ -340,7 +396,7 @@ A supervised daemon never owns a log file. Every start (boot and watchdog re-sta
 - **Outlives the gateway**, like the daemon: the relay reads until every process holding the write end has exited, so a gateway restart that reattaches leaves both running (verified: relays reparent to pid 1 and keep writing). Not a pipe into the gateway process, which the first restart would cut.
 - **A start that only reattaches** never hands the fd on, so its relay reads EOF at once and exits without opening the file.
 - **The trade**, shared with Postgres's own `logging_collector`: a relay that stopped reading would block the daemon's stderr writes once the pipe buffer fills (the relay only appends to a local file), and lines over `PIPE_BUF` (512 B on macOS) from concurrent Postgres backends can interleave. A dead relay costs log lines, not the daemon: Postgres and PgBouncer ignore SIGPIPE.
-- **Behind an older gateway** (no `--log-fd`), the start scripts say so and fall back: Postgres to its old unrotated `postgres/postgres.log`, PgBouncer to `-d` with no log. Restart the gateway (`./equin start --force`) and then the cluster.
+- **Behind an older gateway** (no `--log-fd`), the start scripts say so and fall back: Postgres to its old unrotated `postgres/postgres.log`, PgBouncer to `-d` with no log. Restart the gateway (main's deploy does once the change lands; by hand `./equin start --force`) and then the cluster.
 
 `serviceLogsSubdir`, `serviceLogFdFlag`, `maxLogBytes` and `maxLogBackups` are pinned to their TypeScript twins (`infra/launcher/gateway-logs`) by `gateway-logs:in-sync`.
 
@@ -408,7 +464,7 @@ go build -o /tmp/gateway .
 The gateway expects backends to:
 
 1. Read their socket path from `--socket <path>` on argv (required; backends should error out if missing). A socket is per process, so it must not ride in the environment, where every process the backend starts would inherit it. The server-side reader is `readServingSocket()` in `plugins/infra/plugins/runtime-identity/core`. (A spec written while the transition ran may still carry a `socketTransport` key; the gateway ignores it.)
-2. **Expect a declared environment, nothing ambient.** A backend receives exactly the declared runtime environment — the names the launcher passes via `-child-env` (`runtimeEnvNames()` in `plugins/infra/plugins/launcher/plugins/runtime-env/core`), with the values the gateway itself was started with — and nothing else. Nothing is inherited from whoever started the gateway: an undeclared variable in the starting shell never reaches a backend. A per-child value overrides a same-named base entry. Supervised-service start commands (Postgres, PgBouncer) and the gateway's own helper execs (`taskpolicy`, `ps`) get the base alone. A new variable a backend must read goes on the launcher's list — declaring it there (and restarting the gateway with `./equin start`) is the whole change.
+2. **Expect a declared environment, nothing ambient.** A backend receives exactly the declared runtime environment — the names the launcher passes via `-child-env` (`runtimeEnvNames()` in `plugins/infra/plugins/launcher/plugins/runtime-env/core`), with the values the gateway itself was started with — and nothing else. Nothing is inherited from whoever started the gateway: an undeclared variable in the starting shell never reaches a backend. A per-child value overrides a same-named base entry. Supervised-service start commands (Postgres, PgBouncer) and the gateway's own helper execs (`taskpolicy`, `ps`) get the base alone. A new variable a backend must read goes on the launcher's list — declaring it there is the whole change: `-child-env` changes, so main's deploy restarts the gateway once it lands (the value is the one the gateway was started with).
 3. Bind that Unix socket and accept HTTP/1.1 + WebSocket connections on it. The gateway polls readiness via `GET /api/health/ready` over the socket — it hot-swaps only once that returns `200` (backend fully ready: migrations applied, DB warm, registry built), not on a bare socket accept. A `404` (backend predates the readiness endpoint) falls back to "HTTP-reachable = ready"; `503` means still booting.
 
    **Wedge detection is progress-aware and escalates before it kills.** The base deadline (`-ready-timeout`, load-adaptive up to `-ready-timeout-max`) is only the wedge *threshold*: when it expires but the backend has answered HTTP at all (even `503`), or was spawned darwinbg-demoted (an E-core boot legitimately exceeds base under host load — even to first socket bind), the gateway tells the backend to leave darwinbg (its next readiness probe says `foreground`, see "Start priority") and extends the wait by `-ready-timeout-max` instead of SIGKILLing near-complete boot work. Only a silent, never-demoted backend is declared wedged at base; a crashed backend is always caught instantly via its exit channel. This closes the 2026-07-07 spawn-kill loop, where healthy demoted boots were killed at 15s four times in a row under load, turning a slow cold start into a ~2-minute outage.
