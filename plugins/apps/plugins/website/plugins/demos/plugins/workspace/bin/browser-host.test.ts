@@ -97,7 +97,6 @@ import {
   DEMO_AGENTS,
   DEMO_PAGE_IDS,
   DEMO_PLACES,
-  DEMO_SONGS,
   DEMO_STORIES,
   demoAgentId,
   demoConversationId,
@@ -123,7 +122,9 @@ import { bunHostEntries, diskDemoData } from "./bun-host";
 import { seed } from "./seed";
 import {
   DEMO_FEATURED_PROTOTYPE,
+  DEMO_FILE_SONGS,
   DEMO_PROTOTYPE_TAGS,
+  DEMO_SONGS,
 } from "@plugins/apps/plugins/website/plugins/demos/plugins/workspace/plugins/story/core/testing";
 import {
   parsePrototypeTree,
@@ -1146,6 +1147,14 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
         id: song.id,
         title: song.title,
         source: "chord-grid",
+      });
+    }
+    // The real pieces, each its file's source, named as the story names it.
+    for (const song of DEMO_FILE_SONGS) {
+      expect(songs.rows).toContainEqual({
+        id: song.id,
+        title: song.title,
+        source: song.kind,
       });
     }
     // A fresh install's starters, seeded by the MIDI source itself.

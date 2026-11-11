@@ -10,6 +10,7 @@ import { seedMidiStarters, reconcileSeededStarters } from "./internal/seed";
 import { backfillContentHashes } from "./internal/import";
 
 export { songMidi } from "./internal/tables";
+export { MIDI_SOURCE_ID } from "../shared/constants";
 export {
   importMidiSong,
   getSongMidiBySourcePath,
@@ -20,7 +21,7 @@ export type { ImportMidiSongInput } from "./internal/import";
 
 export default {
   description:
-    "Owns the sonata_songs_ext_midi side-table: per-song MIDI attachment + track count. Creates MIDI-backed songs, serves each song's MIDI row as the lookup-only live collection sonata.midi (what the player hydrates the song from), exposes its track count and file-missing flag to every list of songs (LiveColumns.Expose), serves each song's falling-notes cover (GET …/midi/cover/<version>.svg, drawn by covers), and seeds the bundled public-domain MIDI starters at boot.",
+    "Owns the sonata_songs_ext_midi side-table: per-song MIDI attachment + track count. Creates MIDI-backed songs, serves each song's MIDI row as the lookup-only live collection sonata.midi (what the player hydrates the song from), exposes its track count and file-missing flag to every list of songs (LiveColumns.Expose), serves each song's falling-notes cover (GET …/midi/cover/<version>.svg, drawn by covers), and seeds the bundled public-domain MIDI starters at boot (Bach's C-major prelude written from notes; Mendelssohn, Scriabin and Grieg as Mutopia Project files).",
   httpRoutes: {
     [createMidiSong.route]: handleCreateMidiSong,
     [getSongMidiCover.route]: rawEndpointHandler(

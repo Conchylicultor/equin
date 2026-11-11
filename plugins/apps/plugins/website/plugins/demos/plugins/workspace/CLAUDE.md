@@ -60,7 +60,7 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
   practice-timer agent wrote (`PRACTICE_TIMER_PAGE_WORK`), the transcripts, the
   prototypes (`data/`, a Prototypes fixture) and their tags and pin
   (`story`'s `core/internal/prototypes.ts`), the Sonata songs (`story`'s `core/internal/songs.ts`,
-  a Sonata fixture), Demo's Places map — a real user's: ~350 well-known public places,
+  a Sonata fixture: chord grids, and real pieces whose files are `data/songs/`), Demo's Places map — a real user's: ~350 well-known public places,
   most of them in Paris (Demo's city, across the arrondissements), plus the
   trips (Lisbon being planned, Tokyo next, Rome and New York been), on the
   starter tag tree plus Demo's "Trips › <city>", "Friends' tips" and "Home"
@@ -69,7 +69,7 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
   `~` of the browser's file system: Documents — notes, code, an HTML recipe,
   the Lisbon trip's papers —, Music — a recording, a MIDI piece, the practice
   log —, Pictures, and loose files — a short video clip, a note, a picture, a
-  ticket, a MIDI tune; real files, path → bytes, kept tiny). How each app's data is written is that
+  ticket, a Chopin nocturne; real files, path → bytes, kept small). How each app's data is written is that
   app's fixture writer: `apps/pages/fixtures`' `writePageTree`,
   `apps/prototypes/fixtures`' `writePrototypeFixture`,
   `apps/sonata/fixtures`' `writeSongFixtures` and `apps/places/fixtures`'

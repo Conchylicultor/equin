@@ -49,7 +49,7 @@ import {
   DEMO_PAGE_IDS,
   DEMO_PAGES,
   DEMO_PLACES,
-  DEMO_SONGS,
+  demoSongs,
   DEMO_STORIES,
   demoAgentId,
   demoAgentLaunchId,
@@ -92,7 +92,8 @@ import {
  *    (`writePrototypeFixture`) from `prototypes` — the committed `../data/`,
  *    inlined into the worker's bundle or read off disk by the boot test — then
  *    settled;
- * 6. the Sonata library's songs (`../core`'s), through Sonata's fixture writer
+ * 6. the Sonata library's songs (`../core`'s, the real pieces' files from
+ *    `songs` — the committed `../data/songs/`), through Sonata's fixture writer
  *    (`writeSongFixtures`), beside the MIDI starters the MIDI source seeds;
  * 7. Demo's Places map (`../core`'s), through Places' fixture writer
  *    (`writePlacesFixture`): its tags through the tag tree's endpoints on the
@@ -102,7 +103,7 @@ import {
  *    (`writeBrowserHomeFiles`): Documents (notes, code, a recipe page, the
  *    Lisbon trip's papers), Music (a recording, a MIDI piece, the practice
  *    log), Pictures, and a few loose files (a video clip, a note, a picture,
- *    a ticket, a MIDI tune).
+ *    a ticket, a Chopin nocturne).
  */
 /** The seed's input: the demo's `data/` folder, split by what each writer takes. */
 export interface DemoSeedData {
@@ -110,6 +111,8 @@ export interface DemoSeedData {
   prototypes: PrototypeFixtureData;
   /** `data/home/`: Demo's home folder, path below `~` → bytes. */
   home: Readonly<Record<string, Uint8Array>>;
+  /** `data/songs/`: the files of Demo's file-backed Sonata songs, name → bytes. */
+  songs: Readonly<Record<string, Uint8Array>>;
 }
 
 const PRACTICE_TIMER = demoStoryByKey("practice-timer");
@@ -230,7 +233,7 @@ export async function seed(
 
   await writePrototypeFixture(demoPrototypeFixture(prototypes));
   await settleJobQueue();
-  await writeSongFixtures(DEMO_SONGS);
+  await writeSongFixtures(demoSongs(data.songs));
   await settleJobQueue();
   await writePlacesFixture(DEMO_PLACES, host);
   await settleJobQueue();

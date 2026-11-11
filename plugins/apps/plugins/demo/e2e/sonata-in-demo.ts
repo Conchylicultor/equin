@@ -6,12 +6,12 @@
  *
  *  1. opens the launcher inside the embed and picks Sonata: the embed switches
  *     to Sonata, whose library lists the demo's songs ("ii–V–I warm-up", "Late
- *     night", "Rain on the window") and the MIDI starters a fresh install has ("Für Elise"), with
+ *     night", "Rain on the window", "Nocturne in C minor, Op. 48 No. 1") and the MIDI starters a fresh install has ("Song without Words, Op. 85 No. 1"), with
  *     the starters' covers drawn by the worker (loaded through the transport
  *     as blob URLs, never from the page's origin). The tile and the song are
  *     activated by a bare `click` event, no pointer-down: pointing into the
  *     embed would hand it the keyboard, which it must hold from its mount on;
- *  2. opens "Für Elise" and plays two notes on its keyboard: the first the
+ *  2. opens "Song without Words, Op. 85 No. 1" and plays two notes on its keyboard: the first the
  *     moment the keyboard shows (before the samples are in, as a visitor
  *     would) — it must still start a sampled voice (an
  *     `AudioBufferSourceNode` started) once they are, never stay silent — and
@@ -88,8 +88,9 @@ const DEMO_SONGS = [
   "ii–V–I warm-up",
   "Late night",
   "Rain on the window",
+  "Nocturne in C minor, Op. 48 No. 1",
 ] as const;
-const STARTER = "Für Elise";
+const STARTER = "Song without Words, Op. 85 No. 1";
 /** Middle C and the E above it. */
 const KEYS = [60, 64] as const;
 /** The piano's samples, as the worker's asset mirror fetches them. */
@@ -235,7 +236,7 @@ await withBrowser(async (h) => {
   };
 
   /**
-   * /demo → launcher → Sonata → "Für Elise" → two notes and Space; `pass`
+   * /demo → launcher → Sonata → the Mendelssohn starter → two notes and Space; `pass`
    * names the run. `spaceFirst`: Space before the notes, so before anything
    * pointed into the demo.
    */

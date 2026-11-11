@@ -1,1 +1,6 @@
-export type { SongFixture } from "./internal/song-fixture";
+export type {
+  SongFixture,
+  ChordGridSongFixture,
+  MidiSongFixture,
+  MusicXmlSongFixture,
+} from "./internal/song-fixture";

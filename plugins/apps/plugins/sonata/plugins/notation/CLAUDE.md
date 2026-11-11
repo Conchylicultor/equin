@@ -166,9 +166,7 @@ instrument grouping — while `convert` itself stays pure.
   tuplets (3 / 5 / 6 / 7 / 12) and multi-beat tuplets (a quarter-note triplet
   over 2 beats, a half-note triplet over 4 beats) engrave with a bracket +
   number; 32nd notes engrave; grace notes engrave as acciaccaturas / grace
-  groups. See the *Rhythm* section. The `seed-rhythm-etude` bundled starter
-  demonstrates these — bar 1 eighth-triplets, bar 2 a 32nd run, bar 3 graces,
-  bar 4 a two-beat quarter-triplet + a quintuplet.
+  groups. See the *Rhythm* section.
 - **Virtualized systems + cross-system ties** (was the eager-render + dropped-tie
   caveats). Engraving is split into a **pure** `planEngraving` (all-systems
   layout + measurement, run in a `useMemo`) and a per-system `drawSystem` that

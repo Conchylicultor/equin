@@ -80,7 +80,7 @@ const HOME_ENTRIES = [
   "~/This week.md",
   "~/Alfama at dusk.png",
   "~/Fado night ticket.pdf",
-  "~/Twinkle Twinkle Little Star.mid",
+  "~/Chopin - Nocturne Op. 48 No. 1.mid",
 ] as const;
 /** How long an app swap, a worker read or a viewer gets. */
 const RENDER_TIMEOUT_MS = 30_000;
@@ -339,13 +339,13 @@ await withBrowser(async (h) => {
     pdf,
   );
   await view(
-    "~/Twinkle Twinkle Little Star.mid",
+    "~/Chopin - Nocturne Op. 48 No. 1.mid",
     "the MIDI is drawn in Sonata's preview (song position, Open in Sonata, no loading veil)",
     midi,
   );
   // Music: the MIDI in Sonata's own preview, the recording in the player.
   await view(
-    "~/Music/Ode to Joy.mid",
+    "~/Music/Mendelssohn - Song without Words Op. 85 No. 1.mid",
     "the MIDI is drawn in Sonata's preview (song position, Open in Sonata, no loading veil)",
     midi,
   );

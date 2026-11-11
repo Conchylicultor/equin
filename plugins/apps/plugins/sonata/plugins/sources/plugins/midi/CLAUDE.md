@@ -23,7 +23,7 @@ MIDI for playback is its row in the lookup-only live collection `sonata.midi`
 
 ## Plugin reference
 
-- Description: MIDI file input source for Sonata. Dropzone accepts .mid/.midi files; compile() parses them into a Score via @tonejs/midi. Persists per-song MIDI (attachment + track count) and contributes the library Import affordance, hydration, the song's falling-notes cover, and the cell of the Tracks field its extension exposes on every list of songs. Owns the sonata_songs_ext_midi side-table: per-song MIDI attachment + track count. Creates MIDI-backed songs, serves each song's MIDI row as the lookup-only live collection sonata.midi (what the player hydrates the song from), exposes its track count and file-missing flag to every list of songs (LiveColumns.Expose), serves each song's falling-notes cover (GET …/midi/cover/<version>.svg, drawn by covers), and seeds the bundled public-domain MIDI starters at boot.
+- Description: MIDI file input source for Sonata. Dropzone accepts .mid/.midi files; compile() parses them into a Score via @tonejs/midi. Persists per-song MIDI (attachment + track count) and contributes the library Import affordance, hydration, the song's falling-notes cover, and the cell of the Tracks field its extension exposes on every list of songs. Owns the sonata_songs_ext_midi side-table: per-song MIDI attachment + track count. Creates MIDI-backed songs, serves each song's MIDI row as the lookup-only live collection sonata.midi (what the player hydrates the song from), exposes its track count and file-missing flag to every list of songs (LiveColumns.Expose), serves each song's falling-notes cover (GET …/midi/cover/<version>.svg, drawn by covers), and seeds the bundled public-domain MIDI starters at boot (Bach's C-major prelude written from notes; Mendelssohn, Scriabin and Grieg as Mutopia Project files).
 - Web:
   - Contributes:
     - `SonataDocument.Source` "MIDI File"
@@ -82,6 +82,7 @@ MIDI for playback is its row in the lookup-only live collection `sonata.midi`
     - `getSongMidiBySourcePath`
     - `importMidiSong`
     - `listFolderImportedSongs`
+    - `MIDI_SOURCE_ID`
     - `setSourceMissing`
     - `songMidi`
   - Resources: `sonata.midi:rows` (keyed, point)
@@ -112,6 +113,7 @@ MIDI for playback is its row in the lookup-only live collection `sonata.midi`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
   - Imported by:
+    - `apps/sonata/fixtures`
     - `apps/sonata/sources/midi/file-preview`
     - `apps/sonata/sources/midi/folders`
 - Sub-plugins:

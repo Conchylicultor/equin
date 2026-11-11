@@ -8165,12 +8165,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by: 27 plugins — full list in [`plugins/apps/plugins/sonata/plugins/document/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/document/REFERENCE.md)
               - `apps` ×27
-        - **`fixtures`** — Sonata fixtures, server half: writeSongFixtures writes SongFixtures through each source's real write path (a chord grid through the chord-grid source's create write), measuring a grid as the editor does. Derives nothing else.
+        - **`fixtures`** — Sonata fixtures, server half: writeSongFixtures writes SongFixtures through each source's real write path — a chord grid through the chord-grid source's create write (measured as the editor does), a MIDI or MusicXML file through its source's import into a song created under the fixture's id. Derives nothing else.
           - Server:
-            - Uses: `apps/sonata/sources/chord-grid.createChordGridSongRow`
+            - Uses:
+              - `apps/sonata/library.createSongRow`
+              - `apps/sonata/library.updateSongMeta`
+              - `apps/sonata/sources/chord-grid.createChordGridSongRow`
+              - `apps/sonata/sources/midi.importMidiSong`
+              - `apps/sonata/sources/midi.MIDI_SOURCE_ID`
+              - `apps/sonata/sources/musicxml.importMusicXmlForSong`
+              - `apps/sonata/sources/musicxml.MUSICXML_SOURCE_ID`
             - Exports (values): `writeSongFixtures`
           - Core:
-            - Exports (types): `SongFixture`
+            - Exports (types):
+              - `ChordGridSongFixture`
+              - `MidiSongFixture`
+              - `MusicXmlSongFixture`
+              - `SongFixture`
         - **`library`** — Source-agnostic song library landing for Sonata. Renders the gallery of saved songs (via Sonata.Home) and opens a song into the player by collecting every source's raw through the Library.Source registry. Sources contribute persistence/hydration + their own add affordances. Persists source-agnostic Sonata song rows (generic metadata) and serves the `sonata.songs` live collection (sortable and filterable by every field an extension exposes on the songs entity). Per-source raw lives in each source's own entity-extension; sources create songs via the exported `createSongRow` helper.
           - Web:
             - Slots:
@@ -10013,7 +10024,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/type-scale --font-weight-normal`
                   - `ui/tokens/type-scale --line-height-caption`
                 - Imported by: `apps/sonata/fixtures`
-            - **`midi`** — MIDI file input source for Sonata. Dropzone accepts .mid/.midi files; compile() parses them into a Score via @tonejs/midi. Persists per-song MIDI (attachment + track count) and contributes the library Import affordance, hydration, the song's falling-notes cover, and the cell of the Tracks field its extension exposes on every list of songs. Owns the sonata_songs_ext_midi side-table: per-song MIDI attachment + track count. Creates MIDI-backed songs, serves each song's MIDI row as the lookup-only live collection sonata.midi (what the player hydrates the song from), exposes its track count and file-missing flag to every list of songs (LiveColumns.Expose), serves each song's falling-notes cover (GET …/midi/cover/<version>.svg, drawn by covers), and seeds the bundled public-domain MIDI starters at boot.
+            - **`midi`** — MIDI file input source for Sonata. Dropzone accepts .mid/.midi files; compile() parses them into a Score via @tonejs/midi. Persists per-song MIDI (attachment + track count) and contributes the library Import affordance, hydration, the song's falling-notes cover, and the cell of the Tracks field its extension exposes on every list of songs. Owns the sonata_songs_ext_midi side-table: per-song MIDI attachment + track count. Creates MIDI-backed songs, serves each song's MIDI row as the lookup-only live collection sonata.midi (what the player hydrates the song from), exposes its track count and file-missing flag to every list of songs (LiveColumns.Expose), serves each song's falling-notes cover (GET …/midi/cover/<version>.svg, drawn by covers), and seeds the bundled public-domain MIDI starters at boot (Bach's C-major prelude written from notes; Mendelssohn, Scriabin and Grieg as Mutopia Project files).
               - Web:
                 - Contributes:
                   - `SonataDocument.Source` "MIDI File"
@@ -10072,6 +10083,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `getSongMidiBySourcePath`
                   - `importMidiSong`
                   - `listFolderImportedSongs`
+                  - `MIDI_SOURCE_ID`
                   - `setSourceMissing`
                   - `songMidi`
                 - Resources: `sonata.midi:rows` (keyed, point)
@@ -10102,6 +10114,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/shape --radius`
                   - `ui/tokens/shape --spacing`
                 - Imported by:
+                  - `apps/sonata/fixtures`
                   - `apps/sonata/sources/midi/file-preview`
                   - `apps/sonata/sources/midi/folders`
               - Plugins:
@@ -10251,7 +10264,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/color-palette --destructive`
                   - `ui/tokens/density --space-lg`
                   - `ui/tokens/shape --spacing`
-                - Imported by: `apps/sonata/transcription`
+                - Imported by:
+                  - `apps/sonata/fixtures`
+                  - `apps/sonata/transcription`
             - **`ultimate-guitar`** — Player-side Ultimate Guitar source for Sonata: paste a UG tab URL, fetch its raw tab, and compile() the chord/lyric markup into a playable Score (lyric-proportional, bar-quantized timing synthesis → chord annotations, sections, lyrics, synthesized 4/4 tempo). Chord notes are generated by the shell's reactive re-voicing step from the chord annotations. Persists the loaded tab to a per-song side-table, hydrates it on open, and contributes the library 'Import from Ultimate Guitar' URL-paste affordance plus an in-player editor section, and presents the tab's Key field (exposed on every list of songs). Ultimate Guitar source server, every host's half: owns the sonata_songs_ext_ultimate_guitar side-table — serving each song's row as the lookup-only live collection sonata.ultimate-guitar.songs (what the player hydrates from), creating UG-backed songs from a fetched tab and persisting edits (syncing the parent song's title/duration), exposing the tab's key to every list of songs (LiveColumns.Expose), announcing sonata.ug.tabSaved when a song's sheet content changes. Reading UG itself (a tab, the catalog search) is the machine/ half's.
               - Web:
                 - Contributes:
@@ -11687,7 +11702,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `DEMO_PAGES`
                       - `DEMO_PLACES`
                       - `DEMO_SONG_ID`
-                      - `DEMO_SONGS`
                       - `DEMO_STORIES`
                       - `demoAgentId`
                       - `demoAgentLaunchId`
@@ -11696,6 +11710,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `demoPromptOf`
                       - `demoPrototypeFixture`
                       - `demoPushSha`
+                      - `demoSongs`
                       - `demoStoryByKey`
                       - `demoTaskId`
                       - `demoTranscriptJsonl`
@@ -11706,7 +11721,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - Test helpers:
                     - Core: `@plugins/apps/plugins/website/plugins/demos/plugins/workspace/plugins/story/core/testing`
                       - `DEMO_FEATURED_PROTOTYPE` — The prototype the demo's pages and transcripts point at (the photo grid).
+                      - `DEMO_FILE_SONGS` — The file-backed songs' ids and titles, for the boot test to assert.
                       - `DEMO_PROTOTYPE_TAGS` — The demo's prototype tags, in gallery order, and which prototype carries which.
+                      - `DEMO_SONGS` — The chord grids: authored text, so the story can assert them as written.
         - **`improve`** — The website's Wish button: the header's call to action, a popover where a visitor describes a change to the page, watches a scripted replay of what equin would do with it, and files it as a prefilled GitHub issue.
           - Web:
             - Contributes: `WebsiteHeader` "improve" → `ImproveNavItem`

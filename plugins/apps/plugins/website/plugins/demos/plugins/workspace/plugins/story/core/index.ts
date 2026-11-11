@@ -23,5 +23,5 @@ export type {
   PageToolCall as DemoPageToolCall,
 } from "./internal/transcripts";
 export { demoPrototypeFixture } from "./internal/prototypes";
-export { DEMO_SONGS, DEMO_SONG_ID } from "./internal/songs";
+export { DEMO_SONG_ID, demoSongs } from "./internal/songs";
 export { DEMO_PLACES } from "./internal/places";
