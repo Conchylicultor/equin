@@ -51240,7 +51240,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `onTaskMark`
               - `runMarked`
-    - **`persistent-draft`** — Drafts over a web-storage store: useDraft is the reactive useState drop-in (all calls on one store and scope stay in sync within and across tabs); readDraft/writeDraft are the render-free imperative twin for callers writing at input frequency; onDraftWritten observes every write and clear in the tab; legacyDraftKeys carries drafts written before web-storage into a store. The store (defineStore) owns the cap, TTL and loud refusal.
+    - **`persistent-draft`** — Drafts over a web-storage store: useDraft is the reactive useState drop-in (all calls on one store and scope stay in sync within and across tabs); readDraft/writeDraft are the render-free imperative twin for callers writing at input frequency; onDraftWritten(scope, listener) observes every write and clear in the tab within one composition scope (a StorageScope from useStorageScope), so a page-level listener never sees a PluginScope's drafts; legacyDraftKeys carries drafts written before web-storage into a store. The store (defineStore) owns the cap, TTL and loud refusal.
       - Web:
         - Uses:
           - `primitives/dom/web-storage.ScopedStore`
@@ -52402,6 +52402,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/endpoints.useFetchEndpoint`
               - `primitives/css/link-chip.LinkChip`
               - `primitives/dom/web-storage.defineStore`
+              - `primitives/dom/web-storage.useStorageScope`
               - `primitives/file-type.FileTypeIcon`
               - `primitives/icon-button.IconButton`
               - `primitives/inline-text.InlineText`
@@ -52467,8 +52468,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks` ×3
               - `primitives` ×2
               - `screenshot/draw-on-app`
-          - Exemptions:
-            - Exempts itself from: `page-hosts-on-demand` — `web/index.ts` (debt)
         - **`token-extension`** — The inline-token primitive's synchronously-loadable half: the declaration TYPES of a token family, the tokenExtension pairing of pattern and node, THE line scan, and the lazy-source host registry. Imports lexical for types only — the class factory lives in the `node` sub-plugin.
           - Cross-plugin:
             - Imported by:

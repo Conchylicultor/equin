@@ -124,6 +124,12 @@ export interface Store<T> {
   readonly label: string;
   readonly area: StorageArea;
   readonly ttl: number;
+  /**
+   * The composition scope this handle reads and writes in (the page's own for
+   * a `pageWide` store) — for a caller announcing what it wrote, so a listener
+   * hears only its own scope's writes.
+   */
+  readonly scope: StorageScope;
   /** The full Web Storage key for `id` — for a caller keying something else by it. */
   key(id?: string): string;
   read(id?: string): StoreRead<T>;
@@ -610,6 +616,7 @@ function bind<T>(state: OwnerState<T>, scope: string | null): Store<T> {
     label: spec.label,
     area: spec.area,
     ttl: spec.ttl,
+    scope: storageScope(scope),
     key,
 
     read(id = "") {

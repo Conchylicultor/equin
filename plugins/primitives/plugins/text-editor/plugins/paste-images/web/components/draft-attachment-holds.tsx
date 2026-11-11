@@ -7,7 +7,10 @@ import {
   readDraft,
   writeDraft,
 } from "@plugins/primitives/plugins/persistent-draft/web";
-import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
+import {
+  defineStore,
+  useStorageScope,
+} from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { z } from "zod";
 import { extractAttachmentIds } from "../internal/markdown";
 
@@ -46,13 +49,18 @@ function clientId(): string {
  * the server cannot see, so every draft write re-asserts, as a server-side hold,
  * exactly the attachments the draft references, for as long as the draft lives.
  * A clear (or an edit that drops an image) releases them.
+ *
+ * A host of every scope (`scope: "each"`): a draft written inside a
+ * `PluginScope` (the demo) references uploads on that scope's server, so its
+ * holds go there — this instance hears only its own scope's writes and sends
+ * through its own scope's transport.
  */
 export function DraftAttachmentHolds(): null {
-  // Mounted at `Core.Root`, so this is the page's transport.
   const fetchEndpoint = useFetchEndpoint();
+  const scope = useStorageScope();
   useEffect(() => {
     const sent = new Map<string, { ids: string; at: number }>();
-    return onDraftWritten(({ storageKey, value, ttl }) => {
+    return onDraftWritten(scope, ({ storageKey, value, ttl }) => {
       const ids =
         value === undefined
           ? []
@@ -71,6 +79,6 @@ export function DraftAttachmentHolds(): null {
         Number.isFinite(ttl) ? ttl + REFRESH_MS : null,
       );
     });
-  }, [fetchEndpoint]);
+  }, [fetchEndpoint, scope]);
   return null;
 }

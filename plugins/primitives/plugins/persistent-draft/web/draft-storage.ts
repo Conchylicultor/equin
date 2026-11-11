@@ -16,6 +16,7 @@
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import type {
   LegacyKeys,
+  StorageScope,
   Store,
 } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 
@@ -32,19 +33,39 @@ export interface DraftWrite {
   ttl: number;
 }
 
-function announce(write: DraftWrite): void {
-  window.dispatchEvent(new CustomEvent(DRAFT_SYNC_EVENT, { detail: write }));
+/** A write as announced: with the composition scope its store wrote in. */
+interface ScopedDraftWrite extends DraftWrite {
+  scope: StorageScope;
+}
+
+function announce<T>(store: Store<T>, id: string, value: T | undefined): void {
+  const detail: ScopedDraftWrite = {
+    scope: store.scope,
+    storageKey: store.key(id),
+    value,
+    ttl: store.ttl,
+  };
+  window.dispatchEvent(new CustomEvent(DRAFT_SYNC_EVENT, { detail }));
 }
 
 /**
- * Observe every draft written or cleared in this tab — for state that must
- * live exactly as long as a draft (the attachments it references). Returns the
- * unsubscribe.
+ * Observe every draft written or cleared in this tab within `scope` — for
+ * state that must live exactly as long as a draft (the attachments it
+ * references). Only `scope`'s writes reach the listener (a `StorageScope` is
+ * minted by `useStorageScope()`, from where the listener renders): a draft
+ * written inside a `PluginScope` (the demo) belongs to that scope's server,
+ * so a page-level listener cannot even see it. Returns the unsubscribe.
  */
 export function onDraftWritten(
+  scope: StorageScope,
   listener: (write: DraftWrite) => void,
 ): () => void {
-  const handle = (e: Event) => listener((e as CustomEvent<DraftWrite>).detail);
+  const handle = (e: Event) => {
+    const { scope: written, ...write } = (e as CustomEvent<ScopedDraftWrite>)
+      .detail;
+    // Scopes are interned (one object per id), so identity is equality.
+    if (written === scope) listener(write);
+  };
   window.addEventListener(DRAFT_SYNC_EVENT, handle);
   return () => window.removeEventListener(DRAFT_SYNC_EVENT, handle);
 }
@@ -81,14 +102,13 @@ export function writeDraft<T>(
 ): void {
   const id = options?.scope ?? "";
   const written = store.write(id, value);
-  if (written.ok)
-    announce({ storageKey: store.key(id), value, ttl: store.ttl });
+  if (written.ok) announce(store, id, value);
 }
 
 export function clearDraft<T>(store: Store<T>, options?: DraftOptions): void {
   const id = options?.scope ?? "";
   store.remove(id);
-  announce({ storageKey: store.key(id), value: undefined, ttl: store.ttl });
+  announce(store, id, undefined);
 }
 
 /**

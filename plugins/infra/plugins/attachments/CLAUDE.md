@@ -72,7 +72,7 @@ What matters is that it is **silent when nothing changed**: the diff key is the 
 
 An upload is linked to its owner only when the owner is saved (a turn sent, a task created), and the sweep reclaims unlinked uploads after an hour. An unsent draft lives in browser storage, so it keeps its attachments alive with a **hold** instead: `holdAttachments(holder, ids, ttlMs)` (web, `PUT /api/attachments/holds`) replaces the holder's held set, expiring `ttlMs` from now (`null`: never); an empty set releases it. The sweep skips an attachment with a live hold and deletes expired holds.
 
-Drafts never call it themselves: `primitives/text-editor/paste-images` observes every persistent-draft write (`onDraftWritten`) and re-asserts the attachments that draft references, for the draft's own TTL — so any `useDraft` holding markdown keeps its pasted images exactly as long as the draft lives.
+Drafts never call it themselves: `primitives/text-editor/paste-images` observes every persistent-draft write (`onDraftWritten`) and re-asserts the attachments that draft references, for the draft's own TTL — so any `useDraft` holding markdown keeps its pasted images exactly as long as the draft lives. The holds go to the server of the composition scope that wrote the draft: the host serves each scope (`scope: "each"`) and `onDraftWritten(scope, …)` hands each instance only its own scope's writes, so a draft written inside the demo is held on the demo's worker, never on the page's server.
 
 ## Protocol vs DSL
 

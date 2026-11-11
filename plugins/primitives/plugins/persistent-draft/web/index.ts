@@ -13,6 +13,6 @@ export type { DraftOptions, DraftWrite } from "./draft-storage";
 
 export default {
   description:
-    "Drafts over a web-storage store: useDraft is the reactive useState drop-in (all calls on one store and scope stay in sync within and across tabs); readDraft/writeDraft are the render-free imperative twin for callers writing at input frequency; onDraftWritten observes every write and clear in the tab; legacyDraftKeys carries drafts written before web-storage into a store. The store (defineStore) owns the cap, TTL and loud refusal.",
+    "Drafts over a web-storage store: useDraft is the reactive useState drop-in (all calls on one store and scope stay in sync within and across tabs); readDraft/writeDraft are the render-free imperative twin for callers writing at input frequency; onDraftWritten(scope, listener) observes every write and clear in the tab within one composition scope (a StorageScope from useStorageScope), so a page-level listener never sees a PluginScope's drafts; legacyDraftKeys carries drafts written before web-storage into a store. The store (defineStore) owns the cap, TTL and loud refusal.",
   contributions: [],
 } satisfies PluginDefinition;

@@ -7,7 +7,8 @@
  *
  *  1. creates a task (the tree's root Add), edits a seeded task's title
  *     inline ("Practice timer in Sonata", `stories.ts`), adds a
- *     prerequisite through the task-draft popover, sets the task's thinking
+ *     prerequisite through the task-draft popover (pasting an image into
+ *     its draft first), sets the task's thinking
  *     mode and preprompt (and its workspace / auto-start when the host offers
  *     them), and pastes an image into its description;
  *  2. opens a conversation, sees the composer say sending is not available,
@@ -39,6 +40,11 @@
  *    not optimistic: it shows the row the worker serves) — a control the host
  *    does not offer (absent, disabled) is a SKIP, reported
  *    and counted apart, never a pass;
+ *  - the image pasted into the prerequisite's DRAFT is held where it was
+ *    uploaded: the draft's attachment hold (`PUT /api/attachments/holds`,
+ *    paste-images' DraftAttachmentHolds) goes to the worker — a hold sent
+ *    through the page's own transport would reach the page's server, which
+ *    the leak list below catches;
  *  - the pasted image shows in the read-only description once the editor
  *    closes, and the task's Attachments card lists it;
  *  - a SECOND SUBSCRIBER sees all of it: the detail is closed and reopened
@@ -162,9 +168,25 @@ async function counts(): Promise<Counts> {
   return out;
 }
 
-/** A 1×1 PNG, the image pasted into the description. */
+/** A 1×1 PNG, the image pasted into the description and the draft. */
 const PNG_BASE64 =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+
+/** Paste `PNG_BASE64` as a file into the editor `el` (a clipboard paste event). */
+async function pasteImage(el: Locator): Promise<void> {
+  await el.evaluate((node, b64) => {
+    const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+    const data = new DataTransfer();
+    data.items.add(new File([bytes], "demo.png", { type: "image/png" }));
+    node.dispatchEvent(
+      new ClipboardEvent("paste", {
+        clipboardData: data,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+  }, PNG_BASE64);
+}
 
 /**
  * Records every request the page sends the demo's host and every answer
@@ -504,6 +526,29 @@ await withBrowser(async (h) => {
   await detail.getByRole("button", { name: "+ Prerequisite" }).click();
   const draft = page.locator('[aria-placeholder="Describe the task…"]');
   await draft.click();
+  // An image pasted into the draft is uploaded to the worker at once and
+  // held there while the draft lives: the hold rides the scope's transport.
+  const holdsBefore = (await workerLog(page)).filter((l) =>
+    l.endsWith(" PUT /api/attachments/holds"),
+  ).length;
+  await pasteImage(draft);
+  await renders(
+    "the image pasted into the prerequisite draft lands in it",
+    () => thumbnails(draft).count(),
+    (n) => n > 0,
+  );
+  await renders(
+    "the draft's attachment hold goes to the worker",
+    async () =>
+      (await workerLog(page)).filter((l) =>
+        l.endsWith(" PUT /api/attachments/holds"),
+      ).length,
+    (n) => n > holdsBefore,
+  );
+  // Focus, not click: the draft's centre is now the image's chip, which opens
+  // the image viewer.
+  await draft.focus();
+  await page.keyboard.press("End");
   await page.keyboard.type("A prerequisite drafted in the demo");
   // The draft form's submit ("Launch ⌘↵"), not a row's or the form's own
   // "Launch <model>" launch control.
@@ -566,18 +611,7 @@ await withBrowser(async (h) => {
   const editor = detail.locator('[aria-placeholder^="Add a description"]');
   await editor.first().waitFor({ timeout: 10_000 });
   await editor.first().click();
-  await editor.first().evaluate((el, b64) => {
-    const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-    const data = new DataTransfer();
-    data.items.add(new File([bytes], "demo.png", { type: "image/png" }));
-    el.dispatchEvent(
-      new ClipboardEvent("paste", {
-        clipboardData: data,
-        bubbles: true,
-        cancelable: true,
-      }),
-    );
-  }, PNG_BASE64);
+  await pasteImage(editor.first());
   // The upload goes to the worker; its node joins the editor once answered.
   await renders(
     "the pasted image lands in the description editor",
