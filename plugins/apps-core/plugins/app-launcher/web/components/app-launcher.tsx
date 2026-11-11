@@ -1,6 +1,8 @@
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 import { afterOpen } from "@plugins/primitives/plugins/link-gesture/core";
 import {
+  Apps,
+  routePrefixForMode,
   useListedApps,
   useHomeApp,
   useActiveApp,
@@ -15,7 +17,9 @@ import {
 import {
   useActivateApp,
   useAppLinkProps,
+  useTabs,
 } from "@plugins/apps-core/plugins/tabs/web";
+import { AppLauncherSlots } from "../slots";
 import { AppIconView } from "@plugins/apps-core/plugins/app-icon/web";
 import {
   appRow,
@@ -97,6 +101,39 @@ function useLaunchableApps(
  * it registers one (`mark`), else its rail glyph — so every app keeps its
  * identity at the top-left. Outside any app, the equin mark.
  */
+/**
+ * Which tip the launcher asks for, from the mode of the tab set it is drawn in:
+ *
+ * - inside a surface-mode app (the desktop — its windows draw app shells too):
+ *   none. That app launches and switches by its own chrome, and teaches it.
+ * - just after leaving a mode that declares an `AppLauncherSlots.ReturnTip`
+ *   (a desktop window gone full screen): that tip — how to go back.
+ * - otherwise "Switch apps" (silenced by any return tip already shown, through
+ *   the return tip's `supersedes`).
+ *
+ * A component of its own, mounted only for the launcher that carries the tip:
+ * it reads `useTabs()`, which an app shell always has.
+ */
+function LauncherTip() {
+  const { mode, previousMode } = useTabs();
+  const apps = Apps.App.useContributions();
+  const returnTips = AppLauncherSlots.ReturnTip.useContributions();
+  const insideSurfaceApp = routePrefixForMode(mode, apps) !== undefined;
+  const returnTip =
+    previousMode !== mode
+      ? returnTips.find((t) => t.mode === previousMode)?.hint
+      : undefined;
+  if (returnTip && returnTip.anchor !== appLauncherAnchor)
+    throw new Error(
+      `AppLauncherSlots.ReturnTip "${returnTip.id}": its anchor must be appLauncherAnchor — the launcher is what it points at`,
+    );
+  useHintMoment(
+    insideSurfaceApp ? undefined : (returnTip ?? appLauncherHint),
+    true,
+  );
+  return null;
+}
+
 function LauncherMark({
   app,
   className,
@@ -122,10 +159,10 @@ function LauncherMark({
  * the same from every app — and the same as the action bar's popovers.
  *
  * `tip`: this launcher is the one an app's brand draws, so it carries the
- * "Switch apps" tip — asked for while it is mounted (the host shows it once,
- * the first time an app is open). The floating launcher passes `false`: it is
- * transparent until the pointer nears its corner, so a tip there would point
- * at nothing.
+ * launcher's tip — asked for while it is mounted (the host shows it once),
+ * which one read from its tab set's mode ({@link LauncherTip}). The floating
+ * launcher passes `false`: it is transparent until the pointer nears its
+ * corner, so a tip there would point at nothing.
  */
 export function AppLauncher({
   form,
@@ -135,7 +172,6 @@ export function AppLauncher({
   tip: boolean;
 }) {
   const anchorRef = useHintAnchor(tip ? appLauncherAnchor : undefined);
-  useHintMoment(tip ? appLauncherHint : undefined, true);
   const home = useHomeApp();
   const gallery = home.kind === "app" ? home.app : undefined;
   const launchable = useLaunchableApps(gallery?.id);
@@ -160,6 +196,7 @@ export function AppLauncher({
 
   return (
     <PopupTheme name={chromeThemeScope}>
+      {tip && <LauncherTip />}
       <HoverPopover
         label="Apps"
         side="bottom"

@@ -5,6 +5,7 @@ import {
   activeRequest,
   activeTip,
   emptyTipQueue,
+  isSuperseded,
   ORIENT_MS,
   QUIET_MS,
   removeTip,
@@ -12,6 +13,7 @@ import {
   SETTLE_MS,
   stepTips,
   wakeAt,
+  type TipQueue,
 } from "./tip-queue";
 
 const anchor = defineHintAnchor("test.anchor");
@@ -131,5 +133,51 @@ describe("tip queue", () => {
     // Answering it leaves the page's request waiting.
     q = removeTip(q, "demo\u0000try-it", 1000);
     expect(q.requests.map((r) => r.scope)).toEqual([null]);
+  });
+});
+
+describe("supersedes", () => {
+  const switchApps = defineHint({ id: "switch", anchor, title: "", body: "" });
+  const goBack = defineHint({
+    id: "go-back",
+    anchor,
+    title: "",
+    body: "",
+    supersedes: [switchApps],
+  });
+  const declared = [switchApps, goBack];
+  const req = (q: TipQueue, id: string) =>
+    q.requests.find((r) => r.hint.id === id)!;
+
+  test("a tip asked alongside the one replacing it is superseded", () => {
+    let q = requestTip(emptyTipQueue, switchApps, 0);
+    expect(isSuperseded(q, req(q, "switch"), declared, () => false)).toBe(
+      false,
+    );
+    q = requestTip(q, goBack, 0);
+    expect(isSuperseded(q, req(q, "switch"), declared, () => false)).toBe(true);
+    expect(isSuperseded(q, req(q, "go-back"), declared, () => false)).toBe(
+      false,
+    );
+  });
+
+  test("once the replacing tip was shown, the replaced one never shows", () => {
+    const q = requestTip(emptyTipQueue, switchApps, 0);
+    const shown = (id: string) => id === "go-back";
+    expect(isSuperseded(q, req(q, "switch"), declared, shown)).toBe(true);
+  });
+
+  test("one way only: the replaced tip shown first silences nothing", () => {
+    const q = requestTip(emptyTipQueue, goBack, 0);
+    const shown = (id: string) => id === "switch";
+    expect(isSuperseded(q, req(q, "go-back"), declared, shown)).toBe(false);
+  });
+
+  test("a request in another scope does not supersede", () => {
+    let q = requestTip(emptyTipQueue, switchApps, 0, null);
+    q = requestTip(q, goBack, 0, "demo");
+    expect(isSuperseded(q, req(q, "switch"), declared, () => false)).toBe(
+      false,
+    );
   });
 });

@@ -45,7 +45,7 @@ send) and asserts no other `/api` request left the page and no row landed in
 this deploy's database:
 `./equin run plugins/apps/plugins/demo/e2e/no-leak.ts`. `e2e/location-in-demo.ts`
 covers the start on Home, a reload, a ⌘-click new tab and the full-screen switch. `e2e/tips-in-demo.ts` covers the
-first-time tips inside the demo (Switch apps, Leave the desktop): shown once,
+first-time tips inside the demo (Switch apps, Leave the desktop, Go back to the desktop): shown once,
 remembered in the demo's worker, never a `/api/hints` request to the page. The
 other scripts answer any tip as it shows (`bootDemo` →
 `hints/e2e`'s `answerTipsAsTheyShow`).

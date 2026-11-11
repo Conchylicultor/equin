@@ -3839,7 +3839,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Desktop.Overlay` ← `apps.desktop.switcher`
             - Contributes:
               - `Surface.Placement` "Desktop"
+              - `Hints.Hint` "desktop.back-to-desktop"
               - `Hints.Hint` "desktop.window-fullscreen"
+              - `AppLauncherSlots.ReturnTip` "floating → desktop.back-to-desktop"
               - `Shortcuts.Shortcut` "desktop.overview (f3)"
               - `Shortcuts.Shortcut` "desktop.overview-exit (escape)"
               - `Shortcuts.Shortcut` "floating.close (mod+w)"
@@ -3854,7 +3856,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Shortcuts.Shortcut` "floating.toggle-pin (ctrl+alt+p)"
               - `Shortcuts.Shortcut` "floating.window-to-next-desktop (ctrl+alt+shift+pagedown)"
               - `Shortcuts.Shortcut` "floating.window-to-prev-desktop (ctrl+alt+shift+pageup)"
-            - Uses: 50 symbols — full list in [`plugins/apps/plugins/desktop/plugins/windows/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/windows/REFERENCE.md)
+            - Uses: 51 symbols — full list in [`plugins/apps/plugins/desktop/plugins/windows/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/windows/REFERENCE.md)
               - `primitives/css/ui-kit` ×8
               - `apps-core/surface` ×4
               - `apps/desktop/shell` ×4
@@ -3866,6 +3868,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/theme-boundary` ×2
               - `primitives/overlay/cursor-menu` ×2
               - `primitives/scope/install-sink` ×2
+              - `apps-core/app-launcher.AppLauncherSlots`
               - `apps-core.Apps`
               - `config_v2.useConfig`
               - `infra/endpoints.useAssetSrc`
@@ -3905,9 +3908,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `WindowSnapshot`
           - Core:
             - Uses:
+              - `apps-core/app-launcher.appLauncherAnchor`
+              - `apps-core/app-launcher.appLauncherHint`
               - `hints.defineHint`
               - `hints.defineHintAnchor`
             - Exports (values):
+              - `backToDesktopHint`
               - `windowFullscreenAnchor`
               - `windowFullscreenHint`
           - Cross-plugin:
@@ -12437,15 +12443,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `menu-bar`
     - **`app-launcher`** — The app brand every app shell draws (AppShell.Brand): the launcher — the current app's own mark — click for the composition's home app (the app gallery on main), hover or ArrowDown for a grid of every other installed app (switching exactly as the rail does) — plus, as the sidebar header, the current app's name linking to its own home. Where no app switcher frames the surface — solo (fullscreen), or an AppEmbed, which draws no rail or tab bar — a surface that draws no brand gets the launcher floating at the top-left of its box, revealed as the pointer nears that corner.
       - Web:
+        - Slots: `AppLauncherSlots.ReturnTip`
+        - Slot contributors: `AppLauncherSlots.ReturnTip` ← `apps.desktop.windows`
         - Contributes:
           - `AppShell.Brand` "Brand" → `AppBrand`
           - `Apps.Overlay` "Overlay" → `FloatingAppLauncher`
           - `FieldPresentation.Register` "collection:apps.installed-app"
           - `Fields.Identity` "app-icon"
           - `Hints.Hint` "app-launcher.switch-apps"
-        - Uses: 45 symbols — full list in [`plugins/apps-core/plugins/app-launcher/REFERENCE.md`](../plugins/apps-core/plugins/app-launcher/REFERENCE.md)
+        - Uses: 46 symbols — full list in [`plugins/apps-core/plugins/app-launcher/REFERENCE.md`](../plugins/apps-core/plugins/app-launcher/REFERENCE.md)
           - `apps-core/tabs` ×6
-          - `apps-core` ×5
+          - `apps-core` ×6
           - `hints` ×3
           - `network/live/live-state` ×3
           - `primitives/data-view` ×3
@@ -12471,6 +12479,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types): `AppRow`
         - Exports (values):
           - `AppIconCell`
+          - `AppLauncherSlots`
           - `appRow`
           - `appRowOverrides`
       - Core:
@@ -12505,6 +12514,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-weight-bold`
         - Imported by:
           - `apps/demo`
+          - `apps/desktop/windows`
           - `apps/home/app-cards`
           - `apps/home/usage-fields`
           - `menu-bar/app-grid`
@@ -30957,12 +30967,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `webCollectedDir`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 118 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+        - Imported by: 119 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
           - `primitives` ×23
           - `reports` ×20
           - `apps` ×18
           - `ui` ×7
-          - `apps-core` ×5
+          - `apps-core` ×6
           - `debug` ×5
           - `framework` ×4
           - `page` ×4

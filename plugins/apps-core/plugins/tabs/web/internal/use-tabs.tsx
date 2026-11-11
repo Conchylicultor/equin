@@ -126,6 +126,13 @@ export interface TabsApi {
    * exclusive. Records the outgoing mode for {@link TabsApi.exitToPreviousMode}.
    */
   setMode(mode: Placement): void;
+  /**
+   * The mode in effect before the current one — where
+   * {@link TabsApi.exitToPreviousMode} goes back to (`""` until the set first
+   * changed mode). Read by chrome that teaches the way back (the app launcher's
+   * "Go back to the desktop" tip after a window went full screen).
+   */
+  previousMode: Placement;
   /** Return to the mode in effect before the current one (solo's exit). */
   exitToPreviousMode(): void;
   /**
@@ -801,6 +808,8 @@ export function TabsProvider({
   // never be visible at once. `previousMode` backs the solo (fullscreen) exit.
   const [rawMode, setModeState] = useState<Placement>(initialMode);
   const previousModeRef = useRef<Placement>(initialMode);
+  // Its render-path twin (the ref backs the stable exit callback).
+  const [previousMode, setPreviousMode] = useState<Placement>(initialMode);
   // Resolve the stored mode against the placement registry: `""` (the boot seed
   // when the surface hasn't registered yet) and a stale id (a removed placement
   // sub-plugin) both resolve to the registered default — the same resolution
@@ -1456,6 +1465,7 @@ export function TabsProvider({
     (next: Placement, project: boolean) => {
       if (modeRef.current === next) return;
       previousModeRef.current = modeRef.current;
+      setPreviousMode(modeRef.current);
       modeRef.current = next;
       setModeState(next);
       if (page) setActiveRoutePrefix(routePrefixForMode(next, appsRef.current));
@@ -1639,6 +1649,7 @@ export function TabsProvider({
       focusedTabId,
       titles,
       mode,
+      previousMode,
       setMode,
       exitToPreviousMode,
       setTabTitle,
@@ -1657,6 +1668,7 @@ export function TabsProvider({
       focusedTabId,
       titles,
       mode,
+      previousMode,
       setMode,
       exitToPreviousMode,
       setTabTitle,

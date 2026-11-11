@@ -15,7 +15,7 @@ the collection.
 |---|---|---|
 | Anchor — a UI target | `defineHintAnchor(id)`, or `defineHintAnchor(id, (p) => key)` for a family (`family.at(p)`) | `const ref = useHintAnchor(target)` on the element |
 | Signal — a typed app event | `defineHintSignal<T>(id)` | `emitHintSignal(signal, payload)` |
-| Tip | `defineHint({ id, anchor, title, body, placement?, order?, gotIt?, actOn? })` | `Hints.Hint({ hint })` + `useHintMoment(hint, when)` |
+| Tip | `defineHint({ id, anchor, title, body, placement?, order?, gotIt?, actOn?, supersedes? })` | `Hints.Hint({ hint })` + `useHintMoment(hint, when)` |
 | Tour | `defineTour({ id, app, primary?, autoStart?, intro?, initialData, steps })` | `Hints.Tour({ tour })` + `startTour(id)` |
 | Seen state | `hintsSeen` (live collection), `markHintSeenEndpoint`, `resetHintsEndpoint` | `useHintSeen()`, `useResetHints()`, `useHintCatalog()` |
 
@@ -56,13 +56,13 @@ host shows it when the seen state is **known** and has no row for it, it was
 not answered this session, its anchor is on the page **and on screen** (one
 page-wide in-view watcher; scrolled away, the tip hides and comes back when the
 anchor does) and no tour runs. A tip **never lands with the screen it is
-about**: the first request on a quiet queue waits a **2.5 s orientation
+about**: the first request on a quiet queue waits a **1.2 s orientation
 window** (`ORIENT_MS` — the moment is usually a screen that just appeared, a
 window opened or an app launched, and the user first needs to see where they
-are), and every tip then waits for a **1 s pause in the user's input**
+are), and every tip then waits for a **0.4 s pause in the user's input**
 (`QUIET_MS` — no pointer move, press, wheel or key; never mid-gesture). Requests
 are collected over that window, then the lowest `order` (ties: first asked)
-shows — one at a time; the next gets a short **700 ms** window (`SETTLE_MS`)
+shows — one at a time; the next gets a short **500 ms** window (`SETTLE_MS`)
 after an answer, the user already reading tips. `when` → false or unmount **withdraws** it without marking it seen.
 Several components may hold one hint's moment (every prototype chip on the
 page): the request stays until the last of them lets go. `hint` may be
@@ -72,6 +72,13 @@ page): the request stays until the last of them lets go. `hint` may be
 (and, for a tip declared `actOn: "hover"` — a hover-revealed control like the
 app launcher — so does pointing at it).
 While the seen state is pending nothing shows (no flash on reload).
+
+**A tip can replace another** (`supersedes: [otherHint]`): once it was shown
+(seen, or answered this session) in a scope — or while it is asked for there —
+the superseded tips never show in it. One way only: a superseded tip shown
+first does not silence the one replacing it. The desktop's "Go back to the
+desktop" supersedes the app launcher's "Switch apps" (both on the launcher;
+`isSuperseded` in `web/internal/tip-queue.ts`).
 
 **A tip is remembered where it was asked.** `useHintMoment` reads the seen
 state itself (`useHintSeen`) and hands the host the write (`useMarkHintSeen`)

@@ -10,21 +10,21 @@ import { inScope } from "./scope-key";
  * rocket and its main button both qualify), so the lowest `order` wins
  * instead of whichever component mounted first.
  */
-export const ORIENT_MS = 2500;
+export const ORIENT_MS = 1200;
 
 /**
  * The shorter wait for the next tip once one was answered (or hid because its
  * anchor left the screen): the user is already reading tips on a screen they
  * know — waiting a beat is enough.
  */
-export const SETTLE_MS = 700;
+export const SETTLE_MS = 500;
 
 /**
  * How long the user must have been still (no pointer move, press, wheel or
  * key) before a tip shows: a card never lands mid-gesture — while the user is
  * reaching for something, or typing — only in the pause after.
  */
-export const QUIET_MS = 1000;
+export const QUIET_MS = 400;
 
 export interface TipRequest {
   readonly hint: Hint;
@@ -159,4 +159,22 @@ export function activeRequest(q: TipQueue): TipRequest | null {
 /** The active tip's declaration. */
 export function activeTip(q: TipQueue): Hint | null {
   return activeRequest(q)?.hint ?? null;
+}
+
+/**
+ * Whether `request`'s tip is replaced (`Hint.supersedes`) by another in its
+ * scope: one of `declared` superseding it was already shown there (`shown` —
+ * seen, or answered this session), or one is asked for alongside it. Pure, so
+ * the host's eligibility stays one predicate.
+ */
+export function isSuperseded(
+  q: TipQueue,
+  request: TipRequest,
+  declared: readonly Hint[],
+  shown: (hintId: string) => boolean,
+): boolean {
+  const replaces = (by: Hint) =>
+    by.supersedes?.some((h) => h.id === request.hint.id) ?? false;
+  if (declared.some((by) => replaces(by) && shown(by.id))) return true;
+  return q.requests.some((r) => r.scope === request.scope && replaces(r.hint));
 }

@@ -155,7 +155,9 @@ new window of the focused window's app; F3 toggles the overview.
     - `Desktop.Overlay` ← `apps.desktop.switcher`
   - Contributes:
     - `Surface.Placement` "Desktop"
+    - `Hints.Hint` "desktop.back-to-desktop"
     - `Hints.Hint` "desktop.window-fullscreen"
+    - `AppLauncherSlots.ReturnTip` "floating → desktop.back-to-desktop"
     - `Shortcuts.Shortcut` "desktop.overview (f3)"
     - `Shortcuts.Shortcut` "desktop.overview-exit (escape)"
     - `Shortcuts.Shortcut` "floating.close (mod+w)"
@@ -170,7 +172,7 @@ new window of the focused window's app; F3 toggles the overview.
     - `Shortcuts.Shortcut` "floating.toggle-pin (ctrl+alt+p)"
     - `Shortcuts.Shortcut` "floating.window-to-next-desktop (ctrl+alt+shift+pagedown)"
     - `Shortcuts.Shortcut` "floating.window-to-prev-desktop (ctrl+alt+shift+pageup)"
-  - Uses: 50 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 51 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×8
     - `apps-core/surface` ×4
     - `apps/desktop/shell` ×4
@@ -182,6 +184,7 @@ new window of the focused window's app; F3 toggles the overview.
     - `primitives/css/theme-boundary` ×2
     - `primitives/overlay/cursor-menu` ×2
     - `primitives/scope/install-sink` ×2
+    - `apps-core/app-launcher.AppLauncherSlots`
     - `apps-core.Apps`
     - `config_v2.useConfig`
     - `infra/endpoints.useAssetSrc`
@@ -221,9 +224,12 @@ new window of the focused window's app; F3 toggles the overview.
     - `WindowSnapshot`
 - Core:
   - Uses:
+    - `apps-core/app-launcher.appLauncherAnchor`
+    - `apps-core/app-launcher.appLauncherHint`
     - `hints.defineHint`
     - `hints.defineHintAnchor`
   - Exports (values):
+    - `backToDesktopHint`
     - `windowFullscreenAnchor`
     - `windowFullscreenHint`
 - Cross-plugin:

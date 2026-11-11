@@ -1,5 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { peekDesktopActive } from "@plugins/apps/plugins/desktop/plugins/shell/web";
+import { DESKTOP_PLACEMENT_ID } from "@plugins/apps/plugins/desktop/plugins/shell/core";
+import { AppLauncherSlots } from "@plugins/apps-core/plugins/app-launcher/web";
 import { Surface } from "@plugins/apps-core/plugins/surface/web";
 import { defineShortcut } from "@plugins/primitives/plugins/shortcuts/web";
 import { floatingDef } from "./floating-placement";
@@ -17,7 +19,7 @@ import {
 } from "./window-commands";
 import { Desktop } from "./slots";
 import { Hints } from "@plugins/hints/web";
-import { windowFullscreenHint } from "../core";
+import { backToDesktopHint, windowFullscreenHint } from "../core";
 import { peekFocusedDesktop } from "./internal/desktop-runtime";
 
 export { Desktop, type DesktopOverlayContribution } from "./slots";
@@ -56,6 +58,12 @@ export default {
   contributions: [
     Surface.Placement(floatingDef),
     Hints.Hint({ hint: windowFullscreenHint }),
+    Hints.Hint({ hint: backToDesktopHint }),
+    // Left for one app full screen: the launcher teaches the way back.
+    AppLauncherSlots.ReturnTip({
+      mode: DESKTOP_PLACEMENT_ID,
+      hint: backToDesktopHint,
+    }),
     // Keyboard window management — eligible only while the desktop is the
     // surface mode. Tiling uses the Ctrl+Alt window-manager modifier (free on
     // macOS, the primary target); minimize/close use the platform `mod` so they

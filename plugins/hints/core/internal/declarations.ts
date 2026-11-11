@@ -42,6 +42,15 @@ export interface Hint {
    * launcher's grid opens on hover, under the tip's card).
    */
   readonly actOn?: "press" | "hover";
+  /**
+   * Tips this one replaces: once it has been shown (seen, or answered this
+   * session) — or while it is asked for — they never show. For a tip that
+   * teaches the same control in a context that makes the other one wrong
+   * (the desktop's "Go back to the desktop" on the app launcher replaces its
+   * "Switch apps"). One way: a superseded tip seen first does not silence
+   * this one.
+   */
+  readonly supersedes?: readonly Hint[];
 }
 
 export function defineHint(def: Omit<Hint, "kind">): Hint {

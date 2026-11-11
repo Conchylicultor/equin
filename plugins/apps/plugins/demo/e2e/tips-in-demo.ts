@@ -1,7 +1,8 @@
 /**
- * The first-time tips inside the demo: the app launcher's "Switch apps" and a
- * desktop window's "Leave the desktop", each shown once — and remembered inside
- * the demo (its worker's database), never in the page's.
+ * The first-time tips inside the demo: the app launcher's "Switch apps", a
+ * desktop window's "Leave the desktop" and — once that window went full
+ * screen — the launcher's "Go back to the desktop", each shown once — and
+ * remembered inside the demo (its worker's database), never in the page's.
  *
  * In `/demo` (a fresh context: the demo has met no tip), it:
  *
@@ -9,7 +10,9 @@
  *     ringing the embed's launcher; Got it answers it — the card goes away and
  *     the demo's worker records the answer;
  *  2. picks Desktop from the launcher: the "Leave the desktop" tip shows on the
- *     focused window's Full screen control; Got it answers it, recorded too;
+ *     focused window's Full screen control (and "Switch apps" never does on
+ *     the desktop); Got it answers it, recorded too; then clicks Full screen:
+ *     "Go back to the desktop" shows on the launcher; Got it;
  *  3. reloads and enters again: neither tip shows again — the demo remembers
  *     them;
  *  4. throughout, no `/api/hints/…` request reached the page's server (the
@@ -44,8 +47,8 @@ import {
 } from "./internal/demo-pages";
 
 const OUT = arg("out") ?? "/tmp/demo-tips";
-/** Long enough for a tip's waiting window (2.5 s orientation + 1 s pause) and a seen read, with room. */
-const NO_TIP_WAIT_MS = 6_000;
+/** Long enough for a tip's waiting window (1.2 s orientation + 0.4 s pause) and a seen read, with room. */
+const NO_TIP_WAIT_MS = 4_000;
 
 const SHOWN_TIP = '.hint-card[data-variant="tip"][data-on="true"]';
 const SHOWN_HALO = '.hint-halo[data-on="true"]';
@@ -183,6 +186,32 @@ await withBrowser(async (h) => {
   );
   await snap(page, OUT, "2-back-to-one-app");
   await gotIt(backToOne, "Leave the desktop");
+
+  // ── 2b. Full screen: the launcher teaches the way back ──────────────────
+  await embedRoot(page)
+    .getByRole("button", { name: "Full screen" })
+    .first()
+    .click();
+  const backToDesktop = tipCard(page, "Go back to the desktop");
+  r.ok(
+    "the Go back to the desktop tip shows once a window went full screen",
+    (
+      await waitFor(
+        () => backToDesktop.count(),
+        (n) => n > 0,
+        { timeoutMs: RENDER_TIMEOUT_MS },
+      )
+    ).ok,
+  );
+  r.ok(
+    "its halo rings the embed's launcher",
+    await ringed(
+      page,
+      embedRoot(page).getByRole("button", { name: "All apps" }).first(),
+    ),
+  );
+  await snap(page, OUT, "2b-back-to-desktop");
+  await gotIt(backToDesktop, "Go back to the desktop");
 
   // ── 3. Remembered inside the demo ───────────────────────────────────────
   await page.reload({ waitUntil: "domcontentloaded" });

@@ -37,10 +37,15 @@ import {
   subscribeTourEffects,
   useEngineState,
 } from "../internal/engine-store";
-import { useTours } from "../internal/registry";
+import { useHints, useTours } from "../internal/registry";
 import { useHintSeen, useMarkHintSeen } from "../internal/seen";
 import { subscribeHintSignals } from "../internal/signal-bus";
-import { activeRequest, wakeAt, type TipRequest } from "../internal/tip-queue";
+import {
+  activeRequest,
+  isSuperseded,
+  wakeAt,
+  type TipRequest,
+} from "../internal/tip-queue";
 import { ledgerOf, subscribeLedgers } from "../internal/seen-ledger";
 import { inScope } from "../internal/scope-key";
 import { useElectedHintHost } from "../internal/host-election";
@@ -105,6 +110,7 @@ function ElectedHintHost() {
     error: () => null,
   });
   const tours = useTours();
+  const declaredHints = useHints();
   const focusedApp = useFocusedAppId();
   const markSeen = useMarkHintSeen();
 
@@ -187,7 +193,11 @@ function ElectedHintHost() {
         // its own worker) — not known yet: nothing shows.
         const seen = ledgerOf(request.scope)?.seen ?? null;
         if (seen === null) return false;
-        if (seen.has(hint.id) || isAnswered(request.key)) return false;
+        const shown = (id: string) =>
+          seen.has(id) || isAnswered(inScope(request.scope, id));
+        if (shown(hint.id)) return false;
+        if (isSuperseded(engine.tips, request, declaredHints, shown))
+          return false;
         // On screen: a tip on a scrolled-away anchor would point at nothing.
         return (
           resolveAnchorElement(tipAnchorKey(request), { onScreen: true }) !==

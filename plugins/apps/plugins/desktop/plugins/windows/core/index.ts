@@ -1,1 +1,5 @@
-export { windowFullscreenAnchor, windowFullscreenHint } from "./internal/hints";
+export {
+  backToDesktopHint,
+  windowFullscreenAnchor,
+  windowFullscreenHint,
+} from "./internal/hints";

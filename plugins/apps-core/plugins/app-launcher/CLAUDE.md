@@ -55,15 +55,17 @@ never draw their own header (the shell places it; see
 
 - Description: The app brand every app shell draws (AppShell.Brand): the launcher — the current app's own mark — click for the composition's home app (the app gallery on main), hover or ArrowDown for a grid of every other installed app (switching exactly as the rail does) — plus, as the sidebar header, the current app's name linking to its own home. Where no app switcher frames the surface — solo (fullscreen), or an AppEmbed, which draws no rail or tab bar — a surface that draws no brand gets the launcher floating at the top-left of its box, revealed as the pointer nears that corner.
 - Web:
+  - Slots: `AppLauncherSlots.ReturnTip`
+  - Slot contributors: `AppLauncherSlots.ReturnTip` ← `apps.desktop.windows`
   - Contributes:
     - `AppShell.Brand` "Brand" → `AppBrand`
     - `Apps.Overlay` "Overlay" → `FloatingAppLauncher`
     - `FieldPresentation.Register` "collection:apps.installed-app"
     - `Fields.Identity` "app-icon"
     - `Hints.Hint` "app-launcher.switch-apps"
-  - Uses: 45 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 46 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps-core/tabs` ×6
-    - `apps-core` ×5
+    - `apps-core` ×6
     - `hints` ×3
     - `network/live/live-state` ×3
     - `primitives/data-view` ×3
@@ -89,6 +91,7 @@ never draw their own header (the shell places it; see
   - Exports (types): `AppRow`
   - Exports (values):
     - `AppIconCell`
+    - `AppLauncherSlots`
     - `appRow`
     - `appRowOverrides`
 - Core:
@@ -123,6 +126,7 @@ never draw their own header (the shell places it; see
     - `ui/tokens/type-scale --font-weight-bold`
   - Imported by:
     - `apps/demo`
+    - `apps/desktop/windows`
     - `apps/home/app-cards`
     - `apps/home/usage-fields`
     - `menu-bar/app-grid`
