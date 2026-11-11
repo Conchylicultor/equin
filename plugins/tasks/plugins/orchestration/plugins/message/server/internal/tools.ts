@@ -7,7 +7,7 @@ import {
   submitTurn,
 } from "@plugins/conversations/server";
 import { messageTree } from "@plugins/tasks/plugins/orchestration/plugins/message/plugins/capability/core";
-import { renderAgents, treeAgents } from "./agents";
+import { renderAgents, SETTLED_SHOWN, treeAgents } from "./agents";
 import { renderOutcome, sendAgentMessage, type MessagePorts } from "./send";
 
 const productionPorts: MessagePorts = {
@@ -41,15 +41,21 @@ const productionPorts: MessagePorts = {
 export const listAgentsTool = Mcp.tool({
   name: "list_agents",
   when: granted(messageTree),
-  description:
-    "List the agents of your task tree: for every task an agent ran on, its latest conversation and how it stands (starting, working, idle, waiting on the user, stopped, closed), your own marked. Read-only. Message one with `message_agent`.",
-  inputSchema: {},
-  async handler(_input, { conversationId }) {
+  description: `List the agents of your task tree: for every task an agent ran on, its latest conversation and how it stands (starting, working, idle, waiting on the user, stopped, closed), your own marked. Settled agents (task done or dropped, or agent closed) are capped to the ${SETTLED_SHOWN} started last, the rest counted; pass \`all: true\` for every one. Read-only. Message one with \`message_agent\`.`,
+  inputSchema: {
+    all: z
+      .boolean()
+      .optional()
+      .describe(
+        `List every settled agent too, not only the ${SETTLED_SHOWN} started last.`,
+      ),
+  },
+  async handler({ all }, { conversationId }) {
     const tree = await treeAgents(conversationId);
     const text =
       tree.kind === "no-tree"
         ? "Your conversation has no task tree."
-        : renderAgents(tree.agents);
+        : renderAgents(tree.agents, { all: all === true });
     return { content: [{ type: "text", text }] };
   },
 });

@@ -51,15 +51,37 @@ describe("list_agents' answer", () => {
   ];
 
   test("a written list reads back as written, its tail as text", () => {
-    expect(readAgentList(formatAgentList(agents, 2))).toEqual([
+    expect(
+      readAgentList(
+        formatAgentList(agents, { notYetRun: 2, hiddenSettled: 0 }),
+      ),
+    ).toEqual([
       ...agents.map((a) => ({ kind: "agent" as const, ...a })),
       { kind: "text", text: "2 tasks no agent ran on yet (see `task_tree`)." },
     ]);
   });
 
   test("no agent yet is one notice", () => {
-    expect(readAgentList(formatAgentList([], 3))).toEqual([
+    expect(
+      readAgentList(formatAgentList([], { notYetRun: 3, hiddenSettled: 0 })),
+    ).toEqual([
       { kind: "text", text: "No agent has run on a task of this tree yet." },
     ]);
+  });
+
+  test("hidden settled agents are one text line before the not-run tail", () => {
+    const lines = readAgentList(
+      formatAgentList(agents, { notYetRun: 1, hiddenSettled: 58 }),
+    );
+    expect(lines.slice(2).map((l) => l.kind)).toEqual(["text", "text"]);
+    expect(lines[2]).toMatchObject({
+      text: expect.stringContaining("+58 older settled agents"),
+    });
+  });
+
+  test("only hidden agents is not 'no agent yet'", () => {
+    expect(formatAgentList([], { notYetRun: 0, hiddenSettled: 3 })).toContain(
+      "+3 older settled agents",
+    );
   });
 });

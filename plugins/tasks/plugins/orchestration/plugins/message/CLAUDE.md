@@ -11,7 +11,11 @@ Names no workflow. Plan: `research/2026-10-30-tasks-message-agents.md`.
   `folder_id`) — the same tree `task_tree` shows, siblings and the root's
   agent included; never the caller's own conversation.
 - **`list_agents`** — every task of the tree an agent ran on, with its latest
-  conversation and how it stands (`agentsUnder`, one SQL read).
+  conversation and how it stands (`agentsUnder`, one SQL read). Settled
+  agents (task done or dropped, or the agent closed) pile up in a long-lived
+  tree, so by default only the `SETTLED_SHOWN` (10) started last are listed —
+  the rest are one `+N older settled agents` line; `all: true` lists every
+  one. The caller's own line is never hidden.
 - **`message_agent({ to, text })`** — `to` is a task id (its latest
   conversation) or a conversation id. The message is an `event` turn
   (`submitTurn`; the ledger wraps it in `<equin-event>`, drawn as a system
@@ -48,6 +52,7 @@ Names no workflow. Plan: `research/2026-10-30-tasks-message-agents.md`.
     - `tasks/tasks-core._conversations`
     - `tasks/tasks-core._tasks`
     - `tasks/tasks-core.getConversation`
+    - `tasks/tasks-core.tasksView`
   - Register:
     - `mcpTool('list_agents')`
     - `mcpTool('message_agent')`

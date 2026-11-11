@@ -22,18 +22,25 @@ export function formatAgentLine(a: AgentLine): string {
   return `- ${a.taskId} "${a.title}" · ${a.conversationId} · ${a.standing}${a.self ? SELF_SUFFIX : ""}`;
 }
 
-/** The whole answer: one line per agent, then how many tasks no agent ran on. */
+/** The whole answer: one line per agent shown, then how many settled agents
+ * it left out and how many tasks no agent ran on. */
 export function formatAgentList(
   agents: readonly AgentLine[],
-  notYetRun: number,
+  { notYetRun, hiddenSettled }: { notYetRun: number; hiddenSettled: number },
 ): string {
-  if (agents.length === 0)
+  if (agents.length === 0 && hiddenSettled === 0)
     return "No agent has run on a task of this tree yet.";
-  const tail =
+  const tail = [
+    hiddenSettled > 0
+      ? `+${hiddenSettled} older settled agent${hiddenSettled === 1 ? "" : "s"} (task done or dropped, or agent closed) not shown — \`list_agents({ all: true })\` lists them.`
+      : null,
     notYetRun > 0
-      ? `\n\n${notYetRun} task${notYetRun === 1 ? "" : "s"} no agent ran on yet (see \`task_tree\`).`
-      : "";
-  return agents.map(formatAgentLine).join("\n") + tail;
+      ? `${notYetRun} task${notYetRun === 1 ? "" : "s"} no agent ran on yet (see \`task_tree\`).`
+      : null,
+  ].filter((l) => l !== null);
+  return [agents.map(formatAgentLine).join("\n"), ...tail]
+    .filter((l) => l !== "")
+    .join("\n\n");
 }
 
 export type ReadAgentLine =

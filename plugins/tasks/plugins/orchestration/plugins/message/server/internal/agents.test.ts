@@ -14,7 +14,13 @@ import {
   type DbExecutor,
 } from "@plugins/database/plugins/db-test-fixture/plugins/worktree-db/server/testing";
 import { FALLBACK_MODEL } from "@plugins/conversations/plugins/model-provider/core";
-import { agentsUnder, renderAgents, type TreeAgents } from "./agents";
+import {
+  agentsUnder,
+  renderAgents,
+  SETTLED_SHOWN,
+  type TreeAgent,
+  type TreeAgents,
+} from "./agents";
 import { sendAgentMessage, type MessagePorts } from "./send";
 
 let seq = 0;
@@ -101,7 +107,7 @@ describe("message: tree agents", () => {
       [t.b, t.bConv, false],
       [t.c, null, false],
     ]);
-    const text = renderAgents(agents);
+    const text = renderAgents(agents, { all: false });
     expect(text).toContain(`${t.aNew} · working`);
     expect(text).toContain(`${t.bConv} · stopped`);
     expect(text).toContain(`${t.sup} · working · you`);
@@ -238,5 +244,52 @@ describe("message: send", () => {
     });
     expect(agent.sent).toEqual([]);
     expect(agent.resumed).toEqual([]);
+  });
+});
+
+describe("message: list_agents cap", () => {
+  function agent(
+    i: number,
+    taskStatus: TreeAgent["taskStatus"],
+    status: NonNullable<TreeAgent["conversation"]>["status"],
+    self = false,
+  ): TreeAgent {
+    return {
+      taskId: `task-${i}`,
+      title: `T${i}`,
+      taskStatus,
+      conversation: {
+        id: `conv-${i}`,
+        status,
+        waitingFor: null,
+        hibernated: false,
+        unverified: false,
+      },
+      self,
+    };
+  }
+  const settled = Array.from({ length: SETTLED_SHOWN + 5 }, (_, i) =>
+    agent(i, i % 2 === 0 ? "done" : "dropped", i % 3 === 0 ? "done" : "gone"),
+  );
+  const agents = [
+    agent(100, "done", "done", true),
+    ...settled,
+    agent(200, "in_progress", "working"),
+    agent(201, "need_action", "done"),
+  ];
+
+  test("keeps the unsettled, self, and the settled started last", () => {
+    const text = renderAgents(agents, { all: false });
+    expect(text).toContain("conv-100");
+    expect(text).toContain("conv-200");
+    expect(text).not.toContain("conv-0 ");
+    expect(text).toContain(`conv-${settled.length - 1} `);
+    expect(text).toContain("+6 older settled agents");
+  });
+
+  test("all lists every agent", () => {
+    const text = renderAgents(agents, { all: true });
+    expect(text).toContain("conv-0 ");
+    expect(text).not.toContain("older settled");
   });
 });

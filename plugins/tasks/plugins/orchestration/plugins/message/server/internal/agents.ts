@@ -7,8 +7,12 @@ import {
   _conversations,
   _tasks,
   getConversation,
+  tasksView,
 } from "@plugins/tasks/plugins/tasks-core/server";
-import { ConversationStatusSchema } from "@plugins/tasks/plugins/tasks-core/core";
+import {
+  ConversationStatusSchema,
+  TaskStatusSchema,
+} from "@plugins/tasks/plugins/tasks-core/core";
 import { STUCK_TURN_WAITING_FOR } from "@plugins/conversations/core";
 import { mandateOf } from "@plugins/tasks/plugins/orchestration/plugins/mandate/server";
 import { formatAgentList } from "../../core";
@@ -18,6 +22,7 @@ import { formatAgentList } from "../../core";
 export interface TreeAgent {
   taskId: string;
   title: string;
+  taskStatus: z.infer<typeof TaskStatusSchema>;
   conversation: {
     id: string;
     status: z.infer<typeof ConversationStatusSchema>;
@@ -37,6 +42,7 @@ export type TreeAgents =
 const Row = z.object({
   task_id: z.string(),
   title: z.string(),
+  task_status: TaskStatusSchema,
   conversation_id: z.string().nullable(),
   status: ConversationStatusSchema.nullable(),
   waiting_for: z.string().nullable(),
@@ -72,10 +78,11 @@ export async function agentsUnder(
             JOIN ${_conversations} c ON c.attempt_id = a.id
            ORDER BY a.task_id, c.created_at DESC, c.id DESC
         )
-        SELECT t.id AS task_id, t.title, l.id AS conversation_id, l.status,
+        SELECT t.id AS task_id, t.title, tv.status::text AS task_status, l.id AS conversation_id, l.status,
                l.waiting_for, l.hibernated, l.unverified
           FROM sub
           JOIN ${_tasks} t ON t.id = sub.id
+          JOIN ${tasksView} tv ON tv.id = sub.id
           LEFT JOIN latest l ON l.task_id = t.id
          ORDER BY l.created_at ASC NULLS LAST, t.id`,
     row: Row,
@@ -83,6 +90,7 @@ export async function agentsUnder(
   return rows.map((r) => ({
     taskId: r.task_id,
     title: r.title,
+    taskStatus: r.task_status,
     conversation:
       r.conversation_id === null || r.status === null
         ? null
@@ -136,10 +144,34 @@ function statusWords(c: NonNullable<TreeAgent["conversation"]>): string {
   }
 }
 
-/** `list_agents`' answer: one line per task an agent ran on. */
-export function renderAgents(agents: readonly TreeAgent[]): string {
-  const lines = agents.flatMap((a) =>
-    a.conversation === null
+/** How many settled agents `list_agents` shows by default — the most
+ * recently started; the rest are counted, and `all` lists them. */
+export const SETTLED_SHOWN = 10;
+
+/** An agent whose work is over: its task done or dropped, or the agent
+ * itself closed. A long-lived tree accumulates them by the dozen. */
+function isSettled(a: TreeAgent): boolean {
+  return (
+    a.taskStatus === "done" ||
+    a.taskStatus === "dropped" ||
+    a.conversation?.status === "done"
+  );
+}
+
+/** `list_agents`' answer: one line per task an agent ran on — every one with
+ * `all`, else every unsettled one plus the {@link SETTLED_SHOWN} settled
+ * ones started last (never hiding the caller's own). */
+export function renderAgents(
+  agents: readonly TreeAgent[],
+  { all }: { all: boolean },
+): string {
+  const ran = agents.filter((a) => a.conversation !== null);
+  const settled = ran.filter((a) => isSettled(a) && !a.self);
+  const hidden = new Set(
+    all ? [] : settled.slice(0, Math.max(0, settled.length - SETTLED_SHOWN)),
+  );
+  const lines = ran.flatMap((a) =>
+    a.conversation === null || hidden.has(a)
       ? []
       : [
           {
@@ -151,8 +183,8 @@ export function renderAgents(agents: readonly TreeAgent[]): string {
           },
         ],
   );
-  return formatAgentList(
-    lines,
-    agents.filter((a) => a.conversation === null).length,
-  );
+  return formatAgentList(lines, {
+    notYetRun: agents.length - ran.length,
+    hiddenSettled: hidden.size,
+  });
 }

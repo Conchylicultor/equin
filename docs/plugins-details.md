@@ -56597,6 +56597,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/tasks-core._conversations`
               - `tasks/tasks-core._tasks`
               - `tasks/tasks-core.getConversation`
+              - `tasks/tasks-core.tasksView`
             - Register:
               - `mcpTool('list_agents')`
               - `mcpTool('message_agent')`
