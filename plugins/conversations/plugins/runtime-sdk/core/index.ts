@@ -70,7 +70,7 @@ export type { PartialFrame, PartialMessage } from "./partial";
 export {
   API_ERROR,
   errorStoppedConversations,
-  RESUME_TURN_TEXT,
+  resumeTurnText,
   ResumeStoppedResultSchema,
   resumeStoppedConversations,
   stopErrorLabel,

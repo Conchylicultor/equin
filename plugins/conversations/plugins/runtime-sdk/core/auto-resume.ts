@@ -13,7 +13,7 @@ export const autoResumeConfig = defineConfig({
       default: false,
       label: "Resume agents when their usage limit resets",
       description:
-        "An agent stopped by its Claude account's usage limit is sent “Continue from where you left off.” as soon as the limit resets — or right away on another account, when auto-switch finds one with room.",
+        "An agent stopped by its Claude account's usage limit is told its quota is back and to continue from where it left off as soon as the limit resets — or right away on another account, when auto-switch finds one with room.",
     }),
   },
 });

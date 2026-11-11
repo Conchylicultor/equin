@@ -474,9 +474,9 @@ Gotchas the spike hit:
     - `planAutoResume`
     - `PROTOCOL_VERSION`
     - `refreshClaudeUsage`
-    - `RESUME_TURN_TEXT`
     - `resumeStoppedConversations`
     - `ResumeStoppedResultSchema`
+    - `resumeTurnText`
     - `roomiestAccount`
     - `sdkAgentProcesses`
     - `stopErrorLabel`

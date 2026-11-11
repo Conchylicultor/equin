@@ -125,6 +125,18 @@ export async function usageLimitStoppedConversations(): Promise<
   );
 }
 
+/**
+ * What stopped `id`'s agent: the CLI's kind of failure, null when no stop is
+ * recorded (or it named none).
+ */
+export async function stopErrorOf(id: string): Promise<string | null> {
+  const [row] = await db
+    .select({ stopError: sdkAgentStops.table.stopError })
+    .from(sdkAgentStops.table)
+    .where(eq(sdkAgentStops.table.conversationId, id));
+  return row?.stopError ?? null;
+}
+
 export interface AgentRow extends AgentProjection {
   worktreePath: string;
   /** Where in the events file the cursor was read up to; null before the first write. */

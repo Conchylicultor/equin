@@ -20825,9 +20825,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `planAutoResume`
           - `PROTOCOL_VERSION`
           - `refreshClaudeUsage`
-          - `RESUME_TURN_TEXT`
           - `resumeStoppedConversations`
           - `ResumeStoppedResultSchema`
+          - `resumeTurnText`
           - `roomiestAccount`
           - `sdkAgentProcesses`
           - `stopErrorLabel`

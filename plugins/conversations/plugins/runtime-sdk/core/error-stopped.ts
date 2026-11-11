@@ -69,7 +69,19 @@ export type ErrorStoppedConversation =
     : never;
 
 /** The turn a resume sends: the CLI's own words for carrying on. */
-export const RESUME_TURN_TEXT = "Continue from where you left off.";
+const RESUME_TURN_TEXT = "Continue from where you left off.";
+
+/**
+ * The turn a resume sends an agent stopped by `stopError`. After a usage limit
+ * it says first that the quota is back: told only to carry on, an agent that
+ * last saw "You've hit your limit" concludes the limit still holds and stops
+ * again (or asks whether to wait for the reset).
+ */
+export function resumeTurnText(stopError: string | null): string {
+  if (stopError === USAGE_LIMIT_ERROR)
+    return `Quota is back — the usage limit that stopped you no longer applies. ${RESUME_TURN_TEXT}`;
+  return RESUME_TURN_TEXT;
+}
 
 export const ResumeStoppedResultSchema = z.discriminatedUnion("kind", [
   z.object({ id: z.string(), kind: z.literal("resumed") }),
