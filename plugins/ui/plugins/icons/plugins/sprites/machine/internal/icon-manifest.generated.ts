@@ -277,6 +277,7 @@ export const ICON_MANIFEST: {
     "playlist-add",
     "playlist-play",
     "precision-manufacturing",
+    "progress-activity",
     "public",
     "publish",
     "push-pin",

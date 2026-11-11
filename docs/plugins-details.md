@@ -30050,7 +30050,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Uses: `framework/tooling/checks/type-check.readTypeCheckTree`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 143 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+            - Uses: 144 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
               - `plugin-meta/parse-utils` ×19
               - `config_v2` ×15
               - `framework/plugin-id` ×13
@@ -30076,6 +30076,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/plugin-tree` ×2
               - `fields/reorder-tree.REORDER_NODE_LEGEND`
               - `framework/tooling/guards/agent-policy.agentPolicySettings`
+              - `framework/tooling/import-closure.loadTypescript`
               - `framework/tooling.noteRepoWrites`
               - `infra/namespace.MAIN_COMPOSITION_ID`
               - `packages/macrotask-yield.yieldMacrotask`
@@ -30584,7 +30585,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `importClosures`
               - `loadTypescript`
           - Cross-plugin:
-            - Imported by: `framework/tooling/boundaries`
+            - Imported by:
+              - `framework/tooling/boundaries`
+              - `framework/tooling/codegen`
           - Exemptions:
             - Exempts itself from:
               - `boundaries/no-platform-api` — `core/import-closure.ts` (debt)

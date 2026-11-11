@@ -6,22 +6,24 @@ import { relative } from "path";
 import { sourceFilesIn } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { buildBarrelFreeTree } from "./barrel-free-tree";
 import { scanFiles } from "./file-scans";
-import { ICON_SCAN, type IconManifest } from "./icon-manifest.scan";
+import { loadTypescript } from "@plugins/framework/plugins/tooling/plugins/import-closure/core";
+import { iconManifestScan, type IconManifest } from "./icon-manifest.scan";
 import type { CodegenPass } from "./codegen-pass";
 
 /**
  * Generates the icon manifest — every icon name the code draws, collected from
- * its `symbol("…")` / `brand("…")` / `seti("…")` literals — into
+ * its `symbol("…")` / `brand("…")` / `seti("…")` calls, read from each file's
+ * syntax tree (every reference to an imported constructor, `icon-manifest.scan.ts`) — into
  * `plugins/ui/plugins/icons/plugins/sprites/machine/internal/icon-manifest.generated.ts`,
  * next to the sprite builder, its only reader. (Not in the icons `core/`:
  * the CLI loads that barrel — through the icons checks — in the same process
  * that regenerates this file, which would freeze the stale copy.)
  *
  * The sprite server ships exactly these names, so an icon costs bytes only once
- * some code names it. The `icons/literal-icon-name` lint keeps every argument a
- * string literal (and bans aliasing or passing the functions around), which is
- * what makes a text scan complete; a non-literal that slips through anyway
- * throws here rather than silently drawing an empty box.
+ * some code names it. The `icons/literal-icon-name` lint keeps every use a
+ * direct call with a string literal; the scan follows every reference to the
+ * imported binding and throws on any other use, so a name cannot be missed by
+ * how its call is written (a spread, an argument) — never an empty box.
  *
  * Only files importing the icon constructors are read — by the barrel alias or
  * by a relative path from inside the icons plugin (`isIconRefModule`, the same
@@ -64,7 +66,8 @@ export async function collectIconManifest(
       files.push(relative(root, file));
     }
   }
-  for (const found of await scanFiles(tree.repo, files, ICON_SCAN)) {
+  const scan = iconManifestScan(await loadTypescript());
+  for (const found of await scanFiles(tree.repo, files, scan)) {
     for (const n of found.symbols) symbols.add(n);
     for (const n of found.brands) brands.add(n);
     for (const n of found.seti) seti.add(n);
