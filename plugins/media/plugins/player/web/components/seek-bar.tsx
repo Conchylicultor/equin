@@ -8,6 +8,8 @@ export interface SeekBarProps {
   currentTime: number;
   duration: number;
   buffered: number;
+  /** The playback rate: an arrow key steps 5 s of watching (`skipSeconds`). */
+  rate: number;
   /** The video playing, whose frames the hover bubble previews (none for audio). */
   video: HTMLVideoElement | null;
   /** Move the playhead (seconds). */
@@ -40,6 +42,7 @@ export function SeekBar({
   currentTime,
   duration,
   buffered,
+  rate,
   video,
   onSeek,
   onDragChange,
@@ -121,7 +124,7 @@ export function SeekBar({
       onPointerCancel={endDrag}
       onLostPointerCapture={endDrag}
       onKeyDown={(e) => {
-        const next = seekKeyTarget(e.key, currentTime, d);
+        const next = seekKeyTarget(e.key, currentTime, d, rate);
         if (next === null) return;
         // The seek bar's own keys: the player's (↑ ↓ volume) must not also fire.
         e.preventDefault();

@@ -11,6 +11,7 @@ import { SeekBar } from "./seek-bar";
 export function Timeline({
   el,
   duration,
+  rate,
   remaining,
   onToggleRemaining,
   onSeek,
@@ -18,6 +19,7 @@ export function Timeline({
 }: {
   el: HTMLMediaElement | null;
   duration: number;
+  rate: number;
   remaining: boolean;
   onToggleRemaining(): void;
   onSeek(time: number): void;
@@ -34,6 +36,7 @@ export function Timeline({
         currentTime={currentTime}
         duration={duration}
         buffered={buffered}
+        rate={rate}
         // `el` first: no element (a static render) means no DOM, and no
         // `HTMLVideoElement` class to test against.
         // eslint-disable-next-line dom-access-safety/no-render-time-dom -- read only once `el`, a mounted element, exists — never in a static render

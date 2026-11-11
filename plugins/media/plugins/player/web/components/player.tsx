@@ -45,6 +45,7 @@ import {
   clampRate,
   digitTarget,
   rateShort,
+  skipSeconds,
   skipTarget,
   snapRate,
 } from "../internal/math";
@@ -377,8 +378,15 @@ export function Player({
         show(<Icon icon={el.paused ? pauseIcon : playIcon} />);
         break;
       case "skip":
-        seekMedia(el, skipTarget(el.currentTime, action.seconds, el.duration));
-        show(<Icon icon={action.seconds < 0 ? backIcon : forwardIcon} />);
+        seekMedia(
+          el,
+          skipTarget(
+            el.currentTime,
+            action.direction * skipSeconds(rate),
+            el.duration,
+          ),
+        );
+        show(<Icon icon={action.direction < 0 ? backIcon : forwardIcon} />);
         break;
       case "volume": {
         const base =

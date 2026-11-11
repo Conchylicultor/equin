@@ -135,6 +135,7 @@ export function ControlPill({
             <Timeline
               el={el}
               duration={duration}
+              rate={rate}
               remaining={remaining}
               onToggleRemaining={onToggleRemaining}
               onSeek={onSeek}

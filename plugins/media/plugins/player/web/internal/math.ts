@@ -185,6 +185,15 @@ export function dialTicks(): DialTick[] {
 export const SKIP_SECONDS = 5;
 
 /** A skip, kept within the media. */
+/**
+ * How far an arrow key skips at a playback rate: `SKIP_SECONDS` of
+ * *watching*, so of media time scaled by the rate — at 0.25× a press goes
+ * back 1.25 s (not 20 s of what you watched), at 2× it goes 10 s.
+ */
+export function skipSeconds(rate: number): number {
+  return SKIP_SECONDS * rate;
+}
+
 export function skipTarget(
   current: number,
   delta: number,
@@ -195,22 +204,24 @@ export function skipTarget(
 
 /**
  * The seek bar's own keys while it has focus (a slider's keys): ← ↓ and → ↑
- * step 5 s, Page Down / Page Up a tenth of the media, Home / End its ends.
+ * step 5 s of watching (`skipSeconds`), Page Down / Page Up a tenth of the media, Home / End its ends.
  * `null` = not the seek bar's key.
  */
 export function seekKeyTarget(
   key: string,
   current: number,
   duration: number,
+  rate: number,
 ): number | null {
   const d = Number.isFinite(duration) ? duration : 0;
+  const step = skipSeconds(rate);
   switch (key) {
     case "ArrowLeft":
     case "ArrowDown":
-      return skipTarget(current, -SKIP_SECONDS, d);
+      return skipTarget(current, -step, d);
     case "ArrowRight":
     case "ArrowUp":
-      return skipTarget(current, SKIP_SECONDS, d);
+      return skipTarget(current, step, d);
     case "PageDown":
       return skipTarget(current, -d / 10, d);
     case "PageUp":

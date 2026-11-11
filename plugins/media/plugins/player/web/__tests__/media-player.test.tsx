@@ -126,6 +126,19 @@ describe("play / pause", () => {
     key(root, "3");
     expect(video.currentTime).toBe(18);
   });
+
+  it("arrows skip 5 s of watching: scaled by the speed", () => {
+    const { root, video, key } = setup();
+    act(() => {
+      video.currentTime = 30;
+    });
+    // < twice: 1× → 0.5×, so a press skips 2.5 s of the media.
+    key(root, "<", { shiftKey: true });
+    key(root, "<", { shiftKey: true });
+    expect(video.playbackRate).toBe(0.5);
+    key(root, "ArrowLeft");
+    expect(video.currentTime).toBe(27.5);
+  });
 });
 
 describe("seek bar", () => {

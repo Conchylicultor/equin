@@ -1,7 +1,7 @@
 /** Everything a key can ask of the player. */
 export type PlayerAction =
   | { kind: "toggle" }
-  | { kind: "skip"; seconds: number }
+  | { kind: "skip"; direction: -1 | 1 }
   | { kind: "volume"; delta: number }
   | { kind: "mute" }
   | { kind: "fullscreen" }
@@ -22,7 +22,7 @@ export interface PlayerKey {
 }
 
 /**
- * The player's keyboard, as data: Space / K play, ← → 5 s, ↑ ↓ volume,
+ * The player's keyboard, as data: Space / K play, ← → 5 s of watching (scaled by the speed), ↑ ↓ volume,
  * M mute, F full screen, P picture in picture, R loop, < > speed, 0–9 jump,
  * Esc closes the settings. Space itself is bound through
  * `usePlayPauseShortcut` (every player shares that binding), so it is not
@@ -35,14 +35,14 @@ export const PLAYER_KEYS: readonly PlayerKey[] = [
   {
     id: "back",
     keys: "arrowleft",
-    label: "Back 5 seconds",
-    action: { kind: "skip", seconds: -5 },
+    label: "Back 5 seconds (at the playback speed)",
+    action: { kind: "skip", direction: -1 },
   },
   {
     id: "forward",
     keys: "arrowright",
-    label: "Forward 5 seconds",
-    action: { kind: "skip", seconds: 5 },
+    label: "Forward 5 seconds (at the playback speed)",
+    action: { kind: "skip", direction: 1 },
   },
   {
     id: "louder",

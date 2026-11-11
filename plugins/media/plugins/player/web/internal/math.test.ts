@@ -14,6 +14,8 @@ import {
   rateReadout,
   rateShort,
   rulerOffset,
+  seekKeyTarget,
+  skipSeconds,
   skipTarget,
   snapRate,
   toggleMute,
@@ -58,6 +60,13 @@ describe("seek maths", () => {
     expect(skipTarget(58, 5, 60)).toBe(60);
     expect(digitTarget(3, 60)).toBe(18);
     expect(digitTarget(3, Number.NaN)).toBe(0);
+  });
+  test("a skip is 5 s of watching: media time scaled by the rate", () => {
+    expect(skipSeconds(1)).toBe(5);
+    expect(skipSeconds(0.25)).toBe(1.25);
+    expect(skipSeconds(2)).toBe(10);
+    expect(seekKeyTarget("ArrowLeft", 30, 60, 0.5)).toBe(27.5);
+    expect(seekKeyTarget("PageUp", 30, 60, 0.5)).toBe(36);
   });
 });
 

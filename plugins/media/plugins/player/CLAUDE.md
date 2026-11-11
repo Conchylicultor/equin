@@ -50,7 +50,8 @@ measure for measure, animations included. Plan:
 
 ## Keyboard
 
-Space / K play · ← → 5 s · ↑ ↓ volume · M mute · F full screen · P picture
+Space / K play · ← → 5 s of watching (media time × the speed: 1.25 s at
+0.25×, 10 s at 2×) · ↑ ↓ volume · M mute · F full screen · P picture
 in picture · R loop · `<` `>` speed ±0.25 · 0–9 jump · Esc closes the
 settings. The table is data (`internal/keymap.ts`). On the page every key is
 a surface shortcut (`useSurfaceShortcuts`, Space through
@@ -58,7 +59,7 @@ a surface shortcut (`useSurfaceShortcuts`, Space through
 is**: every key landing inside a player is that player's; from elsewhere on
 the surface only Space reaches a player (the playing one, else the first), so
 a page with a video block keeps its own arrows and letters. The focused seek
-bar takes a slider's keys (← → ↑ ↓ 5 s, Page Up/Down a tenth, Home/End), and
+bar takes a slider's keys (← → ↑ ↓ the same speed-scaled 5 s, Page Up/Down a tenth, Home/End), and
 the volume capsule — drawn outside the pill so its blur sees the picture —
 sits right after the speaker in the tab order and closes when focus leaves
 both. Space on one of the player's own buttons the user reached by keyboard is
