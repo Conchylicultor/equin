@@ -2,7 +2,6 @@ import {
   createContext,
   useContext,
   useLayoutEffect,
-  useMemo,
   useState,
   type ReactNode,
 } from "react";
@@ -10,7 +9,6 @@ import { usePluginScopeId } from "@plugins/framework/plugins/web-sdk/core";
 import {
   COLOR_SCHEME_ATTR,
   isSubThemeScope,
-  MAX_SCHEME_ALTERNATIONS,
   PLUGIN_SCOPE_ROOT_THEME,
   type ColorScheme,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
@@ -121,11 +119,7 @@ export function usePublishedColorScheme(
 
 // ── The nearest carrier, in React ──────────────────────────────────────────
 
-interface SchemeContext {
-  scheme: ColorScheme;
-  /** Carriers in the collapsed chain since the outermost dark one (0: none dark yet). */
-  alternations: number;
-}
+type SchemeContext = ColorScheme;
 
 const ColorSchemeContext = createContext<SchemeContext | null>(null);
 
@@ -150,7 +144,7 @@ function useRootScheme(): ColorScheme {
 export function useColorScheme(): ColorScheme {
   const ctx = useContext(ColorSchemeContext);
   const root = useRootScheme();
-  return ctx?.scheme ?? root;
+  return ctx ?? root;
 }
 
 /**
@@ -158,11 +152,8 @@ export function useColorScheme(): ColorScheme {
  * ({@link useColorScheme}) and the portal forward that re-stamps
  * `data-color-scheme` on popups opened from it (`reach` as the theme token's).
  * The caller stamps the attribute on its own element. `undefined` keeps the
- * scheme around it.
- *
- * Throws past {@link MAX_SCHEME_ALTERNATIONS}: the nearest-carrier selector
- * resolves only that many alternations, and deeper ones would render in the
- * wrong scheme silently.
+ * scheme around it; `reach: "popups"` themes only the popups, the region keeps
+ * its own.
  */
 export function ColorSchemeProvider({
   scheme,
@@ -174,28 +165,7 @@ export function ColorSchemeProvider({
   children: ReactNode;
 }) {
   const parent = useContext(ColorSchemeContext);
-  const root = useRootScheme();
-  // Outside every boundary the chain starts at the root carrier (`<html>`).
-  const outerScheme = parent?.scheme ?? root;
-  const outerAlternations = parent?.alternations ?? (root === "dark" ? 1 : 0);
-  const value = useMemo<SchemeContext | null>(() => {
-    if (scheme === undefined || reach === "popups") return parent;
-    if (scheme === outerScheme) {
-      return { scheme, alternations: outerAlternations };
-    }
-    const alternations =
-      outerAlternations === 0
-        ? scheme === "dark"
-          ? 1
-          : 0
-        : outerAlternations + 1;
-    return { scheme, alternations };
-  }, [scheme, reach, parent, outerScheme, outerAlternations]);
-  if (value !== null && value.alternations > MAX_SCHEME_ALTERNATIONS) {
-    throw new Error(
-      `[theme-boundary] colour schemes alternate ${value.alternations} times here (light/dark/light/…); the nearest-carrier selector resolves ${MAX_SCHEME_ALTERNATIONS} (ui-kit core's DARK_SCHEME).`,
-    );
-  }
+  const value = scheme === undefined || reach === "popups" ? parent : scheme;
   return (
     <PortalForwardProvider
       name={COLOR_SCHEME_ATTR}

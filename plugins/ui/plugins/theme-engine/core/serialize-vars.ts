@@ -5,7 +5,10 @@
 // elements without rewriting them: the no-flash first frame depends on that
 // identity.
 
-import { ROOT_SCHEME_SELECTORS } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
+import {
+  ROOT_SCHEME_SELECTORS,
+  type SchemeSelectors,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 
 type VarsDescriptor = { vars: Record<string, string> };
 
@@ -35,7 +38,12 @@ export function renderGroupBlock(
   descriptor: VarsDescriptor,
   light: Record<string, string>,
   dark: Record<string, string>,
-  selectors: { light: string; dark: string } = ROOT_SCHEME_SELECTORS,
+  selectors: SchemeSelectors = ROOT_SCHEME_SELECTORS,
 ): string {
-  return `${selectors.light} {\n${buildVarsBlock(descriptor, light)}\n}\n${selectors.dark} {\n${buildVarsBlock(descriptor, dark)}\n}`;
+  const darkRule = `${selectors.dark} {\n${buildVarsBlock(descriptor, dark)}\n}`;
+  return `${selectors.light} {\n${buildVarsBlock(descriptor, light)}\n}\n${
+    selectors.darkScope === undefined
+      ? darkRule
+      : `${selectors.darkScope} {\n${darkRule}\n}`
+  }`;
 }

@@ -127,7 +127,7 @@ describe("paintThemeStyles", () => {
       appThemes: [],
     });
     expect(styles[themeStyleId("shape", "sub:card")]).toBe(
-      `[data-theme-scope="sub:card"] {\n  --radius: 1rem;\n  --pad: var(--radius);\n}\n${themeScopeSelectors("sub:card").dark} {\n  --radius: 1rem;\n  --pad: var(--radius);\n}`,
+      `[data-theme-scope="sub:card"] {\n  --radius: 1rem;\n  --pad: var(--radius);\n}\n${themeScopeSelectors("sub:card").darkScope} {\n${themeScopeSelectors("sub:card").dark} {\n  --radius: 1rem;\n  --pad: var(--radius);\n}\n}`,
     );
   });
 
@@ -139,7 +139,7 @@ describe("paintThemeStyles", () => {
       appThemes: [],
     });
     expect(styles["theme-scope-fixed:chrome-palette"]).toBe(
-      `[data-theme-scope="fixed:chrome"] {\n  --primary: grey;\n  --background: black;\n}\n${themeScopeSelectors("fixed:chrome").dark} {\n  --primary: grey;\n  --background: black;\n}`,
+      `[data-theme-scope="fixed:chrome"] {\n  --primary: grey;\n  --background: black;\n}\n${themeScopeSelectors("fixed:chrome").darkScope} {\n${themeScopeSelectors("fixed:chrome").dark} {\n  --primary: grey;\n  --background: black;\n}\n}`,
     );
   });
 

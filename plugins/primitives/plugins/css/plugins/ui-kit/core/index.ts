@@ -20,9 +20,5 @@ export {
   subThemeScope,
   themeScopeSelectors,
 } from "./theme-scope";
-export {
-  COLOR_SCHEME_ATTR,
-  MAX_SCHEME_ALTERNATIONS,
-  ROOT_SCHEME_SELECTORS,
-} from "./theme-scope";
-export type { ColorScheme } from "./theme-scope";
+export { COLOR_SCHEME_ATTR, ROOT_SCHEME_SELECTORS } from "./theme-scope";
+export type { ColorScheme, SchemeSelectors } from "./theme-scope";

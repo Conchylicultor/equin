@@ -8589,7 +8589,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ConfigV2.WebRegister` "config"
               - `Sonata.ViewOption` "piano-roll"
               - `Sonata.ViewSection` "piano-roll-fx" → `FxViewSection`
-            - Uses: 36 symbols — full list in [`plugins/apps/plugins/sonata/plugins/piano-roll/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/piano-roll/REFERENCE.md)
+            - Uses: 37 symbols — full list in [`plugins/apps/plugins/sonata/plugins/piano-roll/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/piano-roll/REFERENCE.md)
               - `apps/sonata/player` ×4
               - `apps/sonata/track-mixer` ×3
               - `config_v2` ×3
@@ -8609,6 +8609,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/pin.Pin`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
+              - `primitives/css/theme-boundary.useColorScheme`
               - `primitives/css/ui-kit.cn`
               - `primitives/dom/element-size.useElementSize`
               - `primitives/latest-ref.useLatestRef`
@@ -46091,36 +46092,43 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `TYPE_ROLES`
               - `TYPE_SUBSCALE`
               - `typeVar`
-        - **`theme-boundary`** — Theme-boundary primitive: <Theme name surface> is the one element that says 'everything below here wears theme X', complete — the data-theme-scope attribute, the PortalThemeScopeProvider that carries it across portals, and the canvas it paints, which no site can now forget because `surface` is required. And <PopupTheme name>: the popups opened from a region wear theme X while the region keeps its own. Plus the no-adhoc-theme-scope lint rule that keeps the three halves from being hand-assembled apart again.
+        - **`theme-boundary`** — Theme-boundary primitive: <Theme name surface> is the one element that says 'everything below here wears theme X', complete — the data-theme-scope attribute, the PortalThemeScopeProvider that carries it across portals, the colour scheme its scope wears (data-color-scheme, published by the theme engine, forwarded to popups; useColorScheme reads the nearest region's in JS), and the canvas it paints, which no site can now forget because `surface` is required. <ColorSchemeRegion scheme> is a region that always wears one scheme (the image viewer's dark). And <PopupTheme name>: the popups opened from a region wear theme X while the region keeps its own. Plus the no-adhoc-theme-scope lint rule that keeps the three halves from being hand-assembled apart again.
           - Web:
             - Uses:
               - `primitives/css/ui-kit.cn`
+              - `primitives/css/ui-kit.PortalForwardProvider`
               - `primitives/css/ui-kit.PortalThemeScopeProvider`
               - `primitives/css/ui-kit.SURFACE_LEVELS`
               - `ui/icons.IconScopeProvider`
             - Exports (types):
+              - `ColorSchemeRegionProps`
               - `PopupThemeProps`
               - `ThemeProps`
               - `ThemeSurface`
             - Exports (values):
+              - `ColorSchemeRegion`
               - `PopupTheme`
               - `Theme`
+              - `useColorScheme`
               - `useEnclosingAppThemeScope`
+              - `usePublishColorScheme`
+              - `usePublishedColorScheme`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/sidebar-palette --sidebar`
               - `ui/tokens/sidebar-palette --sidebar-accent`
-            - Imported by: 25 plugins — full list in [`plugins/primitives/plugins/css/plugins/theme-boundary/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/theme-boundary/REFERENCE.md)
-              - `apps` ×8
+            - Imported by: 30 plugins — full list in [`plugins/primitives/plugins/css/plugins/theme-boundary/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/theme-boundary/REFERENCE.md)
+              - `apps` ×9
               - `apps-core` ×7
+              - `primitives` ×3
               - `hints` ×2
               - `shell` ×2
+              - `ui` ×2
               - `framework/browser-server/demo/scope`
               - `layouts/miller`
               - `map`
               - `media/player`
               - `plugin-meta/exhibits`
-              - `primitives/pane`
           - Exemptions:
             - Exempts itself from: `theme-boundary/no-adhoc-theme-scope` — `.` (sanctioned)
             - Exempted by: `primitives/css/theme-boundary` (0 debt)
@@ -46385,16 +46393,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `surface/no-adhoc-surface` — `web/components/ui` (sanctioned)
               - `viewport-overlay/no-adhoc-viewport-overlay` — `web/components/ui` (sanctioned)
           - Core:
-            - Exports (types): `ClassName`
+            - Exports (types):
+              - `ClassName`
+              - `ColorScheme`
+              - `SchemeSelectors`
             - Exports (values):
               - `APP_STYLESHEET_PATH`
               - `appThemeScope`
               - `bareThemeScope`
+              - `COLOR_SCHEME_ATTR`
               - `fixedThemeScope`
               - `isAppThemeScope`
               - `isSubThemeScope`
               - `PLUGIN_SCOPE_ROOT_THEME`
               - `qualifyThemeScope`
+              - `ROOT_SCHEME_SELECTORS`
               - `subThemeScope`
               - `themeScopeSelectors`
         - **`viewport-overlay`** — Viewport-filling overlay primitive: self-portals to document.body + z-layer + theme-scope so fixed inset-0 fills the real viewport, never a transformed ancestor. Also owns the runtime auditor for the same invariant — the containing-block + stacking-context ancestor walk (assertViewportEscape / useViewportEscape), which reports the two ways a fixed box silently stops being viewport-relative.
@@ -49986,7 +49999,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `createHoverIntent`
         - **`image-viewer`** — One full-screen image viewer for every image in the app: ViewerThumbnail (the capped inline thumbnail that always shows the whole image, with a tiny-icon shape and a size badge; a given width / height reserves its box before it loads, and a chip is one fixed height) and useImageViewerTrigger (for callers that keep their own <img>) open it; ThumbnailPlaceholder holds a thumbnail's box while its source is not known yet; an image that does not load shows MissingImage (its name, and whether the file is gone or only unreadable, with Retry) and leaves the gallery — useImageLoad gives a caller with its own <img> the same load state, and useImageProbe answers it off-DOM for a caller that must know before it renders; ImageGallery makes every thumbnail inside one ← / → set in page order and renders the viewer inside its own React tree; ImageViewer is the controlled viewer itself — fit, click-to-close, wheel/pinch zoom, drag pan, minimap, copy/download/open, a docked thumbnail strip, a grid of every image with a tile-size slider, a control-less full-screen slideshow, keyboard-isolated. A ViewerThumbnail outside any gallery is its own gallery of one; useImageViewerTrigger requires one.
           - Web:
-            - Uses: 53 symbols — full list in [`plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md)
+            - Uses: 54 symbols — full list in [`plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md)
               - `primitives/css/ui-kit` ×6
               - `primitives/networking` ×3
               - `primitives/persistent-draft` ×3
@@ -50010,6 +50023,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/scroll.Scroll`
               - `primitives/css/slider.Slider`
               - `primitives/css/text.Text`
+              - `primitives/css/theme-boundary.ColorSchemeRegion`
               - `primitives/css/viewport-overlay.ViewportOverlay`
               - `primitives/css/yield.yieldClass`
               - `primitives/dom/auto-scroll.keepInPlace`
@@ -51537,6 +51551,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `primitives/css/scroll.Scroll`
           - `primitives/css/text.Text`
+          - `primitives/css/theme-boundary.useColorScheme`
           - `primitives/css/ui-kit.cn`
           - `primitives/dom/scroll-reveal.revealElement`
           - `primitives/select-scope.ContentScope`
@@ -59135,7 +59150,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --space-sm`
               - `ui/tokens/density --space-xs`
               - `ui/tokens/shape --spacing`
-    - **`theme-engine`** — Paints each scope's selected theme: the token-group, theme and theme-source slots, the theme selection config, the injector that resolves one theme per scope into CSS variables, and the document's light/dark: the focused full-surface app's effective color mode (the app's declared default from defineApp, the user's per-app override, else the global setting), read and written through useColorModeSetting (a state: not known until the surface says which app fills it). :root always wears the desktop's theme; each app's theme is painted on its own scope. Registers the theme selection and per-app color-mode configs, and paints the first frame: renders every app's theme CSS into the SPA shell's head (DocumentHead.Fragment) from the generated theme declarations, the ThemeEngine.Source themes, the selections and each app's effective light/dark (its declared default and the user's override), re-rendered when any of them changes.
+    - **`theme-engine`** — Paints each scope's selected theme: the token-group, theme and theme-source slots, the theme selection config, the injector that resolves one theme per scope into CSS variables, and light/dark per region: every app wears its own effective color mode (the app's declared default from defineApp, the user's per-app override, else the global setting) on its own boundary, published for theme-boundary to stamp (ColorSchemePublisher), each fixed theme its own scheme, and <html> the desktop's — so a focus or surface-mode change flips no scheme. The light/dark controls read and write the focused full-surface app's setting through useColorModeSetting (a state: not known until the surface says which app fills it); useColorMode is the scheme of the region a component renders in. :root always wears the desktop's theme; each app's theme is painted on its own scope. Registers the theme selection and per-app color-mode configs, and paints the first frame: renders every app's theme CSS into the SPA shell's head (DocumentHead.Fragment) from the generated theme declarations, the ThemeEngine.Source themes, the selections and each app's effective light/dark (its declared default and the user's override), re-rendered when any of them changes.
       - Web:
         - Slots:
           - `ThemeEngine.VariantGroup`
@@ -59152,6 +59167,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ThemeEngine.FixedTheme` ×4
           - `ThemeEngine.ThemeSource` ×2
         - Contributes:
+          - `Core.Root` → `ColorSchemePublisher`
           - `Core.Root` → `ThemeInjector`
           - `Core.Root` → `AppScopeThemes`
           - `Core.Root` → `SubThemeStyles`
@@ -59172,6 +59188,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `config_v2.useSetConfig`
           - `fields/dynamic-enum/config.DynamicEnum`
           - `network/live/live-state.foldResource`
+          - `primitives/css/theme-boundary.useColorScheme`
+          - `primitives/css/theme-boundary.usePublishColorScheme`
           - `primitives/dom/web-storage.defineStore`
           - `primitives/slot-render.defineRenderSlot`
         - Exports (types):
@@ -59198,7 +59216,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useColorMode`
           - `useColorModeSetting`
           - `useColorModeSettingFor`
-          - `useResolvedColorMode`
+          - `usePreviewColorScheme`
           - `useResolvedTheme`
           - `useSetAppColorMode`
           - `useSetGlobalColorMode`
@@ -59230,6 +59248,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages/list-bound.wholeRecord`
           - `primitives/css/ui-kit.appThemeScope`
           - `primitives/css/ui-kit.fixedThemeScope`
+          - `primitives/css/ui-kit.ROOT_SCHEME_SELECTORS`
+          - `primitives/css/ui-kit.SchemeSelectors`
           - `primitives/css/ui-kit.subThemeScope`
           - `primitives/css/ui-kit.themeScopeSelectors`
           - `primitives/pane.APP_COLOR_MODES`
@@ -59445,9 +59465,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ThemeCustomizer.Section` ×22
               - `themeCustomizerPane.Actions` ← `primitives.pane`
             - Contributes: `Pane.Register` "theme-customizer"
-            - Uses: 39 symbols — full list in [`plugins/ui/plugins/theme-engine/plugins/theme-customizer/REFERENCE.md`](../plugins/ui/plugins/theme-engine/plugins/theme-customizer/REFERENCE.md)
+            - Uses: 40 symbols — full list in [`plugins/ui/plugins/theme-engine/plugins/theme-customizer/REFERENCE.md`](../plugins/ui/plugins/theme-engine/plugins/theme-customizer/REFERENCE.md)
               - `primitives/css/ui-kit` ×10
-              - `ui/theme-engine` ×5
+              - `ui/theme-engine` ×6
               - `primitives/pane` ×3
               - `config_v2` ×2
               - `infra/endpoints` ×2
@@ -59549,7 +59569,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/theme-engine.ColorModeSetting`
           - `ui/theme-engine.useColorModeSetting`
           - `ui/theme-engine.useColorModeSettingFor`
-          - `ui/theme-engine.useResolvedColorMode`
           - `ui/theme-engine.useSetAppColorMode`
           - `ui/theme-engine.useSetGlobalColorMode`
           - `ui/theme-engine/quick-theme.QuickTheme`
@@ -59987,6 +60006,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/row.Row`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
+              - `primitives/css/theme-boundary.usePublishedColorScheme`
               - `primitives/css/toggle-chip.SegmentedControl`
               - `primitives/loading.Loading`
               - `ui/icons.Icon`
@@ -59995,7 +60015,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/icons.usePublishIconStyle`
               - `ui/icons.usePublishIconStyleLayer`
               - `ui/theme-engine.ThemeEngine`
-              - `ui/theme-engine.useResolvedColorMode`
+              - `ui/theme-engine.useColorMode`
               - `ui/theme-engine.useResolvedTheme`
               - `ui/theme-engine/theme-customizer.ThemeCustomizer`
               - `ui/theme-engine/theme-customizer.useTokenGroupEditor`

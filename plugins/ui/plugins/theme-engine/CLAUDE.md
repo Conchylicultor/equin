@@ -26,10 +26,10 @@ focused, in every surface mode. A **scheme carrier** is an element stamped
   portal forward), a `<ColorSchemeRegion scheme>` forces one (the image viewer).
 
 An element wears its NEAREST carrier's scheme, self included: `color-scheme`
-by inheritance; the token blocks' dark halves and Tailwind's `dark:` variant by
-`DARK_SCHEME` (an enumerated nearest-carrier selector — up to four alternations
-from the outermost dark carrier, and a deeper nesting throws in theme-boundary's
-`ColorSchemeProvider` rather than render wrong). Every carrier also re-declares
+by inheritance; the token blocks' dark halves and Tailwind's `dark:` variant
+inside `@scope ([data-color-scheme="dark"]) to ([data-color-scheme="light"])`
+(ui-kit core's `DARK_SCHEME_SCOPE`: a dark carrier is the scope root, a light one
+its limit — at any nesting depth, with no negated selector). Every carrier also re-declares
 the desktop's base tokens in its scheme (`ROOT_SCHEME_SELECTORS`), so an app
 without a theme of its own wears the desktop's theme in its own scheme. Because
 no focus or surface-mode change alters any region's scheme, neither restyles
@@ -388,6 +388,7 @@ path is the `""` entry.
     - `primitives/css/ui-kit.appThemeScope`
     - `primitives/css/ui-kit.fixedThemeScope`
     - `primitives/css/ui-kit.ROOT_SCHEME_SELECTORS`
+    - `primitives/css/ui-kit.SchemeSelectors`
     - `primitives/css/ui-kit.subThemeScope`
     - `primitives/css/ui-kit.themeScopeSelectors`
     - `primitives/pane.APP_COLOR_MODES`

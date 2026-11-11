@@ -37,14 +37,16 @@ export const isSubThemeScope = (token: string) =>
   token.startsWith(SUB_THEME_PREFIX);
 
 /**
- * The selector pair a scoped token block is painted on: the light half on the
- * scope's elements, the dark half on those whose NEAREST scheme carrier (self
- * included) is dark ({@link DARK_SCHEME}) — never "under a dark `<html>`", so a
- * light app inside a dark desktop takes its light values.
+ * Where a scoped token block is painted: the light half on the scope's
+ * elements, the dark half on those whose NEAREST scheme carrier (self
+ * included) is dark — inside {@link DARK_SCHEME_SCOPE}, never "under a dark
+ * `<html>`", so a light app inside a dark desktop takes its light values. Same
+ * specificity both halves; the scoped one wins by scope proximity.
  */
-export const themeScopeSelectors = (token: string) => ({
+export const themeScopeSelectors = (token: string): SchemeSelectors => ({
   light: `[data-theme-scope="${token}"]`,
-  dark: `[data-theme-scope="${token}"]${DARK_SCHEME}`,
+  dark: `[data-theme-scope="${token}"]${IN_SCOPE}`,
+  darkScope: DARK_SCHEME_SCOPE,
 });
 
 /**
@@ -92,7 +94,7 @@ export const bareThemeScope = (
 // ── Colour schemes ─────────────────────────────────────────────────────────
 /**
  * Per-region colour schemes: the attribute a region says "I am light / dark"
- * with, and the selectors every scheme-dependent style is written against.
+ * with, and where every scheme-dependent style is written.
  *
  * A document wears MANY schemes at once: `<html>` carries the desktop's, and
  * every scheme boundary below it (an app's `<Theme>`, a fixed theme's, a popup
@@ -100,7 +102,8 @@ export const bareThemeScope = (
  * region such as the image viewer) carries its own. What an element wears is
  * the NEAREST carrier's scheme — self included — never "is there a dark one
  * anywhere above me", so a light app inside a dark desktop is light all the
- * way down, and a dark window inside that light app is dark again.
+ * way down, and a dark window inside that light app is dark again, at any
+ * depth.
  *
  * Three things follow the nearest carrier:
  *
@@ -108,10 +111,10 @@ export const bareThemeScope = (
  *   inherited property, set on each carrier (ui-kit's `app.css`) — nearest
  *   wins by inheritance, nothing to compute.
  * - the theme's token blocks: the desktop's base blocks are declared on every
- *   carrier ({@link ROOT_SCHEME_SELECTORS}), each scoped block's dark half on
- *   {@link DARK_SCHEME} ({@link themeScopeSelectors}).
- * - Tailwind's `dark:` variant (`app.css`'s `@custom-variant dark`), on
- *   {@link DARK_SCHEME}.
+ *   carrier ({@link ROOT_SCHEME_SELECTORS}), each scoped block's dark half in
+ *   {@link DARK_SCHEME_SCOPE} ({@link themeScopeSelectors}).
+ * - Tailwind's `dark:` variant (`app.css`'s `@custom-variant dark`), in
+ *   {@link DARK_SCHEME_SCOPE}.
  *
  * Because a region's scheme is ITS attribute, focusing another app or
  * switching the surface mode changes no scheme anywhere: nothing restyles but
@@ -124,55 +127,34 @@ export const COLOR_SCHEME_ATTR = "data-color-scheme";
 /** A region's resolved colour scheme. */
 export type ColorScheme = "light" | "dark";
 
-const DARK = `[${COLOR_SCHEME_ATTR}="dark"]`;
-const LIGHT = `[${COLOR_SCHEME_ATTR}="light"]`;
+/**
+ * "The nearest carrier is dark", positively: a dark carrier is a scope root and
+ * a light one its limit, so an element is in scope exactly when some dark
+ * carrier encloses it (or is it) with no light carrier in between — at any
+ * nesting depth. (A negated descendant selector would say the same, but a
+ * complex `:not()` makes Chrome restyle whole subtrees on unrelated changes —
+ * the `negated-complex-selector` check.)
+ */
+export const DARK_SCHEME_SCOPE = `@scope ([${COLOR_SCHEME_ATTR}="dark"]) to ([${COLOR_SCHEME_ATTR}="light"])`;
 
 /**
- * How many dark→light flips (outermost first) the nearest-carrier selector
- * resolves. "Nearest ancestor-or-self wins" has no direct spelling in CSS, so
- * {@link DARK_SCHEME} enumerates the carrier chains it can tell apart: a chain
- * of up to `2 × MAX_SCHEME_FLIPS + 1` alternations (light desktop › dark app ›
- * light window › dark pane › light popup …). Deeper alternation renders with
- * the wrong scheme, so the boundary that would exceed it throws
- * (theme-boundary's `ColorSchemeProvider`) instead of guessing.
+ * Inside {@link DARK_SCHEME_SCOPE}: the root itself and everything below it.
+ * Written explicitly (a bare selector there means descendants only) and weighing
+ * one attribute — so a `dark:` utility keeps the (0,2,0) the old `.dark *`
+ * variant had, and a scoped token block's dark half the weight of its light one.
  */
-export const MAX_SCHEME_ALTERNATIONS = 4;
+const IN_SCOPE = ":is(:scope, :scope *)";
 
-/** `chain` and everything inside it (self-or-descendant). */
-const within = (chain: string) => `${chain}, ${chain} *`;
-
-/** `dark light dark …`, `n` carriers long, starting dark. */
-function alternating(n: number): string {
-  return Array.from({ length: n }, (_, i) => (i % 2 === 0 ? DARK : LIGHT)).join(
-    " ",
-  );
+/** A block's selectors: the light half, and the dark half (inside `darkScope` when set). */
+export interface SchemeSelectors {
+  light: string;
+  dark: string;
+  /** The at-rule the dark half is wrapped in, when its selector needs one. */
+  darkScope?: string;
 }
 
-/**
- * The nearest-carrier-is-dark condition, as one compound selector to append to
- * a selector (`[data-theme-scope="app:x"]${DARK_SCHEME}`, `&${DARK_SCHEME}` for
- * the Tailwind variant). Specificity (0,1,0) — exactly the old `.dark *` — so
- * a `dark:` utility wins and loses against the same rules it always did: the
- * leading `:is()` (a dark carrier is at or above the element) weighs one
- * attribute, and the parity terms are inside `:where()`.
- *
- * Reading: the element is under a dark carrier, and among the carriers above
- * it the last dark one is not followed by a light one — enumerated as "no
- * dark›light at all", or "dark›light›dark but no dark›light›dark›light".
- */
-export const DARK_SCHEME: string = (() => {
-  const terms: string[] = [];
-  for (let flips = 0; flips * 2 < MAX_SCHEME_ALTERNATIONS; flips++) {
-    const reached = alternating(flips * 2 + 1);
-    const undone = alternating(flips * 2 + 2);
-    terms.push(
-      flips === 0
-        ? `:not(${within(undone)})`
-        : `:is(${within(reached)}):not(${within(undone)})`,
-    );
-  }
-  return `:is(${within(DARK)}):where(${terms.join(", ")})`;
-})();
+/** The Tailwind `dark:` variant's body, as `app.css` must declare it. */
+export const DARK_VARIANT_CSS = `@custom-variant dark {\n    ${DARK_SCHEME_SCOPE} {\n        &${IN_SCOPE} {\n            @slot;\n        }\n    }\n}`;
 
 /**
  * The selectors the desktop's base theme is painted on: `:root` and every
@@ -182,7 +164,7 @@ export const DARK_SCHEME: string = (() => {
  * would otherwise inherit computed. Zero specificity (`:where`), so any
  * scoped block on the same element (an app's own theme, a fixed theme) wins.
  */
-export const ROOT_SCHEME_SELECTORS = {
+export const ROOT_SCHEME_SELECTORS: SchemeSelectors = {
   light: `:where(:root, [${COLOR_SCHEME_ATTR}])`,
-  dark: `:where(${DARK})`,
-} as const;
+  dark: `:where([${COLOR_SCHEME_ATTR}="dark"])`,
+};

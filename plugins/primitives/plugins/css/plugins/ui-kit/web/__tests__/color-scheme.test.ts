@@ -4,76 +4,49 @@ import { describe, expect, it } from "vitest";
 import { APP_STYLESHEET_PATH } from "../../core/app-stylesheet";
 import {
   COLOR_SCHEME_ATTR,
-  DARK_SCHEME,
+  DARK_SCHEME_SCOPE,
+  DARK_VARIANT_CSS,
   ROOT_SCHEME_SELECTORS,
   themeScopeSelectors,
 } from "../../core/theme-scope";
 
-// The nearest-carrier semantics of the scheme selectors, matched by the DOM's
-// own selector engine, and the Tailwind `dark:` variant kept equal to them.
+// The scheme selectors' shape, and the Tailwind `dark:` variant kept equal to
+// them. (The nearest-carrier semantics of `@scope … to …` is the browser's
+// cascade, which jsdom does not implement — the scheme-regions e2e drives it.)
 
-/** A chain of nested elements, outermost first; `null` = no carrier. */
-function chain(schemes: ("light" | "dark" | null)[]): HTMLElement {
-  document.body.replaceChildren();
-  let parent: HTMLElement = document.body;
-  for (const scheme of schemes) {
-    const el = document.createElement("div");
-    if (scheme !== null) el.setAttribute(COLOR_SCHEME_ATTR, scheme);
-    el.setAttribute("data-theme-scope", "app:x");
-    parent.appendChild(el);
-    parent = el;
-  }
-  return parent;
-}
-
-const isDark = (schemes: ("light" | "dark" | null)[]) =>
-  chain(schemes).matches(`*${DARK_SCHEME}`);
-
-describe("DARK_SCHEME: the nearest carrier wins", () => {
-  it.each([
-    [["dark"], true],
-    [["light"], false],
-    [[null], false],
-    [["dark", null], true],
-    [["dark", "light"], false],
-    [["dark", "light", null], false],
-    [["light", "dark"], true],
-    [["light", "dark", null, null], true],
-    [["dark", "light", "dark"], true],
-    [["light", "dark", "light"], false],
-    [["dark", "dark", "light"], false],
-    [["dark", "light", "light", "dark"], true],
-    [["light", "dark", "light", "dark"], true],
-    [["dark", "light", "dark", "light"], false],
-    [["light", "dark", "light", "dark", "light"], false],
-  ] as const)("%j → dark %s", (schemes, dark) => {
-    expect(isDark([...schemes])).toBe(dark);
+describe("scheme selectors", () => {
+  it("puts a scoped block's dark half in the dark scope, on the root and below", () => {
+    const { light, dark, darkScope } = themeScopeSelectors("app:x");
+    expect(light).toBe('[data-theme-scope="app:x"]');
+    expect(dark).toBe('[data-theme-scope="app:x"]:is(:scope, :scope *)');
+    expect(darkScope).toBe(DARK_SCHEME_SCOPE);
+    expect(DARK_SCHEME_SCOPE).toBe(
+      `@scope ([${COLOR_SCHEME_ATTR}="dark"]) to ([${COLOR_SCHEME_ATTR}="light"])`,
+    );
   });
 
-  it("scoped blocks pick their dark half by the nearest carrier", () => {
-    const { light, dark } = themeScopeSelectors("app:x");
-    const el = chain(["dark", "light"]);
-    expect(el.matches(light)).toBe(true);
-    expect(el.matches(dark)).toBe(false);
-    expect(chain(["light", "dark"]).matches(dark)).toBe(true);
-  });
-
-  it("the base theme is re-declared on every carrier, in its scheme", () => {
-    const el = chain(["dark", "light"]);
-    expect(el.matches(ROOT_SCHEME_SELECTORS.light)).toBe(true);
-    expect(el.matches(ROOT_SCHEME_SELECTORS.dark)).toBe(false);
-    const plain = chain(["dark", null]);
-    expect(plain.matches(ROOT_SCHEME_SELECTORS.light)).toBe(false);
-    expect(plain.matches(ROOT_SCHEME_SELECTORS.dark)).toBe(false);
+  it("re-declares the base theme on every carrier, in its scheme, at zero specificity", () => {
+    const carrier = (scheme: string) => {
+      const el = document.createElement("div");
+      el.setAttribute(COLOR_SCHEME_ATTR, scheme);
+      return el;
+    };
+    expect(carrier("light").matches(ROOT_SCHEME_SELECTORS.light)).toBe(true);
+    expect(carrier("light").matches(ROOT_SCHEME_SELECTORS.dark)).toBe(false);
+    expect(carrier("dark").matches(ROOT_SCHEME_SELECTORS.dark)).toBe(true);
+    expect(ROOT_SCHEME_SELECTORS.darkScope).toBeUndefined();
+    expect(
+      document.createElement("div").matches(ROOT_SCHEME_SELECTORS.light),
+    ).toBe(false);
   });
 });
 
 describe("app.css", () => {
-  it("declares the dark variant as DARK_SCHEME", () => {
+  it("declares the dark variant as DARK_VARIANT_CSS", () => {
     const css = readFileSync(
       join(__dirname, "../../../../../../../../", APP_STYLESHEET_PATH),
       "utf8",
     );
-    expect(css).toContain(`@custom-variant dark (&${DARK_SCHEME});`);
+    expect(css).toContain(DARK_VARIANT_CSS);
   });
 });

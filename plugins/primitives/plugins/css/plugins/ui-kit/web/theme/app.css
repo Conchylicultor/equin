@@ -14,10 +14,17 @@
 @source "../../../../../../../../plugins/";
 
 /* `dark:` follows the NEAREST scheme carrier (self included), never "a dark
-   <html>": a light app inside a dark desktop is light all the way down. The
-   selector is ui-kit core's DARK_SCHEME, written out (Tailwind cannot import
-   it); `web/__tests__/color-scheme.test.ts` fails when the two disagree. */
-@custom-variant dark (&:is([data-color-scheme="dark"], [data-color-scheme="dark"] *):where(:not([data-color-scheme="dark"] [data-color-scheme="light"], [data-color-scheme="dark"] [data-color-scheme="light"] *), :is([data-color-scheme="dark"] [data-color-scheme="light"] [data-color-scheme="dark"], [data-color-scheme="dark"] [data-color-scheme="light"] [data-color-scheme="dark"] *):not([data-color-scheme="dark"] [data-color-scheme="light"] [data-color-scheme="dark"] [data-color-scheme="light"], [data-color-scheme="dark"] [data-color-scheme="light"] [data-color-scheme="dark"] [data-color-scheme="light"] *)));
+   <html>": a light app inside a dark desktop is light all the way down. A dark
+   carrier is the scope root, a light one its limit. This is ui-kit core's
+   DARK_VARIANT_CSS written out (Tailwind cannot import it);
+   web/__tests__/color-scheme.test.ts fails when the two disagree. */
+@custom-variant dark {
+    @scope ([data-color-scheme="dark"]) to ([data-color-scheme="light"]) {
+        &:is(:scope, :scope *) {
+            @slot;
+        }
+    }
+}
 
 @theme {
     --font-sans: 'Inter Variable', sans-serif;

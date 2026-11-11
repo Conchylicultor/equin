@@ -660,6 +660,7 @@ yes/no guard: `useConfirmDialog` (`imperative-dialog/plugins/confirm`); native
   - Exports (types):
     - `ClassName`
     - `ColorScheme`
+    - `SchemeSelectors`
   - Exports (values):
     - `APP_STYLESHEET_PATH`
     - `appThemeScope`
@@ -668,7 +669,6 @@ yes/no guard: `useConfirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `fixedThemeScope`
     - `isAppThemeScope`
     - `isSubThemeScope`
-    - `MAX_SCHEME_ALTERNATIONS`
     - `PLUGIN_SCOPE_ROOT_THEME`
     - `qualifyThemeScope`
     - `ROOT_SCHEME_SELECTORS`

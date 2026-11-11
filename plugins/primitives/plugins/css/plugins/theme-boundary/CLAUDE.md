@@ -87,8 +87,8 @@ JS. A sub-theme or an undefined `name` keeps the scheme around it.
 
 What an element wears is its NEAREST carrier's (ui-kit core's
 `theme-scope.ts`): `color-scheme` by inheritance, token blocks and Tailwind
-`dark:` by `DARK_SCHEME`. That selector resolves a bounded number of
-light/dark alternations, so `ColorSchemeProvider` throws past it.
+`dark:` inside `@scope (dark carrier) to (light carrier)`, at any nesting
+depth.
 
 `<ColorSchemeRegion scheme>` is a region that always wears one scheme — the
 theme around it, in `scheme` (the image viewer's dark). The lint below bans a
