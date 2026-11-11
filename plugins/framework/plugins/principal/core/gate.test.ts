@@ -71,6 +71,43 @@ describe("gateByPrincipal", () => {
     expect(calls).toHaveLength(1);
   });
 
+  test("the content-only refusal names the URL that serves it", async () => {
+    const { handler } = counting({ content: "untrusted", item: "id" });
+    const gated = only(
+      gateByPrincipal([["GET /api/prototypes/:id/:file", handler]]),
+    );
+    // The gateway addresses the backend as "backend"; the host the visitor
+    // typed travels as X-Forwarded-Host.
+    const req = new Request(
+      "http://backend/api/prototypes/proto-1/index.html?palette=azure",
+      {
+        headers: {
+          [PRINCIPAL_HEADER]: "owner",
+          "x-forwarded-host": "equin.localhost:9000",
+        },
+      },
+    );
+    const body = (await (
+      await gated(req, { id: "proto-1", file: "index.html" })
+    ).json()) as { reason: string; url: string | null; message: string };
+    const want =
+      "http://proto-1.content.localhost:9000/equin/api/prototypes/proto-1/index.html?palette=azure";
+    expect(body.reason).toBe("content-only");
+    expect(body.url).toBe(want);
+    expect(body.message).toContain(want);
+  });
+
+  test("the content-only refusal without a namespace host has no url", async () => {
+    const { handler } = counting({ content: "untrusted", item: "id" });
+    const gated = only(gateByPrincipal([["GET /api/x/:id", handler]]));
+    const body = (await (await gated(as("owner"), { id: "p" })).json()) as {
+      url: string | null;
+      message: string;
+    };
+    expect(body.url).toBeNull();
+    expect(body.message).toContain("<item>.content.localhost");
+  });
+
   test("a missing header is refused (fail closed)", async () => {
     const { handler, calls } = counting("owner");
     const gated = only(gateByPrincipal([["POST /api/x", handler]]));

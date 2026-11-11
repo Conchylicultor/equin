@@ -77,17 +77,36 @@ export function crossSiteRefusedResponse(route: string): Response {
   );
 }
 
-/** The sentence an app-origin caller of a content route reads. */
-export const CONTENT_ONLY_MESSAGE =
-  "This route serves untrusted content; it answers only on its content host (<item>.content.localhost), never on an app origin.";
+/**
+ * The sentence an app-origin caller of a content route reads: where the route
+ * answers instead — the exact URL when the gate could derive it (the request's
+ * namespace host and the route's item param), else the host pattern.
+ */
+export function contentOnlyMessage(contentUrl: string | null): string {
+  const head =
+    "This route serves untrusted content; it answers only on its content host, never on an app origin.";
+  return contentUrl === null
+    ? `${head} Load it on <item>.content.localhost/<namespace>/… instead.`
+    : `${head} Load it at ${contentUrl}`;
+}
 
 /**
- * `403 { reason: "content-only", route, message }` — a content route asked
- * for on an app origin, where its document would run as the owner.
+ * `403 { reason: "content-only", route, url, message }` — a content route
+ * asked for on an app origin, where its document would run as the owner.
+ * `url` is the same request on its content host (null when the request's
+ * host names no namespace, e.g. a local tool on the raw socket).
  */
-export function contentOnlyResponse(route: string): Response {
+export function contentOnlyResponse(
+  route: string,
+  contentUrl: string | null,
+): Response {
   return Response.json(
-    { reason: "content-only", route, message: CONTENT_ONLY_MESSAGE },
+    {
+      reason: "content-only",
+      route,
+      url: contentUrl,
+      message: contentOnlyMessage(contentUrl),
+    },
     { status: REFUSED_STATUS },
   );
 }

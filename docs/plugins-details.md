@@ -29151,12 +29151,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `computeLoadWaves`
           - `topoSortPlugins`
     - **`principal`** — Who a request is: the principal (owner | anonymous) the gateway stamps on every proxied request (X-Equin-Principal), read fail-closed by principalOf; EndpointAccess (owner by default, { public: reason } opt-in); gateByPrincipal — the socket hosts' per-route gate, on only when the gateway declares it stamps (--principal-stamped on the backend's argv; ungated and loudly so behind an older gateway), answering an anonymous caller of an owner route 403 cross-site-refused before the handler runs — the anonymous WebSocket refusal, and each host's route table. Plus the Go↔TS header sync check and the lint rule that keeps origin / Sec-Fetch-* reads out of handlers.
-      - Cross-plugin:
-        - Imported by:
-          - `apps/deploy/deploy-secrets/approvals`
-          - `debug/backend-liveness`
-          - `infra/launcher/gateway-drift`
       - Core:
+        - Uses:
+          - `infra/namespace.CONTENT_ITEM_RE`
+          - `infra/namespace.contentUrl`
+          - `infra/namespace.namespaceFromHost`
         - Exports (types):
           - `EndpointAccess`
           - `GatedRouteHandler`
@@ -29167,8 +29166,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PrincipalStamp`
         - Exports (values):
           - `CENTRAL_HOST_ROUTES_ROUTE`
-          - `CONTENT_ONLY_MESSAGE`
-          - `contentOnlyResponse`
           - `CROSS_SITE_REFUSED_MESSAGE`
           - `crossSiteRefusedResponse`
           - `gateByPrincipal`
@@ -29182,6 +29179,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `principalOf`
           - `principalStamp`
           - `UNSTAMPED_GATEWAY_WARNING`
+      - Cross-plugin:
+        - Imported by:
+          - `apps/deploy/deploy-secrets/approvals`
+          - `debug/backend-liveness`
+          - `infra/launcher/gateway-drift`
     - **`product-name`** — The product's own name, as data: PRODUCT_NAME (`equin`, always lowercase — what every person and agent reads) and LEGACY_PRODUCT_NAMES (the names it went by before, never written again), enforced by the product-name:legacy check over every tracked file; and LEGACY_IDS, the identifiers built from the old name that are kept for good (stored state, cross-version contracts), the one place they are spelled — enforced by product-name:legacy-id (and its mirrors by product-name:legacy-ids-in-sync). A dependency-free leaf, so a browser bundle, a server or a script can import it.
       - Cross-plugin:
         - Imported by: 65 plugins — full list in [`plugins/framework/plugins/product-name/REFERENCE.md`](../plugins/framework/plugins/product-name/REFERENCE.md)
@@ -35246,8 +35248,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `namespaceUrl`
           - `resolveNamespaceAlias`
       - Cross-plugin:
-        - Imported by: 74 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
-          - `framework` ×12
+        - Imported by: 75 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
+          - `framework` ×13
           - `debug` ×11
           - `apps` ×10
           - `infra` ×9

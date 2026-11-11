@@ -1,5 +1,10 @@
 import { z } from "zod";
 import {
+  CONTENT_ITEM_RE,
+  contentUrl,
+  namespaceFromHost,
+} from "@plugins/infra/plugins/namespace/core";
+import {
   contentOnlyResponse,
   crossSiteRefusedResponse,
   principalOf,
@@ -22,6 +27,29 @@ export type GatedRouteHandler = ((
 /** A route's access as the gate resolves it: absent is `owner`. */
 export function accessOf(handler: GatedRouteHandler): EndpointAccess {
   return handler.access ?? "owner";
+}
+
+/**
+ * The same request on its content host
+ * (`http://<item>.content.localhost:<port>/<label><path>?<query>`), so the
+ * content-only refusal names the exact URL to load instead. `null` when the
+ * request's host names no namespace (a local tool on the raw socket, a public
+ * host) or the item param is not one DNS label — nothing to derive it from.
+ */
+function contentUrlFor(req: Request, item: string | undefined): string | null {
+  const url = new URL(req.url);
+  // The gateway addresses the backend as "backend" and hands the host the
+  // visitor typed over as X-Forwarded-Host (always its own word: a client's
+  // value is overwritten — `gateway/worktree.go`).
+  const host = req.headers.get("x-forwarded-host") ?? url.host;
+  const ns = namespaceFromHost(host);
+  if (ns === null || item === undefined || !CONTENT_ITEM_RE.test(item)) {
+    return null;
+  }
+  if (!url.pathname.startsWith("/api/")) return null;
+  const portMatch = /:(\d+)$/.exec(host);
+  const port = portMatch ? Number(portMatch[1]) : 80;
+  return contentUrl(item, ns, `${url.pathname}${url.search}`, port);
 }
 
 /**
@@ -50,7 +78,10 @@ export function gateByPrincipal(
             const kind = principalOf(req).kind;
             if (kind === "content") return handler(req, params);
             return kind === "owner"
-              ? contentOnlyResponse(route)
+              ? contentOnlyResponse(
+                  route,
+                  contentUrlFor(req, params[access.item]),
+                )
               : crossSiteRefusedResponse(route);
           }
         : (req, params) =>
