@@ -1,34 +1,29 @@
-import { and, eq, lt } from "drizzle-orm";
+import { lt } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { _notifications } from "./tables";
 
-const DISMISSED_TTL_MS = 7 * 24 * 3_600_000;
+const RETENTION_MS = 30 * 24 * 3_600_000;
 
-// Deletes only what the USER dismissed, a week later. Nothing here (or
-// anywhere) dismisses a notification on its own: an undismissed row stays
-// until the user dismisses it, however old or quiet. The bell and the pane
-// read the undismissed set as bounded windows (`shared/resources.ts`) and the
-// badge as one indexed count, so its size costs no read.
+// The one retention rule: a notification is deleted 30 days after its
+// `created_at` — whatever it is (read or unread, dismissed or not, any
+// category, audience or state). Keyed on `created_at`, the row's place, so a
+// row never moves: it only falls off the bottom of the list. Never on
+// `last_seen_at`, which every dedup hit bumps and would keep a firing row alive
+// forever. A deleted row's dedup key goes with it, so a later occurrence is a
+// new row on top.
 export const ttlCleanupJob = defineJob({
   name: "notifications.ttl-cleanup",
   description:
-    "Deletes notifications the user dismissed more than a week ago; never dismisses one itself.",
+    "Deletes every notification created more than 30 days ago, whatever its state.",
   hold: "instant",
   input: z.object({}),
   event: z.never(),
   dedup: "singleton",
   schedule: { cron: "0 * * * *" }, // hourly
   async run() {
-    const dismissedCutoff = new Date(Date.now() - DISMISSED_TTL_MS);
-    await db
-      .delete(_notifications)
-      .where(
-        and(
-          eq(_notifications.dismissed, true),
-          lt(_notifications.createdAt, dismissedCutoff),
-        ),
-      );
+    const cutoff = new Date(Date.now() - RETENTION_MS);
+    await db.delete(_notifications).where(lt(_notifications.createdAt, cutoff));
   },
 });

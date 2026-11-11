@@ -1,9 +1,14 @@
 # notifications
 
-## Rules: never dismissed for you, never moved
+## Rules: one retention, never moved
 
-- **Only the user dismisses.** No TTL, sweep or fix dismisses a row; the cleanup
-  job only deletes rows the user dismissed.
+- **One retention rule: a notification is deleted 30 days after its
+  `created_at`**, whatever it is — read or unread, dismissed or not, any
+  category, audience or state (`notifications.ttl-cleanup`, hourly, main
+  only). No special cases; an unread row goes too. Never keyed on
+  `last_seen_at` (every dedup hit bumps it — a firing row would live forever).
+- **Only the user dismisses** (hides a row until the rule deletes it). No sweep
+  or fix sets `dismissed`.
 - **A row never moves.** Its place is `created_at`; moving it hides what was
   below. Its state may change, its place not — the DB refuses a `created_at`
   update (`stable-position-trigger.ts`).
