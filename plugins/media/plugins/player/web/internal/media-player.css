@@ -763,6 +763,12 @@ html[data-pip] .mp-fs {
 .mp-t-center .mp-t-btn {
   border-color: color-mix(in oklab, var(--fg-tint) 12%, transparent);
   box-shadow: none;
+  /* No blur (prototype `blur: none`): a plain dark tint, YouTube's flat
+     circle — the scrim and the glyph shadow already keep the icon legible,
+     and a frosted disc read as sitting on the picture. */
+  background: color-mix(in oklab, var(--background) 38%, transparent);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 .mp-t-skip {
   width: var(--t-skip);

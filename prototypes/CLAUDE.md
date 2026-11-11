@@ -116,7 +116,10 @@ and thumbnails.
 - An invalid line is left out of the picker and reported on the card.
 
 `./equin prototype options <id>` prints the variant the user is looking
-at (one shared pick for every tab and deploy) and its URL. To render a variant,
-load `/api/prototypes/<id>/index.html?pane=floating&accent=%2310b981`, e.g. with
-`e2e-harness/e2e/screenshot.ts --path …`. **Never change the user's picks**:
+at (one shared pick for every tab and deploy) and its URL — on the prototype's
+own content host (`http://<id>.content.localhost:9000/<ns>/api/prototypes/<id>/…`).
+To render a variant, change that URL's query (`?pane=floating&accent=%2310b981`)
+and load it, e.g. with `e2e-harness/e2e/screenshot.ts --url …`. Never load
+`/api/prototypes/…` on an app origin: it serves untrusted content, so it
+answers 403 `content-only` there. **Never change the user's picks**:
 clicking the picker in a browser script changes them for everyone.
