@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
@@ -16,6 +16,8 @@ import {
 } from "@plugins/apps-core/plugins/tabs/web";
 import { AppTabsBody } from "@plugins/apps-core/plugins/tab-surface/web";
 import type { HistoryMode } from "@plugins/primitives/plugins/pane/web";
+import { REVEAL_BOUNDARY_ATTR } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 
 /** An app-rooted URL the embed was asked to open but cannot hold (no app in scope owns it). */
 export type AppEmbedLeave = (url: string) => void;
@@ -71,6 +73,15 @@ const refuseLeave: AppEmbedLeave = () => {
  *   reopens the embed there — a host page keeps it in its own URL, so a
  *   reload comes back to it. A `url` the host changes later (its page's Back
  *   / Forward) moves the open embed there.
+ * - **Its title, for the host to take.** `onTitleChange` is told the focused
+ *   tab's title as the app's own tab is titled (`<Entity> — <App>`) as it
+ *   changes, and `undefined` when the embed unmounts. A host page that is
+ *   the embed while it shows (a demo) hands it to its own tab
+ *   (`useClaimTabTitle`), so the browser tab follows the app inside; one
+ *   that is not ignores it.
+ * - **Never its host page's scroll.** Its box is a reveal boundary
+ *   (`scroll-reveal`): a row revealing itself inside (a selected item, a
+ *   deep link) scrolls the embed's own containers, never the page around it.
  * - **Its new browser tabs.** A ⌘-click or an Open in a new tab inside opens
  *   `browserTabUrl(location there)` when given (the host's page showing the
  *   embed at that place), else the path on the host's origin (the real app).
@@ -83,6 +94,7 @@ export function AppEmbed({
   fills,
   onLocationChange,
   browserTabUrl,
+  onTitleChange,
   className,
   ...at
 }: AppEmbedAt & {
@@ -100,6 +112,8 @@ export function AppEmbed({
   onLocationChange?: (url: string, history: HistoryMode) => void;
   /** See {@link EmbeddedTabSet.browserTabUrl}. */
   browserTabUrl?: (url: string) => string;
+  /** Told the embed's title as it changes, `undefined` once it unmounts (see above). */
+  onTitleChange?: (title: string | undefined) => void;
   className?: string;
 }): ReactNode {
   const fillsPage = fills !== undefined;
@@ -121,7 +135,11 @@ export function AppEmbed({
   );
   return (
     <TabsProvider embedded={embedded}>
-      <EmbedFrame className={className} viewport={fills === "viewport"} />
+      <EmbedFrame
+        className={className}
+        viewport={fills === "viewport"}
+        onTitleChange={onTitleChange}
+      />
     </TabsProvider>
   );
 }
@@ -140,19 +158,39 @@ export type AppEmbedAt =
 function EmbedFrame({
   className,
   viewport,
+  onTitleChange,
 }: {
   className: string | undefined;
   viewport: boolean;
+  onTitleChange: ((title: string | undefined) => void) | undefined;
 }) {
-  const { tabs, focusedTabId } = useTabs();
+  const { tabs, focusedTabId, titles } = useTabs();
   const surface = Apps.Surface.useContributions()[0];
+  const apps = Apps.App.useContributions();
   const focusedApp = tabs.find((t) => t.tabId === focusedTabId)?.appId;
+  // The focused tab's title as the app's own tab is titled: its content's,
+  // then its app's name — each once.
+  const title = [
+    ...new Set([
+      focusedTabId === undefined ? undefined : titles[focusedTabId],
+      apps.find((a) => a.id === focusedApp)?.app.name,
+    ]),
+  ]
+    .filter((p): p is string => p !== undefined && p !== "")
+    .join(" — ");
+  const titleRef = useLatestRef(onTitleChange);
+  useEffect(() => {
+    titleRef.current?.(title === "" ? undefined : title);
+  }, [title, titleRef]);
+  useEffect(() => () => titleRef.current?.(undefined), [titleRef]);
   return (
     <Theme
       name={focusedApp === undefined ? undefined : appThemeScope(focusedApp)}
       surface="canvas"
       // Which app the embed shows, for a reader outside it (an e2e script).
       data-app-embed={focusedApp ?? ""}
+      // A reveal inside scrolls the embed's containers, never its host page.
+      {...{ [REVEAL_BOUNDARY_ATTR]: "" }}
       // `floating-bar-boundary`: the embed is a box on its host's page, not
       // the viewport's top-right corner — its headers must not reserve or
       // anchor the global floating action bar. One filling the viewport is

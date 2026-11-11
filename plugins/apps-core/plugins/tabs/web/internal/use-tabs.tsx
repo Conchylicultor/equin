@@ -54,6 +54,7 @@ import {
   type ShellHistoryAdapter,
 } from "./shell-history-adapter";
 import { setFocusedTabTitle } from "./focused-tab-title-store";
+import { useSurfaceTabId } from "@plugins/primitives/plugins/scope/plugins/surface-id/web";
 import {
   createPlacementRegistry,
   exitPlacementOf,
@@ -104,11 +105,19 @@ export interface TabsApi {
    * Per-tab resolved content title (selected page / conversation / song …),
    * keyed by tabId. Absent when the tab is at its app index or its pane has no
    * title; the tab bar falls back to the app name. Published by the per-tab
-   * title reporter via {@link TabsApi.setTabTitle}.
+   * title reporter via {@link TabsApi.setTabTitle} — or, while one is held,
+   * the title the tab's content claimed ({@link TabsApi.claimTabTitle}).
    */
   titles: Record<string, string>;
   /** Publish (or clear, with `undefined`) the resolved content title for a tab. */
   setTabTitle(tabId: string, title: string | undefined): void;
+  /**
+   * Claim (or release, with `undefined`) a tab's title for something its
+   * content shows in place of its own panes — an embedded app taking the
+   * host's tab title, as `useClaimTabTitle` binds it. A held claim wins over
+   * the panes' reported title; released, the reported one shows again.
+   */
+  claimTabTitle(tabId: string, title: string | undefined): void;
   /** The ONE surface rendering mode every tab is displayed under. */
   mode: Placement;
   /**
@@ -258,6 +267,44 @@ export function useSurfaceMode(): Placement {
     },
     () => surfaceMode,
     () => surfaceMode,
+  );
+}
+
+/** A per-tab title map and its setter (`undefined` clears a tab's entry). */
+function useTitleMap(): [
+  Record<string, string>,
+  (tabId: string, title: string | undefined) => void,
+] {
+  const [map, setMap] = useState<Record<string, string>>({});
+  const set = useCallback((tabId: string, title: string | undefined) => {
+    setMap((prev) => {
+      if ((prev[tabId] ?? undefined) === title) return prev;
+      const next = { ...prev };
+      if (title === undefined) delete next[tabId];
+      else next[tabId] = title;
+      return next;
+    });
+  }, []);
+  return [map, set];
+}
+
+/**
+ * The tab this component renders in, claiming its title: hand the returned
+ * function a title to show it as the tab's (the tab bar, the browser tab),
+ * `undefined` to give the panes' own back — what a host passes as an
+ * `AppEmbed`'s `onTitleChange` to take the embedded app's title. Throws
+ * outside a tab's surface.
+ */
+export function useClaimTabTitle(): (title: string | undefined) => void {
+  const { claimTabTitle } = useTabs();
+  const tabId = useSurfaceTabId();
+  if (tabId === undefined)
+    throw new Error(
+      "useClaimTabTitle() called outside a tab's surface: there is no tab to title.",
+    );
+  return useCallback(
+    (title: string | undefined) => claimTabTitle(tabId, title),
+    [claimTabTitle, tabId],
   );
 }
 
@@ -578,6 +625,11 @@ export interface EmbeddedTabSet {
    * switch), `"replace"` for a correction (a redirect, the route a pending
    * path resolved to, the first report, a surface-mode switch) — so a host
    * that fills its page can give its Back / Forward the app's own steps.
+   *
+   * Never told the set's default: while the host keeps no {@link location},
+   * the place the set opened at by itself (the seed, a redirect) is not
+   * reported — the first report is the user's first move — so a host writing
+   * reports into its address never encodes a state no one chose.
    */
   onLocationChange?: (url: string, history: HistoryMode) => void;
   /**
@@ -771,19 +823,15 @@ export function TabsProvider({
       : rawMode;
   // Per-tab content titles, published by the title reporter mounted inside each
   // tab's pane surface. Derived (not persisted): each tab re-reports on mount.
-  const [titles, setTitles] = useState<Record<string, string>>({});
-
-  const setTabTitle = useCallback(
-    (tabId: string, title: string | undefined) => {
-      setTitles((prev) => {
-        if ((prev[tabId] ?? undefined) === title) return prev;
-        const next = { ...prev };
-        if (title === undefined) delete next[tabId];
-        else next[tabId] = title;
-        return next;
-      });
-    },
-    [],
+  // A claim (`claimTabTitle`) wins over the reported title while it is held.
+  const [reportedTitles, setTabTitle] = useTitleMap();
+  const [titleClaims, claimTabTitle] = useTitleMap();
+  const titles = useMemo(
+    () =>
+      Object.keys(titleClaims).length === 0
+        ? reportedTitles
+        : { ...reportedTitles, ...titleClaims },
+    [reportedTitles, titleClaims],
   );
 
   // Latest tabs/focus in refs for the persistence subscriptions + actions.
@@ -1320,6 +1368,7 @@ export function TabsProvider({
       const remaining = prev.filter((t) => t.tabId !== tabId);
       const wasFocused = focusedRef.current === tabId;
       setTabTitle(tabId, undefined);
+      claimTabTitle(tabId, undefined);
 
       if (remaining.length === 0) {
         if (!placementAllowsEmpty(registry.peek(), modeRef.current)) {
@@ -1361,7 +1410,15 @@ export function TabsProvider({
       }
       persist();
     },
-    [activate, persist, setTabTitle, seedHome, enterEmptySurface, registry],
+    [
+      activate,
+      persist,
+      setTabTitle,
+      claimTabTitle,
+      seedHome,
+      enterEmptySurface,
+      registry,
+    ],
   );
 
   // Reorder the open-tab set: move `activeId` to `overId`'s position. Pure array
@@ -1585,6 +1642,7 @@ export function TabsProvider({
       setMode,
       exitToPreviousMode,
       setTabTitle,
+      claimTabTitle,
       openTab,
       replaceTabApp,
       navigate,
@@ -1602,6 +1660,7 @@ export function TabsProvider({
       setMode,
       exitToPreviousMode,
       setTabTitle,
+      claimTabTitle,
       openTab,
       replaceTabApp,
       navigate,
@@ -1675,10 +1734,22 @@ export function TabsProvider({
   // A report says `"push"` only for a history write it has not reported yet:
   // a report with none (the first, a mode switch, a pending path resolving)
   // corrects the current entry.
+  //
+  // A set the host keeps no location for is at its default — where it opens
+  // by itself — and the default is never the host's to write down: nothing is
+  // reported until the user moves the set (a write that pushes a history
+  // entry, or a surface-mode switch). So mounting an embed never rewrites its
+  // host page's address; a host holding a location hears every report, so a
+  // stale one is corrected.
   const locationRef = useLatestRef(embedded?.onLocationChange);
+  const hostLocationRef = useLatestRef(embedded?.location);
   const reportedRef = useRef<{ url: string; seq: number } | undefined>(
     undefined,
   );
+  const openedRef = useRef<{ seq: number; mode: string } | undefined>(
+    undefined,
+  );
+  const movedRef = useRef(false);
   useEffect(() => {
     if (page) return;
     const report = () => {
@@ -1689,11 +1760,30 @@ export function TabsProvider({
       const history: HistoryMode =
         write !== undefined && write.seq > seen ? write.mode : "replace";
       reportedRef.current = { url, seq: Math.max(seen, write?.seq ?? 0) };
+      // What the set did by itself before its first report is its opening.
+      const opened = (openedRef.current ??= {
+        seq: write?.seq ?? 0,
+        mode: rawMode,
+      });
+      if (
+        rawMode !== opened.mode ||
+        (write !== undefined && write.seq > opened.seq && write.mode === "push")
+      )
+        movedRef.current = true;
+      if (!movedRef.current && hostLocationRef.current === undefined) return;
       locationRef.current?.(url, history);
     };
     report();
     return focusedStore?.subscribeRoute(report);
-  }, [page, focusedStore, focusedTabId, rawMode, locationRef, appsRef]);
+  }, [
+    page,
+    focusedStore,
+    focusedTabId,
+    rawMode,
+    locationRef,
+    hostLocationRef,
+    appsRef,
+  ]);
   useEffect(() => tabSetModeChanged(), [mode]);
 
   // An embedded set's navigation boundary: every cross-app hop read through it

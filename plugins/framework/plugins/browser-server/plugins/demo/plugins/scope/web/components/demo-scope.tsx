@@ -320,6 +320,13 @@ export type DemoBoot =
   | { kind: "starting"; progress: HostProgress | null };
 
 /**
+ * How the visitor came into a gated demo: `"gate"` — they clicked Enter in
+ * this tab; `"joined"` — this tab opened while they were in the demo in
+ * another one (nothing was done in this tab).
+ */
+export type DemoEntry = "gate" | "joined";
+
+/**
  * Renders `children` against the scenario's browser host — real server code
  * in a worker, on the scenario's data — and scoped to the host's composition
  * (`<PluginScope>`), so the page shows exactly what the worker serves.
@@ -329,8 +336,13 @@ export type DemoBoot =
  * host serves (`DemoBoot`). A visit lasts while the visitor is in the demo in
  * any tab of this browser: a tab opened meanwhile — a link from inside opened
  * in a new tab, a second tab of the page — joins it with no gate (each tab
- * whose visitor is in holds a shared Web Lock, `internal/presence.ts`).
- * `onEnter` hears the visitor come in either way. Behind the gate the host starts at once where
+ * whose visitor is in holds a shared Web Lock, `internal/presence.ts`) —
+ * unless the page's own URL says whether the visitor is in (`resume`), which
+ * then decides alone.
+ * `onEnter` hears the visitor come in either way, and which: `"gate"` is
+ * this tab's visitor acting (a click — the page may answer it, by scrolling
+ * to the demo), `"joined"` is this tab opening (no action here: a page must
+ * not move for it). Behind the gate the host starts at once where
  * this browser holds the demo's data (`scenario.storage`, `hostDataStored`) —
  * so entering is instant — and only on `enter` otherwise, since the first
  * start downloads the whole server and its data. Without `boot`, the host
@@ -346,12 +358,23 @@ export function DemoScope({
   scenario,
   boot,
   onEnter,
+  resume,
   children,
 }: {
   scenario: DemoScenario;
   boot?: (state: DemoBoot) => ReactNode;
   /** The visitor came in: entered at the gate, or joined the demo another tab is in. Gated scopes only. */
-  onEnter?: () => void;
+  onEnter?: (how: DemoEntry) => void;
+  /**
+   * Whether the visitor is in the demo, as the page's own URL says — given,
+   * the URL is the authority and no other tab is asked. `true` (the URL names
+   * a place in the demo — a reload, a shared link, a tab opened from inside):
+   * no gate, the host starts at once and `boot` draws only its loading, and
+   * `onEnter` is not called — the page knew. `false` (a plain page): the gate,
+   * even while the visitor is in the demo in another tab. Omitted: a page
+   * whose URL cannot say — a tab joins the demo another tab is in.
+   */
+  resume?: boolean;
   children: ReactNode;
 }): ReactNode {
   // Whether the scope's telemetry is reported — to the page's own server, the
@@ -370,17 +393,19 @@ export function DemoScope({
   useEffect(() => {
     inputKeysRef.current = inputKeys;
   });
-  const gated = boot !== undefined;
-  // Whether the visitor is in the demo: at once without a gate; else at once
-  // when they are in it in another tab of this browser (`checking` until
-  // known), or once they ask at the gate.
+  // A resumed visit is past the gate: the page's own URL says the visitor is in.
+  const gated = boot !== undefined && resume !== true;
+  // Whether the visitor is in the demo: at once without a gate (or resumed);
+  // at the gate when the page's URL says they are not; else at once when
+  // they are in it in another tab of this browser (`checking` until known),
+  // or once they ask at the gate.
   const [visitor, setVisitor] = useState<"checking" | "gate" | "in">(
-    gated ? "checking" : "in",
+    !gated ? "in" : resume === false ? "gate" : "checking",
   );
   const [checkFailed, setCheckFailed] = useState<{ error: unknown } | null>(
     null,
   );
-  const cameIn = useEventCallback(() => onEnter?.());
+  const cameIn = useEventCallback((how: DemoEntry) => onEnter?.(how));
   // Whether the host may start: once the visitor entered, or behind the gate
   // once this browser is found to hold the data (nothing large to download).
   const [started, setStarted] = useState(!gated);
@@ -414,7 +439,7 @@ export function DemoScope({
         }
         setVisitor("in");
         setStarted(true);
-        cameIn();
+        cameIn("joined");
       },
       (error: unknown) => {
         if (live) setCheckFailed({ error });
@@ -521,7 +546,7 @@ export function DemoScope({
       enter: () => {
         setVisitor("in");
         setStarted(true);
-        cameIn();
+        cameIn("gate");
       },
     });
   }

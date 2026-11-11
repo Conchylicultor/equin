@@ -261,7 +261,10 @@ describe("<AppEmbed>", () => {
   describe("its location", () => {
     function mountAt(
       at: AppEmbedAt,
-      opts: { browserTabUrl?: (url: string) => string } = {},
+      opts: {
+        browserTabUrl?: (url: string) => string;
+        onTitleChange?: (title: string | undefined) => void;
+      } = {},
     ) {
       const onLocationChange = vi.fn();
       window.history.replaceState(null, "", "/host/page");
@@ -275,6 +278,7 @@ describe("<AppEmbed>", () => {
             fills="page"
             onLocationChange={onLocationChange}
             browserTabUrl={opts.browserTabUrl}
+            onTitleChange={opts.onTitleChange}
           />
         </PluginProvider>,
       );
@@ -316,6 +320,32 @@ describe("<AppEmbed>", () => {
         "/other/c/x",
         "push",
       ]);
+    });
+
+    it("never tells a host keeping no location the place it opened at — only the user's moves", () => {
+      // The host's address names no place: the embed's default is not one.
+      const onLocationChange = mountAt({ url: undefined });
+      expect(onLocationChange).not.toHaveBeenCalled();
+      goTo("/other/c/x");
+      expect(onLocationChange.mock.calls).toEqual([["/other/c/x", "push"]]);
+      expect(window.location.pathname).toBe("/host/page");
+    });
+
+    it("hands its title to the host as it moves, and takes it back when it unmounts", () => {
+      const onTitleChange = vi.fn();
+      mountAt({ url: undefined }, { onTitleChange });
+      expect(onTitleChange.mock.calls.at(-1)).toEqual(["Embedded"]);
+      goTo("/other/c/x");
+      expect(onTitleChange.mock.calls.at(-1)).toEqual(["Other"]);
+      cleanup();
+      expect(onTitleChange.mock.calls.at(-1)).toEqual([undefined]);
+    });
+
+    it("is a reveal boundary: a reveal inside never scrolls its host page", () => {
+      mountAt({ url: undefined });
+      expect(
+        screen.getByTestId("app").closest("[data-reveal-boundary]"),
+      ).not.toBeNull();
     });
 
     it("follows a url its host changes (Back / Forward), not its own echo", () => {

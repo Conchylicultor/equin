@@ -84,7 +84,9 @@ Tests: `web/__tests__/app-embed.test.tsx`.
     - `apps-core/tabs.useTabs`
     - `primitives/css/theme-boundary.Theme`
     - `primitives/css/ui-kit.cn`
+    - `primitives/dom/scroll-reveal.REVEAL_BOUNDARY_ATTR`
     - `primitives/error-boundary.PluginErrorBoundary`
+    - `primitives/latest-ref.useLatestRef`
     - `primitives/scope/render-origin.RenderOrigin`
     - `primitives/slot-render.renderIsolated`
     - `shell/toast.showToast`

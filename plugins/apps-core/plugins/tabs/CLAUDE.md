@@ -263,6 +263,7 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `useActivateApp`
     - `useAppLink`
     - `useAppLinkProps`
+    - `useClaimTabTitle`
     - `useDefaultPlacement`
     - `useFocusedTabSet`
     - `useFocusedTabTitle`
@@ -273,8 +274,8 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `useSurfaceMode`
     - `useTabs`
 - Cross-plugin:
-  - Imported by: 37 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×13
+  - Imported by: 38 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×14
     - `apps-core` ×8
     - `debug` ×3
     - `hints` ×2

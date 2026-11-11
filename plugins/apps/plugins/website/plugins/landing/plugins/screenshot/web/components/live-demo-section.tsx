@@ -17,8 +17,12 @@ import { revealElement } from "@plugins/primitives/plugins/dom/plugins/scroll-re
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { AppEmbed } from "@plugins/apps-core/plugins/app-embed/web";
+import { useClaimTabTitle } from "@plugins/apps-core/plugins/tabs/web";
 import { SurfaceOverlay } from "@plugins/primitives/plugins/overlay/plugins/surface-overlay/web";
-import { DemoScope } from "@plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/web";
+import {
+  DemoScope,
+  type DemoEntry,
+} from "@plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/web";
 import {
   DEMO_FRAME_ATTR,
   DemoBootScreen,
@@ -62,16 +66,27 @@ const FOOT_ROOM = 56;
  * Reset demo, drawn from inside the scope, into the row, through a portal.
  *
  * Where the visitor is inside the demo, and whether it is maximized, is the
- * homepage's URL (`useDemoPlace`), so a reload comes back there. A maximized
- * URL draws the gate maximized too, so Enter opens the demo where it says;
- * a tab opened while the visitor is in the demo in another tab joins it with
- * no gate, its frame grown (`DemoScope`'s `onEnter`).
+ * homepage's URL (`useDemoPlace`), so a reload comes back there: a URL that
+ * names the demo opens it with no gate (`DemoScope`'s `resume`), its frame
+ * grown — or maximized — showing only its loading until it runs. The plain
+ * page names nothing and stays so: the demo writes no place it opened at by
+ * itself (`AppEmbed` reports none), and shows the gate even while the
+ * visitor is in the demo in another tab — the URL alone decides; a tab
+ * opened from inside the demo carries its place, so it resumes.
+ *
+ * Nothing moves the page but the visitor: only Enter at the gate scrolls to
+ * the grown frame — a resumed demo is grown from the start, and the embed
+ * never scrolls the page around it. While the demo runs, the browser tab is
+ * titled by the app inside it (the embed's title, claimed for this tab).
  */
 export function LiveDemoSection(): ReactNode {
-  // Entered: the frame grows, and stays grown.
-  const [grown, setGrown] = useState(false);
   const place = useDemoPlace();
   const { maximized, setMaximized } = place;
+  // The URL names the demo (a reload, a shared link): the visitor is in it.
+  const [resume] = useState(place.location !== undefined || maximized);
+  // Entered: the frame grows, and stays grown.
+  const [grown, setGrown] = useState(resume);
+  const claimTitle = useClaimTabTitle();
   const [columnRef, column] = useElementSize<HTMLDivElement>();
   // A static render has no window; its frame is never grown (no click runs),
   // and only the grown frame reads the window's size.
@@ -79,11 +94,14 @@ export function LiveDemoSection(): ReactNode {
   const [figure, setFigure] = useState<HTMLElement | null>(null);
   const [controls, setControls] = useState<HTMLElement | null>(null);
 
-  // The visitor came in (the gate's Enter, or joining another tab's demo).
-  const grow = () => {
+  // The visitor came in (the gate's Enter; a join, were the URL silent).
+  const grow = (how: DemoEntry) => {
     setGrown(true);
-    // The grown frame's top comes to the window's (its scroll margin: the gap).
-    revealElement(figure, { behavior: "smooth", block: "start" });
+    // Only the visitor's own click moves the page: the grown frame's top
+    // comes to the window's (its scroll margin: the gap). A tab that joined
+    // opens where its page starts.
+    if (how === "gate")
+      revealElement(figure, { behavior: "smooth", block: "start" });
   };
   const frameStyle = frameSize(column.width, viewport, grown);
   const restore = useCallback(
@@ -96,6 +114,7 @@ export function LiveDemoSection(): ReactNode {
       onLocationChange={place.move}
       browserTabUrl={place.maximizedUrl}
       fills={maximized ? "viewport" : undefined}
+      onTitleChange={claimTitle}
     />
   );
   // The demo's box (what a Maximize grows): the frame, or maximized the
@@ -117,6 +136,7 @@ export function LiveDemoSection(): ReactNode {
             <DemoScope
               scenario={workspaceDemo}
               onEnter={grow}
+              resume={resume}
               // Until the demo runs: its boot screen where the demo will
               // show — in the frame, or maximized over the tab's surface.
               boot={(state) =>

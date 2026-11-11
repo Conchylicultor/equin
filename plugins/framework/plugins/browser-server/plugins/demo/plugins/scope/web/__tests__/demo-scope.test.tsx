@@ -442,21 +442,82 @@ describe("<DemoScope>", () => {
     expect(start).toHaveBeenCalledTimes(1);
   });
 
+  it("a resumed demo (its page's URL names it) skips the gate: only its loading, then the demo", async () => {
+    stubLocks([]);
+    const scenario = scenarioOf();
+    const seen: { boots: string[]; greeting?: string; entered: string[] } = {
+      boots: [],
+      entered: [],
+    };
+    await renderAsync(
+      <PluginProvider plugins={PLUGINS}>
+        <DemoScope
+          scenario={scenario}
+          resume
+          onEnter={(how) => seen.entered.push(how)}
+          boot={(state) => {
+            seen.boots.push(state.kind);
+            return null;
+          }}
+        >
+          <Probe
+            read={() => useLive(greeting, { who: "ada" })}
+            onRead={(r) => (seen.greeting = textOf(r))}
+          />
+        </DemoScope>
+      </PluginProvider>,
+    );
+    await waitFor(() => expect(seen.greeting).toBe("hello ada (demo)"));
+    expect(new Set(seen.boots)).toEqual(new Set(["starting"]));
+    // The page knew: no entry to hear.
+    expect(seen.entered).toEqual([]);
+  });
+
+  it("a page whose URL says the visitor is out shows the gate, though another tab is in the demo", async () => {
+    const scenario = scenarioOf();
+    stubLocks([`demo-visitor-in ${scenario.id}`]);
+    const seen: { boots: string[]; entered: string[] } = {
+      boots: [],
+      entered: [],
+    };
+    await renderAsync(
+      <PluginProvider plugins={PLUGINS}>
+        <DemoScope
+          scenario={scenario}
+          resume={false}
+          onEnter={(how) => seen.entered.push(how)}
+          boot={(state) => {
+            seen.boots.push(state.kind);
+            return null;
+          }}
+        >
+          <Probe
+            read={() => useLive(greeting, { who: "ada" })}
+            onRead={() => undefined}
+          />
+        </DemoScope>
+      </PluginProvider>,
+    );
+    await new Promise((r) => setTimeout(r, 50));
+    expect(new Set(seen.boots)).toEqual(new Set(["gate"]));
+    expect(seen.entered).toEqual([]);
+  });
+
   it("a tab opened while the visitor is in the demo in another tab joins it, with no gate", async () => {
     const scenario = scenarioOf();
     const presence = `demo-visitor-in ${scenario.id}`;
     // Another tab of this browser: its visitor is in the demo.
     const locks = stubLocks([presence]);
     try {
-      const seen: { boots: string[]; greeting?: string; entered: number } = {
+      const seen: { boots: string[]; greeting?: string; entered: string[] } = {
         boots: [],
-        entered: 0,
+        entered: [],
       };
       await renderAsync(
         <PluginProvider plugins={PLUGINS}>
           <DemoScope
             scenario={scenario}
-            onEnter={() => (seen.entered += 1)}
+            onEnter={(how) => seen.entered.push(how)}
             boot={(state) => {
               seen.boots.push(state.kind);
               return null;
@@ -472,7 +533,8 @@ describe("<DemoScope>", () => {
       await waitFor(() => expect(seen.greeting).toBe("hello ada (demo)"));
       expect(seen.boots).not.toContain("gate");
       expect(seen.boots[0]).toBe("checking");
-      expect(seen.entered).toBe(1);
+      // Joined, not entered: nothing was done in this tab.
+      expect(seen.entered).toEqual(["joined"]);
       // This tab now says so too: the other may close, a third still joins.
       expect(locks.held.get(presence)).toBe(2);
       cleanup();

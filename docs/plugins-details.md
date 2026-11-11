@@ -11862,14 +11862,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`screenshot`** — Landing demo band: equin itself, live, where the desktop picture was — its real server code in a worker on the workspace demo's data (DemoScope around AppEmbed), entered through Enter equin on every visit (a first visit downloads nothing before it; a browser already holding the data starts the host behind it; a maximized URL shows the gate maximized; a tab opened while the visitor is in the demo in another tab joins it with no gate, its frame grown). Entering grows the frame in place for good, nearly as wide and tall as the window; once it runs, Maximize (a view transition over the tab's surface, above the site; Restore at its top edge, a 'Press Esc to restore' notice, Esc) and Reset demo sit under it. Where the visitor is inside the demo, and whether it is maximized, is the homepage's URL (two surface view keys of the landing pane), following /demo's history rule: framed, moves rewrite the current entry; maximized, they are the tab's history.
               - Web:
                 - Contributes: `Website.Section` "Demo" → `LiveDemoSection`
-                - Uses: 24 symbols — full list in [`plugins/apps/plugins/website/plugins/landing/plugins/screenshot/REFERENCE.md`](../plugins/apps/plugins/website/plugins/landing/plugins/screenshot/REFERENCE.md)
+                - Uses: 26 symbols — full list in [`plugins/apps/plugins/website/plugins/landing/plugins/screenshot/REFERENCE.md`](../plugins/apps/plugins/website/plugins/landing/plugins/screenshot/REFERENCE.md)
                   - `apps/demo/chrome` ×5
                   - `apps/website/shell` ×3
                   - `primitives/pane` ×3
+                  - `framework/browser-server/demo/scope` ×2
                   - `primitives/css/ui-kit` ×2
                   - `primitives/dom/render-mode` ×2
                   - `apps-core/app-embed.AppEmbed`
-                  - `framework/browser-server/demo/scope.DemoScope`
+                  - `apps-core/tabs.useClaimTabTitle`
                   - `primitives/css/inline.Inline`
                   - `primitives/css/text.Text`
                   - `primitives/dom/element-size.useElementSize`
@@ -12383,7 +12384,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/tabs.useTabs`
           - `primitives/css/theme-boundary.Theme`
           - `primitives/css/ui-kit.cn`
+          - `primitives/dom/scroll-reveal.REVEAL_BOUNDARY_ATTR`
           - `primitives/error-boundary.PluginErrorBoundary`
+          - `primitives/latest-ref.useLatestRef`
           - `primitives/scope/render-origin.RenderOrigin`
           - `primitives/slot-render.renderIsolated`
           - `shell/toast.showToast`
@@ -12871,6 +12874,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useActivateApp`
           - `useAppLink`
           - `useAppLinkProps`
+          - `useClaimTabTitle`
           - `useDefaultPlacement`
           - `useFocusedTabSet`
           - `useFocusedTabTitle`
@@ -12881,8 +12885,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSurfaceMode`
           - `useTabs`
       - Cross-plugin:
-        - Imported by: 37 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
-          - `apps` ×13
+        - Imported by: 38 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
+          - `apps` ×14
           - `apps-core` ×8
           - `debug` ×3
           - `hints` ×2
@@ -28381,7 +28385,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `trackHostGenerations`
               - Cross-plugin:
                 - Imported by: `framework/browser-server/demo/scope`
-            - **`scope`** — <DemoScope scenario>: renders its subtree against the scenario's browser host — real server code in a worker, on the scenario's seed — and scoped to the host's composition (<PluginScope>), so the page shows exactly the plugins the worker serves. Everything inside reaches the host only (the scope's transport): the build's coverage guard holds the host to serving every read, endpoint and config the scope uses, or declaring it needsMachine (answered unavailable); a key or endpoint it still does not serve fails loudly. A host that fails to boot throws to the error boundary. An optional boot render gates the demo on every visit (DemoBoot: checking, the gate, then starting with the worker's progress): the visitor enters it (enter), or — while they are in the demo in another tab of this browser (a shared Web Lock each such tab holds) — the tab joins it with no gate (onEnter hears both); behind the gate, a browser already holding the demo's data starts the host at once, a first visit only on enter, since it downloads the whole server and its data. Connects to one SharedWorker per build (every tab of the demo shares its server and data), shows why when the host declines the page (data written by a newer version) or stops serving it (another tab took it over), and exposes Reset (useDemoHostControl) — the host wipes its data and every tab reconnects to a fresh one.
+            - **`scope`** — <DemoScope scenario>: renders its subtree against the scenario's browser host — real server code in a worker, on the scenario's seed — and scoped to the host's composition (<PluginScope>), so the page shows exactly the plugins the worker serves. Everything inside reaches the host only (the scope's transport): the build's coverage guard holds the host to serving every read, endpoint and config the scope uses, or declaring it needsMachine (answered unavailable); a key or endpoint it still does not serve fails loudly. A host that fails to boot throws to the error boundary. An optional boot render gates the demo on every visit (DemoBoot: checking, the gate, then starting with the worker's progress): the visitor enters it (enter), or — while they are in the demo in another tab of this browser (a shared Web Lock each such tab holds) — the tab joins it with no gate (onEnter hears both, and which: the gate's click, or a join no one acted on); a page whose own URL says whether the visitor is in decides alone (resume: true — no gate, only the loading; false — the gate, no join); behind the gate, a browser already holding the demo's data starts the host at once, a first visit only on enter, since it downloads the whole server and its data. Connects to one SharedWorker per build (every tab of the demo shares its server and data), shows why when the host declines the page (data written by a newer version) or stops serving it (another tab took it over), and exposes Reset (useDemoHostControl) — the host wipes its data and every tab reconnects to a fresh one.
               - Web:
                 - Uses: 24 symbols — full list in [`plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/REFERENCE.md`](../plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/REFERENCE.md)
                   - `framework/browser-server` ×5
@@ -28402,6 +28406,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/icons/sprites.ScopeIconSymbols`
                 - Exports (types):
                   - `DemoBoot`
+                  - `DemoEntry`
                   - `DemoHostControl`
                 - Exports (values):
                   - `DemoScope`
@@ -48338,12 +48343,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `revealElement`
               - `useRevealOnActive`
           - Cross-plugin:
-            - Imported by: 47 plugins — full list in [`plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md)
+            - Imported by: 48 plugins — full list in [`plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md)
               - `apps` ×17
               - `primitives` ×16
               - `page` ×6
+              - `apps-core` ×2
               - `conversations` ×2
-              - `apps-core/tab-bar`
               - `hints`
               - `layouts/miller`
               - `media/player`
@@ -49190,15 +49195,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `seekPredicate`
     - **`latest-ref`** — Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), and useEventCallback(fn) is the stable-identity callback built on it. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
       - Cross-plugin:
-        - Imported by: 84 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
+        - Imported by: 85 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
           - `primitives` ×33
           - `apps` ×26
           - `page` ×5
           - `conversations` ×3
+          - `apps-core` ×2
           - `map` ×2
           - `network` ×2
           - `shell` ×2
-          - `apps-core/tabs`
           - `build/serve-composition`
           - `debug/slow-ops`
           - `framework/browser-server/demo/scope`
