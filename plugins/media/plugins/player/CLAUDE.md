@@ -56,7 +56,7 @@ controls instead of the pill — the prototype `proto-1794361798-f9dak8`,
 YouTube's model (`components/touch-controls.tsx`):
 
 - A **tap on the picture shows or hides the controls**; it never plays or
-  pauses. Playing, they hide after `TOUCH_HIDE_MS` (3 s); paused, they stay.
+  pauses. Playing, they hide after `TOUCH_HIDE_MS` (1 s); paused, they stay.
 - The **centre** holds −10 s · play/pause (replay at the end) · +10 s, small
   float-glass circles (32 / 48 px inline, 40 / 60 px in full screen).
 - A **double-tap on a side** (left / right ~38 %) seeks 10 s, with a shaded

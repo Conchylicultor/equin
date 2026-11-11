@@ -60,8 +60,12 @@ export function previewSize(
 
 /** The media query a touch-first screen answers: no hover, a coarse pointer. */
 export const TOUCH_QUERY = "(hover: none) and (pointer: coarse)";
-/** How long the touch controls stay up after the last tap, while playing. */
-export const TOUCH_HIDE_MS = 3000;
+/**
+ * How long the touch controls stay up after the last tap, while playing.
+ * Shorter than YouTube's ~3 s on purpose: the picture is the point on a small
+ * screen, and every tap on the chrome restarts the clock.
+ */
+export const TOUCH_HIDE_MS = 1000;
 /** One centre ± button, or one tap of a side double-tap: media seconds. */
 export const TOUCH_SKIP_SECONDS = 10;
 /** A second tap on the same side within this is a double-tap (a seek), not two taps. */

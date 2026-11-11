@@ -262,7 +262,7 @@ export function Player({
   const volumeOpen = volumeAt !== null;
   // Touch: the controls stay up while paused (a tap is the only way to bring
   // them back, so they never leave a paused picture bare) and hide after a
-  // longer spell — no pointer rests on a phone to say the user is done.
+  // short spell of no taps (TOUCH_HIDE_MS).
   const { idle, wake, rest } = useIdle(
     touch
       ? settingsOpen || seeking || media.paused
