@@ -365,7 +365,10 @@ function AttachedTab({
 
   const onPointerDown = (e: PointerEvent<HTMLCanvasElement>) => {
     // Drags that leave the canvas keep reporting to it (mouse events follow
-    // pointer capture).
+    // pointer capture). A mouse or pen drag only: a touch sends no mouse moves
+    // while it slides (only the tap's compatibility clicks), so there is no
+    // touch drag to keep — and the browser already captures a touch implicitly.
+    if (e.pointerType === "touch") return;
     e.currentTarget.setPointerCapture(e.pointerId);
   };
 

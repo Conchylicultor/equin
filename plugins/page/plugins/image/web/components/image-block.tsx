@@ -122,11 +122,13 @@ function LoadedImageBlock({
       handle.releasePointerCapture(ev.pointerId);
       handle.removeEventListener("pointermove", onMove);
       handle.removeEventListener("pointerup", onUp);
+      handle.removeEventListener("pointercancel", onUp);
       setLiveWidth(null);
       editor.update({ attachmentId, width: nextWidth, alt });
     }
     handle.addEventListener("pointermove", onMove);
     handle.addEventListener("pointerup", onUp);
+    handle.addEventListener("pointercancel", onUp);
   }
 
   return (
@@ -175,7 +177,7 @@ function LoadedImageBlock({
             aria-label="Resize image"
             role="slider"
             onPointerDown={onResizePointerDown}
-            className="w-2 cursor-ew-resize"
+            className="w-2 cursor-ew-resize touch-none"
           >
             {/* eslint-disable-next-line layout/no-adhoc-layout -- fractional right-0.5 inset + vertical-center on the drag-grip bar is off the spacing ramp */}
             <div className="pointer-events-none absolute top-1/2 right-0.5 h-8 w-1 -translate-y-1/2 rounded-md bg-foreground/30 opacity-0 transition-opacity group-hover/hover-reveal:opacity-100" />

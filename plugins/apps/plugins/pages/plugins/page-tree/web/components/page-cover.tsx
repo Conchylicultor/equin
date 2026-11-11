@@ -315,9 +315,12 @@ function CoverImage({
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
         className={cn(
           "size-full",
-          repositioning && "cursor-grab active:cursor-grabbing",
+          // A vertical drag on a touch screen: claim it, or the browser scrolls
+          // the page instead of moving the image.
+          repositioning && "cursor-grab touch-none active:cursor-grabbing",
         )}
       >
         <img

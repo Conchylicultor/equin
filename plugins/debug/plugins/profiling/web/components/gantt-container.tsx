@@ -255,7 +255,9 @@ export function GanttContainer({
   return (
     <div
       ref={containerRef}
-      className="relative select-none"
+      // The drag-zoom is sideways: on a touch screen it claims the x axis and
+      // leaves vertical panning to the page (a bare drag would be the browser's).
+      className="relative touch-pan-y select-none"
       onPointerDown={handlePointerDown}
       onDoubleClick={zoom.isZoomed ? zoom.reset : undefined}
     >

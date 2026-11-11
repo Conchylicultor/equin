@@ -99,7 +99,7 @@ function JogWheel(): ReactElement {
         aria-valuemax={100}
         aria-valuenow={value}
         data-instance-id={instanceId}
-        className="h-4 w-28 rounded-full bg-muted"
+        className="h-4 w-28 touch-pan-y rounded-full bg-muted"
         onPointerDown={(e) => {
           e.currentTarget.setPointerCapture(e.pointerId);
           setDragging(true);

@@ -158,7 +158,7 @@ export function LoopRegion({
         onPointerMove={startHandleDrag}
         x={{ center: pct(startF), size: 14 }}
         y={HANDLE_BAND}
-        className="pointer-events-auto cursor-ew-resize"
+        className="pointer-events-auto cursor-ew-resize touch-none"
         aria-label="Loop start"
       >
         <Placed
@@ -175,7 +175,7 @@ export function LoopRegion({
         onPointerMove={endHandleDrag}
         x={{ center: pct(endF), size: 14 }}
         y={HANDLE_BAND}
-        className="pointer-events-auto cursor-ew-resize"
+        className="pointer-events-auto cursor-ew-resize touch-none"
         aria-label="Loop end"
       >
         <Placed

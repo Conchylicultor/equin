@@ -292,7 +292,7 @@ function BoundaryHandle({
       {...drag}
       x="fill"
       y={{ center: y, size: HANDLE_HIT_PX }}
-      className="pointer-events-auto cursor-ns-resize hover:bg-primary/25"
+      className="pointer-events-auto cursor-ns-resize touch-none hover:bg-primary/25"
       aria-label={label}
       title={`${label} — drag to move, hold Alt to move off the bar lines`}
     />
@@ -327,7 +327,7 @@ function LoopLabel({
       y={{ start: y, shift: side === "above" ? "-100%" : undefined }}
       // eslint-disable-next-line text/no-adhoc-typography -- leading-none keeps the single-letter edge chip tight against the band
       className={cn(
-        "pointer-events-auto cursor-ns-resize rounded-l-sm px-xs py-2xs text-2xs font-bold leading-none text-primary-foreground shadow-sm",
+        "pointer-events-auto cursor-ns-resize touch-none rounded-l-sm px-xs py-2xs text-2xs font-bold leading-none text-primary-foreground shadow-sm",
         enabled ? "bg-primary" : "bg-primary/55",
       )}
     >
