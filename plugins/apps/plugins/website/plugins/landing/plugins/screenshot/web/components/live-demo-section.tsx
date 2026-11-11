@@ -1,6 +1,5 @@
 import {
   useCallback,
-  useEffect,
   useState,
   type CSSProperties,
   type ReactNode,
@@ -10,6 +9,10 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
+import {
+  useViewportSize,
+  type ViewportSize,
+} from "@plugins/primitives/plugins/dom/plugins/render-mode/web";
 import { revealElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -27,6 +30,8 @@ import { workspaceDemo } from "@plugins/apps/plugins/website/plugins/demos/plugi
 import { WebsiteBand } from "@plugins/apps/plugins/website/plugins/shell/web";
 import { useDemoPlace } from "../internal/demo-place";
 import "./live-demo-section.css";
+
+const NO_WINDOW: ViewportSize = { width: 0, height: 0 };
 
 const CAPTION = "equin, running entirely in your browser.";
 
@@ -68,7 +73,9 @@ export function LiveDemoSection(): ReactNode {
   const place = useDemoPlace();
   const { maximized, setMaximized } = place;
   const [columnRef, column] = useElementSize<HTMLDivElement>();
-  const viewport = useViewportSize();
+  // A static render has no window; its frame is never grown (no click runs),
+  // and only the grown frame reads the window's size.
+  const viewport = useViewportSize(NO_WINDOW);
   const [figure, setFigure] = useState<HTMLElement | null>(null);
   const [controls, setControls] = useState<HTMLElement | null>(null);
 
@@ -179,26 +186,6 @@ export function LiveDemoSection(): ReactNode {
       </div>
     </WebsiteBand>
   );
-}
-
-interface ViewportSize {
-  width: number;
-  height: number;
-}
-
-/** The window's size, kept current by its resize events. */
-function useViewportSize(): ViewportSize {
-  const [size, setSize] = useState<ViewportSize>(() => ({
-    width: window.innerWidth,
-    height: window.innerHeight,
-  }));
-  useEffect(() => {
-    const changed = () =>
-      setSize({ width: window.innerWidth, height: window.innerHeight });
-    window.addEventListener("resize", changed);
-    return () => window.removeEventListener("resize", changed);
-  }, []);
-  return size;
 }
 
 /**

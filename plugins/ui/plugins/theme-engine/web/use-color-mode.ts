@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
+import { useMediaQuery } from "@plugins/primitives/plugins/dom/plugins/render-mode/web";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { Apps } from "@plugins/apps-core/web";
 import { useRootThemeScopeState } from "@plugins/apps-core/plugins/theme-scope/web";
@@ -125,7 +126,7 @@ export function useColorModeSetting(): RootColorModeSetting {
     },
     [app, setGlobal, setApp],
   );
-  const systemDark = useSystemDark(setting.effective === "system");
+  const systemDark = useSystemDark();
   if (!root.known) return { known: false };
   return {
     known: true,
@@ -135,22 +136,9 @@ export function useColorModeSetting(): RootColorModeSetting {
   };
 }
 
-/** Whether the OS prefers dark, live — subscribed only while `active`. */
-export function useSystemDark(active: boolean): boolean {
-  const [systemDark, setSystemDark] = useState(
-    () =>
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-color-scheme: dark)").matches,
-  );
-  useEffect(() => {
-    if (!active) return;
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const apply = () => setSystemDark(mq.matches);
-    apply();
-    mq.addEventListener("change", apply);
-    return () => mq.removeEventListener("change", apply);
-  }, [active]);
-  return systemDark;
+/** Whether the OS prefers dark, live; light in a static render (no OS to ask). */
+export function useSystemDark(): boolean {
+  return useMediaQuery("(prefers-color-scheme: dark)", false);
 }
 
 /** A configured mode as worn: `system` collapsed against the OS. */

@@ -1,4 +1,4 @@
-import { useContext, useLayoutEffect, useState, type ReactNode } from "react";
+import { useContext, useLayoutEffect, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
   cn,
@@ -8,6 +8,8 @@ import {
   type InTreeLayer,
   zLayerClass,
 } from "@plugins/primitives/plugins/css/plugins/z-layers/web";
+import { renderMode } from "@plugins/primitives/plugins/dom/plugins/render-mode/core";
+import { useOwnedElement } from "@plugins/primitives/plugins/dom/plugins/render-mode/web";
 import type { Passthrough } from "@plugins/primitives/plugins/passthrough/core";
 import { SurfaceOverlayHostContext } from "./surface-overlay-host";
 
@@ -69,7 +71,14 @@ export interface SurfaceOverlayProps extends Passthrough<HTMLDivElement> {
  * primitive that quietly delivers the second one when the first is unavailable
  * is a bug that only shows up in a screenshot.
  */
-export function SurfaceOverlay({
+export function SurfaceOverlay(props: SurfaceOverlayProps) {
+  // A static render (HTML for robots, never hydrated) has no document to mint
+  // the container in, and what floats over the surface is not page content.
+  if (renderMode() === "static") return null;
+  return <LiveSurfaceOverlay {...props} />;
+}
+
+function LiveSurfaceOverlay({
   layer = "overlay",
   className,
   children,
@@ -81,8 +90,8 @@ export function SurfaceOverlay({
   // `display: contents` generates no box, so this node is neither a containing
   // block nor a flex/grid item: the portaled root's `absolute inset-0` resolves
   // against the HOST's `relative` box, exactly as if it were rendered there.
-  const [container] = useState(() => {
-    const el = document.createElement("div");
+  const container = useOwnedElement("<SurfaceOverlay> container", (doc) => {
+    const el = doc.createElement("div");
     el.style.display = "contents";
     return el;
   });

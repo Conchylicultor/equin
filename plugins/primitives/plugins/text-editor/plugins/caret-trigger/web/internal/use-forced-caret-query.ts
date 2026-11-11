@@ -46,7 +46,7 @@ export function useForcedCaretQuery(opts: UseForcedCaretQueryOpts): CaretQuery {
   // currently holds focus (an editor focused before this hook mounted).
   const [focused, setFocused] = useState(() => {
     const root = lexicalEditor.getRootElement();
-    return !!root && root.contains(document.activeElement);
+    return !!root && root.contains(root.ownerDocument.activeElement);
   });
 
   // The last reflected query, so the update listener resets the active row

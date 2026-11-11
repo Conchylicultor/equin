@@ -151,7 +151,7 @@ slowness/freeze/memory-pressure incident across the cluster.
 - Description: Timeline tab for the Slow Events pane: the unified cross-worktree wall-clock Gantt — per-worktree lanes of traces / slow-ops / reports / builds / boots with health heat strips and cross-worktree incident bands, read live from the debug.timeline.scan value as the fan-out resolves. Cross-worktree unified timeline: fans out over every live worktree DB fork (traces, slow-op samples, reports, builds) plus the per-worktree disk logs (boot events, health series), normalizes everything to wall-clock TimelineEvents, and serves it as the debug.timeline.scan live value — one scan per window, pushed as each cell resolves.
 - Web:
   - Contributes: `SlowEvents.View` "Timeline" → `TimelineView`
-  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug/profiling` ×7
     - `debug/trace/pane` ×5
     - `primitives/css/coords` ×2
@@ -173,6 +173,7 @@ slowness/freeze/memory-pressure incident across the cluster.
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.SegmentedControl`
+    - `primitives/dom/render-mode.useBrowserValue`
     - `primitives/icon-button.IconButton`
     - `primitives/pane.useOpenPane`
     - `primitives/syntax-highlight.HighlightedCode`

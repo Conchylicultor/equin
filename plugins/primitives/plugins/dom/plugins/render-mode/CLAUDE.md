@@ -29,6 +29,22 @@ into the markup. `renderMode()` is how a building block knows to.
   (a link's `data-link`, a closed fold's content). A feature does not branch on
   it — fix the building block instead.
 - **A leaf with no imports** (core), so leaves like `link-gesture` can read it.
+- **Reading the browser while rendering** (`web/`). A component that reads
+  `window` / `document` / `navigator` / `matchMedia` in its body throws in a
+  static render (no DOM) and, live, reads a value that never updates. Such a
+  read goes through one of:
+  - `useBrowserValue({ name, read, subscribe?, staticValue? })` — live,
+    `useSyncExternalStore` over `read` (re-read on every `subscribe`
+    notification; `read` returns a primitive or a cached object); static,
+    `staticValue` — or, when omitted, a loud `NoStaticValueError` naming
+    `name` (a value with no meaningful static answer: `location.host`).
+  - `useMediaQuery(query, staticValue)`, `useViewportSize(staticValue?)`.
+  - `useOwnedElement(name, create)` — a DOM node a component mints once (a
+    portal container, a stage it moves). It has no static form: a building
+    block a static render reaches branches on `renderMode()` above it
+    (`SurfaceOverlay`, `CursorAnchoredMenu` draw nothing statically).
+
+  `dom-access-safety/no-render-time-dom` enforces it (no debt exemptions).
 - Tests: vitest runs each `web/__tests__/` file in its own module registry, so a
   suite that declares `"static"` at its top reaches no other suite (see
   `link-gesture/web/__tests__/link-props-static.test.ts`).
@@ -37,16 +53,30 @@ into the markup. `renderMode()` is how a building block knows to.
 
 ## Plugin reference
 
-- Description: Whether this process renders the app live in a browser or once, statically, to HTML for robots (never hydrated): renderMode() is "live" unless a static-render process declared "static" (declareRenderMode) before loading any app module.
+- Description: Reading the browser while rendering, safely in both modes: useBrowserValue({ name, read, subscribe?, staticValue? }) (live: useSyncExternalStore, re-read on every change; static: staticValue, or a loud NoStaticValueError), useMediaQuery(query, staticValue), useViewportSize(staticValue), and useOwnedElement(name, create) — a DOM node a component mints once, which has no static form. The one place a render-time read of window / document / navigator / matchMedia happens (dom-access-safety/no-render-time-dom).
 - Cross-plugin:
-  - Imported by:
+  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives` ×10
+    - `apps` ×2
+    - `conversations/conversation-view/jsonl-viewer/steady-reveal`
+    - `debug/timeline`
+    - `fullscreen`
+    - `map/google`
     - `media/player`
-    - `primitives/adaptive-bar`
-    - `primitives/collapsible`
-    - `primitives/css/viewport-overlay`
-    - `primitives/dom/static-render`
-    - `primitives/link-gesture`
-    - `primitives/loading`
+    - `menu-bar`
+    - `screenshot/draw-on-app`
+    - `tasks/worktree-identity`
+    - `ui/theme-engine`
+- Web:
+  - Exports (types):
+    - `BrowserValueOptions`
+    - `ViewportSize`
+  - Exports (values):
+    - `NoStaticValueError`
+    - `useBrowserValue`
+    - `useMediaQuery`
+    - `useOwnedElement`
+    - `useViewportSize`
 - Core:
   - Exports (types): `RenderMode`
   - Exports (values):

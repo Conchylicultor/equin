@@ -49,6 +49,7 @@ export type ExemptableRuleId =
   | "detached-work-safety/no-untracked-detached-work"
   | "detail-sections/no-adhoc-detail-sections"
   | "dom-access-safety/no-module-scope-dom"
+  | "dom-access-safety/no-render-time-dom"
   | "dom-access-safety/no-root-style-write"
   | "dom-selection-safety/no-raw-selection-range"
   | "drizzle-cli-safety/no-adhoc-drizzle-cli"
@@ -217,6 +218,7 @@ export type ExemptableRuleId =
 
 /** Declared `noDebt` by their owner: a sanctioned exemption only. */
 export type SanctionedOnlyRuleId = 
+  | "dom-access-safety/no-render-time-dom"
   | "endpoints/no-asset-path-read"
   | "endpoints/no-raw-web-fetch"
   | "frame/no-raw-frame"

@@ -4,6 +4,10 @@ import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/we
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useNativeHost } from "../native-host";
+import { useBrowserValue } from "@plugins/primitives/plugins/dom/plugins/render-mode/web";
+
+const readOrigin = (): string => window.location.origin;
+const readHostname = (): string => window.location.hostname;
 
 /**
  * The panel's last row: equin is running here (the page is served, so the
@@ -13,9 +17,13 @@ import { useNativeHost } from "../native-host";
  */
 export function PanelFooter() {
   const host = useNativeHost();
+  const origin = useBrowserValue({ name: "location.origin", read: readOrigin });
+  const hostname = useBrowserValue({
+    name: "location.hostname",
+    read: readHostname,
+  });
   if (host.kind === "pending")
     return <Loading variant="block" className="h-6 w-full" />;
-  const { origin, hostname } = window.location;
   const home = `${origin}/`;
   const openUrl = host.kind === "present" ? host.openUrl : null;
   const label = (

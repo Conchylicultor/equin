@@ -1,23 +1,26 @@
-import { useEffect, useState } from "react";
 import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { useBrowserValue } from "@plugins/primitives/plugins/dom/plugins/render-mode/web";
 
 const fullscreenIcon = symbol("fullscreen");
 const exitFullscreenIcon = symbol("fullscreen-exit");
 
-/** Tracks the document's fullscreen state, kept in sync via `fullscreenchange`. */
+function subscribeFullscreen(onChange: () => void): () => void {
+  document.addEventListener("fullscreenchange", onChange);
+  return () => document.removeEventListener("fullscreenchange", onChange);
+}
+const readIsFullscreen = (): boolean => document.fullscreenElement !== null;
+
+/** The document's fullscreen state, kept in sync via `fullscreenchange`; never fullscreen in a static render. */
 function useIsFullscreen() {
-  const [isFullscreen, setIsFullscreen] = useState(
-    () => document.fullscreenElement !== null,
-  );
-  useEffect(() => {
-    const onChange = () => setIsFullscreen(document.fullscreenElement !== null);
-    document.addEventListener("fullscreenchange", onChange);
-    return () => document.removeEventListener("fullscreenchange", onChange);
-  }, []);
-  return isFullscreen;
+  return useBrowserValue({
+    name: "document.fullscreenElement",
+    read: readIsFullscreen,
+    subscribe: subscribeFullscreen,
+    staticValue: false,
+  });
 }
 
 /** Enter browser fullscreen, or leave it when already there. */

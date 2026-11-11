@@ -83,6 +83,7 @@ export function MarkHostProvider({ children }: { children: ReactNode }) {
   const host = useMemo<MarkHost | null>(() => {
     if (probe === null) return null;
     const swatch = probe.firstElementChild;
+    // eslint-disable-next-line dom-access-safety/no-render-time-dom -- past the `probe === null` return: the probe is a mounted element, so a DOM exists
     if (!(swatch instanceof HTMLElement)) {
       throw new Error("map mark host: the colour swatch is missing");
     }

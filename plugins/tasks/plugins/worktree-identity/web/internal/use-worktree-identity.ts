@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useBrowserValue } from "@plugins/primitives/plugins/dom/plugins/render-mode/web";
 import { namespaceFromHost } from "@plugins/infra/plugins/namespace/core";
 import { rowOrStale, useLive } from "@plugins/network/plugins/live/web";
 import { attemptRows, taskRows } from "@plugins/tasks/plugins/tasks-core/core";
@@ -10,13 +11,15 @@ import {
   type WorktreePlace,
 } from "./identity";
 
+const readHost = (): string => window.location.host;
+
 /**
- * Where this page is served from. Read inside a hook rather than at module
- * scope, which would make the module unimportable without a DOM. The host
- * never changes for the life of the page, hence the empty deps.
+ * Where this page is served from. The host never changes for the life of the
+ * page; a static render has no host to answer with, so it fails loudly.
  */
 export function useWorktreePlace(): WorktreePlace {
-  return useMemo(() => placeOf(namespaceFromHost(window.location.host)), []);
+  const host = useBrowserValue({ name: "location.host", read: readHost });
+  return useMemo(() => placeOf(namespaceFromHost(host)), [host]);
 }
 
 /**

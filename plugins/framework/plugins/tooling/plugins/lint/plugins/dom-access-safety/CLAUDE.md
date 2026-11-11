@@ -1,6 +1,6 @@
 # dom-access-safety
 
-Contributes two repo-wide ESLint rules. `no-module-scope-dom`: in `plugins/**/web/**`,
+Contributes three repo-wide ESLint rules. `no-module-scope-dom`: in `plugins/**/web/**`,
 a browser global (`window`, `document`, `navigator`, `localStorage`,
 `sessionStorage`, `matchMedia`) may not be read **during module evaluation** —
 that runs on import, making every importing module unloadable under `bun test`
@@ -20,6 +20,34 @@ Two deliberate holes, both load-bearing:
 
 Rationale and the failure it came from:
 [`research/2026-08-08-global-module-scope-dom-import-safety.md`](../../../../../../../../research/2026-08-08-global-module-scope-dom-import-safety.md).
+
+## `no-render-time-dom`
+
+In `plugins/**/web/**`, a browser global (the module-scope list plus
+`location`, `history`, `screen`, `getComputedStyle`, `Element`, `Node` and every
+`HTML*Element` / `SVG*Element` class) may not be read **while a component or
+hook renders**: its body, a render-time callback (`useState` / `useMemo` /
+`useReducer` initialisers, `useSyncExternalStore`'s `getServerSnapshot`), or an
+IIFE in one. A static render (`primitives/dom/render-mode`: the website's
+HTML for robots) has no DOM and throws there; live, the read never updates.
+The fix is `render-mode/web`'s `useBrowserValue` / `useMediaQuery` /
+`useViewportSize` / `useOwnedElement`, an effect or handler, or a
+`renderMode()` branch in the building block. Unlike `no-module-scope-dom`, a
+`typeof` guard does not pass: it no longer throws, but still never updates.
+
+What the rule knows is safe, so it needs no disable:
+
+- **Behind a `renderMode()` test** — the live branch of
+  `renderMode() === "static" ? … : …` (any `===` / `!==` / `"live"` spelling),
+  `renderMode() === "live" && …`, or everything after
+  `if (renderMode() === "static") return | throw …`.
+- **A live-only component** — not exported, and every use of it in its file
+  is behind such a test or inside another live-only component
+  (`MediaPlayer` → `LiveMediaPlayer`, `AdaptiveBarItem` → `PortaledBarItem`).
+
+A read guarded by something else it cannot see (an element that exists only
+once mounted: `el !== null && el instanceof HTMLVideoElement`) takes a
+per-site disable with that reason. `noDebt`: no debt exemption is accepted.
 
 ## `no-root-style-write`
 

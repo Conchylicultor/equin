@@ -329,6 +329,7 @@ path is the `""` entry.
     - `network/live/live-state.foldResource`
     - `primitives/css/theme-boundary.useColorScheme`
     - `primitives/css/theme-boundary.usePublishColorScheme`
+    - `primitives/dom/render-mode.useMediaQuery`
     - `primitives/dom/web-storage.defineStore`
     - `primitives/slot-render.defineRenderSlot`
   - Exports (types):

@@ -106,6 +106,12 @@ export function steadyAnchor(
 
 type PositionerAnchor = PopoverPrimitive.Positioner.Props["anchor"];
 
+/** `value` is a DOM element — `false` where there is no DOM at all (a static
+ *  render), rather than a `ReferenceError` on the `Element` class. */
+function isElement(value: unknown): value is Element {
+  return typeof Element !== "undefined" && value instanceof Element;
+}
+
 /**
  * The anchor `PopoverContent` hands base-ui: whatever element it would have
  * positioned against — the caller's `anchor` (an element, a ref, or a function
@@ -123,14 +129,12 @@ export function useSteadyAnchor(
     // No anchor (`null` included, as base-ui reads it): the trigger.
     if (anchor == null)
       return trigger ? steadyAnchor(trigger, null, positionerRef) : anchor;
-    if (anchor instanceof Element)
-      return steadyAnchor(anchor, null, positionerRef);
+    if (isElement(anchor)) return steadyAnchor(anchor, null, positionerRef);
     if (typeof anchor === "function") {
       // Base-ui calls it once per open; one steady anchor per call.
       return () => {
         const resolved = anchor();
-        if (resolved !== null && !(resolved instanceof Element))
-          return resolved;
+        if (resolved !== null && !isElement(resolved)) return resolved;
         const el = resolved ?? trigger;
         return el && steadyAnchor(el, null, positionerRef);
       };

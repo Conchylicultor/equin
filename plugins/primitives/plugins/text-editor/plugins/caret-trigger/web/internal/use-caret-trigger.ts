@@ -96,7 +96,7 @@ export function useCaretQuery(opts: UseCaretQueryOpts): CaretQuery {
   // root currently holds focus (an editor focused before this hook mounted).
   const [focused, setFocused] = useState(() => {
     const root = lexicalEditor.getRootElement();
-    return !!root && root.contains(document.activeElement);
+    return !!root && root.contains(root.ownerDocument.activeElement);
   });
 
   const { isCaretOwner, publish } = useCaretOwner(lexicalEditor, opts.id);

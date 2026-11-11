@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactElement, type ReactNode } from "react";
+import { useBrowserValue } from "@plugins/primitives/plugins/dom/plugins/render-mode/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
@@ -112,6 +113,8 @@ export function TimelineView(): ReactElement {
   }
 }
 
+const readCpuCount = (): number => navigator.hardwareConcurrency || 8;
+
 /** One scan, as far as it got: the Gantt over the cells and health it holds. */
 function TimelineScanView({
   scan,
@@ -128,7 +131,10 @@ function TimelineScanView({
   const [selectedBarId, setSelectedBarId] = useState<string | null>(null);
   // The browser runs on the same host as the cluster (single-instance-per-user
   // deployment), so its core count is the honest denominator for load ratios.
-  const cpuCount = navigator.hardwareConcurrency || 8;
+  const cpuCount = useBrowserValue({
+    name: "navigator.hardwareConcurrency",
+    read: readCpuCount,
+  });
 
   const healthByLane = useMemo(() => mergeHealth(health), [health]);
   // Duress episodes are host-global: their ok chunk renders as cross-lane

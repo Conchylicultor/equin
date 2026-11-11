@@ -1,3 +1,4 @@
+import { useOwnedElement } from "@plugins/primitives/plugins/dom/plugins/render-mode/web";
 import {
   createContext,
   useCallback,
@@ -70,12 +71,12 @@ interface Claim {
  */
 export function RecordingProvider({ children }: { children: ReactNode }) {
   const controller = useYouTubePlayer();
-  const [stage] = useState(() => {
-    const el = document.createElement("div");
+  const stage = useOwnedElement("the recording stage", (doc) => {
+    const el = doc.createElement("div");
     el.className = "size-full";
     return el;
   });
-  const [parking] = useState(createParking);
+  const parking = useOwnedElement("the recording parking spot", createParking);
   // Runs after any viewport's own layout effect (a parent's runs last), so a
   // viewport mounted in the same commit already holds the stage.
   useLayoutEffect(() => {
@@ -115,8 +116,8 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
 }
 
 /** The off-screen parking spot: player-sized, so YouTube serves it as one. */
-function createParking(): HTMLDivElement {
-  const el = document.createElement("div");
+function createParking(doc: Document): HTMLDivElement {
+  const el = doc.createElement("div");
   el.setAttribute("aria-hidden", "true");
   el.inert = true;
   Object.assign(el.style, {

@@ -96,7 +96,7 @@ export function ColorSchemePublisher() {
 /** What scope `appId` (undefined = the desktop) wears now, preview included. */
 function useWornScheme(appId: string | undefined): ColorMode {
   const effective = useColorModeSettingFor(appId).effective;
-  const systemDark = useSystemDark(effective === "system");
+  const systemDark = useSystemDark();
   const preview = usePreview(appId);
   return preview ?? resolveColorMode(effective, systemDark);
 }

@@ -5,6 +5,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useBrowserValue } from "@plugins/primitives/plugins/dom/plugins/render-mode/web";
 import { usePluginScopeId } from "@plugins/framework/plugins/web-sdk/core";
 import {
   COLOR_SCHEME_ATTR,
@@ -123,15 +124,22 @@ type SchemeContext = ColorScheme;
 
 const ColorSchemeContext = createContext<SchemeContext | null>(null);
 
-/** The root's scheme: as published, else what `<html>` carries now (the
- *  server's first frame set it before anything mounted). */
-function useRootScheme(): ColorScheme {
-  const published = usePublishedColorScheme(PLUGIN_SCOPE_ROOT_THEME);
-  if (published !== undefined) return published;
-  return typeof document !== "undefined" &&
-    document.documentElement.getAttribute(COLOR_SCHEME_ATTR) === "dark"
+const readHtmlScheme = (): ColorScheme =>
+  document.documentElement.getAttribute(COLOR_SCHEME_ATTR) === "dark"
     ? "dark"
     : "light";
+
+/** The root's scheme: as published, else what `<html>` carries (the server's
+ *  first frame set it before anything mounted; a static render, which has no
+ *  `<html>` to read, wears light until a scheme is published). */
+function useRootScheme(): ColorScheme {
+  const published = usePublishedColorScheme(PLUGIN_SCOPE_ROOT_THEME);
+  const html = useBrowserValue<ColorScheme>({
+    name: "<html> data-color-scheme",
+    read: readHtmlScheme,
+    staticValue: "light",
+  });
+  return published ?? html;
 }
 
 /**

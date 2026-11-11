@@ -8,6 +8,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 import { flushSync } from "react-dom";
+import { useBrowserValue } from "@plugins/primitives/plugins/dom/plugins/render-mode/web";
 import {
   ControlSizeProvider,
   cn,
@@ -109,6 +110,8 @@ const TRANSITION_FADE = "opacity 200ms";
 // The first-open hint shows once per page load, not on every open. A page-wide
 // fact on purpose (not per viewer): it is about whether this user has been told.
 let hintShown = false;
+
+const readPageOrigin = (): string => window.location.origin;
 
 /** `el`'s box in stage coordinates, when any of it is on screen. */
 function rectOnStage(el: Element, stage: Element): Rect | null {
@@ -260,6 +263,10 @@ function ViewerFrame({
   const imgRef = useRef<HTMLImageElement | null>(null);
   const previousFocus = useRef<Element | null>(null);
   const timers = useRef(new Set<number>());
+  const pageOrigin = useBrowserValue({
+    name: "location.origin",
+    read: readPageOrigin,
+  });
 
   const later = useCallback((fn: () => void, ms: number) => {
     const id = window.setTimeout(() => {
@@ -556,10 +563,7 @@ function ViewerFrame({
   }, [gestures, wake]);
 
   // --- actions -------------------------------------------------------------
-  const capabilities = imageCapabilities(
-    shown.image.src,
-    window.location.origin,
-  );
+  const capabilities = imageCapabilities(shown.image.src, pageOrigin);
   const statusTimer = useRef<number | null>(null);
   const feedback = useEventCallback((message: string) => {
     cancel(statusTimer.current);

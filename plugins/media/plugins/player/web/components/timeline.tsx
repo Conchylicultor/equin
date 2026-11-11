@@ -36,6 +36,7 @@ export function Timeline({
         buffered={buffered}
         // `el` first: no element (a static render) means no DOM, and no
         // `HTMLVideoElement` class to test against.
+        // eslint-disable-next-line dom-access-safety/no-render-time-dom -- read only once `el`, a mounted element, exists — never in a static render
         video={el !== null && el instanceof HTMLVideoElement ? el : null}
         onSeek={onSeek}
         onDragChange={onSeekDrag}

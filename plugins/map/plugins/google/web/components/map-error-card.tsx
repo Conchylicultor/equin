@@ -1,6 +1,9 @@
+import { useBrowserValue } from "@plugins/primitives/plugins/dom/plugins/render-mode/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+
+const readOrigin = (): string => window.location.origin;
 
 export type MapErrorReason =
   { kind: "refused" } | { kind: "load"; detail: string };
@@ -10,6 +13,7 @@ export type MapErrorReason =
  * script that did not load are different fixes, so they say different things.
  */
 export function MapErrorCard({ reason }: { reason: MapErrorReason }) {
+  const origin = useBrowserValue({ name: "location.origin", read: readOrigin });
   return (
     <Center className="size-full">
       <Stack gap="xs" className="max-w-md px-md" role="alert">
@@ -22,9 +26,8 @@ export function MapErrorCard({ reason }: { reason: MapErrorReason }) {
               Usually one of these, in the Google Cloud console:
             </Text>
             <Text variant="caption" tone="muted">
-              • the key's HTTP referrers do not include this page (
-              {window.location.origin}) — add{" "}
-              <code>http://*.localhost:9000/*</code>;
+              • the key's HTTP referrers do not include this page ({origin}) —
+              add <code>http://*.localhost:9000/*</code>;
             </Text>
             <Text variant="caption" tone="muted">
               • the Maps JavaScript API is not enabled for the key's project, or

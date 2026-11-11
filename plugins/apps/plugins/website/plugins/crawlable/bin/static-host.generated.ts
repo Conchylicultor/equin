@@ -214,6 +214,7 @@ export const staticHosts: Record<string, StaticHost> = {
       "primitives/plugins/dom/plugins/in-view",
       "primitives/plugins/dom/plugins/layout-host",
       "primitives/plugins/dom/plugins/overscroll-hint",
+      "primitives/plugins/dom/plugins/render-mode",
       "primitives/plugins/dom/plugins/scroll-reveal",
       "primitives/plugins/dom/plugins/web-storage",
       "primitives/plugins/dom/plugins/web-storage/plugins/health",

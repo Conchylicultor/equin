@@ -9205,7 +9205,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ConfigV2.WebRegister` "sonata.recording"
               - `ConfigV2.WebRegister` "sonata.recording-video"
               - `SonataSession.Provider` → `RecordingProvider`
-            - Uses: 23 symbols — full list in [`plugins/apps/plugins/sonata/plugins/recording/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/recording/REFERENCE.md)
+            - Uses: 24 symbols — full list in [`plugins/apps/plugins/sonata/plugins/recording/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/recording/REFERENCE.md)
               - `integrations/youtube` ×5
               - `config_v2` ×3
               - `apps/sonata/session` ×2
@@ -9219,6 +9219,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/switch.Switch`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
+              - `primitives/dom/render-mode.useOwnedElement`
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useLatestRef`
               - `primitives/slot-render.defineMountSlot`
@@ -11861,11 +11862,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`screenshot`** — Landing demo band: equin itself, live, where the desktop picture was — its real server code in a worker on the workspace demo's data (DemoScope around AppEmbed), entered through Enter equin on every visit (a first visit downloads nothing before it; a browser already holding the data starts the host behind it; a maximized URL shows the gate maximized; a tab opened while the visitor is in the demo in another tab joins it with no gate, its frame grown). Entering grows the frame in place for good, nearly as wide and tall as the window; once it runs, Maximize (a view transition over the tab's surface, above the site; Restore at its top edge, a 'Press Esc to restore' notice, Esc) and Reset demo sit under it. Where the visitor is inside the demo, and whether it is maximized, is the homepage's URL (two surface view keys of the landing pane), following /demo's history rule: framed, moves rewrite the current entry; maximized, they are the tab's history.
               - Web:
                 - Contributes: `Website.Section` "Demo" → `LiveDemoSection`
-                - Uses: 22 symbols — full list in [`plugins/apps/plugins/website/plugins/landing/plugins/screenshot/REFERENCE.md`](../plugins/apps/plugins/website/plugins/landing/plugins/screenshot/REFERENCE.md)
+                - Uses: 24 symbols — full list in [`plugins/apps/plugins/website/plugins/landing/plugins/screenshot/REFERENCE.md`](../plugins/apps/plugins/website/plugins/landing/plugins/screenshot/REFERENCE.md)
                   - `apps/demo/chrome` ×5
                   - `apps/website/shell` ×3
                   - `primitives/pane` ×3
                   - `primitives/css/ui-kit` ×2
+                  - `primitives/dom/render-mode` ×2
                   - `apps-core/app-embed.AppEmbed`
                   - `framework/browser-server/demo/scope.DemoScope`
                   - `primitives/css/inline.Inline`
@@ -18056,6 +18058,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/conversation-view/jsonl-viewer/user-text`
                   - `conversations/conversation-view/rewind`
             - **`steady-reveal`** — Steady reveal for text an agent is still writing: useSteadyReveal drains a growing text at an even pace over the bursts it arrives in, its newest words fading in through a soft tail painted with the CSS Custom Highlight API, in the foreground or muted tone. Shared by the streaming reply and the streaming thought.
+              - Web:
+                - Uses: `primitives/dom/render-mode.useMediaQuery`
+                - Exports (types): `RevealTone`
+                - Exports (values): `useSteadyReveal`
               - Cross-plugin:
                 - Uses tokens:
                   - `ui/tokens/color-palette --foreground`
@@ -18063,9 +18069,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by:
                   - `conversations/conversation-view/jsonl-viewer/assistant-text`
                   - `conversations/conversation-view/jsonl-viewer/assistant-thinking`
-              - Web:
-                - Exports (types): `RevealTone`
-                - Exports (values): `useSteadyReveal`
             - **`subagents`** — The sub-agent surfaces: how one sub-agent is going (state, elapsed, the one thing it most recently did) for the card that launched it, and the pane body that shows its write-up and its own live transcript, drawn by the conversation's own TranscriptView. The reads behind the two live values the machine half serves: what every sub-agent is doing right now (one bounded tail read per change), and one sub-agent's own transcript, parsed by the same reader as the main conversation; it serves the parent-transcript facts sub-agent state joins on (Agent / Workflow calls, task notifications, idle and resume times), folded over the whole parent transcript.
               - Server:
                 - Contributes:
@@ -25478,7 +25481,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`timeline`** — Timeline tab for the Slow Events pane: the unified cross-worktree wall-clock Gantt — per-worktree lanes of traces / slow-ops / reports / builds / boots with health heat strips and cross-worktree incident bands, read live from the debug.timeline.scan value as the fan-out resolves. Cross-worktree unified timeline: fans out over every live worktree DB fork (traces, slow-op samples, reports, builds) plus the per-worktree disk logs (boot events, health series), normalizes everything to wall-clock TimelineEvents, and serves it as the debug.timeline.scan live value — one scan per window, pushed as each cell resolves.
       - Web:
         - Contributes: `SlowEvents.View` "Timeline" → `TimelineView`
-        - Uses: 37 symbols — full list in [`plugins/debug/plugins/timeline/REFERENCE.md`](../plugins/debug/plugins/timeline/REFERENCE.md)
+        - Uses: 38 symbols — full list in [`plugins/debug/plugins/timeline/REFERENCE.md`](../plugins/debug/plugins/timeline/REFERENCE.md)
           - `debug/profiling` ×7
           - `debug/trace/pane` ×5
           - `primitives/css/coords` ×2
@@ -25500,6 +25503,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/status-dot.StatusDot`
           - `primitives/css/text.Text`
           - `primitives/css/toggle-chip.SegmentedControl`
+          - `primitives/dom/render-mode.useBrowserValue`
           - `primitives/icon-button.IconButton`
           - `primitives/pane.useOpenPane`
           - `primitives/syntax-highlight.HighlightedCode`
@@ -30932,6 +30936,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Contributes: `ActionBar.ViewOption` → `FullscreenToggle`
     - Uses:
       - `primitives/css/control-panel.ControlPanel`
+      - `primitives/dom/render-mode.useBrowserValue`
       - `primitives/icon-button.IconButton`
       - `shell/action-bar.ActionBar`
       - `ui/icons.Icon`
@@ -37176,7 +37181,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `GeoMap.Renderer` "Google Maps" → `LazyBoundary`
           - `ExternalHosts.Declare` "maps.googleapis.com, maps.gstatic.com, mapsresources-pa.googleapis.com, fonts.googleapis.com, fonts.gstatic.com"
           - `LiveMapSetup.MapIdPreview` → `MapIdPreview`
-        - Uses: 26 symbols — full list in [`plugins/map/plugins/google/REFERENCE.md`](../plugins/map/plugins/google/REFERENCE.md)
+        - Uses: 27 symbols — full list in [`plugins/map/plugins/google/REFERENCE.md`](../plugins/map/plugins/google/REFERENCE.md)
           - `integrations/google-maps` ×5
           - `map` ×4
           - `map/pin-layer` ×3
@@ -37188,6 +37193,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/motion.useTransitionHold`
           - `primitives/css/surface.Surface`
           - `primitives/css/text.Text`
+          - `primitives/dom/render-mode.useBrowserValue`
           - `primitives/icon-button.IconButton`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/lazy-component.lazyComponent`
@@ -37336,7 +37342,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ThemeEngine.Theme` "Menu bar"
       - `MenuBar.Section` "Header" → `PanelHeader`
       - `MenuBar.Section` "Footer" → `PanelFooter`
-    - Uses: 25 symbols — full list in [`plugins/menu-bar/REFERENCE.md`](../plugins/menu-bar/REFERENCE.md)
+    - Uses: 26 symbols — full list in [`plugins/menu-bar/REFERENCE.md`](../plugins/menu-bar/REFERENCE.md)
       - `primitives/css/spacing` ×3
       - `primitives/persistent-draft` ×2
       - `primitives/slot-render` ×2
@@ -37352,6 +37358,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives/css/text.Text`
       - `primitives/css/ui-kit.cn`
       - `primitives/dom/element-size.useResizeObserver`
+      - `primitives/dom/render-mode.useBrowserValue`
       - `primitives/dom/web-storage.defineStore`
       - `primitives/loading.Loading`
       - `primitives/log-channels.clientLog`
@@ -46229,6 +46236,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit.PortalForwardProvider`
               - `primitives/css/ui-kit.PortalThemeScopeProvider`
               - `primitives/css/ui-kit.SURFACE_LEVELS`
+              - `primitives/dom/render-mode.useBrowserValue`
               - `ui/icons.IconScopeProvider`
             - Exports (types):
               - `ColorSchemeRegionProps`
@@ -48191,16 +48199,30 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`overscroll-hint`** — Wasted-scroll hint: a single invisible global controller (mounted via Core.Root) that plays a small native-feeling rubber-band bounce on a surface when a wheel/trackpad/touch gesture scrolls nothing (not scrollable, or already at the edge). Gestures are batched per frame and a batch is wasted when no scroller on its chain scrolled or has room left; a two-stage physics (a saturating pull, drawn through a critically damped spring) turns bursty trackpad input into one smooth out-and-back.
           - Web:
             - Contributes: `Core.Root` → `OverscrollHintController`
-        - **`render-mode`** — Whether this process renders the app live in a browser or once, statically, to HTML for robots (never hydrated): renderMode() is "live" unless a static-render process declared "static" (declareRenderMode) before loading any app module.
+        - **`render-mode`** — Reading the browser while rendering, safely in both modes: useBrowserValue({ name, read, subscribe?, staticValue? }) (live: useSyncExternalStore, re-read on every change; static: staticValue, or a loud NoStaticValueError), useMediaQuery(query, staticValue), useViewportSize(staticValue), and useOwnedElement(name, create) — a DOM node a component mints once, which has no static form. The one place a render-time read of window / document / navigator / matchMedia happens (dom-access-safety/no-render-time-dom).
           - Cross-plugin:
-            - Imported by:
+            - Imported by: 21 plugins — full list in [`plugins/primitives/plugins/dom/plugins/render-mode/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/render-mode/REFERENCE.md)
+              - `primitives` ×10
+              - `apps` ×2
+              - `conversations/conversation-view/jsonl-viewer/steady-reveal`
+              - `debug/timeline`
+              - `fullscreen`
+              - `map/google`
               - `media/player`
-              - `primitives/adaptive-bar`
-              - `primitives/collapsible`
-              - `primitives/css/viewport-overlay`
-              - `primitives/dom/static-render`
-              - `primitives/link-gesture`
-              - `primitives/loading`
+              - `menu-bar`
+              - `screenshot/draw-on-app`
+              - `tasks/worktree-identity`
+              - `ui/theme-engine`
+          - Web:
+            - Exports (types):
+              - `BrowserValueOptions`
+              - `ViewportSize`
+            - Exports (values):
+              - `NoStaticValueError`
+              - `useBrowserValue`
+              - `useMediaQuery`
+              - `useOwnedElement`
+              - `useViewportSize`
           - Core:
             - Exports (types): `RenderMode`
             - Exports (values):
@@ -50182,7 +50204,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `createHoverIntent`
         - **`image-viewer`** — One full-screen image viewer for every image in the app: ViewerThumbnail (the capped inline thumbnail that always shows the whole image, with a tiny-icon shape and a size badge; a given width / height reserves its box before it loads, and a chip is one fixed height) and useImageViewerTrigger (for callers that keep their own <img>) open it; ThumbnailPlaceholder holds a thumbnail's box while its source is not known yet; an image that does not load shows MissingImage (its name, and whether the file is gone or only unreadable, with Retry) and leaves the gallery — useImageLoad gives a caller with its own <img> the same load state, and useImageProbe answers it off-DOM for a caller that must know before it renders; ImageGallery makes every thumbnail inside one ← / → set in page order and renders the viewer inside its own React tree; ImageViewer is the controlled viewer itself — fit, click-to-close, wheel/pinch zoom, drag pan, minimap, copy/download/open, a docked thumbnail strip, a grid of every image with a tile-size slider, a control-less full-screen slideshow, keyboard-isolated. A ViewerThumbnail outside any gallery is its own gallery of one; useImageViewerTrigger requires one.
           - Web:
-            - Uses: 54 symbols — full list in [`plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md)
+            - Uses: 55 symbols — full list in [`plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md)
               - `primitives/css/ui-kit` ×6
               - `primitives/networking` ×3
               - `primitives/persistent-draft` ×3
@@ -50211,6 +50233,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/yield.yieldClass`
               - `primitives/dom/auto-scroll.keepInPlace`
               - `primitives/dom/element-size.useResizeObserver`
+              - `primitives/dom/render-mode.useBrowserValue`
               - `primitives/dom/web-storage.defineStore`
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useEventCallback`
@@ -50447,6 +50470,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit.usePortalForwardedAttrs`
               - `primitives/css/z-layers.InTreeLayer`
               - `primitives/css/z-layers.zLayerClass`
+              - `primitives/dom/render-mode.useOwnedElement`
             - Exports (types): `SurfaceOverlayProps`
             - Exports (values):
               - `SurfaceOverlay`
@@ -54559,6 +54583,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit.cn`
           - `primitives/css/viewport-overlay.ViewportOverlay`
           - `primitives/css/z-layers/stack.defineZLayer`
+          - `primitives/dom/render-mode.useViewportSize`
           - `primitives/icon-button.IconButton`
           - `primitives/text-editor/paste-images.attachmentMarkdown`
           - `screenshot.captureApp`
@@ -58446,6 +58471,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.rowOrStale`
           - `network/live.useLive`
           - `primitives/copy-to-clipboard.CopyButton`
+          - `primitives/dom/render-mode.useBrowserValue`
           - `primitives/icon-button.IconButton`
           - `shell/health-report.HealthReport`
 
@@ -59376,6 +59402,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live/live-state.foldResource`
           - `primitives/css/theme-boundary.useColorScheme`
           - `primitives/css/theme-boundary.usePublishColorScheme`
+          - `primitives/dom/render-mode.useMediaQuery`
           - `primitives/dom/web-storage.defineStore`
           - `primitives/slot-render.defineRenderSlot`
         - Exports (types):

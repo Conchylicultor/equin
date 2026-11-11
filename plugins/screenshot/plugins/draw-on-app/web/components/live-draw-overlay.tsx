@@ -1,5 +1,5 @@
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useEffect, useState } from "react";
+import { useViewportSize } from "@plugins/primitives/plugins/dom/plugins/render-mode/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import {
   DrawCanvas,
@@ -50,21 +50,11 @@ export function LiveDrawOverlay({
   onDone,
   onCancel,
 }: LiveDrawOverlayProps) {
-  const [viewport, setViewport] = useState(() => ({
-    w: window.innerWidth,
-    h: window.innerHeight,
-  }));
-
-  useEffect(() => {
-    const onResize = () =>
-      setViewport({ w: window.innerWidth, h: window.innerHeight });
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
+  const viewport = useViewportSize();
 
   // Drive viewport-rect at 1:1 so strokes map to CSS pixels exactly.
-  const displayed = new DOMRect(0, 0, viewport.w, viewport.h);
-  const natural = { w: viewport.w, h: viewport.h };
+  const displayed = new DOMRect(0, 0, viewport.width, viewport.height);
+  const natural = { w: viewport.width, h: viewport.height };
 
   return (
     <ViewportOverlay layer={DrawLayer}>

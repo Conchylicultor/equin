@@ -23,6 +23,7 @@ The floating tools chrome (color swatches, width slider, Undo/Clear, Cancel/Done
     - `primitives/css/ui-kit.cn`
     - `primitives/css/viewport-overlay.ViewportOverlay`
     - `primitives/css/z-layers/stack.defineZLayer`
+    - `primitives/dom/render-mode.useViewportSize`
     - `primitives/icon-button.IconButton`
     - `primitives/text-editor/paste-images.attachmentMarkdown`
     - `screenshot.captureApp`

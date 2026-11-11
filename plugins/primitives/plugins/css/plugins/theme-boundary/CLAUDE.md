@@ -202,6 +202,7 @@ the code:
     - `primitives/css/ui-kit.PortalForwardProvider`
     - `primitives/css/ui-kit.PortalThemeScopeProvider`
     - `primitives/css/ui-kit.SURFACE_LEVELS`
+    - `primitives/dom/render-mode.useBrowserValue`
     - `ui/icons.IconScopeProvider`
   - Exports (types):
     - `ColorSchemeRegionProps`

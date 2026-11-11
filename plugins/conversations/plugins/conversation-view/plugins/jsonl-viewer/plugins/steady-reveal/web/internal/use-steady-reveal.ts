@@ -1,3 +1,4 @@
+import { useMediaQuery } from "@plugins/primitives/plugins/dom/plugins/render-mode/web";
 import {
   useEffect,
   useLayoutEffect,
@@ -34,9 +35,7 @@ export function useSteadyReveal(
   container: RefObject<HTMLElement | null>,
   tone: RevealTone = "foreground",
 ): number {
-  const [reduced] = useState(
-    () => matchMedia("(prefers-reduced-motion: reduce)").matches,
-  );
+  const reduced = useMediaQuery("(prefers-reduced-motion: reduce)", false);
   const [shown, setShown] = useState(0);
   const textRef = useRef(text);
   const wakeRef = useRef<(() => void) | null>(null);

@@ -1,5 +1,6 @@
 import { createPortal } from "react-dom";
 import type { ComponentProps, ReactNode } from "react";
+import { renderMode } from "@plugins/primitives/plugins/dom/plugins/render-mode/core";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -30,7 +31,14 @@ export interface CursorAnchoredMenuProps {
  * under <DropdownMenu>, so base-ui Menu context is intact. DropdownMenuContent
  * already self-portals + theme-forwards, so no extra wiring is needed.
  */
-export function CursorAnchoredMenu({
+export function CursorAnchoredMenu(props: CursorAnchoredMenuProps) {
+  // A static render (HTML for robots, never hydrated) has no `document.body`
+  // to pin the trigger in, and a menu no click can open is not page content.
+  if (renderMode() === "static") return null;
+  return <LiveCursorAnchoredMenu {...props} />;
+}
+
+function LiveCursorAnchoredMenu({
   anchor,
   onClose,
   children,

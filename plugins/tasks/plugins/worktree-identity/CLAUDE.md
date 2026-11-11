@@ -48,6 +48,7 @@ outside `apps/…` it loads in the eager tier, so the row is there at first pain
     - `network/live.rowOrStale`
     - `network/live.useLive`
     - `primitives/copy-to-clipboard.CopyButton`
+    - `primitives/dom/render-mode.useBrowserValue`
     - `primitives/icon-button.IconButton`
     - `shell/health-report.HealthReport`
 

@@ -95,6 +95,7 @@ had been rendered there. The same idiom — and the same reason — as
     - `primitives/css/ui-kit.usePortalForwardedAttrs`
     - `primitives/css/z-layers.InTreeLayer`
     - `primitives/css/z-layers.zLayerClass`
+    - `primitives/dom/render-mode.useOwnedElement`
   - Exports (types): `SurfaceOverlayProps`
   - Exports (values):
     - `SurfaceOverlay`

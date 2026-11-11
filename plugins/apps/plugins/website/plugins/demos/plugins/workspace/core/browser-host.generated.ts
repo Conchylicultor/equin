@@ -643,6 +643,7 @@ export const browserHost = {
     "primitives.dom.layout-host",
     "primitives.dom.movable",
     "primitives.dom.overscroll-hint",
+    "primitives.dom.render-mode",
     "primitives.dom.scroll-reveal",
     "primitives.dom.tree-focus",
     "primitives.dom.web-storage",
