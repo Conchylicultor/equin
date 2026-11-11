@@ -4850,7 +4850,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `FilePreviewHeader` "open-with" → `OpenWithDefaultApp`
               - `FileBrowserSlots.RowActions` "extract" → `ExtractAction`
               - `FileBrowserSlots.RowActions` "copy-path" → `CopyPathAction`
-            - Uses: 79 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
+            - Uses: 80 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
               - `primitives/data-view` ×10
               - `primitives/css/ui-kit` ×8
               - `primitives/file-viewer` ×7
@@ -4860,12 +4860,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/paths/file-systems` ×3
               - `network/live/live-state` ×3
               - `primitives/path-bar` ×3
+              - `primitives/copy-to-clipboard` ×2
               - `primitives/link-gesture` ×2
               - `primitives/networking` ×2
               - `primitives/persistent-draft` ×2
               - `menu-bar/app-window.useNativeFileDrag`
               - `primitives/bar.Bar`
-              - `primitives/copy-to-clipboard.useCopyToClipboard`
               - `primitives/css/center.Center`
               - `primitives/css/column.Column`
               - `primitives/css/fill.Fill`

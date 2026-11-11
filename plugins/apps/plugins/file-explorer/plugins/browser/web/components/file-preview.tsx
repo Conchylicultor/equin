@@ -25,6 +25,7 @@ import {
 import { subThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { PaneChrome, type AnyPane } from "@plugins/primitives/plugins/pane/web";
 import {
@@ -281,7 +282,7 @@ export function FilePreviewBody(): ReactNode {
 }
 
 /**
- * `parent · size · modified`, from the file's own stat (its system's `stat`,
+ * `parent · size · modified` and a Copy path button, from the file's own stat (its system's `stat`,
  * pushed while read, so an edit on disk moves them). Only the parent until
  * the stat answers; a refusal says why in its place.
  */
@@ -325,9 +326,20 @@ function PreviewMeta({
   return (
     // The small caption rung (`2xs`), faint.
     <ControlSizeProvider size="xs">
-      <Text variant="caption" tone="faint" className="truncate">
-        {parts.join(" · ")}
-      </Text>
+      <Line className="gap-xs">
+        <Text variant="caption" tone="faint" className="truncate">
+          {parts.join(" · ")}
+        </Text>
+        {/* The file's full path — absolute on the computer's disk (home
+            expanded), as shown in another system (whose home names nothing
+            outside it). */}
+        <CopyButton
+          text={fs === "computer" ? absolutePath(path, home) : path}
+          tooltip="Copy path"
+          aspect="inline"
+          className={rigidClass()}
+        />
+      </Line>
       {failed !== null && (
         <ResourceErrorInline
           variant="inline"
