@@ -10109,7 +10109,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - Web:
                     - Contributes: `FileViewer.Renderer` "MIDI" → `MidiFilePreview`
                     - Uses:
-                      - `apps-core/tabs.useNavigate`
+                      - `apps-core/tabs.useAppLink`
                       - `apps/sonata/library.sonataSongLink`
                       - `apps/sonata/mini-player.SonataMiniPlayer`
                       - `apps/sonata/session.useCursorApi`
@@ -48608,7 +48608,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FileViewer.Renderer` ← `primitives.file-viewer.markdown`
           - `FileViewer.Renderer` ← `primitives.file-viewer.media`
           - `FileViewer.Renderer` ← `primitives.file-viewer.pdf`
-        - Uses: 21 symbols — full list in [`plugins/primitives/plugins/file-viewer/REFERENCE.md`](../plugins/primitives/plugins/file-viewer/REFERENCE.md)
+        - Uses: 23 symbols — full list in [`plugins/primitives/plugins/file-viewer/REFERENCE.md`](../plugins/primitives/plugins/file-viewer/REFERENCE.md)
           - `infra/endpoints.useEndpointMutation`
           - `infra/paths/file-systems.useFileStat`
           - `primitives/css/center.Center`
@@ -48625,7 +48625,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/file-type.FileTypeIcon`
           - `primitives/filepath-breadcrumb.FilepathBreadcrumb`
           - `primitives/icon-button.IconButton`
+          - `primitives/link-gesture.gestureOf`
           - `primitives/loading.Loading`
+          - `primitives/pane.useMorphFromElement`
           - `primitives/select-scope.ContentScope`
           - `primitives/slot-render.renderIsolated`
           - `shell/toast.showToast`
@@ -49206,9 +49208,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `linkProps`
           - `openInBrowserTab`
       - Cross-plugin:
-        - Imported by: 77 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
+        - Imported by: 78 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
           - `conversations` ×21
-          - `primitives` ×18
+          - `primitives` ×19
           - `apps` ×12
           - `page` ×4
           - `tasks` ×4
@@ -50751,7 +50753,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-2xs`
           - `ui/tokens/density --space-md`
           - `ui/tokens/shape --spacing`
-        - Imported by: 198 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Imported by: 199 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `apps` ×72
           - `conversations` ×32
           - `debug` ×27
@@ -50759,7 +50761,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks` ×10
           - `apps-core` ×6
           - `plugin-meta` ×6
-          - `primitives` ×5
+          - `primitives` ×6
           - `layouts` ×4
           - `infra` ×2
           - `page` ×2

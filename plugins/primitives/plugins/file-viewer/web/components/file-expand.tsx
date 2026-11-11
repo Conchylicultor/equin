@@ -6,6 +6,8 @@ import {
   type ReactNode,
 } from "react";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { gestureOf } from "@plugins/primitives/plugins/link-gesture/web";
+import { useMorphFromElement } from "@plugins/primitives/plugins/pane/web";
 import { navIcons } from "@plugins/ui/plugins/icons/core";
 import type {
   FileRendererExpand,
@@ -25,25 +27,25 @@ export const FileExpandContext = createContext<
  * Open in Sonata), declared to its host. Renders nothing — the host draws it
  * once, where its Expand belongs: as its pane's Expand (`PaneChrome`'s
  * `expand`, given the handle's `expand`) or in its own header
- * ({@link FileExpandButton}). `onActivate` runs in the renderer's tree, so it
+ * ({@link FileExpandButton}). `resolve` runs in the renderer's tree, so it
  * reads the renderer's state (the player's playhead).
  */
 export function FileExpandAction({
   label,
-  onActivate,
+  resolve,
 }: FileRendererExpand): ReactNode {
   const setExpand = useContext(FileExpandContext);
   // The latest handler, so the declaration below holds across renders: a
   // fresh declaration each render would re-render the host each render.
-  const latest = useRef(onActivate);
+  const latest = useRef(resolve);
   useLayoutEffect(() => {
-    latest.current = onActivate;
+    latest.current = resolve;
   });
   useLayoutEffect(() => {
     if (setExpand === null) return;
     const mine: FileRendererExpand = {
       label,
-      onActivate: () => latest.current(),
+      resolve: () => latest.current(),
     };
     setExpand(mine);
     return () => setExpand((prev) => (prev === mine ? null : prev));
@@ -53,7 +55,8 @@ export function FileExpandAction({
 
 /**
  * The host's half, for a host with no pane Expand to hand it to: the active
- * renderer's Expand as a header button, nothing while it declares none.
+ * renderer's Expand as a header button, nothing while it declares none. The
+ * app it opens grows out of the button.
  */
 export function FileExpandButton({
   renderers,
@@ -61,12 +64,17 @@ export function FileExpandButton({
   renderers: FileRenderersHandle;
 }): ReactNode {
   const { expand } = renderers;
+  const { attach, morph } = useMorphFromElement();
   if (expand === null) return null;
   return (
     <IconButton
+      ref={attach}
       icon={navIcons.expand}
       label={expand.label}
-      onClick={() => expand.onActivate()}
+      onClick={async (e) => {
+        const gesture = gestureOf(e);
+        morph(await expand.resolve()).open(gesture);
+      }}
     />
   );
 }

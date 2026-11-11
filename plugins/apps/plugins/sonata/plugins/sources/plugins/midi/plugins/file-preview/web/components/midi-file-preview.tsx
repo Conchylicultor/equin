@@ -24,7 +24,7 @@ import {
   deriveMidiSongMeta,
   importMidiBytes,
 } from "@plugins/apps/plugins/sonata/plugins/sources/plugins/midi/web";
-import { useNavigate } from "@plugins/apps-core/plugins/tabs/web";
+import { useAppLink } from "@plugins/apps-core/plugins/tabs/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -109,11 +109,11 @@ function OpenInSonata({
   file: FileLocation;
   bytes: ArrayBuffer;
 }) {
-  const goToApp = useNavigate();
+  const appLink = useAppLink();
   const { score, stop } = useSession();
   const cursor = useCursorApi();
   const fetchEndpoint = useFetchEndpoint();
-  const open = async () => {
+  const resolve = async () => {
     stop();
     // Anywhere in the first bar (or its lead-in) is "the start": no bar.
     const at = barPositionAt(score, cursor.getBeat()).bar;
@@ -124,7 +124,7 @@ function OpenInSonata({
         bytes,
         locationName(file),
       );
-      goToApp(sonataSongLink(song.id, bar));
+      return appLink(sonataSongLink(song.id, bar));
     } catch (err) {
       showToast({
         title: "Could not open in Sonata",
@@ -134,5 +134,5 @@ function OpenInSonata({
       throw err;
     }
   };
-  return <FileExpandAction label="Open in Sonata" onActivate={open} />;
+  return <FileExpandAction label="Open in Sonata" resolve={resolve} />;
 }

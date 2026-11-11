@@ -1,5 +1,9 @@
 import type { ReactNode } from "react";
-import { linkProps } from "@plugins/primitives/plugins/link-gesture/web";
+import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
+import {
+  gestureOf,
+  linkProps,
+} from "@plugins/primitives/plugins/link-gesture/web";
 import { navIcons } from "@plugins/ui/plugins/icons/core";
 import type { AnyPane, PaneExpand } from "../pane";
 import { useMorphFromPane } from "../morph-sink";
@@ -9,13 +13,18 @@ import { PaneIconAction } from "./pane-icon-action";
  * An Expand the pane's host hands its chrome for this instance, in place of
  * the pane's declared `expand` and its default promote: what the content
  * itself knows to be its fuller view (a MIDI file's preview opens it in
- * Sonata). An action, not a link — the content may have work to do first.
+ * Sonata). Not a link up front — the content may have work to do first — but
+ * it answers one, so the hop runs as every Expand's does: a morph out of the
+ * pane's box.
  */
 export interface PaneExpandAction {
   /** The button's label ("Open in Sonata"). */
   label: string;
-  /** Runs on click; a returned promise holds the button pending. */
-  onActivate: () => void | Promise<void>;
+  /**
+   * Runs on click and answers where to go; the button holds pending while it
+   * runs. A failure is the action's to report (and rethrow).
+   */
+  resolve: () => Promise<LinkTarget>;
 }
 
 /**
@@ -43,13 +52,7 @@ export function PromoteControl({
   override?: PaneExpandAction | undefined;
 }): ReactNode {
   if (override !== undefined) {
-    return (
-      <PaneIconAction
-        label={override.label}
-        icon={navIcons.expand}
-        onClick={() => override.onActivate()}
-      />
-    );
+    return <ExpandAction action={override} />;
   }
   if (!pane._internal.chrome.promote) return null;
   const expand = pane._internal.expand;
@@ -63,6 +66,21 @@ export function PromoteControl({
     );
   }
   return <DefaultPromote pane={pane} ancestorsHidden={ancestorsHidden} />;
+}
+
+function ExpandAction({ action }: { action: PaneExpandAction }): ReactNode {
+  const { attach, morph } = useMorphFromPane();
+  return (
+    <PaneIconAction
+      ref={attach}
+      label={action.label}
+      icon={navIcons.expand}
+      onClick={async (e) => {
+        const gesture = gestureOf(e);
+        morph(await action.resolve()).open(gesture);
+      }}
+    />
+  );
 }
 
 function ExpandElsewhere({

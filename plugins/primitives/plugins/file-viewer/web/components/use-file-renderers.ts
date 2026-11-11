@@ -1,4 +1,5 @@
 import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
+import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import type { FileLocation } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import type { FileViewerGit } from "../../core";
 import { FileViewer, resolveRenderers, type ResolvedRenderer } from "../slots";
@@ -10,8 +11,12 @@ import { useStableLocation } from "../internal/use-stable-location";
  */
 export interface FileRendererExpand {
   label: string;
-  /** Runs on click; a returned promise holds the button pending. */
-  onActivate: () => void | Promise<void>;
+  /**
+   * Runs on click and answers where to go, which the host opens as a morph
+   * out of its pane (or its button); the button holds pending meanwhile. A
+   * failure is the renderer's to report (and rethrow).
+   */
+  resolve: () => Promise<LinkTarget>;
 }
 
 export interface FileRenderersHandle {
