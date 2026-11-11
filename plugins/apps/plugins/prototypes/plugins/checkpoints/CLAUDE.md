@@ -53,7 +53,7 @@ The window, id and message rules are pure functions over the transcript's events
 
 ## Plugin reference
 
-- Description: Records a version of every prototype an agent turn touched, at the end of that turn: reads the turn's window out of the conversation transcript, finds the prototype ids its tool calls named (Edit/Write paths, Bash commands, an Agent call's prompt), and checkpoints each through the files plugin's version store with the turn's request and summary.
+- Description: Records a version of every prototype an agent turn touched, at the end of that turn: reads the turn's window out of the conversation transcript, finds the prototype ids its tool calls named (Edit/Write paths, Bash commands, an Agent call's prompt — and, for a turn woken by a background task's completion, the call that started that task), and checkpoints each through the files plugin's version store with the turn's request and summary.
 - Server:
   - Contributes: `trigger` "prototypes.checkpoint-turn"
   - Uses:

@@ -128,10 +128,16 @@ describe("findTurnWindow", () => {
     ];
     const window = findTurnWindow(events, "m2");
     if (window.kind !== "found") throw new Error("expected a window");
-    expect(touchedPrototypeIds(window.events)).toEqual([A, B]);
+    expect(touchedPrototypeIds(window.events, events)).toEqual([A, B]);
     expect(turnRequest(window.events)).toBe("try B instead");
   });
 });
+
+/** A window that is the whole transcript. */
+const alone = (events: JsonlEvent[]): [JsonlEvent[], JsonlEvent[]] => [
+  events,
+  events,
+];
 
 function findWindowEvents(messageId: string): JsonlEvent[] {
   const window = findTurnWindow(transcript, messageId);
@@ -141,42 +147,95 @@ function findWindowEvents(messageId: string): JsonlEvent[] {
 
 describe("touchedPrototypeIds", () => {
   test("finds ids in Edit paths, Bash commands and Agent prompts, deduped in order", () => {
-    expect(touchedPrototypeIds(findWindowEvents("msg-3"))).toEqual([A, B, D]);
+    expect(touchedPrototypeIds(findWindowEvents("msg-3"), transcript)).toEqual([
+      A,
+      B,
+      D,
+    ]);
   });
 
   test("ignores ids mentioned only in an earlier turn", () => {
-    expect(touchedPrototypeIds(findWindowEvents("msg-3"))).not.toContain(C);
-    expect(touchedPrototypeIds(findWindowEvents("msg-1"))).toEqual([C]);
+    expect(
+      touchedPrototypeIds(findWindowEvents("msg-3"), transcript),
+    ).not.toContain(C);
+    expect(touchedPrototypeIds(findWindowEvents("msg-1"), transcript)).toEqual([
+      C,
+    ]);
   });
 
   test("ignores ids outside tool-call inputs", () => {
     expect(
-      touchedPrototypeIds([
-        user(`look at ${A}`),
-        endTurn("m", `I changed ${B}`),
-      ]),
+      touchedPrototypeIds(
+        ...alone([user(`look at ${A}`), endTurn("m", `I changed ${B}`)]),
+      ),
     ).toEqual([]);
   });
 
   test("an id starting a line of a multi-line command is found", () => {
     expect(
-      touchedPrototypeIds([call("Bash", { command: `cd x\n${A}` })]),
+      touchedPrototypeIds(...alone([call("Bash", { command: `cd x\n${A}` })])),
     ).toEqual([A]);
   });
 
   test("nested inputs are walked", () => {
     expect(
-      touchedPrototypeIds([
-        call("MultiEdit", { edits: [{ file_path: `${PROTOS}/${B}/app.jsx` }] }),
-      ]),
+      touchedPrototypeIds(
+        ...alone([
+          call("MultiEdit", {
+            edits: [{ file_path: `${PROTOS}/${B}/app.jsx` }],
+          }),
+        ]),
+      ),
     ).toEqual([B]);
+  });
+
+  test("a task notification counts the ids of the call that started its task", () => {
+    // Turn 1 dispatches a background agent on A and ends; the agent edits A
+    // while no turn is open; its notification wakes turn 2, which names no id.
+    const events: JsonlEvent[] = [
+      user("Use agents to fix it"),
+      {
+        kind: "tool-call",
+        at: AT,
+        toolUseId: "tu-agent",
+        name: "Agent",
+        input: { prompt: `Edit ${PROTOS}/${A}/index.html` },
+      },
+      endTurn("m1", "Started an agent."),
+      {
+        kind: "task-notification",
+        at: AT,
+        taskId: "t1",
+        toolUseId: "tu-agent",
+        status: "completed",
+        summary: "Agent finished",
+      },
+      endTurn("m2", "The agent is done."),
+    ];
+    const window = findTurnWindow(events, "m2");
+    if (window.kind !== "found") throw new Error("expected a window");
+    expect(touchedPrototypeIds(window.events, events)).toEqual([A]);
+  });
+
+  test("a notification whose task's call is not in the transcript adds nothing", () => {
+    const notification: JsonlEvent = {
+      kind: "task-notification",
+      at: AT,
+      taskId: "t1",
+      toolUseId: "tu-gone",
+      status: "completed",
+      summary: "Agent finished",
+    };
+    expect(touchedPrototypeIds(...alone([notification]))).toEqual([]);
   });
 
   test("a longer token is not read as an id", () => {
     // Longer than ANY id, not just than A: recognition is the generic stamped
     // body (a 4–8 char suffix, `plugins/ids`), so `${A}x` is itself an id.
     expect(
-      touchedPrototypeIds([call("Bash", { command: `echo ${A}xxxxx x${B}` })]),
+      touchedPrototypeIds(
+        ...alone([call("Bash", { command: `echo ${A}xxxxx x${B}` })]),
+      ),
     ).toEqual([]);
   });
 });

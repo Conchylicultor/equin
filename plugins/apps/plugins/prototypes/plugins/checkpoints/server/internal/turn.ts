@@ -74,15 +74,36 @@ export function findTurnWindow(
  * here. An id that is not a prototype on disk is harmless: recording it answers
  * `no-such-prototype`.
  *
+ * A background task (a subagent, a background shell) keeps working after the
+ * turn that started it has ended: its edits land in the folder while no turn
+ * is open, and the turn its completion notification wakes is the first one
+ * that ends with them done. So a `task-notification` in the window counts the
+ * ids of the tool call that started its task, looked up in the whole
+ * `transcript` by tool-use id — that call sits in an earlier turn's window.
+ * Without it, a turn that only dispatched agents records the folder before
+ * their work, and the work itself waits as "unsaved" for some later turn.
+ *
  * What counts as a mention — the word guard and the leaf walk — is
  * `prototypeIdsIn`, beside the mint it has to agree with. All this adds is
  * which part of the transcript is read: tool-call inputs, and nothing else.
  */
-export function touchedPrototypeIds(window: readonly JsonlEvent[]): string[] {
+export function touchedPrototypeIds(
+  window: readonly JsonlEvent[],
+  transcript: readonly JsonlEvent[],
+): string[] {
   const ids = new Set<string>();
+  const add = (input: unknown) => {
+    for (const id of prototypeIdsIn(input)) ids.add(id);
+  };
   for (const event of window) {
-    if (event.kind !== "tool-call") continue;
-    for (const id of prototypeIdsIn(event.input)) ids.add(id);
+    if (event.kind === "tool-call") add(event.input);
+    else if (event.kind === "task-notification" && event.toolUseId) {
+      const { toolUseId } = event;
+      const started = transcript.find(
+        (e) => e.kind === "tool-call" && e.toolUseId === toolUseId,
+      );
+      if (started?.kind === "tool-call") add(started.input);
+    }
   }
   return [...ids];
 }
@@ -160,7 +181,7 @@ export function planTurnCheckpoint(
   if (window.kind === "not-found") {
     return { kind: "nothing", reason: "turn-not-found" };
   }
-  const ids = touchedPrototypeIds(window.events);
+  const ids = touchedPrototypeIds(window.events, events);
   if (ids.length === 0)
     return { kind: "nothing", reason: "no-prototype-touched" };
   const request = turnRequest(window.events);
