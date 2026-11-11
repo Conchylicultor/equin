@@ -219,6 +219,7 @@ proven by hand:
     - `apps/browser/engine`
     - `apps/events/sources/url-extract`
     - `apps/prototypes/thumbnails`
+    - `debug/profiling/tab-memory`
     - `framework/tooling/e2e-harness`
     - `infra/mcp/browser`
 - Core:

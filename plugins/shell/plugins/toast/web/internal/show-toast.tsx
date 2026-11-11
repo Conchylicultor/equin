@@ -26,9 +26,13 @@ import { toastReachesReader } from "./reader-audience";
  * value: the body carries the id, so we need it *before* the enqueue.
  *
  * It must never repeat. `Observer.create` merges by id against
- * `ToastState.toasts` (sonner 2.0.7, `dist/index.mjs:145`) — an array sonner
- * never prunes — so a reused id republishes, and thereby resurrects, a toast
- * that died minutes ago. A string is disjoint from sonner's own numeric
+ * `ToastState.toasts` — a history sonner keeps after a toast is dismissed,
+ * trimmed of dismissed toasts only once it passes 100 (2.0.8,
+ * `MAX_HISTORY_SIZE` / `trimHistory`) — so a reused id republishes, and
+ * thereby resurrects, a toast that died minutes ago. The same history keeps
+ * each of those last ~100 toasts' bodies alive, a custom toast's portal
+ * container (and React's ~140 root listeners on it) included: bounded, but
+ * real (`research/2026-11-11-global-browser-tab-memory.md`). A string is disjoint from sonner's own numeric
  * counter by construction, and the session prefix keeps an HMR reload (which
  * restarts `seq` under a still-live sonner module) from colliding with the
  * ids the previous module instance handed out.

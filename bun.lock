@@ -2822,6 +2822,10 @@
       "name": "@equin/plugin-debug-profiling-runtime",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/profiling/plugins/tab-memory": {
+      "name": "@equin/plugin-debug-profiling-tab-memory",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/queue": {
       "name": "@equin/plugin-debug-queue",
       "version": "0.0.1",
@@ -8913,6 +8917,8 @@
     "@equin/plugin-debug-profiling-ops-op-gantt": ["@equin/plugin-debug-profiling-ops-op-gantt@workspace:plugins/debug/plugins/profiling/plugins/ops/plugins/op-gantt"],
 
     "@equin/plugin-debug-profiling-runtime": ["@equin/plugin-debug-profiling-runtime@workspace:plugins/debug/plugins/profiling/plugins/runtime"],
+
+    "@equin/plugin-debug-profiling-tab-memory": ["@equin/plugin-debug-profiling-tab-memory@workspace:plugins/debug/plugins/profiling/plugins/tab-memory"],
 
     "@equin/plugin-debug-queue": ["@equin/plugin-debug-queue@workspace:plugins/debug/plugins/queue"],
 

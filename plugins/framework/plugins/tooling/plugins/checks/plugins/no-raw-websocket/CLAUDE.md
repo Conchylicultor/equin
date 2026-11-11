@@ -9,6 +9,7 @@
     - `apps/browser/engine` (0 debt)
     - `conversations/conversation-view/code` (0 debt)
     - `conversations/conversation-view/jsonl-viewer` (0 debt)
+    - `debug/profiling/tab-memory` (0 debt)
     - `network/live` (0 debt)
     - `primitives/networking` (0 debt)
     - `primitives/networking/request-guard` (0 debt)

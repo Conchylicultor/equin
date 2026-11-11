@@ -111,7 +111,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`sql-rows`** [exempt] — Parsed raw-SQL row reads: queryRows / executeRows parse every row against a zod schema and throw a SqlRowError naming the column, the value and its Postgres type OID — closing the pool.query<T>()…
     - **`sql-writes`** — Every hand-written SQL write (INSERT / UPDATE / DELETE / MERGE, in CTEs too) parsed with Postgres's own grammar (libpg_query) and checked against the schema the code declares — drizzle tables with…
 
-- **`debug`** [exempt] [68 sub-plugins] — Debug tools umbrella plugin.
+- **`debug`** [exempt] [69 sub-plugins] — Debug tools umbrella plugin.
 
 - **`fields`** [test helpers] [127 sub-plugins] — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
 

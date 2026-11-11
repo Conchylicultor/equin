@@ -24621,6 +24621,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from:
               - `sink-safety/no-adhoc-profiler-seam` — `.` (sanctioned)
               - `boundaries/no-platform-api` — `server/internal/mcp-tools.ts` (debt)
+        - **`tab-memory`** — Tab memory, the parts a heap snapshot cannot see: clean-soak spawns chrome-headless-shell with nothing attached to the page and reads Chrome's memory-infra dumps per allocator (v8, malloc, partition_alloc, blink_gc, web_cache…) over an idle soak or in-app navigation rounds; listener-probe attributes a tab's event-listener growth to the stacks that add it.
+          - Exemptions:
+            - Exempts itself from: `no-raw-websocket` — `e2e/clean-soak.ts` (sanctioned)
     - **`queue`** — Debug → Queue: the jobs queue as live DataViews with side detail panes — Queue (the host's live job queue, a windowed external collection: status, hold class, attempts, run-at, error, per-state counts; Retry / Cancel), History (the recorded runs, a windowed collection: outcome, duration against the class ceiling, slot wait, error; Run now) — a job leaves Queue for History when its run finishes, and an open detail follows it — Dead (the dead-letter archive), Events (the emit() log, matched or not) and Triggers (every event→job subscription, enable / disable / delete).
       - Web:
         - Slots:
@@ -29955,6 +29958,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/browser/engine` (0 debt)
                   - `conversations/conversation-view/code` (0 debt)
                   - `conversations/conversation-view/jsonl-viewer` (0 debt)
+                  - `debug/profiling/tab-memory` (0 debt)
                   - `network/live` (0 debt)
                   - `primitives/networking` (0 debt)
                   - `primitives/networking/request-guard` (0 debt)
@@ -30345,12 +30349,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards/module-extension.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 191 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+            - Imported by: 192 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
               - `apps` ×58
               - `primitives` ×28
               - `conversations` ×26
               - `page` ×26
-              - `debug` ×8
+              - `debug` ×9
               - `apps-core` ×6
               - `tasks` ×5
               - `active-data` ×3
@@ -32531,7 +32535,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/font-family --font-mono`
-        - Imported by: 29 plugins — full list in [`plugins/infra/plugins/deps/REFERENCE.md`](../plugins/infra/plugins/deps/REFERENCE.md)
+        - Imported by: 30 plugins — full list in [`plugins/infra/plugins/deps/REFERENCE.md`](../plugins/infra/plugins/deps/REFERENCE.md)
           - `infra` ×11
           - `apps` ×5
           - `framework` ×5
@@ -32539,6 +32543,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `media` ×2
           - `packages` ×2
           - `conversations/runtime-sdk`
+          - `debug/profiling/tab-memory`
           - `menu-bar`
       - Deps:
         - Exports (types):
@@ -32712,6 +32717,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `apps/prototypes/thumbnails`
+              - `debug/profiling/tab-memory`
               - `framework/tooling/e2e-harness`
               - `infra/safe-fetch/browser-fetch`
               - `primitives/css/layout-harness`
@@ -36077,6 +36083,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/browser/engine`
               - `apps/events/sources/url-extract`
               - `apps/prototypes/thumbnails`
+              - `debug/profiling/tab-memory`
               - `framework/tooling/e2e-harness`
               - `infra/mcp/browser`
           - Core:

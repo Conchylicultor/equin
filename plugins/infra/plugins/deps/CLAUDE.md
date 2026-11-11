@@ -384,7 +384,7 @@ torch.
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/font-family --font-mono`
-  - Imported by: 29 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 30 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra` ×11
     - `apps` ×5
     - `framework` ×5
@@ -392,6 +392,7 @@ torch.
     - `media` ×2
     - `packages` ×2
     - `conversations/runtime-sdk`
+    - `debug/profiling/tab-memory`
     - `menu-bar`
 - Deps:
   - Exports (types):

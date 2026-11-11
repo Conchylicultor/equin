@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-debug-profiling-tab-memory",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Tab memory, the parts a heap snapshot cannot see: clean-soak spawns chrome-headless-shell with nothing attached to the page and reads Chrome's memory-infra dumps per allocator (v8, malloc, partition_alloc, blink_gc, web_cache…) over an idle soak or in-app navigation rounds; listener-probe attributes a tab's event-listener growth to the stacks that add it."
+}
