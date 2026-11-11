@@ -16,6 +16,10 @@
 //     the edge, and a `position: fixed` widget inside the content stays where
 //     it is on the viewport.
 //
+//   - on a phone: a touch drag the page claimed with `touch-action` never
+//     bounces, and a touch capture on an element that claims nothing is
+//     flagged by the touch-claim guard (a plain tap is not).
+//
 // Synthetic wheel events never scroll anything, so every gesture below is
 // wasted by construction.
 //
@@ -497,6 +501,62 @@ await withBrowser(async (h) => {
     !touch.panYSideways,
   );
   r.ok("touch: …while a vertical one still bounces", touch.panYVertical);
+
+  // --- the touch-claim guard: a touch drag must declare its touch-action ---
+  // Real taps (CDP), so the browser runs its own pointer events and capture.
+  await phone.page.evaluate(() => {
+    const w = window as unknown as { __unclaimed: string[] };
+    w.__unclaimed = [];
+    window.addEventListener("error", (e) => {
+      if (String(e.message).includes("UnclaimedTouchDragError"))
+        w.__unclaimed.push(String(e.message));
+    });
+  });
+  const tapOn = async (
+    touchAction: string,
+    capture: boolean,
+  ): Promise<number> => {
+    await phone.page.evaluate(
+      ({ touchAction, capture }) => {
+        const el = document.createElement("div");
+        el.id = "claim-probe";
+        el.style.cssText = `position:fixed;top:300px;left:40px;width:200px;height:60px;z-index:99999;touch-action:${touchAction};`;
+        if (capture)
+          el.addEventListener("pointerdown", (e) =>
+            el.setPointerCapture(e.pointerId),
+          );
+        document.body.appendChild(el);
+        (window as unknown as { __unclaimed: string[] }).__unclaimed = [];
+      },
+      { touchAction, capture },
+    );
+    await phone.page.touchscreen.tap(140, 330);
+    await phone.page.waitForTimeout(150);
+    return phone.page.evaluate(() => {
+      document.getElementById("claim-probe")?.remove();
+      return (window as unknown as { __unclaimed: string[] }).__unclaimed
+        .length;
+    });
+  };
+  const plainTap = await tapOn("auto", false);
+  const unclaimed = await tapOn("auto", true);
+  const claimedNone = await tapOn("none", true);
+  const claimedPanY = await tapOn("pan-y", true);
+  r.ok(
+    "guard: a plain tap (no capture of its own) is never flagged",
+    plainTap === 0,
+    `${plainTap}`,
+  );
+  r.ok(
+    "guard: a touch capture on an element that claims no touch is flagged",
+    unclaimed === 1,
+    `${unclaimed}`,
+  );
+  r.ok(
+    "guard: a capture on touch-action:none or pan-y is not",
+    claimedNone === 0 && claimedPanY === 0,
+    `${claimedNone} / ${claimedPanY}`,
+  );
 
   await r.finish();
 });

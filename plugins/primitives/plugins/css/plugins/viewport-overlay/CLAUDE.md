@@ -199,6 +199,7 @@ looks equivalent and silently discards the caller's.
     - `hints/ask`
     - `page/editor`
     - `primitives/adaptive-bar`
+    - `primitives/dom/overscroll-hint`
     - `primitives/overlay/floating-surface`
     - `primitives/overlay/image-viewer`
     - `primitives/ui-context/element-picker`
