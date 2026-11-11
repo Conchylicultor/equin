@@ -319,8 +319,8 @@ Metadata is therefore read out of the HTML, not a sidecar file:
 - `<meta name="description">` → `blurb` (default: `""`)
 - `<meta name="prototype-viewport" content="window">` → `viewport`: `responsive`
   (fills the room it is given — the default), `window` (the viewer's own
-  browser window) or a size preset's name (`phone`, `tablet`, `laptop`,
-  `desktop`, `wide`). Where
+  browser window) or a size preset's word (`phone`, `phone-landscape`,
+  `tablet`, `laptop`, `desktop`, `wide`). Where
   there is no viewer's window (thumbnails, Compare), `window` and `responsive`
   render at `HEADLESS_PRESET` (Laptop). `core/viewport.ts` owns the presets
   (`SIZE_PRESETS`, which the canvas's size menu lists) and the parser

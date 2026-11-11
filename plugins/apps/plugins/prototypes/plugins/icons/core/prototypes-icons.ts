@@ -82,6 +82,9 @@ export const prototypesIcons = defineIconFamily({
     phone: {
       body: '<rect x="7" y="3" width="10" height="18" rx="2.5"/><path d="M11 18h2"/>',
     },
+    "phone-landscape": {
+      body: '<rect x="3" y="7" width="18" height="10" rx="2.5"/><path d="M18 11v2"/>',
+    },
     tablet: {
       body: '<rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M11 18h2"/>',
     },
@@ -150,6 +153,7 @@ export const prototypesIcons = defineIconFamily({
     "swap-horiz": "responsive",
     "web-asset": "window",
     "phone-iphone": "phone",
+    "stay-current-landscape": "phone-landscape",
     "tablet-mac": "tablet",
     "laptop-mac": "laptop",
     "desktop-windows": "desktop",

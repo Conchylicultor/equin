@@ -350,6 +350,7 @@ export const LUCIDE_MAP = {
   splitscreen: "rows-2",
   star: "star",
   "splitscreen-left": "panel-left",
+  "stay-current-landscape": MATERIAL_ONLY,
   "sticky-note-2": "sticky-note",
   stacks: "layers",
   stop: "square",

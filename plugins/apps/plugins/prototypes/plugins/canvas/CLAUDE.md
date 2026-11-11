@@ -248,7 +248,7 @@ whose fixed row grid has no two-leading-cell form:
   page gets in the viewer's own browser window, `innerWidth × innerHeight`,
   followed live — the room the real app has on this machine, so a mock judged
   here is judged at the density the app will really have), a **device preset**
-  (Phone 390×844, Tablet 820×1180, Laptop 1440×900, Desktop 1920×1080, Wide
+  (Phone 390×844, Phone landscape 844×390, Tablet 820×1180, Laptop 1440×900, Desktop 1920×1080, Wide
   2560×1440 — real devices at their default scaling, never CSS breakpoints; a
   frame is that device's screen, and a longer page scrolls inside it), or
   **Custom** (a width slid off the presets). A fresh canvas (none saved in
@@ -259,7 +259,7 @@ whose fixed row grid has no two-leading-cell form:
   `files/core` (`SIZE_PRESETS`, `parseViewport`); the provider waits for the
   prototype list before the canvas exists, so it never opens at a stand-in.
 - **The Width slider** in the same popover (its `838px` readout above it) resizes EVERY frame (the size is
-  canvas-wide), in 360–2560 px, snapping onto a preset it moves within 28 px
+  canvas-wide), in 360–2560 px, snapping onto the nearest preset it moves within 28 px
   of. Only a move toward a preset snaps, so an arrow key can step off one.
 - **Zoom** is **Fit** (the default: the largest scale at which the whole frame
   is visible; at Responsive that is 100%) or a fixed scale from the 10–200%
@@ -315,7 +315,7 @@ out at the new size in one frame; scrolling moves nothing. A frame new to the
 board (added, spread, put back by Undo — not the first draw, a reload or a
 swipe → side switch) eases in where it lands (`useEnterMotion`, motion's
 overlay fade and scale) while the others glide. A screen is `rounded-xl`, a phone's
-`rounded-4xl`, a tablet's `rounded-3xl`, ringed in the border hairline over
+(either way up) `rounded-4xl`, a tablet's `rounded-3xl`, ringed in the border hairline over
 the deep `shadow-2xl`; `CanvasFrameView bare` (Present) draws it unframed.
 
 ## Swipe, selection, keyboard

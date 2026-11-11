@@ -33,9 +33,9 @@ describe("parseViewport", () => {
     });
   });
 
-  test("every preset, by its lowercased name, case and spaces ignored", () => {
+  test("every preset, by its word, case and spaces ignored", () => {
     for (const p of SIZE_PRESETS) {
-      expect(parseViewport(` ${p.name.toUpperCase()} `)).toEqual({
+      expect(parseViewport(` ${p.word.toUpperCase()} `)).toEqual({
         ok: true,
         viewport: { kind: "preset", preset: p.name },
       });

@@ -46,6 +46,7 @@ const desktopWindowsIcon = symbol("desktop-windows");
 const descriptionIcon = symbol("description");
 const laptopMacIcon = symbol("laptop-mac");
 const phoneIphoneIcon = symbol("phone-iphone");
+const phoneLandscapeIcon = symbol("stay-current-landscape");
 const removeIcon = symbol("remove");
 const swapHorizIcon = symbol("swap-horiz");
 const tabletMacIcon = symbol("tablet-mac");
@@ -492,6 +493,8 @@ function presetIcon(preset: (typeof SIZE_PRESETS)[number]["name"]): IconRef {
   switch (preset) {
     case "Phone":
       return phoneIphoneIcon;
+    case "Phone landscape":
+      return phoneLandscapeIcon;
     case "Tablet":
       return tabletMacIcon;
     case "Laptop":

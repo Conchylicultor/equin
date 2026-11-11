@@ -204,11 +204,13 @@ export function snapWidth(
   preset: PresetName | null;
 } {
   const clamped = Math.round(Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, w)));
-  const snap = SIZE_PRESETS.find(
+  // The nearest preset in reach, not the first: two presets can sit within
+  // SNAP_PX of one width (Tablet 820, Phone landscape 844).
+  const snap = SIZE_PRESETS.filter(
     (p) =>
       Math.abs(p.w - clamped) < SNAP_PX &&
       Math.abs(p.w - clamped) < Math.abs(p.w - from),
-  );
+  ).sort((x, y) => Math.abs(x.w - clamped) - Math.abs(y.w - clamped))[0];
   return snap
     ? { width: snap.w, preset: snap.name }
     : { width: clamped, preset: null };

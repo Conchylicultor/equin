@@ -149,6 +149,15 @@ describe("snapWidth", () => {
     expect(snapWidth(1000, 900)).toEqual({ width: 1000, preset: null });
   });
 
+  it("snaps onto the nearest of two presets in reach", () => {
+    // Tablet (820) and Phone landscape (844) are both within 28px of 830.
+    expect(snapWidth(830, 700)).toEqual({ width: 820, preset: "Tablet" });
+    expect(snapWidth(840, 700)).toEqual({
+      width: 844,
+      preset: "Phone landscape",
+    });
+  });
+
   it("never pulls a move away from a preset back onto it", () => {
     expect(snapWidth(1441, 1440)).toEqual({ width: 1441, preset: null });
     expect(snapWidth(1460, 1450)).toEqual({ width: 1460, preset: null });

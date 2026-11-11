@@ -213,7 +213,11 @@ function SourceBody({
  * tablet's), else the canvas frame's `rounded-xl`.
  */
 function frameCorners(size: CanvasSize): string {
-  if (size.kind === "preset" && size.preset === "Phone") return "rounded-4xl";
+  if (
+    size.kind === "preset" &&
+    (size.preset === "Phone" || size.preset === "Phone landscape")
+  )
+    return "rounded-4xl";
   if (size.kind === "preset" && size.preset === "Tablet") return "rounded-3xl";
   return "rounded-xl";
 }

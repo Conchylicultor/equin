@@ -81,7 +81,7 @@ never create a `.git` inside a prototype folder.
 - `prototype-viewport`: **leave it out** (the page then fills the canvas)
   unless the design is for one kind of screen. A fluid page already shows at
   desktop size on a desktop, and the reader can pick a device. The value is a
-  name: `phone`, `tablet`, `laptop`, `desktop`, `wide` or `window`. Not pixels.
+  name: `phone`, `phone-landscape`, `tablet`, `laptop`, `desktop`, `wide` or `window`. Not pixels.
 - `mocks`: what real app thing this is a mockup of, so the canvas shows it
   alongside. `exhibit:<id>` is one component, `route:/path` one screen,
   `app:/path` the whole app with its chrome. Declare it by default whenever

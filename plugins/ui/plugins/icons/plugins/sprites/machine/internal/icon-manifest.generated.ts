@@ -322,6 +322,7 @@ export const ICON_MANIFEST: {
     "splitscreen-left",
     "stacks",
     "star",
+    "stay-current-landscape",
     "sticky-note-2",
     "stop",
     "storage",
