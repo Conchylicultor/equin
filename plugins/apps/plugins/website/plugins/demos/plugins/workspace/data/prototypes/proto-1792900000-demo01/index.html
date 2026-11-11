@@ -1,19 +1,23 @@
 <!doctype html>
-<html lang="en" style="--accent: #c8553d">
+<html lang="en" data-cards="photo" data-headings="serif" style="--accent: #c8553d; --paper: #faf6f0">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Family Recipes</title>
 <meta name="description" content="The family's recipes as photo cards. Pick a few for the week and the shopping list writes itself — merged, scaled to servings, grouped by aisle." />
+<meta name="prototype-option-group" content="Layout" />
+<meta name="prototype-option" content="cards: photo | overlay | list" />
+<meta name="prototype-option" content="headings: serif | sans" />
 <meta name="prototype-option-group" content="Colors" />
-<meta name="prototype-option" content="accent: color terracotta=#c8553d | olive=#6b7b3a" />
+<meta name="prototype-option" content="accent: color terracotta=#c8553d | olive=#6b7b3a | plum=#7a4a6b | ocean=#2f6f8f" />
+<meta name="prototype-option" content="paper: color cream=#faf6f0 | white=#ffffff | linen=#f1ece4 | sage=#eef1ea" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
 <style>
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; height: 100%; }
   :root {
-    --bg: #faf6f0; --surface: #fff; --ink: #2b2420; --muted: #8a7d72; --line: #ece4d9;
+    --bg: var(--paper); --surface: #fff; --ink: #2b2420; --muted: #8a7d72; --line: #ece4d9;
     --soft: color-mix(in srgb, var(--accent) 12%, #fff);
     --serif: "Fraunces", Georgia, serif;
   }
@@ -142,6 +146,38 @@
   .empty { text-align: center; padding: 80px 20px; color: var(--muted); }
   .empty .big { font-family: var(--serif); font-size: 26px; color: var(--ink); margin-bottom: 8px; }
   .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 10px 18px; border-radius: 999px; z-index: 20; animation: rise .25s; }
+
+
+  /* ── variants ── */
+  .media { position: relative; }
+
+  /* cards: overlay — the title sits on the photo */
+  :root[data-cards="overlay"] .grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+  :root[data-cards="overlay"] .card { position: relative; }
+  :root[data-cards="overlay"] .photo { aspect-ratio: 4/5; }
+  :root[data-cards="overlay"] .media::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to top, rgba(20,12,6,.8), rgba(20,12,6,0) 55%); pointer-events: none; }
+  :root[data-cards="overlay"] .pick, :root[data-cards="overlay"] .nphotos { z-index: 2; }
+  :root[data-cards="overlay"] .nphotos { top: 10px; bottom: auto; }
+  :root[data-cards="overlay"] .card-body { position: absolute; left: 0; right: 0; bottom: 0; z-index: 1; color: #fff; pointer-events: none; padding: 16px 18px 18px; }
+  :root[data-cards="overlay"] .card h3 { font-size: 21px; }
+  :root[data-cards="overlay"] .meta { color: rgba(255,255,255,.82); }
+  :root[data-cards="overlay"] .from { color: #fff; }
+
+  /* cards: list — compact rows, thumbnail on the left */
+  :root[data-cards="list"] .grid { grid-template-columns: repeat(auto-fill, minmax(min(420px, 100%), 1fr)); gap: 12px; }
+  :root[data-cards="list"] .card { position: relative; flex-direction: row; align-items: center; border-radius: 14px; }
+  :root[data-cards="list"] .card:hover { transform: translateY(-1px); }
+  :root[data-cards="list"] .media { position: static; flex: none; width: 112px; }
+  :root[data-cards="list"] .photo { aspect-ratio: 1; }
+  :root[data-cards="list"] .photo .fallback { font-size: 34px; }
+  :root[data-cards="list"] .nphotos { display: none; }
+  :root[data-cards="list"] .pick { top: calc(50% - 18px); right: 14px; box-shadow: 0 0 0 1px var(--line); }
+  :root[data-cards="list"] .card-body { flex: 1; min-width: 0; padding: 12px 64px 12px 18px; }
+
+  /* headings: sans */
+  :root[data-headings="sans"] { --serif: "Inter", system-ui, sans-serif; }
+  :root[data-headings="sans"] :is(h1, h2, h3, .brand) { letter-spacing: -.02em; }
+  :root[data-headings="sans"] .story { font-style: normal; }
 
   @media (max-width: 760px) {
     .sheet { grid-template-columns: 1fr; }
@@ -530,7 +566,7 @@ function App() {
           <div className="grid">
             {shown.map((r) => (
               <div key={r.id} className={"card" + (week[r.id] ? " picked" : "")} onClick={() => setOpenId(r.id)}>
-                <div style={{ position: "relative" }}>
+                <div className="media">
                   <Photo src={r.photos[0]} title={r.title} />
                   <button className={"pick" + (week[r.id] ? " on" : "")} title={week[r.id] ? "Remove from this week" : "Add to this week"}
                     onClick={(e) => { e.stopPropagation(); toggleWeek(r); }}>{week[r.id] ? "✓" : "+"}</button>
