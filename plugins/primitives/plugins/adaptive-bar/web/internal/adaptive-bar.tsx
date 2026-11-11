@@ -78,7 +78,12 @@ import {
   WIDTH_EPSILON_PX,
 } from "./diagnostics";
 import { DEFAULT_LADDER, formFor, inlineRungsOf, yieldRankOf } from "./ladder";
-import { readRowMetrics, useLayoutMeasured, useMeasureBundle } from "./measure";
+import {
+  foreignCellCount,
+  readRowMetrics,
+  useLayoutMeasured,
+  useMeasureBundle,
+} from "./measure";
 import { OverflowPanel } from "./overflow-panel";
 import {
   BarFormsContext,
@@ -1182,7 +1187,20 @@ function AdaptiveBarShell({
      * there is nothing left to take it from. Stable, because the clamp holds
      * the budget at 0 however much narrower the row gets.
      */
-    const budget = Math.max(0, available - yieldFloor);
+    // Plus one gap per laid-out cell that is not the bar's own (a host's
+    // `Fill`, the yield cell): its width gives, its gap does not, and the fit
+    // only prices the gaps between its own items. See `foreignCellCount`.
+    const foreignGapsPx = layoutMeasured
+      ? foreignCellCount(root, [
+          ...order
+            .filter(({ anchor, entry }) =>
+              isDockedInline(entry.container, anchor),
+            )
+            .map(({ entry }) => entry.container),
+          ...(trigger === null ? [] : [trigger]),
+        ]) * metrics.gapPx
+      : 0;
+    const budget = Math.max(0, available - yieldFloor - foreignGapsPx);
 
     // The bar's whole premise: `available` is handed to it and does not move
     // when it decides. Tested against the layout engine rather than inferred

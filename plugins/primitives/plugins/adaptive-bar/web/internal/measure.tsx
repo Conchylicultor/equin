@@ -193,3 +193,49 @@ function lengthPx(raw: string): number {
   const px = Number.parseFloat(raw);
   return Number.isFinite(px) ? px : 0;
 }
+
+/**
+ * How many of the row's laid-out flex items are NOT the bar's own — a host's
+ * `Fill`, the growing `AdaptiveBar.Yield` cell, a reorder spacer.
+ *
+ * Each one costs the row a `gap` the fit never sees. Its WIDTH is slack (every
+ * such cell is `min-w-0` and gives down to nothing, the yield cell's floor
+ * reserved separately), but the gap beside it is not: flex lays out one gap
+ * between every pair of items, so a row holding a `Fill` between its title box
+ * and its `⋯` is one gap wider at its tightest than the fit's sum. Uncounted,
+ * the fit blesses a placement inside that gap, the row overflows it, and the
+ * `row-overflow` guard floors the whole bar over a few pixels (a canvas frame
+ * header lost its title box into the `⋯` that way).
+ *
+ * `own` is what the fit already prices: the docked occupant containers and the
+ * trigger. A flex item holding one of them (a host wrapper the anchor sits in)
+ * is theirs, not foreign. `display: contents` boxes are walked through, since
+ * their children are the row's flex items; out-of-flow children take no gap.
+ *
+ * Asks the real layout engine (`getClientRects`, computed style), so it is only
+ * called where {@link useLayoutMeasured} holds — the same gate as the guard it
+ * keeps honest.
+ */
+export function foreignCellCount(
+  root: Element,
+  own: readonly Element[],
+): number {
+  let count = 0;
+  const walk = (parent: Element): void => {
+    for (const child of parent.children) {
+      const style = getComputedStyle(child);
+      if (style.display === "contents") {
+        walk(child);
+        continue;
+      }
+      if (child.getClientRects().length === 0) continue;
+      if (style.position === "absolute" || style.position === "fixed") {
+        continue;
+      }
+      if (own.some((el) => child === el || child.contains(el))) continue;
+      count += 1;
+    }
+  };
+  walk(root);
+  return count;
+}

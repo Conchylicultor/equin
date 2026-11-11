@@ -72,8 +72,10 @@ Without a floor, flex takes the whole deficit from the yield cell: the row never
 overflows, and nothing is ever demoted (a title crushed to one word while ten
 widgets sit inline).
 
-So the fit's budget is `row content box − insetPx − yieldFloor`; past the floor
-the row overflows and an occupant relocates.
+So the fit's budget is `row content box − insetPx − yieldFloor − foreign gaps`;
+past the floor the row overflows and an occupant relocates. A foreign gap is the
+`gap` beside every laid-out cell that is not the bar's own (a host's `Fill`, the
+yield cell): its width gives, its gap does not (`foreignCellCount`).
 
 - `em` (not px) because legibility scales with typography/density presets (~16
   chars at 14px).
