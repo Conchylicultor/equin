@@ -30100,6 +30100,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `GenerateDocsOptions`
               - `HostConfigRegistration`
               - `HostContributionBarrel`
+              - `HostedComposition`
               - `HostRead`
               - `InferredBrowserHostGraph`
               - `MainComposition`
@@ -30143,6 +30144,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `colorTokenRefPath`
               - `committedRegistryBundle`
               - `companionManifestPath`
+              - `compositionManifestRedirects`
               - `computeEagerTier`
               - `customUtilitiesManifestPath`
               - `dataViewsManifestPath`

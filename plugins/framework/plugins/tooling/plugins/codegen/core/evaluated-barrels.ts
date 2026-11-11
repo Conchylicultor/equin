@@ -11,10 +11,7 @@ import {
   type SlotNaming,
   type SlotScope,
 } from "@plugins/framework/plugins/slot-declaration/core";
-import {
-  asPluginId,
-  type PluginId,
-} from "@plugins/framework/plugins/plugin-id/core";
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import {
   currentRecordStore,
   outsideFilesAt,
@@ -233,12 +230,21 @@ function declaringPlugins(
   return out;
 }
 
-/** The bundled web barrels (and web-sdk's seed): what the browser loads. */
+/**
+ * The bundled web barrels (and web-sdk's seed): what the browser loads — of
+ * the main composition, or of the composition whose `bundle` is passed (a
+ * composition build's post-web manifests, `writeCompositionManifests`).
+ */
 export async function bundledWebBarrels(
   pass: CodegenPass,
-): Promise<{ ev: BarrelEvaluation; refs: BarrelRef[]; bundle: Set<PluginId> }> {
+  of?: ReadonlySet<string>,
+): Promise<{
+  ev: BarrelEvaluation;
+  refs: BarrelRef[];
+  bundle: ReadonlySet<string>;
+}> {
   const ev = await evaluateWebBarrels(pass);
-  const bundle = mainBundle(ev.tree, pass.root);
+  const bundle = of ?? mainBundle(ev.tree, pass.root);
   return {
     ev,
     bundle,

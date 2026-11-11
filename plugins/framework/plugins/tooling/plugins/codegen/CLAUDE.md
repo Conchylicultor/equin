@@ -272,6 +272,7 @@ wrapper fixpoint reads.
     - `GenerateDocsOptions`
     - `HostConfigRegistration`
     - `HostContributionBarrel`
+    - `HostedComposition`
     - `HostRead`
     - `InferredBrowserHostGraph`
     - `MainComposition`
@@ -315,6 +316,7 @@ wrapper fixpoint reads.
     - `colorTokenRefPath`
     - `committedRegistryBundle`
     - `companionManifestPath`
+    - `compositionManifestRedirects`
     - `computeEagerTier`
     - `customUtilitiesManifestPath`
     - `dataViewsManifestPath`

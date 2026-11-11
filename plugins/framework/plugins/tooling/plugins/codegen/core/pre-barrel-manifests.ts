@@ -2,7 +2,13 @@ import {
   dataViewsManifestPath,
   renderDataViewsManifest,
 } from "./data-views-gen";
-import { type AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
+  appPathParent,
+  joinAppPath,
+  type AppPath,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
+import { compositionRegistryFileName } from "@plugins/framework/plugins/tooling/plugins/codegen/plugins/composition-registries/core";
 import { writeGenerated } from "./write-generated";
 import {
   reorderableSlotsManifestPath,
@@ -162,8 +168,28 @@ export const preBarrelManifests: readonly PreBarrelManifest[] = [
  *   - `appDeclarations`, the apps contributed to `Apps.App` (whole `AppRef` +
  *     launch kind), as data. Read by `apps-core/server` (re-exported as
  *     `declaredApps`) for the web-app manifests and the theme's first frame.
+ *
+ * The last two are what a composition's browser REGISTERS, so they differ per
+ * composition: each is `perComposition`, and a build writes every composition
+ * it hosts a sibling of it (`writeCompositionManifests`) — the committed file is
+ * the main composition's. `reorderableSlots` names the config descriptors the
+ * committed config origins are generated from, which are one set for the
+ * checkout, so it has none.
  */
-export const postWebManifests: readonly PreBarrelManifest[] = [
+export interface PostWebManifest extends Omit<PreBarrelManifest, "render"> {
+  /**
+   * The manifest as the main composition has it — or, given its hard closure
+   * `bundle`, as another composition would (only read when `perComposition`).
+   */
+  render: (pass: CodegenPass, bundle?: ReadonlySet<string>) => Promise<string>;
+  /**
+   * Its content is a function of what the bundle's browser registers, so every
+   * hosted composition gets its own copy. Absent: one manifest serves all.
+   */
+  perComposition?: true;
+}
+
+export const postWebManifests: readonly PostWebManifest[] = [
   {
     id: "reorderableSlots",
     path: reorderableSlotsManifestPath,
@@ -173,13 +199,91 @@ export const postWebManifests: readonly PreBarrelManifest[] = [
     id: "themeDeclarations",
     path: themeDeclarationsManifestPath,
     render: renderThemeDeclarationsManifest,
+    perComposition: true,
   },
   {
     id: "appDeclarations",
     path: appDeclarationsManifestPath,
     render: renderAppDeclarationsManifest,
+    perComposition: true,
   },
 ];
+
+/** One composition a build hosts: its id and its hard closure. */
+export interface HostedComposition {
+  name: string;
+  bundle: ReadonlySet<string>;
+}
+
+/**
+ * Where composition `composition`'s copy of a per-composition post-web manifest
+ * lives: the committed `<name>.generated.ts` for the main composition, the
+ * gitignored `<name>.composition.<id>.generated.ts` beside it for any other —
+ * the spelling the per-composition registries use (`compositionRegistryFileName`).
+ */
+export function compositionManifestPath(
+  m: PostWebManifest,
+  root: AppPath,
+  composition: string,
+): AppPath {
+  const committed = m.path(root);
+  const suffix = ".generated.ts";
+  if (!committed.endsWith(suffix)) {
+    throw new Error(
+      `[codegen] post-web manifest "${m.id}" is not a \`*${suffix}\` file: ${committed}`,
+    );
+  }
+  const dir = appPathParent(committed);
+  const name = committed.slice(dir.length + 1, -suffix.length);
+  return joinAppPath(dir, compositionRegistryFileName(name, composition));
+}
+
+/**
+ * Write every hosted composition's copy of each per-composition post-web
+ * manifest. The main composition's IS the committed file, written by
+ * `regenerateManifestCodegen`, so it is skipped here rather than written twice.
+ * Runs in the post-web phase, over the same evaluated web records.
+ */
+export async function writeCompositionManifests(
+  pass: CodegenPass,
+  compositions: readonly HostedComposition[],
+): Promise<void> {
+  for (const { name, bundle } of compositions) {
+    if (name === MAIN_COMPOSITION_ID) continue;
+    for (const m of postWebManifests) {
+      if (!m.perComposition) continue;
+      await writeGenerated({
+        file: compositionManifestPath(m, pass.root, name),
+        content: await m.render(pass, bundle),
+      });
+    }
+  }
+}
+
+/**
+ * For a compiled release of `composition`: each committed per-composition
+ * post-web manifest paired with the composition's own copy, both absolute — the
+ * manifests' half of what `release` redirects (beside
+ * `compositionRegistryRedirects`), so the server it compiles paints and lists
+ * the composition's apps and themes, not the main app's. Empty for the main
+ * composition, whose copies ARE the committed files.
+ */
+export function compositionManifestRedirects(
+  root: AppPath,
+  composition: string,
+): { committed: string; filtered: string }[] {
+  if (composition === MAIN_COMPOSITION_ID) return [];
+  return postWebManifests.flatMap((m) =>
+    !m.perComposition
+      ? []
+      : [
+          {
+            committed: m.path(root),
+            filtered: compositionManifestPath(m, root, composition),
+          },
+        ],
+  );
+}
 
 /**
  * Regenerate one manifest if it drifted: render in-memory, then hand the bytes

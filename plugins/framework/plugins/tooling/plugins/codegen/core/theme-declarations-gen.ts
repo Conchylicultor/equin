@@ -22,9 +22,11 @@ import type { CodegenPass } from "./codegen-pass";
  * typed `fragment` builder). Apps (id → base path) come from apps-core's own
  * post-web manifest (`app-declarations-gen.ts`).
  *
- * Registry-scoped, like the declaration pass it rides: a plugin the app's
- * composition does not bundle is not loaded by the browser, so its themes are
- * not painted there and must not be painted here either.
+ * Bundle-scoped: a plugin the composition does not bundle is not loaded by its
+ * browser, so its themes are not painted there and must not be painted here
+ * either. The committed manifest is the main composition's; every other
+ * composition a build hosts gets its own sibling (`writeCompositionManifests`),
+ * which its release compiles in place of this one.
  */
 
 const SLOT_IDS = {
@@ -54,8 +56,9 @@ const MANIFEST_HEADER = [
 
 async function collectThemeDeclarations(
   pass: CodegenPass,
+  bundle: ReadonlySet<string> | undefined,
 ): Promise<Record<Section, unknown[]>> {
-  const found = await collectWebSlotContributions(pass, SLOT_IDS);
+  const found = await collectWebSlotContributions(pass, SLOT_IDS, bundle);
   const out = {} as Record<Section, unknown[]>;
   for (const section of Object.keys(SLOT_IDS) as Section[]) {
     out[section] = found[section].map((c) => project(section, c));
@@ -116,9 +119,13 @@ export function themeDeclarationsManifestPath(root: AppPath): AppPath {
   return joinAppPath(root, MANIFEST_REL_PATH);
 }
 
-/** Render the manifest file contents in-memory (used by the in-sync check). */
+/**
+ * Render the manifest file contents in-memory (used by the in-sync check): the
+ * main composition's, or — given its `bundle` — another composition's.
+ */
 export async function renderThemeDeclarationsManifest(
   pass: CodegenPass,
+  bundle?: ReadonlySet<string>,
 ): Promise<string> {
-  return renderManifest(await collectThemeDeclarations(pass));
+  return renderManifest(await collectThemeDeclarations(pass, bundle));
 }

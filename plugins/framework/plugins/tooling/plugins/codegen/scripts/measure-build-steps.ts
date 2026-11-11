@@ -332,7 +332,11 @@ if (order === "pipeline") {
     });
   });
   await step("regenerateManifestCodegen (total)", async () => {
-    await regenerateManifestCodegen({ pass, onStep: record("  man: ") });
+    await regenerateManifestCodegen({
+      pass,
+      onStep: record("  man: "),
+      compositions: [],
+    });
   });
   const t = await treeCounts();
   const first = rows[0]!;

@@ -17,7 +17,9 @@ import { generateColorTokenRef } from "./color-token-ref-gen";
 import {
   postWebManifests,
   preBarrelManifests,
+  writeCompositionManifests,
   writePreBarrelManifest,
+  type HostedComposition,
 } from "./pre-barrel-manifests";
 import { assertPreBarrelManifestsFresh } from "./pre-barrel-guard";
 import { assertSlotsDeclared } from "./slot-declaration-guard";
@@ -211,7 +213,16 @@ export async function regenerateRegistryCodegen({
 export async function regenerateManifestCodegen({
   pass,
   onStep = runInline,
-}: RegenCodegenOptions): Promise<void> {
+  compositions,
+}: RegenCodegenOptions & {
+  /**
+   * The non-main compositions this build hosts, each with its hard closure:
+   * each gets its own copy of the per-composition post-web manifests (gitignored
+   * siblings — not repo-tree artifacts, so a pass that only normalizes the
+   * committed tree passes none).
+   */
+  compositions: readonly HostedComposition[];
+}): Promise<void> {
   const { root } = pass;
   await onStep("symbolNames", "icon symbol names", () =>
     generateSymbolNames({ root }),
@@ -251,6 +262,16 @@ export async function regenerateManifestCodegen({
     for (const m of postWebManifests) {
       await onStep(m.id, `${m.id} manifest`, () =>
         writePreBarrelManifest(m, pass),
+      );
+    }
+    // Every hosted composition's own copy of them, off the same records.
+    // Nothing in this process imports a sibling (only a release's compile
+    // resolves to one), so its write order against the server phase is free.
+    if (compositions.length > 0) {
+      await onStep(
+        "compositionManifests",
+        "composition post-web manifests",
+        () => writeCompositionManifests(pass, compositions),
       );
     }
     await onStep("pluginDocs", "generate plugin docs", () =>

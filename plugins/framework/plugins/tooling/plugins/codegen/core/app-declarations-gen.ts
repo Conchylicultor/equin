@@ -52,8 +52,9 @@ interface ProjectedApp {
 
 async function collectAppDeclarations(
   pass: CodegenPass,
+  bundle: ReadonlySet<string> | undefined,
 ): Promise<ProjectedApp[]> {
-  const { apps } = await collectWebSlotContributions(pass, SLOT_IDS);
+  const { apps } = await collectWebSlotContributions(pass, SLOT_IDS, bundle);
   return apps
     .map((c): ProjectedApp => {
       const app = c.app as ProjectedApp["app"];
@@ -91,9 +92,13 @@ export function appDeclarationsManifestPath(root: AppPath): AppPath {
   return joinAppPath(root, MANIFEST_REL_PATH);
 }
 
-/** Render the manifest file contents in-memory (used by the in-sync check). */
+/**
+ * Render the manifest file contents in-memory (used by the in-sync check): the
+ * main composition's, or — given its `bundle` — another composition's.
+ */
 export async function renderAppDeclarationsManifest(
   pass: CodegenPass,
+  bundle?: ReadonlySet<string>,
 ): Promise<string> {
-  return renderManifest(await collectAppDeclarations(pass));
+  return renderManifest(await collectAppDeclarations(pass, bundle));
 }

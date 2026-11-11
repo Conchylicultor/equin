@@ -17,6 +17,7 @@ import {
   writingCodegenPass,
   type CodegenPass,
   type CodegenStep,
+  type HostedComposition,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { listNamedCompositionRegistries } from "@plugins/framework/plugins/tooling/plugins/codegen/plugins/composition-registries/core";
 import { repoProgram } from "@plugins/framework/plugins/tooling/plugins/checks/core";
@@ -417,7 +418,14 @@ export async function prepareCompositionSources(opts: {
    */
   grant: Grant;
   hooks: ArtifactHooks;
-}): Promise<{ pass: CodegenPass }> {
+}): Promise<{
+  pass: CodegenPass;
+  /**
+   * Every non-main composition whose registries this stage wrote, with its
+   * hard closure — stage 2 writes each its own post-web manifests.
+   */
+  hosted: HostedComposition[];
+}> {
   const { root, compositions, hooks } = opts;
   const codegenStep = codegenStepFor(hooks);
 
@@ -582,6 +590,7 @@ export async function prepareCompositionSources(opts: {
     );
   }
   const filtered = plan.build;
+  const hosted: HostedComposition[] = [];
   if (filtered.length > 0) {
     const allManifests = opts.manifest.map(manifestItemToManifest);
     // ONE faceted tree for N compositions — the barrel-free tree the registry
@@ -604,13 +613,14 @@ export async function prepareCompositionSources(opts: {
         home: item.home,
         unlisted: item.unlisted,
       });
+      hosted.push({ name: composition, bundle });
       hooks.log(
         `Composition "${composition}": ${bundle.size} plugins in closure.`,
       );
     }
   }
   endSpan();
-  return { pass };
+  return { pass, hosted };
 }
 
 /**
@@ -626,6 +636,8 @@ export async function generateAppSources(opts: {
   root: AppPath;
   /** Stage 1's codegen pass (`prepareCompositionSources`). */
   pass: CodegenPass;
+  /** Stage 1's hosted compositions (`prepareCompositionSources`). */
+  hosted: readonly HostedComposition[];
   migration: {
     name?: string;
     reset?: boolean;
@@ -674,7 +686,11 @@ export async function generateAppSources(opts: {
   // plugin move's re-stamp compares the regenerated ones against (4b'').
   const priorOrigins = snapshotConfigOrigins(joinAppPath(root, "config"));
   try {
-    await regenerateManifestCodegen({ pass: opts.pass, onStep: codegenStep });
+    await regenerateManifestCodegen({
+      pass: opts.pass,
+      onStep: codegenStep,
+      compositions: opts.hosted,
+    });
   } finally {
     // The last record misses are the manifest codegen's: the workers (each
     // holding the modules it evaluated) are not kept through the frontend.

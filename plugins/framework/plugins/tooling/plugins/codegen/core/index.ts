@@ -222,9 +222,11 @@ export {
 // `*.generated.ts` files MUST be regenerated before the first barrel import.
 // Read by both the runtime freeze-point guard and the static completeness check.
 export {
+  compositionManifestRedirects,
   preBarrelManifests,
   postWebManifests,
   writePreBarrelManifest,
+  type HostedComposition,
   type PreBarrelManifest,
 } from "./pre-barrel-manifests";
 

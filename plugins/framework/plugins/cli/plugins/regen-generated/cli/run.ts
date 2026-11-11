@@ -22,7 +22,9 @@ const run: CliAction<[], object> = async () => {
     loadRepoSnapshot(root),
   );
   const { renamedPackages } = await regenerateRegistryCodegen({ pass });
-  await regenerateManifestCodegen({ pass });
+  // The committed tree only: a composition's own manifests are gitignored, and
+  // its next build writes them.
+  await regenerateManifestCodegen({ pass, compositions: [] });
 
   // A created or corrected package.json leaves `bun.lock` without the new
   // member, or recording its old name. This

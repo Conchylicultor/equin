@@ -52,6 +52,7 @@ import { appIconToSvg } from "@plugins/apps-core/plugins/app-icon/core";
 import { runAssetMirrorPrewarm } from "@plugins/infra/plugins/asset-mirror/plugins/bundle/cli";
 import {
   codegenPassOver,
+  compositionManifestRedirects,
   propagateConfigToUser,
   readDefineApp,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
@@ -1120,16 +1121,19 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
   // ── 2. Compile entrypoints ───────────────────────────────────────────
   console.log("\n[2/5] Compiling entrypoints (bun build --compile)...");
 
-  // Phase 1 wrote every filtered sibling; a missing one is a codegen bug, and
-  // resolving to a file that is not there must not silently fall back to the
-  // committed (whole-app) registry.
+  // Phase 1 wrote every filtered sibling — the registries, and the post-web
+  // manifests of what the composition's browser registers (its apps and
+  // themes, which the server paints into every page's head); a missing one is
+  // a codegen bug, and resolving to a file that is not there must not silently
+  // fall back to the committed (whole-app) one.
   const registries: RegistryRedirects = new Map(
-    (
-      await compositionRegistryRedirects(
+    [
+      ...(await compositionRegistryRedirects(
         await loadRepoFiles(root),
         opts.composition,
-      )
-    ).map(({ committed, filtered }) => {
+      )),
+      ...compositionManifestRedirects(root, opts.composition),
+    ].map(({ committed, filtered }) => {
       if (!existsSync(filtered)) {
         throw new Error(
           `Composition build did not produce ${relative(root, filtered)}.`,
