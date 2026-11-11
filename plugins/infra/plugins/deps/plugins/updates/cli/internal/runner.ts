@@ -17,7 +17,15 @@ import {
   type ProbeOutcome,
 } from "./bisect";
 import type { Gates } from "./gates";
-import type { Move, Updater, UpdaterSmoke } from "../../core/internal/updater";
+import type {
+  Cooldown,
+  Move,
+  Outdated,
+  Updater,
+  UpdaterSmoke,
+} from "../../core/internal/updater";
+import { boundedRows } from "../../core/internal/awaiting";
+import { formatOutdated } from "../../core/internal/upgrade-prompt";
 import {
   describeHold,
   reviewableHolds,
@@ -26,7 +34,9 @@ import {
 
 /**
  * `running` until the end, and only then: every run ends on one of the others.
- * `current`: nothing newer to move to. `upgraded`: every planned move landed and
+ * `current`: nothing newer anywhere. `waiting`: nothing to move now, but newer
+ * releases exist that this run may not take (`waiting` on the receipt: inside
+ * their cooldown, waiting on a partner's publish, held or blocked). `upgraded`: every planned move landed and
  * nothing regressed. `partial`: some moves landed (proven together); the rest
  * regressed (`culprits`) or were never decided (`untested`). `regressed`:
  * nothing landed — the files were put back. `aborted`: the run itself failed
@@ -37,6 +47,7 @@ import {
 export type UpgradeVerdict =
   | "running"
   | "current"
+  | "waiting"
   | "upgraded"
   | "partial"
   | "regressed"
@@ -58,6 +69,11 @@ export interface UpgradeSelection {
 
 /** A move, with the updater that makes it. */
 export interface UpdaterMove extends Move {
+  updater: string;
+}
+
+/** A newer release this run does not move to, with the updater that saw it and why (`waiting`). */
+export interface UpdaterWaiting extends Outdated {
   updater: string;
 }
 
@@ -89,6 +105,14 @@ export interface UpgradeReceipt {
   error: string | null;
   /** Holds past their `reviewBy` (`holds-to-review` only): the work before any upgrade. */
   holdsToReview: HoldToReview[];
+  /** Whether the release cooldown was honoured or skipped (`--skip-cooldown`). */
+  cooldown: Cooldown;
+  /**
+   * Every newer release the run saw but does not move to, with why (cooldown,
+   * a partner's publish, a hold, a prerequisite) — so a run that moves nothing
+   * never reads as "everything is on its latest release" when it is not.
+   */
+  waiting: UpdaterWaiting[];
   /** What each updater's `prepare` recorded (mise: its own version before and after), by updater id. */
   notes: Record<string, Record<string, string>>;
   /** Every move planned. */
@@ -120,6 +144,29 @@ function writeReceipt(path: string, receipt: UpgradeReceipt): void {
   const tmp = `${path}.tmp.${process.pid}`;
   writeFileSync(tmp, JSON.stringify(receipt, null, 2) + "\n");
   renameSync(tmp, path);
+}
+
+/**
+ * What `updater` sees newer but this run does not move to: its detection's
+ * rows (every wait bounded on `now`) that carry a reason, minus the moves
+ * planned, restricted to `only`. Read after `plan`, so a `--skip-cooldown`
+ * run lists no cooldown wait it is about to take.
+ */
+async function waitingOf(
+  updater: Updater,
+  root: AppPath,
+  only: readonly string[] | undefined,
+  moves: readonly Move[],
+  now: Date,
+): Promise<UpdaterWaiting[]> {
+  const moved = new Set(moves.map((m) => m.name));
+  const named = (name: string) =>
+    only === undefined ||
+    only.some((n) => name === n || name.endsWith(`:${n}`));
+  return boundedRows(await updater.detect(root), now)
+    .filter((o) => o.waiting !== undefined)
+    .filter((o) => !moved.has(o.name) && named(o.name))
+    .map((o) => ({ updater: updater.id, ...o }));
 }
 
 export function formatMove(m: UpdaterMove): string {
@@ -223,6 +270,7 @@ export async function runUpgrade(args: {
   receiptPath: string;
   gates: Gates;
   log: (line: string) => void;
+  cooldown: Cooldown;
 }): Promise<UpgradeReceipt> {
   const { selection, receiptPath, log } = args;
   if (selection.length === 0) throw new Error("No updater to run.");
@@ -234,6 +282,8 @@ export async function runUpgrade(args: {
     verdict: "running",
     error: null,
     holdsToReview: [],
+    cooldown: args.cooldown,
+    waiting: [],
     notes: {},
     moves: [],
     baseline: null,
@@ -285,10 +335,11 @@ async function upgrade(args: {
   receiptPath: string;
   gates: Gates;
   log: (line: string) => void;
+  cooldown: Cooldown;
   receipt: UpgradeReceipt;
   onSnapshot: (putBack: () => Promise<void>) => void;
 }): Promise<void> {
-  const { selection, root, receiptPath, gates, log, receipt } = args;
+  const { selection, root, receiptPath, gates, log, cooldown, receipt } = args;
   const save = () => writeReceipt(receiptPath, receipt);
 
   // Every hold is reviewed before anything moves: a lapsed one stops the run
@@ -311,24 +362,57 @@ async function upgrade(args: {
     return;
   }
 
-  // Every updater's moves, planned before any gate runs.
+  // Every updater's moves, planned before any gate runs, and what it sees
+  // newer but will not move to — reported, never silent.
+  if (cooldown === "skip")
+    log(
+      "Release cooldown SKIPPED: the newest releases are taken however fresh.",
+    );
   const planned: Updater[] = [];
   for (const { updater, only } of selection) {
     if (updater.prepare !== undefined) {
       receipt.notes[updater.id] = { ...(await updater.prepare(root, log)) };
       save();
     }
-    const moves = await updater.plan(root, only);
-    if (moves.length === 0) {
-      log(`${updater.id}: everything is on its latest release.`);
-      continue;
-    }
+    const moves = await updater.plan(root, { only, cooldown });
+    const waiting = await waitingOf(updater, root, only, moves, now);
+    receipt.waiting.push(...waiting);
+    if (moves.length === 0)
+      log(
+        waiting.length === 0
+          ? `${updater.id}: everything is on its latest release.`
+          : `${updater.id}: nothing to move now; ${waiting.length} newer release(s) not taken:`,
+      );
+    else
+      log(
+        `${updater.id}: ${moves.length} move(s)` +
+          (waiting.length === 0
+            ? "."
+            : `; ${waiting.length} newer release(s) not taken:`),
+      );
+    for (const w of waiting) log(`  ${formatOutdated(w)}`);
+    if (moves.length === 0) continue;
     planned.push(updater);
     receipt.moves.push(...moves.map((m) => ({ updater: updater.id, ...m })));
   }
   if (planned.length === 0) {
-    receipt.verdict = "current";
-    log("\nEverything is on its latest release. Nothing to prove.");
+    if (receipt.waiting.length === 0) {
+      receipt.verdict = "current";
+      log("\nEverything is on its latest release. Nothing to prove.");
+    } else {
+      receipt.verdict = "waiting";
+      log(
+        `\nNothing to move now: ${receipt.waiting.length} newer release(s) wait (listed above). Nothing to prove.` +
+          (cooldown === "honour" &&
+          receipt.waiting.some(
+            (w) =>
+              w.waiting?.kind === "awaiting" &&
+              w.waiting.on.kind === "cooldown",
+          )
+            ? " To take a release still in its cooldown now, run again with --skip-cooldown."
+            : ""),
+      );
+    }
     return;
   }
   save();
@@ -375,7 +459,7 @@ async function upgrade(args: {
     try {
       for (const updater of planned) {
         const mine = moves.filter((m) => m.updater === updater.id);
-        if (mine.length > 0) await updater.apply(root, mine, log);
+        if (mine.length > 0) await updater.apply(root, mine, log, cooldown);
       }
       return null;
     } catch (err) {

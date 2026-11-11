@@ -60,12 +60,14 @@ delete it once none can be open.
 - Core:
   - Exports (types):
     - `AwaitingOn`
+    - `Cooldown`
     - `GateResult`
     - `Hold`
     - `Move`
     - `Outdated`
     - `OutdatedUpdater`
     - `OutdatedWaiting`
+    - `PlanOptions`
     - `Updater`
     - `UpdaterSmoke`
   - Exports (values):

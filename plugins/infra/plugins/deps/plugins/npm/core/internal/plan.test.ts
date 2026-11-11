@@ -41,6 +41,63 @@ describe("planNpm", () => {
     expect(plan.moves).toEqual([{ name: "vite", from: "6.4.2", to: "7.1.0" }]);
     expect(plan.outdated).toEqual([
       { name: "vite", current: "6.4.2", latest: "7.1.0" },
+      // The release still cooling down is listed WAITING, never silent.
+      {
+        name: "vite",
+        current: "6.4.2",
+        latest: "7.2.0",
+        waiting: {
+          kind: "awaiting",
+          on: {
+            kind: "cooldown",
+            of: ["vite"],
+            until: "2026-10-18T00:00:00.000Z",
+          },
+        },
+      },
+    ]);
+  });
+
+  test("a lone package whose newest release is cooling down moves nothing and is listed WAITING", () => {
+    const plan = planNpm(
+      input({
+        installed: [{ name: "x", current: "1.0.0" }],
+        packuments: new Map([
+          ["x", pkg("1.1.0", { "1.0.0": OLD, "1.1.0": FRESH })],
+        ]),
+      }),
+    );
+    expect(plan.moves).toEqual([]);
+    expect(plan.outdated).toEqual([
+      {
+        name: "x",
+        current: "1.0.0",
+        latest: "1.1.0",
+        waiting: {
+          kind: "awaiting",
+          on: {
+            kind: "cooldown",
+            of: ["x"],
+            until: "2026-10-18T00:00:00.000Z",
+          },
+        },
+      },
+    ]);
+  });
+
+  test("no cooldown (--skip-cooldown): the freshest release moves", () => {
+    const plan = planNpm(
+      input({
+        cooldownDays: 0,
+        installed: [{ name: "x", current: "1.0.0" }],
+        packuments: new Map([
+          ["x", pkg("1.1.0", { "1.0.0": OLD, "1.1.0": FRESH })],
+        ]),
+      }),
+    );
+    expect(plan.moves).toEqual([{ name: "x", from: "1.0.0", to: "1.1.0" }]);
+    expect(plan.outdated).toEqual([
+      { name: "x", current: "1.0.0", latest: "1.1.0" },
     ]);
   });
 

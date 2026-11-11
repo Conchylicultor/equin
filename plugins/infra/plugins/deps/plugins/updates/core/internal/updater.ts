@@ -98,6 +98,23 @@ export interface Move {
   unit?: string;
 }
 
+/**
+ * How an upgrade treats an updater's release cooldown (the days a release must
+ * have been public before it is adopted — the cheapest defence against a
+ * hijacked fresh release). `honour`: the default, and the only one the
+ * scheduled detection uses. `skip`: adopt the newest release however fresh
+ * (`./equin deps upgrade --skip-cooldown`), for an update wanted now — the
+ * gates still prove every move. An updater with no cooldown ignores it.
+ */
+export type Cooldown = "honour" | "skip";
+
+/** What `Updater.plan` is asked for. */
+export interface PlanOptions {
+  /** Names this updater knows to restrict the plan to (an unknown one throws); every outdated input when undefined. */
+  only: readonly string[] | undefined;
+  cooldown: Cooldown;
+}
+
 export interface Updater {
   /** Stable id: `./equin deps upgrade <id>`, the receipt name, the task author. */
   readonly id: string;
@@ -123,15 +140,20 @@ export interface Updater {
    */
   detect(root: AppPath): Promise<Outdated[]>;
   /**
-   * The exact moves an upgrade would make now, restricted to `only` (names this
-   * updater knows; an unknown one throws). Read-only.
+   * The exact moves an upgrade would make now, restricted to `opts.only`,
+   * under `opts.cooldown`. Read-only.
    */
-  plan(root: AppPath, only: readonly string[] | undefined): Promise<Move[]>;
-  /** Make the moves in `root`'s files. Throws on any failure. */
+  plan(root: AppPath, opts: PlanOptions): Promise<Move[]>;
+  /**
+   * Make the moves in `root`'s files, under the `cooldown` they were planned
+   * with (an updater that re-resolves — uv — must not drop a fresh release the
+   * plan took). Throws on any failure.
+   */
   apply(
     root: AppPath,
     moves: readonly Move[],
     log: (line: string) => void,
+    cooldown: Cooldown,
   ): Promise<void>;
   /**
    * Bring what is installed or derived in `root` back in line with `files` as

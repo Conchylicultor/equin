@@ -323,6 +323,26 @@ export function planNpm(input: PlanInput): Plan {
           latest: newest,
           waiting: heldWaiting(hold, today),
         });
+      } else {
+        // Its own newest release is published but still cooling down: listed,
+        // so a run that moves nothing never reads as "on its latest release".
+        const fresh = everAllowed.get(m)![0]!;
+        if (order(fresh, newestAllowed) > 0) {
+          const at = packuments.get(m)!.published.get(fresh)!;
+          outdated.push({
+            name: m,
+            current: from,
+            latest: fresh,
+            waiting: {
+              kind: "awaiting",
+              on: {
+                kind: "cooldown",
+                of: [m],
+                until: new Date(Date.parse(at) + cooldownMs).toISOString(),
+              },
+            },
+          });
+        }
       }
     }
   }

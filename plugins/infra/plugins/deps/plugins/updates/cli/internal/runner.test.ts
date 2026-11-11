@@ -9,7 +9,12 @@ import {
 import type { GateResult } from "../../core/internal/compare";
 import type { Gates } from "./gates";
 import { runUpgrade } from "./runner";
-import type { Move, Updater } from "../../core/internal/updater";
+import type {
+  Cooldown,
+  Move,
+  Outdated,
+  Updater,
+} from "../../core/internal/updater";
 import type { Hold } from "../../core/internal/hold";
 
 let root: AppPath;
@@ -82,6 +87,7 @@ async function run(updater: Updater, gates: Gates) {
     receiptPath: join(root, "receipt.json"),
     gates,
     log: () => {},
+    cooldown: "honour",
   });
 }
 
@@ -91,6 +97,97 @@ describe("runUpgrade verdicts", () => {
     const receipt = await run(fakeUpdater([]), gates);
     expect(receipt.verdict).toBe("current");
     expect(gates.calls).toEqual([]);
+  });
+
+  test("waiting: nothing to move, but a newer release waits — listed, not 'current'", async () => {
+    const cooling: Outdated = {
+      name: "pkg",
+      current: "1",
+      latest: "2",
+      waiting: {
+        kind: "awaiting",
+        on: { kind: "cooldown", of: ["pkg"], until: "2026-11-12T15:59:03Z" },
+      },
+    };
+    const lines: string[] = [];
+    const gates = fakeGates({ before: clean, after: clean });
+    const receipt = await runUpgrade({
+      selection: [
+        { updater: { ...fakeUpdater([]), detect: async () => [cooling] } },
+      ],
+      root,
+      receiptPath: join(root, "receipt.json"),
+      gates,
+      log: (l) => lines.push(l),
+      cooldown: "honour",
+    });
+    expect(receipt.verdict).toBe("waiting");
+    expect(receipt.waiting).toEqual([{ updater: "fake", ...cooling }]);
+    expect(gates.calls).toEqual([]);
+    const out = lines.join("\n");
+    expect(out).toContain(
+      "pkg 1 → 2 — WAITING for the cooldown of pkg (moves by itself after 2026-11-12)",
+    );
+    expect(out).toContain("--skip-cooldown");
+    expect(out).not.toContain("everything is on its latest release");
+  });
+
+  test("a release the run moves is not also listed as waiting", async () => {
+    const gates = fakeGates({ before: clean, after: clean });
+    const receipt = await run(
+      {
+        ...fakeUpdater(PKG_MOVE),
+        detect: async () => [
+          {
+            name: "pkg",
+            current: "1",
+            latest: "2",
+            waiting: {
+              kind: "awaiting",
+              on: {
+                kind: "cooldown",
+                of: ["pkg"],
+                until: "2026-11-12T00:00:00Z",
+              },
+            },
+          },
+        ],
+      },
+      gates,
+    );
+    expect(receipt.verdict).toBe("upgraded");
+    expect(receipt.waiting).toEqual([]);
+  });
+
+  test("--skip-cooldown reaches the updater's plan and apply, and the receipt", async () => {
+    const seen: Cooldown[] = [];
+    const base = fakeUpdater(PKG_MOVE);
+    const gates = fakeGates({ before: clean, after: clean });
+    const receipt = await runUpgrade({
+      selection: [
+        {
+          updater: {
+            ...base,
+            plan: async (r, opts) => {
+              seen.push(opts.cooldown);
+              return base.plan(r, opts);
+            },
+            apply: async (r, moves, log, cooldown) => {
+              seen.push(cooldown);
+              return base.apply(r, moves, log, cooldown);
+            },
+          },
+        },
+      ],
+      root,
+      receiptPath: join(root, "receipt.json"),
+      gates,
+      log: () => {},
+      cooldown: "skip",
+    });
+    expect(receipt.verdict).toBe("upgraded");
+    expect(receipt.cooldown).toBe("skip");
+    expect(seen).toEqual(["skip", "skip"]);
   });
 
   test("upgraded: the lock moves and stays moved", async () => {
@@ -276,6 +373,7 @@ describe("runUpgrade verdicts", () => {
       receiptPath: join(root, "receipt.json"),
       gates,
       log: () => {},
+      cooldown: "honour",
     });
     expect(receipt.updaters).toEqual(["fake", "other"]);
     expect(receipt.moves.map((m) => m.updater)).toEqual(["fake", "other"]);
@@ -303,6 +401,7 @@ describe("runUpgrade verdicts", () => {
       receiptPath: join(root, "receipt.json"),
       gates,
       log: () => {},
+      cooldown: "honour",
     });
     expect(receipt.verdict).toBe("upgraded");
     expect(receipt.moves).toEqual([{ updater: "fake", ...PKG }]);
@@ -389,6 +488,7 @@ describe("runUpgrade narrows a regressed batch down", () => {
       receiptPath: join(root, "receipt.json"),
       gates,
       log: () => {},
+      cooldown: "honour",
     });
   }
 

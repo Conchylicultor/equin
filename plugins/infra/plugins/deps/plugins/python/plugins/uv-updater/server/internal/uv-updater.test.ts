@@ -49,11 +49,17 @@ source = { registry = "https://pypi.org/simple" }
   });
 
   test("the cooldown cutoff is the start of the UTC day, three days back", () => {
-    expect(uvCutoff(new Date("2026-09-29T17:46:09Z"))).toBe(
+    expect(uvCutoff(new Date("2026-09-29T17:46:09Z"), "honour")).toBe(
       "2026-09-26T00:00:00.000Z",
     );
-    expect(uvCutoff(new Date("2026-09-29T00:00:01Z"))).toBe(
+    expect(uvCutoff(new Date("2026-09-29T00:00:01Z"), "honour")).toBe(
       "2026-09-26T00:00:00.000Z",
+    );
+  });
+
+  test("a skipped cooldown's cutoff is the start of tomorrow (UTC): every upload so far", () => {
+    expect(uvCutoff(new Date("2026-09-29T17:46:09Z"), "skip")).toBe(
+      "2026-09-30T00:00:00.000Z",
     );
   });
 

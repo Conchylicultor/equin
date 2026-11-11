@@ -134,6 +134,8 @@ First, the holds to review (listed above, per updater): \`./equin deps upgrade\`
    Then run \`./equin deps upgrade\` again, and go back to step 2 on its verdict.
 
 4. Verdict \`current\`: nothing to do. Everything is already on its latest release, and no hold is overdue.
+   Verdict \`waiting\`: nothing could move yet — the receipt's \`waiting\` (also printed) lists each newer release and
+   why (a cooldown, a partner's publish, a hold, a prerequisite). Nothing to push; do any BLOCKED prerequisite as below.
 
 A row marked BLOCKED is a release the upgrade cannot move to on its own: do the prerequisite it names (or, when it
 is not doable from this worktree, file it as a task with \`add_task\` and say so), then upgrade again. A row marked

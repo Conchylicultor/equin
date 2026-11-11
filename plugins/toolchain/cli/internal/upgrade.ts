@@ -10,9 +10,16 @@ import { miseUpdater } from "@plugins/infra/plugins/deps/plugins/mise/core";
  * contributions).
  */
 const run: CliAction<[], { tool?: string }> = async (opts) => {
-  await upgradeThisWorktree([
-    { updater: miseUpdater, only: opts.tool?.split(",").map((t) => t.trim()) },
-  ]);
+  // mise has no release cooldown.
+  await upgradeThisWorktree(
+    [
+      {
+        updater: miseUpdater,
+        only: opts.tool?.split(",").map((t) => t.trim()),
+      },
+    ],
+    { cooldown: "honour" },
+  );
 };
 
 export default run;

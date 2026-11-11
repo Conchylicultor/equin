@@ -1,5 +1,6 @@
 import { declaredUpdaters } from "@plugins/infra/plugins/deps/plugins/updates/server";
 import { upgradeThisWorktree } from "@plugins/infra/plugins/deps/plugins/updates/cli";
+import type { Cooldown } from "@plugins/infra/plugins/deps/plugins/updates/core";
 
 /**
  * The body of `deps upgrade`, in its own module because it imports the
@@ -8,11 +9,12 @@ import { upgradeThisWorktree } from "@plugins/infra/plugins/deps/plugins/updates
  * `runExec` (see `./upgrade.ts`).
  *
  * No `id`: every declared updater, as one batch. An `id`: that updater alone,
- * optionally restricted to `only`.
+ * optionally restricted to `only`. `cooldown`: `skip` for `--skip-cooldown`.
  */
 export async function upgrade(
   id: string | undefined,
   only: readonly string[] | undefined,
+  cooldown: Cooldown,
 ): Promise<void> {
   const updaters = declaredUpdaters();
   if (id === undefined) {
@@ -21,7 +23,10 @@ export async function upgrade(
         "`--only` names one updater's inputs: name the updater too.",
       );
     if (updaters.length === 0) throw new Error("No updater is declared.");
-    await upgradeThisWorktree(updaters.map((updater) => ({ updater })));
+    await upgradeThisWorktree(
+      updaters.map((updater) => ({ updater })),
+      { cooldown },
+    );
     return;
   }
   const updater = updaters.find((u) => u.id === id);
@@ -30,5 +35,5 @@ export async function upgrade(
       `No updater ${JSON.stringify(id)}. Updaters: ${updaters.map((u) => u.id).join(", ") || "none"}.`,
     );
   }
-  await upgradeThisWorktree([{ updater, only }]);
+  await upgradeThisWorktree([{ updater, only }], { cooldown });
 }

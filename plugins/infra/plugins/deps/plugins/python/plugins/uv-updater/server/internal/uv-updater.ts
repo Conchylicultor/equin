@@ -12,6 +12,7 @@ import {
   heldWaiting,
   isActionable,
   utcDay,
+  type Cooldown,
   type Hold,
   type Move,
   type Outdated,
@@ -36,15 +37,18 @@ export const UV_COOLDOWN_DAYS = 3;
 
 /**
  * The newest upload a resolution may use: the start of today (UTC) minus the
- * cooldown. Day-granular, so a `plan` and the `apply` after it agree.
+ * cooldown — or, with the cooldown skipped, the start of tomorrow (every
+ * upload so far). Day-granular, so a `plan` and the `apply` after it agree.
  */
-export function uvCutoff(now: Date): string {
+export function uvCutoff(now: Date, cooldown: Cooldown): string {
   const today = Date.UTC(
     now.getUTCFullYear(),
     now.getUTCMonth(),
     now.getUTCDate(),
   );
-  return new Date(today - UV_COOLDOWN_DAYS * DAY_MS).toISOString();
+  return new Date(
+    cooldown === "skip" ? today + DAY_MS : today - UV_COOLDOWN_DAYS * DAY_MS,
+  ).toISOString();
 }
 
 /** One uv project, found by its tracked `python/pyproject.toml`. */
@@ -292,6 +296,59 @@ export function projectHolds(holds: readonly Hold[], label: string): Hold[] {
     .filter((h) => h.names.length > 0);
 }
 
+/** What every project could move to under `cooldown` (detection: always `honour`). */
+async function detectUnder(
+  root: AppPath,
+  cooldown: Cooldown,
+): Promise<Outdated[]> {
+  const now = new Date();
+  const cutoff = uvCutoff(now, cooldown);
+  const today = utcDay(now);
+  const downloads = await cpythonDownloads(root);
+  const newest = newestCpython(downloads, cutoff, []);
+  const out: Outdated[] = [];
+  for (const project of await uvProjects(root)) {
+    const holds = projectHolds(UV_HOLDS, project.label);
+    const cpython = newestCpython(downloads, cutoff, holds);
+    const pinned = (
+      await readFile(pythonVersionFile(root, project), "utf8")
+    ).trim();
+    if (cpython !== null && isNewerRelease(cpython, pinned)) {
+      out.push({
+        name: moveName(project, CPYTHON),
+        current: pinned,
+        latest: cpython,
+      });
+    } else if (newest !== null && isNewerRelease(newest, pinned)) {
+      // Nothing to move to but a held release: listed, so a hold is never silent.
+      const hold = heldBy(holds, CPYTHON, newest, compareReleases)!;
+      out.push({
+        name: moveName(project, CPYTHON),
+        current: pinned,
+        latest: newest,
+        waiting: heldWaiting(hold, today),
+      });
+    }
+    const output = await uvLock(root, project, [
+      "--upgrade",
+      "--dry-run",
+      "--exclude-newer",
+      cutoff,
+    ]);
+    for (const u of parseLockUpdates(output)) {
+      if (!isNewerRelease(u.to, u.from)) continue;
+      const hold = heldBy(holds, u.pkg, u.to, compareReleases);
+      out.push({
+        name: moveName(project, u.pkg),
+        current: u.from,
+        latest: u.to,
+        ...(hold === undefined ? {} : { waiting: heldWaiting(hold, today) }),
+      });
+    }
+  }
+  return out;
+}
+
 /**
  * Every `python/` project's `uv.lock` and `.python-version`, under one
  * {@link UV_COOLDOWN_DAYS}-day release cooldown.
@@ -315,57 +372,10 @@ export const uvUpdater: Updater = {
       join(p.dir, ".python-version"),
     ]),
 
-  async detect(root): Promise<Outdated[]> {
-    const now = new Date();
-    const cutoff = uvCutoff(now);
-    const today = utcDay(now);
-    const downloads = await cpythonDownloads(root);
-    const newest = newestCpython(downloads, cutoff, []);
-    const out: Outdated[] = [];
-    for (const project of await uvProjects(root)) {
-      const holds = projectHolds(UV_HOLDS, project.label);
-      const cpython = newestCpython(downloads, cutoff, holds);
-      const pinned = (
-        await readFile(pythonVersionFile(root, project), "utf8")
-      ).trim();
-      if (cpython !== null && isNewerRelease(cpython, pinned)) {
-        out.push({
-          name: moveName(project, CPYTHON),
-          current: pinned,
-          latest: cpython,
-        });
-      } else if (newest !== null && isNewerRelease(newest, pinned)) {
-        // Nothing to move to but a held release: listed, so a hold is never silent.
-        const hold = heldBy(holds, CPYTHON, newest, compareReleases)!;
-        out.push({
-          name: moveName(project, CPYTHON),
-          current: pinned,
-          latest: newest,
-          waiting: heldWaiting(hold, today),
-        });
-      }
-      const output = await uvLock(root, project, [
-        "--upgrade",
-        "--dry-run",
-        "--exclude-newer",
-        cutoff,
-      ]);
-      for (const u of parseLockUpdates(output)) {
-        if (!isNewerRelease(u.to, u.from)) continue;
-        const hold = heldBy(holds, u.pkg, u.to, compareReleases);
-        out.push({
-          name: moveName(project, u.pkg),
-          current: u.from,
-          latest: u.to,
-          ...(hold === undefined ? {} : { waiting: heldWaiting(hold, today) }),
-        });
-      }
-    }
-    return out;
-  },
+  detect: (root) => detectUnder(root, "honour"),
 
-  async plan(root, only): Promise<Move[]> {
-    const outdated = await uvUpdater.detect(root);
+  async plan(root, { only, cooldown }): Promise<Move[]> {
+    const outdated = await detectUnder(root, cooldown);
     if (only !== undefined) {
       const known = new Set(
         outdated.flatMap((o) => [o.name, o.name.split(":")[1] ?? o.name]),
@@ -392,8 +402,8 @@ export const uvUpdater: Updater = {
   // every env is installed under the identity those files hash to.
   sync: async () => {},
 
-  async apply(root, moves, log) {
-    const cutoff = uvCutoff(new Date());
+  async apply(root, moves, log, cooldown) {
+    const cutoff = uvCutoff(new Date(), cooldown);
     for (const project of await uvProjects(root)) {
       const ours = moves.filter((m) => m.name.startsWith(`${project.label}:`));
       const interpreter = ours.find(

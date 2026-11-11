@@ -40,7 +40,10 @@ export default defineCliCommand({
       arguments: [{ name: "<id>", description: "The dependency's id" }],
       run: () => import("./internal/remove"),
     }),
-    defineCliCommand<[string | undefined], { only?: string }>({
+    defineCliCommand<
+      [string | undefined],
+      { only?: string; skipCooldown?: boolean }
+    >({
       name: "upgrade",
       description:
         "Move updaters' locks (mise, uv, …) to the newest releases, proving it first: the full check and test " +
@@ -61,6 +64,11 @@ export default defineCliCommand({
           flags: "--only <names>",
           description:
             "Comma-separated names to consider (default: everything outdated); needs an updater. Use it to find which one a regression comes from.",
+        },
+        {
+          flags: "--skip-cooldown",
+          description:
+            "Take the newest releases even inside their cooldown (npm, uv, cargo: 3 days public) — for an update wanted now. The gates still prove every move; the receipt records it.",
         },
       ],
       run: () => import("./internal/upgrade"),

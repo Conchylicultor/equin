@@ -10,6 +10,7 @@ import {
   heldBy,
   heldWaiting,
   utcDay,
+  type Cooldown,
   type Hold,
   type Move,
   type Outdated,
@@ -40,14 +41,20 @@ export const CARGO_COOLDOWN_DAYS = 3;
 const CRATES_IO_SOURCE =
   "registry+https://github.com/rust-lang/crates.io-index";
 
-/** The newest publish instant a move may adopt: start of today (UTC) minus the cooldown. */
-export function cargoCutoff(now: Date): string {
+/**
+ * The newest publish instant a move may adopt: start of today (UTC) minus the
+ * cooldown — or, with the cooldown skipped, the start of tomorrow (every
+ * release so far). Day-granular either way.
+ */
+export function cargoCutoff(now: Date, cooldown: Cooldown): string {
   const today = Date.UTC(
     now.getUTCFullYear(),
     now.getUTCMonth(),
     now.getUTCDate(),
   );
-  return new Date(today - CARGO_COOLDOWN_DAYS * DAY_MS).toISOString();
+  return new Date(
+    cooldown === "skip" ? today + DAY_MS : today - CARGO_COOLDOWN_DAYS * DAY_MS,
+  ).toISOString();
 }
 
 /** One crate, found by its tracked `rust/Cargo.lock`. */
@@ -498,9 +505,10 @@ async function analyzeCrate(
 /** Every crate's analyzed rows, under one cooldown cutoff. */
 async function analyze(
   root: AppPath,
+  cooldown: Cooldown,
 ): Promise<Array<{ outdated: Outdated; unit: string | undefined }>> {
   const now = new Date();
-  const cutoff = cargoCutoff(now);
+  const cutoff = cargoCutoff(now, cooldown);
   const today = utcDay(now);
   const out: Array<{ outdated: Outdated; unit: string | undefined }> = [];
   for (const crate of await cargoCrates(root)) {
@@ -527,11 +535,11 @@ export const cargoUpdater: Updater = {
     (await cargoCrates(root)).map((c) => join(c.dir, "Cargo.lock")),
 
   async detect(root): Promise<Outdated[]> {
-    return (await analyze(root)).map((r) => r.outdated);
+    return (await analyze(root, "honour")).map((r) => r.outdated);
   },
 
-  async plan(root, only): Promise<Move[]> {
-    const rows = await analyze(root);
+  async plan(root, { only, cooldown }): Promise<Move[]> {
+    const rows = await analyze(root, cooldown);
     const outdated = rows.map((r) => r.outdated);
     if (only !== undefined) {
       const known = new Set(

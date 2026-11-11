@@ -59,7 +59,7 @@ checksum = "abc"
 });
 
 describe("cargo updater choice", () => {
-  const cutoff = cargoCutoff(new Date("2026-10-24T15:00:00Z"));
+  const cutoff = cargoCutoff(new Date("2026-10-24T15:00:00Z"), "honour");
   const rel = (num: string, day: string, yanked = false): CrateRelease => ({
     num,
     createdAt: `${day}T12:00:00.000Z`,
@@ -77,6 +77,14 @@ describe("cargo updater choice", () => {
 
   test("the cooldown is three whole days", () => {
     expect(cutoff).toBe("2026-10-21T00:00:00.000Z");
+  });
+
+  test("a skipped cooldown takes every release published so far", () => {
+    const skipped = cargoCutoff(new Date("2026-10-24T15:00:00Z"), "skip");
+    expect(skipped).toBe("2026-10-25T00:00:00.000Z");
+    expect(
+      pickRelease(releases, "serde", "1.0.200", "1.0.209", skipped, []),
+    ).toBe("1.0.209");
   });
 
   test("the newest release past the cooldown, in range, neither yanked nor a pre-release", () => {

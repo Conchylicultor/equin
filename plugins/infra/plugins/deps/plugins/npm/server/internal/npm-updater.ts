@@ -12,6 +12,7 @@ import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { loadRepoFiles } from "@plugins/framework/plugins/tooling/core";
 import {
   utcDay,
+  type Cooldown,
   type Move,
   type Outdated,
   type Updater,
@@ -147,7 +148,10 @@ async function workspaceAt(root: AppPath): Promise<Workspace> {
   return readWorkspace(await loadRepoFiles(root));
 }
 
-async function planNow(root: AppPath): Promise<{
+async function planNow(
+  root: AppPath,
+  cooldown: Cooldown,
+): Promise<{
   plan: Plan;
   ws: Workspace;
   packuments: Map<string, Packument>;
@@ -169,7 +173,7 @@ async function planNow(root: AppPath): Promise<{
     holds: ws.policies.flatMap((p) => p.policy.holds ?? []),
     patched: ws.lock.patched,
     now: now.toISOString(),
-    cooldownDays: NPM_COOLDOWN_DAYS,
+    cooldownDays: cooldown === "skip" ? 0 : NPM_COOLDOWN_DAYS,
   });
   return { plan, ws, packuments, now };
 }
@@ -253,7 +257,7 @@ export const npmUpdater: Updater = {
   // show one nobody has wrapped yet. Only detection asks — an upstream row has
   // no move for `plan` to make.
   async detect(root): Promise<Outdated[]> {
-    const { plan, ws, packuments, now } = await planNow(root);
+    const { plan, ws, packuments, now } = await planNow(root, "honour");
     const groups = ws.policies.flatMap((p) => p.policy.groups ?? []);
     const upstream = new Map<string, { release: string; taggedAt: string }>();
     for (const g of groups) {
@@ -283,8 +287,8 @@ export const npmUpdater: Updater = {
     ];
   },
 
-  async plan(root, only): Promise<Move[]> {
-    const { plan, ws } = await planNow(root);
+  async plan(root, { only, cooldown }): Promise<Move[]> {
+    const { plan, ws } = await planNow(root, cooldown);
     if (only === undefined) return plan.moves;
     const known = new Set(ws.declared.map((d) => d.name));
     const unknown = only.filter((n) => !known.has(n));

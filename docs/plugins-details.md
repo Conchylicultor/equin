@@ -32628,12 +32628,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Core:
             - Exports (types):
               - `AwaitingOn`
+              - `Cooldown`
               - `GateResult`
               - `Hold`
               - `Move`
               - `Outdated`
               - `OutdatedUpdater`
               - `OutdatedWaiting`
+              - `PlanOptions`
               - `Updater`
               - `UpdaterSmoke`
             - Exports (values):

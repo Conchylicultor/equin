@@ -7,6 +7,7 @@ import {
   worktreeArtifacts,
 } from "@plugins/infra/plugins/paths/core";
 import { realGates } from "./gates";
+import type { Cooldown } from "../../core/internal/updater";
 import {
   runUpgrade,
   type UpgradeReceipt,
@@ -18,12 +19,13 @@ import {
  * this checkout: refuses the main checkout, writes the receipt in the
  * worktree data dir (`deps-upgrade-<id>.json` for one updater,
  * `deps-upgrade.json` for a batch of several), runs the real gates. Returns the
- * receipt when something landed or nothing had to; throws on `regressed`,
+ * receipt when something landed or nothing could (`current`, `waiting`); throws on `regressed`,
  * `aborted` (files already put back) and `holds-to-review` (nothing touched),
  * so every caller exits non-zero on them.
  */
 export async function upgradeThisWorktree(
   selection: readonly UpgradeSelection[],
+  opts: { cooldown: Cooldown },
 ): Promise<UpgradeReceipt> {
   const root = await getWorktreeRoot();
   if (root === (await getMainRepoRoot())) {
@@ -44,6 +46,7 @@ export async function upgradeThisWorktree(
         : worktreeArtifacts.depsUpgradeBatch(slug),
     gates: realGates(root, slug),
     log: (line) => console.log(line),
+    cooldown: opts.cooldown,
   });
   console.log(`\nverdict: ${receipt.verdict}`);
   if (receipt.verdict === "regressed")

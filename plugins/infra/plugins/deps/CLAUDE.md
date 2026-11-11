@@ -168,7 +168,7 @@ is `failed`, never `absent`.
 
 ## CLI
 
-`./equin deps list | install <id> [--json] | remove <id> | upgrade <updater> [--only a,b]`.
+`./equin deps list | install <id> [--json] | remove <id> | upgrade [<updater>] [--only a,b] [--skip-cooldown]`.
 `list`, `install` and `remove` import the `deps/` barrel directly — the
 declarations are a generated registry and the engine is host-only code, so no
 backend is booted and nothing needs to have been built (`install` passes
@@ -184,8 +184,16 @@ module eval).
 
 - `updates` — the `Updater` contract (`core/`) and the generic runner (its
   `cli/` barrel, shared CLI machinery: baseline gates → move → candidate gates
-  → retry-to-confirm → narrow → prove → verdict `current | upgraded | partial |
-  regressed | aborted | holds-to-review`), lifted from `plugins/toolchain`. A crash in `apply` is
+  → retry-to-confirm → narrow → prove → verdict `current | waiting | upgraded |
+  partial | regressed | aborted | holds-to-review`), lifted from `plugins/toolchain`.
+  Every run also lists what each updater sees newer but does not move to (its
+  `detect` rows with a reason, minus the planned moves: receipt `waiting`); a
+  run that moves nothing while something waits ends `waiting`, never
+  `current`. **`--skip-cooldown`** is the supported bypass of the release
+  cooldown (npm, uv, cargo): the runner hands `cooldown: "skip"` to every
+  updater's `plan` and `apply` (the `Cooldown` type, `updates/core`), the
+  receipt records it, and the gates prove every move as usual. Detection
+  always honours the cooldown. A crash in `apply` is
   a regression, not an abort; anything else that throws is `aborted`, and the
   receipt always ends on a verdict. A regressed batch is bisected by unit (a
   `Move.unit` — a lockstep group — never splits), each probe re-running only the

@@ -18,7 +18,9 @@ self-publishing wrappers and the `awaiting` arm:
   release that is ≤ `dist-tags.latest`, published at least **3 days** ago
   (`NPM_COOLDOWN_DAYS`, as uv), not a prerelease unless the package's own
   `latest` is one, and not held. A new major rewrites the range (`^6.3.2` →
-  `^7.1.0`). It runs through the generic runner (baseline/candidate gates,
+  `^7.1.0`). A newer release still inside the cooldown is listed **WAITING**
+  (`awaiting` `{ kind: "cooldown", of: [itself], until }`), never dropped;
+  `deps upgrade --skip-cooldown` plans with no cooldown (`cooldownDays: 0`). It runs through the generic runner (baseline/candidate gates,
   put-back on regression) like `mise` and `uv`.
 - **Apply is two installs**: the spec is first written as the exact target
   (bun resolves exactly it), then widened back to the range (bun keeps a locked

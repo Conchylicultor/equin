@@ -3,9 +3,11 @@
 // machinery, in this plugin's `cli/` barrel.
 export type {
   AwaitingOn,
+  Cooldown,
   Move,
   Outdated,
   OutdatedWaiting,
+  PlanOptions,
   Updater,
   UpdaterSmoke,
 } from "./internal/updater";

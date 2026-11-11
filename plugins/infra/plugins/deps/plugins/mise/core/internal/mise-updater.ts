@@ -159,7 +159,8 @@ export const miseUpdater: Updater = {
     );
   },
 
-  async plan(root, only): Promise<Move[]> {
+  // No release cooldown: `opts.cooldown` changes nothing.
+  async plan(root, { only }): Promise<Move[]> {
     const unknown = only?.filter((t) => !TOOLS.some((s) => s.name === t)) ?? [];
     if (unknown.length > 0) {
       throw new Error(
