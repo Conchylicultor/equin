@@ -68,7 +68,7 @@ const DEMO_SONG_FILES = [
     kind: "musicxml",
     id: songId(6),
     title: "Tierce romantique",
-    composer: "Demo",
+    composer: "Coda",
     fileName: "tierce-romantique.musicxml",
   },
 ] as const;
