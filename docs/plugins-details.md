@@ -30722,7 +30722,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `infra/background/timer` (0 debt)
             - **`dom-access-safety`** — dom-access-safety lint rule: no-module-scope-dom
               - Exemptions:
-                - Exempted by: `primitives/embed/frame/agent` (0 debt)
+                - Exempted by:
+                  - `framework/web-core` (0 debt)
+                  - `primitives/css/layout-harness` (0 debt)
+                  - `primitives/embed/frame/agent` (0 debt)
+                  - `primitives/networking` (0 debt)
             - **`dom-selection-safety`** — dom-selection-safety lint rule: no-raw-selection-range
               - Exemptions:
                 - Exempted by: `primitives/dom/dom-selection` (0 debt)
@@ -30998,6 +31002,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `boundaries/no-platform-api` — `core/vite-contributions.ts` (debt)
           - `networking/no-page-transport` — `web/App.tsx` (sanctioned)
           - `networking/no-request-guard-capability` — `web/install-request-guard.ts` (sanctioned)
+          - `dom-access-safety/no-module-scope-dom` — `web/main.tsx` (sanctioned)
       - Structure:
         - Composition root: yes
     - **`web-sdk`** — Web plugin runtime: slots, contributions, loader
@@ -45652,6 +45657,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boundaries/no-platform-api` — `web/internal/build-measurer-page.ts`, `web/internal/build-page.ts`, `web/internal/measure-page.ts` (debt)
               - `boundaries:web-loads-portable` — `web/internal/build-measurer-page.ts`, `web/internal/measure-page.ts` (debt)
               - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
+              - `dom-access-safety/no-module-scope-dom` — `web/internal/entry.tsx` (sanctioned)
           - Core:
             - Exports (types):
               - `MeasuredBox`
@@ -50172,6 +50178,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `no-raw-websocket` — `web/shared-ws.worker.ts` (sanctioned)
           - `endpoints/no-raw-web-fetch` — `web` (sanctioned)
           - `networking/no-request-guard-capability` — `web/use-reconnecting-ws.ts` (sanctioned)
+          - `dom-access-safety/no-module-scope-dom` — `web/shared-ws.worker.ts` (sanctioned)
         - Exempted by:
           - `apps-core/app-usage` (0 debt)
           - `apps/deploy/analytics/collect` (0 debt)

@@ -221,6 +221,7 @@ export type ExemptableRuleId =
 
 /** Declared `noDebt` by their owner: a sanctioned exemption only. */
 export type SanctionedOnlyRuleId = 
+  | "dom-access-safety/no-module-scope-dom"
   | "dom-access-safety/no-render-time-dom"
   | "endpoints/no-asset-path-read"
   | "endpoints/no-raw-web-fetch"

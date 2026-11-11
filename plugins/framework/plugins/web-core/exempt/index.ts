@@ -29,4 +29,11 @@ export default [
     reason:
       "The app entry installs the page request guard before anything else evaluates, and registers the asset mirror's prefix (a sampler loads its samples from it by URL, with no transport to resolve an asset base over).",
   },
+  {
+    rule: "dom-access-safety/no-module-scope-dom",
+    paths: ["web/main.tsx"],
+    kind: "sanctioned",
+    reason:
+      'The Vite entry point: loaded by index.html\'s <script type="module"> and never imported, so no module graph (bun test, the docgen barrel walk) evaluates it. Mounting React on #root at evaluation is its whole job.',
+  },
 ] satisfies Exemptions;

@@ -88,6 +88,21 @@ ruleTester.run("no-render-time-dom", rule, {
       code: `function C() { return (window as unknown as { x: number }).x; }`,
       errors: err(),
     },
+    {
+      // `<T>x` is JSX in a .tsx file: the assertion form needs .ts.
+      code: `function C() { return (<Navigator>navigator).language; }`,
+      filename: "plugins/fullscreen/web/c.ts",
+      errors: err(),
+    },
+    {
+      code: `function C() { return (localStorage satisfies Storage).length; }`,
+      errors: err(),
+    },
+    {
+      code: `function C() { return (window as Window)!.innerWidth; }`,
+      languageOptions: { globals: { window: "readonly" as const } },
+      errors: err(),
+    },
     // render-time iteration, and nested wrappers.
     {
       code: `function C({ items }) { return items.map((i) => <b key={i}>{window.name}</b>); }`,
@@ -119,5 +134,5 @@ ruleTester.run("no-render-time-dom", rule, {
              function Live() { return document.title; }`,
       errors: err(),
     },
-  ].map((c) => ({ ...c, filename })),
+  ].map((c) => ({ filename, ...c })),
 });

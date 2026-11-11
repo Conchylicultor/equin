@@ -1,24 +1,8 @@
 import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 import type { TSESLint, TSESTree } from "@typescript-eslint/utils";
+import { domReads } from "./dom-reads";
 
 const createRule = lintRuleCreator(import.meta.url);
-
-/** Browser-only globals, and the DOM classes an `instanceof` reads. */
-const BROWSER_GLOBALS = new Set([
-  "window",
-  "document",
-  "navigator",
-  "localStorage",
-  "sessionStorage",
-  "matchMedia",
-  "location",
-  "history",
-  "screen",
-  "getComputedStyle",
-  "Element",
-  "Node",
-]);
-const DOM_CLASS = /^(?:HTML|SVG)\w*Element$/;
 
 const COMPONENT = /^[A-Z]/;
 const HOOK = /^use[A-Z0-9]/;
@@ -256,34 +240,7 @@ export default createRule({
 
     return {
       "Program:exit"(): void {
-        const globalScope = sourceCode.scopeManager?.globalScope;
-        if (!globalScope) return;
-        // Unresolved names, and names the config declares as globals (the
-        // browser's classes are: `HTMLElement` resolves to a variable with no
-        // definition in the file, so it is not in `through`).
-        const refs = [
-          ...globalScope.through,
-          ...globalScope.variables
-            .filter((v) => v.defs.length === 0)
-            .flatMap((v) => v.references),
-        ];
-        for (const ref of refs) {
-          const identifier = ref.identifier as TSESTree.Identifier;
-          const name = identifier.name;
-          if (!BROWSER_GLOBALS.has(name) && !DOM_CLASS.test(name)) continue;
-          // `x as HTMLElement`'s class is a type; `document!` is a value.
-          if (!ref.isValueReference) continue;
-          let inTypeQuery = false;
-          for (
-            let a: TSESTree.Node | undefined = identifier.parent;
-            a;
-            a = a.parent
-          )
-            if (a.type === "TSTypeQuery") inTypeQuery = true;
-          if (inTypeQuery) continue;
-          const p = identifier.parent;
-          if (p?.type === "UnaryExpression" && p.operator === "typeof")
-            continue;
+        for (const { identifier, name } of domReads(sourceCode)) {
           const fn = enclosingFn(identifier);
           const root = fn === null ? null : renderRoot(fn);
           if (root === null) continue;

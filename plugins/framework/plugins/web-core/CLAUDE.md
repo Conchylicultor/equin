@@ -178,6 +178,7 @@ bun run test:dom plugins/framework/plugins/web-core/web/__tests__/plugin-render.
     - `boundaries/no-platform-api` — `core/vite-contributions.ts` (debt)
     - `networking/no-page-transport` — `web/App.tsx` (sanctioned)
     - `networking/no-request-guard-capability` — `web/install-request-guard.ts` (sanctioned)
+    - `dom-access-safety/no-module-scope-dom` — `web/main.tsx` (sanctioned)
 - Structure:
   - Composition root: yes
 

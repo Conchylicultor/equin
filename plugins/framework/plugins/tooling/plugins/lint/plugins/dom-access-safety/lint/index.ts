@@ -10,5 +10,5 @@ export default {
     "no-render-time-dom": noRenderTimeDom,
     "no-root-style-write": noRootStyleWrite,
   },
-  noDebt: ["no-render-time-dom"],
+  noDebt: ["no-module-scope-dom", "no-render-time-dom"],
 } satisfies LintContribution;

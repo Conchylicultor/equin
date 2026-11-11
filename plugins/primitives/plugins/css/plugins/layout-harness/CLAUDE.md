@@ -462,6 +462,7 @@ somehow is not.
     - `boundaries/no-platform-api` — `web/internal/build-measurer-page.ts`, `web/internal/build-page.ts`, `web/internal/measure-page.ts` (debt)
     - `boundaries:web-loads-portable` — `web/internal/build-measurer-page.ts`, `web/internal/measure-page.ts` (debt)
     - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
+    - `dom-access-safety/no-module-scope-dom` — `web/internal/entry.tsx` (sanctioned)
 - Core:
   - Exports (types):
     - `MeasuredBox`

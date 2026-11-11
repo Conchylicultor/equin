@@ -31,4 +31,11 @@ export default [
     reason:
       "Per-file synchronous work on the shared check thread (a blocking fs/process call made per item, or a direct maskSource / createSourceFile) that predates the rule; move it onto ctx.repo() / fs/promises and checks/core's maskedSource / parsedTsSource.",
   },
+  {
+    rule: "dom-access-safety/no-module-scope-dom",
+    paths: ["web/internal/entry.tsx"],
+    kind: "sanctioned",
+    reason:
+      "The harness page's Vite entry point: loaded by its page's <script type=\"module\"> and never imported, so no module graph evaluates it. Finding #root at evaluation is its job.",
+  },
 ] satisfies Exemptions;
