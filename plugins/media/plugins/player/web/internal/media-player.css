@@ -1008,10 +1008,23 @@ html[data-pip] .mp-fs {
   border-radius: 22px;
   opacity: 1;
   transform: translateY(calc(100% + 24px));
-  transition: transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* Closed, the sheet is parked just below the viewport — and not painted
+   * there once it has slid out: a translate alone leaves it in any capture
+   * wider than the viewport (a view transition's snapshot on a phone, whose
+   * root spans the collapsing URL bar), drawing its speed dial truncated at
+   * the bottom of the screen. Visibility flips at the end of the slide out
+   * and at the start of the slide in. */
+  visibility: hidden;
+  transition:
+    transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1),
+    visibility 0s linear 0.26s;
 }
 .mp-settings[data-sheet][data-open] {
   transform: none;
+  visibility: visible;
+  transition:
+    transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1),
+    visibility 0s;
 }
 .mp-settings[data-sheet] .mp-chip {
   height: 34px;

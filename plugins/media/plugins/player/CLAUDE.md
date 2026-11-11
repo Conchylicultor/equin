@@ -72,7 +72,9 @@ YouTube's model (`components/touch-controls.tsx`):
   controls.
 - **Settings** open as a sheet from the bottom of the screen, over a scrim
   (the inline player is too short to hold the panel): the same panel at
-  `--k: 1`, without key caps.
+  `--k: 1`, without key caps. Closed, it is parked below the viewport *and*
+  `visibility: hidden` — a translate alone leaves it in a view transition's
+  snapshot, which on a phone spans past the visible viewport.
 
 Audio keeps its bar on touch. Where the browser cannot put an element in full
 screen (`document.fullscreenEnabled` false — an iPhone), Full screen makes the
