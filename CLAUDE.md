@@ -197,6 +197,13 @@ Flags: `--path <route>`, `--viewport 1280x900`, `--wait <ms>`, `--color-scheme d
 
 `--width` must be a canvas size preset (omit for the mock's declared viewport); variants are captured at their defaults unless `--options` picks one.
 
+**Tab memory leaks** with [`leak-test.ts`](plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/leak-test.ts): repeats a flow, forces GC, diffs three heap snapshots. Reports what grew per constructor, detached DOM, listeners and retainer paths, with PASS/FAIL against per-iteration thresholds and the `.heapsnapshot` files. `--from <out>` re-analyses a run. A domain flow calls `runLeakTest(page, { step })` (harness CLAUDE.md):
+
+```bash
+./equin run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/leak-test.ts \
+  --path /agents --clicks "<A>|<B>" [--iterations 10] [--attach <ticket>] --no-record --out "$EQUIN_SCRATCH/leak"
+```
+
 **Repeatable flows**: a standalone script at `plugins/<path>/e2e/<name>.ts` in the plugin it verifies — never `*.test.ts` (the test runner would pick it up). Manual only. Running an `e2e/` script is an op (host grant, "E2E in progress" banner); any other `./equin run` script is recorded as a `script` op (op log, Ops views) but takes no grant and no banner. `--headed` to watch.
 
 - Shared helpers (argv, target, `withBrowser`, `report()`): `@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e` — extend it, don't hand-roll. Domain flows go in the owning plugin's `e2e/index.ts`.

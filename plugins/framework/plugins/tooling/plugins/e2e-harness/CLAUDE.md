@@ -322,6 +322,69 @@ time beside its thread CPU time (the Chrome trace's `tdur`), and breaks down
 the tasks that RAN longest by trace event (style recalc, layout, parse, GC)
 and JS call — wall far above CPU means the thread waited, not worked.
 
+## Tab memory leaks: `leak-test.ts` and `runLeakTest`
+
+`e2e/leak-test.ts` repeats a flow in one tab and reports what it leaves behind:
+
+```bash
+./equin run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/leak-test.ts \
+  --path /agents --clicks "Automations|Stats|Agents" --iterations 10 --no-record \
+  --out "$EQUIN_SCRATCH/leak"
+```
+
+- **Flow** = one iteration. `--clicks "A|B|…"` clicks each control by exact
+  accessible name (button, link, tab, menuitem, radio, switch, treeitem,
+  option), then waits `--step-wait` ms and for no loader. End where you
+  started. `--idle <ms>` measures what a screen leaks just by staying open.
+  `--attach <ticket>` works as for any script.
+- **Method** (three snapshots, CDP `HeapProfiler`): warm-up → GC, BASE → N
+  iterations → GC, MID → N iterations → GC, END. Run 1 absorbs one-time
+  allocations such as lazy modules and caches, so the verdict is judged on
+  **run 2** (MID → END). A heap object keeps its id across snapshots of one tab.
+  So the objects allocated in run 1 that are still alive at END (the
+  **survivors**) are what one run left behind.
+- **Report**: heap, app heap, objects, DOM nodes, detached DOM, listeners and
+  documents at BASE/MID/END (counters from `Memory.getDOMCounters`). It also
+  shows per-constructor growth over run 2 with each group's run-1 survivors.
+  A group that grows but keeps none is churn, not a leak. Then come the
+  survivors, and one **retainer path** per suspect group: detached DOM first,
+  then groups that both survived and grew. Each path is the shortest strong
+  chain from a GC root, root first. Elements carry `data-ui-owner` /
+  `data-source`, so the path names the component.
+- **Verdict** over run 2, exit 1 on FAIL: `--max-kb-per-iter` (50, on **app
+  heap**: V8 JIT code, `(system)`, shapes and the inspector's network buffer
+  excluded, since they grow without the app leaking; closure contexts and
+  ArrayBuffer data stay in), `--max-detached-per-iter`
+  (1), `--max-listeners-per-iter` (1).
+- **Files**: `<out>-{base,mid,end}.heapsnapshot` (DevTools → Memory → Load;
+  Comparison MID vs END is the same diff) and `<out>-run.json`.
+  `--from <out>` re-analyses them without a browser, for example with other
+  thresholds, `--top` or `--paths`.
+
+A **domain flow** (seed rows, open a conversation, drive an editor) is a
+script in the owning plugin's `e2e/`. It calls the library half with its own
+step, so the script also serves as that flow's regression check:
+
+```ts
+const leak = await runLeakTest(page, {
+  step: async (p) => { await openConversation(p, id); await closePane(p); },
+  out: `${dir}/conv-pane`,
+  thresholds: { maxBytesPerIteration: 20 * 1024 },
+});
+console.log(leakReportText(leak));
+for (const c of leak.verdict.checks) r.ok(c.name, c.ok, c.detail);
+```
+
+Limits:
+
+- Only the page's main-thread heap is measured. A SharedWorker (live sockets,
+  the demo host) or an iframe is another target.
+- Live updates during the run add noise, so use enough iterations.
+- Retainer paths skip DevTools' and Playwright's injected scripts
+  (`InjectedScript`, `UtilityScript`).
+- `performance` timeline entries are bounded browser buffers.
+- Snapshots are parsed in-process, and a 300 MB snapshot takes about 15 s.
+
 ## `diffImages` — two captures in, a number and a picture out
 
 `diffImages(page, aPng, bPng, { threshold, grid, labels })` compares two PNG

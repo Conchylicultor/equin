@@ -70,3 +70,14 @@ export type {
   SharedWorkerState,
   SharedWorkerTap,
 } from "./shared-worker-requests";
+// Tab-side leak test: repeat a flow, force GC, diff three heap snapshots — see
+// leak.ts and the generic CLI over it, leak-test.ts.
+export { runLeakTest, leakReportText, DEFAULT_LEAK_THRESHOLDS } from "./leak";
+export type {
+  LeakStep,
+  LeakTestOptions,
+  LeakAnalysisOptions,
+  LeakThresholds,
+  LeakReport,
+  LeakPhase,
+} from "./leak";
