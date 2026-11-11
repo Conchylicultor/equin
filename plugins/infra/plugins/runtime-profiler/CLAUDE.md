@@ -595,17 +595,17 @@ remaining allocations are one flat band array per completed entry span, and what
     - `SPAN_MEASURES`
     - `waitSplit`
 - Cross-plugin:
-  - Imported by: 70 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 71 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra` ×22
     - `debug` ×20
     - `apps` ×6
     - `conversations` ×6
     - `tasks` ×3
+    - `build` ×2
     - `database` ×2
     - `packages` ×2
     - `reports` ×2
     - `auth`
-    - `build`
     - `config_v2`
     - `integrations/google-maps/browser-config`
     - `network/live/change-feed`

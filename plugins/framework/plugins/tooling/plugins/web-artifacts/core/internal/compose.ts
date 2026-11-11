@@ -64,8 +64,9 @@ export interface ComposeOptions {
    * link dir of its namespace, shared by every release of it. When set, the
    * staged `artifacts` is a symlink to it and compose links into it only the
    * names it does not hold yet — so a release serves every address its
-   * namespace ever composed (an open tab keeps loading the build it came from)
-   * for O(new names), not O(history), per build. Adding a link never changes
+   * namespace recently composed (an open tab keeps loading the build it came
+   * from) for O(new names), not O(history), per build. What stays is decided
+   * after compose by `cli/`'s address retention. Adding a link never changes
    * what an existing name serves: every name is a write-once content address,
    * so an existing name must already link the same store path (else throws).
    * Exclusive with `materialize` (a release links nothing).

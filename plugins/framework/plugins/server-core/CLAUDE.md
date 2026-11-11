@@ -657,6 +657,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `serverFatalSink`
     - `serverReportSink`
     - `setClientBuildIdentity`
+    - `setClientBuildObserver`
     - `setEpochHandoffHooks`
     - `setLiveStateSnapshotHooks`
     - `setProfilerHooks`

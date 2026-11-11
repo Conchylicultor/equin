@@ -176,6 +176,21 @@ describe("pruneCacheDir keeps entries a served dist links", () => {
     expect(existsSync(gone)).toBe(false);
   });
 
+  test("a prune removes at most its budget, oldest first; the rest wait", () => {
+    const f = fixture();
+    const aged = [40, 35, 30, 25].map((d) => f.entry(`a${d}`, d * DAY));
+    const removed = pruneCacheDir({
+      root: f.store,
+      maxAgeMs: 14 * DAY,
+      maxUnreferenced: 100,
+      trimTo: 50,
+      referenced: servedDistTargets(f.layout),
+      maxRemovals: 2,
+    });
+    expect(removed).toBe(2);
+    expect(aged.map((p) => existsSync(p))).toEqual([false, false, true, true]);
+  });
+
   test("a referenced oldest entry survives the count trim", () => {
     const f = fixture();
     const oldest = f.entry("e0", 5 * DAY);

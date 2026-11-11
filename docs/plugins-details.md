@@ -28612,10 +28612,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `takeReexecBudget`
         - **`build`** — `./equin build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.
           - Cli:
-            - Uses: 55 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
+            - Uses: 57 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
               - `framework/cli/op-runtime` ×31
+              - `framework/tooling/web-artifacts` ×6
               - `framework/cli/bootstrap` ×4
-              - `framework/tooling/web-artifacts` ×4
               - `framework/cli/migrations` ×3
               - `plugin-meta/plugin-records` ×3
               - `debug/profiling/op-log` ×2
@@ -29257,6 +29257,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serverFatalSink`
           - `serverReportSink`
           - `setClientBuildIdentity`
+          - `setClientBuildObserver`
           - `setEpochHandoffHooks`
           - `setLiveStateSnapshotHooks`
           - `setProfilerHooks`
@@ -30802,7 +30803,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `carryForwardServedEntries`
               - `createPooledArtifactBuilder`
               - `idealArtifactBuildThreads`
+              - `retainAddresses`
               - `seedAddressDir`
+              - `servedGraphOf`
           - Cross-plugin:
             - Imported by:
               - `apps/demo`
@@ -35248,6 +35251,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `stampCheckoutMinter`
           - `stampCheckoutMinterSync`
           - `toolchainPin`
+          - `webGraphRecordPath`
+          - `webGraphRecordsDir`
           - `WORKTREE_SPEC_FILE`
           - `worktreeArtifacts`
           - `worktreeDataDir`
@@ -35858,17 +35863,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SPAN_MEASURES`
           - `waitSplit`
       - Cross-plugin:
-        - Imported by: 70 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
+        - Imported by: 71 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
           - `infra` ×22
           - `debug` ×20
           - `apps` ×6
           - `conversations` ×6
           - `tasks` ×3
+          - `build` ×2
           - `database` ×2
           - `packages` ×2
           - `reports` ×2
           - `auth`
-          - `build`
           - `config_v2`
           - `integrations/google-maps/browser-config`
           - `network/live/change-feed`
@@ -38751,8 +38756,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/metrics`
         - **`resource-runtime`**
           - Core:
-            - Uses: 25 symbols — full list in [`plugins/network/plugins/live/plugins/resource-runtime/REFERENCE.md`](../plugins/network/plugins/live/plugins/resource-runtime/REFERENCE.md)
-              - `network/live/resource-protocol` ×15
+            - Uses: 26 symbols — full list in [`plugins/network/plugins/live/plugins/resource-runtime/REFERENCE.md`](../plugins/network/plugins/live/plugins/resource-runtime/REFERENCE.md)
+              - `network/live/resource-protocol` ×16
               - `packages/semaphore` ×2
               - `packages/string-hash` ×2
               - `packages/value-patch` ×2

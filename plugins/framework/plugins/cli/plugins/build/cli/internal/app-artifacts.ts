@@ -36,6 +36,8 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/core";
 import {
   carryForwardServedEntries,
+  retainAddresses,
+  servedGraphOf,
   createPooledArtifactBuilder,
   idealArtifactBuildThreads,
   seedAddressDir,
@@ -68,6 +70,7 @@ import {
   type CompositionManifestItem,
 } from "@plugins/plugin-meta/plugins/composition/core";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
+import { webGraphRecordsDir } from "@plugins/infra/plugins/paths/core";
 import { withHostGrant } from "@plugins/infra/plugins/host/plugins/host-admission/server";
 import {
   cpuBudget,
@@ -1196,6 +1199,8 @@ export async function buildAndPublishWebDist(
   // return value because the job's shape is `StepResult` — the transcript row —
   // and the pin is not part of that.
   let graphHash: string | null = null;
+  // Every name the composed dist links — the graph's record (address retention).
+  let linkNames: string[] = [];
 
   const webArtifactsJob: HeavyJob = async (grant) => {
     // Per-plugin artifact pipeline, in-process, into a staging dir the
@@ -1279,6 +1284,7 @@ export async function buildAndPublishWebDist(
         { units: threads },
       );
       graphHash = result.graphHash;
+      linkNames = result.linkNames;
       lines.push({
         text:
           `web artifacts: ${result.builtArtifacts} built, ${result.reusedArtifacts} reused ` +
@@ -1358,6 +1364,33 @@ export async function buildAndPublishWebDist(
   // by the browser, which cannot tell a worktree namespace from a composition
   // or a release preview.
   if (opts.experimental) stampExperimentalMarker(stagingPath);
+
+  // The address dir keeps what a recently needed graph links — this one, the
+  // one still served, and any a build composed or an open tab named within the
+  // retention window — and lets the rest go, so it is bounded by recent graphs
+  // rather than by the namespace's history (web-artifacts' address retention).
+  // Before the swap: `livePath` still resolves to the graph being served.
+  if (addressDir !== undefined) {
+    const endRetain = hooks.span(
+      "artifacts:retain",
+      "build:frontend",
+      "trim the address dir",
+    );
+    const graphsDir = webGraphRecordsDir(livePath);
+    const retained = retainAddresses({
+      addressDir,
+      graphsDir,
+      graph: graphHash,
+      names: linkNames,
+      live: servedGraphOf({ distDir: livePath, graphsDir }),
+    });
+    endRetain();
+    hooks.log(
+      `Address dir: ${retained.kept} kept, ${retained.removed} removed, ` +
+        `${retained.graphs} graphs retained (${retained.recordsRead} records read` +
+        `${retained.migrated ? ", first trim" : ""})`,
+    );
+  }
 
   // A tab loaded from an earlier build still fetches THAT build's addresses
   // (lazily — the deferred plugin tier, fonts). Its modules stay served through

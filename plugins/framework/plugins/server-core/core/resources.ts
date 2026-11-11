@@ -376,6 +376,15 @@ export function setClientBuildIdentity(fn: () => string | null): void {
   clientBuildIdentity = fn;
 }
 
+// Told every build graph a tab names (`ResourceRuntimeOptions.onClientBuild`):
+// boot-injected by `build/server-build-id`, which marks the graph as still
+// needed so the next build keeps serving that bundle's addresses. No-op before
+// injection, and on central / a browser host (no served dist to keep).
+let clientBuildObserver: (build: string) => void = () => {};
+export function setClientBuildObserver(fn: (build: string) => void): void {
+  clientBuildObserver = fn;
+}
+
 // Whether this process's resource key set is closed
 // (`ResourceRuntimeOptions.keySet`). Open by default: the desktop server and
 // central run under tabs that may hold another bundle, so an unknown key is
@@ -675,6 +684,8 @@ const runtime = createResourceRuntime({
       : epochHandoffHooks.load(epoch),
   // Reads the boot-injected holder at call time (see `setClientBuildIdentity`).
   serverBuildGraph: () => clientBuildIdentity(),
+  // Reads the boot-injected holder at call time (see `setClientBuildObserver`).
+  onClientBuild: (build) => clientBuildObserver(build),
   keySet: () => keySet,
   // Fan each push outcome out to every registered observer (no-op detector et al).
   onPush: (key, info) => {

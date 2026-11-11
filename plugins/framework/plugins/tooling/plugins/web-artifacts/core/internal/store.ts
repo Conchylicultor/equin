@@ -314,6 +314,17 @@ export interface CachePrunePolicy {
   index?: AppPath;
 }
 
+/**
+ * At most this many entries removed from one cache per prune — oldest first,
+ * the rest left to the next (hourly) run. Removal runs under the exclusive
+ * store lock every build's pins wait on, and one entry is ~10 files, so a
+ * burst of victims must not hold the lock for minutes. Steady state removes a
+ * few hundred an hour; a burst comes from a one-time un-rooting (main's first
+ * address-dir trim released ~67k entries, 2026-11-11), which then drains over
+ * a few runs.
+ */
+export const MAX_REMOVALS_PER_PRUNE = 4000;
+
 /** The artifact store's bounds (pruned by `pruneWebArtifactCaches`, `lease.ts`). */
 export const STORE_PRUNE_POLICY: CachePrunePolicy = {
   root: STORE_DIR,
@@ -410,6 +421,8 @@ export function pruneCacheDir(
      * surveyed here, under the caller's lock.
      */
     survey?: CacheSurvey;
+    /** Test seam: defaults to {@link MAX_REMOVALS_PER_PRUNE}. */
+    maxRemovals?: number;
   },
 ): number {
   const survey = opts.survey ?? surveyCacheDir(opts.root, opts.referenced);
@@ -434,6 +447,11 @@ export function pruneCacheDir(
     // Young entries count toward the bound but are never victims.
     const excess = Math.min(candidates.length, total - opts.trimTo);
     victims.push(...candidates.slice(0, excess));
+  }
+  const budget = opts.maxRemovals ?? MAX_REMOVALS_PER_PRUNE;
+  if (victims.length > budget) {
+    victims.sort((a, b) => a.mtimeMs - b.mtimeMs); // oldest first
+    victims.length = budget;
   }
   let removed = 0;
   for (const { path, mtimeMs } of victims) {

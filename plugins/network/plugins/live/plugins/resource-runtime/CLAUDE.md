@@ -933,8 +933,8 @@ Out of reach at this seam (DB-backed harness instead):
 ## Plugin reference
 
 - Core:
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `network/live/resource-protocol` ×15
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `network/live/resource-protocol` ×16
     - `packages/semaphore` ×2
     - `packages/string-hash` ×2
     - `packages/value-patch` ×2

@@ -26,6 +26,11 @@ export {
   checkoutWorktreeName,
 } from "./internal/paths";
 export type { ReleaseIdentity } from "./internal/paths";
+// A served namespace's graph records (which web graphs its tabs may still run).
+export {
+  webGraphRecordPath,
+  webGraphRecordsDir,
+} from "./internal/graph-records";
 // Where the root is when the environment does not say — decided by what is
 // installed (`~/.equin`, or the legacy dir until `./equin data-dir migrate`
 // moves it). `dataRootLayout()` (above) is this process's answer, declared at

@@ -11,6 +11,7 @@ export {
   seedAddressDir,
 } from "./internal/carry-forward";
 export type { CarryForwardResult } from "./internal/carry-forward";
+export { retainAddresses, servedGraphOf } from "./internal/address-retention";
 export {
   createPooledArtifactBuilder,
   idealArtifactBuildThreads,

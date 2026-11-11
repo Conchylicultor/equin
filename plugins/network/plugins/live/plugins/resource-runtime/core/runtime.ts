@@ -13,6 +13,7 @@ import {
 } from "@plugins/packages/plugins/value-patch/core";
 import {
   BUILD_GRAPH_HEADER,
+  DEV_BUILD,
   DERIVE_MAX_ID,
   DERIVE_MAX_SOURCES,
   PROTOCOL,
@@ -2122,6 +2123,14 @@ export interface ResourceRuntimeOptions {
    */
   serverBuildGraph?: () => string | null;
   /**
+   * Told the build graph a client says it runs, on every subscription (single,
+   * batch) and HTTP read that names one — `dev` and an absent build excluded.
+   * Called synchronously and often: the observer dedupes. server:
+   * boot-injected by `build/server-build-id`, which marks the graph as still
+   * needed so the build keeps serving that bundle's addresses; omitted: no-op.
+   */
+  onClientBuild?: (build: string) => void;
+  /**
    * Whether this host's key set is OPEN or CLOSED, read at call time (like
    * `serverBuildGraph`). Open (the default) = a host deployed under tabs that
    * may run another bundle: an unknown key is the other face of skew
@@ -3392,6 +3401,12 @@ export function createResourceRuntime(
    * not yet) serve is the other face of skew. Never reported — a client naming
    * a key is not a server fault.
    */
+  /** Hand a client's named build to the `onClientBuild` observer. */
+  function noteClientBuild(clientBuild: string | undefined): void {
+    if (clientBuild === undefined || clientBuild === DEV_BUILD) return;
+    opts.onClientBuild?.(clientBuild);
+  }
+
   function unknownKeyVerdict(clientBuild: string | undefined): ContractVerdict {
     return contractVerdict(clientBuild, opts.serverBuildGraph?.() ?? null);
   }
@@ -9280,6 +9295,7 @@ export function createResourceRuntime(
     if (!key) return;
     const req = subRequestOf(m);
     const build = typeof m.build === "string" ? m.build : undefined;
+    noteClientBuild(build);
     const entry = registry.get(key);
     if (!entry) {
       sendJson(state.ws, {
@@ -9772,6 +9788,7 @@ export function createResourceRuntime(
   ): void {
     const tabId = typeof m.tabId === "string" ? m.tabId : "";
     const build = typeof m.build === "string" ? m.build : undefined;
+    noteClientBuild(build);
     const entries = Array.isArray(m.entries) ? m.entries : [];
     // Where in this socket's frame stream the batch arrived (`alreadyShipped`).
     const arrivedAt = state.framesSent;
@@ -10199,6 +10216,7 @@ export function createResourceRuntime(
   ): Promise<Response> {
     const key = params.key;
     const build = req.headers.get(BUILD_GRAPH_HEADER) ?? undefined;
+    noteClientBuild(build);
     if (!key) return httpError(404, { reason: "unknown-key" });
     if (key === "_debug") return handleResourcesDebug();
     const entry = registry.get(key);

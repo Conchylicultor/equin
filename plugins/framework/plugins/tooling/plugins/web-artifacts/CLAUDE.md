@@ -405,8 +405,8 @@ Key invariants:
   yet. (The build lease above superseded a per-dist `<live>.pins/` link dir,
   which pinned only after reading or publishing, so a prune could still take a
   reused entry in between; the dist sweep reclaims a leftover one.)
-- **A served dist keeps serving every address its namespace ever composed,
-  for O(new names) per build.** A tab resolves imports only through the import
+- **A served dist keeps serving every address a recently needed graph of its
+  namespace links, for O(new names) per build.** A tab resolves imports only through the import
   map of the page it loaded, and fetches much of it lazily — hours later for a
   background tab. So a served namespace has ONE persistent address dir
   (`<ns>/web-addresses`, `distAddressesPath` in the build CLI): every release's
@@ -427,10 +427,25 @@ Key invariants:
   publish of an address is discarded), so an old tab gets exactly the files it
   was built with and cannot reach a newer build's, and adding a link never
   changes what a published release serves (publish `keep`/`revert` remove a
-  release's `artifacts` link, never the dir it names). How long an address
-  stays is still unbounded — every link is a prune root — and is task
-  task-1793773096-i6fsda's rule to set; with one dir per namespace it can drop
-  what expired in O(expired).
+  release's `artifacts` link, never the dir it names).
+  **What stays is bounded by recent graphs, not by history** (address
+  retention, `cli/internal/address-retention.ts`, run by the build before the
+  publish). A graph (one composed bundle, `.build-graph`) is NEEDED while a
+  build composes or serves it, or an open tab names it — the backend touches
+  its record when a tab's subscription or resource read carries the graph
+  (`build/server-build-id`, through server-core's `setClientBuildObserver`; at
+  most hourly per graph). Each namespace keeps one record per graph beside its
+  dist (`<ns>/web-graphs/<graph>.names`, `webGraphRecordsDir` in
+  `infra/paths`: the names the pipeline linked, `linkNames`; mtime = last
+  needed) and an `index.json` of each name's last-needed time, so a build reads
+  only the records written or touched since the last one. An address stays
+  while a graph needing it was needed within `ADDRESS_RETENTION_MS` (a day);
+  the composed and the served graph always stay. A tab whose graph aged out
+  fails to load what it lacks, loudly (the red reload chip), never silently.
+  Unbounded before: every link was a prune root, so the store grew with
+  builds × namespaces (main's dir 80k links, the store 115k entries,
+  2026-11-11). Only builds write the address dir, under the checkout's
+  `.build.lock`; the prune job never edits it.
   **Pruning never breaks a served dist.** `pruneWebArtifactCaches`
   (`core/internal/lease.ts`; one `pruneCacheDir` policy per cache —
   `STORE_PRUNE_POLICY`, `VENDOR_PRUNE_POLICY`, `CSS_PRUNE_POLICY`,
@@ -440,10 +455,14 @@ Key invariants:
   `web.staging.*`, release scratch dists — `core/internal/served-dists.ts`,
   read through each dist's `artifacts` link, so a namespace's address dir is
   read once however many releases name it) as a root: never deleted by age or by the cap. Only unreferenced entries age out.
+  A run removes at most `MAX_REMOVALS_PER_PRUNE` entries per cache (oldest
+  first; the rest wait for the next run), because removal holds the exclusive
+  store lock every build's pins wait on — a one-time un-rooting (main's first
+  address-retention trim) must drain over a few runs, not stall builds.
   (Before this, an idle worktree lost its modules to the fleet's builds and
   never booted again.) Dead dists release their entries when their worktree is
   reaped.
-  The seed and the assets carry live in `cli/`, not `core/`, because
+  The seed, the assets carry and address retention live in `cli/`, not `core/`, because
   `builderSourceDigest` hashes all of `core/` into every address.
   (`research/2026-09-10-global-stale-tab-plugin-loading.md`)
 
@@ -524,7 +543,9 @@ Key invariants:
     - `carryForwardServedEntries`
     - `createPooledArtifactBuilder`
     - `idealArtifactBuildThreads`
+    - `retainAddresses`
     - `seedAddressDir`
+    - `servedGraphOf`
 - Cross-plugin:
   - Imported by:
     - `apps/demo`

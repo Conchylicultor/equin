@@ -52,9 +52,9 @@ export interface CarryForwardResult {
  * The served namespace's address dir: ONE persistent dir of `<name> → cache`
  * links that every release of the namespace serves as its `artifacts` (a link
  * to it). Compose adds this build's new names to it (`addressDir`), so a dist
- * serves every address its namespace ever composed — what an open tab booted
- * from an older build asks for — and a build costs O(new names), not a re-link
- * of the whole history: carrying ~37k links on main took ~5 s per build
+ * serves every address its namespace recently composed — what an open tab
+ * booted from an older build asks for — and a build costs O(new names), not a
+ * re-link of the whole history: carrying ~37k links on main took ~5 s per build
  * (research/2026-11-06-global-build-pipeline-step7-real-world-split-v2.md).
  *
  * Seeds the dir once, from a dist composed before it existed (whose
@@ -63,9 +63,11 @@ export interface CarryForwardResult {
  * crash leaves either no dir (seeded again next build) or a complete one.
  * No-op when the dir exists, or when there is no live dist to seed from.
  *
- * How long an address stays is the cache's and the prune's business, as
- * before: every link here is a prune root (served-dists), so nothing ages out
- * of a served namespace yet (task-1793773096-i6fsda owns that rule).
+ * How long an address stays is decided at each build by address retention
+ * (`./address-retention.ts`): the names some graph composed, served or named
+ * by an open tab within the last day. Every link here is a prune root
+ * (served-dists); a link retention removes only makes its store entry
+ * unreferenced, for the store's own age and count rules.
  *
  * @returns how many links were seeded (0 when nothing was to be done).
  */

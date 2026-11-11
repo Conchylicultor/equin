@@ -118,6 +118,7 @@ export {
   setEpochHandoffHooks,
   handOffEpoch,
   setClientBuildIdentity,
+  setClientBuildObserver,
   triggerResourcePush,
   withNotifyBatch,
 } from "./resources";

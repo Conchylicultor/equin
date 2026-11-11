@@ -167,6 +167,14 @@ export interface WebArtifactsPipelineResult {
    * is still the one being served.
    */
   graphHash: string;
+  /**
+   * Every name the dist links under `artifacts/` (page and worker artifacts,
+   * the registry, browser hosts, worker tree, vendor set, crawl snapshot) —
+   * what a tab of this graph can fetch, and what keeps the worker-only
+   * artifacts rooted. A served build records it as the graph's record, which
+   * bounds the namespace's address dir (`cli/`'s address-dir retention).
+   */
+  linkNames: string[];
 }
 
 /**
@@ -828,7 +836,7 @@ async function runPipeline(
       log(
         `compose: ${links.length} links, ${mapEntries.length} map entries, ${preloads.length} preloads`,
       );
-      return { preloads, graphHash };
+      return { preloads, graphHash, linkNames: links.map((l) => l.linkName) };
     },
   );
 
@@ -840,5 +848,6 @@ async function runPipeline(
     vendorSpecs: Object.keys(vendors.entries).length,
     preloads: composed.preloads.length,
     graphHash: composed.graphHash,
+    linkNames: composed.linkNames,
   };
 }

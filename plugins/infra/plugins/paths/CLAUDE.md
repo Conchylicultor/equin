@@ -473,6 +473,8 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `stampCheckoutMinter`
     - `stampCheckoutMinterSync`
     - `toolchainPin`
+    - `webGraphRecordPath`
+    - `webGraphRecordsDir`
     - `WORKTREE_SPEC_FILE`
     - `worktreeArtifacts`
     - `worktreeDataDir`
