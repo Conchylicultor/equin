@@ -18,6 +18,15 @@ export interface MemoGetOptions {
   notBefore?: number;
 }
 
+/**
+ * What `get` hands its `signatureFn` on the post-compute re-probe: the probe
+ * must read the state at or after `notBefore` (`performance.now()` clock), so a
+ * shared probe that started earlier may not answer it.
+ */
+export interface SignatureFreshness {
+  notBefore: number;
+}
+
 export interface GitStateMemo<T> {
   /**
    * Return the memoized value for `worktreePath` if the cheap ungated
@@ -28,13 +37,17 @@ export interface GitStateMemo<T> {
    * - `signatureFn`: cheap, UNGATED probe (runs on EVERY call, and once more
    *   after each compute — keep it ~sub-ms, e.g. one ungated `rev-parse`). It must fingerprint every input the result
    *   depends on, so a stale result is never served.
+   *   It is handed `{ notBefore }` on the re-probe after a compute: a
+   *   signature that shares probes (`createSignedMemo`'s `shareProbes`) must
+   *   then join none that started before that instant — the re-probe exists to
+   *   see the state AFTER the compute.
    * - `computeFn`: the expensive, gated recompute. It owns its own
    *   `withHeavyReadSlot` — the memo never touches the heavy-read gate, so a
    *   signature hit acquires NO slot at all.
    */
   get(
     worktreePath: string,
-    signatureFn: () => Promise<string>,
+    signatureFn: (fresh?: SignatureFreshness) => Promise<string>,
     computeFn: () => Promise<T>,
     opts?: MemoGetOptions,
   ): Promise<T>;
@@ -101,7 +114,7 @@ export function createGitStateMemo<T>(opts: { name: string }): GitStateMemo<T> {
           // value for good. Re-probed equal, only a change made AND undone
           // inside the compute can still slip through. Not cached ⇒ the next
           // `get` recomputes: over-invalidation, never a stale hit.
-          if ((await signatureFn()) === sig) {
+          if ((await signatureFn({ notBefore: performance.now() })) === sig) {
             // An entry already cached under `sig` (a prime, or a fresher
             // compute, that landed while this one ran) is the same answer —
             // at least as new as this one: keep it, and hand back THAT

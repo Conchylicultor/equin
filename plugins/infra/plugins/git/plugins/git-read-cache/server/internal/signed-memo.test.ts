@@ -350,3 +350,127 @@ describe("createSignedMemo", () => {
     });
   });
 });
+
+/**
+ * A memo whose signature probe is slow and counted — the transcript chain's
+ * glob + lstat — parked on demand so a test can line callers up against one
+ * running probe.
+ */
+function createProbedAuthority(shared: boolean) {
+  const state = {
+    sig: "S1",
+    value: "V1",
+    probes: 0,
+    computes: 0,
+    probeGate: null as null | ReturnType<typeof openGate>,
+    computeGate: null as null | ReturnType<typeof openGate>,
+  };
+  const memo = createSignedMemo<string>({
+    name: "probed",
+    signature: async () => {
+      state.probes++;
+      // Read when the probe starts, like an lstat: a change landing while it
+      // is parked is not in its answer.
+      const sig = state.sig;
+      if (state.probeGate) await state.probeGate.promise;
+      return sig;
+    },
+    compute: async () => {
+      state.computes++;
+      // Read when released: the compute sees whatever landed while parked.
+      if (state.computeGate) await state.computeGate.promise;
+      return state.value;
+    },
+    ...(shared ? { shareProbes: { inputKey: () => "" } } : {}),
+  });
+  return { state, memo };
+}
+
+/** N values resubscribing at once: each revalidates, then loads. */
+async function resubscribe(
+  memo: ReturnType<typeof createProbedAuthority>["memo"],
+  n: number,
+): Promise<string[]> {
+  return Promise.all(
+    Array.from({ length: n }, async () => {
+      await memo.signature("conv");
+      return memo.get("conv");
+    }),
+  );
+}
+
+describe("createSignedMemo — shareProbes", () => {
+  test("a resubscribe of N values probes once per phase, not twice per value", async () => {
+    // Warm both: the entry is cached, as for a conversation already read.
+    const unshared = createProbedAuthority(false);
+    const shared = createProbedAuthority(true);
+    await unshared.memo.get("conv");
+    await shared.memo.get("conv");
+    unshared.state.probes = 0;
+    shared.state.probes = 0;
+
+    expect(await resubscribe(unshared.memo, 8)).toEqual(Array(8).fill("V1"));
+    expect(await resubscribe(shared.memo, 8)).toEqual(Array(8).fill("V1"));
+    // Before: every revalidate and every get probes on its own.
+    expect(unshared.state.probes).toBe(16);
+    // After: the 8 revalidates share one probe, the 8 gets another.
+    expect(shared.state.probes).toBe(2);
+    expect(shared.state.computes).toBe(1);
+  });
+
+  test("a probe started before a prime is not joined", async () => {
+    const { state, memo } = createProbedAuthority(true);
+    state.probeGate = openGate();
+    const early = memo.signature("conv"); // reads S1, parked
+    // The source changes and the watch primes before telling anyone.
+    state.sig = "S2";
+    memo.prime("conv", "S2", "V2");
+    // The read the change's notify triggers must see S2, not join `early`.
+    const late = memo.signature("conv");
+    state.probeGate.release();
+    expect(await early).toBe("S1");
+    expect(await late).toBe("S2");
+    expect(state.probes).toBe(2);
+  });
+
+  test("callers with no prime between them join one probe", async () => {
+    const { state, memo } = createProbedAuthority(true);
+    state.probeGate = openGate();
+    const a = memo.signature("conv");
+    const b = memo.signature("conv");
+    state.probeGate.release();
+    expect([await a, await b]).toEqual(["S1", "S1"]);
+    expect(state.probes).toBe(1);
+  });
+
+  test("the post-compute re-probe never joins a probe that started before the compute ended", async () => {
+    const { state, memo } = createProbedAuthority(true);
+    // A get probes S1 (a miss: nothing cached) and its compute parks.
+    state.computeGate = openGate();
+    const loaded = memo.get("conv");
+    while (state.computes === 0) await Promise.resolve();
+    expect(state.probes).toBe(1);
+    // A revalidate's probe reads S1 and stalls (a host file stall).
+    const stall = openGate();
+    state.probeGate = stall;
+    const stalled = memo.signature("conv");
+    state.probeGate = null;
+    // The source changes; the compute reads the changed value.
+    state.sig = "S2";
+    state.value = "V2";
+    state.computeGate.release();
+    state.computeGate = null;
+    // Let the compute finish and its re-probe start.
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    // The change is undone, and the stalled probe settles.
+    state.sig = "S1";
+    state.value = "V1";
+    stall.release();
+    expect(await loaded).toBe("V2");
+    expect(await stalled).toBe("S1");
+    // Had the re-probe joined the stalled flight (S1), {S1, V2} would be cached
+    // and — the state back at S1 — served for good. It probed fresh (S2), so
+    // nothing was cached and this read recomputes.
+    expect(await memo.get("conv")).toBe("V1");
+  });
+});

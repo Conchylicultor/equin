@@ -154,6 +154,33 @@ a second time. A memo without input (`I = void`) takes none (tsc). attempt-work'
 two memos (its standing over `AttemptFacts`, its landed set over the conversation
 set and start) are the consumers.
 
+### Shared probes — `shareProbes: { inputKey }`
+
+A memo whose probe touches the filesystem and is asked N times at once — every
+value derived from one source resubscribing together, each probing in its
+`revalidate` and again in its loader's `get` — would run N separate probes, each
+holding its own read-admission slot under a host file stall. With `shareProbes`
+the concurrent probes of one `(key, inputKey(input))` are one `inflight` flight:
+the rest join it (no yieldable slot held, the time a `signature-join:<name>`
+wait). jsonl-events uses it: one chain resolve + `lstat` per conversation
+resubscribe instead of two per derived value.
+
+Two floors keep a joined signature from ever being newer than the value it
+labels, or pinning a stale one:
+
+- **A prime is the change signal.** A probe that started before the key's last
+  `prime` is never joined, so the read a change's notify triggers cannot
+  inherit a pre-change signature. Only sound for a memo whose writer primes
+  before it notifies (otherwise, leave it off).
+- **The post-compute re-probe is fresh.** `get` hands its re-probe
+  `{ notBefore: <compute end> }` (`SignatureFreshness`), so it never joins a
+  probe that read the state before the compute did — which, a change later
+  undone, would cache that value under the restored signature for good.
+
+What a joiner can still get is a signature read a moment before it asked, of a
+change no prime has announced yet: older than the value (the safe direction),
+and followed by the prime and notify that re-read it.
+
 ### `prime(key, signature, value)` — the ordering contract
 
 The write-through prime for an authoritative external writer (the `set` of the

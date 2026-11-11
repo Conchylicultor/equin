@@ -5,6 +5,8 @@
  *
  * See research/2026-07-09-global-etag-value-coproduction.md.
  */
+import { createInflight } from "@plugins/packages/plugins/inflight/core";
+import { beginWait } from "@plugins/infra/plugins/runtime-profiler/core";
 import { createGitStateMemo, type MemoGetOptions } from "./git-state-memo";
 
 /**
@@ -108,30 +110,125 @@ export function createSignedMemo<T, I = void>(opts: {
   name: string;
   signature: (key: string, input: I) => Promise<string>;
   compute: (key: string, input: I) => Promise<T>;
+  /**
+   * Share one signature probe among the concurrent callers that ask for the
+   * same `(key, input)` — `inputKey` spells the input — instead of each
+   * running its own. For a probe that touches the filesystem and is asked N
+   * times at once (every value derived from one source, resubscribing
+   * together): the N become joiners of one probe, holding no yieldable gate
+   * slot while they wait and charging the time as a `signature-join:<name>`
+   * wait.
+   *
+   * Sound only for a memo whose change signal is its `prime`: the writer
+   * primes before it tells anyone the source changed. A probe that started
+   * before the key's last `prime` is then never joined, so a read reacting to
+   * a change cannot inherit a pre-change signature; the post-compute re-probe
+   * never joins one that started before the compute ended. What a joiner can
+   * still get is a signature read a moment before it asked, of a change no
+   * prime has announced yet — older than the value it later labels (the safe
+   * direction), and followed by the prime and notify that re-read it.
+   */
+  shareProbes?: { inputKey: (input: I) => string };
 }): SignedMemo<T, I> {
   const memo = createGitStateMemo<T>({ name: opts.name });
   // `I = void` passes no `{ input }`: its functions are handed `undefined`,
   // which is their `void`.
   const inputOf = (args: readonly unknown[]): I =>
     (args[0] as { input?: I } | undefined)?.input as I;
+  const probe = signatureProbe(opts);
   return {
     signature(key, ...args) {
-      return opts.signature(key, inputOf(args));
+      return probe.run(key, inputOf(args), undefined);
     },
     get(key, ...args) {
       const input = inputOf(args);
+      const callerFloor = args[0]?.notBefore;
       return memo.get(
         key,
-        () => opts.signature(key, input),
+        (fresh) =>
+          probe.run(key, input, maxFloor(callerFloor, fresh?.notBefore)),
         () => opts.compute(key, input), // compute owns withHeavyReadSlot
         args[0],
       );
     },
     prime(key, signature, value) {
+      probe.changed(key);
       memo.set(key, signature, value);
     },
     evict(key) {
       memo.evict(key);
+    },
+  };
+}
+
+function maxFloor(
+  a: number | undefined,
+  b: number | undefined,
+): number | undefined {
+  if (a === undefined) return b;
+  if (b === undefined) return a;
+  return Math.max(a, b);
+}
+
+/**
+ * The memo's signature probe: the bound function itself, or — `shareProbes` —
+ * one flight per `(key, input)` that concurrent callers join, refused to any
+ * caller whose floor (the key's last prime, or the caller's own) is later than
+ * the flight's start.
+ */
+function signatureProbe<I>(opts: {
+  name: string;
+  signature: (key: string, input: I) => Promise<string>;
+  shareProbes?: { inputKey: (input: I) => string };
+}): {
+  run: (
+    key: string,
+    input: I,
+    notBefore: number | undefined,
+  ) => Promise<string>;
+  changed: (key: string) => void;
+} {
+  const share = opts.shareProbes;
+  if (share === undefined) {
+    return {
+      run: (key, input) => opts.signature(key, input),
+      changed: () => {},
+    };
+  }
+  const flights = createInflight();
+  // Per key: how many of its probes are running, and the instant of its last
+  // prime while any was. Only a running probe can be joined, so a prime with
+  // none running needs no floor (every later probe starts after it), and the
+  // floor goes with the key's last running probe — both maps hold only keys
+  // with a probe in flight.
+  const running = new Map<string, number>();
+  const changedAt = new Map<string, number>();
+  return {
+    run(key, input, notBefore) {
+      return flights.run(
+        `${key}\0${share.inputKey(input)}`,
+        async () => {
+          running.set(key, (running.get(key) ?? 0) + 1);
+          try {
+            return await opts.signature(key, input);
+          } finally {
+            const left = (running.get(key) ?? 1) - 1;
+            if (left === 0) {
+              running.delete(key);
+              changedAt.delete(key);
+            } else {
+              running.set(key, left);
+            }
+          }
+        },
+        {
+          notBefore: maxFloor(changedAt.get(key), notBefore),
+          onJoin: () => beginWait(`signature-join:${opts.name}`, "join"),
+        },
+      );
+    },
+    changed(key) {
+      if (running.has(key)) changedAt.set(key, performance.now());
     },
   };
 }

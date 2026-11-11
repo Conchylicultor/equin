@@ -44,12 +44,32 @@ import type {
 // it labels, which every subsequent `get` would hit and serve forever) is unreachable,
 // because the probe always precedes the compute it labels.
 //
+// ONE chain probe per conversation, however many values ask (`shareProbes`).
+// Every value served from a transcript (the pages, the outline, the stats, the
+// shells, …) probes the chain in its `revalidate` and again in its loader's
+// `get`; a resubscribe of one conversation asks all of them at once. Each probe
+// resolves the chain (a projects-dir glob per session, cold after a restart)
+// and `lstat`s its files, so under a host file stall N separate probes each
+// stalled and each held a read-admission slot. Shared, the N are joiners of one
+// flight: no slot held, their time a `signature-join:jsonl-events` wait.
+//
+// The constraint above still holds. The memo's change signal is the watch's
+// `prime` (conversation-events.ts primes before it notifies), and a probe that
+// started before the conversation's last prime is never joined — so a read
+// reacting to a change cannot inherit a pre-change signature — nor is one that
+// started before a compute ended joined by that compute's re-probe. A joiner can
+// only get a signature read a moment before it asked: never newer than the
+// value it labels, and of a change the watch has yet to prime and notify.
+//
 // See research/2026-07-10-conversations-jsonl-events-shared-authority.md and
 // research/2026-07-09-global-etag-value-coproduction.md.
 const memo = createSignedMemo<JsonlEvent[], TranscriptChain>({
   name: "jsonl-events",
   signature: (id, chain) => TranscriptSource.get().signature(id, chain),
   compute: (id, chain) => TranscriptSource.get().events(id, chain),
+  shareProbes: {
+    inputKey: (chain) => JSON.stringify([chain.cwd, chain.sessionIds]),
+  },
 });
 
 export const jsonlEventsMemo = memo;
