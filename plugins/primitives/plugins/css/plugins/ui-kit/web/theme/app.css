@@ -626,6 +626,30 @@
   animation: overlay-exit calc(var(--overlay-enter-duration) * 0.75) var(--overlay-enter-easing) forwards;
   @media (prefers-reduced-motion: reduce) { animation: none; }
 } /* twmerge: extend animate */
+/* A floating panel's positioning inputs stop at the panel box. The positioner
+ * (base-ui's, or `FloatingSurface`'s `size` middleware) publishes the space it
+ * measured as custom properties on the panel or its positioner, for the
+ * panel's OWN width / max-height / origin roles — and rewrites them whenever
+ * the anchor moves (a scroll, a resize, a hovered shelf icon lifting 4px).
+ * Custom properties inherit, so each rewrite restyled every element of the
+ * panel's content: the desktop shelf's peek holds a window snapshot of
+ * thousands of elements, and hovering one app restyled the whole document two
+ * or three times over (~63k elements; leaving it, ~42k). Re-declared on the
+ * panel's children, the content's values never change, so a reposition
+ * restyles the panel box and stops there (~2k / ~0.7k). Nothing inside a panel
+ * reads them; one that wanted the panel's room would read the panel's own
+ * size instead. */
+[data-overlay-panel] > * {
+  --available-width: initial;
+  --available-height: initial;
+  --anchor-width: initial;
+  --anchor-height: initial;
+  --transform-origin: initial;
+  --positioner-width: initial;
+  --positioner-height: initial;
+  --popup-width: initial;
+  --popup-height: initial;
+}
 /* How a floating SURFACE enters (`Surface` levels overlay / float wear it on
  * mount): the panel entry's fade and scale, on the same overlay tokens — but
  * never `translate`, which `Pin` / `Placed` centre a box with: an animated

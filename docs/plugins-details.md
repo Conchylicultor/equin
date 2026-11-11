@@ -48167,7 +48167,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selectionIsCollapsed`
               - `selectionRange`
               - `selectionRect`
-        - **`element-size`** — Element-size ResizeObserver idiom as a primitive: useElementSize(target?) reactively measures an element's size (callback ref, getBoundingClientRect, supports attach-one-node-measure-another via a target getter), useResizeObserver(target, onResize, {debounce, deps}) is the substrate, and useResizeObserverSet(onResize) observes a changing set of elements (windowed rows) through one observer — initial measure after layout and before paint (dom/after-layout: no forced recalc on the commit path), RAF-debounced resize callbacks, auto cleanup. The single sanctioned home for the hand-rolled ResizeObserver-for-size idiom.
+        - **`element-size`** — Element-size ResizeObserver idiom as a primitive: useElementSize(target?) reactively measures an element's layout size (callback ref; the observer's own border-box size, so a transform never freezes a wrong value; a target getter measures another node), useResizeObserver(target, onResize, {debounce, deps}) is the substrate, and useResizeObserverSet(onResize) observes a changing set of elements (windowed rows) through one observer — initial measure after layout and before paint (dom/after-layout: no forced recalc on the commit path), RAF-debounced resize callbacks, auto cleanup. The single sanctioned home for the hand-rolled ResizeObserver-for-size idiom.
           - Web:
             - Uses:
               - `primitives/dom/after-layout.afterLayout`

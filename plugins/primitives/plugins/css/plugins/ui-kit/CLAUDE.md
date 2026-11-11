@@ -350,6 +350,15 @@ one):
   `tabIndex` either — base-ui stamps one on every popup and focus is already
   inside, so the keydown reaches the root by bubbling.
 
+- **Positioning vars stop at the panel box.** The positioner's
+  `--available-*` / `--anchor-*` / `--transform-origin` (base-ui's, or
+  `FloatingSurface`'s `size` middleware) are the panel's own sizing inputs and
+  are rewritten whenever the anchor moves. `app.css` re-declares them on the
+  panel's children (`[data-overlay-panel] > *`), so a reposition restyles the
+  panel and not its content — a big content (the desktop shelf's window-snapshot
+  peek) otherwise restyled whole on every rewrite (~20k elements each). Content
+  that wants the panel's room reads the panel's size, never these vars.
+
 Composing it through base-ui's `render` has three rules:
 
 - **A real host element at the panel's root, spreading `{...rest}`.** `render`

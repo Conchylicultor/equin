@@ -6,10 +6,16 @@ idiom, hand-rolled inconsistently across the repo before this primitive.
 ## API
 
 - `useElementSize<T>(target?)` → `[callbackRef, { width, height }]`
-  Reactive size via `getBoundingClientRect` (fractional, transform-aware).
-  Attach the returned callback ref to the node; `{0,0}` until first measure.
-  Pass a `target` getter to measure a different node than the one the ref is on
-  (e.g. `(el) => el.offsetParent`).
+  Reactive LAYOUT size: the border box in the element's own CSS pixels
+  (fractional), read from the `ResizeObserver`'s own entries. Attach the
+  returned callback ref to the node; `{0,0}` until first measure. Never the
+  visual size (`getBoundingClientRect`): the observer does not fire when a
+  transform changes, so a visual read taken under one (a desktop window's open
+  tween scales it by 0.96) stayed wrong until an unrelated resize — and its
+  correction restyled everything the published value reaches (a DataView's
+  `--dv-header-offset`: ~20k elements on the first full-screen switch).
+  Pass a `target` getter to measure a different node than the one the ref is
+  on (e.g. `(el) => el.offsetParent`); it is resolved after layout.
 
 - `useResizeObserver(target, onResize, { debounce?, deps?, beforePaint? })` → `void`
   The substrate. `target` is a `RefObject`, an array of refs, or a getter
@@ -32,7 +38,9 @@ idiom, hand-rolled inconsistently across the repo before this primitive.
 
 ## The initial measure runs after layout, before paint
 
-The first `onResize` (and the `target` getter) runs in the frame's
+`useElementSize`'s first measure is the observer's first delivery, committed
+in the same phase. `useResizeObserver`'s first `onResize` (and its `target`
+getter) runs in the frame's
 after-layout phase ([`dom/after-layout`](../after-layout/CLAUDE.md)) — not in
 the layout effect, and not behind RAF. Behind RAF would paint a frame first (a
 flash); in the layout effect, every read forces the browser to recompute style
@@ -65,7 +73,7 @@ different need, extend the primitive rather than allowlisting a copy.
 
 ## Plugin reference
 
-- Description: Element-size ResizeObserver idiom as a primitive: useElementSize(target?) reactively measures an element's size (callback ref, getBoundingClientRect, supports attach-one-node-measure-another via a target getter), useResizeObserver(target, onResize, {debounce, deps}) is the substrate, and useResizeObserverSet(onResize) observes a changing set of elements (windowed rows) through one observer — initial measure after layout and before paint (dom/after-layout: no forced recalc on the commit path), RAF-debounced resize callbacks, auto cleanup. The single sanctioned home for the hand-rolled ResizeObserver-for-size idiom.
+- Description: Element-size ResizeObserver idiom as a primitive: useElementSize(target?) reactively measures an element's layout size (callback ref; the observer's own border-box size, so a transform never freezes a wrong value; a target getter measures another node), useResizeObserver(target, onResize, {debounce, deps}) is the substrate, and useResizeObserverSet(onResize) observes a changing set of elements (windowed rows) through one observer — initial measure after layout and before paint (dom/after-layout: no forced recalc on the commit path), RAF-debounced resize callbacks, auto cleanup. The single sanctioned home for the hand-rolled ResizeObserver-for-size idiom.
 - Web:
   - Uses:
     - `primitives/dom/after-layout.afterLayout`

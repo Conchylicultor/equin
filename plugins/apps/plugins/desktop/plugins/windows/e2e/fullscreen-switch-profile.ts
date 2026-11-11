@@ -33,12 +33,16 @@
 //   long enough for what the switch sets off late (a remeasure, a transition).
 // --quiet: totals and style mutations only, no CPU profile breakdown.
 //
-// With --out, writes `<out>-<direction>-<round>.cpuprofile` (open it in
-// Chrome DevTools → Performance).
+// With --out, writes `<out>-<direction>-<round>.cpuprofile` and the switch's
+// trace as `<out>-<direction>-<round>.trace.json` (open either in Chrome
+// DevTools → Performance).
 //
 // --gesture minimize: profile the window's minimize / restore round trip
 // instead (mod+M, then a click on the app's shelf entry — named by
 // --app-name, default Sonata), with the same totals per direction.
+// --gesture peek: minimize the window once, then profile hovering its shelf
+// entry (the peek opening, with the window's snapshot) and leaving it — the
+// part of a restore through the shelf that happens before the click.
 
 import { readFileSync, writeFileSync } from "node:fs";
 import {
@@ -62,8 +66,10 @@ const quiet = flag("quiet");
 const invalidations = flag("invalidations");
 const settle = numArg("settle", 1500);
 const gesture = arg("gesture", "fullscreen");
-if (gesture !== "fullscreen" && gesture !== "minimize")
-  throw new Error(`--gesture must be fullscreen or minimize, got ${gesture}`);
+if (gesture !== "fullscreen" && gesture !== "minimize" && gesture !== "peek")
+  throw new Error(
+    `--gesture must be fullscreen, minimize or peek, got ${gesture}`,
+  );
 const appName = arg("app-name", "Sonata");
 console.log(`scheduling tier: ${readDarwinBackground().kind}`);
 
@@ -151,94 +157,103 @@ await withBrowser(async (h) => {
    * Arm the probe: record when a tab container's frame flips (its `position`
    * changes from what it was when armed: into `fixed` for solo, out of it
    * back on the desktop; or whether it is shown at all: a minimize settling,
-   * a restore starting) — checked once a frame, after the commit (reading it
+   * a restore starting; for --gesture peek, a window snapshot appearing or
+   * going) — checked once a frame, after the commit (reading it
    * inside a mutation callback would force a style recalc mid-commit and bill
    * it to the switch); and log the <style> elements added, removed and
    * rewritten in place meanwhile.
    */
   const arm = () =>
-    page.evaluate((settleMs) => {
-      const tabs = () => [
-        ...document.querySelectorAll<HTMLElement>("[data-tab-id]"),
-      ];
-      // Its frame, and whether it is shown at all (either way it is hidden).
-      const position = (el: HTMLElement) => {
-        const cs = getComputedStyle(el);
-        return `${cs.position} ${cs.display} ${cs.contentVisibility}`;
-      };
-      // By tab id: the switch may remount a tab's container.
-      const armed = new Map(
-        tabs().map((el) => [el.dataset.tabId, position(el)]),
-      );
-      const probe = {
-        t0: performance.now(),
-        flippedAt: null as number | null,
-        styles: [] as StyleChange[],
-        root: [] as string[],
-      };
-      (window as ProbeWindow).__fsProbe = probe;
-      const describe = (op: "+" | "-" | "~", el: Node) => {
-        if (!(el instanceof HTMLStyleElement)) return;
-        const text = el.textContent ?? "";
-        probe.styles.push({
-          op,
-          id: el.id || "(no id)",
-          chars: text.length,
-          head: text.slice(0, 80).replace(/\s+/g, " "),
-        });
-      };
-      const mo = new MutationObserver((records) => {
-        const rewritten = new Set<Node>();
-        for (const r of records) {
-          if (r.target === document.head) {
-            r.addedNodes.forEach((n) => describe("+", n));
-            r.removedNodes.forEach((n) => describe("-", n));
-          } else {
-            const style =
-              r.target instanceof HTMLStyleElement
-                ? r.target
-                : r.target.parentNode;
-            if (style !== null) rewritten.add(style);
-          }
-        }
-        rewritten.forEach((n) => describe("~", n));
-      });
-      // Every write to <html>'s attributes: a custom property or class there
-      // invalidates the style of every element under it.
-      const html = document.documentElement;
-      const rootMo = new MutationObserver((records) => {
-        for (const r of records) {
-          const name = r.attributeName ?? "";
-          probe.root.push(
-            `${name}: ${r.oldValue ?? "(none)"} → ${html.getAttribute(name) ?? "(none)"}`,
-          );
-        }
-      });
-      rootMo.observe(html, { attributes: true, attributeOldValue: true });
-      mo.observe(document.head, {
-        childList: true,
-        subtree: true,
-        characterData: true,
-      });
-      const check = () => {
-        const flipped = tabs().some(
-          (el) =>
-            armed.has(el.dataset.tabId) &&
-            position(el) !== armed.get(el.dataset.tabId),
+    page.evaluate(
+      ({ settleMs, peek }) => {
+        const tabs = () => [
+          ...document.querySelectorAll<HTMLElement>("[data-tab-id]"),
+        ];
+        // Its frame, and whether it is shown at all (either way it is hidden).
+        const position = (el: HTMLElement) => {
+          const cs = getComputedStyle(el);
+          return `${cs.position} ${cs.display} ${cs.contentVisibility}`;
+        };
+        // By tab id: the switch may remount a tab's container.
+        const armed = new Map(
+          tabs().map((el) => [el.dataset.tabId, position(el)]),
         );
-        if (flipped) {
-          probe.flippedAt = performance.now() - probe.t0;
-          // Leave the style log open through the settle window.
-          setTimeout(() => {
-            mo.disconnect();
-            rootMo.disconnect();
-          }, settleMs - 100);
-          return;
-        }
+        const probe = {
+          t0: performance.now(),
+          flippedAt: null as number | null,
+          styles: [] as StyleChange[],
+          root: [] as string[],
+        };
+        (window as ProbeWindow).__fsProbe = probe;
+        const describe = (op: "+" | "-" | "~", el: Node) => {
+          if (!(el instanceof HTMLStyleElement)) return;
+          const text = el.textContent ?? "";
+          probe.styles.push({
+            op,
+            id: el.id || "(no id)",
+            chars: text.length,
+            head: text.slice(0, 80).replace(/\s+/g, " "),
+          });
+        };
+        const mo = new MutationObserver((records) => {
+          const rewritten = new Set<Node>();
+          for (const r of records) {
+            if (r.target === document.head) {
+              r.addedNodes.forEach((n) => describe("+", n));
+              r.removedNodes.forEach((n) => describe("-", n));
+            } else {
+              const style =
+                r.target instanceof HTMLStyleElement
+                  ? r.target
+                  : r.target.parentNode;
+              if (style !== null) rewritten.add(style);
+            }
+          }
+          rewritten.forEach((n) => describe("~", n));
+        });
+        // Every write to <html>'s attributes: a custom property or class there
+        // invalidates the style of every element under it.
+        const html = document.documentElement;
+        const rootMo = new MutationObserver((records) => {
+          for (const r of records) {
+            const name = r.attributeName ?? "";
+            probe.root.push(
+              `${name}: ${r.oldValue ?? "(none)"} → ${html.getAttribute(name) ?? "(none)"}`,
+            );
+          }
+        });
+        rootMo.observe(html, { attributes: true, attributeOldValue: true });
+        mo.observe(document.head, {
+          childList: true,
+          subtree: true,
+          characterData: true,
+        });
+        const snapshots = () =>
+          document.querySelectorAll("[data-window-snapshot]").length;
+        const armedSnapshots = snapshots();
+        const check = () => {
+          const flipped = peek
+            ? snapshots() !== armedSnapshots
+            : tabs().some(
+                (el) =>
+                  armed.has(el.dataset.tabId) &&
+                  position(el) !== armed.get(el.dataset.tabId),
+              );
+          if (flipped) {
+            probe.flippedAt = performance.now() - probe.t0;
+            // Leave the style log open through the settle window.
+            setTimeout(() => {
+              mo.disconnect();
+              rootMo.disconnect();
+            }, settleMs - 100);
+            return;
+          }
+          requestAnimationFrame(check);
+        };
         requestAnimationFrame(check);
-      };
-      requestAnimationFrame(check);
-    }, settle);
+      },
+      { settleMs: settle, peek: gesture === "peek" },
+    );
 
   /** Each direction's per-round metric deltas, for the medians at the end. */
   const deltas: Record<string, Record<string, number[]>> = {};
@@ -316,11 +331,13 @@ await withBrowser(async (h) => {
       for (const c of styles)
         console.log(`    ${c.op} ${c.id} ${c.chars}ch  ${c.head}`);
     if (!quiet) report(profile);
-    if (out !== undefined)
+    if (out !== undefined) {
       writeFileSync(
         `${out}-${label}-${round}.cpuprofile`,
         JSON.stringify(profile),
       );
+      writeFileSync(`${out}-${label}-${round}.trace.json`, trace);
+    }
   };
 
   for (let round = 1; round <= rounds && gesture === "minimize"; round++) {
@@ -331,6 +348,16 @@ await withBrowser(async (h) => {
     const entry = page.locator(`button[aria-label="${appName}"]`);
     await measure("restore", round, () => entry.click());
     await page.mouse.move(0, 0);
+    await page.waitForTimeout(1000);
+  }
+  if (gesture === "peek") {
+    await page.keyboard.press("ControlOrMeta+m");
+    await page.waitForTimeout(1500);
+  }
+  for (let round = 1; round <= rounds && gesture === "peek"; round++) {
+    const entry = page.locator(`button[aria-label="${appName}"]`);
+    await measure("peek", round, () => entry.hover());
+    await measure("unpeek", round, () => page.mouse.move(0, 0));
     await page.waitForTimeout(1000);
   }
   for (let round = 1; round <= rounds && gesture === "fullscreen"; round++) {

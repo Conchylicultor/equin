@@ -101,6 +101,8 @@ export function WindowSnapshot({
   return (
     <div
       ref={host}
+      // Names a window picture (the fullscreen-switch profile's peek probe).
+      data-window-snapshot=""
       // eslint-disable-next-line layout/no-adhoc-layout -- a scaled clone's clip box: the clone is absolutely positioned and transformed, so the box is sized to the scaled window by hand
       className="relative overflow-hidden"
       style={

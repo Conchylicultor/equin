@@ -120,14 +120,35 @@ export function useResizeObserver(
 }
 
 /**
- * Reactively measure an element's rendered size (`getBoundingClientRect`, so
- * fractional and transform-aware). Returns a **callback ref** — attach it to the
- * node to measure; remounts and node swaps are handled. Size is `{ 0, 0 }` until
- * the first measure.
+ * Reactively measure an element's LAYOUT size — its border box in its own CSS
+ * pixels (fractional), as the `ResizeObserver` reports it. Returns a **callback
+ * ref** — attach it to the node to measure; remounts and node swaps are
+ * handled. Size is `{ 0, 0 }` until the first measure (and stays so under
+ * jsdom, which has no layout).
+ *
+ * Layout size, never the visual one (`getBoundingClientRect`): the size is
+ * re-read only when the observer says it changed, and the observer watches the
+ * layout box — a transform on the element or an ancestor (a window's open
+ * tween scaling it from 0.96, a scaled preview) changes the visual size with
+ * no notification. A visual read taken under a transform was therefore frozen
+ * until some unrelated layout change corrected it: a DataView measured inside
+ * an opening desktop window published a 61.4375px toolbar height (64 × 0.96)
+ * as `--dv-header-offset`, and the first full-screen switch then re-published
+ * 64px, restyling every element of the view (~20k on Sonata's library). Every
+ * consumer feeds the size back into CSS lengths in the element's own space
+ * (sticky offsets, paddings, fold breakpoints), which is the layout size.
+ *
+ * Both measures come from the observer's own entries, so the value and its
+ * change signal are one quantity: the first (the observation of a newly
+ * observed box, delivered after this frame's layout) commits before paint
+ * (`flushSync`, in the after-layout phase — no first-paint flash, no read on
+ * the commit path); later ones are RAF-debounced, like `useResizeObserver`'s.
+ * Horizontal writing modes: `width` is the inline size, `height` the block one.
  *
  * `target` lets you attach the ref to one node but measure another — e.g.
- * `useElementSize((el) => el.offsetParent)` measures the offset parent while the
- * ref stays on the anchor child.
+ * `useElementSize((el) => el.offsetParent)` measures the offset parent while
+ * the ref stays on the anchor child. It is resolved in the after-layout phase
+ * (so it may read layout), and the box it returns is the one observed.
  */
 export function useElementSize<T extends HTMLElement = HTMLElement>(
   target: (el: T) => Element | null | undefined = (el) => el,
@@ -135,21 +156,47 @@ export function useElementSize<T extends HTMLElement = HTMLElement>(
   const [size, setSize] = useState<ElementSize>({ width: 0, height: 0 });
   const [node, setNode] = useState<T | null>(null);
   const setRef = useCallback((next: T | null) => setNode(next), []);
+  const resolveTarget = useEventCallback(target);
 
-  useResizeObserver(
-    () => (node ? target(node) : null),
-    () => {
-      const el = node ? target(node) : null;
-      if (!el) return;
-      const rect = el.getBoundingClientRect();
+  useLayoutEffect(() => {
+    if (node === null) return;
+    let latest: ElementSize | null = null;
+    let delivered = false;
+    let rafId: number | null = null;
+    const apply = () => {
+      rafId = null;
+      const next = latest;
+      if (next === null) return;
       setSize((prev) =>
-        prev.width === rect.width && prev.height === rect.height
-          ? prev
-          : { width: rect.width, height: rect.height },
+        prev.width === next.width && prev.height === next.height ? prev : next,
       );
-    },
-    { deps: [node] },
-  );
+    };
+    const observer = new ResizeObserver((entries) => {
+      const box = entries.at(-1)?.borderBoxSize[0];
+      if (box === undefined) return;
+      latest = { width: box.inlineSize, height: box.blockSize };
+      if (!delivered) {
+        delivered = true;
+        runAsAfterLayout(() => flushSync(apply));
+        return;
+      }
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(apply);
+    });
+    // Resolve the target where reading layout is free, then observe it: a
+    // newly observed box (deeper than the phase's root trigger) is delivered
+    // in this same frame, after its layout.
+    const cancelResolve = afterLayout(() => {
+      const el = resolveTarget(node);
+      if (el) observer.observe(el);
+    });
+    return () => {
+      cancelResolve();
+      observer.disconnect();
+      if (rafId !== null) cancelAnimationFrame(rafId);
+    };
+    // `resolveTarget` is stable: an inline getter never re-subscribes.
+  }, [node, resolveTarget]);
 
   return [setRef, size];
 }
