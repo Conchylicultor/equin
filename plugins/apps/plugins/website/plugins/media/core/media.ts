@@ -22,8 +22,8 @@ export const websiteMediaSource = defineAssetMirrorSource({
 });
 
 type MediaFile = keyof typeof WEBSITE_MEDIA_PINS;
-const FILM_FILE: MediaFile = "equin-v20-web.mp4";
-const FILM_POSTER_FILE: MediaFile = "equin-v20-web-poster.jpg";
+const FILM_FILE: MediaFile = "equin-v22-web.mp4";
+const FILM_POSTER_FILE: MediaFile = "equin-v22-web-poster.jpg";
 
 /**
  * The showcase film — `apps/website/promo-film`'s web render (`-web.mp4`:
