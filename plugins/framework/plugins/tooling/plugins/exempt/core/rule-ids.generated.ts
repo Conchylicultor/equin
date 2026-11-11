@@ -131,6 +131,7 @@ export type ExemptableRuleId =
   | "pane/no-core-define-route-in-web"
   | "pane/no-pane-header-bar"
   | "pane/no-raw-location-path"
+  | "parse-utils:mask-sync"
   | "passthrough/no-anonymous-passthrough"
   | "passthrough/no-unanchored-passthrough"
   | "paths:data-root-not-joined"

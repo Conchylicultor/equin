@@ -64,6 +64,23 @@ value back from the original by offset. Route through one of:
   candidate files, then `maskSource` + re-scan / `findImports` yields real-code
   matches only).
 
+### JSX, and keeping the masker in sync
+
+`maskSource` reads JSX: a `<` where an expression is expected opens an element
+or fragment (a type parameter list — `<T,>`, `<T extends U>`, `<T = D>`,
+`<const T>`, `<T>(…) =>` — does not). Its text children are string content
+(blanked with `strings`, kept without), attribute strings mask like strings,
+and `{ … }` containers are code. Known limit: JSX inside a template's `${ … }`
+is not read as JSX (a quote in its text desyncs).
+
+A misread construct does not fail — it silently flips literal and code for the
+rest of the file. The **`parse-utils:mask-sync` check** (`check/`) compares
+the mask with TypeScript's parse of every `.ts` / `.tsx`: identifiers outside
+templates stay code; string / template / JSX text / regex literals are blanked.
+On failure, teach `maskSource` the construct (+ a test); exempt a file only
+when no lexer heuristic can tell it apart. Whole-tree keyed (never
+input-keyed), so a masker edit re-runs it.
+
 `maskSource` supersedes the old per-scanner skip-loops (the boundary checker's
 private `stripComments`, and the inline logic in `matchBracket`).
 

@@ -3,7 +3,8 @@
  *
  * `maskSource` returns a copy of `src` of IDENTICAL length where characters that
  * live inside comments, regex literals and (optionally) string interiors are
- * replaced by spaces. Because every offset and newline is preserved 1:1, a regex
+ * replaced by spaces. JSX text children count as string interiors (and JSX
+ * `{ … }` containers as code). Because every offset and newline is preserved 1:1, a regex
  * match index in the masked text maps back to the original — callers read real
  * string values from the original at the matched offset.
  *
@@ -47,16 +48,26 @@ const REGEX_PRECEDING_KEYWORDS = new Set([
 const MAX_KEYWORD_LEN = 10;
 
 const NL = 0x0a;
+const BANG = 0x21;
 const DQUOTE = 0x22;
+const DOLLAR = 0x24;
 const SQUOTE = 0x27;
+const LPAREN = 0x28;
 const RPAREN = 0x29;
-const LT = 0x3c;
 const STAR = 0x2a;
+const PLUS = 0x2b;
+const COMMA = 0x2c;
+const MINUS = 0x2d;
 const SLASH = 0x2f;
+const COLON = 0x3a;
+const LT = 0x3c;
+const EQ = 0x3d;
+const GT = 0x3e;
 const LBRACKET = 0x5b;
 const BACKSLASH = 0x5c;
 const RBRACKET = 0x5d;
 const BACKTICK = 0x60;
+const LBRACE = 0x7b;
 const RBRACE = 0x7d;
 
 /** `prevSig` sentinels: start of input, and "a string/regex literal". */
@@ -142,147 +153,430 @@ function maskUncached(src: string, maskStrings: boolean): string {
   };
 
   let i = 0;
-  // Last significant (non-whitespace, non-comment) char code seen, or a SIG_*
-  // sentinel — for regex vs division.
-  let prevSig = SIG_NONE;
-  // The identifier word that ended at `prevSig`, for keyword detection: its
-  // total length, and its first MAX_KEYWORD_LEN code units (a longer word can
-  // never be a keyword). Whitespace and comments do not end a word.
-  let wordLen = 0;
-  const word = new Uint16Array(MAX_KEYWORD_LEN);
 
   /**
-   * Whether a `/` here begins a regex literal (vs division). Standard heuristic:
-   * a regex unless the previous significant token produced a value — an
-   * identifier/number, `)`, `]`, `}`, or a string/regex literal — except after a
-   * keyword that takes an expression on its right (`return`, `typeof`, …).
-   * Never after `<`: in TSX `</` closes an element or a fragment (`</b>`,
-   * `</>`), and read as a regex it blanked the markup after it up to the next
-   * `/` (`a < /re/` has no realistic use).
+   * Scan code from `i`. At top level (`inBraces` false) it runs to the end of
+   * the input; inside a JSX expression container (`{ … }`) it returns just past
+   * the `}` that closes it — braces of its own (object literals, blocks) are
+   * counted so they do not.
    */
-  const regexCanStart = (): boolean => {
-    if (prevSig === SIG_NONE) return true;
-    if (prevSig === LT) return false;
-    if (prevSig === SIG_VALUE) return false;
-    if (prevSig === RPAREN || prevSig === RBRACKET || prevSig === RBRACE)
-      return false;
-    if (prevSig < 128 && ASCII_CLASS[prevSig] === IDENT) {
-      return (
-        wordLen <= MAX_KEYWORD_LEN &&
-        REGEX_PRECEDING_KEYWORDS.has(
-          String.fromCharCode(...word.subarray(0, wordLen)),
-        )
-      );
-    }
-    return true;
-  };
+  const scanCode = (inBraces: boolean): void => {
+    // Last significant (non-whitespace, non-comment) char code seen, or a SIG_*
+    // sentinel — for regex vs division.
+    let prevSig = inBraces ? LBRACE : SIG_NONE;
+    // The identifier word that ended at `prevSig`, for keyword detection: its
+    // total length, and its first MAX_KEYWORD_LEN code units (a longer word can
+    // never be a keyword). Whitespace and comments do not end a word.
+    let wordLen = 0;
+    const word = new Uint16Array(MAX_KEYWORD_LEN);
+    let depth = 0;
 
-  while (i < n) {
-    const c = src.charCodeAt(i);
-
-    if (c === SLASH) {
-      const next = src.charCodeAt(i + 1);
-
-      // Line comment: blank `//` and everything up to (not including) the newline.
-      if (next === SLASH) {
-        let end = src.indexOf("\n", i + 2);
-        if (end < 0) end = n;
-        blank(i, end);
-        i = end;
-        continue;
+    /**
+     * Whether the previous significant token leaves an EXPRESSION expected
+     * here — so a `/` begins a regex literal (vs division) and a `<` may begin
+     * a JSX element (vs less-than). Standard heuristic: yes unless the previous
+     * token produced a value — an identifier/number, `)`, `]`, `}`, or a
+     * string/regex/JSX literal — except after a keyword that takes an
+     * expression on its right (`return`, `typeof`, …).
+     * Never after `<`: in TSX `</` closes an element or a fragment (`</b>`,
+     * `</>`), and read as a regex it blanked the markup after it up to the next
+     * `/` (`a < /re/` has no realistic use).
+     */
+    const expressionExpected = (): boolean => {
+      if (prevSig === SIG_NONE) return true;
+      if (prevSig === LT) return false;
+      if (prevSig === SIG_VALUE) return false;
+      if (prevSig === RPAREN || prevSig === RBRACKET || prevSig === RBRACE)
+        return false;
+      if (prevSig < 128 && ASCII_CLASS[prevSig] === IDENT) {
+        return (
+          wordLen <= MAX_KEYWORD_LEN &&
+          REGEX_PRECEDING_KEYWORDS.has(
+            String.fromCharCode(...word.subarray(0, wordLen)),
+          )
+        );
       }
+      return true;
+    };
 
-      // Block comment: blank `/* … */` including delimiters; keep interior newlines.
-      if (next === STAR) {
-        const close = src.indexOf("*/", i + 2);
-        const end = close < 0 ? n : close + 2;
-        blank(i, end);
-        i = end;
-        continue;
-      }
+    while (i < n) {
+      const c = src.charCodeAt(i);
 
-      // Regex literal: opaque, blank interior + delimiters. Honors escapes and
-      // character classes (a `/` inside `[ … ]` does not end the regex).
-      if (regexCanStart()) {
-        const start = i;
+      if (c === SLASH) {
+        const next = src.charCodeAt(i + 1);
+
+        // Line comment: blank `//` and everything up to (not including) the newline.
+        if (next === SLASH) {
+          let end = src.indexOf("\n", i + 2);
+          if (end < 0) end = n;
+          blank(i, end);
+          i = end;
+          continue;
+        }
+
+        // Block comment: blank `/* … */` including delimiters; keep interior newlines.
+        if (next === STAR) {
+          const close = src.indexOf("*/", i + 2);
+          const end = close < 0 ? n : close + 2;
+          blank(i, end);
+          i = end;
+          continue;
+        }
+
+        // Regex literal: opaque, blank interior + delimiters. Honors escapes and
+        // character classes (a `/` inside `[ … ]` does not end the regex).
+        if (expressionExpected()) {
+          const start = i;
+          i++;
+          let inClass = false;
+          while (i < n) {
+            const r = src.charCodeAt(i);
+            // Unterminated regex (shouldn't happen in valid source) — stop here.
+            if (r === NL) break;
+            if (r === BACKSLASH) {
+              i += 2;
+              continue;
+            }
+            if (r === LBRACKET) inClass = true;
+            else if (r === RBRACKET) inClass = false;
+            else if (r === SLASH && !inClass) {
+              i++; // closing '/'
+              break;
+            }
+            i++;
+          }
+          // Flag characters (a-z) following the closing delimiter.
+          while (i < n) {
+            const f = src.charCodeAt(i);
+            if (f < 0x61 || f > 0x7a) break;
+            i++;
+          }
+          blank(start, i);
+          prevSig = SIG_VALUE; // a regex literal as a whole is a value
+          wordLen = 0;
+          continue;
+        }
+
+        // Division: an ordinary significant char.
+        prevSig = SLASH;
+        wordLen = 0;
         i++;
-        let inClass = false;
-        while (i < n) {
-          const r = src.charCodeAt(i);
-          // Unterminated regex (shouldn't happen in valid source) — stop here.
-          if (r === NL) break;
-          if (r === BACKSLASH) {
-            i += 2;
-            continue;
-          }
-          if (r === LBRACKET) inClass = true;
-          else if (r === RBRACKET) inClass = false;
-          else if (r === SLASH && !inClass) {
-            i++; // closing '/'
-            break;
-          }
-          i++;
-        }
-        // Flag characters (a-z) following the closing delimiter.
-        while (i < n) {
-          const f = src.charCodeAt(i);
-          if (f < 0x61 || f > 0x7a) break;
-          i++;
-        }
-        blank(start, i);
-        prevSig = SIG_VALUE; // a regex literal as a whole is a value
+        continue;
+      }
+
+      // String / template literal: delimiters kept verbatim, interior optionally
+      // blanked. A template's interior includes its `${ … }` substitutions, which
+      // are followed as code to find where the template really ends.
+      if (c === DQUOTE || c === SQUOTE || c === BACKTICK) {
+        i++;
+        const start = i;
+        i = c === BACKTICK ? templateInteriorEnd(src, i) : quotedEnd(src, i, c);
+        if (maskStrings) blank(start, i);
+        if (i < n) i++; // closing delimiter (if present)
+        prevSig = SIG_VALUE; // a string literal as a whole is a value
         wordLen = 0;
         continue;
       }
 
-      // Division: an ordinary significant char.
-      prevSig = SLASH;
-      wordLen = 0;
-      i++;
-      continue;
-    }
+      // A JSX element or fragment where an expression is expected. Its text
+      // children are string content, so an apostrophe in them (`Couldn't
+      // load`) is prose — read as code, it opened a string and every literal
+      // after it in the file was read inside-out.
+      if (c === LT && expressionExpected() && isJsxStart(src, i)) {
+        scanJsxElement();
+        prevSig = SIG_VALUE; // an element as a whole is a value
+        wordLen = 0;
+        continue;
+      }
 
-    // String / template literal: delimiters kept verbatim, interior optionally
-    // blanked. A template's interior includes its `${ … }` substitutions, which
-    // are followed as code to find where the template really ends.
-    if (c === DQUOTE || c === SQUOTE || c === BACKTICK) {
-      i++;
-      const start = i;
-      i = c === BACKTICK ? templateInteriorEnd(src, i) : quotedEnd(src, i, c);
-      if (maskStrings) blank(start, i);
-      if (i < n) i++; // closing delimiter (if present)
-      prevSig = SIG_VALUE; // a string literal as a whole is a value
-      wordLen = 0;
-      continue;
-    }
+      if (c === LBRACE) depth++;
+      else if (c === RBRACE) {
+        if (inBraces && depth === 0) {
+          i++;
+          return;
+        }
+        depth--;
+      }
 
-    // Ordinary character.
-    if (c < 128) {
-      const cls = ASCII_CLASS[c]!;
-      if (cls !== SPACE) {
-        prevSig = c;
-        if (cls === IDENT) {
-          if (wordLen < MAX_KEYWORD_LEN) word[wordLen] = c;
-          wordLen++;
-        } else {
+      // A postfix `!` (non-null assertion) or `++` / `--` after an operand
+      // leaves a value: a `/` after `x!` or `i++` divides. (Where an
+      // expression is expected they are prefix: `return!/a/`, `++/a/.x`.)
+      if (
+        (c === BANG && src.charCodeAt(i + 1) !== EQ) ||
+        ((c === PLUS || c === MINUS) && src.charCodeAt(i + 1) === c)
+      ) {
+        if (!expressionExpected()) {
+          prevSig = SIG_VALUE;
           wordLen = 0;
+          i += c === BANG ? 1 : 2;
+          continue;
         }
       }
-    } else if (!isNonAsciiSpace(c)) {
-      prevSig = c;
-      wordLen = 0;
+
+      // Ordinary character.
+      if (c < 128) {
+        const cls = ASCII_CLASS[c]!;
+        if (cls !== SPACE) {
+          prevSig = c;
+          if (cls === IDENT) {
+            if (wordLen < MAX_KEYWORD_LEN) word[wordLen] = c;
+            wordLen++;
+          } else {
+            wordLen = 0;
+          }
+        }
+      } else if (!isNonAsciiSpace(c)) {
+        prevSig = c;
+        wordLen = 0;
+      }
+      i++;
     }
-    i++;
-  }
+  };
+
+  /**
+   * A JSX element or fragment starting at the `<` at `i`; leaves `i` just past
+   * its end (the `/>`, or the `>` of its closing tag).
+   */
+  const scanJsxElement = (): void => {
+    i++; // `<`
+    if (src.charCodeAt(i) === GT) {
+      i++; // `<>`: a fragment has no tag
+      scanJsxChildren();
+      return;
+    }
+    if (scanJsxTag()) scanJsxChildren();
+  };
+
+  /**
+   * The rest of an opening tag after its `<`: name, type arguments and
+   * attributes. Returns true when children follow (`>`), false when the element
+   * closed itself (`/>`) or the input ended.
+   */
+  const scanJsxTag = (): boolean => {
+    // Last significant char in the tag: `=` before a `<` makes it an element
+    // as an attribute's value, anything else a type argument list.
+    let prev = SIG_NONE;
+    while (i < n) {
+      const c = src.charCodeAt(i);
+      if (c === SLASH) {
+        const next = src.charCodeAt(i + 1);
+        if (next === GT) {
+          i += 2;
+          return false;
+        }
+        if (next === SLASH || next === STAR) {
+          const end =
+            next === SLASH
+              ? indexOrEnd(src, "\n", i + 2)
+              : Math.min(indexOrEnd(src, "*/", i + 2) + 2, n);
+          blank(i, end);
+          i = end;
+          continue;
+        }
+      }
+      if (c === GT) {
+        i++;
+        return true;
+      }
+      if (c === LBRACE) {
+        i++;
+        scanCode(true); // a spread or an attribute's expression
+        prev = SIG_VALUE;
+        continue;
+      }
+      if (c === DQUOTE || c === SQUOTE) {
+        // A JSX attribute string has no escapes: it ends at its next quote.
+        const end = indexOrEnd(src, c === DQUOTE ? '"' : "'", i + 1);
+        if (maskStrings) blank(i + 1, end);
+        i = Math.min(end + 1, n);
+        prev = SIG_VALUE;
+        continue;
+      }
+      if (c === LT) {
+        if (prev === EQ) scanJsxElement();
+        else scanTypeArguments();
+        prev = SIG_VALUE;
+        continue;
+      }
+      if (c >= 128 || ASCII_CLASS[c] !== SPACE) prev = c;
+      i++;
+    }
+    return false;
+  };
+
+  /**
+   * A tag's type arguments (`<Select<"a" | "b">`), from their `<` to just past
+   * the matching `>`; their string literals are masked like any other.
+   */
+  const scanTypeArguments = (): void => {
+    let depth = 0;
+    while (i < n) {
+      const c = src.charCodeAt(i);
+      if (c === DQUOTE || c === SQUOTE || c === BACKTICK) {
+        const start = i + 1;
+        i =
+          c === BACKTICK
+            ? templateInteriorEnd(src, start)
+            : quotedEnd(src, start, c);
+        if (maskStrings) blank(start, i);
+        if (i < n) i++;
+        continue;
+      }
+      if (c === LT) depth++;
+      else if (c === GT && src.charCodeAt(i - 1) !== EQ && --depth === 0) {
+        i++;
+        return;
+      }
+      i++;
+    }
+  };
+
+  /**
+   * An element's children, from just past its opening tag to just past its
+   * closing tag: text (string content), `{ … }` containers (code) and nested
+   * elements.
+   */
+  const scanJsxChildren = (): void => {
+    while (i < n) {
+      const start = i;
+      while (i < n) {
+        const c = src.charCodeAt(i);
+        if (c === LT || c === LBRACE) break;
+        i++;
+      }
+      if (maskStrings) blank(start, i);
+      if (i >= n) return;
+      if (src.charCodeAt(i) === LBRACE) {
+        i++;
+        scanCode(true);
+        continue;
+      }
+      // `<`: a closing tag (`</name>`, `</>`) or a nested element.
+      let j = i + 1;
+      while (j < n && isSpace(src.charCodeAt(j))) j++;
+      if (src.charCodeAt(j) === SLASH) {
+        i = Math.min(indexOrEnd(src, ">", j) + 1, n);
+        return;
+      }
+      scanJsxElement();
+    }
+  };
+
+  scanCode(false);
 
   if (copied === 0) return src;
   return copied < n ? out + src.slice(copied) : out;
 }
 
-const DOLLAR = 0x24;
-const PLUS = 0x2b;
-const MINUS = 0x2d;
-const LBRACE = 0x7b;
+/** `src.indexOf(needle, from)`, or `src.length` when absent. */
+function indexOrEnd(src: string, needle: string, from: number): number {
+  const at = src.indexOf(needle, from);
+  return at < 0 ? src.length : at;
+}
+
+function isSpace(c: number): boolean {
+  return c < 128 ? ASCII_CLASS[c] === SPACE : isNonAsciiSpace(c);
+}
+
+/** `[A-Za-z0-9_$]`. */
+function isIdentChar(c: number): boolean {
+  return c >= 0 && c < 128 && ASCII_CLASS[c] === IDENT;
+}
+
+/** Whether `c` can start an identifier: `[A-Za-z_$]` or any non-ASCII char. */
+function isIdentStart(c: number): boolean {
+  if (c >= 128) return !isNonAsciiSpace(c);
+  return ASCII_CLASS[c] === IDENT && (c < 0x30 || c > 0x39);
+}
+
+/**
+ * Whether the `<` at `i`, where an expression is expected, opens a JSX
+ * element or fragment rather than a type parameter list (`<T,>(x) => x`,
+ * `<T extends U>(…)`, `<T = D>`, `<const T>`, or a function type
+ * `<T>(x: T) => T` in a type position). In a `.ts` file only an old-style
+ * type assertion (`<T>x`) reads as an element — the lint-banned spelling.
+ */
+function isJsxStart(src: string, i: number): boolean {
+  const n = src.length;
+  let j = i + 1;
+  const first = src.charCodeAt(j);
+  if (first === GT) return true; // `<>`
+  if (!isIdentStart(first)) return false;
+  const nameStart = j;
+  while (j < n && isIdentChar(src.charCodeAt(j))) j++;
+  const name = src.slice(nameStart, j);
+  if (name === "const" && isSpace(src.charCodeAt(j))) return false;
+  while (j < n && isSpace(src.charCodeAt(j))) j++;
+  const next = src.charCodeAt(j);
+  if (next === COMMA || next === EQ) return false;
+  if (src.startsWith("extends", j) && isSpace(src.charCodeAt(j + 7)))
+    return false;
+  // `<T>(…) =>`, `<T>(…): R =>` (a generic function) and `<T>(…): R;` (a
+  // generic call signature) are not `<T>` with `(…)` as its first text. A
+  // lowercase name is an intrinsic element (`<li>(optional): …</li>`), never
+  // a type parameter by convention.
+  const lower = first >= 0x61 && first <= 0x7a;
+  if (next === GT && !lower) {
+    let k = j + 1;
+    while (k < n && isSpace(src.charCodeAt(k))) k++;
+    if (src.charCodeAt(k) === LPAREN) {
+      let m = parenEnd(src, k);
+      while (m < n && isSpace(src.charCodeAt(m))) m++;
+      const after = src.charCodeAt(m);
+      if (after === COLON) return false;
+      if (after === EQ && src.charCodeAt(m + 1) === GT) return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Furthest a generic arrow's parameter list is looked through for its `)`. A
+ * `(` in JSX text may never close (`<li>(</li>`); bounding the look keeps the
+ * masker linear on such text instead of rescanning to the end of the file.
+ */
+const PAREN_LOOKAHEAD = 2048;
+
+/**
+ * Just past the `)` matching the `(` at `i`, skipping strings, templates and
+ * comments; `src.length` when none closes within {@link PAREN_LOOKAHEAD}.
+ */
+function parenEnd(src: string, i: number): number {
+  const n = src.length;
+  const limit = Math.min(n, i + PAREN_LOOKAHEAD);
+  let depth = 0;
+  while (i < limit) {
+    const c = src.charCodeAt(i);
+    if (c === DQUOTE || c === SQUOTE) {
+      // Ends at its line too: a quote here may be prose (`<li>(it's</li>`).
+      i++;
+      while (i < limit) {
+        const q = src.charCodeAt(i);
+        if (q === c || q === NL) break;
+        i += q === BACKSLASH ? 2 : 1;
+      }
+      i++;
+      continue;
+    }
+    if (c === BACKTICK) {
+      i = templateInteriorEnd(src, i + 1) + 1;
+      continue;
+    }
+    if (c === SLASH && src.charCodeAt(i + 1) === STAR) {
+      i = indexOrEnd(src, "*/", i + 2) + 2;
+      continue;
+    }
+    if (c === SLASH && src.charCodeAt(i + 1) === SLASH) {
+      i = indexOrEnd(src, "\n", i + 2);
+      continue;
+    }
+    if (c === LPAREN) depth++;
+    else if (c === RPAREN && --depth === 0) return i + 1;
+    i++;
+  }
+  return n;
+}
+
 /** `substitutionEnd`'s `prev` after a string, template or regex literal (a value). */
 const LITERAL = 0x10000;
 

@@ -284,6 +284,116 @@ test("source with nothing to mask comes back unchanged", () => {
   expect(maskSource("")).toBe("");
 });
 
+// --- JSX -------------------------------------------------------------------
+
+test("an apostrophe in JSX text opens no string", () => {
+  const src = "const a = <p>This run's log is gone.</p>;\nconst b = 'x';";
+  expect(mask(src)).toBe(
+    "const a = <p>                       </p>;\nconst b = ' ';",
+  );
+  // Strings kept: the text is kept too, and the masker is still in sync.
+  expect(mask(src, { strings: false })).toBe(src);
+});
+
+test("JSX expression containers are code; their strings and comments mask", () => {
+  const src =
+    'return <div title="it\'s" {...p}>{x ? "a" : /* c */ y}{/* n */}</div>;';
+  expect(mask(src)).toBe(
+    'return <div title="    " {...p}>{x ? " " :         y}{       }</div>;',
+  );
+});
+
+test("nested elements, fragments and self-closing tags", () => {
+  const src =
+    "f(<>\n  <A b={1} />\n  <B.C>it's {<i>don't</i>}</B.C>\n</>);\nconst s = 'q';";
+  const out = mask(src);
+  expect(out).toBe(
+    "f(<>\n  <A b={1} />\n  <B.C>     {<i>     </i>}</B.C>\n</>);\nconst s = ' ';",
+  );
+});
+
+test("an element after => / && / ? / return / ( is JSX", () => {
+  for (const lead of ["() =>", "a &&", "a ?", "return", "("]) {
+    const src = `${lead} <b>can't</b>; 'z'`;
+    expect(mask(src)).toBe(`${lead} <b>     </b>; ' '`);
+  }
+});
+
+test("an element as an attribute value, and type arguments on a tag", () => {
+  const src =
+    "<A icon=<I x='1' /> />; <Select<Opt> on={f}>it's</Select>; 'z'; <S<\"a\" | \"b\"> v='c' />";
+  expect(mask(src)).toBe(
+    "<A icon=<I x=' ' /> />; <Select<Opt> on={f}>    </Select>; ' '; <S<\" \" | \" \"> v=' ' />",
+  );
+});
+
+test("a less-than after an operand is a comparison, not JSX", () => {
+  const src = "if (a < b && c<d) x = 'it'; f(a) < g; y[0] <z;";
+  expect(mask(src, { strings: false })).toBe(src);
+});
+
+test("type parameter lists are not JSX", () => {
+  for (const src of [
+    "const f = <T,>(x: T) => x; 'z'",
+    "const f = <T extends U>(x: T) => x; 'z'",
+    "const f = <T = string>(x: T) => x; 'z'",
+    "const f = <const T>(x: T) => x; 'z'",
+    "const f = <T>(x: T) => x; 'z'",
+    "const f = <T>(x: T): T => x; 'z'",
+    "type F = { g: <T>(x: T) => T }; 'z'",
+    "interface F {\n  <B>(props: P<B>): R;\n  <Row>(\n    t: T<Row>,\n  ): R;\n}; 'z'",
+  ]) {
+    expect(mask(src, { strings: false })).toBe(src);
+  }
+});
+
+test("a JSX text paren group is not a generic arrow", () => {
+  expect(mask("<b>(beta)</b>; 'z'")).toBe("<b>      </b>; ' '");
+  expect(mask("x = <li>(optional): it's {x}</li>; 'z'")).toBe(
+    "x = <li>" + " ".repeat("(optional): it's ".length) + "{x}</li>; ' '",
+  );
+});
+
+test("a generic arrow's parameters may hold a ) in a string or comment", () => {
+  for (const src of [
+    "const f = <T>(a = \")\") => a; 'z'",
+    "const f = <T>(a /* ) */) => a; 'z'",
+  ]) {
+    expect(mask(src, { strings: false })).toBe(
+      src.replace(/\/\*.*\*\//, (m) => " ".repeat(m.length)),
+    );
+  }
+});
+
+test("an unclosed ( in JSX text stays linear", () => {
+  const src = "const a = <li>(</li>;\n".repeat(20000);
+  const t = performance.now();
+  mask(src);
+  expect(performance.now() - t).toBeLessThan(1000);
+});
+
+// --- postfix operators before division ------------------------------------
+
+test("a division after a non-null assertion is no regex", () => {
+  const src = "move(vw! / 2, vh! / 2); a[i]! / b; f()! / 2;";
+  expect(mask(src)).toBe(src);
+  expect(mask("x = !/a/.test(s)")).toBe("x = !   .test(s)");
+  expect(mask("x !== /a/")).toBe("x !==    ");
+});
+
+test("a division after a postfix increment is no regex", () => {
+  expect(mask("i++ / 2; a[j]-- / 2; i ++ /2;")).toBe(
+    "i++ / 2; a[j]-- / 2; i ++ /2;",
+  );
+  expect(mask("x = ++/a/.lastIndex")).toBe("x = ++   .lastIndex");
+});
+
+test("a ! after a keyword is prefix: a regex may follow", () => {
+  expect(mask("if (x) return!/'/.test(s); 'z'")).toBe(
+    "if (x) return!   .test(s); ' '",
+  );
+});
+
 // --- the trigger: marker in comment/string/regex ---------------------------
 
 test("marker-shaped regex literal does not leak its name", () => {
