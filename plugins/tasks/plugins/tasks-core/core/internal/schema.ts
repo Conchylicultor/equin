@@ -2,7 +2,7 @@ import { z } from "zod";
 import { fieldsToZodObject, type FieldOptionMeta } from "@plugins/fields/core";
 import { StoredModelSchema } from "@plugins/conversations/plugins/model-provider/core";
 import { RankSchema } from "@plugins/primitives/plugins/rank/core";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { stateIcons } from "@plugins/ui/plugins/icons/core";
 import { ConversationStatusSchema } from "../conversation-status";
 import {
   taskFields,
@@ -56,31 +56,31 @@ export const TASK_STATUS_OPTIONS = {
   new: {
     label: "New",
     variant: "muted",
-    icon: symbol("radio-button-unchecked"),
+    icon: stateIcons.notStarted,
   },
   in_progress: {
     label: "In progress",
     variant: "info",
-    icon: symbol("timelapse"),
+    icon: stateIcons.working,
   },
   need_action: {
     label: "Need action",
     variant: "warning",
-    icon: symbol("input"),
+    icon: stateIcons.needsYou,
   },
   attempted: {
     label: "Attempted",
     variant: "muted",
-    icon: symbol("incomplete-circle"),
+    icon: stateIcons.partial,
   },
-  done: { label: "Done", variant: "success", icon: symbol("check-circle") },
-  held: { label: "Held", variant: "warning", icon: symbol("pause-circle") },
-  dropped: { label: "Dropped", variant: "muted", icon: symbol("cancel") },
-  blocked: { label: "Blocked", variant: "muted", icon: symbol("pause-circle") },
+  done: { label: "Done", variant: "success", icon: stateIcons.done },
+  held: { label: "Held", variant: "warning", icon: stateIcons.paused },
+  dropped: { label: "Dropped", variant: "muted", icon: stateIcons.canceled },
+  blocked: { label: "Blocked", variant: "muted", icon: stateIcons.paused },
   in_progress_blocked: {
     label: "In progress (blocked)",
     variant: "info",
-    icon: symbol("timelapse"),
+    icon: stateIcons.working,
   },
 } as const satisfies Record<TaskStatus, FieldOptionMeta>;
 

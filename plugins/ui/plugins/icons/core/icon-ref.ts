@@ -5,6 +5,9 @@ import type { BrandName, SymbolName } from "./symbol-names.generated";
 export interface SymbolRef {
   readonly kind: "symbol";
   readonly name: SymbolName;
+  /** The glyph turns wherever it is drawn (stilled under reduced motion) —
+   *  set only by `stateIcons.working`, the one glyph that means "in flight". */
+  readonly spin?: true;
 }
 
 /** A brand mark (Simple Icons). Brands ignore the icon theme and always draw their own mark. */

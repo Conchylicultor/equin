@@ -675,7 +675,7 @@ serves them.
     - `primitives/rank.RankSchema`
     - `tasks/orchestration/mandate/policy.defineCapability`
     - `tasks/task-ids.attemptIdKind`
-    - `ui/icons.symbol`
+    - `ui/icons.stateIcons`
   - Exports (types):
     - `Attempt`
     - `AttemptStatus`

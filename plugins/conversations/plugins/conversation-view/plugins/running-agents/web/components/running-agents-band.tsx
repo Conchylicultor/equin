@@ -49,7 +49,7 @@ import {
 import { useRunningAgents } from "./use-running-agents";
 import { useAgentsBandView } from "./band-view";
 import "./running-agents-band.css";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { stateIcons, symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const checkIcon = symbol("check");
@@ -239,13 +239,13 @@ const FIELDS: FieldDef<RunningAgentRow>[] = [
         value: "running",
         label: "Running",
         variant: "muted",
-        icon: symbol("timelapse"),
+        icon: stateIcons.working,
       },
       {
         value: "stopped",
         label: "Stopped",
         variant: "muted",
-        icon: symbol("check-circle"),
+        icon: stateIcons.done,
       },
     ],
     filterable: false,

@@ -1,6 +1,6 @@
 import type { FieldOptionMeta } from "@plugins/fields/core";
 import type { BadgeVariant } from "@plugins/primitives/plugins/css/plugins/badge/core";
-import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
+import { stateIcons, type IconRef } from "@plugins/ui/plugins/icons/core";
 import type {
   BackgroundEntry,
   BackgroundRun,
@@ -28,29 +28,33 @@ export function entryStatus(entry: BackgroundEntry): EntryStatus {
 // Each status declares its colour and glyph; the run outcomes share the one run
 // vocabulary's colours, so a failed job here is the same red as a failed build.
 export const ENTRY_STATUS_OPTIONS = {
-  running: { label: "Running", variant: "info", icon: symbol("timelapse") },
-  failed: { label: "Failed", variant: "destructive", icon: symbol("error") },
+  running: {
+    label: "Running",
+    variant: "info",
+    icon: stateIcons.working,
+  },
+  failed: { label: "Failed", variant: "destructive", icon: stateIcons.failed },
   succeeded: {
     label: "Succeeded",
     variant: "success",
-    icon: symbol("check-circle"),
+    icon: stateIcons.done,
   },
   suspended: {
     label: "Handed off",
     variant: "muted",
-    icon: symbol("pause-circle"),
+    icon: stateIcons.paused,
   },
   never: {
     label: "Not run yet",
     variant: "muted",
-    icon: symbol("radio-button-unchecked"),
+    icon: stateIcons.notStarted,
   },
   elsewhere: {
     label: "Runs on main",
     variant: "muted",
-    icon: symbol("radio-button-unchecked"),
+    icon: stateIcons.notStarted,
   },
-  disabled: { label: "Disabled", variant: "muted", icon: symbol("cancel") },
+  disabled: { label: "Disabled", variant: "muted", icon: stateIcons.canceled },
 } as const satisfies Record<EntryStatus, FieldOptionMeta>;
 
 /** The given statuses as a field's options (label, colour, glyph). */

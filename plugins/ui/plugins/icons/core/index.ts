@@ -1,5 +1,6 @@
 export { brand, runtimeSymbol, seti, symbol } from "./icon-ref";
 export { navIcons } from "./nav-icons";
+export { RESERVED_STATE_GLYPHS, stateIcons } from "./state-icons";
 export { isIconRefModule } from "./icon-module";
 export type {
   BrandRef,

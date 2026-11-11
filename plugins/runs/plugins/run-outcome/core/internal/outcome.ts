@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { FieldOptionMeta } from "@plugins/fields/core";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { stateIcons } from "@plugins/ui/plugins/icons/core";
 
 /**
  * The shared outcome vocabulary every run kind maps its own status into.
@@ -65,23 +65,27 @@ export const RunOutcomeSchema = z.enum(RUN_OUTCOMES);
  * but nothing is broken.
  */
 export const RUN_OUTCOME_OPTIONS_META = {
-  running: { label: "Running", variant: "warning", icon: symbol("timelapse") },
+  running: {
+    label: "Running",
+    variant: "warning",
+    icon: stateIcons.working,
+  },
   succeeded: {
     label: "Succeeded",
     variant: "success",
-    icon: symbol("check-circle"),
+    icon: stateIcons.done,
   },
   partial: {
     label: "Partial",
     variant: "warning",
-    icon: symbol("incomplete-circle"),
+    icon: stateIcons.partial,
   },
-  failed: { label: "Failed", variant: "destructive", icon: symbol("error") },
-  canceled: { label: "Canceled", variant: "muted", icon: symbol("cancel") },
+  failed: { label: "Failed", variant: "destructive", icon: stateIcons.failed },
+  canceled: { label: "Canceled", variant: "muted", icon: stateIcons.canceled },
   "needs-approval": {
     label: "Needs approval",
     variant: "warning",
-    icon: symbol("input"),
+    icon: stateIcons.needsYou,
   },
 } as const satisfies { readonly [O in RunOutcome]: FieldOptionMeta };
 

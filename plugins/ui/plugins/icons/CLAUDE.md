@@ -117,6 +117,34 @@ of any of them outside `nav-icons.ts`. `fullscreen` is the window-level idea
 (solo mode, browser fullscreen, presenting, a full-screen viewer), not a
 destination.
 
+## State icons (`stateIcons`)
+
+A status wears the icon of the STATE it is in, from `stateIcons`
+(`core/state-icons.ts`) — never a glyph picked per status list. A list maps
+each of its values onto a key (`running: { label, variant, icon:
+stateIcons.working }`); its colour stays its own.
+
+| Key | Glyph | State |
+|---|---|---|
+| `working` | `progress-activity`, spinning | in flight: running, working, in progress, starting |
+| `needsYou` | `front-hand` | stopped until a person acts: needs approval, need action, waiting |
+| `done` | `check-circle` | finished, did it |
+| `failed` | `error` | finished, did not |
+| `partial` | `incomplete-circle` | finished, did some of it |
+| `canceled` | `cancel` | ended without a verdict: dropped, superseded, gone |
+| `paused` | `pause-circle` | held, blocked, handed off |
+| `notStarted` | `radio-button-unchecked` | new, never run |
+
+- **Motion rides the ref.** `stateIcons.working` is a `SymbolRef` with
+  `spin: true`; `<Icon>` turns any such ref (stilled under
+  `prefers-reduced-motion`), so a list, a chip, a group header and a hand-drawn
+  status icon all spin with no code of their own.
+- **Reserved glyphs**: `icons/reserved-state-icon` rejects `symbol("…")` of the
+  glyphs only a state means (`progress-activity`, `front-hand`,
+  `incomplete-circle`) outside `state-icons.ts`. The other five also draw
+  ordinary controls and banners (a confirm check, an error banner, a clear
+  button), so they stay spellable.
+
 ## Sprites (`plugins/sprites`)
 
 - **Server** builds each sprite from `@iconify-json/material-symbols` (400) or
@@ -522,6 +550,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
 - Exemptions:
   - Exempts itself from:
     - `icons/reserved-nav-icon` — `core/nav-icons.ts` (sanctioned)
+    - `icons/reserved-state-icon` — `core/state-icons.ts` (sanctioned)
     - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
   - Exempted by: `ui/icons` (0 debt)
 - Server:
@@ -600,6 +629,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `paintedBox`
     - `parseStyleKey`
     - `placeActiveIds`
+    - `RESERVED_STATE_GLYPHS`
     - `resolveIcon`
     - `resolveSymbol`
     - `resolveSymbolStyle`
@@ -608,6 +638,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `seti`
     - `SETI_SPRITE`
     - `setiId`
+    - `stateIcons`
     - `styleKeyOf`
     - `symbol`
     - `symbolId`

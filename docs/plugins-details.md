@@ -54715,7 +54715,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RunOutcomeChip`
           - `RunOutcomeDot`
       - Core:
-        - Uses: `ui/icons.symbol`
+        - Uses: `ui/icons.stateIcons`
         - Exports (types): `RunOutcome`
         - Exports (values):
           - `isRunInFlight`
@@ -58546,7 +58546,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/rank.RankSchema`
           - `tasks/orchestration/mandate/policy.defineCapability`
           - `tasks/task-ids.attemptIdKind`
-          - `ui/icons.symbol`
+          - `ui/icons.stateIcons`
         - Exports (types):
           - `Attempt`
           - `AttemptStatus`
@@ -58915,6 +58915,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempts itself from:
           - `icons/reserved-nav-icon` — `core/nav-icons.ts` (sanctioned)
+          - `icons/reserved-state-icon` — `core/state-icons.ts` (sanctioned)
           - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
         - Exempted by: `ui/icons` (0 debt)
       - Server:
@@ -58993,6 +58994,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `paintedBox`
           - `parseStyleKey`
           - `placeActiveIds`
+          - `RESERVED_STATE_GLYPHS`
           - `resolveIcon`
           - `resolveSymbol`
           - `resolveSymbolStyle`
@@ -59001,6 +59003,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `seti`
           - `SETI_SPRITE`
           - `setiId`
+          - `stateIcons`
           - `styleKeyOf`
           - `symbol`
           - `symbolId`

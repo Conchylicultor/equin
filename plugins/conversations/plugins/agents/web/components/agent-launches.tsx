@@ -2,7 +2,7 @@ import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-
 import { useLive } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { stateIcons } from "@plugins/ui/plugins/icons/core";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import {
   DataView,
@@ -38,26 +38,26 @@ const STATUS_OPTIONS: FieldOption[] = [
     value: "starting",
     label: "Starting",
     variant: "info",
-    icon: symbol("timelapse"),
+    icon: stateIcons.working,
   },
   {
     value: "working",
     label: "Working",
     variant: "info",
-    icon: symbol("timelapse"),
+    icon: stateIcons.working,
   },
   {
     value: "waiting",
     label: "Waiting",
     variant: "warning",
-    icon: symbol("input"),
+    icon: stateIcons.needsYou,
   },
-  { value: "gone", label: "Gone", variant: "muted", icon: symbol("cancel") },
+  { value: "gone", label: "Gone", variant: "muted", icon: stateIcons.canceled },
   {
     value: "done",
     label: "Done",
     variant: "success",
-    icon: symbol("check-circle"),
+    icon: stateIcons.done,
   },
 ];
 

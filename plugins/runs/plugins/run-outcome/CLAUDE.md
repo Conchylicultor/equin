@@ -35,7 +35,7 @@ Own plugin, not `runs/core`, so `runs/web` can import the chip without
     - `RunOutcomeChip`
     - `RunOutcomeDot`
 - Core:
-  - Uses: `ui/icons.symbol`
+  - Uses: `ui/icons.stateIcons`
   - Exports (types): `RunOutcome`
   - Exports (values):
     - `isRunInFlight`

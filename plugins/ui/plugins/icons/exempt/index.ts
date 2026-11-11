@@ -9,6 +9,13 @@ export default [
       "navIcons is where the reserved navigation glyphs are spelled — the one place the rule sends every other call site to.",
   },
   {
+    rule: "icons/reserved-state-icon",
+    paths: ["core/state-icons.ts"],
+    kind: "sanctioned",
+    reason:
+      "stateIcons is where the reserved state glyphs are spelled — the one place the rule sends every other call site to.",
+  },
+  {
     rule: "check-thread-safety/no-blocking-check-work",
     paths: ["check/index.ts"],
     kind: "debt",

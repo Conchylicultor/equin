@@ -171,6 +171,10 @@ function inlineGlyphMarkup(source: DrawingSource | undefined): string | null {
  * its style's symbol once held, the default style's while that one loads, and
  * — only for a name no chunk holds in either — an empty box at its final size
  * (a loading state) until the fetch lands.
+ *
+ * A symbol whose ref says `spin` (`stateIcons.working`) turns wherever it is
+ * drawn, stilled under reduced motion — the state carries its motion, so no
+ * call site animates it.
  */
 export function Icon({ icon, active = false, title, ...rest }: IconProps) {
   const style = useIconStyle();
@@ -226,6 +230,7 @@ export function Icon({ icon, active = false, title, ...rest }: IconProps) {
       role={named ? "img" : undefined}
       data-icon={icon.name}
       {...rest}
+      className={spinClass(icon, rest.className)}
     >
       {title !== undefined ? <title>{title}</title> : null}
       {inline !== null ? (
@@ -239,4 +244,12 @@ export function Icon({ icon, active = false, title, ...rest }: IconProps) {
       ) : null}
     </svg>
   );
+}
+
+const SPIN_CLASS = "animate-spin motion-reduce:animate-none";
+
+/** The caller's class, plus the turn a spinning symbol carries. */
+function spinClass(icon: IconRef, className: string | undefined) {
+  if (icon.kind !== "symbol" || icon.spin !== true) return className;
+  return className === undefined ? SPIN_CLASS : `${className} ${SPIN_CLASS}`;
 }

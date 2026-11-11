@@ -18,14 +18,9 @@ import {
   type TaskEntry,
 } from "./use-task-aggregate";
 import { matchResource } from "@plugins/network/plugins/live/plugins/live-state/web";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { stateIcons, symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
-const radioButtonUncheckedIcon = symbol("radio-button-unchecked");
-const timelapseIcon = symbol("timelapse");
-const checkCircleIcon = symbol("check-circle");
-const cancelIcon = symbol("cancel");
-const stopCircleIcon = symbol("stop-circle");
 const keyboardArrowDownIcon = symbol("keyboard-arrow-down");
 const keyboardArrowUpIcon = symbol("keyboard-arrow-up");
 const closeIcon = symbol("close");
@@ -35,35 +30,35 @@ function StatusIcon({ status }: { status: string }) {
     case "in_progress":
       return (
         <Icon
-          icon={timelapseIcon}
+          icon={stateIcons.working}
           className={cn("size-4 text-info", rigidClass())}
         />
       );
     case "completed":
       return (
         <Icon
-          icon={checkCircleIcon}
+          icon={stateIcons.done}
           className={cn("size-4 text-success", rigidClass())}
         />
       );
     case "failed":
       return (
         <Icon
-          icon={cancelIcon}
+          icon={stateIcons.failed}
           className={cn("size-4 text-destructive", rigidClass())}
         />
       );
     case "stopped":
       return (
         <Icon
-          icon={stopCircleIcon}
+          icon={stateIcons.canceled}
           className={cn("size-4 text-muted-foreground", rigidClass())}
         />
       );
     default:
       return (
         <Icon
-          icon={radioButtonUncheckedIcon}
+          icon={stateIcons.notStarted}
           className={cn("size-4 text-muted-foreground", rigidClass())}
         />
       );
