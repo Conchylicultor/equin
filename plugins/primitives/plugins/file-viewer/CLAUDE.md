@@ -56,7 +56,7 @@ every file's bytes, so PDF, media and images preview wherever the file lives
     - `FileViewer.Renderer` ← `primitives.file-viewer.markdown`
     - `FileViewer.Renderer` ← `primitives.file-viewer.media`
     - `FileViewer.Renderer` ← `primitives.file-viewer.pdf`
-  - Uses:
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/endpoints.useEndpointMutation`
     - `infra/paths/file-systems.useFileStat`
     - `primitives/css/center.Center`
@@ -72,6 +72,7 @@ every file's bytes, so PDF, media and images preview wherever the file lives
     - `primitives/css/ui-kit.Button`
     - `primitives/file-type.FileTypeIcon`
     - `primitives/filepath-breadcrumb.FilepathBreadcrumb`
+    - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
     - `primitives/select-scope.ContentScope`
     - `primitives/slot-render.renderIsolated`
@@ -79,6 +80,7 @@ every file's bytes, so PDF, media and images preview wherever the file lives
     - `ui/icons.Icon`
   - Exports (types):
     - `FileRendererContribution`
+    - `FileRendererExpand`
     - `FileRendererProps`
     - `FileRenderersHandle`
     - `FileRendererTarget`
@@ -87,8 +89,8 @@ every file's bytes, so PDF, media and images preview wherever the file lives
     - `ResolvedRenderer`
   - Exports (values):
     - `FileContent`
-    - `FileHeaderAction`
-    - `FileHeaderActions`
+    - `FileExpandAction`
+    - `FileExpandButton`
     - `FileTabs`
     - `FileView`
     - `FileViewer`

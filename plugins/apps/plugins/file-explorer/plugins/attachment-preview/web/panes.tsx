@@ -122,6 +122,9 @@ function ReadyAttachmentPreview({
     name,
     home,
     git: undefined,
+    // Its pane's Expand leaves the host for Files; the renderer's (Open in
+    // Sonata) is one of the header's items beside it.
+    rendererExpand: "items",
   });
   return (
     <FilePreviewProvider value={preview}>

@@ -4,14 +4,14 @@ import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import type { FileLocation } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { FileViewer } from "../slots";
-import { FileHeaderActionsContext } from "./file-header-actions";
+import { FileExpandContext } from "./file-expand";
 import type { FileRenderersHandle } from "./use-file-renderers";
 import { ReadGate } from "./unreadable-file";
 
 /**
  * The active renderer's body for one file (no header, no scroll container),
- * off the host's renderers handle — which also says where in the host's header
- * the renderer's actions go (`FileHeaderActions`).
+ * off the host's renderers handle — which also takes the Expand the renderer
+ * declares (`FileExpandAction`).
  */
 export function FileContent({
   file,
@@ -31,7 +31,7 @@ export function FileContent({
   // it still routes through the error-boundary middleware chain.
   const body = (
     <ContentScope>
-      <FileHeaderActionsContext.Provider value={renderers.header.element}>
+      <FileExpandContext.Provider value={renderers.setExpand}>
       {renderIsolated(
         FileViewer.Renderer,
         active.contribution as unknown as Contribution,
@@ -43,7 +43,7 @@ export function FileContent({
             : {}),
         },
       )}
-      </FileHeaderActionsContext.Provider>
+      </FileExpandContext.Provider>
     </ContentScope>
   );
   // A file that is not there, or that the account cannot read, says why,

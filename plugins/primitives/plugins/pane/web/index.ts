@@ -101,6 +101,7 @@ export type {
   SerializedSlot,
 } from "./history-sink";
 export { PaneChrome, PaneEndControls } from "./components/pane-chrome";
+export type { PaneExpandAction } from "./components/promote-control";
 export { PaneHeaderCell } from "./components/pane-header-item";
 export type {
   PaneHeaderAction,

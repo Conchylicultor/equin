@@ -1,8 +1,18 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import type { FileLocation } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import type { FileViewerGit } from "../../core";
 import { FileViewer, resolveRenderers, type ResolvedRenderer } from "../slots";
 import { useStableLocation } from "../internal/use-stable-location";
+
+/**
+ * A renderer's Expand — its file's fuller view elsewhere (Open in Sonata) —
+ * declared with `FileExpandAction`, drawn by the host.
+ */
+export interface FileRendererExpand {
+  label: string;
+  /** Runs on click; a returned promise holds the button pending. */
+  onActivate: () => void | Promise<void>;
+}
 
 export interface FileRenderersHandle {
   resolved: ResolvedRenderer[];
@@ -10,14 +20,12 @@ export interface FileRenderersHandle {
   activeId: string | null;
   setActiveId: (id: string) => void;
   /**
-   * Where the active renderer's header actions go: `element` is the one the
-   * host's `FileHeaderActions` mounted (`attach` is its ref), handed to the
-   * renderer by `FileContent`.
+   * The Expand the active renderer declared (`FileExpandAction`), for the host
+   * to draw once: its pane's Expand, or `FileExpandButton` in its header.
    */
-  header: {
-    element: HTMLElement | null;
-    attach: (el: HTMLElement | null) => void;
-  };
+  expand: FileRendererExpand | null;
+  /** Where `FileExpandAction` declares it, handed over by `FileContent`. */
+  setExpand: Dispatch<SetStateAction<FileRendererExpand | null>>;
 }
 
 /**
@@ -55,14 +63,10 @@ export function useFileRenderers({
   const [activeId, setActiveId] = useState<string | null>(defaultId);
   const active =
     resolved.find((r) => r.contribution.id === activeId) ?? resolved[0] ?? null;
-  const [headerElement, attachHeader] = useState<HTMLElement | null>(null);
-  const header = useMemo(
-    () => ({ element: headerElement, attach: attachHeader }),
-    [headerElement],
-  );
+  const [expand, setExpand] = useState<FileRendererExpand | null>(null);
   // Stable identity: a host's header reads this through a context value.
   return useMemo(
-    () => ({ resolved, active, activeId, setActiveId, header }),
-    [resolved, active, activeId, header],
+    () => ({ resolved, active, activeId, setActiveId, expand, setExpand }),
+    [resolved, active, activeId, expand],
   );
 }

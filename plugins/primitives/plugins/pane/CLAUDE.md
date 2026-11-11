@@ -867,6 +867,7 @@ with an empty route.
     - `OpenPaneFn`
     - `PaneChromeConfig`
     - `PaneExpand`
+    - `PaneExpandAction`
     - `PaneExpandTarget`
     - `PaneHeaderAction`
     - `PaneHeaderComponent`

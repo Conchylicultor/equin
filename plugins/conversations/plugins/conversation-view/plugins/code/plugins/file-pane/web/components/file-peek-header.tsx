@@ -8,7 +8,7 @@ import {
 } from "@plugins/primitives/plugins/path-bar/web";
 import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
 import {
-  FileHeaderActions,
+  FileExpandButton,
   FileTabs,
   type FileRenderersHandle,
 } from "@plugins/primitives/plugins/file-viewer/web";
@@ -141,8 +141,8 @@ function HostPathBar({
 }
 
 /**
- * The active renderer's own header actions (the MIDI preview's Open in
- * Sonata), then the renderer tabs (Diff / Raw / Preview …), as a file-peek
+ * The active renderer's own Expand (the MIDI preview's Open in Sonata), then
+ * the renderer tabs (Diff / Raw / Preview …), as a file-peek
  * header item.
  */
 export function FilePeekTabs() {
@@ -150,7 +150,7 @@ export function FilePeekTabs() {
   if (renderers === null) return null;
   return (
     <>
-      <FileHeaderActions attach={renderers.header.attach} />
+      <FileExpandButton renderers={renderers} />
       <FileTabs {...renderers} />
     </>
   );

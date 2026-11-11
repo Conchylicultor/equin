@@ -37,7 +37,7 @@ import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-
 import { FileTypeIcon } from "@plugins/primitives/plugins/file-type/web";
 import {
   FileContent,
-  FileHeaderActions,
+  FileExpandButton,
   FileTabs,
   useArchiveMembership,
   useFileRenderers,
@@ -68,7 +68,19 @@ interface FilePreviewReady {
   file: FileLocation;
   renderers: FileRenderersHandle;
   membership: ArchiveMembership;
+  /**
+   * Where the renderer's Expand (Open in Sonata) is drawn: in the header's
+   * items, or by the host as its pane's own Expand — never both.
+   */
+  rendererExpand: RendererExpandPlacement;
 }
+
+/**
+ * Who draws the active renderer's Expand: `"items"` — the preview's header
+ * items, beside the tabs; `"pane"` — the host, as the Expand of its pane
+ * (`PaneChrome`'s `expand`), in place of the pane's own.
+ */
+export type RendererExpandPlacement = "items" | "pane";
 
 /**
  * The state the preview's header and body share: the file's name (known from
@@ -126,7 +138,7 @@ function useReadyFilePreview(): FilePreviewReady {
  * body share them) and its archive membership. `name` is what to call it when
  * that is not its name on disk — an attachment is stored as `<uuid>.pdf` but
  * is the `report.pdf` the user attached. `git` is its git context, when a lens
- * knows it.
+ * knows it. `rendererExpand` is who draws the renderer's Expand.
  */
 export function useFilePreview({
   fs,
@@ -134,12 +146,14 @@ export function useFilePreview({
   name,
   home,
   git,
+  rendererExpand,
 }: {
   fs: BrowsableFileSystem;
   path: string;
   name?: string;
   home: string;
   git: FileViewerGit | undefined;
+  rendererExpand: RendererExpandPlacement;
 }): FilePreviewValue {
   const file = useMemo(() => ({ fs, path }), [fs, path]);
   const renderers = useFileRenderers({
@@ -151,9 +165,9 @@ export function useFilePreview({
   return useMemo(
     () => ({
       name: displayName,
-      ready: { fs, path, home, file, renderers, membership },
+      ready: { fs, path, home, file, renderers, membership, rendererExpand },
     }),
-    [displayName, fs, path, home, file, renderers, membership],
+    [displayName, fs, path, home, file, renderers, membership, rendererExpand],
   );
 }
 
@@ -192,17 +206,18 @@ export function FilePreviewTitle(): ReactNode {
 }
 
 /**
- * The active renderer's own header actions (the MIDI preview's Open in
- * Sonata), then the renderer tabs — shown only when there is a choice (a
- * changed file in a git checkout also offers its diff).
+ * The active renderer's own Expand (the MIDI preview's Open in Sonata) —
+ * unless the host draws it as its pane's Expand —, then the renderer tabs —
+ * shown only when there is a choice (a changed file in a git checkout also
+ * offers its diff).
  */
 export function FilePreviewTabs(): ReactNode {
   const { ready } = useFilePreviewHeader();
   if (ready === null) return null;
-  const { renderers } = ready;
+  const { renderers, rendererExpand } = ready;
   return (
     <>
-      <FileHeaderActions attach={renderers.header.attach} />
+      {rendererExpand === "items" && <FileExpandButton renderers={renderers} />}
       {renderers.resolved.length > 1 && <FileTabs {...renderers} />}
     </>
   );
@@ -398,10 +413,15 @@ function ReadyFilePreviewPane({
     path,
     home: system.home,
     git,
+    rendererExpand: "pane",
   });
+  // Already in Files beside its folder, the preview has no fuller view of its
+  // own: Expand is the file's in the app that plays it (Open in Sonata), and
+  // absent for a file no renderer opens elsewhere.
+  const expand = preview.ready?.renderers.expand ?? undefined;
   return (
     <FilePreviewProvider value={preview}>
-      <PaneChrome pane={pane}>
+      <PaneChrome pane={pane} expand={expand}>
         <FilePreviewBody />
       </PaneChrome>
     </FilePreviewProvider>
@@ -480,6 +500,7 @@ function SplitPreviewReady({
     path,
     home: system.home,
     git,
+    rendererExpand: "items",
   });
   return (
     <FilePreviewProvider value={preview}>

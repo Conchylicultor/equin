@@ -87,6 +87,10 @@ export const filesPreviewPane = Pane.define({
   // renderer tabs and Open with default app).
   title: { useText: usePreviewTitle, component: FilePreviewTitle },
   actions: FilePreviewHeader,
+  // Promoted, the preview re-roots onto the very folder + preview it already
+  // is (it only ever opens beside its folder): a button that does nothing. Its
+  // Expand is the renderer's own, when it has one (FilePreviewPane).
+  chrome: { promote: false },
   useResolve: false,
   component: FilesPreview,
 });

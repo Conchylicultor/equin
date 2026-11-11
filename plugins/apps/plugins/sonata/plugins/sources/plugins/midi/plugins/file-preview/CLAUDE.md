@@ -21,8 +21,9 @@ native tab.
   preview wires nothing for this: they are `controls`' `SonataPlayer.Effect`s,
   which every shown player gets (see `player/CLAUDE.md`), focus-scoped to this
   surface and yielding to keys the file tree already handled.
-- **Open in Sonata is the host header's Expand** (`FileHeaderAction`: rendered
-  in the preview's player, drawn in the header's `FileHeaderActions`): stops the
+- **Open in Sonata is the renderer's Expand** (`FileExpandAction`: declared in
+  the preview's player, drawn once by the host — the Files preview pane's own
+  Expand, or a header button elsewhere via `FileExpandButton`): stops the
   preview, imports the bytes with the MIDI source's `importMidiBytes`
   (content-hash dedupe on the server, so a second press reuses the first
   press's song) and navigates the focused tab to `sonataSongLink(songId, bar)` —
@@ -57,10 +58,9 @@ preview, then the same in Sonata after Open in Sonata.
     - `infra/paths/file-systems.fileBytesUnavailableMessage`
     - `infra/paths/file-systems.useFileBytes`
     - `primitives/css/placeholder.Placeholder`
-    - `primitives/file-viewer.FileHeaderAction`
+    - `primitives/file-viewer.FileExpandAction`
     - `primitives/file-viewer.FileRendererProps`
     - `primitives/file-viewer.FileViewer`
-    - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
     - `shell/toast.showToast`
 

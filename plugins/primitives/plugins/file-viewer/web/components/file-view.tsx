@@ -8,7 +8,7 @@ import type { FileLocation } from "@plugins/infra/plugins/paths/plugins/file-sys
 import type { FileViewerGit } from "../../core";
 import { FileContent } from "./file-content";
 import { FileTabs } from "./file-tabs";
-import { FileHeaderActions } from "./file-header-actions";
+import { FileExpandButton } from "./file-expand";
 import { useFileRenderers } from "./use-file-renderers";
 
 /**
@@ -39,7 +39,7 @@ export function FileView({
           <Fill>
             <FilepathBreadcrumb path={file.path} />
           </Fill>
-          <FileHeaderActions attach={renderers.header.attach} />
+          <FileExpandButton renderers={renderers} />
           <FileTabs {...renderers} />
         </Text>
       }

@@ -10121,10 +10121,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `infra/paths/file-systems.fileBytesUnavailableMessage`
                       - `infra/paths/file-systems.useFileBytes`
                       - `primitives/css/placeholder.Placeholder`
-                      - `primitives/file-viewer.FileHeaderAction`
+                      - `primitives/file-viewer.FileExpandAction`
                       - `primitives/file-viewer.FileRendererProps`
                       - `primitives/file-viewer.FileViewer`
-                      - `primitives/icon-button.IconButton`
                       - `primitives/loading.Loading`
                       - `shell/toast.showToast`
                 - **`folders`** — Watched-folder UI for the MIDI source: registers the midi-folders config and presents the File field (the MIDI exposure's `sourceMissing`) that flags — and lets you filter for — folder-imported songs whose file has been deleted from disk. Shows every watched folder that cannot be read (denied by macOS, missing, not a folder) as a notice on the library — which folder, why, and Allow access / Check again / Change folder / Remove — and puts the folder list itself, with each folder's status, under a Sonata settings gear in the library header. Watched MIDI folders, every host's half: registers the watched-folder list (a config_v2 listField) and serves each folder's imported-song count (sonata.midi-folders.song-count, a count over the MIDI side-table). Watching, importing and probing the folders is the machine/ half's.
@@ -48449,7 +48448,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FileViewer.Renderer` ← `primitives.file-viewer.markdown`
           - `FileViewer.Renderer` ← `primitives.file-viewer.media`
           - `FileViewer.Renderer` ← `primitives.file-viewer.pdf`
-        - Uses:
+        - Uses: 21 symbols — full list in [`plugins/primitives/plugins/file-viewer/REFERENCE.md`](../plugins/primitives/plugins/file-viewer/REFERENCE.md)
           - `infra/endpoints.useEndpointMutation`
           - `infra/paths/file-systems.useFileStat`
           - `primitives/css/center.Center`
@@ -48465,6 +48464,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit.Button`
           - `primitives/file-type.FileTypeIcon`
           - `primitives/filepath-breadcrumb.FilepathBreadcrumb`
+          - `primitives/icon-button.IconButton`
           - `primitives/loading.Loading`
           - `primitives/select-scope.ContentScope`
           - `primitives/slot-render.renderIsolated`
@@ -48472,6 +48472,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/icons.Icon`
         - Exports (types):
           - `FileRendererContribution`
+          - `FileRendererExpand`
           - `FileRendererProps`
           - `FileRenderersHandle`
           - `FileRendererTarget`
@@ -48480,8 +48481,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ResolvedRenderer`
         - Exports (values):
           - `FileContent`
-          - `FileHeaderAction`
-          - `FileHeaderActions`
+          - `FileExpandAction`
+          - `FileExpandButton`
           - `FileTabs`
           - `FileView`
           - `FileViewer`
@@ -48791,9 +48792,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by: 134 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
-          - `apps` ×48
+          - `apps` ×47
           - `conversations` ×21
-          - `primitives` ×20
+          - `primitives` ×21
           - `tasks` ×8
           - `page` ×7
           - `debug` ×5
@@ -50485,6 +50486,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `OpenPaneFn`
           - `PaneChromeConfig`
           - `PaneExpand`
+          - `PaneExpandAction`
           - `PaneExpandTarget`
           - `PaneHeaderAction`
           - `PaneHeaderComponent`
@@ -58417,8 +58419,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useWantedStyleKeys`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 546 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
-          - `apps` ×155
+        - Imported by: 545 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+          - `apps` ×154
           - `conversations` ×83
           - `primitives` ×53
           - `page` ×52

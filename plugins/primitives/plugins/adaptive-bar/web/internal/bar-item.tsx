@@ -202,8 +202,7 @@ function PortaledBarItem({
     // (`rendersNothing`) looks through `display: contents` boxes, so content can
     // appear without the container's children changing — a slot's wrappers are
     // already there, or the occupant is an empty `contents` span another tree
-    // portals into later (the file preview's FileHeaderActions, which Sonata's
-    // MIDI preview fills with Open in Sonata once it has loaded). Watching only
+    // portals into later. Watching only
     // the child list left such an occupant hidden for good. Text counts too
     // (`characterData`): a text node going from "" to a label is content.
     const observer = new MutationObserver(() => registry.contentChanged(id));

@@ -1,6 +1,6 @@
 import { useMemo, type ReactNode } from "react";
 import {
-  FileHeaderAction,
+  FileExpandAction,
   type FileRendererProps,
 } from "@plugins/primitives/plugins/file-viewer/web";
 import {
@@ -26,16 +26,14 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/sources/plugins/midi/web";
 import { useNavigate } from "@plugins/apps-core/plugins/tabs/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
-import { navIcons } from "@plugins/ui/plugins/icons/core";
 
 /**
  * The file viewer's MIDI renderer: the file in Sonata's mini player — the
  * notes falling onto the keyboard, the progression capsule over them — and
- * Open in Sonata at the playhead as the host header's Expand. Reads the file's
+ * Open in Sonata at the playhead as the renderer's Expand (the host draws it). Reads the file's
  * bytes (loading / unavailable / error are shown as such), parses them once —
  * a file that is not MIDI is an error state, never an empty roll — and only
  * then mounts a player.
@@ -92,18 +90,17 @@ function ParsedPreview({
   }
   return (
     <SonataMiniPlayer identity={identity} rawById={rawById}>
-      <FileHeaderAction>
-        <OpenInSonata file={file} bytes={bytes} />
-      </FileHeaderAction>
+      <OpenInSonata file={file} bytes={bytes} />
     </SonataMiniPlayer>
   );
 }
 
 /**
- * The header's Expand: put the file in the Sonata library (idempotent by
+ * The renderer's Expand: put the file in the Sonata library (idempotent by
  * content) and open it in Sonata at the preview's playhead bar (the URL
- * carries it; the label does not). Drawn in the host's header but rendered in
- * the preview's player, so it reads where that player is.
+ * carries it; the label does not). Drawn by the host (its pane's Expand, or a
+ * header button) but declared in the preview's player, so it reads where that
+ * player is.
  */
 function OpenInSonata({
   file,
@@ -137,7 +134,5 @@ function OpenInSonata({
       throw err;
     }
   };
-  return (
-    <IconButton icon={navIcons.expand} label="Open in Sonata" onClick={open} />
-  );
+  return <FileExpandAction label="Open in Sonata" onActivate={open} />;
 }

@@ -20,7 +20,7 @@ import { hoverRevealGroup } from "@plugins/primitives/plugins/hover-reveal/web";
 import { PaneScroll } from "./pane-scroll";
 import { FloatingHeaderScroll } from "./floating-header-scroll";
 import { PaneIconAction } from "./pane-icon-action";
-import { PromoteControl } from "./promote-control";
+import { PromoteControl, type PaneExpandAction } from "./promote-control";
 import { PaneHeaderCell, type PaneHeaderItem } from "./pane-header-item";
 import { PaneTitleContext, type PaneTitleValue } from "./pane-title";
 import { InsidePaneTitleContext } from "./pane-title-guard";
@@ -138,6 +138,13 @@ type PaneChromeProps = HeaderPresentation & {
    */
   titleOnly?: boolean;
   /**
+   * This instance's Expand, supplied by its host in place of the pane's own
+   * (its declared `expand`, else the default promote) — for content that
+   * knows its fuller view only once it renders (a MIDI file's preview: Open
+   * in Sonata). See {@link PaneExpandAction}.
+   */
+  expand?: PaneExpandAction | undefined;
+  /**
    * The pane's non-scrolling overlay layer — widgets that float over the BODY
    * (an outline rail) rather than scroll with it. Rendered as a SIBLING of the
    * single `PaneScroll`, inside a `relative isolate` host: an absolutely
@@ -180,6 +187,7 @@ type PaneChromeProps = HeaderPresentation & {
 export function PaneChrome({
   pane,
   titleOnly,
+  expand,
   overlay,
   ground,
   header: presentation = "bar",
@@ -257,7 +265,7 @@ export function PaneChrome({
           </pane.Actions.Render>
         </PaneTitleContext.Provider>
       </AdaptiveBar>
-      <PaneEndControls pane={pane} />
+      <PaneEndControls pane={pane} expand={expand} />
     </Bar>
   );
   const content = <ContentScope>{children}</ContentScope>;
@@ -319,7 +327,7 @@ export function PaneChrome({
                     </pane.Actions.Render>
                   </SlotItemLayout>
                 </PaneTitleContext.Provider>
-                <PaneEndControls pane={pane} />
+                <PaneEndControls pane={pane} expand={expand} />
               </ControlSizeProvider>
             </Line>
           </Surface>
@@ -372,13 +380,24 @@ export function PaneChrome({
  * player and its song peek) instead of `PaneChrome`'s row: it ends that band
  * with these, so its Expand and close are every other pane's.
  */
-export function PaneEndControls({ pane }: { pane: AnyPane }): ReactNode {
+export function PaneEndControls({
+  pane,
+  expand,
+}: {
+  pane: AnyPane;
+  /** The host's own Expand, in place of the pane's (`PaneChrome`'s `expand`). */
+  expand?: PaneExpandAction | undefined;
+}): ReactNode {
   const layoutCtx = useContext(PaneLayoutContext);
   const doClose = pane.useClose();
   const ancestorsHidden = layoutCtx?.ancestorsHidden === true;
   return (
     <>
-      <PromoteControl pane={pane} ancestorsHidden={ancestorsHidden} />
+      <PromoteControl
+        pane={pane}
+        ancestorsHidden={ancestorsHidden}
+        override={expand}
+      />
       {!ancestorsHidden && pane._internal.chrome.close && doClose && (
         <PaneIconAction
           label="Close"

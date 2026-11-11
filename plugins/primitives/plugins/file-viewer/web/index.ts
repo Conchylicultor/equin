@@ -13,10 +13,7 @@ export { FileView } from "./components/file-view";
 export { UnloadedFile } from "./components/unloaded-file";
 export { FileContent } from "./components/file-content";
 export { FileTabs } from "./components/file-tabs";
-export {
-  FileHeaderAction,
-  FileHeaderActions,
-} from "./components/file-header-actions";
+export { FileExpandAction, FileExpandButton } from "./components/file-expand";
 export {
   NoPreview,
   type PreviewFailure,
@@ -25,6 +22,7 @@ export {
 } from "./components/no-preview";
 export {
   useFileRenderers,
+  type FileRendererExpand,
   type FileRenderersHandle,
 } from "./components/use-file-renderers";
 export default {
