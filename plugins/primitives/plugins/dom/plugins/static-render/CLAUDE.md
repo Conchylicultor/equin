@@ -13,8 +13,8 @@ const renderer = await createStaticRenderer({
 });
 renderer.unhydrated; // snapshot keys no loaded plugin declares
 renderer.home;       // the composition's home app { id, name, basePath } (null: none)
-const { html, title, paneId, app } = await renderer.render({ path: "/website/download" });
-await renderer.render({ pane: downloadPane, path: "/website/download" }); // asserts the pane
+const { html, title, paneId, app } = await renderer.render({ path: "/about/download" });
+await renderer.render({ pane: downloadPane, path: "/about/download" }); // asserts the pane
 
 // core — pure
 semanticHtml(html); // h1–h6, p, a[href], lists, blockquote, pre/code, tables, figure, img[alt], strong/em, br

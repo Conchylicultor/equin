@@ -11,7 +11,7 @@ import { downloadPane } from "../panes";
 // section-reach keys all carry them.
 describe("downloadPane", () => {
   it("keeps its URL and route id", () => {
-    expect(downloadPane.link(websiteApp, {})).toBe("/website/download");
+    expect(downloadPane.link(websiteApp, {})).toBe("/about/download");
     expect(downloadPane._internal.id).toBe("website-download");
     expect(downloadPane._internal.appIndex).toBe(false);
   });

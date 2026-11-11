@@ -2,7 +2,7 @@
 
 A personal self-evolving operating system for the agentic era.
 
-<a href="https://equin.ai/website"><img width="1920" height="1080" alt="equin, the showcase film — watch it on equin.ai" src="https://github.com/Conchylicultor/equin/releases/download/website-media/equin-readme-thumbnail.jpg" /></a>
+<a href="https://equin.ai/about"><img width="1920" height="1080" alt="equin, the showcase film — watch it on equin.ai" src="https://github.com/Conchylicultor/equin/releases/download/website-media/equin-readme-thumbnail.jpg" /></a>
 
 https://equin.ai/ (website under construction)
 
@@ -14,7 +14,7 @@ equin is a platform meant to design applications at scale:
 to develop, deploy and maintain complex apps with hundreds of features,
 apps that are meant to be used years from now.
 
-How? equin brings [hundreds of innovations and improvements](https://equin.ai/website/foundations) on top of raw Claude, including:
+How? equin brings [hundreds of innovations and improvements](https://equin.ai/about/foundations) on top of raw Claude, including:
 
 - An agent manager designed to manage dozens of agentic sessions in parallel
 - A fast iteration workflow, launching agents in the background that fix, push, and update the app without any human intervention

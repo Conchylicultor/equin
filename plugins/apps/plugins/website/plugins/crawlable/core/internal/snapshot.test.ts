@@ -9,22 +9,22 @@ import {
 } from "./snapshot";
 
 const landing = defineWebsitePage({
-  path: "/website",
+  path: "/about",
   title: "equin",
   description: "The app.",
 });
 const download = defineWebsitePage({
-  path: "/website/download",
+  path: "/about/download",
   title: "Download",
   description: "One command.",
 });
 
 describe("snapshotFileOf", () => {
   test("the path, relative, as .html", () => {
-    expect(snapshotFileOf("/website")).toBe("website.html");
-    expect(snapshotFileOf("/website/download")).toBe("website/download.html");
+    expect(snapshotFileOf("/about")).toBe("about.html");
+    expect(snapshotFileOf("/about/download")).toBe("about/download.html");
   });
-  test.each(["website", "/", "/website/"])("refuses %p", (p) => {
+  test.each(["website", "/", "/about/"])("refuses %p", (p) => {
     expect(() => snapshotFileOf(p)).toThrow(SnapshotPageError);
   });
 });
@@ -44,26 +44,26 @@ describe("snapshotFiles", () => {
         { page: landing, title: "equin", semantic: "<h1>equin</h1>" },
         { page: download, title: "Download — equin", semantic: "<p>Run</p>" },
       ],
-      "/website",
+      "/about",
     );
     expect(SnapshotManifestSchema.parse(manifest)).toEqual({
-      home: "/website",
+      home: "/about",
       pages: {
-        "/website": {
+        "/about": {
           title: "equin",
           description: "The app.",
-          file: "website.html",
+          file: "about.html",
         },
-        "/website/download": {
+        "/about/download": {
           title: "Download — equin",
           description: "One command.",
-          file: "website/download.html",
+          file: "about/download.html",
         },
       },
     });
     expect([...fragments]).toEqual([
-      ["website.html", "<h1>equin</h1>"],
-      ["website/download.html", "<p>Run</p>"],
+      ["about.html", "<h1>equin</h1>"],
+      ["about/download.html", "<p>Run</p>"],
     ]);
   });
   test("a page with no text fails, naming it", () => {
@@ -72,7 +72,7 @@ describe("snapshotFiles", () => {
         [{ page: download, title: "D", semantic: "<p> <br/> </p>" }],
         null,
       ),
-    ).toThrow("/website/download");
+    ).toThrow("/about/download");
   });
   test("no home: the manifest carries none", () => {
     const { manifest } = snapshotFiles(
@@ -81,21 +81,28 @@ describe("snapshotFiles", () => {
     );
     expect(manifest).toEqual({
       pages: {
-        "/website/download": {
+        "/about/download": {
           title: "D",
           description: "One command.",
-          file: "website/download.html",
+          file: "about/download.html",
         },
       },
     });
+  });
+  test("what moved is carried, and omitted when nothing did", () => {
+    const taken = [{ page: download, title: "D", semantic: "<p>a</p>" }];
+    expect(
+      snapshotFiles(taken, null, { "/website": "/about" }).manifest.moved,
+    ).toEqual({ "/website": "/about" });
+    expect("moved" in snapshotFiles(taken, null, {}).manifest).toBe(false);
   });
   test("a home that is no taken page fails, naming it", () => {
     expect(() =>
       snapshotFiles(
         [{ page: download, title: "D", semantic: "<p>a</p>" }],
-        "/website",
+        "/about",
       ),
-    ).toThrow(/\/website: the composition's home is no declared page/);
+    ).toThrow(/\/about: the composition's home is no declared page/);
   });
   test("a path taken twice fails", () => {
     expect(() =>

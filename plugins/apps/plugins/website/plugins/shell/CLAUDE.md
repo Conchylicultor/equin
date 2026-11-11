@@ -1,6 +1,6 @@
 # shell
 
-The site's frame: the `/website` app entry, the shared header every page wears,
+The site's frame: the `/about` app entry, the shared header every page wears,
 and the three chrome pieces a page is built out of.
 
 - **`WebsiteBand`** — one horizontal strip. Owns the site's ONE reading measure
@@ -75,7 +75,7 @@ hover.
 
 ## Plugin reference
 
-- Description: App shell for the Website (equin public site). Registers the /website app entry, owns the shared site header (wordmark + nav) and the band/page/footer chrome every page wears, defines the Website.Section landing slot, and contributes the site's own theme (equin: palette, chart ramp, font), which the website app selects, plus the equin-document sub-theme (type scale, density, shape) every page wears and the equin-page-hero sub-theme an inner page's heading wears. The website's landing page on the server: its sitemap entry (WebsitePages.Page).
+- Description: App shell for the Website (equin public site). Registers the /about app entry, owns the shared site header (wordmark + nav) and the band/page/footer chrome every page wears, defines the Website.Section landing slot, and contributes the site's own theme (equin: palette, chart ramp, font), which the website app selects, plus the equin-document sub-theme (type scale, density, shape) every page wears and the equin-page-hero sub-theme an inner page's heading wears. The website's landing page on the server: its sitemap entry (WebsitePages.Page).
 - Web:
   - Slots:
     - `Website.Section`
@@ -133,7 +133,7 @@ hover.
     - `WebsiteNavLink`
     - `WebsiteSoon`
 - Server:
-  - Contributes: `apps.website.crawlable.page` "/website"
+  - Contributes: `apps.website.crawlable.page` "/about"
   - Uses: `apps/website/crawlable.WebsitePages`
 - Core:
   - Uses:

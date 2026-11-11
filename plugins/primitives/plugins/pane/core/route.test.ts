@@ -470,3 +470,24 @@ describe("normalizeRoutePath", () => {
     );
   });
 });
+
+describe("defineApp formerBasePaths", () => {
+  const app = (formerBasePaths: string[]) =>
+    defineApp({
+      id: "site",
+      name: "Site",
+      basePath: "/about",
+      formerBasePaths,
+      icon: agents.icon,
+    });
+  test("kept when given, omitted when empty", () => {
+    expect(app(["/website"]).formerBasePaths).toEqual(["/website"]);
+    expect("formerBasePaths" in app([])).toBe(false);
+  });
+  test.each([["/"], ["website"], ["/website/"], ["/about"]])(
+    "refuses %s",
+    (former) => {
+      expect(() => app([former])).toThrow(/former base path/);
+    },
+  );
+});

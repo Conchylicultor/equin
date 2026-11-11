@@ -4,7 +4,7 @@ import { Website, WebsiteHeader } from "./slots";
 import { WebsiteChrome } from "./components/website-chrome";
 
 /**
- * The landing pane — the site's index at bare `/website` (`landingPage`), so
+ * The landing pane — the site's index at bare `/about` (`landingPage`), so
  * the app's index pane.
  *
  * It wears the shared site header like every other website pane: the homepage

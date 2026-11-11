@@ -9,7 +9,7 @@ import { DownloadOpening } from "./components/download-opening";
 import { DownloadInstall } from "./components/download-install";
 
 /**
- * The download page at `/website/download` — how to get equin running on your
+ * The download page at `/about/download` — how to get equin running on your
  * own machine. Wears the shared site header (`actions: WebsiteHeader`); the
  * heading, then the one install band inside `WebsiteChrome`.
  */

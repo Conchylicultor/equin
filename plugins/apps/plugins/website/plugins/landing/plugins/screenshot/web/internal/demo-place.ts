@@ -19,7 +19,7 @@ const FULL = "1";
 
 /**
  * Where the visitor is in the homepage's demo, kept in the homepage's own URL
- * (its surface view keys: `/website;view.website.demo=%2Fagents%2Fc%2Fx;view.website.demo.full=1`),
+ * (its surface view keys: `/about;view.website.demo=%2Fagents%2Fc%2Fx;view.website.demo.full=1`),
  * so a reload comes back to it — the rule /demo follows with `/demo/at/…`:
  *
  * - framed, the demo is a box on the page: its moves rewrite the current

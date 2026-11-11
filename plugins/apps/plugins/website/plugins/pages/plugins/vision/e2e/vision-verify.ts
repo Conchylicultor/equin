@@ -1,4 +1,4 @@
-// Verifies the Vision zoom (`/website/vision`) against its mock
+// Verifies the Vision zoom (`/about/vision`) against its mock
 // (`proto-1792811767-vd1ygi`, at its picked options: fit b, copy paragraphs,
 // os orbit): the behaviour a pixel diff at rest cannot see.
 //
@@ -123,7 +123,7 @@ await withBrowser(async (h) => {
     viewport: { width, height },
     colorScheme,
   });
-  await boot(page, pathUrl("/website/vision"), {
+  await boot(page, pathUrl("/about/vision"), {
     marker: "text=A vision for",
     settleMs: 1500,
   });

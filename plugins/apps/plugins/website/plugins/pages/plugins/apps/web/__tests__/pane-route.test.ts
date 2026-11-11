@@ -11,7 +11,7 @@ import { appsPane } from "../panes";
 // section-reach keys all carry them.
 describe("appsPane", () => {
   it("keeps its URL and route id", () => {
-    expect(appsPane.link(websiteApp, {})).toBe("/website/apps");
+    expect(appsPane.link(websiteApp, {})).toBe("/about/apps");
     expect(appsPane._internal.id).toBe("website-apps");
     expect(appsPane._internal.appIndex).toBe(false);
   });

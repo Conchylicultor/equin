@@ -11,7 +11,7 @@ import type { HeaderOver } from "./internal/iceberg/scene";
 import { icebergSeaHeaderTheme, icebergSkyHeaderTheme } from "./internal/theme";
 
 /**
- * The foundations page at `/website/foundations` — what equin brings on top
+ * The foundations page at `/about/foundations` — what equin brings on top
  * of Claude, drawn as an iceberg. Wears the shared site header
  * (`actions: WebsiteHeader`) inside `WebsiteChrome`, so the site footer renders
  * exactly once. The header stays pinned and frosts once the page moves, dressed

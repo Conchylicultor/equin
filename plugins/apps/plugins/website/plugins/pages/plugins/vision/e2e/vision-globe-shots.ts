@@ -131,7 +131,7 @@ await withBrowser(async (h) => {
     colorScheme,
   });
   await page.clock.install();
-  await boot(page, pageUrl ?? pathUrl("/website/vision"), {
+  await boot(page, pageUrl ?? pathUrl("/about/vision"), {
     marker: ".vs-stage",
     settleMs: 2500,
   });

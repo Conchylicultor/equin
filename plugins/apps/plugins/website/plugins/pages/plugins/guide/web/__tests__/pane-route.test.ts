@@ -11,7 +11,7 @@ import { guidePane } from "../panes";
 // section-reach keys all carry them.
 describe("guidePane", () => {
   it("keeps its URL and route id", () => {
-    expect(guidePane.link(websiteApp, {})).toBe("/website/guide");
+    expect(guidePane.link(websiteApp, {})).toBe("/about/guide");
     expect(guidePane._internal.id).toBe("website-guide");
     expect(guidePane._internal.appIndex).toBe(false);
   });

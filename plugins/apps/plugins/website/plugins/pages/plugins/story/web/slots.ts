@@ -3,7 +3,7 @@ import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 
 export const WebsiteStory = {
   /**
-   * Sections of the story page at `/website/story`, rendered top-to-bottom below
+   * Sections of the story page at `/about/story`, rendered top-to-bottom below
    * the page's opening. Each section owns its full-width band (compose
    * `WebsiteBand`).
    *

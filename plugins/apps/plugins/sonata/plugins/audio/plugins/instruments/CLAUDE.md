@@ -21,7 +21,7 @@ contributor — or any host resolving the sampled grand generically — had to i
 `shell/web`, dragging a second `Apps.App` into its bundle. The website's
 app-gallery vignette embeds a real, playable Sonata keyboard + sampled piano; on
 the released public site that stray `Apps.App` would make bare `/` redirect to
-`/sonata` instead of `/website`.
+`/sonata` instead of `/about`.
 
 Splitting only the Instrument axis into this leaf cuts that edge: contributors
 (`audio/piano`, `audio/soundfont`) and consumers (the engine, metronome,

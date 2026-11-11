@@ -188,6 +188,10 @@ func serveArtifact(w http.ResponseWriter, r *http.Request, file string) {
 //     path (snapshot.go: title, description, canonical, the hiding rule, and
 //     the fragment after the root div).
 //
+// A path at or under an address the manifest lists as moved (an app's former
+// base path) is a 301 to the same path under its new one (query kept), so a
+// link published before the move keeps working.
+//
 // Bare `/` of a dist whose snapshot manifest names a home is a 301 to it
 // (query kept): the app redirects `/` to its home app only once its JS runs,
 // so without this a crawler would read an empty shell at the site's
@@ -218,6 +222,13 @@ func serveShell(w http.ResponseWriter, r *http.Request, wt *Worktree, webDir str
 	if set, ok := readSnapshot(webDir); ok {
 		if set.err != nil {
 			http.Error(w, "static snapshot unusable: "+set.err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if target, moved := movedTarget(set.moved, r.URL.Path); moved {
+			if r.URL.RawQuery != "" {
+				target += "?" + r.URL.RawQuery
+			}
+			http.Redirect(w, r, target, http.StatusMovedPermanently)
 			return
 		}
 		if r.URL.Path == "/" && set.home != "" {

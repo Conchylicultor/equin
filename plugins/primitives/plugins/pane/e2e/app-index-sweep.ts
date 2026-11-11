@@ -52,7 +52,7 @@ const APP_INDEXES: Array<{ basePath: string; paneId: string }> = [
   { basePath: "/settings", paneId: "settings-config-index" },
   { basePath: "/sonata", paneId: "sonata-library" },
   { basePath: "/story", paneId: "story-gallery" },
-  { basePath: "/website", paneId: "website-landing" },
+  { basePath: "/about", paneId: "website-landing" },
   { basePath: "/workflows", paneId: "workflows-definitions" },
 ];
 

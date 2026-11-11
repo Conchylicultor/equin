@@ -8,6 +8,9 @@ export const websiteApp = defineApp({
   // The pages' address space (`crawlable`): a page path and the app it
   // renders in cannot disagree.
   basePath: WEBSITE_BASE_PATH,
+  // Where the site lived before `/about`: links published then (the README,
+  // shared URLs, search results) are answered with a 301 to the same page.
+  formerBasePaths: ["/website"],
   icon: symbol("public"),
   audience: "developer",
 });

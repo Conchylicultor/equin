@@ -1,6 +1,6 @@
 # download
 
-The download page at `/website/download` — how to run equin on your own Mac.
+The download page at `/about/download` — how to run equin on your own Mac.
 
 One install, offered two ways behind a tab: **For you**, the repository's
 `install.sh` as one `curl … | bash` command (with what it does folded under
@@ -20,7 +20,7 @@ installer beside another's source. The installer's steps are written out in
 
 ## Plugin reference
 
-- Description: The download page of the equin website: the /website/download pane with the one install command (or, for an agent, a prompt with deep links into Claude Code and the Claude app), what to do once it runs, and its Download nav link. The download page of the equin website on the server: its sitemap entry (WebsitePages.Page).
+- Description: The download page of the equin website: the /about/download pane with the one install command (or, for an agent, a prompt with deep links into Claude Code and the Claude app), what to do once it runs, and its Download nav link. The download page of the equin website on the server: its sitemap entry (WebsitePages.Page).
 - Web:
   - Contributes:
     - `Pane.Register` "website-download"
@@ -45,7 +45,7 @@ installer beside another's source. The installer's steps are written out in
     - `ui/icons.Icon`
   - Exports (values): `downloadPane`
 - Server:
-  - Contributes: `apps.website.crawlable.page` "/website/download"
+  - Contributes: `apps.website.crawlable.page` "/about/download"
   - Uses: `apps/website/crawlable.WebsitePages`
 - Core:
   - Uses: `apps/website/crawlable.defineWebsitePage`

@@ -15,8 +15,8 @@ export class SnapshotPageError extends Error {
 
 /**
  * Where a page's fragment sits, relative to the manifest's directory: its path
- * without the leading slash, `.html` appended — `/website/download` →
- * `website/download.html`, `/website` → `website.html`. A page path is static
+ * without the leading slash, `.html` appended — `/about/download` →
+ * `about/download.html`, `/about` → `about.html`. A page path is static
  * segments only (`defineWebsitePage`), so the name is a plain relative path
  * and two pages never share one.
  */
@@ -48,7 +48,8 @@ export interface SnapshotTaken {
  * The manifest and fragment files of a snapshot, from its pages: each page
  * keyed by its path, its fragment at `snapshotFileOf(path)`, and `home` — the
  * path bare `/` goes to, the composition's home app's base path, `null` for
- * none — recorded when given. Throws a `SnapshotPageError` on a page with no
+ * none — recorded when given, and `moved` — each former base path mapped to
+ * where it moved — recorded when not empty. Throws a `SnapshotPageError` on a page with no
  * text (an empty render is no page a robot can read), a path taken twice, or
  * a home that is no taken page (`/` would redirect to a page with no
  * snapshot).
@@ -56,6 +57,7 @@ export interface SnapshotTaken {
 export function snapshotFiles(
   taken: readonly SnapshotTaken[],
   home: string | null,
+  moved: Readonly<Record<string, string>> = {},
 ): {
   manifest: SnapshotManifest;
   fragments: ReadonlyMap<string, string>;
@@ -76,12 +78,14 @@ export function snapshotFiles(
     pages[page.path] = { title, description: page.description, file };
     fragments.set(file, semantic);
   }
-  if (home === null) return { manifest: { pages }, fragments };
+  const movedPart =
+    Object.keys(moved).length > 0 ? { moved: { ...moved } } : {};
+  if (home === null) return { manifest: { pages, ...movedPart }, fragments };
   if (!(home in pages)) {
     throw new SnapshotPageError(
       home,
       "the composition's home is no declared page — `/` would redirect robots to a path with no snapshot",
     );
   }
-  return { manifest: { home, pages }, fragments };
+  return { manifest: { home, pages, ...movedPart }, fragments };
 }

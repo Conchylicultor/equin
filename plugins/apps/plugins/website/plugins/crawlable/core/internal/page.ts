@@ -3,7 +3,7 @@
  * The website app's `basePath` is this constant (`shell/core`'s `websiteApp`),
  * so a page path and the app it renders in cannot disagree.
  */
-export const WEBSITE_BASE_PATH = "/website";
+export const WEBSITE_BASE_PATH = "/about";
 
 /**
  * One public page of the website, as data: where it lives, what it is called
@@ -13,7 +13,7 @@ export const WEBSITE_BASE_PATH = "/website";
  * cannot drift.
  */
 export interface WebsitePage {
-  /** Absolute, `/website` or under it, no params, no trailing slash. */
+  /** Absolute, `/about` or under it, no params, no trailing slash. */
   readonly path: string;
   /** The page's own name: the pane title, so the tab and document title. */
   readonly title: string;
@@ -37,14 +37,14 @@ const SEGMENT = /^[a-z0-9][a-z0-9._~-]*$/;
  *
  * ```ts
  * export const downloadPage = defineWebsitePage({
- *   path: "/website/download",
+ *   path: "/about/download",
  *   title: "Download",
  *   description: "One command to install equin, and what to do once it runs.",
  * });
  * ```
  *
  * Throws a `WebsitePageError` at module eval on a path that is not a static
- * address under `/website`, or an empty title or description.
+ * address under `/about`, or an empty title or description.
  */
 export function defineWebsitePage(page: WebsitePage): WebsitePage {
   const { path, title, description } = page;
@@ -78,7 +78,7 @@ export function defineWebsitePage(page: WebsitePage): WebsitePage {
 export interface WebsitePaneIdentity {
   /** The route id: `website-<segment>` (`/` as `-`), `website-landing` for the index. */
   readonly id: string;
-  /** The route segment: the path relative to `/website`, `""` for `/website` itself. */
+  /** The route segment: the path relative to `/about`, `""` for `/about` itself. */
   readonly segment: string;
   /** Whether the pane is the website app's index pane (the landing page). */
   readonly appIndex: boolean;

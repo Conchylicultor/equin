@@ -3,7 +3,7 @@ import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 
 export const WebsiteGuide = {
   /**
-   * Sections of the guide at `/website/guide`, rendered top-to-bottom below the
+   * Sections of the guide at `/about/guide`, rendered top-to-bottom below the
    * page's heading. Each section owns its full-width band (compose
    * `WebsiteBand`).
    *

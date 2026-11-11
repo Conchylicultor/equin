@@ -1,4 +1,4 @@
-// Measures what the Vision zoom (`/website/vision`) costs a frame while it
+// Measures what the Vision zoom (`/about/vision`) costs a frame while it
 // plays on its own: for each chapter, scrolled to its card and then left
 // alone, the frame rate, the long animation frames (count, mean, worst; the
 // style + layout share; script time by invoker) and the DOM writes per second
@@ -260,7 +260,7 @@ await withBrowser(
   async (h) => {
     const { page } = await h.session({ viewport: { width, height } });
     const cdp = await page.context().newCDPSession(page);
-    await boot(page, pathUrl("/website/vision"), {
+    await boot(page, pathUrl("/about/vision"), {
       marker: "text=A vision for",
       settleMs: 1500,
     });

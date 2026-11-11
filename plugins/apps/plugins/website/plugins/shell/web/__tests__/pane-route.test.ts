@@ -11,9 +11,7 @@ import { landingPane } from "../panes";
 // section-reach keys all carry them.
 describe("landingPane", () => {
   it("keeps its URL and route id", () => {
-    expect(landingPane.link(websiteApp, {}).replace(/\/$/, "")).toBe(
-      "/website",
-    );
+    expect(landingPane.link(websiteApp, {}).replace(/\/$/, "")).toBe("/about");
     expect(landingPane._internal.id).toBe("website-landing");
     expect(landingPane._internal.appIndex).toBe(true);
   });

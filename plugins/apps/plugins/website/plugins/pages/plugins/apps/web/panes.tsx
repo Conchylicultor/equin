@@ -13,7 +13,7 @@ import { AppsGallery, type CategoryFilter } from "./components/apps-gallery";
 import { AppsClosing } from "./components/apps-closing";
 
 /**
- * The apps gallery at `/website/apps` — every app equin ships, searchable and
+ * The apps gallery at `/about/apps` — every app equin ships, searchable and
  * grouped by category. Wears the shared site header (`actions: WebsiteHeader`);
  * the heading with the search under it, then one body band holding the
  * gallery, the "Missing an app?" card and the two pages to read next, inside

@@ -11,7 +11,7 @@ import { foundationsPane } from "../panes";
 // section-reach keys all carry them.
 describe("foundationsPane", () => {
   it("keeps its URL and route id", () => {
-    expect(foundationsPane.link(websiteApp, {})).toBe("/website/foundations");
+    expect(foundationsPane.link(websiteApp, {})).toBe("/about/foundations");
     expect(foundationsPane._internal.id).toBe("website-foundations");
     expect(foundationsPane._internal.appIndex).toBe(false);
   });

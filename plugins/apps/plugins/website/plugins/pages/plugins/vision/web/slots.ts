@@ -3,7 +3,7 @@ import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 
 export const WebsiteVision = {
   /**
-   * Sections of the vision page at `/website/vision`, rendered
+   * Sections of the vision page at `/about/vision`, rendered
    * top-to-bottom below the page's heading. Each section owns its full-width
    * band.
    *

@@ -24,7 +24,8 @@ import {
  * pane the path resolves to), filtered to its semantic document, and titled
  * as the live app titles its tab (`documentTitle` — the pane's title and its
  * app's name). The manifest's `home` is the composition's home app's base
- * path (what bare `/` goes to). Any render error, or a page without text,
+ * path (what bare `/` goes to), its `moved` every app's former base paths
+ * (`AppRef.formerBasePaths`). Any render error, or a page without text,
  * throws a `SnapshotPageError` naming the page.
  */
 export async function renderSiteSnapshot(opts: {
@@ -70,7 +71,7 @@ export async function renderSiteSnapshot(opts: {
     timings.push({ path: page.path, ms: Math.round(performance.now() - t0) });
   }
   return {
-    ...snapshotFiles(taken, renderer.home?.basePath ?? null),
+    ...snapshotFiles(taken, renderer.home?.basePath ?? null, renderer.moved),
     timings,
   };
 }

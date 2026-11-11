@@ -93,7 +93,7 @@ await withBrowser(async (h) => {
   // ── 1. the gate ────────────────────────────────────────────────────
   // The demo is met fresh: its tips would cover the controls under the frame.
   await answerTipsAsTheyShow(page);
-  await page.goto(pathUrl("/website"), { waitUntil: "domcontentloaded" });
+  await page.goto(pathUrl("/about"), { waitUntil: "domcontentloaded" });
   const band = page.locator("figure.website-demo").first();
   const frame = band.locator(".website-demo-frame").first();
   const gate = page.getByRole("button", { name: /Enter equin/ });

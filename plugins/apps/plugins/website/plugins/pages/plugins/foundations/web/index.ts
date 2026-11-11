@@ -10,7 +10,7 @@ export { foundationsPane } from "./panes";
 
 export default {
   description:
-    "The technical foundations page of the equin website: the /website/foundations pane drawing what equin brings on top of Claude as an iceberg — ten layers from the apps at sea level down to the loop that builds them, each piece a pill that opens in place into a card (many with a live drawing), with a depth gauge, a Components / Harness filter and Expand all — and its Foundations nav link.",
+    "The technical foundations page of the equin website: the /about/foundations pane drawing what equin brings on top of Claude as an iceberg — ten layers from the apps at sea level down to the loop that builds them, each piece a pill that opens in place into a card (many with a live drawing), with a depth gauge, a Components / Harness filter and Expand all — and its Foundations nav link.",
   contributions: [
     // This pane BORROWS the shared site header (`actions: WebsiteHeader`), so it
     // mints no slot of its own and is deliberately absent from `slots:` — the

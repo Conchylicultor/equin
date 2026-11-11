@@ -9,7 +9,7 @@ import { WebsiteVision } from "./slots";
 import { VisionZoom } from "./components/vision-zoom";
 
 /**
- * The vision page at `/website/vision` — the vision for applications, as one
+ * The vision page at `/about/vision` — the vision for applications, as one
  * zoom-out from an idea to every app. Wears the shared site header
  * (`actions: WebsiteHeader`), frosted once the zoom scrolls under it, and
  * renders every `WebsiteVision.Section` contribution below the zoom inside

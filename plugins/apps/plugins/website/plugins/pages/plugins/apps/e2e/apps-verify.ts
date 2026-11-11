@@ -52,7 +52,7 @@ const near = (a: number, b: number, tol = 0.5) => Math.abs(a - b) <= tol;
 await withBrowser(async (h) => {
   const r = report("website apps page vs its mock");
   const { page } = await h.session({ viewport: VIEWPORT, colorScheme: "dark" });
-  await boot(page, pathUrl("/website/apps"), {
+  await boot(page, pathUrl("/about/apps"), {
     marker: "text=The harness",
     settleMs: 800,
   });

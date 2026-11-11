@@ -284,7 +284,7 @@ export function pageProblems(sites: readonly PageSites[]): string[] {
     }
     if (p.appIndex !== want.appIndex) {
       problems.push(
-        `${where(p)}: the pane of \`${p.name}\` (${page.path}) must ${want.appIndex ? "declare \`appIndex: true\`" : "not declare \`appIndex\`"} — only the landing page (\`/website\`) is the app's index`,
+        `${where(p)}: the pane of \`${p.name}\` (${page.path}) must ${want.appIndex ? "declare \`appIndex: true\`" : "not declare \`appIndex\`"} — only the landing page (\`/about\`) is the app's index`,
       );
     }
   }

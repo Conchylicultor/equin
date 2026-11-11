@@ -83,6 +83,12 @@ export interface StaticRenderer {
    * belongs to throws at creation.
    */
   readonly home: { id: string; name: string; basePath: string } | null;
+  /**
+   * Every registered app's former base paths (`AppRef.formerBasePaths`), each
+   * mapped to the app's base path: where a request under an old address goes.
+   * Empty when no app ever moved.
+   */
+  readonly moved: Readonly<Record<string, string>>;
 }
 
 let created = false;
@@ -186,9 +192,16 @@ export async function createStaticRenderer(opts: {
     home = { id: app.id, name: app.name, basePath: app.basePath };
   }
 
+  const moved: Record<string, string> = {};
+  for (const app of apps.values()) {
+    for (const former of app.formerBasePaths ?? [])
+      moved[former] = app.basePath;
+  }
+
   return {
     unhydrated: missing,
     home,
+    moved,
     // Async, so an unresolvable path rejects like every other failure.
     render: async (page) =>
       renderPage({

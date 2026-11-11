@@ -28,7 +28,7 @@ export const SnapshotPageSchema = z
  * static snapshot, and what to put in the shell's head for each.
  *
  * ```json
- * { "home": "/website", "pages": { "/website/download": { "title": "Download", "description": "…", "file": "website/download.html" } } }
+ * { "home": "/about", "moved": { "/about": "/about" }, "pages": { "/about/download": { "title": "Download", "description": "…", "file": "about/download.html" } } }
  * ```
  *
  * - Keys are the exact page paths (`WebsitePage.path`: absolute, no trailing
@@ -51,9 +51,35 @@ export const SnapshotManifestSchema = z
      * and always one of `pages`. Absent: a composition with no home app.
      */
     home: PagePathSchema.optional(),
+    /**
+     * Addresses that moved: each former base path (`AppRef.formerBasePaths`)
+     * mapped to the base path it moved to. The gateway answers a request at
+     * a former base path, or under it, with a 301 to the same path under the
+     * new one (query kept), so a link published before the move keeps
+     * working. Never `/` on either side; a former path holds no page.
+     * Absent: nothing moved.
+     */
+    moved: z.record(PagePathSchema, PagePathSchema).optional(),
   })
   .strict()
   .superRefine((m, ctx) => {
+    for (const [from, to] of Object.entries(m.moved ?? {})) {
+      if (from === "/" || to === "/" || from === to)
+        ctx.addIssue({
+          code: "custom",
+          path: ["moved", from],
+          message:
+            "a move is between two paths other than `/`, never to itself",
+        });
+      for (const page of Object.keys(m.pages)) {
+        if (page === from || page.startsWith(`${from}/`))
+          ctx.addIssue({
+            code: "custom",
+            path: ["moved", from],
+            message: `the page ${page} lives under the moved path ${from} — it would be unreachable`,
+          });
+      }
+    }
     if (m.home === undefined) return;
     if (m.home === "/")
       ctx.addIssue({

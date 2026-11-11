@@ -102,7 +102,7 @@ await withBrowser(async (h) => {
     viewport: { width: 1280, height: 900 },
     colorScheme: "dark",
   });
-  await boot(page, pathUrl("/website"), {
+  await boot(page, pathUrl("/about"), {
     marker: "text=Curious how equin came to be?",
     settleMs: 800,
   });

@@ -4,7 +4,7 @@ import { websiteApp } from "../../core";
 
 /**
  * The website's app surface. A pure full-surface app (like Sonata): the
- * full-pane renderer paints the active site pane — landing at `/website`,
+ * full-pane renderer paints the active site pane — landing at `/about`,
  * pillars / downloads at their own segments — filling the whole surface. The
  * persistent site header is NOT a layout concern: it is the shared
  * `WebsiteHeader` pane-header slot every website pane borrows, so navigation

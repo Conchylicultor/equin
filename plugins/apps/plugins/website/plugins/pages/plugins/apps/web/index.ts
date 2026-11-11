@@ -10,7 +10,7 @@ export { appsPane } from "./panes";
 
 export default {
   description:
-    "The apps gallery of the equin website: the /website/apps pane listing every app equin ships, searchable and grouped by category (harness, daily life, tools, coming next), each card's Install and the 'Missing an app?' band going to the download page, the vision and foundations pages offered at its end, and its Apps nav link.",
+    "The apps gallery of the equin website: the /about/apps pane listing every app equin ships, searchable and grouped by category (harness, daily life, tools, coming next), each card's Install and the 'Missing an app?' band going to the download page, the vision and foundations pages offered at its end, and its Apps nav link.",
   contributions: [
     // This pane BORROWS the shared site header (`actions: WebsiteHeader`), so it
     // mints no slot of its own — the header is declared once, by

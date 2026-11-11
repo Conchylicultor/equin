@@ -98,7 +98,7 @@ await withBrowser(async (h) => {
     );
   }
 
-  await boot(page, pathUrl("/website"), {
+  await boot(page, pathUrl("/about"), {
     marker: "text=Curious how equin came to be?",
     settleMs: 800,
   });

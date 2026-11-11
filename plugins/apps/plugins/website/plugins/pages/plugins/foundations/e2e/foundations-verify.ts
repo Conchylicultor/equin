@@ -1,4 +1,4 @@
-// Verifies the Foundations iceberg (`/website/foundations`) against its mock
+// Verifies the Foundations iceberg (`/about/foundations`) against its mock
 // (`proto-1790334655-cs0c`, at its picked options: header sticky, split icon):
 // the behaviour a pixel diff at rest cannot see.
 //
@@ -116,7 +116,7 @@ await withBrowser(async (h) => {
     viewport: { width, height },
     colorScheme,
   });
-  await boot(page, pathUrl("/website/foundations"), {
+  await boot(page, pathUrl("/about/foundations"), {
     marker: "text=Descend ↓",
     settleMs: 1200,
   });

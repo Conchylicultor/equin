@@ -16,7 +16,7 @@ const replayIcon = symbol("replay");
 const lightbulbIcon = symbol("lightbulb");
 const guideIcon = symbol("menu-book");
 
-const GUIDE_URL = "https://equin.ai/website/guide";
+const GUIDE_URL = "https://equin.ai/about/guide";
 
 /**
  * Starts the primary tour (`defineTour({ primary: true })`) — the engine

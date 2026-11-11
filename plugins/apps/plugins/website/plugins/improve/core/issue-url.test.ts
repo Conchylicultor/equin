@@ -11,7 +11,7 @@ import {
 } from "./issue-url";
 
 const REPO = "https://github.com/owner/repo";
-const PAGE = "https://equin.ai/website/harness";
+const PAGE = "https://equin.ai/about/harness";
 
 const HEADLINE: UiContextMeta = {
   url: "https://equin.ai/",

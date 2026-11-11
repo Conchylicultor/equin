@@ -1,6 +1,6 @@
 # apps
 
-The apps gallery at `/website/apps` — every app equin ships, and the ones
+The apps gallery at `/about/apps` — every app equin ships, and the ones
 being built.
 
 The heading (the shell's `WebsiteHero`) carries the search; under it, a row of
@@ -32,7 +32,7 @@ shell never names this page. The homepage's applications layer opens it.
 
 ## Plugin reference
 
-- Description: The apps gallery of the equin website: the /website/apps pane listing every app equin ships, searchable and grouped by category (harness, daily life, tools, coming next), each card's Install and the 'Missing an app?' band going to the download page, the vision and foundations pages offered at its end, and its Apps nav link. The apps gallery of the equin website on the server: its sitemap entry (WebsitePages.Page).
+- Description: The apps gallery of the equin website: the /about/apps pane listing every app equin ships, searchable and grouped by category (harness, daily life, tools, coming next), each card's Install and the 'Missing an app?' band going to the download page, the vision and foundations pages offered at its end, and its Apps nav link. The apps gallery of the equin website on the server: its sitemap entry (WebsitePages.Page).
 - Web:
   - Contributes:
     - `Pane.Register` "website-apps"
@@ -63,7 +63,7 @@ shell never names this page. The homepage's applications layer opens it.
     - `ui/theme-engine.ThemeEngine`
   - Exports (values): `appsPane`
 - Server:
-  - Contributes: `apps.website.crawlable.page` "/website/apps"
+  - Contributes: `apps.website.crawlable.page` "/about/apps"
   - Uses: `apps/website/crawlable.WebsitePages`
 - Core:
   - Uses: `apps/website/crawlable.defineWebsitePage`

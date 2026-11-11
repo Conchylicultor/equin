@@ -8,7 +8,7 @@ export { downloadPane } from "./panes";
 
 export default {
   description:
-    "The download page of the equin website: the /website/download pane with the one install command (or, for an agent, a prompt with deep links into Claude Code and the Claude app), what to do once it runs, and its Download nav link.",
+    "The download page of the equin website: the /about/download pane with the one install command (or, for an agent, a prompt with deep links into Claude Code and the Claude app), what to do once it runs, and its Download nav link.",
   contributions: [
     // This pane BORROWS the shared site header (`actions: WebsiteHeader`), so it
     // mints no slot of its own — the header is declared once, by

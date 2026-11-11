@@ -11986,7 +11986,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by: `apps/website/landing/hero`
         - **`pages`** — The inner pages of the public website: the apps gallery, the vision for applications, the technical foundations, the story of how equin came to be, the getting-started guide, and how to install it.
           - Plugins:
-            - **`apps`** — The apps gallery of the equin website: the /website/apps pane listing every app equin ships, searchable and grouped by category (harness, daily life, tools, coming next), each card's Install and the 'Missing an app?' band going to the download page, the vision and foundations pages offered at its end, and its Apps nav link. The apps gallery of the equin website on the server: its sitemap entry (WebsitePages.Page).
+            - **`apps`** — The apps gallery of the equin website: the /about/apps pane listing every app equin ships, searchable and grouped by category (harness, daily life, tools, coming next), each card's Install and the 'Missing an app?' band going to the download page, the vision and foundations pages offered at its end, and its Apps nav link. The apps gallery of the equin website on the server: its sitemap entry (WebsitePages.Page).
               - Web:
                 - Contributes:
                   - `Pane.Register` "website-apps"
@@ -12017,7 +12017,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/theme-engine.ThemeEngine`
                 - Exports (values): `appsPane`
               - Server:
-                - Contributes: `apps.website.crawlable.page` "/website/apps"
+                - Contributes: `apps.website.crawlable.page` "/about/apps"
                 - Uses: `apps/website/crawlable.WebsitePages`
               - Core:
                 - Uses: `apps/website/crawlable.defineWebsitePage`
@@ -12037,7 +12037,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/type-scale --font-weight-normal`
                   - `ui/tokens/type-scale --font-weight-semibold`
                 - Imported by: `apps/website/landing/layers`
-            - **`download`** — The download page of the equin website: the /website/download pane with the one install command (or, for an agent, a prompt with deep links into Claude Code and the Claude app), what to do once it runs, and its Download nav link. The download page of the equin website on the server: its sitemap entry (WebsitePages.Page).
+            - **`download`** — The download page of the equin website: the /about/download pane with the one install command (or, for an agent, a prompt with deep links into Claude Code and the Claude app), what to do once it runs, and its Download nav link. The download page of the equin website on the server: its sitemap entry (WebsitePages.Page).
               - Web:
                 - Contributes:
                   - `Pane.Register` "website-download"
@@ -12062,7 +12062,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/icons.Icon`
                 - Exports (values): `downloadPane`
               - Server:
-                - Contributes: `apps.website.crawlable.page` "/website/download"
+                - Contributes: `apps.website.crawlable.page` "/about/download"
                 - Uses: `apps/website/crawlable.WebsitePages`
               - Core:
                 - Uses: `apps/website/crawlable.defineWebsitePage`
@@ -12079,7 +12079,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/shape --spacing`
                   - `ui/tokens/type-scale --font-weight-semibold`
                 - Imported by: `apps/website/pages/apps`
-            - **`foundations`** — The technical foundations page of the equin website: the /website/foundations pane drawing what equin brings on top of Claude as an iceberg — ten layers from the apps at sea level down to the loop that builds them, each piece a pill that opens in place into a card (many with a live drawing), with a depth gauge, a Components / Harness filter and Expand all — and its Foundations nav link. The technical foundations page of the equin website on the server: its sitemap entry (WebsitePages.Page).
+            - **`foundations`** — The technical foundations page of the equin website: the /about/foundations pane drawing what equin brings on top of Claude as an iceberg — ten layers from the apps at sea level down to the loop that builds them, each piece a pill that opens in place into a card (many with a live drawing), with a depth gauge, a Components / Harness filter and Expand all — and its Foundations nav link. The technical foundations page of the equin website on the server: its sitemap entry (WebsitePages.Page).
               - Web:
                 - Contributes:
                   - `Pane.Register` "website-foundations"
@@ -12104,7 +12104,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/theme-engine.ThemeEngine`
                 - Exports (values): `foundationsPane`
               - Server:
-                - Contributes: `apps.website.crawlable.page` "/website/foundations"
+                - Contributes: `apps.website.crawlable.page` "/about/foundations"
                 - Uses: `apps/website/crawlable.WebsitePages`
               - Core:
                 - Uses: `apps/website/crawlable.defineWebsitePage`
@@ -12118,7 +12118,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by:
                   - `apps/website/landing/layers`
                   - `apps/website/pages/apps`
-            - **`guide`** — The getting-started guide of the equin website: the /website/guide pane on the first tasks, agents and changes once equin is installed (a placeholder heading for now), its Guide nav link, and the WebsiteGuide.Section slot the guide is written into. The getting-started guide of the equin website on the server: its sitemap entry (WebsitePages.Page).
+            - **`guide`** — The getting-started guide of the equin website: the /about/guide pane on the first tasks, agents and changes once equin is installed (a placeholder heading for now), its Guide nav link, and the WebsiteGuide.Section slot the guide is written into. The getting-started guide of the equin website on the server: its sitemap entry (WebsitePages.Page).
               - Web:
                 - Slots: `WebsiteGuide.Section`
                 - Contributes:
@@ -12138,14 +12138,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `guidePane`
                   - `WebsiteGuide`
               - Server:
-                - Contributes: `apps.website.crawlable.page` "/website/guide"
+                - Contributes: `apps.website.crawlable.page` "/about/guide"
                 - Uses: `apps/website/crawlable.WebsitePages`
               - Core:
                 - Uses: `apps/website/crawlable.defineWebsitePage`
                 - Exports (values): `guidePage`
               - Cross-plugin:
                 - Imported by: `apps/website/pages/download`
-            - **`story`** — The story page of the equin website: the /website/story pane answering 'how did equin come to be?', its Story nav link, and the WebsiteStory.Section slot the story is written into. The story page of the equin website on the server: its sitemap entry (WebsitePages.Page).
+            - **`story`** — The story page of the equin website: the /about/story pane answering 'how did equin come to be?', its Story nav link, and the WebsiteStory.Section slot the story is written into. The story page of the equin website on the server: its sitemap entry (WebsitePages.Page).
               - Web:
                 - Slots: `WebsiteStory.Section`
                 - Contributes:
@@ -12165,14 +12165,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `storyPane`
                   - `WebsiteStory`
               - Server:
-                - Contributes: `apps.website.crawlable.page` "/website/story"
+                - Contributes: `apps.website.crawlable.page` "/about/story"
                 - Uses: `apps/website/crawlable.WebsitePages`
               - Core:
                 - Uses: `apps/website/crawlable.defineWebsitePage`
                 - Exports (values): `storyPage`
               - Cross-plugin:
                 - Imported by: `apps/website/landing/story-link`
-            - **`vision`** — The vision page of the equin website: the /website/vision pane on the vision for applications — one Powers of Ten zoom-out on a dark starfield, six chapter cards scrolling over a pinned stage (an idea, an app that reshapes itself, apps that integrate, a personal OS, apps shared between people, every app rebuilt) with a layer strip under the header — its Vision nav link, and the WebsiteVision.Section slot for sections below it. The vision page of the equin website on the server: its sitemap entry (WebsitePages.Page).
+            - **`vision`** — The vision page of the equin website: the /about/vision pane on the vision for applications — one Powers of Ten zoom-out on a dark starfield, six chapter cards scrolling over a pinned stage (an idea, an app that reshapes itself, apps that integrate, a personal OS, apps shared between people, every app rebuilt) with a layer strip under the header — its Vision nav link, and the WebsiteVision.Section slot for sections below it. The vision page of the equin website on the server: its sitemap entry (WebsitePages.Page).
               - Web:
                 - Slots: `WebsiteVision.Section`
                 - Contributes:
@@ -12196,7 +12196,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `visionPane`
                   - `WebsiteVision`
               - Server:
-                - Contributes: `apps.website.crawlable.page` "/website/vision"
+                - Contributes: `apps.website.crawlable.page` "/about/vision"
                 - Uses: `apps/website/crawlable.WebsitePages`
               - Core:
                 - Uses: `apps/website/crawlable.defineWebsitePage`
@@ -12247,7 +12247,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by: `apps/website/promo-film`
               - Structure:
                 - Non-standard folders: `data/`
-        - **`shell`** — App shell for the Website (equin public site). Registers the /website app entry, owns the shared site header (wordmark + nav) and the band/page/footer chrome every page wears, defines the Website.Section landing slot, and contributes the site's own theme (equin: palette, chart ramp, font), which the website app selects, plus the equin-document sub-theme (type scale, density, shape) every page wears and the equin-page-hero sub-theme an inner page's heading wears. The website's landing page on the server: its sitemap entry (WebsitePages.Page).
+        - **`shell`** — App shell for the Website (equin public site). Registers the /about app entry, owns the shared site header (wordmark + nav) and the band/page/footer chrome every page wears, defines the Website.Section landing slot, and contributes the site's own theme (equin: palette, chart ramp, font), which the website app selects, plus the equin-document sub-theme (type scale, density, shape) every page wears and the equin-page-hero sub-theme an inner page's heading wears. The website's landing page on the server: its sitemap entry (WebsitePages.Page).
           - Web:
             - Slots:
               - `Website.Section`
@@ -12305,7 +12305,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `WebsiteNavLink`
               - `WebsiteSoon`
           - Server:
-            - Contributes: `apps.website.crawlable.page` "/website"
+            - Contributes: `apps.website.crawlable.page` "/about"
             - Uses: `apps/website/crawlable.WebsitePages`
           - Core:
             - Uses:

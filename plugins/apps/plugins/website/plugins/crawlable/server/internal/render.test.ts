@@ -70,21 +70,21 @@ describe("renderSitemapXml", () => {
   test("one <url><loc> per page, sorted by path", () => {
     expect(
       renderSitemapXml("https://equin.ai", [
-        page("/website/download"),
-        page("/website"),
+        page("/about/download"),
+        page("/about"),
       ]),
     ).toBe(
       `<?xml version="1.0" encoding="UTF-8"?>\n` +
         `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
-        `  <url><loc>https://equin.ai/website</loc></url>\n` +
-        `  <url><loc>https://equin.ai/website/download</loc></url>\n` +
+        `  <url><loc>https://equin.ai/about</loc></url>\n` +
+        `  <url><loc>https://equin.ai/about/download</loc></url>\n` +
         `</urlset>\n`,
     );
   });
 
   test("escapes the origin", () => {
-    expect(renderSitemapXml("http://a&b", [page("/website")])).toContain(
-      "<loc>http://a&amp;b/website</loc>",
+    expect(renderSitemapXml("http://a&b", [page("/about")])).toContain(
+      "<loc>http://a&amp;b/about</loc>",
     );
   });
 });

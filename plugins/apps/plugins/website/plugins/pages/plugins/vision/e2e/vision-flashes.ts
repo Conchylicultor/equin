@@ -1,4 +1,4 @@
-// Finds one-frame flashes in the Vision zoom (`/website/vision`): a chapter is
+// Finds one-frame flashes in the Vision zoom (`/about/vision`): a chapter is
 // scrolled to its card and then played FRAME BY FRAME on a fake clock —
 // requestAnimationFrame is taken over before the page loads, and each step runs
 // the queued callbacks at now + 1/fps — and every frame is photographed. A
@@ -160,7 +160,7 @@ await withBrowser(
       deviceScaleFactor: dpr,
     });
     await page.addInitScript(clockShim);
-    await boot(page, pathUrl("/website/vision"), {
+    await boot(page, pathUrl("/about/vision"), {
       marker: "text=A vision for",
       settleMs: 1500,
     });

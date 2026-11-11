@@ -9,7 +9,7 @@ are, what each is called and says, and a static snapshot of each
 ```ts
 // pages/<page>/core/page.ts
 export const downloadPage = defineWebsitePage({
-  path: "/website/download",           // static, under /website, no trailing slash
+  path: "/about/download",           // static, under /about, no trailing slash
   title: "Download",                   // the pane title: tab + document title
   description: "How to run your own copy of equin…",
 });
@@ -31,7 +31,7 @@ contributions: [WebsitePages.Page(downloadPage)],
   pins every pane's id, segment and `appIndex` by reading them from source as
   literals, so a pane factory deriving them from data would be unreadable
   there. The derivation lives in the check instead (`websitePaneIdentity`):
-  segment = path relative to `/website` (`""` for the landing page, the only
+  segment = path relative to `/about` (`""` for the landing page, the only
   one with `appIndex: true`), route id `website-<segment>` (`website-landing`).
 - The website app's `basePath` is this plugin's `WEBSITE_BASE_PATH`, so a page
   path and its app cannot disagree.
@@ -58,7 +58,7 @@ forwarding these two exact paths is step 4.
 gateway's `snapshot.go`, which mirrors it.
 
 ```json
-{ "home": "/website", "pages": { "/website/download": { "title": "Download", "description": "…", "file": "website/download.html" } } }
+{ "home": "/about", "pages": { "/about/download": { "title": "Download", "description": "…", "file": "about/download.html" } } }
 ```
 
 Keys are exact page paths (no trailing slash; the gateway normalizes the

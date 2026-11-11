@@ -10,7 +10,7 @@ import { WebsiteStory } from "./slots";
 import { StoryOpening } from "./components/story-opening";
 
 /**
- * The story page at `/website/story` — where equin came from, for a reader who
+ * The story page at `/about/story` — where equin came from, for a reader who
  * wants the context behind the project.
  *
  * Wears the shared site header (`actions: WebsiteHeader`), so the wordmark and

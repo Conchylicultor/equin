@@ -99,13 +99,13 @@ function harness(opts: { landing?: TrackerDeps["landing"] } = {}) {
 describe("pageviews", () => {
   it("records one pageview per distinct path, query stripped", () => {
     const h = harness();
-    h.tracker.pathChanged("/website");
-    h.tracker.pathChanged("/website?x=1");
-    h.tracker.pathChanged("/website");
-    h.tracker.pathChanged("/website/story");
+    h.tracker.pathChanged("/about");
+    h.tracker.pathChanged("/about?x=1");
+    h.tracker.pathChanged("/about");
+    h.tracker.pathChanged("/about/story");
     expect(h.sent.filter((b) => b.kind === "pageview")).toEqual([
-      { kind: "pageview", host: "equin.dev", path: "/website" },
-      { kind: "pageview", host: "equin.dev", path: "/website/story" },
+      { kind: "pageview", host: "equin.dev", path: "/about" },
+      { kind: "pageview", host: "equin.dev", path: "/about/story" },
     ]);
   });
 
@@ -115,18 +115,18 @@ describe("pageviews", () => {
       utm: { source: "hn" },
     };
     const h = harness({ landing });
-    h.tracker.pathChanged("/website");
-    h.tracker.pathChanged("/website/story");
+    h.tracker.pathChanged("/about");
+    h.tracker.pathChanged("/about/story");
     expect(h.sent[0]).toEqual({
       kind: "pageview",
       host: "equin.dev",
-      path: "/website",
+      path: "/about",
       ...landing,
     });
     expect(h.sent[1]).toEqual({
       kind: "pageview",
       host: "equin.dev",
-      path: "/website/story",
+      path: "/about/story",
     });
   });
 });
@@ -134,7 +134,7 @@ describe("pageviews", () => {
 describe("engagement", () => {
   it("reports cumulative visible time on hide, excluding hidden stretches", async () => {
     const h = harness();
-    h.tracker.pathChanged("/website");
+    h.tracker.pathChanged("/about");
     await h.respond(0, { outcome: "pageview", pageviewId: PV_A });
     h.advance(1000);
     h.tracker.hidden();
@@ -163,7 +163,7 @@ describe("engagement", () => {
 
   it("does not re-send an unchanged total (visibilitychange then pagehide)", async () => {
     const h = harness();
-    h.tracker.pathChanged("/website");
+    h.tracker.pathChanged("/about");
     await h.respond(0, { outcome: "pageview", pageviewId: PV_A });
     h.advance(700);
     h.tracker.hidden();
@@ -173,10 +173,10 @@ describe("engagement", () => {
 
   it("reports the previous page's time when the path changes", async () => {
     const h = harness();
-    h.tracker.pathChanged("/website");
+    h.tracker.pathChanged("/about");
     await h.respond(0, { outcome: "pageview", pageviewId: PV_A });
     h.advance(2000);
-    h.tracker.pathChanged("/website/story");
+    h.tracker.pathChanged("/about/story");
     expect(h.sent.slice(1)).toEqual([
       {
         kind: "engagement",
@@ -185,7 +185,7 @@ describe("engagement", () => {
         gaps: [],
         load: NO_LOAD,
       },
-      { kind: "pageview", host: "equin.dev", path: "/website/story" },
+      { kind: "pageview", host: "equin.dev", path: "/about/story" },
     ]);
     await h.respond(2, { outcome: "pageview", pageviewId: PV_B });
     h.advance(300);
@@ -200,7 +200,7 @@ describe("engagement", () => {
 
   it("holds an engagement until the pageview id arrives", async () => {
     const h = harness();
-    h.tracker.pathChanged("/website");
+    h.tracker.pathChanged("/about");
     h.advance(400);
     h.tracker.hidden();
     expect(h.sent).toHaveLength(1);
@@ -216,7 +216,7 @@ describe("engagement", () => {
 
   it("sends no engagement for an ignored pageview", async () => {
     const h = harness();
-    h.tracker.pathChanged("/website");
+    h.tracker.pathChanged("/about");
     h.advance(400);
     h.tracker.hidden();
     await h.respond(0, { outcome: "ignored", reason: "bot" });
@@ -226,7 +226,7 @@ describe("engagement", () => {
   it("does not count time while the page started hidden, but reports it as away", async () => {
     const h = harness();
     h.setVisible(false);
-    h.tracker.pathChanged("/website");
+    h.tracker.pathChanged("/about");
     await h.respond(0, { outcome: "pageview", pageviewId: PV_A });
     h.advance(10_000);
     h.tracker.hidden();
@@ -252,7 +252,7 @@ function lastGaps(sent: CollectBody[]) {
 describe("away stretches", () => {
   async function started() {
     const h = harness();
-    h.tracker.pathChanged("/website");
+    h.tracker.pathChanged("/about");
     await h.respond(0, { outcome: "pageview", pageviewId: PV_A });
     return h;
   }
@@ -354,7 +354,7 @@ describe("away stretches", () => {
   it("a path change closes the old page's stretch and starts the new page's offsets", async () => {
     const h = await started();
     h.advance(IDLE_AFTER_MS + 10_000);
-    h.tracker.pathChanged("/website/story");
+    h.tracker.pathChanged("/about/story");
     expect(lastGaps(h.sent)).toEqual([
       { kind: "idle", startMs: 0, endMs: 40_000 },
     ]);
@@ -405,7 +405,7 @@ describe("load timing", () => {
     const h = harness();
     h.setMilestones(MILESTONES);
     h.advance(2000);
-    h.tracker.pathChanged("/website");
+    h.tracker.pathChanged("/about");
     await h.respond(0, { outcome: "pageview", pageviewId: PV_A });
     h.advance(1000);
     h.tracker.hidden();
@@ -414,7 +414,7 @@ describe("load timing", () => {
     h.setVisible(true);
     h.tracker.visible();
     h.advance(1000);
-    h.tracker.pathChanged("/website/story");
+    h.tracker.pathChanged("/about/story");
     await h.respond(3, { outcome: "pageview", pageviewId: PV_B });
     h.advance(1000);
     h.tracker.hidden();
@@ -435,7 +435,7 @@ describe("load timing", () => {
     const h = harness();
     h.setMilestones(MILESTONES);
     h.advance(2000);
-    h.tracker.pathChanged("/website");
+    h.tracker.pathChanged("/about");
     await h.respond(0, { outcome: "pageview", pageviewId: PV_A });
     h.tracker.hidden();
     expect(engagements(h.sent)).toEqual([
@@ -451,7 +451,7 @@ describe("load timing", () => {
 
   it("waits with the beacon for the pageview id, then reads the load", async () => {
     const h = harness();
-    h.tracker.pathChanged("/website");
+    h.tracker.pathChanged("/about");
     h.tracker.hidden();
     // Paint lands while the pageview's response is in flight.
     h.setMilestones({ ...MILESTONES, firstContentfulPaintAt: null });
@@ -464,7 +464,7 @@ describe("load timing", () => {
   it("a page loaded in a background tab keeps its first byte, not its paint", async () => {
     const h = harness();
     h.setVisible(false);
-    h.tracker.pathChanged("/website");
+    h.tracker.pathChanged("/about");
     await h.respond(0, { outcome: "pageview", pageviewId: PV_A });
     h.advance(60_000);
     // Shown a minute later: that is when it painted.
@@ -496,7 +496,7 @@ describe("load timing", () => {
       firstContentfulPaintAt: 300,
       readyAt: 10_600,
     });
-    h.tracker.pathChanged("/website");
+    h.tracker.pathChanged("/about");
     await h.respond(0, { outcome: "pageview", pageviewId: PV_A });
     h.tracker.hidden();
     expect(engagements(h.sent)[0]).toMatchObject({
@@ -511,7 +511,7 @@ describe("load timing", () => {
       firstContentfulPaintAt: 11 * 60 * 1000,
       readyAt: null,
     });
-    h.tracker.pathChanged("/website");
+    h.tracker.pathChanged("/about");
     await h.respond(0, { outcome: "pageview", pageviewId: PV_A });
     h.tracker.hidden();
     expect(engagements(h.sent)[0]).toMatchObject({ load: NO_LOAD });
@@ -521,20 +521,20 @@ describe("load timing", () => {
 describe("events", () => {
   it("attributes an event to the tracked page, else the fallback path", () => {
     const h = harness();
-    h.tracker.track("improve_open", undefined, "/website?q=1");
-    h.tracker.pathChanged("/website/story");
+    h.tracker.track("improve_open", undefined, "/about?q=1");
+    h.tracker.pathChanged("/about/story");
     h.tracker.track("improve_show_me", { step: "1" }, "/ignored");
     expect(h.sent.filter((b) => b.kind === "event")).toEqual([
       {
         kind: "event",
         host: "equin.dev",
-        path: "/website",
+        path: "/about",
         name: "improve_open",
       },
       {
         kind: "event",
         host: "equin.dev",
-        path: "/website/story",
+        path: "/about/story",
         name: "improve_show_me",
         props: { step: "1" },
       },
@@ -567,10 +567,10 @@ describe("landingSource", () => {
 
 describe("isWithinApp", () => {
   it("matches the base path and its sub-paths only", () => {
-    expect(isWithinApp("/website", "/website")).toBe(true);
-    expect(isWithinApp("/website/story", "/website")).toBe(true);
-    expect(isWithinApp("/websites", "/website")).toBe(false);
-    expect(isWithinApp("/agents", "/website")).toBe(false);
+    expect(isWithinApp("/about", "/about")).toBe(true);
+    expect(isWithinApp("/about/story", "/about")).toBe(true);
+    expect(isWithinApp("/websites", "/about")).toBe(false);
+    expect(isWithinApp("/agents", "/about")).toBe(false);
   });
 });
 
@@ -580,8 +580,8 @@ describe("page sections", () => {
 
   it("ride the beacons whenever the list grew, never the pageview", async () => {
     const h = harness();
-    h.setSections("/website", ["landing/hero", "landing/layers"]);
-    h.tracker.pathChanged("/website");
+    h.setSections("/about", ["landing/hero", "landing/layers"]);
+    h.tracker.pathChanged("/about");
     expect(h.sent[0]).not.toHaveProperty("sections");
     await h.respond(0, { outcome: "pageview", pageviewId: PV_A });
     h.advance(1000);
@@ -596,7 +596,7 @@ describe("page sections", () => {
     expect(engagements(h.sent)).toHaveLength(2);
     expect(engagements(h.sent)[1]).not.toHaveProperty("sections");
     // A section mounted late: sent again, whole, even with nothing else new.
-    h.setSections("/website", [
+    h.setSections("/about", [
       "landing/hero",
       "landing/layers",
       "landing/footer",
@@ -610,12 +610,12 @@ describe("page sections", () => {
 
   it("are the left page's own on the beacon sent when leaving it", async () => {
     const h = harness();
-    h.setSections("/website", ["landing/hero"]);
-    h.setSections("/website/vision", ["vision/idea"]);
-    h.tracker.pathChanged("/website");
+    h.setSections("/about", ["landing/hero"]);
+    h.setSections("/about/vision", ["vision/idea"]);
+    h.tracker.pathChanged("/about");
     await h.respond(0, { outcome: "pageview", pageviewId: PV_A });
     h.advance(1000);
-    h.tracker.pathChanged("/website/vision");
+    h.tracker.pathChanged("/about/vision");
     expect(engagements(h.sent)[0]).toMatchObject({
       pageviewId: PV_A,
       sections: ["landing/hero"],
@@ -624,12 +624,12 @@ describe("page sections", () => {
 
   it("a revisit is a new pageview that sends the list again", async () => {
     const h = harness();
-    h.setSections("/website", ["landing/hero"]);
-    h.tracker.pathChanged("/website");
+    h.setSections("/about", ["landing/hero"]);
+    h.tracker.pathChanged("/about");
     await h.respond(0, { outcome: "pageview", pageviewId: PV_A });
     h.advance(1000);
-    h.tracker.pathChanged("/website/vision");
-    h.tracker.pathChanged("/website");
+    h.tracker.pathChanged("/about/vision");
+    h.tracker.pathChanged("/about");
     await h.respond(3, { outcome: "pageview", pageviewId: PV_B });
     h.advance(1000);
     h.tracker.hidden();
@@ -641,7 +641,7 @@ describe("page sections", () => {
 
   it("a page with no sections sends none", async () => {
     const h = harness();
-    h.tracker.pathChanged("/website");
+    h.tracker.pathChanged("/about");
     await h.respond(0, { outcome: "pageview", pageviewId: PV_A });
     h.advance(1000);
     h.tracker.hidden();

@@ -73,7 +73,7 @@ await withBrowser(async (h) => {
   const filed = collect(page);
 
   if (flag("vision")) {
-    await boot(page, pathUrl("/website/vision"), {
+    await boot(page, pathUrl("/about/vision"), {
       marker: "text=A vision for",
       settleMs: 1500,
     });

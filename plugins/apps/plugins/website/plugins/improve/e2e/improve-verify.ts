@@ -179,7 +179,7 @@ await withBrowser(async (h) => {
   let tabsOpened = 0;
   context.on("page", () => tabsOpened++);
 
-  await boot(page, pathUrl("/website"), { marker: MARKER, settleMs: 800 });
+  await boot(page, pathUrl("/about"), { marker: MARKER, settleMs: 800 });
 
   // --- chrome: header, footer, contact band -----------------------------------
   const chrome = await page.evaluate(
@@ -482,7 +482,7 @@ await withBrowser(async (h) => {
     label: "420",
   });
   await narrow.page.emulateMedia({ reducedMotion: "reduce" });
-  await boot(narrow.page, pathUrl("/website"), {
+  await boot(narrow.page, pathUrl("/about"), {
     marker: MARKER,
     settleMs: 800,
   });

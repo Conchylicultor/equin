@@ -78,13 +78,13 @@ const SITE = flag("site");
 /** The demo at `location` (an app-rooted route), on this run's page. */
 function demoUrl(location: string): string {
   return SITE
-    ? pathUrl(`/website;view.website.demo=${encodeURIComponent(location)}`)
+    ? pathUrl(`/about;view.website.demo=${encodeURIComponent(location)}`)
     : pathUrl(demoPath(location));
 }
 
 /** Whether `url` is still the page the demo is on. */
 function onPage(url: string): boolean {
-  return SITE ? new URL(url).pathname.startsWith("/website") : onDemoPage(url);
+  return SITE ? new URL(url).pathname.startsWith("/about") : onDemoPage(url);
 }
 
 /** The page-origin `/api` routes a demo may still call — `no-leak.ts`'s list (D3). */

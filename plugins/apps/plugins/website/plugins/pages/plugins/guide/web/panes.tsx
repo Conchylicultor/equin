@@ -10,7 +10,7 @@ import { WebsiteGuide } from "./slots";
 import { GuideOpening } from "./components/guide-opening";
 
 /**
- * The getting-started guide at `/website/guide` — what to do once equin is
+ * The getting-started guide at `/about/guide` — what to do once equin is
  * running. Wears the shared site header (`actions: WebsiteHeader`), and renders
  * every `WebsiteGuide.Section` contribution below the heading inside
  * `WebsiteChrome`. Unwritten so far, so the heading is followed by the site's

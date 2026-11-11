@@ -100,6 +100,14 @@ export interface AppRef {
   /** App base path, e.g. "/agents", "/pages", or "/" for the root app. */
   readonly basePath: string;
   /**
+   * Base paths the app was served at before (`["/website"]` for the website,
+   * now at `/about`). A host that answers by HTTP sends a request under one to
+   * the same path under `basePath` with a 301 — so a link published before
+   * the move keeps working (the crawlable snapshot's `moved`). Omitted: never
+   * moved.
+   */
+  readonly formerBasePaths?: readonly string[];
+  /**
    * The app's icon glyph (`symbol("piano")`) — THE single place it is authored.
    * Every surface drawing the app reads it from here: the launchers and rail
    * (through `Apps.App`, which derives its icon from it), the server's web-app
@@ -151,16 +159,28 @@ export function defineApp(def: {
   id: string;
   name: string;
   basePath: string;
+  formerBasePaths?: readonly string[];
   icon: SymbolRef;
   iconColor?: AvatarColor;
   colorMode?: AppColorMode;
   listed?: false;
   audience?: "developer";
 }): AppRef {
+  for (const former of def.formerBasePaths ?? []) {
+    if (!/^\/[^/?#;]+(\/[^/?#;]+)*$/.test(former) || former === def.basePath) {
+      throw new Error(
+        `defineApp("${def.id}"): former base path "${former}" must be an absolute path (no trailing slash, not "/") other than the app's base path "${def.basePath}".`,
+      );
+    }
+  }
   return Object.freeze({
     id: def.id,
     name: def.name,
     basePath: def.basePath,
+    ...(def.formerBasePaths !== undefined &&
+      def.formerBasePaths.length > 0 && {
+        formerBasePaths: Object.freeze([...def.formerBasePaths]),
+      }),
     icon: def.icon,
     ...(def.iconColor !== undefined && { iconColor: def.iconColor }),
     // "global" is what omission means: stored only when it says something.

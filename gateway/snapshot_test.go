@@ -42,13 +42,13 @@ func writeSnapshot(t *testing.T, web, manifest string, fragments map[string]stri
 	}
 }
 
-const downloadManifest = `{"pages":{"/website/download":{"title":"Download","description":"One command.","file":"website/download.html"}}}`
+const downloadManifest = `{"pages":{"/about/download":{"title":"Download","description":"One command.","file":"about/download.html"}}}`
 
 func snapshotFixture(t *testing.T) staticFixture {
 	t.Helper()
 	f := newStaticProxy(t)
 	withShell(t, f, snapshotShell)
-	writeSnapshot(t, f.web, downloadManifest, map[string]string{"website/download.html": "<h1>Download</h1><p>Run it.</p>"})
+	writeSnapshot(t, f.web, downloadManifest, map[string]string{"about/download.html": "<h1>Download</h1><p>Run it.</p>"})
 	return f
 }
 
@@ -57,7 +57,7 @@ func snapshotFixture(t *testing.T) staticFixture {
 // the root div.
 func TestSnapshotSplicedOnListedPath(t *testing.T) {
 	f := snapshotFixture(t)
-	rec := serve(f.proxy, "alpha.localhost:9000", "/website/download")
+	rec := serve(f.proxy, "alpha.localhost:9000", "/about/download")
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d body=%q", rec.Code, rec.Body.String())
 	}
@@ -65,7 +65,7 @@ func TestSnapshotSplicedOnListedPath(t *testing.T) {
 	for _, part := range []string{
 		`<title>Download</title>`,
 		`<meta name="description" content="One command.">`,
-		`<link rel="canonical" href="http://alpha.localhost:9000/website/download">`,
+		`<link rel="canonical" href="http://alpha.localhost:9000/about/download">`,
 		snapshotHideHead + `</head>`,
 		`<div id="root"></div><div id="equin-snapshot"><h1>Download</h1><p>Run it.</p></div><script`,
 	} {
@@ -87,12 +87,12 @@ func TestSnapshotSplicedOnListedPath(t *testing.T) {
 // The canonical scheme is what a TLS proxy in front reports.
 func TestSnapshotCanonicalHonoursForwardedProto(t *testing.T) {
 	f := snapshotFixture(t)
-	req := httptest.NewRequest(http.MethodGet, "http://alpha.localhost:9000/website/download", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://alpha.localhost:9000/about/download", nil)
 	req.Host = "alpha.localhost:9000"
 	req.Header.Set("X-Forwarded-Proto", "HTTPS, http")
 	rec := httptest.NewRecorder()
 	f.proxy.ServeHTTP(rec, req)
-	if !strings.Contains(rec.Body.String(), `href="https://alpha.localhost:9000/website/download"`) {
+	if !strings.Contains(rec.Body.String(), `href="https://alpha.localhost:9000/about/download"`) {
 		t.Fatalf("canonical not https: %q", rec.Body.String())
 	}
 }
@@ -101,12 +101,12 @@ func TestSnapshotCanonicalHonoursForwardedProto(t *testing.T) {
 // canonical is the key, never the request's spelling.
 func TestSnapshotRequestPathNormalized(t *testing.T) {
 	f := snapshotFixture(t)
-	for _, p := range []string{"/website/download/", "//website//download", "/website/download?x=1"} {
+	for _, p := range []string{"/about/download/", "//about//download", "/about/download?x=1"} {
 		body := serve(f.proxy, "alpha.localhost:9000", p).Body.String()
 		if !strings.Contains(body, `id="equin-snapshot"`) {
 			t.Errorf("%s: no snapshot in %q", p, body)
 		}
-		if !strings.Contains(body, `href="http://alpha.localhost:9000/website/download"`) {
+		if !strings.Contains(body, `href="http://alpha.localhost:9000/about/download"`) {
 			t.Errorf("%s: canonical is not the page path: %q", p, body)
 		}
 	}
@@ -115,7 +115,7 @@ func TestSnapshotRequestPathNormalized(t *testing.T) {
 // An unlisted path is the plain shell, byte for byte.
 func TestSnapshotUnlistedPathUntouched(t *testing.T) {
 	f := snapshotFixture(t)
-	for _, p := range []string{"/website", "/website/downloads", "/home", "/"} {
+	for _, p := range []string{"/about", "/about/downloads", "/home", "/"} {
 		rec := serve(f.proxy, "alpha.localhost:9000", p)
 		if rec.Code != http.StatusOK || rec.Body.String() != snapshotShell {
 			t.Errorf("%s: status=%d body=%q", p, rec.Code, rec.Body.String())
@@ -129,27 +129,54 @@ func TestSnapshotHomeRedirectsRoot(t *testing.T) {
 	f := newStaticProxy(t)
 	withShell(t, f, snapshotShell)
 	writeSnapshot(t, f.web,
-		`{"home":"/website","pages":{"/website":{"title":"equin","description":"The app.","file":"website.html"}}}`,
-		map[string]string{"website.html": "<h1>equin</h1>"})
-	for p, want := range map[string]string{"/": "/website", "/?utm=x&a=1": "/website?utm=x&a=1"} {
+		`{"home":"/about","pages":{"/about":{"title":"equin","description":"The app.","file":"about.html"}}}`,
+		map[string]string{"about.html": "<h1>equin</h1>"})
+	for p, want := range map[string]string{"/": "/about", "/?utm=x&a=1": "/about?utm=x&a=1"} {
 		rec := serve(f.proxy, "alpha.localhost:9000", p)
 		if rec.Code != http.StatusMovedPermanently || rec.Header().Get("Location") != want {
 			t.Errorf("%s: status=%d Location=%q, want 301 to %q", p, rec.Code, rec.Header().Get("Location"), want)
 		}
 	}
 	// The home itself, and any other path, is served as before.
-	if rec := serve(f.proxy, "alpha.localhost:9000", "/website"); rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `id="equin-snapshot"`) {
-		t.Errorf("/website: status=%d body=%q", rec.Code, rec.Body.String())
+	if rec := serve(f.proxy, "alpha.localhost:9000", "/about"); rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `id="equin-snapshot"`) {
+		t.Errorf("/about: status=%d body=%q", rec.Code, rec.Body.String())
 	}
 	if rec := serve(f.proxy, "alpha.localhost:9000", "/other"); rec.Code != http.StatusOK {
 		t.Errorf("/other: status=%d", rec.Code)
 	}
 }
 
+// A path at or under a moved former base path is a 301 to the same path under
+// the new one, the query kept; a path merely sharing its prefix is not.
+func TestSnapshotMovedRedirects(t *testing.T) {
+	f := newStaticProxy(t)
+	withShell(t, f, snapshotShell)
+	writeSnapshot(t, f.web,
+		`{"home":"/about","moved":{"/website":"/about"},"pages":{"/about":{"title":"equin","description":"The app.","file":"about.html"}}}`,
+		map[string]string{"about.html": "<h1>equin</h1>"})
+	for p, want := range map[string]string{
+		"/website":                  "/about",
+		"/website/":                 "/about",
+		"/website/story":            "/about/story",
+		"/website/vision?utm=x&a=1": "/about/vision?utm=x&a=1",
+		"/website;view.x=y":         "/about;view.x=y",
+	} {
+		rec := serve(f.proxy, "alpha.localhost:9000", p)
+		if rec.Code != http.StatusMovedPermanently || rec.Header().Get("Location") != want {
+			t.Errorf("%s: status=%d Location=%q, want 301 to %q", p, rec.Code, rec.Header().Get("Location"), want)
+		}
+	}
+	for _, p := range []string{"/websites", "/about", "/other"} {
+		if rec := serve(f.proxy, "alpha.localhost:9000", p); rec.Code != http.StatusOK {
+			t.Errorf("%s: status=%d, want 200", p, rec.Code)
+		}
+	}
+}
+
 // No manifest: today's behaviour, the plain shell.
 func TestSnapshotMissingManifestIsPlainShell(t *testing.T) {
 	f := newStaticProxy(t)
-	rec := serve(f.proxy, "alpha.localhost:9000", "/website/download")
+	rec := serve(f.proxy, "alpha.localhost:9000", "/about/download")
 	if rec.Code != http.StatusOK || rec.Body.String() != "<html>spa-shell</html>" {
 		t.Fatalf("status=%d body=%q", rec.Code, rec.Body.String())
 	}
@@ -189,9 +216,9 @@ func TestSnapshotEscapes(t *testing.T) {
 // The ETag names the bytes: unchanged → 304; a new build's fragment → new ETag.
 func TestSnapshotETagFollowsContent(t *testing.T) {
 	f := snapshotFixture(t)
-	first := serve(f.proxy, "alpha.localhost:9000", "/website/download")
+	first := serve(f.proxy, "alpha.localhost:9000", "/about/download")
 	etag := first.Header().Get("ETag")
-	req := httptest.NewRequest(http.MethodGet, "http://alpha.localhost:9000/website/download", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://alpha.localhost:9000/about/download", nil)
 	req.Host = "alpha.localhost:9000"
 	req.Header.Set("If-None-Match", etag)
 	rec := httptest.NewRecorder()
@@ -200,8 +227,8 @@ func TestSnapshotETagFollowsContent(t *testing.T) {
 		t.Fatalf("unchanged: status = %d, want 304", rec.Code)
 	}
 
-	writeSnapshot(t, f.web, downloadManifest, map[string]string{"website/download.html": "<h1>Download v2</h1>"})
-	again := serve(f.proxy, "alpha.localhost:9000", "/website/download")
+	writeSnapshot(t, f.web, downloadManifest, map[string]string{"about/download.html": "<h1>Download v2</h1>"})
+	again := serve(f.proxy, "alpha.localhost:9000", "/about/download")
 	if again.Header().Get("ETag") == etag || !strings.Contains(again.Body.String(), "Download v2") {
 		t.Fatalf("a new snapshot must be served fresh: etag=%q body=%q", again.Header().Get("ETag"), again.Body.String())
 	}
@@ -216,7 +243,7 @@ func TestSnapshotFollowsDistSwap(t *testing.T) {
 		if err := os.WriteFile(filepath.Join(dist, "index.html"), []byte(snapshotShell), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		writeSnapshot(t, dist, downloadManifest, map[string]string{"website/download.html": text})
+		writeSnapshot(t, dist, downloadManifest, map[string]string{"about/download.html": text})
 	}
 	if err := os.Symlink(distA, link); err != nil {
 		t.Fatal(err)
@@ -238,7 +265,7 @@ func TestSnapshotFollowsDistSwap(t *testing.T) {
 
 func serveShellBody(t *testing.T, wt *Worktree, webDir string) string {
 	t.Helper()
-	req := httptest.NewRequest(http.MethodGet, "http://alpha.localhost:9000/website/download", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://alpha.localhost:9000/about/download", nil)
 	req.Host = "alpha.localhost:9000"
 	rec := httptest.NewRecorder()
 	serveShell(rec, req, wt, webDir)
@@ -285,6 +312,10 @@ func TestSnapshotMalformedManifestFailsLoudly(t *testing.T) {
 		"relative home":    `{"home":"a","pages":{"/a":{"title":"A","description":"a","file":"a.html"}}}`,
 		"empty home":       `{"home":"","pages":{"/a":{"title":"A","description":"a","file":"a.html"}}}`,
 		"null home":        `{"home":null,"pages":{"/a":{"title":"A","description":"a","file":"a.html"}}}`,
+		"moved from root":  `{"moved":{"/":"/a"},"pages":{"/a":{"title":"A","description":"a","file":"a.html"}}}`,
+		"moved to itself":  `{"moved":{"/b":"/b"},"pages":{"/a":{"title":"A","description":"a","file":"a.html"}}}`,
+		"page under moved": `{"moved":{"/a":"/b"},"pages":{"/a/x":{"title":"A","description":"a","file":"a.html"}}}`,
+		"relative moved":   `{"moved":{"b":"/a"},"pages":{"/a":{"title":"A","description":"a","file":"a.html"}}}`,
 	} {
 		t.Run(name, func(t *testing.T) {
 			f := newStaticProxy(t)
@@ -301,8 +332,8 @@ func TestSnapshotMalformedManifestFailsLoudly(t *testing.T) {
 // Both splices apply: the document head before </head>, the snapshot too.
 func TestSnapshotComposesWithDocumentHead(t *testing.T) {
 	f := snapshotFixture(t)
-	writeDocumentHead(t, f, "alpha", `{"v":1,"entries":{"/website":"<style id=\"w\">w</style>"}}`)
-	body := serve(f.proxy, "alpha.localhost:9000", "/website/download").Body.String()
+	writeDocumentHead(t, f, "alpha", `{"v":1,"entries":{"/about":"<style id=\"w\">w</style>"}}`)
+	body := serve(f.proxy, "alpha.localhost:9000", "/about/download").Body.String()
 	if !strings.Contains(body, `<style id="w">w</style>`) || !strings.Contains(body, `id="equin-snapshot"`) || !strings.Contains(body, "<title>Download</title>") {
 		t.Fatalf("both splices expected: %q", body)
 	}
@@ -315,7 +346,7 @@ func TestSnapshotComposesWithDocumentHead(t *testing.T) {
 func TestSnapshotShellWithoutRootFails(t *testing.T) {
 	f := snapshotFixture(t)
 	withShell(t, f, "<html><head><title>x</title></head><body></body></html>")
-	if rec := serve(f.proxy, "alpha.localhost:9000", "/website/download"); rec.Code != http.StatusInternalServerError {
+	if rec := serve(f.proxy, "alpha.localhost:9000", "/about/download"); rec.Code != http.StatusInternalServerError {
 		t.Fatalf("status = %d, want 500", rec.Code)
 	}
 }

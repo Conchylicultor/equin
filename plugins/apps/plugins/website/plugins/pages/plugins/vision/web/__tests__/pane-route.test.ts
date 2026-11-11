@@ -11,7 +11,7 @@ import { visionPane } from "../panes";
 // section-reach keys all carry them.
 describe("visionPane", () => {
   it("keeps its URL and route id", () => {
-    expect(visionPane.link(websiteApp, {})).toBe("/website/vision");
+    expect(visionPane.link(websiteApp, {})).toBe("/about/vision");
     expect(visionPane._internal.id).toBe("website-vision");
     expect(visionPane._internal.appIndex).toBe(false);
   });

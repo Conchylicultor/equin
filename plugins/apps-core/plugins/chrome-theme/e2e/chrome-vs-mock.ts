@@ -213,7 +213,7 @@ await withBrowser(async (h) => {
   // ── the chrome is constant across apps ──
   // Switch the focused tab to the website, the app with its own theme, and
   // read the chrome again: its ground must not move.
-  await page.goto(pathUrl("/website"));
+  await page.goto(pathUrl("/about"));
   await page.waitForTimeout(4000);
   const onWebsite = await paint(page, `${CHROME}:has([data-app-tab])`);
   r.eq(

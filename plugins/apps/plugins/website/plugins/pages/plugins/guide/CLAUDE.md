@@ -1,6 +1,6 @@
 # guide
 
-The getting-started guide at `/website/guide` — what to do once equin is
+The getting-started guide at `/about/guide` — what to do once equin is
 running: the first tasks, agents and changes.
 
 A placeholder today: the page's heading, then the site's "more details soon"
@@ -15,7 +15,7 @@ running" steps link here too.
 
 ## Plugin reference
 
-- Description: The getting-started guide of the equin website: the /website/guide pane on the first tasks, agents and changes once equin is installed (a placeholder heading for now), its Guide nav link, and the WebsiteGuide.Section slot the guide is written into. The getting-started guide of the equin website on the server: its sitemap entry (WebsitePages.Page).
+- Description: The getting-started guide of the equin website: the /about/guide pane on the first tasks, agents and changes once equin is installed (a placeholder heading for now), its Guide nav link, and the WebsiteGuide.Section slot the guide is written into. The getting-started guide of the equin website on the server: its sitemap entry (WebsitePages.Page).
 - Web:
   - Slots: `WebsiteGuide.Section`
   - Contributes:
@@ -35,7 +35,7 @@ running" steps link here too.
     - `guidePane`
     - `WebsiteGuide`
 - Server:
-  - Contributes: `apps.website.crawlable.page` "/website/guide"
+  - Contributes: `apps.website.crawlable.page` "/about/guide"
   - Uses: `apps/website/crawlable.WebsitePages`
 - Core:
   - Uses: `apps/website/crawlable.defineWebsitePage`

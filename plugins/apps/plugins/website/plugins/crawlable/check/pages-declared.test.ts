@@ -11,7 +11,7 @@ const sites = (files: Record<string, string>) =>
   );
 
 const core = `export const downloadPage = defineWebsitePage({
-  path: "/website/download", title: "Download", description: "D.",
+  path: "/about/download", title: "Download", description: "D.",
 });`;
 const pane = (
   page: string,
@@ -77,7 +77,7 @@ describe("crawlable:pages-declared", () => {
 
   test("two pages on one path, or a computed path, fail", () => {
     const other = `export const otherPage = defineWebsitePage({
-  path: "/website/download", title: "X", description: "D.",
+  path: "/about/download", title: "X", description: "D.",
 });
 export const computedPage = defineWebsitePage({ path: base + "/x", title: "Y", description: "D." });`;
     const problems = pageProblems(
@@ -89,7 +89,7 @@ export const computedPage = defineWebsitePage({ path: base + "/x", title: "Y", d
       }),
     );
     expect(problems.join("\n")).toContain(
-      "path /website/download declared twice",
+      "path /about/download declared twice",
     );
     expect(problems.join("\n")).toContain(
       "`computedPage` — write its `path` as a string literal",
@@ -135,7 +135,7 @@ export const computedPage = defineWebsitePage({ path: base + "/x", title: "Y", d
       }),
     );
     expect(problems).toEqual([
-      'a/web/panes.tsx:1: the pane of `downloadPage` (/website/download) must declare `route: defineRoute({ id: "website-download", segment: "download" })` inline, as literals',
+      'a/web/panes.tsx:1: the pane of `downloadPage` (/about/download) must declare `route: defineRoute({ id: "website-download", segment: "download" })` inline, as literals',
     ]);
   });
 
@@ -153,7 +153,7 @@ export const computedPage = defineWebsitePage({ path: base + "/x", title: "Y", d
 
   test("only the landing page is the app's index", () => {
     const landing = `export const landingPage = defineWebsitePage({
-  path: "/website", title: "equin", description: "D.",
+  path: "/about", title: "equin", description: "D.",
 });`;
     const landingRoute = `defineRoute({ id: "website-landing", segment: "" })`;
     const ok = pageProblems(

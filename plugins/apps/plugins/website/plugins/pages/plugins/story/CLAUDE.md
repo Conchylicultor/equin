@@ -17,7 +17,7 @@ re-introduces.
 
 ## Plugin reference
 
-- Description: The story page of the equin website: the /website/story pane answering 'how did equin come to be?', its Story nav link, and the WebsiteStory.Section slot the story is written into. The story page of the equin website on the server: its sitemap entry (WebsitePages.Page).
+- Description: The story page of the equin website: the /about/story pane answering 'how did equin come to be?', its Story nav link, and the WebsiteStory.Section slot the story is written into. The story page of the equin website on the server: its sitemap entry (WebsitePages.Page).
 - Web:
   - Slots: `WebsiteStory.Section`
   - Contributes:
@@ -37,7 +37,7 @@ re-introduces.
     - `storyPane`
     - `WebsiteStory`
 - Server:
-  - Contributes: `apps.website.crawlable.page` "/website/story"
+  - Contributes: `apps.website.crawlable.page` "/about/story"
   - Uses: `apps/website/crawlable.WebsitePages`
 - Core:
   - Uses: `apps/website/crawlable.defineWebsitePage`

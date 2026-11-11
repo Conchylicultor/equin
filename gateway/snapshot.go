@@ -48,6 +48,11 @@ type snapshotManifest struct {
 	// one of Pages. Raw, so an explicit null — which the schema's optional
 	// refuses — is told apart from absence.
 	Home json.RawMessage `json:"home"`
+	// Moved maps each former base path of an app to the base path it moved
+	// to: a request at or under one is a 301 to the same path under the
+	// other. Neither side "/", never a path to itself, and no page lives
+	// under a former path.
+	Moved map[string]string `json:"moved"`
 }
 
 type snapshotManifestPage struct {
@@ -72,7 +77,9 @@ type snapshotSet struct {
 	pages map[string]snapshotPage
 	// home is where `GET /` is redirected (301), "" for none.
 	home string
-	err  error
+	// moved is the manifest's moved map (nil for none): see movedTarget.
+	moved map[string]string
+	err   error
 }
 
 // snapshotCache holds one loaded manifest per web dir (the stable symlink in
@@ -160,7 +167,21 @@ func loadSnapshot(manifestFile string) snapshotSet {
 		pages[p] = page
 	}
 	home, _ := manifestHome(manifest)
-	return snapshotSet{pages: pages, home: home}
+	return snapshotSet{pages: pages, home: home, moved: manifest.Moved}
+}
+
+// movedTarget is where a request path goes when it sits at or under a moved
+// former base path — the same rest under the new base path — and ok=false
+// when it sits under none. `;` counts as a boundary too: an app's index pane
+// writes its keyed params on the base path itself (`/website;view.x=y`).
+func movedTarget(moved map[string]string, urlPath string) (string, bool) {
+	p := path.Clean("/" + urlPath)
+	for from, to := range moved {
+		if p == from || strings.HasPrefix(p, from+"/") || strings.HasPrefix(p, from+";") {
+			return to + p[len(from):], true
+		}
+	}
+	return "", false
 }
 
 // parseSnapshotManifest decodes the manifest the way SnapshotManifestSchema
@@ -168,7 +189,8 @@ func loadSnapshot(manifestFile string) snapshotSet {
 // absolute paths with no trailing slash (or "/"), title and description
 // non-empty, file a `.html` path relative to the manifest's dir that never
 // escapes it; `home`, when present, a page path other than "/" that `pages`
-// lists.
+// lists; each `moved` entry two distinct paths other than "/", no page under
+// the former one.
 func parseSnapshotManifest(raw []byte) (snapshotManifest, error) {
 	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.DisallowUnknownFields()
@@ -201,6 +223,16 @@ func parseSnapshotManifest(raw []byte) (snapshotManifest, error) {
 		}
 		if _, listed := m.Pages[home]; !listed {
 			return snapshotManifest{}, fmt.Errorf("home %q: no page of the snapshot", home)
+		}
+	}
+	for from, to := range m.Moved {
+		if !validSnapshotPath(from) || !validSnapshotPath(to) || from == "/" || to == "/" || from == to {
+			return snapshotManifest{}, fmt.Errorf("moved %q → %q: not two distinct absolute paths other than /", from, to)
+		}
+		for p := range m.Pages {
+			if p == from || strings.HasPrefix(p, from+"/") {
+				return snapshotManifest{}, fmt.Errorf("moved %q: the page %q lives under it", from, p)
+			}
 		}
 	}
 	return m, nil
@@ -247,7 +279,7 @@ func logSnapshotError(manifestFile string, err error) {
 
 // snapshotRequestPath is the manifest key a request path looks up: cleaned
 // (repeated slashes collapsed, dot segments resolved) and with no trailing
-// slash, so `/website/download/` is `/website/download`. The query is never
+// slash, so `/about/download/` is `/about/download`. The query is never
 // part of it (r.URL.Path).
 func snapshotRequestPath(urlPath string) string {
 	return path.Clean("/" + urlPath)

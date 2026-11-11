@@ -1,8 +1,8 @@
 # vision
 
-The vision page at `/website/vision` — the vision for applications, as one
+The vision page at `/about/vision` — the vision for applications, as one
 Powers of Ten zoom-out on a dark starfield. (The apps themselves are listed by
-its sibling, the gallery at `/website/apps`.) Ported from the prototype
+its sibling, the gallery at `/about/apps`.) Ported from the prototype
 `proto-1792811767-vd1ygi`, which stays the design reference, at the options
 picked on it: `direction: zoom`, `variant: b`, `fit: b` (the page IS the zoom:
 the heading dissolves into it, a layer strip under the header, no side gauge),
@@ -110,7 +110,7 @@ renders below the zoom.
 
 ## Plugin reference
 
-- Description: The vision page of the equin website: the /website/vision pane on the vision for applications — one Powers of Ten zoom-out on a dark starfield, six chapter cards scrolling over a pinned stage (an idea, an app that reshapes itself, apps that integrate, a personal OS, apps shared between people, every app rebuilt) with a layer strip under the header — its Vision nav link, and the WebsiteVision.Section slot for sections below it. The vision page of the equin website on the server: its sitemap entry (WebsitePages.Page).
+- Description: The vision page of the equin website: the /about/vision pane on the vision for applications — one Powers of Ten zoom-out on a dark starfield, six chapter cards scrolling over a pinned stage (an idea, an app that reshapes itself, apps that integrate, a personal OS, apps shared between people, every app rebuilt) with a layer strip under the header — its Vision nav link, and the WebsiteVision.Section slot for sections below it. The vision page of the equin website on the server: its sitemap entry (WebsitePages.Page).
 - Web:
   - Slots: `WebsiteVision.Section`
   - Contributes:
@@ -134,7 +134,7 @@ renders below the zoom.
     - `visionPane`
     - `WebsiteVision`
 - Server:
-  - Contributes: `apps.website.crawlable.page` "/website/vision"
+  - Contributes: `apps.website.crawlable.page` "/about/vision"
   - Uses: `apps/website/crawlable.WebsitePages`
 - Core:
   - Uses: `apps/website/crawlable.defineWebsitePage`

@@ -1,6 +1,6 @@
 # foundations
 
-The technical foundations page at `/website/foundations`: what equin brings on
+The technical foundations page at `/about/foundations`: what equin brings on
 top of Claude, drawn as an iceberg — ten layers from the apps at sea level down
 to the loop that built everything above it. Ported from the prototype
 `proto-1790334655-cs0c`, which stays the design reference, at the options
@@ -82,7 +82,7 @@ variables.
 
 ## Plugin reference
 
-- Description: The technical foundations page of the equin website: the /website/foundations pane drawing what equin brings on top of Claude as an iceberg — ten layers from the apps at sea level down to the loop that builds them, each piece a pill that opens in place into a card (many with a live drawing), with a depth gauge, a Components / Harness filter and Expand all — and its Foundations nav link. The technical foundations page of the equin website on the server: its sitemap entry (WebsitePages.Page).
+- Description: The technical foundations page of the equin website: the /about/foundations pane drawing what equin brings on top of Claude as an iceberg — ten layers from the apps at sea level down to the loop that builds them, each piece a pill that opens in place into a card (many with a live drawing), with a depth gauge, a Components / Harness filter and Expand all — and its Foundations nav link. The technical foundations page of the equin website on the server: its sitemap entry (WebsitePages.Page).
 - Web:
   - Contributes:
     - `Pane.Register` "website-foundations"
@@ -107,7 +107,7 @@ variables.
     - `ui/theme-engine.ThemeEngine`
   - Exports (values): `foundationsPane`
 - Server:
-  - Contributes: `apps.website.crawlable.page` "/website/foundations"
+  - Contributes: `apps.website.crawlable.page` "/about/foundations"
   - Uses: `apps/website/crawlable.WebsitePages`
 - Core:
   - Uses: `apps/website/crawlable.defineWebsitePage`

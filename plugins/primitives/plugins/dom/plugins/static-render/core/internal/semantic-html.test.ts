@@ -62,9 +62,9 @@ describe("semanticHtml", () => {
   test("an a[href] stays a link with only its href", () => {
     expect(
       semanticHtml(
-        '<p>Go <a href="/website/download" class="c" target="_blank">download</a> now</p>',
+        '<p>Go <a href="/about/download" class="c" target="_blank">download</a> now</p>',
       ),
-    ).toBe('<p>Go <a href="/website/download">download</a> now</p>');
+    ).toBe('<p>Go <a href="/about/download">download</a> now</p>');
   });
 
   test("an a without href is unwrapped", () => {
@@ -74,24 +74,24 @@ describe("semanticHtml", () => {
   test("data-link on a control becomes <a href> around its text", () => {
     expect(
       semanticHtml(
-        '<nav><button type="button" data-link="/website/guide"><svg><path/></svg><span>Read the guide</span></button></nav>',
+        '<nav><button type="button" data-link="/about/guide"><svg><path/></svg><span>Read the guide</span></button></nav>',
       ),
-    ).toBe('<p><a href="/website/guide">Read the guide</a></p>');
+    ).toBe('<p><a href="/about/guide">Read the guide</a></p>');
   });
 
   test("data-link on a kept block keeps the tag with the link inside", () => {
-    expect(
-      semanticHtml('<h2 data-link="/website/vision">The vision</h2>'),
-    ).toBe('<h2><a href="/website/vision">The vision</a></h2>');
+    expect(semanticHtml('<h2 data-link="/about/vision">The vision</h2>')).toBe(
+      '<h2><a href="/about/vision">The vision</a></h2>',
+    );
   });
 
   test("data-link on a card wraps its whole content, headings included", () => {
     expect(
       semanticHtml(
-        '<div data-link="/website/foundations"><h3>Foundations</h3><p>What lies under.</p></div>',
+        '<div data-link="/about/foundations"><h3>Foundations</h3><p>What lies under.</p></div>',
       ),
     ).toBe(
-      '<a href="/website/foundations"><h3>Foundations</h3>\n<p>What lies under.</p></a>',
+      '<a href="/about/foundations"><h3>Foundations</h3>\n<p>What lies under.</p></a>',
     );
   });
 
@@ -146,9 +146,9 @@ describe("semanticHtml", () => {
   test("a data-link control with no text keeps its aria-label", () => {
     expect(
       semanticHtml(
-        '<button data-link="/website" aria-label="Home"><svg/></button>',
+        '<button data-link="/about" aria-label="Home"><svg/></button>',
       ),
-    ).toBe('<p><a href="/website">Home</a></p>');
+    ).toBe('<p><a href="/about">Home</a></p>');
   });
 
   test("an icon-only link without a label is named by its drawing's <title>", () => {

@@ -14,10 +14,10 @@ describe("page section registry", () => {
   it("lists a path's sections in document order, whatever order they mount in", () => {
     const r = createPageSectionRegistry();
     const [a, b, c] = sections(3);
-    r.register("/website", c!, "landing/footer");
-    r.register("/website", a!, "landing/hero");
-    r.register("/website", b!, "landing/layers");
-    expect(r.sectionsOf("/website")).toEqual([
+    r.register("/about", c!, "landing/footer");
+    r.register("/about", a!, "landing/hero");
+    r.register("/about", b!, "landing/layers");
+    expect(r.sectionsOf("/about")).toEqual([
       "landing/hero",
       "landing/layers",
       "landing/footer",
@@ -27,29 +27,23 @@ describe("page section registry", () => {
   it("keeps an unmounted section, and a remount does not list it twice", () => {
     const r = createPageSectionRegistry();
     const [a, b] = sections(2);
-    const unmount = r.register("/website", a!, "landing/hero");
-    r.register("/website", b!, "landing/footer");
+    const unmount = r.register("/about", a!, "landing/hero");
+    r.register("/about", b!, "landing/footer");
     unmount();
     a!.remove();
-    expect(r.sectionsOf("/website")).toEqual([
-      "landing/hero",
-      "landing/footer",
-    ]);
-    r.register("/website", b!, "landing/footer");
-    expect(r.sectionsOf("/website")).toEqual([
-      "landing/hero",
-      "landing/footer",
-    ]);
+    expect(r.sectionsOf("/about")).toEqual(["landing/hero", "landing/footer"]);
+    r.register("/about", b!, "landing/footer");
+    expect(r.sectionsOf("/about")).toEqual(["landing/hero", "landing/footer"]);
   });
 
   it("keeps each path's sections apart", () => {
     const r = createPageSectionRegistry();
     const [a, b] = sections(2);
-    r.register("/website", a!, "landing/hero");
-    r.register("/website/vision", b!, "vision/idea");
-    expect(r.sectionsOf("/website")).toEqual(["landing/hero"]);
-    expect(r.sectionsOf("/website/vision")).toEqual(["vision/idea"]);
-    expect(r.sectionsOf("/website/apps")).toEqual([]);
+    r.register("/about", a!, "landing/hero");
+    r.register("/about/vision", b!, "vision/idea");
+    expect(r.sectionsOf("/about")).toEqual(["landing/hero"]);
+    expect(r.sectionsOf("/about/vision")).toEqual(["vision/idea"]);
+    expect(r.sectionsOf("/about/apps")).toEqual([]);
   });
 
   it("refuses a long name and a page past the cap", () => {

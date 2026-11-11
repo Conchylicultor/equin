@@ -70,7 +70,7 @@ const TOKENS = [
 /** The demo at `location` (an app-rooted route), on this run's page. */
 function demoUrl(location: string): string {
   return SITE
-    ? pathUrl(`/website;view.website.demo=${encodeURIComponent(location)}`)
+    ? pathUrl(`/about;view.website.demo=${encodeURIComponent(location)}`)
     : pathUrl(demoPath(location));
 }
 
