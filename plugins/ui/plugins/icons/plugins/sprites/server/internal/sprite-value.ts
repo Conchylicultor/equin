@@ -33,7 +33,7 @@ export const iconSpriteServed = serveValue(iconSprite, {
     if (hash !== drawer.manifestHash) {
       throw iconSprite.refuse(
         "stale-manifest",
-        `Sprite version ${hash} is not this server's (${drawer.manifestHash}); reload the page`,
+        `Sprite version ${hash} is not this server's (${drawer.manifestHash})`,
       );
     }
     if (!isSpriteKey(key)) {

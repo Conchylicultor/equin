@@ -161,8 +161,13 @@ stateIcons.working }`); its colour stays its own.
   content-addressed by the manifest). An unknown key is refused
   (`unknown-key`), and so is a hash that is not the serving process's
   (`stale-manifest`: the tab predates a restart that changed the manifest).
-  A refusal is thrown into the host's error boundary; a transient failure is
-  reported and leaves that key's icons on their fallback.
+  A contract refusal (`unknown-key`) is thrown into the host's error boundary.
+  A hash-behind refusal (`stale-manifest`, `stale-symbols`) is NOT: the value
+  the hash comes from is pushed again with the new one and the reads re-key
+  off it, the sheet keeping what it holds (`sprites/web/internal/refusals.ts`)
+  — thrown, it unmounted the whole sheet, blanking every icon on each deploy
+  that changed the manifest. A transient failure is reported and leaves that
+  key's icons on their fallback.
 
 ## Icon families
 
@@ -420,7 +425,9 @@ import { runtimeSymbol } from "@plugins/ui/plugins/icons/core";
   value tuple `{ hash, key, names }` per style (`names` sorted, at most 200, so
   content-addressed and `immutable`; refused `unknown-key`, `stale-symbols`,
   `invalid-names`, `unknown-name`), read with `useLive` until it lands; a
-  refused batch throws into its error boundary.
+  contract-refused batch throws into its error boundary (`stale-symbols` waits
+  for the new hash instead — the name list moves whenever a user picks an
+  icon).
 - **Fallback:** while the wanted style's symbol loads `<Icon>` draws the default
   style's symbol for the same name, like a code icon — so a theme switch never
   blanks a saved icon. Only a name with no drawing in any style yet renders an

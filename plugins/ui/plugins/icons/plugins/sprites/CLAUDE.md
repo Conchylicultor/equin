@@ -66,8 +66,12 @@ is in the parent's [`CLAUDE.md`](../../CLAUDE.md) (section "Sprites").
   flight as `useLive(runtimeSymbolsValue, [{ hash, key, names }, …])` and drops
   a batch from the read once its chunk is in the sheet, so the tuples read at
   once are only the ones in flight — never one per name, never one per name
-  ever seen. A refusal is thrown into its error boundary; a transient failure
-  is reported and leaves that batch's icons on their fallback.
+  ever seen. A contract refusal is thrown into its error boundary; a
+  hash-behind one (`stale-manifest`, `stale-symbols`: the server restarted on
+  another manifest, or the saved-name list moved) is not — the reads re-key
+  once the new hash is pushed, the sheet keeping what it holds
+  (`web/internal/refusals.ts`); a transient failure is reported and leaves
+  that batch's icons on their fallback.
 
 Saved (runtime) symbols — see the parent's "Runtime symbols":
 

@@ -62,7 +62,8 @@ export const residentSprites = liveValue("icons.sprites", {
  *
  * Refused `unknown-key` — a key that names no sprite — `stale-manifest` —
  * `hash` is not the serving host's (the tab predates a restart that changed
- * the manifest; reloading the page is the remedy) — and `not-drawn-here` — a
+ * the manifest: the resident value is pushed again with the new hash and the
+ * read re-keys off it — never a fault, the host waits) — and `not-drawn-here` — a
  * sprite this host's drawer holds no set for (a browser host draws the Seti
  * and Lucide sprites only).
  */
@@ -146,9 +147,9 @@ export const MAX_RUNTIME_SYMBOLS_PER_READ = 200;
  * loader batches `<Icon>`'s wants).
  *
  * Refused `unknown-key` (no such style key), `stale-symbols` (`hash` is not
- * the serving process's: the tab predates a restart that changed the sets,
- * the name list or the symbol build —
- * reloading is the remedy), `invalid-names` (empty, unsorted, duplicated or
+ * the serving process's: the tab predates a restart that changed the sets or
+ * the symbol build, or the saved-name list moved — the resident saved
+ * sprites are pushed again with the new hash and the read re-keys off it), `invalid-names` (empty, unsorted, duplicated or
  * over the cap) and `unknown-name` (a name that is not a saved symbol name).
  */
 export const runtimeSymbolsValue = liveValue("icons.runtime-symbols", {

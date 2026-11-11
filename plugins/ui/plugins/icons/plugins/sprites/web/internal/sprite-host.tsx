@@ -34,6 +34,7 @@ import {
   type SavedIconSprites,
 } from "../../core";
 import { createRuntimeSymbolLoader } from "./runtime-symbol-loader";
+import { throwContractRefusal } from "./refusals";
 
 function spriteKey(key: string): SpriteKey {
   if (isSpriteKey(key)) return key;
@@ -70,10 +71,11 @@ export function IconSpriteHost() {
  * runtime-symbol loader: every name `<Icon>` wants in a style no chunk holds
  * is batched (one batch per style key per frame), read as one
  * `icons.runtime-symbols` tuple per batch while it is in flight — from the
- * server of the subtree this renders in — and handed to the store. A refused
+ * server of the subtree this renders in — and handed to the store. A contract-refused
  * batch is thrown into the caller's error boundary; any other failure is
  * reported by live-state's resource-error sink and leaves that batch's icons
- * on their fallback, like a failed sprite.
+ * on their fallback, like a failed sprite; a `stale-symbols` refusal waits for
+ * the new `symbolsHash` (`refusals.ts`).
  */
 function useSavedSymbols(saved: SavedIconSprites, store: RuntimeSymbolStore) {
   useLayoutEffect(() => {
@@ -114,12 +116,10 @@ function useSavedSymbols(saved: SavedIconSprites, store: RuntimeSymbolStore) {
   );
   // One result per batch, in order.
   const landed = batches.map((batch, i) => ({ batch, read: reads[i] }));
-  for (const { read } of landed) {
-    // A refusal (an unknown style or name, unsorted names, a sets hash this
-    // server does not serve) is a contract fault no retry fixes.
-    if (read?.status === "error" && read.error.kind === "refused")
-      throw read.error;
-  }
+  // A contract refusal (an unknown style or name, unsorted names) is thrown;
+  // a symbols hash the server moved past re-keys once `saved` is pushed again
+  // (`refusals.ts`).
+  for (const { read } of landed) throwContractRefusal(read);
   useLayoutEffect(() => {
     for (const { batch, read } of landed) {
       if (read?.status !== "ready") continue;
@@ -140,8 +140,9 @@ function useSavedSymbols(saved: SavedIconSprites, store: RuntimeSymbolStore) {
  * mounted icon asked for (the Seti file-type glyphs and a Lucide scope's
  * glyphs, never resident) — as one live read per key (`icons.sprite`).
  *
- * A refused read is thrown from render, into this contribution's error
- * boundary; a transient failure is reported and leaves that key unprovided
+ * A contract refusal is thrown from render, into this contribution's error
+ * boundary (a `stale-manifest` one waits for the new hash — `refusals.ts`);
+ * a transient failure is reported and leaves that key unprovided
  * (its icons draw their fallback), so a blip never takes the sheet down.
  */
 function LoadedSprites({
@@ -178,15 +179,14 @@ function LoadedSprites({
   );
   // One result per key, in order.
   const sprites = onDemand.map((key, i) => ({ key, read: reads[i] }));
-  for (const { read } of sprites) {
-    // A refusal (an unknown key, a manifest this server does not serve) is a
-    // contract fault no retry fixes: thrown, into this contribution's error
-    // boundary. Any other failure leaves that key's icons on their fallback
-    // glyphs — as a failed resident read leaves the sheet empty — and is
-    // reported by live-state's resource-error sink; the sheet stays up.
-    if (read?.status === "error" && read.error.kind === "refused")
-      throw read.error;
-  }
+  // A contract refusal (an unknown key) is thrown, into this contribution's
+  // error boundary. A manifest the server moved past (it restarted on another
+  // build) is not one: `resident` is pushed again with the new hash and these
+  // reads re-key off it, the sheet keeping the sprites it holds meanwhile
+  // (`refusals.ts`). Any other failure leaves that key's icons on their
+  // fallback glyphs — as a failed resident read leaves the sheet empty — and
+  // is reported by live-state's resource-error sink; the sheet stays up.
+  for (const { read } of sprites) throwContractRefusal(read);
   useLayoutEffect(() => {
     for (const { key, read } of sprites) {
       if (read?.status === "ready") provideSprite(key, read.data);
@@ -256,7 +256,8 @@ function LoadedScopeSymbols({
  * document's sheet — the same ids the page's sprites draw under, so a sprite
  * either side loaded draws for both. Until the hash or a sprite lands its
  * icons draw their fallback (a Seti icon an empty box at its final size), as
- * on the page; a refusal is thrown into the caller's error boundary.
+ * on the page; a contract refusal is thrown into the caller's error boundary
+ * (a `stale-manifest` one waits for the scope's new hash — `refusals.ts`).
  */
 function ScopeSprites({ store }: { store: RuntimeSymbolStore }) {
   const wanted = useWantedScopeSprites(store);
@@ -290,10 +291,7 @@ function ScopeSpriteReads({
     wanted.map((key) => ({ hash, key })),
   );
   const sprites = wanted.map((key, i) => ({ key, read: reads[i] }));
-  for (const { read } of sprites) {
-    if (read?.status === "error" && read.error.kind === "refused")
-      throw read.error;
-  }
+  for (const { read } of sprites) throwContractRefusal(read);
   useLayoutEffect(() => {
     for (const { key, read } of sprites) {
       if (read?.status === "ready") provideSprite(key, read.data);

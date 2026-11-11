@@ -29,7 +29,7 @@ export async function loadRuntimeSymbols({
   if (hash !== symbolsHash()) {
     throw runtimeSymbolsValue.refuse(
       "stale-symbols",
-      `Symbols version ${hash} is not this server's (${symbolsHash()}); reload the page`,
+      `Symbols version ${hash} is not this server's (${symbolsHash()})`,
     );
   }
   const names = raw === "" ? [] : raw.split(",");
