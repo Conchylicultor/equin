@@ -76,7 +76,7 @@ export {
   pushBuildSpan,
   writeBuildProfile,
 } from "./profiler";
-export type { BuildProfile, BuildSpan } from "./profiler";
+export type { BuildProfile, BuildSpan, SpanOptions } from "./profiler";
 
 export {
   PROGRESS_FILE,

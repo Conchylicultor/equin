@@ -28,3 +28,18 @@ export {
   TIMED_FS_CALLS,
 } from "./internal/timed-fs";
 export type { FsWaitLayer, SlowFsCall } from "./internal/timed-fs";
+export {
+  newFsCallTally,
+  processFsCallTally,
+  withFsCallTally,
+  snapshotFsCalls,
+  fsCallsSince,
+  summarizeFsCalls,
+  FS_CALL_TOP_PREFIXES,
+} from "./internal/fs-call-count";
+export type {
+  FsCallCounts,
+  FsCallSnapshot,
+  FsCallSummary,
+  FsCallTally,
+} from "./internal/fs-call-count";

@@ -238,6 +238,7 @@ export interface ArtifactHooks {
     id: string,
     phase: string,
     label: string,
+    options?: { wait?: boolean },
   ) => (info?: { maxRssBytes?: number }) => void;
   /** `pushBuildSpan` — records an already-finished span retroactively. */
   pushSpan: (
@@ -1036,6 +1037,7 @@ export async function withBuildAdmission<T>(
     "acquireHostGrant",
     "build:setup",
     "wait for host CPU grant",
+    { wait: true },
   );
   // The build's place at the gate, kept across requeues: a requeued build
   // rejoins the line where it first arrived, not at the back.

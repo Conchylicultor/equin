@@ -1686,6 +1686,10 @@
       "name": "@equin/plugin-build-server-build-id",
       "version": "0.0.1",
     },
+    "plugins/build/plugins/step-baseline": {
+      "name": "@equin/plugin-build-step-baseline",
+      "version": "0.0.1",
+    },
     "plugins/code-explorer": {
       "name": "@equin/plugin-code-explorer",
       "version": "0.0.1",
@@ -8342,6 +8346,8 @@
     "@equin/plugin-build-serve-composition": ["@equin/plugin-build-serve-composition@workspace:plugins/build/plugins/serve-composition"],
 
     "@equin/plugin-build-server-build-id": ["@equin/plugin-build-server-build-id@workspace:plugins/build/plugins/server-build-id"],
+
+    "@equin/plugin-build-step-baseline": ["@equin/plugin-build-step-baseline@workspace:plugins/build/plugins/step-baseline"],
 
     "@equin/plugin-code-explorer": ["@equin/plugin-code-explorer@workspace:plugins/code-explorer"],
 

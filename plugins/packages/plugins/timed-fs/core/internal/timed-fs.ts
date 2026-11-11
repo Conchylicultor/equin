@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
+import { countFsCall } from "./fs-call-count";
 
 // The file reads every non-browser process makes, timed. A stalled disk used
 // to read as the caller's own work: a 12 s `Bun.Glob` scan inside a live read
@@ -236,6 +237,7 @@ function timedAsync<F extends AnyFn>(layer: FsWaitLayer, op: string, fn: F): F {
   // The guard runs before the async body, so a refusal throws at the call.
   return ((...args: Parameters<F>) => {
     fsCallGuard?.(op, targetOf(args[0]));
+    countFsCall(layer, args[0]);
     return timed(...args);
   }) as F;
 }
@@ -247,6 +249,7 @@ function timedSyncCall<F extends AnyFn>(
 ): F {
   return ((...args: Parameters<F>) => {
     fsCallGuard?.(op, targetOf(args[0]));
+    countFsCall(layer, args[0]);
     const end = meterStart(layer);
     const t0 = performance.now();
     try {
@@ -378,6 +381,7 @@ export async function* scanGlob(
   arg?: GlobScanArg,
 ): AsyncGenerator<string, void, undefined> {
   fsCallGuard?.("scanGlob", globTarget(pattern, arg));
+  countFsCall("fs-glob", globTarget(pattern, arg));
   // eslint-disable-next-line timed-fs/no-untimed-glob-scan -- the one timed scan
   const it = new Bun.Glob(pattern).scan(arg);
   let inScan = 0;
@@ -417,6 +421,7 @@ export function* scanGlobSync(
   arg?: GlobScanArg,
 ): Generator<string, void, undefined> {
   fsCallGuard?.("scanGlobSync", globTarget(pattern, arg));
+  countFsCall("fs-glob", globTarget(pattern, arg));
   // eslint-disable-next-line timed-fs/no-untimed-glob-scan -- the one timed scan
   const it = new Bun.Glob(pattern).scanSync(arg);
   let inScan = 0;

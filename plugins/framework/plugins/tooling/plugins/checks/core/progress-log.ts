@@ -10,6 +10,13 @@ import {
   mergeBaseWithMain,
 } from "@plugins/reports/plugins/outbox/core";
 import { checkProgressLogDir } from "../data-dirs";
+import {
+  newFsCallTally,
+  summarizeFsCalls,
+  withFsCallTally,
+  type FsCallSummary,
+  type FsCallTally,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { openStallReporter, type StallReportSink } from "./stall-report";
 import type { OwnerShare, StallKind } from "./thread-attribution";
 import {
@@ -128,6 +135,13 @@ export type ProgressRecord =
        * every line written before the check-level flight existed.
        */
       sharedFrom?: string;
+      /**
+       * The file calls the check's own body made (`packages/timed-fs`, counted
+       * under its async context): per kind, and the path prefixes most went
+       * to. Absent on every line written before it was counted, which the
+       * reader returns as null (not measured), never zeros.
+       */
+      fs?: FsCallSummary;
     })
   /**
    * A started check found the same check (same signature, same tree) in flight
@@ -338,6 +352,13 @@ export interface ProgressRun {
   /** Record a check entering its body. Written BEFORE the body runs. */
   checkStarted(checkId: string): void;
   /**
+   * Run `fn` — a started check's body — with every file call in its async
+   * context counted as the check's own (`withFsCallTally`), whatever else
+   * shares the thread meanwhile; `checkEnded` writes the count. Work a check
+   * hands to a run-wide memo is counted for whichever check asked first.
+   */
+  inCheck<T>(checkId: string, fn: () => T): T;
+  /**
    * Record a check settling. Written from a `finally`, so a throw still lands.
    *
    * `queuedMs` is the time spent waiting for a slot in the runner's concurrency
@@ -480,6 +501,8 @@ export function startProgressRun(
   });
 
   const inFlight = new Set<string>();
+  // Each started check's own file calls, written on its `end`.
+  const fsCalls = new Map<string, FsCallTally>();
   const inBootstrap = new Set<string>();
   // Started checks waiting on another run's flight: out of `inFlight` (not on
   // the thread), but still outstanding for the heartbeat.
@@ -549,6 +572,7 @@ export function startProgressRun(
       deps.write({ ...stamp(), phase: "selected", treeHash, selected });
     },
     checkStarted(checkId) {
+      fsCalls.set(checkId, newFsCallTally());
       inFlight.add(checkId);
       // Into the watch's current window too: a check that starts and blocks in
       // the same turn is never in a tick's snapshot of `inFlight`.
@@ -568,7 +592,15 @@ export function startProgressRun(
       }
       deps.write({ ...stamp(), phase: "join-ended", checkId, adopted });
     },
+    inCheck(checkId, fn) {
+      const tally = fsCalls.get(checkId);
+      if (tally === undefined)
+        throw new Error(`inCheck(${checkId}) before checkStarted`);
+      return withFsCallTally(tally, fn);
+    },
     checkEnded(checkId, durationMs, ok, cached, queuedMs, sharedFrom) {
+      const tally = fsCalls.get(checkId);
+      fsCalls.delete(checkId);
       inFlight.delete(checkId);
       joined.delete(checkId);
       const now = performance.now();
@@ -582,6 +614,7 @@ export function startProgressRun(
         queuedMs,
         stalledMs: watch.overlapMs(now - durationMs, now),
         ...(sharedFrom !== null ? { sharedFrom } : {}),
+        ...(tally !== undefined ? { fs: summarizeFsCalls(tally) } : {}),
       });
     },
     finish(allOk) {
@@ -663,6 +696,11 @@ export interface CheckRunProgress {
      * null is "not known" where a 0 would be a claim — see the `end` record.
      */
     stalledMs: number | null;
+    /**
+     * The check's own file calls; `null` on a line written before they were
+     * counted.
+     */
+    fs: FsCallSummary | null;
   }>;
   /**
    * `selected − everything that has ever started`: the checks the runner's
@@ -851,6 +889,7 @@ export function reconstructRuns(
         // The opposite normalization, on purpose: a line without it comes from
         // a run that stalled unmeasured, so it is unknown — null, not 0.
         stalledMs: record.stalledMs ?? null,
+        fs: record.fs ?? null,
       });
     } else if (record.phase === "stall") {
       const { kinds, leaves, cpu, held, ...fields } = fieldsOf(record);

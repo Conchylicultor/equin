@@ -391,6 +391,7 @@ export function createValveDeps(): ValveDeps {
         reason === EXCLUSIVE_RUNNING_REASON
           ? `held: ${reason}`
           : "held: host under duress",
+        { wait: true },
       );
     },
     onHoldEnd: (result) => {

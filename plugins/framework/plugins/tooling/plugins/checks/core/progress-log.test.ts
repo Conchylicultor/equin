@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
+import { readdir, stat } from "@plugins/packages/plugins/timed-fs/core";
 import type {
   StackSample,
   StackSampler,
@@ -369,5 +370,48 @@ describe("reconstructRuns", () => {
     // `sharedFrom` is written only when set.
     const endB = records.find((r) => r.phase === "end" && r.checkId === "b");
     expect(endB && "sharedFrom" in endB).toBe(false);
+  });
+
+  test("a check's end carries the file calls made in its own async context, and only those", async () => {
+    const { records, write } = recorder();
+    const run = startProgressRun(
+      { scope: null, requested: null },
+      { write, sampler: fakeSampler([]), reports: noReports },
+    );
+    run.checkStarted("a");
+    run.checkStarted("b");
+    await Promise.all([
+      run.inCheck("a", async () => {
+        await stat(REPO_ROOT);
+        await stat(REPO_ROOT);
+      }),
+      run.inCheck("b", async () => {
+        await readdir(REPO_ROOT);
+      }),
+    ]);
+    run.checkEnded("a", 5, true, false, 0, null);
+    run.checkEnded("b", 5, true, false, 0, null);
+    run.finish(true);
+    const [done] = reconstructRuns(records);
+    const fsOf = (id: string) =>
+      done?.completed.find((c) => c.checkId === id)?.fs;
+    expect(fsOf("a")).toMatchObject({ stat: 2, readdir: 0, total: 2 });
+    expect(fsOf("b")).toMatchObject({ stat: 0, readdir: 1, total: 1 });
+  });
+
+  test("an end recorded before calls were counted reads as not measured", () => {
+    const [run] = reconstructRuns([
+      { ...base, t: at(0), phase: "run", scope: null, requested: null },
+      {
+        ...base,
+        t: at(1),
+        phase: "end",
+        checkId: "a",
+        durationMs: 5,
+        ok: true,
+        cached: false,
+      },
+    ]);
+    expect(run?.completed[0]?.fs).toBeNull();
   });
 });

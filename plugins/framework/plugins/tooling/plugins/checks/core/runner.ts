@@ -888,7 +888,10 @@ export async function runChecks(
           const observations: CheckObservation[] = [];
           let outcome: CheckOutcome | undefined;
           try {
-            outcome = await runOne(check, wallStart, observations, slot);
+            // Its file calls counted as its own, written on its `end`.
+            outcome = await progress.inCheck(check.id, () =>
+              runOne(check, wallStart, observations, slot),
+            );
             return outcome;
           } catch (err) {
             // A check that throws FAILS ITSELF; it does not abort the run.

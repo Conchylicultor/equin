@@ -14409,6 +14409,40 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `boundaries/no-platform-api` — `server/internal/get-server-commit.ts`, `server/internal/get-server-graph-hash.ts` (debt)
           - `blocking-fs/no-sync-fs` — `server/internal/server-pin.ts` (sanctioned)
+    - **`step-baseline`** — Build-step-regression report kind's Debug → Reports summary view: one line naming the step, its value against its baseline, and for file calls where the extra calls went. Filed by main's build through the report outbox — no collector here. Build-step-regression report kind: one row per step and metric (time, or file calls in a build that rebuilt nothing), filed through the report outbox by main's `./equin build` when a step jumps against its own recent baseline in two same-work builds in a row. Renders a task naming the step, the before/after and, for file calls, the path prefixes the extra calls went to. Warning, re-arms every 6 h.
+      - Web:
+        - Contributes: `Reports.KindView` → `StepRegressionSummary`
+        - Uses: `reports.Reports`
+      - Server:
+        - Contributes: `report-kind` "build-step-regression"
+        - Uses:
+          - `reports.ReportKind`
+          - `reports.ReportRow`
+      - Cross-plugin:
+        - Imported by: `framework/cli/build`
+      - Core:
+        - Exports (types):
+          - `BuildSteps`
+          - `PrefixIncrease`
+          - `ProfileLike`
+          - `ProfileSpanLike`
+          - `StepFsCalls`
+          - `StepMetric`
+          - `StepRegression`
+          - `StepRegressionPayload`
+          - `StepSample`
+        - Exports (values):
+          - `buildIdTime`
+          - `detectStepRegressions`
+          - `readBuildSteps`
+          - `STEP_BASELINE_THRESHOLDS`
+          - `STEP_REGRESSION_KIND`
+          - `stepRegressionFingerprint`
+          - `stepRegressionLine`
+          - `StepRegressionPayloadSchema`
+      - Cli:
+        - Exports (types): `JudgeBuildStepsOptions`
+        - Exports (values): `judgeBuildSteps`
 
 - **`code-explorer`** — Worktree-scoped checkout reads by attempt id or the reserved `main` sentinel: push-files — one push's files, its range read from its ledger rows by ancestry. A checkout's raw bytes (file-systems' checkout raw route) are the machine half's.
   - Server:
@@ -28565,7 +28599,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `takeReexecBudget`
         - **`build`** — `./equin build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.
           - Cli:
-            - Uses: 54 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
+            - Uses: 55 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
               - `framework/cli/op-runtime` ×31
               - `framework/cli/bootstrap` ×4
               - `framework/tooling/web-artifacts` ×4
@@ -28574,6 +28608,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/profiling/op-log` ×2
               - `build/converge.decideConvergence`
               - `build/run-ledger.createBuildRunRecorder`
+              - `build/step-baseline.judgeBuildSteps`
               - `framework/cli/doctor.assertPrerequisites`
               - `framework/cli/git-artifacts.registerMergeDrivers`
               - `framework/tooling/checks/type-check.readTypeCheckTree`
@@ -28767,6 +28802,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ResolvedReceipt`
               - `SignalOriginTapOptions`
               - `SignalTermination`
+              - `SpanOptions`
               - `ValveDeps`
               - `Verdict`
             - Exports (values):
@@ -29587,12 +29623,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values): `parseRuntimeException`
         - **`checks`** — Check runner and built-in checks for ./equin check
           - Core:
-            - Uses: 67 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
+            - Uses: 72 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
               - `framework/tooling` ×11
+              - `packages/timed-fs` ×10
               - `framework/tooling/exempt` ×7
               - `reports/check-thread-stall` ×7
               - `infra/stack-sampler` ×5
-              - `packages/timed-fs` ×5
               - `infra/host-fs/user-path` ×4
               - `infra/launcher/env-names` ×3
               - `infra/spawn` ×3
@@ -35204,13 +35240,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 130 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Imported by: 131 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `infra` ×31
           - `apps` ×20
           - `framework` ×20
           - `debug` ×13
           - `conversations` ×7
-          - `build` ×5
+          - `build` ×6
           - `backup` ×4
           - `plugin-meta` ×4
           - `primitives` ×3
@@ -39504,17 +39540,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/ticket-line.ts` (debt)
     - **`timed-fs`** — The file reads, listings, stats and glob scans every non-browser process makes, timed: node:fs's read calls under their own names and types (readFile / readdir / stat / lstat / access / realpath / readlink and their *Sync twins, existsSync) plus scanGlob / scanGlobSync over a Bun.Glob, each call metered while it runs (installFsWaitMeter — the backend's profiler shows one past FS_WAIT_FLOOR_MS in progress and charges it) and, once it returns past the floor, handed to onSlowFsCall subscribers, under a named wait layer (fs-read / fs-readdir / fs-stat / fs-glob) — so a disk stall names itself instead of reading as the caller's own work. A leaf (node builtins only), enforced by the timed-fs/no-untimed-fs-read lint.
       - Cross-plugin:
-        - Imported by: 162 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+        - Imported by: 163 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
           - `infra` ×47
           - `framework` ×25
           - `apps` ×15
           - `debug` ×14
           - `backup` ×12
           - `conversations` ×12
+          - `build` ×5
           - `database` ×5
           - `packages` ×5
           - `plugin-meta` ×5
-          - `build` ×4
           - `config_v2` ×3
           - `release` ×3
           - `reports` ×3
@@ -39527,8 +39563,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/icons/icon-sets`
       - Exemptions:
         - Exempts itself from:
-          - `boundaries/no-platform-api` — `core/internal/timed-fs.ts` (sanctioned)
+          - `boundaries/no-platform-api` — `core/internal/timed-fs.ts`, `core/internal/fs-call-count.ts` (sanctioned)
           - `timed-fs/no-untimed-fs-read` — `core/internal/timed-fs.ts` (sanctioned)
+          - `paths:no-hardcoded-paths` — `core/internal/fs-call-count.ts`, `core/internal/fs-call-count.test.ts` (sanctioned)
         - Exempted by:
           - `framework/tooling/guards` (0 debt)
           - `infra/host/io-health/monitor` (0 debt)
@@ -39536,6 +39573,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages/timed-fs` (0 debt)
       - Core:
         - Exports (types):
+          - `FsCallCounts`
+          - `FsCallSnapshot`
+          - `FsCallSummary`
+          - `FsCallTally`
           - `FsWaitLayer`
           - `SlowFsCall`
         - Exports (values):
@@ -39543,14 +39584,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `accessSync`
           - `exists`
           - `existsSync`
+          - `FS_CALL_TOP_PREFIXES`
           - `FS_WAIT_FLOOR_MS`
           - `FS_WAIT_LAYERS`
+          - `fsCallsSince`
           - `installFsAwait`
           - `installFsCallGuard`
           - `installFsWaitMeter`
           - `lstat`
           - `lstatSync`
+          - `newFsCallTally`
           - `onSlowFsCall`
+          - `processFsCallTally`
           - `readdir`
           - `readdirSync`
           - `readFile`
@@ -39561,9 +39606,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `realpathSync`
           - `scanGlob`
           - `scanGlobSync`
+          - `snapshotFsCalls`
           - `stat`
           - `statSync`
+          - `summarizeFsCalls`
           - `TIMED_FS_CALLS`
+          - `withFsCallTally`
     - **`value-patch`** — A JSON value's change as what changed: diffValue(prev, next) → set / append / push ops at paths (null when the root itself changed), applyValuePatch(base, ops) → the next value, copy-on-write so every untouched subtree keeps its identity. What a pushed live value declared `patches: true` ships instead of its whole value.
       - Cross-plugin:
         - Imported by:
@@ -53292,8 +53340,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`reports`** — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. The reports table and its live read (reports.list), the ReportKind / ReportNoiseRule slots every kind and rule contributes to, and the fan-out ceiling config; recording is the engine's (reports/plugins/engine).
   - Web:
     - Slots: `Reports.KindView`
-    - Slot contributors: 42 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `Reports.KindView` ×42
+    - Slot contributors: 43 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+      - `Reports.KindView` ×43
     - Contributes:
       - `IdKinds.Kind` "report|crash"
       - `ConfigV2.WebRegister` "reports"
@@ -53408,13 +53456,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `SERVER_REPORT_SOURCES`
       - `submitReport`
   - Cross-plugin:
-    - Imported by: 74 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+    - Imported by: 75 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
       - `reports` ×30
       - `debug` ×18
       - `conversations` ×7
       - `database` ×4
       - `infra` ×4
-      - `build` ×2
+      - `build` ×3
       - `framework` ×2
       - `active-data/report`
       - `backup`
@@ -53916,6 +53964,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `backup`
+          - `build/step-baseline`
           - `database/fork`
           - `debug/backend-liveness`
           - `debug/boot-events`

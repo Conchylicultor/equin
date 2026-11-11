@@ -7,6 +7,11 @@ import {
 } from "@plugins/infra/plugins/paths/server";
 import { buildProgressSpanStart, buildProgressSpanEnd } from "./build-progress";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
+import {
+  fsCallsSince,
+  snapshotFsCalls,
+  type FsCallSummary,
+} from "@plugins/packages/plugins/timed-fs/core";
 
 export interface BuildSpan {
   id: string;
@@ -20,6 +25,37 @@ export interface BuildSpan {
    * pool's memory budget (host-semaphore.ts).
    */
   maxRssBytes?: number;
+  /**
+   * The file calls (`packages/timed-fs`) made while the span ran, by kind,
+   * with the path prefixes most went to. A span this process ran counts every
+   * call the process made in its window — a concurrent in-process span's too;
+   * a check span carries its own check's calls, counted in the check
+   * subprocess under that check's own async context. Absent on a profile
+   * written before calls were counted (and on a check span whose record has
+   * none). What `build/step-baseline` judges a step's file work by.
+   */
+  fs?: FsCallSummary;
+  /** A check span: the check answered from the cache, its body never ran. */
+  cached?: boolean;
+  /**
+   * The span is a WAIT, not the build's own work: its length is another
+   * party's — a lock's queue, the host grant, Postgres, a backend or central
+   * adopting the deploy or booting (judged by their own boot monitors) — so no
+   * step baseline judges it.
+   */
+  wait?: true;
+}
+
+/** How a span is opened beyond its name. */
+export interface SpanOptions {
+  /** A wait, not work — see `BuildSpan.wait`. */
+  wait?: boolean;
+}
+
+/** What a retroactively recorded span may carry beyond its timing. */
+export interface PushedSpanExtra {
+  fs?: FsCallSummary;
+  cached?: boolean;
 }
 
 export interface BuildProfile {
@@ -38,6 +74,7 @@ interface SpanCollector {
     id: string,
     phase: string,
     label: string,
+    options?: SpanOptions,
   ): (extra?: { maxRssBytes?: number }) => void;
   push(
     id: string,
@@ -45,6 +82,7 @@ interface SpanCollector {
     label: string,
     durationMs: number,
     wallStartMs?: number,
+    extra?: PushedSpanExtra,
   ): void;
   /**
    * Writes `build-profile-<buildId>.json` under worktree `name`, accepting the
@@ -84,8 +122,9 @@ function makeSpanCollector(): SpanCollector {
   }
 
   return {
-    start(id, phase, label) {
+    start(id, phase, label, options) {
       const start = performance.now();
+      const fsAtStart = snapshotFsCalls();
       // Durable, synchronous `enter` marker — on disk before the span body runs, so a
       // build that wedges inside it is named even after SIGKILL. The in-memory `spans`
       // array below is flushed only by write() at the very end, which a wedged build
@@ -94,6 +133,7 @@ function makeSpanCollector(): SpanCollector {
       buildProgressSpanStart(token, id, phase, label);
       return (extra) => {
         const durationMs = Math.round(performance.now() - start);
+        const fs = fsCallsSince(fsAtStart);
         spans.push({
           id,
           phase,
@@ -103,16 +143,26 @@ function makeSpanCollector(): SpanCollector {
           ...(extra?.maxRssBytes != null
             ? { maxRssBytes: extra.maxRssBytes }
             : {}),
+          fs,
+          ...(options?.wait === true ? { wait: true as const } : {}),
         });
         buildProgressSpanEnd(token, id, durationMs);
       };
     },
-    push(id, phase, label, durationMs, wallStartMs) {
+    push(id, phase, label, durationMs, wallStartMs, extra) {
       const startMs =
         wallStartMs != null
           ? Math.round(wallStartMs - t0)
           : Math.round(performance.now() - t0) - durationMs;
-      spans.push({ id, phase, label, startMs, durationMs });
+      spans.push({
+        id,
+        phase,
+        label,
+        startMs,
+        durationMs,
+        ...(extra?.fs !== undefined ? { fs: extra.fs } : {}),
+        ...(extra?.cached !== undefined ? { cached: extra.cached } : {}),
+      });
     },
     writeProfile,
   };
@@ -126,8 +176,9 @@ export function buildProfilerStart(
   id: string,
   phase: string,
   label: string,
+  options?: SpanOptions,
 ): (extra?: { maxRssBytes?: number }) => void {
-  return defaultCollector.start(id, phase, label);
+  return defaultCollector.start(id, phase, label, options);
 }
 
 export function pushBuildSpan(
@@ -136,8 +187,9 @@ export function pushBuildSpan(
   label: string,
   durationMs: number,
   wallStartMs?: number,
+  extra?: PushedSpanExtra,
 ): void {
-  defaultCollector.push(id, phase, label, durationMs, wallStartMs);
+  defaultCollector.push(id, phase, label, durationMs, wallStartMs, extra);
 }
 
 export function writeBuildProfile(name: Namespace): void {

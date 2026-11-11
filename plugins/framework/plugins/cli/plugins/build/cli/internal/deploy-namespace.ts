@@ -536,8 +536,9 @@ export async function deployNamespace(
     phase: string,
     label: string,
     run: () => Promise<T>,
+    options?: { wait?: boolean },
   ): Promise<T> => {
-    const end = hooks.span(id, phase, label);
+    const end = hooks.span(id, phase, label, options);
     try {
       return await run();
     } finally {
@@ -781,6 +782,8 @@ export async function deployNamespace(
           command,
           commit: opts.commit,
         }),
+      // The running backend's answer: its own work, not this build's.
+      { wait: true },
     );
     if (adoption.kind === "adopted") {
       console.log(
@@ -800,6 +803,8 @@ export async function deployNamespace(
       "build:deploy",
       "restart backend",
       () => restartBackend(ns, site),
+      // The gateway respawning the backend: the new process's boot.
+      { wait: true },
     );
     if (restart.kind === "failed") {
       return {
@@ -826,6 +831,8 @@ export async function deployNamespace(
             restartRequestedAt,
             restart.restartError,
           ),
+        // The new backend coming up: its boot, judged by its own monitors.
+        { wait: true },
       );
       if (health.kind === "failed") {
         return {

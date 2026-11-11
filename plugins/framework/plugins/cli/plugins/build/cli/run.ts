@@ -109,6 +109,7 @@ import {
   type SignalOrigin,
 } from "@plugins/packages/plugins/signal-origin/core";
 import { createOpProfiler } from "@plugins/debug/plugins/profiling/plugins/op-log/cli";
+import { judgeBuildSteps } from "@plugins/build/plugins/step-baseline/cli";
 import {
   markWorktreeOpStart,
   writeWorktreeSpec,
@@ -965,6 +966,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
     "acquireBuildLock",
     "build:setup",
     "acquire build lock",
+    { wait: true },
   );
   const webDir = resolve(root, WEB_CORE_RELATIVE);
   await profiler.wait("build-lock", () => acquireArtifactLock(webDir));
@@ -988,6 +990,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
     "waitForPg",
     "build:database",
     "wait for Postgres",
+    { wait: true },
   );
   await waitForPg();
   endSpan();
@@ -1017,6 +1020,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
       "waitForDatabase",
       "build:database",
       isMainCheckout ? "check base DB" : "wait for DB fork",
+      { wait: true },
     );
     if (isMainCheckout) await requireBaseDatabase(name);
     else await waitForWorktreeDatabase(name);
@@ -1479,6 +1483,10 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
             span.checkId,
             span.durationMs,
             span.wallStartMs,
+            {
+              cached: span.cached,
+              ...(span.fs !== null ? { fs: span.fs } : {}),
+            },
           );
         }
         // New information the in-process pass could not produce: the check
@@ -1732,6 +1740,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
             "adoptCentral",
             "build:deploy",
             "ask central to adopt",
+            { wait: true },
           );
           centralAdoption = await askAdoption({
             endpoint: adoptCentralDeploy,
@@ -1754,6 +1763,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
             "restartCentral",
             "build:deploy",
             "restart central",
+            { wait: true },
           );
           console.log("Restarting central...");
           try {
@@ -1794,6 +1804,12 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
 
       flushFootprint();
       writeBuildProfile(name);
+      // Main's build judges its steps against main's earlier builds (time,
+      // and file calls when it rebuilt nothing) and files what jumped — the
+      // one place a build is compared with its own normal.
+      if (checkout.kind === "main")
+        for (const line of await judgeBuildSteps({ name, buildId }))
+          console.log(line);
       const okV = buildOkVerdict();
       await finalizeBuild(true);
       emitVerdict(okV);

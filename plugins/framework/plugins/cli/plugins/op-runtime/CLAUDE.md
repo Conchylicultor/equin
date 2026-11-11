@@ -210,6 +210,7 @@ the shared Playwright harness.
     - `ResolvedReceipt`
     - `SignalOriginTapOptions`
     - `SignalTermination`
+    - `SpanOptions`
     - `ValveDeps`
     - `Verdict`
   - Exports (values):

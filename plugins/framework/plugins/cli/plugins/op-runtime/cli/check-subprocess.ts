@@ -1,3 +1,4 @@
+import type { FsCallSummary } from "@plugins/packages/plugins/timed-fs/core";
 // The one way to run a check pass from another op.
 //
 // `runChecks()` has exactly ONE in-process caller — the `check` command's own
@@ -115,7 +116,15 @@ export interface CheckSubprocessResult {
    * `performance.now()` domain so a caller can draw them as bars in its own
    * timeline. Empty when no `runId` was given.
    */
-  spans: Array<{ checkId: string; durationMs: number; wallStartMs: number }>;
+  spans: Array<{
+    checkId: string;
+    durationMs: number;
+    wallStartMs: number;
+    /** Answered from the cache: the check's body never ran. */
+    cached: boolean;
+    /** The check's own file calls; null on a record that predates counting. */
+    fs: FsCallSummary | null;
+  }>;
   /** Peak RSS of the child (bytes), when the runtime reported rusage. */
   maxRssBytes: number | undefined;
 }
@@ -234,6 +243,8 @@ function readSpans(
       checkId: c.checkId,
       durationMs: c.durationMs,
       wallStartMs: perfAtSpawn + (startEpoch - epochAtSpawn),
+      cached: c.cached,
+      fs: c.fs,
     };
   });
 }
