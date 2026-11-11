@@ -67,6 +67,13 @@ inversion of it.
 `WebsiteBand`.** That is what makes "one footer per page" and "one reading
 measure across the site" true by construction instead of by remembering.
 
+**Record an event for every meaningful visitor action**: `track("<surface>_<action>", props?)`
+(`apps/deploy/analytics/collect`) on what the owner would want counted (play,
+Enter, Maximize, open, CTA, submit), never on noise (hover, close, toggles,
+inside the demo). Variants are props; never visitor text. Names are lowercase
+letters, digits and `_` only (`track` throws). Record where the action
+succeeds (`onPlay`, not the click), once per action.
+
 Copy register: understated, essay-voice, never marketing. The word is **equin**
 everywhere a reader can see it; the old name survives only as an internal identifier (the repository, the namespace, the data dir).
 
