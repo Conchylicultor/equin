@@ -5,10 +5,9 @@ import {
   useState,
   type DependencyList,
 } from "react";
-import { flushSync } from "react-dom";
-
 import {
   afterLayout,
+  commitInPhase,
   observeInPhase,
   runAsAfterLayout,
   type AfterLayoutRead,
@@ -69,12 +68,13 @@ function resolveTargets(target: ResizeTarget): Element[] {
  *
  * `beforePaint: true` — for a size that DECIDES LAYOUT (which columns a table
  * shows): each resize runs `onResize` inside the observer callback, before
- * the frame paints, and commits its React updates there (`flushSync`) — so
- * the frame that resizes the element is the frame that lays it out anew,
+ * the frame paints, and commits its React updates there (`commitInPhase`) —
+ * so the frame that resizes the element is the frame that lays it out anew,
  * never one painting the old layout squeezed into the new size. Implies no
- * debounce. Keep the layout it changes inside the observed elements (the
- * browser re-delivers what grows deeper, and reports a loop for what grows
- * above).
+ * debounce. The layout it changes may be anywhere: what grows deeper the
+ * browser delivers, and what it resizes at or above the delivery (the chrome
+ * around the box, the box itself) is answered in the same phase by
+ * after-layout — never a "ResizeObserver loop".
  */
 export function useResizeObserver(
   target: ResizeTarget,
@@ -91,7 +91,7 @@ export function useResizeObserver(
     let observer: ResizeObserver | null = null;
     const runNow = () => handler()?.();
     const schedule = beforePaint
-      ? () => flushSync(runNow)
+      ? () => commitInPhase(runNow)
       : debounce
         ? () => {
             if (rafId !== null) cancelAnimationFrame(rafId);
@@ -101,7 +101,7 @@ export function useResizeObserver(
 
     // Resolve, subscribe and take the initial measure after layout — never on
     // the commit path, where each read forces a full style recalc.
-    const cancelObserves: (() => void)[] = [];
+    const releases: (() => void)[] = [];
     const cancelInitial = afterLayout(() => {
       const elements = resolveTargets(target);
       if (elements.length === 0) return;
@@ -112,14 +112,16 @@ export function useResizeObserver(
         ),
       );
       observer = created;
+      // Held back (resized above a delivery by a commit inside it): the same
+      // response as a delivery, in the phase that resized it.
       for (const el of elements)
-        cancelObserves.push(observeInPhase(created, el));
+        releases.push(observeInPhase(created, el, schedule));
       return handler();
     });
 
     return () => {
       cancelInitial();
-      for (const cancel of cancelObserves) cancel();
+      for (const release of releases) release();
       observer?.disconnect();
       if (rafId !== null) cancelAnimationFrame(rafId);
     };
@@ -152,7 +154,7 @@ export function useResizeObserver(
  * change signal are one quantity. The node is observed on the commit path
  * (`observeInPhase`): mounted by an ordinary commit, its first notification is
  * delivered in the next step's first broadcast, together with the after-layout
- * root trigger — so the commit it makes there (`flushSync`, before paint: no
+ * root trigger — so the commit it makes there (`commitInPhase`, before paint: no
  * first-paint flash) may change layout at any depth without the browser
  * holding a notification back. Later measures are RAF-debounced, like
  * `useResizeObserver`'s. Horizontal writing modes: `width` is the inline size,
@@ -162,8 +164,8 @@ export function useResizeObserver(
  * `useElementSize((el) => el.offsetParent)` measures the offset parent while
  * the ref stays on the anchor child. It may read layout, so it is resolved in
  * the after-layout phase and observed from there: its first notification comes
- * in a later broadcast of the same step, whose commit must stay inside what
- * that broadcast can still deliver (the measured host's own subtree).
+ * in a later broadcast of the same step. Whatever that commit resizes at or
+ * above the broadcast, after-layout answers in the same phase.
  */
 export function useElementSize<T extends HTMLElement = HTMLElement>(
   target?: (el: T) => Element | null | undefined,
@@ -194,7 +196,7 @@ export function useElementSize<T extends HTMLElement = HTMLElement>(
       if (!delivered) {
         delivered = true;
         runAsAfterLayout(
-          () => flushSync(apply),
+          () => commitInPhase(apply),
           entries.map((e) => e.target),
         );
         return;
@@ -202,16 +204,19 @@ export function useElementSize<T extends HTMLElement = HTMLElement>(
       if (rafId !== null) cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(apply);
     });
-    let cancelObserve = (): void => {};
+    // No response of its own to a held-back resize: the size is the browser's
+    // entry, so it comes with the restarted observation — at the next frame,
+    // which is when this hook's RAF-debounced measures commit anyway.
+    let release = (): void => {};
     const cancelResolve = resolves
       ? afterLayout(() => {
           const el = resolveTarget(node);
-          if (el) cancelObserve = observeInPhase(observer, el);
+          if (el) release = observeInPhase(observer, el);
         })
-      : ((cancelObserve = observeInPhase(observer, node)), () => {});
+      : ((release = observeInPhase(observer, node)), () => {});
     return () => {
       cancelResolve();
-      cancelObserve();
+      release();
       observer.disconnect();
       if (rafId !== null) cancelAnimationFrame(rafId);
     };
@@ -254,20 +259,21 @@ export function useResizeObserverSet(
   return useCallback(
     (el: Element) => {
       const state = ref.current;
-      if (state.observer === null) {
-        state.observer = new ResizeObserver((entries) => {
-          for (const entry of entries) state.pending.add(entry.target);
-          if (state.rafId !== null) return;
-          state.rafId = requestAnimationFrame(() => {
-            state.rafId = null;
-            const targets = [...state.pending].filter((t) => t.isConnected);
-            state.pending.clear();
-            if (targets.length > 0) handler(targets);
-          });
+      const resized = (targets: readonly Element[]): void => {
+        for (const target of targets) state.pending.add(target);
+        if (state.rafId !== null) return;
+        state.rafId = requestAnimationFrame(() => {
+          state.rafId = null;
+          const connected = [...state.pending].filter((t) => t.isConnected);
+          state.pending.clear();
+          if (connected.length > 0) handler(connected);
         });
-      }
+      };
+      state.observer ??= new ResizeObserver((entries) =>
+        resized(entries.map((entry) => entry.target)),
+      );
       const observer = state.observer;
-      const cancelObserve = observeInPhase(observer, el);
+      const release = observeInPhase(observer, el, () => resized([el]));
       // First measure after layout (no forced recalc in the ref callback),
       // before paint (no first-paint flash).
       const cancelFirst = afterLayout(() => {
@@ -275,8 +281,7 @@ export function useResizeObserverSet(
       });
       return () => {
         cancelFirst();
-        cancelObserve();
-        observer.unobserve(el);
+        release();
         state.pending.delete(el);
       };
     },

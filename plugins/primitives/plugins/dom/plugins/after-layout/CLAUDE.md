@@ -13,14 +13,21 @@ Read layout where the browser already computed it.
   of the phase: reads queued by what it commits run at its end, same frame.
   `delivered` is the callback's entry targets: their shallowest depth bounds
   what the rendering step can still deliver.
-- `observeInPhase(observer, el)` → cancel — start an observation where the
-  browser can deliver it. Outside a phase it observes now and arms the root
-  trigger, so the first notification shares the root's broadcast (whose
-  shallowest depth is the root's: its callback may commit layout at any
+- `commitInPhase(update)` — commit React updates (`flushSync`) as part of the
+  phase: the one way an observer callback (or a read the phase drains) commits
+  before paint. Whatever that commit resizes at or above the delivery is
+  answered in the same phase (see *Commits inside a delivery*).
+- `observeInPhase(observer, el, onHeldBack?)` → release — start an observation
+  where the browser can deliver it, and keep it in the set the phase settles
+  (release it instead of `unobserve`). Outside a phase it observes now and arms
+  the root trigger, so the first notification shares the root's broadcast
+  (whose shallowest depth is the root's: its callback may commit layout at any
   depth). Inside a phase, a target deeper than the delivery observes now; one
   at or above it — which the browser would hold back with a "loop completed"
   error — observes at the next frame's animation-frame callbacks, before that
-  frame gathers its observations.
+  frame gathers its observations. `onHeldBack` is the observer's response to a
+  resize, run in the phase when one of its commits resizes `el` where the
+  browser can no longer deliver it.
 - Under jsdom (its user agent says so) reads run at once, where they are
   queued: there is no layout to wait for, and nothing a read could force.
 
@@ -46,15 +53,40 @@ completed" error. A read that keeps re-queueing itself throws after 50 passes.
 A read that throws does not cost the rest of the batch its turn: every read
 runs, then the failures are rethrown (one error, or an `AggregateError`).
 
+## Commits inside a delivery
+
+The browser delivers resizes in broadcasts of increasing depth: after a
+broadcast, it delivers in the same step only elements DEEPER than that
+broadcast's shallowest target. A commit made inside a deep callback (a column
+fit, a first measure mounted by another measure's commit) can resize anything —
+the chrome above the measured box, a fixed band, the box itself; the browser
+would hold those resizes back a frame (painting the old size meanwhile) and
+report "ResizeObserver loop completed with undelivered notifications".
+
+So the phase settles them itself. `commitInPhase` records, before the phase's
+first commit, the box of every observation at or above the delivery
+(`getBoundingClientRect` size and client size — the same read before and after,
+and no transform advances inside one task). When the phase ends, each one the
+commits resized is stopped (nothing left for the browser to hold back),
+restarted at the next frame, and answered now through its `onHeldBack` — which
+may commit and resize more, settled the same way (at most 50 passes, then it
+throws). A phase that commits nothing reads nothing; the root's phase reaches
+every depth and records nothing.
+
+Not covered: a change of the content box alone (padding, with the border box
+and client box unchanged) — the browser still reports that one, and the
+resize-loop tracer (`element-size/resize-loop-trace`) names it.
+
 ## Caveats
 
 - **Reads wait for a rendered frame.** In a hidden tab the rendering step does
   not run, so a read queued there runs when the page is shown again (the
   synchronous read it replaces would have measured a page nobody sees).
 - **A `ResizeObserver` callback outside element-size** that commits a reader
-  without `runAsAfterLayout` arms the root mid-delivery: the browser defers it
-  a frame and reports a loop. Every observer in the app is element-size's
-  (`no-raw-resize-observer`), which wraps its callbacks.
+  without `runAsAfterLayout`, or commits without `commitInPhase`, escapes the
+  phase: the browser defers what it resizes a frame and reports a loop. Every
+  observer in the app is element-size's (`no-raw-resize-observer`), which
+  wraps its callbacks and commits through `commitInPhase`.
 
 Who reads through it: `dom/element-size` (initial measure, target resolution)
 and `dom/layout-host` (`useHostFlowAxis`).
@@ -63,7 +95,7 @@ and `dom/layout-host` (`useHostFlowAxis`).
 
 ## Plugin reference
 
-- Description: Read layout where the browser already computed it: afterLayout(read) runs `read` once the current frame is styled and laid out, before it paints (a ResizeObserver delivery), batched with every other read of that frame — reads first, then the writes they return, then one React commit (flushSync) — so a layout or style read never forces a synchronous recalc on React's commit path, and a write never sits between two reads. runAsAfterLayout(fn, delivered) lets a ResizeObserver callback join the phase; observeInPhase(observer, el) starts an observation where the browser can deliver it — at once, or (a target the running delivery can no longer reach) at the next frame, never a 'ResizeObserver loop' — and arms the root trigger with one started outside a phase, so its first callback shares the root's broadcast. element-size and layout-host read through it.
+- Description: Read layout where the browser already computed it: afterLayout(read) runs `read` once the current frame is styled and laid out, before it paints (a ResizeObserver delivery), batched with every other read of that frame — reads first, then the writes they return, then one React commit (flushSync) — so a layout or style read never forces a synchronous recalc on React's commit path, and a write never sits between two reads. runAsAfterLayout(fn, delivered) lets a ResizeObserver callback join the phase; commitInPhase(update) is its one way to commit before paint — whatever that commit resizes at or above the delivery (which the browser could only deliver a frame late, with a 'ResizeObserver loop' error) is answered in the same phase through the observer's onHeldBack, and its observation restarted at the next frame; observeInPhase(observer, el, onHeldBack?) starts and keeps an observation where the browser can deliver it — at once, or (a target the running delivery can no longer reach) at the next frame — and arms the root trigger with one started outside a phase, so its first callback shares the root's broadcast. element-size and layout-host read through it.
 - Cross-plugin:
   - Imported by:
     - `primitives/css/layout-harness`
@@ -75,6 +107,7 @@ and `dom/layout-host` (`useHostFlowAxis`).
   - Exports (types): `AfterLayoutRead`
   - Exports (values):
     - `afterLayout`
+    - `commitInPhase`
     - `observeInPhase`
     - `runAsAfterLayout`
 

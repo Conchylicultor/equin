@@ -35,6 +35,30 @@ let phaseDepth: number | null = null;
 let armed = false;
 let trigger: ResizeObserver | null = null;
 
+/** One observation started through {@link observeInPhase}. */
+interface Observation {
+  observer: ResizeObserver;
+  el: Element;
+  /** The observer's response to a resize, run in the phase that caused it when
+   * the browser could no longer deliver it there (see {@link settle}). */
+  onHeldBack: (() => void) | undefined;
+  /** The animation frame that (re)starts it, while one is pending. */
+  frame: number | null;
+  released: boolean;
+}
+
+/** Every live observation of the app's observers — all of them start here
+ * (`no-raw-resize-observer`), so this is the whole set the browser's
+ * depth rule can hold back. */
+const observations = new Set<Observation>();
+
+/**
+ * The box of every observation at or above the running phase's delivery, as it
+ * was before the phase's first commit — taken lazily by {@link commitInPhase},
+ * so a phase that commits nothing reads nothing. Compared when the phase ends.
+ */
+let snapshot: Map<Observation, Box> | null = null;
+
 /**
  * A DOM without a layout engine (jsdom, which says so in its user agent) has
  * no frame to wait for and nothing a read could force: its reads run at once,
@@ -97,15 +121,41 @@ export function runAsAfterLayout(
   try {
     fn();
     drain();
+    settle();
   } finally {
     inPhase = false;
     phaseDelivered = null;
     phaseDepth = null;
+    snapshot = null;
   }
 }
 
 /**
- * Start observing `el`, where the browser can deliver its first notification.
+ * Commit React updates (`flushSync`) as part of the phase: the one way an
+ * observer callback, or a read the phase drains, commits before paint.
+ *
+ * A commit inside a delivery can resize any element — the chrome above the
+ * measured box, a fixed band, the box itself. The browser delivers, in this
+ * rendering step, only resizes of elements DEEPER than the delivery's
+ * shallowest target; anything at or above it would be held back to the next
+ * frame, painted stale meanwhile, and reported as "ResizeObserver loop
+ * completed with undelivered notifications". So before the phase's first
+ * commit, the box of every observation at or above the delivery is recorded;
+ * when the phase ends, every one the phase resized is answered in the phase
+ * itself (its observer's `onHeldBack`, which may commit in turn) and its
+ * browser observation restarted at the next frame, where it can be delivered —
+ * nothing is left for the browser to hold back. Outside a phase (an ordinary
+ * React commit, before layout) it is a plain `flushSync`.
+ */
+export function commitInPhase(update: () => void): void {
+  if (inPhase && snapshot === null) snapshot = shallowBoxes();
+  flushSync(update);
+}
+
+/**
+ * Start observing `el`, where the browser can deliver its notifications, and
+ * keep it there. Returns the release (unobserves, cancels a pending start) —
+ * call it instead of `unobserve`, so the observation leaves the phase's set.
  *
  * Inside a phase, the rendering step is mid-delivery: the browser delivers a
  * new observation in this step only when its target is DEEPER than the
@@ -118,32 +168,135 @@ export function runAsAfterLayout(
  * no loop. Every caller has already taken its first measure directly, so
  * nothing is late. Outside a phase, and for a deeper target, it observes now.
  *
- * Returns the cancel (for a cleanup that runs before the deferred observe).
+ * `onHeldBack` is the observer's response to a resize of `el`, run when a
+ * commit inside a phase resizes `el` at or above that phase's delivery — a
+ * resize the browser could not deliver in this frame (see
+ * {@link commitInPhase}). An observer whose response needs the browser's
+ * entry passes none: its notification then comes with the restarted
+ * observation, at the next frame.
  */
 export function observeInPhase(
   observer: ResizeObserver,
   el: Element,
+  onHeldBack?: () => void,
 ): () => void {
+  const obs: Observation = {
+    observer,
+    el,
+    onHeldBack,
+    frame: null,
+    released: false,
+  };
+  observations.add(obs);
+  start(obs);
+  return () => {
+    obs.released = true;
+    observations.delete(obs);
+    if (obs.frame !== null) cancelAnimationFrame(obs.frame);
+    obs.frame = null;
+    observer.unobserve(el);
+  };
+}
+
+function start(obs: Observation): void {
   if (phaseDelivered === null) {
-    observer.observe(el);
+    obs.observer.observe(obs.el);
     // Delivered in the next step's FIRST broadcast: armed with it, the root
     // trigger shares that broadcast, so its shallowest depth is the root's and
     // a callback committing there may change layout at any depth.
     if (!atOnce) arm();
-    return noop;
+    return;
   }
-  if (depthOf(el) > currentPhaseDepth()) {
-    observer.observe(el);
-    return noop;
+  if (depthOf(obs.el) > currentPhaseDepth()) {
+    obs.observer.observe(obs.el);
+    return;
   }
-  let cancelled = false;
-  const id = requestAnimationFrame(() => {
-    if (!cancelled) observeInPhase(observer, el);
+  startNextFrame(obs);
+}
+
+function startNextFrame(obs: Observation): void {
+  if (obs.frame !== null) return;
+  obs.frame = requestAnimationFrame(() => {
+    obs.frame = null;
+    if (!obs.released) start(obs);
   });
-  return () => {
-    cancelled = true;
-    cancelAnimationFrame(id);
+}
+
+/** What the browser compares an observation by, read the same way before and
+ * after a commit: the layout box (a transform cannot change between the two
+ * reads — no animation advances inside one task) and the client box (a
+ * scrollbar appearing narrows the content box without the border box). */
+interface Box {
+  width: number;
+  height: number;
+  clientWidth: number;
+  clientHeight: number;
+}
+
+function boxOf(el: Element): Box {
+  const rect = el.getBoundingClientRect();
+  return {
+    width: rect.width,
+    height: rect.height,
+    clientWidth: el.clientWidth,
+    clientHeight: el.clientHeight,
   };
+}
+
+function sameBox(a: Box, b: Box): boolean {
+  return (
+    a.width === b.width &&
+    a.height === b.height &&
+    a.clientWidth === b.clientWidth &&
+    a.clientHeight === b.clientHeight
+  );
+}
+
+/** The box of every connected observation the running phase's delivery can no
+ * longer reach: at or above its shallowest target. */
+function shallowBoxes(): Map<Observation, Box> {
+  const boxes = new Map<Observation, Box>();
+  const depth = currentPhaseDepth();
+  // The root's broadcast reaches every depth below it.
+  if (depth === 0) return boxes;
+  for (const obs of observations) {
+    if (!obs.el.isConnected || depthOf(obs.el) > depth) continue;
+    boxes.set(obs, boxOf(obs.el));
+  }
+  return boxes;
+}
+
+/**
+ * Answer, in the phase, every resize its commits made where the browser can no
+ * longer deliver it (see {@link commitInPhase}): the observation is stopped now
+ * (so nothing is held back into a loop error) and restarted at the next frame,
+ * and its observer's response runs here — before paint, as an in-time delivery
+ * would have. That response may commit and resize more; it is settled the same
+ * way, until nothing changes.
+ */
+function settle(): void {
+  for (let pass = 0; snapshot !== null; pass++) {
+    if (pass >= MAX_PASSES) {
+      snapshot = null;
+      throw new Error(
+        `afterLayout: still resizing observed elements above the delivery after ${MAX_PASSES} passes in one frame — an observer's response keeps resizing what it observes`,
+      );
+    }
+    const before = snapshot;
+    snapshot = null;
+    const resized: Observation[] = [];
+    for (const [obs, box] of before) {
+      if (obs.released || !obs.el.isConnected) continue;
+      if (!sameBox(box, boxOf(obs.el))) resized.push(obs);
+    }
+    if (resized.length === 0) return;
+    for (const obs of resized) {
+      obs.observer.unobserve(obs.el);
+      startNextFrame(obs);
+    }
+    for (const obs of resized) obs.onHeldBack?.();
+    drain();
+  }
 }
 
 function currentPhaseDepth(): number {
@@ -198,7 +351,7 @@ function drain(): void {
         errors.push(err);
       }
     };
-    flushSync(() => {
+    commitInPhase(() => {
       const writes: (() => void)[] = [];
       for (const entry of batch) {
         if (!entry.live) continue;

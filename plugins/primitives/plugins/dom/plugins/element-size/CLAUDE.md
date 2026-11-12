@@ -16,8 +16,8 @@ idiom, hand-rolled inconsistently across the repo before this primitive.
   `--dv-header-offset`: ~20k elements on the first full-screen switch).
   Pass a `target` getter to measure a different node than the one the ref is
   on (e.g. `(el) => el.offsetParent`); it may read layout, so it is resolved in
-  the after-layout phase — its first delivery then comes in a later broadcast,
-  and its commit must stay inside the measured host (see below).
+  the after-layout phase — its first delivery then comes in a later broadcast
+  of the same step (see below: what its commit resizes above it is settled).
 
 - `useResizeObserver(target, onResize, { debounce?, deps?, beforePaint? })` → `void`
   The substrate. `target` is a `RefObject`, an array of refs, or a getter
@@ -27,9 +27,10 @@ idiom, hand-rolled inconsistently across the repo before this primitive.
   re-subscribes on closure churn; use `deps` to force a re-measure.
   `beforePaint: true` is for a size that decides layout (the data table's
   column fit): each resize runs `onResize` in the observer callback and
-  commits its updates there (`flushSync`), so no frame paints the old layout
-  at the new size — the RAF + scheduled render of the default path paints one
-  or two.
+  commits its updates there (after-layout's `commitInPhase`), so no frame
+  paints the old layout at the new size — the RAF + scheduled render of the
+  default path paints one or two. The layout it changes may be anywhere (see
+  below).
 
 - `useResizeObserverSet(onResize)` → `observe(el) => release`
   One observer over a CHANGING set of elements (the rows a windowed list mounts
@@ -78,11 +79,19 @@ observers are gathered) — the same frame the browser would have delivered it
 in, with no loop. The first measure never waits for it: it is taken directly
 (`useResizeObserver`'s `onResize`, `useResizeObserverSet`'s first call).
 
-A commit made inside a deep callback can still RESIZE an element shallower
-than the broadcast (a `beforePaint` handler changing layout outside the
-observed boxes, or a `useElementSize` mounted by such a commit whose first
-delivery changes chrome above it). That is what `beforePaint`'s contract
-forbids; the resize-loop tracer names the observer if it happens.
+A commit made inside a deep callback can also RESIZE an element at or above
+the broadcast (a `beforePaint` handler changing the chrome around the box, a
+`useElementSize` mounted by such a commit, or one with a `target` getter whose
+first delivery changes what is above it). Every commit the primitive makes goes
+through after-layout's `commitInPhase`, which settles that in the same phase:
+each observation it resized there is answered now — `useResizeObserver` runs
+its `onResize` (a `beforePaint` one commits before paint, as an in-time
+delivery would), `useResizeObserverSet` queues the element — and restarted at
+the next frame, so nothing is left for the browser to hold back.
+`useElementSize`'s size is the browser's own entry, so its answer comes with
+the restarted observation, at the next frame — when its RAF-debounced measures
+commit anyway. See [`dom/after-layout`](../after-layout/CLAUDE.md) § Commits
+inside a delivery.
 
 Under jsdom the phase runs at once, so the initial measure is
 still the synchronous one a test asserts after render — enough to decide layout
@@ -103,11 +112,12 @@ different need, extend the primitive rather than allowlisting a copy.
 
 ## Plugin reference
 
-- Description: Element-size ResizeObserver idiom as a primitive: useElementSize() reactively measures an element's layout size (callback ref; the observer's own border-box size, so a transform never freezes a wrong value; its first delivery shares the after-layout root's broadcast, so the commit it makes may change layout at any depth), useResizeObserver(target, onResize, {debounce, deps}) is the substrate, and useResizeObserverSet(onResize) observes a changing set of elements (windowed rows) through one observer — initial measure after layout and before paint (dom/after-layout: no forced recalc on the commit path), RAF-debounced resize callbacks, every observation started through after-layout's observeInPhase (never held back into a 'ResizeObserver loop'), auto cleanup. The single sanctioned home for the hand-rolled ResizeObserver-for-size idiom.
+- Description: Element-size ResizeObserver idiom as a primitive: useElementSize() reactively measures an element's layout size (callback ref; the observer's own border-box size, so a transform never freezes a wrong value; its first delivery shares the after-layout root's broadcast, so the commit it makes may change layout at any depth), useResizeObserver(target, onResize, {debounce, deps}) is the substrate, and useResizeObserverSet(onResize) observes a changing set of elements (windowed rows) through one observer — initial measure after layout and before paint (dom/after-layout: no forced recalc on the commit path), RAF-debounced resize callbacks, every observation started through after-layout's observeInPhase and every commit made through its commitInPhase (an observation is never held back into a 'ResizeObserver loop', and what a commit inside a delivery resizes above it is answered in the same phase), auto cleanup. The single sanctioned home for the hand-rolled ResizeObserver-for-size idiom.
 - Web:
   - Uses:
     - `primitives/dom/after-layout.afterLayout`
     - `primitives/dom/after-layout.AfterLayoutRead`
+    - `primitives/dom/after-layout.commitInPhase`
     - `primitives/dom/after-layout.observeInPhase`
     - `primitives/dom/after-layout.runAsAfterLayout`
     - `primitives/latest-ref.useEventCallback`
