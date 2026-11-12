@@ -1,13 +1,17 @@
 import { describe, expect, test } from "bun:test";
-import type { ToolCallEvent } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
-import { parseSearchResult, readSearchCall } from "./search-tools";
+import {
+  parseSearchResult,
+  PartialSearchInputSchema,
+  readSearchCall,
+  SearchInputSchema,
+} from "./search-tools";
 
 const call = (name: string, input: unknown) =>
-  ({ name, input }) as unknown as ToolCallEvent;
+  readSearchCall(name, PartialSearchInputSchema.parse(input));
 
 describe("readSearchCall", () => {
   test("a streaming input with nothing yet", () => {
-    expect(readSearchCall(call("Grep", undefined))).toEqual({
+    expect(call("Grep", {})).toEqual({
       tool: "Grep",
       pattern: "",
       filters: [],
@@ -15,23 +19,29 @@ describe("readSearchCall", () => {
     });
   });
   test("filters and shape", () => {
-    const c = readSearchCall(
-      call("Grep", {
+    const c = call("Grep", {
         pattern: "foo",
         path: "src",
         glob: "*.ts",
         output_mode: "content",
         "-i": true,
         "-C": 2,
-      }),
-    );
+    });
     expect(c.filters).toEqual(["in src", "glob *.ts", "-i", "-C 2"]);
     expect(c.shape).toBe("lines");
   });
   test("glob ignores grep-only fields", () => {
-    expect(
-      readSearchCall(call("Glob", { pattern: "**/*.ts", type: "js" })).filters,
-    ).toEqual([]);
+    expect(call("Glob", { pattern: "**/*.ts", type: "js" }).filters).toEqual(
+      [],
+    );
+  });
+  test("a mode still being written reads as lines", () => {
+    expect(call("Grep", { pattern: "x", output_mode: "fil" }).shape).toBe(
+      "lines",
+    );
+  });
+  test("a finished call needs its pattern", () => {
+    expect(SearchInputSchema.safeParse({ path: "src" }).success).toBe(false);
   });
 });
 

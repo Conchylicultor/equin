@@ -6,9 +6,13 @@ import { StatusIcon } from "@plugins/tasks/plugins/task-status/web";
 import {
   DEFAULT_TASK_TRACK,
   TRACK_META,
-  type TaskTrack,
+  TaskTrackSchema,
 } from "@plugins/tasks/plugins/task-track/core";
-import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import { z } from "zod";
+import type {
+  ToolCall,
+  ToolViewProps,
+} from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { modelDisplayLabel } from "@plugins/conversations/plugins/model-provider/core";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
@@ -18,17 +22,18 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 
-type AddTaskInput = {
-  title: string;
-  description?: string;
+/** `add_task`'s input, as its card draws it. */
+export const AddTaskInputSchema = z.looseObject({
+  title: z.string(),
+  description: z.string().optional(),
   /** Absent on calls made before tracks existed — those tasks are main-track. */
-  track?: TaskTrack;
-  relation?: "followup" | "prerequisite" | "independent";
-  start?: "now" | "after" | "manual";
-  model?: string;
+  track: TaskTrackSchema.optional(),
+  start: z.enum(["now", "after", "manual"]).optional(),
+  model: z.string().optional(),
   /** Calls made before start modes existed. */
-  autostart?: string | null;
-};
+  autostart: z.string().nullable().optional(),
+});
+type AddTaskInput = z.infer<typeof AddTaskInputSchema>;
 
 type AddTaskResult = {
   task_id: string;
@@ -39,7 +44,7 @@ type AddTaskResult = {
   autostart?: string | null;
 };
 
-function parseResult(event: ToolRendererProps["event"]): AddTaskResult | null {
+function parseResult(event: ToolCall): AddTaskResult | null {
   if (!event.result?.content) return null;
   // The result is the filing's JSON, then (since the tree digest) a blank
   // line and the digest text.
@@ -52,8 +57,7 @@ function parseResult(event: ToolRendererProps["event"]): AddTaskResult | null {
   }
 }
 
-export function AddTaskToolView({ event }: ToolRendererProps) {
-  const input = event.input as AddTaskInput;
+export function AddTaskToolView({ event, input }: ToolViewProps<AddTaskInput>) {
   const result = parseResult(event);
   const taskId = result?.task_id;
   const autostart =

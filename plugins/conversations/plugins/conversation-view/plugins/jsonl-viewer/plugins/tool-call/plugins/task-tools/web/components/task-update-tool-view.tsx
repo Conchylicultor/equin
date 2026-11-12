@@ -1,15 +1,9 @@
-import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import type { ToolViewProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import type { TaskUpdateInput } from "../../core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-
-type TaskUpdateInput = {
-  taskId?: string;
-  id?: string;
-  status?: string;
-  description?: string;
-};
 
 function statusBadgeClass(status: string): string {
   switch (status) {
@@ -22,9 +16,10 @@ function statusBadgeClass(status: string): string {
   }
 }
 
-export function TaskUpdateToolView({ event }: ToolRendererProps) {
-  const input = event.input as TaskUpdateInput;
-
+export function TaskUpdateToolView({
+  event,
+  input,
+}: ToolViewProps<TaskUpdateInput>) {
   const taskId = input.taskId ?? input.id;
   const summary =
     taskId || input.status ? (

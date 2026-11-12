@@ -1,15 +1,23 @@
-import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import { z } from "zod";
+import type { ToolViewProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
-// Partial while the call streams: any field may be missing, a string cut.
-type SubmitOutcomeReportInput = {
-  body?: string;
-  question?: string;
-  answers?: string[];
-};
+/** `submit_outcome_report`'s input, as its card draws it. */
+export const SubmitOutcomeReportInputSchema = z.looseObject({
+  body: z.string(),
+  question: z.string().optional(),
+  answers: z.array(z.string()).optional(),
+});
+
+/** The same while the call streams: any field may be missing, a string cut. */
+export const PartialSubmitOutcomeReportInputSchema =
+  SubmitOutcomeReportInputSchema.partial();
+type PartialSubmitOutcomeReportInput = z.infer<
+  typeof PartialSubmitOutcomeReportInputSchema
+>;
 
 /** The report's first line of prose, markdown markers stripped. */
 function headline(body: string | undefined): string {
@@ -28,8 +36,10 @@ function headline(body: string | undefined): string {
  * (tasks/outcome-report), so the call's own card stays compact: headline in the
  * header, the full markdown collapsed under it.
  */
-export function SubmitOutcomeReportToolView({ event }: ToolRendererProps) {
-  const input = event.input as SubmitOutcomeReportInput;
+export function SubmitOutcomeReportToolView({
+  event,
+  input,
+}: ToolViewProps<PartialSubmitOutcomeReportInput>) {
   const answers = input.answers ?? [];
 
   return (

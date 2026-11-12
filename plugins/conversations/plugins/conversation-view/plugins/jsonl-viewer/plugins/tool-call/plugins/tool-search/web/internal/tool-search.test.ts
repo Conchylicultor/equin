@@ -1,23 +1,25 @@
 import { describe, expect, test } from "bun:test";
-import type { ToolCallEvent } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
-import { readToolSearch } from "./tool-search";
+import type { ToolCall } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import { readToolSearch, type ToolSearchInput } from "./tool-search";
 
 const call = (
-  input: unknown,
+  input: ToolSearchInput,
   result?: { content: string; toolReferences?: string[] },
-): ToolCallEvent => ({
-  kind: "tool-call",
-  at: "2026-09-29T00:00:00.000Z",
-  toolUseId: "tu-1",
-  name: "ToolSearch",
+): [ToolCall, ToolSearchInput] => [
+  {
+    kind: "tool-call",
+    at: "2026-09-29T00:00:00.000Z",
+    toolUseId: "tu-1",
+    name: "ToolSearch",
+    result: result && { at: "2026-09-29T00:00:01.000Z", ...result },
+  },
   input,
-  result: result && { at: "2026-09-29T00:00:01.000Z", ...result },
-});
+];
 
 describe("readToolSearch", () => {
   test("a select that loaded everything it named has nothing missing", () => {
     const s = readToolSearch(
-      call(
+      ...call(
         { query: "select:mcp__equin__add_task", max_results: 1 },
         { content: "", toolReferences: ["mcp__equin__add_task"] },
       ),
@@ -30,7 +32,7 @@ describe("readToolSearch", () => {
 
   test("a bare name is served by its full MCP id", () => {
     const s = readToolSearch(
-      call(
+      ...call(
         { query: "select:read_page, Grep" },
         { content: "", toolReferences: ["mcp__equin__read_page"] },
       ),
@@ -41,7 +43,7 @@ describe("readToolSearch", () => {
 
   test("a select with no matches reports every name missing", () => {
     const s = readToolSearch(
-      call(
+      ...call(
         { query: "select:ListAgents" },
         { content: "No matching deferred tools found" },
       ),
@@ -52,7 +54,7 @@ describe("readToolSearch", () => {
   });
 
   test("an in-flight select is neither loaded nor missing", () => {
-    const s = readToolSearch(call({ query: "select:WebFetch" }));
+    const s = readToolSearch(...call({ query: "select:WebFetch" }));
     if (s.mode !== "select") throw new Error("expected select");
     expect(s.loaded).toBeUndefined();
     expect(s.missing).toEqual([]);
@@ -60,7 +62,7 @@ describe("readToolSearch", () => {
 
   test("a keyword query is a search with its ranked matches", () => {
     const s = readToolSearch(
-      call(
+      ...call(
         { query: "list agents team", max_results: 5 },
         { content: "", toolReferences: ["TaskList", "SendMessage"] },
       ),

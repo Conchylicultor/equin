@@ -31,6 +31,8 @@ export const AgentInputSchema = z.object({
   model: z.string().optional(),
   isolation: z.string().optional(),
   run_in_background: toolBoolean.optional(),
+  /** A named sub-agent's name — what its notifications and messages address it by. */
+  name: z.string().optional(),
 });
 export type AgentInput = z.infer<typeof AgentInputSchema>;
 

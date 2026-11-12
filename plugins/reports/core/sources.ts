@@ -112,6 +112,9 @@ export const CLIENT_REPORT_SOURCES = [
   // A dispatch slot fell back inside a PluginScope though the page holds a
   // matching contribution the scope dropped (reports/scoped-out-dispatch).
   "client-scoped-out-dispatch",
+  // A tool took an input its transcript card's schema rejects
+  // (reports/tool-input-drift).
+  "client-tool-input-drift",
   "client-collab-hydration",
   "client-page-undo-conflict",
   "client-theme-resolution",

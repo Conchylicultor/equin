@@ -6963,7 +6963,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page-overlay-item-actions` "save" → `SavePageItemAction`
               - `AgentThreadSlots.StepLabel` "places_search_text" → `SearchStepLabel`
               - `AgentThreadSlots.StepLabel` "places_show_picks" → `PicksStepLabel`
-              - `JsonlViewerTool.Renderer` "mcp__equin__places_show_picks" → `PicksToolView`
+              - `renderer` "mcp__equin__places_show_picks" → `ParsedToolView`
             - Uses: 141 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
               - `primitives/data-view` ×15
               - `apps/places/places-core` ×8
@@ -18604,22 +18604,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`tool-call`** — Renders paired tool-call events with exact/pattern/fallback dispatch to per-tool renderer plugins.
               - Web:
                 - Slots:
-                  - `JsonlViewerTool.Renderer`
+                  - `renderer`
                   - `JsonlViewerTool.Footer`
                 - Slot contributors: 30 contributors — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md)
-                  - `JsonlViewerTool.Renderer` ×29
+                  - `renderer` ×29
                   - `JsonlViewerTool.Footer` ← `debug.browser-recordings`
                 - Contributes:
                   - `JsonlViewer.EventRenderer` "tool-call" → `ToolCallRow`
                   - `JsonlRowActions.Item` "copy-tool-result" → `CopyToolResultAction`
-                - Uses: 28 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md)
+                - Uses: 27 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md)
                   - `primitives/collapsible` ×4
                   - `conversations/conversation-view/jsonl-viewer` ×3
-                  - `primitives/slot-render` ×3
                   - `conversations/conversation-view/jsonl-viewer/collapsible-card` ×2
                   - `conversations/conversation-view/jsonl-viewer/row-actions` ×2
                   - `primitives/css/status-dot` ×2
                   - `primitives/css/ui-kit` ×2
+                  - `primitives/slot-render` ×2
                   - `primitives/css/bouncing-dots.BouncingDots`
                   - `primitives/css/fill.Fill`
                   - `primitives/css/line.Line`
@@ -18631,9 +18631,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/select-scope.ContentScope`
                   - `ui/icons.Icon`
                 - Exports (types):
+                  - `PartialToolRendererSpec`
                   - `ToolFooterContribution`
                   - `ToolFooterProps`
-                  - `ToolRendererContribution`
+                  - `ToolIcon`
+                  - `ToolInputDrift`
+                  - `ToolRendererSpec`
                   - `ToolSectionStatus`
                 - Exports (values):
                   - `JsonlViewerTool`
@@ -18641,6 +18644,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ToolCallFrame`
                   - `ToolCode`
                   - `ToolCodeEmpty`
+                  - `toolInputDriftSink`
                   - `ToolNameLabel`
                   - `ToolOutput`
                   - `toolResultStatus`
@@ -18648,14 +18652,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Core:
                 - Uses: `framework/tooling/guards/refusal-format.refusalReason`
                 - Exports (types):
+                  - `ToolCall`
                   - `ToolCallEvent`
+                  - `ToolInputRead`
+                  - `ToolInputSchemas`
                   - `ToolName`
-                  - `ToolRendererProps`
+                  - `ToolViewProps`
                 - Exports (values):
                   - `blockingHook`
                   - `hookSummary`
                   - `inputSummary`
                   - `isLoudHook`
+                  - `readToolInput`
                   - `toolName`
               - Cross-plugin:
                 - Uses tokens:
@@ -18677,14 +18685,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/type-scale --font-weight-medium`
                   - `ui/tokens/type-scale --font-weight-normal`
                   - `ui/tokens/type-scale --line-height-caption`
-                - Imported by: 32 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md)
+                - Imported by: 33 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md)
                   - `conversations` ×30
                   - `apps/places/places-map`
                   - `debug/browser-recordings`
+                  - `reports/tool-input-drift`
               - Plugins:
                 - **`add-task`** — Renders add_task MCP tool calls with task title, description, and a clickable chip to open the created task.
                   - Web:
-                    - Contributes: `JsonlViewerTool.Renderer` "add_task$" → `AddTaskToolView`
+                    - Contributes: `renderer` "add_task$" → `ParsedToolView`
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
@@ -18713,7 +18722,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Slots: `agentReportPane.Actions`
                     - Slot contributors: `agentReportPane.Actions` ← `primitives.pane`
                     - Contributes:
-                      - `JsonlViewerTool.Renderer` "Agent" → `AgentToolView`
+                      - `renderer` "Agent" → `ParsedToolView`
                       - `Pane.Register` "agent-report"
                       - `TaskNotification.Open` "sub-agent"
                     - Uses: 30 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/agent/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/agent/REFERENCE.md)
@@ -18766,7 +18775,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - **`ask-user-question`** — Renders AskUserQuestion tool calls with question headers, option lists, and answer highlights.
                   - Web:
                     - Contributes:
-                      - `JsonlViewerTool.Renderer` "AskUserQuestion" → `AskUserQuestionToolView`
+                      - `renderer` "AskUserQuestion" → `ParsedToolView`
                       - `JsonlRowActions.Item` "change-answers" → `ChangeAnswersAction`
                       - `JsonlViewer.EventFilter` "ask-user-question:suppress-answer-turn"
                       - `JsonlViewer.EventFilter` "ask-user-question:suppress-interrupt-turn"
@@ -18837,7 +18846,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `AnswerAskUserQuestionBodySchema`
                 - **`bash`** — Renders Bash tool calls with a syntax-highlighted command, optional description label, and ANSI-stripped output.
                   - Web:
-                    - Contributes: `JsonlViewerTool.Renderer` "Bash" → `BashToolView`
+                    - Contributes: `renderer` "Bash" → `ParsedToolView`
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
                       - `conversations/conversation-view/jsonl-viewer/background-shells.shellOutputPane`
@@ -18859,7 +18868,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Uses tokens: `ui/tokens/density --space-md`
                 - **`browser-tools`** — Renders the agent browser's browser_* MCP calls as the salient input (URL, first line of the script, action and target, query, viewport) with the call's code or action list and its result text folded beneath; a screenshot's frame is the browser-recording footer's.
                   - Web:
-                    - Contributes: `JsonlViewerTool.Renderer` "browser_(javascript|navigate|screenshot|act|find|get_page_text|console|close|viewport|tabs|attach|read_page|network|batch)$" → `BrowserToolView`
+                    - Contributes: `renderer` "browser_(javascript|navigate|screenshot|act|find|get_page_text|console|close|viewport|tabs|attach|read_page|network|batch)$" → `ParsedToolView`
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
@@ -18871,8 +18880,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - **`edit`** — Renders Edit and MultiEdit tool calls as side-by-side syntax-highlighted diffs.
                   - Web:
                     - Contributes:
-                      - `JsonlViewerTool.Renderer` "Edit" → `EditView`
-                      - `JsonlViewerTool.Renderer` "MultiEdit" → `MultiEditView`
+                      - `renderer` "Edit" → `ParsedToolView`
+                      - `renderer` "MultiEdit" → `ParsedToolView`
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
@@ -18891,7 +18900,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/type-scale --line-height-2xs`
                 - **`exit-clean`** — Renders exit_clean MCP tool calls as one quiet line — the agent closing its conversation as all-smooth; a refusal opens with the tool's reason.
                   - Web:
-                    - Contributes: `JsonlViewerTool.Renderer` "exit_clean$" → `ExitCleanToolView`
+                    - Contributes: `renderer` "exit_clean$" → `ParsedToolView`
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
@@ -18900,7 +18909,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Uses tokens: `ui/tokens/color-palette --destructive`
                 - **`flag-raise`** — Renders flag_raise MCP tool calls with the flagged reason displayed as a warning banner.
                   - Web:
-                    - Contributes: `JsonlViewerTool.Renderer` "flag_raise$" → `FlagRaiseToolView`
+                    - Contributes: `renderer` "flag_raise$" → `ParsedToolView`
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
@@ -18921,11 +18930,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - **`orchestration-tools`** — Renders the task-orchestration MCP tool calls an agent manages its task tree with: edit_task (the task's chip and the edit in words — renamed, prerequisites added or removed, armed or disarmed; the new title, description and dependency chips inside), drop_task (the dropped task's chip), task_tree (the tree as the agent read it — status icon, title, track and start words, indented, each row opening the task), list_agents (each agent's standing dot, task title and standing, each row opening its conversation) and message_agent (the recipient's chip, the message's first line, then the message and how it was delivered). A refusal turns the card to its error tone and shows the tool's reason.
                   - Web:
                     - Contributes:
-                      - `JsonlViewerTool.Renderer` "edit_task$" → `EditTaskView`
-                      - `JsonlViewerTool.Renderer` "drop_task$" → `DropTaskView`
-                      - `JsonlViewerTool.Renderer` "task_tree$" → `TaskTreeView`
-                      - `JsonlViewerTool.Renderer` "list_agents$" → `ListAgentsView`
-                      - `JsonlViewerTool.Renderer` "message_agent$" → `MessageAgentView`
+                      - `renderer` "edit_task$" → `ParsedToolView`
+                      - `renderer` "drop_task$" → `ParsedToolView`
+                      - `renderer` "task_tree$" → `ParsedToolView`
+                      - `renderer` "list_agents$" → `ParsedToolView`
+                      - `renderer` "message_agent$" → `ParsedToolView`
                     - Uses:
                       - `active-data/conv.ConvChip`
                       - `active-data/task-link.TaskLinkChip`
@@ -18959,7 +18968,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/type-scale --line-height-caption`
                 - **`outcome-report`** — Renders submit_outcome_report MCP tool calls: the report's headline as the summary, the markdown body collapsed under it, and the question it asks as a note.
                   - Web:
-                    - Contributes: `JsonlViewerTool.Renderer` "submit_outcome_report$" → `SubmitOutcomeReportToolView`
+                    - Contributes: `renderer` "submit_outcome_report$" → `ParsedToolView`
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
@@ -19008,7 +19017,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - Plugins:
                     - **`edit-page`** — Renders edit_page MCP tool calls as a side-by-side markdown diff, with the edited page as a clickable chip and what the write changed.
                       - Web:
-                        - Contributes: `JsonlViewerTool.Renderer` "edit_page$" → `EditPageView`
+                        - Contributes: `renderer` "edit_page$" → `ParsedToolView`
                         - Uses:
                           - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
                           - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
@@ -19021,7 +19030,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                           - `primitives/diff-view.TextDiff`
                     - **`read-page`** — Renders read_page MCP tool calls: the page the read was scoped to as a clickable chip, and the markdown it returned.
                       - Web:
-                        - Contributes: `JsonlViewerTool.Renderer` "read_page$" → `ReadPageView`
+                        - Contributes: `renderer` "read_page$" → `ParsedToolView`
                         - Uses:
                           - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
                           - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
@@ -19031,7 +19040,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                           - `primitives/css/spacing.Stack`
                     - **`write-note`** — Renders write_agent_note MCP tool calls: the page the card lives on, the markdown written into it, and what the write changed.
                       - Web:
-                        - Contributes: `JsonlViewerTool.Renderer` "write_agent_note$" → `WriteNoteView`
+                        - Contributes: `renderer` "write_agent_note$" → `ParsedToolView`
                         - Uses:
                           - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
                           - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
@@ -19042,7 +19051,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                           - `primitives/css/spacing.Stack`
                 - **`query-db`** — Renders query_db MCP tool calls: the SQL on one line (highlighted inside), the database when one was named, the row count in the note, and the rows as a compact table; a failed query turns the card to its error tone with the database's message.
                   - Web:
-                    - Contributes: `JsonlViewerTool.Renderer` "query_db$" → `QueryDbToolView`
+                    - Contributes: `renderer` "query_db$" → `ParsedToolView`
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
@@ -19059,7 +19068,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/shape --spacing`
                 - **`read`** — Renders Read tool calls with syntax-highlighted file content, line-number gutter, and image thumbnails.
                   - Web:
-                    - Contributes: `JsonlViewerTool.Renderer` "Read" → `ReadToolView`
+                    - Contributes: `renderer` "Read" → `ParsedToolView`
                     - Uses:
                       - `conversations.useConversationById`
                       - `conversations/conversation-view.conversationPane`
@@ -19079,7 +19088,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/font-family --font-mono`
                 - **`runtime-profile`** — Renders get_runtime_profile MCP tool calls: the target worktree, kind and limit in the summary, and the slowest routes, queries and loaders as one compact table per span kind.
                   - Web:
-                    - Contributes: `JsonlViewerTool.Renderer` "get_runtime_profile$" → `RuntimeProfileToolView`
+                    - Contributes: `renderer` "get_runtime_profile$" → `ParsedToolView`
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
@@ -19095,8 +19104,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - **`scheduling-tools`** — Renders the scheduling built-ins: ScheduleWakeup as 'in 20m — reason' (or 'stop loop') with its prompt inside, and Monitor as its description with the watched command and time limit.
                   - Web:
                     - Contributes:
-                      - `JsonlViewerTool.Renderer` "ScheduleWakeup" → `ScheduleWakeupToolView`
-                      - `JsonlViewerTool.Renderer` "Monitor" → `MonitorToolView`
+                      - `renderer` "ScheduleWakeup" → `ParsedToolView`
+                      - `renderer` "Monitor" → `ParsedToolView`
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
@@ -19106,8 +19115,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - **`search-tools`** — Renders Grep and Glob calls as the pattern with its filters and the result count; opened, the matched files as clickable paths, or the matching lines.
                   - Web:
                     - Contributes:
-                      - `JsonlViewerTool.Renderer` "Grep" → `SearchToolView`
-                      - `JsonlViewerTool.Renderer` "Glob" → `SearchToolView`
+                      - `renderer` "Grep" → `ParsedToolView`
+                      - `renderer` "Glob" → `ParsedToolView`
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
@@ -19128,7 +19137,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/shape --spacing`
                 - **`send-message`** — Renders SendMessage tool calls: the recipient (a sub-agent by name or by its launch description, main, or another session), the caller's summary or the message's first line, and whether it was queued, resumed a stopped sub-agent or failed; opened, the message as markdown (or a protocol reply in words) and how it was delivered, with a button onto the recipient sub-agent's pane.
                   - Web:
-                    - Contributes: `JsonlViewerTool.Renderer` "SendMessage" → `SendMessageView`
+                    - Contributes: `renderer` "SendMessage" → `ParsedToolView`
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
                       - `conversations/conversation-view/jsonl-viewer/subagents.useConversationSubagents`
@@ -19164,10 +19173,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `MessageBody`
                       - `Recipient`
                       - `SendMessageCall`
-                    - Exports (values): `readSendMessage`
+                      - `SendMessageInput`
+                    - Exports (values):
+                      - `readSendMessage`
+                      - `SendMessageInputSchema`
                 - **`skill`** — Renders Skill tool calls with skill name, args preview, and injected context.
                   - Web:
-                    - Contributes: `JsonlViewerTool.Renderer` "Skill" → `SkillToolView`
+                    - Contributes: `renderer` "Skill" → `ParsedToolView`
                     - Uses:
                       - `conversations.useConversationById`
                       - `conversations/conversation-view.conversationPane`
@@ -19186,12 +19198,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - **`task-tools`** — Renders TaskCreate/Update/Get/List/Output/Stop tool calls with a sticky progress overlay. Serves a conversation's task list folded from its Task* tool calls over the whole transcript (jsonl-viewer.task-tools.aggregate), for the progress overlay of a pane that holds only the latest events.
                   - Web:
                     - Contributes:
-                      - `JsonlViewerTool.Renderer` "TaskCreate" → `TaskCreateToolView`
-                      - `JsonlViewerTool.Renderer` "TaskUpdate" → `TaskUpdateToolView`
-                      - `JsonlViewerTool.Renderer` "TaskGet" → `TaskGetToolView`
-                      - `JsonlViewerTool.Renderer` "TaskList" → `TaskListToolView`
-                      - `JsonlViewerTool.Renderer` "TaskOutput" → `TaskOutputToolView`
-                      - `JsonlViewerTool.Renderer` "TaskStop" → `TaskStopToolView`
+                      - `renderer` "TaskCreate" → `ParsedToolView`
+                      - `renderer` "TaskUpdate" → `ParsedToolView`
+                      - `renderer` "TaskGet" → `ParsedToolView`
+                      - `renderer` "TaskList" → `ParsedToolView`
+                      - `renderer` "TaskOutput" → `ParsedToolView`
+                      - `renderer` "TaskStop" → `ParsedToolView`
                       - `JsonlViewer.Overlay` "task-progress" → `TaskProgressOverlay`
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
@@ -19223,10 +19235,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `packages/list-bound.wholeList`
                     - Exports (types):
                       - `TaskAggregate`
+                      - `TaskCreateInput`
                       - `TaskEntry`
+                      - `TaskListInput`
+                      - `TaskRefInput`
+                      - `TaskUpdateInput`
                     - Exports (values):
                       - `buildAggregate`
                       - `conversationTaskAggregate`
+                      - `TaskCreateInputSchema`
+                      - `TaskListInputSchema`
+                      - `TaskRefInputSchema`
+                      - `TaskUpdateInputSchema`
                   - Cross-plugin:
                     - Uses tokens: 23 vars — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/task-tools/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/task-tools/REFERENCE.md)
                       - `ui/tokens/color-palette` ×9
@@ -19237,7 +19257,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/shadow --shadow-sm`
                 - **`task-triage`** — Renders task_submit_triage MCP tool calls: the verdict, priority, type and risk as chips in the header, the context as markdown, and the question with its one-click answers.
                   - Web:
-                    - Contributes: `JsonlViewerTool.Renderer` "task_submit_triage$" → `TaskSubmitTriageToolView`
+                    - Contributes: `renderer` "task_submit_triage$" → `ParsedToolView`
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
@@ -19256,7 +19276,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/type-scale --line-height-caption`
                 - **`timeline`** — Renders get_timeline MCP tool calls: the window and filters asked for in the summary, the events found in the note, and the report as sections inside — events as a compact table, duress, host pressure and backend health as lines.
                   - Web:
-                    - Contributes: `JsonlViewerTool.Renderer` "get_timeline$" → `TimelineToolView`
+                    - Contributes: `renderer` "get_timeline$" → `ParsedToolView`
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
@@ -19273,7 +19293,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/shape --spacing`
                 - **`tool-search`** — Renders ToolSearch calls as the deferred tools they loaded: the tool names in the row, a select's not-found names flagged, a keyword search's query and match count.
                   - Web:
-                    - Contributes: `JsonlViewerTool.Renderer` "ToolSearch" → `ToolSearchToolView`
+                    - Contributes: `renderer` "ToolSearch" → `ParsedToolView`
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
@@ -19290,7 +19310,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/font-family --font-mono`
                 - **`web-fetch`** — Renders WebFetch calls as the page's host and path; opened, the prompt asked of it and the answer as markdown.
                   - Web:
-                    - Contributes: `JsonlViewerTool.Renderer` "WebFetch" → `WebFetchToolView`
+                    - Contributes: `renderer` "WebFetch" → `ParsedToolView`
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
@@ -19308,7 +19328,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/type-scale --line-height-caption`
                 - **`web-search`** — Renders WebSearch calls as the query and its source count; opened, the model-written summary in full and the sources grouped by site, folded beneath it.
                   - Web:
-                    - Contributes: `JsonlViewerTool.Renderer` "WebSearch" → `WebSearchToolView`
+                    - Contributes: `renderer` "WebSearch" → `ParsedToolView`
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
@@ -19340,7 +19360,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Slots: `workflow-node.actions`
                     - Slot contributors: `workflow-node.actions` ← `primitives.pane`
                     - Contributes:
-                      - `JsonlViewerTool.Renderer` "Workflow" → `WorkflowToolView`
+                      - `renderer` "Workflow" → `ParsedToolView`
                       - `Pane.Register` "workflow-node"
                     - Uses: 36 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/workflow/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/workflow/REFERENCE.md)
                       - `primitives/css/spacing` ×4
@@ -19391,7 +19411,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `WORKFLOW_TOOL_NAME`
                 - **`write`** — Renders Write tool calls with syntax-highlighted file content and clickable path affordances.
                   - Web:
-                    - Contributes: `JsonlViewerTool.Renderer` "Write" → `WriteToolView`
+                    - Contributes: `renderer` "Write" → `ParsedToolView`
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
@@ -31594,8 +31614,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots:
           - `Core.Root`
           - `Core.Boot`
-        - Slot contributors: 55 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
-          - `Core.Root` ×54
+        - Slot contributors: 56 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+          - `Core.Root` ×55
           - `Core.Boot` ← `network.live.boot-snapshot`
       - Core:
         - Uses:
@@ -31664,9 +31684,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `webCollectedDir`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 121 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+        - Imported by: 122 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
           - `primitives` ×23
-          - `reports` ×21
+          - `reports` ×22
           - `apps` ×18
           - `ui` ×7
           - `apps-core` ×6
@@ -45846,11 +45866,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×6
               - `ui/tokens/shape` ×3
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 184 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 185 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `apps` ×39
               - `debug` ×38
               - `conversations` ×27
-              - `reports` ×18
+              - `reports` ×19
               - `primitives` ×10
               - `tasks` ×10
               - `plugin-meta` ×8
@@ -46281,10 +46301,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 114 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+            - Imported by: 115 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
               - `apps` ×23
+              - `reports` ×20
               - `debug` ×19
-              - `reports` ×19
               - `primitives` ×12
               - `conversations` ×9
               - `page` ×6
@@ -52179,12 +52199,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useNow`
     - **`report-sink`** — Web presence for the report-sink primitive; the runtime-agnostic factories live in ./core so both web and server can import them. defineReportSink() is fire-and-forget and holds reports emitted before a handler registers (bounded), replaying them on register; defineRequestSink() returns the handler's answer and never holds. emit() never throws — it is called on error paths.
       - Cross-plugin:
-        - Imported by: 26 plugins — full list in [`plugins/primitives/plugins/report-sink/REFERENCE.md`](../plugins/primitives/plugins/report-sink/REFERENCE.md)
+        - Imported by: 27 plugins — full list in [`plugins/primitives/plugins/report-sink/REFERENCE.md`](../plugins/primitives/plugins/report-sink/REFERENCE.md)
           - `primitives` ×10
           - `infra` ×4
           - `network` ×3
           - `reports` ×2
           - `ui` ×2
+          - `conversations/conversation-view/jsonl-viewer/tool-call`
           - `database/connection`
           - `debug/slow-ops/sink`
           - `framework/server-core`
@@ -54227,8 +54248,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`reports`** — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. The reports table and its live read (reports.list), the ReportKind / ReportNoiseRule slots every kind and rule contributes to, and the fan-out ceiling config; recording is the engine's (reports/plugins/engine).
   - Web:
     - Slots: `Reports.KindView`
-    - Slot contributors: 45 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `Reports.KindView` ×45
+    - Slot contributors: 46 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+      - `Reports.KindView` ×46
     - Contributes:
       - `IdKinds.Kind` "report|crash"
       - `ConfigV2.WebRegister` "reports"
@@ -54361,8 +54382,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `versionSkewCode`
       - `versionSkewMayExplain`
   - Cross-plugin:
-    - Imported by: 79 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `reports` ×31
+    - Imported by: 80 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+      - `reports` ×32
       - `debug` ×18
       - `conversations` ×7
       - `database` ×4
@@ -55083,6 +55104,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `themeResolutionFingerprint`
           - `ThemeResolutionPayloadSchema`
+    - **`tool-input-drift`** — Tool-input-drift collector: drains tool-call's toolInputDriftSink into a deduped report whenever a transcript tool card's input schema rejects an input its tool took (the call succeeded) — the renderer's schema is wrong, and the card falls back to the generic one — plus the Debug → Reports summary view. Tool-input-drift report kind: validates the drift a transcript tool card saw (its tool took an input the card's schema rejects), fingerprints by tool + issues, and renders a task naming the renderer schema to fix. Re-arms daily.
+      - Web:
+        - Contributes:
+          - `Core.Root` → `ToolInputDriftCollector`
+          - `Reports.KindView` → `ToolInputDriftKindView`
+        - Uses:
+          - `conversations/conversation-view/jsonl-viewer/tool-call.toolInputDriftSink`
+          - `primitives/css/badge.Badge`
+          - `primitives/css/inline.Inline`
+          - `reports.report`
+          - `reports.Reports`
+      - Server:
+        - Contributes: `report-kind` "tool-input-drift"
+        - Uses: `reports.ReportKind`
+      - Cross-plugin:
+        - Uses tokens: `ui/tokens/color-palette --muted-foreground`
+      - Core:
+        - Exports (types): `ToolInputDriftPayload`
+        - Exports (values):
+          - `toolInputDriftFingerprint`
+          - `ToolInputDriftPayloadSchema`
     - **`turn-unconfirmed`** — Retired turn-unconfirmed report kind's Debug → Reports summary view, kept so existing rows still render: the one-line preview + elapsed + conversation id for a sent turn the browser's old pending-turn store never found in the transcript. Nothing files it any more — the turn ledger's server-side kinds replace it. Retired turn-unconfirmed report kind, kept registered so existing rows still validate, render and can be investigated (an investigated report is never swept): a sent turn the browser's old pending-turn store never found in the transcript within 90 s. Nothing files it any more — the turn ledger (conversations/turn-ledger) replaced it, and confirms each turn by its id. Fingerprints by conversation id; re-arms every 6h.
       - Web:
         - Contributes: `Reports.KindView` → `TurnUnconfirmedKindView`
@@ -60950,7 +60992,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --space-sm`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 542 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 543 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×122
               - `conversations` ×96
               - `primitives` ×73
@@ -60959,7 +61001,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta` ×28
               - `ui` ×26
               - `tasks` ×17
-              - `reports` ×15
+              - `reports` ×16
               - `fields` ×12
               - `active-data` ×8
               - `apps-core` ×6

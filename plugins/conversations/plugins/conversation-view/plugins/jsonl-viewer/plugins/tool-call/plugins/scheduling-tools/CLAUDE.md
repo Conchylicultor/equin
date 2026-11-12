@@ -9,8 +9,8 @@ Renderers for the Claude Code built-ins `ScheduleWakeup` (header `in 20m — rea
 - Description: Renders the scheduling built-ins: ScheduleWakeup as 'in 20m — reason' (or 'stop loop') with its prompt inside, and Monitor as its description with the watched command and time limit.
 - Web:
   - Contributes:
-    - `JsonlViewerTool.Renderer` "ScheduleWakeup" → `ScheduleWakeupToolView`
-    - `JsonlViewerTool.Renderer` "Monitor" → `MonitorToolView`
+    - `renderer` "ScheduleWakeup" → `ParsedToolView`
+    - `renderer` "Monitor" → `ParsedToolView`
   - Uses:
     - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`

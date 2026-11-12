@@ -1,6 +1,7 @@
+import { z } from "zod";
 import type {
-  ToolRendererProps,
-  ToolCallEvent,
+  ToolCall,
+  ToolViewProps,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import {
   ToolCallCard,
@@ -12,12 +13,16 @@ import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { InlineDiff } from "./inline-diff";
 
-type MultiEditInput = {
-  file_path: string;
-  edits: { old_string: string; new_string: string }[];
-};
+/** `MultiEdit`'s input, as its card draws it. */
+export const MultiEditInputSchema = z.looseObject({
+  file_path: z.string(),
+  edits: z.array(
+    z.looseObject({ old_string: z.string(), new_string: z.string() }),
+  ),
+});
+type MultiEditInput = z.infer<typeof MultiEditInputSchema>;
 
-function ResultDetail({ result }: { result: ToolCallEvent["result"] }) {
+function ResultDetail({ result }: { result: ToolCall["result"] }) {
   if (!result || !result.isError) return null;
   return (
     <ToolSection label="Output" copyText={result.content}>
@@ -26,9 +31,8 @@ function ResultDetail({ result }: { result: ToolCallEvent["result"] }) {
   );
 }
 
-export function MultiEditView({ event }: ToolRendererProps) {
-  const { file_path = "", edits = [] } = (event.input ??
-    {}) as Partial<MultiEditInput>;
+export function MultiEditView({ event, input }: ToolViewProps<MultiEditInput>) {
+  const { file_path, edits } = input;
   const multi = edits.length > 1;
   return (
     <ToolCallCard

@@ -1,13 +1,8 @@
 import { type ReactNode, use } from "react";
 import { ToolFooterContext } from "../internal/footer-context";
-import {
-  blockingHook,
-  isLoudHook,
-  toolName,
-  type ToolCallEvent,
-} from "../../core";
+import { blockingHook, isLoudHook, toolName, type ToolCall } from "../../core";
 import { ToolNameTitle } from "./tool-name-label";
-import { JsonlViewerTool } from "../slots";
+import { ToolIconContext } from "../internal/icon-context";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
 import { HookBand, HookIndicator } from "./hook-band";
@@ -165,7 +160,7 @@ export function ToolCallFrame({
 }
 
 type ToolCallCardProps = Omit<ToolCallFrameProps, "name"> & {
-  event: ToolCallEvent;
+  event: ToolCall;
   /**
    * The session ended while the call was in flight, so whether it took effect
    * is unknown (`result.outcomeUnknown`): drawn in the neutral tone with an
@@ -187,8 +182,9 @@ export function ToolCallCard({
 }: ToolCallCardProps) {
   const unknown = outcomeUnknown ?? event.result?.outcomeUnknown === true;
   const footer = use(ToolFooterContext);
-  const match = JsonlViewerTool.Renderer.useMatch();
-  const declared = match({ event })?.icon;
+  const declaredFor = use(ToolIconContext);
+  const declared =
+    declaredFor?.toolUseId === event.toolUseId ? declaredFor.icon : undefined;
   const icon =
     frame.icon ?? (typeof declared === "function" ? declared(event) : declared);
   const blocked = blockingHook(event) !== undefined;

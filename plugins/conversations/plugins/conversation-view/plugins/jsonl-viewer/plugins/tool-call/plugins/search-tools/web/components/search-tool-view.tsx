@@ -1,4 +1,4 @@
-import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import type { ToolViewProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import {
   ToolCallCard,
   ToolCode,
@@ -14,6 +14,7 @@ import {
   parseSearchResult,
   plural,
   readSearchCall,
+  type PartialSearchInput,
   type SearchOutcome,
 } from "../internal/search-tools";
 
@@ -73,8 +74,11 @@ function Results({
  * filters and, once the result is in, how many files / lines / matches it
  * holds; opened, the matched files as clickable paths or the matching lines.
  */
-export function SearchToolView({ event }: ToolRendererProps) {
-  const call = readSearchCall(event);
+export function SearchToolView({
+  event,
+  input,
+}: ToolViewProps<PartialSearchInput>) {
+  const call = readSearchCall(event.name, input);
   const result = event.result;
   const outcome =
     result && !result.isError

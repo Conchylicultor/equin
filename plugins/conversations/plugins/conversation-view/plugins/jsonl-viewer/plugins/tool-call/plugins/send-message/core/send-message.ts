@@ -5,7 +5,7 @@ import { z } from "zod";
  * harness's legacy protocol replies (`{ type: "shutdown_response", … }`); it
  * may be empty when the call only subscribes to an idle notice.
  */
-const SendMessageInputSchema = z.object({
+export const SendMessageInputSchema = z.looseObject({
   to: z.string(),
   message: z
     .union([
@@ -21,6 +21,8 @@ const SendMessageInputSchema = z.object({
   summary: z.string().optional(),
   notify_when_idle: z.boolean().optional(),
 });
+
+export type SendMessageInput = z.infer<typeof SendMessageInputSchema>;
 
 /** The body the harness answers a delivered send with. */
 const SendMessageResultSchema = z.object({
@@ -160,16 +162,13 @@ function deliveryOf(
 
 /**
  * A `SendMessage` tool call, read for its row: who it went to, what it said,
- * and whether it was queued, woke a stopped sub-agent, or failed.
- *
- * Throws when the input is not a `SendMessage` input at all — the row then
- * shows the dispatch's own failure rather than a card claiming a recipient.
+ * and whether it was queued, woke a stopped sub-agent, or failed. `parsed`
+ * is the call's input read with `SendMessageInputSchema`.
  */
 export function readSendMessage(
-  input: unknown,
+  parsed: SendMessageInput,
   result: { content: string; isError?: boolean } | undefined,
 ): SendMessageCall {
-  const parsed = SendMessageInputSchema.parse(input);
   const recipient = recipientOf(parsed.to);
   const body = bodyOf(parsed.message);
   const { delivery, reached } = deliveryOf(result);

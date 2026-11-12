@@ -1,5 +1,6 @@
 import { RowView } from "@plugins/network/plugins/live/web";
-import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import { z } from "zod";
+import type { ToolViewProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
@@ -10,7 +11,13 @@ import { useConversationById } from "@plugins/conversations/web";
 import { CatNListing } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/code-listing/web";
 import { ReadImageView } from "./read-image-view";
 
-type ReadInput = { file_path: string; offset?: number; limit?: number };
+/** The Read tool's input, as its card draws it. */
+export const ReadInputSchema = z.looseObject({
+  file_path: z.string(),
+  offset: z.number().optional(),
+  limit: z.number().optional(),
+});
+type ReadInput = z.infer<typeof ReadInputSchema>;
 
 const IMAGE_EXTS = new Set([
   "png",
@@ -48,12 +55,10 @@ function LineRangeBadge({
   );
 }
 
-export function ReadToolView({ event }: ToolRendererProps) {
-  const {
-    file_path = "",
-    offset,
-    limit,
-  } = (event.input ?? {}) as Partial<ReadInput>;
+export function ReadToolView({
+  event,
+  input: { file_path, offset, limit },
+}: ToolViewProps<ReadInput>) {
   const { convId } = conversationPane.useParams();
   // Only the picture needs the conversation (its worktree): the card itself
   // draws from the event, so it never vanishes while that read is pending.

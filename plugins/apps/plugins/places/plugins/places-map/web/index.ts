@@ -17,6 +17,7 @@ import { PicksStepLabel, SearchStepLabel } from "./components/ask-step-labels";
 import { AgentThreadSlots } from "@plugins/conversations/plugins/agent-thread/web";
 import {
   PICKS_TOOL,
+  PlacesPicksSchema,
   SEARCH_TOOL,
 } from "@plugins/apps/plugins/places/plugins/ask/core";
 import { JsonlViewerTool } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
@@ -67,6 +68,7 @@ export default {
     JsonlViewerTool.Renderer({
       match: agentToolName(PICKS_TOOL),
       icon: symbol("location-on"),
+      input: PlacesPicksSchema,
       component: PicksToolView,
     }),
   ],

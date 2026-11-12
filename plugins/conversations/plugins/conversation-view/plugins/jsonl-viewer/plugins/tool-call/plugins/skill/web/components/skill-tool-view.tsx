@@ -1,5 +1,6 @@
+import { z } from "zod";
 import { rowOrStale } from "@plugins/network/plugins/live/web";
-import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import type { ToolViewProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import {
   ToolCallCard,
   ToolCode,
@@ -16,13 +17,16 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const descriptionIcon = symbol("description");
 
-type SkillInput = { skill: string; args?: string };
+/** The Skill tool's input, as its card draws it. */
+export const SkillInputSchema = z.looseObject({
+  skill: z.string(),
+  args: z.string().optional(),
+});
+type SkillInput = z.infer<typeof SkillInputSchema>;
 
-export function SkillToolView({ event }: ToolRendererProps) {
-  const input = event.input as SkillInput;
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; input is `as`-cast from unknown
-  const skillName = input.skill ?? "";
-  const args = typeof input.args === "string" ? input.args : "";
+export function SkillToolView({ event, input }: ToolViewProps<SkillInput>) {
+  const skillName = input.skill;
+  const args = input.args ?? "";
   const injected = event.injectedContext ?? [];
 
   const { convId } = conversationPane.useParams();

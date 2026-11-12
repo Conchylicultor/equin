@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { ToolCallEvent } from "../../core";
+import type { ToolCall } from "../../core";
 import { CopyTextAction } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
 import { formatDuration } from "@plugins/fields/plugins/duration/core";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
@@ -36,7 +36,7 @@ const STATUS_PAINT: Record<ToolSectionStatus["tone"], StatusDotPaint> = {
  * give one. `undefined` while there is no result.
  */
 export function toolResultStatus(
-  event: ToolCallEvent,
+  event: ToolCall,
   detail?: string,
 ): ToolSectionStatus | undefined {
   const result = event.result;
@@ -152,7 +152,7 @@ export function ToolOutput({
   detail,
   empty = "(empty)",
 }: {
-  event: ToolCallEvent;
+  event: ToolCall;
   text?: string;
   detail?: string;
   empty?: string;

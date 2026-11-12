@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import type { ToolViewProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import {
   readTimelineReport,
@@ -135,8 +135,10 @@ function Report({ report }: { report: TimelineReport }) {
   );
 }
 
-export function TimelineToolView({ event }: ToolRendererProps) {
-  const input = event.input as TimelineInput;
+export function TimelineToolView({
+  event,
+  input,
+}: ToolViewProps<TimelineInput>) {
   const content = event.result?.content;
   const failed = event.result?.isError === true;
   const read = useMemo(

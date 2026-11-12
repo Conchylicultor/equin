@@ -1,6 +1,7 @@
+import { z } from "zod";
 import type {
-  ToolRendererProps,
-  ToolCallEvent,
+  ToolCall,
+  ToolViewProps,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import {
   ToolCallCard,
@@ -11,9 +12,18 @@ import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugi
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { InlineDiff } from "./inline-diff";
 
-type EditInput = { file_path: string; old_string: string; new_string: string };
+/** `Edit`'s input, as its card draws it. */
+export const EditInputSchema = z.looseObject({
+  file_path: z.string(),
+  old_string: z.string(),
+  new_string: z.string(),
+});
 
-function ResultDetail({ result }: { result: ToolCallEvent["result"] }) {
+/** What is written of an `Edit`'s input while the model writes it: the diff fills in. */
+export const PartialEditInputSchema = EditInputSchema.partial();
+type PartialEditInput = z.infer<typeof PartialEditInputSchema>;
+
+function ResultDetail({ result }: { result: ToolCall["result"] }) {
   if (!result || !result.isError) return null;
   return (
     <ToolSection label="Output" copyText={result.content}>
@@ -22,12 +32,8 @@ function ResultDetail({ result }: { result: ToolCallEvent["result"] }) {
   );
 }
 
-export function EditView({ event }: ToolRendererProps) {
-  const {
-    file_path = "",
-    old_string = "",
-    new_string = "",
-  } = (event.input ?? {}) as Partial<EditInput>;
+export function EditView({ event, input }: ToolViewProps<PartialEditInput>) {
+  const { file_path = "", old_string = "", new_string = "" } = input;
   return (
     <ToolCallCard
       event={event}

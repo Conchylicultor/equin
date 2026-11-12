@@ -6,7 +6,7 @@
 
 - Description: Renders exit_clean MCP tool calls as one quiet line — the agent closing its conversation as all-smooth; a refusal opens with the tool's reason.
 - Web:
-  - Contributes: `JsonlViewerTool.Renderer` "exit_clean$" → `ExitCleanToolView`
+  - Contributes: `renderer` "exit_clean$" → `ParsedToolView`
   - Uses:
     - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`

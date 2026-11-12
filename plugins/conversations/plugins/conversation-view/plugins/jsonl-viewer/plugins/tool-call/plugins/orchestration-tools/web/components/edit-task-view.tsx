@@ -1,4 +1,5 @@
-import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import { z } from "zod";
+import type { ToolViewProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { modelDisplayLabel } from "@plugins/conversations/plugins/model-provider/core";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
@@ -8,22 +9,24 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { readManageAnswer } from "@plugins/tasks/core";
 import {
+  TaskTrackSchema,
   TRACK_META,
-  type TaskTrack,
 } from "@plugins/tasks/plugins/task-track/core";
 import { Refusal, TaskChip } from "./target-chip";
 
-type EditTaskInput = {
-  task_id: string;
-  title?: string;
-  description?: string | null;
-  add_after?: string[];
-  remove_after?: string[];
-  start?: "armed" | "manual";
-  model?: string;
+/** `edit_task`'s input, as its card draws it. */
+export const EditTaskInputSchema = z.looseObject({
+  task_id: z.string(),
+  title: z.string().optional(),
+  description: z.string().nullable().optional(),
+  add_after: z.array(z.string()).optional(),
+  remove_after: z.array(z.string()).optional(),
+  start: z.enum(["armed", "manual"]).optional(),
+  model: z.string().optional(),
   /** Calls made before edit_task could move a task between tracks lack it. */
-  track?: TaskTrack;
-};
+  track: TaskTrackSchema.optional(),
+});
+type EditTaskInput = z.infer<typeof EditTaskInputSchema>;
 
 /** The edit in words, in the order the tool applies it. */
 function changes(input: EditTaskInput): string[] {
@@ -48,8 +51,7 @@ function changes(input: EditTaskInput): string[] {
   return out;
 }
 
-export function EditTaskView({ event }: ToolRendererProps) {
-  const input = event.input as EditTaskInput;
+export function EditTaskView({ event, input }: ToolViewProps<EditTaskInput>) {
   const answer = event.result ? readManageAnswer(event.result.content) : null;
   const refused = answer?.kind === "refused";
   const changed = changes(input);
@@ -80,12 +82,12 @@ export function EditTaskView({ event }: ToolRendererProps) {
           )}
           {(input.add_after?.length ?? 0) > 0 && (
             <Field label="Now runs after">
-              <Chips ids={input.add_after!} />
+              <Chips ids={input.add_after ?? []} />
             </Field>
           )}
           {(input.remove_after?.length ?? 0) > 0 && (
             <Field label="No longer runs after">
-              <Chips ids={input.remove_after!} />
+              <Chips ids={input.remove_after ?? []} />
             </Field>
           )}
           {typeof input.description === "string" && (

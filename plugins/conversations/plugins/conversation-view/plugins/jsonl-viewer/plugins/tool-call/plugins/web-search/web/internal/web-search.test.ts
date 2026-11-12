@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import type { ToolCallEvent } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
-import { groupBySite, parseWebSearchResult, readWebSearch } from "./web-search";
+import type { ToolCall } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import {
+  groupBySite,
+  parseWebSearchResult,
+  readWebSearch,
+  type WebSearchInput,
+} from "./web-search";
 
 const RESULT = `Web search results for query: "m5 geekbench"
 
@@ -16,16 +21,18 @@ Links: [{"title":"A again","url":"https://www.cpu-monkey.com/a"},{"title":"C","u
 REMINDER: You MUST include the sources above in your response to the user using markdown hyperlinks.`;
 
 const call = (
-  input: unknown,
+  input: WebSearchInput,
   result?: { content: string; isError?: boolean },
-): ToolCallEvent => ({
-  kind: "tool-call",
-  at: "2026-10-09T00:00:00.000Z",
-  toolUseId: "tu-1",
-  name: "WebSearch",
+): [ToolCall, WebSearchInput] => [
+  {
+    kind: "tool-call",
+    at: "2026-10-09T00:00:00.000Z",
+    toolUseId: "tu-1",
+    name: "WebSearch",
+    result: result && { at: "2026-10-09T00:00:01.000Z", ...result },
+  },
   input,
-  result: result && { at: "2026-10-09T00:00:01.000Z", ...result },
-});
+];
 
 describe("parseWebSearchResult", () => {
   test("merges every Links round, dropping repeated URLs", () => {
@@ -52,7 +59,10 @@ describe("groupBySite", () => {
 describe("readWebSearch", () => {
   test("reads allowed_domains as an only-scope", () => {
     const s = readWebSearch(
-      call({ query: " q ", allowed_domains: ["a.com"] }, { content: RESULT }),
+      ...call(
+        { query: " q ", allowed_domains: ["a.com"] },
+        { content: RESULT },
+      ),
     );
     expect(s.query).toBe("q");
     expect(s.scope).toEqual({ kind: "only", domains: ["a.com"] });
@@ -61,9 +71,10 @@ describe("readWebSearch", () => {
 
   test("a failed or running call has no outcome", () => {
     expect(
-      readWebSearch(call({ query: "q" }, { content: "denied", isError: true }))
-        .outcome,
+      readWebSearch(
+        ...call({ query: "q" }, { content: "denied", isError: true }),
+      ).outcome,
     ).toBeUndefined();
-    expect(readWebSearch(call({ query: "q" })).outcome).toBeUndefined();
+    expect(readWebSearch(...call({ query: "q" })).outcome).toBeUndefined();
   });
 });

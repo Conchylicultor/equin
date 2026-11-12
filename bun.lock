@@ -6847,6 +6847,10 @@
       "name": "@equin/plugin-reports-theme-resolution",
       "version": "0.0.1",
     },
+    "plugins/reports/plugins/tool-input-drift": {
+      "name": "@equin/plugin-reports-tool-input-drift",
+      "version": "0.0.1",
+    },
     "plugins/reports/plugins/turn-unconfirmed": {
       "name": "@equin/plugin-reports-turn-unconfirmed",
       "version": "0.0.1",
@@ -10874,6 +10878,8 @@
     "@equin/plugin-reports-scoped-out-dispatch": ["@equin/plugin-reports-scoped-out-dispatch@workspace:plugins/reports/plugins/scoped-out-dispatch"],
 
     "@equin/plugin-reports-theme-resolution": ["@equin/plugin-reports-theme-resolution@workspace:plugins/reports/plugins/theme-resolution"],
+
+    "@equin/plugin-reports-tool-input-drift": ["@equin/plugin-reports-tool-input-drift@workspace:plugins/reports/plugins/tool-input-drift"],
 
     "@equin/plugin-reports-turn-unconfirmed": ["@equin/plugin-reports-turn-unconfirmed@workspace:plugins/reports/plugins/turn-unconfirmed"],
 

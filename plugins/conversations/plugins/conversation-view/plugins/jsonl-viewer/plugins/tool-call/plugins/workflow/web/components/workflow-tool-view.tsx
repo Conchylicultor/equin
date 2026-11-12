@@ -1,4 +1,4 @@
-import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import type { ToolViewProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import {
   ToolCallCard,
   ToolOutput,
@@ -29,16 +29,10 @@ import { WorkflowGraph } from "./workflow-graph";
 import { workflowNodePane } from "../panes";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import type { WorkflowInput } from "../internal/workflow-input";
 
 const accountTreeIcon = symbol("account-tree");
 const codeIcon = symbol("code");
-
-interface WorkflowInput {
-  script?: string;
-  scriptPath?: string;
-  name?: string;
-  args?: unknown;
-}
 
 function PhaseList({
   phases,
@@ -108,8 +102,10 @@ function ScriptSection({ script }: { script: string }) {
   );
 }
 
-export function WorkflowToolView({ event }: ToolRendererProps) {
-  const input = event.input as WorkflowInput;
+export function WorkflowToolView({
+  event,
+  input,
+}: ToolViewProps<WorkflowInput>) {
   const script = input.script ?? "";
   const meta = script ? parseWorkflowMeta(script) : null;
   const name = meta?.name ?? input.name;

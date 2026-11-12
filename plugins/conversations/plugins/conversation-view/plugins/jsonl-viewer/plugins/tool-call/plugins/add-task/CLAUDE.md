@@ -6,7 +6,7 @@
 
 - Description: Renders add_task MCP tool calls with task title, description, and a clickable chip to open the created task.
 - Web:
-  - Contributes: `JsonlViewerTool.Renderer` "add_task$" → `AddTaskToolView`
+  - Contributes: `renderer` "add_task$" → `ParsedToolView`
   - Uses:
     - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`

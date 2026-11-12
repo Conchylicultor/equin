@@ -6,7 +6,7 @@
 
 - Description: Renders flag_raise MCP tool calls with the flagged reason displayed as a warning banner.
 - Web:
-  - Contributes: `JsonlViewerTool.Renderer` "flag_raise$" → `FlagRaiseToolView`
+  - Contributes: `renderer` "flag_raise$" → `ParsedToolView`
   - Uses:
     - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`

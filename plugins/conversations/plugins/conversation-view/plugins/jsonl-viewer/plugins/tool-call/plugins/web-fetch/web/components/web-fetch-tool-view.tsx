@@ -1,16 +1,19 @@
-import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import type { ToolViewProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { compactUrl, readWebFetch } from "../internal/web-fetch";
+import { compactUrl, type PartialWebFetchInput } from "../internal/web-fetch";
 
 /**
  * WebFetch fetches a page and answers a prompt against it. The row names the
  * page (host and path); opened, the prompt asked and the answer as markdown.
  */
-export function WebFetchToolView({ event }: ToolRendererProps) {
-  const { url, prompt, offset } = readWebFetch(event);
+export function WebFetchToolView({
+  event,
+  input,
+}: ToolViewProps<PartialWebFetchInput>) {
+  const { url, prompt, offset } = input;
   const result = event.result;
   const failed = result?.isError === true;
 

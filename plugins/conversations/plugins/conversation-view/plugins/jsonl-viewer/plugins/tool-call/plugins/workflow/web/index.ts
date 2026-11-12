@@ -4,6 +4,7 @@ import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { JsonlViewerTool } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { WorkflowToolView } from "./components/workflow-tool-view";
 import { workflowNodePane } from "./panes";
+import { WorkflowInputSchema } from "./internal/workflow-input";
 import { WORKFLOW_TOOL_NAME } from "../core";
 
 export default {
@@ -13,6 +14,7 @@ export default {
     JsonlViewerTool.Renderer({
       match: WORKFLOW_TOOL_NAME,
       icon: symbol("account-tree"),
+      input: WorkflowInputSchema,
       component: WorkflowToolView,
     }),
     Pane.Register({ pane: workflowNodePane }),

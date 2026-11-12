@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { JsonlViewerTool } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
-import { BashToolView } from "./components/bash-tool-view";
+import { BashInputSchema, BashToolView } from "./components/bash-tool-view";
 
 export default {
   description:
@@ -10,6 +10,7 @@ export default {
     JsonlViewerTool.Renderer({
       match: "Bash",
       icon: symbol("terminal"),
+      input: BashInputSchema,
       component: BashToolView,
     }),
   ],

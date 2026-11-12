@@ -6,7 +6,7 @@
 
 - Description: Renders task_submit_triage MCP tool calls: the verdict, priority, type and risk as chips in the header, the context as markdown, and the question with its one-click answers.
 - Web:
-  - Contributes: `JsonlViewerTool.Renderer` "task_submit_triage$" → `TaskSubmitTriageToolView`
+  - Contributes: `renderer` "task_submit_triage$" → `ParsedToolView`
   - Uses:
     - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`

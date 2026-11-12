@@ -1,16 +1,12 @@
-import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import type { ToolViewProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import type { TaskCreateInput } from "../../core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
-type TaskCreateInput = {
-  subject?: string;
-  description?: string;
-  activeForm?: string;
-};
-
-export function TaskCreateToolView({ event }: ToolRendererProps) {
-  const input = event.input as TaskCreateInput;
-
+export function TaskCreateToolView({
+  event,
+  input,
+}: ToolViewProps<TaskCreateInput>) {
   const summary = (
     <span className="truncate">
       {input.subject ?? input.description ?? "New task"}

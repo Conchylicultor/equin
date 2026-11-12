@@ -12,7 +12,7 @@ Expanded: syntax-highlighted code block with line numbers derived from the `cat 
 
 - Description: Renders Read tool calls with syntax-highlighted file content, line-number gutter, and image thumbnails.
 - Web:
-  - Contributes: `JsonlViewerTool.Renderer` "Read" → `ReadToolView`
+  - Contributes: `renderer` "Read" → `ParsedToolView`
   - Uses:
     - `conversations.useConversationById`
     - `conversations/conversation-view.conversationPane`

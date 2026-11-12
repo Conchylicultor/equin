@@ -6,7 +6,7 @@
 
 - Description: Renders query_db MCP tool calls: the SQL on one line (highlighted inside), the database when one was named, the row count in the note, and the rows as a compact table; a failed query turns the card to its error tone with the database's message.
 - Web:
-  - Contributes: `JsonlViewerTool.Renderer` "query_db$" → `QueryDbToolView`
+  - Contributes: `renderer` "query_db$" → `ParsedToolView`
   - Uses:
     - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`

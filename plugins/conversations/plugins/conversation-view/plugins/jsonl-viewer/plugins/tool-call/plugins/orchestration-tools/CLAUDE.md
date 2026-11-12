@@ -7,11 +7,11 @@
 - Description: Renders the task-orchestration MCP tool calls an agent manages its task tree with: edit_task (the task's chip and the edit in words — renamed, prerequisites added or removed, armed or disarmed; the new title, description and dependency chips inside), drop_task (the dropped task's chip), task_tree (the tree as the agent read it — status icon, title, track and start words, indented, each row opening the task), list_agents (each agent's standing dot, task title and standing, each row opening its conversation) and message_agent (the recipient's chip, the message's first line, then the message and how it was delivered). A refusal turns the card to its error tone and shows the tool's reason.
 - Web:
   - Contributes:
-    - `JsonlViewerTool.Renderer` "edit_task$" → `EditTaskView`
-    - `JsonlViewerTool.Renderer` "drop_task$" → `DropTaskView`
-    - `JsonlViewerTool.Renderer` "task_tree$" → `TaskTreeView`
-    - `JsonlViewerTool.Renderer` "list_agents$" → `ListAgentsView`
-    - `JsonlViewerTool.Renderer` "message_agent$" → `MessageAgentView`
+    - `renderer` "edit_task$" → `ParsedToolView`
+    - `renderer` "drop_task$" → `ParsedToolView`
+    - `renderer` "task_tree$" → `ParsedToolView`
+    - `renderer` "list_agents$" → `ParsedToolView`
+    - `renderer` "message_agent$" → `ParsedToolView`
   - Uses:
     - `active-data/conv.ConvChip`
     - `active-data/task-link.TaskLinkChip`

@@ -1,10 +1,14 @@
-import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import { z } from "zod";
+import type { ToolViewProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 /** `exit_clean` has no input and answers `{ ok, deferred }`: the whole fact is
  *  that the agent closed the conversation, so the row is one line. */
-export function ExitCleanToolView({ event }: ToolRendererProps) {
+/** `exit_clean` takes no input: the card reads none. */
+export const ExitCleanInputSchema = z.unknown();
+
+export function ExitCleanToolView({ event }: ToolViewProps<unknown>) {
   const failed = event.result?.isError === true;
   return (
     <ToolCallCard

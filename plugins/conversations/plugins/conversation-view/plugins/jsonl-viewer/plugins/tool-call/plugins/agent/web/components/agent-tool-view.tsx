@@ -1,6 +1,6 @@
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
-import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import type { ToolViewProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { useJsonlConversationId } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import {
@@ -27,7 +27,7 @@ import {
 } from "@plugins/conversations/plugins/model-provider/core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { agentReportPane } from "../panes";
-import { AgentInputSchema, DEFAULT_AGENT_TYPE } from "../../core";
+import { DEFAULT_AGENT_TYPE, type AgentInput } from "../../core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const articleIcon = symbol("article");
@@ -50,8 +50,7 @@ function MetaBadge({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function AgentToolView({ event }: ToolRendererProps) {
-  const input = AgentInputSchema.parse(event.input);
+export function AgentToolView({ event, input }: ToolViewProps<AgentInput>) {
   const agentType = input.subagent_type ?? DEFAULT_AGENT_TYPE;
   const description = input.description ?? "";
   const prompt = input.prompt;
@@ -64,7 +63,8 @@ export function AgentToolView({ event }: ToolRendererProps) {
   const status = useSubagentStatus({
     conversationId,
     toolUseId: event.toolUseId,
-    agentToolEvent: event,
+    // The launch as the join reads it: the call with its parsed input.
+    agentToolEvent: { ...event, input },
   });
   const display =
     status.kind === "known"

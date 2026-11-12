@@ -7,8 +7,8 @@
 - Description: Renders Edit and MultiEdit tool calls as side-by-side syntax-highlighted diffs.
 - Web:
   - Contributes:
-    - `JsonlViewerTool.Renderer` "Edit" → `EditView`
-    - `JsonlViewerTool.Renderer` "MultiEdit" → `MultiEditView`
+    - `renderer` "Edit" → `ParsedToolView`
+    - `renderer` "MultiEdit" → `ParsedToolView`
   - Uses:
     - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
     - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`

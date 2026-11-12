@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import type { ToolViewProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import {
   ToolCallCard,
   ToolNameLabel,
@@ -9,7 +9,11 @@ import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { ToolName } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
-import { plural, readToolSearch } from "../internal/tool-search";
+import {
+  plural,
+  readToolSearch,
+  type ToolSearchInput,
+} from "../internal/tool-search";
 
 const names = (tools: ToolName[]) => tools.map((t) => t.name).join(", ");
 
@@ -50,8 +54,11 @@ function ToolGroup({
  * collapsed line names them, and a `select:` that asked for a tool which did
  * not come back says so, since the model's next call to it will fail.
  */
-export function ToolSearchToolView({ event }: ToolRendererProps) {
-  const search = readToolSearch(event);
+export function ToolSearchToolView({
+  event,
+  input,
+}: ToolViewProps<ToolSearchInput>) {
+  const search = readToolSearch(event, input);
   const errorText = event.result?.isError ? event.result.content : undefined;
 
   if (search.mode === "select") {

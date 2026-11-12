@@ -1,7 +1,10 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { JsonlViewerTool } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
-import { WriteNoteView } from "./components/write-note-view";
+import {
+  WriteAgentNoteInputSchema,
+  WriteNoteView,
+} from "./components/write-note-view";
 
 export default {
   description:
@@ -10,6 +13,7 @@ export default {
     JsonlViewerTool.Renderer({
       match: /write_agent_note$/,
       icon: symbol("article"),
+      input: WriteAgentNoteInputSchema,
       component: WriteNoteView,
     }),
   ],

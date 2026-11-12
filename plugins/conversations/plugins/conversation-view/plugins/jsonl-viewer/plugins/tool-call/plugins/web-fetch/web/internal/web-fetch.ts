@@ -1,22 +1,15 @@
 import { z } from "zod";
-import type { ToolCallEvent } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 
-// Every field optional: the call may still be streaming in.
-const InputSchema = z.object({
-  url: z.string().optional(),
-  prompt: z.string().optional(),
+/** WebFetch's input, as its card draws it. */
+export const WebFetchInputSchema = z.looseObject({
+  url: z.string(),
+  prompt: z.string(),
   offset: z.number().optional(),
 });
 
-export interface WebFetch {
-  url?: string;
-  prompt?: string;
-  offset?: number;
-}
-
-export function readWebFetch(event: ToolCallEvent): WebFetch {
-  return InputSchema.parse(event.input ?? {});
-}
+/** What the card draws while the model is still writing the call: any field may be missing yet. */
+export const PartialWebFetchInputSchema = WebFetchInputSchema.partial();
+export type PartialWebFetchInput = z.infer<typeof PartialWebFetchInputSchema>;
 
 /** `host/path`, scheme, `www.` and a bare trailing slash dropped. A cut URL
  *  that does not parse yet is shown as written. */

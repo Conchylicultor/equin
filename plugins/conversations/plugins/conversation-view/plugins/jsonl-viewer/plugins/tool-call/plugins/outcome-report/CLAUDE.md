@@ -6,7 +6,7 @@
 
 - Description: Renders submit_outcome_report MCP tool calls: the report's headline as the summary, the markdown body collapsed under it, and the question it asks as a note.
 - Web:
-  - Contributes: `JsonlViewerTool.Renderer` "submit_outcome_report$" → `SubmitOutcomeReportToolView`
+  - Contributes: `renderer` "submit_outcome_report$" → `ParsedToolView`
   - Uses:
     - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`

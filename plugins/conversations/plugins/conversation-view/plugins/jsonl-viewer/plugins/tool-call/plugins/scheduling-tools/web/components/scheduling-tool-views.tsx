@@ -1,4 +1,4 @@
-import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import type { ToolViewProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import {
   ToolCallCard,
   ToolCode,
@@ -7,14 +7,16 @@ import {
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import {
   formatDuration,
-  readMonitor,
-  readWakeup,
   wakeupSummary,
+  type MonitorInput,
+  type Wakeup,
 } from "../internal/scheduling";
 
 /** ScheduleWakeup: when the loop wakes next, why, and the prompt it wakes with. */
-export function ScheduleWakeupToolView({ event }: ToolRendererProps) {
-  const w = readWakeup(event);
+export function ScheduleWakeupToolView({
+  event,
+  input: w,
+}: ToolViewProps<Wakeup>) {
   return (
     <ToolCallCard
       event={event}
@@ -32,8 +34,10 @@ export function ScheduleWakeupToolView({ event }: ToolRendererProps) {
 }
 
 /** Monitor: what is watched (its description), the command or socket behind it, its time limit. */
-export function MonitorToolView({ event }: ToolRendererProps) {
-  const m = readMonitor(event);
+export function MonitorToolView({
+  event,
+  input: m,
+}: ToolViewProps<MonitorInput>) {
   const source = m.command ?? (m.ws?.url ? `ws ${m.ws.url}` : undefined);
   return (
     <ToolCallCard

@@ -28,7 +28,7 @@ describe("describeBrowserCall", () => {
     ).toBe("390×800");
   });
   test("tolerates an empty streaming input", () => {
-    expect(describeBrowserCall(T("find"), undefined).summary).toBe("find");
+    expect(describeBrowserCall(T("find"), {}).summary).toBe("find");
     expect(describeBrowserCall(T("batch"), { actions: [{}] }).summary).toBe("");
   });
 });

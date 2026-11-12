@@ -1,10 +1,14 @@
-export type TimelineInput = {
-  lookbackMinutes?: number;
-  endIso?: string;
-  minSeverity?: "info" | "warning" | "error";
-  sources?: string[];
-  maxEvents?: number;
-};
+import { z } from "zod";
+
+/** `get_timeline`'s input, as its card draws it. */
+export const TimelineInputSchema = z.looseObject({
+  lookbackMinutes: z.number().optional(),
+  endIso: z.string().optional(),
+  minSeverity: z.enum(["info", "warning", "error"]).optional(),
+  sources: z.array(z.string()).optional(),
+  maxEvents: z.number().optional(),
+});
+export type TimelineInput = z.infer<typeof TimelineInputSchema>;
 
 function span(minutes: number): string {
   if (minutes % 1440 === 0) return `${minutes / 1440} d`;

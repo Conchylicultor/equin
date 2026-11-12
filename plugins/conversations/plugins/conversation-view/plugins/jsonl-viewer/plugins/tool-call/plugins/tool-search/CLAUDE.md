@@ -23,7 +23,7 @@ chip's tooltip.
 
 - Description: Renders ToolSearch calls as the deferred tools they loaded: the tool names in the row, a select's not-found names flagged, a keyword search's query and match count.
 - Web:
-  - Contributes: `JsonlViewerTool.Renderer` "ToolSearch" → `ToolSearchToolView`
+  - Contributes: `renderer` "ToolSearch" → `ParsedToolView`
   - Uses:
     - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`

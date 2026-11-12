@@ -6,7 +6,7 @@ import { TaskNotification } from "@plugins/conversations/plugins/conversation-vi
 import { AgentToolView } from "./components/agent-tool-view";
 import { useSubagentNotificationClaim } from "./internal/use-subagent-claim";
 import { agentReportPane } from "./panes";
-import { AGENT_TOOL_NAME } from "../core";
+import { AGENT_TOOL_NAME, AgentInputSchema } from "../core";
 
 export { agentReportPane } from "./panes";
 
@@ -17,6 +17,7 @@ export default {
     JsonlViewerTool.Renderer({
       match: AGENT_TOOL_NAME,
       icon: symbol("auto-awesome"),
+      input: AgentInputSchema,
       component: AgentToolView,
     }),
     Pane.Register({ pane: agentReportPane }),

@@ -73,8 +73,8 @@ before it) beside the total, worded by `formatReportActivity`
 - Description: Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. The reports table and its live read (reports.list), the ReportKind / ReportNoiseRule slots every kind and rule contributes to, and the fan-out ceiling config; recording is the engine's (reports/plugins/engine).
 - Web:
   - Slots: `Reports.KindView`
-  - Slot contributors: 45 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Reports.KindView` ×45
+  - Slot contributors: 46 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Reports.KindView` ×46
   - Contributes:
     - `IdKinds.Kind` "report|crash"
     - `ConfigV2.WebRegister` "reports"
@@ -207,8 +207,8 @@ before it) beside the total, worded by `formatReportActivity`
     - `versionSkewCode`
     - `versionSkewMayExplain`
 - Cross-plugin:
-  - Imported by: 79 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `reports` ×31
+  - Imported by: 80 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `reports` ×32
     - `debug` ×18
     - `conversations` ×7
     - `database` ×4
@@ -257,6 +257,7 @@ before it) beside the total, worded by `formatReportActivity`
   - **`resource-errors`** — Resource-error collector: drains the live-state primitive's resourceErrorReportSink (one body per failing live read, however many hooks observe it) into a deduped resource-error report for the…
   - **`scoped-out-dispatch`** — Scoped-out-dispatch collector: drains slot-render's scopedOutDispatchSink into a deduped report whenever a dispatch slot renders its fallback inside a PluginScope though the page holds a…
   - **`theme-resolution`** — Theme-resolution collector: drains theme-engine's themeResolutionReportSink into a report whenever a scope's theme cannot be painted as stored (its selected theme does not exist, or a stored theme…
+  - **`tool-input-drift`** — Tool-input-drift collector: drains tool-call's toolInputDriftSink into a deduped report whenever a transcript tool card's input schema rejects an input its tool took (the call succeeded) — the…
   - **`turn-unconfirmed`** — Retired turn-unconfirmed report kind's Debug → Reports summary view, kept so existing rows still render: the one-line preview + elapsed + conversation id for a sent turn the browser's old…
   - **`viewport-escape`** — Viewport-escape collector: drains the viewport-overlay primitive's viewportEscapeReportSink into a deduped report whenever an ancestor stops a viewport-filling box from reaching the viewport (a…
   - **`web-storage`** — Web-storage failure collector: drains the web-storage primitive's storageFailureReportSink into a deduped crash report (source client-storage, one row per owner and reason) for every write refused…

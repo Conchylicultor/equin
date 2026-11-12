@@ -11,7 +11,7 @@ Expanded: shows the full args text block + the injected skill context (the SKILL
 
 - Description: Renders Skill tool calls with skill name, args preview, and injected context.
 - Web:
-  - Contributes: `JsonlViewerTool.Renderer` "Skill" → `SkillToolView`
+  - Contributes: `renderer` "Skill" → `ParsedToolView`
   - Uses:
     - `conversations.useConversationById`
     - `conversations/conversation-view.conversationPane`

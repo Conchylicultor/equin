@@ -1,11 +1,12 @@
 import { z } from "zod";
-import type { ToolCallEvent } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 
-const InputSchema = z.object({
+/** `get_runtime_profile`'s input, as its card draws it: every field is optional. */
+export const ProfileInputSchema = z.looseObject({
   kind: z.string().optional(),
   limit: z.number().optional(),
   worktree: z.string().optional(),
 });
+export type ProfileInput = z.infer<typeof ProfileInputSchema>;
 
 const AggregateSchema = z.object({
   label: z.string(),
@@ -30,10 +31,6 @@ const ProfileSchema = z.object({
 });
 export type Profile = z.infer<typeof ProfileSchema>;
 
-export function readProfileInput(event: ToolCallEvent) {
-  return InputSchema.parse(event.input ?? {});
-}
-
 export type ProfileRead =
   { kind: "profile"; profile: Profile } | { kind: "text"; text: string };
 
@@ -52,9 +49,7 @@ export function readProfile(content: string): ProfileRead {
     : { kind: "text", text: content };
 }
 
-export function describeProfileInput(
-  i: ReturnType<typeof readProfileInput>,
-): string {
+export function describeProfileInput(i: ProfileInput): string {
   const parts = [i.worktree ?? "this worktree", i.kind ?? "all kinds"];
   if (i.limit !== undefined) parts.push(`top ${i.limit}`);
   return parts.join(" · ");

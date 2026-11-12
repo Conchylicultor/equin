@@ -1,16 +1,11 @@
-import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import type { ToolViewProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import type { TaskRefInput } from "../../core";
 import {
   ToolCallCard,
   ToolOutput,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 
-type TaskGetInput = {
-  taskId?: string;
-  id?: string;
-};
-
-export function TaskGetToolView({ event }: ToolRendererProps) {
-  const input = event.input as TaskGetInput;
+export function TaskGetToolView({ event, input }: ToolViewProps<TaskRefInput>) {
   const taskId = input.taskId ?? input.id;
 
   const summary = taskId ? (

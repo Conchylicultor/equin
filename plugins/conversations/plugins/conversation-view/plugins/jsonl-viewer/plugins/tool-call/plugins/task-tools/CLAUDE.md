@@ -9,12 +9,12 @@ Renders Claude Code's native task tools (TaskCreate, TaskUpdate, TaskGet, TaskLi
 - Description: Renders TaskCreate/Update/Get/List/Output/Stop tool calls with a sticky progress overlay. Serves a conversation's task list folded from its Task* tool calls over the whole transcript (jsonl-viewer.task-tools.aggregate), for the progress overlay of a pane that holds only the latest events.
 - Web:
   - Contributes:
-    - `JsonlViewerTool.Renderer` "TaskCreate" → `TaskCreateToolView`
-    - `JsonlViewerTool.Renderer` "TaskUpdate" → `TaskUpdateToolView`
-    - `JsonlViewerTool.Renderer` "TaskGet" → `TaskGetToolView`
-    - `JsonlViewerTool.Renderer` "TaskList" → `TaskListToolView`
-    - `JsonlViewerTool.Renderer` "TaskOutput" → `TaskOutputToolView`
-    - `JsonlViewerTool.Renderer` "TaskStop" → `TaskStopToolView`
+    - `renderer` "TaskCreate" → `ParsedToolView`
+    - `renderer` "TaskUpdate" → `ParsedToolView`
+    - `renderer` "TaskGet" → `ParsedToolView`
+    - `renderer` "TaskList" → `ParsedToolView`
+    - `renderer` "TaskOutput" → `ParsedToolView`
+    - `renderer` "TaskStop" → `ParsedToolView`
     - `JsonlViewer.Overlay` "task-progress" → `TaskProgressOverlay`
   - Uses:
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
@@ -46,10 +46,18 @@ Renders Claude Code's native task tools (TaskCreate, TaskUpdate, TaskGet, TaskLi
     - `packages/list-bound.wholeList`
   - Exports (types):
     - `TaskAggregate`
+    - `TaskCreateInput`
     - `TaskEntry`
+    - `TaskListInput`
+    - `TaskRefInput`
+    - `TaskUpdateInput`
   - Exports (values):
     - `buildAggregate`
     - `conversationTaskAggregate`
+    - `TaskCreateInputSchema`
+    - `TaskListInputSchema`
+    - `TaskRefInputSchema`
+    - `TaskUpdateInputSchema`
 - Cross-plugin:
   - Uses tokens: 23 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/color-palette` ×9

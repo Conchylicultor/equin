@@ -1,5 +1,9 @@
 import { useMemo } from "react";
-import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import type {
+  ToolCall,
+  ToolViewProps,
+} from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import type { TaskListInput } from "../../core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import {
   Badge,
@@ -19,7 +23,7 @@ type TaskListResult = Array<{
   status?: string;
 }>;
 
-function parseResult(event: ToolRendererProps["event"]): TaskListResult | null {
+function parseResult(event: ToolCall): TaskListResult | null {
   if (!event.result?.content) return null;
   try {
     const parsed = JSON.parse(event.result.content);
@@ -30,7 +34,7 @@ function parseResult(event: ToolRendererProps["event"]): TaskListResult | null {
   }
 }
 
-export function TaskListToolView({ event }: ToolRendererProps) {
+export function TaskListToolView({ event }: ToolViewProps<TaskListInput>) {
   const tasks = useMemo(() => parseResult(event), [event]);
   const count = tasks?.length ?? 0;
 

@@ -6,6 +6,7 @@ import { JsonlViewer } from "@plugins/conversations/plugins/conversation-view/pl
 import { isInterruptContent } from "@plugins/conversations/plugins/transcript-source/core";
 import { AskUserQuestionToolView } from "./components/ask-user-question-tool-view";
 import { ChangeAnswersAction } from "./components/change-answers-action";
+import { AskUserQuestionInputSchema } from "./components/answer-model";
 import { ANSWER_MARKER } from "../shared";
 
 // The answer surfaces another plugin composes: the question relay
@@ -35,6 +36,7 @@ export default {
     JsonlViewerTool.Renderer({
       match: "AskUserQuestion",
       icon: symbol("help"),
+      input: AskUserQuestionInputSchema,
       component: AskUserQuestionToolView,
     }),
     JsonlRowActions.Item({

@@ -1,7 +1,10 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { JsonlViewerTool } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
-import { ExitCleanToolView } from "./components/exit-clean-tool-view";
+import {
+  ExitCleanInputSchema,
+  ExitCleanToolView,
+} from "./components/exit-clean-tool-view";
 
 export default {
   description:
@@ -10,6 +13,7 @@ export default {
     JsonlViewerTool.Renderer({
       match: /exit_clean$/,
       icon: symbol("logout"),
+      input: ExitCleanInputSchema,
       component: ExitCleanToolView,
     }),
   ],

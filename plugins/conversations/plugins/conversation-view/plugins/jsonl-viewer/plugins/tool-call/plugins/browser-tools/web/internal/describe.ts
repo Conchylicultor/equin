@@ -1,9 +1,12 @@
+import { z } from "zod";
+
 /**
  * What a browser_* call shows: a one-line summary and, for the tools that carry
  * code or a list of actions, a body of its own. One table over the tool's short
  * name (`mcp__equin__browser_<x>` -> `<x>`), so a tool is a row, not a view.
  *
- * Tolerates a still-streaming input: any field may be missing, the wrong type,
+ * Reads each field of the input object for itself (`str`, `num`, …), so it
+ * draws a still-streaming input too: any field may be missing, the wrong type,
  * or a string cut short.
  */
 
@@ -17,7 +20,14 @@ export interface BrowserCallView {
   body?: BrowserCallBody;
 }
 
-type Input = Record<string, unknown>;
+/**
+ * A browser_* call's input, as its card reads it: an object, every field read
+ * for itself by the tool's row below — one schema for the finished and the
+ * still-streaming input alike.
+ */
+export const BrowserCallInputSchema = z.record(z.string(), z.unknown());
+export type BrowserCallInput = z.infer<typeof BrowserCallInputSchema>;
+type Input = BrowserCallInput;
 
 const SUFFIX = /browser_([a-z_]+)$/;
 
@@ -150,11 +160,10 @@ const TABLE: Record<string, (i: Input) => BrowserCallView> = {
 
 export function describeBrowserCall(
   toolName: string,
-  input: unknown,
+  input: Input,
 ): BrowserCallView {
   const short = browserToolShortName(toolName);
   const row = TABLE[short];
   if (!row) throw new Error(`no browser tool row for ${toolName}`);
-  const i = typeof input === "object" && input !== null ? (input as Input) : {};
-  return row(i);
+  return row(input);
 }

@@ -1,10 +1,7 @@
-import type {
-  HookRecord,
-  JsonlEvent,
-} from "@plugins/conversations/plugins/transcript-source/core";
+import type { HookRecord } from "@plugins/conversations/plugins/transcript-source/core";
 import { refusalReason } from "@plugins/framework/plugins/tooling/plugins/guards/plugins/refusal-format/core";
 
-type ToolCallEvent = Extract<JsonlEvent, { kind: "tool-call" }>;
+import type { ToolCall } from "./tool-input";
 
 /** A hook that changed something the reader must see: anything but a pass. */
 export function isLoudHook(h: HookRecord): boolean {
@@ -12,7 +9,7 @@ export function isLoudHook(h: HookRecord): boolean {
 }
 
 /** The PreToolUse hook that blocked the call — it never ran — if one did. */
-export function blockingHook(event: ToolCallEvent): HookRecord | undefined {
+export function blockingHook(event: ToolCall): HookRecord | undefined {
   return event.hooks?.find(
     (h) => h.event === "PreToolUse" && h.outcome === "block",
   );

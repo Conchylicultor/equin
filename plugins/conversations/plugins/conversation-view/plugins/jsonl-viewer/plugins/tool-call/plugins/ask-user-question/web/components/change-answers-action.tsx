@@ -14,7 +14,7 @@ import {
   restoreAnswerDraft,
   restoreAnswerDraftFromRecord,
 } from "./answer-draft";
-import { type AskUserQuestionInput, type Question } from "./answer-model";
+import { AskUserQuestionInputSchema, type Question } from "./answer-model";
 import { findAnswerTurn } from "./question-state";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -41,10 +41,20 @@ export function ChangeAnswersAction({ event }: { event: JsonlEvent }) {
   if (event.kind !== "tool-call" || event.name !== "AskUserQuestion") {
     return null;
   }
-  return <ChangeAnswersMenu event={event} />;
+  // A call whose input is not a question set (the model got it wrong) asked
+  // nothing, so there is no answer to change; its card is the generic one.
+  const input = AskUserQuestionInputSchema.safeParse(event.input);
+  if (!input.success) return null;
+  return <ChangeAnswersMenu event={event} questions={input.data.questions} />;
 }
 
-function ChangeAnswersMenu({ event }: { event: ToolCallEvent }) {
+function ChangeAnswersMenu({
+  event,
+  questions,
+}: {
+  event: ToolCallEvent;
+  questions: Question[];
+}) {
   const { convId } = conversationPane.useParams();
   const storage = useStorageScope();
   // The transcript this row is drawn in: a window of a long conversation
@@ -56,7 +66,7 @@ function ChangeAnswersMenu({ event }: { event: ToolCallEvent }) {
     return (
       <ChangeAnswersMenuFor
         convId={convId}
-        event={event}
+        questions={questions}
         answerUuid={answerTurn.uuid}
         restore={(targetConvId, questions, answerText) =>
           restoreAnswerDraft(
@@ -77,7 +87,7 @@ function ChangeAnswersMenu({ event }: { event: ToolCallEvent }) {
   return (
     <ChangeAnswersMenuFor
       convId={convId}
-      event={event}
+      questions={questions}
       answerUuid={answerUuid}
       restore={(targetConvId, questions) =>
         restoreAnswerDraftFromRecord(
@@ -94,12 +104,12 @@ function ChangeAnswersMenu({ event }: { event: ToolCallEvent }) {
 
 function ChangeAnswersMenuFor({
   convId,
-  event,
+  questions,
   answerUuid,
   restore,
 }: {
   convId: string;
-  event: ToolCallEvent;
+  questions: Question[];
   answerUuid: string | undefined;
   /** Put the removed answer back in the reopened form of `targetConvId`. */
   restore: (
@@ -108,10 +118,6 @@ function ChangeAnswersMenuFor({
     answerText: string,
   ) => void;
 }) {
-  const input = event.input as AskUserQuestionInput;
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; input is `as`-cast from unknown
-  const questions = Array.isArray(input?.questions) ? input.questions : [];
-
   const { available, busy, run } = useGoBackToMessage({
     convId,
     uuid: answerUuid,

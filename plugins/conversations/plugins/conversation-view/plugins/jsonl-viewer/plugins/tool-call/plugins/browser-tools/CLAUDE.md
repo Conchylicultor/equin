@@ -6,7 +6,7 @@
 
 - Description: Renders the agent browser's browser_* MCP calls as the salient input (URL, first line of the script, action and target, query, viewport) with the call's code or action list and its result text folded beneath; a screenshot's frame is the browser-recording footer's.
 - Web:
-  - Contributes: `JsonlViewerTool.Renderer` "browser_(javascript|navigate|screenshot|act|find|get_page_text|console|close|viewport|tabs|attach|read_page|network|batch)$" → `BrowserToolView`
+  - Contributes: `renderer` "browser_(javascript|navigate|screenshot|act|find|get_page_text|console|close|viewport|tabs|attach|read_page|network|batch)$" → `ParsedToolView`
   - Uses:
     - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`

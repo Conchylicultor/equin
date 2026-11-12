@@ -1,4 +1,4 @@
-import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import type { ToolViewProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -33,10 +33,11 @@ import {
   type ParsedAnswer,
 } from "./answer-model";
 
-export function AskUserQuestionToolView({ event }: ToolRendererProps) {
-  const input = event.input as AskUserQuestionInput;
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; input is `as`-cast from unknown
-  const questions = Array.isArray(input?.questions) ? input.questions : [];
+export function AskUserQuestionToolView({
+  event,
+  input,
+}: ToolViewProps<AskUserQuestionInput>) {
+  const { questions } = input;
 
   const { convId } = conversationPane.useParams();
   // The transcript this card is drawn in. On a long conversation that is its

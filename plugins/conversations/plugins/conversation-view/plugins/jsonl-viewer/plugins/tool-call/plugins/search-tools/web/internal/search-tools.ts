@@ -1,4 +1,31 @@
-import type { ToolCallEvent } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import { z } from "zod";
+
+/**
+ * Grep's and Glob's input, as their card reads it: the pattern, and the
+ * filters (Glob has only `path`; the rest are Grep's).
+ */
+export const SearchInputSchema = z.looseObject({
+  pattern: z.string(),
+  path: z.string().optional(),
+  glob: z.string().optional(),
+  type: z.string().optional(),
+  "-i": z.boolean().optional(),
+  multiline: z.boolean().optional(),
+  "-A": z.number().optional(),
+  "-B": z.number().optional(),
+  "-C": z.number().optional(),
+  head_limit: z.number().optional(),
+  output_mode: z.enum(["content", "files_with_matches", "count"]).optional(),
+});
+
+/**
+ * The same input while the model writes it: any field may be missing yet, and
+ * `output_mode` may stop mid-word (read as lines until it is a known mode).
+ */
+export const PartialSearchInputSchema = SearchInputSchema.partial().extend({
+  output_mode: z.string().optional(),
+});
+export type PartialSearchInput = z.infer<typeof PartialSearchInputSchema>;
 
 /** What the result lists: paths (Glob, Grep files_with_matches), matching
  *  lines (Grep content), or per-file counts (Grep count). */
@@ -25,11 +52,13 @@ function str(v: unknown): string | undefined {
   return typeof v === "string" && v !== "" ? v : undefined;
 }
 
-/** Tolerates a still-streaming input: any field may be missing or the wrong
- *  type, and a string may be cut short. */
-export function readSearchCall(event: ToolCallEvent): SearchCall {
-  const input = (event.input ?? {}) as Record<string, unknown>;
-  const tool = event.name === "Glob" ? "Glob" : "Grep";
+/** Reads a still-streaming input too: any field may be missing, and a string
+ *  may be cut short. */
+export function readSearchCall(
+  name: string,
+  input: PartialSearchInput,
+): SearchCall {
+  const tool = name === "Glob" ? "Glob" : "Grep";
   const filters: string[] = [];
   const path = str(input.path);
   if (path) filters.push(`in ${path}`);
@@ -42,10 +71,10 @@ export function readSearchCall(event: ToolCallEvent): SearchCall {
     if (input.multiline === true) filters.push("multiline");
     for (const flag of ["-A", "-B", "-C"] as const) {
       const n = input[flag];
-      if (typeof n === "number") filters.push(`${flag} ${n}`);
+      if (n !== undefined) filters.push(`${flag} ${n}`);
     }
     const head = input.head_limit;
-    if (typeof head === "number") filters.push(`head ${head}`);
+    if (head !== undefined) filters.push(`head ${head}`);
   }
   const mode = input.output_mode;
   const shape: SearchShape =

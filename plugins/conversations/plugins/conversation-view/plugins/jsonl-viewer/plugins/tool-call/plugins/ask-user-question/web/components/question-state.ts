@@ -1,10 +1,9 @@
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
+import type { ToolCall } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { isInterruptContent } from "@plugins/conversations/plugins/transcript-source/core";
 import type { ConversationStatus } from "@plugins/tasks/plugins/tasks-core/core";
 import { canSendTurn, QUESTION_WAITING_FOR } from "@plugins/conversations/core";
 import { ANSWER_MARKER } from "../../shared";
-
-type ToolCallEvent = Extract<JsonlEvent, { kind: "tool-call" }>;
 
 /**
  * Where one AskUserQuestion call stands — derived from the transcript plus
@@ -41,7 +40,7 @@ export interface QuestionHolderView {
 
 export function questionState(
   events: JsonlEvent[],
-  toolCall: ToolCallEvent,
+  toolCall: ToolCall,
   conversation: QuestionHolderView | null,
 ): QuestionState {
   // Unresolved: no result yet, the result the CLI filled in on resume after
@@ -65,7 +64,7 @@ export function questionState(
  * Nothing came after the call but the CLI's own "[Request interrupted…]" line:
  * no later tool call, no answer turn, no message the user sent instead.
  */
-function isLatest(events: JsonlEvent[], toolCall: ToolCallEvent): boolean {
+function isLatest(events: JsonlEvent[], toolCall: ToolCall): boolean {
   const startIdx = events.findIndex(
     (e) => e.kind === "tool-call" && e.toolUseId === toolCall.toolUseId,
   );

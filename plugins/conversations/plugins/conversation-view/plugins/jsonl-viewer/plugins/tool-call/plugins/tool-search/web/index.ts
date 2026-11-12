@@ -2,6 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { JsonlViewerTool } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { ToolSearchToolView } from "./components/tool-search-tool-view";
+import { ToolSearchInputSchema } from "./internal/tool-search";
 
 export default {
   description:
@@ -10,6 +11,7 @@ export default {
     JsonlViewerTool.Renderer({
       match: "ToolSearch",
       icon: symbol("search"),
+      input: ToolSearchInputSchema,
       component: ToolSearchToolView,
     }),
   ],

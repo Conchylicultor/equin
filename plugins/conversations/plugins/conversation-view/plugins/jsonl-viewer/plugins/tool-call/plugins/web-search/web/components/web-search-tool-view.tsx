@@ -1,4 +1,4 @@
-import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import type { ToolViewProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import {
   Collapsible,
@@ -16,6 +16,7 @@ import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import {
   plural,
   readWebSearch,
+  type WebSearchInput,
   type SearchScope,
   type SearchSite,
 } from "../internal/web-search";
@@ -84,8 +85,11 @@ function Sources({ sites, count }: { sites: SearchSite[]; count: number }) {
  * sources came back; opened, it shows the summary in full and the sources,
  * grouped by site, folded beneath it.
  */
-export function WebSearchToolView({ event }: ToolRendererProps) {
-  const { query, mode, scope, outcome } = readWebSearch(event);
+export function WebSearchToolView({
+  event,
+  input,
+}: ToolViewProps<WebSearchInput>) {
+  const { query, mode, scope, outcome } = readWebSearch(event, input);
   const errorText = event.result?.isError ? event.result.content : undefined;
 
   const notes = [

@@ -6,7 +6,7 @@
 
 - Description: Renders edit_page MCP tool calls as a side-by-side markdown diff, with the edited page as a clickable chip and what the write changed.
 - Web:
-  - Contributes: `JsonlViewerTool.Renderer` "edit_page$" → `EditPageView`
+  - Contributes: `renderer` "edit_page$" → `ParsedToolView`
   - Uses:
     - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`

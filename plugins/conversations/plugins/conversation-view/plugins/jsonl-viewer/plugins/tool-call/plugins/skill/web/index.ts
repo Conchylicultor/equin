@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { JsonlViewerTool } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
-import { SkillToolView } from "./components/skill-tool-view";
+import { SkillInputSchema, SkillToolView } from "./components/skill-tool-view";
 
 export default {
   description:
@@ -10,6 +10,7 @@ export default {
     JsonlViewerTool.Renderer({
       match: "Skill",
       icon: symbol("auto-awesome"),
+      input: SkillInputSchema,
       component: SkillToolView,
     }),
   ],

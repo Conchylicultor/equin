@@ -59,6 +59,7 @@ export const CLIENT_REPORT_SUBJECT: Record<
   "client-panel-overflow": "page",
   "client-popover-anchor-lost": "page",
   "client-scoped-out-dispatch": "page",
+  "client-tool-input-drift": "page",
   "client-collab-hydration": "page",
   "client-page-undo-conflict": "page",
   "client-theme-resolution": "page",

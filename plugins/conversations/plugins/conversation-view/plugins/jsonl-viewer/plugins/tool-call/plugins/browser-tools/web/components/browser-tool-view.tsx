@@ -1,11 +1,14 @@
-import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import type { ToolViewProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import {
   ToolCallCard,
   ToolOutput,
   ToolSection,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
-import { describeBrowserCall } from "../internal/describe";
+import {
+  describeBrowserCall,
+  type BrowserCallInput,
+} from "../internal/describe";
 
 /**
  * Every browser_* call: the salient input as the header, the call's code (or
@@ -13,8 +16,11 @@ import { describeBrowserCall } from "../internal/describe";
  * not part of the transcript event (its result is text); the browser-recording
  * footer draws the frame under this card.
  */
-export function BrowserToolView({ event }: ToolRendererProps) {
-  const view = describeBrowserCall(event.name, event.input);
+export function BrowserToolView({
+  event,
+  input,
+}: ToolViewProps<BrowserCallInput>) {
+  const view = describeBrowserCall(event.name, input);
   const result = event.result;
   const failed = result?.isError === true;
 

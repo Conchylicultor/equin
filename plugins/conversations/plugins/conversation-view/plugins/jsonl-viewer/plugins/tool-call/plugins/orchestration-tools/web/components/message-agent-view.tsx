@@ -1,4 +1,5 @@
-import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import { z } from "zod";
+import type { ToolViewProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -9,7 +10,13 @@ import {
 } from "@plugins/tasks/plugins/orchestration/plugins/message/core";
 import { AgentChip, Refusal } from "./target-chip";
 
-type MessageAgentInput = { to: string; text: string; reopen?: boolean };
+/** `message_agent`'s input, as its card draws it. */
+export const MessageAgentInputSchema = z.object({
+  to: z.string(),
+  text: z.string(),
+  reopen: z.boolean().optional(),
+});
+type MessageAgentInput = z.infer<typeof MessageAgentInputSchema>;
 
 /** The message's first non-empty line — what the closed row previews. */
 function firstLine(text: string): string {
@@ -25,8 +32,10 @@ function sentence(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-export function MessageAgentView({ event }: ToolRendererProps) {
-  const input = event.input as MessageAgentInput;
+export function MessageAgentView({
+  event,
+  input,
+}: ToolViewProps<MessageAgentInput>) {
   const answer = event.result ? readMessageAnswer(event.result.content) : null;
   const notSent = answer?.kind === "not-sent";
 

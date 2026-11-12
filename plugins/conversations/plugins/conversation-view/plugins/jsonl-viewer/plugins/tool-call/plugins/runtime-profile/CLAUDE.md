@@ -8,7 +8,7 @@ Renderer for `get_runtime_profile`: summary is `<worktree> · <kind> · top N`; 
 
 - Description: Renders get_runtime_profile MCP tool calls: the target worktree, kind and limit in the summary, and the slowest routes, queries and loaders as one compact table per span kind.
 - Web:
-  - Contributes: `JsonlViewerTool.Renderer` "get_runtime_profile$" → `RuntimeProfileToolView`
+  - Contributes: `renderer` "get_runtime_profile$" → `ParsedToolView`
   - Uses:
     - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`

@@ -7,8 +7,8 @@
 - Description: Renders Grep and Glob calls as the pattern with its filters and the result count; opened, the matched files as clickable paths, or the matching lines.
 - Web:
   - Contributes:
-    - `JsonlViewerTool.Renderer` "Grep" → `SearchToolView`
-    - `JsonlViewerTool.Renderer` "Glob" → `SearchToolView`
+    - `renderer` "Grep" → `ParsedToolView`
+    - `renderer` "Glob" → `ParsedToolView`
   - Uses:
     - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
     - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`

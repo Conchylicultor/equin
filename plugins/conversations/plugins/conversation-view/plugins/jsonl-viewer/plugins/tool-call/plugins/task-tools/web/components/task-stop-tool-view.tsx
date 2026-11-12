@@ -1,14 +1,12 @@
-import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import type { ToolViewProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import type { TaskRefInput } from "../../core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
-type TaskStopInput = {
-  taskId?: string;
-  id?: string;
-};
-
-export function TaskStopToolView({ event }: ToolRendererProps) {
-  const input = event.input as TaskStopInput;
+export function TaskStopToolView({
+  event,
+  input,
+}: ToolViewProps<TaskRefInput>) {
   const taskId = input.taskId ?? input.id;
 
   const summary = taskId ? (

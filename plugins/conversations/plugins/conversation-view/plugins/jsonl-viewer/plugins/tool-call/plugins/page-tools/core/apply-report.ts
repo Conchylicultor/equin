@@ -1,4 +1,4 @@
-import type { ToolCallEvent } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import type { ToolCall } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 
 /**
  * What a page write actually did, as `write_agent_note` and `edit_page` report
@@ -38,9 +38,7 @@ export type PageApplyReport = {
  * JSON), or the tool returns prose rather than a report — which is exactly what
  * `read_page` does.
  */
-export function parsePageApplyReport(
-  event: ToolCallEvent,
-): PageApplyReport | null {
+export function parsePageApplyReport(event: ToolCall): PageApplyReport | null {
   if (!event.result?.content || event.result.isError) return null;
   try {
     return JSON.parse(event.result.content);

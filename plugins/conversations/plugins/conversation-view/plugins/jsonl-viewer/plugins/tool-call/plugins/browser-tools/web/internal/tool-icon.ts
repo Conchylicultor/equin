@@ -1,8 +1,8 @@
 import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
-import type { ToolCallEvent } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import type { ToolCall } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 
 /** The glyph of a browser_* call's timeline node, by which browser tool it is. */
-export function browserToolIcon(event: ToolCallEvent): IconRef {
+export function browserToolIcon(event: ToolCall): IconRef {
   const tool = event.name.replace(/^.*browser_/, "");
   switch (tool) {
     case "navigate":

@@ -1,4 +1,8 @@
-import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import { z } from "zod";
+import type {
+  ToolCall,
+  ToolViewProps,
+} from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import {
   ToolCallCard,
   ToolCode,
@@ -22,11 +26,13 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const terminalIcon = symbol("terminal");
 
-interface BashInput {
-  command: string;
-  description?: string;
-  run_in_background?: boolean;
-}
+/** `Bash`'s input, as its card draws it. */
+export const BashInputSchema = z.looseObject({
+  command: z.string(),
+  description: z.string().optional(),
+  run_in_background: z.boolean().optional(),
+});
+type BashInput = z.infer<typeof BashInputSchema>;
 
 function stripAnsi(text: string): string {
   return text
@@ -34,8 +40,7 @@ function stripAnsi(text: string): string {
     .replace(/\x1b\][^\x07]*\x07/g, "");
 }
 
-export function BashToolView({ event }: ToolRendererProps) {
-  const input = event.input as BashInput;
+export function BashToolView({ event, input }: ToolViewProps<BashInput>) {
   // Only a backgrounded call reads the conversation's shells — a plain one
   // has nothing to join, and folds nothing.
   if (input.run_in_background === true) {
@@ -61,7 +66,7 @@ function BackgroundBashToolView({
   event,
   input,
 }: {
-  event: ToolRendererProps["event"];
+  event: ToolCall;
   input: BashInput;
 }) {
   const conversationId = useJsonlConversationId();
@@ -130,7 +135,7 @@ function BackgroundBashToolView({
  */
 const EXIT_LINE = /^Exit code (\d+)\n?/;
 
-function readExit(result: NonNullable<ToolRendererProps["event"]["result"]>): {
+function readExit(result: NonNullable<ToolCall["result"]>): {
   code: number | undefined;
   output: string;
 } {
@@ -144,13 +149,7 @@ function readExit(result: NonNullable<ToolRendererProps["event"]["result"]>): {
 }
 
 /** The command, and its result: the output, or a background call's acknowledgement. */
-function BashBody({
-  event,
-  input,
-}: {
-  event: ToolRendererProps["event"];
-  input: BashInput;
-}) {
+function BashBody({ event, input }: { event: ToolCall; input: BashInput }) {
   const result = event.result;
   // A backgrounded call's result is its launch acknowledgement, not the
   // command's end: it has no exit code to read.

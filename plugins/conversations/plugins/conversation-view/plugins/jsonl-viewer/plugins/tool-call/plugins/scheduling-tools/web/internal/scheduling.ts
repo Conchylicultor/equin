@@ -1,7 +1,10 @@
 import { z } from "zod";
-import type { ToolCallEvent } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 
-const WakeupSchema = z.object({
+/**
+ * ScheduleWakeup's input. Every field is optional, so the same schema reads a
+ * call the model is still writing: the card fills in as it is written.
+ */
+export const WakeupSchema = z.looseObject({
   delaySeconds: z.number().optional(),
   prompt: z.string().optional(),
   reason: z.string().optional(),
@@ -9,23 +12,16 @@ const WakeupSchema = z.object({
   stop: z.boolean().optional(),
 });
 
-const MonitorSchema = z.object({
+/** Monitor's input. Every field is optional, as for ScheduleWakeup. */
+export const MonitorSchema = z.looseObject({
   command: z.string().optional(),
   description: z.string().optional(),
   timeout_ms: z.number().optional(),
-  ws: z.object({ url: z.string().optional() }).optional(),
+  ws: z.looseObject({ url: z.string().optional() }).optional(),
 });
 
 export type Wakeup = z.infer<typeof WakeupSchema>;
 export type MonitorInput = z.infer<typeof MonitorSchema>;
-
-export function readWakeup(event: ToolCallEvent): Wakeup {
-  return WakeupSchema.parse(event.input ?? {});
-}
-
-export function readMonitor(event: ToolCallEvent): MonitorInput {
-  return MonitorSchema.parse(event.input ?? {});
-}
 
 /** 90 -> "1m 30s", 1200 -> "20m", 3600 -> "1h". */
 export function formatDuration(totalSeconds: number): string {

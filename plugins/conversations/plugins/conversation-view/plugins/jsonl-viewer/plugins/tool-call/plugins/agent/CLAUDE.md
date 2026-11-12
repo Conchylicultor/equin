@@ -9,7 +9,7 @@
   - Slots: `agentReportPane.Actions`
   - Slot contributors: `agentReportPane.Actions` ← `primitives.pane`
   - Contributes:
-    - `JsonlViewerTool.Renderer` "Agent" → `AgentToolView`
+    - `renderer` "Agent" → `ParsedToolView`
     - `Pane.Register` "agent-report"
     - `TaskNotification.Open` "sub-agent"
   - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)

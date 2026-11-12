@@ -1,5 +1,6 @@
 import { useMemo } from "react";
-import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import { z } from "zod";
+import type { ToolViewProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import {
   readQueryDbResult,
@@ -15,7 +16,12 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { cellText, compactSql, queryNote } from "../internal/describe";
 
-type QueryDbInput = { sql: string; database?: string };
+/** `query_db`'s input, as its card draws it. */
+export const QueryDbInputSchema = z.object({
+  sql: z.string(),
+  database: z.string().optional(),
+});
+type QueryDbInput = z.infer<typeof QueryDbInputSchema>;
 type Row = QueryDbResult["rows"][number];
 
 function columnsOf(result: QueryDbResult): ColumnDef<Row>[] {
@@ -38,8 +44,7 @@ function columnsOf(result: QueryDbResult): ColumnDef<Row>[] {
   }));
 }
 
-export function QueryDbToolView({ event }: ToolRendererProps) {
-  const input = event.input as QueryDbInput;
+export function QueryDbToolView({ event, input }: ToolViewProps<QueryDbInput>) {
   const content = event.result?.content;
   const failed = event.result?.isError === true;
   const read = useMemo(

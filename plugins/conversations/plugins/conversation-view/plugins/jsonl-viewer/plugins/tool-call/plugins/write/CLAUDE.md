@@ -11,7 +11,7 @@ Expanded: shows full path as a clickable row + syntax-highlighted file content. 
 
 - Description: Renders Write tool calls with syntax-highlighted file content and clickable path affordances.
 - Web:
-  - Contributes: `JsonlViewerTool.Renderer` "Write" → `WriteToolView`
+  - Contributes: `renderer` "Write" → `ParsedToolView`
   - Uses:
     - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
     - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`

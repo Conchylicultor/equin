@@ -2,6 +2,10 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { JsonlViewerTool } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { SearchToolView } from "./components/search-tool-view";
+import {
+  PartialSearchInputSchema,
+  SearchInputSchema,
+} from "./internal/search-tools";
 
 export default {
   description:
@@ -10,14 +14,16 @@ export default {
     JsonlViewerTool.Renderer({
       match: "Grep",
       icon: symbol("search"),
+      input: SearchInputSchema,
+      partialInput: PartialSearchInputSchema,
       component: SearchToolView,
-      partialInput: true,
     }),
     JsonlViewerTool.Renderer({
       match: "Glob",
       icon: symbol("search"),
+      input: SearchInputSchema,
+      partialInput: PartialSearchInputSchema,
       component: SearchToolView,
-      partialInput: true,
     }),
   ],
 } satisfies PluginDefinition;

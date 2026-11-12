@@ -1,12 +1,14 @@
 import { z } from "zod";
-import type { ToolCallEvent } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import type { ToolCall } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 
-const InputSchema = z.object({
-  query: z.string().default(""),
+/** WebSearch's input, as its card draws it. */
+export const WebSearchInputSchema = z.looseObject({
+  query: z.string(),
   mode: z.string().optional(),
   allowed_domains: z.array(z.string()).optional(),
   blocked_domains: z.array(z.string()).optional(),
 });
+export type WebSearchInput = z.infer<typeof WebSearchInputSchema>;
 
 const LinksSchema = z.array(z.object({ title: z.string(), url: z.string() }));
 
@@ -88,8 +90,10 @@ export function parseWebSearchResult(content: string): {
   return { summary, links };
 }
 
-export function readWebSearch(event: ToolCallEvent): WebSearch {
-  const input = InputSchema.parse(event.input ?? {});
+export function readWebSearch(
+  event: ToolCall,
+  input: WebSearchInput,
+): WebSearch {
   const scope: SearchScope | undefined = input.allowed_domains?.length
     ? { kind: "only", domains: input.allowed_domains }
     : input.blocked_domains?.length

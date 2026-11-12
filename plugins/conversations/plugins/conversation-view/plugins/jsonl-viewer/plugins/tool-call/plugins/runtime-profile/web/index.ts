@@ -2,6 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { JsonlViewerTool } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { RuntimeProfileToolView } from "./components/runtime-profile-tool-view";
+import { ProfileInputSchema } from "./internal/profile";
 
 export default {
   description:
@@ -10,6 +11,7 @@ export default {
     JsonlViewerTool.Renderer({
       match: /get_runtime_profile$/,
       icon: symbol("speed"),
+      input: ProfileInputSchema,
       component: RuntimeProfileToolView,
     }),
   ],

@@ -1,11 +1,17 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { JsonlViewerTool } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
-import { EditTaskView } from "./components/edit-task-view";
-import { DropTaskView } from "./components/drop-task-view";
-import { TaskTreeView } from "./components/task-tree-view";
-import { ListAgentsView } from "./components/list-agents-view";
-import { MessageAgentView } from "./components/message-agent-view";
+import { EditTaskInputSchema, EditTaskView } from "./components/edit-task-view";
+import { DropTaskInputSchema, DropTaskView } from "./components/drop-task-view";
+import { TaskTreeInputSchema, TaskTreeView } from "./components/task-tree-view";
+import {
+  ListAgentsInputSchema,
+  ListAgentsView,
+} from "./components/list-agents-view";
+import {
+  MessageAgentInputSchema,
+  MessageAgentView,
+} from "./components/message-agent-view";
 
 export default {
   description:
@@ -14,26 +20,31 @@ export default {
     JsonlViewerTool.Renderer({
       match: /edit_task$/,
       icon: symbol("edit"),
+      input: EditTaskInputSchema,
       component: EditTaskView,
     }),
     JsonlViewerTool.Renderer({
       match: /drop_task$/,
       icon: symbol("delete"),
+      input: DropTaskInputSchema,
       component: DropTaskView,
     }),
     JsonlViewerTool.Renderer({
       match: /task_tree$/,
       icon: symbol("account-tree"),
+      input: TaskTreeInputSchema,
       component: TaskTreeView,
     }),
     JsonlViewerTool.Renderer({
       match: /list_agents$/,
       icon: symbol("groups"),
+      input: ListAgentsInputSchema,
       component: ListAgentsView,
     }),
     JsonlViewerTool.Renderer({
       match: /message_agent$/,
       icon: symbol("send"),
+      input: MessageAgentInputSchema,
       component: MessageAgentView,
     }),
   ],

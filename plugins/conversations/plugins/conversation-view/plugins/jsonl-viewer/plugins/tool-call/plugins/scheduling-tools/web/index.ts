@@ -5,6 +5,7 @@ import {
   MonitorToolView,
   ScheduleWakeupToolView,
 } from "./components/scheduling-tool-views";
+import { MonitorSchema, WakeupSchema } from "./internal/scheduling";
 
 export default {
   description:
@@ -14,14 +15,16 @@ export default {
     JsonlViewerTool.Renderer({
       match: "ScheduleWakeup",
       icon: symbol("schedule"),
+      input: WakeupSchema,
+      partialInput: WakeupSchema,
       component: ScheduleWakeupToolView,
-      partialInput: true,
     }),
     JsonlViewerTool.Renderer({
       match: "Monitor",
       icon: symbol("monitoring"),
+      input: MonitorSchema,
+      partialInput: MonitorSchema,
       component: MonitorToolView,
-      partialInput: true,
     }),
   ],
 } satisfies PluginDefinition;

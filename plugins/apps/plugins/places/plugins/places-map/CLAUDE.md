@@ -471,7 +471,7 @@ away closes it — a click in the thread is not away (`useClickAway`'s
     - `page-overlay-item-actions` "save" → `SavePageItemAction`
     - `AgentThreadSlots.StepLabel` "places_search_text" → `SearchStepLabel`
     - `AgentThreadSlots.StepLabel` "places_show_picks" → `PicksStepLabel`
-    - `JsonlViewerTool.Renderer` "mcp__equin__places_show_picks" → `PicksToolView`
+    - `renderer` "mcp__equin__places_show_picks" → `ParsedToolView`
   - Uses: 141 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×15
     - `apps/places/places-core` ×8

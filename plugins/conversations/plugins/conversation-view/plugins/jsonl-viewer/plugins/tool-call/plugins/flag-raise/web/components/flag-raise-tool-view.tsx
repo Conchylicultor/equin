@@ -1,4 +1,5 @@
-import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import { z } from "zod";
+import type { ToolViewProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import {
@@ -14,13 +15,14 @@ const flagIcon = symbol("flag");
 
 const flagIconClass = cn("size-4 text-warning", rigidClass());
 
-type FlagRaiseInput = {
-  reason: string;
-};
+/** `flag_raise`'s input, as its card draws it. */
+export const FlagRaiseInputSchema = z.looseObject({ reason: z.string() });
+type FlagRaiseInput = z.infer<typeof FlagRaiseInputSchema>;
 
-export function FlagRaiseToolView({ event }: ToolRendererProps) {
-  const input = event.input as FlagRaiseInput;
-
+export function FlagRaiseToolView({
+  event,
+  input,
+}: ToolViewProps<FlagRaiseInput>) {
   return (
     <ToolCallCard event={event} summary="Flagged for review" defaultOpen>
       <Stack

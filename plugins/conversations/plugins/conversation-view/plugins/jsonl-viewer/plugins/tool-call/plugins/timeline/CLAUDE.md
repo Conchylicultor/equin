@@ -6,7 +6,7 @@
 
 - Description: Renders get_timeline MCP tool calls: the window and filters asked for in the summary, the events found in the note, and the report as sections inside — events as a compact table, duress, host pressure and backend health as lines.
 - Web:
-  - Contributes: `JsonlViewerTool.Renderer` "get_timeline$" → `TimelineToolView`
+  - Contributes: `renderer` "get_timeline$" → `ParsedToolView`
   - Uses:
     - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`

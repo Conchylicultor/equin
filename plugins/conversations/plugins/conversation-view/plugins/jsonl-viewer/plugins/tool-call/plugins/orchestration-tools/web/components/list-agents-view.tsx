@@ -1,5 +1,6 @@
 import { useMemo } from "react";
-import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import { z } from "zod";
+import type { ToolViewProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { useConversationOpener } from "@plugins/conversations/plugins/conversation-view/web";
 import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
@@ -39,7 +40,14 @@ function tally(standings: readonly string[]): string {
     .join(", ");
 }
 
-export function ListAgentsView({ event }: ToolRendererProps) {
+/** `list_agents`'s input: its card draws from the result alone. */
+export const ListAgentsInputSchema = z.looseObject({
+  all: z.boolean().optional(),
+});
+
+export function ListAgentsView({
+  event,
+}: ToolViewProps<z.infer<typeof ListAgentsInputSchema>>) {
   const lines = useMemo(
     () => (event.result ? readAgentList(event.result.content) : []),
     [event.result],

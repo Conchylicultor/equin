@@ -6,7 +6,7 @@
 
 - Description: Renders write_agent_note MCP tool calls: the page the card lives on, the markdown written into it, and what the write changed.
 - Web:
-  - Contributes: `JsonlViewerTool.Renderer` "write_agent_note$" → `WriteNoteView`
+  - Contributes: `renderer` "write_agent_note$" → `ParsedToolView`
   - Uses:
     - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`

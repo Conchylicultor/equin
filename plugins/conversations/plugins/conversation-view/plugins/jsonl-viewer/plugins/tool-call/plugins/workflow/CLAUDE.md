@@ -9,7 +9,7 @@
   - Slots: `workflow-node.actions`
   - Slot contributors: `workflow-node.actions` ← `primitives.pane`
   - Contributes:
-    - `JsonlViewerTool.Renderer` "Workflow" → `WorkflowToolView`
+    - `renderer` "Workflow" → `ParsedToolView`
     - `Pane.Register` "workflow-node"
   - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/spacing` ×4

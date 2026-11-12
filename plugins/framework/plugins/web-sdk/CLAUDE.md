@@ -401,8 +401,8 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
   - Slots:
     - `Core.Root`
     - `Core.Boot`
-  - Slot contributors: 55 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Core.Root` ×54
+  - Slot contributors: 56 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Core.Root` ×55
     - `Core.Boot` ← `network.live.boot-snapshot`
 - Core:
   - Uses:
@@ -471,9 +471,9 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
     - `webCollectedDir`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
-  - Imported by: 121 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 122 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×23
-    - `reports` ×21
+    - `reports` ×22
     - `apps` ×18
     - `ui` ×7
     - `apps-core` ×6

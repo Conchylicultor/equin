@@ -1,4 +1,5 @@
-import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import { z } from "zod";
+import type { ToolViewProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
@@ -10,22 +11,24 @@ import {
   TRIAGE_RISK_META,
   TRIAGE_TASK_TYPE_META,
   TRIAGE_VERDICT_META,
-  type TriagePriority,
-  type TriageResult,
-  type TriageRisk,
-  type TriageTaskType,
-  type TriageVerdict,
 } from "@plugins/tasks/plugins/task-triage/core";
 
-// Partial while the call streams: any field may be missing, a string cut.
-type TaskSubmitTriageInput = Partial<
-  Omit<TriageResult, "verdict" | "priority" | "taskType" | "risk">
-> & {
-  verdict?: TriageVerdict;
-  priority?: TriagePriority;
-  taskType?: TriageTaskType;
-  risk?: TriageRisk;
-};
+/**
+ * `task_submit_triage`'s input while the model writes it: any field may be
+ * missing, and a vocabulary value may stop mid-word (its chip then draws
+ * nothing). The finished input is read with the tool's own `TriageResultSchema`.
+ */
+export const PartialTriageInputSchema = z.looseObject({
+  verdict: z.string().optional(),
+  priority: z.string().optional(),
+  taskType: z.string().optional(),
+  risk: z.string().optional(),
+  context: z.string().optional(),
+  question: z.string().nullable().optional(),
+  answers: z.array(z.string()).optional(),
+  areas: z.array(z.string()).optional(),
+});
+type TaskSubmitTriageInput = z.infer<typeof PartialTriageInputSchema>;
 
 /** A chip for a vocabulary value; an unknown (cut) value draws nothing. */
 function Chip({
@@ -48,8 +51,10 @@ function Chip({
   );
 }
 
-export function TaskSubmitTriageToolView({ event }: ToolRendererProps) {
-  const input = event.input as TaskSubmitTriageInput;
+export function TaskSubmitTriageToolView({
+  event,
+  input,
+}: ToolViewProps<TaskSubmitTriageInput>) {
   const answers = input.answers ?? [];
 
   const summary = (

@@ -1,5 +1,6 @@
 import { useMemo } from "react";
-import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import { z } from "zod";
+import type { ToolViewProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
@@ -31,7 +32,12 @@ function shownWords(words: readonly string[]): string[] {
     .map((w) => (w.startsWith("report: ") ? "reported" : w));
 }
 
-export function TaskTreeView({ event }: ToolRendererProps) {
+/** `task_tree`'s input: it takes none, and its card draws from the result. */
+export const TaskTreeInputSchema = z.looseObject({});
+
+export function TaskTreeView({
+  event,
+}: ToolViewProps<z.infer<typeof TaskTreeInputSchema>>) {
   const tree = useMemo(
     () => (event.result ? readTree(event.result.content) : null),
     [event.result],

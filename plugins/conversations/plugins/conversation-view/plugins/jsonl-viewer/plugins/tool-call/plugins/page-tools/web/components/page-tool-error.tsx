@@ -1,4 +1,4 @@
-import type { ToolCallEvent } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import type { ToolCall } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import {
   ToolCode,
   ToolSection,
@@ -12,7 +12,7 @@ import {
  * Same appearance as the Edit tool's error detail: the tool-call Output
  * section, in the error tone.
  */
-export function PageToolError({ result }: { result: ToolCallEvent["result"] }) {
+export function PageToolError({ result }: { result: ToolCall["result"] }) {
   if (!result || !result.isError) return null;
   return (
     <ToolSection label="Output" copyText={result.content}>

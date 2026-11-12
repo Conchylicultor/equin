@@ -61,6 +61,25 @@ function WorkflowNodePaneContent({ convId }: { convId: string | undefined }) {
     );
   }
 
+  if (state.phase === "unreadable-input") {
+    return (
+      <PaneChrome pane={workflowNodePane}>
+        <Stack gap="xs" className="p-lg">
+          <Text as="div" variant="body" className="text-muted-foreground">
+            This call's input is not a workflow: there is no script to trace.
+          </Text>
+          <Text
+            as="p"
+            variant="caption"
+            className="whitespace-pre-wrap font-mono"
+          >
+            {state.issues}
+          </Text>
+        </Stack>
+      </PaneChrome>
+    );
+  }
+
   const { graph, status, node } = state;
 
   return (

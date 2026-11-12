@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import type { ToolViewProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -11,8 +11,8 @@ import {
 import {
   describeProfileInput,
   readProfile,
-  readProfileInput,
   type Aggregate,
+  type ProfileInput,
 } from "../internal/profile";
 
 function num(
@@ -49,8 +49,10 @@ const COLUMNS: ColumnDef<Aggregate>[] = [
   num("max", (a) => a.maxMs),
 ];
 
-export function RuntimeProfileToolView({ event }: ToolRendererProps) {
-  const input = readProfileInput(event);
+export function RuntimeProfileToolView({
+  event,
+  input,
+}: ToolViewProps<ProfileInput>) {
   const content = event.result?.content;
   const failed = event.result?.isError === true;
   const read = useMemo(

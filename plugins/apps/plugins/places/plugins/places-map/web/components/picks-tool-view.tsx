@@ -1,5 +1,8 @@
 import { useMemo, type ReactNode } from "react";
-import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import type {
+  ToolCall,
+  ToolViewProps,
+} from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { useJsonlConversationId } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
@@ -23,10 +26,7 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import type { LinkedHover } from "@plugins/primitives/plugins/data-view/core";
 import type { PlaceCandidate } from "@plugins/integrations/plugins/google-maps/plugins/places-api/core";
-import {
-  PlacesPicksSchema,
-  type PlacesPicks,
-} from "@plugins/apps/plugins/places/plugins/ask/core";
+import type { PlacesPicks } from "@plugins/apps/plugins/places/plugins/ask/core";
 import { useAskCandidates } from "../internal/ask-picks";
 import { ASK_PICK_PIN_TYPE } from "../internal/ask-pick";
 
@@ -58,22 +58,12 @@ function namesSummary(picks: readonly ShownPick[]): string | undefined {
  * run's own Google candidates (`askCandidates`). Open by default: the picks
  * ARE the turn's answer.
  */
-export function PicksToolView({ event }: ToolRendererProps) {
+export function PicksToolView({ event, input }: ToolViewProps<PlacesPicks>) {
   const conversationId = useJsonlConversationId();
-  const parsed = PlacesPicksSchema.safeParse(event.input);
-  if (!parsed.success) {
-    return (
-      <ToolCallCard event={event} defaultOpen>
-        <Text as="p" variant="caption" className="text-destructive">
-          Unreadable picks: {parsed.error.message}
-        </Text>
-      </ToolCallCard>
-    );
-  }
   return (
     <LoadedPicks
       event={event}
-      payload={parsed.data}
+      payload={input}
       conversationId={conversationId}
     />
   );
@@ -83,7 +73,8 @@ function LoadedPicks({
   event,
   payload,
   conversationId,
-}: ToolRendererProps & {
+}: {
+  event: ToolCall;
   payload: PlacesPicks;
   conversationId: string | null;
 }) {

@@ -21,7 +21,7 @@ here), the model-written summary, and a trailing `REMINDER:` to the model
 
 - Description: Renders WebSearch calls as the query and its source count; opened, the model-written summary in full and the sources grouped by site, folded beneath it.
 - Web:
-  - Contributes: `JsonlViewerTool.Renderer` "WebSearch" → `WebSearchToolView`
+  - Contributes: `renderer` "WebSearch" → `ParsedToolView`
   - Uses:
     - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`

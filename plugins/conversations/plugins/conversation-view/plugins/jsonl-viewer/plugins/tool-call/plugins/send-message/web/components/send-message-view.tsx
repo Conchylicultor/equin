@@ -1,4 +1,4 @@
-import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import type { ToolViewProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { useJsonlConversationId } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { useConversationSubagents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/web";
@@ -14,7 +14,12 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
-import { readSendMessage, type Delivery, type Recipient } from "../../core";
+import {
+  readSendMessage,
+  type Delivery,
+  type Recipient,
+  type SendMessageInput,
+} from "../../core";
 
 const articleIcon = symbol("article");
 
@@ -75,8 +80,11 @@ function deliverySentence(delivery: Delivery, to: string): string | undefined {
   }
 }
 
-export function SendMessageView({ event }: ToolRendererProps) {
-  const call = readSendMessage(event.input, event.result);
+export function SendMessageView({
+  event,
+  input,
+}: ToolViewProps<SendMessageInput>) {
+  const call = readSendMessage(input, event.result);
   const subagent = useSubagentLabel(call.agentId);
   const to = recipientText(call.recipient, subagent);
   const described =

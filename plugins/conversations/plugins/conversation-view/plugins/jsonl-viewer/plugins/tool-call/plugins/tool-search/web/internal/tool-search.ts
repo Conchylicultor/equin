@@ -1,8 +1,16 @@
+import { z } from "zod";
 import {
   toolName,
-  type ToolCallEvent,
+  type ToolCall,
   type ToolName,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+
+/** ToolSearch's input, as its card draws it. */
+export const ToolSearchInputSchema = z.looseObject({
+  query: z.string(),
+  max_results: z.number().optional(),
+});
+export type ToolSearchInput = z.infer<typeof ToolSearchInputSchema>;
 
 /**
  * What one ToolSearch call asked for and got back.
@@ -30,12 +38,11 @@ export type ToolSearch =
 
 const SELECT_PREFIX = "select:";
 
-export function readToolSearch(event: ToolCallEvent): ToolSearch {
-  const input = (event.input ?? {}) as {
-    query?: unknown;
-    max_results?: unknown;
-  };
-  const query = typeof input.query === "string" ? input.query.trim() : "";
+export function readToolSearch(
+  event: ToolCall,
+  input: ToolSearchInput,
+): ToolSearch {
+  const query = input.query.trim();
   // The result's tool_reference names ARE the loaded tools; a no-match result
   // is text ("No matching deferred tools found") with none.
   const returned = event.result
@@ -63,8 +70,7 @@ export function readToolSearch(event: ToolCallEvent): ToolSearch {
   return {
     mode: "search",
     query,
-    maxResults:
-      typeof input.max_results === "number" ? input.max_results : undefined,
+    maxResults: input.max_results,
     matches: returned,
   };
 }

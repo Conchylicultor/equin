@@ -2,6 +2,11 @@ import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
 import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
+import {
+  TaskCreateInputSchema,
+  TaskRefInputSchema,
+  TaskUpdateInputSchema,
+} from "./inputs";
 
 export interface TaskEntry {
   taskId: string;
@@ -20,42 +25,52 @@ const TERMINAL_STATUSES = new Set(["completed", "failed", "stopped"]);
 
 type ToolCallEvent = Extract<JsonlEvent, { kind: "tool-call" }>;
 
-function parseResultContent(
-  event: ToolCallEvent,
-): Record<string, unknown> | null {
-  if (!event.result?.content || event.result.isError) return null;
+/** The id a TaskCreate result names, under whichever key the harness used. */
+const CreatedTaskSchema = z.looseObject({
+  id: z.string().optional(),
+  task_id: z.string().optional(),
+  taskId: z.string().optional(),
+});
+
+function createdTaskId(event: ToolCallEvent): string | undefined {
+  if (!event.result?.content || event.result.isError) return undefined;
+  let json: unknown;
   try {
-    return JSON.parse(event.result.content);
+    json = JSON.parse(event.result.content);
   } catch (err) {
     if (!(err instanceof SyntaxError)) throw err;
-    return null;
+    return undefined;
   }
+  const read = CreatedTaskSchema.safeParse(json);
+  if (!read.success) return undefined;
+  return read.data.id ?? read.data.task_id ?? read.data.taskId;
 }
 
-/** The agent's Task* tool calls folded into its task list. */
+/**
+ * The agent's Task* tool calls folded into its task list. A call whose input
+ * is not what its tool takes (the model got it wrong; the tool refused it)
+ * changes nothing.
+ */
 export function buildAggregate(events: readonly JsonlEvent[]): TaskAggregate {
   const taskMap = new Map<string, TaskEntry>();
   const ordered: string[] = [];
 
   for (const ev of events) {
     if (ev.kind !== "tool-call") continue;
-    const toolEvent = ev as ToolCallEvent;
+    const toolEvent: ToolCallEvent = ev;
 
     if (toolEvent.name === "TaskCreate" && toolEvent.result) {
-      const result = parseResultContent(toolEvent);
-      const input = toolEvent.input as
-        { subject?: string; description?: string } | undefined;
-      const taskId =
-        (result?.id as string) ??
-        (result?.task_id as string) ??
-        (result?.taskId as string);
+      const read = TaskCreateInputSchema.safeParse(toolEvent.input);
+      if (!read.success) continue;
+      const input = read.data;
+      const taskId = createdTaskId(toolEvent);
       if (!taskId) continue;
       if (!taskMap.has(taskId)) {
         ordered.push(taskId);
       }
       taskMap.set(taskId, {
         taskId,
-        description: input?.subject ?? input?.description ?? "Task",
+        description: input.subject ?? input.description ?? "Task",
         status: "pending",
       });
     } else if (
@@ -63,25 +78,20 @@ export function buildAggregate(events: readonly JsonlEvent[]): TaskAggregate {
       toolEvent.result &&
       !toolEvent.result.isError
     ) {
-      const input = toolEvent.input as
-        | {
-            taskId?: string;
-            id?: string;
-            status?: string;
-            description?: string;
-          }
-        | undefined;
-      const taskId = input?.taskId ?? input?.id;
+      const read = TaskUpdateInputSchema.safeParse(toolEvent.input);
+      if (!read.success) continue;
+      const input = read.data;
+      const taskId = input.taskId ?? input.id;
       if (!taskId) continue;
       const existing = taskMap.get(taskId);
       if (existing) {
-        if (input?.status) existing.status = input.status;
-        if (input?.description) existing.description = input.description;
+        if (input.status) existing.status = input.status;
+        if (input.description) existing.description = input.description;
       }
     } else if (toolEvent.name === "TaskStop" && toolEvent.result) {
-      const input = toolEvent.input as
-        { taskId?: string; id?: string } | undefined;
-      const taskId = input?.taskId ?? input?.id;
+      const read = TaskRefInputSchema.safeParse(toolEvent.input);
+      if (!read.success) continue;
+      const taskId = read.data.taskId ?? read.data.id;
       if (!taskId) continue;
       const existing = taskMap.get(taskId);
       if (existing) existing.status = "stopped";

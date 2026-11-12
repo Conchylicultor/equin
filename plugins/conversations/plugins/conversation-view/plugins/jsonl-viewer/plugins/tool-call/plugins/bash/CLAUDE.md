@@ -6,7 +6,7 @@
 
 - Description: Renders Bash tool calls with a syntax-highlighted command, optional description label, and ANSI-stripped output.
 - Web:
-  - Contributes: `JsonlViewerTool.Renderer` "Bash" → `BashToolView`
+  - Contributes: `renderer` "Bash" → `ParsedToolView`
   - Uses:
     - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
     - `conversations/conversation-view/jsonl-viewer/background-shells.shellOutputPane`

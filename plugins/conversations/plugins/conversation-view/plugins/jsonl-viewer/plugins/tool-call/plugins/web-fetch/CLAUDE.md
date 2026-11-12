@@ -8,7 +8,7 @@ Renderer for `WebFetch` tool calls: the URL (host + path) as the header, the pro
 
 - Description: Renders WebFetch calls as the page's host and path; opened, the prompt asked of it and the answer as markdown.
 - Web:
-  - Contributes: `JsonlViewerTool.Renderer` "WebFetch" → `WebFetchToolView`
+  - Contributes: `renderer` "WebFetch" → `ParsedToolView`
   - Uses:
     - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`

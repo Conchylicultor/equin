@@ -4,10 +4,7 @@ import { transcriptToolCall } from "@plugins/conversations/plugins/conversation-
 import { useWorkflowTrace } from "./use-workflow-trace";
 import type { TracedGraph, TracedNode, TraceStatus } from "./trace-types";
 
-interface WorkflowInput {
-  script?: string;
-  args?: unknown;
-}
+import { WorkflowInputSchema, type WorkflowInput } from "./workflow-input";
 
 export type WorkflowNodeState =
   // The transcript is not known yet.
@@ -17,6 +14,9 @@ export type WorkflowNodeState =
   // No conversation pane above this one: there is no transcript to read
   // (skipped), a settled answer — never a spinner.
   | { phase: "no-conversation" }
+  // The call's input is not a Workflow input the card reads (the model got
+  // the call wrong): no script to trace. `issues` says what did not match.
+  | { phase: "unreadable-input"; issues: string }
   | {
       phase: "found";
       graph: TracedGraph | null;
@@ -46,9 +46,14 @@ export function useWorkflowNode(
   // early return; a transcript not read yet has no script (and is reported as
   // loading / failed below, never as an empty trace).
   let input: WorkflowInput | null = null;
+  let unreadable: string | null = null;
   if (eventsResult.status === "ready") {
     const event = eventsResult.data;
-    if (event?.kind === "tool-call") input = event.input as WorkflowInput;
+    if (event?.kind === "tool-call") {
+      const read = WorkflowInputSchema.safeParse(event.input);
+      if (read.success) input = read.data;
+      else unreadable = read.error.message;
+    }
   }
 
   const { graph, status } = useWorkflowTrace(input?.script ?? "", input?.args);
@@ -64,6 +69,8 @@ export function useWorkflowNode(
         retry: eventsResult.refetch,
       };
     case "ready": {
+      if (unreadable !== null)
+        return { phase: "unreadable-input", issues: unreadable };
       const node = graph?.nodes.find((n) => n.id === nodeId);
       return { phase: "found", graph, status, node };
     }

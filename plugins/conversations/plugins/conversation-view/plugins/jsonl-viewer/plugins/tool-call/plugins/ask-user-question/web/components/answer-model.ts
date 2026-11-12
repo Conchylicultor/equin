@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { QuestionAnswer } from "@plugins/conversations/plugins/transcript-source/core";
 import { ANSWER_MARKER } from "../../shared";
 
@@ -8,22 +9,27 @@ import { ANSWER_MARKER } from "../../shared";
  * parsing contract is unit-testable without pulling in the web dependency tree.
  */
 
-export interface QuestionOption {
-  label: string;
-  description: string;
-  preview?: string;
-}
+const QuestionOptionSchema = z.looseObject({
+  label: z.string(),
+  description: z.string(),
+  preview: z.string().optional(),
+});
+export type QuestionOption = z.infer<typeof QuestionOptionSchema>;
 
-export interface Question {
-  question: string;
-  header: string;
-  options: QuestionOption[];
-  multiSelect: boolean;
-}
+const QuestionSchema = z.looseObject({
+  question: z.string(),
+  header: z.string(),
+  options: z.array(QuestionOptionSchema),
+  /** Claude Code reads an omitted `multiSelect` as a single-select. */
+  multiSelect: z.boolean().default(false),
+});
+export type Question = z.infer<typeof QuestionSchema>;
 
-export interface AskUserQuestionInput {
-  questions: Question[];
-}
+/** `AskUserQuestion`'s input, as its card and its row action read it. */
+export const AskUserQuestionInputSchema = z.looseObject({
+  questions: z.array(QuestionSchema),
+});
+export type AskUserQuestionInput = z.infer<typeof AskUserQuestionInputSchema>;
 
 /**
  * One question's answer as the form gives it: the picked option labels, and

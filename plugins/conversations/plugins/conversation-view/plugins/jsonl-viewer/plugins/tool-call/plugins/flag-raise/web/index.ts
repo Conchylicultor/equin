@@ -1,7 +1,10 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { JsonlViewerTool } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
-import { FlagRaiseToolView } from "./components/flag-raise-tool-view";
+import {
+  FlagRaiseInputSchema,
+  FlagRaiseToolView,
+} from "./components/flag-raise-tool-view";
 
 export default {
   description:
@@ -10,6 +13,7 @@ export default {
     JsonlViewerTool.Renderer({
       match: /flag_raise$/,
       icon: symbol("flag"),
+      input: FlagRaiseInputSchema,
       component: FlagRaiseToolView,
     }),
   ],

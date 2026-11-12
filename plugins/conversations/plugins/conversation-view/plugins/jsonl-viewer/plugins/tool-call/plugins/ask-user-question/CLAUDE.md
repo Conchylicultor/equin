@@ -147,7 +147,7 @@ ordinary `MarkerAnswerForm` renders with the old answer already in its draft.
 - Description: Renders AskUserQuestion tool calls with question headers, option lists, and answer highlights.
 - Web:
   - Contributes:
-    - `JsonlViewerTool.Renderer` "AskUserQuestion" → `AskUserQuestionToolView`
+    - `renderer` "AskUserQuestion" → `ParsedToolView`
     - `JsonlRowActions.Item` "change-answers" → `ChangeAnswersAction`
     - `JsonlViewer.EventFilter` "ask-user-question:suppress-answer-turn"
     - `JsonlViewer.EventFilter` "ask-user-question:suppress-interrupt-turn"
