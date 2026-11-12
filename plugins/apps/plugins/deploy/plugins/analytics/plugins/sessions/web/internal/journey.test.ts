@@ -3,6 +3,7 @@ import type {
   Session,
   SessionHit,
 } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
+import { sourceOf } from "./facts";
 import { journeyOf, pageRead, readLabel, sectionsByPath } from "./journey";
 
 const T0 = Date.parse("2026-11-10T14:32:00.000Z");
@@ -309,5 +310,28 @@ describe("stretches away", () => {
   it("a truncated visit's active time is unknown (its unseen tail may hold stretches)", () => {
     const v = session([withGaps(pv(0, "/"), []), ev(20, "/", "x")], 600_000);
     expect(journeyOf({ ...v, hitsTruncated: true }).activeS).toBeNull();
+  });
+});
+
+describe("sourceOf", () => {
+  const base = session([pv(0, "/")], 1000);
+  it("shows the referring page when the referrer sent a path", () => {
+    expect(sourceOf({ ...base, referrerPath: "/item" })).toBe(
+      "news.ycombinator.com/item",
+    );
+  });
+  it("shows the bare host when the referrer sent only its root", () => {
+    expect(sourceOf({ ...base, referrerPath: "/" })).toBe(
+      "news.ycombinator.com",
+    );
+    expect(sourceOf({ ...base, referrerPath: null })).toBe(
+      "news.ycombinator.com",
+    );
+  });
+  it("falls back to the campaign source, then Direct", () => {
+    expect(
+      sourceOf({ ...base, referrerHost: null, utmSource: "newsletter" }),
+    ).toBe("newsletter");
+    expect(sourceOf({ ...base, referrerHost: null })).toBe("Direct");
   });
 });
