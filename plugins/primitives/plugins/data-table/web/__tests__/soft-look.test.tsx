@@ -52,7 +52,9 @@ describe("DataTable soft presentation", () => {
     expect(r.className).toContain("[[data-soft-row]+&]:before:block");
     expect(r.className).toContain("[[data-soft-row]:hover+&]:before:hidden");
     // The cell pick's scope on the row, its class on each cell.
-    expect(r.style.getPropertyValue("--role-pick")).toBe("var(--cell-role)");
+    expect(r.style.getPropertyValue("--role-pick")).toBe(
+      "var(--cell-role, caption)",
+    );
     expect(
       r.querySelector<HTMLElement>('[data-part="c"]')!.className,
     ).toContain("text-caption");
@@ -65,7 +67,7 @@ describe("DataTable soft presentation", () => {
     expect(h.className).toContain("h-soft-header");
     expect(h.className).not.toContain("border-b");
     expect(h.style.getPropertyValue("--role-pick")).toBe(
-      "var(--column-header-role)",
+      "var(--column-header-role, caption)",
     );
     const [idLabel, nLabel] = [...h.children] as HTMLElement[];
     expect(idLabel!.className).toContain(
@@ -99,7 +101,7 @@ describe("DataTable grid presentation (unchanged by soft)", () => {
     expect(h.className).toContain("border-b");
     expect(h.className).toContain("rail-follow");
     expect(h.style.getPropertyValue("--role-pick")).toBe(
-      "var(--column-header-role)",
+      "var(--column-header-role, caption)",
     );
     const [idLabel, nLabel] = [...h.children] as HTMLElement[];
     expect(idLabel!.className).toContain("tracking-column-header");

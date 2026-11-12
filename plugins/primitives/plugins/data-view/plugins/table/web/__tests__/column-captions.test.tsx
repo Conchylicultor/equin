@@ -140,7 +140,7 @@ describe("data-view table: column captions", () => {
     renderTable({});
     const h = headerRow()!;
     expect(h.style.getPropertyValue("--role-pick")).toBe(
-      "var(--column-header-role)",
+      "var(--column-header-role, caption)",
     );
     expect(h.className).not.toMatch(/\buppercase\b|tracking-wider/);
     const [name, size] = [...h.children] as HTMLElement[];

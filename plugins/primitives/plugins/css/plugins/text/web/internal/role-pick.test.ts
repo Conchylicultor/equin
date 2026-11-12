@@ -1,47 +1,32 @@
 import { describe, expect, it } from "bun:test";
-
-import { PICK_EMPHASES, PICK_FAMILIES, PICK_RUNGS } from "../../core";
+import { PICK_RUNGS } from "../../core";
 import { rolePickClass, rolePickScope } from "./role-pick";
 
 describe("rolePickClass", () => {
-  it("starts with the fallback rung, then a query per rung of the picker", () => {
+  it("is the fallback rung, then the one picker class", () => {
     for (const fallback of PICK_RUNGS) {
       const classes = rolePickClass(fallback).split(" ");
-      expect(classes[0]).toBe(
-        fallback === "tag" ? "text-tag" : `text-${fallback}`,
-      );
-      for (const rung of PICK_RUNGS) {
-        expect(classes).toContain(
-          `[@container_style(--role-pick:${rung})]:text-${rung}`,
-        );
-      }
+      expect(classes[0]).toBe(`text-${fallback}`);
+      expect(classes.at(-1)).toBe("role-pick");
     }
   });
 
-  it("swaps every role rung for its compact form, and keeps the sub-scale", () => {
-    const classes = rolePickClass("label", true).split(" ");
-    expect(classes[0]).toBe("text-label-compact");
-    // `ambient` (the default step) compacts; `base` draws the rung named.
-    expect(classes).toContain(
-      "[@container_style(--role-pick:caption)_and_style(--role-step:ambient)]:text-caption-compact",
+  it("uses the compact fallback and picker class in a compact region", () => {
+    expect(rolePickClass("label", true)).toBe(
+      "text-label-compact role-pick-compact",
     );
-    expect(classes).toContain(
-      "[@container_style(--role-pick:caption)_and_style(--role-step:base)]:text-caption",
-    );
-    expect(classes).toContain("[@container_style(--role-pick:3xs)]:text-3xs");
+    expect(rolePickClass("2xs", true)).toBe("text-2xs role-pick-compact");
   });
 
-  it("covers every emphasis but `role` and every family but `role`", () => {
-    const classes = rolePickClass("caption");
-    for (const emphasis of PICK_EMPHASES.filter((e) => e !== "role"))
-      expect(classes).toContain(`style(--role-emphasis:${emphasis})`);
-    for (const family of PICK_FAMILIES.filter((f) => f !== "role"))
-      expect(classes).toContain(`style(--role-family:${family})`);
+  it("never emits a per-element style query", () => {
+    for (const fallback of PICK_RUNGS)
+      for (const compact of [false, true])
+        expect(rolePickClass(fallback, compact)).not.toContain("@container");
   });
 });
 
 describe("rolePickScope", () => {
-  it("copies the part's three tokens into the generic vars", () => {
+  it("copies the part's tokens into the generic vars, the fallback folded in", () => {
     expect(
       rolePickScope({
         role: "--card-title-role",
@@ -50,9 +35,9 @@ describe("rolePickScope", () => {
         fallback: "label",
       }),
     ).toEqual({
-      "--role-pick": "var(--card-title-role)",
-      "--role-emphasis": "var(--card-title-emphasis)",
-      "--role-family": "var(--card-title-family)",
+      "--role-pick": "var(--card-title-role, label)",
+      "--role-emphasis": "var(--card-title-emphasis, role)",
+      "--role-family": "var(--card-title-family, role)",
       "--role-step": "ambient",
     } as never);
   });

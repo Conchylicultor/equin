@@ -6,7 +6,11 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
 import type { TypeRole, TextTreatment, RolePart } from "../../core";
-import { rolePickClass, rolePickScope } from "./role-pick";
+import {
+  ROLE_PICK_SCOPE_ON_PARENT,
+  rolePickClass,
+  rolePickScope,
+} from "./role-pick";
 
 /**
  * A `<Text>` variant: one of the closed typographic ROLES (`TYPE_ROLES` in this
@@ -160,10 +164,11 @@ interface TextBaseProps extends React.HTMLAttributes<HTMLElement> {
  *   the surrounding typography (the text leaf that sits in a row/header styled
  *   by its parent — the role `TruncatingText` used to fill).
  * - `pick`: a role the THEME picks — the part's three tokens (rung, emphasis,
- *   family; `RolePart`, text core), applied through the role-pick style
- *   queries. A `display: contents` wrapper copies the tokens into the generic
- *   vars; the text element carries the fallback rung (drawn while the role
- *   token is unset) and the pick tables. Compacts at `xs` like `variant`.
+ *   family; `RolePart`, text core), applied by the role-pick class: the text
+ *   element copies the tokens into the generic vars (`rolePickScope`; on a
+ *   box-less wrapper instead in an engine without CSS `if()`) and carries the
+ *   fallback rung plus `role-pick` (`role-pick.ts`). Compacts at `xs` like
+ *   `variant`.
  */
 export type TextProps = TextBaseProps &
   (
@@ -207,6 +212,7 @@ export function Text({
   className,
   children,
   title,
+  style,
   ...rest
 }: TextProps) {
   const singleLine = useSingleLine();
@@ -231,12 +237,20 @@ export function Text({
       ? (compact ? COMPACT_VARIANT_CLASS : VARIANT_CLASS)[variant]
       : undefined;
   const typography = cn(variantClass, TONE_CLASS[tone]);
+  // A pick's scope sits on the leaf itself: `if()` reads the element's own
+  // vars, so no wrapper is needed (the caller's style wins on a clash). An
+  // engine without `if()` reads the style-query fallback, which answers from
+  // the parent: there the scope goes on a box-less wrapper instead.
+  const onLeaf = pick !== undefined && !ROLE_PICK_SCOPE_ON_PARENT;
+  const leafStyle =
+    pick !== undefined && onLeaf ? { ...rolePickScope(pick), ...style } : style;
 
   const leaf =
     singleLine && side === "start" ? (
       <As
         dir="rtl"
         title={resolvedTitle}
+        style={leafStyle}
         className={cn(
           typography,
           singleLineLeafClass(),
@@ -252,6 +266,7 @@ export function Text({
     ) : (
       <As
         title={resolvedTitle}
+        style={leafStyle}
         className={cn(
           typography,
           singleLine && singleLineLeafClass(),
@@ -262,10 +277,7 @@ export function Text({
         {children}
       </As>
     );
-  if (!pick) return leaf;
-  // The part's scope: a box-less wrapper whose computed vars the leaf's style
-  // queries read (a `display: contents` parent still answers them — checked in
-  // Chromium, and an unset token there does not inherit an outer pick).
+  if (pick === undefined || onLeaf) return leaf;
   return (
     <span className="contents" style={rolePickScope(pick)}>
       {leaf}

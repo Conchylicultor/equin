@@ -310,8 +310,9 @@ export function DataViewToolbar({
       }
     />
   );
-  // The pick's scope: a box-less wrapper whose vars the input's style queries
-  // read (through the field's own wrapper, which inherits them).
+  // The pick's scope: a box-less wrapper whose vars the input's role-pick
+  // class reads (through the field's own wrapper, which inherits them) — an
+  // ancestor, as the style-query fallback of an engine without `if()` needs.
   const field = pickSearch ? (
     <span className="contents" style={rolePickScope(searchPick)}>
       {searchField}

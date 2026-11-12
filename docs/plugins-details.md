@@ -47095,7 +47095,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/control-panel`
               - `primitives/launch`
               - `shell/notifications/native`
-        - **`text`** — Semantic typography primitive: <Text variant tone as> (or <Text pick> — a role the theme picks per part through three tokens, applied by CSS style queries) picks a frozen size/line-height/weight role from the typography token group (incl. the eyebrow/section-label role). The single sanctioned home for text hierarchy; raw text-size/leading-* is banned by no-adhoc-typography.
+        - **`text`** — Semantic typography primitive: <Text variant tone as> (or <Text pick> — a role the theme picks per part through three tokens, applied by one CSS if() class) picks a frozen size/line-height/weight role from the typography token group (incl. the eyebrow/section-label role). The single sanctioned home for text hierarchy; raw text-size/leading-* is banned by no-adhoc-typography.
           - Web:
             - Uses:
               - `primitives/css/ui-kit.cn`
@@ -47157,6 +47157,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tag-tree/picker`
           - Core:
             - Exports (types):
+              - `CssUtility`
               - `PickEmphasis`
               - `PickFamily`
               - `PickRung`
@@ -47167,10 +47168,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `TypeSubscale`
               - `TypeVarName`
             - Exports (values):
+              - `CSS_IF_SUPPORTS`
               - `PICK_EMPHASES`
               - `PICK_FAMILIES`
               - `PICK_RUNGS`
               - `PICK_STEPS`
+              - `ROLE_PICK_CLASS`
+              - `ROLE_PICK_COMPACT_CLASS`
+              - `ROLE_PICK_CSS_BEGIN`
+              - `ROLE_PICK_CSS_END`
+              - `rolePickCss`
               - `roleTokenKeys`
               - `TEXT_TREATMENTS`
               - `TYPE_ROLES`

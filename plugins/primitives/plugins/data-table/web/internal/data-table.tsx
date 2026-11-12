@@ -91,7 +91,8 @@ const HEADER_SORTABLE_CLASS =
 /** A soft row's cell: the DataView `cell` pick (scoped on the row), in the
  *  `cellInk` (default the row's own). A cell whose value is a number
  *  (`ColumnDef.numeric`) takes the `cellNumeric` pick, scoped on a box-less
- *  wrapper of its own (a style query reads its parent's vars). */
+ *  wrapper of its own (the role-pick class reads the vars it inherits; an
+ *  engine without CSS `if()` needs them on an ancestor). */
 const SOFT_CELL_CLASS = cn(
   rolePickClass(DATA_VIEW_PICKS.cell.fallback, false),
   "text-cell-ink",

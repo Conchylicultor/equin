@@ -260,7 +260,7 @@ to reconcile them; they never needed reconciling.
 
 ## Plugin reference
 
-- Description: Semantic typography primitive: <Text variant tone as> (or <Text pick> — a role the theme picks per part through three tokens, applied by CSS style queries) picks a frozen size/line-height/weight role from the typography token group (incl. the eyebrow/section-label role). The single sanctioned home for text hierarchy; raw text-size/leading-* is banned by no-adhoc-typography.
+- Description: Semantic typography primitive: <Text variant tone as> (or <Text pick> — a role the theme picks per part through three tokens, applied by one CSS if() class) picks a frozen size/line-height/weight role from the typography token group (incl. the eyebrow/section-label role). The single sanctioned home for text hierarchy; raw text-size/leading-* is banned by no-adhoc-typography.
 - Web:
   - Uses:
     - `primitives/css/ui-kit.cn`
@@ -322,6 +322,7 @@ to reconcile them; they never needed reconciling.
     - `tag-tree/picker`
 - Core:
   - Exports (types):
+    - `CssUtility`
     - `PickEmphasis`
     - `PickFamily`
     - `PickRung`
@@ -332,10 +333,16 @@ to reconcile them; they never needed reconciling.
     - `TypeSubscale`
     - `TypeVarName`
   - Exports (values):
+    - `CSS_IF_SUPPORTS`
     - `PICK_EMPHASES`
     - `PICK_FAMILIES`
     - `PICK_RUNGS`
     - `PICK_STEPS`
+    - `ROLE_PICK_CLASS`
+    - `ROLE_PICK_COMPACT_CLASS`
+    - `ROLE_PICK_CSS_BEGIN`
+    - `ROLE_PICK_CSS_END`
+    - `rolePickCss`
     - `roleTokenKeys`
     - `TEXT_TREATMENTS`
     - `TYPE_ROLES`

@@ -18,3 +18,12 @@ export {
   type TextTreatment,
   type TypeVarName,
 } from "./roles";
+export {
+  rolePickCss,
+  ROLE_PICK_CSS_BEGIN,
+  ROLE_PICK_CSS_END,
+  CSS_IF_SUPPORTS,
+  ROLE_PICK_CLASS,
+  ROLE_PICK_COMPACT_CLASS,
+  type CssUtility,
+} from "./role-pick-css";

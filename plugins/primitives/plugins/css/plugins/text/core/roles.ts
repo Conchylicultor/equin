@@ -118,8 +118,10 @@ export function roleTokenKeys(): string[] {
  *   `sans` / `mono` force one.
  *
  * The type-scale check (rule 6b) holds every `…Role` / `…Emphasis` / `…Family`
- * token's declared `values` equal to these lists, and the role-pick tables
- * (text web) are `Record`s over them, so neither can drift.
+ * token's declared `values` equal to these lists, and the role-pick
+ * stylesheet's generator (`role-pick-css.ts`) reads the rungs from
+ * `PICK_RUNGS` and the emphases / families through `Record`s over them, so
+ * neither can drift.
  */
 export const PICK_RUNGS = [
   ...(Object.keys(TYPE_ROLES) as TypeRole[]),
@@ -154,7 +156,7 @@ export type PickStep = (typeof PICK_STEPS)[number];
 /**
  * One part's role pick, as the CSS custom properties its three tokens paint
  * (`"--card-title-role"`, …) plus the rung drawn where the role token is unset
- * (`initial`) or the browser lacks style queries. `<Text pick={part}>` reads it.
+ * (`initial`) or the browser lacks CSS `if()`. `<Text pick={part}>` reads it.
  */
 export interface RolePart {
   role: `--${string}`;
