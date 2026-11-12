@@ -34,18 +34,16 @@ import {
   type AnalyticsQuery,
   type AnalyticsReport,
   type CollectResponse,
-  type SessionCountsQuery,
-  type SessionsQuery,
+  type VisitCut,
 } from "../../core";
 import {
-  MAX_SESSION_HITS,
-  SESSION_SHAPES,
-  SessionCountsQueryParamSchema,
-  encodeSessionCountsQuery,
-  type Session,
-  SessionsQueryParamSchema,
-  encodeSessionsQuery,
-} from "../../core/internal/sessions";
+  and as allOf,
+  clause,
+  liveBoolean,
+  liveText,
+  type Filter,
+} from "@plugins/network/plugins/live/plugins/filter/core";
+import { MAX_SESSION_HITS, type Session } from "../../core/internal/sessions";
 import { CollectBodySchema } from "../../core/internal/collect-body";
 import { DimensionSchema } from "../../core/internal/dimensions";
 import { eventPropValue } from "../../core/internal/event-prop";
@@ -59,7 +57,13 @@ import {
 } from "./aggregate-sql";
 import { firstIdentityDay, recordCollect } from "./collect";
 import { runAnalyticsQuery } from "./report";
-import { runSessionCountsQuery, runSessionsQuery } from "./sessions";
+import {
+  countVisits,
+  readVisitGroups,
+  readVisitWindow,
+  readVisitsById,
+  type VisitWindowQuery,
+} from "./sessions";
 import { assertDaysRolledUp } from "./retention";
 import { runRollup } from "./rollup";
 import {
@@ -72,6 +76,18 @@ import {
 } from "./tables";
 
 const DAY = "2026-09-10";
+
+/** The visit columns these tests filter on, in their domains (the Sessions list's own declaration). */
+const FILTERABLE = {
+  startedAt: { domain: "instant" },
+  owner: liveBoolean(),
+  channel: liveText(),
+  country: liveText(),
+  events: { domain: "number" },
+  pageviews: { domain: "number" },
+  pages: { domain: "stringArray" },
+  eventNames: { domain: "stringArray" },
+} as const;
 
 const canonicalVisitors = (rows: VisitorRow[]) =>
   [...rows].sort((a, b) =>
@@ -658,54 +674,64 @@ describe("report", () => {
 describe("sessions", () => {
   // The seeded day, seen that evening: its four visits, none still live.
   const now = at(DAY, "23:00");
-  const ask = async (q: Partial<SessionsQuery>) => {
-    const result = await runSessionsQuery(
+  // The seeded day, and the site's visitors (the owner left out) — what
+  // every Sessions view starts from.
+  const ofDay: Filter = allOf(
+    clause("startedAt", "gte", `${DAY}T00:00:00.000Z`),
+    clause("startedAt", "lt", `${NEXT}T00:00:00.000Z`),
+    clause("owner", "eq", false),
+  );
+  const ask = async (
+    q: Partial<Omit<VisitWindowQuery<typeof FILTERABLE>, "filterable">>,
+  ) =>
+    readVisitWindow(
       t.db,
       {
-        range: "today",
-        filters: [],
-        shape: "all",
-        audience: "visitors",
+        where: ofDay,
+        filterable: FILTERABLE,
+        direction: "desc",
         limit: 50,
         ...q,
       },
       now,
     );
-    if (result.kind !== "sessions") throw new Error("expected sessions");
-    return result;
-  };
-  const countsOf = async (q: Partial<SessionCountsQuery>) => {
-    const result = await runSessionCountsQuery(
-      t.db,
-      { range: "today", filters: [], audience: "visitors", ...q },
-      now,
-    );
-    if (result.kind !== "counts") throw new Error("expected counts");
-    return result.counts;
-  };
+  const narrowed = (...more: Filter[]) => allOf(ofDay, ...more);
+  const countOf = (where: Filter) =>
+    countVisits(t.db, { where, filterable: FILTERABLE });
   const entries = (sessions: Session[]) =>
     sessions.map((s) => `${s.entryPath}@${s.startedAt.slice(11, 16)}`);
-  const keyOf = (s: Session | undefined) => {
+  const cutOf = (s: Session | undefined): VisitCut => {
     if (!s) throw new Error("no session");
     return { startedAt: s.startedAt, id: s.id };
   };
+  // The window's tie-break: the visit id, ascending (code point).
+  const byStart = (a: Session, b: Session) =>
+    a.startedAt === b.startedAt
+      ? a.id < b.id
+        ? -1
+        : 1
+      : a.startedAt < b.startedAt
+        ? 1
+        : -1;
 
-  test("newest first, with each visit's hits in order and every shape counted", async () => {
-    const { sessions } = await ask({});
-    const counts = await countsOf({});
+  test("newest first, with each visit's hits in order, its pages and events", async () => {
+    const sessions = await ask({});
     expect(entries(sessions)).toEqual([
       "/@12:00", // C
       "/@11:00", // A, second visit
       "/apps@10:30", // B
       "/@10:00", // A, first visit
     ]);
-    expect(counts).toEqual({ all: 4, actions: 2, multi: 2, bounced: 2 });
+    expect(await countOf(ofDay)).toBe(4);
     const [c, a2, b, a1] = sessions;
     expect(a1!.hits.map((h) => [h.kind, h.path, h.eventName])).toEqual([
       ["pageview", "/", null],
       ["pageview", "/harness", null],
       ["event", "/harness", "improve_open"],
     ]);
+    expect(a1!.pages).toEqual(["/", "/harness"]);
+    expect(a1!.eventNames).toEqual(["improve_open"]);
+    expect(b!.eventNames).toEqual([]);
     expect(a1!.hits[2]!.eventProps).toEqual({ from: "nav" });
     expect(a1!.hits[1]!.engagedMs).toBe(60_000);
     expect(a1!.hits.map((h) => h.gaps)).toEqual([null, null, null]);
@@ -737,10 +763,18 @@ describe("sessions", () => {
     expect(a2!.returning).toBe(true);
     expect(c!.hits).toHaveLength(4);
     expect(b!.hits).toHaveLength(1);
+    // By id, the same visits.
+    const byId = await readVisitsById(
+      t.db,
+      [b!.id, a1!.id, "not-a-visit"],
+      now,
+    );
+    expect(byId.map((s) => s.id).sort()).toEqual([a1!.id, b!.id].sort());
+    expect(byId.find((s) => s.id === a1!.id)).toEqual(a1);
   });
 
   test("the visitor id leaves the box only as a short display hash", async () => {
-    const { sessions } = await ask({});
+    const sessions = await ask({});
     const stored = await t.db
       .select({ id: analyticsVisits.id, visitorId: analyticsVisits.visitorId })
       .from(analyticsVisits);
@@ -757,121 +791,92 @@ describe("sessions", () => {
     expect(b!.visitor).not.toBe(a1!.visitor);
   });
 
-  test("key-range paging: after is exclusive, until inclusive, limit bounds", async () => {
-    const all = (await ask({})).sessions;
+  test("key-range paging: after is exclusive, until inclusive, limit bounds, both directions", async () => {
+    const all = await ask({});
     const first = await ask({ limit: 2 });
-    expect(first.sessions.map((s) => s.id)).toEqual(
-      all.slice(0, 2).map((s) => s.id),
-    );
-    const second = await ask({ limit: 2, after: keyOf(first.sessions[1]) });
-    expect(second.sessions.map((s) => s.id)).toEqual(
-      all.slice(2, 4).map((s) => s.id),
-    );
-    expect((await ask({ after: keyOf(all[3]) })).sessions).toEqual([]);
-    const bounded = await ask({
-      after: keyOf(all[0]),
-      until: keyOf(all[2]),
-    });
-    expect(bounded.sessions.map((s) => s.id)).toEqual(
-      all.slice(1, 3).map((s) => s.id),
-    );
+    expect(first.map((s) => s.id)).toEqual(all.slice(0, 2).map((s) => s.id));
+    const second = await ask({ limit: 2, after: cutOf(first[1]) });
+    expect(second.map((s) => s.id)).toEqual(all.slice(2, 4).map((s) => s.id));
+    expect(await ask({ after: cutOf(all[3]) })).toEqual([]);
+    const bounded = await ask({ after: cutOf(all[0]), until: cutOf(all[2]) });
+    expect(bounded.map((s) => s.id)).toEqual(all.slice(1, 3).map((s) => s.id));
     // A cut whose own row is gone still bounds the range by its key: the
-    // largest id at all[1]'s instant sorts just before it.
+    // largest id at all[1]'s instant sorts just after it.
     const gone = {
-      ...keyOf(all[1]),
+      ...cutOf(all[1]),
       id: "ffffffff-ffff-4fff-bfff-ffffffffffff",
     };
-    expect((await ask({ after: gone })).sessions.map((s) => s.id)).toEqual(
-      all.slice(1).map((s) => s.id),
+    expect((await ask({ after: gone })).map((s) => s.id)).toEqual(
+      all.slice(2).map((s) => s.id),
+    );
+    // Oldest first: the same visits, reversed (no two share an instant here).
+    expect((await ask({ direction: "asc" })).map((s) => s.id)).toEqual(
+      [...all].reverse().map((s) => s.id),
     );
   });
 
-  test("shape filters", async () => {
-    expect(entries((await ask({ shape: "actions" })).sessions)).toEqual([
+  test("the shapes, as filters on the visit's own columns", async () => {
+    const actions = narrowed(clause("events", "gt", 0));
+    const multi = narrowed(clause("pageviews", "gte", 2));
+    const bounced = narrowed(clause("pageviews", "eq", 1));
+    expect(entries(await ask({ where: actions }))).toEqual([
       "/@12:00",
       "/@10:00",
     ]);
-    expect(entries((await ask({ shape: "multi" })).sessions)).toEqual([
+    expect(entries(await ask({ where: multi }))).toEqual([
       "/@12:00",
       "/@10:00",
     ]);
-    const bounced = await ask({ shape: "bounced" });
-    expect(entries(bounced.sessions)).toEqual(["/@11:00", "/apps@10:30"]);
-    // Each shape's count is the length of its own list.
-    for (const shape of SESSION_SHAPES)
-      expect((await ask({ shape })).sessions).toHaveLength(
-        (await countsOf({}))[shape],
-      );
-    expect(await countsOf({})).toEqual({
-      all: 4,
-      actions: 2,
-      multi: 2,
-      bounced: 2,
-    });
+    expect(entries(await ask({ where: bounced }))).toEqual([
+      "/@11:00",
+      "/apps@10:30",
+    ]);
+    for (const where of [actions, multi, bounced])
+      expect(await ask({ where })).toHaveLength(await countOf(where));
   });
 
-  test("the report's filters: a hit dimension keeps visits with such a hit, filters stack", async () => {
+  test("memberships: a page or an event keeps visits with such a hit, filters stack", async () => {
     const harness = await ask({
-      filters: [{ dimension: "page", value: "/harness" }],
+      where: narrowed(clause("pages", "hasAny", ["/harness"])),
     });
-    expect(entries(harness.sessions)).toEqual(["/@10:00"]);
-    expect(
-      await countsOf({ filters: [{ dimension: "page", value: "/harness" }] }),
-    ).toEqual({
-      all: 1,
-      actions: 1,
-      multi: 1,
-      bounced: 0,
-    });
+    expect(entries(harness)).toEqual(["/@10:00"]);
     // The whole visit comes back, not only the matching hits.
-    expect(harness.sessions[0]!.hits).toHaveLength(3);
-    const stacked = await ask({
-      filters: [
-        { dimension: "event", value: "improve_open" },
-        { dimension: "channel", value: "Search" },
-      ],
-    });
-    expect(entries(stacked.sessions)).toEqual(["/@12:00"]);
-    expect(
-      (
-        await countsOf({
-          filters: [
-            { dimension: "event", value: "improve_open" },
-            { dimension: "channel", value: "Search" },
-          ],
-        })
-      ).all,
-    ).toBe(1);
-    const prop = await ask({
-      filters: [
-        {
-          dimension: "event_prop",
-          value: eventPropValue("improve_open", "from", "nav"),
-        },
-      ],
-    });
-    expect(entries(prop.sessions)).toEqual(["/@10:00"]);
+    expect(harness[0]!.hits).toHaveLength(3);
+    const stacked = narrowed(
+      clause("eventNames", "hasAny", ["improve_open"]),
+      clause("channel", "eq", "Search"),
+    );
+    expect(entries(await ask({ where: stacked }))).toEqual(["/@12:00"]);
+    expect(await countOf(stacked)).toBe(1);
   });
 
-  test("one filter definition: the list, its counts and the report keep the same visits", async () => {
-    const cases: AnalyticsFilter[][] = [
-      [],
-      [{ dimension: "page", value: "/harness" }],
-      [{ dimension: "event", value: "improve_open" }],
+  test("one filter definition: the list, its count and the report keep the same visits", async () => {
+    const cases: [AnalyticsFilter[], Filter[]][] = [
+      [[], []],
       [
-        { dimension: "event", value: "improve_open" },
-        { dimension: "channel", value: "Search" },
+        [{ dimension: "page", value: "/harness" }],
+        [clause("pages", "hasAny", ["/harness"])],
       ],
       [
-        {
-          dimension: "event_prop",
-          value: eventPropValue("improve_open", "from", "nav"),
-        },
-        { dimension: "page", value: "/" },
+        [{ dimension: "event", value: "improve_open" }],
+        [clause("eventNames", "hasAny", ["improve_open"])],
       ],
-      [{ dimension: "country", value: "nowhere" }],
+      [
+        [
+          { dimension: "event", value: "improve_open" },
+          { dimension: "channel", value: "Search" },
+        ],
+        [
+          clause("eventNames", "hasAny", ["improve_open"]),
+          clause("channel", "eq", "Search"),
+        ],
+      ],
+      [
+        [{ dimension: "country", value: "nowhere" }],
+        [clause("country", "eq", "nowhere")],
+      ],
     ];
-    for (const filters of cases) {
+    for (const [filters, where] of cases) {
       const report = await runAnalyticsQuery(
         t.db,
         { range: "today", compare: false, audience: "visitors", filters },
@@ -879,9 +884,57 @@ describe("sessions", () => {
       );
       if (report.kind !== "report") throw new Error("expected a report");
       const visits = report.report.current.summary.visits;
-      expect((await ask({ filters })).sessions).toHaveLength(visits);
-      expect((await countsOf({ filters })).all).toBe(visits);
+      expect(await ask({ where: narrowed(...where) })).toHaveLength(visits);
+      expect(await countOf(narrowed(...where))).toBe(visits);
     }
+  });
+
+  test("groupings: each value with its count, count descending", async () => {
+    const groups = await readVisitGroups(t.db, {
+      where: ofDay,
+      filterable: FILTERABLE,
+      groupBy: "channel",
+      limit: 10,
+    });
+    const all = await ask({});
+    const counted = new Map<string, number>();
+    for (const s of all)
+      counted.set(s.channel, (counted.get(s.channel) ?? 0) + 1);
+    expect(groups.reduce((n, g) => n + g.count, 0)).toBe(all.length);
+    for (const g of groups)
+      expect(g.count).toBe(counted.get(String(g.value)) ?? -1);
+    expect(groups.map((g) => g.count)).toEqual(
+      groups.map((g) => g.count).sort((a, b) => b - a),
+    );
+  });
+
+  test("groupings keep NULL, booleans and numbers as they are", async () => {
+    const all = await ask({});
+    const by = (groupBy: "returning" | "country" | "pageviews") =>
+      readVisitGroups(t.db, {
+        where: ofDay,
+        filterable: {
+          ...FILTERABLE,
+          returning: liveBoolean(),
+          country: liveText(),
+        },
+        groupBy,
+        limit: 10,
+      });
+    const returning = await by("returning");
+    expect(returning.map((g) => typeof g.value)).toEqual(
+      returning.map(() => "boolean"),
+    );
+    expect(
+      Object.fromEntries(returning.map((g) => [String(g.value), g.count])),
+    ).toEqual({
+      true: all.filter((s) => s.returning).length,
+      false: all.filter((s) => !s.returning).length,
+    });
+    for (const g of await by("pageviews"))
+      expect(typeof g.value).toBe("number");
+    for (const g of await by("country"))
+      expect(g.value === null || typeof g.value === "string").toBe(true);
   });
 
   test("a visit's hits are capped, and a live visit says so", async () => {
@@ -914,8 +967,7 @@ describe("sessions", () => {
           eventName: `e${i}`,
         })),
       );
-      const { sessions } = await ask({ limit: 1 });
-      const [s] = sessions;
+      const [s] = await ask({ limit: 1 });
       expect(s!.id).toBe(visit!.id);
       expect(s!.live).toBe(true);
       expect(s!.hitsTruncated).toBe(true);
@@ -929,7 +981,7 @@ describe("sessions", () => {
     }
   });
 
-  test("visits that started at the same instant are ordered, and paged, by id", async () => {
+  test("visits that started at the same instant are ordered, and paged, by id ascending", async () => {
     const started = at(DAY, "22:40");
     const twins = await t.db
       .insert(analyticsVisits)
@@ -951,110 +1003,45 @@ describe("sessions", () => {
       )
       .returning({ id: analyticsVisits.id });
     try {
-      const ids = twins
-        .map((v) => v.id)
-        .sort()
-        .reverse();
+      const ids = twins.map((v) => v.id).sort();
       const first = await ask({ limit: 1 });
-      expect(first.sessions.map((s) => s.id)).toEqual(ids.slice(0, 1));
-      const second = await ask({ limit: 1, after: keyOf(first.sessions[0]) });
-      expect(second.sessions.map((s) => s.id)).toEqual(ids.slice(1, 2));
-      const third = await ask({ limit: 1, after: keyOf(second.sessions[0]) });
-      expect(third.sessions[0]!.entryPath).toBe("/");
+      expect(first.map((s) => s.id)).toEqual(ids.slice(0, 1));
+      const second = await ask({ limit: 1, after: cutOf(first[0]) });
+      expect(second.map((s) => s.id)).toEqual(ids.slice(1, 2));
+      const third = await ask({ limit: 1, after: cutOf(second[0]) });
+      expect(third[0]!.entryPath).toBe("/");
+      const all = await ask({});
+      expect(all.map((s) => s.id)).toEqual(
+        [...all].sort(byStart).map((s) => s.id),
+      );
     } finally {
       for (const { id } of twins) {
         await t.db.delete(analyticsVisits).where(eq(analyticsVisits.id, id));
       }
     }
   });
-
-  test("a range past the raw window is refused", async () => {
-    expect(
-      await runSessionsQuery(
-        t.db,
-        {
-          range: "12m",
-          filters: [],
-          shape: "all",
-          audience: "visitors",
-          limit: 50,
-        },
-        now,
-      ),
-    ).toEqual({
-      kind: "refused",
-      reason: "beyond-raw-window",
-      rawWindowDays: 90,
-    });
-    expect(
-      await runSessionCountsQuery(
-        t.db,
-        { range: "12m", filters: [], audience: "visitors" },
-        now,
-      ),
-    ).toEqual({
-      kind: "refused",
-      reason: "beyond-raw-window",
-      rawWindowDays: 90,
-    });
-  });
-
-  test("the question round-trips its wire encoding; an oversized limit is malformed", () => {
-    const q: SessionsQuery = {
-      range: "30d",
-      filters: [{ dimension: "page", value: "/é" }],
-      shape: "actions",
-      audience: "you",
-      after: {
-        startedAt: "2026-09-10T10:00:00.000Z",
-        id: "00000000-0000-4000-8000-000000000000",
-      },
-      limit: 50,
-    };
-    expect(
-      SessionsQueryParamSchema.parse({ q: encodeSessionsQuery(q) }).q,
-    ).toEqual(q);
-    // The default audience is left off the wire and filled back in.
-    const visitors = { ...q, audience: "visitors" as const };
-    expect(
-      SessionsQueryParamSchema.parse({ q: encodeSessionsQuery(visitors) }).q,
-    ).toEqual(visitors);
-    expect(
-      SessionsQueryParamSchema.safeParse({
-        q: encodeSessionsQuery({ ...q, limit: 10_000 }),
-      }).success,
-    ).toBe(false);
-    const counts: SessionCountsQuery = {
-      range: q.range,
-      filters: q.filters,
-      audience: "visitors",
-    };
-    expect(
-      SessionCountsQueryParamSchema.parse({
-        q: encodeSessionCountsQuery(counts),
-      }).q,
-    ).toEqual(counts);
-  });
 });
 
 describe("visit duration: one definition, report and sessions alike", () => {
   const sessionsOf = async (
-    dbx: Parameters<typeof runSessionsQuery>[0],
+    dbx: Parameters<typeof readVisitWindow>[0],
     day: string,
   ) => {
-    const result = await runSessionsQuery(
+    const next = addDays(day, 1);
+    return readVisitWindow(
       dbx,
       {
-        range: "today",
-        filters: [],
-        shape: "all",
-        audience: "visitors",
+        where: allOf(
+          clause("startedAt", "gte", `${day}T00:00:00.000Z`),
+          clause("startedAt", "lt", `${next}T00:00:00.000Z`),
+          clause("owner", "eq", false),
+        ),
+        filterable: FILTERABLE,
+        direction: "desc",
         limit: 50,
       },
       at(day, "23:00"),
     );
-    if (result.kind !== "sessions") throw new Error("expected sessions");
-    return result.sessions;
   };
   const totalDuration = (rows: KeyedRow[]) =>
     rows.find((r) => r.dimension === "total")?.durationMs;
@@ -1229,22 +1216,20 @@ describe("the owner's own visits", () => {
         expect(visits(await raw("you"))).toBe(1);
         expect(visits(await raw("all"))).toBe(2);
 
-        const sessions = await runSessionsQuery(
+        const sessions = await readVisitWindow(
           tx,
           {
-            range: "today",
-            filters: [],
-            shape: "all",
-            audience: "all",
+            where: allOf(
+              clause("startedAt", "gte", `${day}T00:00:00.000Z`),
+              clause("startedAt", "lt", `${addDays(day, 1)}T00:00:00.000Z`),
+            ),
+            filterable: FILTERABLE,
+            direction: "desc",
             limit: 50,
           },
           at(day, "23:00"),
         );
-        if (sessions.kind !== "sessions") throw new Error("expected sessions");
-        expect(sessions.sessions.map((s) => s.owner).sort()).toEqual([
-          false,
-          true,
-        ]);
+        expect(sessions.map((s) => s.owner).sort()).toEqual([false, true]);
 
         // The stored totals hold the visitor only; the memberships keep both.
         await rollupDay(tx, day);

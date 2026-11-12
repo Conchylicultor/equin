@@ -410,6 +410,10 @@ export function fixtureSessions(now: number): Session[] {
       device: v.device,
       browser: v.browser,
       os: v.os,
+      pages: [...new Set(hits.map((h) => h.path))].sort(),
+      eventNames: [
+        ...new Set(hits.flatMap((h) => (h.eventName ? [h.eventName] : []))),
+      ].sort(),
       hits,
       hitsTruncated: false,
     };

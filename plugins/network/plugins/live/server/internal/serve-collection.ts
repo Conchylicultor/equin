@@ -8,6 +8,11 @@ import {
   type FilterScalar,
 } from "@plugins/network/plugins/live/plugins/filter/core";
 import { filterSql } from "@plugins/network/plugins/live/plugins/filter/server";
+import type {
+  ReachPlan,
+  ResourceParams,
+  ServerResourceOptions,
+} from "@plugins/network/plugins/live/plugins/resource-runtime/core";
 import {
   defineDeferredResource,
   defineExternalResource,
@@ -40,6 +45,7 @@ import {
 } from "@plugins/network/plugins/live/plugins/query-resource/core";
 import {
   assertStableRead,
+  compiledValueReach,
   compileAncestorsQuery,
   compileCountQuery,
   compileGroupsQuery,
@@ -60,6 +66,7 @@ import {
   type SelectMap,
   type PointQueryResourceSpec,
   type WindowOrderKey,
+  type ValueReads,
   type WindowQueryResourceSpec,
 } from "@plugins/network/plugins/live/plugins/query-resource/server";
 import {
@@ -109,6 +116,7 @@ import {
   type AnyExternalCollectionOptions,
   type AnyServedExternal,
   type LiveFields,
+  type LiveRuntime,
 } from "../../core";
 import {
   compileAllSpecs,
@@ -399,6 +407,58 @@ export interface ServedAllResources<Row, B extends string = never> {
     ReturnType<typeof ResourceContribution.Declare>,
     ReturnType<typeof ResourceContribution.Declare>,
   ];
+}
+
+/**
+ * The Postgres reads an external window collection's answers make beside its
+ * own truth — only on a `changes: "notified"` one, as an external value's
+ * `reads` (`serveValue`): a static list (every resource registers at once).
+ * Typically `notified` relations — tables the source's own change signal
+ * already covers (a replica's copy, announced by its NOTIFY) — so the
+ * runtime's undeclared-read guard accepts them without routing a write.
+ */
+export type ExternalCollectionReadsOption<C extends LiveCollectionChanges> = [
+  C,
+] extends ["notified"]
+  ? {
+      /** Every table the answers read, and why a write to any row may change any tuple. */
+      reads?: ValueReads<ResourceParams>;
+    }
+  : { reads?: never };
+
+/**
+ * The host runtime with `reads` compiled into every external resource it
+ * registers — the window, `:rows`, `:groups`, `:count` (one reach plan, as an
+ * external value's; a keyed window takes it full-only, D31).
+ */
+function externalReadsRuntime(
+  label: string,
+  reads: ValueReads<never>,
+): Pick<LiveRuntime, "defineResource" | "defineExternalResource"> {
+  const reach = compiledValueReach(
+    reads,
+    label,
+    [],
+  ) as ReachPlan<ResourceParams>;
+  return {
+    defineResource,
+    defineExternalResource: ((contract: never, options: never) => {
+      const { freshness } = options as ServerResourceOptions<
+        unknown,
+        ResourceParams
+      >;
+      if (freshness?.kind !== "notified") {
+        // Unreachable from typed code (`ExternalCollectionReadsOption`).
+        throw new Error(
+          `${label}: \`reads\` is a "notified" collection's — an immutable or fixed one claims no push, so a write could tell it nothing.`,
+        );
+      }
+      return defineExternalResource(contract, {
+        ...(options as object),
+        reach,
+      } as never);
+    }) as LiveRuntime["defineExternalResource"],
+  };
 }
 
 /**
@@ -1237,7 +1297,8 @@ export interface ServeCollectionOverloads<H> {
       NoInfer<S>,
       NoInfer<Cn>,
       C
-    >,
+    > &
+      ExternalCollectionReadsOption<C>,
   ): DeclaredCollection<ServedExternalWindow<Row, C>>;
   // The SQL arm OFF the change feed (`changes` set — `./serve-off-feed`): the
   // same binding and compile, served as an external window / point set whose
@@ -1352,10 +1413,16 @@ export function serveAnyCollection<
   // table-backed arm below is untouched by it.
   if ((served as { source?: unknown }).source !== undefined) {
     // Erased: the overloads checked the options against the declaration.
+    const { reads, ...external_ } = served as { reads?: ValueReads<never> };
     const external = compileExternalCollection(
-      { defineResource, defineExternalResource },
+      reads === undefined
+        ? { defineResource, defineExternalResource }
+        : externalReadsRuntime(
+            `serveCollection("${(collection as { key: string }).key}")`,
+            reads,
+          ),
       collection as unknown as AnyCollection,
-      served as unknown as AnyExternalCollectionOptions,
+      external_ as unknown as AnyExternalCollectionOptions,
     );
     return {
       ...external,

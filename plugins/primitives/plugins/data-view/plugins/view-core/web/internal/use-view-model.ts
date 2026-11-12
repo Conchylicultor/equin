@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
 import type { VariantValue } from "@plugins/fields/plugins/variant/core";
@@ -17,6 +17,7 @@ import {
 import { useViewsConfig, type ViewsConfigHandle } from "./use-views-config";
 import { cleanView, sameView, withDraft } from "./draft-values";
 import { NO_DRAFTS, useDraftMap, useSurfaceDrafts } from "./view-drafts";
+import { encodeViewAddress, parseViewAddress } from "./view-address";
 import { useActiveViewId } from "@plugins/primitives/plugins/view-switcher/web";
 import { resolveActiveId } from "./resolve-active-id";
 import { usableTypes } from "./usable-types";
@@ -156,7 +157,10 @@ export interface ViewModelOptions {
   /**
    * Where the URL holds the active view (a pane's surface view key), when it
    * does: a URL-named view outranks the device-local selection, and the URL is
-   * DERIVED from the active view — see {@link activeViewUrlValue}.
+   * DERIVED from the active view — see {@link activeViewUrlValue}. With
+   * `drafts`, the value also carries the active view's working copy
+   * (`<id>~<draft>`, `view-address.ts`), and a value arriving from outside (a
+   * link, back/forward, F5) seeds that copy.
    * `null`/absent keeps the selection device-local only.
    */
   activeViewUrl?: ActiveViewUrl | null;
@@ -168,12 +172,16 @@ export interface ViewModelOptions {
  * engine names no router.
  */
 export interface ActiveViewUrl {
-  /** The id the address names, `undefined` when it names none. */
+  /** The view the address names, `undefined` when it names none — its id, or
+   *  under drafts its address (`<id>[~<draft>]`, `view-address.ts`). */
   value: string | undefined;
-  /** Write the id into the address, or remove it with `undefined` (in place —
-   *  no history entry). */
+  /** Write the value into the address, or remove it with `undefined` (in
+   *  place — no history entry). */
   set: (viewId: string | undefined) => void;
 }
+
+/** How many of its own URL writes a surface remembers, so none of them reads back as news. */
+const RECENT_WRITES = 8;
 
 /**
  * THE rule for what the URL holds while `activeId` is on screen: nothing on
@@ -217,8 +225,19 @@ export function useViewModel<T extends ViewTypeMeta>(
   const active = useActiveViewId(storageKey);
   const surfaceDrafts = useSurfaceDrafts(storageKey);
   const url = opts?.activeViewUrl ?? null;
-  const urlViewId = url?.value;
+  const urlValue = url?.value;
   const setUrl = url?.set;
+  // Under drafts the value is an address (`<id>[~<draft>]`); without, the id.
+  const urlAddress = useMemo(
+    () =>
+      urlValue === undefined
+        ? undefined
+        : draftsOn
+          ? parseViewAddress(urlValue)
+          : ({ viewId: urlValue, draft: { kind: "none" } } as const),
+    [urlValue, draftsOn],
+  );
+  const urlViewId = urlAddress?.viewId;
 
   // The surface's working copies — the tab's shared map (every mount of this
   // surface reads the same one), or none without drafts.
@@ -332,15 +351,92 @@ export function useViewModel<T extends ViewTypeMeta>(
     }
   }, [activeId, urlViewId, persistedId, persist]);
 
+  // What the URL says for `id` on screen: `activeViewUrlValue`, and under
+  // drafts the view's CURRENT working copy with it (read from the store, not
+  // this render's map, so a copy seeded in this commit is included). A drafted
+  // default view is named, so its copy has somewhere to live.
+  const urlValueFor = useCallback(
+    (id: string): string | undefined => {
+      const draft = draftsOn ? surfaceDrafts.read()[id] : undefined;
+      if (draft === undefined) return activeViewUrlValue(id, staticDefault);
+      return encodeViewAddress(id, draft);
+    },
+    [draftsOn, surfaceDrafts, staticDefault],
+  );
+
+  // The URL values this surface wrote itself (the last few — a burst of
+  // edits can write several before the address shows the first), and the one
+  // it last read: only a value that is neither is news from outside. A value
+  // of ours the address still shows a render after a newer write is never
+  // re-read as news, so it cannot revert that write.
+  const wroteUrl = useRef<(string | undefined)[]>([]);
+  const seenUrl = useRef<string | undefined | null>(null);
+  const writeUrl = useCallback(
+    (value: string | undefined) => {
+      wroteUrl.current = [
+        ...wroteUrl.current.slice(-(RECENT_WRITES - 1)),
+        value,
+      ];
+      setUrl?.(value);
+    },
+    [setUrl],
+  );
+
+  // Under drafts the URL is the truth for its view's working copy when it
+  // changes from outside (a link opened, back/forward, F5): its draft becomes
+  // the copy, and naming the view with no draft drops the copy. Waits for the
+  // config — the copy is compared with, and only kept for, a saved view.
+  // Declared before the derived-URL effect, so that effect, in the same
+  // commit, writes the seeded copy back in its canonical spelling.
+  useEffect(() => {
+    if (!draftsOn || setUrl === undefined || !cfg.ready) return;
+    if (urlValue === seenUrl.current) return;
+    seenUrl.current = urlValue;
+    if (wroteUrl.current.includes(urlValue) || urlAddress === undefined) return;
+    const { viewId, draft } = urlAddress;
+    const saved = savedViewFor(viewId);
+    // An unknown view: the derived-URL effect rewrites the address.
+    if (saved === undefined) return;
+    // A draft part that does not decode (a hand-edited or truncated link) is
+    // not a draft: the view keeps whatever copy it has, and the derived-URL
+    // effect rewrites the address to what is on screen.
+    if (draft.kind === "malformed") return;
+    const current = surfaceDrafts.read()[viewId];
+    if (draft.kind === "none") {
+      if (current !== undefined) setDraft(viewId, null);
+      return;
+    }
+    if (current !== undefined && sameView(current, draft.view, undefined)) {
+      return;
+    }
+    setDraft(
+      viewId,
+      sameView(draft.view, saved, canonical) ? null : cleanView(draft.view),
+    );
+  }, [
+    draftsOn,
+    setUrl,
+    cfg.ready,
+    urlValue,
+    urlAddress,
+    savedViewFor,
+    surfaceDrafts,
+    setDraft,
+    canonical,
+  ]);
+
   // The URL is derived from the active view: once the instances are known,
-  // whatever is on screen is what the address says (`activeViewUrlValue`). So
-  // a view restored from this device is stamped in, a stale or unknown id is
-  // rewritten to the view actually shown, and the default leaves no key.
+  // whatever is on screen is what the address says (`urlValueFor`). So a view
+  // restored from this device is stamped in, a stale or unknown id is
+  // rewritten to the view actually shown, the default leaves no key — and
+  // under drafts every edit to the active view's copy is written in.
   useEffect(() => {
     if (setUrl === undefined || activeId === "") return;
-    const desired = activeViewUrlValue(activeId, staticDefault);
-    if (urlViewId !== desired) setUrl(desired);
-  }, [setUrl, activeId, staticDefault, urlViewId]);
+    const desired = urlValueFor(activeId);
+    if (urlValue !== desired) writeUrl(desired);
+    // `drafted`: `urlValueFor` reads the store, so a write to a copy must
+    // re-run this effect.
+  }, [setUrl, activeId, urlValueFor, urlValue, writeUrl, drafted]);
 
   // Selecting a view writes the device's store and — by the same rule — the
   // URL, in one batch. The URL outranks the store, so a pick that left it
@@ -348,9 +444,9 @@ export function useViewModel<T extends ViewTypeMeta>(
   const setActiveView = useCallback(
     (id: string) => {
       persist(id);
-      setUrl?.(activeViewUrlValue(id, staticDefault));
+      if (setUrl !== undefined) writeUrl(urlValueFor(id));
     },
-    [persist, setUrl, staticDefault],
+    [persist, setUrl, writeUrl, urlValueFor],
   );
 
   // Capability-gated add menu, grouped per source entry: each group is that

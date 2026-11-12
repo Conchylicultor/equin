@@ -13,6 +13,7 @@ import type {
   DataViewDensity,
   DataViewId,
   DataViewActiveChrome,
+  DataViewViewEdits,
   SubItemsKind,
 } from "../../core";
 import { DataViewSlots, type DataViewContribution } from "../slots";
@@ -21,6 +22,7 @@ import {
   type ReadyViewModel,
   type ViewModel,
 } from "../internal/use-data-view-model";
+import { viewEditsOptions } from "../internal/view-edits-options";
 import type {
   DataViewSourceBundle,
   DataViewShellChrome,
@@ -63,6 +65,9 @@ interface DataViewSwitcherBaseProps<THostProps> {
   /** The surface's side panel (`DataViewProps.aside`), forwarded like
    *  `toolbar` — a property of the surface, whichever source is active. */
   aside?: ReactNode;
+  /** How the surface's view edits behave (`DataViewProps.viewEdits`): under
+   *  `{ mode: "draft" }` an edit goes to the view's per-tab working copy. */
+  viewEdits?: DataViewViewEdits;
 }
 
 /**
@@ -135,7 +140,13 @@ function DataViewSwitcherWithLayouts<THostProps>(props: {
     [sourceContribs, contributions, onOrphanType],
   );
 
-  const viewModel = useDataViewModel(storageKey, entries, defaultView);
+  const viewModel = useDataViewModel(
+    storageKey,
+    entries,
+    defaultView,
+    undefined,
+    viewEditsOptions(props.props.viewEdits),
+  );
 
   return (
     <DataViewSwitcherHost

@@ -39,6 +39,7 @@ import {
   type ReadyViewModel,
   type ViewModel,
 } from "../internal/use-data-view-model";
+import { viewEditsOptions } from "../internal/view-edits-options";
 import type {
   DataViewShellChrome,
   DataViewSourceBundle,
@@ -106,14 +107,7 @@ function DataViewWithTypes<TRow>(props: {
     entries,
     props.props.defaultView,
     props.props.pinnedView,
-    props.props.viewEdits === undefined
-      ? undefined
-      : {
-          drafts: props.props.viewEdits.mode === "draft",
-          ...(props.props.viewEdits.home !== undefined
-            ? { home: props.props.viewEdits.home }
-            : {}),
-        },
+    viewEditsOptions(props.props.viewEdits),
   );
   return <DataViewHost props={props.props} viewModel={viewModel} />;
 }

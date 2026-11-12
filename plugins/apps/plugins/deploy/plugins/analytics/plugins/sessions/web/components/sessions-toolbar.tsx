@@ -1,4 +1,5 @@
 import { useContext, type ReactNode } from "react";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import {
   Inset,
@@ -17,25 +18,67 @@ import { axisFrac, axisTicks } from "../internal/axis";
 import { LANE_TRACKS, LaneWindowContext } from "../internal/lane-context";
 import { GAP_KINDS } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
 import { GAP_LABEL, GapSwatch } from "./gap-look";
+import { span } from "../internal/format";
+import { seconds } from "../internal/load";
 
 /**
- * The Sessions list's band: the search, the surface's actions (the shape
- * switch, then the summary pushed right) — and,
- * under them, the axis row whose ticks stand over every journey. One sticky
- * band, so the axis stays on screen while the visits scroll under it.
- * No view controls: the surface pins its one view (newest first, by day), and
- * which visits show is the server's question (range, shape), asked above.
+ * The Sessions list's band: the views (All, With actions, 2+ pages, Bounced —
+ * each a saved filter; narrowing whose visits and since when is a draft of it,
+ * which the URL carries), the search and the controls (Filter, Sort, View),
+ * the summary pushed right — and, under them, the axis row whose ticks stand
+ * over every journey. One sticky band, so the axis stays on screen while the
+ * visits scroll under it.
  */
-function SessionsToolbar({ search, actions }: ToolbarParts): ReactNode {
+function SessionsToolbar({
+  switcher,
+  search,
+  controls,
+}: ToolbarParts): ReactNode {
   return (
     <Stack gap="none" className="rail-follow">
       <Line className="gap-smd py-smd">
-        <div className="w-[260px]">{search}</div>
-        {/* eslint-disable-next-line row-actions/no-raw-actions-slot -- surface-level toolbar actions, one per DataView, not a per-row cluster */}
-        {actions}
+        {switcher.strip ?? switcher.chip}
+        <div className="w-[240px]">{search}</div>
+        {controls}
+        <Fill />
+        <Summary />
       </Line>
       <AxisRow />
     </Stack>
+  );
+}
+
+/** How many visits the view matches, and figures over the loaded ones. */
+function Summary(): ReactNode {
+  const lane = useContext(LaneWindowContext);
+  if (lane === null || lane.summary === null) return null;
+  const { total, loaded, medianS, medianLoadMs, withActions } = lane.summary;
+  return (
+    <Line className="gap-md">
+      <Text variant="caption" tone="muted">
+        <Strong>{total ?? `${loaded}+`}</Strong> sessions
+      </Text>
+      {medianS !== null && (
+        <Text variant="caption" tone="muted">
+          median <Strong>{span(medianS)}</Strong>
+        </Text>
+      )}
+      {medianLoadMs !== null && (
+        <Text variant="caption" tone="muted">
+          median load <Strong>{seconds(medianLoadMs, 1)}</Strong>
+        </Text>
+      )}
+      <Text variant="caption" tone="muted">
+        <Strong>{withActions}</Strong> with actions
+      </Text>
+    </Line>
+  );
+}
+
+/** A figure inside a summary phrase: inline, so the phrase stays one line. */
+function Strong({ children }: { children: ReactNode }): ReactNode {
+  return (
+    <b className="font-semibold text-foreground tabular-nums">{children}</b>
   );
 }
 

@@ -19,14 +19,17 @@ import { ANALYTICS_MIRROR_SET_ID } from "../../core";
  * run locally on the same SQL. The raw visits and hits (90 days; a deleted
  * visit's hits arrive as their own tombstones) and the forever rollups.
  */
+/** The tables of the `analytics` mirror set — what a reader of a copy of it reads. */
+export const analyticsMirrorTables = [
+  analyticsVisits,
+  analyticsHits,
+  analyticsDaily,
+  analyticsVisitMembers,
+] as const;
+
 export const analyticsMirror = defineMirrorSet({
   id: ANALYTICS_MIRROR_SET_ID,
-  tables: [
-    analyticsVisits,
-    analyticsHits,
-    analyticsDaily,
-    analyticsVisitMembers,
-  ],
+  tables: [...analyticsMirrorTables],
 });
 
 export const analyticsMirrorContributions = [

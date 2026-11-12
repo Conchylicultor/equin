@@ -1,9 +1,9 @@
 export {
-  DeploymentSessionsMetaSchema,
-  DeploymentSessionsQuestionSchema,
   deploymentSessions,
+  parseSessionKey,
+  sessionKey,
+  sessionOf,
+  sessionRowOf,
+  startedAtKeyText,
 } from "./internal/sessions";
-export type {
-  DeploymentSessionsMeta,
-  DeploymentSessionsQuestion,
-} from "./internal/sessions";
+export type { SessionRow } from "./internal/sessions";

@@ -181,6 +181,10 @@ A DataView inside a pane puts its active view in the pane URL under
 - **The URL is derived** (view-core `activeViewUrlValue`): absent on the static
   default, the active id otherwise; stale ids are rewritten; every write replaces
   (no history entry). Selecting also writes the device store.
+- **A drafted view carries its copy** (`viewEdits` drafts): the value is
+  `<id>~<base64url draft>` while the active view has a working copy, so a
+  narrowed view's link reproduces the screen; opening such a link (or F5)
+  seeds the copy, and the bare id drops it (view-core "Drafts").
 - **Not bound**: `pinnedView` hosts, DataViews outside every pane (menu bar,
   popovers, sidebars, dialogs), and panes with no URL part that are not the app's
   landing pane.
@@ -218,7 +222,7 @@ Reference: `runs` (`plugins/runs`).
 One source's rows at a time — the same rows organised several ways, or several lists
 of one entity (Queue / History). Mixed kinds → Meta-DataView.
 
-`<DataViewSwitcher storageKey sources hostProps title? actions? defaultView?>` is
+`<DataViewSwitcher storageKey sources hostProps title? actions? defaultView? viewEdits?>` is
 one surface (**one `storageKey` → one config file → one `EditableViewSwitcher`**).
 Each instance binds to a source via the row's optional `source` key:
 

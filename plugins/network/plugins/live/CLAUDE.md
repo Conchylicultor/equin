@@ -371,6 +371,13 @@ with no same-named column is bound in `columns: { name: (j) => j.base.col }`
   - Exposed fields read their defaults (`$columns: {}`); a source row carrying
     `$columns` throws. Refused: union, `scopedColumns`, a stray answer for the
     form, an empty `changes` reason.
+  - **`reads`** (Bun host, window form, `"notified"` only — tsc, and a throw):
+    the Postgres reads its answers make beside its own truth, a static
+    `ValueReads` compiled into every minted resource's reach plan exactly as an
+    external value's (`serveValue`). Typically `reads.notified` — relations
+    whose changes the source's own signal already carries (a table-mirror
+    replica's copy, announced by its NOTIFY: `deploy-analytics.sessions`) —
+    so the undeclared-read guard (A8) accepts them without routing a write.
 - **The SQL arm off the change feed — `changes`** (`server/internal/serve-off-feed.ts`).
   A table its owner `ExcludeFromChangeFeed`s still pages through the same
   compiled SQL (filters, cuts, joins, groups, count); only freshness changes:

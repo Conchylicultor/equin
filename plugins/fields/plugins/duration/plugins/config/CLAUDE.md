@@ -18,6 +18,7 @@
   - Exports (values): `durationField`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/analytics/sessions`
     - `apps/events/events-core`
     - `apps/home/usage-fields`
     - `apps/sonata/library`

@@ -37,6 +37,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "apps.debug.shell.sidebar", pluginId: "apps.debug.shell", configName: "sidebar" },
   { slotId: "apps.debug.shell.toolbar", pluginId: "apps.debug.shell", configName: "toolbar" },
   { slotId: "apps.demo.shell.start.actions", pluginId: "apps.demo.shell", configName: "start.actions" },
+  { slotId: "apps.deploy.analytics.sessions.sources", pluginId: "apps.deploy.analytics.sessions", configName: "sources" },
   { slotId: "apps.deploy.deploy-history.deploy-activity.actions", pluginId: "apps.deploy.deploy-history", configName: "deploy-activity.actions" },
   { slotId: "apps.deploy.deploy-history.item-actions", pluginId: "apps.deploy.deploy-history", configName: "item-actions" },
   { slotId: "apps.deploy.deploy-secrets.approvals.item-actions", pluginId: "apps.deploy.deploy-secrets.approvals", configName: "item-actions" },

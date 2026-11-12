@@ -137,6 +137,7 @@ list cut); the engine's own round trips are `table-mirror/replica`'s suite.
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/analytics/dashboard`
+    - `apps/deploy/analytics/sessions`
     - `apps/deploy/site-messages/inbox`
     - `apps/deploy/site-reports/import`
 

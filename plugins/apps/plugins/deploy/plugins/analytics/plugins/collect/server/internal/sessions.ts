@@ -1,6 +1,15 @@
 import { sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
-import { executeRows } from "@plugins/database/plugins/sql-rows/core";
+import {
+  executeOne,
+  executeRows,
+  type SqlExecutable,
+} from "@plugins/database/plugins/sql-rows/core";
+import type {
+  Filter,
+  FilterColumn,
+} from "@plugins/network/plugins/live/plugins/filter/core";
+import { filterSql } from "@plugins/network/plugins/live/plugins/filter/server";
 import {
   BrowserFamilySchema,
   ChannelSchema,
@@ -10,151 +19,208 @@ import {
   PageSectionsSchema,
   MAX_SESSION_HITS,
   OsFamilySchema,
-  RAW_RETENTION_DAYS,
-  planPeriods,
-  sessionsAvailableFor,
-  type SessionCounts,
-  type SessionCountsQuery,
-  type SessionCountsResult,
+  type Session,
   type SessionHit,
-  type SessionKey,
-  type SessionShape,
-  type SessionsQuery,
-  type SessionsResult,
+  type VisitCut,
+  type VisitFilterColumn,
 } from "../../core";
-import {
-  audienceCondition,
-  visitDurationMs,
-  visitHasAll,
-} from "./aggregate-sql";
-import type { AnalyticsDb } from "./collect";
+import { visitDurationMs, visitMembershipValues } from "./aggregate-sql";
 import { liveVisitCutoff } from "./visit-grouping";
 
-const REFUSED = {
-  kind: "refused",
-  reason: "beyond-raw-window",
-  rawWindowDays: RAW_RETENTION_DAYS,
-} as const;
+// Individual visits ("sessions") as a window of the filter language: the
+// deploy app's Sessions tab reads them from its local copy of a site's tables
+// (`apps/deploy/site-mirror`), through these functions, on that copy — this
+// SQL is the only implementation, wherever the tables are.
+//
+// Every question reads `analytics_visits v`; a filter names the visit's own
+// columns, its duration (`visitDurationMs`, the report's one definition) and
+// its memberships (`visitMembershipValues`, the report's one definition), so
+// the list keeps exactly the visits the report counts.
 
-/**
- * Over visit alias `v`: it started on one of days `from..to` — its `day`
- * (the UTC day it started, `utcDay(started_at)`), also spelled as the
- * `started_at` interval it is, so the list walks `analytics_visits_started_at_id_idx`
- * straight from the range's end instead of sorting the range.
- */
-function startedInDays(from: string, to: string): SQL {
-  return sql`v.day BETWEEN ${from} AND ${to}
-    AND v.started_at >= (${from}::date)::timestamp AT TIME ZONE 'UTC'
-    AND v.started_at < (${to}::date + 1)::timestamp AT TIME ZONE 'UTC'`;
-}
+/** Anything a read can run on: the database, or a transaction (a replica's read). */
+export type VisitReads = SqlExecutable<SQL>;
 
-/**
- * Answer one sessions question as of `now`: the visits of `query.range` that
- * pass its filters (the report's membership definition, `visitHasAll` — no
- * second filter dialect) and its shape, newest first by `(started_at, id)`,
- * inside the key range `(after, until]`, at most `limit` of them, each with
- * its first {@link MAX_SESSION_HITS} hits in time order. A range past the raw
- * window is refused: sessions are raw rows only.
- *
- * Costs the page, not the range: the read walks `(started_at, id)` down from
- * `after`, checks each visit's filters against its own hits, and stops at the
- * `limit`-th match — so a scroll step deep in a busy range costs what the first
- * one does. (A filter that few visits pass walks further for its page: the
- * visits it skips over, never the whole range unless nothing passes.)
- */
-export async function runSessionsQuery(
-  dbx: AnalyticsDb,
-  query: SessionsQuery,
-  now: Date,
-): Promise<SessionsResult> {
-  if (!sessionsAvailableFor(query.range, now)) return REFUSED;
-  const { from, to } = planPeriods(query.range, now).current;
-  const visits = await pageOfVisits(dbx, startedInDays(from, to), query, now);
-  const hits = await hitsOf(
-    dbx,
-    visits.map((v) => v.id),
-  );
-  return {
-    kind: "sessions",
-    generatedAt: now.toISOString(),
-    sessions: visits.map((visit) => {
-      const own = hits.get(visit.id) ?? [];
-      return {
-        ...visit,
-        hits: own.slice(0, MAX_SESSION_HITS),
-        hitsTruncated: own.length > MAX_SESSION_HITS,
-      };
-    }),
-  };
-}
+/** Each filterable visit column, as the SQL over `v` reads it. */
+const VISIT_FILTER_TARGETS: Readonly<Record<VisitFilterColumn, SQL>> = {
+  country: sql`v.country`,
+  channel: sql`v.channel`,
+  device: sql`v.device`,
+  browser: sql`v.browser`,
+  os: sql`v.os`,
+  language: sql`v.language`,
+  returning: sql`v.returning`,
+  owner: sql`v.owner`,
+  entryPath: sql`v.entry_path`,
+  exitPath: sql`v.exit_path`,
+  referrerHost: sql`v.referrer_host`,
+  utmSource: sql`v.utm_source`,
+  utmMedium: sql`v.utm_medium`,
+  utmCampaign: sql`v.utm_campaign`,
+  pageviews: sql`v.pageviews`,
+  events: sql`v.events`,
+  durationMs: visitDurationMs,
+  startedAt: sql`v.started_at`,
+  // The filter language's string arrays are jsonb arrays.
+  pages: sql`to_jsonb(${visitMembershipValues("v", "page")})`,
+  eventNames: sql`to_jsonb(${visitMembershipValues("v", "event")})`,
+};
 
-/**
- * How many visits of `query.range` pass its filters, per shape, as of `now`.
- * An exact count of a range costs the range's visits (each checked against
- * its own hits, as the list does) — which is why it is its own question,
- * asked once per range and filters rather than with every page.
- */
-export async function runSessionCountsQuery(
-  dbx: AnalyticsDb,
-  query: SessionCountsQuery,
-  now: Date,
-): Promise<SessionCountsResult> {
-  if (!sessionsAvailableFor(query.range, now)) return REFUSED;
-  const { from, to } = planPeriods(query.range, now).current;
-  return {
-    kind: "counts",
-    generatedAt: now.toISOString(),
-    counts: await shapeCounts(dbx, startedInDays(from, to), query),
-  };
-}
+/** The filterable visit columns that are numbers. */
+const NUMBER_COLUMNS: ReadonlySet<VisitFilterColumn> = new Set([
+  "pageviews",
+  "events",
+  "durationMs",
+]);
 
-/** Over visit alias `v`: the visit has `shape`. Bounced is the report's bounce (exactly one pageview). */
-function shapeCondition(shape: SessionShape): SQL {
-  switch (shape) {
-    case "all":
-      return sql`TRUE`;
-    case "actions":
-      return sql`v.events > 0`;
-    case "multi":
-      return sql`v.pageviews >= 2`;
-    case "bounced":
-      return sql`v.pageviews = 1`;
+/** The filterable visit columns a caller's filter is declared over (a subset of {@link VisitFilterColumn}). */
+export type VisitFilterable = Partial<Record<VisitFilterColumn, FilterColumn>>;
+
+/** `where` as a predicate over `v` — `TRUE` for the absent filter. */
+function visitFilterSql<F extends VisitFilterable>(
+  where: Filter | undefined,
+  filterable: F,
+): SQL {
+  const targets: Record<string, SQL> = {};
+  for (const column of Object.keys(filterable)) {
+    targets[column] = VISIT_FILTER_TARGETS[column as VisitFilterColumn];
   }
+  return (
+    filterSql(
+      where as Filter<Record<string, FilterColumn>> | undefined,
+      targets,
+      filterable as Record<string, FilterColumn>,
+    ) ?? sql`TRUE`
+  );
 }
 
-const CountsRow = z.object({
-  all: z.coerce.number().int(),
-  actions: z.coerce.number().int(),
-  multi: z.coerce.number().int(),
-  bounced: z.coerce.number().int(),
-});
+/** The window a visit list asks for: its visits matching `where`, by `started_at` then id (ascending), inside `(after, until]`, at most `limit`. */
+export interface VisitWindowQuery<F extends VisitFilterable> {
+  where: Filter | undefined;
+  filterable: F;
+  /** The direction of `started_at`; ties are broken by the visit id ascending (code point). */
+  direction: "asc" | "desc";
+  after?: VisitCut;
+  until?: VisitCut;
+  limit: number;
+}
 
-async function shapeCounts(
-  dbx: AnalyticsDb,
-  inRange: SQL,
-  query: SessionCountsQuery,
-): Promise<SessionCounts> {
-  const shaped = (shape: SessionShape) =>
-    sql`(count(*) FILTER (WHERE ${shapeCondition(shape)}))::int`;
-  const rows = await executeRows(dbx, {
-    label: "analytics.sessionCounts",
-    row: CountsRow,
-    query: sql`
-      SELECT ${shaped("all")} AS "all", ${shaped("actions")} AS "actions",
-        ${shaped("multi")} AS "multi", ${shaped("bounced")} AS "bounced"
+/** The rows strictly past `cut` in the window's order. */
+function afterSql(cut: VisitCut, desc: boolean): SQL {
+  const at = sql`${cut.startedAt}::timestamptz`;
+  return sql`(v.started_at ${sql.raw(desc ? "<" : ">")} ${at}
+    OR (v.started_at = ${at} AND v.id::text COLLATE "C" > ${cut.id}))`;
+}
+
+/** The rows at or before `cut` in the window's order. */
+function untilSql(cut: VisitCut, desc: boolean): SQL {
+  const at = sql`${cut.startedAt}::timestamptz`;
+  return sql`(v.started_at ${sql.raw(desc ? ">" : "<")} ${at}
+    OR (v.started_at = ${at} AND v.id::text COLLATE "C" <= ${cut.id}))`;
+}
+
+/**
+ * One window of visits as of `now`, each with its first
+ * {@link MAX_SESSION_HITS} hits in time order.
+ *
+ * Costs the page, not the range: the read walks `(started_at, id)` from the
+ * cut, checks each visit's filter against its own row and hits, and stops at
+ * the `limit`-th match; the duration and memberships are computed for the
+ * page's rows only.
+ */
+export async function readVisitWindow<F extends VisitFilterable>(
+  dbx: VisitReads,
+  q: VisitWindowQuery<F>,
+  now: Date,
+): Promise<Session[]> {
+  const desc = q.direction === "desc";
+  const where = sql.join(
+    [
+      visitFilterSql(q.where, q.filterable),
+      ...(q.after ? [afterSql(q.after, desc)] : []),
+      ...(q.until ? [untilSql(q.until, desc)] : []),
+    ],
+    sql` AND `,
+  );
+  const order = sql.raw(
+    `v.started_at ${desc ? "DESC" : "ASC"}, v.id::text COLLATE "C" ASC`,
+  );
+  return withHits(
+    dbx,
+    await visitRows(
+      dbx,
+      sql`SELECT v.* FROM analytics_visits v WHERE ${where} ORDER BY ${order} LIMIT ${q.limit}`,
+      order,
+      now,
+    ),
+  );
+}
+
+/** The visits with these ids (any order; an id it cannot find is absent). */
+export async function readVisitsById(
+  dbx: VisitReads,
+  ids: readonly string[],
+  now: Date,
+): Promise<Session[]> {
+  const uuids = ids.filter((id) => UUID.test(id));
+  if (uuids.length === 0) return [];
+  return withHits(
+    dbx,
+    await visitRows(
+      dbx,
+      sql`SELECT v.* FROM analytics_visits v WHERE v.id IN (${sql.join(
+        uuids.map((id) => sql`${id}::uuid`),
+        sql`, `,
+      )})`,
+      sql.raw(`v.started_at DESC, v.id::text COLLATE "C" ASC`),
+      now,
+    ),
+  );
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+/** The values `groupBy` takes over the visits matching `where`, with counts: count descending, then value (NULL last); at most `limit`. */
+export async function readVisitGroups<F extends VisitFilterable>(
+  dbx: VisitReads,
+  q: {
+    where: Filter | undefined;
+    filterable: F;
+    groupBy: keyof F & VisitFilterColumn;
+    limit: number;
+  },
+): Promise<{ value: string | number | boolean | null; count: number }[]> {
+  // A number column groups as float8 (pg hands a bigint back as text);
+  // every other one as it is — text, boolean, NULL — never coerced.
+  const target = NUMBER_COLUMNS.has(q.groupBy)
+    ? sql`(${VISIT_FILTER_TARGETS[q.groupBy]})::float8`
+    : VISIT_FILTER_TARGETS[q.groupBy];
+  return executeRows(dbx, {
+    label: "analytics.visitGroups",
+    row: z.object({
+      value: z.union([z.null(), z.boolean(), z.string(), z.number()]),
+      count: z.coerce.number().int(),
+    }),
+    query: sql`SELECT ${target} AS value, count(*)::int AS count
       FROM analytics_visits v
-      WHERE ${inRange} AND ${audienceCondition(query.audience)}
-        AND ${visitHasAll("v", query.filters)}`,
+      WHERE ${visitFilterSql(q.where, q.filterable)}
+      GROUP BY 1
+      ORDER BY count(*) DESC, 1 NULLS LAST
+      LIMIT ${q.limit}`,
   });
-  const [row] = rows;
-  if (!row || rows.length !== 1)
-    throw new Error("analytics: session counts must be one row");
-  return row;
 }
 
-/** `(v.started_at, v.id)` compared to a key, in the list's descending order. */
-function keyBound(op: "<" | ">=", key: SessionKey): SQL {
-  return sql`(v.started_at, v.id) ${sql.raw(op)} (${key.startedAt}::timestamptz, ${key.id}::uuid)`;
+/** How many visits match `where`. */
+export async function countVisits<F extends VisitFilterable>(
+  dbx: VisitReads,
+  q: { where: Filter | undefined; filterable: F },
+): Promise<number> {
+  const { count } = await executeOne(dbx, {
+    label: "analytics.visitCount",
+    row: z.object({ count: z.coerce.number().int() }),
+    query: sql`SELECT count(*)::int AS count FROM analytics_visits v
+      WHERE ${visitFilterSql(q.where, q.filterable)}`,
+  });
+  return count;
 }
 
 // Instants are spelled by Postgres as `toISOString()` would (fixed width, UTC,
@@ -195,32 +261,20 @@ const VisitRow = z.object({
   device: DeviceFamilySchema,
   browser: BrowserFamilySchema,
   os: OsFamilySchema,
+  pages: z.array(z.string()),
+  eventNames: z.array(z.string()),
 });
 type VisitRow = z.infer<typeof VisitRow>;
 
-async function pageOfVisits(
-  dbx: AnalyticsDb,
-  inRange: SQL,
-  query: SessionsQuery,
+/** The visits `selected` (a `SELECT v.* … ` subquery) yields, in `order`, with their computed columns. */
+function visitRows(
+  dbx: VisitReads,
+  selected: SQL,
+  order: SQL,
   now: Date,
 ): Promise<VisitRow[]> {
-  // Every condition is a per-visit fact (a visit's memberships do not depend
-  // on its neighbours), so the walk down `(started_at, id)` checks each visit
-  // once and stops at the `limit`-th that passes; the duration is computed
-  // for the page's visits only.
-  const where = sql.join(
-    [
-      inRange,
-      audienceCondition(query.audience),
-      shapeCondition(query.shape),
-      ...(query.after ? [keyBound("<", query.after)] : []),
-      ...(query.until ? [keyBound(">=", query.until)] : []),
-      visitHasAll("v", query.filters),
-    ],
-    sql` AND `,
-  );
   return executeRows(dbx, {
-    label: "analytics.sessionsPage",
+    label: "analytics.visitRows",
     row: VisitRow,
     query: sql`
       SELECT v.id::text AS "id",
@@ -236,14 +290,30 @@ async function pageOfVisits(
         v.referrer_host AS "referrerHost", v.referrer_path AS "referrerPath",
         v.utm_source AS "utmSource", v.utm_medium AS "utmMedium",
         v.utm_campaign AS "utmCampaign",
-        v.country, v.language, v.device, v.browser, v.os
-      FROM (
-        SELECT v.* FROM analytics_visits v
-        WHERE ${where}
-        ORDER BY v.started_at DESC, v.id DESC
-        LIMIT ${query.limit}
-      ) v
-      ORDER BY v.started_at DESC, v.id DESC`,
+        v.country, v.language, v.device, v.browser, v.os,
+        ${visitMembershipValues("v", "page")} AS "pages",
+        ${visitMembershipValues("v", "event")} AS "eventNames"
+      FROM (${selected}) v
+      ORDER BY ${order}`,
+  });
+}
+
+/** Each visit with its first {@link MAX_SESSION_HITS} hits. */
+async function withHits(
+  dbx: VisitReads,
+  visits: VisitRow[],
+): Promise<Session[]> {
+  const hits = await hitsOf(
+    dbx,
+    visits.map((v) => v.id),
+  );
+  return visits.map((visit) => {
+    const own = hits.get(visit.id) ?? [];
+    return {
+      ...visit,
+      hits: own.slice(0, MAX_SESSION_HITS),
+      hitsTruncated: own.length > MAX_SESSION_HITS,
+    };
   });
 }
 
@@ -265,7 +335,7 @@ const HitRow = z.object({
  * `MAX_SESSION_HITS + 1` per visit — the extra one only says "truncated".
  */
 async function hitsOf(
-  dbx: AnalyticsDb,
+  dbx: VisitReads,
   visitIds: readonly string[],
 ): Promise<Map<string, SessionHit[]>> {
   const byVisit = new Map<string, SessionHit[]>();

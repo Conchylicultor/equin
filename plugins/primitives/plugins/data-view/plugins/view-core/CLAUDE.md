@@ -157,6 +157,19 @@ CURRENT map, so two writes in one tick compose. The pure value helpers
 (`canonicalJson`, `sameView`, `withDraft`, `cleanView`) are
 `web/internal/draft-values.ts`.
 
+**The active view's copy is in the URL** when the surface is URL-bound
+(`activeViewUrl`): the key's value is `<viewId>` without a copy and
+`<viewId>~<base64url(canonicalJson(copy))>` with one (`web/internal/view-address.ts`
+— `encodeViewAddress` / `parseViewAddress`; base64url of the UTF-8 bytes, so
+no URL escaping; a view id may not hold `~`). A drafted static default is
+named; an undrafted one leaves no key. The derived-URL effect and
+`setActiveView` read the CURRENT store. A value arriving from outside (a link,
+back/forward, F5) is the truth for its view's copy: its draft seeds the copy,
+the view named with no draft part drops it; the hook remembers the values it
+wrote and last read, so its own writes never echo back. A malformed draft part
+is no draft — the URL is rewritten to the screen. Without drafts the value is
+the bare id, as before.
+
 ## ⚠️ Invariant: never import data-view (no cycle)
 
 `view-core` is a **child** of `data-view`, so `data-view → view-core` is the only

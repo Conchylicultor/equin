@@ -51,6 +51,7 @@ and remove flush immediately. `FieldRendererComponent` comes from the slot owner
     - `stringListSample`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/analytics/sessions`
     - `apps/deploy/deployments`
     - `apps/desktop/shell`
     - `build/run-ledger`

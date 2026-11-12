@@ -11,7 +11,7 @@ const r = await pullReplica({
   budget: { pages: 20 },                 // one bounded chunk; pull again while !r.caughtUp
   sink,                                  // only for a "custom" replica (site-reports' reduce step)
 });
-const read = await withReplicaSchema(db, id, (tx) => runAnalyticsQuery(tx, q, asOf));
+const read = await withReplicaSchema(db, id, (tx, { sourceNow }) => runAnalyticsQuery(tx, q, sourceNow));
 // read: { ready: true, value, sourceNow } | { ready: false, phase, progress }
 const stop = onReplicaApplied("analytics", (replicaId) => served.notify());
 ```
@@ -93,7 +93,8 @@ const stop = onReplicaApplied("analytics", (replicaId) => served.notify());
 - **`withReplicaSchema`**: a read-only REPEATABLE READ transaction with
   `search_path = <schema>, pg_catalog` — no `public`, so the owner's own SQL
   runs unchanged on the copy and a table the set does not mirror fails
-  instead of reading this computer's rows.
+  instead of reading this computer's rows. `fn` gets the copy's `sourceNow`
+  (a `Date`): a read that depends on time asks it of the copy's moment.
 - **Ownership**: `dropReplica` (schema + row + key index, one transaction);
   `sweepOrphanReplicaSchemas` drops every `tm_*` schema no row names (the
   `tm_` schema namespace is this plugin's) — schemas listed before rows, so a
@@ -170,7 +171,9 @@ drop and sweep.
     - `tableMirrorReplicas`
     - `withReplicaSchema`
 - Cross-plugin:
-  - Imported by: `apps/deploy/site-mirror/pull`
+  - Imported by:
+    - `apps/deploy/analytics/sessions`
+    - `apps/deploy/site-mirror/pull`
 - Exemptions:
   - Exempts itself from:
     - `sql-writes:fit:hand-written` — `server/internal/schema-sink.ts` (sanctioned)

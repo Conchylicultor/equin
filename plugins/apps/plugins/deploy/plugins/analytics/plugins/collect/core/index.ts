@@ -149,40 +149,21 @@ export {
   RECORDED_FIELDS,
 } from "./internal/recorded-fields";
 export type { RecordedColumn, RecordedField } from "./internal/recorded-fields";
-export {
-  analyticsQueryEndpoint,
-  analyticsSessionCountsEndpoint,
-  analyticsSessionsEndpoint,
-  collectEndpoint,
-} from "./internal/endpoints";
+export { analyticsQueryEndpoint, collectEndpoint } from "./internal/endpoints";
 export {
   MAX_SESSION_HITS,
   MAX_SESSIONS_LIMIT,
-  SESSION_SHAPES,
   SESSIONS_PAGE,
-  SessionCountsResultSchema,
-  SessionCountsSchema,
   SessionHitSchema,
-  SessionKeySchema,
   SessionSchema,
-  SessionShapeSchema,
-  SessionsQueryParamSchema,
-  SessionsQuerySchema,
-  SessionsResultSchema,
-  encodeSessionCountsQuery,
-  encodeSessionsQuery,
-  sessionsAvailableFor,
+  VISIT_FILTER_COLUMNS,
+  VisitCutSchema,
 } from "./internal/sessions";
 export type {
   Session,
-  SessionCounts,
-  SessionCountsQuery,
-  SessionCountsResult,
   SessionHit,
-  SessionKey,
-  SessionShape,
-  SessionsQuery,
-  SessionsResult,
+  VisitCut,
+  VisitFilterColumn,
 } from "./internal/sessions";
 export {
   AUDIENCES,

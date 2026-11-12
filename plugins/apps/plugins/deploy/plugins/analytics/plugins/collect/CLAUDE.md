@@ -112,34 +112,37 @@ refused `audience-beyond-raw-window` (`audienceAvailable`, called on both sides)
 
 ## Sessions
 
-`analyticsSessionsEndpoint` (host-only, `server/internal/sessions.ts`) lists
-individual visits with their hits for the deploy app's Sessions tab. Raw rows
-only, so `12m` is refused (`sessionsAvailableFor`). It filters with the
-report's own membership definition (`visitHasAll` in `aggregate-sql.ts`) —
-never a second filter dialect — plus a shape (all / actions / multi / bounced).
+Individual visits with their hits, for the deploy app's Sessions tab:
+`readVisitWindow` / `readVisitsById` / `readVisitGroups` / `countVisits`
+(`server/internal/sessions.ts`, server barrel). The deploy app runs them on
+its local copy of a site's tables (`apps/deploy/site-mirror`, through
+`withReplicaSchema`), so this SQL is the only implementation wherever the
+tables are; nothing reads visits over SSH any more (the old host-only
+`sessions` / `session-counts` routes are gone).
 
-**A page costs the page, not the range.** `memberships(scope)` writes the
-membership definition once, in two scopes built from the same branches: `all`
-(every visit of `base`, set-based — the aggregates' `m`) and `one` (one visit,
-its hit branches reading only that visit's hits by `analytics_hits_visit_idx`).
-A filter (`visitHasAll`) is an `EXISTS` over the `one` scope, so it narrows the
-visits BEFORE any membership is listed — the report's `base`, the visitor
-counts' raw arm (their stored arm checks `analytics_visit_members` by primary
-key), the sessions list and its counts. So the list is a walk down
-`analytics_visits_started_at_id_idx` from the key that checks each visit and
-stops at the `limit`-th match; the duration is computed for the page's rows
-only. A rare filter walks further for its page (the visits it skips), never
-the whole range unless almost nothing passes. The per-shape counts are their
-own question (`analyticsSessionCountsEndpoint`): an exact count costs the
-range, so the Sessions tab asks it once per question (its meta), never with
-each page.
-
-Paging is a key range of `(started_at desc, id desc)`: `after` exclusive,
-`until` inclusive, at most `limit` (≤ `MAX_SESSIONS_LIMIT`) — the shape
-network/live's paged value asks its loader for; fewer rows than `limit` is the
-end. `startedAt` is spelled as `toISOString()` so its text order is its time
-order. The visitor id never leaves the box: `visitor` is the first 8 hex of
-its sha256. Design: `research/2026-11-10-deploy-sessions-tab.md`.
+- **A filter in the filter language** (`network/live/filter`), compiled by
+  `filterSql` over `VISIT_FILTER_COLUMNS` (core): the visit's own columns,
+  `durationMs` (`visitDurationMs`, the report's one definition) and the
+  memberships `pages` / `eventNames` (`visitMembershipValues`: the report's
+  `page` / `event` pairs, a jsonb array to the filter), so the list keeps
+  exactly the visits a report row counts — pinned against the report in
+  `analytics.db.test.ts`. A caller passes the columns it declares
+  (`filterable`), each a subset of these.
+- **A page costs the page, not the range.** The window walks
+  `(started_at, id)` from its cut, checks each visit's filter against its own
+  row and hits (`memberships`' `one` scope), and stops at the `limit`-th
+  match; duration and memberships are computed for the page's rows only. A
+  rare filter walks further for its page, never the whole range unless
+  almost nothing passes. A count or a grouping costs the visits it matches.
+- **Order and cuts**: `started_at` in the asked direction, then the id as
+  text ascending (code point) — network/live's window order; `after`
+  exclusive, `until` inclusive (`VisitCut`: the start as `toISOString()`, the
+  id).
+- **"Live"** is measured against the `now` passed in (the copy's moment, for
+  the deploy app).
+- The visitor id never leaves the box: `visitor` is the first 8 hex of its
+  sha256. Design: `research/2026-11-10-deploy-sessions-tab.md`,
+  `research/2026-11-12-global-table-mirror.md` § Phase 2.
 
 ## Away stretches
 
@@ -225,7 +228,7 @@ Without it the box knows only the sections someone reached.
 
 ## Plugin reference
 
-- Description: The cookieless visit tracker a deployed site mounts: <AnalyticsTracker app={…} /> records one pageview per path change under that app (landing referrer and utm tags on the first only) and the visible time on each; track(name, props?) records a custom event on the current page; useSectionReach(section) / observeSectionReach(el, section) record section_reach once when a section reaches the upper half of the screen, its section prop (<page>/<key>) giving a per-section reach funnel. Owns the analytics tables (daily salts kept 30 days with the hash → visitor links that let a returning visitor keep one id, 90-day visits and hits, forever daily totals at every single-filter level and forever per-visit memberships for exact unique visitors over any range), the public collect endpoint, the host-only report, sessions (individual visits with their hits, by key range) and session-counts queries, the nightly analytics.rollup job and the visits retention sweep that refuses to delete a day not yet rolled up.
+- Description: The cookieless visit tracker a deployed site mounts: <AnalyticsTracker app={…} /> records one pageview per path change under that app (landing referrer and utm tags on the first only) and the visible time on each; track(name, props?) records a custom event on the current page; useSectionReach(section) / observeSectionReach(el, section) record section_reach once when a section reaches the upper half of the screen, its section prop (<page>/<key>) giving a per-section reach funnel. Owns the analytics tables (daily salts kept 30 days with the hash → visitor links that let a returning visitor keep one id, 90-day visits and hits, forever daily totals at every single-filter level and forever per-visit memberships for exact unique visitors over any range), the public collect endpoint, the host-only report, the visit-list reads (a window of individual visits with their hits, filtered in the filter language — run by the deploy app on its local copy of the tables), the nightly analytics.rollup job and the visits retention sweep that refuses to delete a day not yet rolled up.
 - Server:
   - Contributes:
     - `table-mirror-set` "analytics"
@@ -252,19 +255,27 @@ Without it the box knows only the sections someone reached.
     - `infra/retention.defineRetention`
     - `infra/retention.markCascadeBounded`
     - `network/live/change-feed.ExcludeFromChangeFeed`
+    - `network/live/filter.filterSql`
   - DB schema: `plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/server/internal/tables.ts`
   - Exports (types):
     - `CollectContext`
     - `CountryLookup`
-  - Exports (values): `recordCollect`
+    - `VisitFilterable`
+    - `VisitReads`
+    - `VisitWindowQuery`
+  - Exports (values):
+    - `analyticsMirrorTables`
+    - `countVisits`
+    - `readVisitGroups`
+    - `readVisitsById`
+    - `readVisitWindow`
+    - `recordCollect`
   - Register:
     - `defineJob('analytics.rollup')`
     - `defineJob('retention.analytics_visits')`
   - Routes:
     - `POST /api/analytics/collect`
     - `GET /api/host-only/analytics/query`
-    - `GET /api/host-only/analytics/sessions`
-    - `GET /api/host-only/analytics/session-counts`
 - Web:
   - Uses:
     - `infra/endpoints.fetchEndpointOver`
@@ -326,16 +337,11 @@ Without it the box knows only the sections someone reached.
     - `ReportSource`
     - `SeriesPoint`
     - `Session`
-    - `SessionCounts`
-    - `SessionCountsQuery`
-    - `SessionCountsResult`
     - `SessionHit`
-    - `SessionKey`
-    - `SessionShape`
-    - `SessionsQuery`
-    - `SessionsResult`
     - `UtmTags`
+    - `VisitCut`
     - `VisitDimension`
+    - `VisitFilterColumn`
   - Exports (values):
     - `addDays`
     - `addMetrics`
@@ -349,8 +355,6 @@ Without it the box knows only the sections someone reached.
     - `AnalyticsQuerySchema`
     - `AnalyticsRangeSchema`
     - `AnalyticsReportSchema`
-    - `analyticsSessionCountsEndpoint`
-    - `analyticsSessionsEndpoint`
     - `appendGap`
     - `AUDIENCE_LABEL`
     - `AUDIENCE_OPTIONS`
@@ -378,8 +382,6 @@ Without it the box knows only the sections someone reached.
     - `DeviceFamilySchema`
     - `DIMENSIONS`
     - `encodeAnalyticsQuery`
-    - `encodeSessionCountsQuery`
-    - `encodeSessionsQuery`
     - `EngagementBodySchema`
     - `EVENT_NAME_PATTERN`
     - `EVENT_PROP_KEY_PATTERN`
@@ -439,18 +441,9 @@ Without it the box knows only the sections someone reached.
     - `SECTION_REACH_EVENT`
     - `SECTION_REACH_PROP`
     - `SeriesPointSchema`
-    - `SESSION_SHAPES`
-    - `SessionCountsResultSchema`
-    - `SessionCountsSchema`
     - `SessionHitSchema`
-    - `SessionKeySchema`
     - `SESSIONS_PAGE`
-    - `sessionsAvailableFor`
     - `SessionSchema`
-    - `SessionShapeSchema`
-    - `SessionsQueryParamSchema`
-    - `SessionsQuerySchema`
-    - `SessionsResultSchema`
     - `SiteHostSchema`
     - `stripQuery`
     - `TOTAL_DIMENSION`
@@ -459,6 +452,8 @@ Without it the box knows only the sections someone reached.
     - `UtmTagsSchema`
     - `viewsPerVisit`
     - `VISIT_DIMENSIONS`
+    - `VISIT_FILTER_COLUMNS`
+    - `VisitCutSchema`
     - `visitorShare`
     - `ZERO_ADDITIVE_METRICS`
 - Cross-plugin:

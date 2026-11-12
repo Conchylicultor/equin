@@ -10,54 +10,73 @@ opened, the visit's timeline. Timeline only: no session replay. Design:
 
 ## Reading the visits
 
-`deploy-analytics.sessions` (`core/internal/sessions.ts`) is a **key-range
-paged** live value with `load: "snapshot"` (network/live, *Snapshot pages*):
-question `{ deploymentId, range, shape, audience }`, items collect's `Session`, key
-`[startedAt, id]` both **desc** — collect orders `(started_at desc, id desc)`,
-and the primitive's own tie-break (id ascending) would disagree with the box on
-two visits started in the same millisecond. Page `limit` 50, `maxLimit` 100
-(collect's `SESSIONS_PAGE` / `MAX_SESSIONS_LIMIT`).
+`deploy-analytics.sessions` (`core/internal/sessions.ts`) is a window
+`liveCollection` declared by its own fields (the visit's columns, its
+duration, its `pages` / `eventNames` memberships — labelled, so the DataView
+filters, groups and sorts on them — plus the carried lane data: hits, lastAt,
+…). Row key `key` = `<deploymentId>/<visit id>` (`sessionKey`); sorted by
+`startedAt` alone (`$key` text `toISOString()`), the id ascending breaking
+ties; page 50, `maxLimit` 100, `count: true`.
 
-Served external with `changes: { snapshot }` (`server/internal/served.ts`):
-each page is ONE `hostOnlyQueryOverSsh` call of collect's host-only sessions
-query, its cuts mapped to collect's `after` / `until` (`sessionsQueryOf`).
-Pages are measured when the list first needs them (page 0 on mount, the next
-as it scrolls — DataView's auto-paging, `useLivePagedValuePaging`) and
-re-measured by Refresh; never on a timer (each is an SSH session).
+Served `source: "external"` (`server/internal/served.ts`) on this computer's
+**copy** of the site's analytics tables (`apps/deploy/site-mirror`'s replica,
+`readSiteMirror`) — never over SSH:
 
-The **meta** sibling (`deploymentSessions.meta`, keyed by the same question)
-asks collect's host-only session-counts query — its own endpoint, with the
-question's range and audience but no shape or key range: counting costs the
-whole range, so it is asked once per question, never with each page. Its
-answer is a discriminated state: `sessions` (the counts
-per shape over the whole range, and when the box answered), `refused`
-(`beyond-raw-window`), or one of host-query's failure arms. The tab renders the
-failure from the meta (`HostQueryFailureState`); a page that cannot be read is
-refused `unreachable` / `missing` / `beyond-raw-window` — an expected answer,
-never reported as a loader failure.
+- **One site per read.** A window has no params, so every question names its
+  site as a top-level `deploymentId = <site>` clause (`clause("deploymentId", "eq", id)`)
+  and `splitScope` takes it off; a read naming none, or two, throws.
+- **collect's SQL, no second implementation**: `readVisitWindow` /
+  `readVisitsById` / `readVisitGroups` / `countVisits` (collect's server
+  barrel) run on the replica's schema, the rest of the filter compiled by
+  collect (`filterSql` over its visit columns, the report's duration and
+  membership definitions).
+- **"Live" is the copy's moment**: a visit is still open relative to the box's
+  clock at the last applied page (`withReplicaSchema`'s `sourceNow`), never
+  this computer's clock.
+- **Freshness**: `changes: "notified"`, `whileSubscribed` = the replica's own
+  NOTIFY (`onSiteMirrorApplied("analytics")`), so a pull landing re-reads every
+  held window (the replica schema is outside the change feed — this plugin's
+  `no-db-backed-notify` exemption).
+- **Not copied yet is loading.** The tab mounts the list only once
+  `site-mirror.status` says the analytics set is `copied`; a read before that
+  throws (a broken assumption, never an empty list).
 
 ## The tab
 
 - **Gate**: `useShipsGate(deploymentId, COLLECT_PLUGIN_ID)` — host-query's one
   rule over collect's own id, the same as the Analytics tab's.
-- **Audience** (Visitors / You / All — collect's audiences, Visitors by
-  default): part of the server question; an owner's visit carries a "You"
-  badge in its row.
-- **Range** (Today / 7d / 30d — collect's ranges inside the 90-day raw window)
-  and **shape** (All / With actions / 2+ pages / Bounced, each with its count
-  from the meta) are the server question; the search filters the loaded rows.
-- **List**: a `DataView` (`deploy-sessions`, its one view authored in
-  `config/apps/deploy/analytics/sessions/`: newest first, grouped by day),
-  through the list view's `renderRow` (`SessionLane`) and `detail`
-  (`SessionTimeline`), with `detailOnActivate` (a click opens the timeline)
-  and `frame: "card"` — both list options added for this surface.
-- **Toolbar**: its own arrangement (`sessionsToolbar`): search, the shape
-  switch, the summary (sessions = the meta's count; median duration and "with
-  actions" over the LOADED visits), and the axis row — in the sticky band, so
-  the ticks stay over the bars while visits scroll under them.
+- **Freshness line** above the list: site-mirror's `MirrorFreshness` (synced
+  N ago · Sync now, copying…, a failed pull in host-query's words); opening
+  the tab asks for a pull when the copy is missing or a few minutes old.
+- **List**: a `DataViewSwitcher` (`deploy-sessions`) over ONE contributed
+  source, `visits` (`SessionsSources`), so the loaded rows are in hand: the
+  source reads `useLivePagesPaging(deploymentSessions, { where: clause("deploymentId", "eq", id) },
+  { narrowBy: view, total: true })` — the active view's filter runs on the
+  server (collect's SQL on the copy), its count is the summary's total — and
+  derives the `LaneWindowContext` from the loaded window before handing the
+  bundle on. The exhibit feeds the same source made-up rows
+  (`SessionsHostProps.kind: "fixture"`).
+- **Views = the shapes** (`config/apps/deploy/analytics/sessions/deploy-sessions.jsonc`):
+  All / With actions (`events > 0`) / 2+ pages (`pageviews ≥ 2`) / Bounced
+  (`pageviews = 1`, the report's bounce), each a saved filter that also starts
+  on the site's visitors (`owner is false`) over the last 7 days
+  (`startedAt is-within-past 7 days`, the date type's relative operator).
+  `viewEdits: draft`: changing whose visits or since when (or any other rule)
+  is a draft of the view, and the drafted view rides in the URL
+  (`;view.deploy-sessions=<id>~<draft>`, view-core's addressable drafts).
+  The active view is in the URL too.
+- **Search** filters the loaded rows in memory (country, source, software,
+  pages).
+- **Toolbar**: its own arrangement (`sessionsToolbar`): the view strip,
+  search, the controls (Filter / Sort / View), the summary (sessions = the
+  view's count; median duration, median load and "with actions" over the
+  LOADED visits) — and the axis row, in the sticky band.
+- **Rows**: the list view's `renderRow` (`SessionLane`) and `detail`
+  (`SessionTimeline`), with `detailOnActivate` and `frame: "card"`; a row is
+  handed to them as collect's `Session` (`sessionOf`, kept per row object).
 - **Window**: `LaneWindowContext` carries what every row shares, derived once
   per loaded window: each visit's journey, the axis' end, each path's
-  estimated sections (for pages that did not record their own).
+  estimated sections (for pages that did not record their own), the summary.
 
 ## The journey (pure, `web/internal/`)
 
@@ -88,24 +107,31 @@ Background / idle stretches and load time are recorded but not drawn yet
 
 ## Tests
 
-`web/internal/axis.test.ts`, `web/internal/journey.test.ts`. Run with
+`web/internal/axis.test.ts`, `web/internal/journey.test.ts`,
+`server/internal/served.test.ts` (the scope split); collect's
+`analytics.db.test.ts` covers the SQL. Run with
 `./equin test plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions`.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./equin build` -->
 
 ## Plugin reference
 
-- Description: Sessions tab of a site's page, shown only when the deployment's composition ships the collect plugin: one row per anonymous visit (country, time, device and software, source, first visit or returning, channel), its journey on a shared log time axis (pages split by their share of the visit, the read line and section ticks, action icons, each named on hover) with its duration and actions; opening a row shows its timeline (each page, the sections reached and when, the actions in order, the exit). Range, shape switch with per-shape counts, search over the loaded visits; read over SSH as key-range pages that load as the list scrolls. Reads a deployment's visits over SSH through host-query's hostOnlyQueryOverSsh (collect's host-only sessions query, curled through the install's own gateway), one key range per page, and their per-shape counts — or which of SSH, the request or the answer failed.
+- Description: Sessions tab of a site's page, shown only when the deployment's composition ships the collect plugin: one row per anonymous visit (country, time, device and software, source, first visit or returning, channel), its journey on a shared log time axis (pages split by their share of the visit, the read line and section ticks, action icons, each named on hover) with its duration and actions; opening a row shows its timeline (each page, the sections reached and when, the actions in order, the exit). Read from this computer's copy of the site's analytics (site-mirror, its freshness line above the list; loading until a first whole copy is in place) as live key-range pages: the views (All / With actions / 2+ pages / Bounced) are saved filters, and every filter — whose visits, since when, any field — runs on the copy, a narrowed view carried in the URL. Serves a deployment's visits (deploy-analytics.sessions) from this computer's copy of the site's analytics tables (site-mirror's replica): collect's own visit-list SQL — the window, the rows by key, the groupings and the count, each filter compiled by collect — run on the copy, re-read whenever a pull applies a page to it.
 - Web:
-  - Contributes: `SiteTabs.View` "Sessions" → `SessionsSection`
-  - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps/deploy/host-query` ×5
+  - Slots: `sources`
+  - Slot contributors: `sources` ← `apps.deploy.analytics.sessions`
+  - Contributes:
+    - `SiteTabs.View` "Sessions" → `SessionsSection`
+    - `sources` "Visits" → `VisitsSource`
+  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×7
     - `primitives/css/ui-kit` ×5
-    - `primitives/data-view` ×5
     - `primitives/css/coords` ×4
+    - `apps/deploy/host-query` ×3
     - `network/live/live-state` ×2
     - `primitives/css/spacing` ×2
     - `apps/deploy/deployments.SiteTabs`
+    - `apps/deploy/site-mirror/pull.MirrorFreshness`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
@@ -116,43 +142,52 @@ Background / idle stretches and load time are recorded but not drawn yet
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
-    - `primitives/css/toggle-chip.SegmentedControl`
     - `primitives/css/yield.yieldClass`
-    - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
-    - `primitives/relative-time.RelativeTime`
     - `ui/icons.Icon`
 - Server:
   - Contributes:
     - `resource.declare` "deploy-analytics.sessions"
-    - `resource.declare` "deploy-analytics.sessions:meta"
+    - `resource.declare` "deploy-analytics.sessions:count"
+    - `resource.declare` "deploy-analytics.sessions:groups"
+    - `resource.declare` "deploy-analytics.sessions:rows"
   - Uses:
-    - `apps/deploy/host-query.hostOnlyQueryOverSsh`
-    - `apps/deploy/host-query.HostQueryAnswer`
-    - `infra/endpoints.endpointPath`
-    - `network/live.serveValue`
+    - `apps/deploy/analytics/collect.analyticsMirrorTables`
+    - `apps/deploy/analytics/collect.countVisits`
+    - `apps/deploy/analytics/collect.readVisitGroups`
+    - `apps/deploy/analytics/collect.readVisitsById`
+    - `apps/deploy/analytics/collect.readVisitWindow`
+    - `apps/deploy/analytics/collect.VisitReads`
+    - `apps/deploy/site-mirror/pull.onSiteMirrorApplied`
+    - `apps/deploy/site-mirror/pull.readSiteMirror`
+    - `database/table-mirror/replica.tableMirrorReplicas`
+    - `network/live.serveCollection`
   - Resources:
-    - `deploy-analytics.sessions` (invalidate, snapshot)
-    - `deploy-analytics.sessions:meta` (invalidate, snapshot)
+    - `deploy-analytics.sessions` (keyed, window)
+    - `deploy-analytics.sessions:count` (push)
+    - `deploy-analytics.sessions:groups` (push)
+    - `deploy-analytics.sessions:rows` (keyed, point)
 - Core:
-  - Uses:
-    - `apps/deploy/analytics/collect.AnalyticsRangeSchema`
-    - `apps/deploy/analytics/collect.AudienceSchema`
-    - `apps/deploy/analytics/collect.MAX_SESSIONS_LIMIT`
-    - `apps/deploy/analytics/collect.RAW_RETENTION_DAYS`
-    - `apps/deploy/analytics/collect.SessionCountsSchema`
-    - `apps/deploy/analytics/collect.SESSIONS_PAGE`
-    - `apps/deploy/analytics/collect.SessionSchema`
-    - `apps/deploy/analytics/collect.SessionShapeSchema`
-    - `apps/deploy/host-query.HOST_QUERY_FAILURE_ARMS`
-    - `network/live.liveValue`
-  - Exports (types):
-    - `DeploymentSessionsMeta`
-    - `DeploymentSessionsQuestion`
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/deploy/analytics/collect` ×9
+    - `fields/text/config` ×2
+    - `network/live` ×2
+    - `fields/bool/config.boolField`
+    - `fields/date/config.dateField`
+    - `fields/duration/config.durationField`
+    - `fields/int/config.intField`
+    - `fields/json/config.jsonField`
+    - `fields/string-list/config.stringListField`
+    - `fields.nullable`
+    - `packages/list-bound.cappedList`
+  - Exports (types): `SessionRow`
   - Exports (values):
     - `deploymentSessions`
-    - `DeploymentSessionsMetaSchema`
-    - `DeploymentSessionsQuestionSchema`
+    - `parseSessionKey`
+    - `sessionKey`
+    - `sessionOf`
+    - `sessionRowOf`
+    - `startedAtKeyText`
 - Cross-plugin:
   - Uses tokens: 28 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/color-palette` ×14

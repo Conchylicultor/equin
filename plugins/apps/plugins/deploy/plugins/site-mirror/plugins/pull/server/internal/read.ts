@@ -13,12 +13,13 @@ import { replicaIdOf } from "./jobs";
  * snapshot, `search_path` the copy's schema with no `public`). `ready: false`
  * until a whole copy is in place. A deployment whose set was never asked for
  * has no replica: that throws — a consumer reads the copy only once
- * `site-mirror.status` says it is `copied`.
+ * `site-mirror.status` says it is `copied`. `fn` is told the copy's
+ * `sourceNow` (the box's clock at the last applied page).
  */
 export function readSiteMirror<T>(
   deploymentId: string,
   setId: string,
-  fn: (tx: ReplicaTx) => Promise<T>,
+  fn: (tx: ReplicaTx, copy: { sourceNow: Date | null }) => Promise<T>,
 ): Promise<ReplicaRead<T>> {
   return withReplicaSchema(db, replicaIdOf(deploymentId, setId), fn);
 }

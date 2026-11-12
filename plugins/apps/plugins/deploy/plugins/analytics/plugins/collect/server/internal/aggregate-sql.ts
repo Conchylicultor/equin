@@ -557,3 +557,17 @@ export async function rolledUpDays(
   });
   return new Set(rows.map((r) => r.day));
 }
+
+/**
+ * Over visit alias `alias`: the distinct values the visit has under hit
+ * dimension `dim` (its pages, its event names), as a `text[]` in code-point
+ * order — read from the membership definition ({@link memberships}, `one`
+ * scope), so a list filtering on them keeps exactly the visits a report row
+ * under that dimension counts.
+ */
+export function visitMembershipValues(
+  alias: string,
+  dim: "page" | "event",
+): SQL {
+  return sql`ARRAY(SELECT DISTINCT mv.value COLLATE "C" FROM ${memberships({ kind: "one", alias })} AS mv WHERE mv.dim = ${literal(dim)} ORDER BY 1)`;
+}

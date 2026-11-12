@@ -6,13 +6,28 @@ import type { Journey } from "./journey";
  * compare across rows), each path's estimated sections (the "read %" of a
  * page that did not record its own list — `pageRead`), and each
  * visit's journey (derived once per window, not once per render of a row).
- * Provided around the DataView, read by the rows, the axis row in the toolbar
+ * Provided around the DataView's source bundle, read by the rows, the axis row in the toolbar
  * band and the expanded timeline alike.
  */
 export interface LaneWindow {
   axisMaxS: number;
   sections: ReadonlyMap<string, readonly string[]>;
   journeys: ReadonlyMap<string, Journey>;
+  /** The toolbar's summary of the window — `null` while its rows are not known yet. */
+  summary: LaneSummary | null;
+}
+
+/**
+ * What the toolbar says about the visits: how many the view matches (the
+ * collection's count — `null` while not known, then the loaded rows are a
+ * lower bound), and figures over the LOADED visits.
+ */
+export interface LaneSummary {
+  total: number | null;
+  loaded: number;
+  medianS: number | null;
+  medianLoadMs: number | null;
+  withActions: number;
 }
 
 export const LaneWindowContext = createContext<LaneWindow | null>(null);

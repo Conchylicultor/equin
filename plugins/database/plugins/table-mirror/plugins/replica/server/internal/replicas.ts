@@ -132,12 +132,15 @@ export type ReplicaRead<T> =
  * `search_path` set to the replica's schema then `pg_catalog` — no `public`,
  * so the owner's own SQL, naming its tables unqualified, runs unchanged on
  * the copy, and a query naming a table the set does not mirror fails instead
- * of reading this computer's own rows.
+ * of reading this computer's own rows. `fn` is told what the copy is "as
+ * of" (`sourceNow`: the source's clock at the last applied page), so a read
+ * that depends on time asks it of the copy's moment, never this computer's
+ * clock.
  */
 export async function withReplicaSchema<T>(
   db: NodePgDatabase,
   replicaId: string,
-  fn: (tx: ReplicaTx) => Promise<T>,
+  fn: (tx: ReplicaTx, copy: { sourceNow: Date | null }) => Promise<T>,
 ): Promise<ReplicaRead<T>> {
   return db.transaction(
     async (tx): Promise<ReplicaRead<T>> => {
@@ -169,7 +172,12 @@ export async function withReplicaSchema<T>(
       await tx.execute(
         sql.raw(`SET LOCAL search_path TO ${row.schemaName}, pg_catalog`),
       );
-      return { ready: true, value: await fn(tx), sourceNow: row.sourceNow };
+      const sourceNow = row.sourceNow === null ? null : new Date(row.sourceNow);
+      return {
+        ready: true,
+        value: await fn(tx, { sourceNow }),
+        sourceNow: row.sourceNow,
+      };
     },
     { isolationLevel: "repeatable read", accessMode: "read only" },
   );

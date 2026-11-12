@@ -1952,7 +1952,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`analytics`** — Umbrella for cookieless site analytics on deployed compositions: the host-only route guard, the collect half that ships inside the deployed site (ingest, tables, nightly rollup, retention, host-only report query), and the dashboard half in the local deploy app.
           - Plugins:
-            - **`collect`** — The cookieless visit tracker a deployed site mounts: <AnalyticsTracker app={…} /> records one pageview per path change under that app (landing referrer and utm tags on the first only) and the visible time on each; track(name, props?) records a custom event on the current page; useSectionReach(section) / observeSectionReach(el, section) record section_reach once when a section reaches the upper half of the screen, its section prop (<page>/<key>) giving a per-section reach funnel. Owns the analytics tables (daily salts kept 30 days with the hash → visitor links that let a returning visitor keep one id, 90-day visits and hits, forever daily totals at every single-filter level and forever per-visit memberships for exact unique visitors over any range), the public collect endpoint, the host-only report, sessions (individual visits with their hits, by key range) and session-counts queries, the nightly analytics.rollup job and the visits retention sweep that refuses to delete a day not yet rolled up.
+            - **`collect`** — The cookieless visit tracker a deployed site mounts: <AnalyticsTracker app={…} /> records one pageview per path change under that app (landing referrer and utm tags on the first only) and the visible time on each; track(name, props?) records a custom event on the current page; useSectionReach(section) / observeSectionReach(el, section) record section_reach once when a section reaches the upper half of the screen, its section prop (<page>/<key>) giving a per-section reach funnel. Owns the analytics tables (daily salts kept 30 days with the hash → visitor links that let a returning visitor keep one id, 90-day visits and hits, forever daily totals at every single-filter level and forever per-visit memberships for exact unique visitors over any range), the public collect endpoint, the host-only report, the visit-list reads (a window of individual visits with their hits, filtered in the filter language — run by the deploy app on its local copy of the tables), the nightly analytics.rollup job and the visits retention sweep that refuses to delete a day not yet rolled up.
               - Server:
                 - Contributes:
                   - `table-mirror-set` "analytics"
@@ -1979,19 +1979,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `infra/retention.defineRetention`
                   - `infra/retention.markCascadeBounded`
                   - `network/live/change-feed.ExcludeFromChangeFeed`
+                  - `network/live/filter.filterSql`
                 - DB schema: `plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/server/internal/tables.ts`
                 - Exports (types):
                   - `CollectContext`
                   - `CountryLookup`
-                - Exports (values): `recordCollect`
+                  - `VisitFilterable`
+                  - `VisitReads`
+                  - `VisitWindowQuery`
+                - Exports (values):
+                  - `analyticsMirrorTables`
+                  - `countVisits`
+                  - `readVisitGroups`
+                  - `readVisitsById`
+                  - `readVisitWindow`
+                  - `recordCollect`
                 - Register:
                   - `defineJob('analytics.rollup')`
                   - `defineJob('retention.analytics_visits')`
                 - Routes:
                   - `POST /api/analytics/collect`
                   - `GET /api/host-only/analytics/query`
-                  - `GET /api/host-only/analytics/sessions`
-                  - `GET /api/host-only/analytics/session-counts`
               - Web:
                 - Uses:
                   - `infra/endpoints.fetchEndpointOver`
@@ -2053,16 +2061,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ReportSource`
                   - `SeriesPoint`
                   - `Session`
-                  - `SessionCounts`
-                  - `SessionCountsQuery`
-                  - `SessionCountsResult`
                   - `SessionHit`
-                  - `SessionKey`
-                  - `SessionShape`
-                  - `SessionsQuery`
-                  - `SessionsResult`
                   - `UtmTags`
+                  - `VisitCut`
                   - `VisitDimension`
+                  - `VisitFilterColumn`
                 - Exports (values):
                   - `addDays`
                   - `addMetrics`
@@ -2076,8 +2079,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `AnalyticsQuerySchema`
                   - `AnalyticsRangeSchema`
                   - `AnalyticsReportSchema`
-                  - `analyticsSessionCountsEndpoint`
-                  - `analyticsSessionsEndpoint`
                   - `appendGap`
                   - `AUDIENCE_LABEL`
                   - `AUDIENCE_OPTIONS`
@@ -2105,8 +2106,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `DeviceFamilySchema`
                   - `DIMENSIONS`
                   - `encodeAnalyticsQuery`
-                  - `encodeSessionCountsQuery`
-                  - `encodeSessionsQuery`
                   - `EngagementBodySchema`
                   - `EVENT_NAME_PATTERN`
                   - `EVENT_PROP_KEY_PATTERN`
@@ -2166,18 +2165,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `SECTION_REACH_EVENT`
                   - `SECTION_REACH_PROP`
                   - `SeriesPointSchema`
-                  - `SESSION_SHAPES`
-                  - `SessionCountsResultSchema`
-                  - `SessionCountsSchema`
                   - `SessionHitSchema`
-                  - `SessionKeySchema`
                   - `SESSIONS_PAGE`
-                  - `sessionsAvailableFor`
                   - `SessionSchema`
-                  - `SessionShapeSchema`
-                  - `SessionsQueryParamSchema`
-                  - `SessionsQuerySchema`
-                  - `SessionsResultSchema`
                   - `SiteHostSchema`
                   - `stripQuery`
                   - `TOTAL_DIMENSION`
@@ -2186,6 +2176,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `UtmTagsSchema`
                   - `viewsPerVisit`
                   - `VISIT_DIMENSIONS`
+                  - `VISIT_FILTER_COLUMNS`
+                  - `VisitCutSchema`
                   - `visitorShare`
                   - `ZERO_ADDITIVE_METRICS`
               - Cross-plugin:
@@ -2341,17 +2333,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `buildSnapshot` — Parse a DB-IP `start,end,CC` CSV (no header row) into snapshot bytes.
                   - `createIpCountryLookup` — A lookup over the snapshot file at `snapshotPath()`, read lazily on the first lookup (one ~16 MB read, shared by lookups that arrive while it runs) and then held in memory.
                   - Types: `IpCountryLookup`
-            - **`sessions`** — Sessions tab of a site's page, shown only when the deployment's composition ships the collect plugin: one row per anonymous visit (country, time, device and software, source, first visit or returning, channel), its journey on a shared log time axis (pages split by their share of the visit, the read line and section ticks, action icons, each named on hover) with its duration and actions; opening a row shows its timeline (each page, the sections reached and when, the actions in order, the exit). Range, shape switch with per-shape counts, search over the loaded visits; read over SSH as key-range pages that load as the list scrolls. Reads a deployment's visits over SSH through host-query's hostOnlyQueryOverSsh (collect's host-only sessions query, curled through the install's own gateway), one key range per page, and their per-shape counts — or which of SSH, the request or the answer failed.
+            - **`sessions`** — Sessions tab of a site's page, shown only when the deployment's composition ships the collect plugin: one row per anonymous visit (country, time, device and software, source, first visit or returning, channel), its journey on a shared log time axis (pages split by their share of the visit, the read line and section ticks, action icons, each named on hover) with its duration and actions; opening a row shows its timeline (each page, the sections reached and when, the actions in order, the exit). Read from this computer's copy of the site's analytics (site-mirror, its freshness line above the list; loading until a first whole copy is in place) as live key-range pages: the views (All / With actions / 2+ pages / Bounced) are saved filters, and every filter — whose visits, since when, any field — runs on the copy, a narrowed view carried in the URL. Serves a deployment's visits (deploy-analytics.sessions) from this computer's copy of the site's analytics tables (site-mirror's replica): collect's own visit-list SQL — the window, the rows by key, the groupings and the count, each filter compiled by collect — run on the copy, re-read whenever a pull applies a page to it.
               - Web:
-                - Contributes: `SiteTabs.View` "Sessions" → `SessionsSection`
-                - Uses: 40 symbols — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md)
-                  - `apps/deploy/host-query` ×5
+                - Slots: `sources`
+                - Slot contributors: `sources` ← `apps.deploy.analytics.sessions`
+                - Contributes:
+                  - `SiteTabs.View` "Sessions" → `SessionsSection`
+                  - `sources` "Visits" → `VisitsSource`
+                - Uses: 38 symbols — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md)
+                  - `primitives/data-view` ×7
                   - `primitives/css/ui-kit` ×5
-                  - `primitives/data-view` ×5
                   - `primitives/css/coords` ×4
+                  - `apps/deploy/host-query` ×3
                   - `network/live/live-state` ×2
                   - `primitives/css/spacing` ×2
                   - `apps/deploy/deployments.SiteTabs`
+                  - `apps/deploy/site-mirror/pull.MirrorFreshness`
                   - `network/live.useLive`
                   - `primitives/css/badge.Badge`
                   - `primitives/css/center.Center`
@@ -2362,43 +2359,52 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/status-dot.StatusDot`
                   - `primitives/css/surface.Surface`
                   - `primitives/css/text.Text`
-                  - `primitives/css/toggle-chip.SegmentedControl`
                   - `primitives/css/yield.yieldClass`
-                  - `primitives/icon-button.IconButton`
                   - `primitives/loading.Loading`
-                  - `primitives/relative-time.RelativeTime`
                   - `ui/icons.Icon`
               - Server:
                 - Contributes:
                   - `resource.declare` "deploy-analytics.sessions"
-                  - `resource.declare` "deploy-analytics.sessions:meta"
+                  - `resource.declare` "deploy-analytics.sessions:count"
+                  - `resource.declare` "deploy-analytics.sessions:groups"
+                  - `resource.declare` "deploy-analytics.sessions:rows"
                 - Uses:
-                  - `apps/deploy/host-query.hostOnlyQueryOverSsh`
-                  - `apps/deploy/host-query.HostQueryAnswer`
-                  - `infra/endpoints.endpointPath`
-                  - `network/live.serveValue`
+                  - `apps/deploy/analytics/collect.analyticsMirrorTables`
+                  - `apps/deploy/analytics/collect.countVisits`
+                  - `apps/deploy/analytics/collect.readVisitGroups`
+                  - `apps/deploy/analytics/collect.readVisitsById`
+                  - `apps/deploy/analytics/collect.readVisitWindow`
+                  - `apps/deploy/analytics/collect.VisitReads`
+                  - `apps/deploy/site-mirror/pull.onSiteMirrorApplied`
+                  - `apps/deploy/site-mirror/pull.readSiteMirror`
+                  - `database/table-mirror/replica.tableMirrorReplicas`
+                  - `network/live.serveCollection`
                 - Resources:
-                  - `deploy-analytics.sessions` (invalidate, snapshot)
-                  - `deploy-analytics.sessions:meta` (invalidate, snapshot)
+                  - `deploy-analytics.sessions` (keyed, window)
+                  - `deploy-analytics.sessions:count` (push)
+                  - `deploy-analytics.sessions:groups` (push)
+                  - `deploy-analytics.sessions:rows` (keyed, point)
               - Core:
-                - Uses:
-                  - `apps/deploy/analytics/collect.AnalyticsRangeSchema`
-                  - `apps/deploy/analytics/collect.AudienceSchema`
-                  - `apps/deploy/analytics/collect.MAX_SESSIONS_LIMIT`
-                  - `apps/deploy/analytics/collect.RAW_RETENTION_DAYS`
-                  - `apps/deploy/analytics/collect.SessionCountsSchema`
-                  - `apps/deploy/analytics/collect.SESSIONS_PAGE`
-                  - `apps/deploy/analytics/collect.SessionSchema`
-                  - `apps/deploy/analytics/collect.SessionShapeSchema`
-                  - `apps/deploy/host-query.HOST_QUERY_FAILURE_ARMS`
-                  - `network/live.liveValue`
-                - Exports (types):
-                  - `DeploymentSessionsMeta`
-                  - `DeploymentSessionsQuestion`
+                - Uses: 21 symbols — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md)
+                  - `apps/deploy/analytics/collect` ×9
+                  - `fields/text/config` ×2
+                  - `network/live` ×2
+                  - `fields/bool/config.boolField`
+                  - `fields/date/config.dateField`
+                  - `fields/duration/config.durationField`
+                  - `fields/int/config.intField`
+                  - `fields/json/config.jsonField`
+                  - `fields/string-list/config.stringListField`
+                  - `fields.nullable`
+                  - `packages/list-bound.cappedList`
+                - Exports (types): `SessionRow`
                 - Exports (values):
                   - `deploymentSessions`
-                  - `DeploymentSessionsMetaSchema`
-                  - `DeploymentSessionsQuestionSchema`
+                  - `parseSessionKey`
+                  - `sessionKey`
+                  - `sessionOf`
+                  - `sessionRowOf`
+                  - `startedAtKeyText`
               - Cross-plugin:
                 - Uses tokens: 28 vars — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md)
                   - `ui/tokens/color-palette` ×14
@@ -3653,6 +3659,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Cross-plugin:
                 - Imported by:
                   - `apps/deploy/analytics/dashboard`
+                  - `apps/deploy/analytics/sessions`
                   - `apps/deploy/site-messages/inbox`
                   - `apps/deploy/site-reports/import`
         - **`site-reports`** — Umbrella for the error reports a deployed site's visitors' browsers send: the intake that ships inside the site (public bounded endpoint, aggregated table, host-only list) and the page channel that sends them (deduped, capped, batched).
@@ -23545,7 +23552,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tableMirrorReplicas`
               - `withReplicaSchema`
           - Cross-plugin:
-            - Imported by: `apps/deploy/site-mirror/pull`
+            - Imported by:
+              - `apps/deploy/analytics/sessions`
+              - `apps/deploy/site-mirror/pull`
           - Exemptions:
             - Exempts itself from:
               - `sql-writes:fit:hand-written` — `server/internal/schema-sink.ts` (sanctioned)
@@ -27304,9 +27313,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Fields.Identity` ×35
     - Exports (values): `Fields`
   - Cross-plugin:
-    - Imported by: 137 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
+    - Imported by: 138 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
       - `fields` ×65
-      - `apps` ×22
+      - `apps` ×23
       - `conversations` ×10
       - `infra` ×6
       - `debug` ×5
@@ -27477,8 +27486,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boolField`
               - `boolSample`
           - Cross-plugin:
-            - Imported by: 82 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
-              - `apps` ×26
+            - Imported by: 83 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
+              - `apps` ×27
               - `debug` ×13
               - `backup` ×12
               - `conversations` ×7
@@ -27733,8 +27742,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `DateFieldDef`
             - Exports (values): `dateField`
           - Cross-plugin:
-            - Imported by: 61 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
-              - `apps` ×15
+            - Imported by: 62 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
+              - `apps` ×16
               - `conversations` ×10
               - `infra` ×7
               - `debug` ×5
@@ -27928,6 +27937,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `durationField`
           - Cross-plugin:
             - Imported by:
+              - `apps/deploy/analytics/sessions`
               - `apps/events/events-core`
               - `apps/home/usage-fields`
               - `apps/sonata/library`
@@ -28406,8 +28416,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `intField`
               - `intSample`
           - Cross-plugin:
-            - Imported by: 59 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
-              - `apps` ×16
+            - Imported by: 60 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
+              - `apps` ×17
               - `debug` ×14
               - `conversations` ×7
               - `infra` ×5
@@ -28480,8 +28490,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Imported by: 40 plugins — full list in [`plugins/fields/plugins/json/plugins/config/REFERENCE.md`](../plugins/fields/plugins/json/plugins/config/REFERENCE.md)
-              - `apps` ×7
+            - Imported by: 41 plugins — full list in [`plugins/fields/plugins/json/plugins/config/REFERENCE.md`](../plugins/fields/plugins/json/plugins/config/REFERENCE.md)
+              - `apps` ×8
               - `conversations` ×7
               - `debug` ×5
               - `infra` ×5
@@ -29182,6 +29192,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `stringListSample`
           - Cross-plugin:
             - Imported by:
+              - `apps/deploy/analytics/sessions`
               - `apps/deploy/deployments`
               - `apps/desktop/shell`
               - `build/run-ledger`
@@ -29364,8 +29375,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `textField`
               - `textSample`
           - Cross-plugin:
-            - Imported by: 110 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
-              - `apps` ×30
+            - Imported by: 111 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
+              - `apps` ×31
               - `conversations` ×20
               - `tasks` ×14
               - `infra` ×8
@@ -34197,8 +34208,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 257 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
-          - `apps` ×78
+        - Imported by: 256 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+          - `apps` ×77
           - `conversations` ×35
           - `infra` ×23
           - `debug` ×20
@@ -39764,6 +39775,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`filter`** — The filter language's SQL half: renderOpSql renders one op's dialect-free template over a rendered target (operands as params cast to the domain's SQL type, lists as ONE array param), and filterSql compiles a whole and/or Filter tree over a column → rendered-SQL target map.
           - Cross-plugin:
             - Imported by:
+              - `apps/deploy/analytics/collect`
+              - `apps/deploy/analytics/sessions`
               - `apps/deploy/site-messages/inbox`
               - `fields/bool/filter`
               - `fields/date/filter`
@@ -40650,8 +40663,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `wholeRecord`
           - `wholeTuple`
       - Cross-plugin:
-        - Imported by: 130 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
-          - `apps` ×28
+        - Imported by: 131 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
+          - `apps` ×29
           - `debug` ×20
           - `conversations` ×16
           - `infra` ×16
@@ -48006,8 +48019,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette` ×12
               - `ui/tokens/type-scale` ×6
               - `ui/tokens/shape --spacing`
-            - Imported by: 53 plugins — full list in [`plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md)
-              - `apps` ×20
+            - Imported by: 52 plugins — full list in [`plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md)
+              - `apps` ×19
               - `primitives` ×7
               - `debug` ×5
               - `stats` ×5
@@ -50719,8 +50732,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 134 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
-          - `apps` ×46
+        - Imported by: 133 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+          - `apps` ×45
           - `primitives` ×22
           - `conversations` ×21
           - `tasks` ×8
@@ -52947,8 +52960,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago — or the short now / Nm / Nh / Nd), and a running duration as a clock (m:ss). Exposes formatRelativeTime(), <RelativeTime date={…} />, formatElapsed(), useNow() and <ElapsedTime since={…} />.
       - Cross-plugin:
-        - Imported by: 71 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
-          - `apps` ×26
+        - Imported by: 70 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
+          - `apps` ×25
           - `debug` ×15
           - `conversations` ×10
           - `infra` ×4
@@ -54796,8 +54809,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. Applies each slot's committed layout (order, hidden items, spacers, dividers, groups) everywhere slots render; a layout is edited in its config file or the Config pane's reorder-tree field. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 283 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×283
+    - Contributes: 284 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×284
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfigResult`
@@ -54821,8 +54834,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useLayoutOrder`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 282 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×282
+    - Contributes: 283 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×283
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:

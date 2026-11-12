@@ -1,141 +1,209 @@
-import { endpointPath } from "@plugins/infra/plugins/endpoints/server";
-import { serveValue } from "@plugins/network/plugins/live/server";
-import type { LiveKeyCut } from "@plugins/network/plugins/live/core";
+import type { LiveCutKey } from "@plugins/network/plugins/live/core";
+import { serveCollection } from "@plugins/network/plugins/live/server";
+import type { Filter } from "@plugins/network/plugins/live/plugins/filter/core";
+import { tableMirrorReplicas } from "@plugins/database/plugins/table-mirror/plugins/replica/server";
 import {
-  hostOnlyQueryOverSsh,
-  type HostQueryAnswer,
-} from "@plugins/apps/plugins/deploy/plugins/host-query/server";
+  onSiteMirrorApplied,
+  readSiteMirror,
+} from "@plugins/apps/plugins/deploy/plugins/site-mirror/plugins/pull/server";
 import {
-  analyticsSessionCountsEndpoint,
-  analyticsSessionsEndpoint,
-  encodeSessionCountsQuery,
-  encodeSessionsQuery,
-  SessionCountsResultSchema,
-  SessionsResultSchema,
-  type SessionCountsResult,
-  type SessionKey,
-  type SessionsQuery,
-  type SessionsResult,
+  ANALYTICS_MIRROR_SET_ID,
+  type VisitCut,
 } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
 import {
+  analyticsMirrorTables,
+  countVisits,
+  readVisitGroups,
+  readVisitsById,
+  readVisitWindow,
+  type VisitReads,
+} from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/server";
+import {
   deploymentSessions,
-  type DeploymentSessionsMeta,
-  type DeploymentSessionsQuestion,
+  parseSessionKey,
+  sessionRowOf,
+  startedAtKeyText,
 } from "../../core";
 
-/** A page cut as collect's key: the key's parts are `[startedAt, id]`. */
-export function sessionKeyOf(cut: LiveKeyCut | null): SessionKey | undefined {
-  if (cut === null) return undefined;
-  const [startedAt] = cut.key;
-  if (typeof startedAt !== "string")
-    throw new Error(
-      `a sessions cut without a start instant: ${JSON.stringify(cut)}`,
-    );
-  return { startedAt, id: cut.id };
+// Every filterable field but the scope is a visit column collect's SQL runs.
+const { deploymentId: _scope, ...VISIT_FILTERABLE } =
+  deploymentSessions.filterable;
+
+/** A question's site and the rest of its filter, which collect runs on that site's copy. */
+interface Scoped {
+  deploymentId: string;
+  where: Filter | undefined;
 }
 
-/** The box's sessions query for one question and one key range. */
-export function sessionsQueryOf(
-  q: DeploymentSessionsQuestion,
-  range: { after: LiveKeyCut | null; until: LiveKeyCut | null; limit: number },
-): SessionsQuery {
-  const after = sessionKeyOf(range.after);
-  const until = sessionKeyOf(range.until);
+/** Is `f` the scope clause, `deploymentId = <site>`? */
+function scopeOf(f: Filter): string | null {
+  return "column" in f &&
+    f.column === "deploymentId" &&
+    f.op === "eq" &&
+    typeof f.operand === "string"
+    ? f.operand
+    : null;
+}
+
+/**
+ * Split a question's canonical filter into its site (a top-level
+ * `deploymentId = <site>` clause, required: every site has its own copy, so a
+ * read across sites has no spelling) and the rest. A question without one is
+ * a caller's bug — every reader scopes by the site page it is on.
+ */
+export function splitScope(where: Filter | undefined): Scoped {
+  const missing = () =>
+    new Error(
+      `deploy-analytics.sessions: every read names one site — where: { deploymentId } at the top of its filter (got ${JSON.stringify(where)})`,
+    );
+  if (where === undefined) throw missing();
+  const own = scopeOf(where);
+  if (own !== null) return { deploymentId: own, where: undefined };
+  if (!("and" in where)) throw missing();
+  const scopes = where.and.flatMap((c) => {
+    const s = scopeOf(c);
+    return s === null ? [] : [s];
+  });
+  const [deploymentId, ...more] = scopes;
+  if (deploymentId === undefined || more.length > 0) throw missing();
+  const rest = where.and.filter((c) => scopeOf(c) === null);
   return {
-    range: q.range,
-    filters: [],
-    shape: q.shape,
-    audience: q.audience,
-    ...(after ? { after } : {}),
-    ...(until ? { until } : {}),
-    limit: range.limit,
+    deploymentId,
+    where:
+      rest.length === 0
+        ? undefined
+        : rest.length === 1
+          ? rest[0]
+          : { and: rest },
   };
 }
 
-function askBox(
+/** A window cut (`[startedAt text, key]`) as collect's visit cut. */
+function visitCutOf(cut: LiveCutKey | undefined): VisitCut | undefined {
+  if (cut === undefined) return undefined;
+  const [startedAt, key] = cut;
+  if (typeof startedAt !== "string" || typeof key !== "string")
+    throw new Error(
+      `deploy-analytics.sessions: a cut without a start instant and key: ${JSON.stringify(cut)}`,
+    );
+  return { startedAt, id: parseSessionKey(key).visitId };
+}
+
+/**
+ * `fn` on the site's copy of collect's tables, as of the copy's own moment
+ * (the box's clock at the last applied page — what "still live" is measured
+ * against, so the answer moves when the copy does, never with this
+ * computer's clock). The tab mounts the list only once the copy is whole
+ * (`site-mirror.status`'s `copied`), so a read before that is a broken
+ * assumption, loudly.
+ */
+async function onCopy<T>(
   deploymentId: string,
-  query: SessionsQuery,
-): Promise<HostQueryAnswer<SessionsResult>> {
-  return hostOnlyQueryOverSsh(
+  fn: (tx: VisitReads, asOf: Date) => Promise<T>,
+): Promise<T> {
+  const read = await readSiteMirror(
     deploymentId,
-    `${endpointPath(analyticsSessionsEndpoint, {})}?q=${encodeSessionsQuery(query)}`,
-    SessionsResultSchema,
+    ANALYTICS_MIRROR_SET_ID,
+    (tx, { sourceNow }) => {
+      if (sourceNow === null)
+        throw new Error(
+          `deploy-analytics.sessions: ${deploymentId}'s copy is whole but has no source clock`,
+        );
+      return fn(tx, sourceNow);
+    },
   );
+  if (!read.ready)
+    throw new Error(
+      `deploy-analytics.sessions: ${deploymentId}'s copy of its analytics is not readable yet (${read.phase}) — the tab reads it only once site-mirror.status says it is copied`,
+    );
+  return read.value;
 }
 
-/** The box's per-shape counts for one question — the whole range, whatever the shape. */
-function askBoxCounts(
-  q: DeploymentSessionsQuestion,
-): Promise<HostQueryAnswer<SessionCountsResult>> {
-  const query = { range: q.range, filters: [], audience: q.audience };
-  return hostOnlyQueryOverSsh(
-    q.deploymentId,
-    `${endpointPath(analyticsSessionCountsEndpoint, {})}?q=${encodeSessionCountsQuery(query)}`,
-    SessionCountsResultSchema,
-  );
-}
-
-// A snapshot, not `db` and not "notified": the visits are the remote site's,
-// arriving with every visitor, with no change signal on this side. Like the
-// report (`dashboard/server/internal/served.ts`), `hostOnlyQueryOverSsh` reads
-// the deployment's SSH target from Postgres inside the loader — UNDECLARED,
-// and only `snapshot` keeps that honest (sanctioned in this plugin's
-// `exempt/index.ts`).
-export const deploymentSessionsServed = serveValue(deploymentSessions, {
+// Notified, not the change feed: the copy lives in a replica schema the feed
+// does not cover, and the replica announces every applied page itself
+// (`onSiteMirrorApplied`, one LISTEN while any tuple is held). A lost session
+// (`null`) may have missed one — re-read everything, as for any page.
+export const deploymentSessionsServed = serveCollection(deploymentSessions, {
   source: "external",
-  changes: {
-    snapshot: {
+  changes: "notified",
+  throttleMs: 1000,
+  whileSubscribed: (notify) =>
+    onSiteMirrorApplied(ANALYTICS_MIRROR_SET_ID, () => notify()),
+  // What the answers read: the copy's tables (named as collect's own — the
+  // replica schema holds them under the same names) and the replica's state
+  // row. Every change to either arrives through the replica's NOTIFY above,
+  // in the transaction that applied it — never through the change feed.
+  reads: {
+    tables: [],
+    reason: "a site's copy of its analytics, read through its replica",
+    notified: {
+      relations: [tableMirrorReplicas, ...analyticsMirrorTables],
       reason:
-        "the deployed site's visits, read over SSH from its box: they change with every visitor and have no change signal here",
+        "the copy (and whether it is whole) moves only when a pull applies a page, which the replica announces (onReplicaApplied)",
     },
   },
-  loader: async (q, range) => {
-    const answer = await askBox(q.deploymentId, sessionsQueryOf(q, range));
-    switch (answer.kind) {
-      case "not-found":
-        throw deploymentSessions.refuse(
-          "missing",
-          "This deployment no longer exists.",
-        );
-      case "answer":
-        if (answer.value.kind === "refused")
-          throw deploymentSessions.refuse(
-            "beyond-raw-window",
-            `Visits are kept for ${answer.value.rawWindowDays} days.`,
-          );
-        return answer.value.sessions;
-      case "no-ssh-key":
-      case "unverified":
-      case "ssh-failed":
-      case "request-failed":
-      case "route-missing":
-      case "unreadable-answer":
-        // Which of SSH, the request or the answer failed is the meta's to
-        // render (typed, with what to do); a page only says it could not.
-        throw deploymentSessions.refuse(
-          "unreachable",
-          `The box could not be read (${answer.kind}).`,
-        );
-    }
-  },
-  // The counts are over the whole range whatever the page: their own
-  // question, asked once per question — never with each page, which would
-  // count the whole range on every scroll step.
-  meta: async (q): Promise<DeploymentSessionsMeta> => {
-    const answer = await askBoxCounts(q);
-    if (answer.kind === "not-found")
-      throw deploymentSessions.refuse(
-        "missing",
-        "This deployment no longer exists.",
+  keyText: { startedAt: startedAtKeyText },
+  window: async (q) => {
+    const { deploymentId, where } = splitScope(q.where);
+    const [order, ...rest] = q.orderBy;
+    if (order === undefined || order[0] !== "startedAt" || rest.length > 0)
+      throw new Error(
+        `deploy-analytics.sessions: ordered by startedAt alone — got ${JSON.stringify(q.orderBy)}`,
       );
-    if (answer.kind !== "answer") return answer;
-    const result = answer.value;
-    return result.kind === "counts"
-      ? {
-          kind: "sessions",
-          generatedAt: result.generatedAt,
-          counts: result.counts,
-        }
-      : result;
+    const after = visitCutOf(q.after);
+    const until = visitCutOf(q.until);
+    const visits = await onCopy(deploymentId, (tx, asOf) =>
+      readVisitWindow(
+        tx,
+        {
+          where,
+          filterable: VISIT_FILTERABLE,
+          direction: order[1],
+          ...(after ? { after } : {}),
+          ...(until ? { until } : {}),
+          limit: q.limit,
+        },
+        asOf,
+      ),
+    );
+    return visits.map((s) => sessionRowOf(deploymentId, s));
+  },
+  rows: async (keys) => {
+    const bySite = new Map<string, string[]>();
+    for (const key of keys) {
+      const { deploymentId, visitId } = parseSessionKey(key);
+      bySite.set(deploymentId, [...(bySite.get(deploymentId) ?? []), visitId]);
+    }
+    const rows = await Promise.all(
+      [...bySite].map(async ([deploymentId, ids]) => {
+        const visits = await onCopy(deploymentId, (tx, asOf) =>
+          readVisitsById(tx, ids, asOf),
+        );
+        return visits.map((s) => sessionRowOf(deploymentId, s));
+      }),
+    );
+    return rows.flat();
+  },
+  groups: async (q) => {
+    const { groupBy } = q;
+    if (groupBy === "deploymentId")
+      throw new Error(
+        "deploy-analytics.sessions: grouping by site has no meaning — every read is one site's",
+      );
+    const { deploymentId, where } = splitScope(q.where);
+    return onCopy(deploymentId, (tx) =>
+      readVisitGroups(tx, {
+        where,
+        filterable: VISIT_FILTERABLE,
+        groupBy,
+        limit: q.limit,
+      }),
+    );
+  },
+  count: async (q) => {
+    const { deploymentId, where } = splitScope(q.where);
+    return onCopy(deploymentId, (tx) =>
+      countVisits(tx, { where, filterable: VISIT_FILTERABLE }),
+    );
   },
 });

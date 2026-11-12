@@ -78,6 +78,8 @@ function session(hits: SessionHit[], durationMs: number): Session {
     device: "Desktop",
     browser: "Chrome",
     os: "macOS",
+    pages: [...new Set(hits.map((h) => h.path))].sort(),
+    eventNames: [],
     hits,
     hitsTruncated: false,
   };

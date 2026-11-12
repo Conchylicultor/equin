@@ -1,54 +1,42 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, type ReactElement, type ReactNode } from "react";
 import {
-  AUDIENCE_OPTIONS,
-  SESSION_SHAPES,
-  type AnalyticsRange,
-  type Audience,
+  ANALYTICS_MIRROR_SET_ID,
+  COLLECT_PLUGIN_ID,
   type Session,
-  type SessionShape,
 } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
 import {
-  HostQueryErrorState,
-  HostQueryFailureState,
   useDeploymentShips,
   useShipsGate,
   type HostQuerySubject,
 } from "@plugins/apps/plugins/deploy/plugins/host-query/web";
-import { COLLECT_PLUGIN_ID } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
+import { siteMirrorStatus } from "@plugins/apps/plugins/deploy/plugins/site-mirror/plugins/pull/core";
+import { MirrorFreshness } from "@plugins/apps/plugins/deploy/plugins/site-mirror/plugins/pull/web";
 import { useLive } from "@plugins/network/plugins/live/web";
+import { clause } from "@plugins/network/plugins/live/plugins/filter/core";
 import {
   ResourceErrorInline,
   type ResourceReadiness,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
-  DataView,
+  DataViewSwitcher,
   defineDataView,
-  useLivePagedValuePaging,
-  type FieldDef,
-  type LivePagesPaging,
+  defineDataViewSources,
+  fieldOverrides,
+  useLivePagesPaging,
+  type DataViewPaging,
+  type DataViewSourceProps,
 } from "@plugins/primitives/plugins/data-view/web";
-import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import {
   Inset,
   Stack,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
-import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { symbol } from "@plugins/ui/plugins/icons/core";
-import {
-  deploymentSessions,
-  type DeploymentSessionsMeta,
-  type DeploymentSessionsQuestion,
-} from "../../core";
+import { deploymentSessions, sessionOf, type SessionRow } from "../../core";
 import { axisMaxS } from "../internal/axis";
 import { sourceOf } from "../internal/facts";
-import { countryName, median, span } from "../internal/format";
+import { countryName, median } from "../internal/format";
 import { journeyOf, sectionsByPath, type Journey } from "../internal/journey";
-import { seconds, visitLoad } from "../internal/load";
+import { visitLoad } from "../internal/load";
 import { LaneWindowContext, type LaneWindow } from "../internal/lane-context";
 import { SessionLane } from "./session-lane";
 import { SessionTimeline } from "./session-timeline";
@@ -57,27 +45,22 @@ import { sessionsToolbar } from "./sessions-toolbar";
 // Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
 const SESSIONS_VIEW = defineDataView("deploy-sessions");
 
-const refreshIcon = symbol("refresh");
-
 const SUBJECT: HostQuerySubject = {
   reading: "visits",
-  answer: "a list of visits",
+  answer: "a page of analytics rows",
 };
 
-/** The ranges a visit list can ask: every day of them still has raw rows. */
-const RANGES: readonly { id: Exclude<AnalyticsRange, "12m">; label: string }[] =
-  [
-    { id: "today", label: "Today" },
-    { id: "7d", label: "7d" },
-    { id: "30d", label: "30d" },
-  ];
+/**
+ * Where the Sessions surface's rows come from: one source, `visits` — a
+ * site's live visits, or (the exhibit) made-up ones. A source so the rows are
+ * in hand: every lane shares one axis and one section estimate, derived from
+ * the loaded window.
+ */
+export type SessionsHostProps =
+  | { kind: "site"; deploymentId: string }
+  | { kind: "fixture"; rows: readonly SessionRow[] };
 
-const SHAPE_LABEL: Record<SessionShape, string> = {
-  all: "All",
-  actions: "With actions",
-  multi: "2+ pages",
-  bounced: "Bounced",
-};
+export const SessionsSources = defineDataViewSources<SessionsHostProps>();
 
 /** The tab's gate: the same "ships collect" rule as the Analytics tab's. */
 export function useSessionsAvailable({
@@ -90,8 +73,9 @@ export function useSessionsAvailable({
 
 /**
  * **Sessions** — one row per anonymous visit of the deployed site, read from
- * the box over SSH when the tab opens (and on Refresh), paged as the list
- * scrolls. Shown only when the deployment's composition ships collect.
+ * this computer's copy of the site's analytics tables (site-mirror), paged as
+ * the list scrolls and kept live as pulls land. Shown only when the
+ * deployment's composition ships collect.
  */
 export function SessionsSection({
   deploymentId,
@@ -120,144 +104,134 @@ export function SessionsSection({
 }
 
 function SessionsTab({ deploymentId }: { deploymentId: string }): ReactNode {
-  const [range, setRange] = useState<Exclude<AnalyticsRange, "12m">>("7d");
-  const [shape, setShape] = useState<SessionShape>("all");
-  // The report's own default: the site owner's visits are left out.
-  const [audience, setAudience] = useState<Audience>("visitors");
-  const question: DeploymentSessionsQuestion = {
-    deploymentId,
-    range,
-    shape,
-    audience,
-  };
-  // Each read is an SSH session to the box, so nothing re-asks on its own:
-  // the pages are measured as the list needs them, Refresh re-measures both.
-  const meta = useLive(deploymentSessions.meta, question);
-  const { pages, paging } = useLivePagedValuePaging(
-    deploymentSessions,
-    question,
-  );
-  const counts =
-    meta.status === "ready" && meta.data.kind === "sessions"
-      ? meta.data.counts
-      : null;
-
   return (
     <Stack gap="none">
       <Inset t="lg" b="smd">
-        <Line className="gap-smd">
-          <SegmentedControl
-            options={RANGES}
-            value={range}
-            onChange={setRange}
-          />
-          <SegmentedControl
-            label="Whose visits"
-            options={AUDIENCE_OPTIONS}
-            value={audience}
-            onChange={setAudience}
-          />
-          <Fill />
-          {meta.status === "ready" && meta.data.kind === "sessions" && (
-            <Text variant="caption" tone="faint">
-              Read from the box{" "}
-              <RelativeTime date={new Date(meta.data.generatedAt)} />
-            </Text>
-          )}
-          <IconButton
-            icon={refreshIcon}
-            label="Refresh"
-            loading={meta.status === "loading"}
-            onClick={() => {
-              void meta.refresh();
-              void pages.refresh();
-            }}
-          />
-        </Line>
+        <MirrorFreshness
+          deploymentId={deploymentId}
+          setId={ANALYTICS_MIRROR_SET_ID}
+          subject={SUBJECT}
+        />
       </Inset>
-      {meta.status === "error" ? (
-        <ResourceErrorInline
-          variant="block"
-          subject="this deployment's visits"
-          error={meta.error}
-          refetch={meta.refresh}
-        />
-      ) : meta.status === "ready" && meta.data.kind !== "sessions" ? (
-        <MetaFailure meta={meta.data} />
-      ) : (
-        <SessionsList
-          rows={pages.status === "ready" ? pages.rows : NO_SESSIONS}
-          readiness={pages.status === "ready" ? READY : pages}
-          paging={paging}
-          shape={shape}
-          onShape={setShape}
-          counts={counts}
-        />
-      )}
+      <WhenCopied deploymentId={deploymentId} />
     </Stack>
   );
 }
 
-const NO_SESSIONS: readonly Session[] = [];
-const READY: ResourceReadiness = { status: "ready" };
-
-function MetaFailure({
-  meta,
-}: {
-  meta: Exclude<DeploymentSessionsMeta, { kind: "sessions" }>;
-}): ReactNode {
-  if (meta.kind === "refused")
-    return (
-      <HostQueryErrorState
-        title={`Visits are kept for ${meta.rawWindowDays} days — pick a shorter range.`}
-      />
-    );
-  return <HostQueryFailureState failure={meta} subject={SUBJECT} />;
+/**
+ * The list, once this computer holds a whole copy of the site's analytics.
+ * Before that it is not known yet — a loading state, never an empty list
+ * (the freshness line above says what the copy is doing, or why it failed).
+ */
+function WhenCopied({ deploymentId }: { deploymentId: string }): ReactNode {
+  const status = useLive(siteMirrorStatus, { deploymentId });
+  switch (status.status) {
+    case "loading":
+      return <Loading variant="rows" count={6} />;
+    case "error":
+      return (
+        <ResourceErrorInline
+          variant="block"
+          subject="whether this site's visits are copied yet"
+          error={status.error}
+          refetch={status.refetch}
+        />
+      );
+    case "ready": {
+      const row = status.data.find((r) => r.setId === ANALYTICS_MIRROR_SET_ID);
+      return row?.copied === true ? (
+        <SessionsList host={{ kind: "site", deploymentId }} />
+      ) : (
+        <Loading variant="rows" count={6} />
+      );
+    }
+  }
 }
 
-const FIELDS: FieldDef<Session>[] = [
-  {
-    id: "country",
-    label: "Country",
-    type: "text",
-    primary: true,
-    value: (s) => countryName(s.country),
-    filterable: true,
-  },
-  {
-    id: "startedAt",
-    label: "Started",
-    type: "date",
-    value: (s) => new Date(s.startedAt),
-    sortable: true,
-    groupable: true,
-  },
-  {
-    id: "channel",
-    label: "Channel",
-    type: "text",
-    value: (s) => s.channel,
-    filterable: true,
-    groupable: true,
-  },
-  {
-    id: "device",
-    label: "Device",
-    type: "text",
-    value: (s) => s.device,
-    filterable: true,
-    groupable: true,
-  },
-  {
-    id: "returning",
-    label: "Returning",
-    type: "bool",
-    value: (s) => s.returning,
-    filterable: true,
-  },
-];
+/** The Sessions DataView over `host`'s visits. */
+export function SessionsList({ host }: { host: SessionsHostProps }): ReactNode {
+  return (
+    <DataViewSwitcher<SessionsHostProps>
+      storageKey={SESSIONS_VIEW}
+      sources={SessionsSources}
+      hostProps={host}
+      viewEdits={{ mode: "draft" }}
+      toolbar={sessionsToolbar}
+      searchPlaceholder="Filter by page, source, country…"
+    />
+  );
+}
 
-function searchText(s: Session): string {
+/** The `visits` source: a site's live visits, or the exhibit's made-up ones. */
+export function VisitsSource(
+  props: DataViewSourceProps<SessionsHostProps>,
+): ReactElement {
+  return props.hostProps.kind === "site" ? (
+    <SiteVisits {...props} deploymentId={props.hostProps.deploymentId} />
+  ) : (
+    <VisitsBundle
+      render={props.render}
+      rows={props.hostProps.rows}
+      readiness={READY}
+      paging={undefined}
+    />
+  );
+}
+
+const READY: ResourceReadiness = { status: "ready" };
+const rowKeyOf = (row: SessionRow): string => row.key;
+const NO_ROWS: readonly SessionRow[] = [];
+
+/**
+ * A site's visits as live key-range pages of its copy, paged by the active
+ * view's filter (`narrowBy`: the shape, whose visits, since when — run by
+ * collect's SQL on the copy), with the total it matches.
+ */
+function SiteVisits({
+  deploymentId,
+  view,
+  render,
+}: DataViewSourceProps<SessionsHostProps> & {
+  deploymentId: string;
+}): ReactElement {
+  // The filter language's own clause: the paged read ANDs the view's filter
+  // into it (`narrowBy`), so it is spelled as the language, not shorthand.
+  const query = useMemo(
+    () => ({ where: clause("deploymentId", "eq", deploymentId) }),
+    [deploymentId],
+  );
+  const { pages, paging } = useLivePagesPaging(deploymentSessions, query, {
+    narrowBy: view,
+    total: true,
+  });
+  return (
+    <VisitsBundle
+      render={render}
+      rows={pages.status === "ready" ? pages.rows : NO_ROWS}
+      readiness={pages.status === "ready" ? READY : pages}
+      paging={paging === null ? undefined : paging}
+    />
+  );
+}
+
+// Every field but the site, which every read is scoped by.
+const OVERRIDES = fieldOverrides(deploymentSessions, {
+  deploymentId: { visible: false, filterable: false },
+});
+
+/** Each row's collect visit, kept per row object (rows keep identity across reads). */
+const SESSIONS = new WeakMap<SessionRow, Session>();
+function sessionOfRow(row: SessionRow): Session {
+  let s = SESSIONS.get(row);
+  if (s === undefined) {
+    s = sessionOf(row);
+    SESSIONS.set(row, s);
+  }
+  return s;
+}
+
+function searchText(row: SessionRow): string {
+  const s = sessionOfRow(row);
   return [
     countryName(s.country),
     sourceOf(s),
@@ -265,125 +239,87 @@ function searchText(s: Session): string {
     s.device,
     s.os,
     s.browser,
-    ...new Set(s.hits.map((h) => h.path)),
+    ...s.pages,
   ].join(" ");
 }
 
-export function SessionsList({
+const VIEW_OPTIONS = {
+  list: {
+    renderRow: (row: SessionRow) => <SessionLane session={sessionOfRow(row)} />,
+    detail: (row: SessionRow) => (
+      <SessionTimeline session={sessionOfRow(row)} />
+    ),
+    detailOnActivate: true,
+    frame: "card",
+  },
+} as const;
+
+/** The loaded window handed to the surface, with what every lane shares. */
+function VisitsBundle({
+  render,
   rows,
   readiness,
   paging,
-  shape,
-  onShape,
-  counts,
 }: {
-  rows: readonly Session[];
+  render: DataViewSourceProps<SessionsHostProps>["render"];
+  rows: readonly SessionRow[];
   readiness: ResourceReadiness;
-  paging: LivePagesPaging | null;
-  shape: SessionShape;
-  onShape: (s: SessionShape) => void;
-  counts: Record<SessionShape, number> | null;
-}): ReactNode {
-  // Everything the rows share, derived once per loaded window.
-  const laneWindow = useMemo<LaneWindow>(() => {
+  paging: Omit<DataViewPaging<SessionRow>, "isPaged"> | undefined;
+}): ReactElement {
+  const laneWindow = useLaneWindow(
+    rows,
+    readiness.status === "ready",
+    paging?.total?.count ?? null,
+  );
+  return (
+    <LaneWindowContext.Provider value={laneWindow}>
+      {render<SessionRow>({
+        rows,
+        rowKey: rowKeyOf,
+        collection: deploymentSessions,
+        overrides: OVERRIDES,
+        readiness,
+        ...(paging !== undefined ? { paging } : {}),
+        searchAccessor: searchText,
+        viewOptions: VIEW_OPTIONS,
+        emptyState: <>No visit matches this view.</>,
+      })}
+    </LaneWindowContext.Provider>
+  );
+}
+
+/** Everything the rows share, derived once per loaded window. */
+function useLaneWindow(
+  rows: readonly SessionRow[],
+  known: boolean,
+  total: number | null,
+): LaneWindow {
+  return useMemo<LaneWindow>(() => {
+    const sessions = rows.map(sessionOfRow);
     const journeys = new Map<string, Journey>(
-      rows.map((s) => [s.id, journeyOf(s)]),
+      sessions.map((s) => [s.id, journeyOf(s)]),
     );
     const all = [...journeys.values()];
     return {
       journeys,
       sections: sectionsByPath(all),
       axisMaxS: axisMaxS(Math.max(0, ...all.map((j) => j.durationS))),
-    };
-  }, [rows]);
-  const loaded = [...laneWindow.journeys.values()];
-  const med = median(loaded.map((j) => j.durationS));
-  const withActions = loaded.filter((j) => j.actionCount > 0).length;
-  // Over the visits whose load got ready on screen; none such → no figure.
-  const medLoad = median(
-    rows.flatMap((s) => {
-      const ready = visitLoad(s)?.readyMs ?? null;
-      return ready === null ? [] : [ready];
-    }),
-  );
-
-  return (
-    <LaneWindowContext.Provider value={laneWindow}>
-      <DataView<Session>
-        rows={rows}
-        fields={FIELDS}
-        rowKey={(s) => s.id}
-        storageKey={SESSIONS_VIEW}
-        views={["list"]}
-        pinnedView="sessions"
-        readiness={readiness}
-        paging={paging ?? undefined}
-        toolbar={sessionsToolbar}
-        searchAccessor={searchText}
-        searchPlaceholder="Filter by page, source, country…"
-        actions={
-          <>
-            <SegmentedControl
-              label="Which visits"
-              options={SESSION_SHAPES.map((id) => ({
-                id,
-                label: (
-                  <>
-                    {SHAPE_LABEL[id]}
-                    {counts && (
-                      // Inline in the segment's own line: a <Text> here is a
-                      // block-level leaf and would break the label in two.
-                      <span className="text-faint-foreground tabular-nums">
-                        {" "}
-                        {counts[id]}
-                      </span>
-                    )}
-                  </>
-                ),
-              }))}
-              value={shape}
-              onChange={onShape}
-            />
-            <Fill />
-            <Line className="gap-md">
-              {counts && (
-                <Text variant="caption" tone="muted">
-                  <Strong>{counts[shape]}</Strong> sessions
-                </Text>
-              )}
-              {med !== null && (
-                <Text variant="caption" tone="muted">
-                  median <Strong>{span(med)}</Strong>
-                </Text>
-              )}
-              {medLoad !== null && (
-                <Text variant="caption" tone="muted">
-                  median load <Strong>{seconds(medLoad, 1)}</Strong>
-                </Text>
-              )}
-              <Text variant="caption" tone="muted">
-                <Strong>{withActions}</Strong> with actions
-              </Text>
-            </Line>
-          </>
-        }
-        viewOptions={{
-          list: {
-            renderRow: (s: Session) => <SessionLane session={s} />,
-            detail: (s: Session) => <SessionTimeline session={s} />,
-            detailOnActivate: true,
-            frame: "card",
+      // Not known yet is no figure at all, never "0 sessions".
+      summary: !known
+        ? null
+        : {
+            total,
+            loaded: sessions.length,
+            medianS: median(all.map((j) => j.durationS)),
+            // Over the visits whose load got ready on screen; none such → no figure.
+            medianLoadMs: median(
+              sessions.flatMap((s) => {
+                const ready = visitLoad(s)?.readyMs ?? null;
+                return ready === null ? [] : [ready];
+              }),
+            ),
+            withActions: all.filter((j) => j.actionCount > 0).length,
           },
-        }}
-        emptyState={<>No visit in this range.</>}
-      />
-    </LaneWindowContext.Provider>
-  );
-}
-
-/** A figure inside a summary phrase: inline, so the phrase stays one line. */
-function Strong({ children }: { children: ReactNode }): ReactNode {
-  return (
-    <b className="font-semibold text-foreground tabular-nums">{children}</b>
-  );
+    };
+  }, [rows, known, total]);
 }

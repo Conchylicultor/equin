@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   cappedList,
   cappedRecord,
+  wholeList,
 } from "@plugins/packages/plugins/list-bound/core";
 import {
   BrowserFamilySchema,
@@ -13,35 +14,17 @@ import { GapsSchema } from "./gaps";
 import { LoadTimingSchema } from "./load-timing";
 import { PageSectionsSchema } from "./page-sections";
 import { MAX_EVENT_PROPS } from "./collect-body";
-import {
-  AnalyticsRangeSchema,
-  RAW_RETENTION_DAYS,
-  firstRawDay,
-  planPeriods,
-  type AnalyticsRange,
-} from "./periods";
-import { AudienceSchema, DEFAULT_AUDIENCE } from "./audience";
-import {
-  AnalyticsFilterSchema,
-  MAX_FILTERS,
-  withoutDefaultAudience,
-} from "./query";
-import {
-  base64UrlJsonParamSchema,
-  encodeBase64UrlJson,
-} from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/host-only/core";
-
 /**
  * Individual visits ("sessions"), each with its hits in order — what the
- * deploy app's Sessions tab lists. Sessions exist only as raw rows, so a range
- * reaching past the 90-day raw window is refused, never approximated.
+ * deploy app's Sessions tab lists, from its local copy of the site's tables
+ * (raw rows only: 90 days).
  */
 
 /** The usual page of visits a list asks for. */
 export const SESSIONS_PAGE = 50;
 /**
- * The most visits one answer holds (a caller's `limit` above it is refused):
- * two pages, what a split page of network/live's paged value asks. With
+ * The most visits one window holds: two pages, what a split page of
+ * network/live's window asks. With
  * {@link MAX_SESSION_HITS} hits each, one answer stays a few MB at worst.
  */
 export const MAX_SESSIONS_LIMIT = 2 * SESSIONS_PAGE;
@@ -49,85 +32,48 @@ export const MAX_SESSIONS_LIMIT = 2 * SESSIONS_PAGE;
 export const MAX_SESSION_HITS = 200;
 
 /**
- * Which visits the list shows. Each one's count over the whole range is its
- * own question ({@link SessionCountsQuery}), asked once per range and filters
- * — never with every page, which would count the whole range on each scroll
- * step.
- * - `all`
- * - `actions` — at least one custom event
- * - `multi` — two pageviews or more
- * - `bounced` — exactly one pageview (the report's bounce)
+ * A visit's place in a list ordered by when it started: its start instant
+ * exactly as `toISOString()` spells it (ms precision, as stored — fixed width,
+ * so its text order is its time order), then its id. A window is cut between
+ * two such places (`readVisitWindow`'s `after` / `until`).
  */
-export const SESSION_SHAPES = ["all", "actions", "multi", "bounced"] as const;
-export const SessionShapeSchema = z.enum(SESSION_SHAPES);
-export type SessionShape = z.infer<typeof SessionShapeSchema>;
-
-/**
- * A visit's place in the list, which is newest first: `(startedAt, id)`
- * descending. A page is a KEY RANGE of that order (`after` exclusive, `until`
- * inclusive), so it stays well defined while new visits arrive at the top —
- * the shape network/live's paged value asks its loader for. `startedAt` is
- * the stored instant as `toISOString()` (fixed width, so its text order is its
- * time order).
- */
-export const SessionKeySchema = z
+export const VisitCutSchema = z
   .object({
-    /** ISO instant the visit started, exactly as `toISOString()` spells it (ms precision, as stored). */
     startedAt: z.iso.datetime({ precision: 3 }),
-    id: z.uuid(),
+    id: z.string().min(1),
   })
   .strict();
-export type SessionKey = z.infer<typeof SessionKeySchema>;
-
-/** Each visit's filter key, so a repeated filter is refused (the report's rule). */
-const noDuplicateFilters = (q: {
-  filters: readonly { dimension: string; value: string }[];
-}) =>
-  new Set(q.filters.map((f) => JSON.stringify([f.dimension, f.value]))).size ===
-  q.filters.length;
-
-export const SessionsQuerySchema = z
-  .object({
-    range: AnalyticsRangeSchema,
-    /** The report's filters, applied by the report's own membership SQL. */
-    filters: z.array(AnalyticsFilterSchema).max(MAX_FILTERS),
-    shape: SessionShapeSchema,
-    /** Whose visits (`audience.ts`); absent = the default, as in the report. */
-    audience: AudienceSchema.default(DEFAULT_AUDIENCE),
-    /** Exclusive: only visits ordered after (older than) this key. Absent = from the newest. */
-    after: SessionKeySchema.optional(),
-    /** Inclusive: no visit ordered after (older than) this key. Absent = no lower bound. */
-    until: SessionKeySchema.optional(),
-    /** At most this many visits; an answer holding fewer is the end of the range. */
-    limit: z.number().int().min(1).max(MAX_SESSIONS_LIMIT),
-  })
-  .strict()
-  .refine(noDuplicateFilters, { message: "duplicate filter" });
-export type SessionsQuery = z.infer<typeof SessionsQuerySchema>;
+export type VisitCut = z.infer<typeof VisitCutSchema>;
 
 /**
- * How many visits of a range pass the filters, per shape — the sessions
- * question without its shape and its key range. Counting a range costs the
- * range's visits, so it is asked once per range / audience / filters (the
- * Sessions tab's meta), not with every page of the list.
+ * The visit fields a visit list may filter on, each run by collect's own SQL
+ * (`server/internal/sessions.ts`): the visit's columns, its duration (the
+ * report's one definition) and its memberships — `pages` and `eventNames`,
+ * the report's `page` / `event` dimensions.
  */
-export const SessionCountsQuerySchema = z
-  .object({
-    range: AnalyticsRangeSchema,
-    filters: z.array(AnalyticsFilterSchema).max(MAX_FILTERS),
-    audience: AudienceSchema.default(DEFAULT_AUDIENCE),
-  })
-  .strict()
-  .refine(noDuplicateFilters, { message: "duplicate filter" });
-export type SessionCountsQuery = z.infer<typeof SessionCountsQuerySchema>;
-
-/** Whether `range`'s every day still has raw rows at `now` (else sessions are refused). */
-export function sessionsAvailableFor(
-  range: AnalyticsRange,
-  now: Date,
-): boolean {
-  return planPeriods(range, now).current.from >= firstRawDay(now);
-}
+export const VISIT_FILTER_COLUMNS = [
+  "country",
+  "channel",
+  "device",
+  "browser",
+  "os",
+  "language",
+  "returning",
+  "owner",
+  "entryPath",
+  "exitPath",
+  "referrerHost",
+  "utmSource",
+  "utmMedium",
+  "utmCampaign",
+  "pageviews",
+  "events",
+  "durationMs",
+  "startedAt",
+  "pages",
+  "eventNames",
+] as const;
+export type VisitFilterColumn = (typeof VISIT_FILTER_COLUMNS)[number];
 
 export const SessionHitSchema = z
   .object({
@@ -207,76 +153,19 @@ export const SessionSchema = z
     device: DeviceFamilySchema,
     browser: BrowserFamilySchema,
     os: OsFamilySchema,
+    /** The distinct paths the visit hit (the report's `page` memberships), in code-point order. */
+    pages: wholeList(z.string(), {
+      reason:
+        "one visit's distinct paths — what one visitor opened in one visit",
+    }),
+    /** The distinct custom events the visit sent (the report's `event` memberships), in code-point order. */
+    eventNames: wholeList(z.string(), {
+      reason:
+        "one visit's distinct event names — the site's own small event vocabulary",
+    }),
     /** The visit's first {@link MAX_SESSION_HITS} hits, by time. */
     hits: cappedList(SessionHitSchema, { max: MAX_SESSION_HITS }),
     hitsTruncated: z.boolean(),
   })
   .strict();
 export type Session = z.infer<typeof SessionSchema>;
-
-const CountSchema = z.number().int().nonnegative();
-export const SessionCountsSchema = z
-  .object(
-    Object.fromEntries(SESSION_SHAPES.map((s) => [s, CountSchema])) as Record<
-      SessionShape,
-      typeof CountSchema
-    >,
-  )
-  .strict();
-export type SessionCounts = z.infer<typeof SessionCountsSchema>;
-
-/** A range reaching past the raw window: sessions are raw rows only. */
-const SessionsRefusedSchema = z
-  .object({
-    kind: z.literal("refused"),
-    reason: z.literal("beyond-raw-window"),
-    rawWindowDays: z.literal(RAW_RETENTION_DAYS),
-  })
-  .strict();
-
-export const SessionsResultSchema = z.discriminatedUnion("kind", [
-  z
-    .object({
-      kind: z.literal("sessions"),
-      /** ISO instant the box answered at. */
-      generatedAt: z.iso.datetime(),
-      /** In list order; fewer than the asked `limit` means the range ends here. */
-      sessions: cappedList(SessionSchema, { max: MAX_SESSIONS_LIMIT }),
-    })
-    .strict(),
-  SessionsRefusedSchema,
-]);
-export type SessionsResult = z.infer<typeof SessionsResultSchema>;
-
-export const SessionCountsResultSchema = z.discriminatedUnion("kind", [
-  z
-    .object({
-      kind: z.literal("counts"),
-      /** ISO instant the box answered at. */
-      generatedAt: z.iso.datetime(),
-      /** Visits per shape over the whole range and filters. */
-      counts: SessionCountsSchema,
-    })
-    .strict(),
-  SessionsRefusedSchema,
-]);
-export type SessionCountsResult = z.infer<typeof SessionCountsResultSchema>;
-
-/** The sessions question on the wire — the report's base64url encoding. */
-export function encodeSessionsQuery(query: SessionsQuery): string {
-  return encodeBase64UrlJson(withoutDefaultAudience(query));
-}
-
-/** The sessions endpoint's `?q=` schema. */
-export const SessionsQueryParamSchema =
-  base64UrlJsonParamSchema(SessionsQuerySchema);
-
-/** The session-counts question on the wire — the report's base64url encoding. */
-export function encodeSessionCountsQuery(query: SessionCountsQuery): string {
-  return encodeBase64UrlJson(withoutDefaultAudience(query));
-}
-
-/** The session-counts endpoint's `?q=` schema. */
-export const SessionCountsQueryParamSchema = base64UrlJsonParamSchema(
-  SessionCountsQuerySchema,
-);

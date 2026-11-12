@@ -25,8 +25,13 @@ vi.mock(
 );
 
 let currentModel: unknown = null;
+/** The `edits` argument the switcher last built its model with. */
+let lastEdits: unknown = null;
 vi.mock("../internal/use-data-view-model", () => ({
-  useDataViewModel: () => currentModel,
+  useDataViewModel: (...args: unknown[]) => {
+    lastEdits = args[4];
+    return currentModel;
+  },
 }));
 
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
@@ -43,7 +48,12 @@ import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { liveCollection } from "@plugins/network/plugins/live/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
-import type { DataViewId, DataViewRenderProps, ViewState } from "../../core";
+import type {
+  DataViewId,
+  DataViewRenderProps,
+  DataViewViewEdits,
+  ViewState,
+} from "../../core";
 import { liveDataSource } from "../internal/live-data-source";
 import { defineDataViewSources } from "../internal/define-data-view-sources";
 import { DataViewSwitcher } from "../components/data-view-switcher";
@@ -160,6 +170,7 @@ function mount(
   state: ViewState,
   activeId: string | null = null,
   surface: DataViewId = STORAGE_KEY,
+  viewEdits?: DataViewViewEdits,
 ) {
   currentModel = model(state);
   const source = liveDataSource(c, {
@@ -201,6 +212,7 @@ function mount(
           storageKey={STORAGE_KEY}
           sources={Sources}
           hostProps={{ activeId }}
+          viewEdits={viewEdits}
         />
       </PluginProvider>
     </live.Wrapper>,
@@ -273,6 +285,17 @@ describe("DataViewSwitcher — a live source", () => {
     const items = screen.getByTestId("rows").querySelectorAll("li");
     expect(items[0]!.getAttribute("data-selected")).toBe("true");
     expect(items[1]!.getAttribute("data-selected")).toBe("false");
+  });
+
+  it("builds its model with the surface's view edits, as DataView does", () => {
+    mount(convs(), baseState);
+    expect(lastEdits).toBeUndefined();
+    cleanup();
+    mount(convs(), baseState, null, STORAGE_KEY, {
+      mode: "draft",
+      home: "history",
+    });
+    expect(lastEdits).toEqual({ drafts: true, home: "history" });
   });
 
   it("a source declared for another surface is refused, never listed", () => {
