@@ -4484,11 +4484,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pane.Register` "event-source-detail"
               - `Pane.Register` "event-sources"
               - `FieldPresentation.Register` "entity:event_sources"
+              - `DataViewSlots.CollectionItemAction` "events.sources.all:investigate" → `CollectionInvestigate`
               - `Events.Sidebar` "Sources"
               - `EventSourceActions` "open" → `SourceOpenAction`
               - `EventSourceActions` "enabled" → `SourceToggleAction`
               - `EventSourceActions` "delete" → `SourceDeleteAction`
-            - Uses: 43 symbols — full list in [`plugins/apps/plugins/events/plugins/sources/REFERENCE.md`](../plugins/apps/plugins/events/plugins/sources/REFERENCE.md)
+            - Uses: 44 symbols — full list in [`plugins/apps/plugins/events/plugins/sources/REFERENCE.md`](../plugins/apps/plugins/events/plugins/sources/REFERENCE.md)
               - `apps/events/events-core` ×7
               - `primitives/css/ui-kit` ×5
               - `primitives/data-view` ×5
@@ -4509,6 +4510,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/toggle-chip.SegmentedControl`
               - `primitives/detail-sections.defineDetailSections`
               - `primitives/icon-button.IconButton`
+              - `primitives/launch/investigate.Investigate`
               - `primitives/link-gesture/new-tab.NewTabButton`
               - `primitives/overlay/imperative-dialog.useOpenDialog`
               - `ui/icons.Icon`
@@ -6937,6 +6939,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/places/places-core/no-icon-picker`
               - `apps/places/places-map`
               - `apps/website/promo-film/seed`
+          - Exemptions:
+            - Exempts itself from: `investigate:failures-registered` — `core/internal/resources.ts` (sanctioned)
           - Test helpers:
             - Core: `@plugins/apps/plugins/places/plugins/places-core/core/testing`
               - `testPlace` — A saved place for a test: a Google place named after its Google id, at (0, 0), untagged — `over` sets whatever the test is about.
@@ -47742,9 +47746,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.ValueCodec`
           - `DataViewSlots.Grouping`
           - `DataViewSlots.ColumnConfig`
-        - Slot contributors: 62 contributors — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Slot contributors: 63 contributors — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `DataViewSlots.Cell` ×16
-          - `DataViewSlots.CollectionItemAction` ×9
+          - `DataViewSlots.CollectionItemAction` ×10
           - `DataViewSlots.Filter` ×9
           - `DataViewSlots.CellEditor` ×6
           - `DataViewSlots.View` ×5
@@ -50179,6 +50183,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shape --spacing`
             - Imported by:
               - `apps/deploy/deploy-history/investigate-failure`
+              - `apps/events/sources`
               - `apps/events/sources/source-detail/runs`
               - `apps/studio/compositions/release`
               - `build/build-fix`

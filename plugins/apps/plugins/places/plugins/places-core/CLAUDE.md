@@ -232,6 +232,8 @@ its own.
     - `apps/places/places-core/no-icon-picker`
     - `apps/places/places-map`
     - `apps/website/promo-film/seed`
+- Exemptions:
+  - Exempts itself from: `investigate:failures-registered` — `core/internal/resources.ts` (sanctioned)
 - Test helpers:
   - Core: `@plugins/apps/plugins/places/plugins/places-core/core/testing`
     - `testPlace` — A saved place for a test: a Google place named after its Google id, at (0, 0), untagged — `over` sets whatever the test is about.

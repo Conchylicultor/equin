@@ -167,11 +167,12 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `Pane.Register` "event-source-detail"
     - `Pane.Register` "event-sources"
     - `FieldPresentation.Register` "entity:event_sources"
+    - `DataViewSlots.CollectionItemAction` "events.sources.all:investigate" → `CollectionInvestigate`
     - `Events.Sidebar` "Sources"
     - `EventSourceActions` "open" → `SourceOpenAction`
     - `EventSourceActions` "enabled" → `SourceToggleAction`
     - `EventSourceActions` "delete" → `SourceDeleteAction`
-  - Uses: 43 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 44 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/events/events-core` ×7
     - `primitives/css/ui-kit` ×5
     - `primitives/data-view` ×5
@@ -192,6 +193,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `primitives/css/toggle-chip.SegmentedControl`
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/icon-button.IconButton`
+    - `primitives/launch/investigate.Investigate`
     - `primitives/link-gesture/new-tab.NewTabButton`
     - `primitives/overlay/imperative-dialog.useOpenDialog`
     - `ui/icons.Icon`

@@ -7,6 +7,7 @@ import { SourceDeleteAction } from "./components/source-delete-action";
 import { SourceOpenAction } from "./components/source-open-action";
 import { SourceToggleAction } from "./components/source-toggle-action";
 import { sourcePresentation } from "./internal/presentation";
+import { investigateSources } from "./internal/investigate";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export {
@@ -55,6 +56,7 @@ export default {
     Pane.Register({ pane: eventSourcesPane }),
     Pane.Register({ pane: eventSourceDetailPane }),
     sourcePresentation,
+    investigateSources,
     Events.Sidebar({
       id: "sources",
       title: "Sources",
