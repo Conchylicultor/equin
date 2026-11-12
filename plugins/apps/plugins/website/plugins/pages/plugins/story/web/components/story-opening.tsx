@@ -1,9 +1,8 @@
 import { WebsiteHero } from "@plugins/apps/plugins/website/plugins/shell/web";
 
 /**
- * The story page's heading — "Building equin", the words the homepage's story
- * link offers ("how equin was built"), so following the link confirms rather
- * than re-introduces.
+ * The story page's heading — "Building equin", answering the homepage's story
+ * link ("Curious how equin came to be?").
  */
 export function StoryOpening() {
   return (

@@ -49,7 +49,7 @@ const NEW_ISSUE = `${SOURCE_REPO_URL}/issues/new?`;
 // The pick goes between these two, at a caret put there with the arrow keys.
 const BEFORE_PICK = "Make the";
 const AFTER_PICK = " bigger";
-const MARKER = "text=Curious how equin was built?";
+const MARKER = "text=Curious how equin came to be?";
 
 /** The panel: base-ui's popover popup, found by its title in either view. */
 function panel(page: Page): Locator {
