@@ -147,6 +147,7 @@ export const clusterTriggers = defineDbTriggers({
     - `database/derived-tables`
     - `database/derived-updated-at`
     - `database/migrations`
+    - `database/table-mirror/source`
     - `infra/jobs`
     - `network/live/change-feed`
     - `shell/notifications`

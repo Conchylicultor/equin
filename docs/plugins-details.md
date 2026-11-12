@@ -22298,7 +22298,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadedDatabaseConfig`
       - `readDatabaseConfigSync`
   - Cross-plugin:
-    - Imported by: 162 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 163 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×45
       - `conversations` ×20
       - `infra` ×16
@@ -22306,7 +22306,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `tasks` ×14
       - `debug` ×10
       - `active-data` ×8
-      - `database` ×5
+      - `database` ×6
       - `primitives` ×4
       - `network` ×3
       - `stats` ×3
@@ -22546,6 +22546,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database/derived-tables`
           - `database/derived-updated-at`
           - `database/migrations`
+          - `database/table-mirror/source`
           - `infra/jobs`
           - `network/live/change-feed`
           - `shell/notifications`
@@ -23200,8 +23201,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `toMapper`
     - **`sql-rows`** — Parsed raw-SQL row reads: queryRows / executeRows parse every row against a zod schema and throw a SqlRowError naming the column, the value and its Postgres type OID — closing the pool.query<T>() assertion hole.
       - Cross-plugin:
-        - Imported by: 53 plugins — full list in [`plugins/database/plugins/sql-rows/REFERENCE.md`](../plugins/database/plugins/sql-rows/REFERENCE.md)
-          - `database` ×14
+        - Imported by: 54 plugins — full list in [`plugins/database/plugins/sql-rows/REFERENCE.md`](../plugins/database/plugins/sql-rows/REFERENCE.md)
+          - `database` ×15
           - `apps` ×9
           - `debug` ×6
           - `tasks` ×5
@@ -23240,6 +23241,96 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runtimeTypeOf`
           - `SqlRowError`
     - **`sql-writes`** — Every hand-written SQL write (INSERT / UPDATE / DELETE / MERGE, in CTEs too) parsed with Postgres's own grammar (libpg_query) and checked against the schema the code declares — drizzle tables with their derived updated_at and generated columns, plus hand-written DDL: known tables and columns, required columns inserted, no write to a derived column (check sql-writes:fit).
+    - **`table-mirror`** — Table mirror: pull a remote database's tables into local Postgres from a row-level change log (deltas plus tombstones, paged by an xid8 cursor), reconciling by key and row hash when deltas cannot be trusted. The umbrella's core is the wire protocol both halves speak.
+      - Cross-plugin:
+        - Imported by: `database/table-mirror/source`
+      - Core:
+        - Exports (types):
+          - `MirrorChange`
+          - `MirrorChangesPage`
+          - `MirrorChangesRequest`
+          - `MirrorCopyPage`
+          - `MirrorCopyRequest`
+          - `MirrorCursor`
+          - `MirrorKeyedRow`
+          - `MirrorKeysPage`
+          - `MirrorKeysRequest`
+          - `MirrorLogPosition`
+          - `MirrorPk`
+          - `MirrorRefusal`
+          - `MirrorRow`
+          - `MirrorRowsAnswer`
+          - `MirrorRowsRequest`
+          - `SourceIdentity`
+          - `TableFingerprints`
+          - `Xid8`
+        - Exports (values):
+          - `MIRROR_KEYS_MAX`
+          - `MIRROR_PAGE_MAX_BYTES`
+          - `MIRROR_PAGE_MAX_ROWS`
+          - `MirrorChangeSchema`
+          - `MirrorChangesPageSchema`
+          - `MirrorChangesRequestSchema`
+          - `MirrorCopyPageSchema`
+          - `MirrorCopyRequestSchema`
+          - `MirrorCursorSchema`
+          - `MirrorKeyedRowSchema`
+          - `MirrorKeysPageSchema`
+          - `MirrorKeysRequestSchema`
+          - `MirrorLogPositionSchema`
+          - `MirrorPkSchema`
+          - `MirrorRefusalSchema`
+          - `MirrorRowsAnswerSchema`
+          - `MirrorRowSchema`
+          - `MirrorRowsRequestSchema`
+          - `RowHashSchema`
+          - `SourceIdentitySchema`
+          - `TableFingerprintsSchema`
+          - `TOMBSTONE_RETENTION_DAYS`
+          - `Xid8Schema`
+      - Plugins:
+        - **`source`** — The table mirror's source half: defineMirrorSet / MirrorSet (tables mirrored together) and NeverMirrored (tables whose rows never leave, refused at module eval and at boot); generated statement-level change-log triggers (one table_mirror_log row per primary key — cascaded deletes, retention and TRUNCATE included); the source identity and per-table fingerprints; the readers — the delta stream paged by a { floor, after } xid8 cursor, a first-sync copy, and reconciliation's key + hash walk and rows by key; and the daily log prune at the 30-day horizon, below which a replica is answered reconcile-required.
+          - Server:
+            - Contributes:
+              - `db-trigger-claim` "table-mirror"
+              - `change-feed-exclusion` "table_mirror_log"
+            - Uses:
+              - `database.DatabaseDriver`
+              - `database.db`
+              - `database/db-triggers.DbFunctionDdl`
+              - `database/db-triggers.DbTriggerClaim`
+              - `database/db-triggers.DbTriggerDdl`
+              - `database/db-triggers.DbTriggerSet`
+              - `database/db-triggers.defineDbTriggers`
+              - `database/db-triggers.installDbTriggers`
+              - `infra/jobs.defineJob`
+              - `network/live/change-feed.ExcludeFromChangeFeed`
+            - DB schema: `plugins/database/plugins/table-mirror/plugins/source/server/internal/tables.ts`
+            - Exports (types):
+              - `MirroredTable`
+              - `MirrorSetDefinition`
+              - `MirrorSetSpec`
+              - `NeverMirroredSpec`
+              - `ReadMirrorChangesOptions`
+              - `ReadMirrorCopyOptions`
+              - `ReadMirrorKeysOptions`
+              - `ReadMirrorRowsOptions`
+            - Exports (values):
+              - `defineMirrorSet`
+              - `installMirrorSource`
+              - `MirrorSet`
+              - `NeverMirrored`
+              - `pruneMirrorLog`
+              - `readMirrorChanges`
+              - `readMirrorCopy`
+              - `readMirrorKeys`
+              - `readMirrorRows`
+              - `readSourceIdentity`
+              - `readTableFingerprints`
+              - `resolveMirrorSet`
+            - Register: `defineJob('table-mirror.prune')`
+          - Exemptions:
+            - Exempts itself from: `sql-writes:fit:hand-written` — `server/internal/triggers.ts` (sanctioned)
 
 - **`debug`** — Debug tools umbrella plugin.
   - Cross-plugin:
@@ -30210,12 +30301,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withNotifyBatch`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 113 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
+        - Imported by: 114 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
           - `infra` ×28
           - `debug` ×14
           - `conversations` ×11
+          - `database` ×10
           - `tasks` ×10
-          - `database` ×9
           - `apps` ×7
           - `network` ×5
           - `reports` ×5
@@ -35474,13 +35565,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskFor`
           - `TOTAL_JOB_SLOTS`
       - Cross-plugin:
-        - Imported by: 86 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
+        - Imported by: 87 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
           - `apps` ×21
           - `conversations` ×18
           - `infra` ×15
           - `debug` ×12
           - `tasks` ×7
-          - `database` ×3
+          - `database` ×4
           - `page` ×3
           - `build`
           - `integrations/youtube/audio-fetch`
@@ -39363,6 +39454,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/site-reports/intake`
               - `conversations/runtime-sdk`
               - `conversations/usage`
+              - `database/table-mirror/source`
               - `debug/latency-ledger`
               - `debug/op-rate`
               - `debug/slow-ops`

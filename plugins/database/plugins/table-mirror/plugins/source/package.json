@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-database-table-mirror-source",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The source half of the table mirror: mirror sets, the generated change-log triggers, the source identity and per-table fingerprints, the delta / copy / key-hash / rows readers, and the daily log prune."
+}

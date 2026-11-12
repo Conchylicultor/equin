@@ -500,6 +500,7 @@ See `research/2026-09-29-global-scoped-change-routing.md`.
     - `apps/deploy/site-reports/intake`
     - `conversations/runtime-sdk`
     - `conversations/usage`
+    - `database/table-mirror/source`
     - `debug/latency-ledger`
     - `debug/op-rate`
     - `debug/slow-ops`

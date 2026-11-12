@@ -1,6 +1,6 @@
 {
-  "id": "ae2f279d-5a12-468e-9866-ed0507e3e212",
-  "prevId": "d60f08a0-e56e-4e26-973c-61e1e0ead0b3",
+  "id": "04123b4d-3456-4a76-8426-348f2e954385",
+  "prevId": "ae2f279d-5a12-468e-9866-ed0507e3e212",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -8219,6 +8219,161 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.table_mirror_log": {
+      "name": "table_mirror_log",
+      "schema": "",
+      "columns": {
+        "set_id": {
+          "name": "set_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tbl": {
+          "name": "tbl",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "pk": {
+          "name": "pk",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "xid": {
+          "name": "xid",
+          "type": "xid8",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "deleted": {
+          "name": "deleted",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "table_mirror_log_set_xid_idx": {
+          "name": "table_mirror_log_set_xid_idx",
+          "columns": [
+            {
+              "expression": "set_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "xid",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "tbl",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "pk",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "table_mirror_log_tbl_pk_pk": {
+          "name": "table_mirror_log_tbl_pk_pk",
+          "columns": [
+            "tbl",
+            "pk"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.table_mirror_marks": {
+      "name": "table_mirror_marks",
+      "schema": "",
+      "columns": {
+        "at": {
+          "name": "at",
+          "type": "timestamp with time zone",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "snapshot_xmin": {
+          "name": "snapshot_xmin",
+          "type": "xid8",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.table_mirror_source": {
+      "name": "table_mirror_source",
+      "schema": "",
+      "columns": {
+        "singleton": {
+          "name": "singleton",
+          "type": "boolean",
+          "primaryKey": true,
+          "notNull": true,
+          "default": true
+        },
+        "source_id": {
+          "name": "source_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "epoch": {
+          "name": "epoch",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "horizon": {
+          "name": "horizon",
+          "type": "xid8",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'::xid8"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "table_mirror_source_one_row": {
+          "name": "table_mirror_source_one_row",
+          "value": "\"table_mirror_source\".\"singleton\""
+        }
+      },
       "isRLSEnabled": false
     },
     "public.boot_traces": {

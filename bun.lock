@@ -2688,6 +2688,14 @@
         "libpg-query": "^18.2.2",
       },
     },
+    "plugins/database/plugins/table-mirror": {
+      "name": "@equin/plugin-database-table-mirror",
+      "version": "0.0.1",
+    },
+    "plugins/database/plugins/table-mirror/plugins/source": {
+      "name": "@equin/plugin-database-table-mirror-source",
+      "version": "0.0.1",
+    },
     "plugins/debug": {
       "name": "@equin/plugin-debug",
       "version": "0.0.1",
@@ -8958,6 +8966,10 @@
     "@equin/plugin-database-sql-rows": ["@equin/plugin-database-sql-rows@workspace:plugins/database/plugins/sql-rows"],
 
     "@equin/plugin-database-sql-writes": ["@equin/plugin-database-sql-writes@workspace:plugins/database/plugins/sql-writes"],
+
+    "@equin/plugin-database-table-mirror": ["@equin/plugin-database-table-mirror@workspace:plugins/database/plugins/table-mirror"],
+
+    "@equin/plugin-database-table-mirror-source": ["@equin/plugin-database-table-mirror-source@workspace:plugins/database/plugins/table-mirror/plugins/source"],
 
     "@equin/plugin-debug": ["@equin/plugin-debug@workspace:plugins/debug"],
 
