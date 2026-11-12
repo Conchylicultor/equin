@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, useState } from "react";
+import { cloneWithScroll } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 import type { FloatingWindow } from "../hooks/use-floating-windows";
 
 /** The live container of a window's shown tab (the surface host tags it). */
@@ -25,24 +26,33 @@ function pinResolvedTokens(from: HTMLElement, to: HTMLElement): void {
   }
 }
 
-/** The window's on-screen size, or its stored box while it is hidden. */
+/**
+ * The window's layout size — untransformed (an opening window's scale, the
+ * overview's, a minimise tween), and kept while it is hidden — or its stored
+ * box when it was never laid out.
+ */
 function windowSize(
   w: FloatingWindow,
   el: HTMLElement,
 ): { w: number; h: number } {
-  const r = el.getBoundingClientRect();
-  return r.width > 0 && r.height > 0
-    ? { w: r.width, h: r.height }
+  return el.offsetWidth > 0 && el.offsetHeight > 0
+    ? { w: el.offsetWidth, h: el.offsetHeight }
     : { w: w.geo.w, h: w.geo.h };
 }
 
 /**
- * A still picture of a window, scaled to fit `maxW` × `maxH`: its container's
- * DOM cloned at mount (`cloneNode`), made inert and scaled down — the shelf's
- * hover thumbnails, the pager's desktop preview and the switcher all draw one.
- * Rebuilt on every mount, never kept: a snapshot is what the window showed the
- * moment it was asked for. Canvases and iframes clone empty (their pixels are
- * not DOM); that is accepted.
+ * A still picture of a window, scaled to fit `maxW` × `maxH`: the part of its
+ * container's DOM that shows, cloned at mount with its scroll offsets
+ * (`cloneWithScroll` with `visibleOnly`), made inert and scaled down — the
+ * shelf's hover thumbnails, the pager's desktop preview and the switcher all
+ * draw one. Rebuilt on every mount, never kept: a snapshot is what the window
+ * showed the moment it was asked for.
+ *
+ * Styling the copy is what a snapshot costs, element for element — the same
+ * as restyling the window itself — so it copies only what can show: a Sonata
+ * library window is ~4.3k elements, ~0.7k of them in view (~220 → ~40 ms of
+ * style per snapshot). Canvases, iframes and media clone empty (their pixels
+ * are not DOM, and a copy must not load anything); that is accepted.
  *
  * `fixedScale` draws it at that scale instead of fitting (the desktop preview,
  * where every window shares the desktop's one scale).
@@ -69,7 +79,7 @@ export function WindowSnapshot({
     if (!el || !target) return;
     const size = windowSize(w, el);
     const s = fixedScale ?? Math.min(maxW / size.w, maxH / size.h);
-    const clone = el.cloneNode(true) as HTMLElement;
+    const { clone, carryScroll } = cloneWithScroll(el, { visibleOnly: true });
     pinResolvedTokens(el, clone);
     clone.removeAttribute("data-tab-id");
     clone.setAttribute("inert", "");
@@ -92,6 +102,7 @@ export function WindowSnapshot({
       pointerEvents: "none",
     });
     target.replaceChildren(clone);
+    carryScroll();
     setBox({ w: size.w, h: size.h, s });
     return () => target.replaceChildren();
     // A snapshot is taken once per mount by design (rebuilt on the next one).

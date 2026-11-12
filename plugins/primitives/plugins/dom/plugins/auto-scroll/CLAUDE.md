@@ -236,7 +236,7 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
 
 ## Plugin reference
 
-- Description: The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton; content stamped FOLLOW_MOTION_ATTR is followed frame by frame while it animates), container-scoped scrollToBottom / scrollChildIntoView, a scroll glided frame by frame on a given CSS curve so it moves in step with a transition beside it (glideScroll), gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross, or restoreScrollOffset from a caller's own snapshot), the reader's anchor kept on screen across a commit that resizes content above it (KeepAnchorAcross), an element kept at its screen position across a re-layout (keepInPlace), a deep copy that keeps its scroll offsets (cloneWithScroll, for a stand-in drawn while content leaves), an inner scroller's offset kept across a page reload (useScrollAcrossReload, put back as async content arrives until reached or the reader takes over), and the shared findScrollParent discovery.
+- Description: The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton; content stamped FOLLOW_MOTION_ATTR is followed frame by frame while it animates), container-scoped scrollToBottom / scrollChildIntoView, a scroll glided frame by frame on a given CSS curve so it moves in step with a transition beside it (glideScroll), gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross, or restoreScrollOffset from a caller's own snapshot), the reader's anchor kept on screen across a commit that resizes content above it (KeepAnchorAcross), an element kept at its screen position across a re-layout (keepInPlace), a deep copy that keeps its scroll offsets (cloneWithScroll, for a stand-in drawn while content leaves, or — visibleOnly — a picture of only what shows), an inner scroller's offset kept across a page reload (useScrollAcrossReload, put back as async content arrives until reached or the reader takes over), and the shared findScrollParent discovery.
 - Web:
   - Uses:
     - `primitives/css/ui-kit.Button`
@@ -249,6 +249,7 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
     - `primitives/latest-ref.useLatestRef`
     - `ui/icons.Icon`
   - Exports (types):
+    - `CloneWithScrollOptions`
     - `CubicBezier`
     - `EdgeAutoScroll`
     - `EdgeScrollSurface`
@@ -286,27 +287,12 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
   - Uses tokens:
     - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --spacing`
-  - Imported by:
-    - `apps/places/places-map`
-    - `apps/sonata/progress/loop`
-    - `apps/sonata/rich/chord-progression`
-    - `apps/website/pages/foundations`
-    - `apps/website/pages/story/data-views`
-    - `apps/website/pages/vision`
-    - `conversations/agent-thread`
-    - `conversations/conversation-view/jsonl-viewer`
-    - `conversations/conversation-view/jsonl-viewer/background-shells`
-    - `conversations/conversation-view/jsonl-viewer/outline`
+  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives` ×8
+    - `apps` ×7
+    - `conversations` ×4
     - `layouts/miller`
     - `page/editor`
-    - `primitives/css/motion`
-    - `primitives/data-view`
-    - `primitives/dom/scroll-reveal`
-    - `primitives/log-channels`
-    - `primitives/outline/scroll-spy`
-    - `primitives/overlay/image-viewer`
-    - `primitives/pane`
-    - `primitives/virtual-rows`
 - Exemptions:
   - Exempts itself from: `scroll-safety/no-adhoc-scroll-write` — `web` (sanctioned)
 
