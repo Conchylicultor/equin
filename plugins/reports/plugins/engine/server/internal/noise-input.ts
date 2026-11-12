@@ -11,26 +11,15 @@ import type {
 // rules', so a change here re-runs it.
 
 /**
- * The noise pipeline classifies on a small, generic shape. Crash-shaped fields
- * (errorType / stack) that noise rules inspect live in the kind's `data`
- * payload; surfaced here as plain strings if present. A kind that has no such
- * fields simply yields nulls and matches no crash-specific noise rule.
+ * What a rule is asked about a report: its facts, never its words (a rule
+ * cannot match text — reports/server's ReportNoiseInput).
  */
 export function noiseInputOf(report: {
   source: string;
-  message: string;
-  data: Record<string, unknown>;
   /** reports/core's `versionSkewMayExplain` of the report — judged by the caller, so this leaf stays type-only. */
   versionSkew: boolean;
 }): ReportNoiseInput {
-  const { data } = report;
-  return {
-    source: report.source,
-    errorType: typeof data.errorType === "string" ? data.errorType : null,
-    message: report.message,
-    stack: typeof data.stack === "string" ? data.stack : null,
-    versionSkew: report.versionSkew,
-  };
+  return { source: report.source, versionSkew: report.versionSkew };
 }
 
 /** Noise when any rule matches; a rule that throws is a non-match. */

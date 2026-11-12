@@ -87,8 +87,6 @@ async function reconcileNoise(): Promise<void> {
     .select({
       id: _reports.id,
       source: _reports.source,
-      message: _reports.message,
-      data: _reports.data,
       noise: _reports.noise,
       staleOrigin: _reports.staleOrigin,
     })

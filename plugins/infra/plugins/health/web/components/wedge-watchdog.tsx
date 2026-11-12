@@ -2,14 +2,12 @@ import { useEffect, useRef } from "react";
 import {
   subscribeNetDiag,
   subscribeWsStatus,
-  CONNECT_DEADLINE_MS,
   type NetDiagEvent,
 } from "@plugins/primitives/plugins/networking/web";
 import {
   getNotificationsClient,
   liveStateSocketKind,
   unansweredSubReportSink,
-  UNANSWERED_SUB_MS,
   useNotificationsChannelStatuses,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
@@ -28,8 +26,8 @@ const SOCKET_DOWN_MS = 15_000;
 const WEDGE_COOLDOWN_MS = 60_000;
 
 // Module-level cooldown clock, keyed by discriminator (so independent failure
-// modes — e.g. a benign post-restart wedge vs a genuine silent-drop one — never
-// throttle each other). Survives component remounts so a flapping pipeline that
+// modes — e.g. a post-restart wedge vs a silent-drop one — never throttle each
+// other). Survives component remounts so a flapping pipeline that
 // tears the watcher down and back up still throttles.
 const lastWedgeAt = new Map<string, number>();
 
@@ -53,41 +51,37 @@ function diagSocketKind(url: string) {
 // this is what keeps the failure modes from collapsing into one fingerprint and
 // one growing-count task. socket-down splits by channel (worktree vs central —
 // distinct failure domains, only two values), classified authoritatively by
-// live-state rather than sniffed from the url; missed-updates splits genuine
-// silent-drop ("missed-updates", loud) from benign deploy-skew
-// ("missed-updates:restart", muted server-side) so the two never share a task —
+// live-state rather than sniffed from the url; a fact the tab established about
+// the cause (the server restarted: `:restart`) splits a mode into its own task —
 // but stays key-agnostic within each, so a broad pipeline wedge files ONE task,
 // not one per stuck resource (the key stays in the message + count for triage).
 // No volatile data (versions, params) enters this, so each mode still dedups
 // into a single task.
 //
-// `benign` wedges are expected — the socket missed version bumps while the
-// server restarted (`:restart`), or the wait the signal measured was mostly the
-// page being hidden (`:suspended`: what is left of it, counted while visible,
-// stays under the signal's own limit — a phone locking its screen freezes the
-// tab and drops its socket). They file a (muted) task for the record but skip
-// the toast. Every toast is a developer one: this is equin's own telemetry, and
-// the health report's Connection row already tells a user their live state.
+// Every wedge is a fault and is reported loud: none is "benign". A signal that
+// cannot establish its fault — a wait that spanned a page suspension — does not
+// fire at all (its deadline restarts once the page runs again: `firedLate`,
+// visible-only deadlines), rather than firing and asking for a mute. Every
+// toast is a developer one: this is equin's own telemetry, and the health
+// report's Connection row already tells a user their live state.
 function wedge(
   kind: WedgeKind,
   discriminator: string,
   detail: string,
-  opts: { benign?: boolean; description?: string } = {},
+  opts: { description?: string } = {},
 ): void {
   const now = Date.now();
   const prev = lastWedgeAt.get(discriminator);
   if (prev !== undefined && now - prev < WEDGE_COOLDOWN_MS) return;
   lastWedgeAt.set(discriminator, now);
 
-  if (!opts.benign) {
-    showToast({
-      title: "Live updates stalled",
-      description:
-        opts.description ?? "Reconnecting… refresh if data looks stale",
-      variant: "warning",
-      audience: "developer",
-    });
-  }
+  showToast({
+    title: "Live updates stalled",
+    description:
+      opts.description ?? "Reconnecting… refresh if data looks stale",
+    variant: "warning",
+    audience: "developer",
+  });
 
   // Emit onto the neutral wedge sink; `reports.crash` (when present) maps it to a
   // deduped crash task. The discriminator gives each failure mode a distinct
@@ -95,9 +89,7 @@ function wedge(
   // growing-count task. emit() never throws (the sink swallows on the error path).
   wedgeReportSink.emit({
     discriminator,
-    message: opts.benign
-      ? `live-state went stale across a server restart: ${kind} — ${detail}`
-      : `live-state wedged: ${kind} — ${detail}`,
+    message: `live-state wedged: ${kind} — ${detail}`,
   });
 }
 
@@ -208,27 +200,17 @@ export function WedgeWatchdog() {
         if (kind === null) return;
         const detail = `${ev.url} handshake unanswered for ${Math.round(ev.elapsedMs / 1000)}s (attempt ${ev.attempt})`;
         const stalledSince = Date.now() - ev.elapsedMs;
-        // Hidden time is not the handshake's: what is left of the wait,
-        // counted while visible, must still pass the deadline itself.
-        const visibleMs = deadlines.visibleMsSince(stalledSince);
-        if (visibleMs < CONNECT_DEADLINE_MS) {
-          wedge(
-            "connect-stalled",
-            `connect-stalled:${kind}:suspended`,
-            `${detail}, ${Math.round(visibleMs / 1000)}s of it visible`,
-            { benign: true },
-          );
-          return;
-        }
-        // A server (re)booting during the attempt legitimately holds the
-        // handshake at the gateway; one that was up the whole time did not.
+        // A wait across a suspension never gets here: the socket owner's
+        // deadline restarts once its realm runs again (`firedLate`). A server
+        // (re)booting during the attempt held the handshake at the gateway for
+        // the whole deadline — a boot that slow is a fault of its own, split
+        // into its own task by that fact.
         void getHealth().then((health) => {
           if (health !== null && health.startedAt > stalledSince) {
             wedge(
               "connect-stalled",
               `connect-stalled:${kind}:restart`,
-              detail,
-              { benign: true },
+              `${detail}; held by a server boot (up since ${new Date(health.startedAt).toISOString()})`,
             );
           } else {
             wedge(
@@ -258,15 +240,16 @@ export function WedgeWatchdog() {
 
     // --- Signal 4: subs the server never answered on an open socket ---
     unansweredSubReportSink.register((r) => {
-      // Hidden time is the (possibly frozen) page's, not the server's: what is
-      // left of the wait, counted while visible, must still pass the limit.
+      // A wait across a suspension never gets here: live-state judges a wait
+      // only from when the page could run (its deadline restarts on a late
+      // fire). Hidden is not frozen: a hidden tab that runs measures the
+      // server's silence as well as a visible one (2026-11-12: hidden tabs
+      // measured reports.list:rows unanswered 18–111 s, muted as suspended).
       const visibleMs = deadlines.visibleMsSince(Date.now() - r.oldestWaitMs);
-      const suspended = visibleMs < UNANSWERED_SUB_MS;
       wedge(
         "unanswered-sub",
-        `unanswered-sub:${r.socket}${suspended ? ":suspended" : ""}`,
+        `unanswered-sub:${r.socket}`,
         `${r.count} sub(s) unanswered on an open ${r.socket} socket, oldest ${r.oldestKey} ${r.oldestParams} for ${Math.round(r.oldestWaitMs / 1000)}s (${Math.round(visibleMs / 1000)}s visible; tabs on socket: ${r.attachedTabs ?? "?"}, connection ${r.connection ?? "-"})`,
-        { benign: suspended },
       );
     });
 
@@ -276,12 +259,12 @@ export function WedgeWatchdog() {
     // self-resolves after its settle window; an in-flight guard ignores rapid
     // re-focus while one is running.
     //
-    // A missed-updates gap is benign deploy-skew (not a silent-drop wedge) when
-    // the server restarted *while this tab was backgrounded* — the socket missed
-    // the restart's version bumps. The crash build-id check can't catch this: a
-    // tab that lived through a restart is still on the build the server is
-    // *currently* serving, so its id matches and server-side staleness detection
-    // misses it. `startedAt` advancing past the hidden timestamp is the signal.
+    // A missed-updates gap is split by one fact: whether the server restarted
+    // *while this tab was backgrounded* (`startedAt` advancing past the hidden
+    // timestamp). Either way the tab held a stale value it was never told
+    // about until this probe — the reconnect's replay should have resynced it
+    // — so both are faults, reported loud as two tasks (a restart-path miss
+    // and a silent drop on a live socket are different bugs).
     let hiddenAt: number | null = null;
     let probing = false;
 
@@ -309,7 +292,11 @@ export function WedgeWatchdog() {
           const restartWhileHidden =
             sinceHidden != null && health != null && health.startedAt > sinceHidden;
           if (restartWhileHidden) {
-            wedge("missed-updates", "missed-updates:restart", detail, { benign: true });
+            wedge(
+              "missed-updates",
+              "missed-updates:restart",
+              `${detail}; the server restarted while this tab was hidden`,
+            );
           } else {
             wedge("missed-updates", "missed-updates", detail);
           }

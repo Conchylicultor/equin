@@ -22,9 +22,15 @@ describe("fromOutdatedBundle", () => {
 
 describe("versionSkewMayExplain", () => {
   test("an outdated tab failing to load what the server serves now: skew may explain it", () => {
-    for (const source of ["plugin-load", "boot-snapshot", "client-storage"]) {
+    for (const source of ["plugin-load", "boot-snapshot"]) {
       expect(versionSkewMayExplain({ source, staleOrigin: true })).toBe(true);
     }
+  });
+
+  test("an outdated tab dropping a stored entry it cannot read is its own code destroying data, not skew (2026-11-12: demo-scope.host-generation dropped by a stale tab)", () => {
+    expect(
+      versionSkewMayExplain({ source: "client-storage", staleOrigin: true }),
+    ).toBe(false);
   });
 
   test("an outdated tab's own code misbehaving is a bug in that code, not skew (2026-11-11: a render loop on 10 builds, prototype render loops at 603/s)", () => {

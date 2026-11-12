@@ -10,8 +10,7 @@ import type { CLIENT_REPORT_SOURCES } from "./sources";
  * running an outdated bundle can explain it.
  *
  * - `load` — the tab loading what the server serves NOW with the bundle it
- *   booted: a chunk of its graph, the boot snapshot's values, an entry another
- *   build stored. Its graph and the server's no longer match, so the outdated
+ *   booted: a chunk of its graph, the boot snapshot's values. Its graph and the server's no longer match, so the outdated
  *   bundle may be the whole cause, and reloading the tab the whole fix. The
  *   ONLY subject version skew can explain.
  * - `page` — the tab's own code doing something by itself: an exception, a
@@ -70,7 +69,11 @@ export const CLIENT_REPORT_SUBJECT: Record<
   "client-boot-crash": "page",
   "client-missing-companion": "page",
   "plugin-load": "load",
-  "client-storage": "load",
+  // Not `load`: an entry this bundle's schema cannot read is DELETED by it
+  // (web-storage drops a corrupt entry) — an outdated tab destroying what a
+  // newer build stored is that tab's code losing the user's data, whatever
+  // explains the mismatch.
+  "client-storage": "page",
 };
 
 /**

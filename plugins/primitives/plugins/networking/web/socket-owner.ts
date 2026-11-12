@@ -1,3 +1,4 @@
+import { firedLate } from "./late-fire";
 import type { NetDiagEvent } from "./net-diag-bus";
 import { ReconnectSchedule } from "./reconnect-backoff";
 import type { SocketFault } from "./shared-ws-protocol";
@@ -161,19 +162,33 @@ export class SocketOwner {
     const startedAt = Date.now();
     const attempt = this.attempt++;
     this.clearConnectDeadline();
-    this.connectDeadline = setTimeout(() => {
-      this.connectDeadline = null;
-      if (this.ws !== ws || ws.readyState === WS_OPEN) return;
-      this.events.onDiag({
-        type: "ws-connect-stalled",
-        url: this.url,
-        elapsedMs: Date.now() - startedAt,
-        attempt,
-      });
-      this.detach(ws);
-      ws.close();
-      this.lost();
-    }, CONNECT_DEADLINE_MS);
+    // A deadline that fires late (this realm frozen, or its thread stalled)
+    // proves nothing about the handshake — its `open` may be queued behind
+    // this callback — so it re-arms a fresh window instead (`firedLate`).
+    const arm = (dueAt: number) => {
+      this.connectDeadline = setTimeout(
+        () => {
+          this.connectDeadline = null;
+          if (this.ws !== ws || ws.readyState === WS_OPEN) return;
+          const now = Date.now();
+          if (firedLate(dueAt, now)) {
+            arm(now + CONNECT_DEADLINE_MS);
+            return;
+          }
+          this.events.onDiag({
+            type: "ws-connect-stalled",
+            url: this.url,
+            elapsedMs: now - startedAt,
+            attempt,
+          });
+          this.detach(ws);
+          ws.close();
+          this.lost();
+        },
+        Math.max(0, dueAt - Date.now()),
+      );
+    };
+    arm(startedAt + CONNECT_DEADLINE_MS);
 
     ws.onopen = () => {
       this.clearConnectDeadline();

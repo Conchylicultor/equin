@@ -34961,10 +34961,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `network/live/live-state.getNotificationsClient`
           - `network/live/live-state.liveStateSocketKind`
-          - `network/live/live-state.UNANSWERED_SUB_MS`
           - `network/live/live-state.unansweredSubReportSink`
           - `network/live/live-state.useNotificationsChannelStatuses`
-          - `primitives/networking.CONNECT_DEADLINE_MS`
           - `primitives/networking.NetDiagEvent`
           - `primitives/networking.subscribeNetDiag`
           - `primitives/networking.subscribeWsStatus`
@@ -39836,8 +39834,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `liveStringArray` — A jsonb string array (tags, label ids).
         - **`live-state`** — Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's tab-shared /ws/notifications channel. useQueryResource reads a local async load (not a server read — those are live) as a ResourceResult.
           - Web:
-            - Uses: 25 symbols — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
-              - `primitives/networking` ×10
+            - Uses: 26 symbols — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
+              - `primitives/networking` ×11
               - `primitives/css/spacing` ×2
               - `primitives/css/ui-kit` ×2
               - `primitives/perfs/task-marks` ×2
@@ -39916,7 +39914,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ResourceView`
               - `slowResourceReportSink`
               - `subscribePendingMounts`
-              - `UNANSWERED_SUB_MS`
               - `unansweredSubReportSink`
               - `useCombinedResources`
               - `useFailingResources`
@@ -40504,9 +40501,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/tasks-core`
       - Exemptions:
         - Exempts itself from: `error-subject/crash-fields-of` — `core/internal/error-subject.ts` (sanctioned)
-        - Exempted by:
-          - `packages/error-subject` (0 debt)
-          - `reports/engine` (0 debt)
+        - Exempted by: `packages/error-subject` (0 debt)
       - Core:
         - Exports (types): `CrashFields`
         - Exports (values):
@@ -51639,8 +51634,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `WsStatus`
           - `WsStatusEvent`
         - Exports (values):
-          - `CONNECT_DEADLINE_MS`
           - `fetchWithRetry`
+          - `firedLate`
           - `probeUrlStatus`
           - `publishNetDiag`
           - `publishWsStatus`
@@ -55395,7 +55390,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `sink-safety/no-adhoc-file-sink` — `server/internal/crash-append.ts` (sanctioned)
           - `blocking-fs/no-sync-fs` — `server/internal/crash-append.ts` (sanctioned)
           - `boundaries/no-platform-api` — `server/internal/buffer.ts`, `server/internal/crash-append.ts` (debt)
-          - `error-subject/crash-fields-of` — `server/internal/noise-input.ts` (sanctioned)
       - Cli:
         - Exports (types): `FixedReports`
         - Exports (values):
@@ -55606,13 +55600,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.EndpointError`
           - `infra/endpoints.getEndpointErrorMessage`
           - `shell/notifications.useToast`
-    - **`noise-rules`** — Built-in noise classification rules for low-signal crashes (e.g. ResizeObserver loop warnings).
+    - **`noise-rules`** — Built-in noise classification rules: each judges a fact about a report (a stale tab loading what the server no longer serves), never its message text.
       - Server:
-        - Contributes:
-          - `report-noise-rule` "claude-cli-signal-kill"
-          - `report-noise-rule` "live-state-wedge-restart"
-          - `report-noise-rule` "resize-observer"
-          - `report-noise-rule` "stale-frontend"
+        - Contributes: `report-noise-rule` "stale-frontend"
         - Uses: `reports.ReportNoiseRule`
     - **`optimistic-divergence`** — Optimistic-divergence collector: drains the optimistic-mutation primitive's report sink (a server-acked op superseded by newer truth, or stalled unconfirmed) into a deduped report, plus the Debug → Reports summary view. Optimistic-divergence report kind: validates divergence payloads (kind: superseded = dropped for newer server truth, stalled = kept rendered past the miss threshold), fingerprints by kind + resource + label + ops (excluding the volatile miss count), and renders per-kind tasks. Re-arms periodically (6h) since a still-present divergence is a recurring warning, not a one-shot crash.
       - Web:

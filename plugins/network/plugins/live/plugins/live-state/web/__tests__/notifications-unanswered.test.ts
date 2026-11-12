@@ -131,6 +131,45 @@ describe("NotificationsClient — unanswered subs", () => {
     expect(reports).toHaveLength(1);
   });
 
+  test("a wait across a page suspension is not judged: the deadline that fires late restarts the window", async () => {
+    const { client, socket } = await setup({ open: true });
+    client.observe("k", {}, undefined, { schema: pushSchema });
+    await flush();
+
+    // The page freezes 1 s in (a phone locking its screen): wall time moves
+    // 60 s, no timer runs. On resume the overdue deadline fires late.
+    await vi.advanceTimersByTimeAsync(1_000);
+    vi.setSystemTime(Date.now() + 60_000);
+    await vi.advanceTimersByTimeAsync(UNANSWERED_SUB_MS);
+    expect(reports).toHaveLength(0);
+
+    // The answer was queued behind that callback: it lands, nothing is owed.
+    socket.serverSend({
+      kind: "sub-ack",
+      ...requestOf(socket, "k", "tab-a"),
+      key: "k",
+      params: {},
+      value: { status: "ok" },
+      version: 1,
+    });
+    await vi.advanceTimersByTimeAsync(UNANSWERED_SUB_MS * 2);
+    expect(reports).toHaveLength(0);
+  });
+
+  test("a sub still unanswered a full window after the page resumed is reported, with its whole wait", async () => {
+    const { client } = await setup({ open: true });
+    client.observe("k", {}, undefined, { schema: pushSchema });
+    await flush();
+
+    await vi.advanceTimersByTimeAsync(1_000);
+    vi.setSystemTime(Date.now() + 60_000);
+    await vi.advanceTimersByTimeAsync(UNANSWERED_SUB_MS); // late fire: restart
+    expect(reports).toHaveLength(0);
+    await vi.advanceTimersByTimeAsync(UNANSWERED_SUB_MS);
+    expect(reports).toHaveLength(1);
+    expect(reports[0]!.oldestWaitMs).toBeGreaterThan(60_000);
+  });
+
   test("an answered sub is never reported", async () => {
     const { client, socket } = await setup({ open: true });
     client.observe("k", {}, undefined, { schema: pushSchema });

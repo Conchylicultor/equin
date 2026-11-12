@@ -65,9 +65,7 @@ a Postgres or Node one) lands on a new row keyed by that cause.
     - `tasks/tasks-core`
 - Exemptions:
   - Exempts itself from: `error-subject/crash-fields-of` — `core/internal/error-subject.ts` (sanctioned)
-  - Exempted by:
-    - `packages/error-subject` (0 debt)
-    - `reports/engine` (0 debt)
+  - Exempted by: `packages/error-subject` (0 debt)
 - Core:
   - Exports (types): `CrashFields`
   - Exports (values):

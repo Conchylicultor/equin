@@ -1,10 +1,10 @@
 import { defineServerContribution } from "@plugins/framework/plugins/server-core/core";
 
+// Facts only. A rule never sees a report's words (message, errorType,
+// stack): matching them is how real bugs got muted (the "ResizeObserver loop"
+// warning, a Claude Code exit code), so it has no spelling.
 export interface ReportNoiseInput {
   source: string;
-  errorType: string | null;
-  message: string;
-  stack: string | null;
   // True when version skew may explain the report: every occurrence came from
   // an outdated tab, and it is about that tab loading what the server serves
   // now (reports/core's versionSkewMayExplain). Never for a bug in the tab's

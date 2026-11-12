@@ -377,8 +377,6 @@ async function fileReport(input: ReportInput): Promise<FiledReport> {
     isNoiseReport(
       noiseInputOf({
         source,
-        message: rawMessage ?? "",
-        data,
         versionSkew: versionSkewMayExplain({ source, staleOrigin: rowStale }),
       }),
     );

@@ -22,11 +22,4 @@ export default [
     task: "task-1792338443-riwqev",
     reason: "not yet split into server/ + machine/",
   },
-  {
-    rule: "error-subject/crash-fields-of",
-    paths: ["server/internal/noise-input.ts"],
-    kind: "sanctioned",
-    reason:
-      "The noise-rule input reads a recorded payload's errorType / stack for rules to match on; it files nothing and decides no identity, so there is no scope to carry.",
-  },
 ] satisfies Exemptions;

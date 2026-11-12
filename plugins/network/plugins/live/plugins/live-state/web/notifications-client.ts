@@ -8,6 +8,7 @@ import {
   type TransportSocket,
   subscribeWsStatus,
   subscribeNetDiag,
+  firedLate,
   type SharedWebSocketOptions,
   type WsStatus,
   type NetDiagEvent,
@@ -672,6 +673,11 @@ interface SocketChannel {
   opens: number;
   /** The one armed unanswered-sub deadline for this channel (see `armUnansweredCheck`). */
   unansweredTimer?: ReturnType<typeof setTimeout>;
+  /**
+   * When that deadline last fired late (`firedLate`): the page could not run
+   * before it, so no wait is judged from earlier than this. 0 = never.
+   */
+  unansweredRanSince?: number;
 }
 
 /**
@@ -2480,29 +2486,41 @@ export class NotificationsClient {
    * `UNANSWERED_SUB_MS` — armed only while some sub awaits, so an idle channel
    * holds no timer (no polling). On firing, every sub past the deadline is
    * reported ONCE, as one batch, and stops awaiting; the timer re-arms for the
-   * rest.
+   * rest. A wait counts only from when this page could run: a deadline that
+   * fires late (the page frozen — a hidden phone tab, a sleeping laptop — or
+   * its thread stalled) judges nothing, since the answer may be queued behind
+   * it, and restarts every window from then (`unansweredRanSince`). A wait
+   * across a suspension is thus never reported, rather than reported and
+   * muted; a real hang outlasts a fresh window and is.
    */
   private armUnansweredCheck(channel: SocketChannel): void {
     if (channel.unansweredTimer !== undefined) return;
     let oldest: number | undefined;
     for (const sub of channel.subs.values()) {
       if (sub.awaiting === undefined) continue;
-      if (oldest === undefined || sub.awaiting.since < oldest)
-        oldest = sub.awaiting.since;
+      const from = this.judgedFrom(channel, sub.awaiting.since);
+      if (oldest === undefined || from < oldest) oldest = from;
     }
     if (oldest === undefined) return;
+    const dueAt = oldest + UNANSWERED_SUB_MS;
     channel.unansweredTimer = setTimeout(
       () => {
         channel.unansweredTimer = undefined;
-        this.reportUnanswered(channel);
+        const now = Date.now();
+        if (firedLate(dueAt, now)) channel.unansweredRanSince = now;
+        else this.reportUnanswered(channel, now);
         this.armUnansweredCheck(channel);
       },
-      Math.max(0, oldest + UNANSWERED_SUB_MS - Date.now()),
+      Math.max(0, dueAt - Date.now()),
     );
   }
 
-  private reportUnanswered(channel: SocketChannel): void {
-    const now = Date.now();
+  /** When a wait that began at `since` starts counting (`unansweredRanSince`). */
+  private judgedFrom(channel: SocketChannel, since: number): number {
+    return Math.max(since, channel.unansweredRanSince ?? 0);
+  }
+
+  private reportUnanswered(channel: SocketChannel, now: number): void {
     const open = channel.ws.connection !== null;
     const late: ActiveSub[] = [];
     for (const sub of channel.subs.values()) {
@@ -2510,7 +2528,11 @@ export class NotificationsClient {
       // The socket dropped since: the replay on its next open re-sends and
       // restarts the clock, so these are not unanswered on this connection.
       if (!open) sub.awaiting = undefined;
-      else if (now - sub.awaiting.since >= UNANSWERED_SUB_MS) late.push(sub);
+      else if (
+        now - this.judgedFrom(channel, sub.awaiting.since) >=
+        UNANSWERED_SUB_MS
+      )
+        late.push(sub);
     }
     if (late.length === 0) return;
     late.sort((a, b) => a.awaiting!.since - b.awaiting!.since);

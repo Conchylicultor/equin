@@ -60,7 +60,6 @@ export {
   liveStateSocketKind,
   liveStateSocketUrl,
   ResourceStaleReadError,
-  UNANSWERED_SUB_MS,
 } from "./notifications-client";
 export { httpStaleDropReportSink } from "./stale-drop-reporter";
 export { unansweredSubReportSink } from "./unanswered-sub-reporter";

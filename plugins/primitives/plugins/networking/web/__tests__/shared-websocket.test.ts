@@ -577,6 +577,25 @@ describe("SharedWebSocket — reported recoveries", () => {
     expect(sws.status).toBe("open");
   });
 
+  test("a connect deadline that fires late (the realm was frozen) reports nothing and gives the handshake a fresh window", async () => {
+    const hub = createTransportHub();
+    const sws = new SharedWebSocket(URL_PATH, hub.tab().hooks);
+    built.push(sws);
+    await flush();
+
+    vi.setSystemTime(Date.now() + 60_000); // frozen: wall time moves, no timer runs
+    await vi.advanceTimersByTimeAsync(CONNECT_DEADLINE_MS);
+    expect(diag.some((e) => e.type === "ws-connect-stalled")).toBe(false);
+    expect(sws.status).toBe("connecting");
+
+    // Still unanswered a full window of running time later: a real hang.
+    await vi.advanceTimersByTimeAsync(CONNECT_DEADLINE_MS);
+    expect(diag.find((e) => e.type === "ws-connect-stalled")).toMatchObject({
+      type: "ws-connect-stalled",
+      attempt: 0,
+    });
+  });
+
   test("an open connection is never abandoned by the connect deadline", async () => {
     const hub = createTransportHub();
     built.push(new SharedWebSocket(URL_PATH, hub.tab().hooks));
