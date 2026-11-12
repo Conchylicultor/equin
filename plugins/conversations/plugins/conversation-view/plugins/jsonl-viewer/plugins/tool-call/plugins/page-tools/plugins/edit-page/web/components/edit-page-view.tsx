@@ -35,7 +35,11 @@ export function EditPageView({ event }: ToolRendererProps) {
   );
 
   return (
-    <ToolCallCard event={event} aside={aside} defaultOpen>
+    <ToolCallCard
+      event={event}
+      aside={aside}
+      defaultOpen={event.result?.isError === true}
+    >
       <Stack gap="sm">
         {/* The two strings are markdown fragments of the page document, so the
             diff is given a .md path to highlight them as such. */}
