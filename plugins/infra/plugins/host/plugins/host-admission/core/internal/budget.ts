@@ -258,8 +258,11 @@ export function cpuBudget(host: HostFacts = thisHost()): CpuBudget {
 
 /**
  * The reserved-floor split of a `B`-slot window: the static pool (`cpuBudget`)
- * and the measured memory window (`fleetWindow` → `laneCapacity`) split the same
- * way, so a shrunken window keeps its top slot(s) for interactive work.
+ * and the measured memory window (`fleetWindow` → `laneCapacity`) reserve the
+ * same `reservedInteractive`, so a shrunken window keeps its top slot(s) for
+ * interactive work. Only the static pool floors its background window to 1 (a
+ * pool's `backgroundLimit` is ≥ 1, `defineHostPool`); a measured one-slot
+ * window leaves background none — see `laneCapacity`.
  */
 export function laneSplit(B: number): CpuBudget {
   const reservedInteractive = Math.max(1, Math.floor(B / 3));

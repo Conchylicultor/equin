@@ -39,7 +39,8 @@ import {
 //
 // The window is then the slots already held plus as many more quanta as fit in
 // what is left — never above `B`, never below 1 (one op can always run, so the
-// line always moves: the same floor `cpuBudget` keeps on a small host).
+// line always moves: the same floor `cpuBudget` keeps on a small host). At 1,
+// that op is an interactive one (`laneCapacity`).
 
 /**
  * One reading of the fleet's memory, published by main's owner sampler (see
@@ -100,18 +101,38 @@ export function fleetWindow(
 
 /**
  * The capacity one acquire in `lane` may use out of a `slots`-wide window: the
- * whole window for `interactive`, and the window's own background share for
- * `background` — the same reserved-floor split `cpuBudget` makes of `B`, so a
- * shrunken window still keeps its top slot(s) for a human-blocked op.
+ * whole window for `interactive`, and what is left of it for `background` once
+ * the reserved interactive floor (`max(1, floor(slots / 3))`, the split
+ * `cpuBudget` makes of `B`) is set aside — so every window, however shrunken,
+ * keeps its top slot(s) for a human-blocked op.
+ *
+ * **A one-slot window is the interactive lane's alone** (background `0`: it
+ * waits for the window to widen). Memory has room for one op; were background
+ * allowed it, a human-blocked op — main's own recovery build — would queue
+ * behind a 30–40 min agent build exactly when the box is under memory pressure,
+ * when the human most needs it. Giving each lane a slot instead would admit
+ * two ops onto room measured for one. So the background lane yields: under
+ * that pressure agents wait for memory, the waiter's words say so, and the
+ * memory bound is unchanged.
+ *
+ * The one exception is a host whose whole pool is one slot (`B === 1`, a small
+ * VPS): there the window can never widen, nothing is partitioned (the pool is
+ * unlaned, `cpuBudget`), and background shares the slot — else it would never
+ * run.
  */
-export function laneCapacity(slots: number, lane: Lane): number {
-  return lane === "interactive" ? slots : laneSplit(slots).backgroundLimit;
+export function laneCapacity(
+  slots: number,
+  lane: Lane,
+  host: HostFacts = thisHost(),
+): number {
+  if (lane === "interactive" || cpuBudget(host).B === 1) return slots;
+  return slots - laneSplit(slots).reservedInteractive;
 }
 
 /**
  * The window admission acts on when nothing measures the machine: no reading,
  * or none inside its lease (main's sampler stopped, main down). Two slots — the
- * smallest window `laneSplit` cuts into one background slot and one reserved
+ * smallest window `laneCapacity` cuts into one background slot and one reserved
  * interactive slot — so the agent fleet runs one op at a time while a human-
  * blocked op (main's own recovery build) is never queued behind it.
  *

@@ -107,8 +107,9 @@ window  = clamp(heldUnits + floor((allowed − charged) / PER_UNIT_BYTES), 1, B)
 - `withHostGrant` hands the acquire a **capacity feed** (`fleetCapacity`):
   `laneCapacity(window, lane)` (`AcquireHooks.capacity`,
   `packages/host-semaphore`), so the acquire only touches the low `capacity`
-  slots. Interactive gets the whole window, background its `laneSplit` share —
-  the same reserved-floor split `cpuBudget` makes of `B`.
+  slots. Interactive gets the whole window, background what is left once the
+  reserved interactive floor (`laneSplit`'s, the same one `cpuBudget` takes
+  of `B`) is set aside.
 - **A waiter follows the window.** It is a feed, not a number read once: a
   waiting acquire keeps one non-persistent `fs.watch` on the reading's
   directory (the reading is renamed into place) and one timer for the
@@ -117,7 +118,21 @@ window  = clamp(heldUnits + floor((allowed − charged) / PER_UNIT_BYTES), 1, B)
   this, a waiter queued while Chrome held 38 GB stayed fanned out over slot-0
   after the window widened, and waited out a 30–40 min build for a slot it no
   longer needed. A broken watch or an unreadable reading fails the wait, loudly.
-- The window never drops below 1, so one op always runs and the line moves.
+- The window never drops below 1, so one op always runs and the line moves —
+  **and a one-slot window is the interactive lane's alone.** Background gets
+  `0` there (`laneCapacity`): its acquires wait, in line, for the window to
+  widen (`AcquireHooks.capacity` 0, `packages/host-semaphore`), and their wait
+  reason says so. Before, both lanes mapped onto slot-0 at a window of 1, so a
+  human-blocked op (main's own recovery build) queued behind a 30–40 min agent
+  build exactly when the box was short of memory. Giving each lane a slot
+  would have admitted two ops onto room measured for one; so under that
+  pressure agents wait for memory and the bound is unchanged. Every window
+  thus keeps ≥ 1 slot background cannot take. The exception is a host whose
+  whole pool is one slot (`B = 1`): it is unlaned, so background shares it.
+  What the reservation cannot do is evict: a background holder admitted while
+  the window was wider, then grown past its quantum, can shrink the window
+  onto its own slot, and an interactive op then waits for memory it really
+  does not have.
 - Its words go to `GrantHooks.onAdmissionWindow` (at the start, then on every
   move): the op log records them as the host-grant wait's reason, and a direct
   op prints them when it queues.

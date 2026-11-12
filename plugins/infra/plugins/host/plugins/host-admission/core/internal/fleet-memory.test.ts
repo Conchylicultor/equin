@@ -81,11 +81,29 @@ describe("fleetWindow", () => {
 
 describe("laneCapacity", () => {
   test("interactive gets the window, background its share below the reserved floor", () => {
-    expect(laneCapacity(9, "interactive")).toBe(9);
-    expect(laneCapacity(9, "background")).toBe(6);
-    expect(laneCapacity(3, "background")).toBe(2);
-    // One slot is shared, as on a one-slot host.
-    expect(laneCapacity(1, "background")).toBe(1);
+    expect(laneCapacity(9, "interactive", BOX)).toBe(9);
+    expect(laneCapacity(9, "background", BOX)).toBe(6);
+    expect(laneCapacity(3, "background", BOX)).toBe(2);
+    expect(laneCapacity(2, "background", BOX)).toBe(1);
+  });
+
+  // A human-blocked op (main's recovery build) never queues behind an agent
+  // build when memory has room for one op: that one is the interactive lane's.
+  test("a one-slot window is the interactive lane's alone", () => {
+    expect(laneCapacity(1, "interactive", BOX)).toBe(1);
+    expect(laneCapacity(1, "background", BOX)).toBe(0);
+  });
+
+  test("every window keeps at least one slot background cannot take", () => {
+    for (let w = 1; w <= 9; w++)
+      expect(laneCapacity(w, "background", BOX)).toBeLessThan(
+        laneCapacity(w, "interactive", BOX),
+      );
+  });
+
+  test("a host whose whole pool is one slot shares it: nothing to partition", () => {
+    const small: HostFacts = { cpus: 2, ramBytes: 8e9 };
+    expect(laneCapacity(1, "background", small)).toBe(1);
   });
 });
 
@@ -123,8 +141,8 @@ describe("fleetAdmission", () => {
 
   test("the floor keeps one background slot and one reserved interactive slot", () => {
     const w = unmeasuredWindow(BOX);
-    expect(laneCapacity(w, "background")).toBe(1);
-    expect(laneCapacity(w, "interactive")).toBe(2);
+    expect(laneCapacity(w, "background", BOX)).toBe(1);
+    expect(laneCapacity(w, "interactive", BOX)).toBe(2);
     // A host whose whole fleet is one slot cannot split it.
     expect(unmeasuredWindow({ cpus: 2, ramBytes: 8e9 })).toBe(1);
   });

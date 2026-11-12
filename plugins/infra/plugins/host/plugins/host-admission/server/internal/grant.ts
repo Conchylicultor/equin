@@ -8,6 +8,7 @@ import {
   FLEET_MEMORY_UNMEASURED_KIND,
   fleetMemoryUnmeasuredMessage,
   HOST_POOLS,
+  laneCapacity,
   type FleetAdmission,
   type FleetMemoryUnmeasuredPayload,
   type Grant,
@@ -128,7 +129,7 @@ export async function withHostGrant<T>(
   // error is the one the caller needs.
   let unmeasuredReport: Promise<{ failed: unknown } | null> | undefined;
   const capacity = fleetCapacity(opts.lane, (admission) => {
-    opts.hooks?.onAdmissionWindow?.(describeAdmission(admission));
+    opts.hooks?.onAdmissionWindow?.(describeAdmission(admission, opts.lane));
     if (admission.kind === "unmeasured")
       unmeasuredReport ??= reportUnmeasured(admission, opts.lane).then(
         () => null,
@@ -179,12 +180,18 @@ async function reportUnmeasured(
 const gb = (bytes: number): string => `${(bytes / 1e9).toFixed(1)} GB`;
 
 // The window in words, for whoever waits on it.
-function describeAdmission(admission: FleetAdmission): string {
+function describeAdmission(admission: FleetAdmission, lane: Lane): string {
   if (admission.kind === "unmeasured")
     return fleetMemoryUnmeasuredMessage(admission);
   const { window, reading } = admission;
+  // A lane the window leaves no slot (background, at a one-slot window) waits
+  // for memory, not for a holder: say so, or its wait reads as a stuck line.
+  const none =
+    laneCapacity(window.slots, lane) === 0
+      ? `no ${lane} slot until it widens (its one slot is kept for interactive ops) — `
+      : "";
   return (
-    `memory window ${window.slots} of ${cpuBudget().B} slots: ` +
+    `memory window ${window.slots} of ${cpuBudget().B} slots: ${none}` +
     `${gb(window.allowedBytes)} left for agent ops beside the rest of the machine ` +
     `(${gb(reading.otherBytes)} + ${gb(reading.wiredBytes)} wired), ` +
     `ops charged ${gb(window.chargedBytes)} (${reading.heldUnits} slots held, ${gb(reading.opsBytes)} measured)`

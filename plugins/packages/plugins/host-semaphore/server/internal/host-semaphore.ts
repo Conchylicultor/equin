@@ -151,6 +151,19 @@ export type Lane = "interactive" | "background";
  */
 export type Priority = "normal" | "low";
 
+// Settles only by rejecting with `signal`'s reason, once it aborts.
+function abortOf(signal: AbortSignal): Promise<never> {
+  return new Promise<never>((_, reject) => {
+    if (signal.aborted) {
+      reject(signal.reason as Error);
+      return;
+    }
+    signal.addEventListener("abort", () => reject(signal.reason as Error), {
+      once: true,
+    });
+  });
+}
+
 // The reason a head's fan-out is ended when its window moves — never thrown out
 // of an acquire: the head catches it and fans out again over the new window.
 class CapacityMoved extends Error {
@@ -221,9 +234,13 @@ export interface AcquireHooks {
    * over and tops up from the LOW `capacity` indices only (default: every slot).
    * Within that window the lanes keep their meaning: `background` is confined to
    * `slot-0 … slot-(min(backgroundLimit, capacity)-1)`, `interactive` sweeps
-   * `slot-(capacity-1) … slot-0`, high first. Each value must be a positive
-   * integer, else the acquire throws; above the live size it clamps (the live
-   * slot set is the ceiling).
+   * `slot-(capacity-1) … slot-0`, high first. Each value must be a
+   * non-negative integer, else the acquire throws; above the live size it
+   * clamps (the live slot set is the ceiling). `0` says this acquire may count
+   * on no slot right now: it never takes one, and waits in its line — at the
+   * head, for the feed to move — until the feed says otherwise. That is how a
+   * caller keeps a lane off a window too small to share (host-admission: a
+   * one-slot memory window is the interactive lane's alone).
    *
    * It exists for a pool whose real capacity moves while its slot set cannot (the
    * set names flock files every process shares): the caller says how much of the
@@ -921,14 +938,16 @@ export function createHostSemaphore(opts: {
   const lineFor = (lane: Lane, priority: Priority): TicketLine =>
     createTicketLine(slots.file(`line-${lane}-${priority}`));
 
-  // A capacity value, checked: a positive integer, or every slot (no feed).
+  // A capacity value, checked: a non-negative integer, or every slot (no
+  // feed). 0 is a lane with no window right now: the acquire waits, in line,
+  // until the feed moves it (see `AcquireHooks.capacity`).
   const checkCapacity = (capacity: number): number => {
     if (
       capacity !== Number.POSITIVE_INFINITY &&
-      (!Number.isInteger(capacity) || capacity < 1)
+      (!Number.isInteger(capacity) || capacity < 0)
     ) {
       throw new Error(
-        `acquireShare: capacity must be a positive integer, got ${capacity}`,
+        `acquireShare: capacity must be a non-negative integer, got ${capacity}`,
       );
     }
     return capacity;
@@ -1001,10 +1020,11 @@ export function createHostSemaphore(opts: {
           try {
             // The capacity moved while this pass swept: start over on it.
             if (windowWidth(current) !== order.length) continue;
-            winner = await fanOut(
-              order,
-              AbortSignal.any([waitSignal, moved.signal]),
-            );
+            const until = AbortSignal.any([waitSignal, moved.signal]);
+            // An empty window has no slot to fan out over: wait, at the head,
+            // for the feed to move it (or the caller to give up).
+            if (order.length === 0) await abortOf(until);
+            winner = await fanOut(order, until);
           } catch (err) {
             // Our own "the window moved" abort, not the caller's: fan out
             // again over the new window, still at the head of the line.

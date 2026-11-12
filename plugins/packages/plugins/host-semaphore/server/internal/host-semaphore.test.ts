@@ -422,14 +422,65 @@ describe("capacity", () => {
     await Promise.all([share.release(), b.release(), wide.release()]);
   });
 
-  test("a capacity that is not a positive integer throws", async () => {
+  test("a capacity that is not a non-negative integer throws", async () => {
     const sem = createHostSemaphore({ slots: uniqueSlots("cap-bad"), size: 2 });
-    expect(sem.acquireShare(1, { capacity: fixedCapacity(0) })).rejects.toThrow(
-      /capacity must be a positive integer/,
-    );
+    expect(
+      sem.acquireShare(1, { capacity: fixedCapacity(-1) }),
+    ).rejects.toThrow(/capacity must be a non-negative integer/);
     expect(
       sem.acquireShare(1, { capacity: fixedCapacity(1.5) }),
-    ).rejects.toThrow(/capacity must be a positive integer/);
+    ).rejects.toThrow(/capacity must be a non-negative integer/);
+  });
+
+  // host-admission's one-slot memory window: the interactive lane's alone, so
+  // the background lane's capacity is 0 — it takes nothing, even from an idle
+  // pool, and waits until its window opens.
+  test("a zero capacity takes no slot, even a free one, and waits until the window opens", async () => {
+    const slots = uniqueSlots("cap-zero");
+    const slotsDir = slots.path;
+    const sem = createHostSemaphore({ slots, size: 3 });
+    const cap = movableCapacity(0);
+    let resolved = false;
+    const waiter = sem.acquireShare(1, { capacity: cap.feed }).then((s) => {
+      resolved = true;
+      return s;
+    });
+    await sleep(150);
+    expect(resolved).toBe(false);
+    expect(isSlotHeld(slotsDir, 0)).toBe(false);
+    expect(cap.following()).toBe(1);
+
+    // Another lane's one-slot window still runs meanwhile.
+    const other = await sem.acquireShare(1, {
+      lane: "interactive",
+      capacity: fixedCapacity(1),
+    });
+    expect(isSlotHeld(slotsDir, 0)).toBe(true);
+
+    cap.move(2);
+    const share = await waiter;
+    expect(share.slots).toBe(1);
+    expect(isSlotHeld(slotsDir, 1)).toBe(true);
+    expect(cap.following()).toBe(0);
+    await Promise.all([share.release(), other.release()]);
+  });
+
+  test("a waiter on a zero capacity can be cancelled", async () => {
+    const sem = createHostSemaphore({
+      slots: uniqueSlots("cap-zero-abort"),
+      size: 2,
+    });
+    const cap = movableCapacity(0);
+    const ac = new AbortController();
+    const waiter = sem.acquireShare(1, {
+      capacity: cap.feed,
+      signal: ac.signal,
+    });
+    await sleep(100);
+    ac.abort(new Error("gave up"));
+    expect(waiter).rejects.toThrow("gave up");
+    await sleep(50);
+    expect(cap.following()).toBe(0);
   });
 
   // The 2026-11-12 defect: a waiter that queued while the window was 1 waited
