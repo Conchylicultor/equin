@@ -10,6 +10,9 @@ import {
   DOM_TEST_CLOCK_PIN,
   DOM_TEST_INCLUDE,
   DOM_TEST_SETUP_FILE,
+  bunTestExactArgs,
+  domTestExactInclude,
+  formatDomTestFiles,
   isBunTestPath,
   isDomTestPath,
   isTestFilePath,
@@ -169,5 +172,43 @@ describe("the scope literals", () => {
     expect(DOM_TEST_SETUP_FILE.endsWith(".ts")).toBe(true);
     expect(DOM_TEST_CLOCK_PIN).toContain("vi.setSystemTime(");
     expect(DOM_TEST_CLOCK_PIN.endsWith(")")).toBe(true);
+  });
+});
+
+describe("exact selection", () => {
+  const bunFile = `${PLUGINS}/page/core/x.test.ts`;
+  const domFile = `${PLUGINS}/page/web/__tests__/x.test.tsx`;
+
+  test("bun files go in ./-prefixed — bun's spelling of a path, not a filter", () => {
+    expect(bunTestExactArgs([bunFile, `./${bunFile}`])).toEqual([
+      `./${bunFile}`,
+      `./${bunFile}`,
+    ]);
+  });
+
+  test("a file outside a runner's half is refused, not handed over", () => {
+    expect(() => bunTestExactArgs([domFile])).toThrow("not a bun:test file");
+    expect(() => formatDomTestFiles([bunFile])).toThrow("not a vitest");
+    expect(() => domTestExactInclude(bunFile)).toThrow("not a vitest");
+  });
+
+  test("the vitest list round-trips into an include of the same files", () => {
+    const other = `${PLUGINS}/tasks/web/__tests__/y.test.ts`;
+    expect(domTestExactInclude(formatDomTestFiles([domFile, other]))).toEqual([
+      domFile,
+      other,
+    ]);
+  });
+
+  test("glob metacharacters in a path are escaped, so it matches only itself", () => {
+    const odd = `${PLUGINS}/page/web/__tests__/[id](x){a,b}*.test.ts`;
+    expect(domTestExactInclude(odd)).toEqual([
+      `${PLUGINS}/page/web/__tests__/\\[id\\]\\(x\\)\\{a,b\\}\\*.test.ts`,
+    ]);
+  });
+
+  test("an empty selection is an error on both sides", () => {
+    expect(() => formatDomTestFiles([])).toThrow("no files");
+    expect(() => domTestExactInclude("")).toThrow("empty");
   });
 });

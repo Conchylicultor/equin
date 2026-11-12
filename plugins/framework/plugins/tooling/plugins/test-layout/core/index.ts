@@ -12,4 +12,7 @@ export {
   isDomTestPath,
   isBunTestPath,
   partitionTestPaths,
+  bunTestExactArgs,
+  formatDomTestFiles,
+  domTestExactInclude,
 } from "./test-layout";

@@ -4,6 +4,9 @@ import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import { createJiti } from "jiti";
 import type { isBrowserHostSpecifier as IsBrowserHostSpecifier } from "@plugins/framework/plugins/import-map-names/core";
+import type { domTestExactInclude as DomTestExactInclude } from "@plugins/framework/plugins/tooling/plugins/test-layout/core";
+import type { readEnv as ReadEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+import type { readFileSync as ReadFileSync } from "@plugins/packages/plugins/timed-fs/core";
 
 // The config loader knows nothing of the tsconfig `@plugins/*` alias, so plugin
 // code is loaded through a jiti that does (the same pattern as eslint.config.ts).
@@ -22,6 +25,30 @@ export default defineConfig(async () => {
       "plugins/framework/plugins/import-map-names/core/index.ts",
     ),
   );
+  // `./equin test` names its exact files: vitest reads every positional
+  // argument as a substring filter (`…/live-state` also runs
+  // `…/live-state-snapshot`), so an exact selection can only be an `include`.
+  // Unset — a bare `vitest` — the scope is the whole jsdom half of the split.
+  const { domTestExactInclude } = await jiti.import<{
+    domTestExactInclude: typeof DomTestExactInclude;
+  }>(
+    path.resolve(
+      __dirname,
+      "plugins/framework/plugins/tooling/plugins/test-layout/core/index.ts",
+    ),
+  );
+  const { readEnv } = await jiti.import<{ readEnv: typeof ReadEnv }>(
+    path.resolve(
+      __dirname,
+      "plugins/infra/plugins/launcher/plugins/env-names/core/index.ts",
+    ),
+  );
+  const { readFileSync } = await jiti.import<{
+    readFileSync: typeof ReadFileSync;
+  }>(
+    path.resolve(__dirname, "plugins/packages/plugins/timed-fs/core/index.ts"),
+  );
+  const exactList = readEnv("TEST_DOM_FILES");
   return {
     plugins: [
       // A demo scenario names its browser host as `@browser-host/<plugin>`: a
@@ -66,7 +93,10 @@ export default defineConfig(async () => {
         TZ: "UTC",
       },
       setupFiles: [path.resolve(__dirname, "test/setup.ts")],
-      include: ["plugins/**/web/__tests__/**/*.test.{ts,tsx}"],
+      include:
+        exactList === undefined
+          ? ["plugins/**/web/__tests__/**/*.test.{ts,tsx}"]
+          : domTestExactInclude(readFileSync(exactList, "utf8")),
     },
   };
 });

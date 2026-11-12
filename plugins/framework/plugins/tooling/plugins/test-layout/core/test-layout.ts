@@ -152,3 +152,55 @@ export function partitionTestPaths(files: readonly string[]): {
   }
   return { bun, dom, orphan };
 }
+
+// ── Selecting exactly these files ──────────────────────────────────────────
+//
+// Both runners read a positional argument as a SUBSTRING filter over the paths
+// in their scope, not as a path: `bun test plugins/a/live-state` also runs
+// `plugins/a/live-state-snapshot/…`, and `x.test.ts` also selects `x.test.tsx`
+// (2026-11-12: the harvest found seven foreign files in a run's report and
+// threw). A caller that knows its files hands them over in the one spelling
+// each runner takes as exact:
+//
+// - bun:test takes an argument starting with `./` as a path, not a filter;
+// - vitest has no exact-path argument at all (an absolute or `./` filter is
+//   still matched by `includes`), so the files go in as its `include`, read by
+//   `vitest.config.ts` from the list file `TEST_DOM_FILES` names.
+
+/** The `bun test` arguments that run exactly `files` (repo-relative, run from the repo root). */
+export function bunTestExactArgs(files: readonly string[]): string[] {
+  return files.map((file) => {
+    if (!isBunTestPath(file))
+      throw new Error(`[test-layout] not a bun:test file: ${file}`);
+    return `./${normalize(file)}`;
+  });
+}
+
+/** The list file `vitest.config.ts` reads its exact `include` from: one repo-relative path per line. */
+export function formatDomTestFiles(files: readonly string[]): string {
+  if (files.length === 0)
+    throw new Error("[test-layout] an exact vitest selection of no files");
+  for (const file of files) {
+    if (!isDomTestPath(file))
+      throw new Error(`[test-layout] not a vitest (jsdom) file: ${file}`);
+    if (file.includes("\n"))
+      throw new Error(`[test-layout] a test path with a newline: ${file}`);
+  }
+  return files.map(normalize).join("\n");
+}
+
+/**
+ * vitest's `include` for the list {@link formatDomTestFiles} wrote: each path
+ * a glob matching only itself (metacharacters escaped). Every entry must still
+ * be inside {@link DOM_TEST_INCLUDE}, so an exact run cannot widen the split.
+ */
+export function domTestExactInclude(listText: string): string[] {
+  const files = listText.split("\n").filter((line) => line !== "");
+  if (files.length === 0)
+    throw new Error("[test-layout] the vitest file list is empty");
+  return files.map((file) => {
+    if (!isDomTestPath(file))
+      throw new Error(`[test-layout] not a vitest (jsdom) file: ${file}`);
+    return file.replace(/[\\*?[\]{}()!+@]/g, "\\$&");
+  });
+}

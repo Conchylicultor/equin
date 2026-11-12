@@ -1,4 +1,4 @@
-import { rmSync } from "fs";
+import { rmSync, writeFileSync } from "fs";
 import { join, relative, resolve } from "path";
 import { envName } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { readAwakeClock } from "@plugins/packages/plugins/sleep-clock/core";
@@ -34,6 +34,8 @@ import { TESTS_FAILED_EXIT } from "@plugins/framework/plugins/cli/plugins/test/p
 import { computeTreeHash } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import {
   TEST_FILE_GLOB,
+  bunTestExactArgs,
+  formatDomTestFiles,
   isTestFilePath,
   partitionTestPaths,
 } from "@plugins/framework/plugins/tooling/plugins/test-layout/core";
@@ -54,9 +56,10 @@ const DEFAULT_TARGET = "plugins";
  * One user-supplied path (file or directory), resolved to a repo-relative path
  * plus the repo-relative `*.test.ts(x)` files under it.
  *
- * The enumeration exists ONLY to classify — which runners have work — never to
- * be handed to a runner. Both runners take path filters of their own, so they
- * get `rel` and re-enumerate; see the action below.
+ * The enumeration IS the selection: each runner is handed exactly the files
+ * classified to it (test-layout core's exact spellings), never `rel` — both
+ * runners read a path argument as a substring filter, so `…/live-state` would
+ * also run `…/live-state-snapshot`, files the harvest was never told about.
  */
 async function enumerateTests(
   root: string,
@@ -376,10 +379,8 @@ const run: CliAction<[string[]], object> = async (paths) => {
   const found = new Set<string>();
   for (const target of targets) {
     const { rel, files } = await enumerateTests(root, target);
-    // Repo-relative rather than the literal argv the user typed, because
-    // both runners are spawned with `cwd: root` (that is where bunfig.toml
-    // and vitest.config.ts live). From the repo root — where the CLI is
-    // normally invoked — the two are the same string.
+    // Repo-relative rather than the literal argv the user typed: what the run
+    // reports as its targets. The runners get the enumerated files instead.
     runnerArgs.push(rel);
     for (const file of files) found.add(file);
   }
@@ -477,7 +478,7 @@ const run: CliAction<[string[]], object> = async (paths) => {
                   "test",
                   "--reporter=junit",
                   `--reporter-outfile=${bunReport}`,
-                  ...runnerArgs,
+                  ...bunTestExactArgs(bun),
                 ],
                 root,
                 env,
@@ -495,6 +496,10 @@ const run: CliAction<[string[]], object> = async (paths) => {
         // `bun x vitest` resolves the repo's own vitest and honors its
         // `#!/usr/bin/env node` shebang — the same runtime `bun run test:dom`
         // gives it. `vitest run` picks up the root `vitest.config.ts` from `cwd`.
+        // vitest has no exact-path argument: its files go in as the config's
+        // `include`, from a list in the run's scratch root.
+        const domList = join(scratch, "vitest-files.txt");
+        if (dom.length > 0) writeFileSync(domList, formatDomTestFiles(dom));
         const domRun =
           dom.length > 0
             ? await runRunner(
@@ -510,10 +515,9 @@ const run: CliAction<[string[]], object> = async (paths) => {
                   "--reporter=default",
                   "--reporter=junit",
                   `--outputFile.junit=${domReport}`,
-                  ...runnerArgs,
                 ],
                 root,
-                env,
+                { ...env, [envName("TEST_DOM_FILES")]: domList },
               )
             : null;
         const domExit = domRun?.exitCode ?? null;

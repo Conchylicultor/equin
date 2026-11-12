@@ -141,6 +141,7 @@ The rule only fires in files importing `bun:test`.
   - Uses: `plugin-meta/parse-utils.maskSource`
   - Exports (values):
     - `BUN_TEST_IGNORE`
+    - `bunTestExactArgs`
     - `DOM_TEST_CLOCK_PIN`
     - `DOM_TEST_INCLUDE`
     - `DOM_TEST_LC_ALL`
@@ -148,6 +149,8 @@ The rule only fires in files importing `bun:test`.
     - `DOM_TEST_POOL`
     - `DOM_TEST_SETUP_FILE`
     - `DOM_TEST_TIME_ZONE`
+    - `domTestExactInclude`
+    - `formatDomTestFiles`
     - `isBunTestPath`
     - `isDomTestPath`
     - `isTestFilePath`
