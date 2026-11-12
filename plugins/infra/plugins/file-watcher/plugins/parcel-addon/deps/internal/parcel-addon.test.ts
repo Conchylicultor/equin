@@ -297,6 +297,82 @@ describe.skipIf(process.platform !== "darwin")(
       await expectHeld(base, 0);
       expect(watchErrors).toEqual([]);
     });
+    test("a folder removed from an outer watch leaves the watches rooted below it whole", async () => {
+      // A removal erased every subscription of each path it removed — those
+      // of a separate watch rooted there included, whose tree is not the
+      // remover's. Renaming an ancestor away is heard by the outer watch
+      // alone (the inner roots' own vnodes stay), so it is deterministic:
+      // the inner watches lost every subscription, their descriptors stayed
+      // open past their unsubscribe, and a later delete of their root
+      // found no subscription to report to.
+      const dir = tempDir("rooted");
+      const mid = join(dir, "parent", "mid");
+      const deep = join(mid, "deep");
+      mkdirSync(deep, { recursive: true });
+      for (let i = 0; i < 5; i++) writeFileSync(join(deep, `f${i}`), "x");
+      const away = join(tempDir("rooted-away"), "parent");
+
+      const base = openFds();
+      // The outer: root, parent, mid, deep, five files.
+      const outer = await subscribe(dir);
+      // Rooted at mid (mid, deep, five files) and at deep (deep, five files).
+      const atMid = await subscribe(mid);
+      const atDeep = await subscribe(deep);
+      await expectHeld(base, 9 + 7 + 6);
+
+      renameSync(join(dir, "parent"), away);
+      await until(
+        () => outer.events.some((e) => e.type === "delete" && e.path === deep),
+        5_000,
+        "the outer watch hearing the folder and its entries gone",
+      );
+      // The outer holds its root; the inner watches are untouched.
+      await expectHeld(base, 1 + 7 + 6);
+
+      await atDeep.sub.unsubscribe();
+      await expectHeld(base, 1 + 7);
+
+      // The path comes back as other folders, which the outer watch follows
+      // while the watch rooted at mid still watches the folder moved away.
+      const seenByOuter = (type: string, path: string): boolean =>
+        outer.events.some((e) => e.type === type && e.path === path);
+      mkdirSync(join(dir, "parent"));
+      await until(
+        () => seenByOuter("create", join(dir, "parent")),
+        5_000,
+        "parent recreated",
+      );
+      mkdirSync(mid);
+      await until(() => seenByOuter("create", mid), 5_000, "mid recreated");
+      await expectHeld(base, 3 + 7);
+      const outerDeletes = (): number =>
+        outer.events.filter((e) => e.type === "delete").length;
+      const deletesBefore = outerDeletes();
+
+      // The watch rooted at mid hears its own root go, by the path it was
+      // opened with; the outer watch's folder at that path is not touched.
+      rmSync(away, { recursive: true });
+      await until(
+        () => atMid.events.some((e) => e.type === "delete" && e.path === mid),
+        5_000,
+        "the watch rooted at mid hearing its root deleted",
+      );
+      await expectHeld(base, 3);
+      expect(outerDeletes()).toBe(deletesBefore);
+      writeFileSync(join(mid, "new"), "x");
+      await until(
+        () => seenByOuter("create", join(mid, "new")),
+        5_000,
+        "the outer watch still following the recreated mid",
+      );
+      await expectHeld(base, 4);
+
+      await atMid.sub.unsubscribe();
+      await outer.sub.unsubscribe();
+      await expectHeld(base, 0);
+      expect(watchErrors).toEqual([]);
+    }, 30_000);
+
     test("a subscribe that fails holds nothing, and the next one of the directory opens", async () => {
       // Upstream left the subscriptions it had made before the failure in the
       // backend — their descriptors, and the directory's cached listing, held

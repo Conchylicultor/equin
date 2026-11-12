@@ -17,6 +17,23 @@ plugin ships the fixed build.
   - a removed directory's entries go with it (`forgetDescendants`): reported
     removed to each watcher that did not ignore them, closed, and erased from
     the tree, so a directory recreated under the same name is watched afresh;
+  - a removal drops only its own tree's subscriptions of a path
+    (`forgetSubscriptions(path, tree)`, the one way a removal leaves the
+    table). Subscriptions are keyed by path and a path is held by every tree
+    that watches it; upstream erased the key, so a folder an outer watch saw
+    go (renamed away, or diffed out) took the subscriptions of a watch rooted
+    at or below it too: that watch's descriptors were left with nothing
+    pointing at them — never closed by its `unsubscribe` — and its own
+    delete, when it came, found no subscription to report to;
+  - an event speaks for the subscriptions of the descriptor it fired on
+    (`findSubscriptions(path, fd)`), never every subscription of the path:
+    each tree opens its own descriptor of an entry and hears the change on
+    it. Upstream took the whole path — after a folder was renamed away and
+    the path re-created, the inner watch's stale descriptor going removed
+    the outer watch's live folder (and a write to one folder diffed its
+    listing into the tree watching the other); the delete branch also
+    applied the firing entry's kind to every tree, so a tree holding the
+    path as a folder had its entries freed with no descriptor closed;
   - a delete or rename is handled before a directory diff (a directory whose
     last entry went and which was removed reports both in one event);
   - the delete branch stops reading the `DirEntry` it just freed;
@@ -190,7 +207,11 @@ patch, this plugin and its call in `build` (Backlog page entry).
 Test: `deps/internal/parcel-addon.test.ts` loads the built addon directly and
 counts `/dev/fd` — 40 followed files gone, a watched directory renamed away
 and one deleted, a path two nested watches hold — and checks the events a
-removed directory and one recreated in its place report. Upstream fails the
+removed directory and one recreated in its place report. A folder renamed away from an
+outer watch leaves the watches rooted below it whole (the patch before: their
+unsubscribe left 9 descriptors open), and once the path is re-created the
+inner watch's stale root going leaves the outer watch's new folder alone
+(scoped by path, not descriptor: the outer lost it). Upstream fails the
 three descriptor cases
 (after the 40 followed files go it still holds 41–64 descriptors over the
 baseline, varying run to run; patched: exactly 1, the directory's). In a child,
