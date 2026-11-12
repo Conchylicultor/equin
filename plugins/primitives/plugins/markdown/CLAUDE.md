@@ -55,6 +55,7 @@ Design rationale lives in:
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/hover-reveal.hoverRevealGroup`
     - `primitives/hover-reveal.hoverRevealTarget`
+    - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/lazy-component.lazyComponent`
     - `primitives/lazy-component.useLazyReady`

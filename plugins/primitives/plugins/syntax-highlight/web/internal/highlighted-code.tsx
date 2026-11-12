@@ -9,10 +9,13 @@ import { useHighlightedHtml } from "./use-highlighted-html";
 export function HighlightedCode({
   code,
   lang,
+  wrap = false,
   className,
 }: {
   code: string;
   lang?: string | null;
+  /** Soft-wrap long lines inside the box instead of scrolling them sideways. */
+  wrap?: boolean;
   /** The block carries no outer space of its own: its container spaces it (a
    *  Stack gap), and prose gives it its flow role (`my-flow-block`, as
    *  markdown's fence does). */
@@ -36,8 +39,11 @@ export function HighlightedCode({
   // `clear-both`: a scroll box cannot wrap around a float (a transcript row's
   // floated action strip) — beside one it is narrowed for its whole height,
   // hiding code behind a blank column. It starts below the float instead.
-  const wrapper =
-    "clear-both [&>pre]:overflow-auto [&>pre]:rounded [&>pre]:bg-muted [&>pre]:p-md [&>pre]:text-code";
+  // eslint-disable-next-line layout/no-adhoc-layout, radius/no-adhoc-radius -- every `[&>pre]:` class here styles shiki's injected <pre>, which this component never holds, so no primitive can wrap it
+  const wrapper = cn(
+    "clear-both [&>pre]:overflow-auto [&>pre]:rounded [&>pre]:bg-muted [&>pre]:p-md [&>pre]:text-code",
+    wrap && "[&>pre]:whitespace-pre-wrap [&>pre]:break-words",
+  );
 
   if (!resolved || html === null) {
     return (
@@ -47,6 +53,7 @@ export function HighlightedCode({
           axis="both"
           className={cn(
             "clear-both rounded-md bg-muted p-md font-mono text-caption",
+            wrap && "whitespace-pre-wrap break-words",
             className,
           )}
         >
@@ -59,7 +66,6 @@ export function HighlightedCode({
   return (
     <ContentScope>
       <div
-        // eslint-disable-next-line layout/no-adhoc-layout, radius/no-adhoc-radius -- every `[&>pre]:` class in `wrapper` styles shiki's injected <pre>, which this component never holds, so no primitive can wrap it
         className={cn(wrapper, className)}
         dangerouslySetInnerHTML={{ __html: html }}
       />

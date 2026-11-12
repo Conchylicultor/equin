@@ -420,6 +420,7 @@ export const LUCIDE_MAP = {
   widgets: "blocks",
   "wifi-tethering": "radio",
   work: "briefcase",
+  "wrap-text": "text-wrap",
   "zoom-in": "zoom-in",
 } as const satisfies Partial<Record<SymbolName, LucideEntry>>;
 

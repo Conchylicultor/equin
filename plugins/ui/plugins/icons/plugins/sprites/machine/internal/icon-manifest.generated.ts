@@ -390,6 +390,7 @@ export const ICON_MANIFEST: {
     "widgets",
     "wifi-tethering",
     "work",
+    "wrap-text",
   ],
   brands: [
     "apple",
