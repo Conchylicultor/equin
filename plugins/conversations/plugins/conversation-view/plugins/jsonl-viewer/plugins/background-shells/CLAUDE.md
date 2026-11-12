@@ -96,8 +96,9 @@ v1 is view-only: there is no Stop (only the agent can call `TaskStop`, which the
   - Contributes:
     - `Pane.Register` "shell-output"
     - `TaskNotification.Open` "background-shell"
-  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×4
+    - `conversations/conversation-view/jsonl-viewer/tool-call` ×3
     - `network/live/live-state` ×3
     - `network/live` ×3
     - `primitives/css/spacing` ×2
@@ -178,6 +179,7 @@ v1 is view-only: there is no Stop (only the agent can call `TaskStop`, which the
     - `ui/tokens/color-palette --warning`
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-smd`
     - `ui/tokens/density --space-xs`
     - `ui/tokens/font-family --font-mono`
   - Imported by:

@@ -18090,8 +18090,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Contributes:
                   - `Pane.Register` "shell-output"
                   - `TaskNotification.Open` "background-shell"
-                - Uses: 31 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/background-shells/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/background-shells/REFERENCE.md)
+                - Uses: 34 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/background-shells/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/background-shells/REFERENCE.md)
                   - `primitives/pane` ×4
+                  - `conversations/conversation-view/jsonl-viewer/tool-call` ×3
                   - `network/live/live-state` ×3
                   - `network/live` ×3
                   - `primitives/css/spacing` ×2
@@ -18172,6 +18173,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/color-palette --warning`
                   - `ui/tokens/density --space-md`
                   - `ui/tokens/density --space-sm`
+                  - `ui/tokens/density --space-smd`
                   - `ui/tokens/density --space-xs`
                   - `ui/tokens/font-family --font-mono`
                 - Imported by:
@@ -18671,7 +18673,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `TaskNotification.Open` ← `conversations.conversation-view.jsonl-viewer.tool-call.agent`
                 - Contributes: `JsonlViewer.EventRenderer` "task-notification" → `TaskNotificationRow`
                 - Uses:
-                  - `conversations/conversation-view/jsonl-viewer.EventLine`
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
                   - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
                   - `conversations/conversation-view/jsonl-viewer/fields-card.FieldsCard`
@@ -18690,7 +18691,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/color-palette --destructive`
                   - `ui/tokens/color-palette --muted-foreground`
                   - `ui/tokens/color-palette --success`
-                  - `ui/tokens/type-scale --font-weight-medium`
                 - Imported by:
                   - `conversations/conversation-view/jsonl-viewer/background-shells`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
@@ -18790,8 +18790,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/type-scale --font-weight-medium`
                   - `ui/tokens/type-scale --font-weight-normal`
                   - `ui/tokens/type-scale --line-height-caption`
-                - Imported by: 33 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md)
-                  - `conversations` ×30
+                - Imported by: 34 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md)
+                  - `conversations` ×31
                   - `apps/places/places-map`
                   - `debug/browser-recordings`
                   - `reports/tool-input-drift`
@@ -62062,9 +62062,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `typeScaleGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --space-sm`
-            - Tokens used by: 231 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
+            - Tokens used by: 230 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
               - `apps` ×59
-              - `conversations` ×41
+              - `conversations` ×40
               - `primitives` ×38
               - `debug` ×15
               - `plugin-meta` ×14

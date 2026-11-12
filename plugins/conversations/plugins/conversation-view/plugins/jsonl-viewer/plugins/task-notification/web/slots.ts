@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
@@ -16,6 +17,12 @@ export interface TaskNotificationTarget {
   icon: IconRef;
   /** What the button does — a pane's `LinkTarget`, so ⌘/middle-click opens it in a browser tab. */
   activation: Activation;
+  /**
+   * What the task left, drawn inside the row's card when it is opened (a
+   * shell's output, …). Mounted only while the card is open, so whatever it
+   * reads is read lazily — never for a row nobody opened.
+   */
+  body?: ReactNode;
 }
 
 /**

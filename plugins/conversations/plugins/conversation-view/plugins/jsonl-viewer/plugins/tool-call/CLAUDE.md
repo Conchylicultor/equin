@@ -109,8 +109,8 @@ JsonlViewerTool.Renderer({ match, icon?, input: Schema, partialInput?: PartialSc
     - `ui/tokens/type-scale --font-weight-medium`
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-caption`
-  - Imported by: 33 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×30
+  - Imported by: 34 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×31
     - `apps/places/places-map`
     - `debug/browser-recordings`
     - `reports/tool-input-drift`

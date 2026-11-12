@@ -36,6 +36,9 @@ export function FieldsCard({
   trailing,
   error,
   defaultOpen,
+  open,
+  onOpenChange,
+  children,
 }: {
   /** Leading icon — raw element, sized by the caller (e.g. a StatusDot). */
   icon?: ReactNode;
@@ -58,6 +61,13 @@ export function FieldsCard({
   error?: boolean;
   /** Open on first render. */
   defaultOpen?: boolean;
+  /** Controlled open state (pair with `onOpenChange`) — for a caller whose
+   *  card may remount while it resolves what it draws. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** Further body blocks after the fields — mounted only while the card is
+   *  open, so a block that reads something (a file's output) reads it lazily. */
+  children?: ReactNode;
 }) {
   return (
     <CollapsibleCard
@@ -69,6 +79,8 @@ export function FieldsCard({
       trailing={trailing}
       error={error}
       defaultOpen={defaultOpen}
+      open={open}
+      onOpenChange={onOpenChange}
     >
       <Stack gap="xs">
         {summary != null && summary !== "" && (
@@ -98,6 +110,7 @@ export function FieldsCard({
           </Text>
         ))}
       </Stack>
+      {children}
     </CollapsibleCard>
   );
 }

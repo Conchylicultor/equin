@@ -1,16 +1,14 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
 import { FieldsCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/fields-card/web";
-import {
-  EventLine,
-  useJsonlConversationId,
-} from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
+import { useJsonlConversationId } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import {
   TaskNotification,
+  type TaskNotificationClaim,
   type TaskNotificationEvent,
   type TaskNotificationOpenContribution,
 } from "../slots";
@@ -28,17 +26,24 @@ function statusLabel(status: string): string {
 }
 
 /**
- * The button onto the task this notification ended: the first
- * `TaskNotification.Open` contribution that claims it, or nothing when none
- * does. The row names no kind of task — which pane a sub-agent or a shell
- * opens is its owning plugin's to say.
+ * Resolves which `TaskNotification.Open` contribution claims this notification
+ * and hands the answer to `children`: the first claim, `pending` while a
+ * contributor is still answering, or `declined` when nobody claims it. The row
+ * names no kind of task — which pane a sub-agent or a shell opens, and what it
+ * shows inside the card, is its owning plugin's to say.
  *
  * Asked one contribution per component, in order, so each renders exactly one
  * claim hook (the contribution list is fixed for a session, and each link is
  * keyed by its contribution's id). A contributor still answering holds the
  * chain: a later one must not claim what may be its task.
  */
-function OpenAction({ event }: { event: TaskNotificationEvent }) {
+function ResolveClaim({
+  event,
+  children,
+}: {
+  event: TaskNotificationEvent;
+  children: (claim: TaskNotificationClaim) => ReactNode;
+}) {
   const contributions = TaskNotification.Open.useContributions();
   const conversationId = useJsonlConversationId();
   return (
@@ -47,35 +52,42 @@ function OpenAction({ event }: { event: TaskNotificationEvent }) {
       at={0}
       event={event}
       conversationId={conversationId}
+      render={children}
     />
   );
 }
+
+const DECLINED: TaskNotificationClaim = { kind: "declined" };
 
 function ClaimLink({
   contributions,
   at,
   event,
   conversationId,
+  render,
 }: {
   contributions: readonly TaskNotificationOpenContribution[];
   at: number;
   event: TaskNotificationEvent;
   conversationId: string | null;
+  render: (claim: TaskNotificationClaim) => ReactNode;
 }) {
   const contribution = contributions[at];
-  if (contribution === undefined) return null;
+  if (contribution === undefined) return render(DECLINED);
   return (
     <ClaimStep
       key={contribution.id}
       useClaim={contribution.useClaim}
       event={event}
       conversationId={conversationId}
+      render={render}
       next={
         <ClaimLink
           contributions={contributions}
           at={at + 1}
           event={event}
           conversationId={conversationId}
+          render={render}
         />
       }
     />
@@ -86,68 +98,65 @@ function ClaimStep({
   useClaim,
   event,
   conversationId,
+  render,
   next,
 }: {
   useClaim: TaskNotificationOpenContribution["useClaim"];
   event: TaskNotificationEvent;
   conversationId: string | null;
+  render: (claim: TaskNotificationClaim) => ReactNode;
   next: ReactNode;
 }) {
   const claim = useClaim(event, conversationId);
-  switch (claim.kind) {
-    case "pending":
-      return null;
-    case "declined":
-      return next;
-    case "claimed": {
-      const { target } = claim;
-      return (
-        <IconButton
-          icon={target.icon}
-          label={target.label}
-          {...activationProps(target.activation, { isolate: true })}
-        />
-      );
-    }
-  }
+  return claim.kind === "declined" ? next : render(claim);
 }
 
+/**
+ * A finished background task, as a standard transcript card: the status and
+ * summary on its header line, the output path and the owner's open button
+ * beside them; opened, the summary in full, any extra fields, and what the
+ * claiming plugin shows of the task (a shell's output) — mounted only once
+ * opened, so nothing is read for a row nobody opens.
+ */
 export function TaskNotificationRow({ event }: { event: JsonlEvent }) {
   const e = event as TaskNotificationEvent;
+  // Held here, not in the card: the card is drawn at the end of the claim
+  // chain, so it can remount while the chain resolves — the open state must
+  // survive that.
+  const [open, setOpen] = useState(false);
   const dot = (
     <StatusDot colorClass={STATUS_DOT[e.status] ?? "bg-muted-foreground"} />
   );
-  const label = statusLabel(e.status);
-  const hasExtra = !!e.extra && Object.keys(e.extra).length > 0;
-  const open = <OpenAction event={e} />;
-
-  // Arbitrary, potentially long `extra` fields fold behind the card's chevron so
-  // the default stays a single quiet line; the summary rides the header's
-  // truncating slot and is repeated in full inside the body — the shared
-  // FieldsCard owns that whole shape.
-  if (hasExtra) {
-    return (
-      <FieldsCard
-        icon={dot}
-        label={<span className="font-medium">{label}</span>}
-        summary={e.summary}
-        fields={Object.entries(e.extra ?? {}).map(([key, value]) => ({
-          key,
-          value,
-        }))}
-        aside={e.outputFile ? <FilePath filePath={e.outputFile} /> : undefined}
-        trailing={open}
-      />
-    );
-  }
-
-  // No extra: a pure one-liner. A short output path rides inline as a chip
-  // (FilePath truncates with an RTL ellipsis if it gets long).
+  const fields = Object.entries(e.extra ?? {}).map(([key, value]) => ({
+    key,
+    value,
+  }));
   return (
-    <EventLine icon={dot} label={label}>
-      <span className="truncate">{e.summary}</span>
-      {e.outputFile && <FilePath filePath={e.outputFile} />}
-      {open}
-    </EventLine>
+    <ResolveClaim event={e}>
+      {(claim) => (
+        <FieldsCard
+          icon={dot}
+          label={statusLabel(e.status)}
+          summary={e.summary}
+          fields={fields}
+          aside={
+            e.outputFile ? <FilePath filePath={e.outputFile} /> : undefined
+          }
+          trailing={
+            claim.kind === "claimed" ? (
+              <IconButton
+                icon={claim.target.icon}
+                label={claim.target.label}
+                {...activationProps(claim.target.activation, { isolate: true })}
+              />
+            ) : undefined
+          }
+          open={open}
+          onOpenChange={setOpen}
+        >
+          {claim.kind === "claimed" ? claim.target.body : undefined}
+        </FieldsCard>
+      )}
+    </ResolveClaim>
   );
 }

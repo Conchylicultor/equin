@@ -6,6 +6,7 @@ import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { shellOutputPane } from "../panes";
 import { useConversationShells } from "./use-conversation-shells";
+import { ShellOutputSection } from "../components/shell-output-section";
 
 const terminalIcon = symbol("terminal");
 
@@ -13,7 +14,8 @@ const terminalIcon = symbol("terminal");
  * Claims a `<task-notification>` that ended one of this conversation's
  * background shells — joined the way `backgroundShellsOf` joins it (task id =
  * shell id, else the launching call's tool-use id) — and opens its output
- * pane. Anything else is declined.
+ * pane; opened, the row shows the output inline (read only once opened).
+ * Anything else is declined.
  */
 export function useShellNotificationClaim(
   event: TaskNotificationEvent,
@@ -40,6 +42,13 @@ export function useShellNotificationClaim(
         { shellId: shell.shellId },
         { mode: "push" },
       ),
+      body:
+        conversationId === null ? undefined : (
+          <ShellOutputSection
+            conversationId={conversationId}
+            shellId={shell.shellId}
+          />
+        ),
     },
   };
 }
