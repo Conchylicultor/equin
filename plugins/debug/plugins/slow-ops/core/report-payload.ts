@@ -33,6 +33,11 @@ export const SlowOpReportPayloadSchema = z.object({
   // engine admitted one). Stored in the jsonb `data` (no migration) so the
   // slow-op KindView / renderTask can deep-link the coherent-instant evidence.
   traceId: z.string().optional(),
+  // The trip was seen by a browser under automation (`navigator.webdriver`:
+  // the agent browser, an e2e run). A mark, never a filter — that browser runs
+  // the code a visitor does; the report row's userAgent names it. Absent: a
+  // person's browser, a server span, or a report filed before the mark.
+  automated: z.literal(true).optional(),
   // Present when this op tripped beside others of its kind in one batch — one
   // incident, which rang the bell once while each op kept its own report:
   // `count` is every distinct op of the batch, `operations` its slowest few

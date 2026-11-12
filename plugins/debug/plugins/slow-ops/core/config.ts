@@ -24,6 +24,18 @@ export const slowOpConfig = defineConfig({
       description:
         "Report a slow-op when a live-state resource takes longer than this to settle (mount → first data).",
     }),
+    // An in-browser server's boot (a demo's worker: page asks → host ready) is
+    // filed once per boot against this budget — never on the reads, which
+    // mount only once it is ready. Sized from main's boots over 24 h
+    // (2026-11-12, 94 boots): median 3.0 s, p75 4.3 s, p90 6.3 s — a boot
+    // regressing toward the 19–41 s tail fires.
+    browserHostBootMs: intField({
+      default: 5000,
+      min: 0,
+      label: "In-browser server boot budget (ms)",
+      description:
+        "Report a slow-op when an in-browser server (a demo's worker) takes longer than this from the page asking for it to it being ready — filed once per boot.",
+    }),
     updateMs: intField({
       default: 1000,
       min: 0,

@@ -97,7 +97,7 @@ all or it is charged to the op that owns it:
 | An element's server join (`server-join`) | the sub-ack's `joinedMs` (the `sub` origin's join union) → `SlowResourceInfo.serverJoinedMs`, in `elementSlowOp` | The joined run, as above. |
 | An update's `throttle-hold` | `EXCLUDED_PHASES` / `ownMsOf` (perfs/latency-signal) | Nobody. The resource declared the hold (`throttleMs`). |
 | An update's `server-deliver` (notify → send) | `EXCLUDED_PHASES` / `ownMsOf` | The server: exactly the window its `push deliver:<key>` span judges (and the loader or flush it waited on). |
-| An element's transport bring-up (`notifications-transport`) | `elementSlowOp` | The transport. It is filed once per page as `wait notifications-transport` (`transportSlowOp`). |
+| An element's transport bring-up (`notifications-transport`) | `elementSlowOp` | The transport. It is filed once per transport — the page's own and each scoped pipeline's (`transportId`) — as `wait notifications-transport` (`transportSlowOp`), measured from that pipeline's first socket (`transportStartedAtMs`), never from the page's start. |
 | Main-thread stalls ≥ 1 s (`main-thread-stall`) | `judgePagePauses` at the queue's flush, via perfs/page-pauses | main-thread-stall, which files the frozen page as its own `main-thread` op. |
 | A hidden or frozen tab (`page-hidden`) | The same | Nobody. Only the hidden part is taken off — a throttled tab measures the browser — and the visible rest is still judged, so a slow op spanning a brief tab switch is still reported. |
 | Machine sleep (`sleep`) | `withoutSleep` in the client handler, over the item's `endedAt` window (machine-sleep's `sleptDuring`) | Nobody. Only the sleep beyond the item's `page-hidden` time comes off (a nap usually hides the tab, and the two cannot be placed against each other server-side), so one nap is never taken off twice. A server span needs none: Bun's `performance.now()` stops while the machine sleeps (measured 2026-10-30). |
@@ -115,12 +115,37 @@ spent not working:
 used to land on whichever resource happened to mount (`sonata-key-auto-detect`
 "slow" while the socket was still coming up). Now each resource is judged on
 what remained after the transport was ready, and the bring-up itself is one
-`wait notifications-transport` report per page. A cluster of those right after
+`wait notifications-transport` report per transport (the page's own, and each
+scoped pipeline's from its own first socket). A cluster of those right after
 a hot swap is still a readiness defect to fix at the source (the gateway swaps
 only after `GET /api/health/ready`; see `gateway/CLAUDE.md` and
 `research/2026-06-14-global-cold-load-instant-boot.md`). The element item
 still carries `transportColdStart` and its wait, so its report says what was
 taken off.
+
+**An in-browser server's boot is its own op** (`hostBootSlowOp`). A demo's
+reads (`/demo/at/…`, `/about/at/…`) are served by a worker booting the real
+server graph (`framework/browser-server`): 2–19 s, median 3 s on main
+(2026-11-12). Nothing reads that host before it is ready (`DemoScope` mounts
+its subtree on `ready`), so the boot is in no element's settle; it is filed
+once per boot, from `browser-server`'s `hostBootReportSink`, as `boot
+browser-host:<scenario>` against `browserHostBootMs` (5 s), its `waits` the
+worker's stages (`host-graph`, …) so the report names where it went, its data
+source the variant. Before, the scope's socket was measured from the PAGE's
+start, so the gate a visitor sat at and the host's boot came back as one
+`wait notifications-transport` per page (a 33 s gate → 37.9 s), and the boot
+itself had no op of its own. A demo element slow after the boot is still the
+element's, in full: the 24 h replay of main (2026-11-12) found 901 of the 928
+element markers within 30 s of a demo boot settled after `ready` — their 1–2 s
+was the worker answering on a host at load 40–95, the same as the app's own
+elements.
+
+**Who saw it is marked, never filtered.** The beacon says when the page is
+under automation (`automated`: `navigator.webdriver` — the agent browser, an
+e2e run) and the handler stamps the request's User-Agent; each report carries
+both (`userAgent` on the row, `automated` in the payload, "— in an automated
+browser" in the message). An automated browser runs the code a visitor does,
+so its ops are recorded and reported like any other.
 
 Storage is unchanged. Rows keep wall-clock `durationMs` / `totalMs` / `maxMs`
 plus the per-layer `waits`, so the list's Wait column shows the excluded share.
@@ -324,6 +349,7 @@ bar).
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
     - `debug/trace/engine.TraceChip`
+    - `framework/browser-server.hostBootReportSink`
     - `infra/endpoints.fetchEndpointOver`
     - `network/live/live-state.slowResourceReportSink`
     - `primitives/css/badge.Badge`

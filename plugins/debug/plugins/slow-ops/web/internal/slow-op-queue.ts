@@ -97,6 +97,10 @@ function scheduleFlush(): void {
   }, FLUSH_DELAY_MS);
 }
 
+/** Is this page driven by automation (`navigator.webdriver`: Playwright, the agent browser)? */
+const AUTOMATED =
+  typeof navigator !== "undefined" && navigator.webdriver === true;
+
 async function flush(): Promise<void> {
   while (queue.length > 0) {
     // Drain in chunks the server will accept (≤ MAX_CLIENT_SLOW_OP_ITEMS). An
@@ -118,7 +122,14 @@ async function flush(): Promise<void> {
       submitClientSlowOp,
       {},
       {
-        body: { items, ...(carried > 0 ? { dropped: carried } : {}) },
+        body: {
+          items,
+          ...(carried > 0 ? { dropped: carried } : {}),
+          // A browser under automation (the agent browser, an e2e run) runs the
+          // code a visitor does, so its signals are recorded and reported like
+          // any other — only marked, so a report says who saw it.
+          ...(AUTOMATED ? { automated: true } : {}),
+        },
         keepalive: true,
         retry: SLOW_OP_RETRY,
         // Passive telemetry: a failed beacon must never toast or recurse into

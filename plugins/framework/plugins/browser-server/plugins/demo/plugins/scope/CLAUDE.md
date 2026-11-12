@@ -98,6 +98,10 @@ seed — so the unchanged app reads demo data through `useLive` /
   (`~/.equin/worktrees/<wt>/logs/demo-host-boot.jsonl`, also the page console): the wait
   the page saw, the worker's ready instant on its own clock, its stages (`graph`: load →
   ready barrier with migrations; `seed`), the plugin count and the slowest boot spans.
+  The same boot is handed to `browser-server`'s `hostBootReportSink` (when the
+  scope's `telemetry` is on), which `debug/slow-ops` files once per boot as
+  `boot browser-host:<scenario>` against its own budget — never on the reads,
+  which mount only once the host is ready.
 
 Tests (jsdom, the real `NotificationsClient`): `web/__tests__/demo-scope.test.tsx`,
 over `browser-server/core/testing`'s `inRealmServer` + `channelHost` (an
@@ -109,8 +113,8 @@ in-realm `MessageChannel` standing in for the worker).
 
 - Description: <DemoScope scenario>: renders its subtree against the scenario's browser host — real server code in a worker, on the scenario's seed — and scoped to the host's composition (<PluginScope>), so the page shows exactly the plugins the worker serves. Everything inside reaches the host only (the scope's transport): the build's coverage guard holds the host to serving every read, endpoint and config the scope uses, or declaring it needsMachine (answered unavailable); a key or endpoint it still does not serve fails loudly. A host that fails to boot throws to the error boundary. An optional boot render gates the demo on every visit (DemoBoot: checking, the gate, then starting with the worker's progress): the visitor enters it (enter), or — while they are in the demo in another tab of this browser (a shared Web Lock each such tab holds) — the tab joins it with no gate (onEnter hears both, and which: the gate's click, or a join no one acted on); a page whose own URL says whether the visitor is in decides alone (resume: true — no gate, only the loading; false — the gate, no join); behind the gate, a browser already holding the demo's data starts the host at once, a first visit only on enter, since it downloads the whole server and its data. Connects to one SharedWorker per build (every tab of the demo shares its server and data: a worker that finds the same host serving under another name sends the tab there — it joins, never takes it), shows the true cause when the host will not serve the page (equin updated in another tab; a browser without SharedWorker that opened it in another tab), and exposes Reset (useDemoHostControl) — the host wipes its data and every tab reconnects to a fresh one.
 - Web:
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `framework/browser-server` ×5
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `framework/browser-server` ×6
     - `framework/browser-server/demo/prestart` ×3
     - `network/live/live-state` ×2
     - `primitives/networking` ×2

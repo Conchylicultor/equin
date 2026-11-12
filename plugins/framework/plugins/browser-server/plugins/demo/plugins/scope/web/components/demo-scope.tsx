@@ -32,6 +32,7 @@ import {
   attachFrameServing,
   browserServerTransport,
   HostInputs,
+  hostBootReportSink,
   type FrameServing,
   type HostInputSupply,
 } from "@plugins/framework/plugins/browser-server/web";
@@ -198,6 +199,7 @@ function startScopeServer(
   scenario: DemoScenario,
   generations: HostGenerations,
   inputs: readonly string[],
+  telemetry: boolean,
   report: ScopeStart,
 ): () => void {
   let ended = false;
@@ -266,15 +268,21 @@ function startScopeServer(
       else detachFrames = frames.detach;
     }
     if (ended) return;
-    const line = bootLine(
-      scenario.id,
-      asked,
-      performance.now() - asked,
-      hosted,
-      frames,
-    );
+    const waitedMs = performance.now() - asked;
+    const line = bootLine(scenario.id, asked, waitedMs, hosted, frames);
     console.info(`[demo-scope] ${line}`);
     clientLog(BOOT_LOG_CHANNEL, line);
+    // The boot as its own measurement, once per boot: nothing reads the host
+    // before `ready`, so no read's settle holds it — the consumer
+    // (debug/slow-ops) judges it against its own budget.
+    if (telemetry)
+      hostBootReportSink.emit({
+        host: scenario.id,
+        waitedMs,
+        askedAtMs: asked,
+        boot: hosted.boot,
+        readyAtMs: hosted.readyAtMs,
+      });
     served = hosted.server;
     void hosted.ended.then((why) => {
       switch (why) {
@@ -437,8 +445,12 @@ export function DemoScope({
   // that loads later (a deferred plugin tier) is declared then — never a
   // reason to restart the host.
   const inputKeysRef = useRef(inputKeys);
+  // Read when a boot completes (its measurement is telemetry), never a reason
+  // to restart the host.
+  const telemetryRef = useRef(telemetry);
   useEffect(() => {
     inputKeysRef.current = inputKeys;
+    telemetryRef.current = telemetry;
   });
   // A resumed visit is past the gate: the page's own URL says the visitor is in.
   const gated = boot !== undefined && resume !== true;
@@ -526,7 +538,12 @@ export function DemoScope({
     // resource owned by this mount, so StrictMode's mount → unmount → mount
     // ends the first and keeps the second (an initialiser would start one a
     // discarded render never ends).
-    const stop = startScopeServer(scenario, generations, inputKeysRef.current, {
+    const stop = startScopeServer(
+      scenario,
+      generations,
+      inputKeysRef.current,
+      telemetryRef.current,
+      {
       onReady: (host) => setState({ kind: "ready", host }),
       onStopped: (why) => setState({ kind: "stopped", why }),
       onFollow: (why) => {

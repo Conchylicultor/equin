@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import type { SlowResourceInfo } from "@plugins/network/plugins/live/plugins/live-state/web";
-import { elementSlowOp, transportSlowOp } from "./element-slow-op";
+import type { HostBootInfo } from "@plugins/framework/plugins/browser-server/web";
+import {
+  elementSlowOp,
+  hostBootSlowOp,
+  transportSlowOp,
+} from "./element-slow-op";
 
 const thresholds = {
   pageLoadMs: 2000,
@@ -12,6 +17,7 @@ const thresholds = {
   dbMs: 500,
   jobMs: 3000,
   gateQueueDepth: 0.25,
+  browserHostBootMs: 5000,
 };
 
 const settle = (over: Partial<SlowResourceInfo> = {}): SlowResourceInfo => ({
@@ -22,6 +28,8 @@ const settle = (over: Partial<SlowResourceInfo> = {}): SlowResourceInfo => ({
   transportWaitMs: 0,
   serverJoinedMs: 0,
   transportReadyAtMs: null,
+  transportStartedAtMs: null,
+  transportId: "/ws/notifications",
   ...over,
 });
 
@@ -118,9 +126,31 @@ describe("elementSlowOp", () => {
   });
 });
 
+// The acceptance case of the browser-host boot split: a read of a demo's
+// in-browser server mounts only once the host is ready, so its own transport
+// is ready a microtask after it mounts (a few ms of bring-up) — a 3 s delay of
+// its own after the boot is still the element's, reported in full.
+test("a read of an in-browser server slow after the boot is still reported", () => {
+  const item = elementSlowOp(
+    settle({
+      key: "config-v2.values",
+      durationMs: 3007,
+      transportColdStart: true,
+      transportWaitMs: 7,
+      transportStartedAtMs: 25591,
+      transportReadyAtMs: 25598,
+      transportId: "browser:srv-1:/ws/notifications",
+    }),
+    thresholds,
+    "/demo/at/agents/c/conv-demo-practice-timer",
+  );
+  expect(item?.ownMs).toBe(3000);
+  expect(item?.operation).toBe("config-v2.values");
+});
+
 describe("transportSlowOp", () => {
   test("the bring-up is filed against the transport, as a wait", () => {
-    expect(transportSlowOp(4800.4, thresholds, "/home")).toEqual({
+    expect(transportSlowOp(200, 5000.4, thresholds, "/home")).toEqual({
       operationKind: "wait",
       operation: "notifications-transport",
       durationMs: 4800,
@@ -128,6 +158,71 @@ describe("transportSlowOp", () => {
       thresholdMs: 1000,
       caller: { kind: "route", label: "/home" },
     });
-    expect(transportSlowOp(900, thresholds, "/home")).toBeNull();
+    expect(transportSlowOp(0, 900, thresholds, "/home")).toBeNull();
+  });
+
+  test("measured from the pipeline's own start, never the page's", () => {
+    // A demo's scoped pipeline opened its socket 33.5 s into the page (the
+    // visitor at the gate, then the host's boot) and was ready 7 ms later:
+    // no transport wait at all. Measured from the page's start it was filed
+    // as a 33.5 s `wait notifications-transport` (main, 2026-11-12).
+    expect(transportSlowOp(33_485, 33_492, thresholds, "/demo")).toBeNull();
+  });
+});
+
+const boot = (over: Partial<HostBootInfo> = {}): HostBootInfo => ({
+  host: "agent-manager",
+  waitedMs: 19_285.6,
+  askedAtMs: 3021,
+  readyAtMs: 19_100,
+  boot: {
+    plugins: 321,
+    stages: [
+      { name: "script", ms: 150 },
+      { name: "storage", ms: 400 },
+      { name: "graph", ms: 15_000 },
+      { name: "ready", ms: 200 },
+    ],
+    slowest: [{ label: "onReadyBlocking:database", ms: 6000 }],
+    data: "snapshot",
+  },
+  ...over,
+});
+
+describe("hostBootSlowOp", () => {
+  test("a boot past its budget is one op against the host, split by stage", () => {
+    expect(hostBootSlowOp(boot(), thresholds, "/demo/at/agents")).toEqual({
+      operationKind: "boot",
+      operation: "browser-host:agent-manager",
+      durationMs: 19_286,
+      ownMs: 19_286,
+      thresholdMs: 5000,
+      caller: { kind: "route", label: "/demo/at/agents" },
+      detail: { variant: "snapshot" },
+      waits: {
+        "host-script": 150,
+        "host-storage": 400,
+        "host-graph": 15_000,
+        "host-ready": 200,
+        "host-unstaged": 3536,
+      },
+    });
+  });
+
+  test("within the budget is not slow; the budget is browserHostBootMs", () => {
+    expect(
+      hostBootSlowOp(boot({ waitedMs: 2000 }), thresholds, "/"),
+    ).toBeNull();
+    expect(
+      hostBootSlowOp(boot(), { ...thresholds, browserHostBootMs: 20_000 }, "/"),
+    ).toBeNull();
+  });
+
+  test("a host keeping no data names that as its variant", () => {
+    const b = boot();
+    const { data: _data, ...noData } = b.boot;
+    expect(
+      hostBootSlowOp({ ...b, boot: noData }, thresholds, "/")?.detail,
+    ).toEqual({ variant: "no data kept" });
   });
 });

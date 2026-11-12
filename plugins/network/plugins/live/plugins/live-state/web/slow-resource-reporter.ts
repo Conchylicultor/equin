@@ -27,11 +27,27 @@ export interface SlowResourceInfo {
    */
   serverJoinedMs: number;
   /**
-   * `performance.now()` the transport FIRST became ready (null: not yet) — the
-   * page's whole bring-up wait, which the consumer files once, against the
-   * transport, rather than against each resource that waited on it.
+   * `performance.now()` the transport FIRST became ready (null: not yet). With
+   * `transportStartedAtMs` it is the pipeline's whole bring-up wait, which the
+   * consumer files once per transport, against the transport, rather than
+   * against each resource that waited on it.
    */
   transportReadyAtMs: number | null;
+  /**
+   * `performance.now()` this tuple's pipeline began bringing its transport up
+   * — its first socket opened (null: none yet). A page has several pipelines
+   * (its own, and one per scoped transport — a demo's in-browser server), each
+   * started when it was first needed, so a bring-up is measured from here,
+   * never from the page's start: a scope started 30 s into the page did not
+   * wait 30 s on its socket.
+   */
+  transportStartedAtMs: number | null;
+  /**
+   * Which transport the tuple's pipeline reads (its worktree socket URL: the
+   * page's `/ws/notifications`, a browser server's `browser:<id>:…`) — the key
+   * a consumer files each transport's bring-up once by.
+   */
+  transportId: string;
 }
 
 /**

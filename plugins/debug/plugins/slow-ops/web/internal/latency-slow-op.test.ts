@@ -12,6 +12,7 @@ const thresholds = {
   dbMs: 500,
   jobMs: 3000,
   gateQueueDepth: 0.25,
+  browserHostBootMs: 5000,
 };
 
 const update = (over: Partial<ClientLatencySample> = {}): ClientLatencySample =>

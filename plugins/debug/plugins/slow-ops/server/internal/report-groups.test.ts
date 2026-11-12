@@ -17,6 +17,30 @@ const item = (
 });
 
 describe("incidentsFor", () => {
+  test("an automated browser's op is reported in full, marked, with its User-Agent", () => {
+    const ua =
+      "Mozilla/5.0 (Macintosh) AppleWebKit/537.36 HeadlessChrome/141.0";
+    const [incident] = incidentsFor([
+      item("config-v2.values", 1021, {
+        operationKind: "element",
+        automated: true,
+        userAgent: ua,
+      }),
+    ]);
+    expect(incident).toHaveLength(1);
+    expect(incident![0]!.data.automated).toBe(true);
+    expect(incident![0]!.userAgent).toBe(ua);
+    expect(incident![0]!.message).toBe(
+      "element config-v2.values took 1021ms of its own (1121ms wall) (threshold 1000ms) — in an automated browser",
+    );
+  });
+
+  test("a person's browser carries no mark", () => {
+    const [incident] = incidentsFor([item("tasks", 1500)]);
+    expect(incident![0]!.data.automated).toBeUndefined();
+    expect(incident![0]!.userAgent).toBeUndefined();
+  });
+
   test("a lone item is an incident of one report, fingerprinted on its operation", () => {
     const [incident, ...rest] = incidentsFor([
       item("tasks", 1500, { traceId: "t1", waits: { transport: 1200 } }),

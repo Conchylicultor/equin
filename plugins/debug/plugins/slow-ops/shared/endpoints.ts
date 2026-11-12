@@ -109,6 +109,12 @@ export type SlowOpClientItem = z.infer<typeof SlowOpClientItemSchema>;
 export const SlowOpClientBodySchema = z.object({
   items: z.array(SlowOpClientItemSchema).min(1).max(MAX_CLIENT_SLOW_OP_ITEMS),
   dropped: z.number().optional(),
+  // The page is driven by automation (`navigator.webdriver` — the agent
+  // browser, an e2e run). Its signals run the same code a visitor's do, so they
+  // are recorded and reported in full; the mark only says who saw them, on the
+  // report (with the request's User-Agent). Absent: a person's browser, or a
+  // tab on an older bundle.
+  automated: z.literal(true).optional(),
 });
 export type SlowOpClientBody = z.infer<typeof SlowOpClientBodySchema>;
 

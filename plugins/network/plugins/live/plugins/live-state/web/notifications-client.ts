@@ -842,6 +842,8 @@ export class NotificationsClient {
    * Set once, never reset — a later reconnect does not re-arm cold-start.
    */
   private firstReadyAt: number | null = null;
+  /** `performance.now()` this client opened its first socket (see `getBringUpStartedAt`). */
+  private bringUpStartedAt: number | null = null;
   /**
    * Per-channel twin of `firstReadyAt`: the worktree and central sockets are
    * independent, so a worktree resource's cold-start decision must not hinge on
@@ -997,6 +999,22 @@ export class NotificationsClient {
    */
   getFirstReadyAt(): number | null {
     return this.firstReadyAt;
+  }
+
+  /**
+   * `performance.now()` this client opened its FIRST socket (null: none yet) —
+   * where its transport's bring-up starts. Not the page's start: a scoped
+   * pipeline (a demo's in-browser server) is built when its subtree mounts,
+   * which may be long after the page loaded, so its bring-up is
+   * `getFirstReadyAt() − getBringUpStartedAt()`, never the page's age.
+   */
+  getBringUpStartedAt(): number | null {
+    return this.bringUpStartedAt;
+  }
+
+  /** This client's transport, as its worktree socket URL — one per pipeline on a page. */
+  get transportId(): string {
+    return this.socketUrls.worktree;
   }
 
   /** Has the transport for this origin's channel EVER reached "open"? A one-way
@@ -2224,6 +2242,9 @@ export class NotificationsClient {
   private channelFor(kind: SocketKind): SocketChannel {
     const existing = this.channels[kind];
     if (existing) return existing;
+    // The pipeline's bring-up starts with its first socket (see
+    // `getBringUpStartedAt`). Written once, never re-armed.
+    this.bringUpStartedAt ??= performance.now();
     const channel = this.openChannel(kind);
     this.channels[kind] = channel;
     return channel;

@@ -27,7 +27,7 @@ const dropChannel = defineLogSink({
 // its trace (one per operationKind, see toRecordInputs) are shared.
 export const handleClientSlowOp = implement(
   submitClientSlowOp,
-  async ({ body }) => {
+  async ({ body, req }) => {
     if (body.dropped !== undefined && body.dropped > 0) {
       dropChannel.publish(
         JSON.stringify({
@@ -77,7 +77,16 @@ export const handleClientSlowOp = implement(
       });
       return trace?.id;
     });
-    await recordSlowOpBatch(inputs);
+    // Who saw it: marked on every report the batch files, never filtered.
+    const userAgent = req.headers.get("user-agent") ?? undefined;
+    const automated = body.automated === true;
+    await recordSlowOpBatch(
+      inputs.map((input) => ({
+        ...input,
+        ...(userAgent !== undefined ? { userAgent } : {}),
+        ...(automated ? { automated } : {}),
+      })),
+    );
     return { ok: true };
   },
 );

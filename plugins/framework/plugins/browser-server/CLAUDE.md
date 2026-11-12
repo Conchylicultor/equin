@@ -279,11 +279,13 @@ reaching the server, detach on unmount).
   - Exports (types):
     - `ExternalHostsDeclaration`
     - `FrameServing`
+    - `HostBootInfo`
     - `HostInputSupply`
   - Exports (values):
     - `attachFrameServing`
     - `browserServerTransport`
     - `ExternalHosts`
+    - `hostBootReportSink`
     - `HostInputs`
 - Cross-plugin:
   - Imported by:
@@ -291,6 +293,7 @@ reaching the server, detach on unmount).
     - `apps/prototypes/canvas`
     - `apps/sonata/audio/piano`
     - `apps/sonata/audio/soundfont`
+    - `debug/slow-ops`
     - `framework/browser-server/demo/prestart`
     - `framework/browser-server/demo/scope`
     - `framework/browser-server/host-storage`

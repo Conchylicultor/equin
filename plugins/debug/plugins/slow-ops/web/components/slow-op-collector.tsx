@@ -8,13 +8,20 @@ import { currentRoutePath } from "@plugins/primitives/plugins/pane/web";
 import { toClientBootSection } from "@plugins/debug/plugins/trace/plugins/client-boot/core";
 import { slowOpConfig } from "../../core";
 import { clientSlowOpSink } from "@plugins/debug/plugins/slow-ops/plugins/sink/core";
-import { elementSlowOp, transportSlowOp } from "../internal/element-slow-op";
+import {
+  elementSlowOp,
+  hostBootSlowOp,
+  transportSlowOp,
+} from "../internal/element-slow-op";
+import { hostBootReportSink } from "@plugins/framework/plugins/browser-server/web";
 import { latencySlowOp } from "../internal/latency-slow-op";
 import { endingNow } from "../internal/page-pause-judge";
 import { enqueueSlowOp } from "../internal/slow-op-queue";
 
-// The page's transport bring-up is filed at most once (see transportSlowOp).
-let transportBringUpFiled = false;
+// Each transport's bring-up is filed at most once (see transportSlowOp) — the
+// page's own and each scoped pipeline's (a demo's in-browser server), keyed by
+// `SlowResourceInfo.transportId`.
+const transportBringUpFiled = new Set<string>();
 
 // A Core.Root side-effect component. It owns the client-side slow-op signals —
 // page-load timing, live-state element settle, and every client latency signal
@@ -80,26 +87,40 @@ export function SlowOpCollector() {
       const item = elementSlowOp(info, cfgRef.current, route);
       if (item) enqueueSlowOp(item, endingNow(info.durationMs));
       if (
-        !transportBringUpFiled &&
+        !transportBringUpFiled.has(info.transportId) &&
         info.transportColdStart &&
+        info.transportStartedAtMs !== null &&
         info.transportReadyAtMs !== null
       ) {
-        transportBringUpFiled = true;
+        transportBringUpFiled.add(info.transportId);
         const transport = transportSlowOp(
+          info.transportStartedAtMs,
           info.transportReadyAtMs,
           cfgRef.current,
           route,
         );
-        // Page start → socket open, on the wall clock: a page loaded hidden is
-        // dropped at the flush like any other span.
+        // First socket opened → transport ready, on the wall clock: a page
+        // hidden through it is judged at the flush like any other span.
         if (transport)
           enqueueSlowOp(transport, {
-            startMs: performance.timeOrigin,
+            startMs: performance.timeOrigin + info.transportStartedAtMs,
             endMs: performance.timeOrigin + info.transportReadyAtMs,
           });
       }
     });
     return () => slowResourceReportSink.register(null);
+  }, []);
+
+  // In-browser server boots (a demo's worker): each boot is its own op, filed
+  // once against its own budget — nothing that reads the host mounts before
+  // it is ready, so no element's settle holds it. No window: the boot runs in
+  // the worker, which the page's stalls do not hold up.
+  useEffect(() => {
+    hostBootReportSink.register((info) => {
+      const item = hostBootSlowOp(info, cfgRef.current, currentRoutePath());
+      if (item) enqueueSlowOp(item);
+    });
+    return () => hostBootReportSink.register(null);
   }, []);
 
   // Client latency signals: one generic subscriber for the whole vocabulary.

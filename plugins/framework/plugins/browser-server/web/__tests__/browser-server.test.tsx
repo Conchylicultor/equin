@@ -39,6 +39,8 @@ import {
 import { useLive } from "@plugins/network/plugins/live/web";
 import {
   NotificationsProvider,
+  slowResourceReportSink,
+  type SlowResourceInfo,
   useNotificationsChannelStatuses,
   useResourceContractMismatches,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
@@ -243,6 +245,39 @@ const subFrames = (sent: string[]) =>
     .filter((f) => f.op === "sub" || f.op === "sub-batch");
 
 describe("browser server ⇄ the real live-state client", () => {
+  it("a read's settle names the server's own transport, its bring-up measured from the pipeline's own start", async () => {
+    const { transport, server } = setup();
+    const reports: SlowResourceInfo[] = [];
+    slowResourceReportSink.register((r) => {
+      if (r.key === greeting.key) reports.push(r);
+    });
+    try {
+      // The page has been up a while before the scope mounts (a demo: the
+      // visitor at the gate, then the host's boot).
+      const mountedAt = performance.now();
+      const view = render(
+        <Scoped transport={transport}>
+          <Probe
+            read={() => useLive(greeting, { who: "ada" })}
+            onRead={() => {}}
+          />
+        </Scoped>,
+      );
+      await waitFor(() => expect(reports).toHaveLength(1));
+      const [r] = reports;
+      expect(r!.transportId).toBe(transport.socketUrl("/ws/notifications"));
+      expect(r!.transportStartedAtMs).not.toBeNull();
+      expect(r!.transportStartedAtMs!).toBeGreaterThanOrEqual(mountedAt);
+      expect(r!.transportReadyAtMs!).toBeGreaterThanOrEqual(
+        r!.transportStartedAtMs!,
+      );
+      view.unmount();
+    } finally {
+      slowResourceReportSink.register(null);
+      server.dispose();
+    }
+  });
+
   it("serves a value and an external collection (window + :rows); the channel reads open", async () => {
     const { transport, server } = setup();
     const seen: Record<string, unknown> = {};

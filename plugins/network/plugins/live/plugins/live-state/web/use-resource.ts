@@ -598,6 +598,8 @@ function reportTupleSettled(
     params,
     durationMs: startedAt === null ? 0 : now - startedAt,
     transportReadyAtMs: firstReadyAt,
+    transportStartedAtMs: notifications.getBringUpStartedAt(),
+    transportId: notifications.transportId,
     transportColdStart:
       startedAt !== null &&
       (firstReadyAt === null || firstReadyAt >= startedAt),

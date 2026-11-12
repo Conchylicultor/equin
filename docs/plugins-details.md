@@ -25684,6 +25684,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `config_v2.ConfigV2`
           - `config_v2.useConfig`
           - `debug/trace/engine.TraceChip`
+          - `framework/browser-server.hostBootReportSink`
           - `infra/endpoints.fetchEndpointOver`
           - `network/live/live-state.slowResourceReportSink`
           - `primitives/css/badge.Badge`
@@ -28949,11 +28950,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `ExternalHostsDeclaration`
           - `FrameServing`
+          - `HostBootInfo`
           - `HostInputSupply`
         - Exports (values):
           - `attachFrameServing`
           - `browserServerTransport`
           - `ExternalHosts`
+          - `hostBootReportSink`
           - `HostInputs`
       - Cross-plugin:
         - Imported by:
@@ -28961,6 +28964,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/prototypes/canvas`
           - `apps/sonata/audio/piano`
           - `apps/sonata/audio/soundfont`
+          - `debug/slow-ops`
           - `framework/browser-server/demo/prestart`
           - `framework/browser-server/demo/scope`
           - `framework/browser-server/host-storage`
@@ -29034,8 +29038,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by: `framework/browser-server/demo/scope`
             - **`scope`** — <DemoScope scenario>: renders its subtree against the scenario's browser host — real server code in a worker, on the scenario's seed — and scoped to the host's composition (<PluginScope>), so the page shows exactly the plugins the worker serves. Everything inside reaches the host only (the scope's transport): the build's coverage guard holds the host to serving every read, endpoint and config the scope uses, or declaring it needsMachine (answered unavailable); a key or endpoint it still does not serve fails loudly. A host that fails to boot throws to the error boundary. An optional boot render gates the demo on every visit (DemoBoot: checking, the gate, then starting with the worker's progress): the visitor enters it (enter), or — while they are in the demo in another tab of this browser (a shared Web Lock each such tab holds) — the tab joins it with no gate (onEnter hears both, and which: the gate's click, or a join no one acted on); a page whose own URL says whether the visitor is in decides alone (resume: true — no gate, only the loading; false — the gate, no join); behind the gate, a browser already holding the demo's data starts the host at once, a first visit only on enter, since it downloads the whole server and its data. Connects to one SharedWorker per build (every tab of the demo shares its server and data: a worker that finds the same host serving under another name sends the tab there — it joins, never takes it), shows the true cause when the host will not serve the page (equin updated in another tab; a browser without SharedWorker that opened it in another tab), and exposes Reset (useDemoHostControl) — the host wipes its data and every tab reconnects to a fresh one.
               - Web:
-                - Uses: 24 symbols — full list in [`plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/REFERENCE.md`](../plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/REFERENCE.md)
-                  - `framework/browser-server` ×5
+                - Uses: 25 symbols — full list in [`plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/REFERENCE.md`](../plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/REFERENCE.md)
+                  - `framework/browser-server` ×6
                   - `framework/browser-server/demo/prestart` ×3
                   - `network/live/live-state` ×2
                   - `primitives/networking` ×2
@@ -52272,16 +52276,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useNow`
     - **`report-sink`** — Web presence for the report-sink primitive; the runtime-agnostic factories live in ./core so both web and server can import them. defineReportSink() is fire-and-forget and holds reports emitted before a handler registers (bounded), replaying them on register; defineRequestSink() returns the handler's answer and never holds. emit() never throws — it is called on error paths.
       - Cross-plugin:
-        - Imported by: 27 plugins — full list in [`plugins/primitives/plugins/report-sink/REFERENCE.md`](../plugins/primitives/plugins/report-sink/REFERENCE.md)
+        - Imported by: 28 plugins — full list in [`plugins/primitives/plugins/report-sink/REFERENCE.md`](../plugins/primitives/plugins/report-sink/REFERENCE.md)
           - `primitives` ×10
           - `infra` ×4
           - `network` ×3
+          - `framework` ×2
           - `reports` ×2
           - `ui` ×2
           - `conversations/conversation-view/jsonl-viewer/tool-call`
           - `database/connection`
           - `debug/slow-ops/sink`
-          - `framework/server-core`
           - `page/editor`
           - `tasks/tasks-core`
       - Core:

@@ -9,6 +9,8 @@ export interface SlowOpReport {
   source: SlowOpSource;
   data: SlowOpReportPayload;
   message: string;
+  /** The browser that saw it (a client signal's User-Agent), on the report row. */
+  userAgent?: string;
 }
 
 /**
@@ -59,7 +61,9 @@ export function incidentsFor(
       message:
         `${input.operationKind} ${input.operation} took ${took(input)}` +
         ` (threshold ${input.thresholdMs}ms)` +
-        (burst ? ` — 1 of ${burst.count} at once` : ""),
+        (burst ? ` — 1 of ${burst.count} at once` : "") +
+        (input.automated === true ? " — in an automated browser" : ""),
+      ...(input.userAgent !== undefined && { userAgent: input.userAgent }),
     }));
   });
 }
@@ -79,6 +83,9 @@ function payloadOf(input: RecordSlowOpInput): SlowOpReportPayload {
     // This trip's per-layer split, so the description can name the layer the
     // time went to (the row's `waits` are cumulative, not this trip's).
     ...(input.waits !== undefined && { waits: input.waits }),
+    // Seen by an automated browser (the agent browser, an e2e run): marked,
+    // never muted — it runs the code a visitor does.
+    ...(input.automated === true && { automated: true }),
     // Optional link to the coherent-instant trace captured for this trip.
     ...(input.traceId !== undefined && { traceId: input.traceId }),
   };

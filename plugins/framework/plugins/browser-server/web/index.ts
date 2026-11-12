@@ -3,6 +3,8 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 export { browserServerTransport } from "./browser-server-transport";
 export { attachFrameServing } from "./frame-serving";
 export type { FrameServing } from "./frame-serving";
+export { hostBootReportSink } from "./host-boot-sink";
+export type { HostBootInfo } from "./host-boot-sink";
 import {
   ExternalHosts as ExternalHostsSlots,
   HostInputs as HostInputsSlots,

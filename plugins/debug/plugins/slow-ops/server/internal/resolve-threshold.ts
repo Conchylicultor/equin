@@ -157,7 +157,8 @@ export function resolveWaitThreshold(wait: SlowWait, t: Thresholds): number {
  * own ≤ wall: a span whose own time passes its bar necessarily ran at least
  * that long.) `onSlowWait` takes the lowest of `resolveWaitThreshold`'s bars.
  *
- * The other client knobs (`pageLoadMs`, `elementMs`, `confirmMs`) stay OUT:
+ * The other client knobs (`pageLoadMs`, `elementMs`, `confirmMs`,
+ * `browserHostBootMs`) stay OUT:
  * no server span is ever judged by them, so including one would only lower the
  * profiler floor for every server span. `updateMs` is IN: a latency leaf (a
  * delivery) is judged by it.

@@ -67,4 +67,11 @@ export interface RecordSlowOpInput {
   // a richer payload — `slow-interaction`, `main-thread-stall`): recorded and
   // markered like any op, but `incidentsFor` files no `slow-op` report for it.
   reportedBy?: string;
+  // Who saw it, for a client signal: the browser's User-Agent (from the
+  // beacon's request) and whether it was driven by automation (the agent
+  // browser, an e2e run — `navigator.webdriver`). A mark only: an automated
+  // browser runs the code a visitor does, so its ops are recorded and reported
+  // in full; the report says so. Absent for server spans.
+  userAgent?: string;
+  automated?: boolean;
 }
