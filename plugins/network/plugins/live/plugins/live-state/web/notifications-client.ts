@@ -37,8 +37,10 @@ import {
   BUILD_GRAPH_HEADER,
   contractVerdict,
   reloadVerdict,
+  ANSWER_TRAIL_KEY,
   DERIVE_MAX_SOURCES,
   DEV_BUILD,
+  parseAnswerTrail,
   parseResourceBytesHeaders,
   PROTOCOL,
   parseResourceHttpErrorBody,
@@ -56,8 +58,11 @@ import {
   markResourceContractMismatch,
 } from "./resource-contract-store";
 import {
+  ANSWER_TRAIL_WAIT_MS,
+  describeUnansweredTrail,
   unansweredServer,
   unansweredSubReportSink,
+  type UnansweredTrail,
 } from "./unanswered-sub-reporter";
 import { toResourceError } from "./resource-error";
 import {
@@ -2628,15 +2633,13 @@ export class NotificationsClient {
     const oldest = late[0]!;
     const socket = channel === this.channels.central ? "central" : "worktree";
     const server = unansweredServer(socket, this.server);
-    const oldestWaitMs = now - oldest.awaiting!.since;
+    const asked = oldest.awaiting!;
+    const oldestWaitMs = now - asked.since;
     for (const sub of late) sub.awaiting = undefined;
     trace(
       `unanswered socket=${socket} server=${server} count=${late.length} oldestKey=${oldest.key} oldestParams=${paramsKey(oldest.params)} waitMs=${oldestWaitMs} tabs=${channel.ws.attachedTabs ?? "?"} conn=${channel.ws.connection ?? "-"}`,
     );
-    // Telemetry this transport's traffic raised: a scope that drops its
-    // telemetry reports none (the trace above is this tab's own log).
-    if (!this.telemetry) return;
-    unansweredSubReportSink.emit({
+    const report = {
       server,
       count: late.length,
       oldestKey: oldest.key,
@@ -2644,6 +2647,79 @@ export class NotificationsClient {
       oldestWaitMs,
       attachedTabs: channel.ws.attachedTabs,
       connection: channel.ws.connection,
+    };
+    // Where the server stands on the oldest — asked whether or not this
+    // transport reports, so the tab's own log has it either way.
+    void this.askAnswerTrail(socket, oldest, asked).then((trail) => {
+      trace(
+        `unanswered-trail key=${oldest.key} params=${paramsKey(oldest.params)} ${describeUnansweredTrail(trail)}`,
+      );
+      // Telemetry this transport's traffic raised: a scope that drops its
+      // telemetry reports none (the traces are this tab's own log).
+      if (!this.telemetry) return;
+      unansweredSubReportSink.emit({ ...report, trail });
+    });
+  }
+
+  /**
+   * Ask the server that left `sub`'s request unanswered where it stands on
+   * it (resource-protocol's answer trail), over the same transport — so the
+   * question waits where the sub did. Settles with what the server said, its
+   * silence past `ANSWER_TRAIL_WAIT_MS`, or the question's own failure — each
+   * an answer for the report, never a reason to drop it.
+   */
+  private askAnswerTrail(
+    kind: SocketKind,
+    sub: ActiveSub,
+    asked: { id: number; since: number },
+  ): Promise<UnansweredTrail> {
+    const askedAt = Date.now();
+    const url = resourceUrl(
+      ANSWER_TRAIL_KEY,
+      {
+        tabId: this.tabId,
+        id: String(asked.id),
+        key: sub.key,
+        params: JSON.stringify(sub.params),
+      },
+      kind === "central" ? "central" : undefined,
+    );
+    const question = (async (): Promise<UnansweredTrail> => {
+      try {
+        const res = await this.fetchImpl(url, {
+          cache: "no-store",
+          headers: buildHeader(kind),
+        });
+        if (!res.ok) {
+          return {
+            kind: "failed",
+            message: `HTTP ${res.status} ${(await res.text()).slice(0, 200)}`,
+          };
+        }
+        const trail = parseAnswerTrail(await res.json());
+        return {
+          kind: "trail",
+          trail,
+          sentAt: asked.since,
+          askedAt,
+          repliedAt: Date.now(),
+        };
+      } catch (err) {
+        // The question's own failure is part of the report (`failed`), named.
+        if (err instanceof Error)
+          return { kind: "failed", message: err.message };
+        throw err;
+      }
+    })();
+    return new Promise<UnansweredTrail>((resolve) => {
+      const bound = setTimeout(
+        () => resolve({ kind: "silent", waitedMs: Date.now() - askedAt }),
+        ANSWER_TRAIL_WAIT_MS,
+      );
+      void question.then((trail) => {
+        clearTimeout(bound);
+        resolve(trail);
+      });
     });
   }
 

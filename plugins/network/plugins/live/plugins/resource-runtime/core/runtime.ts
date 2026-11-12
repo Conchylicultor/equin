@@ -12,6 +12,8 @@ import {
   type ValuePatchOp,
 } from "@plugins/packages/plugins/value-patch/core";
 import {
+  ANSWER_TRAIL_HOLDERS_MAX,
+  ANSWER_TRAIL_KEY,
   BUILD_GRAPH_HEADER,
   DEV_BUILD,
   DERIVE_MAX_ID,
@@ -21,6 +23,7 @@ import {
   ResourceRefusal,
   contractVerdict,
   resourceBytesHeaders,
+  type AnswerTrail,
   type ContractVerdict,
   type Derivation,
   type DeriveSource,
@@ -41,6 +44,7 @@ import {
 } from "./keyed-diff";
 import { ResourceGuardError } from "./guard-error";
 import { createLingerLedger, type LingerEnd } from "./linger-ledger";
+import { createAnswerLedger } from "./answer-ledger";
 import {
   isMintedPlan,
   routeTuple,
@@ -3231,6 +3235,10 @@ export function createResourceRuntime(
   const detached = new Map<SocketState, ReturnType<typeof setTimeout>>();
   // What each linger did, for `_debug.linger` (`linger-ledger.ts`).
   const lingerLedger = createLingerLedger(opts.asleepMs ?? (() => null));
+  // Where each subscription request stands — read, queued for a read slot,
+  // loading, answered — for a tab whose sub went unanswered (the answer
+  // trail, `GET …/_answer`). Wall clock: the tab sets it against its own.
+  const answerLedger = createAnswerLedger(() => Date.now());
   // The flush scheduler, as ONE state whose every transition is synchronous:
   //   idle    — nothing pending a flush;
   //   queued  — a `flushNotifies` microtask is pending;
@@ -3637,6 +3645,19 @@ export function createResourceRuntime(
   ): Promise<unknown> {
     const bracket = loadBracket(entry, params);
     const held = heldFollowsFor(entry, paramsKey(params));
+    // A whole-tuple load is the answer trail's `loading` stage (a scoped
+    // refill reads only some rows: a push's, never a sub's answer).
+    const leaveLoading =
+      ctx === undefined
+        ? answerLedger.enter(
+            "loading",
+            flightKeyOf(entry.key, paramsKey(params)),
+            {
+              since: Date.now(),
+              probe: false,
+            },
+          )
+        : null;
     const loadRun: LoadRun | undefined =
       held === undefined
         ? bracket?.run
@@ -3669,6 +3690,10 @@ export function createResourceRuntime(
       // A synchronous throw settles like a rejected load (the bracket's
       // loading count must come down).
       load = Promise.reject(err);
+    }
+    if (leaveLoading !== null) {
+      // Observes only — the caller handles the load's own rejection.
+      void load.then(leaveLoading, leaveLoading);
     }
     const judged = driftGuarded(entry)
       ? load.then((value) => checkRouteDrift(entry, own)(value))
@@ -4422,8 +4447,15 @@ export function createResourceRuntime(
       void run.then(settled, settled);
       return run;
     }
-    return readLoadGate.run(
+    // Queued from here until the slot comes (or the read is dropped): the
+    // answer trail's `queued` stage, set against the gate's holders.
+    const leaveQueue = answerLedger.enter("queued", flightKeyOf(key, read.pk), {
+      since: Date.now(),
+      probe: read.probe,
+    });
+    const run = readLoadGate.run(
       () => {
+        leaveQueue();
         if (!wanted()) throw new ReadAbandoned(key);
         return body();
       },
@@ -4435,6 +4467,9 @@ export function createResourceRuntime(
         class: key,
       },
     );
+    // Observes only — a gate refusal before the body still leaves the queue.
+    void run.then(leaveQueue, leaveQueue);
+    return run;
   }
 
   // The point batch a gated read of `entry` may join (`PointBatch`), or
@@ -4513,9 +4548,36 @@ export function createResourceRuntime(
     }
     const joining = open !== undefined;
     const target = open ?? { ids: new Set<string>(), members: [] };
-    const value = new Promise<FlightValue>((resolve, reject) => {
-      target.members.push({ ...read, ids, resolve, reject });
+    // The answer trail's stages, per member: queued until the batch's slot
+    // comes (its `wanted` is asked then), loading from there until it settles
+    // — a batch of several loads as one scoped read, which `timedLoad` does
+    // not count as any one tuple's load.
+    const tuple = flightKeyOf(entry.key, read.pk);
+    const leaveQueue = answerLedger.enter("queued", tuple, {
+      since: Date.now(),
+      probe: false,
     });
+    let leaveLoading = (): void => {};
+    const wanted = () => {
+      leaveQueue();
+      const live = read.wanted();
+      if (live) {
+        leaveLoading = answerLedger.enter("loading", tuple, {
+          since: Date.now(),
+          probe: false,
+        });
+      }
+      return live;
+    };
+    const value = new Promise<FlightValue>((resolve, reject) => {
+      target.members.push({ ...read, wanted, ids, resolve, reject });
+    });
+    const leaveStages = () => {
+      leaveQueue();
+      leaveLoading();
+    };
+    // Observes only — the flight's caller handles the rejection.
+    void value.then(leaveStages, leaveStages);
     for (const id of ids) target.ids.add(id);
     if (joining) {
       const stats = pointBatchStatsOf(entry.key);
@@ -6476,6 +6538,43 @@ export function createResourceRuntime(
   // (`SocketSubRecord.shipped`). Called after each frame is delivered (or
   // queued in its backlog, in order). `pk` is the frame's params key when the
   // caller already has it (one broadcast, many sockets), else null.
+  // A request a tab named (`tabId` + `id`) was read: the answer trail's
+  // receipt. A frame naming neither cannot be asked about.
+  function noteReceived(tabId: unknown, id: unknown): void {
+    if (typeof tabId !== "string" || typeof id !== "number") return;
+    answerLedger.received(tabId, id, Date.now());
+  }
+
+  // An answer left for the request it names (the answer trail).
+  function noteAnswer(obj: ServerFrame): void {
+    const at = Date.now();
+    switch (obj.kind) {
+      case "up-to-date-batch":
+        if (obj.tabId === undefined) return;
+        for (const e of obj.entries) {
+          if (e.id !== undefined) {
+            answerLedger.answered(obj.tabId, e.id, "up-to-date", at);
+          }
+        }
+        return;
+      case "sub-ack":
+      case "up-to-date":
+      case "sub-error":
+        if (obj.tabId !== undefined && obj.id !== undefined) {
+          answerLedger.answered(obj.tabId, obj.id, obj.kind, at);
+        }
+        return;
+      // Not an answer to a request: a push, a ping.
+      case "update":
+      case "delta":
+      case "patch":
+      case "invalidate":
+      case "ack":
+      case "ping":
+        return;
+    }
+  }
+
   function noteSent(
     state: SocketState,
     obj: ServerFrame,
@@ -6484,6 +6583,7 @@ export function createResourceRuntime(
     to: ReadonlySet<string> | null,
   ): void {
     const position = state.framesSent++;
+    noteAnswer(obj);
     // An answer settles its asker's wait (`SocketSubRecord.awaiting`).
     if (obj.kind === "up-to-date-batch") {
       if (obj.tabId !== undefined) {
@@ -8705,6 +8805,7 @@ export function createResourceRuntime(
         case "sub": {
           const m = msg as ReceivedFrame<"sub">;
           m.params = canonicalFor(m.key, m.params);
+          noteReceived(m.tabId, m.id);
           void handleSub(state, m);
           return;
         }
@@ -8717,6 +8818,7 @@ export function createResourceRuntime(
             for (const e of m.entries) {
               if (e !== null && typeof e === "object") {
                 e.params = canonicalFor(e.key, e.params);
+                noteReceived(m.tabId, e.id);
               }
             }
           }
@@ -10366,6 +10468,7 @@ export function createResourceRuntime(
     noteClientBuild(build);
     if (!key) return httpError(404, { reason: "unknown-key" });
     if (key === "_debug") return handleResourcesDebug();
+    if (key === ANSWER_TRAIL_KEY) return handleAnswerTrail(req);
     const entry = registry.get(key);
     if (!entry) return httpError(404, refuseUnknownKey(key, build));
     // Everything past the registry lookup — the revalidate signature and its 304
@@ -10554,6 +10657,72 @@ export function createResourceRuntime(
     if (entry.externalSource) return "external";
     if (entry.routing) return "routed";
     return "unrouted";
+  }
+
+  // Where one subscription request stands (resource-protocol's answer
+  // trail): asked by a tab whose sub went unanswered, over this host's own
+  // HTTP read route — so the question queues where the sub did (this
+  // server's thread), and how late `at` is says how busy that thread is.
+  // `?tabId=&id=&key=&params=<json>`; a malformed question is a 400.
+  function handleAnswerTrail(req: Request): Response {
+    const q = new URL(req.url).searchParams;
+    const tabId = q.get("tabId");
+    const id = Number(q.get("id"));
+    const key = q.get("key");
+    let params: unknown;
+    try {
+      params = JSON.parse(q.get("params") ?? "null");
+    } catch (err) {
+      if (!(err instanceof SyntaxError)) throw err;
+      params = null;
+    }
+    if (
+      tabId === null ||
+      !Number.isSafeInteger(id) ||
+      key === null ||
+      typeof params !== "object" ||
+      params === null ||
+      Object.values(params).some((v) => typeof v !== "string")
+    ) {
+      return new Response("malformed answer-trail question", {
+        status: 400,
+        headers: { "cache-control": "no-store" },
+      });
+    }
+    // Canonical like the sub it names (a tab sends canonical params; the
+    // flight key is spelled from the canonical tuple).
+    const entry = registry.get(key);
+    const tupleParams = params as ResourceParams;
+    const tuple = flightKeyOf(
+      key,
+      paramsKey(
+        entry === undefined ? tupleParams : canonicalTuple(entry, tupleParams),
+      ),
+    );
+    const gate = readLoadGate.stats();
+    const queued = answerLedger.oldest("queued", tuple);
+    const loading = answerLedger.oldest("loading", tuple);
+    const trail: AnswerTrail = {
+      at: Date.now(),
+      request: answerLedger.request(tabId, id),
+      queued:
+        queued === null ? null : { since: queued.since, probe: queued.probe },
+      loading: loading === null ? null : { since: loading.since },
+      gate: {
+        active: gate.active,
+        queued: gate.queued,
+        max: gate.max,
+        holders: gate.holders
+          .slice(0, ANSWER_TRAIL_HOLDERS_MAX)
+          .map((h) => ({ label: h.label, heldMs: Math.round(h.heldMs) })),
+      },
+    };
+    return new Response(JSON.stringify(trail), {
+      headers: {
+        "content-type": "application/json",
+        "cache-control": "no-store",
+      },
+    });
   }
 
   function handleResourcesDebug(): Response {

@@ -68,6 +68,18 @@ latency into `server-notice` / `server-deliver` / `transport` / `client-apply`
 stands behind (catch-up replay, a forced resubscribe's answer) has none, so it
 yields no latency sample by construction.
 
+## The answer trail (`core/internal/answer-trail.ts`)
+
+`ANSWER_TRAIL_KEY` (`_answer`), `AnswerTrailQuery`, `AnswerTrail` and
+`parseAnswerTrail` (throws naming the field): where a server stands on one
+subscription request — `request` (`no-record` | `received` | `answered` with
+its frame), the tuple's oldest read `queued` for a read slot and `loading`,
+and the read gate (occupancy, the longest-held `ANSWER_TRAIL_HOLDERS_MAX`
+holders). Read over the host's own resource HTTP route, so every host
+answers it — the runtime keeps it (`resource-runtime`, *The answer trail*),
+live-state asks it when a sub goes unanswered. An HTTP body, not a frame:
+`PROTOCOL` does not move.
+
 ## Failure vocabulary (`core/internal/protocol.ts`)
 
 - `SubErrorReason` — `unknown-key` / `unauthorized` / `loader-failed` /
@@ -133,6 +145,11 @@ yields no latency sample by construction.
     - `framework/product-name.LEGACY_IDS`
     - `packages/string-hash.hash53`
   - Exports (types):
+    - `AnswerFrameKind`
+    - `AnswerTrail`
+    - `AnswerTrailHolder`
+    - `AnswerTrailQuery`
+    - `AnswerTrailRequest`
     - `ClientFrame`
     - `ContractVerdict`
     - `Derivation`
@@ -147,12 +164,15 @@ yields no latency sample by construction.
     - `SubErrorFrame`
     - `SubErrorReason`
   - Exports (values):
+    - `ANSWER_TRAIL_HOLDERS_MAX`
+    - `ANSWER_TRAIL_KEY`
     - `BUILD_GRAPH_HEADER`
     - `CENTRAL_RESOURCE_HTTP_ROUTE`
     - `contractVerdict`
     - `DERIVE_MAX_ID`
     - `DERIVE_MAX_SOURCES`
     - `DEV_BUILD`
+    - `parseAnswerTrail`
     - `parseResourceBytesHeaders`
     - `parseResourceHttpErrorBody`
     - `PROTOCOL`

@@ -700,7 +700,8 @@ All but the version are co-produced by the starter. A push drain mints
   back for the wait and takes it back ahead of every newcomer. The gate bounds
   reads that run; a slow read delays only the reads that wait on it. Needs the
   server's lease scope (installed by `runtime-profiler/server`); central and a browser host hold
-  the slot throughout. `runtime-read-admit-yield.test.ts`,
+  the slot throughout — a browser host's read waiting on a page input holds
+  one for as long as the page's own read takes (task-1794519674-76ssv4). `runtime-read-admit-yield.test.ts`,
   `scripts/read-admit-bench.ts`,
   `research/2026-11-03-framework-read-admission-waiters-yield.md`.
 - **A key's share.** No resource key holds more than `READ_KEY_SHARE` (3)
@@ -751,6 +752,21 @@ All but the version are co-produced by the starter. A push drain mints
   says who holds the slots; the profiler stamps them on a filed `wait
   read-admit` (runtime-profiler's `SlowWait.holders` → the slow-op sample) and
   the gates trace lane shows them.
+- **The answer trail — where one sub request stands** (`core/answer-ledger.ts`,
+  `GET <resource route>/_answer?tabId=&id=&key=&params=<json>`, resource-protocol's
+  `AnswerTrail`). The runtime itself records each request a tab names
+  (`tabId` + `id`) as it reads the frame, the answer frame that settles it
+  (`noteSent` → `noteAnswer`: `sub-ack` / `up-to-date` / `sub-error`, an
+  `up-to-date-batch` entry), and, per tuple, the reads waiting for a
+  read-admission slot (`admitRead`, a point batch's members) and the
+  whole-tuple loads running (`timedLoad`). The question answers with the
+  request's state, the tuple's oldest queued / loading read and the gate's
+  occupancy and holders — on every host, profiler or not: a browser host has
+  no runtime profile, so this is the only split of a wait it can give.
+  live-state asks it for the oldest sub of every unanswered-sub report. Wall
+  clock (the tab sets it against its own). Bounded: owed records 10 min,
+  answered ones 2 min after the answer, at most 20 000 of each.
+  `runtime-answer-trail.test.ts`.
 - **A watcher start is timed.** `onFirstSubscribe` (a `whileSubscribed`
   start), awaited before the first read, runs as its own `sub start:<key>`
   span (`startFirstSubscribe`). Pinned by `runtime-read-abandon.test.ts`.
@@ -943,8 +959,8 @@ Out of reach at this seam (DB-backed harness instead):
 ## Plugin reference
 
 - Core:
-  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `network/live/resource-protocol` ×16
+  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `network/live/resource-protocol` ×19
     - `packages/semaphore` ×2
     - `packages/string-hash` ×2
     - `packages/value-patch` ×2

@@ -34969,6 +34969,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Core.Root` → `ReconnectWatcher`
           - `Core.Root` → `WedgeWatchdog`
         - Uses:
+          - `network/live/live-state.describeUnansweredTrail`
           - `network/live/live-state.getNotificationsClient`
           - `network/live/live-state.liveStateSocketKind`
           - `network/live/live-state.UnansweredServer`
@@ -39924,12 +39925,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `TransportInfo`
               - `UnansweredServer`
               - `UnansweredSubReport`
+              - `UnansweredTrail`
               - `WindowParams`
               - `WindowResourceDescriptor`
               - `WindowSelector`
             - Exports (values):
               - `cachedQuery`
               - `combineResources`
+              - `describeUnansweredTrail`
               - `ensureNotificationsClient`
               - `foldResource`
               - `getNotificationsClient`
@@ -40295,6 +40298,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/product-name.LEGACY_IDS`
               - `packages/string-hash.hash53`
             - Exports (types):
+              - `AnswerFrameKind`
+              - `AnswerTrail`
+              - `AnswerTrailHolder`
+              - `AnswerTrailQuery`
+              - `AnswerTrailRequest`
               - `ClientFrame`
               - `ContractVerdict`
               - `Derivation`
@@ -40309,12 +40317,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SubErrorFrame`
               - `SubErrorReason`
             - Exports (values):
+              - `ANSWER_TRAIL_HOLDERS_MAX`
+              - `ANSWER_TRAIL_KEY`
               - `BUILD_GRAPH_HEADER`
               - `CENTRAL_RESOURCE_HTTP_ROUTE`
               - `contractVerdict`
               - `DERIVE_MAX_ID`
               - `DERIVE_MAX_SOURCES`
               - `DEV_BUILD`
+              - `parseAnswerTrail`
               - `parseResourceBytesHeaders`
               - `parseResourceHttpErrorBody`
               - `PROTOCOL`
@@ -40339,8 +40350,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/metrics`
         - **`resource-runtime`**
           - Core:
-            - Uses: 26 symbols — full list in [`plugins/network/plugins/live/plugins/resource-runtime/REFERENCE.md`](../plugins/network/plugins/live/plugins/resource-runtime/REFERENCE.md)
-              - `network/live/resource-protocol` ×16
+            - Uses: 29 symbols — full list in [`plugins/network/plugins/live/plugins/resource-runtime/REFERENCE.md`](../plugins/network/plugins/live/plugins/resource-runtime/REFERENCE.md)
+              - `network/live/resource-protocol` ×19
               - `packages/semaphore` ×2
               - `packages/string-hash` ×2
               - `packages/value-patch` ×2

@@ -22,6 +22,18 @@ export {
   CENTRAL_RESOURCE_HTTP_ROUTE,
   RESOURCE_HTTP_ROUTE,
 } from "./internal/http-route";
+export {
+  ANSWER_TRAIL_HOLDERS_MAX,
+  ANSWER_TRAIL_KEY,
+  parseAnswerTrail,
+} from "./internal/answer-trail";
+export type {
+  AnswerFrameKind,
+  AnswerTrail,
+  AnswerTrailHolder,
+  AnswerTrailQuery,
+  AnswerTrailRequest,
+} from "./internal/answer-trail";
 export { DERIVE_MAX_ID, DERIVE_MAX_SOURCES, PROTOCOL } from "./internal/frames";
 export type {
   ClientFrame,

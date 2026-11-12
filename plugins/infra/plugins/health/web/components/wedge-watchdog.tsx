@@ -5,6 +5,7 @@ import {
   type NetDiagEvent,
 } from "@plugins/primitives/plugins/networking/web";
 import {
+  describeUnansweredTrail,
   getNotificationsClient,
   liveStateSocketKind,
   unansweredSubReportSink,
@@ -263,7 +264,7 @@ export function WedgeWatchdog() {
       wedge(
         "unanswered-sub",
         `unanswered-sub:${r.server}:${r.oldestKey}`,
-        `${r.count} sub(s) unanswered on an open ${UNANSWERED_SERVER_LABEL[r.server]} socket, oldest ${r.oldestKey} ${r.oldestParams} for ${Math.round(r.oldestWaitMs / 1000)}s (${Math.round(visibleMs / 1000)}s visible; tabs on socket: ${r.attachedTabs ?? "?"}, connection ${r.connection ?? "-"})`,
+        `${r.count} sub(s) unanswered on an open ${UNANSWERED_SERVER_LABEL[r.server]} socket, oldest ${r.oldestKey} ${r.oldestParams} for ${Math.round(r.oldestWaitMs / 1000)}s (${Math.round(visibleMs / 1000)}s visible; tabs on socket: ${r.attachedTabs ?? "?"}, connection ${r.connection ?? "-"}). Where the server stands on it: ${describeUnansweredTrail(r.trail)}`,
       );
     });
 

@@ -20,7 +20,11 @@
  *   - an answer the version guard drops still counts as an answer;
  *   - another tab's answer for the same tuple does not answer this tab's sub;
  *   - a sub sent before the socket opens waits for the open's replay, which
- *     starts its clock — a socket that never opens is not this deadline's.
+ *     starts its clock — a socket that never opens is not this deadline's;
+ *   - the report carries where the server stands on the oldest sub (its
+ *     answer trail, asked over the same transport for that very request), or
+ *     the server's silence past `ANSWER_TRAIL_WAIT_MS`, or the question's
+ *     failure — never dropped for want of one.
  *
  * Conventions follow the sibling suites: `clientLog` mocked to a no-op, fake
  * timers per test, every client `destroy()`-ed in afterEach.
@@ -47,9 +51,31 @@ import {
   UNANSWERED_SUB_MS,
 } from "../notifications-client";
 import {
+  ANSWER_TRAIL_WAIT_MS,
+  describeUnansweredTrail,
   unansweredSubReportSink,
   type UnansweredSubReport,
 } from "../unanswered-sub-reporter";
+import type { AnswerTrail } from "@plugins/network/plugins/live/plugins/resource-protocol/core";
+
+/** A server's trail: read the sub, queued behind a page-input wait holding a slot. */
+function trailOf(at: number): AnswerTrail {
+  return {
+    at,
+    request: { kind: "received", at: at - 14_000 },
+    queued: { since: at - 13_000, probe: false },
+    loading: null,
+    gate: {
+      active: 6,
+      queued: 4,
+      max: 6,
+      holders: [{ label: "google-maps.browser-config", heldMs: 70_000 }],
+    },
+  };
+}
+
+/** How the fake server answers the trail question. */
+type TrailAnswer = "trail" | "never" | "not-found";
 
 const pushSchema = z.object({ status: z.string() });
 
@@ -74,11 +100,13 @@ function requestOf(
 describe("NotificationsClient — unanswered subs", () => {
   const clients: NotificationsClient[] = [];
   let reports: UnansweredSubReport[] = [];
+  let asked: string[] = [];
 
   async function setup(opts: {
     open: boolean;
     server?: "page" | "in-browser";
     telemetry?: boolean;
+    trail?: TrailAnswer;
   }): Promise<{
     hub: ReturnType<typeof createTransportHub>;
     client: NotificationsClient;
@@ -90,6 +118,19 @@ describe("NotificationsClient — unanswered subs", () => {
       tabId: "tab-a",
       server: opts.server,
       telemetry: opts.telemetry,
+      fetchImpl: (input) => {
+        asked.push(String(input));
+        switch (opts.trail ?? "trail") {
+          case "trail":
+            return Promise.resolve(
+              new Response(JSON.stringify(trailOf(Date.now()))),
+            );
+          case "never":
+            return new Promise<Response>(() => {});
+          case "not-found":
+            return Promise.resolve(new Response("nope", { status: 404 }));
+        }
+      },
     });
     clients.push(client);
     client.connect();
@@ -106,6 +147,7 @@ describe("NotificationsClient — unanswered subs", () => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0.5);
     reports = [];
+    asked = [];
     unansweredSubReportSink.register((r) => reports.push(r));
   });
 
@@ -135,6 +177,62 @@ describe("NotificationsClient — unanswered subs", () => {
 
     await vi.advanceTimersByTimeAsync(UNANSWERED_SUB_MS * 3);
     expect(reports).toHaveLength(1);
+  });
+
+  test("the report carries the server's answer trail for that very request", async () => {
+    const { client, socket } = await setup({ open: true });
+    client.observe("k", { a: "1" }, undefined, { schema: pushSchema });
+    await flush();
+    const { id } = requestOf(socket, "k", "tab-a");
+
+    await vi.advanceTimersByTimeAsync(UNANSWERED_SUB_MS);
+    expect(asked).toHaveLength(1);
+    const q = new URL(asked[0]!, "http://x").searchParams;
+    expect(new URL(asked[0]!, "http://x").pathname).toBe(
+      "/api/resources/_answer",
+    );
+    expect([q.get("tabId"), q.get("id"), q.get("key")]).toEqual([
+      "tab-a",
+      String(id),
+      "k",
+    ]);
+    expect(JSON.parse(q.get("params")!)).toEqual({ a: "1" });
+
+    const trail = reports[0]!.trail;
+    expect(trail.kind).toBe("trail");
+    const words = describeUnansweredTrail(trail);
+    expect(words).toContain("queued for a read slot 13.0s");
+    expect(words).toContain("read gate 6/6 held, 4 queued");
+    expect(words).toContain("google-maps.browser-config 70.0s");
+  });
+
+  test("a server silent on the trail question is reported as silent, after the bound", async () => {
+    const { client } = await setup({ open: true, trail: "never" });
+    client.observe("k", {}, undefined, { schema: pushSchema });
+    await flush();
+
+    await vi.advanceTimersByTimeAsync(UNANSWERED_SUB_MS);
+    expect(reports).toHaveLength(0);
+    await vi.advanceTimersByTimeAsync(ANSWER_TRAIL_WAIT_MS);
+    expect(reports).toEqual([
+      expect.objectContaining({
+        oldestKey: "k",
+        trail: { kind: "silent", waitedMs: ANSWER_TRAIL_WAIT_MS },
+      }),
+    ]);
+  });
+
+  test("a trail question the server refuses is reported as failed, named", async () => {
+    const { client } = await setup({ open: true, trail: "not-found" });
+    client.observe("k", {}, undefined, { schema: pushSchema });
+    await flush();
+
+    await vi.advanceTimersByTimeAsync(UNANSWERED_SUB_MS);
+    expect(reports).toEqual([
+      expect.objectContaining({
+        trail: { kind: "failed", message: "HTTP 404 nope" },
+      }),
+    ]);
   });
 
   test("a sub a server in this browser left unanswered is reported as that server's, not the page backend's", async () => {

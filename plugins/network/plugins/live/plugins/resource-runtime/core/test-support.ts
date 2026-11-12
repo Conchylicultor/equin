@@ -141,6 +141,8 @@ export interface Harness {
       version?: number;
       epoch?: string;
       tabId?: string;
+      /** The request id (the frame's `id`), echoed by its answer. */
+      id?: number;
       /** Ask for standalone `{ kind: "ack" }` frames on this tuple. */
       acks?: boolean;
       /** The client's build graph (the frame's `build`); absent = a pre-protocol bundle. */
@@ -255,6 +257,7 @@ export function createHarness(
         ws,
         JSON.stringify({
           op: "sub",
+          ...(o.id !== undefined ? { id: o.id } : {}),
           key,
           params,
           ...(o.etag !== undefined ? { etag: o.etag } : {}),

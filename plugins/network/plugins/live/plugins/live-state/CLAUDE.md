@@ -721,6 +721,14 @@ Details:
     localStorage.setItem("liveState.verboseTrace", "1");
     ```
 
+- **Unanswered subs carry the server's answer trail.** When a sub on an open
+  socket crosses `UNANSWERED_SUB_MS`, the client asks the server that left it
+  unanswered where it stands on the oldest one (resource-protocol's answer
+  trail, `GET …/_answer`, over the same transport — so a browser host answers
+  it from its worker) and reports only then, with the trail (`UnansweredTrail`:
+  `trail` | `silent` past `ANSWER_TRAIL_WAIT_MS` | `failed`) — traced as
+  `unanswered-trail …` either way. `describeUnansweredTrail` words it.
+  Pinned by `notifications-unanswered.test.ts`.
 - **Update latency sample** (`clientLatencySink`, signal `update`): one sample
   per applied pushed frame carrying `timing`
   (`{ changedAt, sentAt, deliverMs }`).
@@ -808,12 +816,14 @@ Details:
     - `TransportInfo`
     - `UnansweredServer`
     - `UnansweredSubReport`
+    - `UnansweredTrail`
     - `WindowParams`
     - `WindowResourceDescriptor`
     - `WindowSelector`
   - Exports (values):
     - `cachedQuery`
     - `combineResources`
+    - `describeUnansweredTrail`
     - `ensureNotificationsClient`
     - `foldResource`
     - `getNotificationsClient`
