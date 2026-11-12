@@ -5,8 +5,11 @@ import {
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import {
   cpuBudget,
+  FLEET_MEMORY_UNMEASURED_KIND,
+  fleetMemoryUnmeasuredMessage,
   HOST_POOLS,
-  laneCapacity,
+  type FleetAdmission,
+  type FleetMemoryUnmeasuredPayload,
   type Grant,
   type GrantHooks,
   type Lane,
@@ -14,7 +17,9 @@ import {
 } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { withForegroundPriority } from "@plugins/packages/plugins/spawn-priority/server";
 import { defineHostPool, type HostPool } from "./pool";
-import { readFleetWindow, type FleetWindowNow } from "./fleet-memory";
+import type { CapacityFeed } from "@plugins/packages/plugins/host-semaphore/server";
+import { fileReportFromProcess } from "@plugins/reports/plugins/outbox/plugins/file/core";
+import { claimUnmeasuredEpisode, fleetCapacity } from "./fleet-memory";
 
 // The laned host CPU pool + the grant that subdivides it. This is where the fleet
 // ceiling `B` — host cores vs. how many worker-sized resident sets fit under the
@@ -69,9 +74,11 @@ function spendOf(want: number | undefined, held: number): number {
 
 /**
  * Acquire a host CPU share for `lane` (up to `max` slots, and never beyond the
- * fleet's MEASURED memory window — `readFleetWindow`: what RAM is left beside
+ * fleet's MEASURED memory window — `fleetCapacity`: what RAM is left beside
  * the rest of the machine's actual use, less what the fleet already uses or
- * reserves, holders included), run `fn` with a grant
+ * reserves, holders included; FOLLOWED while the acquire waits, so a window
+ * that widens is taken at once; the two-slot floor, reported, while nothing
+ * measures the machine), run `fn` with a grant
  * over exactly the slots held, and release the share afterwards. `acquireShare`
  * guarantees `>= 1` slot, so a grant always has `units >= 1`: a 1-unit grant
  * merely serializes the holder's children — no starvation branch, no `min > 1`
@@ -113,27 +120,69 @@ export async function withHostGrant<T>(
   opts: { lane: Lane; priority: Priority; max: number; hooks?: GrantHooks },
   fn: (grant: Grant) => Promise<T>,
 ): Promise<T> {
-  const now = await readFleetWindow();
-  opts.hooks?.onAdmissionWindow?.(describeWindow(now));
-  return withPoolGrant(
-    cpuPool,
-    {
-      ...opts,
-      ...(now.kind === "measured"
-        ? { capacity: laneCapacity(now.window.slots, opts.lane) }
-        : {}),
-    },
-    fn,
-  );
+  // Filed at most once per acquire, at the first unmeasured state it acts on;
+  // awaited before the grant returns, so a process cannot exit with it still
+  // in flight. Its outcome is captured as a value the moment it settles (a
+  // rejection left pending until the `finally` would be an unhandled one), and
+  // a failure is thrown once the grant is done — unless the body threw, whose
+  // error is the one the caller needs.
+  let unmeasuredReport: Promise<{ failed: unknown } | null> | undefined;
+  const capacity = fleetCapacity(opts.lane, (admission) => {
+    opts.hooks?.onAdmissionWindow?.(describeAdmission(admission));
+    if (admission.kind === "unmeasured")
+      unmeasuredReport ??= reportUnmeasured(admission, opts.lane).then(
+        () => null,
+        (failed: unknown) => ({ failed }),
+      );
+  });
+  let result: T;
+  try {
+    result = await withPoolGrant(cpuPool, { ...opts, capacity }, fn);
+  } catch (err) {
+    await unmeasuredReport;
+    throw err;
+  }
+  const report = await unmeasuredReport;
+  if (report) throw report.failed;
+  return result;
+}
+
+// A cpu grant admitted with nothing measuring the machine. Main's sampler
+// stopped (or main is down): a broken assumption, so it is said on stderr and
+// filed as a report — once per episode host-wide, through the outbox, since
+// main may be the thing that is down — never left as a reason string only the
+// op log carries. A failing claim throws: the grant is not taken unreported.
+async function reportUnmeasured(
+  admission: Extract<FleetAdmission, { kind: "unmeasured" }>,
+  lane: Lane,
+): Promise<void> {
+  const data: FleetMemoryUnmeasuredPayload = {
+    cause: admission.cause,
+    ageMs: admission.ageMs,
+    slots: admission.slots,
+    lane,
+    pid: process.pid,
+    command: process.argv.slice(1).join(" ").slice(0, 300),
+  };
+  const message = fleetMemoryUnmeasuredMessage(data);
+  // Every acquire that acts on it says so; the first of the episode, host-wide,
+  // also files it.
+  console.error(`[host-admission] ${message}`);
+  if (!(await claimUnmeasuredEpisode(admission))) return;
+  await fileReportFromProcess({
+    kind: FLEET_MEMORY_UNMEASURED_KIND,
+    message,
+    data,
+  });
 }
 
 const gb = (bytes: number): string => `${(bytes / 1e9).toFixed(1)} GB`;
 
 // The window in words, for whoever waits on it.
-function describeWindow(now: FleetWindowNow): string {
-  if (now.kind === "unmeasured")
-    return `memory unmeasured (${now.reason}): admitting on the static ${cpuBudget().B}-slot ceiling`;
-  const { window, reading } = now;
+function describeAdmission(admission: FleetAdmission): string {
+  if (admission.kind === "unmeasured")
+    return fleetMemoryUnmeasuredMessage(admission);
+  const { window, reading } = admission;
   return (
     `memory window ${window.slots} of ${cpuBudget().B} slots: ` +
     `${gb(window.allowedBytes)} left for agent ops beside the rest of the machine ` +
@@ -156,8 +205,8 @@ export async function withPoolGrant<T>(
     priority: Priority;
     max: number;
     hooks?: GrantHooks;
-    /** The pool slots this acquire may count on (`AcquireHooks.capacity`). */
-    capacity?: number;
+    /** The pool slots this acquire may count on, followed while it waits (`AcquireHooks.capacity`). */
+    capacity?: CapacityFeed;
   },
   fn: (grant: Grant) => Promise<T>,
 ): Promise<T> {

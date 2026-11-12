@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-reports-fleet-memory-unmeasured",
+  "description": "The fleet-memory-unmeasured report kind: a cpu grant was admitted with no fresh fleet memory reading (main's owner sampler stopped, or main down), so admission fell to its two-slot floor. Filed by the acquiring process through the report outbox.",
+  "private": true,
+  "version": "0.0.1"
+}

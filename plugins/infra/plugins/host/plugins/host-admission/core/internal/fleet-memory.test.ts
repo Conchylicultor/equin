@@ -1,8 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { PER_UNIT_BYTES, type HostFacts } from "./budget";
 import {
+  fleetAdmission,
   fleetWindow,
+  FLEET_MEMORY_LEASE_MS,
   laneCapacity,
+  unmeasuredWindow,
   type FleetMemoryReading,
 } from "./fleet-memory";
 
@@ -83,5 +86,46 @@ describe("laneCapacity", () => {
     expect(laneCapacity(3, "background")).toBe(2);
     // One slot is shared, as on a one-slot host.
     expect(laneCapacity(1, "background")).toBe(1);
+  });
+});
+
+describe("fleetAdmission", () => {
+  test("a reading inside its lease is measured, and says when the lease ends", () => {
+    const a = fleetAdmission(reading({ sampledAt: 1_000 }), 31_000, BOX);
+    expect(a.kind).toBe("measured");
+    if (a.kind !== "measured") return;
+    expect(a.window.slots).toBe(9);
+    expect(a.expiresAtMs).toBe(1_000 + FLEET_MEMORY_LEASE_MS);
+  });
+
+  // Not the static ceiling: B alone is what let the host swap.
+  test("no reading, or one past its lease: the two-slot floor, not B", () => {
+    expect(fleetAdmission(null, 0, BOX)).toEqual({
+      kind: "unmeasured",
+      cause: "absent",
+      ageMs: null,
+      sampledAt: null,
+      slots: 2,
+    });
+    const stale = fleetAdmission(
+      reading({ sampledAt: 0 }),
+      FLEET_MEMORY_LEASE_MS + 1,
+      BOX,
+    );
+    expect(stale).toEqual({
+      kind: "unmeasured",
+      cause: "stale",
+      ageMs: FLEET_MEMORY_LEASE_MS + 1,
+      sampledAt: 0,
+      slots: 2,
+    });
+  });
+
+  test("the floor keeps one background slot and one reserved interactive slot", () => {
+    const w = unmeasuredWindow(BOX);
+    expect(laneCapacity(w, "background")).toBe(1);
+    expect(laneCapacity(w, "interactive")).toBe(2);
+    // A host whose whole fleet is one slot cannot split it.
+    expect(unmeasuredWindow({ cpus: 2, ramBytes: 8e9 })).toBe(1);
   });
 });

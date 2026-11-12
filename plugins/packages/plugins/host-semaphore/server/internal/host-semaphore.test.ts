@@ -4,7 +4,11 @@ import { dlopen } from "bun:ffi";
 import { closeSync, mkdirSync, openSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { defineDataDir, type DataDir } from "@plugins/infra/plugins/paths/core";
-import { createHostSemaphore, type HostShare } from "./host-semaphore";
+import {
+  createHostSemaphore,
+  type CapacityFeed,
+  type HostShare,
+} from "./host-semaphore";
 
 // Raw flock, the same way the module dials it — used by `isSlotHeld` below to probe
 // which specific slot file a share is holding (flock conflicts across fds even within
@@ -340,6 +344,35 @@ describe("acquireShare", () => {
   });
 });
 
+// A capacity the test moves by hand, with the follows it has open — the shape of
+// host-admission's fleet-memory feed, without the file.
+function movableCapacity(initial: number) {
+  let value = initial;
+  const followers = new Set<(c: number) => void>();
+  const feed: CapacityFeed = {
+    read: () => Promise.resolve(value),
+    follow: (onMove) => {
+      followers.add(onMove);
+      return Promise.resolve({
+        capacity: value,
+        stop: () => {
+          followers.delete(onMove);
+          return Promise.resolve();
+        },
+      });
+    },
+  };
+  return {
+    feed,
+    move(next: number): void {
+      value = next;
+      for (const f of followers) f(next);
+    },
+    following: (): number => followers.size,
+  };
+}
+const fixedCapacity = (n: number): CapacityFeed => movableCapacity(n).feed;
+
 // A per-acquire `capacity` narrows the usable slot set to its low indices,
 // without touching the pool's identity: the window a caller can shrink when the
 // pool's real capacity moves (host-admission's measured memory window).
@@ -350,11 +383,17 @@ describe("capacity", () => {
     const sem = createHostSemaphore({ slots, size: 6, backgroundLimit: 4 });
 
     // Interactive with capacity 3 sweeps slot-2 first (high-first WITHIN the window).
-    const i1 = await sem.acquireShare(1, { lane: "interactive", capacity: 3 });
+    const i1 = await sem.acquireShare(1, {
+      lane: "interactive",
+      capacity: fixedCapacity(3),
+    });
     expect(isSlotHeld(slotsDir, 2)).toBe(true);
     expect(isSlotHeld(slotsDir, 5)).toBe(false);
     // Background with capacity 2 asks for 4 and gets the two low slots only.
-    const b = await sem.acquireShare(4, { lane: "background", capacity: 2 });
+    const b = await sem.acquireShare(4, {
+      lane: "background",
+      capacity: fixedCapacity(2),
+    });
     expect(b.slots).toBe(2);
     expect(isSlotHeld(slotsDir, 0)).toBe(true);
     expect(isSlotHeld(slotsDir, 1)).toBe(true);
@@ -368,7 +407,7 @@ describe("capacity", () => {
     // The window [0, 3) is full: a capacity-3 acquire waits although slot-3..4 are free.
     let resolved = false;
     const blocked = sem
-      .acquireShare(1, { lane: "interactive", capacity: 3 })
+      .acquireShare(1, { lane: "interactive", capacity: fixedCapacity(3) })
       .then((s) => {
         resolved = true;
         return s;
@@ -385,12 +424,112 @@ describe("capacity", () => {
 
   test("a capacity that is not a positive integer throws", async () => {
     const sem = createHostSemaphore({ slots: uniqueSlots("cap-bad"), size: 2 });
-    expect(sem.acquireShare(1, { capacity: 0 })).rejects.toThrow(
+    expect(sem.acquireShare(1, { capacity: fixedCapacity(0) })).rejects.toThrow(
       /capacity must be a positive integer/,
     );
-    expect(sem.acquireShare(1, { capacity: 1.5 })).rejects.toThrow(
-      /capacity must be a positive integer/,
-    );
+    expect(
+      sem.acquireShare(1, { capacity: fixedCapacity(1.5) }),
+    ).rejects.toThrow(/capacity must be a positive integer/);
+  });
+
+  // The 2026-11-12 defect: a waiter that queued while the window was 1 waited
+  // for slot-0's holder although the window had since widened onto free slots.
+  test("a waiter takes a slot the moment its window widens onto one, without a release", async () => {
+    const slots = uniqueSlots("cap-widen");
+    const slotsDir = slots.path;
+    const sem = createHostSemaphore({ slots, size: 4 });
+    const cap = movableCapacity(1);
+
+    const holder = await sem.acquireShare(1, { capacity: cap.feed });
+    expect(isSlotHeld(slotsDir, 0)).toBe(true);
+    let resolved = false;
+    const waiter = sem.acquireShare(2, { capacity: cap.feed }).then((s) => {
+      resolved = true;
+      return s;
+    });
+    await sleep(150);
+    expect(resolved).toBe(false);
+    expect(cap.following()).toBe(1);
+
+    cap.move(3);
+    const share = await waiter;
+    // Fanned out again over [0, 3) and topped up from it: slot-1 and slot-2.
+    expect(share.slots).toBe(2);
+    expect(isSlotHeld(slotsDir, 1)).toBe(true);
+    expect(isSlotHeld(slotsDir, 2)).toBe(true);
+    expect(isSlotHeld(slotsDir, 3)).toBe(false);
+    // The follow ends with the wait.
+    expect(cap.following()).toBe(0);
+    await Promise.all([share.release(), holder.release()]);
+  });
+
+  test("a head that re-fans out on a widening keeps its place: the next waiter still waits behind it", async () => {
+    const slots = uniqueSlots("cap-fifo");
+    const sem = createHostSemaphore({ slots, size: 4 });
+    const cap = movableCapacity(1);
+
+    const holder = await sem.acquireShare(1, { capacity: cap.feed });
+    const order: string[] = [];
+    const first = sem.acquireShare(1, { capacity: cap.feed }).then((s) => {
+      order.push("first");
+      return s;
+    });
+    await sleep(150); // `first` is the head, fanned out over slot-0
+    const second = sem.acquireShare(1, { capacity: cap.feed }).then((s) => {
+      order.push("second");
+      return s;
+    });
+    await sleep(150);
+
+    // Room for exactly one more: the head takes it, the second keeps waiting.
+    cap.move(2);
+    const a = await first;
+    await sleep(150);
+    expect(order).toEqual(["first"]);
+
+    await holder.release();
+    const b = await second;
+    expect(order).toEqual(["first", "second"]);
+    await Promise.all([a.release(), b.release()]);
+  });
+
+  test("a move that leaves the waiter's window as it was changes nothing", async () => {
+    const slots = uniqueSlots("cap-same");
+    // Background is confined to 2 slots whatever the capacity above 2.
+    const sem = createHostSemaphore({ slots, size: 4, backgroundLimit: 2 });
+    const cap = movableCapacity(3);
+    const held = await sem.acquireShare(2, { capacity: cap.feed });
+    expect(held.slots).toBe(2);
+    let resolved = false;
+    const waiter = sem.acquireShare(1, { capacity: cap.feed }).then((s) => {
+      resolved = true;
+      return s;
+    });
+    await sleep(150);
+    cap.move(4);
+    await sleep(150);
+    expect(resolved).toBe(false);
+    await held.release();
+    await (await waiter).release();
+  });
+
+  test("a cancelled waiter stops following its capacity", async () => {
+    const slots = uniqueSlots("cap-abort");
+    const sem = createHostSemaphore({ slots, size: 2 });
+    const cap = movableCapacity(1);
+    const holder = await sem.acquireShare(1, { capacity: cap.feed });
+    const ac = new AbortController();
+    const waiter = sem.acquireShare(1, {
+      capacity: cap.feed,
+      signal: ac.signal,
+    });
+    await sleep(150);
+    expect(cap.following()).toBe(1);
+    ac.abort(new Error("gave up"));
+    expect(waiter).rejects.toThrow("gave up");
+    await sleep(50);
+    expect(cap.following()).toBe(0);
+    await holder.release();
   });
 });
 

@@ -104,26 +104,47 @@ window  = clamp(heldUnits + floor((allowed − charged) / PER_UNIT_BYTES), 1, B)
   the moment it is taken (a just-started build has not grown); once the ops'
   measured footprint is larger — a 1-slot build whose `build` + `check` +
   worker measure 6.5 GB — that is what the fleet is charged.
-- `withHostGrant` reads the reading (`readFleetWindow`) and passes
-  `capacity = laneCapacity(window, lane)` to the acquire
-  (`AcquireHooks.capacity`, `packages/host-semaphore`): the acquire only touches
-  the low `capacity` slots. Interactive gets the whole window, background its
-  `laneSplit` share — the same reserved-floor split `cpuBudget` makes of `B`.
+- `withHostGrant` hands the acquire a **capacity feed** (`fleetCapacity`):
+  `laneCapacity(window, lane)` (`AcquireHooks.capacity`,
+  `packages/host-semaphore`), so the acquire only touches the low `capacity`
+  slots. Interactive gets the whole window, background its `laneSplit` share —
+  the same reserved-floor split `cpuBudget` makes of `B`.
+- **A waiter follows the window.** It is a feed, not a number read once: a
+  waiting acquire keeps one non-persistent `fs.watch` on the reading's
+  directory (the reading is renamed into place) and one timer for the
+  reading's lease end, and the line's head fans out again over the new window
+  whenever it moves — keeping its ticket, so it stays first in its line. Before
+  this, a waiter queued while Chrome held 38 GB stayed fanned out over slot-0
+  after the window widened, and waited out a 30–40 min build for a slot it no
+  longer needed. A broken watch or an unreadable reading fails the wait, loudly.
 - The window never drops below 1, so one op always runs and the line moves.
-- Its words go to `GrantHooks.onAdmissionWindow`: the op log records them as the
-  host-grant wait's reason, and a direct op prints them when it queues.
+- Its words go to `GrantHooks.onAdmissionWindow` (at the start, then on every
+  move): the op log records them as the host-grant wait's reason, and a direct
+  op prints them when it queues.
+- **Unmeasured → the floor, reported.** No reading, or none within
+  `FLEET_MEMORY_LEASE_MS` (120 s: main's sampler stopped, main down or
+  restarting for longer than that), admits on `unmeasuredWindow` = `min(B, 2)`:
+  one background slot and one reserved interactive slot, so agents run one op
+  at a time while a human-blocked op (main's own recovery build) never queues
+  behind them. Not `B`: the static ceiling alone is the model that let the
+  host swap. Not the last reading: minutes-old is not a measurement. Each
+  acquire that acts on it says so on stderr, and the first of each episode
+  host-wide (the reading it outlived, claimed by an exclusive-create marker
+  beside the reading) files a `fleet-memory-unmeasured` report through the
+  report outbox (main may be the thing that is down; its drain records it when
+  it is back) — one report per outage, never one per op, which would fill the
+  outbox's cap and crowd out every other report — the kind's
+  data in `core/internal/unmeasured-report.ts`, registered by
+  [`reports/fleet-memory-unmeasured`](../../../../../reports/plugins/fleet-memory-unmeasured). A stopped sampler is a broken
+  assumption to fix, not a mode.
 
 Limits, stated rather than hidden:
 
 - **Lag.** Readings are 30 s apart. Ops admitted inside one window reserve their
   slots at once, but their holders' growth is seen at the next reading.
 - **A shrink drains, it does not evict.** Holders above a shrunken window keep
-  their slots until they release; no acquire takes a slot at index ≥ capacity.
-- **A grow wakes on the next release.** A waiter fanned out over a small window
-  does not re-sweep when the window widens; it re-reads the window on its next
-  acquire.
-- **Unmeasured → static.** No reading within `FLEET_MEMORY_LEASE_MS` (120 s:
-  main restarting or down) admits on `B` alone, and says so in the window text.
+  their slots until they release; no acquire takes a slot at index ≥ capacity
+  (bar one granted in the instant the shrink lands).
 - **Footprints count compressed pages.** The sum can exceed RAM while the
   compressor holds it; admission treats that demand as real — compressor thrash
   is what froze the host before.
@@ -385,7 +406,6 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
     - `packages/host-semaphore.HostShare`
     - `packages/spawn-priority.withForegroundPriority`
   - Exports (types):
-    - `FleetWindowNow`
     - `ForegroundSlot`
     - `HostPool`
     - `HostPoolSpec`
@@ -402,7 +422,6 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
     - `inheritedGrant`
     - `publishFleetMemory`
     - `pushPool`
-    - `readFleetWindow`
     - `repoPushLock`
     - `withE2eGrant`
     - `withHostGrant`
@@ -422,14 +441,18 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
     - `infra/jobs/supervised-job`
     - `infra/safe-fetch/browser-fetch`
     - `infra/worktree`
+    - `reports/fleet-memory-unmeasured`
 - Exemptions:
   - Exempts itself from:
     - `host-pools-declared` — `server` (sanctioned)
     - `boundaries/no-platform-api` — `core/internal/budget.ts`, `server/internal/pool.ts`, `server/internal/fleet-memory.ts` (debt)
+    - `watcher-safety/no-raw-fs-watch` — `server/internal/fleet-memory.ts` (sanctioned)
 - Core:
   - Exports (types):
     - `CpuBudget`
+    - `FleetAdmission`
     - `FleetMemoryReading`
+    - `FleetMemoryUnmeasuredPayload`
     - `FleetWindow`
     - `Grant`
     - `GrantHooks`
@@ -438,10 +461,17 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
     - `HostPoolId`
     - `Lane`
     - `Priority`
+    - `UnmeasuredCause`
   - Exports (values):
+    - `admissionSlots`
     - `cpuBudget`
     - `FLEET_MEMORY_LEASE_MS`
+    - `FLEET_MEMORY_UNMEASURED_KIND`
+    - `fleetAdmission`
     - `FleetMemoryReadingSchema`
+    - `fleetMemoryUnmeasuredFingerprint`
+    - `fleetMemoryUnmeasuredMessage`
+    - `FleetMemoryUnmeasuredPayloadSchema`
     - `fleetWindow`
     - `HOST_POOLS`
     - `hostCpuCeiling`
@@ -450,5 +480,6 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
     - `laneCapacity`
     - `PER_UNIT_BYTES`
     - `rawFleetCeiling`
+    - `unmeasuredWindow`
 
 <!-- AUTOGENERATED:END -->

@@ -16,8 +16,7 @@ export {
   inheritedGrant,
 } from "./internal/grant";
 export { pushPool, repoPushLock } from "./internal/push";
-export { publishFleetMemory, readFleetWindow } from "./internal/fleet-memory";
-export type { FleetWindowNow } from "./internal/fleet-memory";
+export { publishFleetMemory } from "./internal/fleet-memory";
 export type { RepoPushLock } from "./internal/push";
 // The pure `Grant` TYPE lives in `../core` (both runtimes share it); consumers
 // import it from there. Only the runtime impl (`withHostGrant`/`inheritedGrant`)

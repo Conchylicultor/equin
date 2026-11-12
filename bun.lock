@@ -6838,6 +6838,10 @@
       "name": "@equin/plugin-reports-engine",
       "version": "0.0.1",
     },
+    "plugins/reports/plugins/fleet-memory-unmeasured": {
+      "name": "@equin/plugin-reports-fleet-memory-unmeasured",
+      "version": "0.0.1",
+    },
     "plugins/reports/plugins/host-check": {
       "name": "@equin/plugin-reports-host-check",
       "version": "0.0.1",
@@ -10959,6 +10963,8 @@
     "@equin/plugin-reports-endpoint-errors": ["@equin/plugin-reports-endpoint-errors@workspace:plugins/reports/plugins/endpoint-errors"],
 
     "@equin/plugin-reports-engine": ["@equin/plugin-reports-engine@workspace:plugins/reports/plugins/engine"],
+
+    "@equin/plugin-reports-fleet-memory-unmeasured": ["@equin/plugin-reports-fleet-memory-unmeasured@workspace:plugins/reports/plugins/fleet-memory-unmeasured"],
 
     "@equin/plugin-reports-host-check": ["@equin/plugin-reports-host-check@workspace:plugins/reports/plugins/host-check"],
 

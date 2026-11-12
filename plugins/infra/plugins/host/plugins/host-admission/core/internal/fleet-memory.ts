@@ -107,3 +107,86 @@ export function fleetWindow(
 export function laneCapacity(slots: number, lane: Lane): number {
   return lane === "interactive" ? slots : laneSplit(slots).backgroundLimit;
 }
+
+/**
+ * The window admission acts on when nothing measures the machine: no reading,
+ * or none inside its lease (main's sampler stopped, main down). Two slots — the
+ * smallest window `laneSplit` cuts into one background slot and one reserved
+ * interactive slot — so the agent fleet runs one op at a time while a human-
+ * blocked op (main's own recovery build) is never queued behind it.
+ *
+ * Not the static ceiling `B`: `B` alone is the model that let the host swap
+ * (2026-11-12, ~30 GB of ops admitted onto a host already out of memory). Not
+ * the last reading's window either: a picture of the machine minutes old is
+ * not a measurement. Unmeasured, admission can only prove what it can afford
+ * on a host it cannot see, which is the floor — and it says so loudly
+ * (host-admission's `fleet-memory-unmeasured` report), since a sampler that
+ * stopped is a broken assumption, not a mode.
+ */
+export function unmeasuredWindow(host: HostFacts = thisHost()): number {
+  return Math.min(cpuBudget(host).B, 2);
+}
+
+/** Why there is no measurement to admit by. */
+export type UnmeasuredCause = "absent" | "stale";
+
+/** What admission acts on at one instant: a measured window, or the floor. */
+export type FleetAdmission =
+  | {
+      kind: "measured";
+      window: FleetWindow;
+      reading: FleetMemoryReading;
+      /** When this reading's lease ends and admission turns `unmeasured`. */
+      expiresAtMs: number;
+    }
+  | {
+      kind: "unmeasured";
+      cause: UnmeasuredCause;
+      /** How old the last reading is (`stale`), or null (`absent`). */
+      ageMs: number | null;
+      /**
+       * The last reading's own `sampledAt` (`stale`), or null (`absent`): the
+       * episode's identity — every acquire of one outage sees the same one.
+       */
+      sampledAt: number | null;
+      /** The window admitted on meanwhile: `unmeasuredWindow`. */
+      slots: number;
+    };
+
+/** Admission at `nowMs` given the latest reading (`null`: none was ever written). */
+export function fleetAdmission(
+  reading: FleetMemoryReading | null,
+  nowMs: number,
+  host: HostFacts = thisHost(),
+): FleetAdmission {
+  if (reading === null)
+    return {
+      kind: "unmeasured",
+      cause: "absent",
+      ageMs: null,
+      sampledAt: null,
+      slots: unmeasuredWindow(host),
+    };
+  const ageMs = nowMs - reading.sampledAt;
+  if (ageMs > FLEET_MEMORY_LEASE_MS)
+    return {
+      kind: "unmeasured",
+      cause: "stale",
+      ageMs,
+      sampledAt: reading.sampledAt,
+      slots: unmeasuredWindow(host),
+    };
+  return {
+    kind: "measured",
+    window: fleetWindow(reading, host),
+    reading,
+    expiresAtMs: reading.sampledAt + FLEET_MEMORY_LEASE_MS,
+  };
+}
+
+/** The slots an admission state allows, before the lane split. */
+export function admissionSlots(admission: FleetAdmission): number {
+  return admission.kind === "measured"
+    ? admission.window.slots
+    : admission.slots;
+}

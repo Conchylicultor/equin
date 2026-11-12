@@ -3,6 +3,8 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 export { createHostSemaphore } from "./internal/host-semaphore";
 export type {
   AcquireHooks,
+  CapacityFeed,
+  CapacityFollow,
   HostSemaphore,
   HostShare,
   Priority,

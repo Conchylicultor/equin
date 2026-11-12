@@ -328,6 +328,8 @@ export.
     - `packages/flock.waitForFlock`
   - Exports (types):
     - `AcquireHooks`
+    - `CapacityFeed`
+    - `CapacityFollow`
     - `HostSemaphore`
     - `HostShare`
     - `Priority`

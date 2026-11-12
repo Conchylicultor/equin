@@ -151,6 +151,52 @@ export type Lane = "interactive" | "background";
  */
 export type Priority = "normal" | "low";
 
+// The reason a head's fan-out is ended when its window moves — never thrown out
+// of an acquire: the head catches it and fans out again over the new window.
+class CapacityMoved extends Error {
+  constructor() {
+    super(
+      "the acquire's capacity moved: fanning out again over the new window",
+    );
+  }
+}
+
+/**
+ * A pool capacity that moves while acquires wait on it (`AcquireHooks.capacity`).
+ * Push-based: the feed says when it moved; nothing here polls it.
+ */
+export interface CapacityFeed {
+  /** The capacity now — what a fast-path sweep is bounded by. */
+  read(): Promise<number>;
+  /**
+   * Follow the capacity for the length of one wait: `onMove(capacity)` runs on
+   * every change of it until `stop()`. The follow is armed BEFORE the value it
+   * returns is read, so no move falls between the two. `onMove` must not throw
+   * (it runs inside the feed's own change signal); a bad value is the acquire's
+   * to reject, when it next uses it.
+   *
+   * `onFail(err)`: the follow broke (its change signal was lost, a read of the
+   * capacity failed) and will say nothing more. The wait then FAILS with `err`
+   * — a waiter left in a window nothing updates is the defect this exists for,
+   * so it is never absorbed.
+   */
+  follow(
+    onMove: (capacity: number) => void,
+    onFail: (err: unknown) => void,
+  ): Promise<CapacityFollow>;
+}
+
+/** One open follow of a {@link CapacityFeed}. */
+export interface CapacityFollow {
+  /**
+   * The capacity now, as of the follow's latest delivery — read once the
+   * follow is open, so nothing that moved while it was opening is lost.
+   */
+  readonly capacity: number;
+  /** Stop following. Awaited before the acquire returns or throws. */
+  stop(): Promise<void>;
+}
+
 /**
  * Per-acquire options: the reserved-floor `lane`, an optional `signal`, plus two
  * observability hooks. The hooks are optional and neither gates behavior; they let
@@ -175,17 +221,28 @@ export interface AcquireHooks {
    * over and tops up from the LOW `capacity` indices only (default: every slot).
    * Within that window the lanes keep their meaning: `background` is confined to
    * `slot-0 … slot-(min(backgroundLimit, capacity)-1)`, `interactive` sweeps
-   * `slot-(capacity-1) … slot-0`, high first. A positive integer, else it
-   * throws; above the live size it clamps (the live slot set is the ceiling).
+   * `slot-(capacity-1) … slot-0`, high first. Each value must be a positive
+   * integer, else the acquire throws; above the live size it clamps (the live
+   * slot set is the ceiling).
    *
    * It exists for a pool whose real capacity moves while its slot set cannot (the
-   * set names flock files every process shares): the caller decides, at each
-   * acquire, how much of the set is usable now. Because the window is the low
-   * indices, a shrink takes effect for new acquires at once and for holders
-   * above the new window as they release — no acquire ever takes a slot at an
-   * index `≥ capacity`. It gates which slots, like `lane`; it is not a hook.
+   * set names flock files every process shares): the caller says how much of the
+   * set is usable, and keeps saying it for as long as the acquire waits. It is a
+   * {@link CapacityFeed}, never a number, because a number read when the acquire
+   * started is exactly what went stale: a waiter that queued while the window was
+   * 1 stayed fanned out over slot-0 after the window widened to 6, waiting out a
+   * 30–40 min build for a slot it no longer needed (2026-11-12). The waiter
+   * follows the feed from the moment it queues, and the line's head re-fans out
+   * over the new window whenever it moves, KEEPING its ticket — so a widening is
+   * taken at once and costs no one their place in the line.
+   *
+   * Because the window is the low indices, a shrink takes effect for new
+   * acquires and for the head at once, and for holders above the new window as
+   * they release — no acquire takes a slot at an index `≥ capacity` (bar one
+   * granted in the same instant the shrink lands). It gates which slots, like
+   * `lane`; it is not a hook.
    */
-  capacity?: number;
+  capacity?: CapacityFeed;
   /**
    * Ambient cancellation for this acquire. Optional everywhere: omitting it is
    * exactly today's behavior, so nothing that does not pass one changes.
@@ -864,6 +921,19 @@ export function createHostSemaphore(opts: {
   const lineFor = (lane: Lane, priority: Priority): TicketLine =>
     createTicketLine(slots.file(`line-${lane}-${priority}`));
 
+  // A capacity value, checked: a positive integer, or every slot (no feed).
+  const checkCapacity = (capacity: number): number => {
+    if (
+      capacity !== Number.POSITIVE_INFINITY &&
+      (!Number.isInteger(capacity) || capacity < 1)
+    ) {
+      throw new Error(
+        `acquireShare: capacity must be a positive integer, got ${capacity}`,
+      );
+    }
+    return capacity;
+  };
+
   // The slow path: wait in the class line, then — at its head — take slots the
   // way the head always has: re-sweep, else fan out over the lane window for the
   // first freed slot. The line is left BEFORE sweeping for extras, so the next
@@ -871,9 +941,17 @@ export function createHostSemaphore(opts: {
   // acquire holds the demand lock shared across the whole wait, so `low`
   // acquires yield to it; a `low` acquire keeps its ticket across every yield,
   // so yielding never costs it its place among `low` acquires.
+  //
+  // A moving `capacity` is FOLLOWED for the whole wait (`AcquireHooks.capacity`):
+  // the window is re-derived from its latest value at every pass, and a move that
+  // changes the lane's window while the head is fanned out kills that fan-out and
+  // fans out again over the new window — the ticket is kept, so the head stays
+  // the head. A waiter behind it needs nothing: it reads the latest value when
+  // its turn comes.
   async function waitInLine(
-    effectiveMax: number,
-    order: number[],
+    max: number,
+    lane: Lane,
+    capacity: CapacityFeed | undefined,
     line: TicketLine,
     priority: Priority,
     signal: AbortSignal | undefined,
@@ -883,19 +961,63 @@ export function createHostSemaphore(opts: {
     waiting++;
     let ticket: Ticket | undefined;
     let releaseDemand: (() => Promise<void>) | undefined;
+    let follow: CapacityFollow | undefined;
+    // The latest capacity the feed said, and the fan-out in flight (the window
+    // width it fans out over, and how to end it) — what a move compares against.
+    let current = Number.POSITIVE_INFINITY;
+    let fanning: { width: number; moved: AbortController } | undefined;
+    const windowWidth = (c: number): number => laneOrder(lane, c).length;
+    // The caller's signal, plus the follow breaking: every wait below ends on
+    // either, and the acquire then throws its reason.
+    const broken = new AbortController();
+    const waitSignal = signal
+      ? AbortSignal.any([signal, broken.signal])
+      : broken.signal;
     try {
+      if (capacity) {
+        follow = await capacity.follow(
+          (next) => {
+            current = next;
+            if (fanning && windowWidth(next) !== fanning.width)
+              fanning.moved.abort(new CapacityMoved());
+          },
+          (err) => broken.abort(err),
+        );
+        current = follow.capacity;
+      }
       // A `normal` waiter announces itself before queueing, so every `low`
       // acquire from here on yields to it.
-      if (priority === "normal") releaseDemand = await holdDemand(signal);
-      ticket = await line.join({ signal });
+      if (priority === "normal") releaseDemand = await holdDemand(waitSignal);
+      ticket = await line.join({ signal: waitSignal });
       for (;;) {
         if (priority === "low" && (await demandPresent()))
-          await awaitNoDemand(signal);
-        const fds = await sweepKeep(effectiveMax, order);
-        const taken: Taken =
-          fds.length > 0
-            ? { fds, winner: undefined }
-            : { fds: [], winner: await fanOut(order, signal) };
+          await awaitNoDemand(waitSignal);
+        const order = laneOrder(lane, checkCapacity(current));
+        const fds = await sweepKeep(Math.min(max, order.length), order);
+        let winner: HeldFlock | undefined;
+        if (fds.length === 0) {
+          const moved = new AbortController();
+          fanning = { width: order.length, moved };
+          try {
+            // The capacity moved while this pass swept: start over on it.
+            if (windowWidth(current) !== order.length) continue;
+            winner = await fanOut(
+              order,
+              AbortSignal.any([waitSignal, moved.signal]),
+            );
+          } catch (err) {
+            // Our own "the window moved" abort, not the caller's: fan out
+            // again over the new window, still at the head of the line.
+            if (moved.signal.aborted && !waitSignal.aborted) continue;
+            // The caller's abort (or the follow breaking) wins over a move
+            // that raced it: throw ITS reason, never `CapacityMoved`.
+            if (waitSignal.aborted) throw waitSignal.reason;
+            throw err;
+          } finally {
+            fanning = undefined;
+          }
+        }
+        const taken: Taken = { fds, winner };
         // From here we HOLD slots, and every step below awaits: one that throws
         // (a failed open) must hand them back, never strand them in a share
         // nobody will release.
@@ -907,8 +1029,12 @@ export function createHostSemaphore(opts: {
           yielded = priority === "low" && (await demandPresent());
           if (!yielded) {
             await ticket.leave();
-            if (taken.winner)
-              taken.fds = await sweepKeep(effectiveMax - 1, order);
+            if (taken.winner) {
+              // Extras from the window as it stands now, not as it stood
+              // when the fan-out began.
+              const now = laneOrder(lane, checkCapacity(current));
+              taken.fds = await sweepKeep(Math.min(max, now.length) - 1, now);
+            }
           }
         } catch (err) {
           await releaseTaken(taken);
@@ -916,7 +1042,7 @@ export function createHostSemaphore(opts: {
         }
         if (!yielded) return taken;
         await releaseTaken(taken);
-        signal?.throwIfAborted();
+        waitSignal.throwIfAborted();
       }
     } finally {
       // Decremented FIRST, synchronously: a throwing release below must never
@@ -927,9 +1053,13 @@ export function createHostSemaphore(opts: {
         // (A failed unlink still closes the ticket's lock: see `leave`.)
         await ticket?.leave();
       } finally {
-        // No longer waiting: stop holding `low` acquires back — even when the
-        // leave above threw.
-        if (releaseDemand) await releaseDemand();
+        try {
+          // No longer waiting: stop holding `low` acquires back — even when the
+          // leave above threw.
+          if (releaseDemand) await releaseDemand();
+        } finally {
+          await follow?.stop();
+        }
       }
     }
   }
@@ -941,15 +1071,6 @@ export function createHostSemaphore(opts: {
     if (!Number.isInteger(max) || max < 1) {
       throw new Error(
         `acquireShare: max must be a positive integer, got ${max}`,
-      );
-    }
-    const capacity = hooks?.capacity ?? Number.POSITIVE_INFINITY;
-    if (
-      hooks?.capacity !== undefined &&
-      (!Number.isInteger(capacity) || capacity < 1)
-    ) {
-      throw new Error(
-        `acquireShare: capacity must be a positive integer, got ${hooks.capacity}`,
       );
     }
     const signal = hooks?.signal;
@@ -971,7 +1092,13 @@ export function createHostSemaphore(opts: {
     // AFTER the reconcile, never before: it is what settles which slot set this
     // acquire is entitled to sweep, so a window derived ahead of it could aim at the
     // wrong indices for the whole call.
-    const order = laneOrder(lane, capacity);
+    // The fast path's window: the capacity now. A wait follows it (`waitInLine`).
+    const order = laneOrder(
+      lane,
+      hooks?.capacity
+        ? checkCapacity(await hooks.capacity.read())
+        : Number.POSITIVE_INFINITY,
+    );
     // Asking for more slots than the lane's window holds can't beat its ceiling —
     // clamp to the window size (`backgroundLimit` for background, `size` for
     // interactive, each narrowed by `capacity`) so the fast-path sweep and the extras re-sweep agree on the bound.
@@ -1018,8 +1145,9 @@ export function createHostSemaphore(opts: {
       }
     }
     taken ??= await waitInLine(
-      effectiveMax,
-      order,
+      max,
+      lane,
+      hooks?.capacity,
       line,
       priority,
       signal,

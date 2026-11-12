@@ -210,8 +210,8 @@ before it) beside the total, worded by `formatReportActivity`
     - `versionSkewCode`
     - `versionSkewExplains`
 - Cross-plugin:
-  - Imported by: 83 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `reports` ×32
+  - Imported by: 84 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `reports` ×33
     - `debug` ×20
     - `conversations` ×7
     - `database` ×4
@@ -239,6 +239,7 @@ before it) beside the total, worded by `formatReportActivity`
   - **`crash`** — Crash report kind: browser crash collector and the Debug → Reports summary view. Crash report kind: validates crash payloads, fingerprints by error + stack, and renders per-crash tasks.
   - **`endpoint-errors`** — Files crash tasks for bug-shaped handled endpoint errors (validation 400s and 5xx).
   - **`engine`** [exempt] — Records server/frontend crashes as deduped reports (recordReport: per-fingerprint velocity, per-kind fan-out ceiling, duress shedding, bell notifications), files investigation tasks on demand, files…
+  - **`fleet-memory-unmeasured`** — fleet-memory-unmeasured report kind: validates the payload a cpu grant acquire files (through the report outbox) when no fresh fleet memory reading exists — main's owner sampler stopped or main is…
   - **`host-check`** — Host-check report kind's Debug → Reports summary view: one line naming the failing host-scoped check and the first line of its message. Filed by main's hourly host audit through the report outbox…
   - **`icon-family-gap`** — Icon-family-gap collector: drains the icons plugin's iconFamilyGapReportSink into a deduped report whenever a scope whose icon family is strict draws a symbol the family does not map (it shows the…
   - **`icon-missing-glyph`** — Icon-missing-glyph collector: drains the icons plugin's iconMissingGlyphReportSink into a deduped report whenever a held sprite has no symbol for an icon <Icon> draws (the build's icon manifest…

@@ -234,10 +234,15 @@ test("inheritedGrant returns undefined for absent or invalid HOST_GRANT", async 
   }
 });
 
-test("withPoolGrant hands the measured capacity to the acquire, and none when unmeasured", async () => {
+test("withPoolGrant hands its capacity feed to the acquire", async () => {
   const pool = fakePool(1);
   const opts = { lane: "background", priority: "normal", max: 9 } as const;
-  await withPoolGrant(pool, { ...opts, capacity: 2 }, async () => {});
+  const feed = {
+    read: () => Promise.resolve(2),
+    follow: () =>
+      Promise.resolve({ capacity: 2, stop: () => Promise.resolve() }),
+  };
+  await withPoolGrant(pool, { ...opts, capacity: feed }, async () => {});
   await withPoolGrant(pool, opts, async () => {});
-  expect(pool.calls.capacities).toEqual([2, undefined]);
+  expect(pool.calls.capacities).toEqual([feed, undefined]);
 });

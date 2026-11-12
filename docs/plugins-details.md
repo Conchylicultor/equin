@@ -32050,6 +32050,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `framework/cli/op-runtime` (0 debt)
                   - `infra/file-watcher` (0 debt)
                   - `infra/host/duress/latch` (0 debt)
+                  - `infra/host/host-admission` (0 debt)
         - **`provision`** — Install-time provisioning registry + runner: discovers each plugin's provision/index.ts and runs it during postinstall.
           - Core:
             - Uses: `framework/tooling/collected-dir.defineCollectedDir`
@@ -35120,7 +35121,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/host-semaphore.HostShare`
               - `packages/spawn-priority.withForegroundPriority`
             - Exports (types):
-              - `FleetWindowNow`
               - `ForegroundSlot`
               - `HostPool`
               - `HostPoolSpec`
@@ -35137,7 +35137,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `inheritedGrant`
               - `publishFleetMemory`
               - `pushPool`
-              - `readFleetWindow`
               - `repoPushLock`
               - `withE2eGrant`
               - `withHostGrant`
@@ -35157,14 +35156,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/jobs/supervised-job`
               - `infra/safe-fetch/browser-fetch`
               - `infra/worktree`
+              - `reports/fleet-memory-unmeasured`
           - Exemptions:
             - Exempts itself from:
               - `host-pools-declared` — `server` (sanctioned)
               - `boundaries/no-platform-api` — `core/internal/budget.ts`, `server/internal/pool.ts`, `server/internal/fleet-memory.ts` (debt)
+              - `watcher-safety/no-raw-fs-watch` — `server/internal/fleet-memory.ts` (sanctioned)
           - Core:
             - Exports (types):
               - `CpuBudget`
+              - `FleetAdmission`
               - `FleetMemoryReading`
+              - `FleetMemoryUnmeasuredPayload`
               - `FleetWindow`
               - `Grant`
               - `GrantHooks`
@@ -35173,10 +35176,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `HostPoolId`
               - `Lane`
               - `Priority`
+              - `UnmeasuredCause`
             - Exports (values):
+              - `admissionSlots`
               - `cpuBudget`
               - `FLEET_MEMORY_LEASE_MS`
+              - `FLEET_MEMORY_UNMEASURED_KIND`
+              - `fleetAdmission`
               - `FleetMemoryReadingSchema`
+              - `fleetMemoryUnmeasuredFingerprint`
+              - `fleetMemoryUnmeasuredMessage`
+              - `FleetMemoryUnmeasuredPayloadSchema`
               - `fleetWindow`
               - `HOST_POOLS`
               - `hostCpuCeiling`
@@ -35185,6 +35195,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `laneCapacity`
               - `PER_UNIT_BYTES`
               - `rawFleetCeiling`
+              - `unmeasuredWindow`
         - **`host-read-pool`** — Shared host-wide budget for CPU/IO-heavy git/filesystem reads: withHeavyReadSlot admits at most a few heavy reads at once across all worktree servers.
           - Server:
             - Uses: `infra/host/host-admission.defineHostPool`
@@ -40487,8 +40498,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Plugins:
     - **`coalesce`** — Trigger coalescer: createCoalescer / createKeyedCoalescer run a reaction at most once at a time per key and fold every trigger that lands mid-run into ONE trailing run (its items merged), so however many triggers arrive the work is bounded to one running plus one pending per key — and a trigger never joins a run that started before it.
       - Cross-plugin:
-        - Imported by: 23 plugins — full list in [`plugins/packages/plugins/coalesce/REFERENCE.md`](../plugins/packages/plugins/coalesce/REFERENCE.md)
-          - `infra` ×10
+        - Imported by: 24 plugins — full list in [`plugins/packages/plugins/coalesce/REFERENCE.md`](../plugins/packages/plugins/coalesce/REFERENCE.md)
+          - `infra` ×11
           - `conversations` ×3
           - `debug` ×3
           - `apps` ×2
@@ -40598,6 +40609,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages/flock.waitForFlock`
         - Exports (types):
           - `AcquireHooks`
+          - `CapacityFeed`
+          - `CapacityFollow`
           - `HostSemaphore`
           - `HostShare`
           - `Priority`
@@ -55247,8 +55260,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `versionSkewCode`
       - `versionSkewExplains`
   - Cross-plugin:
-    - Imported by: 83 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `reports` ×32
+    - Imported by: 84 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+      - `reports` ×33
       - `debug` ×20
       - `conversations` ×7
       - `database` ×4
@@ -55475,6 +55488,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `fixesReportTrailer`
           - `resolveFixedReports`
+    - **`fleet-memory-unmeasured`** — fleet-memory-unmeasured report kind: validates the payload a cpu grant acquire files (through the report outbox) when no fresh fleet memory reading exists — main's owner sampler stopped or main is down — and renders a task naming the cause, the reading's age and the acquiring process. One row per cause.
+      - Server:
+        - Contributes: `report-kind` "fleet-memory-unmeasured"
+        - Uses:
+          - `reports.ReportKind`
+          - `reports.ReportRow`
     - **`host-check`** — Host-check report kind's Debug → Reports summary view: one line naming the failing host-scoped check and the first line of its message. Filed by main's hourly host audit through the report outbox — no collector here. Host-check report kind: one row per failing host-scoped check (fingerprint = check id), filed through the report outbox by main's hourly checks.host-audit job (`./equin check --scope host --file-reports`) — the only place a host check's verdict is delivered, since no worktree's check pass asserts the shared machine. Renders a task carrying the check's message and hint verbatim. Warning, re-arms every 6 h.
       - Web:
         - Contributes: `Reports.KindView` → `HostCheckSummary`
@@ -55790,6 +55809,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/checks`
               - `framework/tooling/checks/type-check`
               - `framework/tooling/checks/type-check/backstop`
+              - `infra/host/host-admission`
               - `infra/launcher`
               - `infra/launcher/gateway-drift`
               - `plugin-meta/plugin-records`
