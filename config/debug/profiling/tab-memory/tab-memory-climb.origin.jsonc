@@ -1,0 +1,11 @@
+// @hash 35a0a962186c
+{
+  // When off, the climb watch files no tab-memory-climb reports.
+  "enabled": true,
+  // File a report when a Chrome renderer's lowest footprint over the last 30 minutes is at least this many MB, climbing or not.
+  "highFloorMb": 3000,
+  // A renderer whose floor rose is reported as climbing once its lowest footprint over the last 30 minutes reaches this many MB.
+  "climbFloorMb": 2500,
+  // How far a renderer's 30-minute floor must sit above its lowest reading in the 3 hours before to count as climbing.
+  "climbRiseMb": 1000
+}

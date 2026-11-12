@@ -14896,8 +14896,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins: the registry over the user-layer store (the ConfigStore host service) and the committed layer (ConfigGitLayer), its live values and the scope routes.
   - Web:
     - Slots: `ConfigV2.WebRegister`
-    - Slot contributors: 94 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×94
+    - Slot contributors: 95 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×95
     - Uses:
       - `infra/endpoints.useEndpointMutation`
       - `network/live.useLive`
@@ -15095,11 +15095,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `validationIssues`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Imported by: 140 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+    - Imported by: 141 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
       - `apps` ×39
       - `conversations` ×14
+      - `debug` ×14
       - `backup` ×13
-      - `debug` ×13
       - `ui` ×11
       - `config_v2` ×8
       - `auth` ×6
@@ -24854,15 +24854,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from:
               - `sink-safety/no-adhoc-profiler-seam` — `.` (sanctioned)
               - `boundaries/no-platform-api` — `server/internal/mcp-tools.ts` (debt)
-        - **`tab-memory`** — Tab memory telemetry, browser half: every top-level page the user drives samples itself (JS heap, DOM nodes, canvases, images, its open in-app tabs and route) 30 s after load and every 5 minutes after, posted to its own server; Debug → Tab memory draws each page beside each Chrome renderer's footprint (by pid) over the last 12 h, with a DataView of the pages. Tab memory telemetry, server half: logs each page's sample to the durable tab-memory channel of the worktree it talks to, and serves tab-memory.series — every worktree's pages over the last 12 h beside each Chrome renderer's footprint (by pid) from main's health-owners log.
+        - **`tab-memory`** — Tab memory telemetry, browser half: every top-level page the user drives samples itself (JS heap, DOM nodes, canvases, images, its open in-app tabs and route) 30 s after load and every 5 minutes after, posted to its own server; Debug → Tab memory draws each page beside each Chrome renderer's footprint (by pid) over the last 12 h, with a DataView of the pages; registers the climb watch's bars (tab-memory-climb) for Settings → Config. Tab memory telemetry, server half: logs each page's sample to the durable tab-memory channel of the worktree it talks to, and serves tab-memory.series — every worktree's pages over the last 12 h beside each Chrome renderer's footprint (by pid) from main's health-owners log. The climb watch: every 10 minutes on main, a Chrome renderer whose memory floor is too large or climbing files a tab-memory-climb report (error) with its growth curve, the pages alive through its window and what grew.
           - Web:
             - Slots: `tabMemoryPane.Actions`
             - Slot contributors: `tabMemoryPane.Actions` ← `primitives.pane`
             - Contributes:
+              - `ConfigV2.WebRegister` "tab-memory-climb"
               - `Core.Root` → `TabMemoryRecorder`
               - `Pane.Register` "debug-tab-memory"
               - `DebugApp.Sidebar` "Tab memory"
-            - Uses: 28 symbols — full list in [`plugins/debug/plugins/profiling/plugins/tab-memory/REFERENCE.md`](../plugins/debug/plugins/profiling/plugins/tab-memory/REFERENCE.md)
+            - Uses: 29 symbols — full list in [`plugins/debug/plugins/profiling/plugins/tab-memory/REFERENCE.md`](../plugins/debug/plugins/profiling/plugins/tab-memory/REFERENCE.md)
               - `stats/commits` ×7
               - `primitives/pane` ×4
               - `primitives/data-view` ×3
@@ -24871,6 +24872,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/text` ×2
               - `apps-core/tabs.peekTabSets`
               - `apps/debug/shell.DebugApp`
+              - `config_v2.ConfigV2`
               - `network/live/live-state.ResourceErrorInline`
               - `network/live.useLive`
               - `primitives/css/placeholder.Placeholder`
@@ -24879,32 +24881,54 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/scope/tab-id.getTabId`
             - Exports (values): `tabMemoryPane`
           - Server:
-            - Contributes: `resource.declare` "tab-memory.series"
+            - Contributes:
+              - `resource.declare` "tab-memory.series"
+              - `ConfigV2.Register` "tab-memory-climb"
+              - `report-kind` "tab-memory-climb"
             - Uses:
+              - `config_v2.ConfigV2`
+              - `config_v2.getConfig`
               - `infra/endpoints.implement`
               - `infra/file-watcher.acquireDirWatch`
+              - `infra/jobs.defineJob`
               - `infra/paths.listWorktreeDirsAsync`
               - `infra/paths.worktreesDir`
               - `network/live.serveValue`
               - `primitives/log-channels.defineLogSink`
               - `primitives/log-channels/log-files.readChannelJson`
+              - `reports.ReportKind`
+              - `reports.ReportRow`
+              - `reports/engine.recordReport`
+            - Register: `defineJob('debug.tab-memory-climb')`
             - Resources: `tab-memory.series` (push, notified, capped: MAX_PAGES, capped: MAX_RENDERERS, capped: MAX_PAGE_POINTS, capped: MAX_RENDERER_POINTS, capped: MAX_IN_APP_TABS)
             - Routes: `POST /api/tab-memory/sample`
           - Core:
             - Uses:
+              - `config_v2.defineConfig`
+              - `fields/bool/config.boolField`
+              - `fields/int/config.intField`
               - `infra/endpoints.defineEndpoint`
               - `network/live.liveValue`
               - `packages/list-bound.cappedList`
             - Exports (types):
+              - `ClimbPage`
               - `InAppTab`
               - `PagePoint`
               - `PageSeries`
               - `RendererSeries`
+              - `TabMemoryClimb`
               - `TabMemoryData`
+              - `TabMemoryGrowth`
               - `TabMemorySample`
             - Exports (values):
+              - `CLIMB_CURVE_BIN_MS`
+              - `CLIMB_CURVE_MS`
+              - `ClimbPageSchema`
               - `InAppTabSchema`
               - `jsHeapGrowthMbPerHour`
+              - `MAX_CLIMB_CURVE_POINTS`
+              - `MAX_CLIMB_PAGE_TABS`
+              - `MAX_CLIMB_PAGES`
               - `MAX_IN_APP_TABS`
               - `MAX_PAGE_POINTS`
               - `MAX_PAGES`
@@ -24912,9 +24936,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `MAX_RENDERERS`
               - `RENDERER_BUCKET_MS`
               - `submitTabMemorySample`
+              - `TAB_MEMORY_CLIMB_KIND`
               - `TAB_MEMORY_FIRST_SAMPLE_MS`
+              - `TAB_MEMORY_GROWTH`
               - `TAB_MEMORY_SAMPLE_EVERY_MS`
               - `TAB_MEMORY_WINDOW_MS`
+              - `tabMemoryClimbConfig`
+              - `TabMemoryClimbSchema`
               - `TabMemoryDataSchema`
               - `TabMemorySampleSchema`
               - `tabMemorySeries`
@@ -26858,10 +26886,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boolField`
               - `boolSample`
           - Cross-plugin:
-            - Imported by: 77 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
+            - Imported by: 78 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
               - `apps` ×25
               - `backup` ×12
-              - `debug` ×11
+              - `debug` ×12
               - `conversations` ×7
               - `tasks` ×4
               - `shell` ×3
@@ -27786,9 +27814,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `intField`
               - `intSample`
           - Cross-plugin:
-            - Imported by: 57 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
+            - Imported by: 58 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
               - `apps` ×16
-              - `debug` ×12
+              - `debug` ×13
               - `conversations` ×7
               - `infra` ×5
               - `tasks` ×5
@@ -35176,11 +35204,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskFor`
           - `TOTAL_JOB_SLOTS`
       - Cross-plugin:
-        - Imported by: 84 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
+        - Imported by: 85 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
           - `apps` ×21
           - `conversations` ×18
           - `infra` ×15
-          - `debug` ×10
+          - `debug` ×11
           - `tasks` ×7
           - `database` ×3
           - `page` ×3
@@ -54406,9 +54434,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `versionSkewCode`
       - `versionSkewMayExplain`
   - Cross-plugin:
-    - Imported by: 80 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+    - Imported by: 81 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
       - `reports` ×32
-      - `debug` ×18
+      - `debug` ×19
       - `conversations` ×7
       - `database` ×4
       - `infra` ×4
@@ -54608,8 +54636,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Machine:
         - Uses: `infra/endpoints.implementMachine`
       - Cross-plugin:
-        - Imported by: 32 plugins — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
-          - `debug` ×11
+        - Imported by: 33 plugins — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
+          - `debug` ×12
           - `conversations` ×5
           - `database` ×3
           - `infra` ×3

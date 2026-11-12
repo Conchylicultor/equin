@@ -10,9 +10,13 @@ import {
   type TabMemorySample,
 } from "../../core";
 
-/** The user's Chrome's renderer processes, as the owner sampler names them. */
-function isChromeRenderer(p: OwnerSample["top"][number]): boolean {
-  return p.bucket === "chrome" && p.name.endsWith("(Renderer)");
+/**
+ * The user's Chrome's renderer processes, as the owner sampler names them:
+ * `Google Chrome Helper (Renderer)`, and on some builds `Google Chrome Helper
+ * (Aperitif Renderer)` (every renderer of the user's Chrome, 2026-11-12).
+ */
+export function isChromeRenderer(p: OwnerSample["top"][number]): boolean {
+  return p.bucket === "chrome" && / Renderer\)$|\(Renderer\)$/.test(p.name);
 }
 
 /**
@@ -47,6 +51,7 @@ export function pagesFrom(
         t: s.sampledAt,
         jsHeapUsedMb: s.jsHeapUsedMb,
         domNodes: s.domNodes,
+        canvasImagesMb: s.canvasMb + s.imagesMb,
         inAppTabs: s.inAppTabs.length,
         route: s.route,
         visible: s.visible,

@@ -36,11 +36,12 @@ async function readSince<T>(
   return values.filter((v) => at(v) >= cutoff);
 }
 
+/** Every worktree's page samples since `cutoff`, per worktree. */
 // Async throughout: a live-value loader must never block the event loop.
 // Worktrees are read one after another, so the scan yields between files.
-export async function readTabMemory(): Promise<TabMemoryData> {
-  const readAtMs = Date.now();
-  const cutoff = readAtMs - TAB_MEMORY_WINDOW_MS;
+export async function readPageLogs(
+  cutoff: number,
+): Promise<{ worktree: string; samples: TabMemorySample[] }[]> {
   const logs: { worktree: string; samples: TabMemorySample[] }[] = [];
   for (const worktree of await listWorktreeDirsAsync()) {
     const samples = await readSince(
@@ -53,7 +54,12 @@ export async function readTabMemory(): Promise<TabMemoryData> {
     );
     if (samples.length) logs.push({ worktree, samples });
   }
-  const owners = await readSince<OwnerSample>(
+  return logs;
+}
+
+/** Main's owner samples (the machine's largest processes, by pid) since `cutoff`. */
+export function readOwnerSamples(cutoff: number): Promise<OwnerSample[]> {
+  return readSince<OwnerSample>(
     MAIN_WORKTREE_NAME,
     "health-owners",
     MAX_OWNER_LINES,
@@ -61,6 +67,13 @@ export async function readTabMemory(): Promise<TabMemoryData> {
     cutoff,
     (s) => s.sampledAt,
   );
+}
+
+export async function readTabMemory(): Promise<TabMemoryData> {
+  const readAtMs = Date.now();
+  const cutoff = readAtMs - TAB_MEMORY_WINDOW_MS;
+  const logs = await readPageLogs(cutoff);
+  const owners = await readOwnerSamples(cutoff);
   return {
     windowMs: TAB_MEMORY_WINDOW_MS,
     readAtMs,

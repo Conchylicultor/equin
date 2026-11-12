@@ -58,6 +58,10 @@ export const SERVER_REPORT_SOURCES = [
   // copy of Google's Table A lacks. An observation of Google's taxonomy moving,
   // not an error anyone caught: the place still resolved.
   "server-place-google",
+  // The tab-memory climb watch (debug/profiling/tab-memory): a Chrome renderer
+  // of the user's Chrome sat past its memory bar, or kept climbing. A scheduled
+  // observation of the user's browser, not an error anyone caught.
+  "server-tab-memory-monitor",
   // A report a backend filed synchronously on its way out of a DELIBERATE
   // `process.exit()` — not a crash (nothing threw) and not a caught error
   // (nobody is still running to catch it). Its own source because that

@@ -23,3 +23,18 @@ export {
   type TabMemoryData,
 } from "./internal/series";
 export { jsHeapGrowthMbPerHour } from "./internal/growth";
+export {
+  CLIMB_CURVE_BIN_MS,
+  CLIMB_CURVE_MS,
+  ClimbPageSchema,
+  MAX_CLIMB_CURVE_POINTS,
+  MAX_CLIMB_PAGE_TABS,
+  MAX_CLIMB_PAGES,
+  TAB_MEMORY_CLIMB_KIND,
+  TAB_MEMORY_GROWTH,
+  tabMemoryClimbConfig,
+  TabMemoryClimbSchema,
+  type ClimbPage,
+  type TabMemoryClimb,
+  type TabMemoryGrowth,
+} from "./internal/climb";

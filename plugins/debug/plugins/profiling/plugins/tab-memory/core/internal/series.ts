@@ -20,6 +20,8 @@ export const PagePointSchema = z.object({
   t: z.number(),
   jsHeapUsedMb: z.number().nullable(),
   domNodes: z.number(),
+  /** Canvas backing stores + decoded images, MB. */
+  canvasImagesMb: z.number(),
   inAppTabs: z.number(),
   route: z.string(),
   visible: z.boolean(),
