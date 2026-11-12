@@ -23,6 +23,9 @@ const MemoryCheckpointSchema = z.object({
   heapUsedMb: z.number(),
   externalMb: z.number(),
   arrayBuffersMb: z.number(),
+  // CPU this process had used by then (user + system, ms); absent on a host
+  // with no CPU reader.
+  cpuMs: z.number().optional(),
 });
 export type MemoryCheckpoint = z.infer<typeof MemoryCheckpointSchema>;
 
@@ -43,6 +46,11 @@ export const ProfilingDataSchema = z.object({
   // after process start (the imports before the profiler module evaluates):
   // an offset's epoch ms is processStartedAt + bootStartOffsetMs + offset.
   bootStartOffsetMs: z.number(),
+  // CPU this process has used up to this read (user + system, ms) — with the
+  // checkpoints' cpuMs, what the boot and the work after it cost
+  // (the restart-storm benchmark reads it once the tabs settled). Absent on a
+  // host with no CPU reader.
+  cpuMsNow: z.number().optional(),
   // The gateway's spawn/readiness stamps for this process (boot-monitor's
   // gateway report), absent when the gateway has not POSTed one.
   gateway: BootGatewaySchema.optional(),

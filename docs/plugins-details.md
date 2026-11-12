@@ -15135,8 +15135,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins: the registry over the user-layer store (the ConfigStore host service) and the committed layer (ConfigGitLayer), its live values and the scope routes.
   - Web:
     - Slots: `ConfigV2.WebRegister`
-    - Slot contributors: 99 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×99
+    - Slot contributors: 100 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×100
     - Uses:
       - `infra/endpoints.useEndpointMutation`
       - `network/live.useLive`
@@ -15335,7 +15335,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `validationIssues`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Imported by: 147 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+    - Imported by: 148 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
       - `apps` ×42
       - `debug` ×15
       - `conversations` ×14
@@ -15356,6 +15356,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `fields/secret/config`
       - `hints/ask`
       - `map/google`
+      - `network/live/live-state-snapshot`
       - `reorder`
       - `reports`
       - `review/code-review`
@@ -25027,7 +25028,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --destructive`
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/color-palette --success`
-            - Imported by: `debug/profiling/cold-start`
+            - Imported by:
+              - `debug/profiling/cold-start`
+              - `debug/profiling/restart-storm`
         - **`boot-bench`** — Cold-boot & live-state loader benchmark harness: a POST endpoint that runs the boot burst in-process and a benchmark_boot MCP tool that aggregates it.
           - Server:
             - Uses:
@@ -25338,6 +25341,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/shape` ×2
                   - `ui/tokens/font-family --font-mono`
                 - Imported by: `debug/profiling/ops`
+        - **`restart-storm`** — Restart-storm benchmark: hot-restarts the worktree's backend with N tabs open and splits restart → successor ready → every tab's live data settled into boot phases, process CPU, replayed reads and gate waits; handoff off (cold, the headline) or on (diagnostic).
         - **`runtime`** — Runtime HTTP/DB/loader profiling tables in the Gantt debug pane.
           - Web:
             - Contributes: `Profiling.Section` → `RuntimeSection`
@@ -25399,6 +25403,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-size-3xs`
               - `ui/tokens/type-scale --line-height-3xs`
             - Imported by:
+              - `debug/profiling/restart-storm`
               - `debug/sentinel`
               - `network/live`
           - Exemptions:
@@ -27452,7 +27457,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boolField`
               - `boolSample`
           - Cross-plugin:
-            - Imported by: 81 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
+            - Imported by: 82 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
               - `apps` ×26
               - `debug` ×13
               - `backup` ×12
@@ -27467,6 +27472,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/build/experimental-marks`
               - `history/engine`
               - `integrations/gmail`
+              - `network/live/live-state-snapshot`
               - `plugin-meta/composition`
               - `primitives/data-view/list`
               - `release`
@@ -30494,6 +30500,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hostHttpRoutes`
           - `installAsleepClock`
           - `installBootJournal`
+          - `installCpuReader`
           - `installHeapReader`
           - `installMemoryProbe`
           - `installPeerUsageProbe`
@@ -30512,6 +30519,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `onDeferredResourcesBound`
           - `onResourceDelivery`
           - `onResourcePush`
+          - `ownCpuMs`
           - `peerProcUsage`
           - `persistedDefinitions`
           - `persistedKeys`
@@ -31538,12 +31546,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards/module-extension.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 194 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+            - Imported by: 195 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
               - `apps` ×58
               - `primitives` ×29
               - `conversations` ×26
               - `page` ×26
-              - `debug` ×9
+              - `debug` ×10
               - `apps-core` ×6
               - `tasks` ×5
               - `active-data` ×3
@@ -39974,14 +39982,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `NotificationsClient`
               - `resetResourceContractMismatches` — Forget every mismatch — tests only (via `web/testing`).
               - Types: `LiveStateHarness`, `LiveStateHarnessOptions`, `ResourceErrorInfo`
-        - **`live-state-snapshot`** — L2 persisted live-state materialization: durable snapshot + xmin watermark for instant cold boot, served only from a usable row (a key the runtime persists now, under its current definition, from a current writer). Three persist modes (a FULL recompute replaces; a persisted alias's trailing window lowers the floor, or advances it to a routed cut once its snapshot is proven settled under one), an hourly compact job, and a boot catch-up that seeds each persisted alias from its row and replays the changelog by scope — or, when history was pruned past the floor or a rollup was healed, recomputes every persisted key.
+        - **`live-state-snapshot`** — Registers the epoch handoff's switch (Hand live state over across restarts) for Settings → Config. L2 persisted live-state materialization: durable snapshot + xmin watermark for instant cold boot, served only from a usable row (a key the runtime persists now, under its current definition, from a current writer). Three persist modes (a FULL recompute replaces; a persisted alias's trailing window lowers the floor, or advances it to a routed cut once its snapshot is proven settled under one), an hourly compact job, and a boot catch-up that seeds each persisted alias from its row and replays the changelog by scope — or, when history was pruned past the floor or a rollup was healed, recomputes every persisted key.
+          - Web:
+            - Contributes: `ConfigV2.WebRegister` "live-state-handoff"
+            - Uses: `config_v2.ConfigV2`
           - Server:
             - Contributes:
               - `change-feed-changelog-retention` "live-state-snapshot's cold-boot catch-up replays the changelog; its hourly prune job (pruneChangelog) deletes the rows below the horizon no persisted snapshot needs"
+              - `ConfigV2.Register` "live-state-handoff"
               - `live-state-snapshot-code-digest` "sourceDigest"
               - `fork-data-exclusion` "live_state_handoff"
               - `fork-data-exclusion` "live_state_snapshot"
             - Uses:
+              - `config_v2.ConfigV2`
               - `database.db`
               - `database/derived-tables.reconciledRollups`
               - `infra/jobs.defineJob`
@@ -40000,6 +40013,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Register:
               - `defineJob('database.live-state-changelog-prune')`
               - `defineJob('live-state-snapshot.compact')`
+          - Core:
+            - Uses:
+              - `config_v2.defineConfig`
+              - `fields/bool/config.boolField`
+            - Exports (values): `liveStateHandoffConfig`
           - Cross-plugin:
             - Imported by:
               - `debug/profiling/boot-bench`
@@ -51611,16 +51629,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useTransport`
           - `useTransportScoped`
       - Cross-plugin:
-        - Imported by: 40 plugins — full list in [`plugins/primitives/plugins/networking/REFERENCE.md`](../plugins/primitives/plugins/networking/REFERENCE.md)
+        - Imported by: 41 plugins — full list in [`plugins/primitives/plugins/networking/REFERENCE.md`](../plugins/primitives/plugins/networking/REFERENCE.md)
           - `apps` ×11
           - `primitives` ×7
           - `conversations` ×5
           - `network` ×4
           - `framework` ×3
           - `auth` ×2
+          - `debug` ×2
           - `infra` ×2
           - `page` ×2
-          - `debug/worktree-cleanup`
           - `shell/notifications`
           - `tasks/tasks-core`
           - `ui/icons/emoji`

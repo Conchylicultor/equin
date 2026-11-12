@@ -120,3 +120,23 @@ export function installHeapReader(fn: () => HeapMemory): void {
 export function heapMemory(): HeapMemory | null {
   return heapReader === null ? null : heapReader();
 }
+
+let cpuReader: (() => number) | null = null;
+
+/**
+ * Install this host's own-CPU reader: the CPU time this process has used so
+ * far, ms (user + system — `process.cpuUsage()` on the desktop). Once per
+ * process, before boot. A host without one (the browser worker) records no
+ * CPU on its boot checkpoints — absent, never a made-up zero.
+ */
+export function installCpuReader(fn: () => number): void {
+  if (cpuReader !== null) {
+    throw new Error("[memory-probe] a CPU reader is already installed.");
+  }
+  cpuReader = fn;
+}
+
+/** CPU this process has used so far (ms), or `null` when the host installed no reader. */
+export function ownCpuMs(): number | null {
+  return cpuReader === null ? null : cpuReader();
+}

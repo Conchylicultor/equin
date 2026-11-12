@@ -2886,6 +2886,10 @@
       "name": "@equin/plugin-debug-profiling-ops-op-gantt",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/profiling/plugins/restart-storm": {
+      "name": "@equin/plugin-debug-profiling-restart-storm",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/profiling/plugins/runtime": {
       "name": "@equin/plugin-debug-profiling-runtime",
       "version": "0.0.1",
@@ -9088,6 +9092,8 @@
     "@equin/plugin-debug-profiling-ops": ["@equin/plugin-debug-profiling-ops@workspace:plugins/debug/plugins/profiling/plugins/ops"],
 
     "@equin/plugin-debug-profiling-ops-op-gantt": ["@equin/plugin-debug-profiling-ops-op-gantt@workspace:plugins/debug/plugins/profiling/plugins/ops/plugins/op-gantt"],
+
+    "@equin/plugin-debug-profiling-restart-storm": ["@equin/plugin-debug-profiling-restart-storm@workspace:plugins/debug/plugins/profiling/plugins/restart-storm"],
 
     "@equin/plugin-debug-profiling-runtime": ["@equin/plugin-debug-profiling-runtime@workspace:plugins/debug/plugins/profiling/plugins/runtime"],
 

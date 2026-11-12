@@ -233,16 +233,16 @@ built on them — see
     - `useTransport`
     - `useTransportScoped`
 - Cross-plugin:
-  - Imported by: 40 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 41 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×11
     - `primitives` ×7
     - `conversations` ×5
     - `network` ×4
     - `framework` ×3
     - `auth` ×2
+    - `debug` ×2
     - `infra` ×2
     - `page` ×2
-    - `debug/worktree-cleanup`
     - `shell/notifications`
     - `tasks/tasks-core`
     - `ui/icons/emoji`

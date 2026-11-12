@@ -1,4 +1,4 @@
-import { heapMemory, physFootprintBytes } from "./memory-probe";
+import { heapMemory, ownCpuMs, physFootprintBytes } from "./memory-probe";
 
 export type PhaseId =
   // Importing the plugin graph (`loadServerPlugins`): one `load:wave-<n>` span
@@ -47,6 +47,13 @@ export interface MemoryCheckpoint {
   heapUsedMb: number;
   externalMb: number;
   arrayBuffersMb: number;
+  /**
+   * CPU this process had used by then (user + system, ms) — the difference
+   * between two checkpoints is the boot work's CPU between them, every
+   * concurrent hook included (spans overlap on one loop, so per-span CPU has
+   * no honest split). Absent on a host with no CPU reader.
+   */
+  cpuMs?: number;
 }
 
 const bootStart = performance.now();
@@ -220,6 +227,8 @@ export function recordMemoryCheckpoint(label: string): void {
     externalMb: toMb(mem.external),
     arrayBuffersMb: toMb(mem.arrayBuffers),
   };
+  const cpu = ownCpuMs();
+  if (cpu !== null) checkpoint.cpuMs = Math.round(cpu);
   memoryCheckpoints.push(checkpoint);
   journal?.({ e: "checkpoint", checkpoint });
 }

@@ -10,6 +10,8 @@ import {
   getCoveredTables,
 } from "@plugins/network/plugins/live/plugins/change-feed/server";
 import { db, schemaChangedAtBoot } from "@plugins/database/server";
+import { getConfig } from "@plugins/config_v2/server";
+import { liveStateHandoffConfig } from "../core";
 import { L2CodeDigest } from "../server/internal/code-stamp";
 import { healedRollups } from "../server/internal/healed-rollups";
 import {
@@ -67,9 +69,21 @@ export default {
   // sub loads. Desktop-only: a browser host has no successor process, and the
   // code digest reads the source on disk.
   onReadyBlocking() {
+    // The switch is read at call time by both halves (`liveStateHandoffConfig`):
+    // off, the old backend writes nothing and its successor inherits nothing,
+    // so every replayed sub loads — the cold restart the restart-storm
+    // benchmark measures. Said in the log, so a run can tell which it got.
+    const handoffOff = (): boolean =>
+      !getConfig(liveStateHandoffConfig).enabled;
     setEpochHandoffHooks({
-      write: (state) =>
-        writeEpochHandoff(db, {
+      write: async (state) => {
+        if (handoffOff()) {
+          log.publish(
+            "[live-state-snapshot] epoch handoff not written: turned off (live-state-handoff config)",
+          );
+          return;
+        }
+        await writeEpochHandoff(db, {
           code: liveReadDigest,
           cut: feedCut,
           state,
@@ -83,9 +97,16 @@ export default {
               errorType: "EpochHandoffError",
             });
           },
-        }),
-      load: (epoch) =>
-        loadEpochHandoff(db, epoch, {
+        });
+      },
+      load: async (epoch) => {
+        if (handoffOff()) {
+          log.publish(
+            "[live-state-snapshot] epoch handoff not inherited: turned off (live-state-handoff config) — every sub loads",
+          );
+          return null;
+        }
+        return await loadEpochHandoff(db, epoch, {
           code: liveReadDigest,
           refused: (reason) =>
             log.publish(
@@ -95,7 +116,8 @@ export default {
           healedRollups,
           schemaChanged: schemaChangedAtBoot,
           listening: feedListening,
-        }),
+        });
+      },
     });
   },
 } satisfies MachinePluginDefinition;

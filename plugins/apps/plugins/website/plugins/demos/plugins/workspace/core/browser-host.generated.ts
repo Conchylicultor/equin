@@ -497,6 +497,7 @@ export const browserHost = {
     "network.live",
     "network.live.boot-snapshot",
     "network.live.live-state",
+    "network.live.live-state-snapshot",
     "network.live.optimistic-mutation",
     "page.annotations.agent-notes",
     "page.annotations.agent-notes.agent-page",

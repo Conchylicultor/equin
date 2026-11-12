@@ -1,0 +1,5 @@
+// @hash 293a7e80a4ef
+{
+  // When on, a restarting server hands its open tabs' live data to its successor, which then reloads only what changed. Turn off to measure a cold restart: every open tab's data reloads.
+  "enabled": true
+}

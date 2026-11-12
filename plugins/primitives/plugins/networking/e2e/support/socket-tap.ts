@@ -34,6 +34,12 @@ export interface SocketTap {
   readonly events: readonly WsTestEvent[];
   /** Call `listener` for every server frame the page receives from now on. */
   onFrame(listener: (frame: TappedFrame) => void): void;
+  /**
+   * Call `listener` for every event of every socket of the page from now on,
+   * with the epoch ms the script received it at (one host clock with the
+   * server's and the gateway's stamps — what a timeline across them needs).
+   */
+  onEvent(listener: (event: WsTestEvent, atMs: number) => void): void;
   /** Frames the page sent on `url`, parsed. */
   sent(url: string): Record<string, unknown>[];
   /** The distinct server connections the page was bound to on `url`, in order. */
@@ -61,10 +67,13 @@ export async function tapSharedSocket(
 ): Promise<SocketTap> {
   const events: WsTestEvent[] = [];
   const listeners: Array<(frame: TappedFrame) => void> = [];
+  const eventListeners: Array<(event: WsTestEvent, atMs: number) => void> = [];
   const conn = new Map<string, string | null>();
   await page.exposeFunction(EMIT_BINDING, (event: WsTestEvent) => {
     events.push(event);
+    const atMs = Date.now();
     if (event.kind === "status") conn.set(event.url, event.conn);
+    for (const fn of eventListeners) fn(event, atMs);
     if (event.kind !== "rx") return;
     const frame = {
       url: event.url,
@@ -116,6 +125,9 @@ export async function tapSharedSocket(
     events,
     onFrame: (listener) => {
       listeners.push(listener);
+    },
+    onEvent: (listener) => {
+      eventListeners.push(listener);
     },
     sent: (url) =>
       events.flatMap((e) =>

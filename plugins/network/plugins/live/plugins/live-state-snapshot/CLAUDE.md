@@ -4,14 +4,19 @@
 
 ## Plugin reference
 
-- Description: L2 persisted live-state materialization: durable snapshot + xmin watermark for instant cold boot, served only from a usable row (a key the runtime persists now, under its current definition, from a current writer). Three persist modes (a FULL recompute replaces; a persisted alias's trailing window lowers the floor, or advances it to a routed cut once its snapshot is proven settled under one), an hourly compact job, and a boot catch-up that seeds each persisted alias from its row and replays the changelog by scope — or, when history was pruned past the floor or a rollup was healed, recomputes every persisted key.
+- Description: Registers the epoch handoff's switch (Hand live state over across restarts) for Settings → Config. L2 persisted live-state materialization: durable snapshot + xmin watermark for instant cold boot, served only from a usable row (a key the runtime persists now, under its current definition, from a current writer). Three persist modes (a FULL recompute replaces; a persisted alias's trailing window lowers the floor, or advances it to a routed cut once its snapshot is proven settled under one), an hourly compact job, and a boot catch-up that seeds each persisted alias from its row and replays the changelog by scope — or, when history was pruned past the floor or a rollup was healed, recomputes every persisted key.
+- Web:
+  - Contributes: `ConfigV2.WebRegister` "live-state-handoff"
+  - Uses: `config_v2.ConfigV2`
 - Server:
   - Contributes:
     - `change-feed-changelog-retention` "live-state-snapshot's cold-boot catch-up replays the changelog; its hourly prune job (pruneChangelog) deletes the rows below the horizon no persisted snapshot needs"
+    - `ConfigV2.Register` "live-state-handoff"
     - `live-state-snapshot-code-digest` "sourceDigest"
     - `fork-data-exclusion` "live_state_handoff"
     - `fork-data-exclusion` "live_state_snapshot"
   - Uses:
+    - `config_v2.ConfigV2`
     - `database.db`
     - `database/derived-tables.reconciledRollups`
     - `infra/jobs.defineJob`
@@ -30,6 +35,11 @@
   - Register:
     - `defineJob('database.live-state-changelog-prune')`
     - `defineJob('live-state-snapshot.compact')`
+- Core:
+  - Uses:
+    - `config_v2.defineConfig`
+    - `fields/bool/config.boolField`
+  - Exports (values): `liveStateHandoffConfig`
 - Cross-plugin:
   - Imported by:
     - `debug/profiling/boot-bench`

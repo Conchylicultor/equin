@@ -65,6 +65,7 @@
     - `ui/tokens/type-scale --font-size-3xs`
     - `ui/tokens/type-scale --line-height-3xs`
   - Imported by:
+    - `debug/profiling/restart-storm`
     - `debug/sentinel`
     - `network/live`
 - Exemptions:

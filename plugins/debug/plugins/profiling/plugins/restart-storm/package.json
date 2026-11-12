@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-debug-profiling-restart-storm",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Restart-storm benchmark: hot-restarts the worktree's backend with N tabs open and splits restart → successor ready → every tab's live data settled into boot phases, process CPU, replayed reads and gate waits; handoff off (cold, the headline) or on (diagnostic)."
+}

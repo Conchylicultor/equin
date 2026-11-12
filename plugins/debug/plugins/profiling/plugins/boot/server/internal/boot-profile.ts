@@ -1,4 +1,7 @@
-import { getProfilingData } from "@plugins/framework/plugins/server-core/core";
+import {
+  getProfilingData,
+  ownCpuMs,
+} from "@plugins/framework/plugins/server-core/core";
 import { getGatewayBootReport } from "@plugins/debug/plugins/boot-monitor/server";
 import type { ProfilingData } from "../../core";
 
@@ -6,6 +9,7 @@ import type { ProfilingData } from "../../core";
 export function readBootProfile(): ProfilingData {
   const server = getProfilingData();
   const gateway = getGatewayBootReport();
+  const cpu = ownCpuMs();
   return {
     spans: server.spans,
     totalMs: server.totalDurationMs,
@@ -13,5 +17,6 @@ export function readBootProfile(): ProfilingData {
     processStartedAt: performance.timeOrigin,
     bootStartOffsetMs: server.bootStartOffsetMs,
     ...(gateway ? { gateway } : {}),
+    ...(cpu !== null ? { cpuMsNow: Math.round(cpu) } : {}),
   };
 }

@@ -614,6 +614,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `hostHttpRoutes`
     - `installAsleepClock`
     - `installBootJournal`
+    - `installCpuReader`
     - `installHeapReader`
     - `installMemoryProbe`
     - `installPeerUsageProbe`
@@ -632,6 +633,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `onDeferredResourcesBound`
     - `onResourceDelivery`
     - `onResourcePush`
+    - `ownCpuMs`
     - `peerProcUsage`
     - `persistedDefinitions`
     - `persistedKeys`

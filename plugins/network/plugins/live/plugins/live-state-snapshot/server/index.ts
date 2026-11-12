@@ -13,6 +13,8 @@ import {
   relationBases,
 } from "@plugins/network/plugins/live/plugins/change-feed/server";
 import { db } from "@plugins/database/server";
+import { ConfigV2 } from "@plugins/config_v2/server";
+import { liveStateHandoffConfig } from "../core";
 import { LIVE_STATE_SNAPSHOT_TABLE } from "@plugins/database/plugins/derived-views/core";
 import { initSnapshotSubsystem } from "./internal/boot-init";
 import {
@@ -64,6 +66,8 @@ export default {
       reason:
         "live-state-snapshot's cold-boot catch-up replays the changelog; its hourly prune job (pruneChangelog) deletes the rows below the horizon no persisted snapshot needs",
     }),
+    // The epoch handoff's switch, read by the desktop's half (`../machine`).
+    ConfigV2.Register({ descriptor: liveStateHandoffConfig }),
   ],
   // Create the snapshot table and INJECT the persist hooks into the resource
   // runtime here — before the ready barrier flips and before any flush could try

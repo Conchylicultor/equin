@@ -31,7 +31,9 @@ export type {
 } from "./profiler-hooks";
 export {
   heapMemory,
+  installCpuReader,
   installHeapReader,
+  ownCpuMs,
   installMemoryProbe,
   installPeerUsageProbe,
   peerProcUsage,

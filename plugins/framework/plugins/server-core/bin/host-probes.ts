@@ -1,5 +1,6 @@
 import {
   installAsleepClock,
+  installCpuReader,
   installHeapReader,
   installMemoryProbe,
   installPeerUsageProbe,
@@ -21,6 +22,10 @@ import { macPeerProcUsage, macProcMemory } from "./phys-footprint";
 installMemoryProbe(macProcMemory);
 installPeerUsageProbe(macPeerProcUsage);
 installHeapReader(() => process.memoryUsage());
+installCpuReader(() => {
+  const u = process.cpuUsage();
+  return (u.user + u.system) / 1000;
+});
 // Native wyhash on the keyed-delta hot path (the runtime's portable default is
 // plain-JS `hash64`); the length fold kills every different-length collision.
 installSnapHash((json) => Bun.hash.wyhash(json) ^ BigInt(json.length));
