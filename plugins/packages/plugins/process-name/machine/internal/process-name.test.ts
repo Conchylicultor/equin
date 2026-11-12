@@ -10,6 +10,7 @@ import {
   lstatSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   readlinkSync,
   statSync,
@@ -60,6 +61,25 @@ describe("cloneNamedBinary", () => {
     const ino = statSync(a.path).ino;
     await cloneNamedBinary({ bin, dir, name: "equin · x" });
     expect(statSync(a.path).ino).toBe(ino);
+  });
+
+  test("a dead writer's staging is removed, even beside a current clone; a live one's is kept", async () => {
+    const root = asAppPath(mkdtempSync(join(tmpdir(), "process-name-")));
+    const bin = fakeBin(root);
+    const dir = asAppPath(join(root, "names"));
+    await cloneNamedBinary({ bin, dir, name: "equin · x" });
+    const exited = Bun.spawn(["true"]);
+    await exited.exited;
+    const dead = String(exited.pid);
+    // The hardlink builds' pid-only name, and today's `<pid>.<seq>`.
+    linkSync(bin, join(dir, `.${dead}.tmp`));
+    writeFileSync(join(dir, `.${dead}.3.tmp`), "");
+    writeFileSync(join(dir, `.verbs.${dead}.1.tmp`), "");
+    const live = `.${String(process.ppid)}.1.tmp`;
+    writeFileSync(join(dir, live), "");
+    await cloneNamedBinary({ bin, dir, name: "equin · x" });
+    expect(readdirSync(dir).sort()).toEqual([live, "equin · x"].sort());
+    expect(statSync(bin).nlink).toBe(1);
   });
 
   test("an old build's hardlink at the name is replaced by a clone", async () => {

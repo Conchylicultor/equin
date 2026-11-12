@@ -27,7 +27,10 @@ its first exec, so a current clone is never re-made.
   name already holding a current clone (one link, the source's size and mtime —
   a clone keeps the mtime) is left alone; otherwise the clone is swapped in with
   one rename, so an old build's hardlink is replaced. `{ kind: "refused" }` when
-  the filesystem cannot (not APFS, another volume): run `bin` itself.
+  the filesystem cannot (not APFS, another volume): run `bin` itself. Every
+  call also removes the staging files (`.<pid>[.<seq>].tmp`) in `dir` whose
+  writer is dead (a crash mid-clone; the hardlink builds' leaks), so a dir
+  heals the next time anything is named in it.
 - `refreshCheckoutBun(root, bin, verbsDir)` / `CHECKOUT_BUN_DIR` — the
   checkout's Bun as a clone plus a stamp, and `verbs`, a symlink to
   `verbsDir` (the `process-names` data dir's `bun-<version>/`), written by the

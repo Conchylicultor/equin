@@ -73,20 +73,58 @@ export async function cloneNamedBinary(opts: {
   const source = await realpath(opts.bin);
   const sourceStat = await stat(source);
   await mkdir(opts.dir, { recursive: true });
+  await removeOrphanStaging(opts.dir);
   if (await isCurrentClone(path, sourceStat)) return { kind: "cloned", path };
   const staging = joinAppPath(opts.dir, `.${stagingSuffix()}`);
-  await rm(staging, { force: true });
   try {
     // The clone keeps the source's mtime (to the nanosecond), which is how
     // `isCurrentClone` — and the `./equin` script — recognise it later.
     await copyFile(source, staging, constants.COPYFILE_FICLONE_FORCE);
+    await rename(staging, path);
   } catch (err) {
+    await rm(staging, { force: true });
     const code = (err as NodeJS.ErrnoException).code;
     if (code === undefined || !REFUSALS.has(code)) throw err;
     return { kind: "refused", code };
   }
-  await rename(staging, path);
   return { kind: "cloned", path };
+}
+
+/**
+ * A staging name `stagingSuffix` made (`.<pid>.<seq>.tmp`, `.verbs.<pid>.<seq>.tmp`)
+ * — or the pid-only `.<pid>.tmp` of the builds before it — with its writer's pid.
+ */
+const STAGING_RE = /^\..*?(\d+)(?:\.\d+)?\.tmp$/;
+
+/**
+ * Remove the staging files in `dir` whose writer is gone: one killed between
+ * its copy and its rename, and every one the hardlink builds left — there,
+ * `rename` between two names of one inode is a no-op, so each rebuild of an
+ * already-named backend kept its staging name: 303 names of mise's Bun inode
+ * on 2026-11-12 (central's `bin/` alone held 210), the many-names hazard at
+ * the top of this file. Run on every call, the current-clone path included,
+ * so a directory heals the next time anything is named in it. A live writer's
+ * staging (another process cloning here now) is its own business.
+ */
+async function removeOrphanStaging(dir: AppPath): Promise<void> {
+  for (const entry of await readdir(dir)) {
+    const pid = STAGING_RE.exec(entry)?.[1];
+    if (pid === undefined) continue;
+    if (Number(pid) === process.pid || pidAlive(Number(pid))) continue;
+    await rm(joinAppPath(dir, entry), { force: true });
+  }
+}
+
+/** Whether a process with this pid exists (EPERM: it does, as another user). */
+function pidAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ESRCH") return false;
+    if ((err as NodeJS.ErrnoException).code === "EPERM") return true;
+    throw err;
+  }
 }
 
 /**
