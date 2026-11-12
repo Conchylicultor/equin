@@ -36,6 +36,7 @@ export function createStaticTransport(
   };
   return {
     socketUrl: (path) => `static-render:${path}`,
+    server: "none",
     openSocket(url): TransportSocket {
       throw violation(`a socket was opened (${url})`);
     },

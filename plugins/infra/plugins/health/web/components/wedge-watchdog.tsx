@@ -9,6 +9,7 @@ import {
   liveStateSocketKind,
   unansweredSubReportSink,
   useNotificationsChannelStatuses,
+  type UnansweredServer,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import { getHealth } from "../internal/client";
@@ -30,6 +31,13 @@ const WEDGE_COOLDOWN_MS = 60_000;
 // other). Survives component remounts so a flapping pipeline that
 // tears the watcher down and back up still throttles.
 const lastWedgeAt = new Map<string, number>();
+
+/** How a report names the server an unanswered sub was sent to. */
+const UNANSWERED_SERVER_LABEL: Record<UnansweredServer, string> = {
+  worktree: "worktree",
+  central: "central",
+  "in-browser": "in-browser server",
+};
 
 type WedgeKind =
   | "socket-down"
@@ -55,6 +63,12 @@ function diagSocketKind(url: string) {
 // the cause (the server restarted: `:restart`) splits a mode into its own task —
 // but stays key-agnostic within each, so a broad pipeline wedge files ONE task,
 // not one per stuck resource (the key stays in the message + count for triage).
+// The two modes that measure ONE resource are keyed by it: a stuck resource
+// push (`push-stall-resource`) and an unanswered sub (`unanswered-sub`, by
+// the server that left it unanswered and its oldest key) — each such wait has
+// its own cause (one loader, one key's watch), so one fingerprint for every
+// key and server made a fix of one read as regressed by the next, and let a
+// server in this browser's wedge hide the page backend's under the cooldown.
 // No volatile data (versions, params) enters this, so each mode still dedups
 // into a single task.
 //
@@ -248,8 +262,8 @@ export function WedgeWatchdog() {
       const visibleMs = deadlines.visibleMsSince(Date.now() - r.oldestWaitMs);
       wedge(
         "unanswered-sub",
-        `unanswered-sub:${r.socket}`,
-        `${r.count} sub(s) unanswered on an open ${r.socket} socket, oldest ${r.oldestKey} ${r.oldestParams} for ${Math.round(r.oldestWaitMs / 1000)}s (${Math.round(visibleMs / 1000)}s visible; tabs on socket: ${r.attachedTabs ?? "?"}, connection ${r.connection ?? "-"})`,
+        `unanswered-sub:${r.server}:${r.oldestKey}`,
+        `${r.count} sub(s) unanswered on an open ${UNANSWERED_SERVER_LABEL[r.server]} socket, oldest ${r.oldestKey} ${r.oldestParams} for ${Math.round(r.oldestWaitMs / 1000)}s (${Math.round(visibleMs / 1000)}s visible; tabs on socket: ${r.attachedTabs ?? "?"}, connection ${r.connection ?? "-"})`,
       );
     });
 

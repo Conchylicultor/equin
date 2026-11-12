@@ -22,6 +22,7 @@ const realFetch = globalThis.fetch;
 /** A page-shaped transport over the global fetch (read at call time, so a stub answers). */
 const page: Transport = {
   socketUrl: (path) => path,
+  server: "page",
   openSocket: () => {
     throw new Error("these tests open no socket");
   },

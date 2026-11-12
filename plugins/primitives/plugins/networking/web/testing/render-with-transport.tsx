@@ -18,6 +18,7 @@ import { TransportProvider, type Transport } from "../transport";
 export function testTransport(overrides: Partial<Transport> = {}): Transport {
   const transport: Transport = {
     socketUrl: (path) => path,
+    server: "page",
     openSocket: (url, options) => new SharedWebSocket(url, undefined, options),
     fetch: (input, init) => globalThis.fetch(input, init),
     servesUrls: true,

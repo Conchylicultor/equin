@@ -918,6 +918,7 @@ function pageBackend(): Transport {
   const value = { text: "from the page" };
   return {
     socketUrl: (path) => `test-page:${path}`,
+    server: "page",
     openSocket() {
       const socket: TransportSocket = {
         onopen: null,

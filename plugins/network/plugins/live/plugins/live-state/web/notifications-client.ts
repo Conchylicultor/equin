@@ -5,6 +5,7 @@ import type {
 } from "@tanstack/react-query";
 import {
   SharedWebSocket,
+  type TransportServer,
   type TransportSocket,
   subscribeWsStatus,
   subscribeNetDiag,
@@ -54,7 +55,10 @@ import {
   clearResourceContractMismatch,
   markResourceContractMismatch,
 } from "./resource-contract-store";
-import { unansweredSubReportSink } from "./unanswered-sub-reporter";
+import {
+  unansweredServer,
+  unansweredSubReportSink,
+} from "./unanswered-sub-reporter";
 import { toResourceError } from "./resource-error";
 import {
   resourceErrorReportSink,
@@ -840,6 +844,12 @@ export class NotificationsClient {
    */
   readonly telemetry: boolean;
   /**
+   * Which server this client's worktree socket reaches — its transport's
+   * `server`: the page's own backend, or a server running in this browser.
+   * What an unanswered sub is reported against (`reportUnanswered`).
+   */
+  private readonly server: TransportServer;
+  /**
    * `${key}\0${paramsKey}` → the live read currently failing on that tuple (its
    * query holds an error). Kept from the query cache's own events — never from
    * the hooks — so N observers of one tuple are one entry, one report, one
@@ -903,6 +913,8 @@ export class NotificationsClient {
        * transport's `telemetry`. Default true — the page's.
        */
       telemetry?: boolean;
+      /** Which server the transport reaches (its `server`). Default `"page"`. */
+      server?: TransportServer;
     },
   ) {
     // Socket factory: read by openChannel on a channel's first need.
@@ -925,6 +937,7 @@ export class NotificationsClient {
     this.fetchImpl = hooks?.fetchImpl ?? ((...a) => fetch(...a));
     this.tabId = hooks?.tabId ?? REALM_HOLDER_ID;
     this.telemetry = hooks?.telemetry ?? true;
+    this.server = hooks?.server ?? "page";
     this.unsubscribeFromBus = subscribeWsStatus(({ url, status }) => {
       const kind = this.socketKindOf(url);
       if (kind === null) return;
@@ -2597,13 +2610,17 @@ export class NotificationsClient {
     late.sort((a, b) => a.awaiting!.since - b.awaiting!.since);
     const oldest = late[0]!;
     const socket = channel === this.channels.central ? "central" : "worktree";
+    const server = unansweredServer(socket, this.server);
     const oldestWaitMs = now - oldest.awaiting!.since;
     for (const sub of late) sub.awaiting = undefined;
     trace(
-      `unanswered socket=${socket} count=${late.length} oldestKey=${oldest.key} oldestParams=${paramsKey(oldest.params)} waitMs=${oldestWaitMs} tabs=${channel.ws.attachedTabs ?? "?"} conn=${channel.ws.connection ?? "-"}`,
+      `unanswered socket=${socket} server=${server} count=${late.length} oldestKey=${oldest.key} oldestParams=${paramsKey(oldest.params)} waitMs=${oldestWaitMs} tabs=${channel.ws.attachedTabs ?? "?"} conn=${channel.ws.connection ?? "-"}`,
     );
+    // Telemetry this transport's traffic raised: a scope that drops its
+    // telemetry reports none (the trace above is this tab's own log).
+    if (!this.telemetry) return;
     unansweredSubReportSink.emit({
-      socket,
+      server,
       count: late.length,
       oldestKey: oldest.key,
       oldestParams: paramsKey(oldest.params),

@@ -40,6 +40,18 @@ export type ContentServing =
     };
 
 /**
+ * Which server a transport reaches — the fault domain a report about that
+ * server names (see {@link Transport.server}).
+ */
+export type TransportServer =
+  /** The page's own server: this checkout's backend. */
+  | "page"
+  /** A server running in this browser (a browser host: its worker's graph). */
+  | "in-browser"
+  /** No server at all (a static render, which may reach for none). */
+  | "none";
+
+/**
  * Where a subtree's server traffic goes: its live sockets, its HTTP requests
  * and the assets its elements load. The page's own server is `pageTransport`
  * (`networking/page-transport`, mounted at the app root); a
@@ -56,6 +68,14 @@ export interface Transport {
    * otherwise read the other transport's socket status as its own.
    */
   socketUrl(path: string): string;
+  /**
+   * Which server this transport reaches. A report about a server — a live
+   * subscription it left unanswered — is filed per server, so the page's
+   * backend and a server in this browser never share one report (a fix of
+   * one would read as regressed by the other) and one's wedge never hides the
+   * other's. Required, so every transport states it.
+   */
+  readonly server: TransportServer;
   /** Opens the socket for a URL `socketUrl` returned. */
   openSocket(url: string, options?: SharedWebSocketOptions): TransportSocket;
   /** `fetch` for every relative `/api/…` request of the subtree. */

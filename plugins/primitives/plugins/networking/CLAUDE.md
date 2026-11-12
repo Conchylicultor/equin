@@ -77,7 +77,7 @@ others — there is no leader to lose. Design:
 
 ## `Transport` — where a subtree's server traffic goes
 
-`web/transport.ts`: a `Transport` is `{ socketUrl, openSocket, fetch,
+`web/transport.ts`: a `Transport` is `{ socketUrl, server, openSocket, fetch,
 servesUrls, content, machine, telemetry }`. **There is no default transport**:
 `useTransport()` throws outside every `<TransportProvider>`. The app root
 (`framework/web-core`'s `App.tsx`) mounts the page's own server,
@@ -104,6 +104,11 @@ the same URL. `fetchWithRetry` takes the transport's `fetch` as an option.
   `RESOURCE_TIMING_WAIT_MS` — or `unmeasured { reason }` (an in-browser server,
   no stamp, no entry). Endpoints' `FetchOpts.onTiming` hands it to a caller
   (the optimistic `confirm` sample's ack split).
+- **`server`** (`TransportServer`) — which server the transport reaches:
+  `page` (the page's own backend), `in-browser` (a server running in this
+  browser — a browser host), `none` (a static render). A report about a
+  server names it, so the two never share one report (live-state's
+  unanswered-sub report: `worktree` / `central` / `in-browser`).
 - **`machine`** — whether the computer is behind the transport (`needsMachine`
   declarations answer `unavailable` without asking when it is not).
 - **`servesUrls`** — whether an element can load the transport's `/api/…`
@@ -221,6 +226,7 @@ built on them — see
     - `SocketMessage`
     - `Transport`
     - `TransportScoped`
+    - `TransportServer`
     - `TransportSocket`
     - `UrlStatus`
     - `WsStatus`

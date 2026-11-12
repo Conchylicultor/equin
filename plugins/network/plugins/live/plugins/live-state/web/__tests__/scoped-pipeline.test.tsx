@@ -52,6 +52,7 @@ function backend(who: string, watermark: string) {
   let closed = 0;
   const transport: Transport = {
     socketUrl: (path) => `test-${who}:${path}`,
+    server: "in-browser",
     openSocket(url) {
       opened.push(url);
       const socket: TransportSocket = {

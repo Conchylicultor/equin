@@ -63,7 +63,10 @@ export {
 } from "./notifications-client";
 export { httpStaleDropReportSink } from "./stale-drop-reporter";
 export { unansweredSubReportSink } from "./unanswered-sub-reporter";
-export type { UnansweredSubReport } from "./unanswered-sub-reporter";
+export type {
+  UnansweredServer,
+  UnansweredSubReport,
+} from "./unanswered-sub-reporter";
 export { useResourceContractMismatches } from "./resource-contract-store";
 export type { ResourceContractMismatch } from "./resource-contract-store";
 export type { HttpStaleDropReport } from "./stale-drop-reporter";

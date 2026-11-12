@@ -34970,6 +34970,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `network/live/live-state.getNotificationsClient`
           - `network/live/live-state.liveStateSocketKind`
+          - `network/live/live-state.UnansweredServer`
           - `network/live/live-state.unansweredSubReportSink`
           - `network/live/live-state.useNotificationsChannelStatuses`
           - `primitives/networking.NetDiagEvent`
@@ -39858,8 +39859,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `liveStringArray` — A jsonb string array (tags, label ids).
         - **`live-state`** — Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's tab-shared /ws/notifications channel. useQueryResource reads a local async load (not a server read — those are live) as a ResourceResult.
           - Web:
-            - Uses: 26 symbols — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
-              - `primitives/networking` ×11
+            - Uses: 27 symbols — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
+              - `primitives/networking` ×12
               - `primitives/css/spacing` ×2
               - `primitives/css/ui-kit` ×2
               - `primitives/perfs/task-marks` ×2
@@ -39910,6 +39911,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SlowResourceInfo`
               - `StalledResource`
               - `TransportInfo`
+              - `UnansweredServer`
               - `UnansweredSubReport`
               - `WindowParams`
               - `WindowResourceDescriptor`
@@ -51700,6 +51702,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SocketMessage`
           - `Transport`
           - `TransportScoped`
+          - `TransportServer`
           - `TransportSocket`
           - `UrlStatus`
           - `WsStatus`

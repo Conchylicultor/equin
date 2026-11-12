@@ -113,6 +113,8 @@ export function browserServerTransport(
   const prefix = `browser:${server.id}:`;
   return {
     socketUrl: (path) => `${prefix}${path}`,
+    // A server running in this browser, not the page's own backend.
+    server: "in-browser",
     openSocket(url) {
       if (url === `${prefix}${NOTIFICATIONS_PATH}`) {
         return connectedSocket(server, url);

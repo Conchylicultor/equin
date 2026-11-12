@@ -209,6 +209,7 @@ class PipelineSlot {
       fetchImpl: (input, init) => transport.fetch(input, init),
       registries,
       telemetry: transport.telemetry,
+      server: transport.server,
     });
     return { queryClient, client };
   }

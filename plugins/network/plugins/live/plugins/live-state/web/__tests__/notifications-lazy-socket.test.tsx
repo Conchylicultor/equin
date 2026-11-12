@@ -62,6 +62,7 @@ function recordingTransport() {
   const opened: string[] = [];
   const transport: Transport = {
     socketUrl: (path) => `test-lazy:${path}`,
+    server: "page",
     openSocket(url) {
       opened.push(url);
       return inertSocket();

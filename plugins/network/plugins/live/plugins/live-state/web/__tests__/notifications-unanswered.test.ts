@@ -75,7 +75,11 @@ describe("NotificationsClient — unanswered subs", () => {
   const clients: NotificationsClient[] = [];
   let reports: UnansweredSubReport[] = [];
 
-  async function setup(opts: { open: boolean }): Promise<{
+  async function setup(opts: {
+    open: boolean;
+    server?: "page" | "in-browser";
+    telemetry?: boolean;
+  }): Promise<{
     hub: ReturnType<typeof createTransportHub>;
     client: NotificationsClient;
     socket: FakeWebSocket;
@@ -84,6 +88,8 @@ describe("NotificationsClient — unanswered subs", () => {
     const client = new NotificationsClient(new QueryClient(), {
       makeSocket: hub.makeSocket(hub.tab()),
       tabId: "tab-a",
+      server: opts.server,
+      telemetry: opts.telemetry,
     });
     clients.push(client);
     client.connect();
@@ -120,7 +126,7 @@ describe("NotificationsClient — unanswered subs", () => {
     await vi.advanceTimersByTimeAsync(1);
     expect(reports).toEqual([
       expect.objectContaining({
-        socket: "worktree",
+        server: "worktree",
         count: 1,
         oldestKey: "k",
         oldestWaitMs: UNANSWERED_SUB_MS,
@@ -129,6 +135,26 @@ describe("NotificationsClient — unanswered subs", () => {
 
     await vi.advanceTimersByTimeAsync(UNANSWERED_SUB_MS * 3);
     expect(reports).toHaveLength(1);
+  });
+
+  test("a sub a server in this browser left unanswered is reported as that server's, not the page backend's", async () => {
+    const { client } = await setup({ open: true, server: "in-browser" });
+    client.observe("k", { a: "1" }, undefined, { schema: pushSchema });
+    await flush();
+
+    await vi.advanceTimersByTimeAsync(UNANSWERED_SUB_MS);
+    expect(reports).toEqual([
+      expect.objectContaining({ server: "in-browser", oldestKey: "k" }),
+    ]);
+  });
+
+  test("a client whose transport drops its telemetry reports no unanswered sub", async () => {
+    const { client } = await setup({ open: true, telemetry: false });
+    client.observe("k", { a: "1" }, undefined, { schema: pushSchema });
+    await flush();
+
+    await vi.advanceTimersByTimeAsync(UNANSWERED_SUB_MS * 2);
+    expect(reports).toHaveLength(0);
   });
 
   test("a wait across a page suspension is not judged: the deadline that fires late restarts the window", async () => {

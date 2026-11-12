@@ -37,6 +37,7 @@ function pageContentServing(): ContentServing | null {
  */
 export const pageTransport: Transport = {
   socketUrl: (path) => path,
+  server: "page",
   openSocket: (url, options) => new SharedWebSocket(url, undefined, options),
   fetch: (input, init) => nativeFetch(input, init),
   servesUrls: true,

@@ -20,7 +20,12 @@ export type {
   SharedWorkerLike,
 } from "./transport-types";
 export { TransportProvider, useTransport } from "./transport";
-export type { ContentServing, Transport, TransportSocket } from "./transport";
+export type {
+  ContentServing,
+  Transport,
+  TransportServer,
+  TransportSocket,
+} from "./transport";
 export { transportScoped, useTransportScoped } from "./transport-scoped";
 export type { TransportScoped } from "./transport-scoped";
 export { requestTimingOf, RESOURCE_TIMING_WAIT_MS } from "./request-timing";
