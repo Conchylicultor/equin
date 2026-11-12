@@ -1,5 +1,6 @@
-import { EventLine } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
+import { CollapsibleCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/web";
 import type { AttachmentRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/core";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -26,15 +27,11 @@ function labelFor(subtype: string): string {
 }
 
 /**
- * The harness slipping the agent a one-line coaching note mid-session — batch
- * your tool calls, say something so the user knows you're alive. It is not the
- * agent's turn and not the user's, and it is never the point of the
- * conversation, so it renders as a quiet line: which nudge, then the note
- * itself truncated to one line.
- *
- * Truncating loses nothing — the row's own raw-JSON action holds the full text
- * — and it is what keeps a nudge that fires ninety times from crowding out the
- * work around it.
+ * The harness slipping the agent a coaching note mid-session — batch your tool
+ * calls, say something so the user knows you're alive. It is not the agent's
+ * turn and not the user's, and it is never the point of the conversation, so it
+ * renders as a collapsed card: the closed row names which nudge, and opening it
+ * shows the note's full text.
  */
 export function HarnessNudgeView({ event }: AttachmentRendererProps) {
   const att = event.attachment as HarnessNudgePayload;
@@ -43,11 +40,17 @@ export function HarnessNudgeView({ event }: AttachmentRendererProps) {
   }
 
   return (
-    <EventLine
+    <CollapsibleCard
       icon={<Icon icon={campaignIcon} className="size-3.5" />}
       label={labelFor(event.subtype)}
     >
-      <span className="truncate">{att.text}</span>
-    </EventLine>
+      <Text
+        as="p"
+        variant="caption"
+        className="whitespace-pre-wrap break-words text-muted-foreground"
+      >
+        {att.text}
+      </Text>
+    </CollapsibleCard>
   );
 }

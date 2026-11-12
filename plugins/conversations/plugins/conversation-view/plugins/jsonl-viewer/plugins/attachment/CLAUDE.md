@@ -42,7 +42,7 @@
   - **`directory-listing`** — Renders the directory listings the harness hands the agent: the directory and its entry count on the collapsed line, the entry names in the body.
   - **`edited-text-file`** — Renders edited-text-file attachment events as a collapsible file path with the resulting file content shown as a syntax-highlighted code listing.
   - **`environment`** — Renders the environment attachment — where the agent is running — as either the opening snapshot or, when the harness reports changes, the fields that moved with their from → to values.
-  - **`harness-nudge`** — Renders the one-line coaching notes the harness slips the agent mid-session — the batching reminder and the check-in reminder.
+  - **`harness-nudge`** — Renders the coaching notes the harness slips the agent mid-session, as collapsed cards — the batching reminder and the check-in reminder.
   - **`hook-additional-context`** — Renders hook_additional_context attachment events: the context a PreToolUse/PostToolUse hook injected into the agent before a tool ran.
   - **`hook-error`** — Renders hook-failure attachment events (hook_non_blocking_error, hook_blocking_error, hook_cancelled, hook_stopped_continuation) as a destructive, expanded-by-default error card surfacing the…
   - **`hook-message`** — Renders hook_system_message attachment events — a hook's informational line (a tip, a reminder) — as a calm one-line row, distinct from the loud hook-error card.

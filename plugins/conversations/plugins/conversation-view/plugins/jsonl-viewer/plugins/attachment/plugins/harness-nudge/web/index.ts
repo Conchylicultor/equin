@@ -5,7 +5,7 @@ import { HarnessNudgeView } from "./components/harness-nudge-view";
 export default {
   collapsed: true,
   description:
-    "Renders the one-line coaching notes the harness slips the agent mid-session — the batching reminder and the check-in reminder.",
+    "Renders the coaching notes the harness slips the agent mid-session, as collapsed cards — the batching reminder and the check-in reminder.",
   contributions: [
     ...attachmentRenderer({
       match: "batching_reminder_sent",

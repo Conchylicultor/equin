@@ -17398,8 +17398,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-size-2xs`
               - `ui/tokens/type-scale --line-height-2xs`
               - `ui/tokens/type-scale --measure-reading`
-            - Imported by: 52 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
-              - `conversations` ×49
+            - Imported by: 51 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+              - `conversations` ×48
               - `apps/places/places-map`
               - `network/live`
               - `tasks/outcome-report`
@@ -17644,7 +17644,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/color-palette --muted-foreground`
                       - `ui/tokens/font-family --font-mono`
                       - `ui/tokens/shape --spacing`
-                - **`harness-nudge`** — Renders the one-line coaching notes the harness slips the agent mid-session — the batching reminder and the check-in reminder.
+                - **`harness-nudge`** — Renders the coaching notes the harness slips the agent mid-session, as collapsed cards — the batching reminder and the check-in reminder.
                   - Web:
                     - Contributes:
                       - `JsonlViewerAttachment.Renderer` "batching_reminder_sent" → `HarnessNudgeView`
@@ -17652,11 +17652,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `JsonlViewer.ContextRole` "attachment:batching_reminder_sent"
                       - `JsonlViewer.ContextRole` "attachment:silent_turn_reminder"
                     - Uses:
-                      - `conversations/conversation-view/jsonl-viewer.EventLine`
                       - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
+                      - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
+                      - `primitives/css/text.Text`
                       - `ui/icons.Icon`
                   - Cross-plugin:
-                    - Uses tokens: `ui/tokens/shape --spacing`
+                    - Uses tokens:
+                      - `ui/tokens/color-palette --muted-foreground`
+                      - `ui/tokens/shape --spacing`
                 - **`hook-additional-context`** — Renders hook_additional_context attachment events: the context a PreToolUse/PostToolUse hook injected into the agent before a tool ran.
                   - Web:
                     - Contributes:
@@ -18096,8 +18099,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/density` ×5
                   - `ui/tokens/shape` ×2
                   - `ui/tokens/font-family --font-sans`
-                - Imported by: 30 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/REFERENCE.md)
-                  - `conversations` ×30
+                - Imported by: 31 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/REFERENCE.md)
+                  - `conversations` ×31
             - **`compaction`** — Renders a context compaction as one thin rule across the transcript — Context compacted · 316k → 12k — folding the summary the agent continues from (as markdown), the files it re-read, and the context the harness re-injected right after.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "compaction" → `CompactionRow`
@@ -46610,9 +46613,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 422 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 423 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×110
-              - `conversations` ×83
+              - `conversations` ×84
               - `primitives` ×47
               - `debug` ×37
               - `page` ×25
@@ -60423,9 +60426,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --space-sm`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 540 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 541 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×122
-              - `conversations` ×95
+              - `conversations` ×96
               - `primitives` ×73
               - `debug` ×40
               - `page` ×33
