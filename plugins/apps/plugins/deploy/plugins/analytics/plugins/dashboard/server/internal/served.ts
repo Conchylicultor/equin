@@ -55,9 +55,8 @@ export const deploymentAnalyticsServed = serveValue(deploymentAnalytics, {
     return read.ready ? read.value : { kind: "not-copied" as const };
   },
   whileSubscribed: ({ deploymentId }, notify) =>
-    onSiteMirrorApplied(
-      { setId: ANALYTICS_MIRROR_SET_ID, deploymentId },
-      () => notify(),
+    onSiteMirrorApplied({ setId: ANALYTICS_MIRROR_SET_ID, deploymentId }, () =>
+      notify(),
     ),
   // A first copy or a reconcile commits a page after another; one report per
   // second is all a reader can see of it.

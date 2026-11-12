@@ -30,7 +30,8 @@ export async function readSiteMirror<T>(
     .select({ id: tableMirrorReplicas.id })
     .from(tableMirrorReplicas)
     .where(eq(tableMirrorReplicas.id, replicaId));
-  if (row === undefined) return { ready: false, phase: "empty", progress: null };
+  if (row === undefined)
+    return { ready: false, phase: "empty", progress: null };
   return withReplicaSchema(db, replicaId, fn);
 }
 

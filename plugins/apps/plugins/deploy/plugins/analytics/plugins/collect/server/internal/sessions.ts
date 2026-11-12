@@ -1,6 +1,9 @@
 import { sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
-import { executeOne, executeRows } from "@plugins/database/plugins/sql-rows/core";
+import {
+  executeOne,
+  executeRows,
+} from "@plugins/database/plugins/sql-rows/core";
 import type {
   Filter,
   FilterColumn,
