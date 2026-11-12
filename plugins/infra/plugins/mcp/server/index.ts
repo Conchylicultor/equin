@@ -2,7 +2,6 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 
 export { Mcp } from "./internal/mcp";
 export type {
-  McpInstructions,
   McpScope,
   McpScopeResolver,
   McpTool,
@@ -13,5 +12,5 @@ export type {
 
 export default {
   description:
-    "The MCP contribution API, SDK-free: Mcp.tool / Mcp.instructions / Mcp.scope register a tool, a server-instructions section or THE scope resolver into the in-process registry the desktop half (machine/) serves over HTTP — so a plugin contributing to the MCP server stays portable.",
+    "The MCP contribution API, SDK-free: Mcp.tool / Mcp.scope register a tool or THE scope resolver (no server instructions: context about an agent is a conversations/system-prompt section) into the in-process registry the desktop half (machine/) serves over HTTP — so a plugin contributing to the MCP server stays portable.",
 } satisfies ServerPluginDefinition;

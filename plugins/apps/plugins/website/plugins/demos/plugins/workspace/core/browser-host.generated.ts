@@ -987,6 +987,7 @@ export const hostReads: readonly {
   { key: "conversations.history", needsMachine: false },
   { key: "conversations.partial-message", needsMachine: true },
   { key: "conversations.rewind-preview", needsMachine: true },
+  { key: "conversations.system-prompt", needsMachine: false },
   { key: "data-view-custom-values.v2", needsMachine: false },
   { key: "data-view-row-order.v2", needsMachine: false },
   { key: "deps.states", needsMachine: true },

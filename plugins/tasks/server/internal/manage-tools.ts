@@ -197,9 +197,9 @@ ${SCOPE}`,
   },
 });
 
-/** How a `tasks.manage` grant reads to the agent. */
+/** A `tasks.manage` grant adds no Mandate line: `edit_task` / `drop_task`
+ * appear only when granted, and their descriptions state the tree scope. */
 export const tasksManageCapability = Mandate.Capability({
   cap: tasksManage,
-  describe: () =>
-    "You may edit (title, description, dependencies, track, how it starts — arm or disarm it, sidequests included) and drop the tasks of this tree with `edit_task` and `drop_task` — only the tasks below its root, never a task outside it.",
+  describe: () => null,
 });

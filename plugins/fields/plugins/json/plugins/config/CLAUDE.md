@@ -39,9 +39,9 @@
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
-  - Imported by: 39 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 40 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×7
-    - `conversations` ×6
+    - `conversations` ×7
     - `debug` ×5
     - `infra` ×5
     - `page` ×4

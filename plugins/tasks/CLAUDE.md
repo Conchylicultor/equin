@@ -12,6 +12,7 @@
     - `resource.declare` "tasks.repo-info"
     - `treeDigestAnnotation` "tasks"
     - `conversations.compaction-context` "task-tree (fit)"
+    - `conversations.system-prompt.section` "tree-digest"
     - `watchSource` "tasks.created"
     - `watchSource` "tasks.settled"
     - `watchSource` "tasks.started"
@@ -72,7 +73,6 @@
   - Register:
     - `mcpTool('add_task')`
     - `mcpTool('task_tree')`
-    - `mcpInstructions('tree-digest')`
     - `defineWarmup('tasks.auto-start-reconcile')`
   - Routes: `POST /api/tasks/launch`
 - Core:

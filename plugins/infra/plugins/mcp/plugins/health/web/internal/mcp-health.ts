@@ -14,7 +14,7 @@ import type { McpHealth } from "@plugins/infra/plugins/mcp/core";
  * - the latest request failed → `critical`: agents launched from here have
  *   no equin tools (not even `flag_raise` to say so);
  * - a contribution's latest run threw → `attention`: the server answers, with
- *   that tool hidden or that instructions section replaced by a notice;
+ *   that tool hidden or its live description replaced by a notice;
  * - otherwise `ok` — including before any agent connected, since a server
  *   nothing has asked has nothing wrong to report.
  */

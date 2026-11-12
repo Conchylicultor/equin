@@ -1,4 +1,4 @@
-import type { McpInstructions, McpScopeResolver, McpTool } from "./mcp";
+import type { McpScopeResolver, McpTool } from "./mcp";
 
 export const registry = new Map<string, McpTool>();
 
@@ -9,10 +9,6 @@ export const registry = new Map<string, McpTool>();
  * read only by the catalog (Debug → MCP tools).
  */
 export const toolDeclaredIn = new Map<string, string | null>();
-export const instructionsDeclaredIn = new Map<string, string | null>();
-
-/** `Mcp.instructions` contributions, keyed by id. */
-export const instructionsRegistry = new Map<string, McpInstructions>();
 
 /** The one `Mcp.scope` resolver, when a plugin registered it. */
 export const scopeRegistry: {

@@ -38,7 +38,7 @@ export const exitCleanTool = Mcp.tool({
   name: "exit_clean",
   description: `Close this conversation cleanly: your work is finished (the branch landed, or there was nothing to land) and there's nothing the user needs to know about. The conversation will close automatically after this turn ends.
 
-Call it when your mandate says to (on request — the push-and-exit prompt or an explicit "Exit" — or on your own once your work is done). If anything went wrong or there's something worth surfacing, call \`flag_raise\` instead.`,
+Call it when the user asks you to wrap up (the push-and-exit prompt or an explicit "Exit") — never on your own, unless your Mandate says to close once your work is done. If anything went wrong or there's something worth surfacing, call \`flag_raise\` instead.`,
   inputSchema: {},
   async handler(_args, { conversationId }) {
     await updateConversation(conversationId, { closeRequested: true });

@@ -1,5 +1,11 @@
 import { useState, type ReactNode } from "react";
 import type { ContextUsage } from "@plugins/conversations/plugins/context-usage/core";
+import {
+  conversationSystemPrompt,
+  estimateTokens,
+  type SystemPromptSectionRecord,
+} from "@plugins/conversations/plugins/system-prompt/core";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { formatTokenCount } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import {
   useSendConversationTurn,
@@ -45,6 +51,19 @@ const seriesColor = (i: number) => `var(--categorical-${(i % 10) + 1})`;
 // The harness's names for the rows that carry a per-item breakdown.
 const MEMORY_FILES_ROW = "Memory files";
 const MCP_TOOLS_ROW = "MCP tools";
+const SYSTEM_PROMPT_ROW = "System prompt";
+
+/**
+ * What equin appended to the agent's system prompt at its last spawn, section
+ * by section (conversations/system-prompt) — `loading` until the read answers,
+ * `error` when it failed, `unrecorded` for an agent spawned before sections
+ * were recorded.
+ */
+export type SystemPromptParts =
+  | { kind: "loading" }
+  | { kind: "error"; message: string }
+  | { kind: "unrecorded" }
+  | { kind: "sections"; sections: readonly SystemPromptSectionRecord[] };
 
 // A window far larger than what is used (1M against a 60k conversation) would
 // squeeze every share into a sliver at the bar's start. The bar then spans
@@ -71,6 +90,15 @@ export function ContextCard({
 }) {
   const [instructions, setInstructions] = useState("");
   const shownPath = useShownPath(conversationId);
+  const promptRead = useLive(conversationSystemPrompt, { id: conversationId });
+  const systemPrompt: SystemPromptParts =
+    promptRead.status === "loading"
+      ? { kind: "loading" }
+      : promptRead.status === "error"
+        ? { kind: "error", message: promptRead.error.message }
+        : promptRead.found
+          ? { kind: "sections", sections: promptRead.row.sections }
+          : { kind: "unrecorded" };
   const sendConversationTurn = useSendConversationTurn();
   // Compacting is a turn: on a host without the computer it is disabled.
   const sendAvailability = useTurnSendAvailability();
@@ -86,7 +114,7 @@ export function ContextCard({
   return (
     <Stack gap="md">
       {usage !== null ? (
-        <Breakdown usage={usage} shownPath={shownPath} />
+        <Breakdown usage={usage} shownPath={shownPath} systemPrompt={systemPrompt} />
       ) : (
         <Text variant="caption" tone="muted">
           No reading yet. The agent measures its context when it starts and
@@ -141,10 +169,12 @@ function useShownPath(conversationId: string): (path: string) => string {
 export function Breakdown({
   usage,
   shownPath,
+  systemPrompt,
 }: {
   usage: ContextUsage;
   /** How a memory file's path is shown (the harness reports it absolute). */
   shownPath: (path: string) => string;
+  systemPrompt: SystemPromptParts;
 }) {
   const { messages, setup, free, reserve } = contextRows(usage);
   const window = usage.rawMaxTokens;
@@ -257,9 +287,13 @@ export function Breakdown({
               color={seriesColor(i)}
               name={c.name}
               tokens={c.tokens}
-              detail={setupDetail(usage, c.name, shownPath)}
+              detail={setupDetail(usage, c, shownPath, systemPrompt)}
               nested
-            />
+            >
+              {c.name === SYSTEM_PROMPT_ROW ? (
+                <SystemPromptStatus systemPrompt={systemPrompt} />
+              ) : undefined}
+            </Share>
           ))}
         </Share>
         <Share color="var(--muted)" name="Free" tokens={free} />
@@ -287,9 +321,13 @@ function messageDetail(usage: ContextUsage): Item[] {
 
 function setupDetail(
   usage: ContextUsage,
-  row: string,
+  category: { name: string; tokens: number },
   shownPath: (path: string) => string,
+  systemPrompt: SystemPromptParts,
 ): Item[] {
+  const row = category.name;
+  if (row === SYSTEM_PROMPT_ROW)
+    return systemPromptDetail(category.tokens, systemPrompt);
   if (row === MEMORY_FILES_ROW)
     return usage.memoryFiles.map((f) => ({
       name: shownPath(f.path),
@@ -307,6 +345,52 @@ function setupDetail(
     return [...byServer].map(([name, tokens]) => ({ name, tokens }));
   }
   return [];
+}
+
+/** What the System prompt row says when it has no parts to list. */
+function SystemPromptStatus({
+  systemPrompt,
+}: {
+  systemPrompt: SystemPromptParts;
+}) {
+  if (systemPrompt.kind === "sections") return null;
+  return (
+    <Text
+      variant="caption"
+      tone={systemPrompt.kind === "error" ? "default" : "faint"}
+      className={cn(
+        "px-xs py-2xs",
+        systemPrompt.kind === "error" && "text-destructive",
+      )}
+    >
+      {systemPrompt.kind === "loading"
+        ? "Loading…"
+        : systemPrompt.kind === "error"
+          ? `Sections unavailable: ${systemPrompt.message}`
+          : "Sections not recorded: the agent started before they were."}
+    </Text>
+  );
+}
+
+/**
+ * The System prompt row's parts: each section equin appended (an estimate from
+ * its length — the harness measures the row, not its parts), then Claude Code's
+ * own prompt as what is left of the measured total.
+ */
+function systemPromptDetail(
+  measured: number,
+  systemPrompt: SystemPromptParts,
+): Item[] {
+  if (systemPrompt.kind !== "sections") return [];
+  const appended = systemPrompt.sections.map((s) => ({
+    name: `~ ${s.label}`,
+    tokens: estimateTokens(s.chars),
+  }));
+  const ours = appended.reduce((sum, s) => sum + s.tokens, 0);
+  return [
+    { name: "Claude Code", tokens: Math.max(0, measured - ours) },
+    ...appended,
+  ];
 }
 
 /**

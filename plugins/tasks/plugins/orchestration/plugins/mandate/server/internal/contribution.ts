@@ -9,8 +9,17 @@ import type { Capability } from "@plugins/tasks/plugins/orchestration/plugins/ma
 export interface MandateCapabilityEntry<T> {
   /** The core token — the id and the schema a stored value is parsed by. */
   cap: Capability<T>;
-  /** One instruction for the agent, from the granted value. */
-  describe: (value: T) => string;
+  /**
+   * The agent's Mandate line for the granted value, or `null` for none.
+   *
+   * Write a line ONLY for what nothing else tells the agent. A capability that
+   * just gates a tool says nothing here: the tool appears only when granted,
+   * and its own description states its limits. A value that matches what
+   * CLAUDE.md already says (push only when asked) says nothing either. What is
+   * left is behaviour no tool carries — how to pace itself while it watches,
+   * that it may push or close on its own.
+   */
+  describe: (value: T) => string | null;
 }
 
 const CapabilityToken = defineServerContribution<

@@ -13,6 +13,7 @@ import {
 } from "@plugins/conversations/plugins/spawn-failure/server";
 import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import { Runtime } from "./runtime";
+import { spawnSystemPrompt } from "./spawn-system-prompt";
 import { requestStatusReconcile } from "./status-reconciler";
 import { launchWithHeldTurn } from "./turns";
 
@@ -51,7 +52,6 @@ export const spawnConversationJob = defineJob({
     workspace: WorkspaceSpecSchema.default({ kind: "worktree" }),
     runtimeId: z.string(),
     create: z.object({
-      appendSystemPrompt: z.string().optional(),
       model: ConversationModelSchema,
       effort: EffortLevelSchema.optional(),
       resumeSessionId: z.string().optional(),
@@ -126,12 +126,15 @@ export const spawnConversationJob = defineJob({
         // launch's own prompt (kind `launch`), else one the user sent while
         // this was starting — becomes the launch message, so Claude starts on
         // it directly instead of idling at an empty prompt.
+        // Composed at the spawn, never at enqueue: a job retried after a
+        // restart starts on what is true now (system-prompt).
+        const appendSystemPrompt = await spawnSystemPrompt(conversationId);
         await launchWithHeldTurn(conversationId, (prompt) =>
           runtime.create(
             conversationId,
             worktreePath,
             workspace.launch(at, { conversationId }),
-            { ...create, prompt },
+            { ...create, appendSystemPrompt, prompt },
           ),
         );
       }

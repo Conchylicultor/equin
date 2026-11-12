@@ -17,6 +17,19 @@ export function treeDigest(args: DigestArgs): Promise<TreeDigestResult | null> {
   });
 }
 
+/** The whole mandate subtree, capped like a digest, and the cursor advanced:
+ * what an agent process starts with, so the `add_task` digests after it list
+ * only what changed since. `null` for a conversation without a task. */
+export function treeSnapshot(
+  args: DigestArgs,
+): Promise<TreeDigestResult | null> {
+  return treeDigestOn(dbDigestStore, {
+    conversationId: args.conversationId,
+    annotate: annotateFromContributions,
+    whole: true,
+  });
+}
+
 /** The conversation's whole mandate subtree, read-only (the cursor stays). */
 export function taskTree(args: DigestArgs): Promise<string | null> {
   return taskTreeOn(dbDigestStore, {

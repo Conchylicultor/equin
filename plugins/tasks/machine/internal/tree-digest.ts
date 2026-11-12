@@ -1,4 +1,5 @@
 import { Mcp } from "@plugins/infra/plugins/mcp/server";
+import { SystemPrompt } from "@plugins/conversations/plugins/system-prompt/server";
 import { CompactionContext } from "@plugins/conversations/plugins/compaction-context/server";
 import { fitToBudget } from "@plugins/conversations/plugins/compaction-context/core";
 import {
@@ -13,6 +14,7 @@ import {
 import {
   taskTree,
   treeDigest,
+  treeSnapshot,
   TreeDigest,
 } from "@plugins/tasks/plugins/orchestration/plugins/tree-digest/server";
 import { listSidequestIds } from "@plugins/tasks/plugins/task-track/server";
@@ -67,12 +69,18 @@ export const taskTreeTool = Mcp.tool({
   },
 });
 
-/** The tree, seen at connect — before the first filing. */
-export const treeDigestInstructions = Mcp.instructions({
+/**
+ * The tree, in the agent's system prompt — the whole tree at every spawn
+ * (launch and resume: a resumed process's new system prompt replaced the one
+ * that held the last whole tree), capped like a digest, then the cursor
+ * advanced so the `add_task` digests list only what changed since.
+ */
+export const treeSection = SystemPrompt.Section({
   id: "tree-digest",
-  render: async ({ conversationId }) => {
+  label: "Task tree",
+  render: async (conversationId) => {
     if ((await grantOf(tasksFile, conversationId)) === null) return null;
-    const digest = await treeDigest({ conversationId });
+    const digest = await treeSnapshot({ conversationId });
     return digest === null ? null : `## Task tree\n\n${digest.text}`;
   },
 });

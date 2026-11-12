@@ -1,7 +1,6 @@
 /**
- * `Mcp.instructions` rides the initialize result only: an initialize request
- * renders every contribution (nulls dropped, id order, blank-line joined), and
- * any other request renders nothing.
+ * The MCP request path: no server instructions at initialize, live
+ * descriptions on tools/list, `when` gates, the call context.
  *
  * Run: `./equin test plugins/infra/plugins/mcp`
  */
@@ -11,21 +10,9 @@ import { z } from "zod";
 import { setServerErrorHandler } from "@plugins/framework/plugins/server-core/core/testing";
 import { handleMcpRequest } from "./handle-mcp";
 import { Mcp, type McpToolContext } from "../../server";
-import { instructionsRegistry, registry } from "../../server/internal/registry";
+import { registry } from "../../server/internal/registry";
 
 const CONVERSATION = "conv-test";
-
-let renders: Array<{ id: string; ctx: McpToolContext }> = [];
-
-function contribute(id: string, text: string | null): void {
-  void Mcp.instructions({
-    id,
-    render: (ctx) => {
-      renders.push({ id, ctx });
-      return Promise.resolve(text);
-    },
-  }).register();
-}
 
 function post(body: unknown): Promise<Response> {
   return handleMcpRequest(
@@ -55,10 +42,8 @@ const initialize = {
 let reported: string[] = [];
 
 beforeEach(() => {
-  renders = [];
   reported = [];
   setServerErrorHandler((report) => reported.push(report.message));
-  instructionsRegistry.clear();
   registry.clear();
   void Mcp.tool({
     name: "echo",
@@ -69,92 +54,14 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  instructionsRegistry.clear();
   registry.clear();
 });
 
-describe("Mcp.instructions", () => {
-  test("initialize carries rendered instructions, nulls omitted, id order", async () => {
-    contribute("b-second", "Second section.");
-    contribute("a-first", "First section.");
-    contribute("c-null", null);
-
+describe("server instructions", () => {
+  test("initialize carries none: agent context is a system-prompt section", async () => {
     const res = await post(initialize);
-    expect(res.status).toBe(200);
-    const json = (await res.json()) as {
-      result: { instructions?: string };
-    };
-    expect(json.result.instructions).toBe("First section.\n\nSecond section.");
-    expect(renders.map((r) => r.id).sort()).toEqual([
-      "a-first",
-      "b-second",
-      "c-null",
-    ]);
-    expect(renders[0]?.ctx).toEqual({ conversationId: CONVERSATION });
-  });
-
-  test("a batch containing initialize also renders", async () => {
-    contribute("a", "Batched.");
-    const res = await post([initialize]);
-    expect(res.status).toBe(200);
-    expect(renders.map((r) => r.id)).toEqual(["a"]);
-  });
-
-  test("initialize omits instructions when every contribution is null", async () => {
-    contribute("only-null", null);
-    const res = await post(initialize);
-    const json = (await res.json()) as { result: Record<string, unknown> };
-    expect("instructions" in json.result).toBe(false);
-  });
-
-  test("tools/list and tools/call render nothing", async () => {
-    contribute("a", "Should not render.");
-
-    const list = await post({ jsonrpc: "2.0", id: 2, method: "tools/list" });
-    expect(list.status).toBe(200);
-    const listJson = (await list.json()) as {
-      result: { tools: Array<{ name: string }> };
-    };
-    expect(listJson.result.tools.map((t) => t.name)).toEqual(["echo"]);
-
-    const call = await post({
-      jsonrpc: "2.0",
-      id: 3,
-      method: "tools/call",
-      params: { name: "echo", arguments: { text: "hi" } },
-    });
-    expect(call.status).toBe(200);
-    const callJson = (await call.json()) as {
-      result: { content: Array<{ text: string }> };
-    };
-    expect(callJson.result.content[0]?.text).toBe("hi");
-
-    expect(renders).toEqual([]);
-  });
-
-  test("a throwing contribution fails only its own section, reported", async () => {
-    contribute("a-first", "First section.");
-    void Mcp.instructions({
-      id: "boom",
-      render: () => Promise.reject(new Error("render failed")),
-    }).register();
-    contribute("z-last", "Last section.");
-    const res = await post(initialize);
-    expect(res.status).toBe(200);
-    const json = (await res.json()) as { result: { instructions?: string } };
-    const text = json.result.instructions ?? "";
-    expect(text).toStartWith("First section.\n\n");
-    expect(text).toEndWith("\n\nLast section.");
-    expect(text).toContain('Instructions section "boom" unavailable');
-    expect(text).toContain("render failed");
-    expect(reported).toEqual([
-      'MCP instructions section "boom" failed: render failed',
-    ]);
-  });
-
-  test("duplicate ids throw at register", () => {
-    contribute("dup", "x");
-    expect(() => contribute("dup", "y")).toThrow('"dup" already registered');
+    const body = (await res.json()) as { result: { instructions?: string } };
+    expect(body.result.instructions).toBeUndefined();
   });
 });
 

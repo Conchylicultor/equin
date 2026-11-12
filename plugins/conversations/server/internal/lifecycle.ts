@@ -82,7 +82,7 @@ import { getTaskEffort } from "@plugins/tasks/plugins/task-effort/server";
 import { getTaskWorkspace } from "@plugins/conversations/plugins/workspace/plugins/launch-option/server";
 import type { EffortLevel } from "@plugins/conversations/plugins/effort-provider/core";
 import { setTaskCategory } from "@plugins/tasks/plugins/task-category/server";
-import { wrapPreprompt } from "@plugins/conversations/plugins/transcript-source/core";
+import { spawnSystemPrompt } from "./spawn-system-prompt";
 import type {
   ResumeBlocked,
   ResumeBlockedReason,
@@ -162,8 +162,6 @@ interface CreateConversationFields {
 // The `runtime.create` options a launch spawns with — the spawn job's `create`
 // input, and the inline reuse-branch spawn's options.
 interface SpawnCreate {
-  /** Appended to Claude Code's own system prompt (the conversation's preprompt). */
-  appendSystemPrompt?: string;
   model: ConversationModel;
   effort?: EffortLevel;
   resumeSessionId?: string;
@@ -247,15 +245,6 @@ async function taskPreprompt(
       icon: item.icon,
     }
   );
-}
-
-// A preprompt as the runtime adds it to Claude Code's own system prompt (the
-// preset is kept, never replaced), wrapped in <special_instructions> so the
-// model reads it as an imperative to follow.
-function systemPromptAppend(
-  preprompt: ConversationPrepromptSnapshot | undefined,
-): string | undefined {
-  return preprompt ? wrapPreprompt(preprompt.text) : undefined;
 }
 
 // The mandate of the root task a new attempt with no task files. Only the
@@ -460,7 +449,6 @@ export async function prepareConversation(
     workspace,
     target,
     create: {
-      appendSystemPrompt: systemPromptAppend(preprompt),
       model,
       effort,
       resumeSessionId,
@@ -624,12 +612,14 @@ export async function finishConversation(
       );
     }
     // The launch turn rides the launch message, as in the spawn job.
+    // Composed now, right before the process starts (system-prompt).
+    const appendSystemPrompt = await spawnSystemPrompt(p.conversationId);
     await launchWithHeldTurn(p.conversationId, (prompt) =>
       Runtime.get(p.runtimeId).create(
         p.conversationId,
         p.workspace.path,
         workspace.launch(p.workspace, { conversationId: p.conversationId }),
-        { ...p.create, prompt },
+        { ...p.create, appendSystemPrompt, prompt },
       ),
     );
   } catch (err) {
@@ -800,10 +790,9 @@ async function respawnResume(
         }),
         {
           ...(fresh ? {} : { resumeSessionId: row.claudeSessionId! }),
-          // Not in the transcript: the system prompt is given anew on every spawn.
-          appendSystemPrompt: systemPromptAppend(
-            await getConversationPreprompt(row.id),
-          ),
+          // Not in the transcript: the system prompt is given anew on every
+          // spawn, composed now (system-prompt).
+          appendSystemPrompt: await spawnSystemPrompt(row.id),
           model: row.model,
           effort: await resolveTaskEffort(row.taskId),
         },
@@ -921,9 +910,6 @@ export async function retryLaunch(id: string): Promise<void> {
 
   const workspace = await workspaceOf(row);
   const create = {
-    appendSystemPrompt: systemPromptAppend(
-      await getConversationPreprompt(row.id),
-    ),
     model: row.model,
     effort: await resolveTaskEffort(row.taskId),
     forkSession: false,

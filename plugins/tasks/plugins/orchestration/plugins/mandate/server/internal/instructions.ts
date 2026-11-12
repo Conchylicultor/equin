@@ -1,12 +1,13 @@
-import { Mcp } from "@plugins/infra/plugins/mcp/server";
+import { SystemPrompt } from "@plugins/conversations/plugins/system-prompt/server";
 import { capabilityEntries } from "./contribution";
 import { conversationMandate, grantIn } from "./resolve";
 
 /**
- * Renders the `## Mandate` section: one line per granted capability, in
- * capability-id order, from each capability's own describe. Names none of
- * them. A grant this process registers no capability for is skipped (newer
- * code may have stored it); an invalid value throws, failing `initialize`.
+ * Renders the `## Mandate` section: one line per granted capability that has
+ * something to say (its describe is not `null`), in capability-id order. Names
+ * none of them. `null` when no line is left — the tools the mandate grants say
+ * the rest. A grant this process registers no capability for is skipped (newer
+ * code may have stored it); an invalid value throws.
  */
 export async function renderMandateInstructions(
   conversationId: string,
@@ -19,19 +20,17 @@ export async function renderMandateInstructions(
   const lines: string[] = [];
   for (const entry of entries) {
     const value = grantIn(entry.cap, mandate.policy, mandate.at);
-    if (value !== null) lines.push(`- ${entry.describe(value)}`);
+    if (value === null) continue;
+    const line = entry.describe(value);
+    if (line !== null) lines.push(`- ${line}`);
   }
   if (lines.length === 0) return null;
-  return [
-    "## Mandate",
-    "",
-    "What you may do in this task's subtree:",
-    "",
-    ...lines,
-  ].join("\n");
+  return ["## Mandate", "", ...lines].join("\n");
 }
 
-export const mandateInstructions = Mcp.instructions({
+/** The Mandate, in the agent's system prompt (rendered at every spawn). */
+export const mandateSection = SystemPrompt.Section({
   id: "mandate",
-  render: ({ conversationId }) => renderMandateInstructions(conversationId),
+  label: "Mandate",
+  render: (conversationId) => renderMandateInstructions(conversationId),
 });

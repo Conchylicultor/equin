@@ -1,6 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { capabilityCatalogServed } from "./internal/catalog";
-import { mandateInstructions } from "./internal/instructions";
+import { mandateSection } from "./internal/instructions";
 
 export { renderMandateInstructions } from "./internal/instructions";
 
@@ -11,7 +11,6 @@ export type { EffectiveMandate } from "./internal/resolve";
 
 export default {
   description:
-    "The mandate's server half: the Mandate.Capability registry (each owner contributes how its granted value reads), mandateOf (the named mandate nearest-wins up the folder tree, resolved to its definition's current policy through mandate/definitions) and grantOf (per conversation, collapsed per request burst), granted(cap) for Mcp.tool.when, the `## Mandate` MCP instructions section, and the mandate.capabilities catalog value.",
-  contributions: [...capabilityCatalogServed.declare],
-  register: [mandateInstructions],
+    "The mandate's server half: the Mandate.Capability registry (each owner contributes how its granted value reads), mandateOf (the named mandate nearest-wins up the folder tree, resolved to its definition's current policy through mandate/definitions) and grantOf (per conversation, collapsed per request burst), granted(cap) for Mcp.tool.when, the `## Mandate` system-prompt section (only the lines no tool already says), and the mandate.capabilities catalog value.",
+  contributions: [...capabilityCatalogServed.declare, mandateSection],
 } satisfies ServerPluginDefinition;

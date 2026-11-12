@@ -6,7 +6,7 @@ import { mcpToolPane, mcpToolsPane } from "./panes";
 
 export default {
   description:
-    "Debug → MCP tools: every tool the MCP server hosts as a live DataView (searchable over name, declaring plugin and description; filterable by plugin, visibility and live description), with a detail pane per tool — declaring plugin, the name agents call it by, who it is listed for (every conversation, gated by when, or reserved for scratch profiles), the full description, its arguments and the input schema exactly as tools/list sends it — plus the server instructions sections and scope resolver above the list.",
+    "Debug → MCP tools: every tool the MCP server hosts as a live DataView (searchable over name, declaring plugin and description; filterable by plugin, visibility and live description), with a detail pane per tool — declaring plugin, the name agents call it by, who it is listed for (every conversation, gated by when, or reserved for scratch profiles), the full description, its arguments and the input schema exactly as tools/list sends it — plus the scope resolver above the list.",
   contributions: [
     Pane.Register({ pane: mcpToolsPane }),
     Pane.Register({ pane: mcpToolPane }),

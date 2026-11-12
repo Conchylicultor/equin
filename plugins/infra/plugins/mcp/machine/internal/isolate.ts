@@ -7,8 +7,8 @@ export type ContributionOutcome<T> =
   { ok: true; value: T } | { ok: false; message: string };
 
 /**
- * Runs one contribution's per-connection callback (an instructions section, a
- * live description, a `when` gate) so its failure stays its own: a throw is
+ * Runs one contribution's per-connection callback (a live description, a
+ * `when` gate) so its failure stays its own: a throw is
  * reported (server log + a `crash` report through server-core's error
  * reporter) and returned as the failed arm, which the caller must render in
  * place of the contribution. It never fails the request — every other tool and
@@ -17,8 +17,8 @@ export type ContributionOutcome<T> =
  * Either way the outcome is recorded for the health value (`mcp.health`):
  * a throw lists the contribution as degraded until it next runs cleanly.
  *
- * `what` names the contribution in the report, e.g. `instructions section
- * "tree-digest"`.
+ * `what` names the contribution in the report, e.g. `tool "add_task"
+ * when`.
  */
 export async function runContribution<T>(
   what: string,

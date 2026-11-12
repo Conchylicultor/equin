@@ -3,13 +3,7 @@ import {
   registeringPlugin,
   type Registration,
 } from "@plugins/framework/plugins/server-core/core";
-import {
-  instructionsDeclaredIn,
-  instructionsRegistry,
-  registry,
-  scopeRegistry,
-  toolDeclaredIn,
-} from "./registry";
+import { registry, scopeRegistry, toolDeclaredIn } from "./registry";
 
 export interface McpToolContext {
   conversationId: string;
@@ -86,19 +80,6 @@ export type McpScope =
  */
 export type McpScopeResolver = (ctx: McpToolContext) => Promise<McpScope>;
 
-/**
- * A section of the server-level instructions an MCP client receives once, in
- * the `initialize` result, at connect. Rendered per connection with the
- * connecting conversation's context; return `null` to contribute nothing for
- * that conversation. A render that throws is reported and replaced by a notice
- * that the section is missing; the connect and every other section go through.
- */
-export interface McpInstructions {
-  /** Unique id. Sections are joined in id order. */
-  id: string;
-  render: (ctx: McpToolContext) => Promise<string | null>;
-}
-
 export const Mcp = {
   /**
    * Returns a {@link Registration} token. The actual `registry.set` (and the
@@ -135,27 +116,6 @@ export const Mcp = {
         }
         scopeRegistry.resolver = resolver;
         scopeRegistry.declaredIn = registeringPlugin();
-      },
-    };
-  },
-  /**
-   * Contributes a section to the MCP server instructions sent at `initialize`.
-   * Returns a {@link Registration} token; list it in the plugin's `register`
-   * array. Duplicate ids throw at register time.
-   */
-  instructions(instructions: McpInstructions): Registration {
-    return {
-      _kind: "mcp-instructions",
-      _factory: "mcpInstructions",
-      _doc: { label: instructions.id },
-      register() {
-        if (instructionsRegistry.has(instructions.id)) {
-          throw new Error(
-            `MCP instructions "${instructions.id}" already registered`,
-          );
-        }
-        instructionsRegistry.set(instructions.id, instructions);
-        instructionsDeclaredIn.set(instructions.id, registeringPlugin());
       },
     };
   },

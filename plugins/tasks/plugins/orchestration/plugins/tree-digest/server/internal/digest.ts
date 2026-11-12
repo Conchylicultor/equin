@@ -111,11 +111,18 @@ async function renderLines(
 export interface DigestPolicyArgs {
   conversationId: string;
   annotate: DigestAnnotate;
+  /**
+   * Render the whole subtree whatever the cursor says (still capped, still
+   * advancing it): the snapshot a freshly spawned agent process starts with,
+   * whose system prompt replaced the one that held the last whole tree.
+   */
+  whole?: boolean;
 }
 
 /**
  * What changed in the conversation's mandate subtree since it last looked —
- * the whole subtree the first time (or after its root moved) — capped at
+ * the whole subtree the first time (or after its root moved, or when `whole`
+ * asks for it) — capped at
  * {@link DIGEST_LINE_CAP} lines. Advances the cursor. `null` for a
  * conversation without a task.
  */
@@ -125,7 +132,9 @@ export async function treeDigestOn(
 ): Promise<TreeDigestResult | null> {
   const scope = await store.scopeOf(args.conversationId);
   if (scope === null) return null;
-  const since = await store.cursorOf(args.conversationId, scope.rootTaskId);
+  const since = args.whole
+    ? null
+    : await store.cursorOf(args.conversationId, scope.rootTaskId);
   const overflow = " — call `task_tree` for the whole tree";
   const render = {
     selfTaskId: scope.taskId,

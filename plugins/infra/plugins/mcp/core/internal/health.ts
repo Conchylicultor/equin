@@ -7,7 +7,7 @@ export const MCP_HEALTH_MAX_DEGRADED = 10;
 
 /** One per-connection contribution whose latest run threw (`runContribution`). */
 export const McpDegradedSchema = z.object({
-  /** The contribution, as its report names it: `instructions section "tree-digest"`. */
+  /** The contribution, as its report names it: `tool "add_task" when`. */
   what: z.string(),
   message: z.string(),
   /** When it last failed (epoch ms). */

@@ -3,10 +3,11 @@ import { StopWaiver } from "@plugins/conversations/plugins/stop-gate/server";
 import { contextCompact } from "@plugins/conversations/plugins/self-compact/plugins/capability/core";
 import { hasPendingCompaction } from "./compaction";
 
+/** No Mandate line: `compact_context` appears only when granted, and its
+ * description says how to use it. */
 export const contextCompactCapability = Mandate.Capability({
   cap: contextCompact,
-  describe: () =>
-    "You may compact your own context with `compact_context` after a major step: say what to keep and what to do next, then end your turn.",
+  describe: () => null,
 });
 
 /**

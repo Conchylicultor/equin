@@ -6,9 +6,9 @@ fresh, stateless `McpServer`; the conversation id from the URL is the context
 
 ## Two halves
 
-- `server/` — the contribution API only (`Mcp.tool` / `Mcp.instructions` /
-  `Mcp.scope`, the types, the in-process registry). SDK-free, so a plugin that
-  contributes a tool or a section stays portable (a browser host registers its
+- `server/` — the contribution API only (`Mcp.tool` / `Mcp.scope`, the types,
+  the in-process registry). SDK-free, so a plugin that contributes a tool stays
+  portable (a browser host registers its
   contributions into a registry nothing serves).
 - `machine/` — everything that answers agents: the `POST /api/mcp/:conversationId`
   route (`@modelcontextprotocol/sdk`), the `mcp.catalog` and `mcp.health` values.
@@ -41,53 +41,51 @@ Both factories return a `Registration` token that goes in the plugin's server
   (`{kind:"default"}` or `{kind:"profile", profile, tools}`), registered by
   `conversations/workspace/scratch` (inverted so this plugin knows nothing of
   conversations). A profile scope sees exactly its `tools` (an unknown or
-  foreign-reserved name throws) and gets no server instructions; `when` still
-  applies on top. Pure filter: `machine/internal/scope.ts`.
-- `Mcp.instructions({ id, render })` — a section of the server instructions.
-  `render(ctx)` returns the section text, or `null` to contribute nothing for
-  that conversation.
+  foreign-reserved name throws); `when` still applies on top. Pure filter: `machine/internal/scope.ts`.
 
 ## Catalog
 
-`mcp.catalog` (core, a `liveValue` fixed for the process) lists every tool,
-instructions section and the scope resolver with the plugin that declared each
+`mcp.catalog` (core, a `liveValue` fixed for the process) lists every tool
+and the scope resolver with the plugin that declared each
 (recorded via `registeringPlugin()` at register time). Each tool's input schema
 is read off a real `tools/list` over an in-memory client (`machine/internal/catalog.ts`),
 through the same `mountTool` the request path uses — so it is exactly what
 agents receive. Shown by Debug → MCP tools (`debug/mcp-tools`).
 
-## Server instructions
+## No server instructions
 
-MCP clients receive server instructions once, in the `initialize` result, so a
-client sees them at connect (Claude Code connects once per conversation).
+The server sends no MCP server instructions, and there is no way to contribute
+one. `Mcp.instructions` existed until 2026-11-12 and carried the Mandate, the
+global page instructions and the Task tree — until Claude Code was seen cutting
+the instructions at **4,096 characters, silently**: a supervisor's Mandate and
+page section filled the budget, a global instructions card was cut mid-header
+while recorded as received, and the Task tree never arrived
+(`research/2026-11-12-conversations-system-prompt-sections.md`).
 
-- Rendering happens **only** when the request body is an `initialize` call (a
-  single message, or a batch containing one). Tool calls, `tools/list` and every
-  other request render nothing and cost what they did before.
-- All contributions render in parallel; the non-null results join in **id
-  order**, separated by blank lines. With nothing left the field is omitted.
-- A `render` that throws fails only its own section (see *Failure isolation*).
-- Clients may truncate long instructions. Keep sections short and point at
-  longer material instead of inlining it.
+- **How to use a tool** goes in its `description` (or `liveDescription`).
+- **Context about the agent and its task** is a `SystemPrompt.Section`
+  ([`conversations/system-prompt`](../../../conversations/plugins/system-prompt/CLAUDE.md)):
+  appended to the agent's system prompt at every spawn, uncapped, its size shown
+  in the context card.
 
 ## Failure isolation
 
-Every per-connection contribution callback — an instructions `render`, a
-`liveDescription`, a `when` gate — runs through `runContribution`
+Every per-connection contribution callback — a `liveDescription`, a `when`
+gate — runs through `runContribution`
 (`machine/internal/isolate.ts`): a throw stays that contribution's failure, never
 the connection's. It is reported (server log + a `crash` report via
 server-core's `reportServerError`) and rendered where the contribution would
 have been:
 
-- instructions section → a "section unavailable" notice naming the error, so the
-  agent knows guidance is missing;
-- live description → the fixed description plus the same kind of notice;
+- live description → the fixed description plus a "section unavailable" notice
+  naming the error, so the agent knows guidance is missing;
 - `when` → the tool is hidden for that request (fail closed: a gate that cannot
   answer never grants).
 
 Why not fail the whole request: these are independent contributions from
 unrelated plugins. Failing the connect for one of them (as it did until
-2026-10-28) let a single broken section — tree-digest's — take down every equin
+2026-10-28) let a single broken contribution — the tree-digest instructions
+section, since moved to the system prompt — take down every equin
 tool for every agent for over an hour, including `exit_clean` / `flag_raise`, the
 very tools an agent would use to report it. Loud means *reported and visible*,
 not *blast radius of everything*. The scope resolver stays global: there is one,
@@ -97,14 +95,13 @@ and without it no tool set can be computed.
 
 ## Plugin reference
 
-- Description: The MCP contribution API, SDK-free: Mcp.tool / Mcp.instructions / Mcp.scope register a tool, a server-instructions section or THE scope resolver into the in-process registry the desktop half (machine/) serves over HTTP — so a plugin contributing to the MCP server stays portable.
+- Description: The MCP contribution API, SDK-free: Mcp.tool / Mcp.scope register a tool or THE scope resolver (no server instructions: context about an agent is a conversations/system-prompt section) into the in-process registry the desktop half (machine/) serves over HTTP — so a plugin contributing to the MCP server stays portable.
 - Load-bearing: yes
 - Server:
   - Contributes:
     - `resource.declare` "mcp.catalog"
     - `resource.declare` "mcp.health"
   - Exports (types):
-    - `McpInstructions`
     - `McpScope`
     - `McpScopeResolver`
     - `McpTool`
@@ -113,7 +110,7 @@ and without it no tool set can be computed.
     - `McpToolResult`
   - Exports (values): `Mcp`
   - Resources:
-    - `mcp.catalog` (push, fixed, whole: every Mcp.tool the code registers — fixed for the process, a hundred or so, whole: every Mcp.instructions section the code registers — fixed for the process, a handful, whole: the scratch profiles a tool is reserved for — one or two, whole: one JSON Schema object's top-level keywords (type, properties, required, …) — a handful)
+    - `mcp.catalog` (push, fixed, whole: every Mcp.tool the code registers — fixed for the process, a hundred or so, whole: the scratch profiles a tool is reserved for — one or two, whole: one JSON Schema object's top-level keywords (type, properties, required, …) — a handful)
     - `mcp.health` (push, notified, capped: MCP_HEALTH_MAX_DEGRADED)
 - Machine:
   - Uses:
@@ -129,7 +126,6 @@ and without it no tool set can be computed.
     - `packages/list-bound.wholeRecord`
   - Exports (types):
     - `McpCatalog`
-    - `McpCatalogInstructions`
     - `McpCatalogTool`
     - `McpDegraded`
     - `McpHealth`
@@ -138,7 +134,6 @@ and without it no tool set can be computed.
     - `MCP_HEALTH_MAX_DEGRADED`
     - `MCP_SERVER_NAME`
     - `mcpCatalog`
-    - `McpCatalogInstructionsSchema`
     - `McpCatalogSchema`
     - `McpCatalogToolSchema`
     - `McpDegradedSchema`
@@ -146,9 +141,9 @@ and without it no tool set can be computed.
     - `McpHealthSchema`
     - `mcpRequest`
 - Cross-plugin:
-  - Imported by: 25 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 24 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×6
-    - `tasks` ×6
+    - `tasks` ×5
     - `conversations` ×4
     - `apps` ×3
     - `infra` ×2

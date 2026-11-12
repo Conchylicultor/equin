@@ -768,8 +768,8 @@ serves them.
     - `TRAILER_LOG_FORMAT`
     - `UNATTRIBUTED_TRAILER_KEY`
 - Cross-plugin:
-  - Imported by: 119 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×49
+  - Imported by: 120 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×50
     - `tasks` ×36
     - `debug` ×6
     - `active-data` ×5
@@ -796,6 +796,7 @@ serves them.
     - `conversations/runtime-sdk` (table `conversations_ext_sdk_agent`)
     - `conversations/runtime-sdk` (table `conversations_ext_sdk_agent_stop`)
     - `conversations/spawn-failure` (table `conversations_ext_spawn_failure`)
+    - `conversations/system-prompt/composer` (table `conversations_ext_system_prompt`)
     - `conversations/conversation-view/turn-summary` (table `conversations_ext_turn_summary`)
     - `conversations/usage` (table `conversations_ext_usage`)
     - `tasks/auto-start` (table `tasks_ext_auto_start`)

@@ -29,7 +29,7 @@ database binding is `store.ts`. The `task_tree` tool, the digest appended to
 
 ## Plugin reference
 
-- Description: The tree digest: what an agent is shown of its mandate's task subtree — treeDigest (the whole subtree the first time, then only the tasks created or changed since the conversation's digest_cursors row, capped at 40 lines, advancing the cursor) and taskTree (the whole subtree, read-only). Each line is a task's id, title and derived status plus the words every TreeDigest.Annotation contribution adds; names no track or workflow.
+- Description: The tree digest: what an agent is shown of its mandate's task subtree — treeDigest (the whole subtree the first time, then only the tasks created or changed since the conversation's digest_cursors row, capped at 40 lines, advancing the cursor), treeSnapshot (the whole subtree, same cap, advancing the cursor — what an agent process starts with) and taskTree (the whole subtree, read-only). Each line is a task's id, title and derived status plus the words every TreeDigest.Annotation contribution adds; names no track or workflow.
 - Server:
   - Uses:
     - `database.db`
@@ -49,6 +49,7 @@ database binding is `store.ts`. The `task_tree` tool, the digest appended to
     - `taskTree`
     - `treeDigest`
     - `TreeDigest`
+    - `treeSnapshot`
 - Cross-plugin:
   - Imported by:
     - `conversations/conversation-view/jsonl-viewer/tool-call/orchestration-tools`

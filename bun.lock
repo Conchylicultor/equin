@@ -2515,6 +2515,14 @@
       "name": "@equin/plugin-conversations-summary",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/system-prompt": {
+      "name": "@equin/plugin-conversations-system-prompt",
+      "version": "0.0.1",
+    },
+    "plugins/conversations/plugins/system-prompt/plugins/composer": {
+      "name": "@equin/plugin-conversations-system-prompt-composer",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/task-categories": {
       "name": "@equin/plugin-conversations-task-categories",
       "version": "0.0.1",
@@ -8910,6 +8918,10 @@
     "@equin/plugin-conversations-stop-gate": ["@equin/plugin-conversations-stop-gate@workspace:plugins/conversations/plugins/stop-gate"],
 
     "@equin/plugin-conversations-summary": ["@equin/plugin-conversations-summary@workspace:plugins/conversations/plugins/summary"],
+
+    "@equin/plugin-conversations-system-prompt": ["@equin/plugin-conversations-system-prompt@workspace:plugins/conversations/plugins/system-prompt"],
+
+    "@equin/plugin-conversations-system-prompt-composer": ["@equin/plugin-conversations-system-prompt-composer@workspace:plugins/conversations/plugins/system-prompt/plugins/composer"],
 
     "@equin/plugin-conversations-task-categories": ["@equin/plugin-conversations-task-categories@workspace:plugins/conversations/plugins/task-categories"],
 

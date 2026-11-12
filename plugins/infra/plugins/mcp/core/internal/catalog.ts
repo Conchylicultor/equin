@@ -35,24 +35,10 @@ export const McpCatalogToolSchema = z.object({
 });
 export type McpCatalogTool = z.infer<typeof McpCatalogToolSchema>;
 
-/** One `Mcp.instructions` section. Its text is rendered per conversation at
- * `initialize`, so only its identity is catalogued. */
-export const McpCatalogInstructionsSchema = z.object({
-  id: z.string(),
-  declaredIn: z.string().nullable(),
-});
-export type McpCatalogInstructions = z.infer<
-  typeof McpCatalogInstructionsSchema
->;
-
 export const McpCatalogSchema = z.object({
   tools: wholeList(McpCatalogToolSchema, {
     reason:
       "every Mcp.tool the code registers — fixed for the process, a hundred or so",
-  }),
-  instructions: wholeList(McpCatalogInstructionsSchema, {
-    reason:
-      "every Mcp.instructions section the code registers — fixed for the process, a handful",
   }),
   /** The one `Mcp.scope` resolver, when a plugin registered it. */
   scope: z.object({ declaredIn: z.string().nullable() }).nullable(),
@@ -60,8 +46,8 @@ export const McpCatalogSchema = z.object({
 export type McpCatalog = z.infer<typeof McpCatalogSchema>;
 
 /**
- * Everything this backend's MCP server hosts: every tool, instructions section
- * and the scope resolver, with the plugin that declared each. Fixed for the
+ * Everything this backend's MCP server hosts: every tool and the scope
+ * resolver, with the plugin that declared each. Fixed for the
  * process — contributions only register at boot.
  */
 export const mcpCatalog = liveValue("mcp.catalog", {

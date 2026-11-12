@@ -47,8 +47,27 @@ function usage(window: number, messages: number): ContextUsage {
 export default function BreakdownExhibit() {
   return (
     <Stack gap="xl">
-      <Breakdown usage={usage(200_000, 107_000)} shownPath={shownPath} />
-      <Breakdown usage={usage(1_000_000, 10_000)} shownPath={shownPath} />
+      <Breakdown
+        usage={usage(200_000, 107_000)}
+        shownPath={shownPath}
+        systemPrompt={{
+          kind: "sections",
+          sections: [
+            { id: "mandate", label: "Mandate", chars: 420 },
+            {
+              id: "page-instructions",
+              label: "Page instructions",
+              chars: 2_340,
+            },
+            { id: "tree-digest", label: "Task tree", chars: 1_100 },
+          ],
+        }}
+      />
+      <Breakdown
+        usage={usage(1_000_000, 10_000)}
+        shownPath={shownPath}
+        systemPrompt={{ kind: "loading" }}
+      />
     </Stack>
   );
 }

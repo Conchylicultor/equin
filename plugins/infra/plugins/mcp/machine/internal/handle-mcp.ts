@@ -1,11 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
-import {
-  bodyMessages,
-  hasInitialize,
-  hasToolsList,
-  renderInstructions,
-} from "./instructions";
+import { bodyMessages, hasToolsList } from "./messages";
 import { MCP_SERVER_NAME } from "../../core";
 import { runContribution } from "./isolate";
 import type { McpTool, McpToolCallContext, McpToolContext } from "../../server";
@@ -56,24 +51,14 @@ async function answerMcpRequest(
     ? await scopeRegistry.resolver(ctx)
     : { kind: "default" as const };
 
-  // Server instructions only ride the initialize result, so only initialize
-  // pays for rendering them. A throwing contribution fails only its own
-  // section (reported, and replaced by a notice the agent reads).
-  // A profile-scoped conversation gets none: the sections describe this app
-  // to its own agents, and a profile's agent carries only its profile's
-  // context.
   const messages = await bodyMessages(req);
-  const instructions =
-    hasInitialize(messages) && scope.kind === "default"
-      ? await renderInstructions(ctx)
-      : undefined;
   // Live description sections likewise render only for the request that lists
   // the tools; a tool call never pays for them.
   const descriptions = hasToolsList(messages)
     ? await renderDescriptions({ conversationId })
     : null;
 
-  const server = newMcpServer(instructions);
+  const server = newMcpServer();
 
   // Per-conversation visibility: first the scope, then each tool's own `when`.
   // A tool either says no to is never registered on this request's server, so
@@ -115,12 +100,14 @@ async function answerMcpRequest(
   }
 }
 
-/** The server every MCP request (and the catalog's listing) runs on. */
-export function newMcpServer(instructions: string | undefined): McpServer {
-  return new McpServer(
-    { name: MCP_SERVER_NAME, version: "0.0.1" },
-    { instructions },
-  );
+/**
+ * The server every MCP request (and the catalog's listing) runs on. It sends
+ * no server instructions: Claude Code cuts them at 4,096 characters, silently.
+ * How to use a tool belongs in its description; context about the agent and
+ * its task is a `SystemPrompt.Section` (conversations/system-prompt).
+ */
+export function newMcpServer(): McpServer {
+  return new McpServer({ name: MCP_SERVER_NAME, version: "0.0.1" });
 }
 
 /** Registers one tool on a server, the one way both the request path and the

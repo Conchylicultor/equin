@@ -4,8 +4,6 @@ import { serveValue } from "@plugins/network/plugins/live/machine";
 import { mcpCatalog, type McpCatalog } from "../../core";
 import { mountTool, newMcpServer } from "./handle-mcp";
 import {
-  instructionsDeclaredIn,
-  instructionsRegistry,
   registry,
   scopeRegistry,
   toolDeclaredIn,
@@ -24,7 +22,7 @@ const CATALOG_CTX = { conversationId: "(catalog)" };
 async function listedInputSchemas(): Promise<
   Map<string, Record<string, unknown>>
 > {
-  const server = newMcpServer(undefined);
+  const server = newMcpServer();
   for (const tool of registry.values()) {
     mountTool(server, tool, tool.description, CATALOG_CTX);
   }
@@ -63,10 +61,6 @@ async function loadCatalog(): Promise<McpCatalog> {
         };
       })
       .sort((a, b) => a.name.localeCompare(b.name)),
-    instructions: [...instructionsRegistry.keys()].sort().map((id) => ({
-      id,
-      declaredIn: instructionsDeclaredIn.get(id) ?? null,
-    })),
     scope: scopeRegistry.resolver
       ? { declaredIn: scopeRegistry.declaredIn }
       : null,

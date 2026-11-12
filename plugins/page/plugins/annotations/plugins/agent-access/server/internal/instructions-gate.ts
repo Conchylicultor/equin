@@ -29,8 +29,9 @@ import {
  * - **A write** under a page with undelivered instructions is refused before it
  *   plans anything, and the refusal carries them ({@link assertInstructionsReceived}).
  *   The refusal is the delivery, so the retry goes through.
- * - **Conversation start** carries the GLOBAL ones ({@link renderGlobalSection}):
- *   cards in full, pages as pointers to read.
+ * - **Every spawn** of the agent's process (launch, resume) carries the GLOBAL
+ *   ones in its system prompt ({@link renderGlobalSection}): cards in full,
+ *   pages as pointers to read.
  *
  * A compaction takes back what a read or a refusal handed over: the summary
  * folds the tool result carrying them away, while the record still says
@@ -186,17 +187,18 @@ export async function assertInstructionsReceived(args: {
 }
 
 /**
- * The page section of the MCP server instructions an agent receives when its
- * conversation connects: what page instructions are, then every GLOBAL one —
- * cards in full, pages as pointers to read. The cards it shows are recorded as
- * received by the conversation.
+ * The page section of the agent's system prompt, rendered at every spawn of its
+ * process (launch and resume): what page instructions are, then every GLOBAL
+ * one — cards in full, pages as pointers to read. The cards it shows are
+ * recorded as received by the conversation: the spawn that carries them follows
+ * at once, and each later spawn renders (and records) their current version.
  *
  * Never `null`: the fixed paragraph is worth sending even with no global
  * instructions, because instructions scoped to a page still refuse a write, and
  * an agent that knows why reads before it writes.
  *
- * Pages go as pointers rather than in full because a client may truncate long
- * server instructions; a page is the form meant for long instructions.
+ * Pages go as pointers rather than in full: a page is the form meant for long
+ * instructions, and the system prompt is paid on every turn.
  */
 export async function renderGlobalSection(
   conversationId: string,
@@ -252,10 +254,9 @@ export async function renderGlobalSection(
  * now how the agent holds it. One transaction, so a read racing the compaction
  * never sees them half-forgotten.
  *
- * Global CARDS are left alone: they ride the MCP server instructions, which are
- * part of the system prompt and survive a compaction. (An edit to one since the
- * conversation connected was handed over by a later read or refusal, and is
- * lost with it — the rare case this leaves.)
+ * Global CARDS are left alone: they ride the system prompt, which survives a
+ * compaction. (An edit to one since the process spawned was handed over by a
+ * later read or refusal, and is lost with it — the rare case this leaves.)
  */
 export async function restoreAfterCompaction(
   conversationId: string,

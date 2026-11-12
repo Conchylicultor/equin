@@ -2,8 +2,6 @@ import { z } from "zod";
 import { Mcp } from "@plugins/infra/plugins/mcp/server";
 import { loadTagVocabularyNames } from "@plugins/page/plugins/tags/server";
 import { TAG_COLORS } from "@plugins/page/plugins/tags/core";
-import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
-import { renderGlobalSection } from "../../server/internal/instructions-gate";
 import { pageTools } from "../../server/internal/page-tools";
 
 /**
@@ -479,32 +477,4 @@ the author's even when it sits in yours.`,
   },
   handler: (input, ctx) =>
     pageTools.edit(input, { conversationId: ctx.conversationId }),
-});
-
-/**
- * Where the length of every rendered page section goes. A client may truncate
- * long server instructions, so the length is what tells whether the global
- * instructions still fit.
- */
-const instructionsLog = defineLogSink({
-  id: "mcp-page-instructions",
-  description:
-    "One line per MCP initialize: the conversation and the length of the page-instructions section of the server instructions (page/annotations/agent-access).",
-});
-
-/**
- * The page section of the MCP server instructions — what page instructions are,
- * and every global one. Lives beside the three tools because it describes them:
- * the `instructions` plugin owns the data and the delivery record, and stays
- * free of MCP.
- */
-export const pageInstructionsSection = Mcp.instructions({
-  id: "page-instructions",
-  async render({ conversationId }) {
-    const section = await renderGlobalSection(conversationId);
-    instructionsLog.publish(
-      JSON.stringify({ conversationId, length: section.length }),
-    );
-    return section;
-  },
 });

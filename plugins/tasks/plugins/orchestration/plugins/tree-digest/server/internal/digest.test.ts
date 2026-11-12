@@ -76,6 +76,31 @@ const annotate: DigestAnnotate = async (ts) =>
   new Map(ts.filter((t) => t.id === "B").map((t) => [t.id, ["armed"]]));
 
 describe("treeDigest", () => {
+  test("whole renders the whole subtree past a cursor, and advances it", async () => {
+    const s = makeStore();
+    s.put(ROOT, null, "a");
+    s.put("A", ROOT, "b");
+    await treeDigestOn(s.store, { conversationId: CONV, annotate });
+
+    // A resumed process: the cursor is set, yet it starts on the whole tree.
+    const snapshot = await treeDigestOn(s.store, {
+      conversationId: CONV,
+      annotate,
+      whole: true,
+    });
+    expect(snapshot?.full).toBe(true);
+    expect(snapshot?.text.split("\n")[0]).toBe(
+      `Your task tree (root ${ROOT}):`,
+    );
+
+    // Then the add_task digests are incremental again.
+    const quiet = await treeDigestOn(s.store, {
+      conversationId: CONV,
+      annotate,
+    });
+    expect(quiet?.full).toBe(false);
+  });
+
   test("first the whole subtree, in tree order; then only what changed", async () => {
     const s = makeStore();
     s.put(ROOT, null, "a");

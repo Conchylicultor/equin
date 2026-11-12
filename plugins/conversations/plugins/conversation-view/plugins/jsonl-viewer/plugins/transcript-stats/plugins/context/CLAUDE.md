@@ -28,6 +28,7 @@
     - `ui/icons.Icon`
 - Cross-plugin:
   - Uses tokens:
+    - `ui/tokens/color-palette --destructive`
     - `ui/tokens/color-palette --muted`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --primary`

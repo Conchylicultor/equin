@@ -76,7 +76,7 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
     - `report-kind` "conversation-stuck-turn"
     - `report-kind` "held-turn-undelivered"
     - `resource.declare` "conversations.partial-message"
-  - Uses: 87 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 88 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/tasks-core` ×27
     - `conversations/turn-ledger` ×15
     - `conversations/transcript-watcher` ×8
@@ -93,6 +93,7 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
     - `conversations/model-provider/catalog.getModelCatalog`
     - `conversations/preprompts.resolvePrepromptItem`
     - `conversations/session-chain.recordSessionId`
+    - `conversations/system-prompt/composer.composeSystemPromptAppend`
     - `conversations/workspace/launch-option.getTaskWorkspace`
     - `database/fork-point.databaseForkedAt`
     - `infra/attachments.getAttachment`
@@ -420,6 +421,9 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
   - **`spawn-failure`** — Per-conversation spawn failure: the latest error of a conversation's spawn job (the failed step and its message), stored in conversations_ext_spawn_failure by the job on every failed attempt and…
   - **`stop-gate`** [exempt] — The stop-gate backend: the StopGate contribution (a plugin's check(conversationId) — block the agent's stop while it still owes the plugin something, with the reason it reads) and the StopWaiver…
   - **`summary`** — Toolbar button that opens a side pane with the Summarise action and the latest structured Sonnet summary (phase, flags, next action). On-demand structured summaries of conversations: phase, flags…
+  - **`system-prompt`** — What equin appends to an agent's system prompt: the SystemPrompt.Section contribution — a plugin's context about this agent and its task (mandate, global page instructions, task tree), rendered at…
+    - Plugins:
+      - **`composer`** — Composes what equin appends to an agent's system prompt at a spawn: composeSystemPromptAppend (the preprompt, then every SystemPrompt.Section in id order inside <equin-context id>, a throwing…
   - **`task-categories`** — The task categories a conversation's own task is filed under (Conversations, System), registered from a portable barrel so every host labels them — the browser host included, which does not boot the…
   - **`transcript-api`** — Agent API: GET /api/conversations/:id/transcript returns the ordered on-disk JSONL paths of a conversation's Claude session chain.
   - **`transcript-retention`** [exempt] — Keeps retained conversations' Claude session JSONL alive by refreshing their mtime daily — active rows plus every conversation of a held task — so Claude Code's cleanupPeriodDays sweep never deletes…

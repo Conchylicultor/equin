@@ -190,7 +190,7 @@ function ToolsList({
   );
 }
 
-/** The counts above the list, and the two contributions that are not tools. */
+/** The counts above the list, and the scope resolver (the one contribution that is not a tool). */
 function Summary({ catalog }: { catalog: McpCatalog }): ReactElement {
   const plugins = new Set(catalog.tools.map((t) => t.declaredIn)).size;
   return (
@@ -198,13 +198,6 @@ function Summary({ catalog }: { catalog: McpCatalog }): ReactElement {
       <Stack gap="none">
         <Text variant="caption" tone="muted">
           {catalog.tools.length} tools from {plugins} plugins
-          {" · "}
-          {catalog.instructions.length} server instructions sections
-          {catalog.instructions.length > 0
-            ? ` (${catalog.instructions
-                .map((i) => `${i.id} — ${pluginPath(i.declaredIn)}`)
-                .join(", ")})`
-            : ""}
         </Text>
         <Text variant="caption" tone="muted">
           {catalog.scope === null

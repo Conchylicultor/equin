@@ -43,8 +43,14 @@ task resolves to a policy. Plan:
     calls for one conversation collapse (`createInflight`), since every gated
     tool's `when` runs on each MCP request.
   - `granted(cap)` — an `Mcp.tool` `when` gate.
-  - The `mandate` `Mcp.instructions` section: `## Mandate` and one
-    `describe(value)` line per granted capability.
+  - The `mandate` system-prompt section (`SystemPrompt.Section`,
+    `conversations/system-prompt`): `## Mandate` and one `describe(value)` line
+    per granted capability whose describe is not `null`. A capability that only
+    gates a tool returns `null` — the tool appears only when granted and its
+    description states its limits — and so does a value CLAUDE.md already says
+    (push / close only when asked). The Mandate holds only what nothing else
+    tells the agent (how to pace itself while it watches, a push or close on
+    its own initiative).
 - **Debug** — `mandate.capabilities` (core, a fixed `liveValue`): every
   contributed capability.
 
@@ -58,12 +64,14 @@ automations define theirs through `defineAutomation({ mandate })`.
 
 ## Plugin reference
 
-- Description: The mandate's server half: the Mandate.Capability registry (each owner contributes how its granted value reads), mandateOf (the named mandate nearest-wins up the folder tree, resolved to its definition's current policy through mandate/definitions) and grantOf (per conversation, collapsed per request burst), granted(cap) for Mcp.tool.when, the `## Mandate` MCP instructions section, and the mandate.capabilities catalog value.
+- Description: The mandate's server half: the Mandate.Capability registry (each owner contributes how its granted value reads), mandateOf (the named mandate nearest-wins up the folder tree, resolved to its definition's current policy through mandate/definitions) and grantOf (per conversation, collapsed per request burst), granted(cap) for Mcp.tool.when, the `## Mandate` system-prompt section (only the lines no tool already says), and the mandate.capabilities catalog value.
 - Server:
-  - Contributes: `resource.declare` "mandate.capabilities"
+  - Contributes:
+    - `resource.declare` "mandate.capabilities"
+    - `conversations.system-prompt.section` "mandate"
   - Uses:
+    - `conversations/system-prompt.SystemPrompt`
     - `database.db`
-    - `infra/mcp.Mcp`
     - `network/live.serveValue`
     - `tasks/orchestration/mandate/definitions.mandateDefinitionEntries`
     - `tasks/tasks-core.getConversation`
@@ -77,7 +85,6 @@ automations define theirs through `defineAutomation({ mandate })`.
     - `Mandate`
     - `mandateOf`
     - `renderMandateInstructions`
-  - Register: `mcpInstructions('mandate')`
   - Resources: `mandate.capabilities` (push, fixed, whole: every capability the code contributes — fixed for the process, a handful)
 - Core:
   - Uses:

@@ -163,6 +163,7 @@ Design: `research/2026-10-19-global-demo-story-from-browser-worker.md` §3.
     - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
     - `conversations/conversation-view/jsonl-viewer/transcript-stats`
     - `conversations/question-relay`
+    - `conversations/system-prompt/composer`
     - `conversations/transcript-source/memory`
     - `conversations/transcript-watcher`
 - Sub-plugins:

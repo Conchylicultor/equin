@@ -9,8 +9,8 @@ import { noticeText } from "./notice";
 /**
  * On a mandate change: each live agent on the moved tasks reconnects the
  * equin MCP server (its tools follow at once), then is sent a notice carrying
- * the new `## Mandate` section — the instructions it read at its start are
- * not re-read. The notice is typed now, as a person's message would be
+ * the new `## Mandate` section — its system prompt is fixed for the life of
+ * its process. The notice is typed now, as a person's message would be
  * (`submitTurn`): a working agent reads it at its next step, an idle one
  * answers it. An agent this backend does not run (`not-running`: another
  * namespace's, hibernated, or none) is skipped: its next start reads the new

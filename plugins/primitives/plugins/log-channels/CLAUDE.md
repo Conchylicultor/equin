@@ -229,7 +229,7 @@ count accumulates across drops.
     - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
-  - Imported by: 76 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 75 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×14
     - `debug` ×14
     - `infra` ×10
@@ -245,7 +245,6 @@ count accumulates across drops.
     - `backup`
     - `integrations/youtube/audio-fetch`
     - `menu-bar`
-    - `page/annotations/agent-access`
     - `primitives/log-channels/memory-persistence`
     - `release`
     - `stats/cost`
