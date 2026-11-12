@@ -23,6 +23,7 @@
     - `apps/sonata/library`
     - `conversations/conversation-view/op-status`
     - `debug/slow-ops`
+    - `debug/tests`
     - `debug/trace/engine`
     - `infra/claude-cli`
     - `infra/jobs`

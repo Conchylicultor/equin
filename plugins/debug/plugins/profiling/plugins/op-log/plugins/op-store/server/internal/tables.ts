@@ -25,6 +25,7 @@ const opLogOpsEntity = defineEntity(opLogOpsEntityRef, {
   primaryKey: "opId",
   columns: {
     interrupted: { default: false },
+    opportunistic: { default: false },
     cycle: { default: 0 },
     closedWaitMs: { default: 0 },
     holdMs: { default: 0 },
@@ -44,6 +45,7 @@ const opLogOpsEntity = defineEntity(opLogOpsEntityRef, {
       mode: true,
       buildId: true,
       pid: true,
+      opportunistic: true,
       requestedAt: true,
       grantedAt: true,
       completedAt: true,

@@ -1,4 +1,4 @@
-// @hash 8755e6c2dd52
+// @hash 6a1c3d1b833d
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -29,6 +29,7 @@
     "debug.read-set:read-set",
     "debug.render-profiler:render-profiler",
     "debug.reports:reports",
+    "debug.tests:tests",
     "debug.trace.pane:trace-slow-events",
     "debug.worktree-cleanup:worktree-cleanup",
     "infra.deps:dependencies",

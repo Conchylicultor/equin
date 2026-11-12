@@ -320,6 +320,8 @@ export async function readRecordedFailure(
  * surface, since a job without its own ledger has no UI.
  *
  * - exit 0 → `done`.
+ * - exited (not signalled) with one of the job's `verdictExits` → `done`: the
+ *   child reported a verdict about its work, not a failure of the run.
  * - failed, but the run was cancelled (`cancelSupervisedJobByLock`) → `done`:
  *   the user asked for it to stop, so there is nothing to retry and nothing to
  *   alert on.
@@ -339,10 +341,17 @@ export function applyFailurePolicy(args: {
   terminal: RunTerminal;
   attempt: number;
   runAttempts: number;
+  /** Exit codes that are the child's verdict about its work (`verdictExits`). */
+  verdictExits?: readonly number[];
   failure: RecordedFailure | null;
 }): "done" | "retry" {
   const { terminal } = args;
   if (terminal.exitCode === 0) return "done";
+  if (
+    terminal.signalCode === null &&
+    (args.verdictExits ?? []).includes(terminal.exitCode)
+  )
+    return "done";
   if (args.failure === null) {
     throw new Error(
       `[supervised-job] ${args.jobName}: a failed run's policy needs its recorded failure.`,

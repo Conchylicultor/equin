@@ -88,6 +88,7 @@ test("a held marker is one v2 file per op, read back live", async () => {
           pid: process.pid,
           opId: "op-1",
           startedAt: raw.startedAt as string,
+          opportunistic: false,
         },
       ]);
       expect(await probeWorktreeOp(slug, "op-1")).toBe("live");
@@ -100,6 +101,35 @@ test("a held marker is one v2 file per op, read back live", async () => {
     expect(existsSync(marker.path)).toBe(false);
     expect(await probeWorktreeOp(slug, "op-1")).toBe("absent");
     expect(await isWorktreeOpActive(slug)).toBe(false);
+  });
+});
+
+test("an opportunistic op says so on its marker, under both names", async () => {
+  await withTempSlug(async (slug) => {
+    const idle = markWorktreeOpStart(slug, "test", "op-idle", {
+      opportunistic: true,
+    });
+    const work = markWorktreeOpStart(slug, "check", "op-work");
+    try {
+      const byId = new Map(
+        (await listWorktreeOps(slug)).map((o) => [o.opId, o.opportunistic]),
+      );
+      expect(byId).toEqual(
+        new Map([
+          ["op-idle", true],
+          ["op-work", false],
+        ]),
+      );
+      const hostWide = (await listActiveWorktreeOps()).filter(
+        (o) => o.slug === slug,
+      );
+      expect(hostWide.find((o) => o.opId === "op-idle")?.opportunistic).toBe(
+        true,
+      );
+    } finally {
+      idle.release();
+      work.release();
+    }
   });
 });
 

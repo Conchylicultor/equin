@@ -55,6 +55,7 @@ export {
 } from "./internal/worktree-op";
 export {
   type WorktreeOpMarker,
+  type MarkWorktreeOpOptions,
   markWorktreeOpStart,
 } from "./internal/worktree-op-marker";
 export {

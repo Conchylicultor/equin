@@ -130,7 +130,7 @@ import { withRank } from "@plugins/primitives/plugins/rank/server";
     - `rankText`
     - `withRank`
 - Cross-plugin:
-  - Imported by: 26 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 27 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×7
     - `conversations` ×5
     - `primitives` ×4
@@ -139,6 +139,7 @@ import { withRank } from "@plugins/primitives/plugins/rank/server";
     - `page` ×2
     - `tag-tree` ×2
     - `tasks` ×2
+    - `debug/tests`
 - Web:
   - Exports (values):
     - `Rank`

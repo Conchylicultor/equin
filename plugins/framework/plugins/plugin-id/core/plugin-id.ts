@@ -13,6 +13,37 @@ export const asPath = (id: PluginId): string => id.split(".").join("/");
 export const asFsPath = (id: PluginId): string =>
   id.split(".").join("/plugins/");
 
+/**
+ * The directory of the plugin a repo-relative posix path lies in
+ * (`plugins/a/plugins/b` for `plugins/a/plugins/b/web/x.ts`) — the deepest
+ * `plugins/<name>` chain the path walks through — or `null` for a path outside
+ * `plugins/` (or one naming no plugin below it). Plain string operations: no
+ * file system, so every host and runtime may call it.
+ */
+export function pluginDirOfRepoPath(rel: string): string | null {
+  const segs = rel.split("/");
+  if (segs[0] !== "plugins" || segs.length < 3) return null;
+  let end = 2;
+  while (segs[end] === "plugins" && end + 2 < segs.length) end += 2;
+  return segs.slice(0, end).join("/");
+}
+
+/**
+ * The id of the plugin a repo-relative path lies in
+ * (`plugins/a/plugins/b/web/x.ts` → `a.b`), or `null` outside `plugins/`.
+ * The id form of {@link pluginDirOfRepoPath}.
+ */
+export function pluginIdOfRepoPath(rel: string): PluginId | null {
+  const dir = pluginDirOfRepoPath(rel);
+  if (dir === null) return null;
+  return asPluginId(
+    dir
+      .split("/")
+      .filter((_, i) => i % 2 === 1)
+      .join("."),
+  );
+}
+
 /** Segments for breadcrumbs / last-segment matching. */
 export const pluginIdSegments = (id: PluginId): string[] => id.split(".");
 

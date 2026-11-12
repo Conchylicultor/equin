@@ -25,10 +25,12 @@ import {
   readTestStatus,
   testFailureLines,
   writeTestStatus,
+  type JunitSummary,
   type TestRunnerName,
   type TestRunnerOutcome,
   type TestStatus,
 } from "@plugins/framework/plugins/cli/plugins/test/core";
+import { TESTS_FAILED_EXIT } from "@plugins/framework/plugins/cli/plugins/test/plugins/record/core";
 import { computeTreeHash } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import {
   TEST_FILE_GLOB,
@@ -42,6 +44,7 @@ import {
   statSync,
 } from "@plugins/packages/plugins/timed-fs/core";
 import { tmpdirEnv, withRunTmpdir } from "./run-tmpdir";
+import { finishHarvest, startHarvest, type HarvestRunner } from "./harvest";
 
 // No args ⇒ every test in the repo. `plugins/` is the whole of it: both runners
 // are scoped to that tree (vitest's `include` literally starts `plugins/**`).
@@ -272,7 +275,7 @@ function runnerOutcome(
   files: readonly string[],
   reportPath: string,
   run: Pick<RunnerRun, "wedged" | "leftBehind">,
-): TestRunnerOutcome {
+): { outcome: TestRunnerOutcome; report: JunitSummary | null } {
   const { wedged, leftBehind } = run;
   const failures: string[] = [];
   if (wedged !== null) {
@@ -281,8 +284,10 @@ function runnerOutcome(
     );
   }
   const unreported: string[] = [];
+  // Also handed back whole: the harvest attributes it per file (harvest.ts).
+  let report: JunitSummary | null = null;
   if (existsSync(reportPath)) {
-    const report = parseJunit(readFileSync(reportPath, "utf8"));
+    report = parseJunit(readFileSync(reportPath, "utf8"));
     rmSync(reportPath);
     failures.push(...report.failures);
     // A file that threw while loading never reaches the report — nor does one
@@ -293,12 +298,15 @@ function runnerOutcome(
   if (exitCode !== 0 && failures.length === 0)
     failures.push(`(${runner} exited ${exitCode})`);
   return {
-    runner,
-    exitCode,
-    files: files.length,
-    failures,
-    unreported,
-    leftBehind,
+    outcome: {
+      runner,
+      exitCode,
+      files: files.length,
+      failures,
+      unreported,
+      leftBehind,
+    },
+    report,
   };
 }
 
@@ -419,6 +427,9 @@ const run: CliAction<[string[]], object> = async (paths) => {
   // The tree hash, before the op: the run-level single-flight is keyed on it, and
   // a duplicate must find the in-flight run before it queues for a host slot.
   const treeHash = await computeTreeHash(root);
+  // The harvest's digests (Debug → Tests), before the op and before either
+  // runner starts, so no file changes mid-graph. Never fails the run.
+  const harvest = await startHarvest(root, [...found]);
 
   const outcome = await withDirectOp(
     "test",
@@ -531,22 +542,64 @@ const run: CliAction<[string[]], object> = async (paths) => {
           bunExit !== null && bunExit !== 0 ? "bun:test" : null,
           domExit !== null && domExit !== 0 ? "vitest" : null,
         ].filter((name): name is string => name !== null);
-        if (bunRun !== null)
-          status.runners.push(
-            runnerOutcome("bun:test", bunRun.exitCode, bun, bunReport, bunRun),
+        const harvested: HarvestRunner[] = [];
+        if (bunRun !== null) {
+          const r = runnerOutcome(
+            "bun:test",
+            bunRun.exitCode,
+            bun,
+            bunReport,
+            bunRun,
           );
-        if (domRun !== null)
-          status.runners.push(
-            runnerOutcome("vitest", domRun.exitCode, dom, domReport, domRun),
+          status.runners.push(r.outcome);
+          harvested.push({
+            runner: "bun:test",
+            files: bun,
+            exitCode: bunRun.exitCode,
+            wedged: bunRun.wedged !== null,
+            report: r.report,
+          });
+        }
+        if (domRun !== null) {
+          const r = runnerOutcome(
+            "vitest",
+            domRun.exitCode,
+            dom,
+            domReport,
+            domRun,
           );
+          status.runners.push(r.outcome);
+          harvested.push({
+            runner: "vitest",
+            files: dom,
+            exitCode: domRun.exitCode,
+            wedged: domRun.wedged !== null,
+            report: r.report,
+          });
+        }
         status.status = failed.length === 0 ? "passed" : "failed";
         status.finishedAt = new Date().toISOString();
         writeTestStatus(slug, status);
+        // The harvest record, by the LEADER only: a run that joined an
+        // identical in-flight run (`testFlight`'s adopt) never gets here.
+        if (harvest.ok)
+          await finishHarvest({
+            start: harvest.start,
+            root,
+            slug,
+            opId: ctx.opId,
+            treeHashBefore: treeHash,
+            treeHashAfter: () => computeTreeHash(root),
+            runners: harvested,
+          });
         if (failed.length === 0) return "success";
         console.error(`\nFAILED: ${failed.join(", ")}`);
         return "failed";
       }),
   );
+  // The tests ran and some failed — a verdict, told apart from a run that
+  // could not be done (exit 1) for whoever supervises runs.
+  if (outcome === "failed") process.exit(TESTS_FAILED_EXIT);
   if (outcome !== "success") process.exit(1);
 };
 

@@ -169,6 +169,15 @@ interface SingleChildCommon<S extends z.ZodType> {
    */
   runAttempts?: number;
   /**
+   * Exit codes by which the child reports a VERDICT about its work rather
+   * than a failure of the run (`./equin test`'s "the tests ran and some
+   * failed"). Built-in ledger: such a run ends `done` — no retry, no
+   * dead-letter, the row still records the exit code — so a verdict is never
+   * filed as a broken job. A signalled death is never a verdict. An own
+   * ledger's exit code is already data and ignores this.
+   */
+  verdictExits?: readonly number[];
+  /**
    * The run ENDED — do the terminal WORK: a notification, a convergence
    * reconcile, data beyond the outcome. The row is already closed by
    * `closeRow` in the ordinary case, so read it back rather than gating on it.
@@ -463,12 +472,14 @@ export function defineSupervisedJob<N extends string, S extends z.ZodType>(
       command = async (input, runId) => await argv(input, runId);
     }
     const onEnded = spec.onEnded;
+    const verdictExits = spec.verdictExits ?? [];
     run = ({ input, ctx }) =>
       runSingleChildJob({
         jobName: spec.name,
         kind,
         ledger,
         runAttempts,
+        verdictExits,
         command,
         onEnded,
         input,
@@ -532,6 +543,7 @@ async function runSingleChildJob<I>(opts: {
   kind: SupervisedRunKind;
   ledger: ResolvedLedger<I>;
   runAttempts: number;
+  verdictExits: readonly number[];
   command: (
     input: I,
     runId: string,
@@ -584,6 +596,7 @@ async function runSingleChildJob<I>(opts: {
           jobName: opts.jobName,
           builtin: ledger.builtin,
           runAttempts: opts.runAttempts,
+          verdictExits: opts.verdictExits,
           readFailure: readRecordedFailure,
           onEnded: opts.onEnded,
           runId: started.runId,
@@ -627,6 +640,8 @@ export async function endAttempt<I>(opts: {
   jobName: string;
   builtin: boolean;
   runAttempts: number;
+  /** See `SingleChildCommon.verdictExits`; `[]` when the job declared none. */
+  verdictExits?: readonly number[];
   readFailure: (runId: string) => Promise<RecordedFailure>;
   onEnded:
     | ((
@@ -657,6 +672,7 @@ export async function endAttempt<I>(opts: {
     terminal,
     attempt,
     runAttempts: opts.runAttempts,
+    verdictExits: opts.verdictExits ?? [],
     failure,
   });
 }

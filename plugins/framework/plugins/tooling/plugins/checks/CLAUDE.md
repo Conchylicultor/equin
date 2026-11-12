@@ -543,6 +543,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `framework/cli/check`
     - `framework/cli/op-runtime`
     - `framework/cli/test`
+    - `framework/cli/test/digest`
     - `framework/tooling/checks/cache-prune`
     - `framework/tooling/checks/type-check`
     - `framework/tooling/checks/type-check/backstop`

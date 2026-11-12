@@ -43,12 +43,12 @@
     - `ui/tokens/color-palette --popover`
     - `ui/tokens/color-palette --popover-foreground`
     - `ui/tokens/shape --radius`
-  - Imported by: 34 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 35 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×11
     - `config_v2` ×3
     - `conversations` ×3
+    - `debug` ×3
     - `primitives` ×3
-    - `debug` ×2
     - `hints` ×2
     - `infra` ×2
     - `page` ×2

@@ -89,6 +89,7 @@ and log-channels' emit test.
     - `framework/cli/build`
     - `framework/cli/op-runtime`
     - `infra/host/duress/shed`
+    - `infra/host/idle/duress`
     - `primitives/log-channels`
 - Exemptions:
   - Exempts itself from:

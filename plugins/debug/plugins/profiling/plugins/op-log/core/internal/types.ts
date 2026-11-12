@@ -206,14 +206,28 @@ export interface OpIdentity {
   buildId: string | null;
   /** The CLI process that ran it; `null` on a legacy line. */
   pid: number | null;
+  /**
+   * The op runs only because the host is idle and yields to any other work
+   * (`EQUIN_OP_OPPORTUNISTIC`, cli/op-runtime): background lane, low
+   * priority, and not counted as work by the host idle signal.
+   */
+  opportunistic: boolean;
 }
+
+/**
+ * The identity as the WIRE carries it: `opportunistic` is absent from a line an
+ * older writer appended, which reads as `false`.
+ */
+export type WireOpIdentity = Omit<OpIdentity, "opportunistic"> & {
+  opportunistic?: boolean;
+};
 
 /**
  * The self-contained terminal: identity, timing, every wait, outcome, steps. A
  * clipped tail that kept only this line still folds to a full record — which is
  * what `await` and the stats readers depend on.
  */
-export interface OpSummary extends OpIdentity {
+export interface OpSummary extends WireOpIdentity {
   requestedAt: string;
   /** `null` when the op ended (or was killed) before it was granted. */
   grantedAt: string | null;
@@ -257,7 +271,7 @@ interface OpEventBase {
 
 export type OpEvent = OpEventBase &
   (
-    | ({ e: "requested"; pid: number } & Omit<OpIdentity, "pid">)
+    | ({ e: "requested"; pid: number } & Omit<WireOpIdentity, "pid">)
     | { e: "wait-start"; wait: WaitKind; reason: string | null; cycle: number }
     | {
         e: "wait-end";

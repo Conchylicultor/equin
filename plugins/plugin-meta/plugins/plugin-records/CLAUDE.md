@@ -224,6 +224,7 @@ its docblock records — and then lowered as readily as raised.
 - Description: Content-addressed records of what the build learns about each plugin (file facts, facet extracts, evaluated barrels), shared by every worktree's build and check pass; the daily plugin-records.verify job recomputes them on main and fails on any record that disagrees with its key.
 - Core:
   - Uses:
+    - `framework/plugin-id.pluginDirOfRepoPath`
     - `infra/deps/npm/lock-resolutions.lockfileNpmResolutions`
     - `infra/host-fs/user-path.AppPath`
     - `infra/host-fs/user-path.joinAppPath`
@@ -283,6 +284,8 @@ its docblock records — and then lowered as readily as raised.
     - `framework/cli/check`
     - `framework/cli/migrations`
     - `framework/cli/regen-generated`
+    - `framework/cli/test`
+    - `framework/cli/test/digest`
     - `framework/tooling/boundaries`
     - `framework/tooling/codegen`
     - `framework/tooling/web-artifacts`

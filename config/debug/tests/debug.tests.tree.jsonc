@@ -1,0 +1,9 @@
+// @hash 6ec84829688d
+{
+  "views": [
+    { "id": "tree", "name": "Tree", "icon": "account-tree", "view": { "type": "table" } }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

@@ -9,8 +9,8 @@
   - Slots:
     - `DebugApp.Sidebar`
     - `DebugApp.Toolbar`
-  - Slot contributors: 27 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `DebugApp.Sidebar` ×27
+  - Slot contributors: 28 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `DebugApp.Sidebar` ×28
   - Contributes: `Apps.App` "Debug" → `DebugLayout`
   - Uses:
     - `apps-core.Apps`
@@ -24,8 +24,8 @@
     - `ui/icons.symbol`
   - Exports (values): `debugApp`
 - Cross-plugin:
-  - Imported by: 38 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `debug` ×29
+  - Imported by: 39 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `debug` ×30
     - `infra` ×2
     - `backup`
     - `build`

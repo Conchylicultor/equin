@@ -29,6 +29,7 @@
     - `debug/service-down`
     - `debug/slow-ops/cluster`
     - `debug/slow-ops/pane`
+    - `debug/tests`
     - `debug/trace/gates`
     - `fields/duration/config`
     - `fields/duration/filter`

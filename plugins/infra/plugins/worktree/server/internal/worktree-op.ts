@@ -56,6 +56,12 @@ export interface WorktreeOpInfo {
   // and this is the join.
   opId: string | null;
   startedAt: string;
+  /**
+   * The op runs only because the host is idle and yields to any other work
+   * (an idle test batch, `EQUIN_OP_OPPORTUNISTIC`). False on a marker an older
+   * CLI wrote, which predates the flag.
+   */
+  opportunistic: boolean;
 }
 
 // Op markers are keyed by the same slug the spec dir carries, and a slug reaches
@@ -125,6 +131,7 @@ type MarkerJson = {
   pid?: unknown;
   opId?: unknown;
   startedAt?: unknown;
+  opportunistic?: unknown;
 };
 
 function opOf(raw: unknown): WorktreeOp {
@@ -146,6 +153,7 @@ function infoFromParsed(
       typeof parsed.startedAt === "string"
         ? parsed.startedAt
         : new Date(0).toISOString(),
+    opportunistic: parsed.opportunistic === true,
   };
 }
 

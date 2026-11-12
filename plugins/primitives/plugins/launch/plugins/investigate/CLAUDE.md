@@ -36,6 +36,7 @@
     - `build/build-fix`
     - `debug/background/investigate`
     - `debug/reports`
+    - `debug/tests`
     - `runs`
     - `tasks/task-triage`
 

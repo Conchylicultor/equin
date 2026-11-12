@@ -1,3 +1,5 @@
+import { pluginDirOfRepoPath } from "@plugins/framework/plugins/plugin-id/core";
+
 /**
  * Repo-relative posix paths, in plain string operations: the module graph
  * resolves imports against the repo's file set, never the disk, so it needs no
@@ -33,9 +35,5 @@ export function relJoin(dir: string, spec: string): string | null {
  * directory outside `plugins/`: the unit records are read in (`readGrouped`).
  */
 export function relOwner(rel: string): string {
-  const segs = rel.split("/");
-  if (segs[0] !== "plugins" || segs.length < 3) return segs[0]!;
-  let end = 2;
-  while (segs[end] === "plugins" && end + 2 < segs.length) end += 2;
-  return segs.slice(0, end).join("/");
+  return pluginDirOfRepoPath(rel) ?? rel.split("/")[0]!;
 }

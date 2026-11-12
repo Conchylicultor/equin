@@ -130,6 +130,7 @@ export function stateToRow(s: OpFoldState): OpInsert | null {
     mode: knownOrNull(PUSH_MODES, s.identity.mode, "mode", id),
     buildId: s.identity.buildId,
     pid: s.identity.pid,
+    opportunistic: s.identity.opportunistic,
     requestedAt: new Date(s.requestedAt),
     grantedAt: s.grantedAt === null ? null : new Date(s.grantedAt),
     completedAt: s.completedAt === null ? null : new Date(s.completedAt),

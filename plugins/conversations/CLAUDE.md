@@ -263,8 +263,8 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
     - `SYSTEM_CATEGORY_ID`
     - `withdrawConversationTurn`
 - Cross-plugin:
-  - Imported by: 84 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×58
+  - Imported by: 85 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×59
     - `tasks` ×8
     - `apps` ×6
     - `infra` ×3
@@ -400,6 +400,7 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
       - **`queue`** — Queue classification (classifyQueue) consumed by the DataView Queue tab; a reorder is the server's (reorderQueue mints the rank). Ranks seeded once on creation (newest first); a waiting task group…
   - **`effort-provider`** — Registry mapping thinking-mode (effort) levels to Claude CLI delivery (--effort flag / --settings ultracode) and display metadata. Reusable EffortSelect picker.
   - **`hibernation`** — Records conversation selection so idle hibernation can reset the idle timer and transparently resume. Idle-conversation hibernation, portable half: the global hibernation config, and the viewed…
+  - **`idle-blocker`** — Idle blocker `agents`: any conversation starting or working (isAgentBusy) keeps the host busy; every conversation.statusChanged that crosses that line asks the idle signal to re-evaluate.
   - **`menu-bar-status`** — The agents' part of the menu-bar panel's status line (MenuBar.Status 'agents'): from useConversations(), partitioned like the agent manager's home — working or starting → 'N agents working', waiting…
   - **`model-provider`** [exempt] — Model pickers and labels over the live model catalog: useModelCatalog (the pushed, preloaded catalog), useVisibleModels / useModelItems / ModelSelect / ModelChoiceLabel (families with today's…
     - Plugins:

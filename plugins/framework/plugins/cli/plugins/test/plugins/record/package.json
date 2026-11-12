@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-framework-cli-test-record",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The test harvest's file formats, as zod schemas: TestRunRecord (one `./equin test` run's per-file verdicts under their digests, written to the host-global test-runs dir) and CheckoutDigests (`./equin test-digest`'s output) — a leaf every writer and reader shares."
+}

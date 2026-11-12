@@ -224,13 +224,13 @@ insert and the ring's inline prune reach it through the change feed. The
     - `TriggerRowSchema`
     - `TriggersPayloadSchema`
 - Cross-plugin:
-  - Imported by: 38 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×11
+  - Imported by: 42 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×12
     - `tasks` ×10
     - `apps` ×7
-    - `infra` ×4
+    - `infra` ×5
     - `page` ×4
-    - `debug/queue`
+    - `debug` ×3
     - `wish`
 - Exemptions:
   - Exempts itself from:

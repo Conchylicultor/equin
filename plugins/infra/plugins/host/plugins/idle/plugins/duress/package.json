@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-infra-host-idle-duress",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Idle blocker: a fresh host duress latch keeps the host busy; a watch on the latch dir asks for a re-evaluation, and a fresh latch asks to be re-read when its lease could lapse (a lapse emits no event)."
+}

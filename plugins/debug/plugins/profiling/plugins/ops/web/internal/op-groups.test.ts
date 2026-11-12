@@ -22,6 +22,7 @@ function row(over: Partial<OpRow> & { opId: string }): OpRow {
     mode: null,
     buildId: null,
     pid: 1,
+    opportunistic: false,
     requestedAt: new Date(T0),
     grantedAt: new Date(T0),
     completedAt: new Date(T0 + 60_000),

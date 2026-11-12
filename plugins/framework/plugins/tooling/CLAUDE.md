@@ -50,6 +50,8 @@
     - `framework/cli/migrations`
     - `framework/cli/regen-generated`
     - `framework/cli/release`
+    - `framework/cli/test`
+    - `framework/cli/test/digest`
     - `framework/tooling/checks`
     - `framework/tooling/codegen`
     - `framework/tooling/exempt`

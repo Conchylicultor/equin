@@ -49,6 +49,8 @@ export const dataViews: DataViewEntry[] = [
   { id: "debug.slow-ops.cluster-aggregate", pluginId: "debug.slow-ops.cluster" },
   { id: "debug.slow-ops.cluster-timeline", pluginId: "debug.slow-ops.cluster" },
   { id: "debug.slow-ops.local", pluginId: "debug.slow-ops.pane" },
+  { id: "debug.tests.file-runs", pluginId: "debug.tests" },
+  { id: "debug.tests.tree", pluginId: "debug.tests" },
   { id: "debug.trace.events", pluginId: "debug.trace.pane" },
   { id: "debug.worktree-cleanup.worktrees", pluginId: "debug.worktree-cleanup" },
   { id: "deploy-sessions", pluginId: "apps.deploy.analytics.sessions" },

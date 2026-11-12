@@ -1,0 +1,9 @@
+// @hash 6ec84829688d
+{
+  "views": [
+    { "id": "recent", "name": "Recent", "view": { "type": "table", "sort": [{ "fieldId": "finishedAt", "direction": "desc" }] } }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

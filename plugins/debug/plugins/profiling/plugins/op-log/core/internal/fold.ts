@@ -243,6 +243,7 @@ function applyV2(s: OpFoldState, ev: OpEvent): OpFoldState {
         mode: summary.mode,
         buildId: summary.buildId,
         pid: summary.pid,
+        opportunistic: summary.opportunistic === true,
       },
       requestedAt: summary.requestedAt,
       grantedAt: summary.grantedAt,
@@ -282,6 +283,7 @@ function applyV2Change(
         mode: ev.mode,
         buildId: ev.buildId,
         pid: ev.pid,
+        opportunistic: ev.opportunistic === true,
       };
       next.requestedAt = ev.at;
       return next;
@@ -392,6 +394,8 @@ function legacyIdentity(r: RawOpRecord, known: OpIdentity | null): OpIdentity {
     mode: r.mode !== undefined ? r.mode : (known?.mode ?? null),
     buildId: r.buildId !== undefined ? r.buildId : (known?.buildId ?? null),
     pid: known?.pid ?? null,
+    // A legacy (pre-v2) writer predates opportunistic ops.
+    opportunistic: false,
   };
 }
 

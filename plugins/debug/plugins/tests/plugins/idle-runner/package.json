@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-debug-tests-idle-runner",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Runs stale and never-run test files while the host is idle: on host.idleBegan it brings the checkout's test digests current, then runs batches (`./equin test`, opportunistic, origin idle) chosen by selectIdleBatch — stale and last failing, never run, stale oldest, then verdicts over 7 days old — one after another while the host stays idle, cancelled on host.idleEnded."
+}

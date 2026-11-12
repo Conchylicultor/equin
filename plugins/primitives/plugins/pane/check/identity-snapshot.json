@@ -319,6 +319,18 @@
       "parent": null
     },
     {
+      "paneId": "debug-test-file",
+      "segment": "test-file/:path*",
+      "appIndex": false,
+      "parent": "debug-tests"
+    },
+    {
+      "paneId": "debug-tests",
+      "segment": "tests;status",
+      "appIndex": false,
+      "parent": null
+    },
+    {
       "paneId": "demo-start",
       "segment": "",
       "appIndex": true,

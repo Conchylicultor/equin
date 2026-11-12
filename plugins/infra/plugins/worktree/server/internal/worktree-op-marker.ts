@@ -33,6 +33,15 @@ export interface WorktreeOpMarker {
   release(): void;
 }
 
+/** What a marker says about its op beyond its kind and id. */
+export interface MarkWorktreeOpOptions {
+  /**
+   * The op runs only because the host is idle and yields to any other work
+   * (`WorktreeOpInfo.opportunistic`): the host idle signal does not count it.
+   */
+  opportunistic: boolean;
+}
+
 /**
  * Publish this process's liveness marker for op `opId` and hold its lock until
  * `release()` (or process death — the kernel releases it either way).
@@ -53,6 +62,7 @@ export function markWorktreeOpStart(
   slug: string,
   op: WorktreeOp,
   opId: string,
+  opts: MarkWorktreeOpOptions = { opportunistic: false },
 ): WorktreeOpMarker {
   const dir = opsDir(slug);
   mkdirSync(dir, { recursive: true });
@@ -78,6 +88,7 @@ export function markWorktreeOpStart(
         opId,
         pid: process.pid,
         startedAt: new Date().toISOString(),
+        opportunistic: opts.opportunistic,
       }),
     );
     // Linked before the rename: once the marker is visible, so is its link.

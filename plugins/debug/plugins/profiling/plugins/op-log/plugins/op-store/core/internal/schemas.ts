@@ -149,6 +149,11 @@ export const OP_ROW_CARRIED = {
   buildId: nullable(textField()),
   /** The CLI process that ran it; `null` for a legacy (pre-v2) op. */
   pid: nullable(intField()),
+  /**
+   * Runs only because the host is idle, yielding to any other work (an idle
+   * test batch): background lane, low priority, not work to the idle signal.
+   */
+  opportunistic: boolField(),
   grantedAt: nullable(dateField()),
   interrupted: boolField(),
   /** Non-null ⇔ terminal. THE in-flight predicate (`completedAt` is not one). */
@@ -243,6 +248,7 @@ export function opRowToFoldState(row: OpRow): OpFoldState {
       mode: row.mode,
       buildId: row.buildId,
       pid: row.pid,
+      opportunistic: row.opportunistic,
     },
     requestedAt: row.requestedAt.toISOString(),
     grantedAt: row.grantedAt?.toISOString() ?? null,

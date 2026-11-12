@@ -64,6 +64,11 @@ export interface OpProfilerOptions {
   /** build only — joins the record to its `build-profile-<id>.json` spans. */
   buildId?: string | null;
   /**
+   * The op runs only because the host is idle and yields to any other work
+   * (direct ops under `EQUIN_OP_OPPORTUNISTIC`). Omitted: `false`.
+   */
+  opportunistic?: boolean;
+  /**
    * Where each event lands. Defaults to appending to the real `OP_LOG_FILE`.
    * Injectable so a test can drive the profiler against an in-memory sink and
    * assert the event stream without touching the user's real log.
@@ -204,6 +209,7 @@ export function createOpProfiler<K extends OpKind>(
     lane: opts.lane ?? null,
     mode: opts.mode ?? null,
     buildId: opts.buildId ?? null,
+    opportunistic: opts.opportunistic ?? false,
   });
 
   type Body = OpEvent extends infer E

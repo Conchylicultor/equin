@@ -30,6 +30,8 @@
     - `PLUGIN_FOLDERS`
     - `PLUGIN_MANIFEST_KEY`
     - `PLUGIN_PACKAGE_PREFIX`
+    - `pluginDirOfRepoPath`
+    - `pluginIdOfRepoPath`
     - `pluginIdSegments`
     - `pluginOfNode`
     - `RUNTIME_FOLDERS`
@@ -39,9 +41,9 @@
     - `UNDOCUMENTED_RUNTIME_FOLDERS`
     - `VERIFYING_FOLDERS`
 - Cross-plugin:
-  - Imported by: 45 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `plugin-meta` ×20
-    - `framework` ×10
+  - Imported by: 47 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `plugin-meta` ×21
+    - `framework` ×11
     - `apps` ×4
     - `build` ×2
     - `config_v2` ×2

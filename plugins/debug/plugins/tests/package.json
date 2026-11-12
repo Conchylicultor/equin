@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-debug-tests",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Debug → Tests: every test file's last known status on this checkout, from verdicts harvested out of the `./equin test` runs agents already do (matched to the current code by import-closure digest), as a plugin tree coloured by worst status, with a detail pane per file, Run now, and Investigate for failing or flaky files."
+}

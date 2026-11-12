@@ -21,12 +21,12 @@ web bundle could not import the name from there.
     - `CLI_NAMES`
     - `isCliName`
 - Cross-plugin:
-  - Imported by: 24 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 26 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework` ×6
     - `infra` ×6
+    - `debug` ×4
     - `apps` ×2
     - `build` ×2
-    - `debug` ×2
     - `plugin-meta` ×2
     - `database/admin`
     - `primitives/css/layout-harness`

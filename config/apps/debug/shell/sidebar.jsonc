@@ -1,4 +1,4 @@
-// @hash 8755e6c2dd52
+// @hash 6a1c3d1b833d
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -15,6 +15,7 @@
     "debug.trace.pane:trace-slow-events",
     "debug.profiling:profiling",
     "build:build",
+    "debug.tests:tests",
     "debug.boot-profile:boot-profile",
     "debug.boot-profile:boot-profiles-list",
     "debug.render-profiler:render-profiler",

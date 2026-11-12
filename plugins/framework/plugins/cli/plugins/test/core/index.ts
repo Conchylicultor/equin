@@ -1,5 +1,9 @@
 export { parseJunit } from "./internal/junit";
-export type { JunitSummary } from "./internal/junit";
+export type {
+  JunitFailure,
+  JunitFileStats,
+  JunitSummary,
+} from "./internal/junit";
 export {
   readLatestTestStatus,
   readTestStatus,
@@ -17,3 +21,8 @@ export {
   formatLoopHeartbeat,
   parseLoopHeartbeat,
 } from "./internal/loop-heartbeat";
+export { fileResults, JunitPathMismatchError } from "./internal/file-results";
+export type {
+  RunnerHarvest,
+  RunnerHarvestInput,
+} from "./internal/file-results";

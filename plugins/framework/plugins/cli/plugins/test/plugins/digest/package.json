@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-framework-cli-test-digest",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The test digest: each test file's import-closure Merkle key plus its runner's inputs (plugin-records' module graph), the key a harvested `./equin test` verdict is stored under — and `./equin test-digest`, the whole checkout's digests for the Debug → Tests page."
+}

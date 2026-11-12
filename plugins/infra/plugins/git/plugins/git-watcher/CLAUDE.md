@@ -90,6 +90,7 @@ Measure: `scripts/measure-ref-delivery.ts`; in the app, the
     - `apps/deploy/remote-deploy`
     - `build/deployment`
     - `conversations/conversation-view/commits-graph`
+    - `debug/tests`
     - `infra/launcher/gateway-drift`
     - `infra/launcher/login-services`
     - `plugin-meta/plugin-health`

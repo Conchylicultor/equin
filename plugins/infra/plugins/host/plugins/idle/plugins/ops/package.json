@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-infra-host-idle-ops",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Idle blocker: any op running on the host (build, push, check, test, e2e) keeps it busy — read from the host-wide live-ops markers, an opportunistic op (the idle test batch) excepted; a watch on the live-ops dir asks for a re-evaluation."
+}

@@ -59,6 +59,7 @@ function makeHarness(
     slug?: string;
     flight?: FlightScript;
     priority?: Priority;
+    opportunistic?: boolean;
   } = {},
 ) {
   const events: string[] = [];
@@ -91,6 +92,7 @@ function makeHarness(
     describeQueue: (pool) => `queue:${pool}`,
     identity: async () => ({ slug, branch: "feature" }),
     priority: async () => opts.priority ?? "normal",
+    opportunistic: () => opts.opportunistic ?? false,
     checkBroadcasts: async (kind) => {
       events.push(`broadcasts:${kind}`);
     },
@@ -112,8 +114,10 @@ function makeHarness(
             events.push(`log:${r.e}`);
         },
       }),
-    markWorktreeOpStart: (_slug, op, _opId) => {
-      events.push(`marker:${op}:publish`);
+    markWorktreeOpStart: (_slug, op, _opId, marked) => {
+      events.push(
+        `marker:${op}:publish${marked?.opportunistic ? ":opportunistic" : ""}`,
+      );
       let released = false;
       return {
         path: asAppPath("/dev/null"),
@@ -261,6 +265,46 @@ describe("withDirectOp — top-level path", () => {
     const h = makeHarness({ priority: "low" });
     await withDirectOp("check", { max: 2 }, async () => "success", h.deps);
     expect(h.events).toContain("acquire:background:low:2");
+  });
+
+  test("an opportunistic op on main yields: background lane, low priority, marked on its marker and record", async () => {
+    const h = makeHarness({
+      slug: MAIN_WORKTREE_NAME,
+      opportunistic: true,
+    });
+    await withDirectOp(
+      "test",
+      { max: 2 },
+      async (_grant, ctx) => {
+        expect(ctx.opportunistic).toBe(true);
+        expect(ctx.lane).toBe("background");
+        return "success";
+      },
+      h.deps,
+    );
+    expect(h.events).toContain("lane:background");
+    expect(h.events).toContain("acquire:background:low:2");
+    expect(h.events).toContain("marker:test:publish:opportunistic");
+    const requested = h.records.find((r) => r.e === "requested");
+    expect(requested?.e === "requested" && requested.opportunistic).toBe(true);
+    for (const fn of h.exitHandlers) fn();
+    expect(terminalOf(h.records)?.opportunistic).toBe(true);
+  });
+
+  test("a nested op is never opportunistic: it acquires and records nothing", async () => {
+    const h = makeHarness({
+      inherited: fakeGrant(2, "background"),
+      opportunistic: true,
+    });
+    await withDirectOp(
+      "check",
+      { max: 1 },
+      async (_grant, ctx) => {
+        expect(ctx.opportunistic).toBe(false);
+        return "success";
+      },
+      h.deps,
+    );
   });
 
   test("the main worktree is the interactive origin", async () => {

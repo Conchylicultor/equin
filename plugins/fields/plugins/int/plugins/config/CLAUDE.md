@@ -39,9 +39,9 @@ its table/filter capabilities from `number` via the identity `extends` chain.
     - `intField`
     - `intSample`
 - Cross-plugin:
-  - Imported by: 56 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 57 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×16
-    - `debug` ×11
+    - `debug` ×12
     - `conversations` ×7
     - `infra` ×5
     - `tasks` ×5

@@ -90,11 +90,11 @@ naming the pane, the path and the component path.
     - `ui/tokens/type-scale --font-size-body`
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-body`
-  - Imported by: 229 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 230 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×71
     - `conversations` ×23
     - `ui` ×23
-    - `debug` ×19
+    - `debug` ×20
     - `primitives` ×19
     - `tasks` ×14
     - `page` ×11

@@ -133,6 +133,41 @@ describe("applyFailurePolicy", () => {
     ).toBe("done");
   });
 
+  test("an exit the job declared a verdict is done on the last attempt, a signal never is", () => {
+    const failure = { errorMessage: null, retryable: null, cancelled: false };
+    expect(
+      applyFailurePolicy({
+        ...base,
+        terminal: ended(2),
+        attempt: 3,
+        verdictExits: [2],
+        failure,
+      }),
+    ).toBe("done");
+    expect(
+      thrown(() =>
+        applyFailurePolicy({
+          ...base,
+          terminal: ended(1),
+          attempt: 3,
+          verdictExits: [2],
+          failure,
+        }),
+      ).message,
+    ).toContain("exited 1");
+    expect(
+      thrown(() =>
+        applyFailurePolicy({
+          ...base,
+          terminal: { ...ended(2), signalCode: "SIGINT" },
+          attempt: 3,
+          verdictExits: [2],
+          failure,
+        }),
+      ),
+    ).toBeInstanceOf(Error);
+  });
+
   test("a retryable failure before the last attempt retries — and again on replay", () => {
     const args = {
       ...base,

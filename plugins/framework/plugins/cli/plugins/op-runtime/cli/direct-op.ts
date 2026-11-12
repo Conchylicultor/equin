@@ -10,6 +10,7 @@ import type {
   Priority,
 } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { z } from "zod";
+import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import {
   actAsCheckoutNamespace,
   worktreeArtifacts,
@@ -77,6 +78,13 @@ export interface DirectOpContext<K extends OpKind> {
   nested: boolean;
   /** `undefined` exactly when `nested`: a nested op records nothing of its own. */
   profiler: OpProfiler<K> | undefined;
+  /**
+   * The op runs only because the host is idle (`EQUIN_OP_OPPORTUNISTIC=1`):
+   * it acquires on the background lane at low priority and its marker and
+   * op-log record say so, so the host idle signal does not count it as work.
+   * Always false when `nested` (a nested op acquires and records nothing).
+   */
+  opportunistic: boolean;
 }
 
 /**
@@ -258,6 +266,11 @@ export interface DirectOpDeps {
    * the op actually acquires: a nested op or a single-flight joiner never does.
    */
   priority: (kind: OpKind, isMainCheckout: boolean) => Promise<Priority>;
+  /**
+   * Whoever started this op marked it opportunistic — it runs only because the
+   * host is idle and must yield to any other work (`EQUIN_OP_OPPORTUNISTIC`).
+   */
+  opportunistic: () => boolean;
   checkBroadcasts: (kind: OpKind) => Promise<void>;
   reportInterruptedPredecessor: (slug: Namespace) => void;
   publishLane: (isInteractiveOrigin: boolean) => void;
@@ -310,6 +323,7 @@ const realDeps: DirectOpDeps = {
   identity: getWorktreeIdentity,
   priority: async (kind, isMainCheckout) =>
     opPriority(await getWorktreeRoot(), kind, isMainCheckout),
+  opportunistic: () => readEnv("OP_OPPORTUNISTIC") === "1",
   checkBroadcasts,
   reportInterruptedPredecessor: reportInterruptedPredecessorSync,
   publishLane,
@@ -391,7 +405,13 @@ export async function withDirectOp<K extends OpKind>(
   // is how a push-nested check keeps `interactive` even on an agent branch.
   // Left UNCONDITIONAL; a `!nested` gate would be a second rule saying the
   // same thing. See ./lane.ts.
-  const isInteractiveOrigin = slug === MAIN_WORKTREE_NAME;
+  //
+  // An OPPORTUNISTIC op (it runs only because the host is idle: the idle test
+  // batch, started on main) is never interactive, whatever checkout it runs
+  // in — nobody waits on it, and it must yield to anyone who does: background
+  // lane, low priority (below).
+  const opportunistic = !nested && deps.opportunistic();
+  const isInteractiveOrigin = slug === MAIN_WORKTREE_NAME && !opportunistic;
   const lane: Lane = isInteractiveOrigin ? "interactive" : "background";
   deps.publishLane(isInteractiveOrigin);
 
@@ -399,14 +419,20 @@ export async function withDirectOp<K extends OpKind>(
 
   const profiler = nested
     ? undefined
-    : deps.createOpProfiler(kind, { opId, branch, opSlug: slug, lane });
+    : deps.createOpProfiler(kind, {
+        opId,
+        branch,
+        opSlug: slug,
+        lane,
+        opportunistic,
+      });
 
   // The marker first, THEN `requested`: an op in the log with no locked marker
   // is one the reconciler closes as interrupted. The terminal is appended
   // before the release for the same reason (see `finish`).
   const marker = nested
     ? undefined
-    : deps.markWorktreeOpStart(slug, kind, opId);
+    : deps.markWorktreeOpStart(slug, kind, opId, { opportunistic });
   // The terminal record then the release, on every graceful exit — including a
   // `process.exit(1)` inside `body`, which skips the `finally`. Idempotent (both
   // halves are), and an outcome already stamped by `complete()` wins; a path
@@ -431,6 +457,7 @@ export async function withDirectOp<K extends OpKind>(
     opId,
     nested,
     profiler,
+    opportunistic,
   };
 
   try {
@@ -480,7 +507,9 @@ export async function withDirectOp<K extends OpKind>(
       return await acquire(
         {
           lane,
-          priority: await deps.priority(kind, isInteractiveOrigin),
+          priority: opportunistic
+            ? "low"
+            : await deps.priority(kind, isInteractiveOrigin),
           max: opts.max,
           hooks: grantHooks(pool),
         },

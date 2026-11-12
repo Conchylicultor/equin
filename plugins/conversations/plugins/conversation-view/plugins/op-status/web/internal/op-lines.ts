@@ -75,6 +75,22 @@ export function timesOf(
 }
 
 /**
+ * How an op names itself, and what it is doing while it works. An
+ * OPPORTUNISTIC op (it runs only because the host is idle — the idle test
+ * batch) says so, and that it gives way: `Idle test run — yields to work`,
+ * never `Test — Testing`, which would read as someone's work in progress.
+ */
+export function opWording(row: OpRow): { label: string; progressive: string } {
+  const { label, progressive } = OP_KINDS[row.kind];
+  return row.opportunistic
+    ? {
+        label: `Idle ${label.toLowerCase()} run`,
+        progressive: "yields to work",
+      }
+    : { label, progressive };
+}
+
+/**
  * The one state line: `Build — waiting for a host CPU grant · 3rd in line ·
  * 12:03` while parked in a wait (`ahead`: the op's place in that wait's line,
  * `waitersAhead` over every in-flight op — `null` when the wait is no line or
@@ -87,7 +103,7 @@ export function stateLine(
   now: number,
   sleepNow: SleepNow,
 ): string {
-  const { label, progressive } = OP_KINDS[row.kind];
+  const { label, progressive } = opWording(row);
   const wait = row.openWait;
   if (!wait) return `${label} — ${progressive}`;
   const requeue = wait.cycle > 0 ? ` · requeue #${wait.cycle}` : "";

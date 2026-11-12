@@ -114,6 +114,10 @@ export const RUNTIME_WITHHELD_ENV = {
     "the instant (epoch ms) an agent's foreground Bash call is cut off; a PreToolUse guard exports it into that one command, and the op hand-off takes it out of the env of the op it detaches (cli/op-runtime foreground-handoff.ts)",
   TEST_HEARTBEAT:
     "the file a bun:test process stamps with its awake clock every 30 s, set by `./equin test` for the runner it spawns so it can tell a run whose event loop stopped (cli/test run.ts, test/bun-preload.ts)",
+  TEST_ORIGIN:
+    "who started one `./equin test` run (agent | run-now | idle), stamped into the run's harvest record; set by the backend for the run it supervises (debug/tests), read by cli/test run.ts — unset means an agent typed it",
+  OP_OPPORTUNISTIC:
+    "marks an op that runs only because the host is idle and yields to any other work (`1`): it acquires its grant on the background lane at low priority and is stamped opportunistic on its marker and op-log record, so the idle signal does not count it as work; set by the backend for the idle test batch it supervises (debug/tests/idle-runner), read by cli/op-runtime direct-op.ts",
   OP_HANDED_OFF:
     "marks an op detached by the foreground hand-off, meant to outlive the call that started it; set by the hand-off for that one op (cli/op-runtime foreground-handoff.ts), read by its orphan guard",
   BUILD_IN_PROGRESS:

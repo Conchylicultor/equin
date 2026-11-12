@@ -1827,8 +1827,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Slots:
               - `DebugApp.Sidebar`
               - `DebugApp.Toolbar`
-            - Slot contributors: 27 contributors — full list in [`plugins/apps/plugins/debug/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/debug/plugins/shell/REFERENCE.md)
-              - `DebugApp.Sidebar` ×27
+            - Slot contributors: 28 contributors — full list in [`plugins/apps/plugins/debug/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/debug/plugins/shell/REFERENCE.md)
+              - `DebugApp.Sidebar` ×28
             - Contributes: `Apps.App` "Debug" → `DebugLayout`
             - Uses:
               - `apps-core.Apps`
@@ -1842,8 +1842,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/icons.symbol`
             - Exports (values): `debugApp`
           - Cross-plugin:
-            - Imported by: 38 plugins — full list in [`plugins/apps/plugins/debug/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/debug/plugins/shell/REFERENCE.md)
-              - `debug` ×29
+            - Imported by: 39 plugins — full list in [`plugins/apps/plugins/debug/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/debug/plugins/shell/REFERENCE.md)
+              - `debug` ×30
               - `infra` ×2
               - `backup`
               - `build`
@@ -15618,8 +15618,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `SYSTEM_CATEGORY_ID`
       - `withdrawConversationTurn`
   - Cross-plugin:
-    - Imported by: 84 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
-      - `conversations` ×58
+    - Imported by: 85 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+      - `conversations` ×59
       - `tasks` ×8
       - `apps` ×6
       - `infra` ×3
@@ -20756,6 +20756,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `conversations/agent-thread`
           - `conversations/conversation-view`
+    - **`idle-blocker`** — Idle blocker `agents`: any conversation starting or working (isAgentBusy) keeps the host busy; every conversation.statusChanged that crosses that line asks the idle signal to re-evaluate.
+      - Server:
+        - Contributes:
+          - `host.idle-blocker` "agents"
+          - `trigger` "conversations.idle-blocker.notify"
+        - Uses:
+          - `database.db`
+          - `infra/events.Trigger`
+          - `infra/host/idle.IdleBlocker`
+          - `infra/host/idle.requestIdleEvaluation`
+          - `infra/jobs.defineJob`
+          - `tasks/tasks-core._conversations`
+          - `tasks/tasks-core.conversationStatusChanged`
+        - Register: `defineJob('conversations.idle-blocker.notify')`
     - **`menu-bar-status`** — The agents' part of the menu-bar panel's status line (MenuBar.Status 'agents'): from useConversations(), partitioned like the agent manager's home — working or starting → 'N agents working', waiting → 'N need you' — with attention while any agent waits on the user, which lights the menu-bar icon's dot.
       - Web:
         - Contributes: `MenuBar.Status` "Agents"
@@ -22119,14 +22133,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadedDatabaseConfig`
       - `readDatabaseConfigSync`
   - Cross-plugin:
-    - Imported by: 157 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 161 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×45
-      - `conversations` ×19
-      - `infra` ×15
+      - `conversations` ×20
+      - `infra` ×16
       - `page` ×14
       - `tasks` ×14
+      - `debug` ×9
       - `active-data` ×8
-      - `debug` ×7
       - `database` ×5
       - `primitives` ×4
       - `network` ×3
@@ -22207,9 +22221,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `openShortLivedClient`
           - `reclaimForkTemp`
       - Cross-plugin:
-        - Imported by: 30 plugins — full list in [`plugins/database/plugins/admin/REFERENCE.md`](../plugins/database/plugins/admin/REFERENCE.md)
+        - Imported by: 31 plugins — full list in [`plugins/database/plugins/admin/REFERENCE.md`](../plugins/database/plugins/admin/REFERENCE.md)
           - `debug` ×7
-          - `infra` ×6
+          - `infra` ×7
           - `database` ×4
           - `apps` ×3
           - `framework` ×3
@@ -25816,6 +25830,192 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `GATE_WAITERS_MAX`
           - `SPAN_STUCK_KIND`
           - `StuckSpanPayloadSchema`
+    - **`tests`** — Debug → Tests: every test file of this checkout with its last known status — harvested from the `./equin test` runs agents already do, matched to the current code by digest — as summary cards (the status filter) over a plugin tree coloured by worst status, and a detail pane per file (last run, failing cases, why flaky, recent runs, Run now, Investigate). Debug → Tests, portable half: the harvested test verdicts (test_runs, test_file_results, test_case_failures), the checkout's test digests and their generation, the derived test_file_status (recomputeFileStatus, its only writer), the collections the page reads, the daily tests.results-cap job, the tests.digestsSettled event (a digest computation ended), and the Tests task category Investigate files under.
+      - Web:
+        - Slots:
+          - `tests.actions`
+          - `test-file.actions`
+        - Slot contributors:
+          - `tests.actions` ← `primitives.pane`
+          - `test-file.actions` ← `primitives.pane`
+        - Contributes:
+          - `Pane.Register` "debug-test-file"
+          - `Pane.Register` "debug-tests"
+          - `DataViewSlots.CollectionItemAction` "tests.file-status:investigate" → `CollectionInvestigate`
+          - `DataViewSlots.CollectionItemAction` "tests.file-runs:investigate" → `CollectionInvestigate`
+          - `DebugApp.Sidebar` "Tests"
+        - Uses: 37 symbols — full list in [`plugins/debug/plugins/tests/REFERENCE.md`](../plugins/debug/plugins/tests/REFERENCE.md)
+          - `primitives/data-view` ×6
+          - `primitives/pane` ×6
+          - `network/live` ×2
+          - `primitives/css/spacing` ×2
+          - `primitives/css/status-dot` ×2
+          - `primitives/launch/investigate` ×2
+          - `apps/debug/shell.DebugApp`
+          - `infra/endpoints.useEndpointMutation`
+          - `network/live/live-state.ResourceErrorInline`
+          - `primitives/css/badge.Badge`
+          - `primitives/css/card.Card`
+          - `primitives/css/clip.Clip`
+          - `primitives/css/fill.Fill`
+          - `primitives/css/grid.Grid`
+          - `primitives/css/inline.Inline`
+          - `primitives/css/line.Line`
+          - `primitives/css/scroll.Scroll`
+          - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.Button`
+          - `primitives/loading.Loading`
+          - `primitives/rank.Rank`
+          - `primitives/relative-time.RelativeTime`
+          - `shell/toast.showToast`
+      - Server:
+        - Contributes:
+          - `resource.declare` "tests.case-failures"
+          - `resource.declare` "tests.case-failures:rows"
+          - `resource.declare` "tests.digest-generation"
+          - `resource.declare` "tests.file-runs"
+          - `resource.declare` "tests.file-runs:groups"
+          - `resource.declare` "tests.file-runs:rows"
+          - `resource.declare` "tests.file-status"
+          - `resource.declare` "tests.file-status:rows"
+          - `taskCategory` "tests"
+        - Uses:
+          - `database.db`
+          - `infra/entities.defineEntity`
+          - `infra/events.defineTriggerEvent`
+          - `infra/jobs.defineJob`
+          - `network/live.serveCollection`
+          - `tasks/task-category.TaskCategory`
+        - DB schema:
+          - `plugins/debug/plugins/tests/server/internal/tables-events.ts`
+          - `plugins/debug/plugins/tests/server/internal/tables.ts`
+        - Exports (types): `DbExec`
+        - Exports (values):
+          - `_testCaseFailures`
+          - `_testCheckoutDigests`
+          - `_testDigestGeneration`
+          - `_testDigestsSettledTriggers`
+          - `_testFileResults`
+          - `_testFileStatus`
+          - `_testRuns`
+          - `ingestedOpIds`
+          - `ingestRunRecord`
+          - `recomputeFileStatus`
+          - `testDigestsSettled`
+        - Register:
+          - `defineJob('tests.results-cap')`
+          - `defineTriggerEvent('tests.digestsSettled')`
+        - Resources:
+          - `tests.case-failures` (keyed)
+          - `tests.case-failures:rows` (keyed, point)
+          - `tests.digest-generation` (push)
+          - `tests.file-runs` (keyed, window)
+          - `tests.file-runs:groups` (push)
+          - `tests.file-runs:rows` (keyed, point)
+          - `tests.file-status` (keyed)
+          - `tests.file-status:rows` (keyed, point)
+      - Machine:
+        - Uses: `infra/endpoints.implementMachine`
+        - Exports (values):
+          - `ingestRunRecordsNow`
+          - `requestCheckoutDigests`
+        - Register:
+          - `defineFileWatcher('tests.run-records')`
+          - `defineSupervisedJob('tests.checkout-digests')`
+          - `defineSupervisedJob('tests.run-now')`
+          - `defineRefReaction('tests.checkout-digests (refs/heads/main)')`
+        - Routes: `POST /api/debug/tests/run-now`
+      - Core:
+        - Uses:
+          - `fields.FieldsRecord`
+          - `fields.nullable`
+          - `fields/date/config.dateField`
+          - `fields/duration/config.durationField`
+          - `fields/int/config.intField`
+          - `fields/json/config.jsonField`
+          - `fields/text/config.enumTextField`
+          - `fields/text/config.textField`
+          - `ids.externalIdField`
+          - `infra/endpoints.defineEndpoint`
+          - `infra/entities.entityRef`
+          - `network/live.liveCollection`
+          - `network/live.LiveRowsCollection`
+          - `network/live.liveValue`
+          - `packages/list-bound.cappedList`
+        - Exports (types):
+          - `DigestGeneration`
+          - `DigestGenerationState`
+          - `StatusHistoryEntry`
+          - `StatusInput`
+          - `TestCaseFailureRow`
+          - `TestFileRunRow`
+          - `TestFileStatusRow`
+          - `TestOrigin`
+          - `TestOutcome`
+          - `TestRunner`
+          - `TestStatus`
+        - Exports (values):
+          - `deriveStatus`
+          - `DIGEST_GENERATION_STATES`
+          - `DigestGenerationSchema`
+          - `RESULTS_KEPT_PER_FILE`
+          - `RUN_NOW_MAX_PATHS`
+          - `runTestsNow`
+          - `STATUS_HISTORY_MAX`
+          - `StatusHistoryEntrySchema`
+          - `TEST_DIGEST_GENERATION_ID`
+          - `TEST_ORIGINS`
+          - `TEST_OUTCOMES`
+          - `TEST_RUNNERS`
+          - `TEST_STATUS_SEVERITY`
+          - `TEST_STATUSES`
+          - `testCaseFailureFields`
+          - `testCaseFailures`
+          - `testCaseFailuresEntityRef`
+          - `testCheckoutDigestFields`
+          - `testCheckoutDigestsEntityRef`
+          - `testDigestGeneration`
+          - `testDigestGenerationEntityRef`
+          - `testDigestGenerationFields`
+          - `testFileResultFields`
+          - `testFileResultsEntityRef`
+          - `testFileRuns`
+          - `testFileStatus`
+          - `testFileStatusEntityRef`
+          - `testFileStatusFields`
+          - `testFileSubject`
+          - `testRunFields`
+          - `testRunsEntityRef`
+          - `TESTS_CATEGORY_ID`
+          - `worstStatus`
+      - Cross-plugin:
+        - Uses tokens:
+          - `ui/tokens/color-palette --destructive`
+          - `ui/tokens/color-palette --muted`
+          - `ui/tokens/color-palette --muted-foreground`
+          - `ui/tokens/color-palette --success`
+          - `ui/tokens/color-palette --warning`
+          - `ui/tokens/shape --radius`
+          - `ui/tokens/shape --spacing`
+        - Imported by: `debug/tests/idle-runner`
+      - Exemptions:
+        - Exempts itself from: `ids:pk-declared` — `server/internal/tables-events.ts` (debt)
+      - Plugins:
+        - **`idle-runner`** — Runs stale and never-run test files while the host is idle: on host.idleBegan it brings the checkout's test digests current; each tests.digestsSettled (and each batch's end, after its record is ingested) starts the next tests.idle-batch — `./equin test` on files chosen by selectIdleBatch, opportunistic, origin idle — while the host is still idle; host.idleEnded cancels the running batch.
+          - Server:
+            - Contributes:
+              - `trigger` "tests.idle-began"
+              - `trigger` "tests.idle-ended"
+              - `trigger` "tests.idle-next"
+          - Machine:
+            - Uses:
+              - `debug/tests.ingestRunRecordsNow`
+              - `debug/tests.requestCheckoutDigests`
+            - Register:
+              - `defineSupervisedJob('tests.idle-batch')`
+              - `defineJob('tests.idle-next')`
+              - `defineJob('tests.idle-began')`
+              - `defineJob('tests.idle-ended')`
     - **`timeline`** — Timeline tab for the Slow Events pane: the unified cross-worktree wall-clock Gantt — per-worktree lanes of traces / slow-ops / reports / builds / boots with health heat strips and cross-worktree incident bands, read live from the debug.timeline.scan value as the fan-out resolves. Cross-worktree unified timeline: fans out over every live worktree DB fork (traces, slow-op samples, reports, builds) plus the per-worktree disk logs (boot events, health series), normalizes everything to wall-clock TimelineEvents, and serves it as the debug.timeline.scan live value — one scan per window, pushed as each cell resolves.
       - Web:
         - Contributes: `SlowEvents.View` "Timeline" → `TimelineView`
@@ -26382,13 +26582,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Fields.Identity` ×35
     - Exports (values): `Fields`
   - Cross-plugin:
-    - Imported by: 134 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
+    - Imported by: 136 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
       - `fields` ×65
       - `apps` ×21
       - `conversations` ×10
-      - `infra` ×5
+      - `infra` ×6
+      - `debug` ×5
       - `tasks` ×5
-      - `debug` ×4
       - `page` ×4
       - `primitives` ×4
       - `backup` ×2
@@ -26810,13 +27010,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `DateFieldDef`
             - Exports (values): `dateField`
           - Cross-plugin:
-            - Imported by: 58 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
+            - Imported by: 60 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
               - `apps` ×14
               - `conversations` ×10
-              - `infra` ×6
+              - `infra` ×7
+              - `debug` ×5
               - `page` ×5
               - `tasks` ×5
-              - `debug` ×4
               - `primitives` ×3
               - `active-data`
               - `backup`
@@ -26981,6 +27181,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/service-down`
           - `debug/slow-ops/cluster`
           - `debug/slow-ops/pane`
+          - `debug/tests`
           - `debug/trace/gates`
           - `fields/duration/config`
           - `fields/duration/filter`
@@ -27008,6 +27209,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/library`
               - `conversations/conversation-view/op-status`
               - `debug/slow-ops`
+              - `debug/tests`
               - `debug/trace/engine`
               - `infra/claude-cli`
               - `infra/jobs`
@@ -27479,9 +27681,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `intField`
               - `intSample`
           - Cross-plugin:
-            - Imported by: 56 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
+            - Imported by: 57 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
               - `apps` ×16
-              - `debug` ×11
+              - `debug` ×12
               - `conversations` ×7
               - `infra` ×5
               - `tasks` ×5
@@ -27553,11 +27755,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Imported by: 37 plugins — full list in [`plugins/fields/plugins/json/plugins/config/REFERENCE.md`](../plugins/fields/plugins/json/plugins/config/REFERENCE.md)
+            - Imported by: 39 plugins — full list in [`plugins/fields/plugins/json/plugins/config/REFERENCE.md`](../plugins/fields/plugins/json/plugins/config/REFERENCE.md)
               - `apps` ×7
               - `conversations` ×6
-              - `debug` ×4
-              - `infra` ×4
+              - `debug` ×5
+              - `infra` ×5
               - `page` ×4
               - `tasks` ×4
               - `backup` ×2
@@ -28437,14 +28639,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `textField`
               - `textSample`
           - Cross-plugin:
-            - Imported by: 106 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
+            - Imported by: 108 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
               - `apps` ×29
               - `conversations` ×20
               - `tasks` ×14
               - `page` ×8
-              - `infra` ×6
+              - `infra` ×7
               - `primitives` ×6
-              - `debug` ×4
+              - `debug` ×5
               - `build` ×2
               - `fields` ×2
               - `plugin-meta` ×2
@@ -28848,8 +29050,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readMergeMarkers`
           - `resolveGitDir`
       - Cross-plugin:
-        - Imported by: 37 plugins — full list in [`plugins/framework/plugins/cli/REFERENCE.md`](../plugins/framework/plugins/cli/REFERENCE.md)
-          - `framework` ×26
+        - Imported by: 38 plugins — full list in [`plugins/framework/plugins/cli/REFERENCE.md`](../plugins/framework/plugins/cli/REFERENCE.md)
+          - `framework` ×27
           - `infra` ×5
           - `apps` ×3
           - `plugin-meta` ×2
@@ -28986,12 +29188,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CLI_NAMES`
               - `isCliName`
           - Cross-plugin:
-            - Imported by: 24 plugins — full list in [`plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md)
+            - Imported by: 26 plugins — full list in [`plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md)
               - `framework` ×6
               - `infra` ×6
+              - `debug` ×4
               - `apps` ×2
               - `build` ×2
-              - `debug` ×2
               - `plugin-meta` ×2
               - `database/admin`
               - `primitives/css/layout-harness`
@@ -29218,6 +29420,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`test`** — `./equin test` — the ONLY way to run tests: both runners (bun:test for co-located logic suites, vitest for jsdom suites), with a summary naming both buckets so a green-but-partial result is impossible.
           - Core:
             - Uses:
+              - `framework/cli/test/record.TEST_FAILURE_DETAIL_MAX`
+              - `framework/cli/test/record.TestCaseFailure`
+              - `framework/cli/test/record.TestFileResult`
               - `infra/paths.pruneWorktreeTestArtifactsSync`
               - `infra/paths.worktreeArtifacts`
               - `infra/paths.worktreeDataDir`
@@ -29225,12 +29430,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/timed-fs.readdirSync`
               - `packages/timed-fs.readFileSync`
             - Exports (types):
+              - `JunitFailure`
+              - `JunitFileStats`
               - `JunitSummary`
+              - `RunnerHarvest`
+              - `RunnerHarvestInput`
               - `TestRunnerName`
               - `TestRunnerOutcome`
               - `TestStatus`
             - Exports (values):
+              - `fileResults`
               - `formatLoopHeartbeat`
+              - `JunitPathMismatchError`
               - `LOOP_HEARTBEAT_EVERY_MS`
               - `LOOP_STOPPED_AFTER_MS`
               - `parseJunit`
@@ -29243,14 +29454,68 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `framework/cli/op-runtime.DirectOpFlight`
               - `framework/cli/op-runtime.withDirectOp`
+              - `plugin-meta/plugin-records.openRecordStore`
           - Cross-plugin:
             - Imported by:
+              - `debug/tests`
               - `framework/cli/await`
               - `infra/deps/updates`
           - Exemptions:
             - Exempts itself from:
               - `boundaries/no-platform-api` — `core/internal/test-status.ts` (debt)
               - `blocking-fs/sync-named` — `core/internal/test-status.ts` (sanctioned)
+          - Plugins:
+            - **`digest`** — The test digest: each test file's import-closure Merkle key plus its runner's inputs (plugin-records' module graph), the key a harvested `./equin test` verdict is stored under — and `./equin test-digest`, the whole checkout's digests for the Debug → Tests page.
+              - Core:
+                - Uses:
+                  - `framework/tooling/test-layout.isDomTestPath`
+                  - `plugin-meta/plugin-records.buildModuleGraph`
+                  - `plugin-meta/plugin-records.ModuleGraph`
+                  - `plugin-meta/plugin-records.NO_OUTSIDE_FILES`
+                  - `plugin-meta/plugin-records.npmResolutionsKey`
+                  - `plugin-meta/plugin-records.recordKey`
+                  - `plugin-meta/plugin-records.RecordStore`
+                - Exports (types):
+                  - `TestDigest`
+                  - `TestRunnerName`
+                - Exports (values):
+                  - `BUN_RUNNER_CONFIG`
+                  - `BUN_RUNNER_PRELOAD`
+                  - `runnerOfTestPath`
+                  - `TEST_DIGEST_VERSION`
+                  - `testDigests`
+                  - `VITEST_RUNNER_ENTRIES`
+              - Cli:
+                - Uses: `plugin-meta/plugin-records.openRecordStore`
+              - Cross-plugin:
+                - Imported by: `framework/cli/test`
+            - **`record`** — The test harvest's file formats, as zod schemas: TestRunRecord (one `./equin test` run's per-file verdicts under their digests, written to the host-global test-runs dir) and CheckoutDigests (`./equin test-digest`'s output) — a leaf every writer and reader shares.
+              - Cross-plugin:
+                - Imported by:
+                  - `debug/tests`
+                  - `debug/tests/idle-runner`
+                  - `framework/cli/test`
+              - Core:
+                - Exports (types):
+                  - `CheckoutDigests`
+                  - `TestCaseFailure`
+                  - `TestFileOutcome`
+                  - `TestFileResult`
+                  - `TestRunOrigin`
+                  - `TestRunRecord`
+                - Exports (values):
+                  - `CheckoutDigestsSchema`
+                  - `TEST_FAILURE_DETAIL_MAX`
+                  - `TEST_FILE_OUTCOMES`
+                  - `TEST_RUN_ORIGINS`
+                  - `TEST_RUN_RECORD_RETENTION_DAYS`
+                  - `TEST_RUN_RECORD_VERSION`
+                  - `TestFileOutcomeSchema`
+                  - `TestRunOriginSchema`
+                  - `testRunRecordFileName`
+                  - `testRunRecordOpId`
+                  - `TestRunRecordSchema`
+                  - `TESTS_FAILED_EXIT`
         - **`upstream`** — `./equin upstream status|merge` — what the repo this checkout was cloned from has that local main does not, and the one sanctioned merge that brings it into a worktree branch.
     - **`hook-value`** — A React hook carried as a value: the Hook<F> brand, and the two lint rules that keep every binding holding one named use* (the React Compiler recognises hooks by name only and memoizes any other call).
       - Core:
@@ -29309,6 +29574,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PLUGIN_FOLDERS`
           - `PLUGIN_MANIFEST_KEY`
           - `PLUGIN_PACKAGE_PREFIX`
+          - `pluginDirOfRepoPath`
+          - `pluginIdOfRepoPath`
           - `pluginIdSegments`
           - `pluginOfNode`
           - `RUNTIME_FOLDERS`
@@ -29318,9 +29585,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `UNDOCUMENTED_RUNTIME_FOLDERS`
           - `VERIFYING_FOLDERS`
       - Cross-plugin:
-        - Imported by: 45 plugins — full list in [`plugins/framework/plugins/plugin-id/REFERENCE.md`](../plugins/framework/plugins/plugin-id/REFERENCE.md)
-          - `plugin-meta` ×20
-          - `framework` ×10
+        - Imported by: 47 plugins — full list in [`plugins/framework/plugins/plugin-id/REFERENCE.md`](../plugins/framework/plugins/plugin-id/REFERENCE.md)
+          - `plugin-meta` ×21
+          - `framework` ×11
           - `apps` ×4
           - `build` ×2
           - `config_v2` ×2
@@ -29575,9 +29842,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `validatePersistedValue`
           - `withNotifyBatch`
       - Cross-plugin:
-        - Imported by: 110 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
-          - `infra` ×27
-          - `debug` ×13
+        - Imported by: 112 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
+          - `infra` ×28
+          - `debug` ×14
           - `conversations` ×11
           - `tasks` ×10
           - `database` ×9
@@ -29720,6 +29987,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/cli/migrations`
           - `framework/cli/regen-generated`
           - `framework/cli/release`
+          - `framework/cli/test`
+          - `framework/cli/test/digest`
           - `framework/tooling/checks`
           - `framework/tooling/codegen`
           - `framework/tooling/exempt`
@@ -30024,6 +30293,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/check`
               - `framework/cli/op-runtime`
               - `framework/cli/test`
+              - `framework/cli/test/digest`
               - `framework/tooling/checks/cache-prune`
               - `framework/tooling/checks/type-check`
               - `framework/tooling/checks/type-check/backstop`
@@ -31040,7 +31310,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `partitionTestPaths`
               - `TEST_FILE_GLOB`
           - Cross-plugin:
-            - Imported by: `framework/cli/test`
+            - Imported by:
+              - `framework/cli/test`
+              - `framework/cli/test/digest`
           - Exemptions:
             - Exempts itself from:
               - `marker-scan-safety/no-adhoc-marker-scan` — `check/index.ts` (sanctioned)
@@ -31805,17 +32077,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `parseKindLabel`
       - `storedIdSchema`
   - Cross-plugin:
-    - Imported by: 42 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
+    - Imported by: 44 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
       - `apps` ×13
       - `conversations` ×7
+      - `infra` ×3
       - `primitives` ×3
       - `tasks` ×3
       - `active-data` ×2
       - `build` ×2
-      - `infra` ×2
       - `page` ×2
       - `release` ×2
       - `reports` ×2
+      - `debug/tests`
       - `history/engine`
       - `plugin-meta/plugin-health`
       - `shell/notifications`
@@ -33158,12 +33431,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 254 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 255 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×77
           - `conversations` ×35
           - `infra` ×23
+          - `debug` ×19
           - `page` ×19
-          - `debug` ×18
           - `tasks` ×18
           - `primitives` ×15
           - `reports` ×6
@@ -33266,12 +33539,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `entityRef`
           - `wireSchema`
       - Cross-plugin:
-        - Imported by: 49 plugins — full list in [`plugins/infra/plugins/entities/REFERENCE.md`](../plugins/infra/plugins/entities/REFERENCE.md)
+        - Imported by: 51 plugins — full list in [`plugins/infra/plugins/entities/REFERENCE.md`](../plugins/infra/plugins/entities/REFERENCE.md)
           - `apps` ×10
           - `conversations` ×8
+          - `infra` ×7
           - `page` ×7
-          - `infra` ×6
-          - `debug` ×4
+          - `debug` ×5
           - `primitives` ×3
           - `active-data`
           - `backup`
@@ -33453,13 +33726,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TriggerRowSchema`
           - `TriggersPayloadSchema`
       - Cross-plugin:
-        - Imported by: 38 plugins — full list in [`plugins/infra/plugins/events/REFERENCE.md`](../plugins/infra/plugins/events/REFERENCE.md)
-          - `conversations` ×11
+        - Imported by: 42 plugins — full list in [`plugins/infra/plugins/events/REFERENCE.md`](../plugins/infra/plugins/events/REFERENCE.md)
+          - `conversations` ×12
           - `tasks` ×10
           - `apps` ×7
-          - `infra` ×4
+          - `infra` ×5
           - `page` ×4
-          - `debug/queue`
+          - `debug` ×3
           - `wish`
       - Exemptions:
         - Exempts itself from:
@@ -33657,9 +33930,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Register: `file-sink-exit-flush`
     - **`file-watcher`** — defineFileWatcher: the one declared in-process file watcher — a named, described declaration (static policy: extensions, ignore, debounce, ceiling, writesWhileOpen, depth, mainOnly) whose start({dirs, label, onChange, onLost}) — start({files, …}) for a writesWhileOpen one, which follows writes to the named files only (kqueue on darwin, one descriptor per file; every follow of a directory shares one subscription) — opens instances over one @parcel/watcher engine (debounce + ceiling flush; no timer — a dropped event is reported to onLost, the one backstop). Records per declaration its open instances, last change batch and a ring of handler runs for the Background activity catalog (onWatcherActivity / listFileWatchers / fileWatcherRecentRuns). The cli barrel's watchForCommand is the same engine for a foreground command, with no registry. acquireDirWatch({dir, scope, onChange}) is the shared directory-watch hub: refcounted native watches, a dir under a watched root riding its watch (a watcher never moved off a live root: a root opening above leaves it where it is), with subtree or children (depth-1 listing) scope — a children request with no root above it opening only a single-directory watch (depth children), never a recursive one. On macOS a children watch is kqueue's (a descriptor on the dir and each entry, budgeted — a dir past the budget rides FSEvents), so watching / or ~ puts nothing on fseventsd; every other FSEvents watch with no ignore rides the process's stream pool — one stream per watched root, a dir under an open recursive stream riding it, whatever declaration asks (fsEventsStreams reads it).
       - Cross-plugin:
-        - Imported by: 40 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
-          - `infra` ×13
-          - `debug` ×8
+        - Imported by: 43 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
+          - `infra` ×15
+          - `debug` ×9
           - `build` ×5
           - `conversations` ×5
           - `apps` ×2
@@ -33837,6 +34110,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/remote-deploy`
               - `build/deployment`
               - `conversations/conversation-view/commits-graph`
+              - `debug/tests`
               - `infra/launcher/gateway-drift`
               - `infra/launcher/login-services`
               - `plugin-meta/plugin-health`
@@ -34007,6 +34281,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `framework/cli/build`
                   - `framework/cli/op-runtime`
                   - `infra/host/duress/shed`
+                  - `infra/host/idle/duress`
                   - `primitives/log-channels`
               - Exemptions:
                 - Exempts itself from:
@@ -34142,6 +34417,87 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/tasks-core`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/pool.ts` (debt)
+        - **`idle`** — The host idle signal: the IdleBlocker contribution (a plugin's read() — busy or not, in words, and when to look again without an event), main's host-idle.evaluate job folding every blocker into host_idle_state (busy → settling → idle after 10 quiet minutes, nextIdleState) with host-idle.wake as its one timer, the host.idleBegan / host.idleEnded events it emits on transitions, and the hostIdle value (refused main-only elsewhere).
+          - Server:
+            - Contributes:
+              - `resource.declare` "host.idle"
+              - `fork-data-exclusion` "host_idle_state"
+            - Uses:
+              - `database.db`
+              - `database/admin.ExcludeFromFork`
+              - `infra/entities.defineEntity`
+              - `infra/events.defineTriggerEvent`
+              - `infra/jobs.defineJob`
+              - `network/live.serveValue`
+            - DB schema:
+              - `plugins/infra/plugins/host/plugins/idle/server/internal/tables-events.ts`
+              - `plugins/infra/plugins/host/plugins/idle/server/internal/tables.ts`
+            - Exports (types): `IdleBlockerEntry`
+            - Exports (values):
+              - `_hostIdleBeganTriggers`
+              - `_hostIdleEndedTriggers`
+              - `_hostIdleState`
+              - `hostIdleBegan`
+              - `hostIdleEnded`
+              - `IdleBlocker`
+              - `readHostIdleRecord`
+              - `requestIdleEvaluation`
+            - Register:
+              - `defineJob('host-idle.evaluate')`
+              - `defineJob('host-idle.wake')`
+              - `defineTriggerEvent('host.idleBegan')`
+              - `defineTriggerEvent('host.idleEnded')`
+            - Resources: `host.idle` (push, capped: MAX_IDLE_BLOCKERS)
+          - Core:
+            - Uses:
+              - `fields.FieldsRecord`
+              - `fields.nullable`
+              - `fields/date/config.dateField`
+              - `fields/json/config.jsonField`
+              - `fields/text/config.enumTextField`
+              - `ids.externalIdField`
+              - `infra/entities.entityRef`
+              - `network/live.liveValue`
+              - `packages/list-bound.cappedList`
+            - Exports (types):
+              - `BlockerReading`
+              - `HostIdle`
+              - `HostIdleRecord`
+              - `HostIdleState`
+              - `IdleBlockerReading`
+              - `IdleBlockerStatus`
+              - `IdleStep`
+            - Exports (values):
+              - `HOST_IDLE_STATE_ID`
+              - `HOST_IDLE_STATES`
+              - `hostIdle`
+              - `HostIdleSchema`
+              - `hostIdleStateEntityRef`
+              - `hostIdleStateFields`
+              - `IDLE_SUSTAIN_MS`
+              - `IdleBlockerStatusSchema`
+              - `MAX_IDLE_BLOCKERS`
+              - `nextIdleState`
+          - Cross-plugin:
+            - Imported by:
+              - `conversations/idle-blocker`
+              - `debug/tests`
+              - `debug/tests/idle-runner`
+              - `infra/host/idle/duress`
+              - `infra/host/idle/ops`
+          - Exemptions:
+            - Exempts itself from: `ids:pk-declared` — `server/internal/tables-events.ts` (debt)
+          - Plugins:
+            - **`duress`** — Idle blocker `duress`: a fresh host duress latch keeps the host busy, and asks to be re-read when its lease could lapse (a lapse emits no event). On main, a watch on the latch dir asks for a re-evaluation when duress starts or ends.
+              - Server:
+                - Contributes: `host.idle-blocker` "duress"
+              - Machine:
+                - Register: `defineFileWatcher('host-idle.duress-latch')`
+            - **`ops`** — Idle blocker `ops`: any op running on the host (build, push, check, test, e2e) keeps it busy — read from the host-wide live-ops markers (flock-probed), an opportunistic op (the idle test batch) excepted. On main, a watch on the live-ops dir asks for a re-evaluation on every op start and end.
+              - Server:
+                - Contributes: `host.idle-blocker` "ops"
+              - Machine:
+                - Register: `defineFileWatcher('host-idle.live-ops')`
         - **`io-health`** — Host file-I/O health, shown: the health report's Disk I/O row (attention while a finding holds — critical for a metadata stall — or while the fs-latency monitor is not installed or has stopped writing; never green before the read lands) and the one-line Debug → Reports summary of the host-io-degraded kind.
           - Web:
             - Contributes:
@@ -34678,11 +35034,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskFor`
           - `TOTAL_JOB_SLOTS`
       - Cross-plugin:
-        - Imported by: 80 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
+        - Imported by: 84 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
           - `apps` ×21
-          - `conversations` ×17
-          - `infra` ×14
-          - `debug` ×8
+          - `conversations` ×18
+          - `infra` ×15
+          - `debug` ×10
           - `tasks` ×7
           - `database` ×3
           - `page` ×3
@@ -34923,16 +35279,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `cliExecContext`
               - `runAttached`
           - Cross-plugin:
-            - Imported by: 30 plugins — full list in [`plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md`](../plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md)
+            - Imported by: 32 plugins — full list in [`plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md`](../plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md)
               - `framework` ×9
               - `infra` ×6
               - `apps` ×5
               - `build` ×3
+              - `debug` ×3
               - `plugin-meta` ×2
               - `backup`
               - `conversations/workspace/worktree`
               - `database/fork`
-              - `debug/worktree-cleanup`
               - `release`
           - Exemptions:
             - Exempts itself from:
@@ -35073,12 +35429,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `setEnvDefault`
               - `unsetEnv`
           - Cross-plugin:
-            - Imported by: 47 plugins — full list in [`plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md`](../plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md)
+            - Imported by: 49 plugins — full list in [`plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md`](../plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md)
               - `framework` ×18
               - `infra` ×12
+              - `debug` ×5
               - `database` ×4
               - `packages` ×4
-              - `debug` ×3
               - `auth`
               - `build`
               - `conversations/agent-launch`
@@ -35585,11 +35941,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 131 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
-          - `infra` ×31
+        - Imported by: 135 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+          - `infra` ×34
           - `apps` ×20
           - `framework` ×20
-          - `debug` ×13
+          - `debug` ×14
           - `conversations` ×7
           - `build` ×6
           - `backup` ×4
@@ -35966,17 +36322,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/host-fs/user-path.asAppPath`
             - Exports (values): `REPO_ROOT`
           - Cross-plugin:
-            - Imported by: 45 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
+            - Imported by: 47 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
               - `framework` ×14
               - `infra` ×8
               - `apps` ×6
               - `build` ×6
+              - `debug` ×3
               - `plugin-meta` ×3
               - `reports` ×2
               - `code-explorer`
               - `config_v2`
               - `conversations/workspace/scratch`
-              - `debug/boot-events`
               - `primitives/css/layout-harness`
               - `release`
           - Exemptions:
@@ -36100,9 +36456,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runtimeNamespace`
           - `servingSocketPath`
       - Cross-plugin:
-        - Imported by: 69 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
+        - Imported by: 70 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
           - `infra` ×16
-          - `debug` ×13
+          - `debug` ×14
           - `conversations` ×9
           - `build` ×7
           - `apps` ×4
@@ -36190,9 +36546,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SPAN_MEASURES`
           - `waitSplit`
       - Cross-plugin:
-        - Imported by: 72 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
+        - Imported by: 73 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
           - `infra` ×22
-          - `debug` ×20
+          - `debug` ×21
           - `apps` ×7
           - `conversations` ×6
           - `tasks` ×3
@@ -36401,8 +36757,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `spawnPassthrough`
           - `spawnToFile`
       - Cross-plugin:
-        - Imported by: 91 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
-          - `framework` ×29
+        - Imported by: 92 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
+          - `framework` ×30
           - `infra` ×25
           - `apps` ×9
           - `debug` ×5
@@ -36686,6 +37042,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CheckoutState`
           - `CompositionMarker`
           - `HarvestResult`
+          - `MarkWorktreeOpOptions`
           - `NamespaceClaimant`
           - `NamespaceProbe`
           - `RetiredReflogSweep`
@@ -36737,9 +37094,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreePathFor`
           - `writeWorktreeSpec`
       - Cross-plugin:
-        - Imported by: 36 plugins — full list in [`plugins/infra/plugins/worktree/REFERENCE.md`](../plugins/infra/plugins/worktree/REFERENCE.md)
+        - Imported by: 37 plugins — full list in [`plugins/infra/plugins/worktree/REFERENCE.md`](../plugins/infra/plugins/worktree/REFERENCE.md)
           - `debug` ×9
-          - `infra` ×7
+          - `infra` ×8
           - `framework` ×4
           - `tasks` ×4
           - `conversations` ×3
@@ -38346,12 +38703,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
           - `sliceRange`
       - Cross-plugin:
-        - Imported by: 339 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 341 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×86
           - `conversations` ×70
-          - `debug` ×33
+          - `debug` ×34
           - `tasks` ×28
-          - `infra` ×23
+          - `infra` ×24
           - `page` ×16
           - `active-data` ×13
           - `build` ×10
@@ -38752,10 +39109,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `unresolved`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --destructive`
-            - Imported by: 301 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
+            - Imported by: 302 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
               - `apps` ×83
               - `conversations` ×48
-              - `debug` ×29
+              - `debug` ×30
               - `ui` ×25
               - `tasks` ×22
               - `page` ×16
@@ -39247,11 +39604,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Plugins:
     - **`coalesce`** — Trigger coalescer: createCoalescer / createKeyedCoalescer run a reaction at most once at a time per key and fold every trigger that lands mid-run into ONE trailing run (its items merged), so however many triggers arrive the work is bounded to one running plus one pending per key — and a trigger never joins a run that started before it.
       - Cross-plugin:
-        - Imported by: 22 plugins — full list in [`plugins/packages/plugins/coalesce/REFERENCE.md`](../plugins/packages/plugins/coalesce/REFERENCE.md)
+        - Imported by: 23 plugins — full list in [`plugins/packages/plugins/coalesce/REFERENCE.md`](../plugins/packages/plugins/coalesce/REFERENCE.md)
           - `infra` ×10
           - `conversations` ×3
+          - `debug` ×3
           - `apps` ×2
-          - `debug` ×2
           - `framework/tooling/web-artifacts`
           - `packages/watched-memo`
           - `plugin-meta/plugin-tree`
@@ -39453,11 +39810,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `wholeRecord`
           - `wholeTuple`
       - Cross-plugin:
-        - Imported by: 126 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
+        - Imported by: 128 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
           - `apps` ×28
-          - `debug` ×18
+          - `debug` ×19
+          - `infra` ×16
           - `conversations` ×15
-          - `infra` ×15
           - `tasks` ×8
           - `build` ×5
           - `stats` ×4
@@ -39825,17 +40182,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withForegroundPriority`
     - **`string-hash`** — Portable string hashes in plain JS (no node:crypto, no Bun.hash), so every host — the Bun server, central and a browser page — computes the same value: hash53 (cyrb53, a 53-bit number, optionally seeded), hashHex (two seeded cyrb53s, ~106 bits as hex), hash64 (a 64-bit bigint), sha256Hex (a synchronous SHA-256, identical to node:crypto's hex digest), createSha256 (the same SHA-256, incremental over strings and bytes) and sha1Hex (SHA-1 for values already stored as one).
       - Cross-plugin:
-        - Imported by: 39 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
+        - Imported by: 40 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
           - `apps` ×12
           - `network` ×5
           - `database` ×4
           - `framework` ×3
           - `ui` ×3
+          - `debug` ×2
           - `infra` ×2
           - `page` ×2
           - `plugin-meta` ×2
           - `reports` ×2
-          - `debug/queue-health`
           - `map`
           - `menu-bar`
           - `tasks/orchestration/watch`
@@ -39891,11 +40248,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/ticket-line.ts` (debt)
     - **`timed-fs`** — The file reads, listings, stats and glob scans every non-browser process makes, timed: node:fs's read calls under their own names and types (readFile / readdir / stat / lstat / access / realpath / readlink and their *Sync twins, existsSync) plus scanGlob / scanGlobSync over a Bun.Glob, each call metered while it runs (installFsWaitMeter — the backend's profiler shows one past FS_WAIT_FLOOR_MS in progress and charges it) and, once it returns past the floor, handed to onSlowFsCall subscribers, under a named wait layer (fs-read / fs-readdir / fs-stat / fs-glob) — so a disk stall names itself instead of reading as the caller's own work. A leaf (node builtins only), enforced by the timed-fs/no-untimed-fs-read lint.
       - Cross-plugin:
-        - Imported by: 163 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+        - Imported by: 164 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
           - `infra` ×47
           - `framework` ×25
           - `apps` ×15
-          - `debug` ×14
+          - `debug` ×15
           - `backup` ×12
           - `conversations` ×12
           - `build` ×5
@@ -44173,6 +44530,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`plugin-records`** — Content-addressed records of what the build learns about each plugin (file facts, facet extracts, evaluated barrels), shared by every worktree's build and check pass; the daily plugin-records.verify job recomputes them on main and fails on any record that disagrees with its key.
       - Core:
         - Uses:
+          - `framework/plugin-id.pluginDirOfRepoPath`
           - `infra/deps/npm/lock-resolutions.lockfileNpmResolutions`
           - `infra/host-fs/user-path.AppPath`
           - `infra/host-fs/user-path.joinAppPath`
@@ -44232,6 +44590,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/cli/check`
           - `framework/cli/migrations`
           - `framework/cli/regen-generated`
+          - `framework/cli/test`
+          - `framework/cli/test/digest`
           - `framework/tooling/boundaries`
           - `framework/tooling/codegen`
           - `framework/tooling/web-artifacts`
@@ -45365,9 +45725,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×6
               - `ui/tokens/shape` ×3
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 182 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 183 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `apps` ×39
-              - `debug` ×37
+              - `debug` ×38
               - `conversations` ×27
               - `reports` ×17
               - `primitives` ×10
@@ -45425,13 +45785,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --muted`
               - `ui/tokens/color-palette --primary`
               - `ui/tokens/density --pad-card`
-            - Imported by: 26 plugins — full list in [`plugins/primitives/plugins/css/plugins/card/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/card/REFERENCE.md)
+            - Imported by: 27 plugins — full list in [`plugins/primitives/plugins/css/plugins/card/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/card/REFERENCE.md)
               - `apps` ×13
               - `page` ×3
               - `primitives` ×3
               - `conversations` ×2
+              - `debug` ×2
               - `active-data/task`
-              - `debug/trace/contention`
               - `plugin-meta/exhibits`
               - `review/plugin-changes`
               - `tasks/outcome-report`
@@ -45475,12 +45835,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Clip`
               - `clipClasses`
           - Cross-plugin:
-            - Imported by: 60 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
+            - Imported by: 61 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
               - `apps` ×20
               - `primitives` ×10
               - `conversations` ×7
               - `page` ×6
-              - `debug` ×4
+              - `debug` ×5
               - `fields` ×2
               - `review` ×2
               - `active-data/go`
@@ -45718,11 +46078,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Fill`
               - `fillClasses`
           - Cross-plugin:
-            - Imported by: 177 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
+            - Imported by: 178 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
               - `apps` ×51
               - `primitives` ×31
               - `conversations` ×25
-              - `debug` ×17
+              - `debug` ×18
               - `page` ×11
               - `ui` ×9
               - `tasks` ×8
@@ -45745,12 +46105,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `GridProps`
             - Exports (values): `Grid`
           - Cross-plugin:
-            - Imported by: 41 plugins — full list in [`plugins/primitives/plugins/css/plugins/grid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/grid/REFERENCE.md)
+            - Imported by: 42 plugins — full list in [`plugins/primitives/plugins/css/plugins/grid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/grid/REFERENCE.md)
               - `apps` ×18
               - `primitives` ×9
+              - `debug` ×3
               - `ui` ×3
               - `conversations` ×2
-              - `debug` ×2
               - `stats` ×2
               - `infra/claude-cli`
               - `page/formatting/color`
@@ -45800,9 +46160,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 112 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+            - Imported by: 113 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
               - `apps` ×23
-              - `debug` ×18
+              - `debug` ×19
               - `reports` ×18
               - `primitives` ×12
               - `conversations` ×9
@@ -45899,11 +46259,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `LineProps`
             - Exports (values): `Line`
           - Cross-plugin:
-            - Imported by: 126 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
+            - Imported by: 127 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
               - `apps` ×37
               - `primitives` ×20
               - `conversations` ×19
-              - `debug` ×7
+              - `debug` ×8
               - `page` ×6
               - `ui` ×6
               - `tasks` ×5
@@ -46242,11 +46602,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useScrollsSideways`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --space-sm`
-            - Imported by: 100 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
+            - Imported by: 101 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
               - `conversations` ×30
               - `apps` ×21
               - `primitives` ×15
-              - `debug` ×13
+              - `debug` ×14
               - `page` ×5
               - `build` ×2
               - `infra` ×2
@@ -46370,11 +46730,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 439 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 440 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×108
               - `conversations` ×76
               - `primitives` ×54
-              - `debug` ×38
+              - `debug` ×39
               - `ui` ×31
               - `page` ×27
               - `plugin-meta` ×16
@@ -46453,10 +46813,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --status-dot-md`
               - `ui/tokens/density --status-dot-sm`
               - `ui/tokens/density --status-dot-xs`
-            - Imported by: 45 plugins — full list in [`plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md)
+            - Imported by: 46 plugins — full list in [`plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md)
               - `apps` ×12
               - `conversations` ×10
-              - `debug` ×8
+              - `debug` ×9
               - `active-data` ×3
               - `build` ×2
               - `shell` ×2
@@ -46613,11 +46973,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 423 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 424 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×110
               - `conversations` ×84
               - `primitives` ×47
-              - `debug` ×37
+              - `debug` ×38
               - `page` ×25
               - `ui` ×18
               - `plugin-meta` ×15
@@ -46926,12 +47286,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 464 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 465 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×111
               - `apps` ×108
               - `conversations` ×53
               - `page` ×27
-              - `debug` ×24
+              - `debug` ×25
               - `ui` ×23
               - `tasks` ×19
               - `fields` ×12
@@ -47214,10 +47574,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.ValueCodec`
           - `DataViewSlots.Grouping`
           - `DataViewSlots.ColumnConfig`
-        - Slot contributors: 61 contributors — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Slot contributors: 62 contributors — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `DataViewSlots.Cell` ×16
+          - `DataViewSlots.CollectionItemAction` ×9
           - `DataViewSlots.Filter` ×9
-          - `DataViewSlots.CollectionItemAction` ×8
           - `DataViewSlots.CellEditor` ×6
           - `DataViewSlots.View` ×5
           - `DataViewSlots.CollectionRowActivation` ×4
@@ -47228,8 +47588,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ← `primitives.data-view`
           - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
           - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-        - Contributes: 102 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.WebRegister` ×92
+        - Contributes: 104 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.WebRegister` ×94
           - `DataViewSlots.Control` ×4
           - `DataViewSlots.Setting` ×4
           - `IdKinds.Kind` ×2
@@ -47508,8 +47868,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useViewRowCounts`
           - `wearsTimeInk`
       - Server:
-        - Contributes: 94 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.Register` ×92
+        - Contributes: 96 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.Register` ×94
           - `ids.kind` ×2
         - Uses:
           - `config_v2.getAllDescriptors`
@@ -47707,10 +48067,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale` ×6
           - `ui/tokens/shadow` ×4
           - `ui/tokens/shape` ×3
-        - Imported by: 123 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Imported by: 124 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `fields` ×39
           - `apps` ×29
-          - `debug` ×15
+          - `debug` ×16
           - `primitives` ×10
           - `conversations` ×8
           - `infra` ×4
@@ -49667,6 +50027,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `build/build-fix`
               - `debug/background/investigate`
               - `debug/reports`
+              - `debug/tests`
               - `runs`
               - `tasks/task-triage`
     - **`lazy-component`** — Pairs React.lazy with its own Suspense boundary so a heavy component is code-split off the eager plugin-boot wave, loading on first mount instead.
@@ -49792,11 +50153,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 229 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+        - Imported by: 230 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
           - `apps` ×71
           - `conversations` ×23
           - `ui` ×23
-          - `debug` ×19
+          - `debug` ×20
           - `primitives` ×19
           - `tasks` ×14
           - `page` ×11
@@ -49895,9 +50256,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
-        - Imported by: 72 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
+        - Imported by: 74 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
           - `apps` ×14
-          - `debug` ×10
+          - `debug` ×12
           - `infra` ×10
           - `conversations` ×6
           - `database` ×6
@@ -50980,9 +51341,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
         - Slots: `Pane.Register`
-        - Slot contributors: 94 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `Pane.Register` ×94
-        - Contributes: 124 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Slot contributors: 95 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `Pane.Register` ×95
+        - Contributes: 126 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `FileBrowserHeader` "title" → `PaneTitleItem`
           - `FilePreviewHeader` "title" → `PaneTitleItem`
           - `SlotRender.ListMiddleware`
@@ -51101,6 +51462,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tableDetailPane.Actions` "title" → `PaneTitleItem`
           - `taskDetailPane.Actions` "title" → `PaneTitleItem`
           - `tasksRootPane.Actions` "title" → `PaneTitleItem`
+          - `test-file.actions` "title" → `PaneTitleItem`
+          - `tests.actions` "title" → `PaneTitleItem`
           - `themeCustomizerPane.Actions` "title" → `PaneTitleItem`
           - `threadPane.Actions` "title" → `PaneTitleItem`
           - `traceDetailPane.Actions` "title" → `PaneTitleItem`
@@ -51258,10 +51621,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-2xs`
           - `ui/tokens/density --space-md`
           - `ui/tokens/shape --spacing`
-        - Imported by: 202 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Imported by: 203 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `apps` ×74
           - `conversations` ×32
-          - `debug` ×27
+          - `debug` ×28
           - `active-data` ×13
           - `tasks` ×10
           - `apps-core` ×7
@@ -51600,7 +51963,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `rankText`
           - `withRank`
       - Cross-plugin:
-        - Imported by: 26 plugins — full list in [`plugins/primitives/plugins/rank/REFERENCE.md`](../plugins/primitives/plugins/rank/REFERENCE.md)
+        - Imported by: 27 plugins — full list in [`plugins/primitives/plugins/rank/REFERENCE.md`](../plugins/primitives/plugins/rank/REFERENCE.md)
           - `apps` ×7
           - `conversations` ×5
           - `primitives` ×4
@@ -51609,6 +51972,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page` ×2
           - `tag-tree` ×2
           - `tasks` ×2
+          - `debug/tests`
       - Web:
         - Exports (values):
           - `Rank`
@@ -51666,9 +52030,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago — or the short now / Nm / Nh / Nd), and a running duration as a clock (m:ss). Exposes formatRelativeTime(), <RelativeTime date={…} />, formatElapsed(), useNow() and <ElapsedTime since={…} />.
       - Cross-plugin:
-        - Imported by: 68 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
+        - Imported by: 69 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
           - `apps` ×25
-          - `debug` ×13
+          - `debug` ×14
           - `conversations` ×10
           - `infra` ×4
           - `tasks` ×4
@@ -53499,8 +53863,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. Applies each slot's committed layout (order, hidden items, spacers, dividers, groups) everywhere slots render; a layout is edited in its config file or the Config pane's reorder-tree field. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 280 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×280
+    - Contributes: 282 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×282
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfigResult`
@@ -53523,8 +53887,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useLayoutOrder`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 279 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×279
+    - Contributes: 281 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×281
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:
@@ -55686,12 +56050,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --popover`
           - `ui/tokens/color-palette --popover-foreground`
           - `ui/tokens/shape --radius`
-        - Imported by: 34 plugins — full list in [`plugins/shell/plugins/toast/REFERENCE.md`](../plugins/shell/plugins/toast/REFERENCE.md)
+        - Imported by: 35 plugins — full list in [`plugins/shell/plugins/toast/REFERENCE.md`](../plugins/shell/plugins/toast/REFERENCE.md)
           - `apps` ×11
           - `config_v2` ×3
           - `conversations` ×3
+          - `debug` ×3
           - `primitives` ×3
-          - `debug` ×2
           - `hints` ×2
           - `infra` ×2
           - `page` ×2
@@ -57543,16 +57907,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `task-categories.by-id:rows` (keyed, point)
           - `task-category.registry` (push, fixed, whole: one entry per registered task category — declared in code, a few dozen)
       - Cross-plugin:
-        - Imported by: 28 plugins — full list in [`plugins/tasks/plugins/task-category/REFERENCE.md`](../plugins/tasks/plugins/task-category/REFERENCE.md)
+        - Imported by: 29 plugins — full list in [`plugins/tasks/plugins/task-category/REFERENCE.md`](../plugins/tasks/plugins/task-category/REFERENCE.md)
           - `apps` ×7
           - `tasks` ×5
           - `conversations` ×3
+          - `debug` ×2
           - `hints` ×2
           - `page` ×2
           - `backup`
           - `build`
           - `config_v2/settings`
-          - `debug/background/investigate`
           - `infra/deps/updates`
           - `release`
           - `toolchain`
@@ -58897,8 +59261,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TRAILER_LOG_FORMAT`
           - `UNATTRIBUTED_TRAILER_KEY`
       - Cross-plugin:
-        - Imported by: 118 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
-          - `conversations` ×48
+        - Imported by: 119 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+          - `conversations` ×49
           - `tasks` ×36
           - `debug` ×6
           - `active-data` ×5
@@ -59133,13 +59497,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useWantedStyleKeys`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 585 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 586 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×154
           - `conversations` ×123
           - `primitives` ×53
           - `page` ×52
           - `fields` ×41
-          - `debug` ×28
+          - `debug` ×29
           - `tasks` ×23
           - `plugin-meta` ×16
           - `active-data` ×11
@@ -60426,11 +60790,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --space-sm`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 541 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 542 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×122
               - `conversations` ×96
               - `primitives` ×73
-              - `debug` ×40
+              - `debug` ×41
               - `page` ×33
               - `plugin-meta` ×28
               - `ui` ×26
@@ -61000,12 +61364,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --radius-chip-compact`
               - `ui/tokens/density --space-sm`
-            - Tokens used by: 403 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 404 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `conversations` ×94
               - `apps` ×82
               - `primitives` ×60
               - `page` ×36
-              - `debug` ×26
+              - `debug` ×27
               - `ui` ×26
               - `tasks` ×11
               - `plugin-meta` ×9

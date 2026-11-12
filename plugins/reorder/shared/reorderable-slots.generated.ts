@@ -233,6 +233,8 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "debug.reports.reports.actions", pluginId: "debug.reports", configName: "reports.actions" },
   { slotId: "debug.reports.sources", pluginId: "debug.reports", configName: "sources" },
   { slotId: "debug.slow-ops.pane.slow-op-detail.actions", pluginId: "debug.slow-ops.pane", configName: "slow-op-detail.actions" },
+  { slotId: "debug.tests.test-file.actions", pluginId: "debug.tests", configName: "test-file.actions" },
+  { slotId: "debug.tests.tests.actions", pluginId: "debug.tests", configName: "tests.actions" },
   { slotId: "debug.trace.pane.trace-detail.actions", pluginId: "debug.trace.pane", configName: "trace-detail.actions" },
   { slotId: "debug.trace.pane.traces.actions", pluginId: "debug.trace.pane", configName: "traces.actions" },
   { slotId: "debug.trace.pane.view", pluginId: "debug.trace.pane", configName: "view" },

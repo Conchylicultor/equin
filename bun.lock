@@ -2424,6 +2424,10 @@
       "name": "@equin/plugin-conversations-hibernation",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/idle-blocker": {
+      "name": "@equin/plugin-conversations-idle-blocker",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/menu-bar-status": {
       "name": "@equin/plugin-conversations-menu-bar-status",
       "version": "0.0.1",
@@ -2912,6 +2916,14 @@
     },
     "plugins/debug/plugins/stuck-spans": {
       "name": "@equin/plugin-debug-stuck-spans",
+      "version": "0.0.1",
+    },
+    "plugins/debug/plugins/tests": {
+      "name": "@equin/plugin-debug-tests",
+      "version": "0.0.1",
+    },
+    "plugins/debug/plugins/tests/plugins/idle-runner": {
+      "name": "@equin/plugin-debug-tests-idle-runner",
       "version": "0.0.1",
     },
     "plugins/debug/plugins/timeline": {
@@ -3630,6 +3642,14 @@
     },
     "plugins/framework/plugins/cli/plugins/test": {
       "name": "@equin/plugin-framework-cli-test",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/cli/plugins/test/plugins/digest": {
+      "name": "@equin/plugin-framework-cli-test-digest",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/cli/plugins/test/plugins/record": {
+      "name": "@equin/plugin-framework-cli-test-record",
       "version": "0.0.1",
     },
     "plugins/framework/plugins/cli/plugins/upstream": {
@@ -4472,6 +4492,18 @@
     },
     "plugins/infra/plugins/host/plugins/host-read-pool": {
       "name": "@equin/plugin-infra-host-host-read-pool",
+      "version": "0.0.1",
+    },
+    "plugins/infra/plugins/host/plugins/idle": {
+      "name": "@equin/plugin-infra-host-idle",
+      "version": "0.0.1",
+    },
+    "plugins/infra/plugins/host/plugins/idle/plugins/duress": {
+      "name": "@equin/plugin-infra-host-idle-duress",
+      "version": "0.0.1",
+    },
+    "plugins/infra/plugins/host/plugins/idle/plugins/ops": {
+      "name": "@equin/plugin-infra-host-idle-ops",
       "version": "0.0.1",
     },
     "plugins/infra/plugins/host/plugins/io-health": {
@@ -8756,6 +8788,8 @@
 
     "@equin/plugin-conversations-hibernation": ["@equin/plugin-conversations-hibernation@workspace:plugins/conversations/plugins/hibernation"],
 
+    "@equin/plugin-conversations-idle-blocker": ["@equin/plugin-conversations-idle-blocker@workspace:plugins/conversations/plugins/idle-blocker"],
+
     "@equin/plugin-conversations-menu-bar-status": ["@equin/plugin-conversations-menu-bar-status@workspace:plugins/conversations/plugins/menu-bar-status"],
 
     "@equin/plugin-conversations-model-provider": ["@equin/plugin-conversations-model-provider@workspace:plugins/conversations/plugins/model-provider"],
@@ -8983,6 +9017,10 @@
     "@equin/plugin-debug-stall-monitor": ["@equin/plugin-debug-stall-monitor@workspace:plugins/debug/plugins/stall-monitor"],
 
     "@equin/plugin-debug-stuck-spans": ["@equin/plugin-debug-stuck-spans@workspace:plugins/debug/plugins/stuck-spans"],
+
+    "@equin/plugin-debug-tests": ["@equin/plugin-debug-tests@workspace:plugins/debug/plugins/tests"],
+
+    "@equin/plugin-debug-tests-idle-runner": ["@equin/plugin-debug-tests-idle-runner@workspace:plugins/debug/plugins/tests/plugins/idle-runner"],
 
     "@equin/plugin-debug-timeline": ["@equin/plugin-debug-timeline@workspace:plugins/debug/plugins/timeline"],
 
@@ -9333,6 +9371,10 @@
     "@equin/plugin-framework-cli-stop": ["@equin/plugin-framework-cli-stop@workspace:plugins/framework/plugins/cli/plugins/stop"],
 
     "@equin/plugin-framework-cli-test": ["@equin/plugin-framework-cli-test@workspace:plugins/framework/plugins/cli/plugins/test"],
+
+    "@equin/plugin-framework-cli-test-digest": ["@equin/plugin-framework-cli-test-digest@workspace:plugins/framework/plugins/cli/plugins/test/plugins/digest"],
+
+    "@equin/plugin-framework-cli-test-record": ["@equin/plugin-framework-cli-test-record@workspace:plugins/framework/plugins/cli/plugins/test/plugins/record"],
 
     "@equin/plugin-framework-cli-upstream": ["@equin/plugin-framework-cli-upstream@workspace:plugins/framework/plugins/cli/plugins/upstream"],
 
@@ -9723,6 +9765,12 @@
     "@equin/plugin-infra-host-host-admission": ["@equin/plugin-infra-host-host-admission@workspace:plugins/infra/plugins/host/plugins/host-admission"],
 
     "@equin/plugin-infra-host-host-read-pool": ["@equin/plugin-infra-host-host-read-pool@workspace:plugins/infra/plugins/host/plugins/host-read-pool"],
+
+    "@equin/plugin-infra-host-idle": ["@equin/plugin-infra-host-idle@workspace:plugins/infra/plugins/host/plugins/idle"],
+
+    "@equin/plugin-infra-host-idle-duress": ["@equin/plugin-infra-host-idle-duress@workspace:plugins/infra/plugins/host/plugins/idle/plugins/duress"],
+
+    "@equin/plugin-infra-host-idle-ops": ["@equin/plugin-infra-host-idle-ops@workspace:plugins/infra/plugins/host/plugins/idle/plugins/ops"],
 
     "@equin/plugin-infra-host-io-health": ["@equin/plugin-infra-host-io-health@workspace:plugins/infra/plugins/host/plugins/io-health"],
 

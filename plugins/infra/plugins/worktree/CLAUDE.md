@@ -330,6 +330,7 @@ pid liveness.
     - `CheckoutState`
     - `CompositionMarker`
     - `HarvestResult`
+    - `MarkWorktreeOpOptions`
     - `NamespaceClaimant`
     - `NamespaceProbe`
     - `RetiredReflogSweep`
@@ -381,9 +382,9 @@ pid liveness.
     - `worktreePathFor`
     - `writeWorktreeSpec`
 - Cross-plugin:
-  - Imported by: 36 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 37 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×9
-    - `infra` ×7
+    - `infra` ×8
     - `framework` ×4
     - `tasks` ×4
     - `conversations` ×3

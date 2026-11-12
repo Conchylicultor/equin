@@ -10,6 +10,8 @@ export {
   asPath,
   asFsPath,
   pluginIdSegments,
+  pluginDirOfRepoPath,
+  pluginIdOfRepoPath,
   packageNameFor,
   PACKAGE_SCOPE,
   PLUGIN_PACKAGE_PREFIX,

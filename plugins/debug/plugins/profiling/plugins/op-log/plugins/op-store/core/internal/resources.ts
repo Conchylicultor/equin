@@ -29,6 +29,7 @@ const OP_ROW_CARRIED_PICK = [
   "mode",
   "buildId",
   "pid",
+  "opportunistic",
   "grantedAt",
   "interrupted",
   "closedBy",

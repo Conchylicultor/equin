@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-infra-host-idle",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The host idle signal: whether nothing on the machine is working — no agent, no op, no duress — sustained for 10 minutes. Contributed blockers (IdleBlocker) say what is busy; main's host-idle.evaluate job folds them (nextIdleState) into host_idle_state, emits host.idleBegan / host.idleEnded on transitions, and serves the hostIdle value."
+}
