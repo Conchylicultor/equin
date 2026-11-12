@@ -673,6 +673,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `validatePersistedValue`
     - `withNotifyBatch`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shadow --shadow`
   - Imported by: 113 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra` ×28
     - `debug` ×14

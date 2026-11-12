@@ -12522,7 +12522,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/website/pages/story/essay`
               - `apps/website/pages/vision`
 
-- **`apps-core`** — App switcher rail. Wraps per-app shells; plugins contribute via Apps.App. Every app the browser registers, readable on the server: declaredApps — each Apps.App contribution's whole AppRef (id, name, base path, icon, tile colour) and its launch kind (tab or surface mode), generated at build time from the web contributions.
+- **`apps-core`** — App switcher rail. Wraps per-app shells; plugins contribute via Apps.App. Every app the browser registers, readable on the server: declaredApps() — each Apps.App contribution of the plugins the backend's composition loads: whole AppRef (id, name, base path, icon, tile colour) and its launch kind (tab or surface mode), generated at build time from the web contributions.
   - Web:
     - Slots:
       - `Apps.App`
@@ -29780,6 +29780,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `BrowserHostBoot`
           - `BrowserHostOptions`
           - `ChangeSource`
+          - `ComposedEntry`
           - `DependsOnEntry`
           - `EndpointHttpHandler`
           - `EpochHandoffHooks`
@@ -29848,6 +29849,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `bootBrowserHost`
           - `boundedMembershipKeys`
           - `collectContributions`
+          - `composedOnly`
           - `defineDeferredResource`
           - `defineExternalResource`
           - `defineHostService`
@@ -29922,7 +29924,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `validatePersistedValue`
           - `withNotifyBatch`
       - Cross-plugin:
-        - Imported by: 112 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
+        - Uses tokens: `ui/tokens/shadow --shadow`
+        - Imported by: 113 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
           - `infra` ×28
           - `debug` ×14
           - `conversations` ×11
@@ -29937,6 +29940,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework` ×2
           - `integrations` ×2
           - `ui` ×2
+          - `apps-core`
           - `backup`
           - `config_v2`
           - `fields/server-capabilities`
@@ -30675,7 +30679,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `GenerateDocsOptions`
               - `HostConfigRegistration`
               - `HostContributionBarrel`
-              - `HostedComposition`
               - `HostRead`
               - `InferredBrowserHostGraph`
               - `MainComposition`
@@ -30719,7 +30722,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `colorTokenRefPath`
               - `committedRegistryBundle`
               - `companionManifestPath`
-              - `compositionManifestRedirects`
               - `computeEagerTier`
               - `customUtilitiesManifestPath`
               - `dataViewsManifestPath`
@@ -61464,11 +61466,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-3xs`
               - `ui/tokens/type-scale --line-height-caption`
-            - Tokens used by: 53 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
+            - Tokens used by: 54 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
               - `apps` ×20
               - `primitives` ×11
               - `ui` ×5
-              - `framework` ×3
+              - `framework` ×4
               - `page` ×3
               - `apps-core` ×2
               - `screenshot` ×2
