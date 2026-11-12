@@ -1,20 +1,24 @@
-// @hash 5091dbb29243
+// @hash 1fb8ce05ce0e
 {
   // When off, the monitor job returns early and files no op-rate reports.
   "enabled": true,
-  // File an op-rate report when an HTTP request label is called more than this many times within one monitor window.
+  // An op is never reported as over-called below this many calls in one monitor window (one call every 5 s), however far above its usual rate.
+  "minCallsPerWindow": 60,
+  // File an op-rate report when an op is called more than this many times its usual count for that kind of window (a backend's first window after boot, or any later one) over the last 7 days.
+  "baselineFactor": 3,
+  // While this backend has under a day of call history: file an op-rate report when an HTTP request label is called more than this many times within one monitor window.
   "httpPerWindow": 500,
-  // File an op-rate report when a resource loader label runs more than this many times within one monitor window.
+  // While this backend has under a day of call history: file an op-rate report when a resource loader label runs more than this many times within one monitor window.
   "loaderPerWindow": 500,
-  // File an op-rate report when a WS-subscription origin entry fires more than this many times within one monitor window.
+  // While this backend has under a day of call history: file an op-rate report when a WS-subscription origin entry fires more than this many times within one monitor window.
   "subPerWindow": 500,
-  // File an op-rate report when a push/cascade origin entry fires more than this many times within one monitor window.
+  // While this backend has under a day of call history: file an op-rate report when a push/cascade origin entry fires more than this many times within one monitor window.
   "pushPerWindow": 500,
-  // File an op-rate report when a live-state notify-flush cycle runs more than this many times within one monitor window (internally high-count).
+  // While this backend has under a day of call history: file an op-rate report when a live-state notify-flush cycle runs more than this many times within one monitor window (internally high-count).
   "flushPerWindow": 1000,
-  // File an op-rate report when a database query label runs more than this many times within one monitor window (leaf-level, naturally high).
+  // While this backend has under a day of call history: file an op-rate report when a database query label runs more than this many times within one monitor window (leaf-level, naturally high).
   "dbPerWindow": 5000,
-  // File an op-rate report when a job label runs more than this many times within one monitor window.
+  // While this backend has under a day of call history: file an op-rate report when a job label runs more than this many times within one monitor window.
   "jobPerWindow": 500,
   // File an op-time report when an HTTP request label consumes more than this many ms of its own time (waits excluded) within one monitor window.
   "httpMsPerWindow": 30000,

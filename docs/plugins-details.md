@@ -22189,13 +22189,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadedDatabaseConfig`
       - `readDatabaseConfigSync`
   - Cross-plugin:
-    - Imported by: 161 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 162 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×45
       - `conversations` ×20
       - `infra` ×16
       - `page` ×14
       - `tasks` ×14
-      - `debug` ×9
+      - `debug` ×10
       - `active-data` ×8
       - `database` ×5
       - `primitives` ×4
@@ -22277,8 +22277,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `openShortLivedClient`
           - `reclaimForkTemp`
       - Cross-plugin:
-        - Imported by: 31 plugins — full list in [`plugins/database/plugins/admin/REFERENCE.md`](../plugins/database/plugins/admin/REFERENCE.md)
-          - `debug` ×7
+        - Imported by: 32 plugins — full list in [`plugins/database/plugins/admin/REFERENCE.md`](../plugins/database/plugins/admin/REFERENCE.md)
+          - `debug` ×8
           - `infra` ×7
           - `database` ×4
           - `apps` ×3
@@ -23015,13 +23015,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens: `ui/tokens/color-palette --muted-foreground`
     - **`sql-column`** — Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union, or a jsonb shape, that nothing verifies. `withWire` declares a column type's JSON wire form (a codec applied in JS by whatever projects the column onto the wire), carried on the built column's type so a row schema must match it.
       - Cross-plugin:
-        - Imported by: 26 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
+        - Imported by: 27 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
           - `apps` ×8
           - `fields` ×5
           - `infra` ×4
           - `conversations` ×2
+          - `debug` ×2
           - `network` ×2
-          - `debug/latency-ledger`
           - `ids`
           - `search/engine`
           - `tasks/orchestration/watch`
@@ -24305,15 +24305,36 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ConfigV2.Register` "op-rate"
           - `report-kind` "op-rate"
           - `report-kind` "op-time"
+          - `change-feed-exclusion` "op_rate_hour_calls"
+          - `change-feed-exclusion` "op_rate_window_counts"
+          - `change-feed-exclusion` "op_rate_windows"
+          - `fork-data-exclusion` "op_rate_hour_calls"
+          - `fork-data-exclusion` "op_rate_window_counts"
+          - `fork-data-exclusion` "op_rate_windows"
+          - `backup-data-exclusion` "op_rate_hour_calls"
+          - `backup-data-exclusion` "op_rate_window_counts"
+          - `backup-data-exclusion` "op_rate_windows"
         - Uses:
           - `config_v2.ConfigV2`
           - `config_v2.getConfig`
+          - `database.db`
+          - `database.writeAtomically`
+          - `database/admin.ExcludeFromBackup`
+          - `database/admin.ExcludeFromFork`
+          - `database/sql-column.parsedText`
           - `debug/trace/engine.captureTrace`
           - `infra/jobs.defineJob`
+          - `infra/retention.defineRetention`
+          - `network/live/change-feed.ExcludeFromChangeFeed`
           - `primitives/log-channels.Log`
           - `reports.ReportKind`
           - `reports/engine.recordReport`
-        - Register: `defineJob('debug.op-rate-monitor')`
+        - DB schema: `plugins/debug/plugins/op-rate/server/internal/tables.ts`
+        - Register:
+          - `defineJob('debug.op-rate-monitor')`
+          - `defineJob('retention.op_rate_window_counts')`
+          - `defineJob('retention.op_rate_windows')`
+          - `defineJob('retention.op_rate_hour_calls')`
       - Core:
         - Uses:
           - `config_v2.defineConfig`
@@ -24321,8 +24342,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields/int/config.intField`
         - Exports (types):
           - `OpRatePayload`
+          - `OpRateRegime`
+          - `OpRateSpan`
           - `OpTimePayload`
         - Exports (values):
+          - `OP_RATE_REGIMES`
+          - `OP_RATE_SPANS`
           - `opRateConfig`
           - `OpRatePayloadSchema`
           - `OpTimePayloadSchema`
@@ -36626,9 +36651,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `getTableGrowthBounds`
           - `markCascadeBounded`
       - Cross-plugin:
-        - Imported by: 23 plugins — full list in [`plugins/infra/plugins/retention/REFERENCE.md`](../plugins/infra/plugins/retention/REFERENCE.md)
+        - Imported by: 24 plugins — full list in [`plugins/infra/plugins/retention/REFERENCE.md`](../plugins/infra/plugins/retention/REFERENCE.md)
           - `apps` ×6
-          - `debug` ×5
+          - `debug` ×6
           - `infra` ×3
           - `page` ×3
           - `conversations` ×2
@@ -39092,6 +39117,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/runtime-sdk`
               - `conversations/usage`
               - `debug/latency-ledger`
+              - `debug/op-rate`
               - `debug/slow-ops`
               - `debug/trace/engine`
               - `infra/jobs/in-process`

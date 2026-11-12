@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   getRuntimeProfile,
+  profilerNowMs,
   SPAN_KINDS,
   type GateHolder,
   type SpanKind,
@@ -11,7 +12,7 @@ import type { ConfigValues } from "@plugins/config_v2/core";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
 import { captureTrace } from "@plugins/debug/plugins/trace/plugins/engine/server";
 import { Log } from "@plugins/primitives/plugins/log-channels/server";
-import { opRateConfig } from "../../core";
+import { opRateConfig, type OpRateRegime, type OpRateSpan } from "../../core";
 import {
   windowDelta,
   computeRollup,
@@ -19,13 +20,25 @@ import {
   type GateBaseline,
   type LabelDelta,
 } from "./op-time-math";
+import {
+  BASELINE_QUANTILE,
+  callsPerWindow,
+  HOUR_QUANTILE,
+  hourThresholdOf,
+  MIN_COVERED_HOURS,
+  MIN_HISTORY_WINDOWS,
+  planTick,
+  thresholdOf,
+  usualCallsOf,
+  usualHourCallsOf,
+  utcHourStart,
+  WINDOW_MS,
+  type OpRateBasis,
+  type TickState,
+} from "./op-rate-baseline";
+import { readHistory, readHourHistory, recordWindow } from "./baseline-store";
 
 type Thresholds = ConfigValues<(typeof opRateConfig)["fields"]>;
-
-// The window the call-rate delta is measured over. Informational only (matches
-// the cron interval): the trip decision is on the raw per-op delta vs the
-// per-kind threshold, so cron skew never changes correctness.
-const WINDOW_MS = 5 * 60_000;
 
 // The span kinds the runtime profiler tracks — the recorder's single SPAN_KINDS
 // source, iterated here to fan the per-op deltas across every kind. Not
@@ -41,10 +54,13 @@ const TOP_N = 20;
 
 // Per-process baseline of each op's cumulative `count` at the previous tick,
 // keyed `${kind}:${label}`. The runtime profiler accumulates `count` cumulatively
-// since boot; we diff successive snapshots here so the recorder stays pure (no
-// back-edge to a monitor). Lives at module scope: the job and the recorder run in
-// the SAME worktree process.
+// since its epoch (process start or a reset); we diff successive snapshots here
+// so the recorder stays pure (no back-edge to a monitor). Lives at module scope:
+// the job and the recorder run in the SAME worktree process. Which window a
+// tick's counts close — and whether they all started at 0 — is `planTick`'s,
+// from the profile's epoch and this process's previous tick (`lastTick`).
 const lastCount = new Map<string, number>();
+let lastTick: TickState | undefined;
 
 // The aggregate-time twin of `lastCount`: each op's cumulative OWN time
 // (`selfTotalMs`) at the previous tick, same `${kind}:${label}` key, same
@@ -78,8 +94,11 @@ type PerOpTrip =
       type: "op-rate";
       kind: SpanKind;
       label: string;
-      delta: number; // calls in window
+      delta: number; // calls in window (per standard window)
+      windowMs: number;
       threshold: number;
+      /** Absent when judged on the per-kind warm-up threshold. */
+      baseline?: { over: OpRateSpan; usualCalls: number };
     }
   | {
       type: "op-time";
@@ -128,7 +147,32 @@ export const opRateMonitorJob = defineJob({
     const cfg = getConfig(opRateConfig);
     if (!cfg.enabled) return;
 
-    const { aggregates, gates } = getRuntimeProfile();
+    const { aggregates, gates, sinceMs } = getRuntimeProfile();
+    const nowMs = profilerNowMs();
+    const wallNow = Date.now();
+    // The process's start on the profiler clock (performance.now()'s origin).
+    const processStartMs = nowMs - performance.now();
+    const plan = planTick(lastTick, sinceMs, nowMs, processStartMs);
+    if (plan.kind === "unjudgeable")
+      opRateLog.publish(`call counts not judged this tick: ${plan.reason}`);
+    // This tick's readings become the module state only once the whole tick
+    // has succeeded (see `commit` at the end): a tick that throws, and is
+    // retried, re-diffs the same window instead of losing it, and records it
+    // in the history once.
+    const prevCounts =
+      plan.kind === "window" && !plan.fromZero
+        ? lastCount
+        : new Map<string, number>();
+    const nextCount = new Map<string, number>();
+    const nextSelfMs = new Map<string, number>();
+    const nextWallMs = new Map<string, number>();
+    const nextGates: GateBaseline = new Map(lastGates);
+    // This window's calls per op (per standard window), for the history and
+    // the judgement below.
+    const windowCalls = new Map<
+      string,
+      { kind: SpanKind; label: string; calls: number }
+    >();
     const perOp: PerOpTrip[] = [];
     // Per-kind rollup accumulator: every op's ms delta this window (so a kind
     // whose cost is smeared across many under-budget labels still trips), plus
@@ -141,31 +185,32 @@ export const opRateMonitorJob = defineJob({
     }[] = [];
 
     for (const kind of KINDS) {
-      const threshold = kindThreshold(kind, cfg);
       const budgetMs = kindMsBudget(kind, cfg);
       const kindDeltas: LabelDelta[] = [];
       let callsSum = 0;
       for (const agg of aggregates[kind]) {
         const key = `${kind}:${agg.label}`;
 
-        // --- op-rate: cumulative call-count delta ---
-        const prevCount = lastCount.get(key);
-        lastCount.set(key, agg.count);
-        const countDelta = windowDelta(prevCount, agg.count);
-        if (countDelta !== null && countDelta > threshold)
-          perOp.push({
-            type: "op-rate",
-            kind,
-            label: agg.label,
-            delta: countDelta,
-            threshold,
-          });
+        // --- op-rate: this window's calls (judged after the loop) ---
+        const prevCount = prevCounts.get(key) ?? 0;
+        nextCount.set(key, agg.count);
+        let countDelta: number | null = null;
+        if (plan.kind === "window") {
+          countDelta = agg.count - prevCount;
+          if (countDelta < 0)
+            throw new Error(
+              `op-rate: ${key} count went from ${prevCount} to ${agg.count} within one profile epoch`,
+            );
+          const calls = callsPerWindow(countDelta, plan.windowMs);
+          if (calls > 0)
+            windowCalls.set(key, { kind, label: agg.label, calls });
+        }
 
         // --- op-time: cumulative OWN-time (selfTotalMs) delta ---
         const prevSelf = lastSelfMs.get(key);
-        lastSelfMs.set(key, agg.selfTotalMs);
+        nextSelfMs.set(key, agg.selfTotalMs);
         const prevWall = lastWallMs.get(key);
-        lastWallMs.set(key, agg.totalMs);
+        nextWallMs.set(key, agg.totalMs);
         const msDelta = windowDelta(prevSelf, agg.selfTotalMs);
         if (msDelta === null) continue; // first observation seeds, fires nothing
         kindDeltas.push({ label: agg.label, deltaMs: msDelta });
@@ -184,9 +229,29 @@ export const opRateMonitorJob = defineJob({
       rollups.push({ kind, budgetMs, deltas: kindDeltas, callsSum });
     }
 
+    // --- op-rate: each op's window, and its hour so far, against its own
+    // history (one report per op: the trip furthest past its bar). Read-only
+    // here; the window joins the history after the reports are filed. ---
+    // The window's middle: a window closed on the hour belongs to the hour it
+    // covered.
+    const atMs = plan.kind === "window" ? wallNow - plan.windowMs / 2 : 0;
+    if (plan.kind === "window")
+      perOp.push(
+        ...worstPerOp([
+          ...(await judgeCallRates(
+            plan.regime,
+            plan.windowMs,
+            windowCalls,
+            atMs,
+            cfg,
+          )),
+          ...(await judgeHourRates(atMs, windowCalls, cfg)),
+        ]),
+      );
+
     // --- gate waits: each gate's metered wait time, judged as the gate's ---
     const holdersOf = new Map(gates.map((g) => [g.layer, g.holders ?? []]));
-    for (const t of gateTrips(gates, lastGates, cfg.waitMsPerWindow))
+    for (const t of gateTrips(gates, nextGates, cfg.waitMsPerWindow))
       perOp.push({
         type: "gate-wait",
         layer: t.layer,
@@ -216,10 +281,15 @@ export const opRateMonitorJob = defineJob({
             kind: h.kind,
             label: h.label,
             callsInWindow: h.delta,
-            windowMs: WINDOW_MS,
+            windowMs: h.windowMs,
             threshold: h.threshold,
+            ...(h.baseline && { baseline: h.baseline }),
           },
-          message: `${h.kind} ${h.label} — ${h.delta} calls/window (threshold ${h.threshold})`,
+          message: h.baseline
+            ? h.baseline.over === "hour"
+              ? `${h.kind} ${h.label} — ${h.delta} calls so far this hour, usually ≤${h.baseline.usualCalls} in an hour (threshold ${h.threshold})`
+              : `${h.kind} ${h.label} — ${h.delta} calls/window, usually ≤${h.baseline.usualCalls} in a ${h.baseline.over} window (threshold ${h.threshold})`
+            : `${h.kind} ${h.label} — ${h.delta} calls/window (warm-up threshold ${h.threshold})`,
         });
       } else if (h.type === "gate-wait") {
         // The gate's congestion, filed against the gate: who held it right now
@@ -305,15 +375,159 @@ export const opRateMonitorJob = defineJob({
         message: `${r.kind} rollup — ${(breach.sumDeltaMs / 1000).toFixed(1)}s own/window across ${r.deltas.length} labels (budget ${(breach.rollupBudgetMs / 1000).toFixed(1)}s)`,
       });
     }
+
+    // The window joins the call history, then the tick's readings become the
+    // state the next tick diffs against.
+    if (plan.kind === "window")
+      await recordWindow(
+        plan.regime,
+        atMs,
+        new Map([...windowCalls].map(([key, w]) => [key, w.calls])),
+      );
+    lastTick = { epoch: sinceMs, atMs: nowMs };
+    replaceMap(lastCount, nextCount);
+    replaceMap(lastSelfMs, nextSelfMs);
+    replaceMap(lastWallMs, nextWallMs);
+    replaceMap(lastGates, nextGates);
   },
 });
+
+function replaceMap<K, V>(target: Map<K, V>, next: ReadonlyMap<K, V>): void {
+  target.clear();
+  for (const [k, v] of next) target.set(k, v);
+}
+
+// Judge each op's calls in this window against the op's own history of that
+// regime (op-rate-baseline.ts). Only ops past the lowest bar that could fire are
+// looked up. A regime with under MIN_HISTORY_WINDOWS of history is warming up:
+// a steady window is judged on the per-kind warm-up threshold, a boot window is
+// not judged (logged) — exactly what op-rate did before it had a history. An op
+// the history has never seen called is warming up too.
+async function judgeCallRates(
+  regime: OpRateRegime,
+  windowMs: number,
+  windowCalls: ReadonlyMap<
+    string,
+    { kind: SpanKind; label: string; calls: number }
+  >,
+  atMs: number,
+  cfg: Thresholds,
+): Promise<PerOpTrip[]> {
+  const rule = { minCalls: cfg.minCallsPerWindow, factor: cfg.baselineFactor };
+  const candidates = [...windowCalls].filter(
+    ([, w]) => w.calls > Math.min(rule.minCalls, kindThreshold(w.kind, cfg)),
+  );
+  if (candidates.length === 0) return [];
+  const history = await readHistory(
+    regime,
+    atMs,
+    candidates.map(([key]) => key),
+  );
+  const learned = history.windows >= MIN_HISTORY_WINDOWS[regime];
+  if (!learned && regime === "boot") {
+    opRateLog.publish(
+      `boot window not judged: ${history.windows} past boot windows (needs ${MIN_HISTORY_WINDOWS.boot})`,
+    );
+    return [];
+  }
+  const trips: PerOpTrip[] = [];
+  for (const [key, w] of candidates) {
+    const opHistory = history.ops.get(key);
+    if (opHistory === undefined)
+      throw new Error(`op-rate: no history read for ${key}`);
+    // An op with no called window in the history is new to it (a changed SQL
+    // text is a new `db` label; a new resource is a new key): it has no usual
+    // rate yet, so it is judged on the warm-up bar, never as a jump from 0.
+    const basis: OpRateBasis =
+      learned && opHistory.buckets.size > 0
+        ? {
+            kind: "baseline",
+            usualCalls: usualCallsOf(opHistory, BASELINE_QUANTILE[regime]),
+          }
+        : { kind: "warm-up", threshold: kindThreshold(w.kind, cfg) };
+    const threshold = thresholdOf(basis, rule);
+    if (w.calls <= threshold) continue;
+    trips.push({
+      type: "op-rate",
+      kind: w.kind,
+      label: w.label,
+      delta: w.calls,
+      windowMs: Math.round(Math.min(windowMs, WINDOW_MS)),
+      threshold,
+      ...(basis.kind === "baseline" && {
+        baseline: { over: regime, usualCalls: basis.usualCalls },
+      }),
+    });
+  }
+  return trips;
+}
+
+// Judge each op called in this window on its calls so far in the clock hour
+// (the history's hour plus this window) against its usual hour
+// (op-rate-baseline.ts, *The hour horizon*). Only an op called in this window
+// is judged, so an hour trip stops once its op does. Under MIN_COVERED_HOURS of
+// history the hour is not judged (the window's warm-up bar covers that day),
+// nor is an op with no past hour (new to the history, judged on its window).
+async function judgeHourRates(
+  atMs: number,
+  windowCalls: ReadonlyMap<
+    string,
+    { kind: SpanKind; label: string; calls: number }
+  >,
+  cfg: Thresholds,
+): Promise<PerOpTrip[]> {
+  if (windowCalls.size === 0) return [];
+  const rule = { minCalls: cfg.minCallsPerWindow, factor: cfg.baselineFactor };
+  const history = await readHourHistory(
+    atMs,
+    new Map([...windowCalls].map(([key, w]) => [key, w.calls])),
+    hourThresholdOf(0, rule),
+  );
+  if (history.coveredHours < MIN_COVERED_HOURS) return [];
+  const trips: PerOpTrip[] = [];
+  for (const [key, h] of history.ops) {
+    const w = windowCalls.get(key);
+    if (w === undefined)
+      throw new Error(`op-rate: hour history answered an op not asked: ${key}`);
+    if (!h.pastHours.some((n) => n > 0)) continue;
+    const usualCalls = usualHourCallsOf(h.pastHours, HOUR_QUANTILE);
+    const threshold = hourThresholdOf(usualCalls, rule);
+    if (h.hourSoFar <= threshold) continue;
+    trips.push({
+      type: "op-rate",
+      kind: w.kind,
+      label: w.label,
+      delta: h.hourSoFar,
+      windowMs: Math.round(atMs - utcHourStart(atMs).getTime()),
+      threshold,
+      baseline: { over: "hour", usualCalls },
+    });
+  }
+  return trips;
+}
+
+// One op-rate trip per op: the one furthest past its own bar.
+function worstPerOp(trips: readonly PerOpTrip[]): PerOpTrip[] {
+  const worst = new Map<string, PerOpTrip & { type: "op-rate" }>();
+  for (const t of trips) {
+    if (t.type !== "op-rate") continue;
+    const key = `${t.kind}:${t.label}`;
+    const prev = worst.get(key);
+    if (
+      prev === undefined ||
+      t.delta / t.threshold > prev.delta / prev.threshold
+    )
+      worst.set(key, t);
+  }
+  return [...worst.values()];
+}
 
 // The `kind` a gate's op-time report carries: a gate is no span kind, so its
 // fingerprint (`op-time:wait:<layer>`) can never collide with an op's.
 const WAIT_KIND = "wait";
 
-// Map each SpanKind to its per-kind call-rate threshold field (same shape as
-// slow-ops' thresholdFor). Typed over the exported SpanKind so adding a kind is a
+// Map each SpanKind to its per-kind warm-up call-rate threshold field (same
+// shape as slow-ops' thresholdFor). Typed over the exported SpanKind so adding a kind is a
 // tsc error here until its threshold is wired.
 function kindThreshold(kind: SpanKind, cfg: Thresholds): number {
   switch (kind) {

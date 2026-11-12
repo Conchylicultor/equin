@@ -501,6 +501,7 @@ See `research/2026-09-29-global-scoped-change-routing.md`.
     - `conversations/runtime-sdk`
     - `conversations/usage`
     - `debug/latency-ledger`
+    - `debug/op-rate`
     - `debug/slow-ops`
     - `debug/trace/engine`
     - `infra/jobs/in-process`

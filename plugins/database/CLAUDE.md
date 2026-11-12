@@ -523,13 +523,13 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
     - `loadedDatabaseConfig`
     - `readDatabaseConfigSync`
 - Cross-plugin:
-  - Imported by: 161 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 162 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×45
     - `conversations` ×20
     - `infra` ×16
     - `page` ×14
     - `tasks` ×14
-    - `debug` ×9
+    - `debug` ×10
     - `active-data` ×8
     - `database` ×5
     - `primitives` ×4

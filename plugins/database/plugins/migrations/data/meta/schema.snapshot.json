@@ -1,6 +1,6 @@
 {
-  "id": "e5b9fa82-4691-469d-94e4-128f9b69d957",
-  "prevId": "e7717784-cef6-42c8-b357-cf2e617660cb",
+  "id": "263b78bc-f0bc-461f-b657-2cff4a7c8182",
+  "prevId": "e5b9fa82-4691-469d-94e4-128f9b69d957",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -8499,6 +8499,169 @@
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.op_rate_hour_calls": {
+      "name": "op_rate_hour_calls",
+      "schema": "",
+      "columns": {
+        "op": {
+          "name": "op",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "hour_start": {
+          "name": "hour_start",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "calls": {
+          "name": "calls",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "op_rate_hour_calls_hour_idx": {
+          "name": "op_rate_hour_calls_hour_idx",
+          "columns": [
+            {
+              "expression": "hour_start",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "op_rate_hour_calls_op_hour_start_pk": {
+          "name": "op_rate_hour_calls_op_hour_start_pk",
+          "columns": [
+            "op",
+            "hour_start"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.op_rate_window_counts": {
+      "name": "op_rate_window_counts",
+      "schema": "",
+      "columns": {
+        "op": {
+          "name": "op",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "regime": {
+          "name": "regime",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "day_start": {
+          "name": "day_start",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bucket": {
+          "name": "bucket",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "windows": {
+          "name": "windows",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "op_rate_window_counts_day_idx": {
+          "name": "op_rate_window_counts_day_idx",
+          "columns": [
+            {
+              "expression": "day_start",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "op_rate_window_counts_op_regime_day_start_bucket_pk": {
+          "name": "op_rate_window_counts_op_regime_day_start_bucket_pk",
+          "columns": [
+            "op",
+            "regime",
+            "day_start",
+            "bucket"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.op_rate_windows": {
+      "name": "op_rate_windows",
+      "schema": "",
+      "columns": {
+        "regime": {
+          "name": "regime",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "hour_start": {
+          "name": "hour_start",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "windows": {
+          "name": "windows",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "op_rate_windows_regime_hour_start_pk": {
+          "name": "op_rate_windows_regime_hour_start_pk",
+          "columns": [
+            "regime",
+            "hour_start"
+          ]
+        }
+      },
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},

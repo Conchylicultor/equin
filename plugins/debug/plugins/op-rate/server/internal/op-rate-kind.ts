@@ -26,26 +26,49 @@ export const opRateKind = ReportKind({
   renderTask: (row: ReportRow) => {
     const d = OpRatePayloadSchema.parse(row.data);
     return {
-      title: `[op-rate] ${d.kind} ${d.label} — ${d.callsInWindow} calls/window`,
+      title: `[op-rate] ${d.kind} ${d.label} — ${d.callsInWindow} calls/${d.baseline?.over === "hour" ? "hour" : "window"}`,
       description: renderDescription(row, d),
     };
   },
 });
 
+// What the calls were counted over, in words, and the quantile its usual count
+// is (op-rate-baseline.ts).
+const SPAN_WORDS = {
+  boot: { span: "a boot window (a backend's first minutes)", quantile: "90th" },
+  steady: { span: "a steady monitor window", quantile: "99th" },
+  hour: { span: "the clock hour so far", quantile: "95th" },
+} as const;
+
 function renderDescription(row: ReportRow, d: OpRatePayload): string {
   const lines: string[] = [];
-  lines.push(
-    `The \`${d.kind}\` op \`${d.label}\` was called **${d.callsInWindow}** ` +
-      `times within a single monitor window — past the per-kind threshold of ` +
-      `${d.threshold}. A hammered op points straight at the cause of load ` +
-      "(not just the collateral slow spans it produces); investigate who is " +
-      "issuing this many calls.",
-  );
+  const base = d.baseline;
+  const per = base?.over === "hour" ? "hour" : "window";
+  if (base) {
+    const words = SPAN_WORDS[base.over];
+    lines.push(
+      `The \`${d.kind}\` op \`${d.label}\` was called **${d.callsInWindow}** ` +
+        `times in ${words.span}, where it is usually called at most ` +
+        `${base.usualCalls} times (the ${words.quantile} percentile of its last 7 ` +
+        `days) — past the threshold of ${d.threshold}. Something is calling it ` +
+        "far more than it normally does; investigate who is issuing these calls.",
+    );
+  } else
+    lines.push(
+      `The \`${d.kind}\` op \`${d.label}\` was called **${d.callsInWindow}** ` +
+        `times within a single monitor window — past the per-kind warm-up ` +
+        `threshold of ${d.threshold} (this backend had under a day of call ` +
+        "history to judge the op against its own usual rate). Investigate who " +
+        "is issuing this many calls.",
+    );
   lines.push("");
   lines.push(`**Op:** \`${d.kind}\` \`${d.label}\``);
-  lines.push(`**Calls in window:** ${d.callsInWindow}`);
+  lines.push(`**Calls in ${per}:** ${d.callsInWindow}`);
+  lines.push(
+    `**Counted over:** ${base ? `${base.over} ` : ""}(${Math.round(d.windowMs / 1000)}s)`,
+  );
+  if (base) lines.push(`**Usual calls in such a ${per}:** ${base.usualCalls}`);
   lines.push(`**Threshold:** ${d.threshold}`);
-  lines.push(`**Window:** ${Math.round(d.windowMs / 1000)}s`);
   lines.push("");
   lines.push(
     "Inspect the live call counts in the **Debug → Reports** / runtime " +

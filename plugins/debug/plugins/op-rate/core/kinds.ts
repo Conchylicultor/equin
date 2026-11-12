@@ -1,16 +1,41 @@
 import { z } from "zod";
 
+// The two kinds of monitor window an op's call count is judged in, each against
+// its own history: `boot` — the first window of a backend process (every tab
+// replays its subscriptions, catch-up runs), `steady` — every later one.
+export const OP_RATE_REGIMES = ["boot", "steady"] as const;
+export type OpRateRegime = (typeof OP_RATE_REGIMES)[number];
+
+// What an op's calls were counted over when judged against its history: one
+// window of a regime, or the clock hour so far (a sustained loop on an op whose
+// windows are bursty stays under its usual window peak, never its usual hour).
+export const OP_RATE_SPANS = [...OP_RATE_REGIMES, "hour"] as const;
+export type OpRateSpan = (typeof OP_RATE_SPANS)[number];
+
 // The jsonb payload for an `op-rate` report. One report per distinct hot op
 // (`${kind}:${label}`), so a single hammered op gets its own report pointing
 // straight at the cause. The payload carries the call-rate snapshot that tripped
 // the threshold: which op, how many calls landed in the window, how long the
-// window was, and the per-kind threshold it exceeded.
+// window was, and the threshold it exceeded.
+//   • `baseline` — judged against the op's own history: what the calls were
+//     counted over (`over`: a boot or steady window, or the clock hour so far),
+//     and how many calls the op usually makes over such a span (a high quantile
+//     of its last 7 days); `threshold` is derived from it.
+//   • no `baseline` — judged against the per-kind warm-up threshold, while this
+//     backend has less than a day of history (and every report filed before
+//     baselines existed).
 export const OpRatePayloadSchema = z.object({
   kind: z.string(),
   label: z.string(),
   callsInWindow: z.number().int(),
   windowMs: z.number().int(),
   threshold: z.number().int(),
+  baseline: z
+    .object({
+      over: z.enum(OP_RATE_SPANS),
+      usualCalls: z.number().int(),
+    })
+    .optional(),
 });
 export type OpRatePayload = z.infer<typeof OpRatePayloadSchema>;
 

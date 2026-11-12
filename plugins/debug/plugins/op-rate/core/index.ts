@@ -1,3 +1,13 @@
 export { opRateConfig } from "./config";
-export { OpRatePayloadSchema, OpTimePayloadSchema } from "./kinds";
-export type { OpRatePayload, OpTimePayload } from "./kinds";
+export {
+  OP_RATE_REGIMES,
+  OP_RATE_SPANS,
+  OpRatePayloadSchema,
+  OpTimePayloadSchema,
+} from "./kinds";
+export type {
+  OpRatePayload,
+  OpRateRegime,
+  OpRateSpan,
+  OpTimePayload,
+} from "./kinds";
