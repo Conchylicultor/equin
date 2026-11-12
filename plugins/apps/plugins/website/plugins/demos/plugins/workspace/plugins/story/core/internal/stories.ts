@@ -11,11 +11,13 @@ import type { TaskTrack } from "@plugins/tasks/plugins/task-track/core";
 import { hashHex } from "@plugins/packages/plugins/string-hash/core";
 
 // The Agent Manager demo's tasks: changes Demo asked of their own apps. The
-// open conversation is an agent that added a practice timer to Sonata, tested
-// and built it, and is waiting for Demo's review — launched from a prompt on
-// the "Piano practice" page (`./pages`), where it left its plan. The queue
-// holds a prototype ready for review, a design question, and a roster agent
-// at work; the Done list two pushed ones.
+// queue is in STORIES order (the seed ranks the live ones as listed): first a
+// prototype ready to try — the simplest thing a first-time visitor can open —
+// then the open conversation, an agent that added a practice timer to Sonata,
+// tested and built it, and is waiting for Demo's review — launched from a
+// prompt on the "Piano practice" page (`./pages`), where it left its plan —
+// then a roster agent at work and a design question; the Done list two pushed
+// ones.
 // Every id carries `demo`, so a request that leaked to the real server is
 // findable in its logs. Written into the demo's browser host by its seed
 // (`bin/seed.ts`), each story's transcript by `./transcripts`.
@@ -94,6 +96,20 @@ const PRACTICE_TIMER_PROMPT =
 /** One agent per task: conversation `conv-demo-<key>`, attempt `att-demo-<key>`, task `task-demo-<key>`. */
 export const STORIES: readonly Story[] = [
   {
+    key: "recipes",
+    shortTitle: "Family recipes",
+    phase: "design",
+    category: WISHES_CATEGORY_ID,
+    task: "A recipes app for my family",
+    prompt:
+      "I want a small app for our family recipes: a card per recipe, with photos, and a shopping list made from the ones we pick for the week.",
+    title: "Prototype a family recipes app",
+    status: "waiting",
+    model: OPUS,
+    startedAgo: 70 * MIN,
+    updatedAgo: 6 * MIN,
+  },
+  {
     key: "practice-timer",
     shortTitle: "Practice timer",
     phase: "implementation",
@@ -108,20 +124,6 @@ export const STORIES: readonly Story[] = [
     model: OPUS,
     startedAgo: 38 * MIN,
     updatedAgo: 2 * MIN,
-  },
-  {
-    key: "recipes",
-    shortTitle: "Family recipes",
-    phase: "design",
-    category: WISHES_CATEGORY_ID,
-    task: "A recipes app for my family",
-    prompt:
-      "I want a small app for our family recipes: a card per recipe, with photos, and a shopping list made from the ones we pick for the week.",
-    title: "Prototype a family recipes app",
-    status: "waiting",
-    model: OPUS,
-    startedAgo: 70 * MIN,
-    updatedAgo: 6 * MIN,
   },
   {
     key: "weekly-review",

@@ -595,7 +595,19 @@ function recipes(story: Story, _s: PageSession, ctx: SessionContext): Turn[] {
   const answers = [
     `Done (${id}, v1): the recipes you pick for the week sit in a bar at the bottom, with their photos and one tap to the shopping list.`,
     `v2 is ready (${id}): the accent option now has plum and ocean beside terracotta and olive.`,
-    `v3 is ready (${id}), with three new options in the picker:\n\n- **Cards**: photo (as before), overlay (the title on the photo) or list (compact rows).\n- **Headings**: serif or sans.\n- **Paper**: the background colour, beside the accent.\n\nNext would be the real app. That's a new app in your equin, so I'm asking first: build it from this prototype?`,
+    // The last word of the conversation: a first-time visitor lands here, so
+    // it says what to open and what they can do next, not only what changed.
+    [
+      `Your prototype is ready: ${id}`,
+      "",
+      "Open it to try it: pick a few recipes for the week, then tap the bar at the bottom for the shopping list. The picker at the top now has three new options:",
+      "",
+      "- **Cards**: photo (as before), overlay (the title on the photo) or list (compact rows).",
+      "- **Headings**: serif or sans.",
+      "- **Paper**: the background colour, beside the accent.",
+      "",
+      "Tell me what to change, or say *build it* and I'll turn it into a real app in your equin.",
+    ].join("\n"),
   ];
   if (answers.length !== steps.length)
     throw new Error(
