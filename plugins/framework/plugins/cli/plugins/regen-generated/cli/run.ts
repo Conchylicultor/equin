@@ -7,7 +7,10 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { loadRepoSnapshot } from "@plugins/framework/plugins/tooling/core";
-import { installRecordStore } from "@plugins/plugin-meta/plugins/plugin-records/core";
+import {
+  currentRecordStore,
+  installRecordStore,
+} from "@plugins/plugin-meta/plugins/plugin-records/core";
 import { openRecordStore } from "@plugins/plugin-meta/plugins/plugin-records/cli";
 
 const run: CliAction<[], object> = async () => {
@@ -25,6 +28,9 @@ const run: CliAction<[], object> = async () => {
   // The committed tree only: a composition's own manifests are gitignored, and
   // its next build writes them.
   await regenerateManifestCodegen({ pass });
+  // The records this pass made, written before it ends (a busy store is the
+  // store's own outcome, said by it — never this command's failure).
+  await currentRecordStore().flush();
 
   // A created or corrected package.json leaves `bun.lock` without the new
   // member, or recording its old name. This

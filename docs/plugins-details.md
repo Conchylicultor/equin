@@ -40197,26 +40197,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/orchestration/mandate`
     - **`keyed-mutex`** — Keyed FIFO mutex: createKeyedMutex().run(key, fn) runs fn once every earlier run for the same key has settled, in arrival order, while different keys run concurrently; a key's entry is dropped the moment its queue drains.
       - Cross-plugin:
-        - Imported by:
-          - `apps/deploy/site-reports/intake`
-          - `apps/mail/sync`
+        - Imported by: 21 plugins — full list in [`plugins/packages/plugins/keyed-mutex/REFERENCE.md`](../plugins/packages/plugins/keyed-mutex/REFERENCE.md)
+          - `infra` ×11
+          - `conversations` ×4
+          - `apps` ×2
           - `config_v2`
-          - `conversations`
-          - `conversations/model-provider/catalog`
-          - `conversations/runtime-sdk`
-          - `conversations/transcript-source`
           - `debug/sentinel/status-file`
-          - `infra/claude-cli/accounts`
-          - `infra/claude-cli/sign-in`
-          - `infra/deps`
-          - `infra/jobs`
-          - `infra/jobs/attempt-audit`
-          - `infra/jobs/in-process`
-          - `infra/jobs/supervised-job`
-          - `infra/launcher/login-services`
-          - `infra/paths/data-files`
-          - `infra/paths/data-files/memory`
-          - `infra/request-origin/agent-write-ledger`
+          - `plugin-meta/plugin-records`
           - `reports/engine`
       - Core:
         - Exports (types): `KeyedMutex`
@@ -40683,6 +40670,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `framework/cli/op-runtime`
           - `packages/host-semaphore`
+          - `plugin-meta/plugin-records`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/ticket-line.ts` (debt)
     - **`timed-fs`** — The file reads, listings, stats and glob scans every non-browser process makes, timed: node:fs's read calls under their own names and types (readFile / readdir / stat / lstat / access / realpath / readlink and their *Sync twins, existsSync) plus scanGlob / scanGlobSync over a Bun.Glob, each call metered while it runs (installFsWaitMeter — the backend's profiler shows one past FS_WAIT_FLOOR_MS in progress and charges it) and, once it returns past the floor, handed to onSlowFsCall subscribers, under a named wait layer (fs-read / fs-readdir / fs-stat / fs-glob) — so a disk stall names itself instead of reading as the caller's own work. A leaf (node builtins only), enforced by the timed-fs/no-untimed-fs-read lint.
@@ -44988,16 +44976,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ModuleGraphInput`
           - `ModuleNode`
           - `OutsideFiles`
+          - `RecordFlushOutcome`
           - `RecordJob`
           - `RecordJobRequest`
           - `RecordStore`
           - `RecordTable`
           - `RecordWorkers`
+          - `RecordWriteTiming`
         - Exports (values):
           - `buildModuleGraph`
           - `createMemoryRecordStore`
           - `currentRecordStore`
           - `defineRecordJob`
+          - `emptyWriteTiming`
           - `gitBlobId`
           - `groupedByOwner`
           - `installRecordStore`
@@ -45117,6 +45108,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/jobs/supervised-job.defineSupervisedJob`
               - `primitives/log-channels.defineLogSink`
             - Register: `defineSupervisedJob('plugin-records.verify')`
+        - **`write-lost`** — plugin-records-write-lost report kind: validates the shared record store's lost-write payloads (filed through the report outbox by the store itself, one row per cause) and renders a task naming the process, the records lost and how its writes waited in the writer line and held the lock. Warning, re-arms daily.
+          - Server:
+            - Contributes: `report-kind` "plugin-records-write-lost"
+            - Uses:
+              - `reports.ReportKind`
+              - `reports.ReportRow`
+          - Cross-plugin:
+            - Imported by: `plugin-meta/plugin-records`
+          - Core:
+            - Exports (types):
+              - `RecordsWriteLostPayload`
+              - `RecordsWriteLostReason`
+            - Exports (values):
+              - `RECORDS_WRITE_LOST_KIND`
+              - `recordsWriteLostFingerprint`
+              - `recordsWriteLostMessage`
+              - `RecordsWriteLostPayloadSchema`
+              - `RecordsWriteLostReasonSchema`
     - **`plugin-refs`** — The one plugin-reference locator: every place the repo names a plugin (path literals, @plugins specifiers, structurally-read dot ids, relative markdown/CSS links), each with an exact character range a mover rewrites by.
       - Core:
         - Uses:
@@ -54734,7 +54743,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `versionSkewCode`
       - `versionSkewMayExplain`
   - Cross-plugin:
-    - Imported by: 82 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+    - Imported by: 83 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
       - `reports` ×32
       - `debug` ×20
       - `conversations` ×7
@@ -54747,6 +54756,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `backup`
       - `network/live/boot-snapshot`
       - `page/place/google`
+      - `plugin-meta/plugin-records/write-lost`
       - `stats/cost`
       - `tasks/reports-investigation`
       - `upstream`
@@ -55273,6 +55283,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/tooling/checks/type-check/backstop`
           - `infra/launcher`
           - `infra/launcher/gateway-drift`
+          - `plugin-meta/plugin-records`
           - `reports/interaction-budget`
       - Exemptions:
         - Exempts itself from:

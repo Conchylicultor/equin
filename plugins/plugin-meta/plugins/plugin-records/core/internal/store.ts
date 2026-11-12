@@ -1,3 +1,5 @@
+import type { RecordsWriteLostReason } from "@plugins/plugin-meta/plugins/plugin-records/plugins/write-lost/core";
+
 /**
  * Where records live: a content-addressed key → value map, one per kind of
  * record. A key is a hash of EVERYTHING the value is a function of (see
@@ -13,7 +15,8 @@
  * not cached — a check pass asks ~32k), and the process asking is often a
  * check pass, whose one JS thread every check shares. So the shared store
  * reads off that thread (`cli`'s `openRecordStore`), and a reader awaits.
- * Writes stay synchronous: they are held in memory until a `flush`.
+ * A put is synchronous: it is held in memory until a `flush`, which writes
+ * (and so may wait for the shared store's other writers) asynchronously.
  */
 
 /** The kinds of record, one table each. */
@@ -57,9 +60,51 @@ export interface RecordStore {
    * puts back to write them in one transaction (the SQLite store does: one
    * commit per call made a cold build's ~3.7k calls cost seconds); its own
    * reads see them at once either way. Flush where another process is about
-   * to read (the build, before its checks start).
+   * to read (the build, before its checks start), and before a process that
+   * put records ends.
+   *
+   * Never rejects for a write the store could not make: a lost record is
+   * only computed again, so it is an outcome (`lost`), which the store has
+   * already logged and reported — never a failure of the caller's work.
    */
-  flush(): void;
+  flush(): Promise<RecordFlushOutcome>;
+}
+
+/** How one write's transactions waited for, and held, the store's write lock. */
+export interface RecordWriteTiming {
+  transactions: number;
+  /** Time spent waiting in the store's writer line, in total and the longest once. */
+  waitedMs: number;
+  longestWaitMs: number;
+  /** Time the write lock was held, in total and the longest once. */
+  heldMs: number;
+  longestHoldMs: number;
+}
+
+/** What one `flush` did with the records it held. */
+export type RecordFlushOutcome =
+  | { kind: "written"; records: number; timing: RecordWriteTiming }
+  /**
+   * The store could not write them (`reason`: why): these records are not
+   * stored, and are computed again by whichever pass next asks for them.
+   */
+  | {
+      kind: "lost";
+      records: number;
+      reason: RecordsWriteLostReason;
+      error: string;
+      timing: RecordWriteTiming;
+    };
+
+/** No transaction yet. */
+export function emptyWriteTiming(): RecordWriteTiming {
+  return {
+    transactions: 0,
+    waitedMs: 0,
+    longestWaitMs: 0,
+    heldMs: 0,
+    longestHoldMs: 0,
+  };
 }
 
 /** A store that lives as long as the process: what a caller with no shared store gets. */
@@ -85,7 +130,13 @@ export function createMemoryRecordStore(environment = "memory"): RecordStore {
       const m = tableOf(table);
       for (const [k, v] of entries) if (!m.has(k)) m.set(k, v);
     },
-    flush() {},
+    // Holds nothing back: every put is already where its reads look.
+    flush: () =>
+      Promise.resolve({
+        kind: "written",
+        records: 0,
+        timing: emptyWriteTiming(),
+      }),
   };
 }
 

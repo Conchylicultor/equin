@@ -61,6 +61,7 @@ import {
   openRepoView,
 } from "@plugins/framework/plugins/tooling/core";
 import {
+  currentRecordStore,
   installRecordStore,
   installRecordWorkers,
 } from "@plugins/plugin-meta/plugins/plugin-records/core";
@@ -395,6 +396,8 @@ console.log(
 
 // As the build's frontend does: every answer read off the view still holds.
 await view.assertAgrees(await loadRepoSnapshot(root));
+// The records this run made, written before it ends.
+if (records) await currentRecordStore().flush();
 
 if (jsonOut) {
   writeFileSync(

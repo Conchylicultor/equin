@@ -33,26 +33,13 @@ keystrokes into one concatenated turn.
 
 - Description: Keyed FIFO mutex: createKeyedMutex().run(key, fn) runs fn once every earlier run for the same key has settled, in arrival order, while different keys run concurrently; a key's entry is dropped the moment its queue drains.
 - Cross-plugin:
-  - Imported by:
-    - `apps/deploy/site-reports/intake`
-    - `apps/mail/sync`
+  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra` ×11
+    - `conversations` ×4
+    - `apps` ×2
     - `config_v2`
-    - `conversations`
-    - `conversations/model-provider/catalog`
-    - `conversations/runtime-sdk`
-    - `conversations/transcript-source`
     - `debug/sentinel/status-file`
-    - `infra/claude-cli/accounts`
-    - `infra/claude-cli/sign-in`
-    - `infra/deps`
-    - `infra/jobs`
-    - `infra/jobs/attempt-audit`
-    - `infra/jobs/in-process`
-    - `infra/jobs/supervised-job`
-    - `infra/launcher/login-services`
-    - `infra/paths/data-files`
-    - `infra/paths/data-files/memory`
-    - `infra/request-origin/agent-write-ledger`
+    - `plugin-meta/plugin-records`
     - `reports/engine`
 - Core:
   - Exports (types): `KeyedMutex`

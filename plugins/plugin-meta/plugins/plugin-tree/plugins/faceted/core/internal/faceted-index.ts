@@ -122,7 +122,7 @@ export async function openFacetedIndex(
     }
     if (keyed.size === 0) return false;
     const read = await facetRecordTexts(input, facets, keyed);
-    store.flush();
+    await store.flush();
     let moved = false;
     for (const [node, perFacet] of keyed) {
       const nodeTexts = new Map<string, string>();

@@ -178,6 +178,7 @@ pass the same `code` field.
     - `framework/tooling/checks/type-check/backstop`
     - `infra/launcher`
     - `infra/launcher/gateway-drift`
+    - `plugin-meta/plugin-records`
     - `reports/interaction-budget`
 - Exemptions:
   - Exempts itself from:

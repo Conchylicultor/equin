@@ -687,7 +687,7 @@ export async function generateAppSources(opts: {
     recordWorkers = undefined;
     // Codegen's records, written in one transaction now that it is done: the
     // check pass this build starts next (another process) reads them.
-    currentRecordStore().flush();
+    await currentRecordStore().flush();
   }
 
   // 4b''. A plugin move re-roots reorder keys in committed overrides, but the

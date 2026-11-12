@@ -40,7 +40,7 @@ if (!SKIP_OLD) {
       repo: await loadRepoSnapshot(root),
     });
     JSON.parse(JSON.stringify(pluginTreeToJson(tree)));
-    store.flush();
+    await store.flush();
     old.push(performance.now() - s);
   }
   console.log("before: per change, in-process ", fmt(old));

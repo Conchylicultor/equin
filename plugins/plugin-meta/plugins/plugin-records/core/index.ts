@@ -2,9 +2,15 @@ export {
   RECORD_TABLES,
   createMemoryRecordStore,
   currentRecordStore,
+  emptyWriteTiming,
   installRecordStore,
 } from "./internal/store";
-export type { RecordStore, RecordTable } from "./internal/store";
+export type {
+  RecordFlushOutcome,
+  RecordStore,
+  RecordTable,
+  RecordWriteTiming,
+} from "./internal/store";
 export { gitBlobId, recordKey } from "./internal/keys";
 export { groupedByOwner, readGrouped } from "./internal/grouped";
 export {

@@ -490,6 +490,12 @@ const run: CliAction<
         checks.length > 0 ? checks : undefined,
         runOpts,
       );
+      // The records this pass made, written now — not by an exit listener
+      // after the verdict. A write the store could not make is its own
+      // outcome (logged and reported by the store): the records are computed
+      // again, and the verdict stays the checks' (2026-11-12, a green pass
+      // turned failed by a busy store at exit).
+      await sharedRecords.flush();
       // Last line, so it survives `./equin check | tail`.
       if (!ok) console.error(`\nFull check output: ${checkLogPath}`);
       if (verification) {

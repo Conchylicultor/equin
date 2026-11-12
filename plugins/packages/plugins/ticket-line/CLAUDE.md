@@ -76,6 +76,7 @@ Cost: one `flock-wait` child (~37 MB, `bun --smol`) per queued waiter.
   - Imported by:
     - `framework/cli/op-runtime`
     - `packages/host-semaphore`
+    - `plugin-meta/plugin-records`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `core/internal/ticket-line.ts` (debt)
 

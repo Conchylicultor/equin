@@ -3,7 +3,9 @@ import { afterAll, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { recordKey } from "../../core";
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { createTicketLine } from "@plugins/packages/plugins/ticket-line/core";
+import { emptyWriteTiming, recordKey } from "../../core";
 import {
   HOLD_MS,
   openRecordStore,
@@ -25,7 +27,7 @@ test("records survive a reopen, per table, and a present key keeps its value", a
     [k("2"), "v2"],
   ]);
   a.putMany("facet", [[k("1"), "other"]]);
-  a.flush();
+  await a.flush();
   const b = openRecordStore({ path });
   expect([...(await b.getMany("facet", [k("1"), k("2"), k("3")]))]).toEqual([
     [k("1"), "v1"],
@@ -41,12 +43,12 @@ test("puts are held until a flush: own reads see them, another process's do not"
   a.putMany("facet", [[k("h"), "held"]]);
   expect((await a.getMany("facet", [k("h")])).get(k("h"))).toBe("held");
   expect((await b.getMany("facet", [k("h")])).size).toBe(0);
-  a.flush();
+  await a.flush();
   expect((await b.getMany("facet", [k("h")])).get(k("h"))).toBe("held");
   // A key held twice keeps its first value, as a stored one does.
   a.putMany("facet", [[k("h2"), "first"]]);
   a.putMany("facet", [[k("h2"), "second"]]);
-  a.flush();
+  await a.flush();
   expect((await b.getMany("facet", [k("h2")])).get(k("h2"))).toBe("first");
 });
 
@@ -77,7 +79,7 @@ test("one value stored under many keys is stored once", async () => {
   );
   s.putMany("facet", [[k("f"), value]]);
   expect((await s.getMany("facet", [k("f")])).get(k("f"))).toBe(value);
-  s.flush();
+  await s.flush();
   const db = new Database(path, { readonly: true });
   expect(db.query("SELECT count(*) AS n FROM vals").get()).toEqual({ n: 1 });
   expect(db.query("SELECT count(*) AS n FROM keys").get()).toEqual({ n: 51 });
@@ -93,7 +95,7 @@ test("the reclaim drops unread keys, then the values only they named", async () 
     [k("new"), "shared"],
   ]);
   s.putMany("facet", [[k("old-facet"), "only-old-facet"]]);
-  s.flush();
+  await s.flush();
   const db = new Database(path);
   db.query("UPDATE keys SET used = used - 30 WHERE key != ?").run(
     Buffer.from(k("new"), "hex"),
@@ -102,7 +104,7 @@ test("the reclaim drops unread keys, then the values only they named", async () 
   openRecordStore({ path });
   expect(db.query("SELECT count(*) AS n FROM keys").get()).toEqual({ n: 4 });
   db.close();
-  expect(reclaimRecordStore({ path })).toMatchObject({
+  expect(await reclaimRecordStore({ path })).toMatchObject({
     keysRead: 4,
     keysDeleted: 3,
     valuesDeleted: 2,
@@ -124,7 +126,7 @@ test("the reclaim drops unread keys, then the values only they named", async () 
   check.close();
 });
 
-test("a reclaim pages through more rows than one page holds", () => {
+test("a reclaim pages through more rows than one page holds", async () => {
   const path = join(dir, "reclaim-pages.sqlite");
   const s = openRecordStore({ path });
   s.putMany(
@@ -134,11 +136,11 @@ test("a reclaim pages through more rows than one page holds", () => {
       (_, i) => [k(`p${i}`), `v${i % 7}`] as const,
     ),
   );
-  s.flush();
+  await s.flush();
   const db = new Database(path);
   db.exec("UPDATE keys SET used = used - 30");
   db.close();
-  const r = reclaimRecordStore({ path });
+  const r = await reclaimRecordStore({ path });
   expect(r).toMatchObject({
     keysRead: 12_345,
     keysDeleted: 12_345,
@@ -148,7 +150,7 @@ test("a reclaim pages through more rows than one page holds", () => {
   expect(r.pagesFreed).toBeGreaterThan(0);
 });
 
-test("a reclaim of a file without incremental auto_vacuum ends, keeping its pages", () => {
+test("a reclaim of a file without incremental auto_vacuum ends, keeping its pages", async () => {
   const path = join(dir, "reclaim-none.sqlite");
   // A store whose file does not have the setting (one created before it
   // could take): VACUUM rewrites it without.
@@ -163,11 +165,11 @@ test("a reclaim of a file without incremental auto_vacuum ends, keeping its page
     "file",
     Array.from({ length: 3_000 }, (_, i) => [k(`n${i}`), `v${i}`] as const),
   );
-  s.flush();
+  await s.flush();
   const db = new Database(path);
   db.exec("UPDATE keys SET used = used - 30");
   db.close();
-  expect(reclaimRecordStore({ path })).toMatchObject({
+  expect(await reclaimRecordStore({ path })).toMatchObject({
     keysDeleted: 3_000,
     valuesDeleted: 3_000,
     returnsPages: false,
@@ -183,7 +185,7 @@ test("a flush of several probe batches lands whole", async () => {
     (_, i) => [k(`c${i}`), `v${i}`] as const,
   );
   s.putMany("file", entries);
-  s.flush();
+  await s.flush();
   expect(
     (
       await openRecordStore({ path }).getMany(
@@ -198,7 +200,7 @@ test("opening an existing store never waits for a writer", async () => {
   const path = join(dir, "open-under-writer.sqlite");
   const seed = openRecordStore({ path });
   seed.putMany("file", [[k("w"), "v"]]);
-  seed.flush();
+  await seed.flush();
   // Another process mid-transaction holds the write lock; an open (and a
   // read) goes ahead at once — with no busy wait to hide behind.
   const writer = new Database(path);
@@ -253,7 +255,7 @@ test("the verifier recomputes everything and names a record whose value moved un
   expect((await shared.getMany("facet", [k("new")])).size).toBe(0);
 });
 
-test("a bounded write commits once it has held the lock its budget, and every item lands", () => {
+test("a bounded write commits once it has held the lock its budget, and every item lands", async () => {
   const path = join(dir, "bounded.sqlite");
   // The store's own schema, written directly.
   openRecordStore({ path });
@@ -271,8 +273,10 @@ test("a bounded write commits once it has held the lock its budget, and every it
   let clock = 0;
   const committedBefore: number[] = [];
   const probed: number[][] = [];
-  writeBounded(
+  const timing = emptyWriteTiming();
+  await writeBounded(
     db,
+    createTicketLine(asAppPath(`${path}.writers`)),
     Array.from({ length: 40 }, (_, i) => i),
     (batch) => {
       probed.push([...batch]);
@@ -285,6 +289,7 @@ test("a bounded write commits once it has held the lock its budget, and every it
       insert.run(Buffer.from(k(`b${i}`), "hex"));
       clock += ITEM_MS;
     },
+    timing,
     { now: () => clock },
   );
   expect(visible()).toBe(40);
@@ -301,6 +306,9 @@ test("a bounded write commits once it has held the lock its budget, and every it
   ]);
   // What one transaction left is probed again before the next.
   expect(probed[1]![0]).toBe(perTransaction[0]);
+  // Each transaction's hold is measured on the same clock.
+  expect(timing.transactions).toBe(perTransaction.length);
+  expect(timing.heldMs).toBe(40 * ITEM_MS);
   other.close();
   db.close();
 });
@@ -314,13 +322,13 @@ test("a flush writes nothing for a record another process stored meanwhile", asy
     [k("only-a"), "a"],
   ]);
   b.putMany("facet", [[k("both"), "same"]]);
-  b.flush();
+  await b.flush();
   const db = new Database(path);
   db.query("UPDATE keys SET used = 1 WHERE key = ?").run(
     Buffer.from(k("both"), "hex"),
   );
   db.close();
-  a.flush();
+  await a.flush();
   const check = new Database(path, { readonly: true });
   // a's flush did not rewrite the row b stored (its day stays as set).
   expect(
@@ -333,4 +341,52 @@ test("a flush writes nothing for a record another process stored meanwhile", asy
     (await openRecordStore({ path }).getMany("facet", [k("both"), k("only-a")]))
       .size,
   ).toBe(2);
+});
+
+test("a writer waits its turn in the writer line, and its wait is measured", async () => {
+  const path = join(dir, "line.sqlite");
+  const s = openRecordStore({ path });
+  s.putMany("file", [[k("l"), "v"]]);
+  // Another writer is at the head of the line.
+  const ahead = await createTicketLine(asAppPath(`${path}.writers`)).join();
+  let settled = false;
+  const flushed = s.flush().then((outcome) => {
+    settled = true;
+    return outcome;
+  });
+  await Bun.sleep(300);
+  // Queued behind it — not polling SQLite's lock, which nobody holds.
+  expect(settled).toBe(false);
+  // Its own reads still answer what it is writing.
+  expect((await s.getMany("file", [k("l")])).get(k("l"))).toBe("v");
+  await ahead.leave();
+  const outcome = await flushed;
+  expect(outcome).toMatchObject({ kind: "written", records: 1 });
+  expect(outcome.timing.transactions).toBe(1);
+  expect(outcome.timing.longestWaitMs).toBeGreaterThanOrEqual(250);
+  expect(
+    (await openRecordStore({ path }).getMany("file", [k("l")])).get(k("l")),
+  ).toBe("v");
+});
+
+test("a write a lock outside the line keeps busy is lost, as an outcome — never a throw", async () => {
+  const path = join(dir, "lost.sqlite");
+  const s = openRecordStore({ path, busyTimeoutMs: 50 });
+  s.putMany("file", [
+    [k("x"), "1"],
+    [k("y"), "2"],
+  ]);
+  // A writer outside the line (no ticket) holds SQLite's lock.
+  const outside = new Database(path);
+  outside.exec("BEGIN IMMEDIATE");
+  const outcome = await s.flush();
+  outside.exec("ROLLBACK");
+  outside.close();
+  expect(outcome).toMatchObject({ kind: "lost", records: 2, reason: "busy" });
+  expect(outcome.kind === "lost" && outcome.error).toContain("locked");
+  // Lost, not held for later: a flush after has nothing to write.
+  expect(await s.flush()).toMatchObject({ kind: "written", records: 0 });
+  expect((await openRecordStore({ path }).getMany("file", [k("x")])).size).toBe(
+    0,
+  );
 });

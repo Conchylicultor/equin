@@ -82,8 +82,11 @@ export interface TicketLine {
 
 const TICKET = /^t-\d{20}-\d{10}-\d{6}\.lock$/;
 
-// Distinguishes two tickets one process takes within one clock tick.
-let seq = 0;
+// Distinguishes two tickets one process takes within one clock tick. Starts
+// at a random point: each worker thread has its own copy of this module under
+// the same pid, so two threads counting from 0 could mint the same name in
+// the same tick (and fail the exclusive create of its temp file).
+let seq = Math.floor(Math.random() * 1_000_000);
 
 // CLOCK_MONOTONIC in <time.h>: 6 on darwin (keeps running through sleep), 1 on
 // Linux. Either is one clock for every process on the box, which is all the

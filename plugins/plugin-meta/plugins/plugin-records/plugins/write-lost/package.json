@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-plugin-meta-plugin-records-write-lost",
+  "description": "The plugin-records-write-lost report kind: a process's records could not be written to the shared plugin-records store (its write lock stayed busy past the backstop wait). Filed by the store itself through the report outbox; never a verdict — the records are computed again by the next pass.",
+  "private": true,
+  "version": "0.0.1"
+}

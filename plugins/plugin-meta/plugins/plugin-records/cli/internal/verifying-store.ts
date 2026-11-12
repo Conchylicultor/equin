@@ -1,5 +1,6 @@
 import {
   createMemoryRecordStore,
+  emptyWriteTiming,
   type RecordStore,
   type RecordTable,
 } from "../../core";
@@ -83,7 +84,12 @@ export function verifyRecordsAgainst(shared: RecordStore): RecordVerification {
         );
     },
     // Writes nothing to the shared store, so holds nothing back.
-    flush() {},
+    flush: () =>
+      Promise.resolve({
+        kind: "written",
+        records: 0,
+        timing: emptyWriteTiming(),
+      }),
   };
   return {
     store,

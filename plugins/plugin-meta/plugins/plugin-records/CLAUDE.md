@@ -81,7 +81,7 @@ plugin) therefore spreads its FACET misses over worker threads
 `core` defines `RecordStore` (batched; async reads, synchronous writes) and a per-process memory
 store (`currentRecordStore()` without an install). The build, `regen-generated`
 and **every check pass** install the shared one, `cli`'s `openRecordStore()`:
-one SQLite file (`<data root>/cache/plugin-records/records.v2.sqlite`, WAL), so
+one SQLite file (`<data root>/cache/plugin-records/records.v3.sqlite`, WAL), so
 a pass computes only the records no checkout has made yet.
 
 - **Values are content-addressed too.** A key moves whenever anything in its
@@ -95,7 +95,7 @@ a pass computes only the records no checkout has made yet.
   a key already being read joins that read. A lookup is a random read of a
   multi-GB file (~0.5 ms on a loaded host, mostly I/O wait) and a check pass
   asks ~32k: in-process they held the one thread every check shares 10–15 s.
-  Writes stay synchronous (held until `flush`).
+  A put stays synchronous (held until `flush`).
 - **A key is read once per process.** A record is a pure function of its
   key, so the store keeps what it read and never asks SQLite for that key
   again (a no-change build re-read ~37k keys: the facet records for both
@@ -121,11 +121,15 @@ a pass computes only the records no checkout has made yet.
     everything else an open runs is a read on an existing store;
   - **writes are held back, then flushed.** `putMany` holds its records (its
     own `getMany` answers them at once) until `flush()`: one commit per call
-    made a cold codegen's ~3,700 calls cost 4 s on a loaded host. The build
-    flushes at the end of codegen, before its check pass (another process)
-    reads; every process flushes at exit, and past 64 MB held a put flushes
-    on its own. A killed process loses its held records, which only means
-    they are computed again;
+    made a cold codegen's ~3,700 calls cost 4 s on a loaded host. `flush()`
+    is async (it may wait in the writer line, below) and one runs at a time,
+    in call order; past 64 MB held a put starts one on its own. Every process
+    that puts records awaits a flush before it ends: the build at the end of
+    codegen (before its check pass, another process, reads) and in
+    `finalizeBuild`, the check runner right after its checks, before its
+    verdict. The exit listener writes nothing — it cannot wait in a line —
+    and only names what a process held and never wrote. A lost record only
+    means it is computed again;
   - **a write reads nothing under the lock, and holds it a bounded TIME**
     (`writeBounded`). Before each transaction a batch of records is probed
     with no lock — a point lookup of a missing key ends on the very leaf its
@@ -140,17 +144,46 @@ a pass computes only the records no checkout has made yet.
     writer waiting in SQLite's busy handler (which polls) gets the lock,
     rather than this one re-taking it commit after commit. The read path's
     once-a-day `used` refresh is written right after its read, on the pages
-    it brought in.
+    it brought in, and not awaited: an answer never waits in the line;
+  - **writers wait in line.** SQLite's busy handler is a lottery, not a
+    queue: a waiter polls, and whoever polls when the lock frees takes it, so
+    any writer could lose to every newcomer until its 30 s timeout threw
+    (2026-11-12: a green check and a build turned failed by the throw, from
+    the exit listener). So every write transaction first takes a ticket in
+    the store's writer line (`packages/ticket-line`, the `<file>.writers`
+    dir: first come, first served across processes, a dead holder's place
+    freed by the kernel) and takes SQLite's lock only at its head. Each
+    transaction's wait and hold are measured (`RecordWriteTiming`, in every
+    flush outcome and the reclaim's line); a wait over 5 s or a hold over 2 s
+    prints a line naming the process. A turn comes after each writer ahead
+    commits one transaction, so a wait in the line is bounded at 120 s — a
+    bound around another process (one stopped holding its ticket would
+    otherwise hold every writer, and every verdict awaiting a flush). The
+    busy timeout stays only as the backstop for a writer outside the line —
+    never raise either: a write they end is something to find. A reader
+    thread's `used` refreshes are coalesced to one write in flight;
+  - **a lost write is an outcome, not a failure.** A flush the store could
+    not make resolves `{ kind: "lost", reason }` (`RecordFlushOutcome`;
+    `busy` — a writer outside the line, `sqlite` — another SQLite failure,
+    `line` / `line-timeout` — the writer line's) — never a throw (only a
+    programming error throws): it prints one line and, for the host's shared store,
+    files a `plugin-records-write-lost` report (the `write-lost` sub-plugin)
+    through the report outbox. The caller's verdict is untouched;
+  - **one file version per write protocol.** A writer on code before the
+    line takes the lock with no ticket (and one before the time bound held it
+    44–58 s a chunk), so the line came with `records.v3.sqlite`: older code
+    writes `records.v2.sqlite`, which the reclaim unlinks. A future change to
+    how writers take the lock bumps the file again.
 - **Reclaim** is main's daily `plugin-records.reclaim` job (the `reclaim`
   sub-plugin, a supervised `./equin plugin-records-reclaim`), never an open:
   key rows unread for 7 days are deleted a page at a time (read in key order
   with no lock; each row and the value only it named in the same transaction,
   through `writeBounded`; a row read since is kept), then the freed pages are
-  returned in steps sized to hold the lock ~`HOLD_MS`, the lock left free as
-  long after each
-  — on a file created with `auto_vacuum = INCREMENTAL`; any other keeps them
-  for reuse, and the run says so. The first store's file (`records.sqlite`)
-  is unlinked by the same pass.
+  returned in steps sized to hold the lock ~`HOLD_MS`, each transaction taking
+  its own turn in the writer line (so a build's write goes next, not after
+  the whole reclaim) — on a file created with `auto_vacuum = INCREMENTAL`; any other keeps them
+  for reuse, and the run says so. The earlier stores' files
+  (`records.sqlite`, `records.v2.sqlite`) are unlinked by the same pass.
 
 ## Every input in the key — and a verifier
 
@@ -259,16 +292,19 @@ its docblock records — and then lowered as readily as raised.
     - `ModuleGraphInput`
     - `ModuleNode`
     - `OutsideFiles`
+    - `RecordFlushOutcome`
     - `RecordJob`
     - `RecordJobRequest`
     - `RecordStore`
     - `RecordTable`
     - `RecordWorkers`
+    - `RecordWriteTiming`
   - Exports (values):
     - `buildModuleGraph`
     - `createMemoryRecordStore`
     - `currentRecordStore`
     - `defineRecordJob`
+    - `emptyWriteTiming`
     - `gitBlobId`
     - `groupedByOwner`
     - `installRecordStore`
@@ -327,5 +363,6 @@ its docblock records — and then lowered as readily as raised.
   - **`key-width`** — How much of a record producer's key is code it never calls: keyWidths walks a producer's closure through the names it actually imports from each barrel and attributes the rest to the barrel imports…
   - **`reclaim`** — The daily plugin-records.reclaim job: on main, deletes the shared record store's key rows unread for 7 days and the values only they named, then returns the freed pages — a page at a time, off every…
   - **`verify`** — The daily plugin-records.verify job: on main, recomputes every plugin record a tree check pass reads (`./equin check --verify-records`) and fails when one disagrees with the shared store under the…
+  - **`write-lost`** — plugin-records-write-lost report kind: validates the shared record store's lost-write payloads (filed through the report outbox by the store itself, one row per cause) and renders a task naming the…
 
 <!-- AUTOGENERATED:END -->

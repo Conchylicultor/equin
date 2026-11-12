@@ -61,7 +61,7 @@ const run: CliAction<[], { out: string; unlessTree?: string }> = async (
     .under("plugins")
     .filter((p) => isTestFilePath(p) && !p.split("/").includes("node_modules"));
   const digests = await testDigests(snapshot, store, files);
-  store.flush();
+  await store.flush();
   const elapsedMs = Math.round(performance.now() - started);
   writeAtomic(out, {
     kind: "digests",

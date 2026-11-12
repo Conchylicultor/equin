@@ -5667,6 +5667,10 @@
       "name": "@equin/plugin-plugin-meta-plugin-records-verify",
       "version": "0.0.1",
     },
+    "plugins/plugin-meta/plugins/plugin-records/plugins/write-lost": {
+      "name": "@equin/plugin-plugin-meta-plugin-records-write-lost",
+      "version": "0.0.1",
+    },
     "plugins/plugin-meta/plugins/plugin-refs": {
       "name": "@equin/plugin-plugin-meta-plugin-refs",
       "version": "0.0.1",
@@ -10354,6 +10358,8 @@
     "@equin/plugin-plugin-meta-plugin-records-reclaim": ["@equin/plugin-plugin-meta-plugin-records-reclaim@workspace:plugins/plugin-meta/plugins/plugin-records/plugins/reclaim"],
 
     "@equin/plugin-plugin-meta-plugin-records-verify": ["@equin/plugin-plugin-meta-plugin-records-verify@workspace:plugins/plugin-meta/plugins/plugin-records/plugins/verify"],
+
+    "@equin/plugin-plugin-meta-plugin-records-write-lost": ["@equin/plugin-plugin-meta-plugin-records-write-lost@workspace:plugins/plugin-meta/plugins/plugin-records/plugins/write-lost"],
 
     "@equin/plugin-plugin-meta-plugin-refs": ["@equin/plugin-plugin-meta-plugin-refs@workspace:plugins/plugin-meta/plugins/plugin-refs"],
 

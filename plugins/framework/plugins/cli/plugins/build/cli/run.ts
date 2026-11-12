@@ -3,6 +3,7 @@ import {
   readEnv,
 } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
+import { currentRecordStore } from "@plugins/plugin-meta/plugins/plugin-records/core";
 import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { retryUntil, fixed } from "@plugins/packages/plugins/retry/core";
 import { sweepDistLeftovers } from "./internal/dist-publish";
@@ -829,6 +830,13 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
     // Only now: the verdict is in the log, so a reader that sees the marker
     // gone finds the terminal rather than an op that looks killed.
     marker.release();
+    // The records put since codegen's flush, written before the process
+    // ends — not by the store's exit listener, which writes nothing. A write
+    // the store could not make is its own outcome (logged and reported by
+    // the store), never this build's verdict: the records are computed again.
+    // From the exit hook below it writes nothing (an exit listener runs no
+    // event loop); the store's exit line names what it did not write.
+    await currentRecordStore().flush();
     // Release the DB pools LAST, after every synchronous durable write
     // above. The process.on("exit") backstop below can run this sync body
     // but cannot await — that's fine: the profile / log / op record is

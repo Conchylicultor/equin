@@ -1,11 +1,31 @@
-import { Database } from "bun:sqlite";
+import { Database, SQLiteError } from "bun:sqlite";
 import { rmSync } from "node:fs";
 import { z } from "zod";
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
+import {
+  createTicketLine,
+  type Ticket,
+  type TicketLine,
+} from "@plugins/packages/plugins/ticket-line/core";
 import {
   createThreadPool,
   serveThreadPool,
 } from "@plugins/packages/plugins/thread-pool/cli";
-import { RECORD_TABLES, type RecordStore, type RecordTable } from "../../core";
+import { fileReportFromProcess } from "@plugins/reports/plugins/outbox/core";
+import {
+  RECORDS_WRITE_LOST_KIND,
+  recordsWriteLostMessage,
+  type RecordsWriteLostPayload,
+} from "@plugins/plugin-meta/plugins/plugin-records/plugins/write-lost/core";
+import {
+  emptyWriteTiming,
+  RECORD_TABLES,
+  type RecordFlushOutcome,
+  type RecordStore,
+  type RecordTable,
+  type RecordWriteTiming,
+} from "../../core";
 import { pluginRecordsDir } from "../../data-dirs";
 
 /**
@@ -36,6 +56,26 @@ import { pluginRecordsDir } from "../../data-dirs";
  * commits once it has held the lock {@link HOLD_MS}, however many records are
  * left. The reclaim runs off every build's path, the same way.
  *
+ * WRITERS WAIT IN LINE. SQLite's busy handler is a lottery, not a queue: a
+ * waiter polls, and whoever polls when the lock frees takes it, so a waiter
+ * can lose to every newcomer until its timeout throws — however short each
+ * hold is. So every write transaction first takes a ticket in the store's
+ * writer line (`packages/ticket-line`: first come, first served across
+ * processes, a dead holder's place freed by the kernel), and takes SQLite's
+ * lock only at the head of it, where nobody else wants it. Each transaction's
+ * wait in the line and hold of the lock are measured ({@link RecordWriteTiming});
+ * a long one prints a line naming this process. The busy timeout remains only
+ * as the backstop for a writer OUTSIDE the line — and a write that still
+ * cannot take the lock is an outcome, not a failure: its records are
+ * {@link RecordFlushOutcome} `lost` (logged, and reported as
+ * `plugin-records-write-lost`), and computed again by the next pass.
+ *
+ * ONE FILE VERSION PER WRITE PROTOCOL. A writer on code before the line takes
+ * the lock without a ticket, and one on code before the time bound held it
+ * 44–58 s a chunk (2026-11-12) — past every waiter's backstop. So the line
+ * came with a new file ({@link FILE}): code without the line writes the old
+ * one, which the daily reclaim unlinks ({@link LEGACY_FILES}).
+ *
  * NO READ HOLDS THE CALLER'S THREAD. A lookup is a random read of a multi-GB
  * file: measured 2026-11-12 on a 24M-row, 8.7 GB store (5% of its rows read
  * that day, so nearly every page holds a live row and none stays cached) at
@@ -59,6 +99,20 @@ const BATCH = 500;
 // Reader threads, each with its own connection: a lookup is I/O-bound (a
 // random page read), so a few in flight at once overlap their waits.
 const READERS = 4;
+// A wait in the writer line, or a hold of the lock, past these prints a line
+// naming this process: what identifies who held the store when a pass was slow.
+const LONG_WAIT_MS = 5_000;
+const LONG_HOLD_MS = 2_000;
+// The longest a write waits for its turn in the writer line. A turn comes
+// after each writer ahead commits one transaction (~HOLD_MS; one ticket per
+// process at a time), so a wait this long is a holder that stopped, not a
+// queue — a bound around another process, ending in a lost write, said.
+const LINE_WAIT_MS = 120_000;
+// SQLite's own wait for the write lock: the backstop for a writer outside the
+// line (every writer of this file version is in it). Not the queue — the line
+// is — so a write it times out is a writer outside the line to find, never a
+// number to raise.
+const BUSY_TIMEOUT_MS = 30_000;
 // The longest one write transaction holds the store's lock. Bounded by TIME,
 // not by a record count: what one record costs under the lock is not a
 // constant. The count bound before it (2,000 records, measured 2026-11-08 at
@@ -67,17 +121,16 @@ const READERS = 4;
 // (its pages no longer in the page cache) and each insert descends three
 // B-trees — so every other writer's 30 s busy wait ran out behind it.
 export const HOLD_MS = 200;
-// How many records one read before the lock covers (see writeBounded). Each
-// such read leaves the lock free while it runs: the gap in which a writer
-// waiting in SQLite's busy handler (which polls, at most 100 ms apart) takes
-// it, rather than this one re-taking it at once, commit after commit.
+// How many records one read before the lock covers (see writeBounded).
 const PROBE_BATCH = 200;
 // How many key rows one reclaim step reads; the most freed pages one returns.
 const RECLAIM_PAGE = 5_000;
-// The first store's file (text keys, a value per row): unlinked on the daily
-// reclaim, so its gigabytes go once every checkout reads this one.
-const LEGACY_FILE = "records.sqlite";
-const FILE = "records.v2.sqlite";
+// The store's earlier files, unlinked on the daily reclaim so their gigabytes
+// go once every checkout reads this one: the first (text keys, a value per
+// row), then v2 — the same schema, written by code that took the lock with no
+// place in the writer line.
+const LEGACY_FILES = ["records.sqlite", "records.v2.sqlite"];
+const FILE = "records.v3.sqlite";
 // A record key is a sha256 (`recordKey`), stored as its 32 bytes.
 const KEY = /^[0-9a-f]{64}$/;
 
@@ -97,13 +150,22 @@ const RecordRows = z.array(
   }),
 );
 
-// The backstop: a process that never flushed (a script, a check pass) still
-// leaves its records behind. A killed one loses them, which only means they
-// are computed again: every record is a pure function of its key. One exit
-// listener for every store the process opened.
-const openStores = new Set<() => void>();
+// What a process held and never wrote, said at its exit. A write waits in the
+// writer line, which an exit listener cannot (it runs no event loop), so the
+// exit writes nothing: a process that puts records flushes before it ends
+// (the build, the check runner, every script that opens the store). What it
+// did not — killed, or exited past its flush — is lost, which only means it is
+// computed again (every record is a pure function of its key), and this names
+// it. Never a throw: an exit listener's throw replaced a green verdict with a
+// failed one (2026-11-12).
+const openStores = new Set<() => number>();
 process.on("exit", () => {
-  for (const flush of openStores) flush();
+  let unwritten = 0;
+  for (const held of openStores) unwritten += held();
+  if (unwritten > 0)
+    console.error(
+      `[plugin-records] ${unwritten} records not written: the process exited before flushing them — they are computed again next time`,
+    );
 });
 
 function today(): number {
@@ -122,12 +184,15 @@ function keyBytes(key: string): Buffer {
  * The store's database, set up. Takes no write lock on an existing store: on
  * one, each statement here is a read.
  */
-function openDatabase(path: string): Database {
+function openDatabase(
+  path: string,
+  opts?: { busyTimeoutMs?: number },
+): Database {
   const db = new Database(path, { create: true });
   // First, so every statement after it — the first open's own pragmas
   // included, when several processes create the file at once — waits for a
   // writer instead of failing.
-  db.exec("PRAGMA busy_timeout = 30000");
+  db.exec(`PRAGMA busy_timeout = ${opts?.busyTimeoutMs ?? BUSY_TIMEOUT_MS}`);
   // Before any table exists, or it does not take: a reclaim can then return
   // its freed pages (`incremental_vacuum`) without rewriting the file. Only
   // then: setting it runs a WRITE transaction even when the file already has
@@ -153,12 +218,111 @@ function openDatabase(path: string): Database {
   return db;
 }
 
+/** The writer line of the store at `path`: every process writing it shares it. */
+function writerLine(path: string): TicketLine {
+  return createTicketLine(asAppPath(`${path}.writers`));
+}
+
+/** A write SQLite could not take the lock for, within its busy timeout. */
+function isBusy(err: SQLiteError): boolean {
+  return err.code?.startsWith("SQLITE_BUSY") === true;
+}
+
 /**
- * One write transaction, taking the write lock at its BEGIN (under the busy
- * timeout) rather than at its first write.
+ * The writer line failed this write: its wait outlasted {@link LINE_WAIT_MS}
+ * (`line-timeout`: whoever is ahead stalls — a stopped or starved process
+ * holding its ticket), or a ticket could not be taken or left (`line`: the
+ * line's directory, or the child a waiter blocks in).
  */
-function write(db: Database, fn: () => void): void {
-  db.transaction(fn).immediate();
+class WriterLineError extends Error {
+  constructor(
+    readonly reason: "line" | "line-timeout",
+    message: string,
+    options: { cause: unknown },
+  ) {
+    super(message, options);
+  }
+}
+
+/**
+ * A ticket at the head of the line, waited for at most {@link LINE_WAIT_MS}.
+ * The bound is around OTHER processes (one stopped holding its ticket would
+ * otherwise hold every writer on the host, and every verdict waiting on a
+ * flush, for as long as it lives); a wait it ends is a lost write, said.
+ */
+async function joinLine(line: TicketLine): Promise<Ticket> {
+  const signal = AbortSignal.timeout(LINE_WAIT_MS);
+  try {
+    return await line.join({ signal });
+  } catch (err) {
+    throw signal.aborted
+      ? new WriterLineError(
+          "line-timeout",
+          `no turn in the store's writer line within ${LINE_WAIT_MS / 1000} s`,
+          { cause: err },
+        )
+      : new WriterLineError(
+          "line",
+          `could not join the store's writer line: ${String(err)}`,
+          { cause: err },
+        );
+  }
+}
+
+/**
+ * One write transaction, at the head of the writer line: waits its turn, takes
+ * SQLite's write lock at its BEGIN (under the busy timeout — the backstop for
+ * a writer outside the line), runs `fn`, commits and leaves the line. The wait
+ * and the hold (from the turn granted to the commit: how long this process
+ * kept everyone behind it waiting) are added to `timing`, and a long one is
+ * said, naming this process.
+ */
+async function writeInLine(
+  db: Database,
+  line: TicketLine,
+  timing: RecordWriteTiming,
+  fn: () => void,
+  now: () => number = () => performance.now(),
+): Promise<void> {
+  const asked = now();
+  const ticket = await joinLine(line);
+  const granted = now();
+  let held = 0;
+  try {
+    const waited = granted - asked;
+    timing.waitedMs += waited;
+    timing.longestWaitMs = Math.max(timing.longestWaitMs, waited);
+    if (waited > LONG_WAIT_MS)
+      console.error(
+        `[plugin-records] waited ${Math.round(waited)} ms in the store's writer line (pid ${process.pid})`,
+      );
+    try {
+      db.transaction(fn).immediate();
+    } finally {
+      held = now() - granted;
+    }
+  } finally {
+    await ticket.leave().catch((err: unknown) => {
+      throw new WriterLineError(
+        "line",
+        `could not leave the store's writer line: ${String(err)}`,
+        { cause: err },
+      );
+    });
+  }
+  timing.transactions++;
+  timing.heldMs += held;
+  timing.longestHoldMs = Math.max(timing.longestHoldMs, held);
+  if (held > LONG_HOLD_MS)
+    console.error(
+      `[plugin-records] held the store's write lock ${Math.round(held)} ms (pid ${process.pid}: ${commandLine()})`,
+    );
+}
+
+/** This process's command line, abridged: who a log line or report is about. */
+function commandLine(): string {
+  const cmd = process.argv.slice(1).join(" ");
+  return cmd.length > 200 ? `${cmd.slice(0, 200)}…` : cmd;
 }
 
 /**
@@ -166,27 +330,30 @@ function write(db: Database, fn: () => void): void {
  * ~{@link HOLD_MS}, plus the item that crossed it — an item is one row's
  * statements, so a transaction is never left half an item. What one item
  * costs is not bounded here: a row's statements must stay small (a reclaimed
- * value's overflow pages, freed under the lock, are the largest today).
+ * value's overflow pages, freed under the lock, are the largest today). Each
+ * transaction waits its turn in the writer line ({@link writeInLine}); the
+ * waits and holds are added to `timing`, which keeps what was measured even
+ * when a transaction throws.
  *
  * Before each transaction, `probe` reads — with no lock, from the reader's own
- * WAL snapshot — a batch of up to {@link PROBE_BATCH} items: the very pages the
- * item's statements will descend (a point lookup of a missing key ends on the
- * leaf its insert goes into), so the locked statements find them in the page
- * cache (the OS's file cache: SQLite drops its own whenever another
- * connection commits) instead of each waiting on the disk with every other writer queued
- * behind. It returns the items still to write (a record another process stored
- * meanwhile needs no write at all). What one transaction leaves is probed
- * again with the next batch: whatever the store's size or the host's load, the
- * slow part — the reads — runs outside the lock, and the lock is free while it
- * does.
+ * WAL snapshot, before taking a ticket — a batch of up to {@link PROBE_BATCH}
+ * items: the very pages the item's statements will descend (a point lookup of
+ * a missing key ends on the leaf its insert goes into), so the locked
+ * statements find them in the page cache (the OS's file cache: SQLite drops its
+ * own whenever another connection commits) instead of each waiting on the disk
+ * with every other writer queued behind. It returns the items still to write
+ * (a record another process stored meanwhile needs no write at all). What one
+ * transaction leaves is probed again with the next batch: whatever the store's
+ * size or the host's load, the slow part — the reads — runs outside the lock.
  */
-export function writeBounded<T>(
+export async function writeBounded<T>(
   db: Database,
+  line: TicketLine,
   items: readonly T[],
   probe: (batch: readonly T[]) => readonly T[],
   apply: (item: T) => void,
+  timing: RecordWriteTiming,
   opts?: {
-    pace?: boolean;
     /**
      * The clock the hold is measured on (ms; `performance.now` by default).
      * The rule under test is "commit once held ≥ HOLD_MS", a function of
@@ -196,7 +363,7 @@ export function writeBounded<T>(
      */
     now?: () => number;
   },
-): void {
+): Promise<void> {
   const now = opts?.now ?? (() => performance.now());
   let next = 0;
   let carry: readonly T[] = [];
@@ -205,24 +372,72 @@ export function writeBounded<T>(
     next += take.length;
     const batch = probe([...carry, ...take]);
     let done = 0;
-    let held = 0;
     if (batch.length > 0)
-      write(db, () => {
-        const start = now();
-        do apply(batch[done++]!);
-        while (done < batch.length && (held = now() - start) < HOLD_MS);
-        held = now() - start;
-      });
+      await writeInLine(
+        db,
+        line,
+        timing,
+        () => {
+          const start = now();
+          do apply(batch[done++]!);
+          while (done < batch.length && now() - start < HOLD_MS);
+        },
+        now,
+      );
     carry = batch.slice(done);
-    // A background writer (the reclaim) leaves the lock free as long as it
-    // held it before taking it again, so a build's writer waiting in the busy
-    // handler gets it even when the next probe finds its pages warm (no gap).
-    if (opts?.pace && (next < items.length || carry.length > 0))
-      Bun.sleepSync(held);
   }
 }
 
-function storePath(opts?: { path?: string }): string {
+/**
+ * {@link writeBounded}, with a write the store could not make as an outcome,
+ * never a throw: the lock busy past the backstop (`busy`: a writer outside
+ * the line), any other SQLite failure (`sqlite`: the disk full, an I/O
+ * error), or the writer line's (`line`, `line-timeout`) — each `lost`, its
+ * `records` counting all of `items` (those an earlier transaction committed
+ * included: an upper bound on what is missing), computed again by whichever
+ * pass next asks for them. Only a programming error throws.
+ */
+async function writeOrLose<T>(
+  db: Database,
+  line: TicketLine,
+  items: readonly T[],
+  probe: (batch: readonly T[]) => readonly T[],
+  apply: (item: T) => void,
+): Promise<RecordFlushOutcome> {
+  const timing = emptyWriteTiming();
+  try {
+    await writeBounded(db, line, items, probe, apply, timing);
+  } catch (err) {
+    if (!(err instanceof WriterLineError || err instanceof SQLiteError))
+      throw err;
+    return {
+      kind: "lost",
+      records: items.length,
+      reason:
+        err instanceof WriterLineError
+          ? err.reason
+          : isBusy(err)
+            ? "busy"
+            : "sqlite",
+      error: err.message,
+      timing,
+    };
+  }
+  return { kind: "written", records: items.length, timing };
+}
+
+interface StoreOptions {
+  /** Another file than the host's shared store (a test's). */
+  path?: string;
+  /**
+   * SQLite's backstop wait for a writer outside the line (ms;
+   * {@link BUSY_TIMEOUT_MS} by default) — a test's, to reach a lost write
+   * without waiting the real one.
+   */
+  busyTimeoutMs?: number;
+}
+
+function storePath(opts?: StoreOptions): string {
   return (
     opts?.path ?? (pluginRecordsDir.ensureSync(), pluginRecordsDir.file(FILE))
   );
@@ -235,6 +450,8 @@ export interface ReclaimResult {
   /** False on a file not created with auto_vacuum = INCREMENTAL. */
   returnsPages: boolean;
   pagesFreed: number;
+  /** How its transactions waited in the writer line and held the lock. */
+  timing: RecordWriteTiming;
 }
 
 /**
@@ -243,12 +460,19 @@ export interface ReclaimResult {
  * store long: the key rows are read a page at a time in primary-key order
  * with no lock, and each stale row and the value it alone named go in the
  * same {@link writeBounded} transaction (so an interrupted reclaim leaves no
- * value no row names). O(key rows) to read,
+ * value no row names). Every transaction waits its turn in the writer line, so
+ * a build's write queued behind the reclaim goes next, not after all of it.
+ * O(key rows) to read,
  * O(what it deletes) to write: a value can only lose its last name when a row
  * naming it is deleted, so no scan of the values is needed.
  */
-export function reclaimRecordStore(opts?: { path?: string }): ReclaimResult {
-  const db = openDatabase(storePath(opts));
+export async function reclaimRecordStore(
+  opts?: StoreOptions,
+): Promise<ReclaimResult> {
+  const path = storePath(opts);
+  const db = openDatabase(path, opts);
+  const line = writerLine(path);
+  const timing = emptyWriteTiming();
   const cutoff = today() - KEEP_DAYS;
   const page = db.query(
     "SELECT key, vid, used FROM keys WHERE tbl = ? AND key > ? ORDER BY key LIMIT ?",
@@ -263,7 +487,7 @@ export function reclaimRecordStore(opts?: { path?: string }): ReclaimResult {
   );
   const valueAt = db.query("SELECT 1 FROM vals WHERE vid = ?");
   const keyNaming = db.query("SELECT 1 FROM keys WHERE vid = ? LIMIT 1");
-  const result: ReclaimResult = {
+  const result: Omit<ReclaimResult, "timing"> = {
     keysRead: 0,
     keysDeleted: 0,
     valuesDeleted: 0,
@@ -293,8 +517,9 @@ export function reclaimRecordStore(opts?: { path?: string }): ReclaimResult {
       // transaction (a row sharing the value deleted later deletes it then);
       // the value's pages read first, with no lock (its keys row was just
       // read with the page).
-      writeBounded(
+      await writeBounded(
         db,
+        line,
         rows.filter((r) => r.used < cutoff),
         (batch) => {
           for (const r of batch) {
@@ -308,7 +533,7 @@ export function reclaimRecordStore(opts?: { path?: string }): ReclaimResult {
           result.keysDeleted++;
           result.valuesDeleted += deleteOrphan.run(r.vid, r.vid).changes;
         },
-        { pace: true },
+        timing,
       );
     }
   }
@@ -330,11 +555,11 @@ export function reclaimRecordStore(opts?: { path?: string }): ReclaimResult {
     // (timed from the lock taken, not from the wait for it) to hold the lock
     // ~HOLD_MS, growing at most twofold a step: a page's cost is not a
     // constant, and a step sized from a warm one could find its pages cold.
-    // After each, the reclaim leaves the lock free as long as it held it.
+    // Each step takes its own turn in the writer line.
     let step = 16;
     for (let free = freelist(); free > 0;) {
       let held = 0;
-      write(db, () => {
+      await writeInLine(db, line, timing, () => {
         const start = performance.now();
         db.exec(`PRAGMA incremental_vacuum(${Math.min(free, step)})`);
         held = performance.now() - start;
@@ -354,7 +579,6 @@ export function reclaimRecordStore(opts?: { path?: string }): ReclaimResult {
         ),
       );
       free = left;
-      if (free > 0) Bun.sleepSync(held);
     }
   }
   // A checkout still on the code that reclaimed inside its first open of the
@@ -363,7 +587,7 @@ export function reclaimRecordStore(opts?: { path?: string }): ReclaimResult {
   db.exec(
     "CREATE TABLE IF NOT EXISTS meta (name TEXT PRIMARY KEY, value TEXT NOT NULL) WITHOUT ROWID",
   );
-  write(db, () =>
+  await writeInLine(db, line, timing, () =>
     db
       .query(
         "INSERT INTO meta (name, value) VALUES ('pruned', ?) ON CONFLICT (name) DO UPDATE SET value = excluded.value",
@@ -372,11 +596,10 @@ export function reclaimRecordStore(opts?: { path?: string }): ReclaimResult {
   );
   db.close();
   if (opts?.path === undefined)
-    for (const suffix of ["", "-wal", "-shm"])
-      rmSync(pluginRecordsDir.file(`${LEGACY_FILE}${suffix}`), {
-        force: true,
-      });
-  return result;
+    for (const file of LEGACY_FILES)
+      for (const suffix of ["", "-wal", "-shm"])
+        rmSync(pluginRecordsDir.file(`${file}${suffix}`), { force: true });
+  return { ...result, timing };
 }
 
 /** One batch of lookups, as a reader thread is sent it. */
@@ -408,37 +631,64 @@ export function serveRecordReads(): void {
 
 function recordReader(path: string): (req: ReadRequest) => [string, string][] {
   const db = openDatabase(path);
+  const line = writerLine(path);
   const select = (n: number) =>
     db.query(
       `SELECT k.key AS key, v.value AS value, k.used AS used FROM keys k JOIN vals v ON v.vid = k.vid WHERE k.tbl = ? AND k.key IN (${Array(n).fill("?").join(",")})`,
     );
   const touch = db.query("UPDATE keys SET used = ? WHERE tbl = ? AND key = ?");
+  // The last-read days still to refresh, and whether a refresh is running.
+  // One refresh write at a time per reader, folding in whatever stale rows
+  // the reads found meanwhile: a pass's ~64 read batches are a handful of
+  // writes, never a ticket each in the writer line.
+  let stale: { tbl: RecordTable; key: Uint8Array; day: number }[] = [];
+  let refreshing = false;
+  const refresh = async (): Promise<void> => {
+    refreshing = true;
+    while (stale.length > 0) {
+      const rows = stale;
+      stale = [];
+      const outcome = await writeOrLose(
+        db,
+        line,
+        rows,
+        (batch) => batch,
+        (r) => touch.run(r.day, r.tbl, r.key),
+      );
+      if (outcome.kind === "lost")
+        console.error(
+          `[plugin-records] ${outcome.records} last-read days not refreshed (${outcome.reason}: ${outcome.error})`,
+        );
+    }
+    refreshing = false;
+  };
   return ({ tbl, keys, day }) => {
     const found: [string, string][] = [];
-    const stale: Uint8Array[] = [];
     for (const row of RecordRows.parse(
       select(keys.length).all(tbl, ...keys.map(keyBytes)),
     )) {
       found.push([Buffer.from(row.key).toString("hex"), row.value]);
-      if (row.used < day) stale.push(row.key);
+      if (row.used < day) stale.push({ tbl, key: row.key, day });
     }
-    // Refreshed right after their read, so the pages the updates touch
-    // are the ones it just brought in: no read before the lock is needed.
-    writeBounded(
-      db,
-      stale,
-      (batch) => batch,
-      (key) => touch.run(day, tbl, key),
-    );
+    // Refreshed soon after their read, so the pages the updates touch are
+    // the ones it just brought in: no read before the lock is needed. Not
+    // awaited: the answer never waits in the writer line. A refresh lost (a
+    // busy store, or the process gone first) only lets the reclaim take the
+    // row a day early, to be computed again.
+    if (stale.length > 0 && !refreshing) void refresh();
     return found;
   };
 }
 
-export function openRecordStore(opts?: { path?: string }): RecordStore {
+export function openRecordStore(opts?: StoreOptions): RecordStore {
   const path = storePath(opts);
   // Opened here first: a fresh file is created (and its schema made) before
   // any reader thread opens it.
-  const db = openDatabase(path);
+  const db = openDatabase(path, opts);
+  const line = writerLine(path);
+  // A lost write of the host's shared store is reported; a test's own file
+  // is only logged.
+  const shared = opts?.path === undefined;
   const day = today();
   // Lazy (no thread until the first lookup) and unref-ed while idle, so it
   // never keeps the process alive.
@@ -466,8 +716,20 @@ export function openRecordStore(opts?: { path?: string }): RecordStore {
   );
 
   // What `putMany` has held back, per table, until the next `flush`.
-  const pending = new Map<RecordTable, Map<string, string>>();
+  type Held = Map<RecordTable, Map<string, string>>;
+  let pending: Held = new Map();
   let pendingBytes = 0;
+  // What flushes have taken from `pending` and not yet written: still
+  // answered by `getMany` until it is in the store.
+  const writing = new Set<Held>();
+  const countOf = (held: Held): number => {
+    let n = 0;
+    for (const m of held.values()) n += m.size;
+    return n;
+  };
+  // One flush writes at a time, in call order: a flush returns once every
+  // record put before it is written (or lost).
+  const flushes = createKeyedMutex();
   // Every record this process has read, per table. A record is a pure
   // function of its key, so a key this process already read is never asked of
   // SQLite again: a build reads the same facts from several readers (the facet
@@ -491,24 +753,24 @@ export function openRecordStore(opts?: { path?: string }): RecordStore {
     if (!m) inFlight.set(tbl, (m = new Map()));
     return m;
   };
-  const flush = (): void => {
-    if (pending.size === 0) return;
+  const writeHeld = async (held: Held): Promise<RecordFlushOutcome> => {
     const rows: {
       tbl: RecordTable;
       key: Buffer;
       vid: Buffer;
       value: string;
     }[] = [];
-    for (const [tbl, held] of pending)
-      for (const [k, value] of held)
+    for (const [tbl, records] of held)
+      for (const [k, value] of records)
         rows.push({
           tbl,
           key: keyBytes(k),
           vid: new Bun.CryptoHasher("sha256").update(value).digest(),
           value,
         });
-    writeBounded(
+    const outcome = await writeOrLose(
       db,
+      line,
       rows,
       // A key already stored (by another build that computed the same
       // record) is dropped: its value is the same. The value is still
@@ -526,10 +788,64 @@ export function openRecordStore(opts?: { path?: string }): RecordStore {
         insertKey.run(r.tbl, r.key, r.vid, day);
       },
     );
-    pending.clear();
-    pendingBytes = 0;
+    if (outcome.kind === "lost") await sayLost(outcome);
+    return outcome;
   };
-  openStores.add(flush);
+  // A lost write, said: one line, and — for the host's shared store — a
+  // report. Never a throw: the caller's verdict is not the store's.
+  const sayLost = async (
+    outcome: Extract<RecordFlushOutcome, { kind: "lost" }>,
+  ): Promise<void> => {
+    const data: RecordsWriteLostPayload = {
+      reason: outcome.reason,
+      store: path,
+      records: outcome.records,
+      error: outcome.error,
+      pid: process.pid,
+      command: commandLine(),
+      ...outcome.timing,
+    };
+    const message = recordsWriteLostMessage(data);
+    console.error(`[plugin-records] ${message}`);
+    if (!shared) return;
+    // No `code`: what held the lock is the host's state, not a source file.
+    // `fileReportFromProcess` says why itself when it cannot file.
+    const filed = await fileReportFromProcess({
+      kind: RECORDS_WRITE_LOST_KIND,
+      message,
+      data,
+    });
+    if (filed.outcome === "written")
+      console.error(
+        `[plugin-records] filed a ${RECORDS_WRITE_LOST_KIND} report`,
+      );
+  };
+  const flush = (): Promise<RecordFlushOutcome> => {
+    const held = pending;
+    pending = new Map();
+    pendingBytes = 0;
+    if (held.size > 0) writing.add(held);
+    return flushes.run("flush", async () => {
+      try {
+        if (held.size === 0)
+          return { kind: "written", records: 0, timing: emptyWriteTiming() };
+        const outcome = await writeHeld(held);
+        // Not in the store, but still this process's: its own reads keep
+        // answering them rather than computing them again.
+        if (outcome.kind === "lost")
+          for (const [tbl, records] of held)
+            for (const [k, v] of records) knownOf(tbl).set(k, v);
+        return outcome;
+      } finally {
+        writing.delete(held);
+      }
+    });
+  };
+  openStores.add(() => {
+    let n = countOf(pending);
+    for (const held of writing) n += countOf(held);
+    return n;
+  });
 
   return {
     environment: `bun ${Bun.version} ${process.platform}-${process.arch}`,
@@ -540,12 +856,18 @@ export function openRecordStore(opts?: { path?: string }): RecordStore {
       // this process already read or wrote from what it knows, one another
       // caller is reading from that read.
       const held = pending.get(tbl);
+      const inWrite: Map<string, string>[] = [];
+      for (const w of writing) {
+        const m = w.get(tbl);
+        if (m) inWrite.push(m);
+      }
       const seen = knownOf(tbl);
       const flying = inFlightOf(tbl);
       const joined = new Set<Promise<void>>();
       const ask: string[] = [];
       for (const k of keys) {
-        const v = held?.get(k) ?? seen.get(k);
+        const v =
+          held?.get(k) ?? inWrite.find((m) => m.has(k))?.get(k) ?? seen.get(k);
         if (v !== undefined) out.set(k, v);
         else {
           const f = flying.get(k);
@@ -586,7 +908,9 @@ export function openRecordStore(opts?: { path?: string }): RecordStore {
         held.set(k, v);
         pendingBytes += v.length;
       }
-      if (pendingBytes >= FLUSH_BYTES) flush();
+      // Its outcome is said by the flush itself; the caller's own flush
+      // still waits for it (one flush at a time, in order).
+      if (pendingBytes >= FLUSH_BYTES) void flush();
     },
     flush,
   };

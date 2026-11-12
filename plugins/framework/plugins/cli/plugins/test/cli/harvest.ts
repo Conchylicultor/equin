@@ -73,7 +73,7 @@ export async function startHarvest(
     const store = openRecordStore();
     const snapshot = await repoSnapshotNow(root);
     const digests = await testDigests(snapshot, store, files);
-    store.flush();
+    await store.flush();
     console.log(
       `(test digests: ${files.length} file${files.length === 1 ? "" : "s"} in ${Math.round(performance.now() - t0)} ms)`,
     );

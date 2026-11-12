@@ -34,4 +34,4 @@ await testDigests(snapshot2, store, files);
 console.log(
   `again on a new snapshot: snapshot ${Math.round(t2 - t)} ms, digest ${ms(t2)}`,
 );
-store.flush();
+await store.flush();
