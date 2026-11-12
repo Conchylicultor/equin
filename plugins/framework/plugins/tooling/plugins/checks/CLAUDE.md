@@ -27,6 +27,37 @@ left in that gitignored directory counted as source and failed its coverage
 gate. Both ask git for tracked + untracked-not-ignored — the same universe
 `computeTreeHash` builds. The `no-adhoc-repo-walk` lint rule enforces it.
 
+## Reading code: `sourceAnalysis`, not regexes
+
+A check that asks a question about code — where a function is called, what an
+import names, what a `const` holds, which file a specifier is — answers it with
+**`sourceAnalysis(ctx)`** (exported from `checks/core`; the API is the
+[`source-analysis`](plugins/source-analysis/CLAUDE.md) sub-plugin), never with
+regexes over masked text (`findImports` / `matchBracket` / an `importAliases`
+map / a `const x =` pattern). Text scanners guess, and what they cannot guess
+they skip: aliases, re-exports, `export *` barrels, namespace imports,
+ternaries, spreads and wrappers silently escape them, and the check passes over
+the case it exists for.
+
+- **`usesOf({ key: { rel, name } }, (g) => listCandidateSources({ grepArg: g }))`**
+  — every call / member call / re-export of a declaration, through every
+  barrel and alias.
+- **`bindingOf(file, id)` → `initializerOf(decl)`** — follow a name to its
+  declaration (scope-aware, across files) and read its value.
+- **`literalString(ts, file, expr)`** — a literal argument.
+
+It is **fail-closed**: every answer carries what it could NOT read
+(`Readout`'s `unreadable` arm, `Collected.unreadable`, each with file:line and
+how to rewrite it). Report each as a violation (`formatUnreadable`) — dropping
+them reopens the hole. Codegen calls `failClosed`, which throws naming all of
+them (the icon manifest scan, `codegen/core/icon-manifest.scan.ts`, is the
+reference user).
+
+It reuses the repo project (the root `tsconfig.json`'s module resolution) and
+the run-shared parse (`parsedTsSource`, so the thread yields); it builds no
+type checker. Every check of a pass shares one analysis; an input-keyed check
+gets its own, so its reads land in its read-set.
+
 ## Grep selections are answered per blob (`core/grep-index.ts`)
 
 `grepCode` / `grepImports` / `listCandidateSources` select their candidates
@@ -460,13 +491,14 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
 
 - Description: Check runner and built-in checks for ./equin check
 - Core:
-  - Uses: 72 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 75 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework/tooling` ×11
     - `packages/timed-fs` ×10
     - `framework/tooling/exempt` ×7
     - `reports/check-thread-stall` ×7
     - `infra/stack-sampler` ×5
     - `infra/host-fs/user-path` ×4
+    - `framework/tooling/checks/source-analysis` ×3
     - `infra/launcher/env-names` ×3
     - `infra/spawn` ×3
     - `plugin-meta/parse-utils` ×3
@@ -536,6 +568,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `runChecks`
     - `scopeOf`
     - `sliceCheckThread`
+    - `sourceAnalysis`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
   - Imported by:
@@ -614,6 +647,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
   - **`pre-barrel-manifests-complete`**
   - **`reorderable-slots-in-sync`**
   - **`snapshot-chain-intact`**
+  - **`source-analysis`**
   - **`space-ramp-in-sync`**
   - **`table-defs-in-schema-glob`** [exempt]
   - **`tailwind-scan-covers-classes`**

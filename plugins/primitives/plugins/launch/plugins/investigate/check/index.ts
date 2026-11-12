@@ -51,6 +51,9 @@ const EXPORTED_FN = /\bexport\s+function\s+(\w+)/g;
 
 const notTest = (f: CandidateSource) => !isTestCodePath(f.rel.split("/"));
 
+/** How many names one `git grep -E` alternation holds when following tinted constants. */
+const NAME_GREP_CHUNK = 100;
+
 /** Local binding → the name it was imported under. */
 function importAliases(file: CandidateSource): Map<string, string> {
   const imported = new Map<string, string>();
@@ -324,13 +327,26 @@ const failuresRegistered: Check = {
         )
       ).known;
       if (names.size === 0) break;
-      const more = await listCandidateSources({
-        root,
-        // git grep's extended regexp: a plain alternation (a wider net is
-        // harmless — every file is parsed anyway).
-        grepArg: [...names].join("|"),
-        fixed: false,
-      });
+      // git grep's extended regexp: a plain alternation (a wider net is
+      // harmless — every file is parsed anyway), in bounded chunks: the
+      // name-based closure can know hundreds of names, and one alternation of
+      // them all outgrew git's regex limit (the grep exited 128). The union of
+      // the chunks selects exactly the files the whole alternation would.
+      const all = [...names];
+      const chunks: string[][] = [];
+      for (let i = 0; i < all.length; i += NAME_GREP_CHUNK)
+        chunks.push(all.slice(i, i + NAME_GREP_CHUNK));
+      const more = (
+        await Promise.all(
+          chunks.map((chunk) =>
+            listCandidateSources({
+              root,
+              grepArg: chunk.join("|"),
+              fixed: false,
+            }),
+          ),
+        )
+      ).flat();
       const before = sources.size;
       for (const f of more) if (!sources.has(f.rel)) sources.set(f.rel, f);
       if (sources.size === before) break;

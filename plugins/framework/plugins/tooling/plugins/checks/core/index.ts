@@ -41,6 +41,7 @@ export {
   gitGrepList,
 } from "./grep-code";
 export { maskedSource, parsedTsSource, sliceCheckThread } from "./source-work";
+export { sourceAnalysis } from "./source-analysis";
 export type { SourceText } from "./source-work";
 export {
   isBuildInProgress,

@@ -1,4 +1,10 @@
-import { unresolvableCallIdMessage } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import {
+  failClosed,
+  fileTargetUses,
+  literalString,
+  unreadableAt,
+  type ParsedFile,
+} from "@plugins/framework/plugins/tooling/plugins/checks/plugins/source-analysis/core";
 import { isIconRefModule } from "@plugins/ui/plugins/icons/core";
 import type { FileScan } from "@plugins/plugin-meta/plugins/plugin-records/core";
 import type TS from "typescript";
@@ -12,9 +18,13 @@ type Marker = keyof typeof MARKERS;
 
 /**
  * Sound pre-filter: a file whose text never spells a constructor's name cannot
- * import one (an import names the export, aliased or not), so it is not parsed.
+ * import one (an import names the export, aliased or not) — unless it imports
+ * a namespace, which it may index without spelling one (`icons[k]`), or
+ * re-exports a whole module (`export * from`), or loads one dynamically
+ * (`import(…)` / `require(…)`) — so it is not parsed.
  */
-const MARKER_NAME_RE = /\b(?:symbol|brand|seti)\b/;
+const MARKER_NAME_RE =
+  /\b(?:symbol|brand|seti)\b|\*\s*as\b|\bexport\s*\*|\b(?:import|require)\s*\(/;
 
 const HINT =
   "The icon manifest lists every name a constructor is called with, so an icon " +
@@ -34,14 +44,16 @@ function isMarker(name: string): name is Marker {
 /**
  * The icon names one file draws, read from its syntax tree — not its text.
  *
- * Every binding the file imports a constructor (`symbol` / `brand` / `seti`)
- * into, from the icons core by any spelling (`isIconRefModule`), is followed to
- * EVERY identifier naming it. Each must be the callee of a call whose one
- * argument is a string literal (what `icons/literal-icon-name` requires), and
- * its literal is collected — wherever the call sits (a spread, an argument, a
- * default). Any other use (passed around, re-exported, shadowed) throws: the
- * scan answers for every reference or refuses, so a name cannot be missed by
- * how its call is written.
+ * Every reference to a constructor (`symbol` / `brand` / `seti`) imported from
+ * the icons core by any spelling (`isIconRefModule`) — named, aliased, or
+ * through a namespace (`icons.symbol("x")`) — is classified by the shared
+ * source analysis (`fileTargetUses`). Each must be a call whose one argument
+ * is a string literal (what `icons/literal-icon-name` requires), and its
+ * literal is collected wherever the call sits (a spread, an argument, a
+ * default). Any other use — passed around, shadowed, a namespace indexed, a
+ * re-export outside the icons core's own modules — fails the scan, naming
+ * every one (`failClosed`): the scan answers for every reference or refuses,
+ * so a name cannot be missed by how its call is written.
  *
  * `displayPath` is repo-relative: relative imports resolve against it.
  */
@@ -52,124 +64,54 @@ export function scanIconNames(
 ): IconManifest {
   const out: IconManifest = { symbols: [], brands: [], seti: [] };
   if (!MARKER_NAME_RE.test(src)) return out;
-  const sf = ts.createSourceFile(
-    displayPath,
-    src,
-    ts.ScriptTarget.Latest,
-    /* setParentNodes */ true,
-    displayPath.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
-  );
-  const lineOf = (node: TS.Node) =>
-    sf.getLineAndCharacterOfPosition(node.getStart(sf)).line + 1;
-  const fail = (node: TS.Node, what: string): never => {
-    throw new Error(
-      `${displayPath}:${lineOf(node)}: ${what} ${HINT} (icon manifest scan)`,
-    );
+  const file: ParsedFile = {
+    rel: displayPath,
+    sf: ts.createSourceFile(
+      displayPath,
+      src,
+      ts.ScriptTarget.Latest,
+      /* setParentNodes */ true,
+      displayPath.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+    ),
   };
-
-  // Local binding name → the constructor it is.
-  const bindings = new Map<string, Marker>();
-  for (const stmt of sf.statements) {
-    if (!ts.isImportDeclaration(stmt)) continue;
-    if (!ts.isStringLiteral(stmt.moduleSpecifier)) continue;
-    if (!isIconRefModule(displayPath, stmt.moduleSpecifier.text)) continue;
-    const clause = stmt.importClause;
-    if (clause === undefined || clause.isTypeOnly) continue;
-    const named = clause.namedBindings;
-    if (named === undefined) continue;
-    if (ts.isNamespaceImport(named)) {
-      fail(
-        named,
-        "the icon constructors are imported through a namespace; import `symbol` / `brand` / `seti` by name.",
+  const uses = fileTargetUses<Marker>(ts, file, {
+    imported: (spec, exported) =>
+      isIconRefModule(displayPath, spec) && isMarker(exported)
+        ? exported
+        : undefined,
+    isTargetModule: (spec) => isIconRefModule(displayPath, spec),
+  });
+  // The icons core's own modules re-export the constructors (the barrel
+  // re-exporting `./icon-ref`): that is the module every import above names.
+  const base = displayPath.slice(displayPath.lastIndexOf("/") + 1);
+  const isIconModule = isIconRefModule(displayPath, `./${base}`);
+  const unreadable = [...uses.unreadable];
+  for (const use of uses.found) {
+    if (use.kind === "reexport" || use.kind === "reexport-all") {
+      if (!isIconModule)
+        unreadable.push({
+          site: use.site,
+          reason:
+            "an icon constructor is re-exported: its importers would name it under a module the scan does not read; import it from the icons core instead.",
+          text: use.kind === "reexport" ? use.as : `* from "${use.specifier}"`,
+        });
+      continue;
+    }
+    if (use.kind === "member-call" || use.call.arguments.length !== 1) {
+      unreadable.push(
+        unreadableAt(
+          file,
+          use.call,
+          `\`${use.exported}\` is not called with exactly one argument.`,
+        ),
       );
       continue;
     }
-    for (const el of named.elements) {
-      if (el.isTypeOnly) continue;
-      const imported = (el.propertyName ?? el.name).text;
-      if (isMarker(imported)) bindings.set(el.name.text, imported);
-    }
+    const name = literalString(ts, file, use.call.arguments[0]!);
+    if (name.kind === "unreadable") unreadable.push(name.unreadable);
+    else out[MARKERS[use.key]].push(name.value);
   }
-  if (bindings.size === 0) return out;
-
-  const visit = (node: TS.Node): void => {
-    if (ts.isIdentifier(node)) {
-      const marker = bindings.get(node.text);
-      if (marker !== undefined) collect(node, marker);
-    }
-    ts.forEachChild(node, visit);
-  };
-
-  /** One identifier spelled like a bound constructor: a use to read, or a name that is not a reference. */
-  const collect = (id: TS.Identifier, marker: Marker): void => {
-    const parent = id.parent;
-    // Spellings that are not a reference to the binding: the import itself, a
-    // property or member name, an object-literal key, a label.
-    if (ts.isImportSpecifier(parent)) return;
-    if (ts.isPropertyAccessExpression(parent) && parent.name === id) return;
-    if (ts.isQualifiedName(parent) && parent.right === id) return;
-    if (
-      (ts.isPropertyAssignment(parent) ||
-        ts.isPropertySignature(parent) ||
-        ts.isPropertyDeclaration(parent) ||
-        ts.isMethodDeclaration(parent) ||
-        ts.isMethodSignature(parent) ||
-        ts.isGetAccessorDeclaration(parent) ||
-        ts.isSetAccessorDeclaration(parent) ||
-        ts.isEnumMember(parent) ||
-        ts.isJsxAttribute(parent)) &&
-      parent.name === id
-    )
-      return;
-    if (ts.isBindingElement(parent) && parent.propertyName === id) return;
-    if (
-      (ts.isLabeledStatement(parent) ||
-        ts.isBreakStatement(parent) ||
-        ts.isContinueStatement(parent)) &&
-      parent.label === id
-    )
-      return;
-    // A declaration of the same name shadows the import: the scan would have to
-    // guess which binding each later use means, so it refuses.
-    if (
-      (ts.isVariableDeclaration(parent) ||
-        ts.isParameter(parent) ||
-        ts.isFunctionDeclaration(parent) ||
-        ts.isFunctionExpression(parent) ||
-        ts.isClassDeclaration(parent) ||
-        ts.isBindingElement(parent)) &&
-      parent.name === id
-    )
-      fail(
-        id,
-        `\`${id.text}\` is declared again, shadowing the imported icon constructor; rename it.`,
-      );
-    // Every other spelling is a use of the constructor: it must be called.
-    if (
-      !ts.isCallExpression(parent) ||
-      parent.expression !== id ||
-      parent.arguments.length !== 1
-    )
-      fail(
-        id,
-        `\`${id.text}\` is used other than called with one argument; call it directly with a string literal.`,
-      );
-    const call = parent as TS.CallExpression;
-    const arg = call.arguments[0]!;
-    if (!ts.isStringLiteral(arg) && !ts.isNoSubstitutionTemplateLiteral(arg))
-      throw new Error(
-        unresolvableCallIdMessage({
-          marker,
-          file: displayPath,
-          line: lineOf(call),
-          expr: arg.getText(sf),
-          hint: HINT,
-        }),
-      );
-    out[MARKERS[marker]].push(arg.text);
-  };
-
-  visit(sf);
+  failClosed({ found: [], unreadable }, `${HINT} (icon manifest scan)`);
   return out;
 }
 

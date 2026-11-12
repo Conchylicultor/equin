@@ -86,26 +86,64 @@ describe("scanIconNames", () => {
     expect(() => scanIconNames(`${IMPORT}names.map(symbol);`, "x.ts")).toThrow(
       /used other than called/,
     );
+    expect(() => scanIconNames(`${IMPORT}symbol("a", "b");`, "x.ts")).toThrow(
+      /not called with exactly one argument/,
+    );
   });
 
   it("throws on a declaration shadowing the import", () => {
     expect(() =>
       scanIconNames(`${IMPORT}function f() { const symbol = 1; }`, "x.ts"),
-    ).toThrow(/shadowing the imported icon constructor/);
+    ).toThrow(/shadowing the imported binding/);
   });
 
-  it("throws on a namespace import of the icons core", () => {
-    expect(() =>
+  it("collects through a namespace import, and throws on one it cannot read", () => {
+    const NS = `import * as icons from "@plugins/ui/plugins/icons/core";\n`;
+    expect(
       scanIconNames(
-        `import * as icons from "@plugins/ui/plugins/icons/core";\nicons.symbol("forum");`,
+        `${NS}icons.symbol("forum");\nicons.runtimeSymbol(x);`,
         "x.ts",
       ),
-    ).toThrow(/through a namespace/);
+    ).toEqual({ symbols: ["forum"], brands: [], seti: [] });
+    expect(() => scanIconNames(`${NS}icons[k]("forum");`, "x.ts")).toThrow(
+      /x\.ts:2: the namespace `icons` .* is indexed/,
+    );
+    expect(() => scanIconNames(`${NS}use(icons);`, "x.ts")).toThrow(
+      /used as a value/,
+    );
   });
 
-  it("throws on a non-literal name", () => {
-    expect(() => scanIconNames(`${IMPORT}symbol(name);`, "x.ts")).toThrow(
-      /x\.ts:2: symbol\(…\) id is not a static string literal/,
+  it("throws on a re-export outside the icons core, and allows the barrel's own", () => {
+    expect(() =>
+      scanIconNames(
+        `export { symbol as s } from "@plugins/ui/plugins/icons/core";`,
+        "plugins/tasks/core/x.ts",
+      ),
+    ).toThrow(
+      /plugins\/tasks\/core\/x\.ts:1: an icon constructor is re-exported/,
+    );
+    expect(() =>
+      scanIconNames(`${IMPORT}export { symbol };`, "plugins/tasks/core/x.ts"),
+    ).toThrow(/re-exported/);
+    expect(() =>
+      scanIconNames(
+        `export * from "@plugins/ui/plugins/icons/core";`,
+        "plugins/tasks/core/x.ts",
+      ),
+    ).toThrow(/re-exported/);
+    expect(
+      scanIconNames(
+        `export { brand, runtimeSymbol, seti, symbol } from "./icon-ref";`,
+        "plugins/ui/plugins/icons/core/index.ts",
+      ),
+    ).toEqual({ symbols: [], brands: [], seti: [] });
+  });
+
+  it("throws on a non-literal name, naming every one", () => {
+    expect(() =>
+      scanIconNames(`${IMPORT}symbol(name);\nbrand(a ? "x" : "y");`, "x.ts"),
+    ).toThrow(
+      /x\.ts:2: not a string literal[\s\S]*x\.ts:3: not a string literal/,
     );
   });
 });

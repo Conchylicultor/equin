@@ -30288,13 +30288,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values): `parseRuntimeException`
         - **`checks`** — Check runner and built-in checks for ./equin check
           - Core:
-            - Uses: 72 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
+            - Uses: 75 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
               - `framework/tooling` ×11
               - `packages/timed-fs` ×10
               - `framework/tooling/exempt` ×7
               - `reports/check-thread-stall` ×7
               - `infra/stack-sampler` ×5
               - `infra/host-fs/user-path` ×4
+              - `framework/tooling/checks/source-analysis` ×3
               - `infra/launcher/env-names` ×3
               - `infra/spawn` ×3
               - `plugin-meta/parse-utils` ×3
@@ -30364,6 +30365,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `runChecks`
               - `scopeOf`
               - `sliceCheckThread`
+              - `sourceAnalysis`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shadow --shadow`
             - Imported by:
@@ -30517,6 +30519,37 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`pre-barrel-manifests-complete`**
             - **`reorderable-slots-in-sync`**
             - **`snapshot-chain-intact`**
+            - **`source-analysis`**
+              - Cross-plugin:
+                - Imported by:
+                  - `framework/tooling/checks`
+                  - `framework/tooling/codegen`
+              - Core:
+                - Exports (types):
+                  - `Binding`
+                  - `CandidatesFor`
+                  - `Collected`
+                  - `Declaration`
+                  - `ExportRef`
+                  - `ModuleResolution`
+                  - `ParsedFile`
+                  - `Readout`
+                  - `SourceAnalysis`
+                  - `SourceAnalysisHost`
+                  - `SourceFiles`
+                  - `SourceSite`
+                  - `TargetResolver`
+                  - `TargetUse`
+                  - `Unreadable`
+                - Exports (values):
+                  - `createSourceAnalysis`
+                  - `failClosed`
+                  - `fileTargetUses`
+                  - `formatUnreadable`
+                  - `literalString`
+                  - `readRepoCompilerOptions`
+                  - `siteOf`
+                  - `unreadableAt`
             - **`space-ramp-in-sync`**
             - **`table-defs-in-schema-glob`**
               - Exemptions:
@@ -30589,7 +30622,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Uses: `framework/tooling/checks/type-check.readTypeCheckTree`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 144 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+            - Uses: 149 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
               - `plugin-meta/parse-utils` ×19
               - `config_v2` ×15
               - `framework/plugin-id` ×13
@@ -30599,6 +30632,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/barrel-import` ×6
               - `plugin-meta/closure` ×6
               - `plugin-meta/composition` ×6
+              - `framework/tooling/checks/source-analysis` ×5
               - `packages/timed-fs` ×5
               - `plugin-meta/facets` ×5
               - `plugin-meta/plugin-records/evaluate` ×5
