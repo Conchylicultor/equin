@@ -1,11 +1,10 @@
 // Photographs every app the website's gallery shows, one PNG per app, so the
 // gallery's screenshots can be refreshed whenever an app's design moves.
 //
-// An app the homepage's live demo carries is photographed IN the demo, at the
-// place its gallery card opens (`APP_DEMO_PLACES`, the apps page's core): the
-// homepage at `/about/at/<place>;full=1`, the demo maximized over the page —
-// the demo's own made-up data, never anyone's real one, and exactly the frame
-// a click on the card shows. Every tip the demo raises is answered before
+// An app the homepage's live demo carries is photographed IN the demo, at its
+// place (`APP_DEMO_PLACES`, the apps page's core): the homepage at
+// `/about/at/<place>;full=1`, the demo maximized over the page — the demo's
+// own made-up data, never anyone's real one. Every tip the demo raises is answered before
 // the shot, so none covers the app.
 //
 // An app the demo does not carry opens at its own basePath (read from the

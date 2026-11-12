@@ -12,7 +12,6 @@ import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { embedTailPath } from "@plugins/primitives/plugins/pane/core";
 import { useAppLinkProps } from "@plugins/apps-core/plugins/tabs/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -30,9 +29,10 @@ import type { AppCategory, CatalogApp } from "../internal/catalog";
  * (`equinGalleryTheme`, worn by the gallery around it).
  *
  * An app the homepage's live demo carries (`APP_DEMO_PLACES`) is a link as a
- * whole: the card opens the demo maximized, at that app
- * (`/about/at/<place>;full=1` — the embed's own place in the homepage's
- * URL), so the reader tries the app instead of reading about it. The link is
+ * whole: the card opens the homepage, where the live demo starts, so the
+ * reader tries equin instead of reading about it — never straight into the
+ * staged frame its picture shows (the demo launches from its own start, not
+ * from a place picked for a screenshot). The link is
  * a full-bleed button BEHIND the card's content, so Install stays a control
  * of its own above it; the picture's "Try it live" chip says the card opens
  * before it is hovered (a touch screen never hovers).
@@ -65,9 +65,7 @@ export function AppCard({
           type="button"
           className="website-app-open"
           aria-label={`Try ${app.name} live`}
-          {...appLinkProps(
-            websiteApp.basePath + embedTailPath(demoPlace, { maximized: true }),
-          )}
+          {...appLinkProps(websiteApp.basePath)}
           onClickCapture={() => track("apps_try_live", { app: app.id })}
         />
       )}

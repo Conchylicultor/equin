@@ -1,10 +1,9 @@
 /**
  * Where each gallery app opens in the homepage's live demo — an app-rooted
  * location inside the demo (`/sonata/song/<id>;bar=12`), keyed by the
- * catalog's app id. One place, read twice: the gallery card opens the demo
- * there, maximized (`/about/at/<location>;full=1`), and the website's
- * `e2e/app-screenshots.ts` photographs that same frame, so a card's picture
- * is exactly what clicking it shows.
+ * catalog's app id. The website's `e2e/app-screenshots.ts` photographs that
+ * frame for the gallery card's picture; the card itself (a "Try it live" link)
+ * opens the homepage, where the demo starts from its own beginning.
  *
  * Only apps the demo carries (`website/demos/workspace`) have one; the ids
  * below are the demo's seeded ones (its story, `story/core`), written as text

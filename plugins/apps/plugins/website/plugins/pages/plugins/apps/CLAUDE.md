@@ -18,10 +18,10 @@ The list is plain data (`web/internal/catalog.ts`): the site is a written page,
 so adding an app to equin does not add it here — edit the catalog. The homepage's
 layers band keeps its own shorter teaser of the same apps.
 
-**A card opens the app live.** An app the homepage's live demo carries has a
+**A card opens the live demo.** An app the homepage's live demo carries has a
 place in it (`core/demo-places.ts`, `APP_DEMO_PLACES`, keyed by the catalog's
-id): the whole card is a link to the homepage with the demo maximized there
-(`/about/at/<place>;full=1`, the embed's own place in the page URL) — a
+id — where its screenshot is taken): the whole card is a link to the homepage,
+where the demo starts — not to the staged frame the picture shows — a
 full-bleed button behind the card's content, so Install stays its own control,
 and an always-drawn "Try it live" chip on the picture says so before any hover.
 
