@@ -87,10 +87,41 @@ index 328f469965d3bc248c99e8a50752c549c631e20a..d3d0eb17c52c07e8db400657153e49f9
    std::string path;
    uint64_t mtime;
 diff --git a/src/Watcher.cc b/src/Watcher.cc
-index a58ff3722d0d4a85dbef822f7cd4a078cb4278ff..7c9fbb9b662004c4d21499d94dad30412170ff88 100644
+index a58ff3722d0d4a85dbef822f7cd4a078cb4278ff..f7e965de2964d094dbfc8f6e2099bc5047c5e223 100644
 --- a/src/Watcher.cc
 +++ b/src/Watcher.cc
-@@ -223,7 +223,7 @@ bool Watcher::isIgnored(std::string path) {
+@@ -1,4 +1,5 @@
+ #include "Watcher.hh"
++#include <algorithm>
+ #include <unordered_set>
+ 
+ using namespace Napi;
+@@ -21,8 +22,8 @@ static std::unordered_set<WatcherRef , WatcherHash, WatcherCompare>& getSharedWa
+   return *sharedWatchers;
+ }
+ 
+-WatcherRef Watcher::getShared(std::string dir, std::unordered_set<std::string> ignorePaths, std::unordered_set<Glob> ignoreGlobs) {
+-  WatcherRef watcher = std::make_shared<Watcher>(dir, ignorePaths, ignoreGlobs);
++WatcherRef Watcher::getShared(std::string dir, std::unordered_set<std::string> ignorePaths, std::unordered_set<Glob> ignoreGlobs, int maxDepth) {
++  WatcherRef watcher = std::make_shared<Watcher>(dir, ignorePaths, ignoreGlobs, maxDepth);
+   auto found = getSharedWatchers().find(watcher);
+   if (found != getSharedWatchers().end()) {
+     return *found;
+@@ -46,10 +47,11 @@ void removeShared(Watcher *watcher) {
+   }
+ }
+ 
+-Watcher::Watcher(std::string dir, std::unordered_set<std::string> ignorePaths, std::unordered_set<Glob> ignoreGlobs)
++Watcher::Watcher(std::string dir, std::unordered_set<std::string> ignorePaths, std::unordered_set<Glob> ignoreGlobs, int maxDepth)
+   : mDir(dir),
+     mIgnorePaths(ignorePaths),
+-    mIgnoreGlobs(ignoreGlobs) {
++    mIgnoreGlobs(ignoreGlobs),
++    mMaxDepth(maxDepth) {
+       mDebounce = Debounce::getShared();
+       mDebounce->add(this, [this] () {
+         triggerCallbacks();
+@@ -223,7 +225,7 @@ bool Watcher::isIgnored(std::string path) {
      }
    }
  
@@ -99,11 +130,195 @@ index a58ff3722d0d4a85dbef822f7cd4a078cb4278ff..7c9fbb9b662004c4d21499d94dad3041
  
    if (path.rfind(basePath, 0) != 0) {
      return false;
+@@ -231,6 +233,11 @@ bool Watcher::isIgnored(std::string path) {
+ 
+   auto relativePath = path.substr(basePath.size());
+ 
++  // equin: deeper than this watcher sees.
++  if (mMaxDepth > 0 && std::count(relativePath.begin(), relativePath.end(), DIR_SEP[0]) >= mMaxDepth) {
++    return true;
++  }
++
+   for (auto it = mIgnoreGlobs.begin(); it != mIgnoreGlobs.end(); it++) {
+     if (it->isIgnored(relativePath)) {
+       return true;
+@@ -239,3 +246,16 @@ bool Watcher::isIgnored(std::string path) {
+ 
+   return false;
+ }
++
++bool Watcher::seesBelow(const std::string &dir) {
++  if (mMaxDepth <= 0 || dir == mDir) {
++    return true;
++  }
++  auto basePath = childPrefix(mDir);
++  if (dir.rfind(basePath, 0) != 0) {
++    return true; // not below mDir: no depth to judge it by
++  }
++  auto relativePath = dir.substr(basePath.size());
++  // `dir` sits at depth separators + 1; its entries one deeper.
++  return std::count(relativePath.begin(), relativePath.end(), DIR_SEP[0]) + 1 < mMaxDepth;
++}
+diff --git a/src/Watcher.hh b/src/Watcher.hh
+index f89e9f5dca4531b5c7cdf524252973dc2c568d6a..d7c2fe349f11d184e74367d6e887f11f5bf9fc65 100644
+--- a/src/Watcher.hh
++++ b/src/Watcher.hh
+@@ -31,14 +31,23 @@ struct Watcher {
+   std::string mDir;
+   std::unordered_set<std::string> mIgnorePaths;
+   std::unordered_set<Glob> mIgnoreGlobs;
++  // equin: how deep below mDir this watcher sees — 1 is the dir's own
++  // entries, 0 no limit. Part of the watcher's identity. The kqueue backend
++  // never lists a folder nothing of which the watcher can see (readTree,
++  // compareDir): spelled as a regex ignore instead (`[/]`), every child
++  // folder was listed and every entry in it stat'ed, then dropped — a
++  // children watch of a folder of 44 entries holding 690k below them took
++  // 37 s, under the backend's lock that every other subscribe and unsubscribe
++  // waits on.
++  int mMaxDepth;
+   EventList mEvents;
+   std::shared_ptr<WatcherState> state;
+ 
+-  Watcher(std::string dir, std::unordered_set<std::string> ignorePaths, std::unordered_set<Glob> ignoreGlobs);
++  Watcher(std::string dir, std::unordered_set<std::string> ignorePaths, std::unordered_set<Glob> ignoreGlobs, int maxDepth = 0);
+   ~Watcher();
+ 
+   bool operator==(const Watcher &other) const {
+-    return mDir == other.mDir && mIgnorePaths == other.mIgnorePaths && mIgnoreGlobs == other.mIgnoreGlobs;
++    return mDir == other.mDir && mIgnorePaths == other.mIgnorePaths && mIgnoreGlobs == other.mIgnoreGlobs && mMaxDepth == other.mMaxDepth;
+   }
+ 
+   void wait();
+@@ -48,9 +57,13 @@ struct Watcher {
+   bool unwatch(Function callback);
+   void unref();
+   bool isIgnored(std::string path);
++  // equin: whether any path below `dir` (mDir or a folder under it) is within
++  // this watcher's depth — false means listing `dir` finds only ignored
++  // entries, so it is never listed.
++  bool seesBelow(const std::string &dir);
+   void destroy();
+ 
+-  static WatcherRef getShared(std::string dir, std::unordered_set<std::string> ignorePaths, std::unordered_set<Glob> ignoreGlobs);
++  static WatcherRef getShared(std::string dir, std::unordered_set<std::string> ignorePaths, std::unordered_set<Glob> ignoreGlobs, int maxDepth = 0);
+ 
+ private:
+   std::mutex mMutex;
+diff --git a/src/binding.cc b/src/binding.cc
+index 057b61b83385793a2f13c7adc8c2e983bef67538..9f3f89517fcfcba15e1c36ad127b61ab596f5a5d 100644
+--- a/src/binding.cc
++++ b/src/binding.cc
+@@ -53,6 +53,37 @@ std::unordered_set<Glob> getIgnoreGlobs(Env env, Value opts) {
+   return result;
+ }
+ 
++// equin: how deep below the dir the watcher sees (Watcher::mMaxDepth) — a
++// positive integer, or 0 / absent for no limit.
++int getMaxDepth(Env env, Value opts) {
++  if (!opts.IsObject()) {
++    return 0;
++  }
++  Value v = opts.As<Object>().Get(String::New(env, "depth"));
++  if (v.IsUndefined()) {
++    return 0;
++  }
++  return v.As<Number>().Int32Value(); // validated by depthIsValid before any runner
++}
++
++// equin: refused before a runner is built — a runner's constructor has already
++// registered the callback and queued its work, so a throw from inside it would
++// leave a watcher of no limit subscribed with no handle to unsubscribe it.
++bool depthIsValid(Env env, Value opts) {
++  if (!opts.IsObject()) {
++    return true;
++  }
++  Value v = opts.As<Object>().Get(String::New(env, "depth"));
++  if (v.IsUndefined()) {
++    return true;
++  }
++  if (!v.IsNumber() || v.As<Number>().DoubleValue() < 1 || v.As<Number>().DoubleValue() != (double)v.As<Number>().Int32Value()) {
++    TypeError::New(env, "depth must be a positive integer").ThrowAsJavaScriptException();
++    return false;
++  }
++  return true;
++}
++
+ std::shared_ptr<Backend> getBackend(Env env, Value opts) {
+   Value b = opts.As<Object>().Get(String::New(env, "backend"));
+   std::string backendName;
+@@ -71,7 +102,8 @@ public:
+     watcher = Watcher::getShared(
+       std::string(dir.As<String>().Utf8Value().c_str()),
+       getIgnorePaths(env, opts),
+-      getIgnoreGlobs(env, opts)
++      getIgnoreGlobs(env, opts),
++      getMaxDepth(env, opts)
+     );
+ 
+     backend = getBackend(env, opts);
+@@ -99,7 +131,8 @@ public:
+     watcher = std::make_shared<Watcher>(
+       std::string(dir.As<String>().Utf8Value().c_str()),
+       getIgnorePaths(env, opts),
+-      getIgnoreGlobs(env, opts)
++      getIgnoreGlobs(env, opts),
++      getMaxDepth(env, opts)
+     );
+ 
+     backend = getBackend(env, opts);
+@@ -150,6 +183,10 @@ Value queueSnapshotWork(const CallbackInfo& info) {
+     return env.Null();
+   }
+ 
++  if (info.Length() >= 3 && !depthIsValid(env, info[2])) {
++    return env.Null();
++  }
++
+   Runner *runner = new Runner(info.Env(), info[0], info[1], info[2]);
+   return runner->queue();
+ }
+@@ -168,7 +205,8 @@ public:
+     watcher = Watcher::getShared(
+       std::string(dir.As<String>().Utf8Value().c_str()),
+       getIgnorePaths(env, opts),
+-      getIgnoreGlobs(env, opts)
++      getIgnoreGlobs(env, opts),
++      getMaxDepth(env, opts)
+     );
+ 
+     backend = getBackend(env, opts);
+@@ -196,7 +234,8 @@ public:
+     watcher = Watcher::getShared(
+       std::string(dir.As<String>().Utf8Value().c_str()),
+       getIgnorePaths(env, opts),
+-      getIgnoreGlobs(env, opts)
++      getIgnoreGlobs(env, opts),
++      getMaxDepth(env, opts)
+     );
+ 
+     backend = getBackend(env, opts);
+@@ -233,6 +272,10 @@ Value queueSubscriptionWork(const CallbackInfo& info) {
+     return env.Null();
+   }
+ 
++  if (info.Length() >= 3 && !depthIsValid(env, info[2])) {
++    return env.Null();
++  }
++
+   Runner *runner = new Runner(info.Env(), info[0], info[1], info[2]);
+   return runner->queue();
+ }
 diff --git a/src/kqueue/KqueueBackend.cc b/src/kqueue/KqueueBackend.cc
-index 2991c32fa320cd61d5b575a49ace19cb8a940d03..f46af4541cbc45d8aec663c83cc3f8cfd522f3ce 100644
+index 2991c32fa320cd61d5b575a49ace19cb8a940d03..efabce6b1bb54b3bb97e1033d96cf843691a7f1a 100644
 --- a/src/kqueue/KqueueBackend.cc
 +++ b/src/kqueue/KqueueBackend.cc
-@@ -58,13 +58,39 @@ void KqueueBackend::start() {
+@@ -1,4 +1,5 @@
+ #include <memory>
++#include <algorithm>
+ #include <poll.h>
+ #include <unistd.h>
+ #include <libgen.h>
+@@ -58,13 +59,39 @@ void KqueueBackend::start() {
  
      // Track all of the watchers that are touched so we can notify them at the end of the events.
      std::unordered_set<WatcherRef> watchers;
@@ -145,7 +360,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..f46af4541cbc45d8aec663c83cc3f8cf
        }
  
        auto it = mFdToEntry.find(fd);
-@@ -75,21 +101,49 @@ void KqueueBackend::start() {
+@@ -75,21 +102,49 @@ void KqueueBackend::start() {
  
        DirEntry *entry = it->second;
  
@@ -204,7 +419,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..f46af4541cbc45d8aec663c83cc3f8cf
              struct stat st;
              lstat(sub->path.c_str(), &st);
              if (entry->mtime != CONVERT_TIME(st.st_mtim)) {
-@@ -100,6 +154,17 @@ void KqueueBackend::start() {
+@@ -100,6 +155,17 @@ void KqueueBackend::start() {
          }
        }
      }
@@ -222,7 +437,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..f46af4541cbc45d8aec663c83cc3f8cf
  
      for (auto it = watchers.begin(); it != watchers.end(); it++) {
        (*it)->notify();
-@@ -112,31 +177,119 @@ done:
+@@ -112,31 +178,119 @@ done:
    mEndedSignal.notify();
  }
  
@@ -305,7 +520,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..f46af4541cbc45d8aec663c83cc3f8cf
 +      // still heard by its folder's diff, its own writes are not. Upstream
 +      // failed the whole subscription.
 +      continue;
-     }
++    }
 +    if (result == WatchResult::Gone && it->second.path != watcher->mDir) {
 +      // Gone since the listing: not in the tree, so a re-creation is a create.
 +      gone.push_back(it->second.path);
@@ -332,7 +547,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..f46af4541cbc45d8aec663c83cc3f8cf
 +        close(fd);
 +      }
 +      forgetSubscriptions(entry->first, tree);
-+    }
+     }
 +    tree->remove(*it);
    }
  }
@@ -351,7 +566,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..f46af4541cbc45d8aec663c83cc3f8cf
    }
  
    KqueueSubscription sub = {
-@@ -146,9 +299,29 @@ bool KqueueBackend::watchDir(WatcherRef watcher, std::string path, std::shared_p
+@@ -146,9 +300,29 @@ bool KqueueBackend::watchDir(WatcherRef watcher, std::string path, std::shared_p
    };
  
    if (!entry->state) {
@@ -382,7 +597,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..f46af4541cbc45d8aec663c83cc3f8cf
      }
  
      struct kevent event;
-@@ -163,8 +336,10 @@ bool KqueueBackend::watchDir(WatcherRef watcher, std::string path, std::shared_p
+@@ -163,8 +337,10 @@ bool KqueueBackend::watchDir(WatcherRef watcher, std::string path, std::shared_p
      );
  
      if (kevent(mKqueue, &event, 1, NULL, 0, 0)) {
@@ -394,7 +609,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..f46af4541cbc45d8aec663c83cc3f8cf
      }
  
      entry->state = (void *)(size_t)fd;
-@@ -173,38 +348,103 @@ bool KqueueBackend::watchDir(WatcherRef watcher, std::string path, std::shared_p
+@@ -173,38 +349,114 @@ bool KqueueBackend::watchDir(WatcherRef watcher, std::string path, std::shared_p
  
    sub.fd = (int)(size_t)entry->state;
    mSubscriptions.emplace(path, sub);
@@ -463,6 +678,17 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..f46af4541cbc45d8aec663c83cc3f8cf
 +
 +void KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<WatcherRef> &watchers, std::unordered_set<int> &closing) {
 +  std::vector<KqueueSubscription *> subs = findSubscriptions(path, fd);
++  // equin: a folder at its watcher's depth (an entry of a children watch) is
++  // not listed: every entry the diff could find is one the watcher ignores,
++  // and a tree that never held them has nothing to remove. Listed, a write in
++  // a big folder stat'ed each of its entries into a tree that wanted none
++  // (once per new entry), under the backend's lock.
++  subs.erase(std::remove_if(subs.begin(), subs.end(), [&path](KqueueSubscription *sub) {
++    return !sub->watcher->seesBelow(path);
++  }), subs.end());
++  if (subs.empty()) {
++    return;
++  }
 +
    // macOS doesn't support fdclosedir, so we have to duplicate the file descriptor
    // to ensure the closedir doesn't also stop watching.
@@ -508,7 +734,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..f46af4541cbc45d8aec663c83cc3f8cf
  
    std::unordered_set<std::shared_ptr<DirTree>> trees;
    for (auto it = subs.begin(); it != subs.end(); it++) {
-@@ -213,41 +453,114 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
+@@ -213,41 +465,114 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
  
    std::unordered_set<std::string> entries;
    struct dirent *entry;
@@ -641,7 +867,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..f46af4541cbc45d8aec663c83cc3f8cf
    }
  
    for (auto it = trees.begin(); it != trees.end(); it++) {
-@@ -270,8 +583,17 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
+@@ -270,8 +595,17 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
            }
          }
  
@@ -661,7 +887,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..f46af4541cbc45d8aec663c83cc3f8cf
          entry = tree->entries.erase(entry);
        } else {
          entry++;
-@@ -284,17 +606,61 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
+@@ -284,17 +618,61 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
    #else
      fdclosedir(dir);
    #endif
@@ -876,7 +1102,7 @@ index de7a73d1e9549300408fbb56dec837720eed80d1..46e7462bcdc77891eec59ad80d9fa59d
  };
  
 diff --git a/src/unix/fts.cc b/src/unix/fts.cc
-index d50c3e4931eb29a408ea29c1394a3fc977349455..908ae262b5d775ff665744acc629f4ae0e6f50a8 100644
+index d50c3e4931eb29a408ea29c1394a3fc977349455..707e8ff0cd74c63c6b0ee5cb46a6639519cc31ca 100644
 --- a/src/unix/fts.cc
 +++ b/src/unix/fts.cc
 @@ -28,6 +28,21 @@ void BruteForceBackend::readTree(WatcherRef watcher, std::shared_ptr<DirTree> tr
@@ -901,3 +1127,16 @@ index d50c3e4931eb29a408ea29c1394a3fc977349455..908ae262b5d775ff665744acc629f4ae
        fts_close(fts);
        throw WatcherError(strerror(node->fts_errno), watcher);
      }
+@@ -44,6 +59,12 @@ void BruteForceBackend::readTree(WatcherRef watcher, std::shared_ptr<DirTree> tr
+ 
+     tree->add(node->fts_path, CONVERT_TIME(node->fts_statp->st_mtim), (node->fts_info & FTS_D) == FTS_D);
+     isRoot = false;
++
++    // equin: a folder at the watcher's depth is an entry, never listed — fts
++    // would read it and stat every entry in it before the ignore dropped them.
++    if ((node->fts_info & FTS_D) && !watcher->seesBelow(std::string(node->fts_path))) {
++      fts_set(fts, node, FTS_SKIP);
++    }
+   }
+ 
+   fts_close(fts);

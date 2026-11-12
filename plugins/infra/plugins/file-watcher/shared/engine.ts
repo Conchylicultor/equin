@@ -27,7 +27,7 @@ import { WatchedDirGoneError } from "./dir-gone";
 import { followFiles } from "./follow-files";
 import { createStreamPool, type StreamPool } from "./fsevents-pool";
 import {
-  KQUEUE_CHILDREN_IGNORE,
+  KQUEUE_CHILDREN_DEPTH,
   watchChildrenOnKqueue,
   type ChildrenWatchOn,
 } from "./kqueue-children";
@@ -68,6 +68,12 @@ export { WatchedDirGoneError } from "./dir-gone";
  */
 type ParcelOptions = Omit<parcel.Options, "backend"> & {
   backend?: parcel.BackendType | "kqueue";
+  /**
+   * How deep below the dir the watch sees (1: its own entries), honoured by
+   * the patched kqueue backend only (`parcel-addon`): it never lists a folder
+   * nothing of which the watch can see. Part of the native watcher's identity.
+   */
+  depth?: number;
 };
 
 /** The `@parcel/watcher` API with {@link ParcelOptions} on `subscribe`. */
@@ -632,7 +638,7 @@ async function watchChildrenOver(
     openKqueue: (real, callback) =>
       parcelWatcher.subscribe(real, callback, {
         backend: "kqueue",
-        ignore: [KQUEUE_CHILDREN_IGNORE],
+        depth: KQUEUE_CHILDREN_DEPTH,
       }),
     fallback: async (d, o) =>
       (

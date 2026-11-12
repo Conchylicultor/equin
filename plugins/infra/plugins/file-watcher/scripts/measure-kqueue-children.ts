@@ -22,7 +22,7 @@ import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
 import { join } from "node:path";
 import { createFileWatcher, fsEventsStreams } from "../shared/engine";
 import { getParcelWatcher } from "../shared/engine";
-import { KQUEUE_CHILDREN_IGNORE } from "../shared/kqueue-children";
+import { KQUEUE_CHILDREN_DEPTH } from "../shared/kqueue-children";
 import type { FileChangeEvent } from "../shared/registry";
 
 const argv = process.argv.slice(2);
@@ -160,7 +160,7 @@ async function sizes(): Promise<void> {
         const t0 = performance.now();
         const sub = await parcel.subscribe(dir, () => {}, {
           backend: "kqueue",
-          ignore: [KQUEUE_CHILDREN_IGNORE],
+          depth: KQUEUE_CHILDREN_DEPTH,
         });
         opens.push(performance.now() - t0);
         if (r === 0) held = descriptorsUnder(dir);

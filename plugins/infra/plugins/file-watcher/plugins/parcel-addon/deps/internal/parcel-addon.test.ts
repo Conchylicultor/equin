@@ -276,6 +276,57 @@ describe.skipIf(process.platform !== "darwin")(
       expect(watchErrors).toEqual([]);
     }, 30_000);
 
+    test("a depth-1 watch hears its entries only, and is not the same watcher as an unlimited one of the dir", async () => {
+      const dir = tempDir("depth");
+      mkdirSync(join(dir, "s"));
+      for (let i = 0; i < 50; i++) writeFileSync(join(dir, "s", `f${i}`), "x");
+      writeFileSync(join(dir, "a"), "x");
+
+      const base = openFds();
+      // The engine's kqueue children watch (`KQUEUE_CHILDREN_DEPTH`).
+      const shallow = await subscribe(dir, { depth: 1 } as parcel.Options);
+      // The dir and its two entries — none of what `s` holds.
+      await expectHeld(base, 3);
+      const deep = await subscribe(dir);
+      const seen = (w: { events: parcel.Event[] }, type: string, rel: string) =>
+        w.events.some((e) => e.type === type && e.path === join(dir, rel));
+
+      writeFileSync(join(dir, "s", "g"), "y");
+      await until(
+        () => seen(deep, "create", "s/g"),
+        5_000,
+        "the unlimited watch hears s/g",
+      );
+      writeFileSync(join(dir, "b"), "y");
+      appendFileSync(join(dir, "a"), "z");
+      await until(
+        () => seen(shallow, "create", "b") && seen(shallow, "update", "a"),
+        5_000,
+        "the depth-1 watch hears its entries",
+      );
+      rmSync(join(dir, "s"), { recursive: true });
+      await until(
+        () => seen(shallow, "delete", "s"),
+        5_000,
+        "an entry folder going",
+      );
+      expect(
+        shallow.events.filter((e) => e.path.startsWith(join(dir, "s/"))),
+      ).toEqual([]);
+
+      await shallow.sub.unsubscribe();
+      await deep.sub.unsubscribe();
+      await expectHeld(base, 0);
+
+      // A depth that is not a positive integer is refused before anything is
+      // watched (not a no-limit watch left with no handle to close it).
+      expect(subscribe(dir, { depth: 1.5 } as parcel.Options)).rejects.toThrow(
+        "depth must be a positive integer",
+      );
+      await expectHeld(base, 0);
+      expect(watchErrors).toEqual([]);
+    });
+
     test("a path two nested watches both hold closes both descriptors", async () => {
       const dir = tempDir("nested");
       const inner = join(dir, "inner");

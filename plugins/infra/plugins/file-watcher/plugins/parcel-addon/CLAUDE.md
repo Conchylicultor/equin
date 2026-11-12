@@ -105,6 +105,18 @@ plugin ships the fixed build.
     rounds 2–5 of five rename-overs reported nothing). Now each rewrite
     reports the path (a `delete` and a `create` may land in successive
     batches);
+  - a watcher has a **depth** (`opts.depth`, `Watcher::mMaxDepth`: 1 is the
+    dir's own entries, absent no limit), part of its identity like its
+    ignore. `isIgnored` drops what is deeper; `readTree` never descends into
+    a folder at the depth (`FTS_SKIP` after adding it as an entry), and
+    `compareDir` never lists one (`seesBelow`). An ignore regex could say
+    the same paths but not that a folder needs no listing: fts read every
+    entry folder and stat'ed all it held, then dropped it, under the
+    backend's lock — 37 s for the children watch of a folder of 44 entries
+    holding 690k below them, while every other subscribe and unsubscribe of
+    the process (each on a Bun worker-pool thread) waited; and a write in an
+    entry folder stat'ed its listing into a tree that wanted none of it. The
+    engine's kqueue children watch passes `depth: 1`;
   - `childPrefix` (`DirTree.hh`): the prefix below a path is `path + "/"`
     except for `/` itself (upstream built `//`, so a watch of `/` ignored
     nothing and its diff named entries `//bin`).

@@ -302,8 +302,18 @@ than joining the dead one. **It is live when it resolves**: a write landing
 right after `start` / `acquire` is heard, so "arm, then read" is correct.
 
 - **macOS: kqueue** (`shared/kqueue-children.ts`): parcel's kqueue backend on
-  the dir, every deeper path ignored natively — one descriptor on the dir and
-  one on each entry, registered before `subscribe` resolves. Never an
+  the dir at `depth: 1` (the patched addon's watch depth) — one descriptor on
+  the dir and one on each entry, registered before `subscribe` resolves, and
+  nothing below an entry ever listed: not at open, not when an entry folder
+  is written. A depth, never an ignore regex: with `ignore: [/[/]/]` the
+  backend could not tell nothing below an entry folder was wanted, so it
+  listed each one and stat'ed all it held before dropping it — the open of
+  `~/.equin/cache` (44 entries, 690k one level below) took 37 s holding the
+  backend's lock, and every other kqueue open and close of the process queued
+  behind it, each on a Bun worker-pool thread, until plain file reads queued
+  too (2026-11-12: the file explorer's peeks, 59 closes of 12 s ending in the
+  same millisecond beside a 15.8 s `stat`; now 14 ms).
+  `research/2026-11-12-infra-file-watcher-close-queue.md`. Never an
   FSEvents stream: a stream is delivered every event under its path however
   deep, so the file explorer's children watches of `/` and `~` made
   fseventsd deliver every file event of the machine to the process, to hear

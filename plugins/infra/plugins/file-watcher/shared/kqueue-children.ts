@@ -1,8 +1,8 @@
 import type * as parcel from "@parcel/watcher";
 
 // A `children` watch on macOS, heard by kqueue: one descriptor on the dir and
-// one on each of its entries (parcel's kqueue backend, every deeper path
-// ignored natively), never an FSEvents stream.
+// one on each of its entries (parcel's kqueue backend at depth 1 — it never
+// lists an entry folder), never an FSEvents stream.
 //
 // Why not the FSEvents pool, which every other watch with no ignore rides: an
 // FSEvents stream is delivered every event under its path, however deep. A
@@ -63,14 +63,20 @@ export const KQUEUE_CHILDREN_CAP = 1024;
 export const KQUEUE_CHILDREN_PROCESS_BUDGET = 8192;
 
 /**
- * Every path deeper than a direct entry: a relative path holding a `/`.
- * Spelled apart from the FSEvents pool's `/\//` on purpose: parcel shares one
- * native Watcher per (dir, ignore) whatever the backend, so a kqueue and an
- * FSEvents subscription of one dir with the same ignore would be one watcher
- * attached to two backends — each hearing the other's events, and the first
- * unsubscribe leaving the other backend watching.
+ * The kqueue subscription's depth: the dir's direct entries, nothing below.
+ * A depth, not an ignore regex (`/[/]/`, until 2026-11-12): the backend cannot
+ * tell from a regex that nothing below an entry folder is wanted, so it
+ * listed every entry folder and stat'ed everything in it — before the ignore
+ * dropped it — on open, and on every write inside one. A children watch of
+ * `~/.equin/cache` (44 entries, 690k one level below) took 37 s to open,
+ * holding the backend's lock: every other kqueue subscribe and unsubscribe of
+ * the process queued behind it, each on a Bun worker-pool thread, until file
+ * reads queued too (`research/2026-11-12-infra-file-watcher-close-queue.md`).
+ * The depth is part of parcel's native watcher identity, so this subscription
+ * is never shared with an FSEvents one of the same dir (one native watcher
+ * attached to two backends would hear both).
  */
-export const KQUEUE_CHILDREN_IGNORE = /[/]/;
+export const KQUEUE_CHILDREN_DEPTH = 1;
 
 export interface ChildrenWatchOn {
   /** Direct entries, named under the dir as the caller spelled it. */
