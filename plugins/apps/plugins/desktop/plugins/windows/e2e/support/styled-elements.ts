@@ -107,6 +107,14 @@ export async function traceSwitch(
     () => (window as ProbeWindow).__switchProbe?.flippedAt ?? -1,
   );
   const recalcs = styleRecalcs(trace);
+  // The shown window set changed, so something was restyled: a trace with no
+  // style recalc did not capture the switch (a renamed trace event, a missing
+  // category). Counted as 0 it would read as a perfect switch — and a budget
+  // over it could never fail.
+  if (recalcs.length === 0)
+    throw new Error(
+      `the switch flipped the shown windows (after ${Math.round(flippedAtMs)} ms) but its trace holds no UpdateLayoutTree with an element count — the trace did not capture the switch`,
+    );
   return {
     styled: recalcs.reduce((n, r) => n + r, 0),
     recalcs,

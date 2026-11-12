@@ -27,6 +27,14 @@ rendered — and none is slow enough for the stall report to see.
   and at boot for the latest deploy — once per commit (`lock` = commit,
   checked with `latestSupervisedRun`). Not on every push: it needs the deploy
   and a browser (~2 min).
+- Reading a run on main: `job_runs` shows two rows per commit — a ~100 ms
+  `suspended` one (claim + spawn) and, ~80 s later, a few-ms `succeeded` one
+  (the wake that records the child's exit). The measurement is the child, in
+  `supervised_job_runs` (`exit_code`) and its transcript in main's
+  `logs/desktop-fullscreen-budget.jsonl`. A child that cannot measure (no
+  browser, `/demo` broken, a trace with no style recalc — `traceSwitch`
+  throws) exits 1: the built-in ledger dead-letters it and files a
+  `job-attempt-failed` report, never "succeeded".
 - On demand from any worktree: `./equin run <the script>` against your own
   build; exits 1 while over budget.
 
