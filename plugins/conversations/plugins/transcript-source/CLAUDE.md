@@ -42,7 +42,11 @@ A conversation's transcript, independent of the host that stores it.
   twice), and both the line decode and `buildJsonlEvents` yield about every
   10 ms on one turn queue shared by every transcript parse (`slicing.ts`) — so
   a cold read of a huge chain, or of every chain a server boot opens, never
-  stalls the event loop (it once held it 10.5 s).
+  stalls the event loop (it once held it 10.5 s). The time a slice waits for
+  its turn is a `queue` wait on layer `transcript-turn` (runtime-profiler
+  `beginWait`), so a span that parses is judged on its own slices and a
+  crowded queue reports itself as `wait transcript-turn`, never as the
+  parse's own time.
 - **Providers.** The desktop: `transcript-watcher#machine` (the session files on
   disk, signed by mtime + size, watched by the one transcript watcher). A host
   without the files: `plugins/memory` (JSONL text written to it —

@@ -29,6 +29,17 @@ turn has arrived, so a full loop turn (timers, I/O) separates consecutive
 callers. The check runner starts every check through one: ~100 checks'
 synchronous start-ups used to run as one block before any timer fired.
 
+**A turn's wait is a wait, not the caller's work.** A call queued behind N
+other callers spends N slices plus a loop turn before it resumes; a span
+timing the caller would count all of it as its own. `createTurnQueue({ onWait })`
+takes the semaphore's `onQueued` shape — called as the call starts waiting,
+its returned end called as the turn arrives — so an owner meters it (on a
+server: runtime-profiler's `beginWait(layer, "queue")`) without this
+primitive knowing a profiler. The transcript parse queue is metered as
+`transcript-turn`: before, a boot's 45 concurrent cold parses each read as
+~0.5–0.7 s of own time (3 s on a busy main boot, report-1794456016-90xw7m);
+metered, 75–90 % of it is the queue (own 44–179 ms).
+
 `createTimeSlicer(budgetMs, yieldTurn)` takes the queue as its yield: tasks of
 one kind slicing at once (the transcripts a server boot opens) share one
 `createTurnQueue()`, so each slice gets a turn of its own.

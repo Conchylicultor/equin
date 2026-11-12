@@ -52,12 +52,26 @@ export function yieldMacrotask(): Promise<void> {
  *
  * The check runner starts every check through one, so ~100 checks' synchronous
  * start-ups are spread over ~100 turns instead of run as one block.
+ *
+ * A call's time until its turn is NOT its caller's work: it is the other
+ * callers' slices ahead of it, then one loop turn. `onWait` makes that wait
+ * observable without coupling this primitive to a profiler (the semaphore's
+ * `onQueued` shape): called synchronously, in the caller's context, as the call
+ * starts waiting; the function it returns is called the moment the turn
+ * arrives. A server owner passes the runtime profiler's `beginWait(layer,
+ * "queue")`, so a span that took its turns here is judged on its own slices,
+ * and the queue on its waits.
  */
-export function createTurnQueue(): () => Promise<void> {
+export function createTurnQueue(
+  opts: { onWait?: () => () => void } = {},
+): () => Promise<void> {
+  const { onWait } = opts;
   let last: Promise<void> = Promise.resolve();
   return () => {
     last = last.then(yieldMacrotask);
-    return last;
+    if (!onWait) return last;
+    const end = onWait();
+    return last.then(end);
   };
 }
 

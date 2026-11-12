@@ -36733,11 +36733,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SPAN_MEASURES`
           - `waitSplit`
       - Cross-plugin:
-        - Imported by: 75 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
+        - Imported by: 76 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
           - `infra` ×22
           - `debug` ×21
           - `apps` ×7
-          - `conversations` ×6
+          - `conversations` ×7
           - `build` ×3
           - `tasks` ×3
           - `database` ×2

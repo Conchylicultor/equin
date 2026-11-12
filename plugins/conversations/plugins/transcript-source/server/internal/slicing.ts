@@ -1,13 +1,23 @@
+import { beginWait } from "@plugins/infra/plugins/runtime-profiler/core";
 import {
   createTimeSlicer,
   createTurnQueue,
 } from "@plugins/packages/plugins/macrotask-yield/core";
 
+/**
+ * The wait layer a transcript parse's turns are metered under: the time a
+ * slice spent queued behind every other transcript's slices (then one loop
+ * turn) is a `queue` wait on this layer, never the parse's own time.
+ */
+const TRANSCRIPT_TURN_LAYER = "transcript-turn";
+
 // Every transcript parse on this thread takes its turns from one queue: a
 // server boot opens many conversations' transcripts at once, and slicers that
 // yielded on their own would all resume back to back in one turn — the stall
 // again, cut into pieces that still run as one block.
-const transcriptTurns = createTurnQueue();
+const transcriptTurns = createTurnQueue({
+  onWait: () => beginWait(TRANSCRIPT_TURN_LAYER, "queue"),
+});
 
 /**
  * A time slicer for one pass over a transcript's lines (decoding a chunk,

@@ -74,6 +74,31 @@ describe("createTurnQueue", () => {
     }
   });
 
+  test("onWait opens as each call starts waiting and closes as its turn arrives", async () => {
+    const log: string[] = [];
+    let n = 0;
+    const turns = createTurnQueue({
+      onWait: () => {
+        const id = n++;
+        log.push(`begin ${id}`);
+        return () => log.push(`end ${id}`);
+      },
+    });
+    const calls = [0, 1, 2].map((i) =>
+      turns().then(() => log.push(`resume ${i}`)),
+    );
+    expect(log).toEqual(["begin 0", "begin 1", "begin 2"]);
+    await Promise.all(calls);
+    expect(log.slice(3)).toEqual([
+      "end 0",
+      "resume 0",
+      "end 1",
+      "resume 1",
+      "end 2",
+      "resume 2",
+    ]);
+  });
+
   test("a call made after the queue went idle still yields a full turn", async () => {
     const turns = createTurnQueue();
     await turns();
