@@ -368,20 +368,22 @@ const passed = await withBrowser(async (h) => {
   const running = page.getByText(/The agent is building it now/);
   if (await visible("handoff card (running)", running, LIVE_TIMEOUT_MS)) {
     await visible("handoff offers Finish tour", button("Finish tour"));
-    // The step brought its row into view: the spotlight's cut-out (the mask's
-    // hole) lies inside the viewport, not off below the sidebar's fold.
-    const hole = await page.evaluate(() => {
-      const r = document.querySelector("svg mask rect:nth-of-type(2)");
-      return r
-        ? {
-            y: Number(r.getAttribute("y")),
-            h: Number(r.getAttribute("height")),
-          }
-        : null;
+    // The step brought its row into view: the spotlight's cut-out (the
+    // stage's one spot box, in `hole` mode) lies inside the viewport, not off
+    // below the sidebar's fold — measured once its glide onto the row ended.
+    const spot = page.locator('.hint-spot[data-mode="hole"]');
+    await spot.waitFor({ state: "attached", timeout: LIVE_TIMEOUT_MS });
+    const hole = await spot.evaluate(async (el) => {
+      // Until no glide runs: a retargeted transition replaces the one awaited
+      // (whose `finished` then rejects — settled either way), so look again.
+      for (let a = el.getAnimations(); a.length > 0; a = el.getAnimations())
+        await Promise.allSettled(a.map((anim) => anim.finished));
+      const b = el.getBoundingClientRect();
+      return { y: b.y, h: b.height };
     });
     r.ok(
       "handoff spotlight is on screen",
-      hole !== null && hole.y >= 0 && hole.y + hole.h <= viewportHeight(page),
+      hole.h > 0 && hole.y >= 0 && hole.y + hole.h <= viewportHeight(page),
       JSON.stringify(hole),
     );
     await snap(page, out, "8-handoff-running");

@@ -212,6 +212,11 @@ ends it through the same evidence signal.
   `returnTurnByPromptUuid` makes THAT row `returned`, and the draft gets the
   row's own `text` — never text read back from the agent. A uuid no row was
   confirmed as is a ledger hole and throws.
+  A turn `typed` into an idle agent is not running yet: an interrupt finds
+  nothing and the turn runs right after. So Stop first waits for the agent to
+  take it (`awaitTypedTurnTaken`: `hasTypedTurn` re-read on each
+  `onStatusEvidence`; 60 s bound, then `TypedTurnNotTakenError`), then
+  interrupts. A turn queued behind a running one is not waited for.
 - **Rewind** (conversations `rewindConversationAt`): `returnTurnsSince(
   conversationId, cutMessageAt)` returns every turn sent from the cut on, and
   `returnTurnByPromptUuid` the cut message itself, by the cut line's uuid (its
@@ -287,6 +292,7 @@ withdrawn).
     - `getTurn`
     - `hasHeldTurns`
     - `hasTurnInFlight`
+    - `hasTypedTurn`
     - `holdIfStarting`
     - `latestSubmitAt`
     - `listHeldTurns`

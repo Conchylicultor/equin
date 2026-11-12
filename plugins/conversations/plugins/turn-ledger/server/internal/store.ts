@@ -611,6 +611,29 @@ export async function hasTurnInFlight(
 }
 
 /**
+ * Whether the conversation holds a `typed` turn: handed to its agent, not
+ * taken yet (no `turn_started`). Left only by an event — the confirmation,
+ * or `dropped` when the agent goes away — each of which signals
+ * `onStatusEvidence`, so a caller can wait for it push-based.
+ */
+export async function hasTypedTurn(
+  conversationId: string,
+  conn: Pick<NodePgDatabase, "select"> = db,
+): Promise<boolean> {
+  const [row] = await conn
+    .select({ id: _conversationTurns.id })
+    .from(_conversationTurns)
+    .where(
+      and(
+        eq(_conversationTurns.conversationId, conversationId),
+        eq(_conversationTurns.state, "typed"),
+      ),
+    )
+    .limit(1);
+  return row !== undefined;
+}
+
+/**
  * Mark `returned` the turn the agent took as transcript line `promptUuid` —
  * the turn Stop took back out of the session, or the message a rewind cut at.
  * Returns the row, or null when this conversation has no turn with that uuid

@@ -76,9 +76,9 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
     - `report-kind` "conversation-stuck-turn"
     - `report-kind` "held-turn-undelivered"
     - `resource.declare` "conversations.partial-message"
-  - Uses: 85 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 86 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/tasks-core` ×27
-    - `conversations/turn-ledger` ×14
+    - `conversations/turn-ledger` ×15
     - `conversations/transcript-watcher` ×7
     - `conversations/conversation-preprompt` ×3
     - `conversations/spawn-failure` ×3

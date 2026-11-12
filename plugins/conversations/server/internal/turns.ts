@@ -10,22 +10,29 @@ import {
   applyTurnEvent,
   getTurn,
   hasTurnInFlight,
+  hasTypedTurn,
   holdIfStarting,
   listHeldTurns,
+  onStatusEvidence,
   returnHeldTurns,
   returnTurnByPromptUuid,
   type TurnRow,
 } from "@plugins/conversations/plugins/turn-ledger/server";
-import { QUESTION_WAITING_FOR } from "../../core/turn-gate";
+import {
+  QUESTION_WAITING_FOR,
+  STUCK_TURN_WAITING_FOR,
+} from "../../core/turn-gate";
 import {
   ensureResumed,
   ResumeBlockedError,
   resumeIfStopped,
 } from "./lifecycle";
 import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
+import { withDeadline } from "@plugins/packages/plugins/deadline/core";
 import {
   conversationRuntime,
   withTerminal,
+  type ConversationRuntime,
   type OutgoingTurn,
 } from "./runtime";
 
@@ -249,37 +256,139 @@ export async function launchWithHeldTurn(
  * the terminal back.
  */
 export async function stopTurn(conversationId: string): Promise<string | null> {
-  const takenBack = await returnHeldTurns(conversationId);
   const row = await getConversation(conversationId);
   if (!row) throw new Error(`Conversation ${conversationId} not found`);
-  const nothingRunning =
+  if (
     (row.status === "starting" || row.resumingSince !== null) &&
-    !(await hasTurnInFlight(conversationId));
-  const stopped = nothingRunning
-    ? null
-    : await withTerminal(conversationId, async () => {
-        const { runtime } = await conversationRuntime(conversationId);
-        const { returnedPromptUuid } = await runtime.stop(conversationId);
-        if (returnedPromptUuid === null) return null;
-        const returned = await returnTurnByPromptUuid(
-          conversationId,
-          returnedPromptUuid,
-        );
-        // Every turn an agent takes is a ledger row confirmed with its line's
-        // uuid: one without a row is a ledger hole, and its text is gone from
-        // the session — say so rather than hand back nothing.
-        if (!returned) {
-          throw new Error(
-            `Stop took turn ${returnedPromptUuid} out of conversation ${conversationId}, but no ledger turn was confirmed as it`,
-          );
-        }
-        return returned.text;
-      });
-  // Oldest first: the running turn was sent before any turn held behind it.
+    !(await hasTurnInFlight(conversationId))
+  ) {
+    // Coming up with nothing on its way in: take every held turn back first,
+    // racing the launch's claim (both conditional on `held`), then look again
+    // — a launch that won the claim is stopped as a running turn below.
+    const takenBack = await returnHeldTurns(conversationId);
+    const stopped = (await hasTurnInFlight(conversationId))
+      ? await stopRunningTurn(conversationId, row.waitingFor)
+      : null;
+    return joinStopTexts(stopped, takenBack);
+  }
+  return withTerminal(conversationId, async () => {
+    const stopped = await stopRunningTurn(conversationId, row.waitingFor, {
+      locked: true,
+    });
+    // As the terminal writer no launch or flush is claiming a held turn, so
+    // taking them back here — after the wait, which may throw — is race-free
+    // and loses none.
+    return joinStopTexts(stopped, await returnHeldTurns(conversationId));
+  });
+}
+
+/** Oldest first: the running turn was sent before any turn held behind it. */
+function joinStopTexts(
+  stopped: string | null,
+  takenBack: readonly TurnRow[],
+): string | null {
   const texts = [stopped, ...takenBack.map((turn) => turn.text)].filter(
     (text): text is string => text !== null && text.trim().length > 0,
   );
   return texts.length > 0 ? texts.join("\n\n") : null;
+}
+
+/**
+ * Stop the agent's running turn — first waiting for it to take a turn typed
+ * into it ({@link awaitTypedTurnTaken}) — and return the text of the turn it
+ * took back, or null when the turn stays (it had a reply, or there was none).
+ */
+async function stopRunningTurn(
+  conversationId: string,
+  waitingFor: string | null,
+  { locked }: { locked: boolean } = { locked: false },
+): Promise<string | null> {
+  const run = async (): Promise<string | null> => {
+    const { runtime } = await conversationRuntime(conversationId);
+    // A stuck agent (its CLI wedged holding a turn) will never take it: stop
+    // it as it stands rather than wait out the bound.
+    if (waitingFor !== STUCK_TURN_WAITING_FOR)
+      await awaitTypedTurnTaken(conversationId, runtime);
+    const { returnedPromptUuid } = await runtime.stop(conversationId);
+    if (returnedPromptUuid === null) return null;
+    const returned = await returnTurnByPromptUuid(
+      conversationId,
+      returnedPromptUuid,
+    );
+    // Every turn an agent takes is a ledger row confirmed with its line's
+    // uuid: one without a row is a ledger hole, and its text is gone from
+    // the session — say so rather than hand back nothing.
+    if (!returned) {
+      throw new Error(
+        `Stop took turn ${returnedPromptUuid} out of conversation ${conversationId}, but no ledger turn was confirmed as it`,
+      );
+    }
+    return returned.text;
+  };
+  return locked ? run() : withTerminal(conversationId, run);
+}
+
+/**
+ * How long Stop waits for an idle agent to take the turn typed into it — the
+ * bound the sdk runtime gives an agent's start (its CLI's initialize), since
+ * the turn waiting is usually the launch prompt riding that start.
+ */
+const TYPED_TURN_TAKE_MS = 60_000;
+
+/** Stop waited out {@link TYPED_TURN_TAKE_MS} for a typed turn its agent never took. */
+export class TypedTurnNotTakenError extends Error {
+  constructor(conversationId: string) {
+    super(
+      `Stop: conversation ${conversationId}'s agent was handed a turn and neither took it nor gave it back within ${TYPED_TURN_TAKE_MS / 1000} s`,
+    );
+    this.name = "TypedTurnNotTakenError";
+  }
+}
+
+/**
+ * A turn typed into an agent that is not running one is about to start, but
+ * has not yet: an interrupt now finds nothing to stop, and the turn then runs
+ * in full (the Home tour's first request, stopped the second its agent came
+ * up). Wait for the agent to take it (`accepted`) — or the ledger to settle it
+ * otherwise (the agent went away: `dropped`) — so the interrupt that follows
+ * stops it, and Stop's rewind hands it back. Push-based: re-read on each of
+ * the ledger's status-evidence signals for this conversation. A turn queued
+ * behind a running one is not waited for: the interrupt has a turn to stop.
+ */
+async function awaitTypedTurnTaken(
+  conversationId: string,
+  runtime: ConversationRuntime,
+): Promise<void> {
+  if (!(await hasTypedTurn(conversationId))) return;
+  const inspection = (await runtime.inspect([conversationId])).get(
+    conversationId,
+  );
+  if (
+    inspection?.kind !== "live" ||
+    inspection.info.dead ||
+    inspection.info.workingOn === "turn"
+  )
+    return;
+  let wake = (): void => {};
+  const unsubscribe = onStatusEvidence((id) => {
+    if (id === conversationId) wake();
+  });
+  try {
+    await withDeadline(
+      (async () => {
+        for (;;) {
+          // Armed before the read, so a signal landing during it is not lost.
+          const signalled = new Promise<void>((resolve) => (wake = resolve));
+          if (!(await hasTypedTurn(conversationId))) return;
+          await signalled;
+        }
+      })(),
+      TYPED_TURN_TAKE_MS,
+      () => new TypedTurnNotTakenError(conversationId),
+    );
+  } finally {
+    unsubscribe();
+  }
 }
 
 function messageOf(err: unknown): string {

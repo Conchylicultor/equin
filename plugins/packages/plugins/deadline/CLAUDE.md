@@ -20,6 +20,7 @@ Used by `infra/safe-fetch/browser-fetch` (the Playwright import) and
 - Description: Bound an await: withDeadline(work, budgetMs, onTimeout) races a promise against a one-shot timer, rejecting with the caller's own error on expiry (the work's own rejection wins when it comes first) and always clearing the timer. It never cancels the work — the caller keeps its handle and decides what a still-running promise means.
 - Cross-plugin:
   - Imported by:
+    - `conversations`
     - `conversations/runtime-sdk`
     - `infra/claude-cli/sdk`
     - `infra/safe-fetch/browser-fetch`

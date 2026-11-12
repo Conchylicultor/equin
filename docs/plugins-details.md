@@ -15421,9 +15421,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `report-kind` "conversation-stuck-turn"
       - `report-kind` "held-turn-undelivered"
       - `resource.declare` "conversations.partial-message"
-    - Uses: 85 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+    - Uses: 86 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
       - `tasks/tasks-core` ×27
-      - `conversations/turn-ledger` ×14
+      - `conversations/turn-ledger` ×15
       - `conversations/transcript-watcher` ×7
       - `conversations/conversation-preprompt` ×3
       - `conversations/spawn-failure` ×3
@@ -21726,6 +21726,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `getTurn`
           - `hasHeldTurns`
           - `hasTurnInFlight`
+          - `hasTypedTurn`
           - `holdIfStarting`
           - `latestSubmitAt`
           - `listHeldTurns`
@@ -39209,6 +39210,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`deadline`** — Bound an await: withDeadline(work, budgetMs, onTimeout) races a promise against a one-shot timer, rejecting with the caller's own error on expiry (the work's own rejection wins when it comes first) and always clearing the timer. It never cancels the work — the caller keeps its handle and decides what a still-running promise means.
       - Cross-plugin:
         - Imported by:
+          - `conversations`
           - `conversations/runtime-sdk`
           - `infra/claude-cli/sdk`
           - `infra/safe-fetch/browser-fetch`

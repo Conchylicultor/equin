@@ -20,6 +20,7 @@ export {
   resolvePromptSubmit,
   returnHeldTurns,
   hasTurnInFlight,
+  hasTypedTurn,
   returnTurnByPromptUuid,
   returnTurnsSince,
 } from "./internal/store";
