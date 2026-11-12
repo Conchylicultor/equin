@@ -1,12 +1,12 @@
 import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
-import type { JsonlEvent } from "../../core";
+import { BranchForest, type JsonlEvent } from "../../core";
 import { slimApiRequestLine } from "./api-request";
 import {
   base64ImageSize,
   encodeImageKey,
   visitInlineImages,
 } from "./image-key";
-import { buildJsonlEvents, type TranscriptImageReader } from "./parse-jsonl";
+import { JsonlEventBuilder, type TranscriptImageReader } from "./parse-jsonl";
 import { transcriptSlicer } from "./slicing";
 
 const NEWLINE = 0x0a;
@@ -51,17 +51,28 @@ export type TranscriptByteRead = (
  *   AskUserQuestion answer) are dropped, and so is a line with neither a uuid
  *   nor a timestamp (`api-request-blob`, `mode`, …: not in the branch forest,
  *   and skipped by the event builder). In a 52 MB transcript that is most of it.
- * - **Events from the held lines**, built once per change (`events()`): the
- *   builder's cross-line state — the live branch, a tool call and its later
- *   result, a message split over lines — always sees the whole chain, so an
- *   incremental read can never answer differently from a full one.
+ * - **Events from the held lines, built from what changed** (`events()`):
+ *   the lines held since the last build go through the branch filter
+ *   (`BranchForest`) and into the event builder (`JsonlEventBuilder`), whose
+ *   cross-line state — a tool call and its later result, a message split over
+ *   lines — carries over from the lines before. So an append costs its own
+ *   lines, and answers what a build over the whole chain would: the one
+ *   change that can rewrite earlier events, a rewind dropping a line already
+ *   built, rebuilds the events from the live branch.
  */
 export class TranscriptLines {
   private readonly held: Record<string, unknown>[] = [];
-  private readonly seenUuids = new Set<string>();
+  /** Each held uuid's position in `held`. */
+  private readonly heldAt = new Map<string, number>();
   private readonly consumedByFile = new Map<string, number>();
   private built: { version: number; events: Promise<JsonlEvent[]> } | null =
     null;
+  /** The live-branch filter over the first `branched` held lines. */
+  private readonly branch = new BranchForest();
+  private branched = 0;
+  /** The events of the first `builtTo` held lines' live branch; null after a failed build (the next one starts over). */
+  private builder: JsonlEventBuilder | null = null;
+  private builtTo = 0;
   private version = 0;
   private readonly lock = createKeyedMutex();
 
@@ -104,13 +115,42 @@ export class TranscriptLines {
   events(): Promise<JsonlEvent[]> {
     return this.lock.run(CHAIN, () => {
       if (this.built?.version !== this.version) {
-        this.built = {
-          version: this.version,
-          events: buildJsonlEvents(this.held, this.readImage),
-        };
+        this.built = { version: this.version, events: this.build() };
       }
       return this.built.events;
     });
+  }
+
+  /**
+   * The events of every held line: the lines held since the last build go
+   * through the branch filter and into the builder. Runs under the lock.
+   */
+  private async build(): Promise<JsonlEvent[]> {
+    const end = this.held.length;
+    // A rewind can drop lines already built — their events must go.
+    let rewound = false;
+    for (let i = this.branched; i < end; i++) {
+      for (const uuid of this.branch.add(this.held[i]!)) {
+        if (this.heldAt.get(uuid)! < this.builtTo) rewound = true;
+      }
+    }
+    this.branched = end;
+    const live = (line: Record<string, unknown>) =>
+      typeof line.uuid !== "string" || !this.branch.isDropped(line.uuid);
+    if (rewound || !this.builder) {
+      this.builder = new JsonlEventBuilder(this.readImage);
+      this.builtTo = 0;
+    }
+    const builder = this.builder;
+    try {
+      await builder.add(this.held.slice(this.builtTo, end).filter(live));
+    } catch (err) {
+      // Half-folded: nothing it holds can be trusted.
+      this.builder = null;
+      throw err;
+    }
+    this.builtTo = end;
+    return builder.events();
   }
 
   /** Decode the complete lines of `bytes` — `file`'s bytes from `offset`. Runs under the lock. */
@@ -148,8 +188,8 @@ export class TranscriptLines {
   ): boolean {
     const uuid = typeof line.uuid === "string" ? line.uuid : null;
     if (uuid) {
-      if (this.seenUuids.has(uuid)) return false;
-      this.seenUuids.add(uuid);
+      if (this.heldAt.has(uuid)) return false;
+      this.heldAt.set(uuid, this.held.length);
     } else if (typeof line.timestamp !== "string") {
       return false;
     }

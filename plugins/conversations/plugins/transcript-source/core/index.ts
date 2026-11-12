@@ -23,7 +23,7 @@ export { unwrapPastedContent } from "./pasted-content";
 export { questionAnswerText, userPromptText } from "./user-prompt";
 export { turnLineKind } from "./turn-line";
 export type { TurnLineKind } from "./turn-line";
-export { activeLineUuids } from "./branch-filter";
+export { activeLineUuids, BranchForest } from "./branch-filter";
 export { mergedSendUuids } from "./merged-sends";
 export type { CrossSessionMessage, TeammateMessage } from "./relay";
 export {

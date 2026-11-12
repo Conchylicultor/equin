@@ -47,6 +47,13 @@ A conversation's transcript, independent of the host that stores it.
   `beginWait`), so a span that parses is judged on its own slices and a
   crowded queue reports itself as `wait transcript-turn`, never as the
   parse's own time.
+- **An append costs its own lines, never the transcript.** `TranscriptLines`
+  keeps the branch filter (`BranchForest`) and the event builder
+  (`JsonlEventBuilder`, cross-line state carried over) between builds and
+  feeds them only the new lines; a rewind dropping a line already built
+  starts the builder over. An answer of `events()` is never mutated later:
+  mutate an emitted event only through the builder's `touch`, which
+  republishes a copy.
 - **Providers.** The desktop: `transcript-watcher#machine` (the session files on
   disk, signed by mtime + size, watched by the one transcript watcher). A host
   without the files: `plugins/memory` (JSONL text written to it —
@@ -111,6 +118,7 @@ Design: `research/2026-10-19-global-demo-story-from-browser-worker.md` §3.
     - `UserTextSegment`
   - Exports (values):
     - `activeLineUuids`
+    - `BranchForest`
     - `createTurnEndTracker`
     - `crossSessionMessageOf`
     - `extractPreprompt`

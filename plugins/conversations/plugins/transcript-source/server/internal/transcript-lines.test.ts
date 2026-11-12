@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { buildJsonlEvents } from "./parse-jsonl";
 import {
   mergeChainLines,
   TranscriptLines,
@@ -269,5 +270,134 @@ describe("TranscriptLines catch-ups", () => {
     release();
     await caughtUp;
     expect((await events).map((e) => e.kind)).toContain("user-text");
+  });
+});
+
+describe("TranscriptLines events, built from what changed", () => {
+  const toolUseLine = (
+    uuid: string,
+    parentUuid: string,
+    id: string,
+    at: string,
+  ) => ({
+    type: "assistant",
+    uuid,
+    parentUuid,
+    timestamp: at,
+    message: {
+      role: "assistant",
+      id: `msg-${uuid}`,
+      content: [
+        { type: "tool_use", id, name: "Bash", input: { command: "ls" } },
+      ],
+    },
+  });
+  const toolResultLine = (
+    uuid: string,
+    parentUuid: string,
+    id: string,
+    at: string,
+  ) => ({
+    type: "user",
+    uuid,
+    parentUuid,
+    timestamp: at,
+    message: {
+      role: "user",
+      content: [{ type: "tool_result", tool_use_id: id, content: "ok" }],
+    },
+  });
+  const snapshotLine = (uuid: string, parentUuid: string, at: string) => ({
+    type: "attachment",
+    uuid,
+    parentUuid,
+    timestamp: at,
+    attachment: {
+      type: "prompt_snapshot",
+      systemPrompt: [
+        "base",
+        "<special_instructions>\nbe brief\n</special_instructions>",
+      ],
+    },
+  });
+
+  /**
+   * Append `lines` one at a time: after each, the events equal a build over
+   * every line from scratch, and every earlier answer is still what it was.
+   */
+  async function replay(lines: Record<string, unknown>[]) {
+    const held = new TranscriptLines(() => Promise.resolve(null));
+    const answers: { events: unknown; json: string }[] = [];
+    let text = "";
+    for (const line of lines) {
+      text += JSON.stringify(line) + "\n";
+      const bytes = new TextEncoder().encode(text);
+      await held.catchUp("a.jsonl", bytes.length, wholeBytes(bytes));
+      const events = await held.events();
+      const json = JSON.stringify(events);
+      expect(json).toBe(
+        JSON.stringify(
+          await buildJsonlEvents(held.lines(), () => Promise.resolve(null)),
+        ),
+      );
+      answers.push({ events, json });
+    }
+    for (const { events, json } of answers) {
+      expect(JSON.stringify(events)).toBe(json);
+    }
+    return answers.at(-1)!.events as Awaited<
+      ReturnType<TranscriptLines["events"]>
+    >;
+  }
+
+  test("a result pairs with a call already returned, without changing that answer", async () => {
+    const events = await replay([
+      userLine("u1", null, "run it", T1),
+      toolUseLine("a1", "u1", "tu-1", T2),
+      toolResultLine("r1", "a1", "tu-1", T3),
+    ]);
+    const call = events.find((e) => e.kind === "tool-call");
+    expect(call?.kind === "tool-call" && call.result?.content).toBe("ok");
+  });
+
+  test("a rewind drops events already returned", async () => {
+    const events = await replay([
+      userLine("u1", null, "hello", T1),
+      assistantLine("a1", "u1", "hi", T2),
+      userLine("p1", "a1", "first try", T3),
+      assistantLine("a2", "p1", "answer to the first try", T3),
+      // The user rewinds to before p1: a sibling prompt under a1.
+      userLine("p2", "a1", "second try", T4),
+    ]);
+    const texts = events.flatMap((e) =>
+      e.kind === "user-text" || e.kind === "assistant-text" ? [e.text] : [],
+    );
+    expect(texts).toEqual(["hello", "hi", "second try"]);
+  });
+
+  test("a result before its call, then the call: paired on a copy each time", async () => {
+    const events = await replay([
+      userLine("u1", null, "go", T1),
+      toolResultLine("r1", "u1", "tu-9", T2),
+      toolUseLine("a1", "r1", "tu-9", T3),
+      assistantLine("a2", "a1", "done", T4),
+    ]);
+    const calls = events.filter((e) => e.kind === "tool-call");
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.kind === "tool-call" && calls[0].name).toBe("Bash");
+  });
+
+  test("a preprompt snapshot lands before the first prompt already returned", async () => {
+    const events = await replay([
+      userLine("u1", null, "hello", T1),
+      assistantLine("a1", "u1", "hi", T2),
+      snapshotLine("s1", "a1", T3),
+    ]);
+    expect(events.map((e) => e.kind)).toEqual([
+      "preprompt",
+      "user-text",
+      "assistant-text",
+      "attachment",
+    ]);
   });
 });
