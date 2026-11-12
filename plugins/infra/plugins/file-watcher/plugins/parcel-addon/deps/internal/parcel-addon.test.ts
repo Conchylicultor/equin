@@ -380,6 +380,115 @@ describe.skipIf(process.platform !== "darwin")(
       });
     }, 60_000);
 
+    test("a folder diff that cannot watch a created entry reports every create and the loss", async () => {
+      // Upstream's diff stopped at the first entry it could not watch and
+      // start() ignored its answer: the rest of the diff (other creates,
+      // every delete) went unreported, with no error, until the folder
+      // changed again. The failure here is EMFILE once the diff has its
+      // folder open — in a child, whose descriptors are used up alone: every
+      // descriptor but one is taken, the files are renamed in (no descriptor
+      // needed), and the diff's dup takes the last, so each open fails.
+      const ready = await ensureDep(parcelWatcherAddon, execContextForTests());
+      const dir = tempDir("diff-fails");
+      const staging = tempDir("diff-fails-staging");
+      const names = ["a.log", "b.log", "c.log"];
+      const script = `
+        const [wrapperPath, addonPath, dir, staging, names] = process.argv.slice(-5);
+        const { closeSync, openSync, renameSync, writeFileSync } = require("node:fs");
+        const { join } = require("node:path");
+        const addon = require(wrapperPath).createWrapper(require(addonPath));
+        const events = [];
+        const errors = [];
+        const sub = await addon.subscribe(dir, (err, batch) => {
+          if (err) errors.push(err.message);
+          events.push(...batch);
+        }, { backend: "kqueue" });
+        const files = names.split(",");
+        for (const n of files) writeFileSync(join(staging, n), "x");
+        const fillers = [];
+        while (true) {
+          try { fillers.push(openSync("/dev/null", "r")); }
+          catch (err) { if (err.code === "EMFILE") break; throw err; }
+        }
+        closeSync(fillers.pop());
+        for (const n of files) renameSync(join(staging, n), join(dir, n));
+        const start = Date.now();
+        while (errors.length === 0 && Date.now() - start < 5000) {
+          await new Promise((r) => setTimeout(r, 20));
+        }
+        await new Promise((r) => setTimeout(r, 300));
+        for (const fd of fillers) closeSync(fd);
+        await sub.unsubscribe();
+        const created = [...new Set(events.filter((e) => e.type === "create").map((e) => e.path))].sort();
+        console.log(JSON.stringify({ created, errors }));
+        process.exit(0);`;
+      const child = spawn(
+        "/bin/sh",
+        [
+          "-c",
+          'ulimit -n $(( $(ls /dev/fd | wc -l) + 80 )) && exec "$0" -e "$1" "$2" "$3" "$4" "$5" "$6"',
+          process.execPath,
+          script,
+          createRequire(import.meta.url).resolve("@parcel/watcher/wrapper"),
+          builtFile(ready),
+          dir,
+          staging,
+          names.join(","),
+        ],
+        { stdio: ["ignore", "pipe", "pipe"] },
+      );
+      let out = "";
+      let err = "";
+      child.stdout.on("data", (chunk: Buffer) => (out += chunk.toString()));
+      child.stderr.on("data", (chunk: Buffer) => (err += chunk.toString()));
+      const code = await new Promise<number | null>((resolve) =>
+        child.on("exit", (c) => resolve(c)),
+      );
+      expect({ code, err }).toEqual({ code: 0, err: "" });
+      const result = JSON.parse(out) as { created: string[]; errors: string[] };
+      expect(result.created).toEqual(names.map((n) => join(dir, n)));
+      expect(result.errors.length).toBeGreaterThan(0);
+      for (const message of result.errors)
+        expect(message).toMatch(
+          /^error diffing .*: watch .*: Too many open files$/,
+        );
+    }, 60_000);
+
+    test("an entry gone between a folder's listing and its open is no loss", async () => {
+      // The vanished-entry race is expected, not a failure: an entry created
+      // and removed while its folder is diffed is skipped (its create and
+      // removal cancel out), and the diff goes on — every lasting file heard,
+      // no error reported.
+      const dir = tempDir("vanish");
+      const { sub, events } = await subscribe(dir);
+      const churn = spawn(
+        "/bin/sh",
+        [
+          "-c",
+          `cd ${JSON.stringify(dir)} && i=0; while :; do i=$((i+1)); : > tmp-$i; mkdir d-$i; rm -f tmp-$i; rmdir d-$i; done`,
+        ],
+        { stdio: "ignore" },
+      );
+      const kept = Array.from({ length: 100 }, (_, i) => `keep-${i}.log`);
+      try {
+        for (const n of kept) {
+          writeFileSync(join(dir, n), "x");
+          await new Promise((resolve) => setTimeout(resolve, 5));
+        }
+        const heard = (): number =>
+          new Set(
+            events
+              .filter((e) => e.type === "create" && e.path.includes("/keep-"))
+              .map((e) => e.path),
+          ).size;
+        await until(() => heard() === kept.length, 10_000, "every kept file");
+      } finally {
+        churn.kill("SIGKILL");
+      }
+      await sub.unsubscribe();
+      expect(watchErrors).toEqual([]);
+    }, 60_000);
+
     test("subscriptions of one directory with different ignores each see exactly their own files", async () => {
       const dir = tempDir("shared");
       const a = ["a0.log", "a1.log"];
