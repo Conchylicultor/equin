@@ -260,8 +260,8 @@ export async function seed(
  */
 async function runPageWork(): Promise<DemoPageSession> {
   const caller = { conversationId: demoConversationId(PRACTICE_TIMER) };
-  const text = (result: { content: [{ text: string }] }) =>
-    result.content[0].text;
+  const text = (result: { content: readonly { text: string }[] }) =>
+    result.content.map((part) => part.text).join("\n\n");
 
   const read = async (
     blockId: string,

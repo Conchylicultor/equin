@@ -223,10 +223,13 @@ byte-for-byte. Prefer \`edit_page\` for a localized change — same machinery, f
 smaller chance of rewriting the whole block by accident.
 
 **A write can be refused because of instructions.** If the page is covered by
-instructions from its author that this conversation has not received yet (or
-that changed since), the write is refused with nothing written, and the refusal
-carries those instructions in full. They then count as received: read them, and
-retry if the write still follows them. Reading the page with \`read_page\` first
+instructions from its author that this conversation has not received yet, the
+write is refused with nothing written, and the refusal carries those
+instructions in full. They then count as received: read them, and retry if the
+write still follows them. Instructions you received that the author edited since
+do not refuse: the write goes through, and the result carries their current
+version in an \`<updated-instructions>\` part — follow it, and fix the write if
+it no longer does. Reading the page with \`read_page\` first
 delivers them the same way.
 
 The block records that THIS conversation wrote it, so a human reading the page
@@ -414,10 +417,13 @@ A worked round trip:
    \`write_agent_note\` on block-77. Answer it in block-77, below the card.
 
 **A write can be refused because of instructions.** If the page is covered by
-instructions from its author that this conversation has not received yet (or
-that changed since), the edit is refused with nothing written, and the refusal
-carries those instructions in full. They then count as received: read them, and
-retry if the edit still follows them. Reading the page with \`read_page\` first
+instructions from its author that this conversation has not received yet, the
+edit is refused with nothing written, and the refusal carries those
+instructions in full. They then count as received: read them, and retry if the
+edit still follows them. Instructions you received that the author edited since
+do not refuse: the edit goes through, and the result carries their current
+version in an \`<updated-instructions>\` part — follow it, and fix the edit if
+it no longer does. Reading the page with \`read_page\` first
 delivers them the same way. An \`<instructions>\` card is the author's, like a
 \`<human>\` card: hand it back byte-identical.
 

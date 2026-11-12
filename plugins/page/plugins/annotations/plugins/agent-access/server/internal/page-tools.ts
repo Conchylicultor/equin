@@ -28,7 +28,8 @@ import {
 } from "@plugins/page/plugins/editor/core";
 import { recordAgentNotesAuthor } from "@plugins/page/plugins/annotations/plugins/agent-notes/plugins/authorship/server";
 import {
-  assertInstructionsReceived,
+  admitWrite,
+  type InstructionsUpdate,
   deliverWithRead,
 } from "./instructions-gate";
 import { canonicalSnippet } from "./canonical-snippet";
@@ -84,9 +85,20 @@ export interface PageToolCaller {
   conversationId: string;
 }
 
-/** What every page tool returns — an MCP tool result's one text part. */
+/** One text part of an MCP tool result. */
+interface TextPart {
+  type: "text";
+  text: string;
+}
+
+/**
+ * What every page tool returns — an MCP tool result's text parts. The first is
+ * the tool's own answer (the markdown, or the write's JSON summary); a write
+ * adds a second when instructions it had received were edited since
+ * (`<updated-instructions>`, see `admitWrite`).
+ */
 export interface PageToolResult {
-  content: [{ type: "text"; text: string }];
+  content: [TextPart, ...TextPart[]];
 }
 
 /** `read_page`'s input, under the MCP tool's own (snake_case) names. */
@@ -111,6 +123,22 @@ export interface EditPageInput {
 const jsonResult = (value: unknown): PageToolResult => ({
   content: [{ type: "text", text: JSON.stringify(value) }],
 });
+
+/**
+ * A successful write's result, carrying the edited instructions the gate let it
+ * through with (as their own text part, so the first stays the JSON summary),
+ * which now count as received.
+ */
+async function withInstructionsUpdate(
+  result: PageToolResult,
+  update: InstructionsUpdate | null,
+): Promise<PageToolResult> {
+  if (update === null) return result;
+  await update.markDelivered();
+  return {
+    content: [...result.content, { type: "text", text: update.text }],
+  };
+}
 
 /**
  * The part of an {@link ApplyReport} an agent needs to see.
@@ -327,7 +355,7 @@ async function writeAgentNote(
   const scope = await loadBlockScope(blockId);
   assertAgentAuthored(scope, blockId);
   // Before anything is planned: a refusal here has written nothing.
-  await assertInstructionsReceived({
+  const instructionsUpdate = await admitWrite({
     tool: "write_agent_note",
     conversationId,
     pageId: scope.pageId,
@@ -366,8 +394,14 @@ async function writeAgentNote(
   // either way, and an agent that re-sends an unchanged document has still
   // taken authorship of what it says.
   await stampAuthors([blockId, ...authored], conversationId);
-  return jsonResult(
-    applySummary(report, [blockId, ...authored.filter((id) => id !== blockId)]),
+  return withInstructionsUpdate(
+    jsonResult(
+      applySummary(report, [
+        blockId,
+        ...authored.filter((id) => id !== blockId),
+      ]),
+    ),
+    instructionsUpdate,
   );
 }
 
@@ -395,7 +429,7 @@ async function editPage(
   assertAgentAddressable(scope, blockId);
   // Before the edit is even matched: whatever it would write, it waits until
   // the page's instructions have been received. A refusal writes nothing.
-  await assertInstructionsReceived({
+  const instructionsUpdate = await admitWrite({
     tool: "edit_page",
     conversationId,
     pageId: scope.pageId,
@@ -672,31 +706,34 @@ async function editPage(
     tagResolution === null
       ? null
       : await writeResolvedPageTags(scope.pageId, tagResolution.tags);
-  return jsonResult({
-    ...(applySummary(report, noteIds) as object),
-    ...(tagsWritten === null
-      ? {}
-      : {
-          tags_set: tagsWritten.names,
-          ...(tagsWritten.created.length === 0
-            ? {}
-            : { tags_created: tagsWritten.created }),
-        }),
-    replaced: replaceAll ? matches : 1,
-    // Said aloud rather than applied silently: the caller's snippet was at
-    // another depth than the text it matched (the first match's shift; with
-    // replace_all, later matches may sit at other depths).
-    ...(shift === null
-      ? {}
-      : { reindented: { from: shift.from.length, to: shift.to.length } }),
-    ...(renamedTo === undefined ? {} : { renamed_to: renamedTo }),
-    ...(metaIgnored
-      ? {
-          page_meta_ignored:
-            "<page-meta> is read-only outside its <tags> section: your change to the rest of it was not written",
-        }
-      : {}),
-  });
+  return withInstructionsUpdate(
+    jsonResult({
+      ...(applySummary(report, noteIds) as object),
+      ...(tagsWritten === null
+        ? {}
+        : {
+            tags_set: tagsWritten.names,
+            ...(tagsWritten.created.length === 0
+              ? {}
+              : { tags_created: tagsWritten.created }),
+          }),
+      replaced: replaceAll ? matches : 1,
+      // Said aloud rather than applied silently: the caller's snippet was at
+      // another depth than the text it matched (the first match's shift; with
+      // replace_all, later matches may sit at other depths).
+      ...(shift === null
+        ? {}
+        : { reindented: { from: shift.from.length, to: shift.to.length } }),
+      ...(renamedTo === undefined ? {} : { renamed_to: renamedTo }),
+      ...(metaIgnored
+        ? {
+            page_meta_ignored:
+              "<page-meta> is read-only outside its <tags> section: your change to the rest of it was not written",
+          }
+        : {}),
+    }),
+    instructionsUpdate,
+  );
 }
 
 /**

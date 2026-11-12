@@ -31,7 +31,7 @@ import { textBlock } from "@plugins/page/plugins/text/core";
 import { readBlockAsMarkdown } from "@plugins/page/plugins/markdown-apply/server";
 import { instructionsBlock } from "@plugins/page/plugins/annotations/plugins/instructions/core";
 import {
-  assertInstructionsReceived,
+  admitWrite,
   deliverWithRead,
   renderGlobalSection,
   restoreAfterCompaction,
@@ -186,23 +186,29 @@ async function read(
   });
 }
 
-/** The write rule's verdict: `null` when admitted, the refusal otherwise. */
+/**
+ * The write rule's verdict: `null` when admitted as is, the update text when
+ * admitted carrying edited instructions (recorded as handed over, as a write
+ * that succeeded does), the refusal otherwise.
+ */
 async function writeVerdict(
   conversationId: string,
   pageId: string,
-): Promise<HttpError | null> {
+): Promise<HttpError | string | null> {
   // The refusal is caught INSIDE the transaction: thrown out of it, the
   // transaction would roll back the delivery the refusal just recorded, which
   // the tool (running on the process db, outside any transaction) keeps.
   return t.db.transaction(async (tx) => {
     try {
-      await assertInstructionsReceived({
+      const update = await admitWrite({
         tool: "edit_page",
         conversationId,
         pageId,
         executor: tx,
       });
-      return null;
+      if (update === null) return null;
+      await update.markDelivered();
+      return update.text;
     } catch (err) {
       if (err instanceof HttpError) return err;
       throw err;
@@ -254,10 +260,11 @@ describe("read_page's preamble", () => {
 describe("the write rule", () => {
   test("refused with the instructions in full, then admitted on retry", async () => {
     const refusal = await writeVerdict("conv", "TRACK");
-    expect(refusal?.status).toBe(409);
-    expect(refusal?.message).toContain("nothing was written");
-    expect(refusal?.message).toContain("root rule");
-    expect(refusal?.message).toContain("track rules");
+    if (!(refusal instanceof HttpError)) throw new Error("expected a refusal");
+    expect(refusal.status).toBe(409);
+    expect(refusal.message).toContain("nothing was written");
+    expect(refusal.message).toContain("root rule");
+    expect(refusal.message).toContain("track rules");
     expect(await writeVerdict("conv", "TRACK")).toBeNull();
   });
 
@@ -268,15 +275,38 @@ describe("the write rule", () => {
     expect(await writeVerdict("conv", "TRACK")).toBeNull();
   });
 
-  test("an edit to received instructions refuses again, carrying only the edited one", async () => {
+  test("an edit to received instructions admits the write, carrying only the edited one", async () => {
     await read("conv", "TRACK", "TRACK");
     expect(await writeVerdict("conv", "TRACK")).toBeNull();
 
     await setData("IR-1", text("root rule, revised"));
+    const update = await writeVerdict("conv", "TRACK");
+    if (typeof update !== "string") throw new Error("expected an update");
+    expect(update.startsWith("<updated-instructions>")).toBe(true);
+    expect(update).toContain("root rule, revised");
+    expect(update).not.toContain("track rules");
+    expect(await writeVerdict("conv", "TRACK")).toBeNull();
+  });
+
+  test("an author typing in received instructions never refuses a write", async () => {
+    await read("conv", "TRACK", "TRACK");
+    for (const typed of ["r", "ro", "roo", "root"]) {
+      await setData("IR-1", text(typed));
+      const verdict = await writeVerdict("conv", "TRACK");
+      expect(typeof verdict).toBe("string");
+      expect(verdict as string).toContain(typed);
+    }
+  });
+
+  test("a refusal carries the edited ones too; the retry is admitted", async () => {
+    await read("conv", "ROOT", "ROOT");
+    await setData("IR-1", text("root rule, revised"));
+    // TI covers TRACK and was never received: that refuses, and the refusal
+    // hands IR's new version over with it.
     const refusal = await writeVerdict("conv", "TRACK");
-    expect(refusal?.status).toBe(409);
-    expect(refusal?.message).toContain("root rule, revised");
-    expect(refusal?.message).not.toContain("track rules");
+    if (!(refusal instanceof HttpError)) throw new Error("expected a refusal");
+    expect(refusal.message).toContain("track rules");
+    expect(refusal.message).toContain("root rule, revised");
     expect(await writeVerdict("conv", "TRACK")).toBeNull();
   });
 });
@@ -312,8 +342,9 @@ describe("the connect-time section", () => {
 
     expect(await writeVerdict("conv", "ROOT")).toBeNull();
     const refusal = await writeVerdict("conv", "TRACK");
-    expect(refusal?.message).toContain("track rules");
-    expect(refusal?.message).not.toContain("root rule");
+    if (!(refusal instanceof HttpError)) throw new Error("expected a refusal");
+    expect(refusal.message).toContain("track rules");
+    expect(refusal.message).not.toContain("root rule");
   });
 });
 

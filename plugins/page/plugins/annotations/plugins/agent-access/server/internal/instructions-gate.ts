@@ -26,9 +26,11 @@ import {
  * - **A read** puts the undelivered ones in a `<received-instructions>` block
  *   ahead of the page ({@link deliverWithRead}). An instructions block the read
  *   already shows whole is not repeated there — the read itself delivers it.
- * - **A write** under a page with undelivered instructions is refused before it
- *   plans anything, and the refusal carries them ({@link assertInstructionsReceived}).
- *   The refusal is the delivery, so the retry goes through.
+ * - **A write** under a page with instructions it never received is refused
+ *   before it plans anything, and the refusal carries them ({@link admitWrite}).
+ *   The refusal is the delivery, so the retry goes through. Instructions it
+ *   received and that were edited since do not refuse: the write goes through
+ *   and its result carries the new version.
  * - **Every spawn** of the agent's process (launch, resume) carries the GLOBAL
  *   ones in its system prompt ({@link renderGlobalSection}): cards in full,
  *   pages as pointers to read.
@@ -155,33 +157,79 @@ export async function deliverWithRead(args: {
 }
 
 /**
- * The write rule: refuse a write under `pageId` while any instructions covering
- * it are undelivered to this conversation, or were edited since they were.
- *
- * Runs BEFORE the write plans anything, so a refusal has written nothing. The
- * refusal (409) carries the instructions in full and records them as received —
- * the refusal is the delivery — so the same call retried then goes through.
+ * What a write admitted by {@link admitWrite} still owes the agent: the
+ * instructions it had received and that were edited since, to hand back WITH
+ * the write's result. `null` when there is nothing.
  */
-export async function assertInstructionsReceived(args: {
+export interface InstructionsUpdate {
+  /** The text to append to the write's result (its own text part). */
+  text: string;
+  /**
+   * Record the edited instructions as received at the version in {@link text}.
+   * Call it once the write succeeded and its result carries the text — a write
+   * that fails after the gate hands nothing over, so the next call still owes it.
+   */
+  markDelivered(): Promise<void>;
+}
+
+/** The `<updated-instructions>` block a successful write carries. */
+function formatUpdatedInstructions(
+  blocks: readonly RenderedInstructions[],
+): string {
+  return (
+    `<updated-instructions>\n` +
+    `The page's author edited instructions this conversation had already ` +
+    `received (they may still be typing). Your write went through. Below is how ` +
+    `they read now: follow them from here, and if what you just wrote no longer ` +
+    `does, fix it with another edit. They are not part of any page's content: ` +
+    `do not copy them into an edit.\n\n` +
+    blocks.map(formatBlock).join("\n\n") +
+    `\n</updated-instructions>`
+  );
+}
+
+/**
+ * The write rule, run BEFORE the write plans anything:
+ *
+ * - **Instructions the conversation never received** refuse the write (409),
+ *   so nothing is written before the agent has read them. The refusal carries
+ *   them in full — with any edited ones — and records them as received: the
+ *   refusal is the delivery, so the same call retried then goes through.
+ * - **Instructions it received, edited since**, do NOT refuse. The agent already
+ *   works by a version of them, and the author may be editing them right now:
+ *   refusing on every change would refuse every retry while they type. The
+ *   write goes through and hands the current version back with its result —
+ *   the returned {@link InstructionsUpdate}.
+ *
+ * So one write is refused at most once per instructions block per conversation
+ * (again only after a compaction forgets it).
+ */
+export async function admitWrite(args: {
   tool: string;
   conversationId: string;
   pageId: string;
   executor?: DbExecutor;
-}): Promise<void> {
+}): Promise<InstructionsUpdate | null> {
   const executor = args.executor ?? db;
   const refs = await instructionsInScope(args.pageId, executor);
-  if (refs.length === 0) return;
+  if (refs.length === 0) return null;
   const delivery = await renderForDelivery(args.conversationId, refs, executor);
-  if (delivery.pending.length === 0) return;
+  if (delivery.pending.length === 0) return null;
+  if (delivery.changed.length === delivery.pending.length) {
+    return {
+      text: formatUpdatedInstructions(delivery.changed),
+      markDelivered: () => delivery.markDelivered(),
+    };
+  }
   await delivery.markDelivered();
   const n = delivery.pending.length;
   throw new HttpError(
     409,
     `${args.tool}: refused, and nothing was written. Page ${args.pageId} is ` +
       `covered by ${n === 1 ? "instructions" : `${n} sets of instructions`} from ` +
-      `its author that this conversation had not received yet (or that changed ` +
-      `since it did). They are below, and they now count as received. Read them, ` +
-      `and retry the call if it still follows them.\n\n` +
+      `its author that this conversation had not received yet. They are below, ` +
+      `and they now count as received. Read them, and retry the call if it ` +
+      `still follows them.\n\n` +
       formatReceivedInstructions(delivery.pending),
   );
 }
@@ -220,8 +268,9 @@ export async function renderGlobalSection(
       `it. read_page hands you the ones covering what you read, in a ` +
       `<received-instructions> block ahead of the page. edit_page and ` +
       `write_agent_note refuse to write under a page whose instructions you have ` +
-      `not received yet, or that changed since you did; the refusal carries them, ` +
-      `so read them and retry.`,
+      `not received yet; the refusal carries them, so read them and retry. When ` +
+      `instructions you received are edited since, the write goes through and ` +
+      `its result carries their new version in an <updated-instructions> part.`,
   ];
   if (cards.length > 0 || pages.length > 0) {
     parts.push(

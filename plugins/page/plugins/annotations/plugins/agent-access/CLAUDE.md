@@ -464,10 +464,17 @@ agent gets them, in `server/internal/instructions-gate.ts`:
   its id AND its whole rendered content, and a card or page counts when the read
   is rooted at it.
 - **`edit_page` and `write_agent_note`** check the same thing right after their
-  door checks and before anything is matched or planned. If anything is
-  undelivered, they refuse with a 409 whose message carries the instructions in
-  full, and record them as received, so the retry goes through. A refusal
-  therefore writes nothing.
+  door checks and before anything is matched or planned (`admitWrite`). If a
+  covering block was NEVER received, they refuse with a 409 whose message
+  carries the instructions in full (edited ones included), and record them as
+  received, so the retry goes through. A refusal therefore writes nothing.
+  A block received and edited since does **not** refuse: the write goes through
+  and its result gains a second text part, `<updated-instructions>`, with the
+  current version, recorded as received only once the write succeeded. Refusing
+  on a change made every write fail while the author was typing in the
+  instructions (each keystroke a new hash); the agent already works by a version
+  of them, so handing the new one over with the result is enough — and a write
+  is refused at most once per block per conversation.
 - **At every spawn** of the agent's process (launch, resume),
   `SystemPrompt.Section({ id: "page-instructions" })` (server half,
   [`conversations/system-prompt`](../../../../../conversations/plugins/system-prompt/CLAUDE.md))

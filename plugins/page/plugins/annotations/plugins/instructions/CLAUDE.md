@@ -55,7 +55,7 @@ instructionsInScope(pageId, executor?): Promise<InstructionsRef[]>   // root-fir
 globalInstructions(executor?): Promise<InstructionsRef[]>
 renderInstructions(refs, executor?): Promise<RenderedInstructions[]>
 renderForDelivery(conversationId, refs, executor?): Promise<InstructionsDelivery>
-  // { rendered, pending, markDelivered() }
+  // { rendered, pending, changed, markDelivered() }
 markInstructionsDelivered(conversationId, blocks, executor?): Promise<void>
 deliveredInstructionIds(conversationId, executor?): Promise<string[]>   // oldest first
 forgetInstructionsDeliveries(conversationId, blockIds, executor?): Promise<void>
@@ -89,7 +89,9 @@ RenderedInstructions = InstructionsRef & { markdown, contentHash }
 - **A delivery counts at a content hash.** `page_instructions_deliveries`
   `(conversation_id, block_id)` → `content_hash` (sha256 of the rendered
   markdown). `renderForDelivery` renders, hashes and compares; a block with no row
-  or a different hash is `pending`. Nothing is recorded until the caller runs
+  or a different hash is `pending`, and one with a row at a different hash is
+  also `changed` (received, then edited — `agent-access` lets a write through
+  for those and hands the new version back with it). Nothing is recorded until the caller runs
   `markDelivered()` — rendering is not handing over. A text edit inside a redacted
   private card does not change the hash, because it is not in the markdown.
 - **A compaction un-delivers.** A delivery means "the agent's context holds

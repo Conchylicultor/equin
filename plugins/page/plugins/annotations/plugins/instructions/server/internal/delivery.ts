@@ -32,6 +32,12 @@ export interface InstructionsDelivery {
    */
   pending: RenderedInstructions[];
   /**
+   * The subset of `pending` the conversation HAS received, at an older hash —
+   * edited since it was handed over. The rest of `pending` it never received.
+   * Same order.
+   */
+  changed: RenderedInstructions[];
+  /**
    * Record every `pending` block as delivered to the conversation at the hash
    * rendered here. Call it once the agent has actually been handed them — after
    * the tool response carrying them is built, or as part of the refusal that
@@ -126,7 +132,7 @@ export async function markInstructionsDelivered(
  * Which of `refs` the conversation still has to receive: render each one, hash
  * it, and compare against the conversation's stored deliveries. A block with no
  * delivery, or one recorded at a different hash (the instructions were edited
- * since), is pending.
+ * since), is pending; the edited ones are also `changed`.
  *
  * Nothing is recorded until the caller runs `markDelivered()`: rendering is not
  * handing over, and a tool call that fails after this read must not count as a
@@ -139,7 +145,12 @@ export async function renderForDelivery(
 ): Promise<InstructionsDelivery> {
   const rendered = await renderInstructions(refs, executor);
   if (rendered.length === 0) {
-    return { rendered, pending: [], markDelivered: () => Promise.resolve() };
+    return {
+      rendered,
+      pending: [],
+      changed: [],
+      markDelivered: () => Promise.resolve(),
+    };
   }
   const stored = await executor
     .select({
@@ -160,9 +171,11 @@ export async function renderForDelivery(
   const pending = rendered.filter(
     (r) => deliveredAt.get(r.id) !== r.contentHash,
   );
+  const changed = pending.filter((r) => deliveredAt.has(r.id));
   return {
     rendered,
     pending,
+    changed,
     markDelivered: () =>
       markInstructionsDelivered(conversationId, pending, executor),
   };
