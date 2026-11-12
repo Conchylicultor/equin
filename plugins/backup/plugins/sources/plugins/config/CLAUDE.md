@@ -16,6 +16,9 @@
     - `backup.BackupSource`
     - `config_v2.ConfigV2`
     - `config_v2.getConfig`
+    - `infra/worktree.classifyNamespace`
+    - `infra/worktree.hasCompositionMarker`
+    - `infra/worktree.NamespaceKind`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/assemble-config.ts` (debt)
 

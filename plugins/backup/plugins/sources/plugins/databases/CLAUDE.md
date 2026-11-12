@@ -21,8 +21,10 @@
     - `database/admin.inspectBackup`
     - `database/admin.isForkTempName`
     - `database/admin.listDatabases`
+    - `infra/worktree.classifyNamespace`
     - `infra/worktree.hasCompositionMarker`
-    - `infra/worktree.isCanonicalWorktreeName`
+    - `infra/worktree.isPersistentNamespace`
+    - `infra/worktree.NamespaceKind`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/assemble-databases.ts` (debt)
 

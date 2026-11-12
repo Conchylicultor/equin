@@ -14077,6 +14077,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `backup.BackupSource`
               - `config_v2.ConfigV2`
               - `config_v2.getConfig`
+              - `infra/worktree.classifyNamespace`
+              - `infra/worktree.hasCompositionMarker`
+              - `infra/worktree.NamespaceKind`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/assemble-config.ts` (debt)
         - **`cost-history`** — Config UI for the cost-history backup source. Backs up the permanent cost-history archive (year-sharded session records and the merged price table) into the backup archive.
@@ -14110,8 +14113,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `database/admin.inspectBackup`
               - `database/admin.isForkTempName`
               - `database/admin.listDatabases`
+              - `infra/worktree.classifyNamespace`
               - `infra/worktree.hasCompositionMarker`
-              - `infra/worktree.isCanonicalWorktreeName`
+              - `infra/worktree.isPersistentNamespace`
+              - `infra/worktree.NamespaceKind`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/assemble-databases.ts` (debt)
         - **`platform`** — Config UI for the equin platform backup source. Backs up equin platform files (auth, database config) into the backup archive.
@@ -36603,7 +36608,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `namespaceUrl`
           - `resolveNamespaceAlias`
       - Cross-plugin:
-        - Imported by: 78 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
+        - Imported by: 77 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
           - `framework` ×13
           - `debug` ×12
           - `apps` ×11
@@ -36613,11 +36618,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta` ×3
           - `primitives` ×3
           - `tasks` ×3
-          - `backup` ×2
           - `database` ×2
           - `release` ×2
           - `reports` ×2
           - `auth`
+          - `backup`
           - `menu-bar`
       - Exemptions:
         - Exempts itself from:
@@ -37841,6 +37846,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HarvestResult`
           - `MarkWorktreeOpOptions`
           - `NamespaceClaimant`
+          - `NamespaceKind`
           - `NamespaceProbe`
           - `RetiredReflogSweep`
           - `TreeHarvestResult`
@@ -37857,6 +37863,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `addCheckout`
           - `appCheckoutOf`
           - `checkoutState`
+          - `classifyNamespace`
           - `countReadySpares`
           - `createSpareWorktree`
           - `describeAdoption`
@@ -37871,6 +37878,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isCanonicalWorktreeName`
           - `isCanonicalWorktreePath`
           - `isCompositionMarkerPath`
+          - `isPersistentNamespace`
           - `isWorktreeOpActive`
           - `listActiveWorktreeOps`
           - `listWorktreeEntries`
@@ -37891,16 +37899,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreePathFor`
           - `writeWorktreeSpec`
       - Cross-plugin:
-        - Imported by: 38 plugins — full list in [`plugins/infra/plugins/worktree/REFERENCE.md`](../plugins/infra/plugins/worktree/REFERENCE.md)
+        - Imported by: 39 plugins — full list in [`plugins/infra/plugins/worktree/REFERENCE.md`](../plugins/infra/plugins/worktree/REFERENCE.md)
           - `debug` ×9
           - `infra` ×8
           - `framework` ×4
           - `tasks` ×4
           - `conversations` ×3
+          - `backup` ×2
           - `build` ×2
           - `stats` ×2
           - `apps/website/promo-film/seed`
-          - `backup/sources/databases`
           - `code-explorer`
           - `plugin-meta/plugin-health`
           - `release/source-checkout`

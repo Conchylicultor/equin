@@ -332,6 +332,7 @@ pid liveness.
     - `HarvestResult`
     - `MarkWorktreeOpOptions`
     - `NamespaceClaimant`
+    - `NamespaceKind`
     - `NamespaceProbe`
     - `RetiredReflogSweep`
     - `TreeHarvestResult`
@@ -348,6 +349,7 @@ pid liveness.
     - `addCheckout`
     - `appCheckoutOf`
     - `checkoutState`
+    - `classifyNamespace`
     - `countReadySpares`
     - `createSpareWorktree`
     - `describeAdoption`
@@ -362,6 +364,7 @@ pid liveness.
     - `isCanonicalWorktreeName`
     - `isCanonicalWorktreePath`
     - `isCompositionMarkerPath`
+    - `isPersistentNamespace`
     - `isWorktreeOpActive`
     - `listActiveWorktreeOps`
     - `listWorktreeEntries`
@@ -382,16 +385,16 @@ pid liveness.
     - `worktreePathFor`
     - `writeWorktreeSpec`
 - Cross-plugin:
-  - Imported by: 38 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 39 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×9
     - `infra` ×8
     - `framework` ×4
     - `tasks` ×4
     - `conversations` ×3
+    - `backup` ×2
     - `build` ×2
     - `stats` ×2
     - `apps/website/promo-film/seed`
-    - `backup/sources/databases`
     - `code-explorer`
     - `plugin-meta/plugin-health`
     - `release/source-checkout`

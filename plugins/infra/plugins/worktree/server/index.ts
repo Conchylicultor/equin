@@ -46,6 +46,11 @@ export {
 } from "./internal/tree-pool";
 export { isCanonicalWorktreeName } from "./internal/worktree-name";
 export {
+  type NamespaceKind,
+  classifyNamespace,
+  isPersistentNamespace,
+} from "./internal/namespace-kind";
+export {
   type WorktreeOp,
   type WorktreeOpInfo,
   probeWorktreeOp,
