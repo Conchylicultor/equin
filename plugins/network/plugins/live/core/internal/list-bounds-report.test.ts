@@ -15,6 +15,7 @@ import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import ts from "typescript";
 import {
   importBarrel,
   registerBarrelStubs,
@@ -24,20 +25,43 @@ import type { LiveValueShape } from "./live-value";
 
 const ROOT = REPO_ROOT;
 
-/** A declaration statement (`… = liveValue("key"` / `liveCollection("key"`), never a doc comment's example. */
-const DECLARATION_RE =
-  /=\s*live(?:Value|Collection)\s*(?:<[^(]*>)?\(\s*"([^"]+)"/;
+/** The declaring factories, by the callee name a declaration statement calls. */
+const FACTORIES = new Set([
+  "liveValue",
+  "liveCollection",
+  "liveArm",
+  "defineExtensionShape",
+]);
 
-/** A collection whose `liveCollection(` and key sit on two lines (`(\n  "key",`). */
-const SPLIT_DECLARATION_RE =
-  /=\s*live(?:Value|Collection)\s*(?:<[^(]*>)?\(\s*$/;
-const SPLIT_KEY_RE = /^\s*"([^"]+)"\s*,/;
-
-/** A union arm's declaration (`… = liveArm(`) — its key is its union's and its kind, rarely literals. */
-const ARM_DECLARATION_RE = /=\s*liveArm\s*(?:<[^(]*>)?\(/;
-
-/** An extension shape's declaration (`… = defineExtensionShape(`) — an exposure refuses a bare list when it is declared. */
-const SHAPE_DECLARATION_RE = /=\s*defineExtensionShape\s*(?:<[^(]*>)?\(/;
+/**
+ * The factory a variable's initializer calls first (`= liveValue("k", …)`, also
+ * through `.chain()`, `as` / `satisfies` / parentheses), with its call — or
+ * `null`. Read from the syntax tree, so a doc comment's example or a string
+ * literal that merely spells a declaration (a demo transcript showing code) is
+ * never counted as one.
+ */
+function factoryCall(
+  e: ts.Expression,
+): { name: string; call: ts.CallExpression } | null {
+  if (
+    ts.isAsExpression(e) ||
+    ts.isSatisfiesExpression(e) ||
+    ts.isParenthesizedExpression(e) ||
+    ts.isNonNullExpression(e)
+  ) {
+    return factoryCall(e.expression);
+  }
+  if (!ts.isCallExpression(e)) return null;
+  if (ts.isIdentifier(e.expression)) {
+    return FACTORIES.has(e.expression.text)
+      ? { name: e.expression.text, call: e }
+      : null;
+  }
+  if (ts.isPropertyAccessExpression(e.expression)) {
+    return factoryCall(e.expression.expression);
+  }
+  return null;
+}
 
 interface DeclaringModule {
   path: string;
@@ -62,22 +86,33 @@ function declaringModules(): DeclaringModule[] {
       continue;
     }
     const path = resolve(ROOT, rel);
+    const src = readFileSync(path, "utf8");
+    // Cheap pre-filter: a module naming no factory declares nothing.
+    if (![...FACTORIES].some((f) => src.includes(f))) continue;
     const keys: string[] = [];
     let arms = 0;
     let shapes = 0;
-    const lines = readFileSync(path, "utf8").split("\n");
-    lines.forEach((line, i) => {
-      const t = line.trimStart();
-      if (t.startsWith("*") || t.startsWith("//")) return;
-      if (ARM_DECLARATION_RE.test(line)) arms++;
-      if (SHAPE_DECLARATION_RE.test(line)) shapes++;
-      const m = DECLARATION_RE.exec(line);
-      if (m !== null) keys.push(m[1]!);
-      else if (SPLIT_DECLARATION_RE.test(line)) {
-        const k = SPLIT_KEY_RE.exec(lines[i + 1] ?? "");
-        if (k !== null) keys.push(k[1]!);
+    const visit = (node: ts.Node): void => {
+      if (ts.isVariableDeclaration(node) && node.initializer !== undefined) {
+        const found = factoryCall(node.initializer);
+        if (found !== null) {
+          if (found.name === "liveArm") arms++;
+          else if (found.name === "defineExtensionShape") shapes++;
+          else {
+            const first = found.call.arguments[0];
+            if (
+              first !== undefined &&
+              (ts.isStringLiteral(first) ||
+                ts.isNoSubstitutionTemplateLiteral(first))
+            ) {
+              keys.push(first.text);
+            }
+          }
+        }
       }
-    });
+      ts.forEachChild(node, visit);
+    };
+    visit(ts.createSourceFile(path, src, ts.ScriptTarget.Latest, false));
     if (keys.length > 0 || arms > 0 || shapes > 0) {
       out.push({ path, keys, arms, shapes });
     }

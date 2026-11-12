@@ -1567,7 +1567,11 @@
         "options": {
           "membership": {
             "kind": "point",
-            "idsOf": "$function"
+            "idsOf": "$function",
+            "batch": {
+              "familyOf": "$function",
+              "maxIds": 500
+            }
           }
         },
         "membership": "point",
@@ -1774,7 +1778,11 @@
         "options": {
           "membership": {
             "kind": "point",
-            "idsOf": "$function"
+            "idsOf": "$function",
+            "batch": {
+              "familyOf": "$function",
+              "maxIds": 500
+            }
           }
         },
         "membership": "point",
@@ -1975,7 +1983,11 @@
         "options": {
           "membership": {
             "kind": "point",
-            "idsOf": "$function"
+            "idsOf": "$function",
+            "batch": {
+              "familyOf": "$function",
+              "maxIds": 500
+            }
           }
         },
         "membership": "point",
@@ -3551,7 +3563,11 @@
         "options": {
           "membership": {
             "kind": "point",
-            "idsOf": "$function"
+            "idsOf": "$function",
+            "batch": {
+              "familyOf": "$function",
+              "maxIds": 50
+            }
           }
         },
         "membership": "point",
@@ -5371,7 +5387,11 @@
         "options": {
           "membership": {
             "kind": "point",
-            "idsOf": "$function"
+            "idsOf": "$function",
+            "batch": {
+              "familyOf": "$function",
+              "maxIds": 50
+            }
           }
         },
         "membership": "point",
@@ -6854,7 +6874,11 @@
         "options": {
           "membership": {
             "kind": "point",
-            "idsOf": "$function"
+            "idsOf": "$function",
+            "batch": {
+              "familyOf": "$function",
+              "maxIds": 50
+            }
           }
         },
         "membership": "point",
@@ -8572,7 +8596,11 @@
         "options": {
           "membership": {
             "kind": "point",
-            "idsOf": "$function"
+            "idsOf": "$function",
+            "batch": {
+              "familyOf": "$function",
+              "maxIds": 30
+            }
           }
         },
         "membership": "point",
@@ -9751,7 +9779,11 @@
         "options": {
           "membership": {
             "kind": "point",
-            "idsOf": "$function"
+            "idsOf": "$function",
+            "batch": {
+              "familyOf": "$function",
+              "maxIds": 50
+            }
           }
         },
         "membership": "point",
@@ -10587,7 +10619,11 @@
         "options": {
           "membership": {
             "kind": "point",
-            "idsOf": "$function"
+            "idsOf": "$function",
+            "batch": {
+              "familyOf": "$function",
+              "maxIds": 30
+            }
           }
         },
         "membership": "point",
@@ -10760,7 +10796,11 @@
         "options": {
           "membership": {
             "kind": "point",
-            "idsOf": "$function"
+            "idsOf": "$function",
+            "batch": {
+              "familyOf": "$function",
+              "maxIds": 500
+            }
           }
         },
         "membership": "point",
@@ -11115,7 +11155,11 @@
         "options": {
           "membership": {
             "kind": "point",
-            "idsOf": "$function"
+            "idsOf": "$function",
+            "batch": {
+              "familyOf": "$function",
+              "maxIds": 500
+            }
           }
         },
         "membership": "point",
@@ -12663,7 +12707,11 @@
         "options": {
           "membership": {
             "kind": "point",
-            "idsOf": "$function"
+            "idsOf": "$function",
+            "batch": {
+              "familyOf": "$function",
+              "maxIds": 500
+            }
           }
         },
         "membership": "point",
@@ -16959,7 +17007,11 @@
         "options": {
           "membership": {
             "kind": "point",
-            "idsOf": "$function"
+            "idsOf": "$function",
+            "batch": {
+              "familyOf": "$function",
+              "maxIds": 30
+            }
           }
         },
         "membership": "point",
@@ -18283,7 +18335,11 @@
         "options": {
           "membership": {
             "kind": "point",
-            "idsOf": "$function"
+            "idsOf": "$function",
+            "batch": {
+              "familyOf": "$function",
+              "maxIds": 500
+            }
           }
         },
         "membership": "point",
@@ -19448,7 +19504,11 @@
         "options": {
           "membership": {
             "kind": "point",
-            "idsOf": "$function"
+            "idsOf": "$function",
+            "batch": {
+              "familyOf": "$function",
+              "maxIds": 500
+            }
           }
         },
         "membership": "point",
