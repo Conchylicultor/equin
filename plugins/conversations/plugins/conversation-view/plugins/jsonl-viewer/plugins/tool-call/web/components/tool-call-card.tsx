@@ -72,7 +72,8 @@ interface ToolCallFrameProps {
    *  block, a failure, added context) at the top of the opened body. */
   hooks?: readonly HookRecord[];
   /** Always-shown content inside the card under its header (the card's
-   *  `footer`). `ToolCallCard` passes the call's `JsonlViewerTool.Footer`. */
+   *  `footer`), beside its timeline rail. `ToolCallCard` adds the call's
+   *  `JsonlViewerTool.Footer` after the renderer's own. */
   footer?: ReactNode;
 }
 
@@ -187,6 +188,10 @@ export function ToolCallCard({
     declaredFor?.toolUseId === event.toolUseId ? declaredFor.icon : undefined;
   const icon =
     frame.icon ?? (typeof declared === "function" ? declared(event) : declared);
+  // The renderer's own footer first (what the call is doing now), then what
+  // the call left behind (`JsonlViewerTool.Footer`).
+  const contributed =
+    footer?.toolUseId === event.toolUseId ? footer.footer : undefined;
   const blocked = blockingHook(event) !== undefined;
   // A stand-in the model is still writing has not been sent yet.
   const writing = useBlockWriting();
@@ -214,7 +219,14 @@ export function ToolCallCard({
             : "Waiting for result…"
       }
       hooks={event.hooks}
-      footer={footer?.toolUseId === event.toolUseId ? footer.footer : undefined}
+      footer={
+        frame.footer === undefined && contributed === undefined ? undefined : (
+          <>
+            {frame.footer}
+            {contributed}
+          </>
+        )
+      }
     />
   );
 }

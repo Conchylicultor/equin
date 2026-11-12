@@ -18860,6 +18860,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/color-palette --muted-foreground`
                       - `ui/tokens/density --space-md`
                       - `ui/tokens/density --space-sm`
+                      - `ui/tokens/density --space-xs`
                       - `ui/tokens/font-family --font-mono`
                       - `ui/tokens/shape --radius`
                       - `ui/tokens/shape --spacing`

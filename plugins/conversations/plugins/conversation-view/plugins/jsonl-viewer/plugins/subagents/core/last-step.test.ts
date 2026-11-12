@@ -58,6 +58,18 @@ describe("lastStepOfLines", () => {
     });
   });
 
+  test("a call's human-readable description wins over its raw command", () => {
+    const step = lastStepOfLines([
+      assistant([
+        toolUse("Bash", {
+          command: "./equin await build; echo EXIT=$?",
+          description: "Wait for the build verdict",
+        }),
+      ]),
+    ]);
+    expect(formatLastStep(step!)).toBe("Bash Wait for the build verdict");
+  });
+
   test("a result whose call has scrolled out of the window says so, and quotes nothing", () => {
     // 8 of 348 measured windows. `null` would render "Starting…", which is false
     // for a sub-agent plainly mid-tool-loop; the payload is what we refuse to show.

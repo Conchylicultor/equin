@@ -6,6 +6,11 @@ const PREVIEW_MAX = 80;
 /**
  * Tool-input keys worth showing, most identifying first.
  *
+ * `description` leads: when the caller wrote one (Bash, Agent), it is the
+ * human-readable intent — "Resolve conflict and continue rebase" — where the
+ * raw `command` is the internal mechanics a reader has to decode. The main
+ * transcript's Bash card shows the same words.
+ *
  * A CLOSED list of plain data, deliberately not a slot: it is the handful of
  * argument names Claude's own tools use for "the thing being acted on", and it
  * is tool-AGNOSTIC by construction — it names arguments, never tools. A renderer
@@ -13,6 +18,7 @@ const PREVIEW_MAX = 80;
  * result paired, which is the whole-file parse this tail read exists to avoid.
  */
 const TOOL_INPUT_KEYS = [
+  "description",
   "file_path",
   "notebook_path",
   "command",
@@ -21,7 +27,6 @@ const TOOL_INPUT_KEYS = [
   "url",
   "query",
   "prompt",
-  "description",
 ] as const;
 
 /** Keys whose value is a filesystem path, shown as its last segment. */

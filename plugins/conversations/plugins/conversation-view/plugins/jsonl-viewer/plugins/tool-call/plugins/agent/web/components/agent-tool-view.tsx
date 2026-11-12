@@ -131,12 +131,36 @@ export function AgentToolView({ event, input }: ToolViewProps<AgentInput>) {
     />
   );
 
+  // What it is doing right now, in the card's footer: under its header and
+  // beside its timeline rail, so it reads as part of this call — and always
+  // shown, since the body is collapsed by default and this is the line you want
+  // without opening anything. Once it has reported, the report is the answer.
+  // A state that could not be read says so here, with Retry — outside the
+  // summary, whose content is click-through.
+  const footer =
+    status.kind === "failed" ? (
+      <div className="pl-sm pb-xs">
+        <ResourceErrorInline
+          variant="inline"
+          subject="the sub-agent's state"
+          error={status.error}
+          refetch={status.refetch}
+        />
+      </div>
+    ) : status.kind === "known" && status.state.kind !== "finished" ? (
+      <SubagentLastStep
+        row={status.row}
+        state={status.state}
+        className="pl-sm pb-xs"
+      />
+    ) : undefined;
+
   return (
-    <Stack gap="2xs">
-      <ToolCallCard
+    <ToolCallCard
         event={event}
         summary={summary}
         aside={aside}
+      footer={footer}
         // `result` is a launch acknowledgement for a backgrounded Agent, so the
         // card must not read it as "done" — the sub-agent's own state does.
         // With no sub-agent reads on this host (an in-browser server), the
@@ -169,29 +193,6 @@ export function AgentToolView({ event, input }: ToolViewProps<AgentInput>) {
             <span className="font-medium">{openLabel}</span>
           </Row>
         </Stack>
-      </ToolCallCard>
-      {/* What it is doing right now, under the card rather than inside it: the
-          body is collapsed by default, and this is the line you want without
-          opening anything. Once it has reported, the report is the answer. */}
-      {/* A state that could not be read says so here, with Retry — outside the
-          summary, whose content is click-through. */}
-      {status.kind === "failed" && (
-        <div className="px-md">
-          <ResourceErrorInline
-            variant="inline"
-            subject="the sub-agent's state"
-            error={status.error}
-            refetch={status.refetch}
-          />
-        </div>
-      )}
-      {status.kind === "known" && status.state.kind !== "finished" && (
-        <SubagentLastStep
-          row={status.row}
-          state={status.state}
-          className="px-md"
-        />
-      )}
-    </Stack>
+    </ToolCallCard>
   );
 }
