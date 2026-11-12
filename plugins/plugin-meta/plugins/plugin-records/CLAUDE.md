@@ -65,23 +65,39 @@ violations, the mentions of a few names — folds its per-file scan along the
 directory tree (`foldFilesCached` / `foldRepoFiles`, `core/internal/tree-fold.ts`,
 records in the `fold` table) instead of scanning every file:
 
-- a file's part is keyed by the fold's module Merkle key (`FileFold.url`, a
-  `*.scan.ts` module, as a `FileScan`'s), the fold's context (plain data,
-  keyed by its JSON; the scan is handed that JSON parsed back, so it sees
-  nothing the key does not hold), its path and its blob;
-- a directory's part is `combine` of its members' (sorted by name), keyed by
-  its path and its members' keys — a Merkle tree over the selected files.
+- a NODE record — a file's, or a directory's of 2+ members (a one-member
+  directory is its member) — is keyed by the fold's module Merkle key
+  (`FileFold.url`, a `*.scan.ts` module, as a `FileScan`'s), the fold's
+  context (plain data, keyed by its JSON; the scan is handed that JSON parsed
+  back, so it sees nothing the key does not hold), the inline limit, its path,
+  and its blob — a directory's its members' keys: a Merkle tree over the
+  selected files. It holds only a ref to its value (`<size>.<sha256>`);
+- a VALUE record is keyed by that ref, its content: stored once however many
+  nodes, edits or worktrees name it. A file's value is held whole, and so is a
+  directory's whose members' sizes add up to at most the inline limit (256 KB
+  of JSON) — `combine` of its members, sorted by name; a larger directory's
+  value is the LIST of its members' refs, combined when the answer is read.
 
-The store is asked top-down, one batch per depth: a hit answers its whole
-subtree, a miss hands its members to the next batch. So an unchanged tree is
-one lookup, and an edit costs the fan-out of the edited path's directories
-(~80 lookups for a one-file edit under `plugins/`) and the scan of the edited
-files alone — never one lookup per plugin, never a re-read of the tree. Every
-ancestor of an edit writes a new record holding its whole subtree's answer, so
-a fold is for answers far smaller than the files; a reader that needs every
-file's own value is a `FileScan`. `combine` must be associative
-(`combine([combine([a, b]), c])` = `combine([a, b, c])`), so the per-directory
-fold equals the flat one.
+The store is asked top-down, one batch per depth: a hit names its whole
+subtree's value, a miss hands its members to the next batch. So an unchanged
+tree is one node lookup, and an edit costs the fan-out of the edited path's
+directories (~60–130 node lookups for a one-file edit under `plugins/`) and
+the scan of the edited files alone — never one lookup per plugin, never a
+re-read of the tree. What an edit WRITES is its own path: a node record per
+re-folded node, and the values that changed — none when the edit leaves its
+file's part as it was (a comment), at most the inline limit per directory
+otherwise, however large the answer. The answer is then read whole for its
+reader (the lists, and the whole values they hang from: ~230 / ~540 value
+lookups for boundary-rules / plugin-boundaries), so a fold is for an answer a
+reader wants whole; a reader that needs every file's own value is a
+`FileScan`. `combine` must be associative (`combine([combine([a, b]), c])` =
+`combine([a, b, c])`), so the per-directory fold equals the flat one.
+
+A value under a whole one (a file's, beside an edit) is read only when a
+sibling is edited, so the reclaim can delete it while its node record lives
+on; a pass that finds a ref with no value folds that node again (a rescan of
+the file, a re-fold of the directory) and writes it back — a cost of its own
+subtree, never an error and never a cold fold.
 
 Adopters: `boundary-rules` (`boundaries/core/boundary-rules.scan.ts`) and
 `relocate:moved-plugins-unnamed` (`plugin-refs/core/mentions.scan.ts`).

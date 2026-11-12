@@ -33,8 +33,9 @@ export const RECORD_TABLES = [
   // The values of a set of records of one table, keyed by their keys alone
   // (`readGrouped`): one lookup for a plugin's records instead of one each.
   "group",
-  // A file scan folded along the directory tree (`foldFilesCached`): one
-  // file's part keyed by its blob, one directory's fold keyed by its members'.
+  // A file scan folded along the directory tree (`foldFilesCached`): a node
+  // record (a file keyed by its blob, a directory by its members' keys) names
+  // its value by ref, and a value record holds it, keyed by that ref.
   "fold",
 ] as const;
 export type RecordTable = (typeof RECORD_TABLES)[number];

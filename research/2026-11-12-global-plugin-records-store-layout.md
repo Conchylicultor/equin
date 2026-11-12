@@ -436,3 +436,91 @@ boundary-rules 1.7 MB) still write their whole O(repo) answer into every
 ancestor's record per edit: the shared store's churn grows with every edit.
 Their verdict reads the combined answer at the root, so referencing children by
 key moves the cost to the read; the design has to keep both O(changes).
+
+## A fold writes its own path, not its answer (task: check pass O(changes), 5)
+
+Measured 2026-11-12, host load 17–25, with a write probe in the SQLite store
+(new value rows and their zstd bytes, per table) and a fold probe (node and
+value lookups, bytes read, phase times) — both temporary, reverted.
+
+### Split before
+
+The store already stores each distinct value once (`vals`, keyed by the
+value's sha256), so the cost depends on the edit:
+
+- **an edit that leaves its file's part as it was** (a comment) writes no
+  value: every ancestor's combined answer is byte-identical. 26 key rows.
+- **an edit that changes its file's part** (an import, an export, a
+  violation) changes every ancestor's combined answer, the root's included:
+  plugin-boundaries + boundary-rules wrote 7–14 new values, **3.3–5.3 MB raw,
+  510–711 KB zstd per edit**, whatever the edit's size (five edits in
+  `conversations`, `primitives/action-presentation`, `checks/core`,
+  `hints/help-menu`: 3.2 MB zstd in total). Reclaimed only after 7 days unread.
+
+Root cause: a directory's record was its subtree's combined answer, so an
+answer-changing edit rewrote the answer once per ancestor — the root's whole.
+
+### Fix
+
+`foldFilesCached` (`plugin-records/core/internal/tree-fold.ts`) records two
+kinds in the `fold` table:
+
+- a **node** record (file by blob, directory by its members' keys — the same
+  Merkle walk) holds only a ref to its value, `<size>.<sha256 of the body>`;
+- a **value** record, keyed by that ref: a file's value, or a directory's
+  whose members' sizes add up to ≤ 256 KB of JSON, held whole (`combine` of its
+  members); a larger directory's value is the **list of its members' refs**,
+  combined only when the answer is read.
+
+A directory's size is its members' sizes added up (a file's is its JSON
+length), so whole-or-list is decided from refs alone and a subtree is
+recorded the same way whichever of its nodes a pass found. An edit re-folds
+its path: whole directories read at most the limit of sibling values, lists
+read nothing. A value can be reclaimed while its node record lives on (a
+value under a whole one is read only when a sibling is edited); a pass that
+meets one re-folds that node and writes it back — its own subtree, not an
+error.
+
+Equivalence: the unit tests compare against the flat fold with lists forced
+(a 40-character limit), after an edit, after a reclaimed value, and with every
+value reclaimed; plugin-boundaries, boundary-rules, mask-sync and relocate
+report the same verdicts on the real tree.
+
+| per edit, plugin-boundaries + boundary-rules | before | after |
+| --- | ---: | ---: |
+| answer-changing edit: new values written (zstd) | 510–711 KB | 3.4–38 KB |
+| 5 answer-changing edits: store growth (zstd) | 3.2 MB | 72 KB |
+| comment edit: new values written | 0 (26 key rows) | 0 (10–26 key rows) |
+| node lookups, one-line edit | 55–132 | 55–132 |
+| value lookups to read the answer | — (in the node reads) | 229 / 543 |
+| bytes read for the answer | 1.77 + 3.43 MB | 1.79 + 4.45 MB |
+| fold time alone, one-line edit | 169 / 195 ms | 106–175 / 134–232 ms |
+| cold fold alone (scan module new) | 3.4 s (plugin-boundaries) | 2.8 s (scan 2.5 s, dirs 0.2 s) |
+
+The limit trades reads against the write bound: at 32 KB the answer is read as
+1,016 / 2,020 value records, at 512 KB 65 / 289; 256 KB keeps both near the
+old shape while bounding an edit's write to the limit per whole ancestor (the
+largest seen: `checks/core`, 291 KB raw / 38 KB zstd).
+
+Whole pass, the same answer-changing edit (`--scope tree`): fold writes
+676 KB → 8.1 KB zstd; no fold is among the check thread's top-10 owners before
+or after (top: `parsedTsSource` ~3.6–4.1 s, `platformOffenders` ~2.2–2.6 s,
+semaphore ~2.5–3.1 s, source-analysis ~1.6–1.8 s, sql-writes ~1.2 s);
+51 s → 31 s grant to verdict, noise-bound (load 17–25).
+
+### What is still O(answer)
+
+The **read**: every pass materializes the whole answer for its verdict (the
+R6 graph, every barrel's names), 1.8 + 4.5 MB from ~770 records. Writes no
+longer grow with it, and its cost is ~0.1–0.2 s per check; making it
+O(changes) means not running the verdict when the root's ref did not move —
+a read-set fact on the fold's root ref (validated by the O(changes) walk,
+which already answers it) in place of a content fact per folded file. Not
+done here: the read-set's other facts (the plugin tree's and the standard-dir
+scan's content reads) would have to be recorded precisely first.
+
+### Next
+
+The shared parse behind the sourceAnalysis checks (no-db-backed-notify,
+sql-writes:fit: `parsedTsSource` is the thread's top owner, ~3.6–4.9 s per
+one-line-edit pass).

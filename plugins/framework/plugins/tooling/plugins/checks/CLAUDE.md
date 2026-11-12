@@ -46,7 +46,9 @@ it") is written as **`defineFoldCheck`** (`core/fold-check.ts`), not as a
 
 The fold's records are kept along the directory tree, so a pass after an
 edit reads and judges only the edited files (an unchanged directory is one
-record), and a cold store reads each file once. A one-line edit re-ran
+record) and writes only its own path — never the whole answer again (a record
+names its value by content; a large directory's value is the list of its
+members', `plugin-records` § Folds) — and a cold store reads each file once. A one-line edit re-ran
 plugin-boundaries' whole-tree walk (52.9k reads, ~9 s of check thread); as a
 fold it reads the edited file (research/2026-11-12-global-plugin-records-store-layout.md).
 An input-keyed fold check needs no read-set code: keying a file's record takes

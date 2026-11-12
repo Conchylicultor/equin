@@ -29,8 +29,9 @@ export type FoldVerdictContext = Omit<CheckContext, "repo"> & {
  *
  * The fold's records are kept along the directory tree, so a pass after an
  * edit reads and judges only the edited files — every other directory is one
- * record — and a cold store reads each selected file once, as a whole-tree
- * `run` would. That makes the check's cost O(changes) by its shape: the
+ * record — and writes only its own path (a record names its value by content,
+ * and a large directory's value is the list of its members'); a cold store
+ * reads each selected file once, as a whole-tree `run` would. That makes the check's cost O(changes) by its shape: the
  * selection and the verdict are handed no `read`, so the only bytes the check
  * reads are the fold's.
  *
