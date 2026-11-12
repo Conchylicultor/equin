@@ -49,8 +49,12 @@ Code's `Background command "<label>" …` wording; an output file; a
 well-formed id) that ends none of the launches. A delivered shell carries only
 what the notification says (id, tool-use id, label, output file, end) — the
 command and start are the sub-agent's, never guessed — and is always ended.
-The notification claim and the output pane read both lists; the band and the
-`Bash` card read `launched` only (the sub-agent's own row covers its work).
+The notification claim and the output pane read both lists; the band reads
+`launched` only (the sub-agent's own row covers its work). The `Bash` card
+reads both: in a sub-agent's transcript pane (rendered under the parent's id)
+its background call joins its delivered shell by tool-use id and starts at the
+call's own time. A sub-agent's shell still running has no end delivered yet,
+so its card stays the plain one.
 The server resolves a delivered shell's output file from that notification
 (`shellOutputFileIn`), through the same `assertShellOutputPath`.
 

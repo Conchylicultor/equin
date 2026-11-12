@@ -23,6 +23,7 @@ import {
   shellOutputPane,
   useConversationShells,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/background-shells/web";
+import type { DeliveredShell } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/background-shells/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const terminalIcon = symbol("terminal");
@@ -62,6 +63,12 @@ export function BashToolView({ event, input }: ToolViewProps<BashInput>) {
  * acknowledgement, not the end — so "is it running" is the shell's own state
  * (`useConversationShells`, joined by this call's tool-use id), never the
  * result's presence. The live output is in the shell's pane, not inline.
+ *
+ * In a sub-agent's transcript (rendered under its parent conversation's id)
+ * the call is a shell the conversation did not launch: it joins the
+ * conversation's DELIVERED shells — the sub-agent's shells whose end reached
+ * the parent — and starts at this call's own time, which is its launch.
+ * A sub-agent's shell still running has no end delivered yet: the plain card.
  */
 function BackgroundBashToolView({
   event,
@@ -78,7 +85,8 @@ function BackgroundBashToolView({
   // plain card, which is what it is.
   const shell =
     shells.kind === "known"
-      ? shells.shells.find((s) => s.toolUseId === event.toolUseId)
+      ? (shells.shells.find((s) => s.toolUseId === event.toolUseId) ??
+        deliveredShellOf(shells.delivered, event))
       : undefined;
 
   return (
@@ -127,6 +135,17 @@ function BackgroundBashToolView({
       )}
     </Stack>
   );
+}
+
+/** The delivered shell this sub-agent call launched, with its start read off the call. */
+function deliveredShellOf(
+  delivered: readonly DeliveredShell[],
+  event: ToolCall,
+): (DeliveredShell & { startedAt: Date }) | undefined {
+  const shell = delivered.find((s) => s.toolUseId === event.toolUseId);
+  return shell === undefined
+    ? undefined
+    : { ...shell, startedAt: new Date(event.at) };
 }
 
 /**
