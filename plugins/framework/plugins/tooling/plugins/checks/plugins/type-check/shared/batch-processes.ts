@@ -1,15 +1,16 @@
 // Batches in child processes, `width` at once (the worker runs one: see
-// `./batch-run.ts`). One process per batch, started the way the
-// worker itself is (a job file in, one JSON result on stdout, through the
-// wedge-proof `spawnCaptured`): a process exit is the push signal that frees a
-// slot, so no channel between processes is needed.
+// `./batch-run.ts`). One process per batch (a job file in the spool — what
+// `TYPE_CHECK_KEEP_BATCHES` keeps for a replay — one JSON result on stdout,
+// through the wedge-proof `spawnCaptured`): a process exit is the push signal
+// that frees a slot, so no channel between processes is needed. The spool is
+// made inside the worker's scratch dir, which the worker's own spawner owns
+// (`./launch.ts`): a worker that dies mid-run cannot leak it.
 //
 // A batch is served the `.d.ts` this run produced through a SPOOL directory
 // (one file per hash, written before the batch that needs it is dispatched),
 // and every other `.d.ts` from the host-wide store, read by the child.
 
 import { cpSync, mkdtempSync, rmSync, writeFileSync } from "fs";
-import os from "os";
 import { basename, join } from "path";
 import { fileURLToPath } from "url";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
@@ -40,6 +41,12 @@ export function processBatches(opts: {
   width: number;
   root: AppPath;
   tree: TypeCheckTree;
+  /**
+   * The worker's scratch dir (`TypeCheckWorkerJob.scratch`): each spool is
+   * made inside it, so a worker killed mid-run leaves its spool to the
+   * launcher that removes the scratch dir, never to nobody.
+   */
+  scratch: AppPath;
   /** Added to as each batch process is reaped. */
   spend: BatchSpend;
 }): Batching {
@@ -47,7 +54,7 @@ export function processBatches(opts: {
     k: opts.k,
     open(ctx) {
       const spool = asAppPath(
-        mkdtempSync(join(os.tmpdir(), "type-check-batches-")),
+        mkdtempSync(join(opts.scratch, "type-check-batches-")),
       );
       const fixed = {
         root: opts.root,

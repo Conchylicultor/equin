@@ -36,16 +36,14 @@
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { setEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { cpSync, mkdirSync, rmSync, writeFileSync } from "fs";
-import os from "os";
 import { join, resolve } from "path";
-import { fileURLToPath } from "url";
 import { computeTreeHash } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import { TYPE_CHECK_BATCH_FILES, type TypeCheckWorkerOutput } from "../core";
 import {
-  TYPE_CHECK_BATCH_FILES,
-  type TypeCheckWorkerJob,
-  type TypeCheckWorkerOutput,
-} from "../core";
+  launchTypeCheckWorker,
+  type TypeCheckWorkerRequest,
+} from "../shared/launch";
 import { readCheckTree } from "../shared/repo-view";
 import { splitKey } from "../shared/name-records";
 import { openNameStore } from "../shared/name-store";
@@ -56,8 +54,6 @@ import {
   type WalkFileState,
   type WalkShard,
 } from "../shared/walk-base";
-
-const WORKER = fileURLToPath(new URL("../shared/worker.ts", import.meta.url));
 
 const args = process.argv.slice(2);
 const flag = (name: string): string | undefined => {
@@ -121,7 +117,7 @@ async function runChain(
 ): Promise<ChainStep> {
   setDataDir(chainDir[chain]);
   const tsconfigPath = join(scratch, "tsconfig.json");
-  const job: TypeCheckWorkerJob = {
+  const job: TypeCheckWorkerRequest = {
     root: scratch,
     name: "repo",
     tsconfigPath,
@@ -134,13 +130,14 @@ async function runChain(
     tree: (await readCheckTree(scratch, tsconfigPath, treeHash)).tree,
     batch: BATCH,
   };
-  const jobPath = join(os.tmpdir(), `walk-replay-${chain}-${process.pid}.json`);
-  writeFileSync(jobPath, JSON.stringify(job));
-  const run = await spawnCaptured([process.execPath, WORKER, jobPath], {
-    cwd: scratch,
-    env: { ...process.env },
-    unbounded: UNBOUNDED,
-  });
+  const run = await launchTypeCheckWorker(job, (argv, io) =>
+    spawnCaptured(argv, {
+      ...io,
+      cwd: scratch,
+      env: { ...process.env },
+      unbounded: UNBOUNDED,
+    }),
+  );
   if (run.exitCode !== 0) {
     throw new Error(
       `${chain}: the worker exited ${run.exitCode} (a missed prediction throws):\n${run.stderr.slice(-4000)}`,

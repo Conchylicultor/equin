@@ -4,11 +4,11 @@ export default [
   {
     rule: "boundaries/no-platform-api",
     paths: [
-      "server/internal/spawn-worker.ts",
       "shared/batch-processes.ts",
       "shared/batch-worker.ts",
       "shared/full-check.ts",
       "shared/keys.ts",
+      "shared/launch.ts",
       "shared/name-check.ts",
       "shared/name-host.ts",
       "shared/name-records.ts",
@@ -27,10 +27,10 @@ export default [
   },
   {
     rule: "user-path/no-unproven-claim",
-    paths: ["shared/worker.ts", "shared/batch-worker.ts"],
+    paths: ["shared/batch-worker.ts"],
     kind: "sanctioned",
     reason:
-      "the job file the spawning type-check wrote, passed by argv to this worker process",
+      "the job file the spawning worker wrote in its spool, passed by argv to this batch process",
   },
   {
     rule: "check-thread-safety/no-blocking-check-work",

@@ -161,9 +161,16 @@ export interface TscPredictionMiss {
   name: string;
 }
 
-/** The job file handed to the worker as `argv[2]` (see `../shared/worker.ts`). */
+/** The job handed to the worker on stdin (see `../shared/launch.ts`). */
 export interface TypeCheckWorkerJob {
   root: AppPath;
+  /**
+   * A directory the worker may write its scratch into (its batch spool),
+   * made before the spawn and removed after it by the launcher
+   * (`../shared/launch.ts`) — the process that outlives the worker — so a
+   * worker that crashes or is killed leaves nothing behind.
+   */
+  scratch: AppPath;
   name: string;
   tsconfigPath: string;
   tscMode: TscMode;

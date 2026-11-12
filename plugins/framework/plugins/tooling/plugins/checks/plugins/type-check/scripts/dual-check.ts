@@ -29,18 +29,14 @@
 
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { writeFileSync } from "fs";
-import os from "os";
 import { join, resolve } from "path";
-import { fileURLToPath } from "url";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import { TYPE_CHECK_BATCH_FILES, type TypeCheckWorkerOutput } from "../core";
 import {
-  TYPE_CHECK_BATCH_FILES,
-  type TypeCheckWorkerJob,
-  type TypeCheckWorkerOutput,
-} from "../core";
+  launchTypeCheckWorker,
+  type TypeCheckWorkerRequest,
+} from "../shared/launch";
 import { readCheckTree } from "../shared/repo-view";
-
-const WORKER = fileURLToPath(new URL("../shared/worker.ts", import.meta.url));
 
 const args = process.argv.slice(2);
 const root = args[0] ? asAppPath(resolve(args[0])) : undefined;
@@ -65,7 +61,7 @@ if (
 }
 
 const tsconfigPath = join(root, "tsconfig.json");
-const job: TypeCheckWorkerJob = {
+const job: TypeCheckWorkerRequest = {
   root,
   name: "dual",
   tsconfigPath,
@@ -80,13 +76,14 @@ const job: TypeCheckWorkerJob = {
   tree: (await readCheckTree(root, tsconfigPath)).tree,
   batch: { kind: "batches", k: batchK },
 };
-const jobPath = join(os.tmpdir(), `dual-check-${process.pid}.json`);
-writeFileSync(jobPath, JSON.stringify(job));
-const run = await spawnCaptured([process.execPath, WORKER, jobPath], {
-  cwd: root,
-  unbounded:
-    "a measurement run by hand: two program builds and a full check, minutes long, owned by the person who started it",
-});
+const run = await launchTypeCheckWorker(job, (argv, io) =>
+  spawnCaptured(argv, {
+    ...io,
+    cwd: root,
+    unbounded:
+      "a measurement run by hand: two program builds and a full check, minutes long, owned by the person who started it",
+  }),
+);
 process.stderr.write(run.stderr);
 if (run.exitCode !== 0) {
   console.error(`dual-check: the worker exited ${run.exitCode}`);

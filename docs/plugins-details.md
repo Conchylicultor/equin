@@ -31261,8 +31261,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `framework/tooling/checks/type-check/backstop`
               - Exemptions:
                 - Exempts itself from:
-                  - `boundaries/no-platform-api` — `server/internal/spawn-worker.ts`, `shared/batch-processes.ts`, `shared/batch-worker.ts`, `shared/full-check.ts`, `shared/keys.ts`, `shared/name-check.ts`, `shared/name-host.ts`, `shared/name-records.ts`, `shared/name-resolve.ts`, `shared/name-run.ts`, `shared/name-store.ts`, `shared/name-walk.ts`, `shared/pass-set.ts`, `shared/repo-view.ts`, `shared/tsc-engine.ts`, `shared/worker.ts` (debt)
-                  - `user-path/no-unproven-claim` — `shared/worker.ts`, `shared/batch-worker.ts` (sanctioned)
+                  - `boundaries/no-platform-api` — `shared/batch-processes.ts`, `shared/batch-worker.ts`, `shared/full-check.ts`, `shared/keys.ts`, `shared/launch.ts`, `shared/name-check.ts`, `shared/name-host.ts`, `shared/name-records.ts`, `shared/name-resolve.ts`, `shared/name-run.ts`, `shared/name-store.ts`, `shared/name-walk.ts`, `shared/pass-set.ts`, `shared/repo-view.ts`, `shared/tsc-engine.ts`, `shared/worker.ts` (debt)
+                  - `user-path/no-unproven-claim` — `shared/batch-worker.ts` (sanctioned)
                   - `check-thread-safety/no-blocking-check-work` — `check/import-graph.ts` (debt)
                   - `blocking-fs/sync-named` — `shared/batch-processes.ts`, `shared/batch-worker.ts`, `shared/name-store.ts`, `shared/pass-set.ts`, `shared/repo-view.ts`, `shared/tsc-engine.ts`, `shared/worker.ts` (sanctioned)
               - Cli:

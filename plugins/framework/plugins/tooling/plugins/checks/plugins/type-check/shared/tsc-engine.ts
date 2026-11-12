@@ -188,6 +188,7 @@ export function engineSources(): string[] {
 }
 
 const NOT_ENGINE = new Set([
+  "launch.ts",
   "worker.ts",
   "full-check.ts",
   "batch-processes.ts",

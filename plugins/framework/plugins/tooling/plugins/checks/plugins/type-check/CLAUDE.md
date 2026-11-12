@@ -270,6 +270,8 @@ What a change costs:
 
 ## Host-wide worker admission — `server/spawnTypeCheckWorker`
 
+**Every worker starts through `shared/launch.ts`** (`launchTypeCheckWorker` — `spawnTypeCheckWorker` and the measurement scripts alike): the job goes in on stdin, never as a file, and the worker's scratch dir (`TypeCheckWorkerJob.scratch`, required; its batch spool lives inside) is made and removed by the launcher, around the spawn. So whatever outlives the worker owns what it leaves on disk: a worker that throws or is killed leaks nothing. (Before, a `/tmp/type-check-<name>-<pid>.json` job file only the worker deleted, after a run that returned: 29 of them, 14–21 MB each, sat in `/tmp` on 2026-11-12.)
+
 `spawnTypeCheckWorker` (`server/`) is the ONE place a worker starts (this check, build's `--skip-checks` path and the backstop). The caller hands it the tree (`tree`, required). The check's preparation already read it; a CLI caller reads the working tree with `readTypeCheckTree` (`cli/`). `server/` never reads it: that loads the TypeScript compiler and the check runner, and a server barrel is in every backend's closure (`boot:closure-no-dev-tooling`, `boot:closure-digestable`). One read also gives a small attempt and its heavy retry the same tree.
 
 It takes the caller's `Grant`, so admission and priority cannot be skipped:
@@ -360,8 +362,8 @@ Sizes: `research/2026-10-15-global-push-typecheck-lane-priority-and-cap.md`.
     - `framework/tooling/checks/type-check/backstop`
 - Exemptions:
   - Exempts itself from:
-    - `boundaries/no-platform-api` — `server/internal/spawn-worker.ts`, `shared/batch-processes.ts`, `shared/batch-worker.ts`, `shared/full-check.ts`, `shared/keys.ts`, `shared/name-check.ts`, `shared/name-host.ts`, `shared/name-records.ts`, `shared/name-resolve.ts`, `shared/name-run.ts`, `shared/name-store.ts`, `shared/name-walk.ts`, `shared/pass-set.ts`, `shared/repo-view.ts`, `shared/tsc-engine.ts`, `shared/worker.ts` (debt)
-    - `user-path/no-unproven-claim` — `shared/worker.ts`, `shared/batch-worker.ts` (sanctioned)
+    - `boundaries/no-platform-api` — `shared/batch-processes.ts`, `shared/batch-worker.ts`, `shared/full-check.ts`, `shared/keys.ts`, `shared/launch.ts`, `shared/name-check.ts`, `shared/name-host.ts`, `shared/name-records.ts`, `shared/name-resolve.ts`, `shared/name-run.ts`, `shared/name-store.ts`, `shared/name-walk.ts`, `shared/pass-set.ts`, `shared/repo-view.ts`, `shared/tsc-engine.ts`, `shared/worker.ts` (debt)
+    - `user-path/no-unproven-claim` — `shared/batch-worker.ts` (sanctioned)
     - `check-thread-safety/no-blocking-check-work` — `check/import-graph.ts` (debt)
     - `blocking-fs/sync-named` — `shared/batch-processes.ts`, `shared/batch-worker.ts`, `shared/name-store.ts`, `shared/pass-set.ts`, `shared/repo-view.ts`, `shared/tsc-engine.ts`, `shared/worker.ts` (sanctioned)
 - Cli:

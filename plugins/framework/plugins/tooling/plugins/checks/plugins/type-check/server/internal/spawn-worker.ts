@@ -12,14 +12,7 @@
  * worker is spawned through that slot, so it runs in the foreground. See
  * ./worker-pool.ts.
  */
-import {
-  asAppPath,
-  joinAppPath,
-  type AppPath,
-} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { writeFile } from "node:fs/promises";
-import os from "os";
-import { fileURLToPath } from "url";
+import { type AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { Grant } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import type { ForegroundSlot } from "@plugins/infra/plugins/host/plugins/host-admission/server";
 import {
@@ -34,6 +27,10 @@ import {
 import { fileReportFromProcess } from "@plugins/reports/plugins/outbox/plugins/file/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { pacedHeapEnv } from "@plugins/packages/plugins/heap-pacing/core";
+import {
+  launchTypeCheckWorker,
+  type TypeCheckWorkerRequest,
+} from "../../shared/launch";
 import { reportMisses, type MissReportSink } from "./miss-reports";
 import { typeCheckLightPool, typeCheckWorkerPool } from "./worker-pool";
 
@@ -57,10 +54,6 @@ function outboxSink(root: string): MissReportSink {
     },
   };
 }
-
-const WORKER = fileURLToPath(
-  new URL("../../shared/worker.ts", import.meta.url),
-);
 
 /** What the parent measured about the worker PROCESS, on top of its output. */
 export interface TypeCheckWorkerRun {
@@ -204,7 +197,7 @@ export async function spawnTypeCheckWorker(opts: {
   const typedParts = opts.typedParts ?? { split: [], whole: [] };
   const lintBase = opts.lintBase ?? null;
   const walkBase = opts.walkBase ?? { kind: "hint" };
-  const job = (batch: TypeCheckWorkerJob["batch"]): TypeCheckWorkerJob => ({
+  const job = (batch: TypeCheckWorkerJob["batch"]): TypeCheckWorkerRequest => ({
     root,
     name,
     tsconfigPath,
@@ -289,7 +282,7 @@ export async function spawnTypeCheckWorker(opts: {
 async function spawnWorker(opts: {
   root: string;
   name: string;
-  job: TypeCheckWorkerJob;
+  job: TypeCheckWorkerRequest;
   slot: ForegroundSlot;
 }): Promise<
   Omit<TypeCheckWorkerRun, "slotWaitMs" | "admission" | "result"> & {
@@ -297,13 +290,10 @@ async function spawnWorker(opts: {
   }
 > {
   const { root, name, job, slot } = opts;
-  const jobPath = joinAppPath(
-    asAppPath(os.tmpdir()),
-    `type-check-${name}-${process.pid}.json`,
-  );
-  await writeFile(jobPath, JSON.stringify(job));
   const startedAt = performance.now();
-  const spawned = await slot.spawn([process.execPath, WORKER, jobPath], {
+  const spawned = await launchTypeCheckWorker(job, (argv, io) =>
+    slot.spawn(argv, {
+      ...io,
     cwd: root,
     // A multi-GB heap, paced against what one process may hold rather than
     // the machine's whole RAM; its batch processes inherit the same pacing.
@@ -316,7 +306,8 @@ async function spawnWorker(opts: {
     // unusable.
     unbounded:
       "a cold type-check worker legitimately runs for minutes of TS program construction, and the CLI run it belongs to owns no shorter deadline",
-  });
+    }),
+  );
   const wallMs = performance.now() - startedAt;
   if (spawned.exitCode !== 0) {
     throw new Error(

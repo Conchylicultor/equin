@@ -15,17 +15,14 @@
  *      (`parserOptions.programs`), so typescript-eslint reuses it instead of
  *      constructing a second one.
  *
- * Protocol: argv[2] is a JSON job file (so a cold run's thousands of lint paths
- * never hit the argv limit). stdout is one JSON `TypeCheckWorkerOutput`: the
+ * Protocol: the JSON job on stdin (`./launch.ts`: no argv limit for a cold
+ * run's thousands of lint paths, and no job file to outlive a crash). stdout is one JSON `TypeCheckWorkerOutput`: the
  * result, or — a small run's worker (`batch: refuse`) asked to build a larger
  * program — over-budget, and nothing recorded. A nonzero exit
  * means the worker itself crashed (the orchestrator records no PASSes for it).
  */
-import { unlinkSync, writeSync } from "fs";
-import {
-  readFileSync,
-  realpathSync,
-} from "@plugins/packages/plugins/timed-fs/core";
+import { writeSync } from "fs";
+import { realpathSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join, relative } from "path";
 import ts from "typescript";
 import { exitWithParent } from "@plugins/packages/plugins/flock/core";
@@ -75,7 +72,6 @@ import {
   type OpenedWalkBase,
   type WalkBaseStore,
 } from "./walk-base";
-import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   canonicalDeclarations,
   formatDiagnostic,
@@ -459,6 +455,7 @@ async function run(job: Job): Promise<Result> {
           width: 1,
           root: job.root,
           tree: job.tree,
+          scratch: job.scratch,
           spend,
         });
   const store: NameStore = openNameStore();
@@ -663,14 +660,14 @@ async function run(job: Job): Promise<Result> {
 // research/2026-10-09-infra-spawn-children-die-with-parent.md).
 exitWithParent();
 
-const jobArg = process.argv[2];
-if (!jobArg) {
-  console.error("type-check worker: missing job file argument");
+const jobText = await Bun.stdin.text();
+if (jobText === "") {
+  console.error(
+    "type-check worker: no job on stdin (start it through ./launch.ts)",
+  );
   process.exit(2);
 }
-// The job file the spawning type-check wrote in its own temp dir.
-const jobPath = asAppPath(jobArg);
-const job = JSON.parse(readFileSync(jobPath, "utf8")) as Job;
+const job = JSON.parse(jobText) as Job;
 let output: Output;
 try {
   output = { kind: "done", result: await run(job) };
@@ -680,11 +677,6 @@ try {
   // spawner from a result only. The heavy run starts from the same state.
   if (!(err instanceof OverBudget)) throw err;
   output = { kind: "over-budget", sources: err.sources, bound: err.bound };
-}
-try {
-  unlinkSync(jobPath);
-} catch (err) {
-  if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
 }
 // Synchronous, because the exit below follows at once: an async stream write
 // could still be buffered when the process ends.
