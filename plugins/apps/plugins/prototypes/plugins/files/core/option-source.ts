@@ -14,17 +14,43 @@ export function readPrototypeOptions(html: string): {
 }
 
 /**
- * Read the option declarations out of a prototype's HTML: every
- * `<meta name="prototype-option">` content, in document order, every
- * `<meta name="prototype-option-group">` and where it starts, the `data-*`
- * attributes on `<html>` (choice defaults) and the custom properties in its
- * `style` (color defaults). The ONE read — the gallery list, the
- * folder validator and the server's stamping all go through it, so none of them
- * can disagree about what a page declares.
+ * Everything a prototype's `index.html` declares about itself, read in ONE pass
+ * of the scanner: the gallery list, the folder validator and the server's
+ * stamping all read it through here, so none of them can disagree about what a
+ * page declares — and a list of the tree tokenizes each entry file once, not
+ * once per reader (it used to be four times: validation facts, validation
+ * options, the meta, the meta's options — 70% of a cold list's CPU).
  *
- * Values come back decoded exactly once, by `html-decode`'s scanner.
+ * Each `<title>` / `<meta>` value is the FIRST occurrence's, decoded once:
+ * a `<title>` further down the document (inside an inline `<svg>`, say) is not
+ * the document's title. `undefined` ⇔ absent.
  */
-export function readOptionSource(html: string): OptionSource {
+export interface PrototypeEntry {
+  title: string | undefined;
+  /** `<meta name="description">`. */
+  description: string | undefined;
+  /** `<meta name="prototype-viewport">`, unparsed (`parseViewport`). */
+  viewport: string | undefined;
+  /** `<meta name="mocks">`, unparsed (`parseMocks`). */
+  mocks: string | undefined;
+  /**
+   * It loads a Babel-transformed script from a separate file — a validation
+   * problem. `<script type="text/babel" src="app.jsx">` is the one violation
+   * that LOOKS fine: it works through the server and silently renders nothing
+   * over `file://` (Babel-standalone fetches a `src` with XHR, which Chrome
+   * refuses file→file). A plain non-Babel `<script src>` is fine.
+   */
+  loadsExternalBabelScript: boolean;
+  /** The option declarations, for `foldOptions`. */
+  optionSource: OptionSource;
+}
+
+export function readPrototypeEntry(html: string): PrototypeEntry {
+  let title: string | undefined;
+  let description: string | undefined;
+  let viewport: string | undefined;
+  let mocks: string | undefined;
+  let loadsExternalBabelScript = false;
   const declarations: string[] = [];
   const groups: { at: number; label: string }[] = [];
   const htmlData: Record<string, string> = {};
@@ -55,11 +81,44 @@ export function readOptionSource(html: string): OptionSource {
           });
         } else if (name === "prototype-option") {
           declarations.push(el.attr("content") ?? "");
+        } else if (name === "description") {
+          description ??= el.attr("content");
+        } else if (name === "prototype-viewport") {
+          viewport ??= el.attr("content");
+        } else if (name === "mocks") {
+          mocks ??= el.attr("content");
         }
+      },
+      script(el) {
+        if (el.attr("type")?.trim().toLowerCase() !== "text/babel") return;
+        if (el.attr("src") !== undefined) loadsExternalBabelScript = true;
+      },
+    },
+    text: {
+      title(text) {
+        title ??= text;
       },
     },
   });
-  return { declarations, groups, htmlData, htmlVars };
+  return {
+    title,
+    description,
+    viewport,
+    mocks,
+    loadsExternalBabelScript,
+    optionSource: { declarations, groups, htmlData, htmlVars },
+  };
+}
+
+/**
+ * Read the option declarations out of a prototype's HTML: every
+ * `<meta name="prototype-option">` content, in document order, every
+ * `<meta name="prototype-option-group">` and where it starts, the `data-*`
+ * attributes on `<html>` (choice defaults) and the custom properties in its
+ * `style` (color defaults) — the option half of {@link readPrototypeEntry}.
+ */
+export function readOptionSource(html: string): OptionSource {
+  return readPrototypeEntry(html).optionSource;
 }
 
 /**

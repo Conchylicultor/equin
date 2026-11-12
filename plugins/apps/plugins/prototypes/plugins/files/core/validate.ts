@@ -1,9 +1,9 @@
 import { z } from "zod";
-import { scanHtml } from "@plugins/infra/plugins/html-decode/core";
 import { protoIdKind } from "./id";
 import { mocksProblemDetail, parseMocks } from "./mocks";
 import { parseViewport, viewportProblemDetail } from "./viewport";
-import { readPrototypeOptions } from "./option-source";
+import { readPrototypeEntry, type PrototypeEntry } from "./option-source";
+import { foldOptions } from "./options";
 
 // The rules that make a folder a prototype, as one pure function.
 //
@@ -133,69 +133,6 @@ function isNameChar(code: number): boolean {
   );
 }
 
-/** What the validator reads off `index.html`, gathered in one scan. */
-interface EntryFacts {
-  /** A non-empty `<title>` — same reading `list-metas.ts` makes. */
-  hasTitle: boolean;
-  /**
-   * It loads a Babel-transformed script from a separate file.
-   *
-   * `<script type="text/babel" src="app.jsx">` is the one violation that LOOKS
-   * fine: it works perfectly through the server, and silently renders nothing
-   * over `file://`. Babel-standalone fetches a `src` with XHR, and Chrome
-   * refuses file→file XHR, so the double-click invariant dies while every HTTP
-   * check stays green. JSX therefore goes INLINE, in a `<script
-   * type="text/babel">` with no `src`. (A plain non-Babel `<script
-   * src="fixtures.js">` is fine — that's an ordinary script load, not XHR.)
-   */
-  loadsExternalBabelScript: boolean;
-  /**
-   * The decoded `content` of the first `<meta name="mocks">` /
-   * `<meta name="prototype-viewport">`, `undefined` when absent. Same scanner
-   * and first-occurrence rule as `list-metas.ts`; the judgement itself is the
-   * tag's own parser (`parseMocks`, `parseViewport`), so the validator and the
-   * reader can never disagree about what a line means.
-   */
-  mocks: string | undefined;
-  viewport: string | undefined;
-}
-
-/**
- * Read {@link EntryFacts} off `index.html` in ONE pass of the scanner — the
- * entry file is most of a tree's bytes (5 MB of a gallery's 11), and the
- * gallery re-validates it on every list.
- */
-function readEntryFacts(html: string): EntryFacts {
-  let title: string | undefined;
-  let loadsExternalBabelScript = false;
-  let mocks: string | undefined;
-  let viewport: string | undefined;
-  scanHtml(html, {
-    elements: {
-      script(el) {
-        if (el.attr("type")?.trim().toLowerCase() !== "text/babel") return;
-        if (el.attr("src") !== undefined) loadsExternalBabelScript = true;
-      },
-      meta(el) {
-        const name = el.attr("name");
-        if (name === "mocks") mocks ??= el.attr("content");
-        else if (name === "prototype-viewport") viewport ??= el.attr("content");
-      },
-    },
-    text: {
-      title(text) {
-        title ??= text;
-      },
-    },
-  });
-  return {
-    hasTitle: (title ?? "").trim() !== "",
-    loadsExternalBabelScript,
-    mocks,
-    viewport,
-  };
-}
-
 /**
  * What one folder's validation needs of the folder alone — everything but
  * WHICH other prototypes exist. A long-lived lister (the server's) keeps one
@@ -212,6 +149,13 @@ export interface PrototypeScan {
   /** The folder-level problems: its name, subdirs, a missing entry file. */
   folderProblems: PrototypeProblem[];
   files: ScannedFile[];
+  /**
+   * What `index.html` declares about itself ({@link readPrototypeEntry}), read
+   * in the same pass the validation made — so a lister takes the title, the
+   * meta and the options from here instead of tokenizing the page again.
+   * `undefined` when the folder has no readable entry file.
+   */
+  entry: PrototypeEntry | undefined;
   /**
    * The non-token names (not every character a name character — never a
    * minted id) the references were judged against, in order: such a name is
@@ -339,14 +283,16 @@ export function scanPrototypeFolder(
   }
 
   const files: ScannedFile[] = [];
+  let entry: PrototypeEntry | undefined;
   for (const fileName of [...folder.files].sort()) {
     const text = folder.texts.get(fileName);
     if (text === undefined) continue;
     const problems: PrototypeProblem[] = [];
 
     if (fileName === PROTOTYPE_ENTRY_FILE) {
-      const facts = readEntryFacts(text);
-      if (!facts.hasTitle) {
+      const facts = readPrototypeEntry(text);
+      entry = facts;
+      if ((facts.title ?? "").trim() === "") {
         problems.push({
           path: fileName,
           detail:
@@ -379,7 +325,7 @@ export function scanPrototypeFolder(
       }
       // Every `prototype-option` line that cannot be an option: it is left out
       // of the app's picker, so the card is where the author learns why.
-      for (const detail of readPrototypeOptions(text).problems) {
+      for (const detail of foldOptions(facts.optionSource).problems) {
         problems.push({ path: fileName, detail });
       }
     }
@@ -410,6 +356,7 @@ export function scanPrototypeFolder(
     dirName: folder.dirName,
     folderProblems,
     files,
+    entry,
     nonTokenNames: [...nonTokenNames],
   };
 }

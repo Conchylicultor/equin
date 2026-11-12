@@ -33,7 +33,7 @@ export default {
     // "did the checkout move under the import wave?" over the whole wave. A
     // difference makes the pin `unresolved("mixed boot")`, which reads as not
     // converged and forces a rebuild + restart.
-    sealServerPin();
+    await sealServerPin();
     // Push the sealed answer: subscribers that hydrated from the boot snapshot
     // hold the pre-seal value.
     deploymentServed.notify();

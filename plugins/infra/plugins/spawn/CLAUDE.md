@@ -310,13 +310,13 @@ presence only — **no re-exports**; import from `core/`.
     - `spawnPassthrough`
     - `spawnToFile`
 - Cross-plugin:
-  - Imported by: 93 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 94 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework` ×30
     - `infra` ×25
     - `apps` ×9
     - `debug` ×5
+    - `build` ×3
     - `database` ×3
-    - `build` ×2
     - `code-explorer` ×2
     - `conversations` ×2
     - `plugin-meta` ×2

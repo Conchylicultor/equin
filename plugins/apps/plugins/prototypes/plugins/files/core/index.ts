@@ -91,5 +91,10 @@ export type {
   OptionSource,
   OptionGroup,
 } from "./options";
-export { readOptionSource, readPrototypeOptions } from "./option-source";
+export {
+  readOptionSource,
+  readPrototypeEntry,
+  readPrototypeOptions,
+} from "./option-source";
+export type { PrototypeEntry } from "./option-source";
 export { stampPicks } from "./stamp-picks";

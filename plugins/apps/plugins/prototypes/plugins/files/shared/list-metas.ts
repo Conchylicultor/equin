@@ -14,7 +14,6 @@ import {
   relPath,
   type Mount,
 } from "@plugins/infra/plugins/paths/plugins/data-files/core";
-import { scanHtml } from "@plugins/infra/plugins/html-decode/core";
 import {
   PROTOTYPE_ENTRY_FILE,
   UNTITLED_PROTOTYPE,
@@ -23,9 +22,11 @@ import {
   DEFAULT_PROTOTYPE_VIEWPORT,
   nonTokenNamesOf,
   problemsOf,
-  readPrototypeOptions,
+  foldOptions,
+  readPrototypeEntry,
   scanPrototypeFolder,
   type MocksDeclaration,
+  type PrototypeEntry,
   type PrototypeFolder,
   type PrototypeMeta,
   type PrototypeProblem,
@@ -49,53 +50,23 @@ interface HtmlMeta {
 }
 
 /**
- * Pull `<title>` and the three `<meta>` tags out of a prototype's `index.html`.
- *
- * Read with `html-decode`'s scanner, which hands every value back decoded
- * exactly once.
- *
- * First occurrence wins for each tag: a `<title>` further down the document
- * (inside an inline `<svg>`, say) is not the document's title.
+ * The meta `index.html` declares, defaults folded in — from the one read of the
+ * page ({@link readPrototypeEntry}), which the validation scan already made.
  */
-function parseHtmlMeta(html: string): HtmlMeta {
-  let titleText: string | undefined;
-  let blurbRaw: string | undefined;
-  let viewportRaw: string | undefined;
-  let mocksRaw: string | undefined;
-
-  scanHtml(html, {
-    elements: {
-      meta(el) {
-        const name = el.attr("name");
-        if (name === "description") {
-          blurbRaw ??= el.attr("content");
-        } else if (name === "prototype-viewport") {
-          viewportRaw ??= el.attr("content");
-        } else if (name === "mocks") {
-          mocksRaw ??= el.attr("content");
-        }
-      },
-    },
-    text: {
-      title(text) {
-        titleText ??= text;
-      },
-    },
-  });
-
+function htmlMetaOf(entry: PrototypeEntry): HtmlMeta {
   // An unreadable size is also a `problems[]` entry, from the same parser
   // (`validatePrototypeFolder`); here it reads as the default.
-  const viewport = parseViewport(viewportRaw);
+  const viewport = parseViewport(entry.viewport);
 
   return {
-    title: (titleText ?? "").trim(),
-    blurb: (blurbRaw ?? "").trim(),
+    title: (entry.title ?? "").trim(),
+    blurb: (entry.description ?? "").trim(),
     viewport: viewport.ok ? viewport.viewport : DEFAULT_PROTOTYPE_VIEWPORT,
     // Declaring no counterpart is the ordinary case, so the absent tag parses
     // to `none` — there is nothing wrong with a prototype that mocks nothing.
     // A malformed line parses to `malformed` here AND is reported by
     // `validatePrototypeFolder` as a problem; both come from `parseMocks`.
-    mocks: parseMocks(mocksRaw ?? ""),
+    mocks: parseMocks(entry.mocks ?? ""),
   };
 }
 
@@ -174,7 +145,7 @@ export async function readPrototypeTitle(
   }
   const read = await readText(mount, entry);
   if (read.kind === "missing") return { found: false };
-  const { title } = parseHtmlMeta(read.text);
+  const { title } = htmlMetaOf(readPrototypeEntry(read.text));
   return { found: true, title: title === "" ? UNTITLED_PROTOTYPE : title };
 }
 
@@ -289,10 +260,9 @@ export async function scanPrototype(
   }
 
   const scan = scanPrototypeFolder(folder, nonTokenNames);
-  const html = folder.texts.get(PROTOTYPE_ENTRY_FILE);
-  if (html === undefined) return { readable: true, base, scan };
+  if (scan.entry === undefined) return { readable: true, base, scan };
 
-  const parsed = parseHtmlMeta(html);
+  const parsed = htmlMetaOf(scan.entry);
   return {
     readable: true,
     base: {
@@ -302,9 +272,8 @@ export async function scanPrototype(
       viewport: parsed.viewport,
       mocks: parsed.mocks,
       // Valid options only; each broken line is already in the scan's
-      // problems, from the same read (`scanPrototypeFolder` calls
-      // `readPrototypeOptions` too).
-      options: readPrototypeOptions(html).options,
+      // problems, folded from the same read.
+      options: foldOptions(scan.entry.optionSource).options,
     },
     scan,
   };

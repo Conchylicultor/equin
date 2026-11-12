@@ -650,6 +650,7 @@ for the `checkpoints` plugin's end-of-turn job, and the history contract
     - `OptionSource`
     - `PicksChange`
     - `PresetName`
+    - `PrototypeEntry`
     - `PrototypeFolder`
     - `PrototypeHistory`
     - `PrototypeMeta`
@@ -711,6 +712,7 @@ for the `checkpoints` plugin's end-of-turn job, and the history contract
     - `PrototypeVersionSchema`
     - `PrototypeViewportSchema`
     - `readOptionSource`
+    - `readPrototypeEntry`
     - `readPrototypeOptions`
     - `resolvePicks`
     - `restorePrototypeVersion`

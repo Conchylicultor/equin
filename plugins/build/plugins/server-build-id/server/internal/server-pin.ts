@@ -1,5 +1,6 @@
 import { GIT } from "@plugins/infra/plugins/paths/server";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
+import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import {
   resolved,
   unresolved,
@@ -17,17 +18,34 @@ import {
  * failure: a release bundle has no checkout at all, and every caller below turns
  * it into an explicit `unresolved(reason)`.
  */
+const REV_PARSE_HEAD = [
+  GIT,
+  "--no-optional-locks",
+  "-C",
+  REPO_ROOT,
+  "rev-parse",
+  "HEAD",
+];
+
 function headSync(): string | null {
-  const proc = Bun.spawnSync([
-    GIT,
-    "--no-optional-locks",
-    "-C",
-    REPO_ROOT,
-    "rev-parse",
-    "HEAD",
-  ]);
+  const proc = Bun.spawnSync(REV_PARSE_HEAD);
   if (proc.exitCode !== 0) return null;
   return proc.stdout.toString().trim() || null;
+}
+
+/**
+ * The same read, awaited — for the re-sample at `onAllReady`, where an await
+ * exists. A `spawnSync` there froze the backend's one thread for the whole
+ * spawn (a process start on a loaded host: tens to hundreds of ms) while the
+ * gateway may already be swapping tabs onto it.
+ */
+async function head(): Promise<string | null> {
+  const result = await spawnCaptured(REV_PARSE_HEAD, {
+    // A bound around git, a process this code does not control.
+    timeoutMs: 60_000,
+  });
+  if (result.exitCode !== 0) return null;
+  return result.stdout.trim() || null;
 }
 
 // Sampled at module eval — DURING the plugin import wave, so it names the tree
@@ -53,9 +71,9 @@ let pin: Resolvable<string> =
  * Idempotent by construction: once the pin is unresolved it stays that way, so a
  * second call can never talk it back into a commit.
  */
-export function sealServerPin(): void {
+export async function sealServerPin(): Promise<void> {
   if (!pin.resolved) return;
-  const headNow = headSync();
+  const headNow = await head();
   if (headNow === null) {
     pin = unresolved("mixed boot — the checkout became unreadable during boot");
     return;
