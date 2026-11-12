@@ -92,11 +92,18 @@ export interface CreatedSlot {
  * The code an evaluation runs besides the barrels': its identity is part of
  * every evaluated record's key. The stubs patch `globalThis` and stand in for
  * packages, so they shape what a barrel evaluates to.
+ *
+ * Keyed over their WHOLE closure (the only sound key), so every module they
+ * load re-keys every evaluated record of every barrel when it changes. What
+ * they load and never call is held under a bound by this plugin's
+ * `evaluator-key-width` check: a barrel import dragging in a heavy closure
+ * (the `infra/paths` core barrel once made it 361 modules, re-keyed by 1 main
+ * commit in 6) fails there, naming the import.
  */
-const EVALUATOR_MODULES = [
+export const EVALUATOR_MODULES = [
   "plugins/plugin-meta/plugins/plugin-records/plugins/evaluate/core/evaluate.ts",
   "plugins/plugin-meta/plugins/barrel-import/core/index.ts",
-];
+] as const;
 
 // ── Evaluation ────────────────────────────────────────────────────────────
 

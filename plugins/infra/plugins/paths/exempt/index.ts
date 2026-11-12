@@ -3,9 +3,9 @@ import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exem
 export default [
   {
     rule: "paths:no-hardcoded-paths",
-    paths: ["check/index.ts", "core/internal/paths.ts"],
+    paths: ["check/index.ts"],
     kind: "sanctioned",
-    reason: "The check itself and the owner of the path family: paths.ts.",
+    reason: "The check itself: it spells the patterns it looks for.",
   },
   {
     rule: "paths:no-inlined-worktree-artifacts",
@@ -29,7 +29,6 @@ export default [
       "core/internal/checkout-owner.ts",
       "core/internal/checkout-ref.ts",
       "core/internal/data-dir.ts",
-      "core/internal/data-root-layout.ts",
       "core/internal/data-dirs-manifest.ts",
       "core/internal/paths.ts",
       "core/internal/prune-artifacts.ts",
@@ -42,7 +41,7 @@ export default [
   },
   {
     rule: "user-path/no-unproven-claim",
-    paths: ["core/internal/paths.ts", "core/internal/data-root-layout.ts"],
+    paths: ["core/internal/paths.ts"],
     kind: "sanctioned",
     reason:
       "The app's fixed dirs under the home dir — the data root (and its legacy name), the local backups dir and Claude Code's own dir and config file — spelled once here: a home-relative path is wherever its segments say, so these are the claims every AppPath under them rests on.",

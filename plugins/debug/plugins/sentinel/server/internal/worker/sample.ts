@@ -8,10 +8,10 @@ import { statfs } from "node:fs/promises";
 import { stat } from "@plugins/packages/plugins/timed-fs/core";
 import { cpus, loadavg } from "node:os";
 import {
-  HOME_DIR,
   listWorktreeDirsAsync,
   worktreesDir,
 } from "@plugins/infra/plugins/paths/core";
+import { HOME_DIR } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 import type { DiskReading } from "@plugins/debug/plugins/sentinel/plugins/status-file/core";
 import {
   HealthSampleSchema,

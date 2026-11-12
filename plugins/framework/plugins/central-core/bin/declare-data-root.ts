@@ -1,4 +1,4 @@
-import { declareDataRootLayoutSync } from "@plugins/infra/plugins/paths/core";
+import { declareDataRootLayoutSync } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 
 // ── Before anything reads a path: decide where the data root is ──────────────
 //

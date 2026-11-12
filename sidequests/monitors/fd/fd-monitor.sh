@@ -34,7 +34,7 @@
 # Dumps have per-pid and system-wide cooldowns. lsof is sanity-checked before
 # incident detection so truncated output doesn't produce garbage forensics.
 
-# The data root, by paths/core's rule (data-root-layout.ts): the legacy dir
+# The data root, by paths/data-root-layout's rule (data-root-layout.ts): the legacy dir
 # while an install not yet migrated has it (`./equin data-dir migrate` moves
 # it), else ~/.equin.
 data_root() {

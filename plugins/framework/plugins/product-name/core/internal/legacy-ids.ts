@@ -126,7 +126,7 @@ export const LEGACY_ID_NOTES: Readonly<Record<LegacyIdKey, LegacyIdNote>> = {
     kept: "the installed service of an install not yet migrated; the gateway's login service stays bound to it while its definition is installed, until `./equin data-dir migrate` relabels it",
   },
   dataDirName: {
-    kept: "the data root of an install not yet migrated; it is used while it exists, until `./equin data-dir migrate` moves it (paths/core dataRootLayout)",
+    kept: "the data root of an install not yet migrated; it is used while it exists, until `./equin data-dir migrate` moves it (paths/data-root-layout dataRootLayout)",
     mirrors: [
       "gateway/dataroot.go",
       "install.sh",

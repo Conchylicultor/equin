@@ -1,4 +1,4 @@
-import type { DataRootLayout } from "@plugins/infra/plugins/paths/core";
+import type { DataRootLayout } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 
 // What `./equin data-dir migrate` will do, decided from facts alone — pure, so
 // every state an install can be in is a unit test, and the dry run prints the

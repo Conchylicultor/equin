@@ -4686,6 +4686,10 @@
       "name": "@equin/plugin-infra-paths-data-files-memory",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/paths/plugins/data-root-layout": {
+      "name": "@equin/plugin-infra-paths-data-root-layout",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/paths/plugins/display": {
       "name": "@equin/plugin-infra-paths-display",
       "version": "0.0.1",
@@ -9967,6 +9971,8 @@
     "@equin/plugin-infra-paths-data-files": ["@equin/plugin-infra-paths-data-files@workspace:plugins/infra/plugins/paths/plugins/data-files"],
 
     "@equin/plugin-infra-paths-data-files-memory": ["@equin/plugin-infra-paths-data-files-memory@workspace:plugins/infra/plugins/paths/plugins/data-files/plugins/memory"],
+
+    "@equin/plugin-infra-paths-data-root-layout": ["@equin/plugin-infra-paths-data-root-layout@workspace:plugins/infra/plugins/paths/plugins/data-root-layout"],
 
     "@equin/plugin-infra-paths-display": ["@equin/plugin-infra-paths-display@workspace:plugins/infra/plugins/paths/plugins/display"],
 

@@ -8,7 +8,7 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { join } from "node:path";
-import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
+import { HOME_DIR } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 import {
   journalChangesSince,
   journalCursor,

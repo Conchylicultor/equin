@@ -2,7 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
+import { HOME_DIR } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 import { createContext } from "../context";
 import type { Verdict } from "../types";
 import {

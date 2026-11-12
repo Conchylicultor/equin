@@ -17,7 +17,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { isPlatformApi } from "@plugins/framework/plugins/tooling/plugins/boundaries/core";
 import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
-import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
+import { HOME_DIR } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 import type { ArtifactBuilder } from "../core";
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 

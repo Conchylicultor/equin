@@ -3,10 +3,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
-import {
-  HOME_DIR,
-  relativeToDataRoot,
-} from "@plugins/infra/plugins/paths/core";
+import { relativeToDataRoot } from "@plugins/infra/plugins/paths/core";
+import { HOME_DIR } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 
 import { dbConfigDir } from "../../data-dirs";

@@ -5,7 +5,7 @@
 # gets its parent's STARTING environment — inherits a decided root instead of
 # reading the disk on its own (infra/paths CLAUDE.md, § The data root).
 #
-# The shell twin of paths/core decideDataRootLayout (data-root-layout.ts), case
+# The shell twin of paths/data-root-layout decideDataRootLayout (data-root-layout.ts), case
 # for case, held to it by declare-data-root-sh.test.ts; the tokens are
 # HOME_LAYOUT_TOKENS. Two roots (a split) is left undeclared: the CLI's own
 # decision throws DataRootSplitError, which names what to do.

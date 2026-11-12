@@ -113,8 +113,8 @@ candidate calls (an identifier callee — an alias, a twin — is always asked).
 
 - Description: Which host paths a synchronous fs call may touch: AppPath (a path the app owns — its data dirs, its checkout; the only kind a sync fs call in runtime code may take) and UserPath (one the user or their config chose), with the type-aware lint that refuses a sync fs call on any path not proven app-owned — so a macOS Files & Folders prompt can never freeze a backend's JS thread, whether or not anyone marked the user's path.
 - Cross-plugin:
-  - Imported by: 106 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra` ×37
+  - Imported by: 107 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra` ×38
     - `framework` ×20
     - `apps` ×8
     - `debug` ×7
@@ -153,6 +153,7 @@ candidate calls (an identifier callee — an alias, a twin — is always asked).
     - `infra/launcher/env-names` (0 debt)
     - `infra/launcher/login-services` (0 debt)
     - `infra/paths` (0 debt)
+    - `infra/paths/data-root-layout` (0 debt)
     - `infra/paths/repo-root` (0 debt)
     - `infra/spawn` (0 debt)
     - `infra/worktree` (0 debt)

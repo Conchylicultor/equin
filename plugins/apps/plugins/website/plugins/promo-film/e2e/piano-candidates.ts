@@ -12,7 +12,7 @@
 
 import { copyFileSync, mkdirSync, rmSync } from "node:fs";
 import { basename, join } from "node:path";
-import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
+import { HOME_DIR } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 import { resolveFfmpeg } from "@plugins/media/plugins/ffmpeg/deps";
 import { promoFilmWorkspaceDir } from "@plugins/apps/plugins/website/plugins/promo-film/plugins/seed/data-dirs";
 import {

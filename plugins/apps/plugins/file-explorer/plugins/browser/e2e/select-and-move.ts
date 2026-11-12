@@ -41,7 +41,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Locator, Page } from "playwright";
-import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
+import { HOME_DIR } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 import {
   arg,
   boot,

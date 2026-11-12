@@ -14,7 +14,7 @@
 // `promo-music` dep (sha256, license) and switch this to `{ kind: "dep" }`.
 
 import { join } from "node:path";
-import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
+import { HOME_DIR } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 import { ensureDepViaCli } from "@plugins/infra/plugins/deps/deps";
 import { downloadedFile } from "@plugins/infra/plugins/deps/plugins/download/deps";
 import { PROMO_MUSIC, promoMusic } from "../../deps";

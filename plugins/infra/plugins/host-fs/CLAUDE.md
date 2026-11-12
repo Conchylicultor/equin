@@ -218,7 +218,6 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
   - Uses:
     - `infra/endpoints.HttpError`
     - `infra/host/host-read-pool.withHeavyReadSlot`
-    - `infra/paths.HOME_DIR`
   - Exports (types):
     - `ArchiveFormat`
     - `ArchiveIndexResult`

@@ -64,7 +64,7 @@ every move proven before it lands.
     - `infra/deps/updates.Hold`
     - `infra/deps/updates.holdProblems`
     - `infra/host-fs/user-path.asAppPath`
-    - `infra/paths.HOME_DIR`
+    - `infra/paths/data-root-layout.HOME_DIR`
     - `packages/timed-fs.access`
     - `packages/timed-fs.existsSync`
   - Exports (types):

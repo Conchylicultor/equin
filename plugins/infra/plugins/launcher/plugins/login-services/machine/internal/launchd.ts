@@ -8,7 +8,7 @@ import {
   spawnExpectOk,
   SpawnFailedError,
 } from "@plugins/infra/plugins/spawn/core";
-import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
+import { HOME_DIR } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 import { retryUntil, exponential } from "@plugins/packages/plugins/retry/core";
 import type { LoginServiceId } from "../../core";
 import {

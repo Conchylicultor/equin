@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { dataRootLayout } from "@plugins/infra/plugins/paths/core";
+import { dataRootLayout } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 import { envName } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { createContext } from "../context";
 import type { Verdict } from "../types";

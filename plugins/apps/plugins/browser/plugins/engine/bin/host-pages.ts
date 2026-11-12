@@ -20,7 +20,7 @@ import type {
   Page,
 } from "playwright";
 import { readyNow } from "@plugins/infra/plugins/deps/deps";
-import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
+import { HOME_DIR } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 import { backgroundOnlyChromium } from "./background-app";
 import { launchPersistentChromium } from "@plugins/infra/plugins/deps/plugins/playwright-browser/deps";
 import { chromium } from "@plugins/infra/plugins/safe-fetch/plugins/browser-fetch/deps";

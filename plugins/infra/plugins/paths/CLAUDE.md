@@ -17,7 +17,7 @@ browser that needs to *name* a directory reads the string literals in the
 
 `EQUIN_DIR` when set (a release bundle, a preview, a VM). Otherwise it is
 decided by what is **installed**, not by the code's version
-(`core/internal/data-root-layout.ts`, `dataRootLayout()`):
+(the `data-root-layout` sub-plugin, `dataRootLayout()` — a leaf apart from this core barrel, so code keyed on its own closure can read the root without keying on this barrel's):
 
 | on disk | root |
 |---|---|
@@ -393,13 +393,14 @@ reaped namespaces' gateway logs were each found by accident, months in.
 
 - Description: Canonical machine paths, plus the boot-time publication of this namespace's declared data-dir set so an audit running in another checkout can tell one of this branch's directories from an orphan.
 - Core:
-  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `packages/timed-fs` ×11
+  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `packages/timed-fs` ×10
     - `infra/namespace` ×8
     - `infra/launcher/env-names` ×5
     - `infra/host-fs/user-path` ×3
     - `framework/product-name` ×2
     - `framework/tooling/collected-dir` ×2
+    - `infra/paths/data-root-layout` ×2
     - `infra/runtime-identity` ×2
     - `infra/paths/repo-root.REPO_ROOT`
     - `infra/spawn.getMainRepoRoot`
@@ -415,7 +416,6 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `DataDirKind`
     - `DataDirRef`
     - `DataDirSpec`
-    - `DataRootLayout`
     - `DataRootView`
     - `DataRootWriteViolation`
     - `LegacyMove`
@@ -441,18 +441,12 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `claudeProjectDirName`
     - `claudeTranscriptPath`
     - `DATA_DIR_KINDS`
-    - `DATA_DIR_NAME`
     - `dataRoot`
-    - `dataRootLayout`
-    - `DataRootSplitError`
     - `dataRootWriteViolationSync`
-    - `declareDataRootLayoutSync`
     - `defineAppDataDir`
     - `defineDataDir`
     - `deploysForCheckoutSync`
     - `getDataDirs`
-    - `HOME_DIR`
-    - `homeDataRoots`
     - `isHostSingleton`
     - `isRelease`
     - `LEGACY_LAYOUT`
@@ -473,7 +467,6 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `readCheckoutMinterSync`
     - `readCheckoutOwner`
     - `readCheckoutOwnerSync`
-    - `readHomeDataRootLayoutSync`
     - `relativeToDataRoot`
     - `releaseIdentity`
     - `repoConfigDir`
@@ -492,16 +485,16 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `worktreeDataDir`
     - `worktreesDir`
 - Cross-plugin:
-  - Imported by: 137 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra` ×34
-    - `apps` ×20
+  - Imported by: 129 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra` ×31
     - `framework` ×20
+    - `apps` ×18
     - `debug` ×15
     - `conversations` ×7
     - `build` ×6
     - `backup` ×4
-    - `plugin-meta` ×4
     - `packages` ×3
+    - `plugin-meta` ×3
     - `primitives` ×3
     - `release` ×3
     - `reports` ×3
@@ -510,19 +503,17 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `integrations` ×2
     - `stats` ×2
     - `config_v2`
-    - `media/film`
     - `menu-bar`
     - `review/plugin-changes`
     - `shell/document-head`
     - `tasks`
-    - `toolchain`
 - Exemptions:
   - Exempts itself from:
-    - `paths:no-hardcoded-paths` — `check/index.ts`, `core/internal/paths.ts` (sanctioned)
+    - `paths:no-hardcoded-paths` — `check/index.ts` (sanctioned)
     - `paths:no-inlined-worktree-artifacts` — `.` (sanctioned)
     - `paths:data-root-not-joined` — `.` (sanctioned)
-    - `boundaries/no-platform-api` — `core/internal/checkout-deploys.ts`, `core/internal/checkout-minter.ts`, `core/internal/checkout-owner.ts`, `core/internal/checkout-ref.ts`, `core/internal/data-dir.ts`, `core/internal/data-root-layout.ts`, `core/internal/data-dirs-manifest.ts`, `core/internal/paths.ts`, `core/internal/prune-artifacts.ts`, `core/internal/toolchain-pin.ts`, `core/internal/worktree-dirs.ts` (debt)
-    - `user-path/no-unproven-claim` — `core/internal/paths.ts`, `core/internal/data-root-layout.ts` (sanctioned)
+    - `boundaries/no-platform-api` — `core/internal/checkout-deploys.ts`, `core/internal/checkout-minter.ts`, `core/internal/checkout-owner.ts`, `core/internal/checkout-ref.ts`, `core/internal/data-dir.ts`, `core/internal/data-dirs-manifest.ts`, `core/internal/paths.ts`, `core/internal/prune-artifacts.ts`, `core/internal/toolchain-pin.ts`, `core/internal/worktree-dirs.ts` (debt)
+    - `user-path/no-unproven-claim` — `core/internal/paths.ts` (sanctioned)
     - `user-path/no-unproven-claim` — `core/internal/checkout-deploys.ts` (sanctioned)
 - Server:
   - Exports (types):
@@ -551,12 +542,10 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `claudeTranscriptPath`
     - `DATA_DIR_KINDS`
     - `dataRoot`
-    - `dataRootLayout`
     - `defineAppDataDir`
     - `defineDataDir`
     - `getDataDirs`
     - `GIT`
-    - `HOME_DIR`
     - `isHostSingleton`
     - `isRelease`
     - `listWorktreeDirsAsync`
@@ -585,6 +574,7 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `worktreesDir`
 - Sub-plugins:
   - **`data-files`** — Data files: the files app-owned data dirs hold, on whatever host runs — the DataFiles host service (the computer's disk on the desktop, memory in a browser host) behind defineFileRoot, a root…
+  - **`data-root-layout`** — The user's home (HOME_DIR) and where the data root sits in it: dataRootLayout() — named by the environment (custom), an install not yet migrated (legacy) or ~/.equin — declared once per process tree…
   - **`display`** — The human-facing spelling of the data dirs (the `~/…` form a message, an empty state, or an agent prompt writes). Web-safe by construction: string literals only, no node:* and no homedir() — so the…
   - **`file-systems`** — One read of a file in any file system: useFileText, useFileBytes and useFileStat take a FileLocation and read that system's live value (the computer's disk, the browser's storage, a checkout), so a…
   - **`repo-root`** — REPO_ROOT — the checkout this code runs from, the one place any file gets it. Derived without counting ../ (its own repo-relative dir is a literal `./equin plugin move` rewrites; a stale one throws…

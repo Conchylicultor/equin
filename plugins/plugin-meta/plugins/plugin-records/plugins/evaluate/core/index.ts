@@ -1,4 +1,4 @@
-export { evaluateBarrels } from "./evaluate";
+export { EVALUATOR_MODULES, evaluateBarrels } from "./evaluate";
 export type {
   BarrelRef,
   BarrelRuntime,

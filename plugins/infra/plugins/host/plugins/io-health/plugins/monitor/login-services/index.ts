@@ -2,7 +2,7 @@
 // registers it next to the gateway (ensuring and holding the binary from the
 // main checkout), and main's boot moves it onto every new build. Periodic, not
 // kept alive: launchd runs one tick every 30 s.
-import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
+import { HOME_DIR } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 import { defineLoginService } from "@plugins/infra/plugins/launcher/plugins/login-services/machine";
 import { componentIdentity } from "@plugins/infra/plugins/launcher/plugins/login-services/core";
 import { builtFile } from "@plugins/infra/plugins/deps/plugins/build/deps";

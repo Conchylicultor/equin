@@ -1,6 +1,6 @@
 import { dirname, isAbsolute, resolve } from "node:path";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { HOME_DIR } from "@plugins/infra/plugins/paths/server";
+import { HOME_DIR } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 import {
   asUserPath,
   type UserPath,

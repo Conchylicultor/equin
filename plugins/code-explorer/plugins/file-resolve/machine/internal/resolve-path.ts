@@ -1,5 +1,6 @@
 import { isAbsolute, relative, resolve } from "node:path";
-import { GIT, HOME_DIR } from "@plugins/infra/plugins/paths/server";
+import { GIT } from "@plugins/infra/plugins/paths/server";
+import { HOME_DIR } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import type { ResolvedFile } from "../../shared/resolved-file";
 

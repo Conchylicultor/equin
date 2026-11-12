@@ -2,7 +2,7 @@ import { installFsCallGuard } from "@plugins/packages/plugins/timed-fs/core";
 import { dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
-import { dataRootLayout } from "@plugins/infra/plugins/paths/core";
+import { dataRootLayout } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 import { envName } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 
 /**

@@ -32,7 +32,7 @@
  */
 import type { Locator, Page, Request, WebSocket } from "playwright";
 import { pickFromLauncher } from "@plugins/apps-core/plugins/app-launcher/e2e";
-import { DATA_DIR_NAME } from "@plugins/infra/plugins/paths/core";
+import { DATA_DIR_NAME } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 import {
   arg,
   pathUrl,

@@ -6,7 +6,7 @@ import {
 } from "@plugins/packages/plugins/timed-fs/core";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
+import { HOME_DIR } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 import { getParcelWatcher, watcherBackend } from "./engine";
 
 // ─── The file-system journal: what changed under a folder since a cursor ─────

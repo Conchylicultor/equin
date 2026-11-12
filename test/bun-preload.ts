@@ -4,8 +4,8 @@ import { join } from "node:path";
 import {
   PLUGINS_DIR,
   checkoutNamespace,
-  declareDataRootLayoutSync,
 } from "@plugins/infra/plugins/paths/core";
+import { declareDataRootLayoutSync } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import type { ServerContribution } from "@plugins/framework/plugins/server-core/core";
 import {

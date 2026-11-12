@@ -118,6 +118,7 @@ export const checkEntries: CollectedEntry[] = [
   { pluginPath: "plugin-meta/plugins/facets", id: "plugin-meta.facets", loader: () => import("@plugins/plugin-meta/plugins/facets/check"), dependsOn: ["framework/plugins/tooling/plugins/codegen"] },
   { pluginPath: "plugin-meta/plugins/parse-utils", id: "plugin-meta.parse-utils", loader: () => import("@plugins/plugin-meta/plugins/parse-utils/check"), dependsOn: ["plugin-meta/plugins/plugin-records"] },
   { pluginPath: "plugin-meta/plugins/plugin-records", id: "plugin-meta.plugin-records", loader: () => import("@plugins/plugin-meta/plugins/plugin-records/check"), dependsOn: [] },
+  { pluginPath: "plugin-meta/plugins/plugin-records/plugins/evaluate", id: "plugin-meta.plugin-records.evaluate", loader: () => import("@plugins/plugin-meta/plugins/plugin-records/plugins/evaluate/check"), dependsOn: ["plugin-meta/plugins/plugin-records"] },
   { pluginPath: "plugin-meta/plugins/plugin-refs", id: "plugin-meta.plugin-refs", loader: () => import("@plugins/plugin-meta/plugins/plugin-refs/check"), dependsOn: ["plugin-meta/plugins/plugin-records"] },
   { pluginPath: "plugin-meta/plugins/plugin-tree/plugins/faceted", id: "plugin-meta.plugin-tree.faceted", loader: () => import("@plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/check"), dependsOn: ["plugin-meta/plugins/plugin-records"] },
   { pluginPath: "plugin-meta/plugins/relocate", id: "plugin-meta.relocate", loader: () => import("@plugins/plugin-meta/plugins/relocate/check"), dependsOn: ["plugin-meta/plugins/plugin-refs"] },

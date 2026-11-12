@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
+import { HOME_DIR } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 import { createContext } from "../context";
 import type { Verdict } from "../types";
 import { noMemoryGuard } from "./no-memory";

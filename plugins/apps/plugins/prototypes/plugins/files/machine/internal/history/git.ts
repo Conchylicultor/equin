@@ -4,7 +4,7 @@ import {
   spawnExpectOk,
   type SpawnResult,
 } from "@plugins/infra/plugins/spawn/core";
-import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
+import { HOME_DIR } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 
 // The one way this plugin runs git: hermetic, against ONE prototype's private
 // history repo, with the prototype folder as its work tree.

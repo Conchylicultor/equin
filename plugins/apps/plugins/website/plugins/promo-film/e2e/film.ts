@@ -29,7 +29,7 @@
 
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
-import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
+import { HOME_DIR } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 import { usage } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { runFilm, type FilmContext } from "@plugins/media/plugins/film/e2e";
 import { buildFilm } from "./internal/film";

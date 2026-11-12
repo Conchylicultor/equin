@@ -4,10 +4,8 @@ import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { agentScratchDir } from "@plugins/infra/plugins/launcher/plugins/agent-scratch/core";
-import {
-  dataRootLayout,
-  machineDeclaredRootEntriesSync,
-} from "@plugins/infra/plugins/paths/core";
+import { machineDeclaredRootEntriesSync } from "@plugins/infra/plugins/paths/core";
+import { dataRootLayout } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 import type { DataRootView } from "@plugins/infra/plugins/paths/core";
 import { classifyRepo } from "./git-target";
 import { worktreeContextOf } from "./worktree-root";

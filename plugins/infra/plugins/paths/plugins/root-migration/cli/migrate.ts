@@ -20,12 +20,14 @@ import { loginServiceManager } from "@plugins/infra/plugins/launcher/plugins/log
 import {
   backupsDirs,
   CLAUDE_PROJECTS_DIR,
+  listWorktreeDirsSync,
+} from "@plugins/infra/plugins/paths/core";
+import {
   DataRootSplitError,
   HOME_DIR,
-  listWorktreeDirsSync,
   readHomeDataRootLayoutSync,
   type DataRootLayout,
-} from "@plugins/infra/plugins/paths/core";
+} from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 import { listWorktreeOps } from "@plugins/infra/plugins/worktree/server";
 import {
   pidAlive,

@@ -6,7 +6,7 @@ import { exists } from "@plugins/packages/plugins/timed-fs/core";
 import { userInfo } from "node:os";
 import { join } from "node:path";
 import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
-import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
+import { HOME_DIR } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 import { retryUntil, exponential } from "@plugins/packages/plugins/retry/core";
 import { SERVICE_STOP_WAIT_MS, type LoginServiceId } from "../../core";
 import {

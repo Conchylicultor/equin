@@ -344,10 +344,12 @@ So the key stays whole and the producers are kept narrow, **guarded**: the
 imports from each barrel — unsound as a key, exact as a diagnostic — and
 names the barrel imports that drag in modules it never calls. Each producer's
 owner checks its own (`plugin-records:scan-key-width` over every `*.scan.ts`,
-`faceted:facet-key-width` over the facets and the extraction harness), failing
+`faceted:facet-key-width` over the facets and the extraction harness,
+`evaluate:evaluator-key-width` over the barrel evaluator), failing
 over `MAX_UNUSED_KEY_MODULES`. The fix is always the same: move what the
 producer takes into a leaf it can import alone (`boundaries/runtime-exception`,
-`closure/entry-pattern`, `theme-engine/token-var-name`), or read it from the
+`closure/entry-pattern`, `theme-engine/token-var-name`,
+`paths/data-root-layout`), or read it from the
 producer's own input. Measure a producer's re-key rate with
 `scripts/key-closures.ts`.
 

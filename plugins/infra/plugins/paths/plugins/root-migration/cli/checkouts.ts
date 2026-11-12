@@ -22,9 +22,21 @@ import type { StaleCheckout } from "./plan";
 // agent all run its source as it is now, built or not — so the deploy
 // registry, which only knows the last build, would undercount.
 
-/** The module that decides the data root by what is installed (`paths/core`'s data-root layout). */
-export const LAYOUT_RULE_MODULE =
-  "plugins/infra/plugins/paths/core/internal/data-root-layout.ts";
+/**
+ * The module that decides the data root by what is installed, at every path it
+ * has had — current first. A HEAD carrying it at ANY of them has the rule: it
+ * moved from `paths/core` into the `data-root-layout` leaf, and a checkout
+ * from before the move has it all the same.
+ */
+export const LAYOUT_RULE_MODULES = [
+  "plugins/infra/plugins/paths/plugins/data-root-layout/core/internal/data-root-layout.ts",
+  "plugins/infra/plugins/paths/core/internal/data-root-layout.ts",
+] as const;
+
+/** One `cat-file --batch-check` query per (head, module path), heads outer. */
+function layoutQueries(heads: readonly string[]): string[] {
+  return heads.flatMap((h) => LAYOUT_RULE_MODULES.map((m) => `${h}:${m}`));
+}
 
 /**
  * Every checkout of the repo at `repoRoot` whose HEAD lacks the layout rule.
@@ -52,7 +64,9 @@ export async function staleCheckouts(
   const { stdout } = await spawnExpectOk(
     [GIT, "-C", repoRoot, "cat-file", "--batch-check"],
     {
-      stdin: heads.map((h) => `${h}:${LAYOUT_RULE_MODULE}\n`).join(""),
+      stdin: layoutQueries(heads)
+        .map((q) => `${q}\n`)
+        .join(""),
       timeoutMs: 60_000,
     },
   );
@@ -63,29 +77,31 @@ export async function staleCheckouts(
 }
 
 /**
- * The heads `git cat-file --batch-check` answered `missing` for — one output
- * line per input line, in order. Anything but a blob or `missing` is not an
+ * The heads `git cat-file --batch-check` answered `missing` for at every
+ * {@link LAYOUT_RULE_MODULES} path — one output line per query of
+ * `layoutQueries(heads)`, in order. Anything but a blob or `missing` is not an
  * answer to the question asked, so it throws rather than counting either way.
  */
 export function headsLacking(
   heads: readonly string[],
   stdout: string,
 ): Set<string> {
+  const queries = layoutQueries(heads);
   const lines = stdout.split("\n").filter((l) => l !== "");
-  if (lines.length !== heads.length) {
+  if (lines.length !== queries.length) {
     throw new Error(
-      `git cat-file --batch-check answered ${lines.length} lines for ${heads.length} heads:\n${stdout}`,
+      `git cat-file --batch-check answered ${lines.length} lines for ${queries.length} queries:\n${stdout}`,
     );
   }
-  const lacking = new Set<string>();
+  const found = new Set<string>();
   for (const [i, line] of lines.entries()) {
-    const head = heads[i]!;
-    if (line.endsWith(" missing")) lacking.add(head);
-    else if (!/^[0-9a-f]+ blob \d+$/.test(line)) {
+    const head = heads[Math.floor(i / LAYOUT_RULE_MODULES.length)]!;
+    if (/^[0-9a-f]+ blob \d+$/.test(line)) found.add(head);
+    else if (!line.endsWith(" missing")) {
       throw new Error(
-        `git cat-file --batch-check: unexpected answer for ${head}:${LAYOUT_RULE_MODULE}: ${line}`,
+        `git cat-file --batch-check: unexpected answer for ${queries[i]}: ${line}`,
       );
     }
   }
-  return lacking;
+  return new Set(heads.filter((h) => !found.has(h)));
 }

@@ -12,7 +12,7 @@ import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core"
 import {
   DataRootSplitError,
   declareDataRootLayoutSync,
-} from "@plugins/infra/plugins/paths/core";
+} from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 
 /**
  * `./equin`'s entrypoint — and deliberately NOT the CLI. Four ordered

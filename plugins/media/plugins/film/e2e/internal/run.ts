@@ -33,7 +33,7 @@ import {
 import { availableParallelism, tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import type { Page } from "playwright";
-import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
+import { HOME_DIR } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 import { resolveFfmpeg } from "@plugins/media/plugins/ffmpeg/deps";
 import { resolveMouseSounds } from "../../deps";
 import {

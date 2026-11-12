@@ -30380,8 +30380,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/launcher/gateway-drift`
     - **`product-name`** — The product's own name, as data: PRODUCT_NAME (`equin`, always lowercase — what every person and agent reads) and LEGACY_PRODUCT_NAMES (the names it went by before, never written again), enforced by the product-name:legacy check over every tracked file; and LEGACY_IDS, the identifiers built from the old name that are kept for good (stored state, cross-version contracts), the one place they are spelled — enforced by product-name:legacy-id (and its mirrors by product-name:legacy-ids-in-sync). A dependency-free leaf, so a browser bundle, a server or a script can import it.
       - Cross-plugin:
-        - Imported by: 64 plugins — full list in [`plugins/framework/plugins/product-name/REFERENCE.md`](../plugins/framework/plugins/product-name/REFERENCE.md)
-          - `infra` ×15
+        - Imported by: 65 plugins — full list in [`plugins/framework/plugins/product-name/REFERENCE.md`](../plugins/framework/plugins/product-name/REFERENCE.md)
+          - `infra` ×16
           - `framework` ×11
           - `apps` ×9
           - `conversations` ×4
@@ -30899,7 +30899,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/jobs/supervised-job` (3 debt)
               - `infra/launcher` (2 debt)
               - `infra/mcp/browser` (2 debt)
-              - `infra/paths` (11 debt)
+              - `infra/paths` (10 debt)
+              - `infra/paths/data-root-layout` (2 debt)
               - `infra/request-origin/agent-write-ledger` (1 debt)
               - `infra/runtime-profiler` (1 debt)
               - `infra/safe-fetch` (1 debt)
@@ -31678,7 +31679,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
           - Core:
             - Uses: 35 symbols — full list in [`plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md)
-              - `infra/paths` ×7
+              - `infra/paths` ×5
               - `packages/timed-fs` ×4
               - `framework/cli/cli-name` ×3
               - `infra/host-fs/user-path` ×3
@@ -31687,6 +31688,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/guards/refusal-format` ×2
               - `infra/launcher/agent-scratch` ×2
               - `infra/namespace` ×2
+              - `infra/paths/data-root-layout` ×2
               - `packages/owned-fd` ×2
               - `framework/plugin-id.PLUGIN_MANIFEST_KEY`
               - `framework/tooling/guards/module-extension.MODULE_EXTENSION`
@@ -35507,7 +35509,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `infra/endpoints.HttpError`
           - `infra/host/host-read-pool.withHeavyReadSlot`
-          - `infra/paths.HOME_DIR`
         - Exports (types):
           - `ArchiveFormat`
           - `ArchiveIndexResult`
@@ -35612,8 +35613,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/sweep.ts` (debt)
         - **`user-path`** — Which host paths a synchronous fs call may touch: AppPath (a path the app owns — its data dirs, its checkout; the only kind a sync fs call in runtime code may take) and UserPath (one the user or their config chose), with the type-aware lint that refuses a sync fs call on any path not proven app-owned — so a macOS Files & Folders prompt can never freeze a backend's JS thread, whether or not anyone marked the user's path.
           - Cross-plugin:
-            - Imported by: 106 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
-              - `infra` ×37
+            - Imported by: 107 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
+              - `infra` ×38
               - `framework` ×20
               - `apps` ×8
               - `debug` ×7
@@ -35652,6 +35653,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/launcher/env-names` (0 debt)
               - `infra/launcher/login-services` (0 debt)
               - `infra/paths` (0 debt)
+              - `infra/paths/data-root-layout` (0 debt)
               - `infra/paths/repo-root` (0 debt)
               - `infra/spawn` (0 debt)
               - `infra/worktree` (0 debt)
@@ -36282,9 +36284,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `setEnvDefault`
               - `unsetEnv`
           - Cross-plugin:
-            - Imported by: 49 plugins — full list in [`plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md`](../plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md)
+            - Imported by: 50 plugins — full list in [`plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md`](../plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md)
               - `framework` ×18
-              - `infra` ×12
+              - `infra` ×13
               - `debug` ×5
               - `database` ×4
               - `packages` ×4
@@ -36698,13 +36700,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `ndjsonResponse`
     - **`paths`** — Canonical machine paths, plus the boot-time publication of this namespace's declared data-dir set so an audit running in another checkout can tell one of this branch's directories from an orphan.
       - Core:
-        - Uses: 35 symbols — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
-          - `packages/timed-fs` ×11
+        - Uses: 36 symbols — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+          - `packages/timed-fs` ×10
           - `infra/namespace` ×8
           - `infra/launcher/env-names` ×5
           - `infra/host-fs/user-path` ×3
           - `framework/product-name` ×2
           - `framework/tooling/collected-dir` ×2
+          - `infra/paths/data-root-layout` ×2
           - `infra/runtime-identity` ×2
           - `infra/paths/repo-root.REPO_ROOT`
           - `infra/spawn.getMainRepoRoot`
@@ -36720,7 +36723,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataDirKind`
           - `DataDirRef`
           - `DataDirSpec`
-          - `DataRootLayout`
           - `DataRootView`
           - `DataRootWriteViolation`
           - `LegacyMove`
@@ -36746,18 +36748,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `claudeProjectDirName`
           - `claudeTranscriptPath`
           - `DATA_DIR_KINDS`
-          - `DATA_DIR_NAME`
           - `dataRoot`
-          - `dataRootLayout`
-          - `DataRootSplitError`
           - `dataRootWriteViolationSync`
-          - `declareDataRootLayoutSync`
           - `defineAppDataDir`
           - `defineDataDir`
           - `deploysForCheckoutSync`
           - `getDataDirs`
-          - `HOME_DIR`
-          - `homeDataRoots`
           - `isHostSingleton`
           - `isRelease`
           - `LEGACY_LAYOUT`
@@ -36778,7 +36774,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readCheckoutMinterSync`
           - `readCheckoutOwner`
           - `readCheckoutOwnerSync`
-          - `readHomeDataRootLayoutSync`
           - `relativeToDataRoot`
           - `releaseIdentity`
           - `repoConfigDir`
@@ -36797,16 +36792,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 137 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
-          - `infra` ×34
-          - `apps` ×20
+        - Imported by: 129 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+          - `infra` ×31
           - `framework` ×20
+          - `apps` ×18
           - `debug` ×15
           - `conversations` ×7
           - `build` ×6
           - `backup` ×4
-          - `plugin-meta` ×4
           - `packages` ×3
+          - `plugin-meta` ×3
           - `primitives` ×3
           - `release` ×3
           - `reports` ×3
@@ -36815,19 +36810,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `integrations` ×2
           - `stats` ×2
           - `config_v2`
-          - `media/film`
           - `menu-bar`
           - `review/plugin-changes`
           - `shell/document-head`
           - `tasks`
-          - `toolchain`
       - Exemptions:
         - Exempts itself from:
-          - `paths:no-hardcoded-paths` — `check/index.ts`, `core/internal/paths.ts` (sanctioned)
+          - `paths:no-hardcoded-paths` — `check/index.ts` (sanctioned)
           - `paths:no-inlined-worktree-artifacts` — `.` (sanctioned)
           - `paths:data-root-not-joined` — `.` (sanctioned)
-          - `boundaries/no-platform-api` — `core/internal/checkout-deploys.ts`, `core/internal/checkout-minter.ts`, `core/internal/checkout-owner.ts`, `core/internal/checkout-ref.ts`, `core/internal/data-dir.ts`, `core/internal/data-root-layout.ts`, `core/internal/data-dirs-manifest.ts`, `core/internal/paths.ts`, `core/internal/prune-artifacts.ts`, `core/internal/toolchain-pin.ts`, `core/internal/worktree-dirs.ts` (debt)
-          - `user-path/no-unproven-claim` — `core/internal/paths.ts`, `core/internal/data-root-layout.ts` (sanctioned)
+          - `boundaries/no-platform-api` — `core/internal/checkout-deploys.ts`, `core/internal/checkout-minter.ts`, `core/internal/checkout-owner.ts`, `core/internal/checkout-ref.ts`, `core/internal/data-dir.ts`, `core/internal/data-dirs-manifest.ts`, `core/internal/paths.ts`, `core/internal/prune-artifacts.ts`, `core/internal/toolchain-pin.ts`, `core/internal/worktree-dirs.ts` (debt)
+          - `user-path/no-unproven-claim` — `core/internal/paths.ts` (sanctioned)
           - `user-path/no-unproven-claim` — `core/internal/checkout-deploys.ts` (sanctioned)
       - Server:
         - Exports (types):
@@ -36856,12 +36849,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `claudeTranscriptPath`
           - `DATA_DIR_KINDS`
           - `dataRoot`
-          - `dataRootLayout`
           - `defineAppDataDir`
           - `defineDataDir`
           - `getDataDirs`
           - `GIT`
-          - `HOME_DIR`
           - `isHostSingleton`
           - `isRelease`
           - `listWorktreeDirsAsync`
@@ -37003,6 +36994,53 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Test helpers:
                 - Server: `@plugins/infra/plugins/paths/plugins/data-files/plugins/memory/server/testing`
                   - `createMemoryDataFiles` — Files in memory: a browser host's store.
+        - **`data-root-layout`** — The user's home (HOME_DIR) and where the data root sits in it: dataRootLayout() — named by the environment (custom), an install not yet migrated (legacy) or ~/.equin — declared once per process tree at its root by declareDataRootLayoutSync() and carried by the environment. A leaf apart from infra/paths' core so code whose identity keys records (the barrel evaluator's load guard) reads the root without keying on the paths barrel's ~300-module closure.
+          - Core:
+            - Uses:
+              - `framework/product-name.LEGACY_IDS`
+              - `framework/product-name.PRODUCT_NAME`
+              - `infra/host-fs/user-path.AppPath`
+              - `infra/host-fs/user-path.asAppPath`
+              - `infra/launcher/env-names.envName`
+              - `infra/launcher/env-names.readEnv`
+              - `infra/launcher/env-names.readEnvPath`
+              - `infra/launcher/env-names.setEnv`
+              - `infra/launcher/env-names.unsetEnv`
+              - `packages/timed-fs.lstatSync`
+              - `packages/timed-fs.realpathSync`
+            - Exports (types): `DataRootLayout`
+            - Exports (values):
+              - `DATA_DIR_NAME`
+              - `dataRootLayout`
+              - `DataRootSplitError`
+              - `DataRootUndeclaredError`
+              - `declareDataRootLayoutSync`
+              - `HOME_DIR`
+              - `homeDataRoots`
+              - `readHomeDataRootLayoutSync`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/demo`
+              - `apps/file-explorer/browser`
+              - `apps/prototypes/files`
+              - `apps/website/promo-film`
+              - `code-explorer/file-resolve`
+              - `debug/sentinel`
+              - `framework/tooling/guards`
+              - `infra/file-watcher`
+              - `infra/host-account`
+              - `infra/host-fs`
+              - `infra/launcher/login-services`
+              - `infra/paths`
+              - `infra/paths/root-migration`
+              - `media/film`
+              - `plugin-meta/barrel-import`
+              - `toolchain`
+          - Exemptions:
+            - Exempts itself from:
+              - `paths:no-hardcoded-paths` — `core/internal/declared.ts` (sanctioned)
+              - `boundaries/no-platform-api` — `core/internal/data-root-layout.ts`, `core/internal/declared.ts` (debt)
+              - `user-path/no-unproven-claim` — `core/internal/data-root-layout.ts` (sanctioned)
         - **`display`** — The human-facing spelling of the data dirs (the `~/…` form a message, an empty state, or an agent prompt writes). Web-safe by construction: string literals only, no node:* and no homedir() — so the browser can name a directory the server resolves.
           - Cross-plugin:
             - Imported by:
@@ -41166,8 +41204,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/ticket-line.ts` (debt)
     - **`timed-fs`** — The file reads, listings, stats and glob scans every non-browser process makes, timed: node:fs's read calls under their own names and types (readFile / readdir / stat / lstat / access / realpath / readlink and their *Sync twins, existsSync) plus scanGlob / scanGlobSync over a Bun.Glob, each call metered while it runs (installFsWaitMeter — the backend's profiler shows one past FS_WAIT_FLOOR_MS in progress and charges it) and, once it returns past the floor, handed to onSlowFsCall subscribers, under a named wait layer (fs-read / fs-readdir / fs-stat / fs-glob) — so a disk stall names itself instead of reading as the caller's own work. A leaf (node builtins only), enforced by the timed-fs/no-untimed-fs-read lint.
       - Cross-plugin:
-        - Imported by: 168 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
-          - `infra` ×48
+        - Imported by: 169 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+          - `infra` ×49
           - `framework` ×25
           - `apps` ×15
           - `debug` ×15
@@ -44288,7 +44326,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/slot-declaration.trackSlotSites`
           - `infra/launcher/env-names.envName`
           - `infra/namespace.asNamespace`
-          - `infra/paths.dataRootLayout`
+          - `infra/paths/data-root-layout.dataRootLayout`
           - `infra/paths/repo-root.REPO_ROOT`
           - `infra/runtime-identity.declareRuntimeNamespace`
           - `infra/runtime-identity.hasRuntimeNamespace`
@@ -45608,6 +45646,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SerializeOptions`
             - Exports (values):
               - `evaluateBarrels`
+              - `EVALUATOR_MODULES`
               - `reviveValue`
               - `serializeValue`
           - Cross-plugin:
@@ -60462,7 +60501,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `infra/deps/updates.Hold`
       - `infra/deps/updates.holdProblems`
       - `infra/host-fs/user-path.asAppPath`
-      - `infra/paths.HOME_DIR`
+      - `infra/paths/data-root-layout.HOME_DIR`
       - `packages/timed-fs.access`
       - `packages/timed-fs.existsSync`
     - Exports (types):

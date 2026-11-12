@@ -18,7 +18,7 @@ import {
 } from "node:fs/promises";
 import { realpath } from "@plugins/packages/plugins/timed-fs/core";
 import { tmpdir } from "node:os";
-import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
+import { HOME_DIR } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 import { join } from "node:path";
 import { createFileWatcher, fsEventsStreams } from "../shared/engine";
 import { getParcelWatcher } from "../shared/engine";

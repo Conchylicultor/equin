@@ -2,7 +2,7 @@ import { isAbsolute, resolve } from "node:path";
 import { serveValue } from "@plugins/network/plugins/live/machine";
 import { getConfig, watchConfig } from "@plugins/config_v2/server";
 import { setHostHomeResolver } from "@plugins/infra/plugins/host-fs/server";
-import { HOME_DIR } from "@plugins/infra/plugins/paths/server";
+import { HOME_DIR } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 import { homeFolderConfig, hostHome, type HostHome } from "../../core";
 
 /**

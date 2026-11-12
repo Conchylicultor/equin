@@ -1,4 +1,4 @@
-import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
+import { HOME_DIR } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 
 /**
  * The home-relative spellings the shell expands before a command sees them:

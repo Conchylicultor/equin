@@ -3,11 +3,8 @@ export {
   PLUGINS_DIR,
   SERVER_CORE_RELATIVE,
   backendEntryFor,
-  HOME_DIR,
   backupsDir,
   backupsDirs,
-  dataRootLayout,
-  declareDataRootLayoutSync,
   worktreesDir,
   worktreeDataDir,
   worktreeArtifacts,
@@ -31,18 +28,9 @@ export {
   webGraphRecordPath,
   webGraphRecordsDir,
 } from "./internal/graph-records";
-// Where the root is when the environment does not say — decided by what is
-// installed (`~/.equin`, or the legacy dir until `./equin data-dir migrate`
-// moves it). `dataRootLayout()` (above) is this process's answer, declared at
-// its tree's root by `declareDataRootLayoutSync()`; the migration
-// reads the disk afresh, since it is the one thing that changes it.
-export {
-  DATA_DIR_NAME,
-  DataRootSplitError,
-  homeDataRoots,
-  readHomeDataRootLayoutSync,
-} from "./internal/data-root-layout";
-export type { DataRootLayout } from "./internal/data-root-layout";
+// The home (HOME_DIR) and where the data root sits in it (dataRootLayout(),
+// declareDataRootLayoutSync()) are the `data-root-layout` leaf's: import them
+// from `@plugins/infra/plugins/paths/plugins/data-root-layout/core`.
 // The toolchain a process belongs to: its own checkout's locked mise tools,
 // whatever cwd a shim runs in. Applied by each backend and central at boot.
 export { toolchainPin } from "./internal/toolchain-pin";

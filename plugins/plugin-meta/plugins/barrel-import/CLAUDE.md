@@ -90,7 +90,7 @@ barrel written after its folder was first read would not be found.
     - `framework/slot-declaration.trackSlotSites`
     - `infra/launcher/env-names.envName`
     - `infra/namespace.asNamespace`
-    - `infra/paths.dataRootLayout`
+    - `infra/paths/data-root-layout.dataRootLayout`
     - `infra/paths/repo-root.REPO_ROOT`
     - `infra/runtime-identity.declareRuntimeNamespace`
     - `infra/runtime-identity.hasRuntimeNamespace`

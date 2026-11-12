@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// The same cases as plugins/infra/plugins/paths/core/internal/data-root-layout.test.ts.
+// The same cases as plugins/infra/plugins/paths/plugins/data-root-layout/core/internal/data-root-layout.test.ts.
 func TestHomeDataRoot(t *testing.T) {
 	cases := []struct {
 		name  string
@@ -67,7 +67,7 @@ func link(t *testing.T, target, at string) {
 	}
 }
 
-// The same shapes as plugins/infra/plugins/paths/core/internal/declare-data-root-sh.test.ts:
+// The same shapes as plugins/infra/plugins/paths/plugins/data-root-layout/core/internal/declare-data-root-sh.test.ts:
 // the token every child is told must be the one paths/core would decide.
 func TestHomeDataRootLayoutToken(t *testing.T) {
 	cases := []struct {

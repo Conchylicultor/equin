@@ -23,6 +23,6 @@ export default [
     ],
     kind: "sanctioned",
     reason:
-      "the call count spells a path under the home dir as `~/…` for a prefix a person reads, never a path anything resolves; a leaf (node builtins only) cannot import paths/core's HOME_DIR",
+      "the call count spells a path under the home dir as `~/…` for a prefix a person reads, never a path anything resolves; a leaf (node builtins only) cannot import paths' HOME_DIR",
   },
 ] satisfies Exemptions;

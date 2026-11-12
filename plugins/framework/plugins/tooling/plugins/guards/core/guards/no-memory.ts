@@ -1,4 +1,4 @@
-import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
+import { HOME_DIR } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 import { canonicalCommand, redirectionTargets } from "../argv";
 import { defineGuard } from "../define-guard";
 import { parseShell } from "../parse-shell";

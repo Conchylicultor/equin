@@ -19,7 +19,7 @@ import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { setEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
-import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
+import { HOME_DIR } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 import { loadBabelContributions } from "@plugins/framework/plugins/web-core/core";
 import { loadRepoSnapshot } from "@plugins/framework/plugins/tooling/core";
 import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";

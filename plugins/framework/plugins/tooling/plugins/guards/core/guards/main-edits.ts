@@ -1,5 +1,5 @@
 import { resolve } from "node:path";
-import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
+import { HOME_DIR } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 import { defineGuard } from "../define-guard";
 import type { FileInput } from "../types";
 import { worktreeContextOf } from "../worktree-root";

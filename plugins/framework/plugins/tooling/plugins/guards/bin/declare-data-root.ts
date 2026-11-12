@@ -1,7 +1,7 @@
 import {
   DataRootSplitError,
   declareDataRootLayoutSync,
-} from "@plugins/infra/plugins/paths/core";
+} from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 
 // A hook is the root of its own process tree: Claude Code starts it, and Claude
 // Code may hold an environment from before a migration (or none), so the hook

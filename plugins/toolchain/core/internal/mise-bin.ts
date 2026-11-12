@@ -2,7 +2,7 @@
 import { constants } from "node:fs";
 import { access, existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { delimiter, join } from "node:path";
-import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
+import { HOME_DIR } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /**

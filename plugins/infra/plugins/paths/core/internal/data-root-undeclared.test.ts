@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
-import { DATA_DIR_NAME } from "./data-root-layout";
+import { DATA_DIR_NAME } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 
 // A path read in a process whose tree's root declared nothing throws; it never
 // decides the layout on the spot. Each case runs in a fresh Bun process with a
@@ -13,6 +13,10 @@ import { DATA_DIR_NAME } from "./data-root-layout";
 // by the preload, and HOME_DIR is read once at module eval.
 
 const PATHS_CORE = join(REPO_ROOT, "plugins/infra/plugins/paths/core/index.ts");
+const LAYOUT_CORE = join(
+  REPO_ROOT,
+  "plugins/infra/plugins/paths/plugins/data-root-layout/core/index.ts",
+);
 
 const homes: string[] = [];
 function home(): string {
@@ -24,10 +28,10 @@ afterEach(() => {
   for (const dir of homes.splice(0)) rmSync(dir, { recursive: true });
 });
 
-/** Run `body` (after `const p = await import(<paths core>)`) and print what it returns or throws. */
+/** Run `body` (after `const p` = the paths core and data-root-layout barrels' exports) and print what it returns or throws. */
 function inChild(h: string, body: string): string {
   const script =
-    `const p = await import(${JSON.stringify(PATHS_CORE)});\n` +
+    `const p = { ...(await import(${JSON.stringify(LAYOUT_CORE)})), ...(await import(${JSON.stringify(PATHS_CORE)})) };\n` +
     `try { console.log("ok " + (${body})); }\n` +
     `catch (err) { console.log("threw " + err.name); }`;
   const out = spawnSync(process.execPath, ["-e", script], {

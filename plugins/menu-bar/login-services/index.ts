@@ -3,7 +3,7 @@
 // checkout), so the equin icon is in the menu bar / top bar after every login,
 // and relaunched if it dies. `graphical`: it needs the desktop session.
 import { userInfo } from "node:os";
-import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
+import { HOME_DIR } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 import { defineLoginService } from "@plugins/infra/plugins/launcher/plugins/login-services/machine";
 import { GATEWAY_SERVICE } from "@plugins/infra/plugins/launcher/core";
 import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";

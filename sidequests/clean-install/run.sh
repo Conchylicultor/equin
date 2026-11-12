@@ -100,7 +100,7 @@ case "$VM_NAME" in
     ;;
 esac
 
-# The data root, by paths/core's rule (data-root-layout.ts): the legacy dir
+# The data root, by paths/data-root-layout's rule (data-root-layout.ts): the legacy dir
 # while an install not yet migrated has it (`./equin data-dir migrate` moves
 # it), else ~/.equin.
 data_root() {
