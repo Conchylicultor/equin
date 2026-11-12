@@ -138,6 +138,7 @@ export const LUCIDE_MAP = {
   downloading: "arrow-down-to-line",
   draft: "file",
   "drag-indicator": "grip-vertical",
+  "drive-file-move": "folder-input",
   "drive-file-rename": "file-pen",
   edit: "pencil",
   "edit-calendar": "calendar-cog",

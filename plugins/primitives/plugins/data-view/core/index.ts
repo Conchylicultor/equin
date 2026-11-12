@@ -76,6 +76,7 @@ export {
   sumSectionCounts,
 } from "./internal/section-count";
 export { visibleSections } from "./internal/nested-sections";
+export { applySectionMove, applySectionMoves } from "./internal/section-move";
 
 export type {
   LiveDataSource,
@@ -134,6 +135,8 @@ export type {
   ViewRowDropConfig,
   CreateOption,
   ManualOrderConfig,
+  GroupEditConfig,
+  SectionMove,
   SortRule,
   SortPreset,
   FilterPreset,

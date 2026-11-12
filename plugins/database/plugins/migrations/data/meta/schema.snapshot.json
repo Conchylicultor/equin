@@ -1,6 +1,6 @@
 {
-  "id": "3ca8678a-4212-4db0-9e07-d6da29d50f30",
-  "prevId": "02d58d8b-b43b-41a2-90a4-406508e43580",
+  "id": "65f150ac-9d35-4d00-911f-a1c20504afe1",
+  "prevId": "3ca8678a-4212-4db0-9e07-d6da29d50f30",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -7021,6 +7021,44 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.conversation_sections": {
+      "name": "conversation_sections",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rank": {
+          "name": "rank",
+          "type": "rank_text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.conversations_ext_queue": {
       "name": "conversations_ext_queue",
       "schema": "",
@@ -7037,12 +7075,11 @@
           "primaryKey": false,
           "notNull": true
         },
-        "pinned": {
-          "name": "pinned",
-          "type": "boolean",
+        "section": {
+          "name": "section",
+          "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": false
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",

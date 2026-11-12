@@ -19,7 +19,9 @@ import {
 import type { ViewState } from "@plugins/primitives/plugins/data-view/core";
 import {
   queueRanks,
+  queueSections,
   reorderQueue,
+  type ConversationSectionId,
   type QueueData,
   type ReorderQueueBody,
 } from "@plugins/conversations/plugins/conversations-view/plugins/queue/core";
@@ -30,8 +32,13 @@ import {
 import { spawnFailureRows } from "@plugins/conversations/plugins/spawn-failure/core";
 import { reuseRows } from "./reuse-rows";
 import { queueParentTaskId, stepFlags } from "./queue-attach";
+import type { QueueUserSection } from "./queue-sections";
 
-/** The read-time section a queue row belongs to (the enum the `section` field partitions by). */
+/**
+ * The read-time section a queue row belongs to (the enum the `section` field
+ * partitions by); a waiting group filed into a user section reads that
+ * section's id ({@link QueueRowSection}).
+ */
 export type QueueSection =
   | "pinned"
   | "queued"
@@ -41,6 +48,9 @@ export type QueueSection =
   | "failed"
   | "disconnected"
   | "done";
+
+/** A row's section: a built-in one, or a user section's id. */
+export type QueueRowSection = QueueSection | ConversationSectionId;
 
 /**
  * A conversation as both queue reads deliver it: its fields (derived from the
@@ -56,16 +66,17 @@ type QueueConversation =
  * section classification + the group-level queue flags (set identically on every
  * member of a task-group, so whichever member the aggregate picks as the
  * representative carries the right flags). `rank` is non-null ONLY in the
- * `pinned`/`queued` sections (drives manual-order drag); `null` everywhere else
- * marks the row non-draggable (primitive P1). `pinned` is the user's own flag and
- * is carried on EVERY section's rows, so the unpin action is reachable from
- * Working too — a pinned group that starts running comes back to Pinned when it
- * finishes.
+ * `pinned`/`queued`/user sections (drives manual-order drag); `null` everywhere
+ * else marks the row non-draggable (primitive P1). `filedSection` is the section
+ * the user filed the group into (`PINNED_SECTION`, a user section id, or `null`
+ * = the Queue) and is carried on EVERY section's rows, so the unpin action is
+ * reachable from Working too — a pinned group that starts running comes back to
+ * Pinned when it finishes.
  */
 export type QueueRow = QueueConversation & {
-  section: QueueSection;
+  section: QueueRowSection;
   rank: Rank | null;
-  pinned: boolean;
+  filedSection: string | null;
   isTop: boolean;
   isBottom: boolean;
   canStepDown: boolean;
@@ -76,6 +87,9 @@ export type QueueRow = QueueConversation & {
 /** The computed queue display. */
 type QueueDisplay = {
   rows: QueueRow[];
+  /** The user's own sections, in rank order — read in the same gate as the
+   *  rows, so a row filed into a section never shows before its section. */
+  sections: readonly QueueUserSection[];
 };
 
 /** The display shown, and the computation it was reconciled from. */
@@ -95,6 +109,8 @@ type HeldDisplay = { from: QueueDisplay; display: QueueDisplay };
  */
 export function useQueueRows(view: ViewState): {
   rows: QueueRow[];
+  /** The user's own sections, in rank order (empty until the rows are read). */
+  sections: readonly QueueUserSection[];
   /**
    * Move a conversation's group next to another's. The server mints the rank
    * (`reorderQueue`); the ranks read follows by push. Resolves once the server
@@ -181,6 +197,9 @@ export function useQueueRows(view: ViewState): {
   // surfaced because the gate stays pending until active settles. The id set
   // is encoded canonically (sorted, deduped), so its order does not matter.
   const ranksResult = useLive(queueRanks, { ids: liveIds ?? [] });
+  // The user's own sections (rank order) — which section ids are known, so a
+  // group filed into one reads under it (an unknown id reads as the Queue).
+  const sectionsResult = useLive(queueSections);
   const dispatchReorder = useCallback(
     (vars: ReorderQueueBody) => fetchEndpoint(reorderQueue, {}, { body: vars }),
     [fetchEndpoint],
@@ -200,15 +219,17 @@ export function useQueueRows(view: ViewState): {
       ranks: ranksResult,
       tasks: tasksResult,
       failures: failuresResult,
+      sections: sectionsResult,
     });
     if (all.status === "loading" || all.status === "error") return null;
-    const { active, gone, ranks, tasks, failures } = all.data;
+    const { active, gone, ranks, tasks, failures, sections } = all.data;
 
     // Wrap the point ranks in the client-side `QueueData` shape so
     // `classifyQueue` (the shared source of truth) stays UNCHANGED.
     const queue: QueueData = { ranks };
     const {
       pinnedGroups,
+      sectionGroups,
       waitingGroups,
       workingGroups,
       workingUnranked,
@@ -224,6 +245,7 @@ export function useQueueRows(view: ViewState): {
       queue,
       tasks,
       spawnFailedIds: new Set(failures.map((f) => f.conversationId)),
+      sectionIds: sections.map((sec) => sec.id),
     });
 
     const out: QueueRow[] = [];
@@ -246,7 +268,7 @@ export function useQueueRows(view: ViewState): {
     // key equals the representative id. Group-level flags apply to every member.
     const emitGroup = (
       group: TaskGroup<QueueConversation>,
-      section: QueueSection,
+      section: QueueRowSection,
       flags: {
         ranked: boolean;
         isTop: boolean;
@@ -264,7 +286,7 @@ export function useQueueRows(view: ViewState): {
           ...m,
           section,
           rank: flags.ranked ? m.rank : null,
-          pinned: m.pinned,
+          filedSection: m.section,
           isTop: flags.isTop,
           isBottom: flags.isBottom,
           canStepDown: flags.canStepDown,
@@ -279,7 +301,7 @@ export function useQueueRows(view: ViewState): {
         ...conv,
         section,
         rank: null,
-        pinned: false,
+        filedSection: null,
         isTop: false,
         isBottom: false,
         canStepDown: false,
@@ -300,7 +322,20 @@ export function useQueueRows(view: ViewState): {
       });
     }
 
-    // 2. queued — the unpinned waiting clusters (rank asc).
+    // 1b. user sections — the waiting clusters filed into each of the user's
+    // own sections, in section order; each its own rank space for top/bottom.
+    for (const [sectionId, groups] of sectionGroups) {
+      const flags = stepFlags(groups, topLevel);
+      for (const group of groups) {
+        emitGroup(group, sectionId, {
+          ranked: true,
+          ...flags.get(group)!,
+          isBlocked: blockedIds.has(group.selected.id),
+        });
+      }
+    }
+
+    // 2. queued — the waiting clusters in no section (rank asc).
     const waitingFlags = stepFlags(waitingGroups, topLevel);
     for (const group of waitingGroups) {
       emitGroup(group, "queued", {
@@ -329,8 +364,18 @@ export function useQueueRows(view: ViewState): {
     for (const conv of disconnected) emitFlat(conv, "disconnected");
     for (const conv of recentGone) emitFlat(conv, "done");
 
-    return { rows: out };
-  }, [activeResult, goneResult, ranksResult, tasksResult, failuresResult]);
+    return {
+      rows: out,
+      sections: sections.map((sec) => ({ id: sec.id, name: sec.name })),
+    };
+  }, [
+    activeResult,
+    goneResult,
+    ranksResult,
+    tasksResult,
+    failuresResult,
+    sectionsResult,
+  ]);
 
   // The display actually shown, derived from the last settled `computed`:
   //
@@ -359,6 +404,11 @@ export function useQueueRows(view: ViewState): {
       from: computed,
       display: {
         rows: reuseRows(held?.display.rows ?? null, computed.rows),
+        // Kept by identity while no section changed, so the section field
+        // (memoized on it) is not rebuilt on every row change.
+        sections: sameSections(held?.display.sections, computed.sections)
+          ? held!.display.sections
+          : computed.sections,
       },
     };
     setHeld(current);
@@ -373,6 +423,7 @@ export function useQueueRows(view: ViewState): {
     gone: goneResult,
     ranks: ranksResult,
     tasks: tasksResult,
+    sections: sectionsResult,
   });
   let display: QueueDisplay | null;
   let readiness: ResourceReadiness;
@@ -394,10 +445,24 @@ export function useQueueRows(view: ViewState): {
 
   return {
     rows: display?.rows ?? [],
+    sections: display?.sections ?? NO_SECTIONS,
     dispatchReorder,
     readiness,
     paging,
   };
+}
+
+const NO_SECTIONS: readonly QueueUserSection[] = [];
+
+function sameSections(
+  a: readonly QueueUserSection[] | undefined,
+  b: readonly QueueUserSection[],
+): boolean {
+  return (
+    a !== undefined &&
+    a.length === b.length &&
+    a.every((s, i) => s.id === b[i]!.id && s.name === b[i]!.name)
+  );
 }
 
 // The pages' query: the collection's default order, every ended conversation.

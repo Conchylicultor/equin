@@ -1061,6 +1061,7 @@ export const hostReads: readonly {
   { key: "pushes", needsMachine: false },
   { key: "question-relay.pending", needsMachine: false },
   { key: "queue-ranks", needsMachine: false },
+  { key: "queue-sections", needsMachine: false },
   { key: "reports.list", needsMachine: false },
   { key: "runs", needsMachine: false },
   { key: "runtime-sdk.agent-processes", needsMachine: true },

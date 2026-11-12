@@ -1,4 +1,4 @@
-// @hash 68b504e1ed7b
+// @hash 01e08988b4ba
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -8,6 +8,7 @@
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
     "conversations.conversations-view.data-view.queue:pin",
+    "conversations.conversations-view.data-view.queue:move-to",
     "conversations.conversations-view.data-view.queue:promote",
     "conversations.conversations-view.data-view.queue:step-down",
     "conversations.conversations-view.data-view.queue:demote",

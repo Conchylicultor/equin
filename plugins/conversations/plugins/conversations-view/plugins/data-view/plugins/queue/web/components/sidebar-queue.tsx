@@ -4,6 +4,7 @@ import type {
   DataViewSourceProps,
   ManualOrderConfig,
 } from "@plugins/primitives/plugins/data-view/web";
+import type { GroupEditConfig } from "@plugins/primitives/plugins/data-view/core";
 import { conversationsActive } from "@plugins/tasks/plugins/tasks-core/core";
 import {
   SidebarConversationDot,
@@ -11,7 +12,19 @@ import {
   type ConversationSidebarProps,
 } from "@plugins/conversations/plugins/conversations-view/plugins/data-view/web";
 import { useQueueRows, type QueueRow } from "./use-queue-rows";
-import { QUEUE_EXTRA_FIELDS, QUEUE_OVERRIDES } from "./queue-fields";
+import { QUEUE_OVERRIDES } from "./queue-fields";
+import {
+  filedSectionOf,
+  isUserSection,
+  queueSectionField,
+  takesFiledRows,
+} from "./queue-sections";
+import {
+  NEW_SECTION_NAME,
+  QueueSectionsContext,
+  useQueueSectionControls,
+} from "./queue-section-controls";
+import { queueHeaderActions } from "./queue-section-header";
 import { QUEUE_ATTACH } from "./queue-attach";
 import {
   QueueItemActions,
@@ -22,8 +35,11 @@ import {
  * The Queue source of the merged conversation-sidebar DataView: the priority
  * queue's live data + mutation layer handed to the shared surface as a source
  * bundle. Rows carry a synthetic `section` field (default group-by) so the
- * classic status sections render as group-by sections; `manualOrder` drives the
- * neighbor-based `reorderQueue` drag; `aggregate` collapses task-groups (in the
+ * classic status sections render as group-by sections — Pinned, the user's own
+ * sections, Queue, Working, …; `manualOrder` drives the neighbor-based
+ * `reorderQueue` drag, within a section and across the filed ones (Pinned, a
+ * user section, Queue), plus the "New section" drop; `groupEdit` /
+ * `headerActions` rename, reorder, add and delete the user's sections; `aggregate` collapses task-groups (in the
  * ranked/working sections) to one representative + `×N` badge; `attach` draws
  * a supervised task beneath its supervisor's row (`QUEUE_ATTACH`).
  *
@@ -36,7 +52,13 @@ export function QueueSource({
   render,
 }: DataViewSourceProps<ConversationSidebarProps>): ReactElement {
   const { activeId, linkTo, onCloseConversation } = hostProps;
-  const { rows, dispatchReorder, readiness, paging } = useQueueRows(view);
+  const { rows, sections, dispatchReorder, readiness, paging } =
+    useQueueRows(view);
+  const controls = useQueueSectionControls(sections);
+  // The section field's options follow the user's sections (memoized on them:
+  // `useQueueRows` keeps their identity while none changed).
+  const extraFields = useMemo(() => [queueSectionField(sections)], [sections]);
+  const { file: fileSection, create: createSection } = controls;
   // Every accessor below keeps its identity across renders (module constants,
   // or memoized on what they close over): the list view memoizes each row on
   // them, so a fresh closure here would re-render every row of the queue.
@@ -55,19 +77,56 @@ export function QueueSource({
           zone: dest.zone,
         });
       },
-      // No `onReseat` on purpose. `pinned` and `queued` are the two
-      // draggable sections and they share one rank space, but which of the
-      // two a row sits in is now the user's own pin flag, not something a
-      // rank can express — so a drop into the OTHER section has no meaning a
-      // reorder could carry out, and withholding `onReseat` makes the
-      // primitive refuse it. Pinning is the explicit action instead. Every
-      // other section has `rank: null`, so it is neither a drag source nor a
-      // drop target and can never reach here.
+      // A drop into another filed section (Pinned, a user section, Queue):
+      // the group is filed there — beside its drop neighbour (one global rank
+      // space, so `reorder` places it among that section's rows), or, dropped
+      // on the section itself, keeping its rank. Only the filed sections take
+      // a row (`reseatInto`); every other one is read-time (Working, Done, …)
+      // and has `rank: null`, so it is neither a drag source nor a target.
+      reseatInto: takesFiledRows,
+      onReseat: (id, dest) => {
+        const section = filedSectionOf(dest.groupKey);
+        if (section === undefined)
+          throw new Error(
+            `Queue: a row dropped into section ${String(dest.groupKey)}, which nothing is filed into.`,
+          );
+        if (dest.targetId === undefined || dest.zone === undefined)
+          return fileSection(id, section);
+        return dispatchReorder({
+          conversationId: id,
+          targetId: dest.targetId,
+          zone: dest.zone,
+          section,
+        });
+      },
+      onReseatNew: {
+        label: NEW_SECTION_NAME,
+        onDrop: (id) => createSection({ conversationId: id }),
+      },
     }),
-    [dispatchReorder],
+    [dispatchReorder, fileSection, createSection],
   );
+  const groupEdit = useMemo(
+    (): GroupEditConfig => ({
+      editable: isUserSection,
+      onRename: (key, name) => {
+        if (!isUserSection(key)) throw new Error(`Queue: rename of ${key}.`);
+        return controls.rename(key, name);
+      },
+      onMove: (key, { targetKey, zone }) => {
+        if (!isUserSection(key) || !isUserSection(targetKey))
+          throw new Error(`Queue: section move ${key} → ${targetKey}.`);
+        return controls.move(key, { targetId: targetKey, zone });
+      },
+      renaming: controls.renaming,
+      setRenaming: controls.setRenaming,
+    }),
+    [controls],
+  );
+  const headerActions = useMemo(() => queueHeaderActions(controls), [controls]);
 
   return (
+    <QueueSectionsContext.Provider value={controls}>
     <CloseConversationContext.Provider value={onCloseConversation}>
       {render<QueueRow>({
         rows,
@@ -78,7 +137,7 @@ export function QueueSource({
         // memory. The Queue adds only its `section`.
         collection: conversationsActive,
         overrides: QUEUE_OVERRIDES,
-        extraFields: QUEUE_EXTRA_FIELDS,
+          extraFields,
         rowKey: queueRowKey,
         readiness,
         ...(paging ? { paging } : {}),
@@ -90,8 +149,11 @@ export function QueueSource({
         // Supervised tasks beneath their supervisor's row (Sub-items).
         attach: QUEUE_ATTACH,
         manualOrder,
+          groupEdit,
+          headerActions,
       })}
     </CloseConversationContext.Provider>
+    </QueueSectionsContext.Provider>
   );
 }
 
@@ -122,9 +184,7 @@ const QUEUE_VIEW_OPTIONS = {
 /** Task-groups collapse to one representative in the ranked/working sections. */
 const QUEUE_AGGREGATE: DataViewAggregateConfig<QueueRow> = {
   getKey: (r) =>
-    r.section === "pinned" || r.section === "queued" || r.section === "working"
-      ? r.taskId
-      : null,
+    takesFiledRows(r.section) || r.section === "working" ? r.taskId : null,
   pickRepresentative: (m) =>
     m.find((x) => x.status === "working" || x.status === "starting") ??
     m.reduce((a, b) => (b.createdAt > a.createdAt ? b : a)),

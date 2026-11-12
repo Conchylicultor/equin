@@ -473,15 +473,19 @@ interface ManualOrderConfig<TRow> {
     id: string,
     dest: { rank: Rank; targetId?: string; zone?: "before" | "after" },
   ) => void | Promise<void>;
-  // across sections; absent ⇒ refused
+  // across sections; absent ⇒ refused. No anchor = onto the section itself
   onReseat?: (
     id: string,
     dest: {
       groupKey: string | null;
-      targetId: string;
-      zone: "before" | "after";
+      targetId?: string;
+      zone?: "before" | "after";
     },
   ) => void | Promise<void>;
+  // which sections take a row from another; absent ⇒ every one
+  reseatInto?: (groupKey: string) => boolean;
+  // the floating "+ label" target while a row drags; absent ⇒ none
+  onReseatNew?: { label: string; onDrop: (id: string) => void | Promise<void> };
   // place keys (may not exist yet)
   onInsert?: (
     keys: readonly string[],
@@ -517,9 +521,39 @@ order (`manualOrderOverridden`). While active:
   uses `layout="grid"`);
 - cross-section drops need `onReseat` (handler presence = capability); without it
   collision detection sees only the row's own section, so refusal is visible;
+- **cross-section drags slide** (list): the row is laid out in the section it is
+  dragged over (rank-reorder's `slideAcrossGroups` preview, applied to the
+  sections by `applySectionMove`, core), so that section's rows slide around it
+  and both counts follow. The dragged row follows the pointer over every
+  target (headers, bands, the new-section card included — rank-reorder lists
+  them in its sortable context). A **collapsed** or **empty** section's header —
+  and the band an empty section draws — is an "into this section" target: a
+  drop there is `onReseat` with no anchor (the consumer keeps the rank), the
+  only way into such a section. An expanded section showing rows is entered
+  through its rows: its header is no target then, so crossing it is a smooth
+  move from the previous section's end to this one's head, never a jump. Over
+  an empty section's band / header the row is laid out in it; over a collapsed
+  header it stays where it is laid out and the header lights. Icons / table
+  keep the drop-time reseat without the slide;
+- **`reseatInto(groupKey)`** narrows which sections take a row from another
+  (the Queue: only the filed sections, never Working / Done): a refused
+  section's header, empty band and rows leave the drag's collision, so the row
+  is never previewed or dropped there;
+- **`onReseatNew`** (list): while a row drags, a "+ `label`" card floats over the
+  bottom of the scroller — a zero-height `Sticky edge="bottom"` anchor holding a
+  `Pin`ned card, so it takes no layout space: a raised card (`bg-card`,
+  `shadow-md`, `rounded-lg`, 40px, inset `sm`) with a dashed `border-input` and
+  a muted plus + label at rest; solid primary border, a primary wash and a
+  slight scale while over; it fades and slides in. Behind it a 64px fade of
+  `--chrome-mask` washes the rows out toward the bottom. Reaching it never
+  auto-scrolls the list (rank-reorder's new-group auto-scroll). A drop calls
+  `onDrop(id)`;
 - **no snap-back**: `usePendingMoveOverlay` (`web/internal/use-pending-move-overlay.ts`)
   holds the dropped rank until the underlying `getRank` changes, the row disappears,
-  or the returned `onMove` promise rejects — a producer only returns its promise;
+  or the returned `onMove` promise rejects — a producer only returns its promise.
+  A cross-section drop is held the same way: while `onReseat`'s promise is in
+  flight the row is drawn in its destination section
+  (`DataViewRenderProps.heldReseats`) until its group-by value changes;
 - `list`, `icons`, `table` **window and drag** (`measuringAlways`, `keepMounted`,
   `raisedKey`). The table uses `DataTable.useRowDecoration`.
 
@@ -691,6 +725,18 @@ It owns:
 
 Headers sit on the rail via `rail-follow` — no per-view header inset.
 
+**Stacking.** Headers pin on `raised`; each section body is `isolate` (a row's
+own raised chrome never paints over a pinned header). So a dragged row would be
+sealed in its body: a view with manual order passes `draggedSection` — the
+section the dragged row is laid out in (after a cross-section preview) — and
+that body is **unsealed** for the drag (`isolation-auto`, `data-holds-drag`),
+never lifted: the row's own `z-drag` then orders it above every header, the
+toolbar band and the new-section card, while the body's other rows stay below
+them (lifting the body raised them all over the card). Pinned by
+`web/__tests__/grouped-sections.test.tsx` ("stacking") and the Queue's
+`e2e/queue-sections.ts` (the dragged row is topmost at its top edge under a
+header).
+
 ### The group header: one rendering, its style a theme token
 
 `DataViewGroupHeader` (web barrel) is the ONE group header (no treatment prop):
@@ -702,6 +748,39 @@ and while collapsed).
   style queries) picks `caption` (default) / `rule` / `pill`.
 - Pinned by `web/__tests__/grouped-sections.test.tsx`.
 - The table draws the same node in its own `col-span-full` rows.
+
+### Empty sections: `FieldOption.alwaysGroup`
+
+An option declaring `alwaysGroup: true` is a section even when no row holds it:
+`partitionIntoSections` hands its value to the grouping's plan (so it is ordered
+like any other) and emits its bucket empty — header, `0`, and an "Empty" band
+(the list), which is a drop target under `onReseat`. Not under `appearance`
+sectioning (server order is the rows'). Default off.
+
+### Editable headers: `groupEdit`
+
+`DataViewProps.groupEdit?: GroupEditConfig` (core) — `{ editable(key),
+onRename(key, name), onMove(key, { targetKey, zone }), renaming, setRenaming }`.
+Drawn by the list through `GroupedSections`:
+
+- **Rename inline**: a double-click on an editable header's label, or
+  `renaming === key` (controlled — a consumer opens it right after creating a
+  section). The header turns static while editing (the field cannot sit in its
+  button), the name is selected on open; Enter / blur commit the trimmed name
+  (empty cancels), Escape cancels.
+- **Drag a whole section**: every section mounts `useRankSortableGroup` (the
+  non-editable ones disabled) in the list's one `RankReorderProvider`, given the
+  editable keys as `groups` — header and body slide as one block (the body sits
+  in a box of its own BESIDE the sticky header, never around it, so stacking is
+  kept). Sections reorder only among the editable ones. The dragged block is
+  lifted: both halves cast `shadow-md`, and the body paints `bg-chrome-mask`
+  (the header's band is masked already), so sections it passes over never
+  show through it.
+- A click still collapses (4px activation); the header's `headerActions` and
+  the name field stop the press.
+
+`DataViewProps.headerActions?: (section) => ReactNode` threads a consumer's
+per-section affordance (a `+`, a `⋯` menu) to `GroupedSections` (list).
 
 ### `headerActions` — one affordance, scoped to one section
 
@@ -2210,13 +2289,14 @@ list, table and `primitives/tree` share it.
     - `DataViewSlots.Control` ×4
     - `DataViewSlots.Setting` ×4
     - `IdKinds.Kind` ×2
-  - Uses: 143 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 147 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live` ×24
     - `primitives/css/ui-kit` ×17
     - `primitives/data-view/view-core` ×11
     - `network/live/live-state` ×7
     - `primitives/slot-render` ×5
     - `primitives/css/control-panel` ×4
+    - `primitives/rank-reorder` ×4
     - `primitives/collapsible` ×3
     - `primitives/css/sticky/stack` ×3
     - `primitives/css/text` ×3
@@ -2575,6 +2655,7 @@ list, table and `primitives/tree` share it.
     - `GroupBucket`
     - `GroupBucketAncestor`
     - `GroupByRule`
+    - `GroupEditConfig`
     - `GroupingPlanContext`
     - `HierarchyConfig`
     - `HostedToolbar`
@@ -2617,6 +2698,7 @@ list, table and `primitives/tree` share it.
     - `RowSelectionConfig`
     - `RowTone`
     - `SectionCount`
+    - `SectionMove`
     - `SectionsToolbar`
     - `SectionsToolbarForms`
     - `SelectionConfig`
@@ -2637,6 +2719,8 @@ list, table and `primitives/tree` share it.
     - `ViewSlots`
     - `ViewState`
   - Exports (values):
+    - `applySectionMove`
+    - `applySectionMoves`
     - `atLeastCount`
     - `compareValues`
     - `createLinkedHover`
@@ -2672,12 +2756,12 @@ list, table and `primitives/tree` share it.
     - `valuePosition`
     - `visibleSections`
 - Cross-plugin:
-  - Uses tokens: 91 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 92 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/data-view` ×53
     - `ui/tokens/color-palette` ×13
     - `ui/tokens/density` ×13
     - `ui/tokens/type-scale` ×6
-    - `ui/tokens/shadow` ×3
+    - `ui/tokens/shadow` ×4
     - `ui/tokens/shape` ×3
   - Imported by: 123 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `fields` ×39

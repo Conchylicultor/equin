@@ -115,6 +115,7 @@ toggle, silently resetting any child component state (e.g. an inner
     - `primitives/css/sticky/stack`
     - `primitives/data-table`
     - `primitives/data-view`
+    - `primitives/data-view/list`
     - `primitives/multi-select`
     - `primitives/pane`
     - `primitives/tabbed-view`

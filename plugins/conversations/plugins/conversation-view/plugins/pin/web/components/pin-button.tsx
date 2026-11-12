@@ -2,7 +2,8 @@ import type { ReactElement } from "react";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import {
-  pinQueue,
+  fileQueue,
+  PINNED_SECTION,
   queueRanks,
 } from "@plugins/conversations/plugins/conversations-view/plugins/queue/core";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
@@ -56,8 +57,8 @@ function QueuePin({ convId }: { convId: string }): ReactElement {
       />
     );
   }
-  // No rank row yet: never pinned (the pin endpoint seeds one on pin).
-  const pinned = rank.found && rank.row.pinned;
+  // No rank row yet: never pinned (the file endpoint seeds one on pin).
+  const pinned = rank.found && rank.row.section === PINNED_SECTION;
   return (
     <IconButton
       icon={keepIcon}
@@ -66,9 +67,14 @@ function QueuePin({ convId }: { convId: string }): ReactElement {
       className={pinned ? undefined : hoverRevealTargetInAnchor}
       onClick={() =>
         fetchEndpoint(
-          pinQueue,
+          fileQueue,
           {},
-          { body: { conversationId: convId, pinned: !pinned } },
+          {
+            body: {
+              conversationId: convId,
+              section: pinned ? null : PINNED_SECTION,
+            },
+          },
         )
       }
     />

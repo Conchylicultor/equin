@@ -25,6 +25,7 @@ import { FoldMotion } from "@plugins/primitives/plugins/collapsible/web";
 import {
   CoverFrame,
   DROP_TARGET_RING,
+  DROP_TARGET_WASH,
   DropBackground,
   DropInsertLine,
   FieldCell,
@@ -73,14 +74,28 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import {
   RankReorderProvider,
+  useRankDragState,
+  useRankGroupDropTarget,
+  useRankNewGroupTarget,
   useRankSortableItem,
+  type RankDragPreview,
   type RankReorderItem,
+  type RankReseatDest,
+  type RankSortableGroups,
 } from "@plugins/primitives/plugins/rank-reorder/web";
+import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import { VirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import { useIsHovered } from "@plugins/primitives/plugins/data-view/web";
-import type { LinkedHover } from "@plugins/primitives/plugins/data-view/core";
+import {
+  applySectionMove,
+  applySectionMoves,
+  dataPart,
+  type LinkedHover,
+} from "@plugins/primitives/plugins/data-view/core";
 import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import {
   activationHref,
@@ -378,7 +393,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
   // Attach arrives type-erased; present only while the view's Sub-items
   // setting draws attached rows under their parent.
   const attach = props.attach as DataViewAttachConfig<unknown> | undefined;
-  const sections = useDataViewSections(
+  const computedSections = useDataViewSections(
     props.rows,
     props.fields,
     props.state,
@@ -397,6 +412,17 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
       selectedRowId: props.selectedRowId,
     },
   );
+  // A cross-section drop whose write is in flight is drawn in its
+  // destination section (`heldReseats`), so it never snaps back.
+  const heldReseats = props.heldReseats;
+  const sections = useMemo(
+    () =>
+      heldReseats && heldReseats.length > 0
+        ? applySectionMoves(computedSections, heldReseats)
+        : computedSections,
+    [computedSections, heldReseats],
+  );
+  const groupEdit = props.groupEdit;
   const options = (props.options ?? {}) as ListViewOptions<unknown>;
   // Density is the SURFACE's declaration, not the view's: a compact surface gets
   // the tighter row unless this view instance pinned a size of its own.
@@ -633,20 +659,43 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
         zone: dest.zone,
       }),
   );
-  const onReseat = useEventCallback(
-    (
-      id: string,
-      dest: {
-        group: string | null;
-        targetId: string;
-        zone: "before" | "after";
-      },
-    ) =>
-      manualOrder?.onReseat?.(id, {
-        groupKey: dest.group,
-        targetId: dest.targetId,
-        zone: dest.zone,
-      }),
+  const onReseat = useEventCallback((id: string, dest: RankReseatDest) =>
+    manualOrder?.onReseat?.(id, {
+      groupKey: dest.group,
+      ...(dest.targetId === undefined
+        ? {}
+        : { targetId: dest.targetId, zone: dest.zone }),
+    }),
+  );
+  const reseatNew = manualOrder?.onReseatNew;
+  const onReseatNew = useEventCallback((id: string) =>
+    manualOrder?.onReseatNew?.onDrop(id),
+  );
+  // The editable sections, in display order: the blocks a header drag
+  // reorders (the others stay put).
+  const editableKeys = groupEdit
+    ? sections.flatMap((section) =>
+        section.key !== null && groupEdit.editable(section.key)
+          ? [section.key]
+          : [],
+      )
+    : [];
+  const editableKeysKey = JSON.stringify(editableKeys);
+  const onGroupMove = useEventCallback(
+    (key: string, dest: { targetKey: string; zone: "before" | "after" }) =>
+      groupEdit?.onMove(key, dest),
+  );
+  const hasGroupEdit = groupEdit != null;
+  const sortableGroups = useMemo<RankSortableGroups | undefined>(
+    () =>
+      hasGroupEdit
+        ? {
+            keys: JSON.parse(editableKeysKey) as string[],
+            onMove: onGroupMove,
+          }
+        : undefined,
+    // `groupEdit` only for its presence: its handlers are read at drop time.
+    [hasGroupEdit, editableKeysKey, onGroupMove],
   );
 
   // The host owns the loading→empty precedence: it renders the skeleton and
@@ -778,8 +827,17 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
           }
         >
           {/* A section whose rows are all folded draws no rows — its header and
-            fold line say everything. */}
-          {entries.length === 0 ? null : windowed ? (
+            fold line say everything. A section holding no row at all (an
+            `alwaysGroup` option) draws an empty band: the place a row is
+            dropped into it. */}
+          {entries.length === 0 ? (
+            group !== null &&
+            section.count.n === 0 &&
+            section.fold === undefined &&
+            section.paging === undefined ? (
+              <EmptySectionBand group={group} />
+            ) : null
+          ) : windowed ? (
             <VirtualRows<DataViewRowEntry<unknown>>
               items={entries}
               estimateSize={estimateSize}
@@ -799,21 +857,50 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     );
   };
 
-  const renderBody = (activeId: string | null): ReactNode =>
+  const renderBody = (
+    activeId: string | null,
+    preview: RankDragPreview | null,
+  ): ReactNode => {
+    // A row dragged into another section is laid out there (the provider's
+    // preview), so that section's rows slide around it.
+    const shown =
+      preview === null
+        ? sections
+        : applySectionMove(sections, {
+            id: preview.id,
+            dest: {
+              groupKey: preview.group,
+              ...(preview.targetId === undefined
+                ? {}
+                : { targetId: preview.targetId, zone: preview.zone }),
+            },
+          });
     // Ungrouped: the single implicit section renders headerless.
-    sections.length === 1 && sections[0]!.key === null ? (
-      renderSection(sections[0]!, activeId)
+    return shown.length === 1 && shown[0]!.key === null ? (
+      renderSection(shown[0]!, activeId)
     ) : (
       // Grouped: the shared pinned/stacking group-header chrome. GroupedSections
       // follows the ambient rail too, so header and body sit on one rail.
       <GroupedSections
-        sections={sections}
+        sections={shown}
         collapsedSections={props.collapsedSections}
         setSectionCollapsed={props.setSectionCollapsed}
+        headerActions={props.headerActions}
+        groupEdit={groupEdit}
+        // The section the dragged row is laid out in (after the preview):
+        // its body is lifted over the pinned headers for the drag.
+        draggedSection={
+          activeId === null
+            ? null
+            : (shown.find((section) =>
+                section.entries.some((entry) => entry.key === activeId),
+              )?.key ?? null)
+        }
       >
         {(section) => renderSection(section, activeId)}
       </GroupedSections>
     );
+  };
 
   // Every row's cells present quiet and leave out the value most rows share
   // (`FieldPresentationProvider` — never the title or the leading visual); the
@@ -832,6 +919,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
           <ListCaptions config={config} firstRow={firstRow} />
         ) : null}
         {body}
+        {reseatNew ? <NewGroupSlot label={reseatNew.label} /> : null}
       </div>
     </FieldPresentationProvider>
   );
@@ -841,7 +929,11 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
   // section is a group write plus a reorder, so it is offered only when the
   // config supplies `onReseat` — otherwise the primitive limits the drag to its
   // own section.
-  if (manualOrder) {
+  //
+  // A cross-section drag slides: the row is laid out in the section it is
+  // dragged into (`renderBody`'s preview). Editable section headers
+  // (`groupEdit`) drag whole sections under the same host.
+  if (manualOrder || sortableGroups) {
     // Any windowed section ⇒ rows mount/unmount mid-drag as autoscroll runs, so
     // the shell must re-measure droppables every frame.
     const anyWindowed = sections.some(
@@ -853,13 +945,129 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
         measuringAlways={anyWindowed}
         onMove={onMove}
         onReseat={hasReseat ? onReseat : undefined}
+        reseatInto={manualOrder?.reseatInto}
+        slideAcrossGroups
+        onReseatNew={reseatNew ? onReseatNew : undefined}
+        groups={sortableGroups}
       >
-        {(activeId) => wrap(renderBody(activeId))}
+        {(activeId, preview) => wrap(renderBody(activeId, preview))}
       </RankReorderProvider>
     );
   }
-  return wrap(renderBody(null));
+  return wrap(renderBody(null, null));
 }
+
+/**
+ * The band a section holding no row draws under its header: quiet text, and —
+ * under a manual order that moves rows across sections — the "into this
+ * section" drop target, lit while a row is over it.
+ */
+function EmptySectionBand({ group }: { group: string }): ReactNode {
+  const { canReseat } = useRankDragState();
+  return canReseat ? (
+    <DroppableEmptyBand group={group} />
+  ) : (
+    <EmptyBandText over={false} />
+  );
+}
+
+function DroppableEmptyBand({ group }: { group: string }): ReactNode {
+  // The band stands where the section's rows would: a row dragged onto it is
+  // laid out in the section (`preview`).
+  const { ref, isOver } = useRankGroupDropTarget(group, { preview: true });
+  return (
+    <div
+      ref={ref}
+      data-group-drop={group}
+      className={cn(
+        "rounded-md",
+        isOver && [DROP_TARGET_WASH, DROP_TARGET_RING],
+      )}
+    >
+      <EmptyBandText over={isOver} />
+    </div>
+  );
+}
+
+function EmptyBandText({ over }: { over: boolean }): ReactNode {
+  return (
+    <Inset x="sm" y="xs">
+      <Text
+        as="div"
+        variant="caption"
+        className={over ? "text-foreground" : "text-faint-foreground"}
+      >
+        {over ? "Drop here" : "Empty"}
+      </Text>
+    </Inset>
+  );
+}
+
+/** The new-section target's place: mounted only while a row drag is in
+ *  flight under a provider taking `onReseatNew`. */
+function NewGroupSlot({ label }: { label: string }): ReactNode {
+  const { activeKind, canReseatNew } = useRankDragState();
+  if (activeKind !== "row" || !canReseatNew) return null;
+  return <NewGroupTarget label={label} />;
+}
+
+/**
+ * "+ New section" floating over the bottom of the scroller while a row is
+ * dragged: a zero-height anchor pinned to the scroll edge (`Sticky
+ * edge="bottom"`) holding the card above it, so it takes no layout space — the
+ * rows never move for it. Behind the card a fade of the scroller's own colour
+ * (`--chrome-mask`) washes the rows out toward the bottom, so the card reads
+ * as standing over the list rather than over a row. The card is a raised
+ * surface with a dashed border at rest; with the row over it, a solid primary
+ * border on a primary wash, slightly enlarged. It fades and slides in.
+ */
+function NewGroupTarget({ label }: { label: string }): ReactNode {
+  const { ref, isOver } = useRankNewGroupTarget();
+  return (
+    // `float` (an in-pane floating widget): over the rows, the headers and
+    // the toolbar, but under the dragged row (`drag`), which crosses it.
+    <Sticky edge="bottom" layer="float" className="h-0">
+      <Pin to="bottom" stretch decorative>
+        <div className="h-16 animate-in bg-linear-to-b from-transparent to-chrome-mask to-70% fade-in-0" />
+      </Pin>
+      <Pin to="bottom" offset="sm" stretch spanOffset="sm">
+        {/* Opaque ground under the wash: the card floats over rows, and a
+            translucent fill alone would let them show through it. */}
+        <div
+          ref={ref}
+          {...dataPart("dv.new-group")}
+          data-over={isOver ? "" : undefined}
+          className={cn(
+            "animate-in rounded-lg bg-card shadow-md transition-transform fade-in-0 slide-in-from-bottom-2",
+            isOver && "scale-102",
+          )}
+        >
+          <div
+            className={cn(
+              "h-10 rounded-lg border transition-colors",
+              isOver
+                ? "border-primary bg-primary/20 text-foreground"
+                : "border-dashed border-input text-muted-foreground",
+            )}
+          >
+            <Stack
+              direction="row"
+              gap="xs"
+              align="center"
+              justify="center"
+              className="h-full"
+            >
+              <Icon icon={NEW_GROUP_ICON} />
+              <Text variant="label">{label}</Text>
+            </Stack>
+          </div>
+        </div>
+      </Pin>
+    </Sticky>
+  );
+}
+
+const NEW_GROUP_ICON = symbol("add");
 
 /**
  * The list's caption row (`columnCaptions`): the title field's label where the

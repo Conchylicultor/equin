@@ -14,6 +14,6 @@ export const handleRerank = implement(rerankQueue, async ({ body }) => {
     // If the task already has a group in the queue, take its seat; else go to top.
     const seat = await seatJoiningGroup(conv.taskId, conversationId, tx);
     const rank = seat?.rank ?? (await rankForTop(conversationId, tx));
-    await upsertRank(conversationId, rank, tx, seat?.pinned ?? false);
+    await upsertRank(conversationId, rank, tx, seat?.section ?? null);
   });
 });

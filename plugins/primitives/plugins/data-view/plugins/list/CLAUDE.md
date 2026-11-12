@@ -204,9 +204,22 @@ When the host hands down a `manualOrder`, both branches wrap each row in
 is hosted by one `RankReorderProvider` spanning every section. The provider is
 mounted with `measuringAlways` whenever **any** section windows, and its
 render-prop `activeId` is threaded into each section's `VirtualRows` as
-`keepMounted` (and as `raisedKey`, lifting the dragged row's wrapper above its neighbours) — so the drag source survives scrolling out of its own window.
+`keepMounted` (and as `raisedKey`, lifting the dragged row's wrapper to the `drag` layer) — so the drag source survives scrolling out of its own window.
 `VirtualRows` positions rows absolutely at their measured offsets, so a pinned
 off-screen source is invisible and harmless.
+
+Across sections (`onReseat`) the provider runs with `slideAcrossGroups`: its
+render-prop `preview` is applied to the sections (`applySectionMove`) before
+they are drawn, so a row dragged into another section is laid out there and
+that section's rows slide. The section the dragged row is laid out in is
+handed to `GroupedSections` as `draggedSection`, so its body is lifted over
+the pinned headers for the drag; the `onReseatNew` card floats on `float`,
+under the dragged row. Held cross-section drops (`heldReseats`) are applied
+the same way. An empty section draws an "Empty" band (its drop target), the
+`onReseatNew` card floats at the end of the list root, and `groupEdit` makes
+the provider sort whole sections (`groups`) — see the data-view CLAUDE.md,
+"Manual order" and "Editable headers". The provider mounts for `groupEdit`
+alone too (no manual order: no row drags).
 
 A row whose `getRank` is `null` is non-orderable and renders plain, so
 `useRankSortableItem` is never mounted for it — an element-type choice, not a
@@ -261,9 +274,9 @@ conditional hook.
 - Description: List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.
 - Web:
   - Contributes: `DataViewSlots.View` "List" → `ListView`
-  - Uses: 75 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/data-view` ×49
-    - `primitives/rank-reorder` ×3
+  - Uses: 85 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×50
+    - `primitives/rank-reorder` ×9
     - `primitives/tree` ×3
     - `primitives/css/spacing` ×2
     - `primitives/latest-ref` ×2
@@ -274,8 +287,10 @@ conditional hook.
     - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`
     - `primitives/css/line.Line`
+    - `primitives/css/pin.Pin`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`
+    - `primitives/css/sticky.Sticky`
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
@@ -283,13 +298,16 @@ conditional hook.
     - `primitives/icon-button.IconButton`
     - `primitives/link-gesture.activationProps`
     - `primitives/virtual-rows.VirtualRows`
+    - `ui/icons.Icon`
   - Exports (types): `ListViewOptions`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --background`
     - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --card`
     - `ui/tokens/color-palette --faint-foreground`
     - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --input`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --primary`
     - `ui/tokens/data-view --list-slot-gap`
@@ -299,7 +317,9 @@ conditional hook.
     - `ui/tokens/density --space-sm`
     - `ui/tokens/density --space-xl`
     - `ui/tokens/density --space-xs`
+    - `ui/tokens/shadow --shadow-md`
     - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
 - Core:
   - Exports (types): `ListViewOptions`
 

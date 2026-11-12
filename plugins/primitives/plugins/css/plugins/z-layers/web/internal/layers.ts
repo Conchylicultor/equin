@@ -13,6 +13,7 @@ const Z_LAYER_CLASS = {
   raised: "z-raised",
   nav: "z-nav",
   float: "z-float",
+  drag: "z-drag",
   overlay: "z-overlay",
   popover: "z-popover",
   max: "z-max",
@@ -22,8 +23,10 @@ const Z_LAYER_CLASS = {
 export type ZLayer = keyof typeof Z_LAYER_CLASS;
 
 /** In-tree levels (0–40): elements that stay in document flow — sticky headers,
- *  in-pane floats, full-pane overlays. Out-stacked by every portaled layer. */
-export type InTreeLayer = "base" | "raised" | "nav" | "float" | "overlay";
+ *  in-pane floats, the item a drag carries (`drag`), full-pane overlays.
+ *  Out-stacked by every portaled layer. */
+export type InTreeLayer =
+  "base" | "raised" | "nav" | "float" | "drag" | "overlay";
 
 /** Generic layers above the in-tree tier: `popover` (50) for every popup /
  *  lightbox opened from the page, and `max` (9999) — the unconditional top for

@@ -1,7 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
-import type { QueueData } from "../core";
+import {
+  PINNED_SECTION,
+  conversationSectionIdKind,
+  type QueueData,
+} from "../core";
 import { classifyQueue } from "./classify-queue";
 
 // The `spawnedBy` rows adopted by the retired runtime carry.
@@ -16,11 +20,15 @@ const conv = (o: Partial<Conversation> & { id: string }): Conversation =>
     ...o,
   }) as Conversation;
 
-const rankRow = (conversationId: string): QueueData["ranks"][number] =>
+const rankRow = (
+  conversationId: string,
+  section: string | null = null,
+  rank: Rank = Rank.between(null, null),
+): QueueData["ranks"][number] =>
   ({
     conversationId,
-    rank: Rank.between(null, null),
-    pinned: false,
+    rank,
+    section,
   }) as QueueData["ranks"][number];
 
 describe("classifyQueue — Lost", () => {
@@ -39,6 +47,7 @@ describe("classifyQueue — Lost", () => {
       queue: { ranks: [rankRow("conv-1"), rankRow("spike-a")] },
       tasks: [],
       spawnFailedIds: new Set(),
+      sectionIds: [],
     });
     expect(q.lost.map((c) => c.id)).toEqual(["spike-a", "spike-b"]);
     expect(q.waitingGroups.map((g) => g.selected.id)).toEqual(["conv-1"]);
@@ -56,6 +65,7 @@ describe("classifyQueue — Lost", () => {
       queue: { ranks: [] },
       tasks: [],
       spawnFailedIds: new Set(),
+      sectionIds: [],
     });
     expect(q.lost).toEqual([]);
     expect(q.disconnected.map((c) => c.id)).toEqual(["spike-a"]);
@@ -76,9 +86,80 @@ describe("classifyQueue — Failed to start", () => {
       queue: { ranks: [rankRow("conv-retried")] },
       tasks: [],
       spawnFailedIds: new Set(["conv-failed", "conv-retried"]),
+      sectionIds: [],
     });
     expect(q.failedToStart.map((c) => c.id)).toEqual(["conv-failed"]);
     expect(q.disconnected.map((c) => c.id)).toEqual(["conv-ran"]);
     expect(q.waitingGroups.map((g) => g.selected.id)).toEqual(["conv-retried"]);
+  });
+});
+
+describe("classifyQueue — sections", () => {
+  const mine = conversationSectionIdKind.mint();
+  const empty = conversationSectionIdKind.mint();
+  const r1 = Rank.between(null, null);
+  const r2 = Rank.between(r1, null);
+  const r3 = Rank.between(r2, null);
+
+  test("a waiting group goes to its section: Pinned, a known user section, else the Queue", () => {
+    const q = classifyQueue({
+      active: [
+        conv({ id: "pinned" }),
+        conv({ id: "mine-b" }),
+        conv({ id: "mine-a" }),
+        conv({ id: "queued" }),
+        conv({ id: "stale" }),
+      ],
+      gone: [],
+      queue: {
+        ranks: [
+          rankRow("pinned", PINNED_SECTION, r1),
+          rankRow("mine-b", mine, r3),
+          rankRow("mine-a", mine, r2),
+          rankRow("queued", null, r1),
+          // A section deleted under a stale read: the Queue, never lost.
+          rankRow("stale", "csec-gone", r2),
+        ],
+      },
+      tasks: [],
+      spawnFailedIds: new Set(),
+      sectionIds: [mine, empty],
+    });
+    expect(q.pinnedGroups.map((g) => g.selected.id)).toEqual(["pinned"]);
+    expect([...q.sectionGroups.keys()]).toEqual([mine, empty]);
+    expect(q.sectionGroups.get(mine)!.map((g) => g.selected.id)).toEqual([
+      "mine-a",
+      "mine-b",
+    ]);
+    expect(q.sectionGroups.get(empty)).toEqual([]);
+    expect(q.waitingGroups.map((g) => g.selected.id)).toEqual([
+      "queued",
+      "stale",
+    ]);
+  });
+
+  test("a working group is Working whatever section it is filed into", () => {
+    const q = classifyQueue({
+      active: [
+        conv({ id: "run-pinned", status: "working" }),
+        conv({ id: "run-mine", status: "working" }),
+      ],
+      gone: [],
+      queue: {
+        ranks: [
+          rankRow("run-pinned", PINNED_SECTION, r1),
+          rankRow("run-mine", mine, r2),
+        ],
+      },
+      tasks: [],
+      spawnFailedIds: new Set(),
+      sectionIds: [mine],
+    });
+    expect(q.workingGroups.map((g) => g.selected.id)).toEqual([
+      "run-pinned",
+      "run-mine",
+    ]);
+    expect(q.pinnedGroups).toEqual([]);
+    expect(q.sectionGroups.get(mine)).toEqual([]);
   });
 });

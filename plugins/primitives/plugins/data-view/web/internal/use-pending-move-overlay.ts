@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
-import type { ManualOrderConfig } from "../../core";
+import type { ManualOrderConfig, SectionMove } from "../../core";
 
 /**
  * A drop whose write is still in flight: the rank the row was dropped at, and
@@ -40,11 +40,11 @@ export function shouldClear(move: PendingMove, current: CurrentRank): boolean {
  * Record a drop. Keyed by row id: a second drop of the same row before the
  * first one landed REPLACES the entry (the latest drop is what the user sees).
  */
-export function applyPendingMove(
-  pending: PendingMoves,
+export function applyPendingMove<T>(
+  pending: ReadonlyMap<string, T>,
   id: string,
-  move: PendingMove,
-): PendingMoves {
+  move: T,
+): ReadonlyMap<string, T> {
   return new Map(pending).set(id, move);
 }
 
@@ -52,11 +52,11 @@ export function applyPendingMove(
  * Drop `id`'s entry — but only if it is still `move`. A rejection of an earlier
  * drop must not clear a later drop of the same row that replaced it.
  */
-export function releasePendingMove(
-  pending: PendingMoves,
+export function releasePendingMove<T>(
+  pending: ReadonlyMap<string, T>,
   id: string,
-  move: PendingMove,
-): PendingMoves {
+  move: T,
+): ReadonlyMap<string, T> {
   if (pending.get(id) !== move) return pending;
   const next = new Map(pending);
   next.delete(id);
@@ -87,6 +87,49 @@ export function overlayRank(
   underlying: Rank | null,
 ): Rank | null {
   return pending.get(id)?.rank ?? underlying;
+}
+
+/**
+ * A cross-section drop whose `onReseat` write is still in flight: where the
+ * row is drawn (`move`), and the row's group-by value at drop time, spelled
+ * (`spellGroupValue`). The value moving off `baseline` is the producer's own
+ * data carrying the move, so the hold steps aside.
+ */
+export interface PendingReseat {
+  readonly move: SectionMove;
+  readonly baseline: string;
+}
+
+export type PendingReseats = ReadonlyMap<string, PendingReseat>;
+
+const NO_PENDING_RESEATS: PendingReseats = new Map();
+
+/** A group-by value as one comparable spelling (`null` / absent its own). */
+export function spellGroupValue(value: unknown): string {
+  if (value == null) return "\u0000none";
+  return typeof value === "string" ? value : JSON.stringify(value);
+}
+
+/** A held row's group-by value now — or `present: false` once it left the rows. */
+export type CurrentGroupValue =
+  { present: false } | { present: true; value: string };
+
+/**
+ * Remove every held reseat that is done: its row gone, or its group-by value
+ * off the drop-time baseline. `pending` itself when nothing cleared.
+ */
+export function prunePendingReseats(
+  pending: PendingReseats,
+  current: (id: string) => CurrentGroupValue,
+): PendingReseats {
+  let next: Map<string, PendingReseat> | null = null;
+  for (const [id, held] of pending) {
+    const now = current(id);
+    if (now.present && now.value === held.baseline) continue;
+    next ??= new Map(pending);
+    next.delete(id);
+  }
+  return next ?? pending;
 }
 
 interface RowIndex<TRow> {
@@ -134,6 +177,11 @@ function indexRows<TRow>(
  * early — the row may show the first drop's slot until the second push. That
  * degrades to the pre-overlay behaviour, never to a wrong final order.
  *
+ * `onReseat` (a cross-section drop) is held the same way, by section rather
+ * than rank: with `groupValue` given and a promise returned, the move is kept
+ * as a `SectionMove` the view applies (`heldReseats`) until the row's group-by
+ * value moves off its drop-time value, the row leaves, or the promise rejects.
+ *
  * `dest.rank` is computed against the RENDERED rows. That is right for display
  * (the row lands between the rows the user saw); producers keep minting their
  * own ranks.
@@ -142,15 +190,19 @@ export function usePendingMoveOverlay<TRow>(
   config: ManualOrderConfig<TRow> | undefined,
   rows: readonly TRow[],
   rowKey: (row: TRow, index: number) => string,
-): ManualOrderConfig<TRow> | undefined {
+  /** The group-by field's value of a row — absent when the view is not
+   *  grouped, where no drop crosses sections. */
+  groupValue?: (row: TRow) => unknown,
+): PendingOverlay<TRow> {
   const [pending, setPending] = useState<PendingMoves>(NO_PENDING_MOVES);
+  const [reseats, setReseats] = useState<PendingReseats>(NO_PENDING_RESEATS);
   // `rowKey` is an inline arrow at the consumer's call site; the stable identity
   // keeps the memos below keyed on the data, not on a closure's identity.
   const stableRowKey = useEventCallback(rowKey);
 
   // The id ↔ row index costs a pass over the rows, so it only exists while a
   // move is pending — an idle DataView pays nothing.
-  const hasPending = pending.size > 0;
+  const hasPending = pending.size > 0 || reseats.size > 0;
   const index = useMemo(
     () => (hasPending ? indexRows(rows, stableRowKey) : null),
     [hasPending, rows, stableRowKey],
@@ -172,9 +224,25 @@ export function usePendingMoveOverlay<TRow>(
   // returns to `baseline`. `prunePendingMoves` returns the same identity when
   // nothing cleared, so the re-render this schedules settles immediately.
   if (live !== pending) setPending(live);
+  // The held reseats, cleared the same way off the row's group-by value.
+  const liveReseats = useMemo(() => {
+    if (index === null || groupValue === undefined) return reseats;
+    return prunePendingReseats(reseats, (id): CurrentGroupValue => {
+      const row = index.rowById.get(id);
+      return row === undefined
+        ? { present: false }
+        : { present: true, value: spellGroupValue(groupValue(row)) };
+    });
+  }, [reseats, index, groupValue]);
+  if (liveReseats !== reseats) setReseats(liveReseats);
+  const heldReseats = useMemo(
+    () => [...liveReseats.values()].map((held) => held.move),
+    [liveReseats],
+  );
 
-  return useMemo(() => {
+  const wrapped = useMemo(() => {
     if (config === undefined) return undefined;
+    const onReseat = config.onReseat;
     return {
       ...config,
       getRank: (row: TRow) => {
@@ -197,8 +265,37 @@ export function usePendingMoveOverlay<TRow>(
           throw err;
         });
       },
+      // A cross-section drop holds its row in the destination section until
+      // the row's group-by value moves — the same rule as `onMove`'s rank, and
+      // only while a write is in flight (a promise) under a group-by.
+      onReseat:
+        onReseat === undefined
+          ? undefined
+          : (id, dest) => {
+              const i = rows.findIndex((row, j) => stableRowKey(row, j) === id);
+              const result = onReseat(id, dest);
+              if (result === undefined || i === -1 || groupValue === undefined)
+                return result;
+              const held: PendingReseat = {
+                move: { id, dest },
+                baseline: spellGroupValue(groupValue(rows[i]!)),
+              };
+              setReseats((prev) => applyPendingMove(prev, id, held));
+              return result.then(undefined, (err: unknown) => {
+                setReseats((prev) => releasePendingMove(prev, id, held));
+                throw err;
+              });
+            },
     } satisfies ManualOrderConfig<TRow>;
-  }, [config, index, live, rows, stableRowKey]);
+  }, [config, index, live, rows, stableRowKey, groupValue]);
+  return { config: wrapped, heldReseats };
+}
+
+/** What the overlay hands the view: the wrapped config, and the rows held in
+ *  another section while their `onReseat` write is in flight. */
+export interface PendingOverlay<TRow> {
+  config: ManualOrderConfig<TRow> | undefined;
+  heldReseats: readonly SectionMove[];
 }
 
 /**
@@ -210,12 +307,14 @@ export function PendingMoveOverlay<TRow>({
   config,
   rows,
   rowKey,
+  groupValue,
   children,
 }: {
   config: ManualOrderConfig<TRow> | undefined;
   rows: readonly TRow[];
   rowKey: (row: TRow, index: number) => string;
-  children: (config: ManualOrderConfig<TRow> | undefined) => ReactNode;
+  groupValue?: (row: TRow) => unknown;
+  children: (overlay: PendingOverlay<TRow>) => ReactNode;
 }): ReactNode {
-  return children(usePendingMoveOverlay(config, rows, rowKey));
+  return children(usePendingMoveOverlay(config, rows, rowKey, groupValue));
 }

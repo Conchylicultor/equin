@@ -16,6 +16,7 @@ vars, exposed as the matching `z-*` `@utility` classes (both defined in
 | `z-raised`   | 10    | sticky headers, hover chrome, drag handles             |
 | `z-nav`      | 20    | persistent app chrome: sidebar, app-rail, pane header  |
 | `z-float`    | 30    | in-pane floating widgets: selection bar, message TOC   |
+| `z-drag`     | 35    | the item a drag carries, while carried (below)         |
 | `z-overlay`  | 40    | full-pane bespoke overlays                             |
 | `z-popover`  | 50    | portaled floating layers: floating-action, lightboxes  |
 | *(stack)*    | 51…   | app-wide surfaces declared by their own plugins — see below |
@@ -33,6 +34,21 @@ cannot be pushed without placing. Values sit between `z-popover` and `z-max`.
 A stack layer is drawn **only** through `ViewportOverlay` (`layer={…}`), the
 sole reader of its z-index, which also wraps it in a `PortalHost` — so a popup
 opened from a stack surface paints above it, never on `z-popover` beneath.
+
+### `z-drag`: what a drag carries paints over every in-pane band
+
+A dragged row (or a dragged section block) must paint over everything it
+crosses — sticky group headers (`raised`), the pinned toolbar (`nav`), an
+in-pane float such as a drop card (`float`) — for the whole drag. It takes
+`z-drag`, and nothing between it and the list may seal it: z-index only
+orders siblings inside one context, so a row at `z-drag` inside a box that
+seals its rows (`isolate`, a transformed virtual-row wrapper) still paints at
+that box's level. A box that must be a context (a transformed wrapper) lifts
+itself while it holds the dragged item (`rank-reorder`'s sortable styles,
+`VirtualRows`' `raisedKey`); a box that seals only by choice stops sealing
+instead (`GroupedSections`' `draggedSection` drops the body's `isolate`) —
+lifting it would raise all of its other rows too. Below `overlay`: a
+full-pane overlay still covers a drag in progress.
 
 ### Why two systems, and what `z-max` is for
 
@@ -76,7 +92,7 @@ a `layer` prop into a class through it instead of each copying the map:
 
 - **`zLayerClass(layer)`** — resolves a named layer to its `z-*` utility class.
   The only read site of the name→class record (which stays private).
-- **`InTreeLayer`** — `base | raised | nav | float | overlay` (0–40): elements
+- **`InTreeLayer`** — `base | raised | nav | float | drag | overlay` (0–40): elements
   that stay in document flow. Used by `overlay` / `sticky` / `pin`.
 The in-tree tier and the generic portaled layers (`popover | max`, internal)
 exactly partition the full `ZLayer` union (enforced by a

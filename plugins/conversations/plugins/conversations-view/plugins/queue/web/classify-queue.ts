@@ -7,12 +7,18 @@ import type {
   TaskListItem,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
-import type { QueueData } from "../core";
+import {
+  PINNED_SECTION,
+  conversationSectionIdKind,
+  type ConversationSectionId,
+  type QueueData,
+} from "../core";
 
-/** A live conversation carrying its resolved queue rank and pin. */
+/** A live conversation carrying its resolved queue rank and section key. */
 export type RankedConversation<C extends Conversation = Conversation> = C & {
   rank: Rank;
-  pinned: boolean;
+  /** `PINNED_SECTION`, a user section's id, or `null` (the Queue) — as stored. */
+  section: string | null;
 };
 
 /** A task-group: every ranked conversation sharing a `taskId`, sharing one rank. */
@@ -30,6 +36,12 @@ export type TaskGroup<C extends Conversation = Conversation> = {
  */
 export interface ClassifiedQueue<C extends Conversation = Conversation> {
   pinnedGroups: TaskGroup<C>[];
+  /**
+   * The waiting groups filed into each user section, keyed by section id, for
+   * every id in `sectionIds` (an empty section maps to `[]`), in that order.
+   */
+  sectionGroups: ReadonlyMap<ConversationSectionId, TaskGroup<C>[]>;
+  /** The waiting groups in the Queue: no section, or a section no longer known. */
   waitingGroups: TaskGroup<C>[];
   workingGroups: TaskGroup<C>[];
   /**
@@ -65,9 +77,11 @@ export interface ClassifiedQueue<C extends Conversation = Conversation> {
  * queue's read-time sections (Pinned / Queue / Working / Lost / Unranked /
  * Failed to start / Disconnected / Done), grouped by `taskId` with a shared rank per group.
  *
- * A pin only moves a WAITING group into its own section: an active group belongs
- * in Working whether or not it is pinned, since Working answers "what is running
- * right now" and the pin answers "what do I want to keep in reach".
+ * A section (Pinned, or a user section) only holds WAITING groups: an active
+ * group belongs in Working whatever section it is filed into, since Working
+ * answers "what is running right now" and a section answers "where do I want to
+ * keep this". A group filed into a section id not in `sectionIds` (deleted
+ * under a stale read) reads as the Queue.
  *
  * Kept free of React and of the DataView so the partitioning stays testable and
  * reusable by any presentation of the queue.
@@ -80,8 +94,10 @@ export function classifyQueue<C extends Conversation>(data: {
   tasks: TaskListItem[];
   /** The ids, among the gone `active` rows, that carry a spawn failure. */
   spawnFailedIds: ReadonlySet<string>;
+  /** Every known user section id, in display (rank) order. */
+  sectionIds: readonly ConversationSectionId[];
 }): ClassifiedQueue<C> {
-  const { active, gone, queue, tasks, spawnFailedIds } = data;
+  const { active, gone, queue, tasks, spawnFailedIds, sectionIds } = data;
   const ranks = new Map(queue.ranks.map((r) => [r.conversationId, r]));
   const taskStatusMap = new Map(tasks.map((t) => [t.id, t.status]));
   const ranked: RankedConversation<C>[] = [];
@@ -110,7 +126,7 @@ export function classifyQueue<C extends Conversation>(data: {
     }
     const row = ranks.get(c.id);
     if (row) {
-      ranked.push({ ...c, rank: row.rank, pinned: row.pinned });
+      ranked.push({ ...c, rank: row.rank, section: row.section });
     } else if (c.status === "waiting") {
       noRank.push(c);
     } else {
@@ -128,6 +144,9 @@ export function classifyQueue<C extends Conversation>(data: {
   }
 
   const pinnedWaiting: TaskGroup<C>[] = [];
+  const sectioned = new Map<ConversationSectionId, TaskGroup<C>[]>(
+    sectionIds.map((id) => [id, []]),
+  );
   const waiting: TaskGroup<C>[] = [];
   const working: TaskGroup<C>[] = [];
   let waitingCount = 0;
@@ -149,20 +168,29 @@ export function classifyQueue<C extends Conversation>(data: {
     if (workingMember) {
       working.push(group);
     } else {
-      // The pin is written to every live member of a group, so any member
+      // The section is written to every live member of a group, so any member
       // answers for the group.
-      (selected.pinned ? pinnedWaiting : waiting).push(group);
+      const key = selected.section;
+      const userSection =
+        key !== null && conversationSectionIdKind.is(key)
+          ? sectioned.get(key)
+          : undefined;
+      if (key === PINNED_SECTION) pinnedWaiting.push(group);
+      else if (userSection) userSection.push(group);
+      else waiting.push(group);
       waitingCount += members.filter((m) => m.status === "waiting").length;
     }
   }
   const byRank = (a: TaskGroup<C>, b: TaskGroup<C>): number =>
     Rank.compare(a.selected.rank, b.selected.rank);
   pinnedWaiting.sort(byRank);
+  for (const groups of sectioned.values()) groups.sort(byRank);
   waiting.sort(byRank);
   working.sort(byRank);
 
   return {
     pinnedGroups: pinnedWaiting,
+    sectionGroups: sectioned,
     waitingGroups: waiting,
     workingGroups: working,
     workingUnranked: workingNoRank,

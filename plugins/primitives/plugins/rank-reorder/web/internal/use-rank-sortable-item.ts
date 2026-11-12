@@ -16,7 +16,7 @@ export interface RankSortableItemControls {
    *  it) a focusable fake button that steals the row's own tab stop. */
   listeners: DraggableSyntheticListeners;
   /** Put on the same element as `ref`: the slide (and, while dragging, the
-   *  follow-the-pointer offset plus a raised stacking layer). */
+   *  follow-the-pointer offset plus the `drag` stacking layer). */
   style: CSSProperties;
   /** True while THIS item is the one being dragged. */
   isDragging: boolean;
@@ -48,7 +48,7 @@ export function useRankSortableItem(
   group?: string | null,
 ): RankSortableItemControls {
   const data = useMemo(
-    () => ({ id, rank, group: group ?? null }),
+    () => ({ kind: "row" as const, id, rank, group: group ?? null }),
     [id, rank, group],
   );
   const { setNodeRef, listeners, transform, transition, isDragging } =
@@ -60,9 +60,12 @@ export function useRankSortableItem(
     // (`sortable-list/no-scaling-transform`). Rows only ever move.
     transform: CSS.Translate.toString(transform),
     transition,
-    // The dragged row paints over the neighbours it slides across.
+    // The dragged row paints over everything it crosses — its neighbours,
+    // sticky headers (`raised`), the toolbar (`nav`), a drop card (`float`):
+    // the `drag` layer. A box that seals the row's stacking (a section body,
+    // a windowed wrapper) must lift itself to `drag` too (z-layers CLAUDE.md).
     ...(isDragging
-      ? { position: "relative" as const, zIndex: "var(--z-raised)" }
+      ? { position: "relative" as const, zIndex: "var(--z-drag)" }
       : {}),
   };
 

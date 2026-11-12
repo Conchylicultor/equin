@@ -449,6 +449,8 @@ function DataViewBodyInner<TRow>(
     itemActions,
     creators,
     rowHover,
+    groupEdit,
+    headerActions,
     storageKey,
     viewModel,
     activeInstance,
@@ -1629,7 +1631,16 @@ function DataViewBodyInner<TRow>(
           // place both hosts set it) — the view child decides what to tighten.
           density: chrome.density,
           rowHover,
+          groupEdit,
+          headerActions,
         };
+        // The grouped field's value of a row: what a held cross-section drop
+        // waits on to change (`usePendingMoveOverlay`).
+        const groupedField = effectiveState.groupBy
+          ? (fields as FieldDef<unknown>[]).find(
+              (f) => f.id === effectiveState.groupBy!.fieldId,
+            )
+          : undefined;
 
         // The ONE context every toolbar control and settings contribution reads —
         // no prop-threading. Nothing here is derived: every field was computed
@@ -1747,39 +1758,40 @@ function DataViewBodyInner<TRow>(
                         }
                         onScreen={rowsOnScreen}
                       >
-                      {/* A live page that could not refresh keeps its rows on
+                        {/* A live page that could not refresh keeps its rows on
                       screen; its notice sits above them, naming where. */}
-                      {paging && paging.notices.length > 0 ? (
-                        <PageNotices
-                          notices={paging.notices}
+                        {paging && paging.notices.length > 0 ? (
+                          <PageNotices
+                            notices={paging.notices}
+                            rows={effectiveRows}
+                            fields={fields as FieldDef<unknown>[]}
+                            rowKey={
+                              rowKey as (row: unknown, index: number) => string
+                            }
+                          />
+                        ) : null}
+                        <PendingMoveOverlay
+                          config={renderProps.manualOrder}
                           rows={effectiveRows}
-                          fields={fields as FieldDef<unknown>[]}
-                          rowKey={
-                            rowKey as (row: unknown, index: number) => string
-                          }
-                        />
-                      ) : null}
-                      <PendingMoveOverlay
-                        config={renderProps.manualOrder}
-                        rows={effectiveRows}
-                        rowKey={renderProps.rowKey}
-                      >
-                        {(manualOrder) => (
-                          <FieldExtentsContext.Provider value={fieldExtents}>
+                          rowKey={renderProps.rowKey}
+                          groupValue={groupedField?.value}
+                        >
+                          {({ config: manualOrder, heldReseats }) => (
+                            <FieldExtentsContext.Provider value={fieldExtents}>
                               {renderIsolated(
                                 DataViewSlots.View,
                                 activeInstance.viewType as unknown as Contribution,
-                                { ...renderProps, manualOrder },
+                                { ...renderProps, manualOrder, heldReseats },
                               )}
-                          </FieldExtentsContext.Provider>
-                        )}
-                      </PendingMoveOverlay>
-                      {flatPlaceholders ? (
-                        <PagePlaceholders
-                          placeholders={flatPlaceholders.after}
-                        />
-                      ) : null}
-                      <NotKnownRowsTail rows={notKnown} />
+                            </FieldExtentsContext.Provider>
+                          )}
+                        </PendingMoveOverlay>
+                        {flatPlaceholders ? (
+                          <PagePlaceholders
+                            placeholders={flatPlaceholders.after}
+                          />
+                        ) : null}
+                        <NotKnownRowsTail rows={notKnown} />
                       </RowReadsHost>
                     </>
                   )}

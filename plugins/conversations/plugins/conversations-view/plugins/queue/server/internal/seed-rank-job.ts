@@ -34,14 +34,14 @@ export const seedRankJob = defineJob({
         .limit(1);
       if (existing) return;
 
-      // If the task already has a group, take its seat — position AND pin —
-      // rather than going to top as a fresh unpinned row.
+      // If the task already has a group, take its seat — position AND section —
+      // rather than going to top as a fresh row in the Queue.
       const taskId = await findTaskIdForConversation(conversationId, tx);
       const seat = taskId
         ? await seatJoiningGroup(taskId, conversationId, tx)
         : null;
       const rank = seat?.rank ?? (await rankForTop(conversationId, tx));
-      await upsertRank(conversationId, rank, tx, seat?.pinned ?? false);
+      await upsertRank(conversationId, rank, tx, seat?.section ?? null);
     });
   },
 });

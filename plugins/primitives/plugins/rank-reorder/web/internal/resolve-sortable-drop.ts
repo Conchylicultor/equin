@@ -2,6 +2,7 @@ import {
   Rank,
   computeFlatReorder,
 } from "@plugins/primitives/plugins/rank/core";
+import { beforeInReadingOrder } from "./drag-preview";
 
 /** One reorderable item: a stable id, its sort `Rank`, and an optional
  *  section/group key. A drop onto another group's row is a *reseat*, reported
@@ -121,19 +122,4 @@ export function resolveSortableDrop(
   const rank = computeFlatReorder(scope, activeId, zone, overId);
   if (rank === null || Rank.equals(active.rank, rank)) return { kind: "none" };
   return { kind: "move", rank, group, targetId: overId, zone };
-}
-
-/** Is the dragged box's centre ahead of `over`'s centre? A column compares y;
- *  a grid compares x within `over`'s row band and y outside it. */
-function beforeInReadingOrder(
-  layout: RankSortableLayout,
-  dragged: DropRect,
-  over: DropRect,
-): boolean {
-  const dy = dragged.top + dragged.height / 2;
-  const oy = over.top + over.height / 2;
-  if (layout === "grid" && dy >= over.top && dy <= over.top + over.height) {
-    return dragged.left + dragged.width / 2 < over.left + over.width / 2;
-  }
-  return dy < oy;
 }

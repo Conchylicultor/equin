@@ -297,17 +297,18 @@ export async function reseatGroupMembers(
   }
 }
 
-/** The queue state a task group shares: one position, one pin. */
+/** The queue state a task group shares: one position, one section. */
 export interface GroupSeat {
   rank: Rank;
-  pinned: boolean;
+  /** `PINNED_SECTION`, a user section's id, or `null` (the Queue). */
+  section: string | null;
 }
 
 // Returns the seat of the task group so a conversation joining it lands in the
-// same position AND the same section. Rank and pin are read together on purpose:
-// both are group-level, so a caller that could inherit one without the other
-// would split the group across two sections. Null if the task has no existing
-// ranked members.
+// same position AND the same section. Rank and section are read together on
+// purpose: both are group-level, so a caller that could inherit one without the
+// other would split the group across two sections. Null if the task has no
+// existing ranked members.
 export async function seatJoiningGroup(
   taskId: string,
   conversationId: string,
@@ -316,7 +317,7 @@ export async function seatJoiningGroup(
   const [existing] = await executor
     .select({
       rank: _conversationsExtQueue.rank,
-      pinned: _conversationsExtQueue.pinned,
+      section: _conversationsExtQueue.section,
     })
     .from(_conversationsExtQueue)
     .innerJoin(
@@ -334,35 +335,39 @@ export async function seatJoiningGroup(
     .limit(1);
 
   if (!existing?.rank) return null;
-  return { rank: Rank.from(existing.rank as string), pinned: existing.pinned };
+  return {
+    rank: Rank.from(existing.rank as string),
+    section: existing.section,
+  };
 }
 
-// Writes a conversation's position. `pinned` is deliberately NOT touched: every
-// caller here is moving a row around, and a move must not silently change which
-// section the row is in. Seat inheritance goes through `seatJoiningGroup`, and
-// the pin itself through `setGroupPinned`.
+// Writes a conversation's position. `section` is deliberately NOT touched on an
+// existing row: every caller here is moving a row around, and a move must not
+// silently change which section the row is in. It is only written when the row
+// is first inserted (seat inheritance goes through `seatJoiningGroup`); the
+// section itself is set through `setGroupSection`.
 export async function upsertRank(
   conversationId: string,
   rank: Rank,
   executor: RankExecutor = db,
-  pinned = false,
+  section: string | null = null,
 ): Promise<void> {
   await executor
     .insert(_conversationsExtQueue)
-    .values({ conversationId, rank: rank.toJSON(), pinned })
+    .values({ conversationId, rank: rank.toJSON(), section })
     .onConflictDoUpdate({
       target: _conversationsExtQueue.conversationId,
       set: { rank: rank.toJSON() },
     });
 }
 
-// Sets the pin on every live member of the conversation's task group — the same
-// group-level treatment `reseatGroupMembers` gives the rank, because the sidebar
-// shows a group as ONE row: a per-member pin could split one group across the
-// Pinned and Queue sections.
-export async function setGroupPinned(
+// Files every live member of the conversation's task group into `section` —
+// the same group-level treatment `reseatGroupMembers` gives the rank, because
+// the sidebar shows a group as ONE row: a per-member section could split one
+// group across two sections. The caller checks a user section id exists.
+export async function setGroupSection(
   conversationId: string,
-  pinned: boolean,
+  section: string | null,
   executor: RankExecutor,
 ): Promise<void> {
   const taskId = await findTaskIdForConversation(conversationId, executor);
@@ -371,7 +376,7 @@ export async function setGroupPinned(
     : [];
   await executor
     .update(_conversationsExtQueue)
-    .set({ pinned })
+    .set({ section })
     .where(
       inArray(_conversationsExtQueue.conversationId, [
         conversationId,

@@ -42,6 +42,43 @@ describe("GroupedSections — stacking", () => {
       expect(body.getAttribute("class")).toContain("isolate");
     }
   });
+
+  it("unseals the body holding the dragged row — never lifts it — and only that one", () => {
+    // The row's own `z-drag` would be sealed inside its body's `isolate`, and
+    // slide UNDER a section header it is dragged beneath (the Queue →
+    // user-section drag, 2026-11-12). Lifting the whole body instead raised
+    // every one of its rows over the new-section card; so the body holding
+    // the drag stops being a stacking context and the row orders itself.
+    render(
+      <GroupedSections sections={SECTIONS} draggedSection="working">
+        {(section) => <div>rows of {section.key}</div>}
+      </GroupedSections>,
+    );
+    const bodies = [
+      ...document.querySelectorAll<HTMLElement>('[data-part="dv.group"]'),
+    ];
+    const [queue, working] = bodies;
+    expect(working!.className).toContain("isolation-auto");
+    expect(working!.className).not.toContain("isolate ");
+    expect(working!.className).not.toContain("z-drag");
+    expect(working!.hasAttribute("data-holds-drag")).toBe(true);
+    expect(queue!.className).toContain("isolate");
+    expect(queue!.hasAttribute("data-holds-drag")).toBe(false);
+    for (const header of document.querySelectorAll(
+      '[data-part="dv.group-header"]',
+    )) {
+      const band = header.closest(".sticky")!;
+      expect(band.className).toContain("z-raised");
+    }
+  });
+
+  it("unseals nothing while no row drags", () => {
+    renderSections();
+    for (const body of document.querySelectorAll('[data-part="dv.group"]')) {
+      expect(body.getAttribute("class")).toContain("isolate");
+      expect(body.getAttribute("class")).not.toContain("z-drag");
+    }
+  });
 });
 
 describe("GroupedSections — group header", () => {

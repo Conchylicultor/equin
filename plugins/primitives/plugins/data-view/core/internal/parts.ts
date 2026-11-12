@@ -41,6 +41,8 @@ export const DATA_VIEW_PARTS = [
   "dv.group-count",
   "dv.group-rule",
   "dv.group-chevron",
+  "dv.group-rename",
+  "dv.new-group",
   // Table
   "dv.table",
   "dv.table-frame",

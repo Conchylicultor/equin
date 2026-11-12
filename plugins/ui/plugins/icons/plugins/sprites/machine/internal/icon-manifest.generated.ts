@@ -118,6 +118,7 @@ export const ICON_MANIFEST: {
     "downloading",
     "draft",
     "drag-indicator",
+    "drive-file-move",
     "drive-file-rename",
     "edit",
     "edit-calendar",

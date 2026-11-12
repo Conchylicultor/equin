@@ -1,4 +1,6 @@
-import { type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
+import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { RowActions } from "@plugins/primitives/plugins/row-actions/web";
@@ -168,6 +170,17 @@ export interface DataViewGroupHeaderProps {
   action?: ReactNode;
   /** Forwarded to the header row (the band's inline-inset choice is the caller's). */
   className?: string;
+  /**
+   * An editable header's inline rename (`GroupEditConfig`): a double-click on
+   * the label calls `onStart`; while `editing` the label is a name field,
+   * selected on open — Enter or blur commits the trimmed name (an empty one
+   * cancels), Escape cancels. Absent ⇒ a read-only header.
+   */
+  rename?: {
+    editing: boolean;
+    onStart: () => void;
+    onDone: (name: string | null) => void;
+  };
 }
 
 /**
@@ -198,14 +211,19 @@ export function DataViewGroupHeader({
   onClick,
   action,
   className,
+  rename,
 }: DataViewGroupHeaderProps): ReactNode {
   const ctx = useCollapsibleContext();
   const open = openProp ?? ctx?.open ?? true;
   // A nested section's header below the roots steps its label down a weight
   // (medium, against a root's semibold), so the levels read apart.
   const sub = (section.nesting?.depth ?? 0) >= 1;
+  const editing = rename?.editing === true;
   return (
     <SectionHeaderRow
+      // While its name is edited the header is no toggle: the field cannot sit
+      // inside the row's button, and a click in it must not fold the section.
+      collapsible={!editing}
       // The `group` role: the heading of a group of rows, a value out of the
       // data (spelled as the data spells it), sized by the theme apart from
       // the rows it heads.
@@ -232,7 +250,23 @@ export function DataViewGroupHeader({
       }
     >
       {identityMark(section)}
-      <GroupLabel label={section.label} sub={sub} open={open} />
+      {editing ? (
+        <GroupRenameField
+          name={typeof section.label === "string" ? section.label : ""}
+          onDone={rename.onDone}
+        />
+      ) : rename ? (
+        <span
+          onDoubleClick={(e) => {
+            e.stopPropagation();
+            rename.onStart();
+          }}
+        >
+          <GroupLabel label={section.label} sub={sub} open={open} />
+        </span>
+      ) : (
+        <GroupLabel label={section.label} sub={sub} open={open} />
+      )}
       {/* The count right beside its label: a faint tally (`groupCountInk`) in
           the `groupCount` part, part of the label's run so the rule (under
           `rule`) starts after it. */}
@@ -244,5 +278,54 @@ export function DataViewGroupHeader({
         {formatSectionCount(section.count)}
       </Text>
     </SectionHeaderRow>
+  );
+}
+
+/** A group header's inline name field: selected on open; Enter or blur
+ *  commits the trimmed name (an empty one cancels), Escape cancels — and the
+ *  blur that follows a settled edit commits nothing. */
+function GroupRenameField({
+  name,
+  onDone,
+}: {
+  name: string;
+  onDone: (name: string | null) => void;
+}): ReactNode {
+  const settled = useRef(false);
+  const input = useRef<HTMLInputElement | null>(null);
+  useEffect(() => {
+    // A section named right after it was made sits on screen already: focus
+    // it without moving the page.
+    focusElement(input.current, { reveal: false });
+    input.current?.select();
+  }, []);
+  const done = (next: string | null) => {
+    if (settled.current) return;
+    settled.current = true;
+    onDone(next);
+  };
+  const commit = (value: string) => {
+    const next = value.trim();
+    done(next.length > 0 ? next : null);
+  };
+  return (
+    <Input
+      ref={input}
+      defaultValue={name}
+      aria-label="Section name"
+      onBlur={(e) => commit(e.target.value)}
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          commit(e.currentTarget.value);
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          done(null);
+        }
+      }}
+      {...dataPart("dv.group-rename")}
+    />
   );
 }

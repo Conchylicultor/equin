@@ -614,6 +614,13 @@ export interface FieldOption {
    * names no option, or a cycle, is tolerated there.
    */
   parent?: string;
+  /**
+   * Group-by draws this option's section even when no row holds it — its
+   * header and an empty band (a drop target for a manual order's `onReseat`).
+   * A section the user made and has not filled yet. Default off: a value no
+   * row holds draws no section.
+   */
+  alwaysGroup?: true;
   /** The option's own colour (`#rrggbb`, user data — a tag's): a grouping that
    *  carries it to its bucket (`GroupBucket.swatch`) has the section header draw
    *  it as a dot before the label. */
@@ -1272,6 +1279,47 @@ export interface DataViewAttachConfig<TRow> {
  * **handler presence** — the same convention `HierarchyConfig` uses for a
  * read-only tree — not from a flag.
  */
+/**
+ * A row moved into another section, as the view lays it out: `id` (the row's
+ * key) drawn in `groupKey`'s section, `zone` of `targetId` — or, with no
+ * anchor, at the section's head. Both the live drag preview and a held
+ * cross-section drop whose write is in flight (`DataViewRenderProps.heldReseats`)
+ * are one of these, applied by `applySectionMove`.
+ */
+export interface SectionMove {
+  id: string;
+  dest: {
+    groupKey: string | null;
+    targetId?: string;
+    zone?: "before" | "after";
+  };
+}
+
+/**
+ * Editable section headers (`DataViewProps.groupEdit`): which sections the
+ * user may rename and reorder, and how each edit is written. Data-view names
+ * no field: the consumer knows which sections are its own (a user-made
+ * section) and how to persist them.
+ */
+export interface GroupEditConfig {
+  /** Whether this section's header renames and drags. Non-editable sections
+   *  stay where they are, and moving sections reorder only among the
+   *  editable ones. */
+  editable: (key: string) => boolean;
+  /** Persist a rename — `name` trimmed and non-empty. */
+  onRename: (key: string, name: string) => void | Promise<void>;
+  /** Persist a section move: `key` lands `zone` of `targetKey`. */
+  onMove: (
+    key: string,
+    dest: { targetKey: string; zone: "before" | "after" },
+  ) => void | Promise<void>;
+  /** The section whose name field is open (controlled, so a consumer can
+   *  open it right after creating a section). A double-click on an editable
+   *  header's label opens it too. */
+  renaming: string | null;
+  setRenaming: (key: string | null) => void;
+}
+
 export interface ManualOrderConfig<TRow> {
   /**
    * The sort `Rank` of a row — rows render in this order in manual mode.
@@ -1322,15 +1370,37 @@ export interface ManualOrderConfig<TRow> {
    * made. (It is not a drop-time no-op — the user sees the refusal mid-gesture.)
    * `groupKey` is `null` for the implicit ungrouped section, which is why the
    * ungrouped surface never reaches this handler.
+   *
+   * **No anchor** (`targetId` / `zone` absent) means the row was dropped on the
+   * section itself — its header, or the band an empty section draws: move it
+   * into the section and keep its rank. That is the only way into an empty or
+   * collapsed section.
+   *
+   * While the drag is over another section the list lays the row out there,
+   * so that section's rows slide around it. Return a promise when the write
+   * is in flight: the row is held in the destination section until its
+   * group-by value changes (or the promise rejects) — no snap-back.
    */
-  onReseat?: (
-    id: string,
-    dest: {
-      groupKey: string | null;
-      targetId: string;
-      zone: "before" | "after";
-    },
-  ) => void | Promise<void>;
+  onReseat?: (id: string, dest: SectionMove["dest"]) => void | Promise<void>;
+  /**
+   * Which sections take a row from another one (default: every section). A
+   * section it refuses — a read-time partition nothing can be moved into —
+   * is no target for a row from elsewhere: its header, empty band and rows
+   * are left out of the drag, so the row is never previewed there. Read only
+   * with `onReseat`.
+   */
+  reseatInto?: (groupKey: string) => boolean;
+  /**
+   * A drop into a section that does not exist yet. While a row drag is in
+   * flight the list floats a "+ `label`" target over the bottom of its
+   * scroller (taking no layout space); a drop there calls `onDrop(id)` — the
+   * consumer creates the section and files the row into it. Absent ⇒ no
+   * target.
+   */
+  onReseatNew?: {
+    label: string;
+    onDrop: (id: string) => void | Promise<void>;
+  };
   /**
    * Place `keys` as one contiguous run, in the given order, immediately
    * `dest.zone` of `dest.targetId` — rows already present, or keys of rows that
@@ -1535,6 +1605,19 @@ export interface DataViewRenderProps<TRow> {
   collapsedSections?: ReadonlySet<string>;
   /** Toggle a group-by section's device-local collapsed state. */
   setSectionCollapsed?: (key: string, collapsed: boolean) => void;
+  /** `DataViewProps.groupEdit`: editable section headers (rename, reorder).
+   *  The list honours it; other views draw their headers read-only. */
+  groupEdit?: GroupEditConfig;
+  /** `DataViewProps.headerActions`: a section-scoped affordance in each group
+   *  header's hover cluster (`GroupedSectionsProps.headerActions`). */
+  headerActions?: (section: DataViewSection<unknown>) => ReactNode;
+  /**
+   * Cross-section drops whose `onReseat` write is still in flight: the view
+   * draws each row in its destination section (`applySectionMove`) until the
+   * row's group-by value changes — so it never snaps back to the section it
+   * left. Held by the host for every view, like the pending rank of `onMove`.
+   */
+  heldReseats?: readonly SectionMove[];
   /**
    * The fold-line controls, present exactly when `state.fold` is in effect. A
    * flat view passes `foldLines.open` to `useDataViewSections` and renders each
@@ -2268,6 +2351,19 @@ export interface DataViewBaseProps<TRow> extends PlacementSpec {
    * decorations is its own change.
    */
   rowTone?: (row: TRow) => RowTone;
+  /**
+   * Editable section headers under group-by ({@link GroupEditConfig}): an
+   * editable section's header renames inline (double-click its label, or
+   * `renaming`) and drags its whole section to reorder it among the editable
+   * ones. Drawn by the list.
+   */
+  groupEdit?: GroupEditConfig;
+  /**
+   * A section-scoped affordance in each group header's hover cluster (a "+",
+   * a "⋯" menu); `null` for a section with nothing to offer. Drawn by the
+   * views rendering through `GroupedSections`.
+   */
+  headerActions?: (section: DataViewSection<unknown>) => ReactNode;
   /**
    * Every row activates, this way. The simple case, and what most surfaces want.
    *

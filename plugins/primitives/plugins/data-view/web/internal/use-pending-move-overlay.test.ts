@@ -4,6 +4,10 @@ import {
   applyPendingMove,
   overlayRank,
   prunePendingMoves,
+  prunePendingReseats,
+  spellGroupValue,
+  type PendingReseat,
+  type PendingReseats,
   releasePendingMove,
   shouldClear,
   type CurrentRank,
@@ -102,5 +106,34 @@ describe("prunePendingMoves", () => {
     const current = (id: string): CurrentRank =>
       id === "x" ? { present: true, rank: a } : { present: false };
     expect([...prunePendingMoves(pending, current).keys()]).toEqual(["x"]);
+  });
+});
+
+describe("prunePendingReseats", () => {
+  const held: PendingReseat = {
+    move: { id: "r", dest: { groupKey: "B" } },
+    baseline: spellGroupValue("A"),
+  };
+  const pending: PendingReseats = new Map([["r", held]]);
+
+  it("holds the row while its group-by value is still the drop-time one", () => {
+    expect(
+      prunePendingReseats(pending, () => ({ present: true, value: "A" })),
+    ).toBe(pending);
+  });
+
+  it("lets go once the value moved, or the row left", () => {
+    expect(
+      prunePendingReseats(pending, () => ({ present: true, value: "B" })).size,
+    ).toBe(0);
+    expect(prunePendingReseats(pending, () => ({ present: false })).size).toBe(
+      0,
+    );
+  });
+
+  it("spells no value apart from any string", () => {
+    expect(spellGroupValue(null)).toBe(spellGroupValue(undefined));
+    expect(spellGroupValue(null)).not.toBe(spellGroupValue("null"));
+    expect(spellGroupValue(1)).toBe("1");
   });
 });

@@ -200,9 +200,18 @@ export function partitionIntoSections<TRow>(
     field.type ?? "text",
     groupBy.groupingId,
   );
+  // Options declaring `alwaysGroup` are sections whether or not a row holds
+  // them. The plan sees their values too, so it orders them like any other —
+  // never in server-sorted `appearance` order, whose sections are the rows'.
+  const alwaysValues =
+    opts.sectioning?.kind === "appearance"
+      ? []
+      : (field.options ?? [])
+          .filter((option) => option.alwaysGroup === true)
+          .map((option) => option.value);
   const bucketOf = grouping.plan({
     now: opts.now,
-    values: values.filter((v) => v != null),
+    values: [...values.filter((v) => v != null), ...alwaysValues],
     field: field as FieldDef<unknown>,
   });
 
@@ -286,13 +295,8 @@ export function partitionIntoSections<TRow>(
     parentKey: null,
     chain: "",
   };
-  rows.forEach((row, i) => {
-    const value = values[i] as FieldValue;
-    const bucketed = value == null ? null : bucketOf(value);
-    if (!bucketed) {
-      nullBucket.rows.push(row);
-      return;
-    }
+  // The bucket (and its ancestors) a value lands in, created on first sight.
+  const place = (bucketed: GroupBucket): Bucket => {
     const ancestors = honourAncestors ? (bucketed.ancestors ?? []) : [];
     // The first nested bucket turns the partition into a tree: every bucket
     // met so far was a root (no ancestors), which its empty chain says.
@@ -308,8 +312,23 @@ export function partitionIntoSections<TRow>(
       node(ancestor, above);
       above.push(ancestor.key);
     }
-    node(bucketed, above).rows.push(row);
+    return node(bucketed, above);
+  };
+  rows.forEach((row, i) => {
+    const value = values[i] as FieldValue;
+    const bucketed = value == null ? null : bucketOf(value);
+    if (!bucketed) {
+      nullBucket.rows.push(row);
+      return;
+    }
+    place(bucketed).rows.push(row);
   });
+  // An `alwaysGroup` option no row holds: its section, empty (after the rows,
+  // so discovery order — the tie-break — stays the rows').
+  for (const value of alwaysValues) {
+    const bucketed = bucketOf(value);
+    if (bucketed) place(bucketed);
+  }
 
   const dir = opts.order === "desc" ? -1 : 1;
   // In row order, a section's first row is where the server's sort placed it;

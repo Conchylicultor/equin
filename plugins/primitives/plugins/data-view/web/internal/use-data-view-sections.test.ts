@@ -142,6 +142,44 @@ describe("partitionIntoSections", () => {
     expect(sections[0]!.key).toBeNull();
   });
 
+  test("an `alwaysGroup` option is a section with no rows, in the grouping's order", () => {
+    const field: FieldDef<Task> = {
+      ...statusField,
+      options: [
+        { value: "todo", label: "To do", alwaysGroup: true },
+        { value: "doing", label: "Doing", alwaysGroup: true },
+        { value: "done", label: "Done" },
+      ],
+    };
+    const rows: Task[] = [{ id: "1", status: "doing" }];
+    const sections = partitionIntoSections(
+      rows,
+      [field],
+      by("status"),
+      rowKey,
+      {
+        ...stubOpts({ enum: optionOrderGrouping }),
+      },
+    );
+    // "todo" holds no row but is drawn (first, by its ordinal); "done" holds
+    // none and is not.
+    expect(sections.map((s) => s.key)).toEqual(["todo", "doing"]);
+    expect(sections.map((s) => s.count)).toEqual([
+      { kind: "exact", n: 0 },
+      { kind: "exact", n: 1 },
+    ]);
+    expect(sections[0]!.entries).toEqual([]);
+    // The identity grouping draws it too.
+    const identity = partitionIntoSections(
+      rows,
+      [{ ...field, type: "text" }],
+      by("status"),
+      rowKey,
+      stubOpts(),
+    );
+    expect(identity.map((s) => s.key).sort()).toEqual(["doing", "todo"]);
+  });
+
   test("the grouping's `order` drives section order — not discovery, not value", () => {
     const rows: Task[] = [
       { id: "1", status: "done" },

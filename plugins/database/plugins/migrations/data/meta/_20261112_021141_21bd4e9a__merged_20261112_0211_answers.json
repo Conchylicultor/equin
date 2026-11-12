@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "answers": [
+    {
+      "key": "column:conversations_ext_queue.section",
+      "entityType": "column",
+      "entityName": "section",
+      "action": "create"
+    }
+  ]
+}

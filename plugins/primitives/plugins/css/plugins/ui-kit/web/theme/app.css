@@ -46,6 +46,9 @@
     --z-raised:  10;   /* sticky headers, hover chrome, drag handles            */
     --z-nav:     20;   /* persistent app chrome: sidebar, app-rail, pane header  */
     --z-float:   30;   /* in-pane floating widgets: selection bar, message TOC   */
+    --z-drag:    35;   /* the item a drag carries, while carried: a dragged row
+                          (or the stacking box holding it) paints over every
+                          in-pane band — sticky headers, the toolbar, floats */
     --z-overlay: 40;   /* full-pane bespoke overlays                             */
     --z-popover: 50;   /* portaled floating layers: floating-action, lightboxes  */
     /* 51…: the top-layer stack — app-wide surfaces (hints, Ask, draw, toasts)
@@ -2531,6 +2534,7 @@
 @utility z-raised  { z-index: var(--z-raised); }  /* twmerge: extend z */
 @utility z-nav     { z-index: var(--z-nav); }     /* twmerge: extend z */
 @utility z-float   { z-index: var(--z-float); }   /* twmerge: extend z */
+@utility z-drag    { z-index: var(--z-drag); }    /* twmerge: extend z */
 @utility z-overlay { z-index: var(--z-overlay); } /* twmerge: extend z */
 @utility z-popover { z-index: var(--z-popover); } /* twmerge: extend z */
 @utility z-max     { z-index: var(--z-max); }     /* twmerge: extend z */

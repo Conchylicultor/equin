@@ -52,11 +52,11 @@ export interface VirtualRowsProps<T> {
    */
   keepMounted?: readonly string[];
   /**
-   * Item key whose wrapper is lifted onto the raised z-layer. Each wrapper is
+   * Item key whose wrapper is lifted onto the `drag` z-layer. Each wrapper is
    * transformed, so it is its own stacking context and nothing inside it can
-   * paint over a later sibling wrapper; a row dragged across its neighbours
-   * (sortable reorder) needs its wrapper raised instead. Pass the active drag
-   * id while a drag is in flight, nothing otherwise.
+   * paint over a later sibling wrapper (or a sticky header); a row dragged
+   * across its neighbours (sortable reorder) needs its wrapper lifted instead.
+   * Pass the active drag id while a drag is in flight, nothing otherwise.
    */
   raisedKey?: string;
   /**
@@ -453,7 +453,7 @@ export function VirtualRows<T>({
           ref={virtualizer.measureElement}
           x={{ start: 0, end: 0 }}
           y={{ start: 0, shift: vi.start - scrollMargin }}
-          layer={vi.key === raisedKey ? "raised" : undefined}
+          layer={vi.key === raisedKey ? "drag" : undefined}
           className={itemClassName}
         >
           {children(drawn[vi.index]!, vi.index)}

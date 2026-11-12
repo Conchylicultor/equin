@@ -1,5 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { Trigger } from "@plugins/infra/plugins/events/server";
+import { IdKinds } from "@plugins/ids/server";
 import {
   conversationCreated,
   taskStatusChanged,
@@ -9,11 +10,17 @@ import { handlePromote } from "./internal/handle-promote";
 import { handleDemote } from "./internal/handle-demote";
 import { handleStepDown } from "./internal/handle-step-down";
 import { handleRerank } from "./internal/handle-rerank";
-import { handlePin } from "./internal/handle-pin";
+import { handleFile } from "./internal/handle-file";
+import {
+  handleCreateSection,
+  handleRenameSection,
+  handleMoveSection,
+  handleDeleteSection,
+} from "./internal/handle-sections";
 import { seedRankJob } from "./internal/seed-rank-job";
 import { taskStatusRerankJob } from "./internal/task-status-rerank-job";
 import { sweepGoneRanksJob } from "./internal/sweep-gone-ranks-job";
-import { queueRanksServed } from "./internal/resource";
+import { queueRanksServed, queueSectionsServed } from "./internal/resource";
 import { repairBlockedOrder } from "./internal/repair-blocked-order";
 import {
   reorderQueue,
@@ -21,10 +28,15 @@ import {
   demoteQueue,
   stepDownQueue,
   rerankQueue,
-  pinQueue,
+  fileQueue,
+  createQueueSection,
+  renameQueueSection,
+  moveQueueSection,
+  deleteQueueSection,
+  conversationSectionIdKind,
 } from "../core";
 
-export { conversationsQueue } from "./internal/tables";
+export { conversationsQueue, _conversationSections } from "./internal/tables";
 export { seedRankJob } from "./internal/seed-rank-job";
 export {
   lockDeck,
@@ -38,14 +50,16 @@ export {
   reseatGroupMembers,
   upsertRank,
   seatJoiningGroup,
-  setGroupPinned,
+  setGroupSection,
 } from "./internal/queue-ranks";
 
 export default {
   description:
-    "Stable-rank global queue. Ranks seeded once on creation (newest first). A user-set pin lifts a conversation's task group into its own section at the top.",
+    "Stable-rank global queue. Ranks seeded once on creation (newest first). A user files a conversation's task group into a section — Pinned (built in, first) or one of their own sections (conversation_sections, served as queue-sections) — or leaves it in the Queue.",
   contributions: [
     ...queueRanksServed.declare,
+    ...queueSectionsServed.declare,
+    IdKinds.Kind({ kind: conversationSectionIdKind }),
     Trigger({
       on: conversationCreated,
       do: seedRankJob,
@@ -68,7 +82,11 @@ export default {
     [demoteQueue.route]: handleDemote,
     [stepDownQueue.route]: handleStepDown,
     [rerankQueue.route]: handleRerank,
-    [pinQueue.route]: handlePin,
+    [fileQueue.route]: handleFile,
+    [createQueueSection.route]: handleCreateSection,
+    [renameQueueSection.route]: handleRenameSection,
+    [moveQueueSection.route]: handleMoveSection,
+    [deleteQueueSection.route]: handleDeleteSection,
   },
   onReady: repairBlockedOrder,
 } satisfies ServerPluginDefinition;

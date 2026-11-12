@@ -20519,35 +20519,31 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/data-view.defineItemActions`
                   - `primitives/data-view.liveDataSource`
                   - `primitives/icon-button.IconButton`
-            - **`queue`** — Contributes the priority Queue (pin/status group-by sections, task-group aggregation, supervised tasks nested beneath their supervisor's row (attach, per-view Sub-items), and neighbor-based manual-order drag over the queue's live data/mutation layer) as the Queue source of the merged conversation-sidebar DataView.
+            - **`queue`** — Contributes the priority Queue (Pinned, user-made and status group-by sections — drag a row across them or onto New section, rename / reorder / delete sections from their headers, Move to on each row — task-group aggregation, supervised tasks nested beneath their supervisor's row (attach, per-view Sub-items), and neighbor-based manual-order drag over the queue's live data/mutation layer) as the Queue source of the merged conversation-sidebar DataView.
               - Web:
                 - Slots: `queue-actions`
                 - Slot contributors: `queue-actions` ← `conversations.conversations-view.data-view.queue`
                 - Contributes:
                   - `SidebarSources` "Queue" → `QueueSource`
                   - `queue-actions` "pin" → `PinAction`
+                  - `queue-actions` "move-to" → `MoveToAction`
                   - `queue-actions` "promote" → `PromoteAction`
                   - `queue-actions` "step-down" → `StepDownAction`
                   - `queue-actions` "demote" → `DemoteAction`
                   - `queue-actions` "add-to-queue" → `AddToQueueAction`
                   - `queue-actions` "close" → `CloseAction`
-                - Uses:
-                  - `conversations/conversations-view/data-view.ConversationSidebarProps`
-                  - `conversations/conversations-view/data-view.SidebarConversationDot`
-                  - `conversations/conversations-view/data-view.SidebarConversationItem`
-                  - `conversations/conversations-view/data-view.SidebarSources`
-                  - `conversations/conversations-view/queue.classifyQueue`
-                  - `conversations/conversations-view/queue.TaskGroup`
+                - Uses: 24 symbols — full list in [`plugins/conversations/plugins/conversations-view/plugins/data-view/plugins/queue/REFERENCE.md`](../plugins/conversations/plugins/conversations-view/plugins/data-view/plugins/queue/REFERENCE.md)
+                  - `primitives/css/ui-kit` ×8
+                  - `conversations/conversations-view/data-view` ×4
+                  - `primitives/data-view` ×4
+                  - `conversations/conversations-view/queue` ×2
+                  - `network/live/live-state` ×2
                   - `infra/endpoints.useFetchEndpoint`
                   - `network/live.useLive`
-                  - `network/live/live-state.combineResources`
-                  - `network/live/live-state.ResourceReadiness`
-                  - `primitives/data-view.DataViewPaging`
-                  - `primitives/data-view.defineItemActions`
-                  - `primitives/data-view.FieldDef`
-                  - `primitives/data-view.fieldOverrides`
-                  - `primitives/data-view.useLivePagesPaging`
                   - `primitives/icon-button.IconButton`
+                  - `ui/icons.Icon`
+              - Cross-plugin:
+                - Uses tokens: `ui/tokens/shape --spacing`
         - **`grouped`** — Registers the conversation-group id kind (`cgrp-…`) in the browser's id registry, the twin of the server registration. Conversation-group persistence (tables + addMemberToGroup) backing the improve plugin's group-on-launch. No UI.
           - Web:
             - Contributes: `IdKinds.Kind` "cgrp"
@@ -20572,22 +20568,37 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `conversationGroupIdKind`
           - Cross-plugin:
             - Imported by: `wish`
-        - **`queue`** — Queue classification (classifyQueue) consumed by the DataView Queue tab; a reorder is the server's (reorderQueue mints the rank). Ranks seeded once on creation (newest first); a user-set pin lifts a waiting task group into its own top section. Stable-rank global queue. Ranks seeded once on creation (newest first). A user-set pin lifts a conversation's task group into its own section at the top.
+        - **`queue`** — Queue classification (classifyQueue) consumed by the DataView Queue tab; a reorder is the server's (reorderQueue mints the rank). Ranks seeded once on creation (newest first); a waiting task group the user filed into a section (Pinned, or one of their own — the csec id kind, registered here) is read out under it. Stable-rank global queue. Ranks seeded once on creation (newest first). A user files a conversation's task group into a section — Pinned (built in, first) or one of their own sections (conversation_sections, served as queue-sections) — or leaves it in the Queue.
+          - Web:
+            - Contributes: `IdKinds.Kind` "csec"
+            - Uses: `ids.IdKinds`
+            - Exports (types):
+              - `ClassifiedQueue`
+              - `RankedConversation`
+              - `TaskGroup`
+            - Exports (values): `classifyQueue`
           - Server:
             - Contributes:
               - `resource.declare` "queue-ranks"
               - `resource.declare` "queue-ranks:groups"
               - `resource.declare` "queue-ranks:rows"
+              - `resource.declare` "queue-sections"
+              - `resource.declare` "queue-sections:rows"
+              - `ids.kind` "csec"
               - `trigger` "queue.seed-rank"
               - `trigger` "queue.task-status-rerank"
             - Uses:
               - `database.db`
+              - `ids.IdKinds`
               - `infra/endpoints.HttpError`
               - `infra/endpoints.implement`
+              - `infra/entities.defaultNow`
+              - `infra/entities.defineEntity`
               - `infra/entity-extensions.defineExtension`
               - `infra/events.Trigger`
               - `infra/jobs.defineJob`
               - `network/live.serveCollection`
+              - `primitives/rank.rankAdjacentTo`
               - `tasks/tasks-core._attempts`
               - `tasks/tasks-core._conversations`
               - `tasks/tasks-core.conversationCreated`
@@ -20598,6 +20609,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - DB schema: `plugins/conversations/plugins/conversations-view/plugins/queue/server/internal/tables.ts`
             - Entity extension of: `tasks/tasks-core` (table `conversations_ext_queue`)
             - Exports (values):
+              - `_conversationSections`
               - `conversationsQueue`
               - `endRank`
               - `findTaskIdForConversation`
@@ -20610,7 +20622,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reseatGroupMembers`
               - `seatJoiningGroup`
               - `seedRankJob`
-              - `setGroupPinned`
+              - `setGroupSection`
               - `upsertRank`
             - Register:
               - `defineJob('queue.seed-rank')`
@@ -20620,32 +20632,54 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `queue-ranks` (keyed, window)
               - `queue-ranks:groups` (push)
               - `queue-ranks:rows` (keyed, point)
+              - `queue-sections` (keyed)
+              - `queue-sections:rows` (keyed, point)
             - Routes:
               - `POST /api/conversations-queue/reorder`
               - `POST /api/conversations-queue/promote`
               - `POST /api/conversations-queue/demote`
               - `POST /api/conversations-queue/step-down`
               - `POST /api/conversations-queue/rerank`
-              - `POST /api/conversations-queue/pin`
+              - `POST /api/conversations-queue/file`
+              - `POST /api/conversations-queue/sections/create`
+              - `POST /api/conversations-queue/sections/rename`
+              - `POST /api/conversations-queue/sections/move`
+              - `POST /api/conversations-queue/sections/delete`
           - Core:
             - Uses:
-              - `fields/bool/config.boolField`
+              - `fields.nullable`
+              - `fields/date/config.dateField`
               - `fields/rank/config.rankField`
               - `fields/rank/config.rankValueField`
+              - `fields/text/config.textField`
+              - `ids.defineIdKind`
+              - `ids.idKindField`
+              - `ids.IdOf`
               - `infra/endpoints.defineEndpoint`
+              - `infra/entities.entityRef`
               - `infra/entity-extensions.defineExtensionShape`
               - `network/live.liveCollection`
               - `primitives/rank.RankSchema`
             - Exports (types):
+              - `ConversationSectionId`
               - `QueueData`
               - `QueueRankRow`
+              - `QueueSectionKey`
               - `ReorderQueueBody`
             - Exports (values):
+              - `conversationSectionIdKind`
+              - `createQueueSection`
+              - `deleteQueueSection`
               - `demoteQueue`
-              - `pinQueue`
+              - `fileQueue`
+              - `moveQueueSection`
+              - `PINNED_SECTION`
               - `promoteQueue`
               - `queueRanks`
+              - `queueSections`
+              - `queueSectionsEntityRef`
               - `queueShape`
+              - `renameQueueSection`
               - `reorderQueue`
               - `rerankQueue`
               - `stepDownQueue`
@@ -20654,12 +20688,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/website/promo-film/seed`
               - `conversations/conversation-view/pin`
               - `conversations/conversations-view/data-view/queue`
-          - Web:
-            - Exports (types):
-              - `ClassifiedQueue`
-              - `RankedConversation`
-              - `TaskGroup`
-            - Exports (values): `classifyQueue`
     - **`effort-provider`** — Registry mapping thinking-mode (effort) levels to Claude CLI delivery (--effort flag / --settings ultracode) and display metadata. Reusable EffortSelect picker.
       - Web:
         - Uses:
@@ -26346,10 +26374,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Fields.Identity` ×35
     - Exports (values): `Fields`
   - Cross-plugin:
-    - Imported by: 133 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
+    - Imported by: 134 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
       - `fields` ×65
       - `apps` ×21
-      - `conversations` ×9
+      - `conversations` ×10
       - `infra` ×5
       - `tasks` ×5
       - `debug` ×4
@@ -26519,11 +26547,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boolField`
               - `boolSample`
           - Cross-plugin:
-            - Imported by: 78 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
+            - Imported by: 77 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
               - `apps` ×25
               - `backup` ×12
               - `debug` ×11
-              - `conversations` ×8
+              - `conversations` ×7
               - `tasks` ×4
               - `shell` ×3
               - `infra` ×2
@@ -26774,9 +26802,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `DateFieldDef`
             - Exports (values): `dateField`
           - Cross-plugin:
-            - Imported by: 57 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
+            - Imported by: 58 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
               - `apps` ×14
-              - `conversations` ×9
+              - `conversations` ×10
               - `infra` ×6
               - `page` ×5
               - `tasks` ×5
@@ -28401,9 +28429,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `textField`
               - `textSample`
           - Cross-plugin:
-            - Imported by: 105 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
+            - Imported by: 106 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
               - `apps` ×29
-              - `conversations` ×19
+              - `conversations` ×20
               - `tasks` ×14
               - `page` ×8
               - `infra` ×6
@@ -31713,8 +31741,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Slots:
       - `IdKinds.Kind`
       - `IdKinds.Presenter`
-    - Slot contributors: 40 contributors — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
-      - `IdKinds.Kind` ×31
+    - Slot contributors: 41 contributors — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
+      - `IdKinds.Kind` ×32
       - `IdKinds.Presenter` ×9
     - Exports (types):
       - `IdPresenter`
@@ -31769,9 +31797,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `parseKindLabel`
       - `storedIdSchema`
   - Cross-plugin:
-    - Imported by: 41 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
+    - Imported by: 42 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
       - `apps` ×13
-      - `conversations` ×6
+      - `conversations` ×7
       - `primitives` ×3
       - `tasks` ×3
       - `active-data` ×2
@@ -33230,9 +33258,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `entityRef`
           - `wireSchema`
       - Cross-plugin:
-        - Imported by: 48 plugins — full list in [`plugins/infra/plugins/entities/REFERENCE.md`](../plugins/infra/plugins/entities/REFERENCE.md)
+        - Imported by: 49 plugins — full list in [`plugins/infra/plugins/entities/REFERENCE.md`](../plugins/infra/plugins/entities/REFERENCE.md)
           - `apps` ×10
-          - `conversations` ×7
+          - `conversations` ×8
           - `page` ×7
           - `infra` ×6
           - `debug` ×4
@@ -46020,8 +46048,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pin`
               - `pinClasses`
           - Cross-plugin:
-            - Imported by: 60 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
-              - `primitives` ×19
+            - Imported by: 61 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
+              - `primitives` ×20
               - `apps` ×17
               - `page` ×9
               - `conversations` ×4
@@ -46457,6 +46485,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/sticky/stack`
               - `primitives/data-table`
               - `primitives/data-view`
+              - `primitives/data-view/list`
               - `primitives/multi-select`
               - `primitives/pane`
               - `primitives/tabbed-view`
@@ -46889,10 +46918,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 463 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 464 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×111
               - `apps` ×108
-              - `conversations` ×52
+              - `conversations` ×53
               - `page` ×27
               - `debug` ×24
               - `ui` ×23
@@ -47196,13 +47225,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ×4
           - `DataViewSlots.Setting` ×4
           - `IdKinds.Kind` ×2
-        - Uses: 143 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Uses: 147 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `network/live` ×24
           - `primitives/css/ui-kit` ×17
           - `primitives/data-view/view-core` ×11
           - `network/live/live-state` ×7
           - `primitives/slot-render` ×5
           - `primitives/css/control-panel` ×4
+          - `primitives/rank-reorder` ×4
           - `primitives/collapsible` ×3
           - `primitives/css/sticky/stack` ×3
           - `primitives/css/text` ×3
@@ -47561,6 +47591,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `GroupBucket`
           - `GroupBucketAncestor`
           - `GroupByRule`
+          - `GroupEditConfig`
           - `GroupingPlanContext`
           - `HierarchyConfig`
           - `HostedToolbar`
@@ -47603,6 +47634,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RowSelectionConfig`
           - `RowTone`
           - `SectionCount`
+          - `SectionMove`
           - `SectionsToolbar`
           - `SectionsToolbarForms`
           - `SelectionConfig`
@@ -47623,6 +47655,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ViewSlots`
           - `ViewState`
         - Exports (values):
+          - `applySectionMove`
+          - `applySectionMoves`
           - `atLeastCount`
           - `compareValues`
           - `createLinkedHover`
@@ -47658,12 +47692,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `valuePosition`
           - `visibleSections`
       - Cross-plugin:
-        - Uses tokens: 91 vars — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Uses tokens: 92 vars — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `ui/tokens/data-view` ×53
           - `ui/tokens/color-palette` ×13
           - `ui/tokens/density` ×13
           - `ui/tokens/type-scale` ×6
-          - `ui/tokens/shadow` ×3
+          - `ui/tokens/shadow` ×4
           - `ui/tokens/shape` ×3
         - Imported by: 123 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `fields` ×39
@@ -47938,9 +47972,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`list`** — List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.
           - Web:
             - Contributes: `DataViewSlots.View` "List" → `ListView`
-            - Uses: 75 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md)
-              - `primitives/data-view` ×49
-              - `primitives/rank-reorder` ×3
+            - Uses: 85 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md)
+              - `primitives/data-view` ×50
+              - `primitives/rank-reorder` ×9
               - `primitives/tree` ×3
               - `primitives/css/spacing` ×2
               - `primitives/latest-ref` ×2
@@ -47951,8 +47985,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/fill.Fill`
               - `primitives/css/inline.Inline`
               - `primitives/css/line.Line`
+              - `primitives/css/pin.Pin`
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/row.Row`
+              - `primitives/css/sticky.Sticky`
               - `primitives/css/surface.Surface`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
@@ -47960,13 +47996,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/icon-button.IconButton`
               - `primitives/link-gesture.activationProps`
               - `primitives/virtual-rows.VirtualRows`
+              - `ui/icons.Icon`
             - Exports (types): `ListViewOptions`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --background`
               - `ui/tokens/color-palette --border`
+              - `ui/tokens/color-palette --card`
               - `ui/tokens/color-palette --faint-foreground`
               - `ui/tokens/color-palette --foreground`
+              - `ui/tokens/color-palette --input`
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/color-palette --primary`
               - `ui/tokens/data-view --list-slot-gap`
@@ -47976,7 +48015,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --space-sm`
               - `ui/tokens/density --space-xl`
               - `ui/tokens/density --space-xs`
+              - `ui/tokens/shadow --shadow-md`
               - `ui/tokens/shape --radius`
+              - `ui/tokens/shape --spacing`
           - Core:
             - Exports (types): `ListViewOptions`
         - **`map`** — Map view child for the data-view primitive: every row with a location as a pin on a full-bleed map, clustered, with clicking a pin activating its row.
@@ -51574,21 +51615,29 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RankSchema`
           - `rankText`
           - `withRank`
-    - **`rank-reorder`** — Rank-based drag-reorder primitive. Flat lists and grids: a sortable RankReorderProvider (one SortableContext, the dragged row follows the pointer and its group's rows slide, drops resolved to a Rank via computeFlatReorder, group-by aware) and useRankSortableItem per row. The tree: RankReorderDndContext + useRankReorderItem (indicator-line before/after droppables and a drag chip). Depends only on rank + dnd-kit.
+    - **`rank-reorder`** — Rank-based drag-reorder primitive. Flat lists and grids: a sortable RankReorderProvider (one SortableContext, the dragged row follows the pointer and its group's rows slide, drops resolved to a Rank via computeFlatReorder, group-by aware; with onReseat + slideAcrossGroups a row dragged into another group is previewed there so its rows slide, group headers / empty bands take anchorless drops, an optional new-group target, and sortable whole-group blocks) and useRankSortableItem per row. The tree: RankReorderDndContext + useRankReorderItem (indicator-line before/after droppables and a drag chip). Depends only on rank + dnd-kit.
       - Web:
         - Uses:
           - `primitives/css/text.Text`
           - `primitives/sortable-list.useChromePointerSensor`
         - Exports (types):
+          - `RankDragPreview`
           - `RankReorderDndContextProps`
           - `RankReorderItem`
           - `RankReorderItemControls`
           - `RankReorderProviderProps`
+          - `RankReseatDest`
+          - `RankSortableGroupControls`
+          - `RankSortableGroups`
           - `RankSortableItemControls`
         - Exports (values):
           - `RankReorderDndContext`
           - `RankReorderProvider`
+          - `useRankDragState`
+          - `useRankGroupDropTarget`
+          - `useRankNewGroupTarget`
           - `useRankReorderItem`
+          - `useRankSortableGroup`
           - `useRankSortableItem`
       - Cross-plugin:
         - Uses tokens:
@@ -51599,6 +51648,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --radius`
         - Imported by:
+          - `primitives/data-view`
           - `primitives/data-view/icons`
           - `primitives/data-view/list`
           - `primitives/data-view/table`
@@ -60893,9 +60943,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-3xs`
               - `ui/tokens/type-scale --line-height-caption`
-            - Tokens used by: 52 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
+            - Tokens used by: 53 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
               - `apps` ×20
-              - `primitives` ×10
+              - `primitives` ×11
               - `ui` ×5
               - `framework` ×3
               - `page` ×3
@@ -60941,8 +60991,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --radius-chip-compact`
               - `ui/tokens/density --space-sm`
-            - Tokens used by: 402 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
-              - `conversations` ×93
+            - Tokens used by: 403 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+              - `conversations` ×94
               - `apps` ×82
               - `primitives` ×60
               - `page` ×36
