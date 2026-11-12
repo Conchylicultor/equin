@@ -6,12 +6,14 @@ import type { BashInput, FileInput } from "../types";
 import { writeTargets } from "./main-writes";
 
 /**
- * Claude Code's auto-memory lives at `~/.claude/projects/<slug>/memory/**`.
- * Agents here must not add to it: a memory reaches one agent on one machine,
+ * Claude Code's auto-memory lives at `~/.claude/projects/<slug>/memory/**`;
+ * a checkout's `.claude/memory/**` is the same thing kept in a repo. Agents
+ * here must not add to either: a memory reaches one agent on one machine,
  * while the fix it describes belongs in the code, a check, or a CLAUDE.md that
  * every agent reads (see "Don't memorize gotchas" in the root CLAUDE.md).
  */
 export function isMemoryPath(p: string): boolean {
+  if (p.includes("/.claude/memory/")) return true;
   const prefix = `${HOME_DIR}/.claude/projects/`;
   if (!p.startsWith(prefix)) return false;
   const rest = p.slice(prefix.length);

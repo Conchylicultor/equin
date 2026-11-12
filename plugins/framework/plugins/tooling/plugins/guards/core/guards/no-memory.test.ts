@@ -26,6 +26,11 @@ describe("no-memory guard", () => {
     expect(blocks({ command: `tee ${MEM}/fact.md` })).toBe(true);
   });
 
+  test("blocks a checkout's .claude/memory dir", () => {
+    expect(blocks({ file_path: `${WT}/.claude/memory/MEMORY.md` })).toBe(true);
+    expect(blocks({ command: `echo x > .claude/memory/fact.md` })).toBe(true);
+  });
+
   test("allows removing and reading memories", () => {
     expect(blocks({ command: `rm ${MEM}/fact.md` })).toBe(false);
     expect(blocks({ command: `cat ${MEM}/MEMORY.md` })).toBe(false);
