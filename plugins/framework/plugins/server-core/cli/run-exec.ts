@@ -6,6 +6,7 @@ import { settleDeclaredDataDirMoves } from "@plugins/infra/plugins/paths/core";
 import { recordMemoryCheckpoint } from "../core/profiler";
 import { bootPluginGraph, runShutdownHooks } from "../core/boot-stages";
 import { installProcessCrashListeners } from "../core/process-crash-listeners";
+import { declareComposedWebPlugins } from "../core/composed-web-plugins";
 
 // ── `exec` — the short-lived boot mode ───────────────────────────────────────
 //
@@ -150,8 +151,10 @@ export async function runExec(
     // only: an exec child never moves shared data (infra/paths CLAUDE.md,
     // § Moving a declared dir).
     await settleDeclaredDataDirMoves({ perform: false });
-    const { serverEntries, machineEntries } =
+    const { serverEntries, machineEntries, serverComposition } =
       await import("../bin/active-runtime");
+    // The same answer `serve` declares, off the same registry.
+    declareComposedWebPlugins(serverComposition.webPlugins);
     ordered = await bootPluginGraph({
       mode: "exec",
       afterLoad: treeRead.releaseNow,

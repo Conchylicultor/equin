@@ -529,6 +529,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `BrowserHostBoot`
     - `BrowserHostOptions`
     - `ChangeSource`
+    - `ComposedEntry`
     - `DependsOnEntry`
     - `EndpointHttpHandler`
     - `EpochHandoffHooks`
@@ -597,6 +598,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `bootBrowserHost`
     - `boundedMembershipKeys`
     - `collectContributions`
+    - `composedOnly`
     - `defineDeferredResource`
     - `defineExternalResource`
     - `defineHostService`
@@ -671,7 +673,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `validatePersistedValue`
     - `withNotifyBatch`
 - Cross-plugin:
-  - Imported by: 112 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 113 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra` ×28
     - `debug` ×14
     - `conversations` ×11
@@ -686,6 +688,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `framework` ×2
     - `integrations` ×2
     - `ui` ×2
+    - `apps-core`
     - `backup`
     - `config_v2`
     - `fields/server-capabilities`

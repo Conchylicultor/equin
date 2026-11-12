@@ -15,7 +15,7 @@ import { appIconPng } from "./icon-png";
 export const handleAppIcon = machineHandler(
   getAppIconPng,
   async (_req, params) => {
-    const app = installableApp(declaredApps, params.appId ?? "");
+    const app = installableApp(declaredApps(), params.appId ?? "");
     const size = parseAppIconFile(params.file ?? "");
     if (app === undefined || size === null) {
       return new Response(

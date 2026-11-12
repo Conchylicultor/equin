@@ -232,8 +232,7 @@ function declaringPlugins(
 
 /**
  * The bundled web barrels (and web-sdk's seed): what the browser loads — of
- * the main composition, or of the composition whose `bundle` is passed (a
- * composition build's post-web manifests, `writeCompositionManifests`).
+ * the main composition, or of the composition whose `bundle` is passed.
  */
 export async function bundledWebBarrels(
   pass: CodegenPass,

@@ -66,7 +66,9 @@ const check: Check = {
       subThemes: SUB_THEME_SLOT,
     });
     const contributed = new Set(
-      subThemes.flatMap((c) => (typeof c.id === "string" ? [c.id] : [])),
+      subThemes.flatMap(({ contribution: c }) =>
+        typeof c.id === "string" ? [c.id] : [],
+      ),
     );
     const missing = uncontributedSubThemes(declared, contributed);
     if (missing.length === 0) return { ok: true };

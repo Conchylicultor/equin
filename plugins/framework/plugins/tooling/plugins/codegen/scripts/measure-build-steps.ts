@@ -335,7 +335,6 @@ if (order === "pipeline") {
     await regenerateManifestCodegen({
       pass,
       onStep: record("  man: "),
-      compositions: [],
     });
   });
   const t = await treeCounts();

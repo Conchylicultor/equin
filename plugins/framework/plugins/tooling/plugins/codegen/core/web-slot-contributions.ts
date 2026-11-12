@@ -7,6 +7,12 @@ export type WebSlotContribution = Record<string, unknown> & {
   _slot?: SlotHandle;
 };
 
+/** One contribution, with the web plugin (dot-form id) whose barrel made it. */
+export interface ContributedBy {
+  plugin: string;
+  contribution: WebSlotContribution;
+}
+
 /**
  * Every contribution the bundled web barrels make to the named slots, grouped
  * by section, as the build's evaluated records hold them (data: a function is a
@@ -16,14 +22,16 @@ export type WebSlotContribution = Record<string, unknown> & {
  * Generic: keyed on slot id, never naming a contributor. Bundle-scoped: a
  * plugin the composition does not bundle is not loaded by its browser, so its
  * contributions are not collected — the main composition's bundle by default,
- * or the `bundle` passed (a composition's own manifests). A stale slot id
- * throws (resolved up front) instead of matching nothing.
+ * or the `bundle` passed. Each comes with its contributing plugin, so a
+ * manifest can tag its entries and a backend keep those its own composition
+ * loads (`composedOnly`, server-core). A stale slot id throws (resolved up
+ * front) instead of matching nothing.
  */
 export async function collectWebSlotContributions<S extends string>(
   pass: CodegenPass,
   slotIds: Record<S, string>,
   bundle?: ReadonlySet<string>,
-): Promise<Record<S, WebSlotContribution[]>> {
+): Promise<Record<S, ContributedBy[]>> {
   // The evaluated bundled web barrels, and the registry naming settled over
   // them — so each contribution's slot can be named, with no barrel imported
   // when nothing changed. The naming is the main registry's: the slots these
@@ -40,7 +48,7 @@ export async function collectWebSlotContributions<S extends string>(
   );
   const out = Object.fromEntries(
     (Object.keys(slotIds) as S[]).map((s) => [s, []]),
-  ) as unknown as Record<S, WebSlotContribution[]>;
+  ) as unknown as Record<S, ContributedBy[]>;
   for (const ref of refs) {
     const def = ev.barrels.module(ref.path).default as
       { contributions?: WebSlotContribution[] } | undefined;
@@ -50,7 +58,7 @@ export async function collectWebSlotContributions<S extends string>(
       if (lookup.kind !== "named") continue;
       const section = sectionBySlotId.get(lookup.id);
       if (section === undefined) continue;
-      out[section].push(c);
+      out[section].push({ plugin: ref.pluginId, contribution: c });
     }
   }
   return out;

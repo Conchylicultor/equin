@@ -3,7 +3,11 @@
 import "./host-probes";
 // The registry this exec child boots: the namespace's composition, selected at
 // runtime by `./plugins-active` (by identity, off the namespace's spec.json).
-import { serverEntries, machineEntries } from "./plugins-active";
+import {
+  serverEntries,
+  machineEntries,
+  serverComposition,
+} from "./plugins-active";
 
 // ── What an `exec` child boots ───────────────────────────────────────────────
 //
@@ -22,4 +26,4 @@ import { serverEntries, machineEntries } from "./plugins-active";
 // `bin/` and `cli/` edges sit outside the server import graph, so `cli/` can
 // reach it from here.
 
-export { serverEntries, machineEntries };
+export { serverEntries, machineEntries, serverComposition };

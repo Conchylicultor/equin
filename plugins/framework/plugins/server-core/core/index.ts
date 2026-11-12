@@ -73,6 +73,8 @@ export type {
 export type { ServerRegistryEntry } from "./boot-stages";
 export { recordLoaderReadSet } from "./read-set";
 export { getBootMode, registeringPlugin } from "./boot-mode";
+export { composedOnly } from "./composed-web-plugins";
+export type { ComposedEntry } from "./composed-web-plugins";
 export { sinkHandler } from "./sink-handler";
 export { isProcessCrashHandled, processCrashSink } from "./process-crash";
 export type { ProcessCrash, ProcessCrashEvent } from "./process-crash";

@@ -34,8 +34,8 @@ async function catalogApp(app: AppRef): Promise<CatalogApp> {
 export async function appCatalog(): Promise<AppCatalog> {
   return {
     apps: await Promise.all(
-      declaredApps.flatMap((d) => {
-        const app = installableApp(declaredApps, d.app.id);
+      declaredApps().flatMap((d) => {
+        const app = installableApp(declaredApps(), d.app.id);
         return app === undefined ? [] : [catalogApp(app)];
       }),
     ),

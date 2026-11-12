@@ -1244,7 +1244,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
       // registry: the main composition's registry IS the committed
       // `<dir>.generated.ts`, so stage 1 has nothing to write and skips the
       // plugin-tree walk entirely.
-      const { pass, hosted } = await prepareCompositionSources({
+      const { pass } = await prepareCompositionSources({
         root,
         manifest,
         compositions: targets.map((t) => t.composition),
@@ -1343,7 +1343,6 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
       await generateAppSources({
         root,
         pass,
-        hosted,
         migration: {
           name: opts.migrationName,
           reset: opts.resetMigration,

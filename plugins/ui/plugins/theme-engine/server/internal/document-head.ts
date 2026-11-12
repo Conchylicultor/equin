@@ -18,7 +18,8 @@ import {
 } from "../../core";
 import { declaredApps } from "@plugins/apps-core/server";
 import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
-import { codeThemes, tokenGroups } from "./theme-declarations.generated";
+import { composedOnly } from "@plugins/framework/plugins/server-core/core";
+import * as declared from "./theme-declarations.generated";
 import { ThemeEngine } from "./source";
 import { renderThemeHead } from "./theme-head";
 
@@ -28,7 +29,10 @@ async function themesById(): Promise<Map<ThemeId, Theme>> {
     ThemeEngine.Source.getContributions().map((s) => s.list()),
   );
   const byId = new Map<ThemeId, Theme>();
-  for (const theme of [...codeThemes, ...stored.flat()]) {
+  for (const theme of [
+    ...composedOnly(declared.codeThemes),
+    ...stored.flat(),
+  ]) {
     if (byId.has(theme.id)) {
       throw new Error(
         `[theme-engine] two themes claim the id "${theme.id}" — theme ids must be unique across code themes and every ThemeEngine.Source.`,
@@ -52,7 +56,7 @@ async function render(): Promise<HeadFragments> {
   // Only a tab app is opened by a page at its
   // base path. A surface-mode app's base path (`/desktop`) is a route prefix in
   // front of another app's URL — the `""` entry these pages already fall back to.
-  const apps = declaredApps.map(({ app, launch }) => ({
+  const apps = declaredApps().map(({ app, launch }) => ({
     id: app.id,
     ...(launch === "tab" && { basePath: app.basePath }),
     colorMode: effectiveColorMode(globalMode, {
@@ -64,7 +68,9 @@ async function render(): Promise<HeadFragments> {
   }));
   return renderThemeHead(
     {
-      groups: tokenGroups,
+      // The composition's own declarations: the entries of the plugins its
+      // browser loads (`composedOnly`), never every app's of the checkout.
+      groups: composedOnly(declared.tokenGroups),
       themesById: await themesById(),
     },
     apps,

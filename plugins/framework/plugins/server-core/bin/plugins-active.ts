@@ -36,7 +36,7 @@ const namespace = runtimeNamespace();
 const coreDir = join(import.meta.dir, "../core");
 const composition = readSpecComposition(worktreesDir(), namespace);
 
-export const { serverEntries } = (await import(
+export const { serverEntries, composition: serverComposition } = (await import(
   selectRegistry(coreDir, namespace, composition, "server")
 )) as typeof import("../core/server.generated");
 export const { machineEntries } = (await import(

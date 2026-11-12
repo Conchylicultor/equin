@@ -5,7 +5,7 @@ import { appManifestFor } from "./manifest";
 
 /** `GET /api/apps/:appId/manifest.webmanifest` — 404 for an app that cannot be installed. */
 export const handleAppManifest = implement(getAppManifest, ({ params }) => {
-  const app = installableApp(declaredApps, params.appId);
+  const app = installableApp(declaredApps(), params.appId);
   if (app === undefined) {
     throw new HttpError(
       404,

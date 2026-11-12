@@ -284,7 +284,7 @@ export async function runHermeticBuild(opts: {
       // exists only in someone's user-layer `compositions.jsonc` is deliberately not
       // releasable. The deploy posture reads the checkout's RESOLVED config instead
       // (`./build-targets.ts`) — the divergence is stated at both ends.
-      const { pass, hosted } = await prepareCompositionSources({
+      const { pass } = await prepareCompositionSources({
         root,
         manifest: compositionsConfig.fields.manifests.defaultValue,
         compositions: opts.compositions,
@@ -305,7 +305,6 @@ export async function runHermeticBuild(opts: {
       await generateAppSources({
         root,
         pass,
-        hosted,
         migration: opts.migration,
         hooks,
       });

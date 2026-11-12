@@ -591,16 +591,33 @@ export async function renderCollectedDirRegistry(opts: {
 }): Promise<string> {
   const { ctx, def, bundle } = opts;
   const { entries, deps } = await collectEntriesWithDeps(ctx, def.dir, bundle);
+  const composed = def.membership === "composition";
   return renderRegistry(
     def.dir,
     entries,
     deps,
-    def.membership === "composition" ? opts.composition : null,
-    def.dir === SCOPED_ENTRIES_DIR && def.membership === "composition"
+    composed ? opts.composition : null,
+    def.dir === SCOPED_ENTRIES_DIR && composed
       ? await collectScopedEntries(ctx, def.dir, bundle)
+      : null,
+    def.dir === WEB_PLUGINS_DIR && composed
+      ? (await collectEntriesWithDeps(ctx, SCOPED_ENTRIES_DIR, bundle)).entries
+          .map((e) => e.id)
+          .sort()
       : null,
   );
 }
+
+/**
+ * The dir whose registry also states its composition's WEB plugins
+ * (`composition.webPlugins`, dot-form ids — the plugins its web registry
+ * lists): the server, which cannot see web slots, keeps only those plugins'
+ * entries of the post-web manifests (`composedOnly`, server-core). Declared
+ * once per backend, off the registry its entry imported (`bin/serve.ts`,
+ * `cli/run-exec.ts`), so a dev composition backend and a release read the one
+ * committed manifest through the same filter.
+ */
+const WEB_PLUGINS_DIR = "server";
 
 /**
  * The dir whose registry also lists its composition's ON-DEMAND plugins
@@ -655,6 +672,7 @@ export function renderEmptyCollectedDirRegistry(
     new Map(),
     composition,
     dir === SCOPED_ENTRIES_DIR ? { entries: [], deps: new Map() } : null,
+    dir === WEB_PLUGINS_DIR ? [] : null,
   );
 }
 
@@ -751,6 +769,7 @@ function renderRegistry(
     entries: CollectedRawEntry[];
     deps: Map<string, string[]>;
   } | null,
+  webPlugins: readonly string[] | null,
 ): string {
   const exportName = `${identifierForDir(dir)}Entries`;
 
@@ -818,10 +837,16 @@ function renderRegistry(
     // a registry whose launchers offer every app reads as it always did.
     const unlisted = composition.unlisted.length > 0;
     if (unlisted) lines.push("  unlisted: readonly string[];");
+    if (webPlugins !== null) {
+      lines.push(
+        "  /** The plugins its browser loads (its web registry), dot-form ids. */",
+      );
+      lines.push("  webPlugins: readonly string[];");
+    }
     lines.push("}");
     lines.push("");
     lines.push(
-      `export const composition: CompositionIdentity = { id: ${JSON.stringify(composition.id)}, home: ${JSON.stringify(composition.home)}${unlisted ? `, unlisted: ${JSON.stringify(composition.unlisted)}` : ""} };`,
+      `export const composition: CompositionIdentity = { id: ${JSON.stringify(composition.id)}, home: ${JSON.stringify(composition.home)}${unlisted ? `, unlisted: ${JSON.stringify(composition.unlisted)}` : ""}${webPlugins !== null ? `, webPlugins: ${JSON.stringify(webPlugins)}` : ""} };`,
     );
   }
   lines.push("");
