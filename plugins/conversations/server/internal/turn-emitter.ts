@@ -10,8 +10,15 @@ import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
-import { watchTranscript } from "@plugins/conversations/plugins/transcript-watcher/server";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
+import {
+  readJsonlEventsFromChain,
+  resolveConversationTranscriptPaths,
+  watchTranscriptAppends,
+} from "@plugins/conversations/plugins/transcript-watcher/server";
+import {
+  createTurnEndTracker,
+  type TurnEnd,
+} from "@plugins/conversations/plugins/transcript-source/core";
 import {
   _conversationTurnCompletedTriggers,
   conversationTurnCompleted,
@@ -92,57 +99,102 @@ export const turnEmitterReconcileJob = defineJob({
   },
 });
 
-type EndTurnEvent = Extract<JsonlEvent, { kind: "assistant-text" }> & {
-  messageId: string;
-};
-
+// Follows one active conversation from NOW: a turn is announced when it ends
+// after the subscription (the backend's boot or the conversation becoming
+// active). Subscribing reads no history — only the transcript's appends, and
+// a backward read of each chain file's last assistant message, the context a
+// turn whose Stop hooks are still running needs. A turn that ended while the
+// backend was down is not announced, as before — except to a durable workflow
+// still waiting on this conversation, which gets the latest one replayed.
 function subscribeToConversation(conversationId: string): () => void {
-  let hasPrimed = false;
-  const emittedIds = new Set<string>();
-
-  async function handleEvents(events: JsonlEvent[]): Promise<void> {
-    // A turn is over once its Stop hooks let the agent stop — not at the
-    // `end_turn` text, which the CLI writes BEFORE running them: a waiter that
-    // tears the agent down on that text (exit_clean's finalize) killed the
-    // stop gate mid-run, and a stop a hook blocked is no end at all.
-    const endTurns = events.filter(
-      (e): e is EndTurnEvent =>
-        e.kind === "assistant-text" &&
-        e.stopReason === "end_turn" &&
-        e.stopHooks === "allowed" &&
-        typeof e.messageId === "string",
+  const tracker = createTurnEndTracker();
+  // Turns this subscription announced: the waiter replay and the append stream
+  // can both reach the latest turn.
+  const announced = new Set<string>();
+  let emitting = Promise.resolve();
+  const announce = (turn: TurnEnd) => {
+    if (announced.has(turn.messageId)) return;
+    announced.add(turn.messageId);
+    emitting = emitting.then(() =>
+      runTracked("conversations:turn-emitter-events", () =>
+        emitEndTurn(conversationId, turn),
+      ),
     );
+  };
 
-    if (!hasPrimed) {
-      // First callback (seed read): populate dedupe set without emitting.
-      // Exception: if a durable job is waiting on this conversation, replay
-      // the most recent end_turn so it can resume after a server restart.
-      for (const t of endTurns) emittedIds.add(t.messageId);
-      hasPrimed = true;
-      if (endTurns.length > 0 && (await hasPendingTrigger(conversationId))) {
-        const latest = endTurns[endTurns.length - 1];
-        if (latest) await emitEndTurn(conversationId, latest);
+  const unsubscribe = watchTranscriptAppends(
+    conversationId,
+    lastAssistantMessage,
+    ({ lines }) => {
+      // A turn is over once its Stop hooks let the agent stop — not at the
+      // `end_turn` text, which the CLI writes BEFORE running them: a waiter that
+      // tears the agent down on that text (exit_clean's finalize) killed the
+      // stop gate mid-run, and a stop a hook blocked is no end at all.
+      // Seed lines were written before this subscription: they only set up
+      // the turn in progress, and a turn they end was over before it.
+      for (const { line, seed } of lines) {
+        const ended = tracker.feed(line);
+        if (ended && !seed) announce(ended);
       }
+    },
+  );
+  void runTracked("conversations:turn-emitter-replay", () =>
+    replayForWaiter(conversationId, announce),
+  );
+  return unsubscribe;
+}
+
+/**
+ * The backward read of a file met for the first time: its lines back to the
+ * newest assistant message, that message's lines included — so a turn whose
+ * last message was written but whose Stop hooks have not answered is known.
+ */
+function lastAssistantMessage(): (
+  line: Record<string, unknown>,
+) => "take" | "stop" {
+  let newest: unknown = undefined;
+  return (line) => {
+    if (line.type !== "assistant") return "take";
+    const id = (line.message as { id?: unknown } | undefined)?.id;
+    if (newest === undefined) {
+      newest = id ?? null;
+      return "take";
+    }
+    return id === newest ? "take" : "stop";
+  };
+}
+
+/**
+ * A durable workflow waiting on this conversation (a trigger row keyed to it)
+ * may have missed its turn while the backend was down: hand it the latest
+ * finished turn. Only for a waited-on conversation — the one case a boot reads
+ * the whole transcript.
+ */
+async function replayForWaiter(
+  conversationId: string,
+  announce: (turn: TurnEnd) => void,
+): Promise<void> {
+  if (!(await hasPendingTrigger(conversationId))) return;
+  const events = await readJsonlEventsFromChain(
+    await resolveConversationTranscriptPaths(conversationId),
+  );
+  for (let i = events.length - 1; i >= 0; i--) {
+    const e = events[i]!;
+    if (
+      e.kind === "assistant-text" &&
+      e.stopReason === "end_turn" &&
+      e.stopHooks === "allowed" &&
+      typeof e.messageId === "string"
+    ) {
+      announce({ messageId: e.messageId, text: e.text });
       return;
     }
-
-    for (const t of endTurns) {
-      if (emittedIds.has(t.messageId)) continue;
-      emittedIds.add(t.messageId);
-      await emitEndTurn(conversationId, t);
-    }
   }
-
-  return watchTranscript(conversationId, ({ events }) => {
-    void runTracked("conversations:turn-emitter-events", () =>
-      handleEvents(events),
-    );
-  });
 }
 
 async function emitEndTurn(
   conversationId: string,
-  turn: EndTurnEvent,
+  turn: TurnEnd,
 ): Promise<void> {
   try {
     await conversationTurnCompleted.emit({

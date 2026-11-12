@@ -15461,10 +15461,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `report-kind` "conversation-stuck-turn"
       - `report-kind` "held-turn-undelivered"
       - `resource.declare` "conversations.partial-message"
-    - Uses: 86 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+    - Uses: 87 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
       - `tasks/tasks-core` ×27
       - `conversations/turn-ledger` ×15
-      - `conversations/transcript-watcher` ×7
+      - `conversations/transcript-watcher` ×8
       - `conversations/conversation-preprompt` ×3
       - `conversations/spawn-failure` ×3
       - `conversations/workspace` ×3
@@ -21684,10 +21684,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ToolCallResult`
           - `TranscriptChain`
           - `TranscriptImage`
+          - `TurnEnd`
           - `TurnLineKind`
           - `UserTextSegment`
         - Exports (values):
           - `activeLineUuids`
+          - `createTurnEndTracker`
           - `crossSessionMessageOf`
           - `extractPreprompt`
           - `extractTeammateMessages`
@@ -21771,6 +21773,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/tasks-core.getConversationTranscriptTail`
         - Exports (types):
           - `PathsSnapshot`
+          - `SeedBack`
+          - `TranscriptAppends`
           - `TranscriptSnapshot`
           - `WatchSpec`
           - `WatchTargets`
@@ -21789,6 +21793,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `transcriptChainSignature`
           - `watchPaths`
           - `watchTranscript`
+          - `watchTranscriptAppends`
           - `watchTranscriptFile`
         - Register:
           - `defineFileWatcher('transcript-watcher.transcripts')`

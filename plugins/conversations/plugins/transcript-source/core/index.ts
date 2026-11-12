@@ -46,3 +46,5 @@ export { hookRecordOf, resultBlockOf, sameHookOutcome } from "./hook-record";
 export type { HookRecord, HookOutcome } from "./hook-record";
 export { transcriptChainOf } from "./chain";
 export type { TranscriptChain } from "./chain";
+export { createTurnEndTracker } from "./turn-end";
+export type { TurnEnd } from "./turn-end";

@@ -76,10 +76,10 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
     - `report-kind` "conversation-stuck-turn"
     - `report-kind` "held-turn-undelivered"
     - `resource.declare` "conversations.partial-message"
-  - Uses: 86 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 87 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/tasks-core` ×27
     - `conversations/turn-ledger` ×15
-    - `conversations/transcript-watcher` ×7
+    - `conversations/transcript-watcher` ×8
     - `conversations/conversation-preprompt` ×3
     - `conversations/spawn-failure` ×3
     - `conversations/workspace` ×3

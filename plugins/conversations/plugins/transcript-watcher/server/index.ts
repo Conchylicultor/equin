@@ -7,6 +7,12 @@ import {
 } from "./internal/watcher";
 import { foreignSessionKind } from "./internal/foreign-session-kind";
 
+// A conversation's chain from NOW: only the lines appended after subscribing
+// (plus a short backward read for context), never the history — for a
+// follower that only reacts to what happens next (the turn-emitter).
+export { watchTranscriptAppends } from "./internal/appends";
+export type { TranscriptAppends, SeedBack } from "./internal/appends";
+
 export {
   watchTranscript,
   watchTranscriptFile,

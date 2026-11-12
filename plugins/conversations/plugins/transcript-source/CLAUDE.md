@@ -106,10 +106,12 @@ Design: `research/2026-10-19-global-demo-story-from-browser-worker.md` §3.
     - `ToolCallResult`
     - `TranscriptChain`
     - `TranscriptImage`
+    - `TurnEnd`
     - `TurnLineKind`
     - `UserTextSegment`
   - Exports (values):
     - `activeLineUuids`
+    - `createTurnEndTracker`
     - `crossSessionMessageOf`
     - `extractPreprompt`
     - `extractTeammateMessages`

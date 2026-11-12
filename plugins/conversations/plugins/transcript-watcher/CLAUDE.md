@@ -45,7 +45,35 @@ mtime), except on a room's first read. Values notified from it pass it on
 (`notify({ changedAt })`, network/live), so their update latency starts at the
 write.
 
-**Restart recovery**: room creation triggers an immediate seed read, so any events that landed during server downtime are delivered to subscribers on reconnect. `turn-emitter`'s `hasPendingTrigger` logic hooks into this seed callback.
+**Restart recovery**: room creation triggers an immediate seed read, so any events that landed during server downtime are delivered to subscribers on reconnect.
+
+## Following appends only: `watchTranscriptAppends`
+
+A follower that reacts only to what happens NEXT — the turn-emitter, which
+announces each agent turn that ends — never needs the chain's history, so it
+must not pay for it. `watchTranscriptAppends(id, seedBack, onAppends)` starts
+each chain file at its current end and hands over only the complete lines
+appended since (raw lines, no events built). A file met for the first time (at
+subscribe, a session switch adding one, a rewind cutting one short) is read
+backwards from its end while `seedBack` takes lines, and those few lines are
+handed over first as `seed` context — the turn-emitter takes the last assistant
+message, so a turn whose Stop hooks are still running is known.
+
+- **Why.** The turn-emitter follows every active conversation the database
+  owns (~45 on main). Through `watchTranscript` each one's first read parsed
+  the whole chain cold — only to learn which turns were already over —
+  so every boot cost active conversations × transcript size (≈ 0.7–1 s CPU
+  for 45 transcripts / 187 MB, its slices queued on the shared
+  `transcript-turn` queue for seconds). Now a boot costs a stat and a short
+  backward read per chain file (≈ 40 ms CPU, 385 lines in all, for the same
+  45), and an append costs the bytes appended.
+- **Not shared.** Each call is its own room: an append stream starts at its
+  own subscriber's now, so there is nothing a later subscriber could join (a
+  shared room would hand it the last batch again).
+- **What it gives up.** A line written to a NEW chain file before the room
+  hears of that file is read as seed context, not as an append (the status
+  reconciler adopts a session at its file's birth, so this is a window of
+  milliseconds); the same for a file a rewind cut short.
 
 ## One conversation, one projects directory — looked up, never searched
 
@@ -140,6 +168,8 @@ memo degrades to a full chain re-read on every push.
     - `tasks/tasks-core.getConversationTranscriptTail`
   - Exports (types):
     - `PathsSnapshot`
+    - `SeedBack`
+    - `TranscriptAppends`
     - `TranscriptSnapshot`
     - `WatchSpec`
     - `WatchTargets`
@@ -158,6 +188,7 @@ memo degrades to a full chain re-read on every push.
     - `transcriptChainSignature`
     - `watchPaths`
     - `watchTranscript`
+    - `watchTranscriptAppends`
     - `watchTranscriptFile`
   - Register:
     - `defineFileWatcher('transcript-watcher.transcripts')`
