@@ -688,6 +688,12 @@ All but the version are co-produced by the starter. A push drain mints
     FULL to every holder.
 - **Gate-after-dedup.** The read-admission slot is acquired INSIDE the
   single-flight, so N concurrent reads of one tuple take 1 slot.
+- **Queued probes share one signature read.** A subscription's `revalidate`
+  probe finding another probe of the same tuple still QUEUED for its slot
+  rides it (`computeEtag`'s `queuedProbes`): no slot, no second read. Sound
+  because that read has not started — it describes the state after the
+  joiner registered. A probe already admitted is never joined; an HTTP probe
+  keeps its own read. `_debug.<key>.sharedProbes`.
 - **Waiters hold no slot.** The slot is `yieldable` (`packages/semaphore`): a
   read whose loader joins another caller's in-flight work (`inflight` →
   `whileWaiting` — a shared memo's compute, another resource's flight) gives it

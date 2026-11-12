@@ -2968,6 +2968,14 @@ class ReadAbandoned extends Error {
   }
 }
 
+/**
+ * A subscription's `revalidate` probe, shareable while it waits for its
+ * read-admission slot (see `computeEtag`).
+ */
+interface QueuedProbe {
+  read: Promise<string>;
+}
+
 /** The single-flight key of one tuple's read. */
 function flightKeyOf(key: string, pk: string): string {
   return `${key} ${pk}`;
@@ -3143,6 +3151,13 @@ export function createResourceRuntime(
   // Per-key count of reads that reached a read-admission slot with nobody
   // left to answer (`ReadAbandoned`). Monotonic; surfaced in `_debug`.
   const abandonedReads = new Map<string, number>();
+  // Subscription `revalidate` probes still queued for a read-admission slot,
+  // per flight (`flightKeyOf`): a probe of the same tuple arriving meanwhile
+  // shares its signature read (`computeEtag`). Deleted the moment the probe
+  // is admitted. `sharedProbes` counts, per key, the probes that rode one
+  // (no slot, no signature read); monotonic, surfaced in `_debug`.
+  const queuedProbes = new Map<string, QueuedProbe>();
+  const sharedProbes = new Map<string, number>();
   // Per flight (`flightKeyOf`): how many callers awaiting it are NOT a
   // tuple's subscription — an HTTP read, a push drain that joined it. Their
   // want is invisible to `entry.tracked`, so a queued read counts them before
@@ -4757,6 +4772,19 @@ export function createResourceRuntime(
   // A subscription's probe (`reader: "sub"`) is dropped at the gate like its
   // read once nobody holds the tuple: `ReadAbandoned` is rethrown, never
   // reported. An HTTP probe always runs — its caller awaits the answer.
+  //
+  // Subscription probes of one tuple QUEUED together share one signature read
+  // (`queuedProbes`), as its loads share one flight (gate-after-dedup): a
+  // restart's replay restates every tuple from every tab, and each probe used
+  // to take its own slot to read the same signature — `build.deployment`'s
+  // `git rev-parse` eight times per restart, one per tab, queued behind its
+  // key's share. Sound because the shared read has not started when a probe
+  // joins it: its signature describes the state after the joiner's sub was
+  // registered, exactly what the joiner's own probe would have read. A probe
+  // already admitted is never joined (it may have read before the joiner
+  // registered, and a change in between would answer the joiner `up-to-date`
+  // over a value it never received). Subscriptions only: an HTTP probe's
+  // caller is not a tracked holder, so it keeps its own read.
   async function computeEtag(
     entry: RegistryEntry,
     params: ResourceParams,
@@ -4765,17 +4793,47 @@ export function createResourceRuntime(
     if (!entry.revalidate) return undefined;
     const revalidate = entry.revalidate;
     const pk = paramsKey(params);
+    const flightKey = flightKeyOf(entry.key, pk);
     try {
-      const run = () =>
-        admitRead(
-          entry,
-          { pk, probe: true },
-          () => reader !== "sub" || entry.tracked.has(pk),
-          () => revalidate(params, heldFollowsFor(entry, pk)),
-        );
-      const raw = await (opts.wrapOrigin
-        ? opts.wrapOrigin("sub", entry.key, run)
-        : run());
+      const queued = reader === "sub" ? queuedProbes.get(flightKey) : undefined;
+      let raw: string;
+      if (queued !== undefined) {
+        sharedProbes.set(entry.key, (sharedProbes.get(entry.key) ?? 0) + 1);
+        raw = await queued.read;
+      } else {
+        // Set once the probe is shareable; the body (run at admission)
+        // withdraws it, so no probe joins a read that may have started.
+        let shared: QueuedProbe | undefined;
+        let admitted = false;
+        const run = () =>
+          admitRead(
+            entry,
+            { pk, probe: true },
+            () => reader !== "sub" || entry.tracked.has(pk),
+            () => {
+              admitted = true;
+              if (shared && queuedProbes.get(flightKey) === shared)
+                queuedProbes.delete(flightKey);
+              return revalidate(params, heldFollowsFor(entry, pk));
+            },
+          );
+        const read = opts.wrapOrigin
+          ? opts.wrapOrigin("sub", entry.key, run)
+          : run();
+        // A memory read runs at once, inside `run`: it is admitted already.
+        if (reader === "sub" && !admitted) {
+          const probe: QueuedProbe = { read };
+          shared = probe;
+          queuedProbes.set(flightKey, probe);
+          const clear = () => {
+            if (queuedProbes.get(flightKey) === probe)
+              queuedProbes.delete(flightKey);
+          };
+          // Observes only — every awaiting caller handles the rejection.
+          void read.then(clear, clear);
+        }
+        raw = await read;
+      }
       return normalizeEtag(raw);
     } catch (err) {
       if (err instanceof ReadAbandoned) throw err;
@@ -10544,6 +10602,7 @@ export function createResourceRuntime(
       notifyStats: NotifyCounts;
       subShortCircuits: number;
       abandonedReads: number;
+      sharedProbes: number;
       pointBatches: { runs: number; joined: number };
       handoff: string;
       resumedSubs: number;
@@ -10685,6 +10744,9 @@ export function createResourceRuntime(
         // Reads skipped at the read-admission gate because every subscriber
         // of the tuple left while they queued (see `ReadAbandoned`).
         abandonedReads: abandonedReads.get(entry.key) ?? 0,
+        // `revalidate` probes that shared another queued probe's signature
+        // read (no slot, no read; see `computeEtag`).
+        sharedProbes: sharedProbes.get(entry.key) ?? 0,
         // Batched cold point reads (`PointBatch`): loads run through a batch,
         // and reads that rode one another tuple opened (no slot, no query).
         pointBatches: pointBatchStats.get(entry.key) ?? { runs: 0, joined: 0 },
