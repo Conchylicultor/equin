@@ -26,7 +26,7 @@ export type FrameResolution =
       /**
        * An agent launch that would resolve it (declare what the prototype
        * mocks, say). When present, the add rail's Compare button opens this
-       * launch popover instead of being left out.
+       * launch popover; when absent, it adds the frame, which shows the notice.
        */
       launch?: FrameLaunch;
     }

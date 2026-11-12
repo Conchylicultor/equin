@@ -32,11 +32,12 @@ export type AddFrameHandlers = Partial<
  * The canvas's add actions, as one column of icon buttons on its right edge —
  * the same rail on the canvas pane and in every presentation: `+` (a copy of
  * the last prototype frame, to change its variant or version) and one
- * **Compare with <addLabel>** per contributed frame source this prototype
- * resolves (the real app, swiped over it) — disabled while that source is
+ * **Compare with <addLabel>** per contributed frame source (the real app,
+ * swiped over it) — disabled while that source is
  * already on the canvas. A source that cannot resolve here but offers a
- * `launch` (no counterpart declared yet) keeps its button, which opens that
- * agent launch popover instead. Names no source.
+ * `launch` (no counterpart declared yet) opens that agent launch popover
+ * instead; one that cannot resolve and offers none (a declared path no app
+ * owns) still adds its frame, which names the issue. Names no source.
  *
  * By default each dispatches its action to this canvas. A surface that also
  * leaves (Present's overlay, its new-tab page) passes `extend`, and
@@ -87,23 +88,33 @@ export function AddFrameRail({
               meta={meta}
             >
               {(resolution: FrameResolution) => {
-                if (resolution.status === "found") {
+                if (resolution.status === "loading") return null;
+                if (
+                  resolution.status === "found" ||
+                  resolution.launch === undefined
+                ) {
+                  // An unresolved source with no launch still adds its frame:
+                  // the frame paints the notice naming why it cannot resolve
+                  // here (a mocked path no app owns), instead of the button
+                  // vanishing without a word.
+                  const tip =
+                    reason ??
+                    (resolution.status === "unresolved"
+                      ? `No ${source.addLabel} found here — add it to see why`
+                      : undefined);
                   return (
                     <IconButton
                       variant="floating"
                       className={railButtonClass}
                       icon={compareIcon}
                       label={compareWithLabel(source.addLabel)}
-                      tooltip={reason}
+                      tooltip={tip}
                       disabled={reason !== undefined}
                       {...(reason === undefined
                         ? handlers({ type: "addSource", source: source.id })
                         : {})}
                     />
                   );
-                }
-                if (resolution.status === "loading" || !resolution.launch) {
-                  return null;
                 }
                 const trigger = (
                   <IconButton
