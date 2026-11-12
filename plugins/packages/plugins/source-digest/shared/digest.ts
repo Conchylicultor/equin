@@ -11,6 +11,7 @@ import { fileURLToPath } from "node:url";
 import { yieldMacrotask } from "@plugins/packages/plugins/macrotask-yield/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { allSourceSets, type ClosureSince, type SourceSet } from "../core";
+import { storedFacts, storeFacts } from "./facts-store";
 import {
   createImportResolver,
   UnresolvedImportError,
@@ -159,17 +160,48 @@ function stampOf(s: { ino: number; size: number; ctimeMs: number }): string {
   return `${s.ino}:${s.size}:${s.ctimeMs}`;
 }
 
+/** A file's facts with the sha256 of the bytes they were read from. */
+interface KnownFacts {
+  sha256: string;
+  facts: FileFacts;
+}
+
 /**
- * Every repo file this process has scanned, by path: its facts and the stamp
- * its bytes had when they were read. A file whose stamp is unchanged has those
- * same bytes, so its facts are reused instead of read again — a closure walk
- * reads only what changed since this process last looked (O(closure) stats,
- * O(changed files) reads). Never a verdict: every walk still visits, stats and
- * re-resolves every file, so a new file shadowing an import, a re-pointed
- * package or a moved file is seen exactly as by a first walk. Bounded by the
- * repo files a closure of this process reaches.
+ * Every repo file this process knows the facts of, by path: its facts, its
+ * bytes' sha256 and the stamp its bytes had when they were read. A file whose
+ * stamp is unchanged has those same bytes, so its facts are reused instead of
+ * read again — a closure walk reads only what changed since this process last
+ * looked (O(closure) stats, O(changed files) reads). Never a verdict: every
+ * walk still visits, stats and re-resolves every file, so a new file shadowing
+ * an import, a re-pointed package or a moved file is seen exactly as by a
+ * first walk. Bounded by the repo files a closure of this process reaches.
+ *
+ * Backed by the host-wide store (`facts-store.ts`): facts some other process
+ * read under the stamp the file holds now are the facts of these bytes too, so
+ * a new process reads only the files written since any process read them.
  */
-const scanned = new Map<string, { stamp: string; facts: FileFacts }>();
+const scanned = new Map<string, { stamp: string } & KnownFacts>();
+
+/** This module's file: the scanner whose code the stored facts are a function of. */
+const SCANNER_MODULE = fileURLToPath(import.meta.url);
+
+/**
+ * The facts of `path` as it is now (`now`, its stat), when this process or
+ * any other read them under that stamp; `null` when the file must be read.
+ */
+async function knownFacts(
+  path: string,
+  now: { ino: number; size: number; ctimeMs: number },
+): Promise<KnownFacts | null> {
+  const stamp = stampOf(now);
+  const known = scanned.get(path);
+  if (known !== undefined && known.stamp === stamp) return known;
+  const stored = await storedFacts(SCANNER_MODULE, path, stamp);
+  if (stored === null) return null;
+  const facts = { imports: stored.imports };
+  scanned.set(path, { stamp, sha256: stored.sha256, facts });
+  return { sha256: stored.sha256, facts };
+}
 
 /**
  * Read `path` and scan it. Its facts are remembered only under a stamp the
@@ -182,18 +214,24 @@ async function readFacts(
   path: string,
   before?: { ino: number; size: number; ctimeMs: number },
 ): Promise<{
-  bytes: Buffer;
+  sha256: string;
   after: { ctimeMs: number };
   facts: FileFacts;
 }> {
   const prior = before ?? (await stat(path));
   const bytes = await readFile(path);
   const facts = scanFacts(path, bytes);
+  const hash = sha256(bytes);
   const after = await stat(path);
   const stamp = stampOf(after);
-  if (stamp === stampOf(prior)) scanned.set(path, { stamp, facts });
-  else scanned.delete(path);
-  return { bytes, after, facts };
+  if (stamp === stampOf(prior)) {
+    scanned.set(path, { stamp, sha256: hash, facts });
+    await storeFacts(SCANNER_MODULE, path, stamp, {
+      sha256: hash,
+      imports: facts.imports,
+    });
+  } else scanned.delete(path);
+  return { sha256: hash, after, facts };
 }
 
 /**
@@ -287,12 +325,18 @@ async function closureOf(entries: readonly string[]): Promise<Closure> {
   };
   const packageIds = new Map<string, Promise<string>>();
   await walkClosure(entries, {
-    // The digest hashes every byte, so it always reads; what it scans is
-    // remembered for a later `closureChangedSince` of the same files.
+    // A file whose present stamp some process read it under holds those
+    // bytes: their sha256 and imports are known. Any other is read now.
     async facts(path) {
-      const { bytes, facts } = await readFacts(path);
-      closure.files.set(path, sha256(bytes));
-      return facts;
+      const now = await stat(path);
+      const known = await knownFacts(path, now);
+      if (known !== null) {
+        closure.files.set(path, known.sha256);
+        return known.facts;
+      }
+      const read = await readFacts(path, now);
+      closure.files.set(path, read.sha256);
+      return read.facts;
     },
     async package(pkg) {
       closure.packages.add(await packageIdOf(pkg.dir, packageIds));
@@ -375,10 +419,8 @@ export async function closureChangedSince(
         if (before.ctimeMs >= sinceMs) {
           throw new ChangedSince(path, before.ctimeMs);
         }
-        const known = scanned.get(path);
-        if (known !== undefined && known.stamp === stampOf(before)) {
-          return known.facts;
-        }
+        const known = await knownFacts(path, before);
+        if (known !== null) return known.facts;
         const { after, facts } = await readFacts(path, before);
         if (after.ctimeMs >= sinceMs) {
           throw new ChangedSince(path, after.ctimeMs);
@@ -427,11 +469,10 @@ export async function closureRefusal(
   try {
     await walkClosure(entries, {
       async facts(path) {
-        const known = scanned.get(path);
-        if (known !== undefined && known.stamp === stampOf(await stat(path))) {
-          return known.facts;
-        }
-        return (await readFacts(path)).facts;
+        const now = await stat(path);
+        const known = await knownFacts(path, now);
+        if (known !== null) return known.facts;
+        return (await readFacts(path, now)).facts;
       },
       async package() {},
       builtin() {},

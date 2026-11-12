@@ -740,6 +740,7 @@ only agreement that matters.
     - `database/migrations` (0 debt)
     - `database/table-mirror/replica` (0 debt)
     - `framework/tooling/checks` (0 debt)
+    - `packages/source-digest` (0 debt)
     - `plugin-meta/plugin-records` (0 debt)
 - Machine:
   - Exports (values):

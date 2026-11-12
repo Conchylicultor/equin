@@ -14711,7 +14711,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reports.ReportRow`
       - Machine:
         - Uses: `infra/endpoints.implementMachine`
-        - Register: `defineWarmup('restart-skip.closure')`
         - Routes: `POST /api/build/restart-skip/adopt`
       - Central:
         - Uses: `packages/source-digest.closureChangedSince`
@@ -23152,6 +23151,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database/migrations` (0 debt)
           - `database/table-mirror/replica` (0 debt)
           - `framework/tooling/checks` (0 debt)
+          - `packages/source-digest` (0 debt)
           - `plugin-meta/plugin-records` (0 debt)
       - Machine:
         - Exports (values):
@@ -36774,7 +36774,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 136 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Imported by: 137 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `infra` ×34
           - `apps` ×20
           - `framework` ×20
@@ -36783,13 +36783,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build` ×6
           - `backup` ×4
           - `plugin-meta` ×4
+          - `packages` ×3
           - `primitives` ×3
           - `release` ×3
           - `reports` ×3
           - `code-explorer` ×2
           - `database` ×2
           - `integrations` ×2
-          - `packages` ×2
           - `stats` ×2
           - `config_v2`
           - `media/film`
@@ -37832,12 +37832,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `WarmupHost`
           - `warmupRunOf`
       - Cross-plugin:
-        - Imported by: 27 plugins — full list in [`plugins/infra/plugins/warmup/REFERENCE.md`](../plugins/infra/plugins/warmup/REFERENCE.md)
+        - Imported by: 26 plugins — full list in [`plugins/infra/plugins/warmup/REFERENCE.md`](../plugins/infra/plugins/warmup/REFERENCE.md)
           - `tasks` ×7
           - `apps` ×6
           - `infra` ×4
           - `conversations` ×2
-          - `build/restart-skip`
           - `database/lock-watch`
           - `debug/config-orphans`
           - `page/links`
@@ -40837,7 +40836,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withJitter`
     - **`semaphore`**
       - Cross-plugin:
-        - Imported by: 30 plugins — full list in [`plugins/packages/plugins/semaphore/REFERENCE.md`](../plugins/packages/plugins/semaphore/REFERENCE.md)
+        - Imported by: 31 plugins — full list in [`plugins/packages/plugins/semaphore/REFERENCE.md`](../plugins/packages/plugins/semaphore/REFERENCE.md)
           - `infra` ×9
           - `apps` ×6
           - `debug` ×3
@@ -40845,6 +40844,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations` ×2
           - `database` ×2
           - `packages` ×2
+          - `config_v2`
           - `integrations/youtube/song-videos`
           - `network/live/resource-runtime`
           - `plugin-meta/barrel-import`
@@ -40978,7 +40978,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `stats/commits`
           - `ui/icons/saved-sources`
       - Exemptions:
-        - Exempts itself from: `boundaries/no-platform-api` — `shared/digest.ts`, `shared/resolve.ts` (sanctioned)
+        - Exempts itself from:
+          - `boundaries/no-platform-api` — `shared/digest.ts`, `shared/resolve.ts`, `shared/facts-store.ts` (sanctioned)
+          - `imperative-create-table-allowlisted` — `shared/facts-store.ts` (sanctioned)
       - Server:
         - Exports (types): `ComputedLoads`
         - Exports (values):

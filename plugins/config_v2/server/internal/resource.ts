@@ -515,6 +515,10 @@ export const configConflictLocationsServed = serveValue(
       paths.forEach((storePath, i) => {
         const locations = all[i];
         if (locations) out[storePath] = locations;
+        // What the subscriber now holds: the push path's baseline.
+        if (locations)
+          publishedConflictLocations.set(storePath, JSON.stringify(locations));
+        else publishedConflictLocations.delete(storePath);
       });
       return out;
     }),
@@ -533,8 +537,10 @@ const publishedConflictLocations = new Map<string, string>();
 // fixing a conflict clears the badge without waiting for anything to re-read.
 // Purely a latency optimization now — the loader re-derives from disk on every
 // load regardless, so failing to call this can delay a push but can never leave a
-// wrong value behind. Also called at boot to seed both the memo and this snapshot
-// (so the first real change doesn't emit a spurious notify).
+// wrong value behind. Its baseline is what the loader last answered (it seeds
+// this snapshot), so nothing is derived at boot for a value no tab may open: a
+// change before any load compares against nothing and notifies a value nobody
+// subscribes to yet.
 export function refreshConflictLocations(storePath: string): Promise<void> {
   return publishLock.run(`conflicts\0${storePath}`, () =>
     refreshConflictLocationsNow(storePath),
@@ -594,6 +600,9 @@ export const configModifiedCountsServed = serveValue(configModifiedCounts, {
     paths.forEach((storePath, i) => {
       const count = counts[i]!;
       if (count > 0) out[storePath] = count;
+      // What the subscriber now holds: the push path's baseline.
+      if (count > 0) publishedModifiedCounts.set(storePath, count);
+      else publishedModifiedCounts.delete(storePath);
     });
     return out;
   }),
@@ -608,8 +617,8 @@ const publishedModifiedCounts = new Map<string, number>();
 // Push path: on a watcher callback or an in-process write, re-derive THIS
 // descriptor and notify iff its count moved. Purely a latency mechanism — the
 // loader re-derives from disk regardless, so failing to call this can delay a
-// badge but can never leave a wrong count behind. Also called at boot to seed the
-// snapshot, so the first real change doesn't emit a spurious notify.
+// badge but can never leave a wrong count behind. Its baseline is what the loader
+// last answered (it seeds the snapshot), as for conflict locations.
 export function refreshModifiedCount(storePath: string): Promise<void> {
   return publishLock.run(`modified\0${storePath}`, () =>
     refreshModifiedCountNow(storePath),

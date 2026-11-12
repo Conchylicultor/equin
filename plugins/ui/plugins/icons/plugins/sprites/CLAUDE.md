@@ -92,9 +92,10 @@ Saved (runtime) symbols — see the parent's "Runtime symbols":
   change bump the tick) and the on-demand runtime-symbols value (external
   `immutable`; answers only this host's `symbolsHash`).
 - `machine/`: the desktop's drawer — the per-style symbol maps
-  (`runtime-symbols.ts`: every saved name's symbol for one style, built in one
-  pass over both installed sets the first time the style is asked for, then
-  kept). The ~19 MB sets are parsed under one shared lease (`withSymbolSets`)
+  (`runtime-symbols.ts`: a name's symbol is drawn the first time it is asked
+  for, the names of one draw not drawn yet in one pass over both installed
+  sets, then kept — so a boot draws the handful of saved names, not all
+  4,240). The ~19 MB sets are parsed under one shared lease (`withSymbolSets`)
   and dropped after.
 - `plugins/bundled-symbols` (a host provider, never booted by the desktop): a
   browser host's drawer — `@iconify-json/material-symbols` (weight 400, every

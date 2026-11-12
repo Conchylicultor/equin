@@ -65,13 +65,24 @@ const digest = await sourceDigest([myCode]);
   every import (against directory listings read fresh for that walk — so a file
   added since, shadowing a resolution, is seen; `Bun.resolveSync` answers from
   an in-process directory cache, measured returning a file already deleted), but reads and scans only files whose stamp moved:
-  O(closure) stats + O(directories) listings, O(changed files) reads. restart-skip walks it once after boot (a
-  warm-up), so the first deploy asks cheaply too. The walk goes a level at a
+  O(closure) stats + O(directories) listings, O(changed files) reads. The walk goes a level at a
   time, 64 files at once with one yield per batch: one file at a time, a warm
   walk of a backend (5,371 files) spent 128 ms on stats that cost 14 ms
   batched and yielded 5,371 times, letting unrelated backend work land inside
   it (build pipeline step 13: 0.33 → 0.12 s). The stats are the floor; only a
   change signal removes them.
+- **The facts outlive the process (`shared/facts-store.ts`).** Every file's
+  facts (sha256 + imports) are recorded under its stamp in one SQLite
+  database shared by every process on the host (`sourceFactsDir`, WAL), keyed
+  by the scanner (this Bun's revision + `digest.ts`'s own bytes — a change to
+  either re-reads everything once). A stamp is the kernel's, so facts any
+  process read under the file's present stamp are the facts of its present
+  bytes: a boot's digests and a deploy's adoption walk read only the files
+  written since any process read them. Every boot used to re-read and re-scan
+  its closure (~0.6 s CPU before ready); restart-skip's boot warm-up (another
+  ~0.6 s CPU while tabs resubscribed) is gone — the build's own closure checks
+  (`boot:closure-digestable`) record the new code's facts before the deploy
+  asks. Rows unread for 14 days are dropped.
 - **Keep the included module small.** The digest moves with everything the
   module loads: include the module holding the parse or the compiler, not the
   plugin's server entry, or every unrelated change rebuilds the state.
@@ -101,7 +112,9 @@ import.meta`, carried by `Resource.Declare`) — the L2 stamps judged by
     - `stats/commits`
     - `ui/icons/saved-sources`
 - Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `shared/digest.ts`, `shared/resolve.ts` (sanctioned)
+  - Exempts itself from:
+    - `boundaries/no-platform-api` — `shared/digest.ts`, `shared/resolve.ts`, `shared/facts-store.ts` (sanctioned)
+    - `imperative-create-table-allowlisted` — `shared/facts-store.ts` (sanctioned)
 - Server:
   - Exports (types): `ComputedLoads`
   - Exports (values):

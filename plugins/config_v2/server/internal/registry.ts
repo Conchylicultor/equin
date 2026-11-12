@@ -16,6 +16,7 @@ import {
   threeWayMerge,
 } from "../../core";
 import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
+import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { diffValue } from "@plugins/packages/plugins/value-patch/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import type { Disposable, JsonValue } from "../../core";
@@ -566,13 +567,20 @@ export async function syncScopeEntryNow(
     );
 }
 
+/**
+ * How many descriptors `initRegistry` reads at once: each holds a handful of
+ * file reads and stats in flight, so a few dozen keep the disk busy without
+ * opening hundreds of files together.
+ */
+const INIT_CONCURRENCY = 16;
+
 export async function initRegistry(): Promise<void> {
   try {
     setConfigGetter(getConfig);
     const contributions = ConfigV2.Register.getContributions();
     const registered: {
       descriptor: ConfigDescriptor;
-      hierarchyPath: string;
+      storePath: string;
     }[] = [];
 
     for (const contribution of contributions) {
@@ -591,46 +599,49 @@ export async function initRegistry(): Promise<void> {
         continue;
       }
       const hierarchyPath = asPath(asPluginId(pluginId));
-
       const storePath = `${hierarchyPath}/${descriptor.name}.jsonc`;
       registerDescriptorPath(storePath, descriptor, hierarchyPath);
-
-      // Register only the BASE entry per descriptor (as today). Scoped entries are
-      // created on demand by ensureScopeEntry once a fork writes their files.
-      await buildEntry(descriptor, storePath, BASE_SCOPE);
-      registered.push({ descriptor, hierarchyPath });
+      registered.push({ descriptor, storePath });
     }
 
-    // Rehydrate scoped entries from the store. Scoped (per-app) entries are otherwise
-    // only ever created lazily on fork/setConfig, so after a server restart none
-    // exist — yet their files persist on disk (a propagated git scope's origin, or
-    // a runtime fork's override). Without this the in-memory cache silently
+    // Each descriptor's documents are read on their own: its base entry, then
+    // every scoped entry its store holds, then its scope membership — and the
+    // ~250 descriptors at once, a bounded number in flight. Read one after
+    // another, every one of the ~1.5k file reads and stats waited for the
+    // previous one: 3.5 s of a busy host's boot before the backend could serve,
+    // for ~0.8 s of work.
+    //
+    // Scoped (per-app) entries are otherwise only ever created lazily on
+    // fork/setConfig, so after a server restart none exist — yet their files
+    // persist on disk (a propagated git scope's origin, or a runtime fork's
+    // override). Without rehydrating them the in-memory cache silently
     // disagrees with durable state: getConfig (which needs a live entry AND the
-    // on-disk scope) falls back to base/global for an app with its own config, and
-    // knownScopeIds stays empty so base-config changes stop notifying scoped apps.
-    // Any registered descriptor can be git-scoped (a committed config/<hier>/@app/
-    // file), not just `scope: "app"` ones — so iterate the full registered set.
-    for (const { descriptor, hierarchyPath } of registered) {
-      const storePath = `${hierarchyPath}/${descriptor.name}.jsonc`;
-      for (const scopeId of await ConfigStore.get().scopes(storePath)) {
-        if (await scopeHasOwnConfigOnDisk(descriptor, scopeId)) {
-          await ensureScopeEntry(descriptor, scopeId);
-        }
-      }
-    }
-
-    // Warm the derived state behind the aggregate resources: the scopes and
-    // modified-counts maps their loaders read (so a first load is a memory read,
-    // not a filesystem walk), and — for conflict-locations, whose loader re-derives
-    // from disk — the fingerprint memo plus the published-set snapshot, so the
-    // first load is stat-only and the first real change doesn't emit a spurious
-    // notify.
-    for (const { descriptor, hierarchyPath } of registered) {
-      const storePath = `${hierarchyPath}/${descriptor.name}.jsonc`;
-      await refreshScopeMembers(storePath);
-      await refreshConflictLocations(storePath);
-      await refreshModifiedCount(storePath);
-    }
+    // on-disk scope) falls back to base/global for an app with its own config,
+    // and knownScopeIds stays empty so base-config changes stop notifying
+    // scoped apps. Any registered descriptor can be git-scoped (a committed
+    // config/<hier>/@app/ file), not just `scope: "app"` ones — so every
+    // registered descriptor is asked.
+    //
+    // The scopes map is warmed because `config-v2.scopes` is preloaded and its
+    // loader reads it. The conflict-locations and modified-counts sweeps are
+    // NOT warmed here: their loaders derive from disk themselves, nothing
+    // preloads them, and only the config nav reads them — so the first nav
+    // open pays for them, not every boot.
+    const store = ConfigStore.get();
+    const reads = createSemaphore(INIT_CONCURRENCY);
+    await Promise.all(
+      registered.map(({ descriptor, storePath }) =>
+        reads.run(async () => {
+          await buildEntry(descriptor, storePath, BASE_SCOPE);
+          for (const scopeId of await store.scopes(storePath)) {
+            if (await scopeHasOwnConfigOnDisk(descriptor, scopeId)) {
+              await ensureScopeEntry(descriptor, scopeId);
+            }
+          }
+          await refreshScopeMembers(storePath);
+        }),
+      ),
+    );
   } finally {
     // Open the readiness gate even if init threw partway through. Otherwise the
     // resource loader awaits registryReady forever and every config read hangs

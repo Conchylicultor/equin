@@ -1,32 +1,52 @@
 import type { SavedSymbolName, StyleKey } from "@plugins/ui/plugins/icons/core";
-import { allSavedSymbolNames } from "@plugins/ui/plugins/icons/plugins/saved-names/core";
 import { drawRuntimeSymbol, type RuntimeSymbolDrawerImpl } from "../../server";
 import { PACKAGE, setIdentity, withSymbolSets } from "./symbol-sets";
 
-// Per style key, every saved name's `<symbol>` — built in one pass the first
-// time the style is asked for (the sets are parsed once for it and dropped),
-// then kept: ~2 MB per style, and a picker scrolling through the whole set
-// never parses again. A failed build is not cached.
-const styles = new Map<StyleKey, Promise<ReadonlyMap<string, string>>>();
+// Per style key, the `<symbol>` of every name drawn so far. A draw asks only
+// for the names it was given: the ones not drawn yet are drawn in one pass
+// over the sets (parsed once for the pass and dropped — concurrent passes
+// share one parse), then kept, so a name is drawn at most once per process.
+//
+// It used to draw EVERY saved name (4,240) the first time a style was asked
+// for — what a boot paid in full, twice (the resident saved-icon sprites ask
+// both default styles) to serve the handful of names anyone saved. Only a
+// picker reaches the whole set, a batch at a time, and it now pays for the
+// names it shows. A failed pass keeps nothing.
+const drawn = new Map<StyleKey, Map<SavedSymbolName, Promise<string>>>();
 
-function styleSymbols(key: StyleKey): Promise<ReadonlyMap<string, string>> {
-  let build = styles.get(key);
-  if (!build) {
-    build = withSymbolSets(
+function symbolsOf(
+  key: StyleKey,
+  names: readonly SavedSymbolName[],
+): Promise<readonly string[]> {
+  let style = drawn.get(key);
+  if (style === undefined) {
+    style = new Map();
+    drawn.set(key, style);
+  }
+  const held = style;
+  const missing = names.filter((name) => !held.has(name));
+  if (missing.length > 0) {
+    const pending = new Map<SavedSymbolName, Promise<string>>();
+    const pass = withSymbolSets(
       (sets) =>
         new Map(
-          allSavedSymbolNames().map((name) => [
-            name,
-            drawRuntimeSymbol(sets, key, name),
-          ]),
+          missing.map((name) => [name, drawRuntimeSymbol(sets, key, name)]),
         ),
     ).catch((err: unknown) => {
-      styles.delete(key);
+      // Not kept: the next draw of these names parses again (and fails
+      // loudly again); every caller awaiting them sees this rejection.
+      for (const [name, symbol] of pending) {
+        if (held.get(name) === symbol) held.delete(name);
+      }
       throw err;
     });
-    styles.set(key, build);
+    for (const name of missing) {
+      const symbol = pass.then((symbols) => symbols.get(name)!);
+      pending.set(name, symbol);
+      held.set(name, symbol);
+    }
   }
-  return build;
+  return Promise.all(names.map((name) => held.get(name)!));
 }
 
 /**
@@ -36,14 +56,7 @@ function styleSymbols(key: StyleKey): Promise<ReadonlyMap<string, string>> {
  */
 export const installedSetsDrawer: RuntimeSymbolDrawerImpl = {
   identity: [PACKAGE.regular, PACKAGE.light].map(setIdentity).join("\n"),
-  async draw(key: StyleKey, names: readonly SavedSymbolName[]) {
-    const symbols = await styleSymbols(key);
-    return names.map((name) => {
-      const symbol = symbols.get(name);
-      if (symbol === undefined) {
-        throw new Error(`[icons] "${name}" is not a saved symbol name`);
-      }
-      return symbol;
-    });
+  draw(key: StyleKey, names: readonly SavedSymbolName[]) {
+    return symbolsOf(key, names);
   },
 };

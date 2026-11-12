@@ -69,6 +69,7 @@ export const dataDirsEntries: CollectedEntry[] = [
   { pluginPath: "menu-bar", id: "menu-bar", loader: () => import("@plugins/menu-bar/data-dirs"), dependsOn: [] },
   { pluginPath: "packages/plugins/process-name", id: "packages.process-name", loader: () => import("@plugins/packages/plugins/process-name/data-dirs"), dependsOn: [] },
   { pluginPath: "packages/plugins/signal-origin/plugins/sink", id: "packages.signal-origin.sink", loader: () => import("@plugins/packages/plugins/signal-origin/plugins/sink/data-dirs"), dependsOn: [] },
+  { pluginPath: "packages/plugins/source-digest", id: "packages.source-digest", loader: () => import("@plugins/packages/plugins/source-digest/data-dirs"), dependsOn: [] },
   { pluginPath: "plugin-meta/plugins/plugin-records", id: "plugin-meta.plugin-records", loader: () => import("@plugins/plugin-meta/plugins/plugin-records/data-dirs"), dependsOn: [] },
   { pluginPath: "primitives/plugins/css/plugins/layout-harness", id: "primitives.css.layout-harness", loader: () => import("@plugins/primitives/plugins/css/plugins/layout-harness/data-dirs"), dependsOn: [] },
   { pluginPath: "release/plugins/bundles", id: "release.bundles", loader: () => import("@plugins/release/plugins/bundles/data-dirs"), dependsOn: [] },

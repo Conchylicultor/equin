@@ -12,7 +12,6 @@
     - `reports.ReportRow`
 - Machine:
   - Uses: `infra/endpoints.implementMachine`
-  - Register: `defineWarmup('restart-skip.closure')`
   - Routes: `POST /api/build/restart-skip/adopt`
 - Central:
   - Uses: `packages/source-digest.closureChangedSince`
