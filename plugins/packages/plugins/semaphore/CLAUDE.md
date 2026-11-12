@@ -72,8 +72,14 @@ before every caller now queued). Overlapping waits in one body give back once
 and take back once; each take-back reports its queue time through `onWait`; a
 wait started after the body settled takes nothing. The context is an injected
 runtime (`installLeaseContextRuntime`, mirroring the profiler's span context):
-the server installs an AsyncLocalStorage one at boot (`runtime-profiler/server`'s install, beside its span context); elsewhere
-`whileWaiting` is the very promise and the slot is held, as before. Never make a
+every Bun host installs an AsyncLocalStorage one at boot — a worktree server in
+`runtime-profiler/server`'s install (beside its span context), central in
+`central-core/bin/lease-scope.ts`. A browser host has no async context
+(no `AsyncLocalStorage`, no TC39 `AsyncContext` in browsers yet), so there
+`whileWaiting` is the very promise and the slot is held: a browser host's code
+must not WAIT on another party inside a gated read — its one such source, a
+page input, is read as a state, never awaited (`framework/browser-server`).
+Elsewhere (tests that install none) the slot is held, as before. Never make a
 slot yieldable when it stands for a held resource (a DB connection, a file
 handle) — it is still in use while its holder waits. Deliberately NOT done at a
 gate's own queue: a read queued for a DB connection that gave its read slot back

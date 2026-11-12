@@ -22,6 +22,8 @@ export function useMapsBrowserConfig(): MapsBrowserConfigState {
     case "error":
       return { kind: "error", error: result.error, refetch: result.refetch };
     case "ready":
-      return result.data;
+      // A browser host still waiting for its page to hand the config over:
+      // not known yet, so loading — never `unset`.
+      return result.data.kind === "pending" ? { kind: "loading" } : result.data;
   }
 }

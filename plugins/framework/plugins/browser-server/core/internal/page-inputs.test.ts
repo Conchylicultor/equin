@@ -3,24 +3,27 @@ import { declarePageInputs, pageInput, receivePageInput } from "./page-inputs";
 
 // The store is module-global (one per host realm): each test uses its own key.
 describe("page inputs", () => {
-  test("a key no page declared reads absent", async () => {
-    expect(await pageInput("t.absent").read()).toEqual({ kind: "absent" });
+  test("a key no page declared reads absent", () => {
+    expect(pageInput("t.absent").read()).toEqual({ kind: "absent" });
   });
 
-  test("a declared key waits for its first value, then reads the newest", async () => {
+  test("a declared key reads pending until its first value, then the newest — never waiting", () => {
     declarePageInputs(["t.wait"]);
     const input = pageInput("t.wait");
-    const first = input.read();
+    expect(input.read()).toEqual({ kind: "pending" });
     receivePageInput("t.wait", { kind: "value", value: { n: 1 } });
-    expect(await first).toEqual({ kind: "value", value: { n: 1 } });
+    expect(input.read()).toEqual({ kind: "value", value: { n: 1 } });
     receivePageInput("t.wait", { kind: "value", value: { n: 2 } });
-    expect(await input.read()).toEqual({ kind: "value", value: { n: 2 } });
+    expect(input.read()).toEqual({ kind: "value", value: { n: 2 } });
   });
 
-  test("a page's failed read rejects", () => {
+  test("a page's failed read reads failed, with its message", () => {
     declarePageInputs(["t.failed"]);
     receivePageInput("t.failed", { kind: "failed", message: "socket down" });
-    expect(pageInput("t.failed").read()).rejects.toThrow(/socket down/);
+    expect(pageInput("t.failed").read()).toEqual({
+      kind: "failed",
+      message: "socket down",
+    });
   });
 
   test("watch hears a declaration and each value, until stopped", () => {

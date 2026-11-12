@@ -168,9 +168,15 @@ from the page's chrome instead, declared by the plugin owning the value:
   `portBrowserServer(end, { inputs })` lists the keys at connect (`inputs`
   frame), `PortServer.supply(key, input)` sends each value (`input` frame,
   `{ kind: "value" | "failed" }`).
-- In the worker, `core`'s `pageInput(key)` reads it: `absent` when no
-  connected page declares the key, else the newest value (waiting for the
-  first); `watch(changed)` hears each new one. Memory only — never in the
+- In the worker, `core`'s `pageInput(key)` reads it, synchronously:
+  `absent` when no connected page declares the key, `pending` until its first
+  value, then the newest value (or `failed` with the page's message);
+  `watch(changed)` hears each new one. **A state, never a wait**: a page hands
+  its value once its own server read lands (72 s once), and a host read
+  awaiting it would hold a read-admission slot all that time — a browser host
+  has no async context, so a waiting read cannot give its slot back
+  (resource-runtime, *Waiters hold no slot*). The provider answers `pending`
+  and its `watch` moves the value on. Memory only — never in the
   host's storage, so never in a build-time snapshot. A host provider serves it
   (`google-maps/page-config`).
 

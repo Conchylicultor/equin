@@ -15,6 +15,14 @@ export function useLiveMapStatus(): ResourceResult<IntegrationStatus> {
           label: "Set up",
           summary: config.mapId ? "Vector map" : "Raster map",
         }
-      : { tone: "muted", label: "Not set up" },
+      : config.kind === "pending"
+        ? // A browser host whose page has not handed its key over yet — not
+          // "Not set up", which would be a claim about a key nobody knows yet.
+          {
+            tone: "muted",
+            label: "Waiting for the page",
+            summary: "The page has not handed its map key over yet",
+          }
+        : { tone: "muted", label: "Not set up" },
   );
 }

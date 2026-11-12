@@ -13,23 +13,30 @@ export type PageInputValue =
   { kind: "value"; value: unknown } | { kind: "failed"; message: string };
 
 /**
- * One input as the host reads it: no page that connected (to this host, so
- * far) declared it, or its value. Declarations only grow — a page that goes
- * away leaves its last value standing — which fits a host one owner's pages
- * share (the demo); per-page tracking is for a host that needs it.
+ * One input as the host reads it, now: no page that connected (to this host,
+ * so far) declared it; declared, its first value not handed yet; its latest
+ * value; or the page's own read of it failed. Declarations only grow — a page
+ * that goes away leaves its last value standing — which fits a host one
+ * owner's pages share (the demo); per-page tracking is for a host that needs
+ * it.
+ *
+ * A state, never a wait: a page hands its value once its OWN read from its
+ * server lands (72 s once, 2026-11-12), and a host read awaiting it would hold
+ * a read-admission slot all that time — a browser host has no async context,
+ * so a wait inside a read cannot give its slot back (resource-runtime,
+ * *Waiters hold no slot*). Reading `pending` answers at once; `watch` hears
+ * the value land.
  */
 export type PageInputRead =
-  { kind: "absent" } | { kind: "value"; value: unknown };
+  | { kind: "absent" }
+  | { kind: "pending" }
+  | { kind: "value"; value: unknown }
+  | { kind: "failed"; message: string };
 
 /** An input of this host, by key — what a host provider reads. */
 export interface PageInput {
-  /**
-   * `absent` when no page that connected declared it; else its latest value,
-   * waiting for the first one (a page supplies it once its own read lands —
-   * so nothing a host's boot awaits may read one). A page's failed read
-   * rejects.
-   */
-  read(): Promise<PageInputRead>;
+  /** Where the input stands now (see `PageInputRead`) — synchronous. */
+  read(): PageInputRead;
   /** `changed` on every new value (or a page declaring it); returns the stop. */
   watch(changed: () => void): () => void;
 }
@@ -72,25 +79,8 @@ export function pageInput(key: string): PageInput {
   return {
     watch,
     read() {
-      if (!supplied.has(key)) return Promise.resolve({ kind: "absent" });
-      return new Promise<PageInputRead>((resolve, reject) => {
-        const settle = (): boolean => {
-          const input = latest.get(key);
-          if (input === undefined) return false;
-          if (input.kind === "failed") {
-            reject(
-              new Error(`The page could not read "${key}": ${input.message}`),
-            );
-          } else {
-            resolve({ kind: "value", value: input.value });
-          }
-          return true;
-        };
-        if (settle()) return;
-        const stop = watch(() => {
-          if (settle()) stop();
-        });
-      });
+      if (!supplied.has(key)) return { kind: "absent" };
+      return latest.get(key) ?? { kind: "pending" };
     },
   };
 }

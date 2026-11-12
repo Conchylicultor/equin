@@ -38,10 +38,16 @@ export type MapsBrowserConfigInput = z.infer<
 /**
  * The browser config as the live value carries it. `unset` is an answer (no
  * file on this machine), distinct from not-loaded-yet — which is the read's
- * `pending`, never a value.
+ * `loading`, never a value. `pending` is a browser host's answer only: its page
+ * declared the config but has not handed it over yet (the page's own read of
+ * it has not landed — `framework/browser-server` page inputs). The host answers
+ * it at once rather than waiting inside its read, which would hold one of its
+ * read-admission slots for as long as the page's server takes; the value moves
+ * on when the page hands it over. Readers draw it as loading.
  */
 export const MapsBrowserConfigValueSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("unset") }),
+  z.object({ kind: z.literal("pending") }),
   z.object({
     kind: z.literal("set"),
     browserKey: z.string(),

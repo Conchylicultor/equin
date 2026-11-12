@@ -43,7 +43,11 @@ key (below) is the last line, since a key in a page is public.
   page (main's `/demo`, the website) read the value from its own server and
   hand it over (`framework/browser-server` page inputs) — never read from a
   server by the host's own code, never stored, so never in a snapshot. A page
-  that supplies none reads `unset`: the map says it has no key.
+  that supplies none reads `unset`: the map says it has no key. Until a page
+  that declared it hands it over, the host answers `pending` (a browser host
+  only; readers draw it as loading) instead of awaiting the page inside its
+  read, which would hold a read-admission slot for as long as the page's own
+  server read takes.
   `deployed-key` is imported only from `machine/`, so `deploy-secrets` stays
   out of the demo's worker graph.
 

@@ -699,9 +699,13 @@ All but the version are co-produced by the starter. A push drain mints
   `whileWaiting` — a shared memo's compute, another resource's flight) gives it
   back for the wait and takes it back ahead of every newcomer. The gate bounds
   reads that run; a slow read delays only the reads that wait on it. Needs the
-  server's lease scope (installed by `runtime-profiler/server`); central and a browser host hold
-  the slot throughout — a browser host's read waiting on a page input holds
-  one for as long as the page's own read takes (task-1794519674-76ssv4). `runtime-read-admit-yield.test.ts`,
+  host's lease scope — an AsyncLocalStorage on every Bun host: a worktree
+  server's (`runtime-profiler/server`) and central's (`central-core/bin`). A
+  browser host has no async context, so a wait inside its reads keeps the
+  slot; its one wait on another party — a page input, which the page hands
+  over once its OWN server read lands (72 s, 2026-11-12) — is therefore a
+  state the host reads at once (`pending`), never a promise a read awaits
+  (`framework/browser-server` page inputs). `runtime-read-admit-yield.test.ts`,
   `scripts/read-admit-bench.ts`,
   `research/2026-11-03-framework-read-admission-waiters-yield.md`.
 - **A key's share.** No resource key holds more than `READ_KEY_SHARE` (3)

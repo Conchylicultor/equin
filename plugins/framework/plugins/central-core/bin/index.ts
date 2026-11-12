@@ -1,5 +1,7 @@
 // FIRST, and it must stay first: the data root, which the imports below read.
 import "./declare-data-root";
+// Then the lease scope, before any plugin's read gate runs.
+import "./lease-scope";
 import type {
   WsData,
   HttpHandler,

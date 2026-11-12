@@ -13,9 +13,13 @@
  * counts the bodies that run, not the ones that wait.
  *
  * The scope is carried by an injected context runtime (mirroring the profiler's
- * span context): core stays host-neutral, and the server installs an
- * AsyncLocalStorage-backed one at boot (`runtime-profiler/server`'s install). Without it every
- * `whileWaiting` is a passthrough — the slot is simply held, as before.
+ * span context): core stays host-neutral, and every Bun host installs an
+ * AsyncLocalStorage-backed one at boot — a worktree server in
+ * `runtime-profiler/server`'s install, central in `central-core/bin`. Without
+ * it every `whileWaiting` is a passthrough — the slot is simply held. That is
+ * a browser host (no async context in a browser yet), so it must not wait on
+ * another party inside a gated read at all: its page inputs are read as a
+ * state, never awaited (`framework/browser-server`).
  */
 
 /** One held yieldable slot, as `whileWaiting` sees it. */
@@ -38,7 +42,7 @@ export interface LeaseContextRuntime {
   current(): LeaseScope | undefined;
 }
 
-// Default: no ambient context (the web, central, a test that installs none) —
+// Default: no ambient context (a browser host, a test that installs none) —
 // `whileWaiting` is a passthrough and a yieldable slot is held throughout.
 let contextRuntime: LeaseContextRuntime = {
   run: (_scope, fn) => fn(),
