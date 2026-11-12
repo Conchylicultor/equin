@@ -46,6 +46,8 @@ export interface MediaPlayerProps {
    * The caller owns what to show instead (and a retry: remount with a new `key`).
    */
   onError?(error: MediaError | null): void;
+  /** Playback started or resumed — the media element's `play` event (autoplay included). */
+  onPlay?(): void;
   /** Sizing for the player's box (`max-h-full`, a width): it lands on the player's root. */
   className?: string;
 }
@@ -124,6 +126,7 @@ function LiveMediaPlayer({
   autoPlay = false,
   poster,
   onError,
+  onPlay,
   className,
 }: MediaPlayerProps) {
   const [host] = useState(createPlayerHost);
@@ -246,6 +249,7 @@ function LiveMediaPlayer({
           autoPlay={autoPlay}
           poster={poster}
           onError={onError}
+          onPlay={onPlay}
           className={className}
           pip={
             kind === "video" && offered

@@ -461,6 +461,8 @@ Without it the box knows only the sections someone reached.
     - `apps/deploy/fixtures`
     - `apps/deploy/site-messages/intake`
     - `apps/website/improve`
+    - `apps/website/landing/hero`
+    - `apps/website/landing/screenshot`
     - `apps/website/pages/apps`
     - `apps/website/pages/download`
     - `apps/website/pages/foundations`

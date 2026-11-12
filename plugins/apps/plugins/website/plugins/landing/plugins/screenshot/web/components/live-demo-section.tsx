@@ -33,6 +33,7 @@ import {
   morphDemoFrame,
   ResetDemoButton,
 } from "@plugins/apps/plugins/demo/plugins/chrome/web";
+import { track } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/web";
 import { workspaceDemo } from "@plugins/apps/plugins/website/plugins/demos/plugins/workspace/core";
 import { WebsiteBand } from "@plugins/apps/plugins/website/plugins/shell/web";
 import { useLegacyDemoPlace } from "../internal/legacy-demo-place";
@@ -107,8 +108,9 @@ function LiveDemoBand(): ReactNode {
     // Only the visitor's own click moves the page: the grown frame's top
     // comes to the window's (its scroll margin: the gap). A tab that joined
     // opens where its page starts.
-    if (how === "gate")
-      revealElement(figure, { behavior: "smooth", block: "start" });
+    if (how !== "gate") return;
+    track("demo_enter");
+    revealElement(figure, { behavior: "smooth", block: "start" });
   };
   const frameStyle = frameSize(column.width, viewport, grown);
   const restore = useCallback(
@@ -173,12 +175,20 @@ function LiveDemoBand(): ReactNode {
                   <Inline gap="sm">
                     <Button
                       variant="outline"
-                      onClick={() => morphDemoFrame(() => setMaximized(true))}
+                      onClick={() => {
+                        track("demo_maximize");
+                        morphDemoFrame(() => setMaximized(true));
+                      }}
                     >
                       <Icon icon={symbol("fullscreen")} />
                       Maximize
                     </Button>
-                    <ResetDemoButton onReset={reset} />
+                    <ResetDemoButton
+                      onReset={() => {
+                        track("demo_reset");
+                        reset();
+                      }}
+                    />
                   </Inline>,
                   controls,
                 )}

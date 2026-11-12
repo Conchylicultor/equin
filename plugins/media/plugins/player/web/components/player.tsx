@@ -94,6 +94,7 @@ export interface PlayerProps {
   autoPlay: boolean;
   poster?: string;
   onError?(error: MediaError | null): void;
+  onPlay?(): void;
   className?: string;
   /** Picture in picture, owned by `MediaPlayer` (it moves this whole tree). `null` = not offered. */
   pip: { open: boolean; toggle(): void } | null;
@@ -204,6 +205,7 @@ export function Player({
   autoPlay,
   poster,
   onError,
+  onPlay,
   className,
   pip,
   mediaRef,
@@ -531,6 +533,7 @@ export function Player({
     preload: autoPlay || played ? "auto" : "metadata",
     onError: (e: SyntheticEvent<HTMLMediaElement>) =>
       onError?.(e.currentTarget.error),
+    onPlay: () => onPlay?.(),
   } as const;
 
   return (

@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useAssetSrc } from "@plugins/infra/plugins/endpoints/web";
 import { MediaPlayer } from "@plugins/media/plugins/player/web";
+import { track } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/web";
 import { showcaseFilm } from "@plugins/apps/plugins/website/plugins/media/core";
 
 /** The film's box: a 16:9 frame, capped narrower than the reading measure. */
@@ -23,6 +24,8 @@ export function HeroFilm() {
   const video = useAssetSrc(showcaseFilm.video);
   const poster = useAssetSrc(showcaseFilm.poster);
   const [failed, setFailed] = useState<string | null>(null);
+  // The first play only: a pause and resume is the same viewing.
+  const played = useRef(false);
 
   if (video.kind === "loading")
     return <Loading variant="block" className={FRAME} />;
@@ -34,6 +37,11 @@ export function HeroFilm() {
       src={video.src}
       poster={poster.kind === "ready" ? poster.src : undefined}
       label={showcaseFilm.label}
+      onPlay={() => {
+        if (played.current) return;
+        played.current = true;
+        track("hero_film_play");
+      }}
       onError={(error) =>
         setFailed(
           `The film could not be played${error?.message ? `: ${error.message}` : "."}`,

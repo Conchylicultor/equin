@@ -1,6 +1,6 @@
 # media-player
 
-`<MediaPlayer kind src label autoPlay? poster? onError? className? />` — a themed
+`<MediaPlayer kind src label autoPlay? poster? onError? onPlay? className? />` — a themed
 video / audio player in place of the browser's native `controls`, which
 cannot be themed, cannot grow a control (a fine speed, loop in the bar) and
 float an unthemable picture in picture. The design is the prototype

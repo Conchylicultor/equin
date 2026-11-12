@@ -26,6 +26,7 @@ and the paragraph says what it means.
 - Web:
   - Contributes: `Website.Section` "Hero" → `HeroSection`
   - Uses:
+    - `apps/deploy/analytics/collect.track`
     - `apps/website/shell.Website`
     - `apps/website/shell.WebsiteHero`
     - `infra/endpoints.useAssetSrc`

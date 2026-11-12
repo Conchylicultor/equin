@@ -2187,6 +2187,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/deploy/fixtures`
                   - `apps/deploy/site-messages/intake`
                   - `apps/website/improve`
+                  - `apps/website/landing/hero`
+                  - `apps/website/landing/screenshot`
                   - `apps/website/pages/apps`
                   - `apps/website/pages/download`
                   - `apps/website/pages/foundations`
@@ -11999,6 +12001,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Web:
                 - Contributes: `Website.Section` "Hero" → `HeroSection`
                 - Uses:
+                  - `apps/deploy/analytics/collect.track`
                   - `apps/website/shell.Website`
                   - `apps/website/shell.WebsiteHero`
                   - `infra/endpoints.useAssetSrc`
@@ -12058,7 +12061,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`screenshot`** — Landing demo band: equin itself, live, where the desktop picture was — its real server code in a worker on the workspace demo's data (DemoScope around AppEmbed), entered through Enter equin on every visit (a first visit downloads nothing before it; a browser already holding the data starts the host behind it; a maximized URL shows the gate maximized; a tab opened while the visitor is in the demo in another tab joins it with no gate, its frame grown). Entering grows the frame in place for good, nearly as wide and tall as the window; once it runs, Maximize (a view transition over the tab's surface, above the site; Restore at its top edge, a 'Press Esc to restore' notice, Esc) and Reset demo sit under it. Where the visitor is inside the demo, and whether it is maximized, is the homepage's URL, kept by the embed itself (/about/at/<location>[;full=1]; old ;view.website.demo=… links are rewritten onto it), with the embed's history rule: framed, moves rewrite the current entry; maximized, they are the tab's history.
               - Web:
                 - Contributes: `Website.Section` "Demo" → `LiveDemoSection`
-                - Uses: 23 symbols — full list in [`plugins/apps/plugins/website/plugins/landing/plugins/screenshot/REFERENCE.md`](../plugins/apps/plugins/website/plugins/landing/plugins/screenshot/REFERENCE.md)
+                - Uses: 24 symbols — full list in [`plugins/apps/plugins/website/plugins/landing/plugins/screenshot/REFERENCE.md`](../plugins/apps/plugins/website/plugins/landing/plugins/screenshot/REFERENCE.md)
                   - `apps/demo/chrome` ×5
                   - `apps-core/app-embed` ×2
                   - `apps/website/shell` ×2
@@ -12066,6 +12069,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/ui-kit` ×2
                   - `primitives/dom/render-mode` ×2
                   - `apps-core/tabs.useClaimTabTitle`
+                  - `apps/deploy/analytics/collect.track`
                   - `primitives/css/inline.Inline`
                   - `primitives/css/text.Text`
                   - `primitives/dom/element-size.useElementSize`
