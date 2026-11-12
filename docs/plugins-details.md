@@ -36740,7 +36740,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SPAN_MEASURES`
           - `waitSplit`
       - Cross-plugin:
-        - Imported by: 74 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
+        - Imported by: 75 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
           - `infra` ×22
           - `debug` ×21
           - `apps` ×7
@@ -36749,13 +36749,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks` ×3
           - `database` ×2
           - `packages` ×2
+          - `primitives` ×2
           - `reports` ×2
           - `auth`
           - `config_v2`
           - `integrations/google-maps/browser-config`
           - `network/live/change-feed`
           - `plugin-meta/plugin-tree`
-          - `primitives/log-channels`
       - Exemptions:
         - Exempts itself from:
           - `boundaries/no-platform-api` — `server/internal/install.ts` (debt)

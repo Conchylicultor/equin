@@ -1,6 +1,7 @@
 import { stat } from "@plugins/packages/plugins/timed-fs/core";
 import { GIT } from "@plugins/infra/plugins/paths/server";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import { beginWait } from "@plugins/infra/plugins/runtime-profiler/core";
 
 // One bound for every git invocation routed through this file — which is the
 // point of the file, so a per-call number would just be a knob nobody could set
@@ -102,6 +103,22 @@ export interface GitRunOptions {
   stdin?: string;
 }
 
+/** git's options that take the next argument as their value. */
+const GIT_VALUE_OPTIONS = new Set(["-c", "-C", "--git-dir", "--work-tree"]);
+
+/**
+ * The git subcommand `args` run (`status`, `diff`, …) — past the global
+ * options before it — naming the wait the child is metered as.
+ */
+export function gitSubcommand(args: readonly string[]): string {
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i]!;
+    if (GIT_VALUE_OPTIONS.has(arg)) i++;
+    else if (!arg.startsWith("-")) return arg;
+  }
+  return "git";
+}
+
 /**
  * Probe variant: runs git and returns a discriminated result, never throwing
  * on a non-zero exit. The caller inspects `.ok` and branches.
@@ -117,10 +134,15 @@ export async function tryRunGit(
   cwd: string,
   opts: GitRunOptions = {},
 ): Promise<GitResult> {
+  // The child's time is git's, not the caller's: an `io` wait on
+  // `git:<subcommand>`, shown while it runs and charged as it ends — so a
+  // span awaiting a slow `git status` names it (and slow-ops files a slow one
+  // as `wait git:status`) instead of booking it as its own work.
+  const end = beginWait(`git:${gitSubcommand(args)}`, "io");
   const result = await spawnCaptured(
     [GIT, "--no-optional-locks", "-C", cwd, ...args],
     { timeoutMs: GIT_TIMEOUT_MS, stdin: opts.stdin },
-  );
+  ).finally(end);
   const { exitCode, stdout, stderr } = result;
   if (exitCode === 0) return { ok: true, stdout };
   // A KILLED child is not an answer, so it must not become one. Every caller of

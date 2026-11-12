@@ -46,15 +46,22 @@ function world() {
     facts: 0,
     computes: 0,
     signatures: 0,
+    stillHolds: 0,
+    moved: [] as string[],
     fail: null as Error | null,
     gates: [] as Deferred<void>[],
     gateNext: false,
-    trigger: null as ((resync?: true) => void) | null,
+    trigger: null as
+      ((how?: { resync: true } | { moved: string }) => void) | null,
     stops: 0,
     open: null as Deferred<void> | null,
     openError: null as Error | null,
   };
-  const memo = createWatchedMemo<{ content: string; dirty: string }, string>({
+  const memo = createWatchedMemo<
+    { content: string; dirty: string },
+    string,
+    string
+  >({
     name: "test",
     facts: async () => {
       w.facts += 1;
@@ -76,6 +83,13 @@ function world() {
         await gate.promise;
       }
       return { content, dirty: facts };
+    },
+    // A narrowed trigger names `dirty` moving: the held value stands while
+    // the facts it was computed over still read the same.
+    stillHolds: async (_key, held, moved) => {
+      w.stillHolds += 1;
+      w.moved.push(...moved);
+      return held === w.dirty;
     },
     changes: async (_key, trigger) => {
       if (w.open !== null) await w.open.promise;
@@ -241,7 +255,7 @@ describe("createWatchedMemo — watched", () => {
     });
     await memo.get("k");
     w.content = "c1";
-    w.trigger!(true);
+    w.trigger!({ resync: true });
     await settle();
     expect(w.computes).toBe(2);
     expect(notified).toBe(1);
@@ -268,6 +282,83 @@ describe("createWatchedMemo — watched", () => {
     expect(w.stops).toBe(0);
     stopB();
     expect(w.stops).toBe(1);
+  });
+});
+
+describe("createWatchedMemo — narrowed triggers", () => {
+  test("a narrowed trigger whose input did not move ends the pass unread", async () => {
+    const { w, memo } = world();
+    let notified = 0;
+    const stop = await memo.watch("k", () => {
+      notified += 1;
+    });
+    await memo.get("k");
+    w.trigger!({ moved: "dirty" });
+    await settle();
+    expect(w.stillHolds).toBe(1);
+    expect(w.moved).toEqual(["dirty"]);
+    expect(w.facts).toBe(1);
+    expect(w.computes).toBe(1);
+    expect(notified).toBe(0);
+    stop();
+  });
+
+  test("a narrowed trigger whose input moved runs the full pass", async () => {
+    const { w, memo } = world();
+    let notified = 0;
+    const stop = await memo.watch("k", () => {
+      notified += 1;
+    });
+    await memo.get("k");
+    w.dirty = "d1";
+    w.trigger!({ moved: "dirty" });
+    await settle();
+    expect(w.stillHolds).toBe(1);
+    expect(w.computes).toBe(2);
+    expect(notified).toBe(1);
+    expect(await memo.get("k")).toEqual({ content: "c0", dirty: "d1" });
+    // The held facts are the new pass's: the same narrowed change again holds.
+    w.trigger!({ moved: "dirty" });
+    await settle();
+    expect(w.stillHolds).toBe(2);
+    expect(w.computes).toBe(2);
+    stop();
+  });
+
+  test("a narrowed trigger folded with any other runs the full pass, unasked", async () => {
+    const { w, memo } = world();
+    const stop = await memo.watch("k", () => {});
+    await memo.get("k");
+    w.gateNext = true;
+    w.content = "c1";
+    w.trigger!();
+    await settle();
+    // Mid-pass: one narrowed and one plain trigger fold into one trailing pass.
+    w.trigger!({ moved: "dirty" });
+    w.trigger!();
+    w.gateNext = false;
+    w.gates.shift()!.resolve();
+    await settle();
+    await settle();
+    expect(w.stillHolds).toBe(0);
+    expect(w.computes).toBe(3);
+    stop();
+  });
+
+  test("a narrowed trigger after a failed pass runs the full pass", async () => {
+    const { w, memo } = world();
+    const stop = await memo.watch("k", () => {});
+    await memo.get("k");
+    w.fail = new Error("status failed");
+    w.trigger!();
+    await settle();
+    w.fail = null;
+    w.trigger!({ moved: "dirty" });
+    await settle();
+    expect(w.stillHolds).toBe(0);
+    expect(w.computes).toBe(2);
+    expect(await memo.get("k")).toEqual({ content: "c0", dirty: "d0" });
+    stop();
   });
 });
 

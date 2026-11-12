@@ -177,7 +177,11 @@ recompute) and the 0 ms markers `git-memo-hit:<name>` / `git-memo-miss:<name>`
 in-flight first pass, `packages/watched-memo`); `fs-stat` / `fs-readdir` / `fs-read` / `fs-glob`
 (kind `io`: a file call past `packages/timed-fs`'s floor, a `beginDeferredWait`
 from `server/internal/install.ts`'s fs wait meter — a disk stall is the
-disk's time, filed like a `queue` wait as `wait fs-<op>`); `event-loop` (below). A wait with no active entry (context-less jobs/pollers)
+disk's time, filed like a `queue` wait as `wait fs-<op>`); `git:<subcommand>`
+(kind `io`: a git child of `primitives/commit-list`'s `runGit` / `tryRunGit`,
+announced as it spawns and charged as it exits — the child's time, so a span
+awaiting `git status` is not booked as its own work; slow-ops files a slow one
+as `wait git:status`); `event-loop` (below). A wait with no active entry (context-less jobs/pollers)
 falls back to a standalone `db [layer]` span so the wait is never lost — recorded
 as ALL wait (`waits: { [layer]: ms }`, own time 0) and, for a `queue`/`io` wait,
 handed to `onSlowWait` with that span as its caller: a wait is never booked as a
@@ -605,7 +609,7 @@ remaining allocations are one flat band array per completed entry span, and what
     - `SPAN_MEASURES`
     - `waitSplit`
 - Cross-plugin:
-  - Imported by: 74 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 75 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra` ×22
     - `debug` ×21
     - `apps` ×7
@@ -614,13 +618,13 @@ remaining allocations are one flat band array per completed entry span, and what
     - `tasks` ×3
     - `database` ×2
     - `packages` ×2
+    - `primitives` ×2
     - `reports` ×2
     - `auth`
     - `config_v2`
     - `integrations/google-maps/browser-config`
     - `network/live/change-feed`
     - `plugin-meta/plugin-tree`
-    - `primitives/log-channels`
 - Exemptions:
   - Exempts itself from:
     - `boundaries/no-platform-api` — `server/internal/install.ts` (debt)

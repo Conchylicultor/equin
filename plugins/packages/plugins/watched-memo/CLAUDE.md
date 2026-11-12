@@ -14,8 +14,20 @@ into one trailing pass), `refcount-hub` (one change source per key) and
   `whileWaiting` — holding no yieldable gate slot (the live read gate), the
   wait charged as `memo-opening:<name>` — since pass 1 is the watch's work,
   not the reader's.
-- **Every pass computes.** No skip on an equal signature: a write read mid-pass
-  and then undone puts the signature back while the value still shows it.
+- **Every pass computes** — no skip on an equal signature: a write read
+  mid-pass and then undone puts the signature back while the value still
+  shows it.
+- **…unless the source said what moved.** `trigger({ moved: n })` is a
+  narrowed trigger: the source heard ONLY the inputs `n` names change. A pass
+  whose every folded trigger is narrowed first asks `stillHolds(key,
+  heldFacts, moved)` — against the facts the held value was computed over —
+  and a yes ends it (`memo-still-holds:<name>`, no `facts`, no `compute`).
+  Keyed on exactly what changed, so it is sound where a signature skip is
+  not: nothing else moved, so nothing read mid-pass can have been undone. Any
+  plain or resync trigger in the batch, or no held value (opening, demoted),
+  runs the full pass. A pass with an `equals` value still takes its new facts.
+  edited-files: a batch that moved only `refs/heads/main` re-reads the
+  merge-base (~50 ms) instead of a whole-tree `git status` + diff (1–2 s).
 - Pass 1 notifies nobody. A later pass with an `equals` value keeps the held
   object (identity) and notifies nobody; otherwise it sets the value, then
   notifies. A pass after close writes nothing.
@@ -26,7 +38,7 @@ into one trailing pass), `refcount-hub` (one change source per key) and
   the cached value on a hit, else a compute single-flighted per `key\0signature`
   over the probe's own facts — one scan per miss — cached only when a re-probe
   after it still reads the same signature.
-- `trigger(true)` is a resync: the source lost events (`file-watcher`'s
+- `trigger({ resync: true })` is a resync: the source lost events (`file-watcher`'s
   `onLost`, `checkout-watch`'s `onResync`), so anything may have moved.
 - The last watcher leaving drops the key's value and its probe entry at once
   (readers awaiting pass 1 fall to the probe path). There is no warm-on-close

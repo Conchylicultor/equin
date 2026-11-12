@@ -8,7 +8,19 @@ import {
   runTracked,
 } from "@plugins/infra/plugins/runtime-profiler/core";
 
-export interface WatchedMemoOptions<T, F> {
+/**
+ * What a change source says moved, handed to `trigger`:
+ *
+ * - nothing (`trigger()`): anything `facts` or `compute` reads may have moved.
+ * - `{ resync: true }`: the source lost events, so anything may have moved
+ *   unheard.
+ * - `{ moved: n }`: ONLY the inputs `n` names moved — the source heard nothing
+ *   else. A pass whose every trigger is narrowed asks `stillHolds` first, and
+ *   ends there when the held value still stands.
+ */
+export type WatchedTrigger<N> = { resync: true } | { moved: N };
+
+export interface WatchedMemoOptions<T, F, N = never> {
   /** Names the profiler markers (`memo-watched-hit:<name>`, …). */
   name: string;
   /**
@@ -33,8 +45,17 @@ export interface WatchedMemoOptions<T, F> {
    */
   changes: (
     key: string,
-    trigger: (resync?: true) => void,
+    trigger: (how?: WatchedTrigger<N>) => void,
   ) => Promise<() => void>;
+  /**
+   * Whether the held value still stands when only the inputs `moved` names
+   * changed since it was computed over `held` (its facts). Read only what
+   * those inputs feed — the cheap part of `facts` — and answer from it: true
+   * ends the pass with no `facts` and no `compute`; false runs the full pass.
+   * Absent, every pass computes. Called with the held value's OWN facts, so
+   * an answer is about the value readers hold, never about a later read.
+   */
+  stillHolds?: (key: string, held: F, moved: readonly N[]) => Promise<boolean>;
   /** Whether a pass's value is the one held (default: JSON equality). */
   equals?: (a: T, b: T) => boolean;
   /** The `bg` span each pass runs under (default `watched-memo:<name>:pass`). */
@@ -63,13 +84,18 @@ export interface WatchedMemo<T> {
 /** How pass 1 ended: its value, or `none` — the get falls to the probe path. */
 type FirstOutcome<T> = { ok: true; value: T } | { ok: false };
 
-type EntryState<T> =
+type EntryState<T, F> =
   | {
       kind: "opening";
       first: Promise<FirstOutcome<T>>;
       settle: (outcome: FirstOutcome<T>) => void;
     }
-  | { kind: "watched"; value: T }
+  | {
+      kind: "watched";
+      value: T;
+      /** The facts of the pass that last ran in full — what `value` is over. */
+      facts: F;
+    }
   | {
       /**
        * The last pass failed. Kept for inspection only: a get takes the probe
@@ -80,9 +106,9 @@ type EntryState<T> =
     };
 
 /** One watched key: its state, its watchers, and the notify to them. */
-interface Entry<T> {
+interface Entry<T, F> {
   key: string;
-  state: EntryState<T>;
+  state: EntryState<T, F>;
   /** Live `watch` holds. The last one leaving closes the entry at once. */
   holders: number;
   closed: boolean;
@@ -90,6 +116,9 @@ interface Entry<T> {
   live: boolean;
   emit: () => void;
 }
+
+/** Why a pass runs: one per trigger folded into it. */
+type PassCause<N> = { kind: "any" } | { kind: "narrow"; moved: N };
 
 const jsonEquals = (a: unknown, b: unknown): boolean =>
   JSON.stringify(a) === JSON.stringify(b);
@@ -109,6 +138,14 @@ const jsonEquals = (a: unknown, b: unknown): boolean =>
  * value is pushed: no ETag is minted from the held value. (Re-adding a
  * revalidate means returning the entry's own signature, never a fresh probe.)
  *
+ * The one exception is keyed on WHAT changed, not on a signature: when every
+ * trigger folded into a pass is narrowed (`{ moved }` — the source heard only
+ * those inputs move), `stillHolds` is asked against the held value's own
+ * facts, and a yes ends the pass (`memo-still-holds:<name>`). That is sound
+ * where a signature skip is not: nothing else moved, so nothing read
+ * mid-pass can have been undone, and the answer is about the facts the held
+ * value was computed over. Any other trigger in the batch runs the full pass.
+ *
  * A failed pass demotes the key — watchers are told, and `get` takes the
  * probe path, which raises the real error — until a pass succeeds again.
  *
@@ -120,29 +157,60 @@ const jsonEquals = (a: unknown, b: unknown): boolean =>
  * There is no `prime` and no warm-on-close: a watcher cannot bypass the
  * single-flight or order a write by hand, and a closed key drops its value.
  */
-export function createWatchedMemo<T, F>(
-  opts: WatchedMemoOptions<T, F>,
+export function createWatchedMemo<T, F, N = never>(
+  opts: WatchedMemoOptions<T, F, N>,
 ): WatchedMemo<T> {
   const { name } = opts;
   const equals = opts.equals ?? jsonEquals;
   const passLabel = opts.passLabel ?? `watched-memo:${name}:pass`;
-  const entries = new Map<string, Entry<T>>();
+  const entries = new Map<string, Entry<T, F>>();
   const cache = new Map<string, { signature: string; value: T }>();
   const inflight = createInflight();
 
-  const passes = createKeyedCoalescer<Entry<T>>({
-    run: (entry) => runTracked(passLabel, () => pass(entry)),
+  const passes = createKeyedCoalescer<Entry<T, F>, PassCause<N>>({
+    run: (entry, causes) => runTracked(passLabel, () => pass(entry, causes)),
   });
 
-  function settleFirst(entry: Entry<T>, outcome: FirstOutcome<T>): void {
+  function settleFirst(entry: Entry<T, F>, outcome: FirstOutcome<T>): void {
     if (entry.state.kind === "opening") entry.state.settle(outcome);
   }
 
-  async function pass(entry: Entry<T>): Promise<void> {
+  /**
+   * The narrowed inputs, when every trigger folded into this pass named
+   * what moved and the entry holds a value to judge — else null (full pass).
+   */
+  function narrowedOnly(
+    entry: Entry<T, F>,
+    causes: readonly PassCause<N>[],
+  ): N[] | null {
+    if (opts.stillHolds === undefined) return null;
+    if (entry.state.kind !== "watched" || causes.length === 0) return null;
+    const moved: N[] = [];
+    for (const cause of causes) {
+      if (cause.kind !== "narrow") return null;
+      moved.push(cause.moved);
+    }
+    return moved;
+  }
+
+  async function pass(
+    entry: Entry<T, F>,
+    causes: readonly PassCause<N>[],
+  ): Promise<void> {
     if (entry.closed) return;
     let value: T;
+    let facts: F;
     try {
-      const facts = await opts.facts(entry.key);
+      const moved = narrowedOnly(entry, causes);
+      if (moved !== null && entry.state.kind === "watched") {
+        // Passes run one at a time and only a pass writes the state, so the
+        // held facts are still the held value's while this runs.
+        if (await opts.stillHolds!(entry.key, entry.state.facts, moved)) {
+          markWait(`memo-still-holds:${name}`);
+          return;
+        }
+      }
+      facts = await opts.facts(entry.key);
       value = await opts.compute(entry.key, facts);
     } catch (error) {
       // Not rethrown: the coalescer would raise it unhandled. The probe path
@@ -161,18 +229,22 @@ export function createWatchedMemo<T, F>(
     if (entry.closed) return;
     const state = entry.state;
     if (state.kind === "opening") {
-      entry.state = { kind: "watched", value };
+      entry.state = { kind: "watched", value, facts };
       state.settle({ ok: true, value });
       return;
     }
     // Equal: keep the held object, so a reader comparing by identity sees no
-    // change, and tell nobody.
-    if (state.kind === "watched" && equals(state.value, value)) return;
-    entry.state = { kind: "watched", value };
+    // change, and tell nobody — but take this pass's facts: the held value is
+    // over them now (a merge-base can move and leave the list the same).
+    if (state.kind === "watched" && equals(state.value, value)) {
+      entry.state = { kind: "watched", value: state.value, facts };
+      return;
+    }
+    entry.state = { kind: "watched", value, facts };
     entry.emit();
   }
 
-  function close(entry: Entry<T>): void {
+  function close(entry: Entry<T, F>): void {
     if (entry.closed) return;
     entry.closed = true;
     if (entries.get(entry.key) === entry) {
@@ -189,7 +261,7 @@ export function createWatchedMemo<T, F>(
     const first = new Promise<FirstOutcome<T>>((resolve) => {
       settle = resolve;
     });
-    const entry: Entry<T> = {
+    const entry: Entry<T, F> = {
       key,
       state: { kind: "opening", first, settle },
       holders: 0,
@@ -200,9 +272,16 @@ export function createWatchedMemo<T, F>(
     entries.set(key, entry);
     let stop: () => void;
     try {
-      stop = await opts.changes(key, (resync) => {
-        if (resync === true) markWait(`memo-resync:${name}`);
-        if (entry.live && !entry.closed) passes.trigger(entry);
+      stop = await opts.changes(key, (how) => {
+        if (how !== undefined && "resync" in how) {
+          markWait(`memo-resync:${name}`);
+        }
+        if (!entry.live || entry.closed) return;
+        passes.trigger(entry, [
+          how !== undefined && "moved" in how
+            ? { kind: "narrow", moved: how.moved }
+            : { kind: "any" },
+        ]);
       });
     } catch (err) {
       close(entry);
@@ -211,7 +290,7 @@ export function createWatchedMemo<T, F>(
     entry.live = true;
     // Pass 1 starts after the source is live, so it reads every change the
     // source did not report.
-    if (!entry.closed) passes.trigger(entry);
+    if (!entry.closed) passes.trigger(entry, [{ kind: "any" }]);
     return () => {
       close(entry);
       stop();

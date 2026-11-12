@@ -34,6 +34,14 @@ export interface EditedFilesFacts {
 }
 
 /**
+ * `merge-base main HEAD`: what the edited files are measured against — and the
+ * one input of the list that `refs/heads/main` moving can change.
+ */
+export async function readMergeBase(worktreePath: string): Promise<string> {
+  return (await runGit(["merge-base", "main", "HEAD"], worktreePath)).trim();
+}
+
+/**
  * Read the facts: `merge-base main HEAD` ‖ the dirty entries. Ungated (no
  * heavy slot) — the status walk is the expensive half of a probe, so each pass
  * or probe reads it once and hands it on. runGit throws on failure (never a
@@ -50,7 +58,7 @@ export async function readEditedFilesFacts(
   worktreePath: string,
 ): Promise<EditedFilesFacts> {
   const [mergeBase, statusZ] = await Promise.all([
-    runGit(["merge-base", "main", "HEAD"], worktreePath),
+    readMergeBase(worktreePath),
     runGit(
       [
         "status",
@@ -67,7 +75,7 @@ export async function readEditedFilesFacts(
     .filter((e) => e.code === "??" && e.path.endsWith("/"))
     .map((e) => e.path);
   if (untrackedDirs.length === 0) {
-    return { mergeBase: mergeBase.trim(), dirty: entries };
+    return { mergeBase, dirty: entries };
   }
   const othersZ = await runGit(
     [
@@ -86,7 +94,7 @@ export async function readEditedFilesFacts(
     .map((path) => ({ code: "??", path }));
   const dirs = new Set(untrackedDirs);
   return {
-    mergeBase: mergeBase.trim(),
+    mergeBase,
     dirty: [
       ...entries.filter((e) => !(e.code === "??" && dirs.has(e.path))),
       ...expanded,

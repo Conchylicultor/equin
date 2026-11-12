@@ -45,7 +45,13 @@ a third of its walk) and ONE
 `git diff -M -C -z --raw --numstat <merge-base>` over them
 (`computeEditedFiles(wt, facts)`), and a loader run is a slice of the held list
 with no git spawn. Every pass computes — never skipped on an equal signature (an
-edit read mid-pass and undone would leave the list stale for good). The watch
+edit read mid-pass and undone would leave the list stale for good) — except a
+batch that moved ONLY `refs/heads/main`: the list reads main through the
+merge-base alone, so that pass re-reads `merge-base main HEAD` and ends when it
+is the held list's own (the usual forward advance). Before, every main advance
+cost every watched worktree a full pass (measured on a clone: 1.1–2.4 s each,
+~90% `git status`; after: 21–148 ms, one `merge-base`). A push of this branch
+moves the merge-base, and then the full pass runs. The watch
 is only as complete as what checkout-watch hears: every repo file `git status`
 reads (the git dirs, the shared refs, `config`, `packed-refs`,
 `info/exclude`), but not the global excludes file or global config — an edit

@@ -2,7 +2,13 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { GitError, WorktreeGoneError, runGit, tryRunGit } from "./run-git";
+import {
+  GitError,
+  WorktreeGoneError,
+  gitSubcommand,
+  runGit,
+  tryRunGit,
+} from "./run-git";
 
 // A real temp git repo with one commit, so success paths exercise real git output.
 let repo: string;
@@ -98,5 +104,25 @@ describe("tryRunGit", () => {
       expect(res.exitCode).toBe(1);
       expect(typeof res.stderr).toBe("string");
     }
+  });
+});
+
+describe("gitSubcommand", () => {
+  test("the first non-option argument", () => {
+    expect(gitSubcommand(["status", "--porcelain", "-z"])).toBe("status");
+    expect(gitSubcommand(["merge-base", "main", "HEAD"])).toBe("merge-base");
+  });
+
+  test("past global options, and the values of those that take one", () => {
+    expect(gitSubcommand(["--literal-pathspecs", "ls-files", "-z"])).toBe(
+      "ls-files",
+    );
+    expect(gitSubcommand(["-c", "user.name=x", "commit", "-m", "m"])).toBe(
+      "commit",
+    );
+  });
+
+  test("no subcommand", () => {
+    expect(gitSubcommand(["--version"])).toBe("git");
   });
 });

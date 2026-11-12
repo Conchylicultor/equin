@@ -6,6 +6,7 @@ import {
   type EditedFilesFacts,
   editedFilesSignatureOf,
   readEditedFilesFacts,
+  readMergeBase,
 } from "./edited-files-signature";
 
 // ONE module-level memo per process, keyed by worktree, shared by every reader
@@ -27,6 +28,17 @@ import {
 // ignores (a build's `dist/`, the main checkout's `.claude/worktrees/`). A watch
 // that lost events is a resync: one more pass.
 //
+// A batch that moved ONLY `refs/heads/main` is a narrowed trigger: the list
+// reads main through the merge-base alone (the diff is the working tree
+// against `facts.mergeBase`; the status is the index against HEAD), so the
+// pass first re-reads `merge-base main HEAD` (one cheap git call) and ends
+// there when it is the held list's own — the usual case, main moving forward
+// past a branch it does not contain. Before, every main advance cost every
+// watched worktree a full pass (a whole-tree `git status` + the diff) to
+// compute the same list (2026-11-12: 9 advances in an hour, 36 passes of
+// 2–8 s on main). The merge-base moves when main takes this branch (a push)
+// or the checkout IS main (HEAD moves with it): then the full pass runs.
+//
 // Unwatched (an HTTP read, plugin-changes with nothing open), or after a failed
 // pass, a read takes the probe path: the facts, then the content signature
 // (edited-files-signature.ts) — a hit, or one compute single-flighted per
@@ -37,20 +49,31 @@ import {
 //
 // See packages/watched-memo and
 // research/2026-10-25-global-edited-files-paged-cost.md.
+const MAIN_REF = "refs/heads/main";
+
 export const editedFilesMemo = createWatchedMemo<
   EditedFile[],
-  EditedFilesFacts
+  EditedFilesFacts,
+  typeof MAIN_REF
 >({
   name: "edited-files",
   passLabel: "watch-edited-files:pass",
   facts: readEditedFilesFacts,
   signatureOf: editedFilesSignatureOf,
   compute: computeEditedFiles,
+  // Only `refs/heads/main` moved: the list stands while the merge-base does.
+  stillHolds: async (worktreePath, held) =>
+    (await readMergeBase(worktreePath)) === held.mergeBase,
   changes: (worktreePath, trigger) =>
     acquireCheckoutWatch(worktreePath, {
-      refs: { also: ["refs/heads/main"] },
-      onChange: () => trigger(),
-      onResync: () => trigger(true),
+      refs: { also: [MAIN_REF] },
+      onChange: (changes) =>
+        trigger(
+          changes.every((c) => c.ref === MAIN_REF)
+            ? { moved: MAIN_REF }
+            : undefined,
+        ),
+      onResync: () => trigger({ resync: true }),
     }),
 });
 
