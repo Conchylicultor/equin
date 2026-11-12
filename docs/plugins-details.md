@@ -17788,7 +17788,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/color-palette --muted-foreground`
                       - `ui/tokens/shape --spacing`
                       - `ui/tokens/type-scale --font-weight-semibold`
-                - **`attached-file`** — Renders a file the user attached to their message: a pasted image shown inline at its own aspect with a small/large toggle, or a text file as a syntax-highlighted listing behind its path. A file the prompt already draws (an equin attachment) folds into the context after the prompt instead of repeating it.
+                - **`attached-file`** — Renders a file the user attached to their message: a pasted image shown inline at its own aspect with a small/large toggle, a text file as a syntax-highlighted listing behind its path, or a PDF / notebook as one line naming it — over every content kind of the SDK's Read-tool output, switched exhaustively so a new kind is a type error. A file the prompt already draws (an equin attachment) folds into the context after the prompt instead of repeating it.
                   - Web:
                     - Contributes:
                       - `JsonlViewerAttachment.Renderer` "file" → `AttachedFileView`
@@ -17796,6 +17796,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
                       - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
+                      - `conversations/conversation-view/jsonl-viewer/collapsible-card.TimelineLine`
                       - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
                       - `primitives/overlay/image-viewer.AssetThumbnail`
                       - `primitives/syntax-highlight.CodeListing`

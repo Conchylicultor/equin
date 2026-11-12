@@ -72,6 +72,7 @@ export const LUCIDE_MAP = {
   block: "ban",
   "blur-on": MATERIAL_ONLY,
   bolt: "zap",
+  book: "book",
   bookmark: "bookmark",
   "bookmark-add": "bookmark-plus",
   "broken-image": "image-off",

@@ -1,7 +1,16 @@
 # attached-file
 
 A file the user attached to their message. Nine of ten are pasted screenshots;
-the rest are text files.
+the rest are text files, now and then a PDF or a notebook.
+
+**The kinds are the SDK's, not ours.** Claude Code feeds an attached file to
+the model through its Read tool, so `content` is the Read tool's output —
+`FileReadOutput` from `@anthropic-ai/claude-agent-sdk/sdk-tools` (`text`,
+`image`, `notebook`, `pdf`, `parts`). The view switches over that union
+exhaustively, and the agent runs the SDK's own bundled CLI, so an SDK bump
+that adds a kind is a tsc error here, not a crash in the transcript. Only
+`image` (base64 swapped for a transcript image reference by the reader) and
+`text` (line counts missing in older transcripts) are restated locally.
 
 The collapsed line has to answer one question — *is this worth opening* — and
 the answer differs by kind:
@@ -12,6 +21,10 @@ the answer differs by kind:
   chevron is an image the reader never sees. Inside, it is the same
   `ViewerThumbnail` every transcript image uses: capped inline, and a click
   opens the full-window viewer.
+- **a PDF / notebook** — one static line (`TimelineLine`): `Attached PDF ·
+  120 KB` (or `· 3 pages` for a PDF fed as page images), `Attached notebook ·
+  12 cells`, with the path. The CLI keeps none of the bytes in the transcript
+  (`base64` is persisted empty), so there is nothing to open.
 - **a text file** — which file, and how much of it: `Attached file · 39 lines`,
   with the path as the interactive `aside`. Collapsed, like every other content
   card.
@@ -48,7 +61,7 @@ rendering a card with an empty body.
 
 ## Plugin reference
 
-- Description: Renders a file the user attached to their message: a pasted image shown inline at its own aspect with a small/large toggle, or a text file as a syntax-highlighted listing behind its path. A file the prompt already draws (an equin attachment) folds into the context after the prompt instead of repeating it.
+- Description: Renders a file the user attached to their message: a pasted image shown inline at its own aspect with a small/large toggle, a text file as a syntax-highlighted listing behind its path, or a PDF / notebook as one line naming it — over every content kind of the SDK's Read-tool output, switched exhaustively so a new kind is a type error. A file the prompt already draws (an equin attachment) folds into the context after the prompt instead of repeating it.
 - Web:
   - Contributes:
     - `JsonlViewerAttachment.Renderer` "file" → `AttachedFileView`
@@ -56,6 +69,7 @@ rendering a card with an empty body.
   - Uses:
     - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
+    - `conversations/conversation-view/jsonl-viewer/collapsible-card.TimelineLine`
     - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
     - `primitives/overlay/image-viewer.AssetThumbnail`
     - `primitives/syntax-highlight.CodeListing`

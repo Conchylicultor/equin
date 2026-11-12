@@ -54,6 +54,7 @@ export const ICON_MANIFEST: {
     "block",
     "blur-on",
     "bolt",
+    "book",
     "bookmark",
     "bookmark-add",
     "broken-image",

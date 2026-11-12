@@ -35,7 +35,7 @@
     - `AttachmentRendererProps`
 - Sub-plugins:
   - **`agent-listing-delta`** — Renders agent-listing-delta attachment events showing which agent types are available (or added/removed) for the Agent tool.
-  - **`attached-file`** — Renders a file the user attached to their message: a pasted image shown inline at its own aspect with a small/large toggle, or a text file as a syntax-highlighted listing behind its path. A file the…
+  - **`attached-file`** — Renders a file the user attached to their message: a pasted image shown inline at its own aspect with a small/large toggle, a text file as a syntax-highlighted listing behind its path, or a PDF /…
   - **`command-permissions`** — Renders command-permissions attachment events showing permission grants for the session.
   - **`date`** — Renders the harness calendar-date attachments — the routine date stamp and the mid-conversation date change — across both the current `date` spelling and the legacy `date_change` one.
   - **`deferred-tools`** — Renders both spellings of the deferred-tool roster: the full deferred_tools_record listing and the deferred_tools_delta showing tools becoming available or removed mid-session.
