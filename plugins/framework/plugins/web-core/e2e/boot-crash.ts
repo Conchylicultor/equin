@@ -27,7 +27,10 @@ const BOOT = "[data-boot-state]";
 
 await withBrowser(async (h) => {
   // The page logs and reports the boot crash on purpose: not a capture failure.
-  const { page } = await h.session({ label: "no-shared-worker", capture: false });
+  const { page } = await h.session({
+    label: "no-shared-worker",
+    capture: false,
+  });
   await page.addInitScript(() => {
     // Like an Android WebView: the API is absent, not broken.
     delete (globalThis as { SharedWorker?: unknown }).SharedWorker;

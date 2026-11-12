@@ -31487,7 +31487,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards/module-extension.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 193 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+            - Imported by: 194 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
               - `apps` ×58
               - `primitives` ×29
               - `conversations` ×26
@@ -31497,10 +31497,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks` ×5
               - `active-data` ×3
               - `config_v2` ×3
+              - `framework` ×3
               - `reports` ×3
               - `shell` ×3
               - `ui` ×3
-              - `framework` ×2
               - `hints` ×2
               - `infra` ×2
               - `network` ×2
@@ -40403,15 +40403,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `withDeadline`
     - **`error-subject`** — What an error is about, carried by the error: SubjectError (a shared throw site — the migration runner, the trigger installer — names the one subject it failed for), errorSubject(err) (the subjects along the cause chain plus the innermost class code, ENOENT / SQLSTATE) and crashFieldsOf(err, scope?) — the errorType / stack / scope every crash filer derives from an error, so a shared throw site's failures land on one report row per cause instead of one for all. Enforced by error-subject/crash-fields-of.
       - Cross-plugin:
-        - Imported by: 28 plugins — full list in [`plugins/packages/plugins/error-subject/REFERENCE.md`](../plugins/packages/plugins/error-subject/REFERENCE.md)
+        - Imported by: 29 plugins — full list in [`plugins/packages/plugins/error-subject/REFERENCE.md`](../plugins/packages/plugins/error-subject/REFERENCE.md)
           - `infra` ×8
           - `conversations` ×5
           - `database` ×5
           - `reports` ×3
           - `debug` ×2
+          - `framework` ×2
           - `network` ×2
           - `apps/deploy/deployments`
-          - `framework/server-core`
           - `tasks/tasks-core`
       - Exemptions:
         - Exempts itself from: `error-subject/crash-fields-of` — `core/internal/error-subject.ts` (sanctioned)
