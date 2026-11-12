@@ -103,6 +103,7 @@ follow.
     - `apps/prototypes/shell`
     - `apps/sonata/shell`
     - `apps/website/pages/apps`
+    - `apps/website/pages/download`
     - `apps/website/shell`
     - `hints`
     - `media/player`

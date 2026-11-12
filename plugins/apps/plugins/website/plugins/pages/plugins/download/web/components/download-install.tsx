@@ -15,6 +15,8 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { subThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
+import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import {
   INSTALL_COMMAND,
   LOCAL_APP_HOST,
@@ -30,6 +32,12 @@ import { DownloadCode } from "./download-code";
 import { DownloadLink } from "./download-link";
 import { DownloadNextSteps } from "./download-next-steps";
 import { DownloadTryDemo } from "./download-try-demo";
+import {
+  equinDownloadNoteTheme,
+  equinDownloadTabsTheme,
+  equinDownloadTheme,
+} from "../internal/theme";
+import "./download.css";
 
 const infoIcon = symbol("info");
 
@@ -68,50 +76,57 @@ const CLAUDE_APP_LINK = `claude://code/new?q=${PROMPT_QUERY}`;
  *
  * Its column is narrower than the site's measure (820px): a code panel as wide
  * as the homepage's cards leaves the command stranded at one edge. It caps
- * itself inside the band, as the band asks, rather than narrowing the band.
+ * itself inside the band, as the band asks, rather than narrowing the band. It
+ * wears the page's own sizes (`equinDownloadTheme`); the distances between its
+ * parts are the page's score, in `download.css`.
  */
 export function DownloadInstall() {
   const [audience, setAudience] = useState<Audience>("human");
   return (
-    <WebsiteBand section="install" rhythm="closing">
-      <Stack gap="2xl" className="mx-auto max-w-[51.25rem]">
-        <Stack gap="xl">
-          <Stack gap="xs" align="center">
-            <SegmentedControl
-              options={AUDIENCES}
-              value={audience}
-              onChange={setAudience}
-              variant="ghost"
-            />
+    <WebsiteBand section="install" rhythm="page-body">
+      <Theme name={subThemeScope(equinDownloadTheme)} surface="none">
+        <Stack gap="none" className="website-download mx-auto max-w-[51.25rem]">
+          <Stack gap="2xl">
+            <Theme name={subThemeScope(equinDownloadTabsTheme)} surface="none">
+              <Stack gap="none" align="center">
+                <SegmentedControl
+                  options={AUDIENCES}
+                  value={audience}
+                  onChange={setAudience}
+                  variant="ghost"
+                  className="download-tabs"
+                />
+              </Stack>
+            </Theme>
+            {audience === "human" ? <ForYou /> : <ForYourAgent />}
           </Stack>
-          {audience === "human" ? <ForYou /> : <ForYourAgent />}
+          <Disclaimer />
+          <DownloadNextSteps />
+          <DownloadTryDemo />
         </Stack>
-        <Disclaimer />
-        <DownloadNextSteps />
-        <DownloadTryDemo />
-      </Stack>
+      </Theme>
     </WebsiteBand>
   );
 }
 
 function ForYou() {
   return (
-    <Stack gap="lg">
-      <Text as="h2" variant="heading" className="tracking-tight">
-        One command
-      </Text>
+    <Stack gap="2xl">
       <Stack gap="md">
+        <Text as="h2" variant="title" className="tracking-[-0.02em]">
+          One command
+        </Text>
         <DownloadCode kind="command" text={INSTALL_COMMAND} />
-        <Text as="p" variant="body" tone="muted">
+        <Text as="p" variant="label" tone="faint" className="font-normal">
           Then open{" "}
           <DownloadLink href={LOCAL_APP_URL}>{LOCAL_APP_HOST}</DownloadLink>
         </Text>
       </Stack>
       <Collapsible>
         <CollapsibleTrigger className="text-muted-foreground hover:text-foreground">
-          <Stack direction="row" gap="xs" align="center">
+          <Stack direction="row" gap="2xs" align="center">
             <CollapsibleChevron />
-            <Text variant="body">
+            <Text variant="label">
               What does <code className="font-mono">install.sh</code> do?
             </Text>
           </Stack>
@@ -120,7 +135,7 @@ function ForYou() {
           <Stack
             as="ol"
             gap="xs"
-            className={cn("list-decimal", insetClass({ l: "xl" }))}
+            className={cn("list-decimal", insetClass({ l: "xl", t: "smd" }))}
           >
             {INSTALLER_STEPS.map((step) => (
               <Text as="li" key={step} variant="body" tone="muted">
@@ -136,35 +151,33 @@ function ForYou() {
 
 function ForYourAgent() {
   return (
-    <Stack gap="lg">
-      <Text as="h2" variant="heading" className="tracking-tight">
+    <Stack gap="md">
+      <Text as="h2" variant="title" className="tracking-[-0.02em]">
         One prompt
       </Text>
-      <Stack gap="md">
-        <DownloadCode kind="prompt" text={AGENT_PROMPT} />
-        <Stack direction="row" gap="sm" wrap>
-          <Button
-            variant="secondary"
-            className="font-semibold"
-            render={<a href={CLAUDE_CODE_LINK} />}
-            onClick={() => track("download_open_claude_code")}
-          >
-            Open in Claude Code
-            <WebsiteArrow />
-          </Button>
-          <Button
-            variant="outline"
-            render={<a href={CLAUDE_APP_LINK} />}
-            onClick={() => track("download_open_claude_app")}
-          >
-            Open in the Claude app
-          </Button>
-        </Stack>
-        <Text as="p" variant="body" tone="muted">
-          Opens a new session with the prompt typed in. Nothing runs until you
-          press Enter.
-        </Text>
+      <DownloadCode kind="prompt" text={AGENT_PROMPT} />
+      <Stack direction="row" gap="sm" wrap className="download-open">
+        <Button
+          variant="secondary"
+          className="font-semibold"
+          render={<a href={CLAUDE_CODE_LINK} />}
+          onClick={() => track("download_open_claude_code")}
+        >
+          Open in Claude Code
+          <WebsiteArrow />
+        </Button>
+        <Button
+          variant="outline"
+          render={<a href={CLAUDE_APP_LINK} />}
+          onClick={() => track("download_open_claude_app")}
+        >
+          Open in the Claude app
+        </Button>
       </Stack>
+      <Text as="p" variant="label" tone="faint" className="font-normal">
+        Opens a new session with the prompt typed in. Nothing runs until you
+        press Enter.
+      </Text>
     </Stack>
   );
 }
@@ -181,40 +194,38 @@ const CAVEATS = [
   },
 ];
 
-/** The caveats, as bullets in one bordered note above what to do once it runs. */
+/**
+ * The caveats, as bullets in one bordered note between the install and what
+ * to do once it runs — in the note's own size (`equinDownloadNoteTheme`).
+ */
 function Disclaimer() {
   return (
-    <Stack
-      direction="row"
-      gap="md"
-      align="start"
-      className={cn(
-        "border-border rounded-2xl border",
-        insetClass({ x: "lg", y: "md" }),
-      )}
-    >
-      <Icon
-        icon={infoIcon}
-        aria-hidden
-        className={cn("text-muted-foreground size-4", rigidClass())}
-      />
+    <Theme name={subThemeScope(equinDownloadNoteTheme)} surface="none">
       <Stack
-        as="ul"
-        gap="sm"
-        className={cn("list-disc", insetClass({ l: "lg" }))}
+        direction="row"
+        gap="smd"
+        align="start"
+        className="website-download-note download-note border-border border"
       >
-        {CAVEATS.map(({ lead, body }) => (
-          <Text as="li" key={lead} variant="caption" tone="muted">
-            <Text
-              variant="caption"
-              className="font-semibold text-muted-foreground"
-            >
-              {lead}
-            </Text>{" "}
-            {body}
-          </Text>
-        ))}
+        <Icon
+          icon={infoIcon}
+          aria-hidden
+          className={cn(
+            "download-note-icon text-faint-foreground size-4",
+            rigidClass(),
+          )}
+        />
+        <Stack as="ul" gap="xs" className="download-note-list list-disc">
+          {CAVEATS.map(({ lead, body }) => (
+            <Text as="li" key={lead} variant="caption" tone="faint">
+              <Text variant="caption" tone="muted" className="font-semibold">
+                {lead}
+              </Text>{" "}
+              {body}
+            </Text>
+          ))}
+        </Stack>
       </Stack>
-    </Stack>
+    </Theme>
   );
 }

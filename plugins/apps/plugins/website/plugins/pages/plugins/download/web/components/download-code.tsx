@@ -5,6 +5,7 @@ import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { track } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/web";
+import "./download.css";
 
 /**
  * Something the reader copies whole — a shell command or a prompt — in a flat
@@ -24,20 +25,24 @@ export function DownloadCode({
   text: string;
 }) {
   return (
-    <Card className="rounded-xl shadow-none">
+    <Card className="download-code shadow-none">
       {/* A command is one line: centre it on the copy button so the card's
           space above and below the line match. A prompt wraps, so its first
           line stays level with the button's top. */}
       <Stack
         direction="row"
-        gap="md"
+        gap="smd"
         align={kind === "command" ? "center" : "start"}
       >
         <Fill>
           {kind === "command" ? (
             <Scroll axis="x">
-              <Text as="pre" variant="code" className="whitespace-pre">
-                <span aria-hidden className="text-muted-foreground select-none">
+              <Text
+                as="pre"
+                variant="code"
+                className="download-code-text whitespace-pre"
+              >
+                <span aria-hidden className="text-faint-foreground select-none">
                   ${" "}
                 </span>
                 {text}
@@ -46,9 +51,9 @@ export function DownloadCode({
           ) : (
             <Text
               as="pre"
-              variant="body"
+              variant="subheading"
               tone="muted"
-              className="font-sans whitespace-pre-wrap"
+              className="download-code-text font-sans font-normal whitespace-pre-wrap"
             >
               {text}
             </Text>
@@ -57,7 +62,7 @@ export function DownloadCode({
         <CopyButton
           text={text}
           tooltip="Copy"
-          className="border-border border"
+          className="download-copy border-border border"
           onClick={() => track(`download_copy_${kind}`)}
         />
       </Stack>

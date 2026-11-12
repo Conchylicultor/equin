@@ -1,0 +1,129 @@
+/* The download page's paint and score, over `equinDownloadTheme`.
+ *
+ * The score: the column starts 48px under the heading's lede (the page-body
+ * band starts at the heading band's 36px; 12px more here) and ends 96px above
+ * the footer's rule (the band's 64px, 32px more). Inside it, 48px from the
+ * install panel to the caveats, 64px from the caveats to "Once it is running",
+ * and 48px from the steps to the try-the-demo card — distances above the
+ * spacing ramp, as the site's band rhythms are. */
+.website-download {
+  padding-block: 0.75rem 2rem;
+}
+
+.website-download-note {
+  margin-top: 3rem;
+}
+
+.website-download-next {
+  margin-top: 4rem;
+}
+
+.website-download-try {
+  margin-top: 3rem;
+}
+
+/* ---- the audience switch: two segments in one hairline tray ----
+ * 3px inside a 10px tray on the page's ground; each segment 6px × 14px with a
+ * 7px corner, the picked one on the muted fill. */
+.download-tabs {
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--background);
+}
+
+.download-tabs > button {
+  height: auto;
+  padding: 6px 14px;
+  border-radius: 7px;
+  color: var(--faint-foreground);
+  background: transparent;
+}
+
+.download-tabs > button:hover {
+  color: var(--foreground);
+  background: transparent;
+}
+
+.download-tabs > button[aria-checked="true"] {
+  color: var(--foreground);
+  background: var(--muted);
+}
+
+/* ---- something to copy: 14px around it, 18px before the words ---- */
+.download-code {
+  padding: 0.875rem 0.875rem 0.875rem 1.125rem;
+  border-radius: 12px;
+}
+
+.download-code-text {
+  padding-block: 4px;
+}
+
+/* The copy button: a 30px outlined square, its glyph 13px, quiet until hovered. */
+.download-copy {
+  width: 1.875rem;
+  height: 1.875rem;
+  color: var(--faint-foreground);
+}
+
+.download-copy:hover {
+  color: var(--foreground);
+  border-color: color-mix(in srgb, var(--foreground) 20%, transparent);
+  background: transparent;
+}
+
+.download-copy svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* The agent's two buttons sit 16px under the prompt (the column's 14px + 2px). */
+.download-open {
+  margin-top: 0.125rem;
+}
+
+/* ---- the caveats: 14px × 18px inside a 14px corner, bullets 18px in ---- */
+.download-note {
+  padding: 0.875rem 1.125rem;
+  border-radius: 14px;
+}
+
+.download-note-icon {
+  margin-top: 2px;
+}
+
+.download-note-list {
+  padding-left: 1.125rem;
+}
+
+/* ---- once it is running: a hairline runs from each number to the next ---- */
+.download-step {
+  position: relative;
+}
+
+.download-step:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 12px;
+  left: 36px;
+  right: -16px;
+  height: 1px;
+  background: var(--border);
+}
+
+@media (max-width: 37.5rem) {
+  .download-step:not(:last-child)::after {
+    display: none;
+  }
+}
+
+/* A link in a sentence sits in the sentence's own line: no box of its own
+ * around it, so "Then open …" stays one line tall. */
+.download-link {
+  padding: 0;
+  border-width: 0;
+  line-height: inherit;
+  vertical-align: baseline;
+}

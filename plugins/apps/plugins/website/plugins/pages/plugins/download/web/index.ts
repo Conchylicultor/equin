@@ -2,7 +2,13 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { WebsiteHeader } from "@plugins/apps/plugins/website/plugins/shell/web";
 import { downloadPane } from "./panes";
+import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
 import { DownloadNavItem } from "./components/download-nav-item";
+import {
+  equinDownloadNoteTheme,
+  equinDownloadTabsTheme,
+  equinDownloadTheme,
+} from "./internal/theme";
 
 export { downloadPane } from "./panes";
 
@@ -15,5 +21,10 @@ export default {
     // `apps.website.shell`.
     Pane.Register({ pane: downloadPane }),
     WebsiteHeader({ id: "download", component: DownloadNavItem }),
+    // The page body's sizes and its caveats note's and its audience switch's, each worn over the site's
+    // equin-document by its own region of the page.
+    ThemeEngine.SubTheme(equinDownloadTheme),
+    ThemeEngine.SubTheme(equinDownloadNoteTheme),
+    ThemeEngine.SubTheme(equinDownloadTabsTheme),
   ],
 } satisfies PluginDefinition;

@@ -25,15 +25,15 @@ import { DownloadLink } from "./download-link";
 export function DownloadNextSteps() {
   const openPane = useOpenPane();
   return (
-    <Stack gap="xl">
+    <Stack gap="xl" className="website-download-next">
       <Text
         variant="eyebrow"
-        tone="muted"
-        className={cn(selfClass("center"), "font-semibold")}
+        tone="faint"
+        className={cn(selfClass("center"), "font-semibold tracking-[0.12em]")}
       >
         Once it is running
       </Text>
-      <Grid as="ol" minCellWidth="14rem" mode="fit" gap="xl" align="start">
+      <Grid as="ol" minCellWidth="14rem" mode="fit" gap="2xl" align="start">
         <Step n={1} title="Open it">
           equin lives at{" "}
           <DownloadLink href={LOCAL_APP_URL}>{LOCAL_APP_HOST}</DownloadLink>,
@@ -43,10 +43,12 @@ export function DownloadNextSteps() {
           n={2}
           title="Learn the basics"
           action={
-            <DownloadLink {...openPane.link(guidePane, {}, { mode: "root" })}>
-              Read the guide
-              <WebsiteArrow />
-            </DownloadLink>
+            <Text variant="label">
+              <DownloadLink {...openPane.link(guidePane, {}, { mode: "root" })}>
+                Read the guide
+                <WebsiteArrow />
+              </DownloadLink>
+            </Text>
           }
         >
           Tasks, agents and apps, in ten minutes.
@@ -72,7 +74,7 @@ function Step({
   children: ReactNode;
 }) {
   return (
-    <Stack as="li" gap="sm" align="start">
+    <Stack as="li" gap="md" align="start" className="download-step">
       <Center
         aria-hidden
         className="border-border bg-muted size-6 rounded-full border"
@@ -81,13 +83,15 @@ function Step({
           {n}
         </Text>
       </Center>
-      <Stack gap="xs" align="start">
-        <Text as="h3" variant="body" className="font-semibold">
-          {title}
-        </Text>
-        <Text as="p" variant="body" tone="muted">
-          {children}
-        </Text>
+      <Stack gap="xsm" align="start">
+        <Stack gap="2xs" align="start">
+          <Text as="h3" variant="subheading">
+            {title}
+          </Text>
+          <Text as="p" variant="body" tone="muted">
+            {children}
+          </Text>
+        </Stack>
         {action}
       </Stack>
     </Stack>

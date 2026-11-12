@@ -28,7 +28,10 @@ installer beside another's source. The installer's steps are written out in
   - Contributes:
     - `Pane.Register` "website-download"
     - `WebsiteHeader` "download" → `DownloadNavItem`
-  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ThemeEngine.SubTheme` "equin download note"
+    - `ThemeEngine.SubTheme` "equin download tabs"
+    - `ThemeEngine.SubTheme` "equin download"
+  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/website/shell` ×6
     - `primitives/collapsible` ×4
     - `primitives/css/spacing` ×3
@@ -45,8 +48,10 @@ installer beside another's source. The installer's steps are written out in
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/text.Text`
+    - `primitives/css/theme-boundary.Theme`
     - `primitives/css/toggle-chip.SegmentedControl`
     - `ui/icons.Icon`
+    - `ui/theme-engine.ThemeEngine`
   - Exports (values): `downloadPane`
 - Server:
   - Contributes: `apps.website.crawlable.page` "/about/download"
@@ -59,15 +64,15 @@ installer beside another's source. The installer's steps are written out in
     - `ui/tokens/color-palette --background`
     - `ui/tokens/color-palette --border`
     - `ui/tokens/color-palette --card`
+    - `ui/tokens/color-palette --faint-foreground`
     - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --muted`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --primary`
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/font-family --font-sans`
-    - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
-    - `ui/tokens/type-scale --font-weight-medium`
+    - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by: `apps/website/pages/apps`
 

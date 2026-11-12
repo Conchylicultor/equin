@@ -2,6 +2,8 @@
  * whole-card links; its link line underlined in the small print's grey,
  * coming up to the foreground while the card is hovered or focused. */
 .download-try {
+  padding: 1rem 1.375rem 1rem 1rem;
+  border-radius: 16px;
   transition: border-color 0.2s ease;
 }
 
@@ -13,6 +15,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
+  /* 10px under the line: the card's 4px + 6px. */
   margin-top: 0.375rem;
 }
 

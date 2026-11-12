@@ -1,5 +1,6 @@
 import type { ComponentProps, ReactNode } from "react";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import "./download.css";
 
 /**
  * A link inside a sentence of the download page — the local app's address, the
@@ -26,7 +27,7 @@ export function DownloadLink({
     <Button
       variant="link"
       aspect="inline"
-      className="text-foreground decoration-muted-foreground/60 hover:decoration-foreground underline"
+      className="download-link text-foreground decoration-muted-foreground/60 hover:decoration-foreground underline"
       {...gesture}
       render={
         href === undefined ? undefined : (

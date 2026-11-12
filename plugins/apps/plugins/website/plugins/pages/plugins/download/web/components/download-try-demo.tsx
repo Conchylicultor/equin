@@ -31,19 +31,19 @@ export function DownloadTryDemo() {
     <Card
       as="button"
       interactive
-      className="download-try hover:bg-card rounded-2xl text-left shadow-none"
+      className="website-download-try download-try hover:bg-card text-left shadow-none"
       {...appLinkProps(DEMO_URL)}
       onClickCapture={() => track("download_try_demo")}
     >
       {/* Side by side while the words keep 16rem; below that the picture
           sits on top. */}
-      <Stack direction="row" gap="xl" align="center" wrap>
+      <Stack direction="row" gap="lg" align="center" wrap>
         <DemoMiniature />
         <Fill className="min-w-64">
-          <Stack gap="xs" align="start">
+          <Stack gap="2xs" align="start">
             <Text
               as="span"
-              variant="subheading"
+              variant="heading"
               className="font-semibold tracking-[-0.01em]"
             >
               Not ready to install? Try it in your browser
@@ -52,11 +52,7 @@ export function DownloadTryDemo() {
               The real app on made-up data, nothing to install. Agents are off:
               they need equin on your machine.
             </Text>
-            <Text
-              as="span"
-              variant="body"
-              className="download-try-go font-medium"
-            >
+            <Text as="span" variant="label" className="download-try-go">
               Open the demo
               <WebsiteArrow />
             </Text>

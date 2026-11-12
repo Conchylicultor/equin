@@ -12107,7 +12107,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Contributes:
                   - `Pane.Register` "website-download"
                   - `WebsiteHeader` "download" → `DownloadNavItem`
-                - Uses: 31 symbols — full list in [`plugins/apps/plugins/website/plugins/pages/plugins/download/REFERENCE.md`](../plugins/apps/plugins/website/plugins/pages/plugins/download/REFERENCE.md)
+                  - `ThemeEngine.SubTheme` "equin download note"
+                  - `ThemeEngine.SubTheme` "equin download tabs"
+                  - `ThemeEngine.SubTheme` "equin download"
+                - Uses: 33 symbols — full list in [`plugins/apps/plugins/website/plugins/pages/plugins/download/REFERENCE.md`](../plugins/apps/plugins/website/plugins/pages/plugins/download/REFERENCE.md)
                   - `apps/website/shell` ×6
                   - `primitives/collapsible` ×4
                   - `primitives/css/spacing` ×3
@@ -12124,8 +12127,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/rigid.rigidClass`
                   - `primitives/css/scroll.Scroll`
                   - `primitives/css/text.Text`
+                  - `primitives/css/theme-boundary.Theme`
                   - `primitives/css/toggle-chip.SegmentedControl`
                   - `ui/icons.Icon`
+                  - `ui/theme-engine.ThemeEngine`
                 - Exports (values): `downloadPane`
               - Server:
                 - Contributes: `apps.website.crawlable.page` "/about/download"
@@ -12138,15 +12143,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/color-palette --background`
                   - `ui/tokens/color-palette --border`
                   - `ui/tokens/color-palette --card`
+                  - `ui/tokens/color-palette --faint-foreground`
                   - `ui/tokens/color-palette --foreground`
                   - `ui/tokens/color-palette --muted`
                   - `ui/tokens/color-palette --muted-foreground`
                   - `ui/tokens/color-palette --primary`
                   - `ui/tokens/font-family --font-mono`
                   - `ui/tokens/font-family --font-sans`
-                  - `ui/tokens/shape --radius`
                   - `ui/tokens/shape --spacing`
-                  - `ui/tokens/type-scale --font-weight-medium`
+                  - `ui/tokens/type-scale --font-weight-normal`
                   - `ui/tokens/type-scale --font-weight-semibold`
                 - Imported by: `apps/website/pages/apps`
             - **`foundations`** — The technical foundations page of the equin website: the /about/foundations pane drawing what equin brings on top of Claude as an iceberg — ten layers from the apps at sea level down to the loop that builds them, each piece a pill that opens in place into a card (many with a live drawing), with a depth gauge, a Components / Harness filter and Expand all — and its Foundations nav link. The technical foundations page of the equin website on the server: its sitemap entry (WebsitePages.Page).
@@ -46685,8 +46690,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/sidebar-palette --sidebar`
               - `ui/tokens/sidebar-palette --sidebar-accent`
-            - Imported by: 30 plugins — full list in [`plugins/primitives/plugins/css/plugins/theme-boundary/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/theme-boundary/REFERENCE.md)
-              - `apps` ×9
+            - Imported by: 31 plugins — full list in [`plugins/primitives/plugins/css/plugins/theme-boundary/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/theme-boundary/REFERENCE.md)
+              - `apps` ×10
               - `apps-core` ×7
               - `primitives` ×3
               - `hints` ×2
@@ -59870,10 +59875,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ThemeEngine.SubTheme`
           - `ThemeEngine.FixedTheme`
           - `ThemeEngine.ThemeSource`
-        - Slot contributors: 52 contributors — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
+        - Slot contributors: 53 contributors — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
           - `ThemeEngine.TokenGroup` ×19
           - `ThemeEngine.Theme` ×14
-          - `ThemeEngine.SubTheme` ×7
+          - `ThemeEngine.SubTheme` ×8
           - `ThemeEngine.VariantGroup` ×6
           - `ThemeEngine.FixedTheme` ×4
           - `ThemeEngine.ThemeSource` ×2
@@ -60032,9 +60037,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape` ×4
           - `ui/tokens/type-scale` ×4
           - `ui/tokens/data-view` ×2
-        - Imported by: 52 plugins — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
+        - Imported by: 53 plugins — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
           - `ui` ×29
-          - `apps` ×17
+          - `apps` ×18
           - `apps-core/chrome-theme`
           - `hints`
           - `map`
@@ -60609,6 +60614,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/prototypes/shell`
               - `apps/sonata/shell`
               - `apps/website/pages/apps`
+              - `apps/website/pages/download`
               - `apps/website/shell`
               - `hints`
               - `media/player`
@@ -61037,6 +61043,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/prototypes/shell`
               - `apps/sonata/shell`
               - `apps/website/pages/apps`
+              - `apps/website/pages/download`
               - `apps/website/shell`
               - `hints`
               - `media/player`
@@ -61187,6 +61194,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/prototypes/shell`
               - `apps/sonata/shell`
               - `apps/website/pages/apps`
+              - `apps/website/pages/download`
               - `apps/website/shell`
               - `hints`
               - `media/player`
