@@ -1,6 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { JsonlViewerTool } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { BrowserToolView } from "./components/browser-tool-view";
+import { browserToolIcon } from "./internal/tool-icon";
 
 export default {
   description:
@@ -9,6 +10,7 @@ export default {
     JsonlViewerTool.Renderer({
       match:
         /browser_(javascript|navigate|screenshot|act|find|get_page_text|console|close|viewport|tabs|attach|read_page|network|batch)$/,
+      icon: browserToolIcon,
       component: BrowserToolView,
       partialInput: true,
     }),

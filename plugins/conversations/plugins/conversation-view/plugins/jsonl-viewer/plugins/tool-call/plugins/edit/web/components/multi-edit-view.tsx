@@ -2,11 +2,14 @@ import type {
   ToolRendererProps,
   ToolCallEvent,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
-import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
+import {
+  ToolCallCard,
+  ToolCode,
+  ToolSection,
+} from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { InlineDiff } from "./inline-diff";
 
 type MultiEditInput = {
@@ -17,14 +20,9 @@ type MultiEditInput = {
 function ResultDetail({ result }: { result: ToolCallEvent["result"] }) {
   if (!result || !result.isError) return null;
   return (
-    <Text
-      as="div"
-      variant="caption"
-      tone="destructive"
-      className="rounded-md bg-destructive/10 p-sm whitespace-pre-wrap break-words"
-    >
-      {result.content || "Error"}
-    </Text>
+    <ToolSection label="Output" copyText={result.content}>
+      <ToolCode tone="error">{result.content || "Error"}</ToolCode>
+    </ToolSection>
   );
 }
 

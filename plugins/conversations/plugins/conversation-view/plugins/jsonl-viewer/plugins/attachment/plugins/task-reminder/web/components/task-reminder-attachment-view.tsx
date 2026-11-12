@@ -8,6 +8,10 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const checklistIcon = symbol("checklist");
 
 interface TaskReminderItem {
   id: string;
@@ -40,6 +44,7 @@ export function TaskReminderAttachmentView({ event }: AttachmentRendererProps) {
 
   return (
     <CollapsibleCard
+      icon={<Icon icon={checklistIcon} className="size-3.5" />}
       label="Task reminder"
       note={`· ${count === 0 ? "no tasks" : `${count} task${count === 1 ? "" : "s"}`}`}
     >

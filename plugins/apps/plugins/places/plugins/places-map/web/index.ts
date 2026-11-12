@@ -1,4 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 import { GeoMap } from "@plugins/map/web";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { placesMapPane } from "./panes";
@@ -65,6 +66,7 @@ export default {
     }),
     JsonlViewerTool.Renderer({
       match: agentToolName(PICKS_TOOL),
+      icon: symbol("location-on"),
       component: PicksToolView,
     }),
   ],

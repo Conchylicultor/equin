@@ -11,6 +11,7 @@ import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { EventRowActions } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
 
@@ -41,8 +42,8 @@ export interface CollapsibleCardProps {
   /** Leading icon before the title. Rendered by the card inside the title
    *  group, so it inherits the canonical title size/color — pass the raw icon
    *  element (e.g. `<MdReplay className="size-3.5" />`), never a styled wrapper. */
-  icon?: ReactNode;
-  /** Title content after the optional icon. Natural case — never all-caps
+  icon: ReactNode;
+  /** Title content after the icon. Natural case — never all-caps
    *  (jsonl-viewer rule). The card owns the title TYPOGRAPHY (house font + size);
    *  pass content only — `font-*`/`text-*` classes here are banned by lint
    *  (`collapsible-card/no-adhoc-card-title-font`). A semantic color accent
@@ -84,6 +85,15 @@ export interface CollapsibleCardProps {
   /** Collapsible body: its blocks, as siblings — the body stacks them with its
    *  own gap (and its own offset under the header), so none carries a margin. */
   children?: ReactNode;
+  /**
+   * `ghost` (default): a borderless timeline row — the `icon` on a node in its own column, a rail
+   * running down from it beside whatever hangs under the header (the open body,
+   * the footer), and the header's hover tint as the only surface. Opening it
+   * brightens the node and the title instead of drawing a box. Every
+   * transcript row is one, so the transcript reads as one timeline. `card`:
+   * the bordered, filled card, for a surface that is not a timeline.
+   */
+  variant?: "ghost" | "card";
   /** Always-shown content under the header (and under the body when open),
    *  inside the card's chrome — what belongs to the card but is not folded
    *  away, e.g. the screenshot a browser call left. It owns its own top
@@ -125,6 +135,7 @@ export function CollapsibleCard({
   className,
   children,
   footer,
+  variant = "ghost",
 }: CollapsibleCardProps) {
   const { open, triggerProps, contentProps } = useCollapsible({
     defaultOpen,
@@ -132,6 +143,26 @@ export function CollapsibleCard({
     onOpenChange,
   });
   const sideContent = aside ?? null;
+  if (variant === "ghost") {
+    return (
+      <GhostRow
+        icon={icon}
+        label={label}
+        note={note}
+        summary={summary}
+        aside={sideContent}
+        trailing={trailing}
+        error={error}
+        open={open}
+        triggerProps={triggerProps}
+        contentProps={contentProps}
+        className={className}
+        footer={footer}
+      >
+        {children}
+      </GhostRow>
+    );
+  }
   return (
     <Card
       controlSize="xs"
@@ -239,6 +270,188 @@ export function CollapsibleCard({
         </Stack>
       </FoldMotion>
       {footer}
+    </Card>
+  );
+}
+
+// The ghost row's own geometry: a 24px node column beside a 28px header, so the
+// node's glyph sits centred on the header line and the rail under it lines up
+// with every other ghost row's.
+const GHOST_NODE = "h-7 w-6";
+const GHOST_HEADER =
+  "w-full rounded-md font-sans text-tag text-muted-foreground transition-colors hover:bg-muted/55 hover:text-foreground";
+// The title's own weight: a row's name reads stronger than its summary.
+const GHOST_TITLE = "font-tag-strong";
+
+/**
+ * The node column every timeline row starts with: the row's glyph, centred on
+ * its 28px header line, then the rail — a 1px line filling whatever height
+ * hangs under the header (none on a row with nothing under it, so a run of
+ * closed rows reads as a column of glyphs).
+ */
+function TimelineNode({ icon, tone }: { icon: ReactNode; tone: string }) {
+  return (
+    <Stack
+      direction="col"
+      align="center"
+      gap="none"
+      className={cn(rigidClass(), "w-6")}
+    >
+      <Center className={cn(GHOST_NODE, "transition-colors", tone)}>
+        {icon}
+      </Center>
+      <Fill axis="y" className="w-px bg-border" />
+    </Stack>
+  );
+}
+
+/**
+ * A timeline row with nothing to open — a checkpoint, a notice, a mode change:
+ * the same node, header line and actions as a `CollapsibleCard`, so a static
+ * line and a tool call sit on one column and one baseline. `children` is the
+ * flexible, muted detail after the label (it may hold interactive content).
+ */
+export function TimelineLine({
+  icon,
+  label,
+  children,
+}: {
+  icon: ReactNode;
+  label: ReactNode;
+  children?: ReactNode;
+}) {
+  return (
+    <Stack direction="row" gap="2xs" align="stretch">
+      <TimelineNode icon={icon} tone="text-muted-foreground/70" />
+      <Fill>
+        <Line className="h-7 gap-sm pl-sm pr-2xs font-sans text-tag text-muted-foreground">
+          <span className={cn(rigidClass(), GHOST_TITLE)}>{label}</span>
+          <Fill>
+            <Line className="gap-xs text-muted-foreground/80">{children}</Line>
+          </Fill>
+          <span className={rigidClass()}>
+            <EventRowActions />
+          </span>
+        </Line>
+      </Fill>
+    </Stack>
+  );
+}
+
+type Collapsible = ReturnType<typeof useCollapsible>;
+
+function GhostRow({
+  icon,
+  label,
+  note,
+  summary,
+  aside,
+  trailing,
+  error,
+  open,
+  triggerProps,
+  contentProps,
+  className,
+  footer,
+  children,
+}: Pick<
+  CollapsibleCardProps,
+  | "icon"
+  | "label"
+  | "note"
+  | "summary"
+  | "aside"
+  | "trailing"
+  | "error"
+  | "className"
+  | "footer"
+  | "children"
+> & {
+  open: boolean;
+  triggerProps: Collapsible["triggerProps"];
+  contentProps: Collapsible["contentProps"];
+}) {
+  return (
+    <Card
+      controlSize="xs"
+      data-open={open || undefined}
+      className={cn(
+        "group rounded-none border-transparent bg-transparent p-none shadow-none",
+        className,
+      )}
+    >
+      <Stack direction="row" gap="2xs" align="stretch">
+        <TimelineNode
+          icon={icon}
+          tone={
+            error
+              ? "text-destructive"
+              : open
+                ? "text-foreground"
+                : "text-muted-foreground/70"
+          }
+        />
+        <Fill>
+          <Overlay
+            className={cn(GHOST_HEADER, open && "text-foreground")}
+            clickThrough
+            behind={
+              <button
+                {...triggerProps}
+                aria-label={open ? "Collapse" : "Expand"}
+                className="size-full rounded-md"
+              />
+            }
+          >
+            <Line className="h-7 gap-sm pl-sm pr-2xs">
+              <Stack
+                as="span"
+                direction="row"
+                align="center"
+                gap="xs"
+                className={cn(
+                  rigidClass(),
+                  GHOST_TITLE,
+                  "pointer-events-none relative",
+                )}
+              >
+                {label}
+                {note != null && (
+                  <span className="text-muted-foreground/60">{note}</span>
+                )}
+              </Stack>
+              <Fill>
+                <Line className="gap-sm">
+                  {summary != null && (
+                    <Text className="pointer-events-none text-muted-foreground/80">
+                      {summary}
+                    </Text>
+                  )}
+                  {aside && (
+                    <CardHeaderAction className={yieldClass("x")}>
+                      {aside}
+                    </CardHeaderAction>
+                  )}
+                </Line>
+              </Fill>
+              {trailing && (
+                <CardHeaderAction className={rigidClass()}>
+                  {trailing}
+                </CardHeaderAction>
+              )}
+              <CardHeaderAction className={rigidClass()}>
+                <EventRowActions />
+              </CardHeaderAction>
+            </Line>
+          </Overlay>
+          <FoldMotion {...contentProps}>
+            <Stack gap="2xs" className="pb-xs">
+              {children}
+            </Stack>
+          </FoldMotion>
+          {footer}
+        </Fill>
+      </Stack>
     </Card>
   );
 }

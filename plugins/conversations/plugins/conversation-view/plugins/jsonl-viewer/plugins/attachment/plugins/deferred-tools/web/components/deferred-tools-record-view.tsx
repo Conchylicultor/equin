@@ -3,6 +3,10 @@ import type { AttachmentRendererProps } from "@plugins/conversations/plugins/con
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const buildIcon = symbol("build");
 
 interface DeferredToolsRecordPayload {
   type: "deferred_tools_record";
@@ -28,6 +32,7 @@ export function DeferredToolsRecordView({ event }: AttachmentRendererProps) {
 
   return (
     <CollapsibleCard
+      icon={<Icon icon={buildIcon} className="size-3.5" />}
       label="Deferred tools"
       note={`· ${entries.length} ${entries.length === 1 ? "tool" : "tools"}`}
     >

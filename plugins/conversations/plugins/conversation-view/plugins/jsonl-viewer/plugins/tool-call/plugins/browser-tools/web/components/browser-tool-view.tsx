@@ -1,10 +1,9 @@
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
-import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
-import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
-import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  ToolCallCard,
+  ToolOutput,
+  ToolSection,
+} from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { describeBrowserCall } from "../internal/describe";
 
@@ -25,27 +24,12 @@ export function BrowserToolView({ event }: ToolRendererProps) {
       summary={<span className="font-mono">{view.summary}</span>}
       defaultOpen={failed}
     >
-      <ContentScope>
-        <Stack gap="sm">
-          {view.body && (
-            <HighlightedCode code={view.body.code} lang={view.body.lang} />
-          )}
-          {result && result.content !== "" && (
-            <Clip className="rounded-md border border-border/40 bg-muted font-mono">
-              <Text as="div" variant="caption">
-                <Scroll
-                  as="pre"
-                  className={`max-h-72 whitespace-pre-wrap break-words px-md py-sm ${
-                    failed ? "text-destructive" : "text-muted-foreground"
-                  }`}
-                >
-                  {result.content}
-                </Scroll>
-              </Text>
-            </Clip>
-          )}
-        </Stack>
-      </ContentScope>
+      {view.body && (
+        <ToolSection label="Input" copyText={view.body.code}>
+          <HighlightedCode code={view.body.code} lang={view.body.lang} />
+        </ToolSection>
+      )}
+      {result && result.content !== "" && <ToolOutput event={event} />}
     </ToolCallCard>
   );
 }

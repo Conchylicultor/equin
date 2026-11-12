@@ -1,4 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { JsonlViewerTool } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { WorkflowToolView } from "./components/workflow-tool-view";
@@ -11,6 +12,7 @@ export default {
   contributions: [
     JsonlViewerTool.Renderer({
       match: WORKFLOW_TOOL_NAME,
+      icon: symbol("account-tree"),
       component: WorkflowToolView,
     }),
     Pane.Register({ pane: workflowNodePane }),

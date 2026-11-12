@@ -13,17 +13,15 @@
     - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
     - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
+    - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCode`
+    - `conversations/conversation-view/jsonl-viewer/tool-call.ToolSection`
     - `primitives/css/fill.Fill`
     - `primitives/css/spacing.Stack`
-    - `primitives/css/text.Text`
     - `primitives/diff-view.TextDiff`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --border`
-    - `ui/tokens/color-palette --destructive`
     - `ui/tokens/color-palette --muted-foreground`
-    - `ui/tokens/density --space-sm`
-    - `ui/tokens/shape --radius`
     - `ui/tokens/type-scale --font-scale`
     - `ui/tokens/type-scale --font-size-2xs`
     - `ui/tokens/type-scale --line-height-2xs`

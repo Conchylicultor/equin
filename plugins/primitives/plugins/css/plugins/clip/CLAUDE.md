@@ -34,10 +34,10 @@ truncation leaf (it ellipsizes via the ambient single-line context).
     - `Clip`
     - `clipClasses`
 - Cross-plugin:
-  - Imported by: 63 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 60 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×20
-    - `conversations` ×10
     - `primitives` ×10
+    - `conversations` ×7
     - `page` ×6
     - `debug` ×4
     - `fields` ×2

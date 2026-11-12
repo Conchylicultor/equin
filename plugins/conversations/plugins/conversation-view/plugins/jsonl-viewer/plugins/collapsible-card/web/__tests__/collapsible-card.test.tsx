@@ -32,14 +32,20 @@ afterEach(cleanup);
 describe("CollapsibleCard", () => {
   it("renders no chevron", () => {
     const { container } = render(
-      <CollapsibleCard label="Thinking">body</CollapsibleCard>,
+      <CollapsibleCard icon={<span />} label="Thinking">
+        body
+      </CollapsibleCard>,
     );
     // The only glyph a bare card could draw was the chevron.
     expect(container.querySelector("svg")).toBeNull();
   });
 
   it("still toggles from the row, and says so to assistive tech", async () => {
-    render(<CollapsibleCard label="Thinking">the body</CollapsibleCard>);
+    render(
+      <CollapsibleCard icon={<span />} label="Thinking">
+        the body
+      </CollapsibleCard>,
+    );
     const toggle = screen.getByRole("button", { name: "Expand" });
     expect(toggle.getAttribute("aria-expanded")).toBe("false");
     expect(screen.queryByText("the body")).toBeNull();

@@ -1,11 +1,12 @@
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
-import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
-import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
+import {
+  ToolCallCard,
+  ToolCode,
+  ToolOutput,
+  ToolSection,
+} from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
-import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
@@ -122,6 +123,26 @@ function BackgroundBashToolView({
   );
 }
 
+/**
+ * A failed Bash result opens with the harness's `Exit code N` line; a result
+ * not flagged as an error is a command that exited 0. Anything else (a
+ * timeout, a denial, an interrupted call) has no exit code to show.
+ */
+const EXIT_LINE = /^Exit code (\d+)\n?/;
+
+function readExit(result: NonNullable<ToolRendererProps["event"]["result"]>): {
+  code: number | undefined;
+  output: string;
+} {
+  const text = stripAnsi(result.content);
+  if (result.outcomeUnknown) return { code: undefined, output: text };
+  if (!result.isError) return { code: 0, output: text };
+  const m = EXIT_LINE.exec(text);
+  return m
+    ? { code: Number(m[1]), output: text.slice(m[0].length) }
+    : { code: undefined, output: text };
+}
+
 /** The command, and its result: the output, or a background call's acknowledgement. */
 function BashBody({
   event,
@@ -131,39 +152,31 @@ function BashBody({
   input: BashInput;
 }) {
   const result = event.result;
-  const output = result?.content ? stripAnsi(result.content) : null;
+  // A backgrounded call's result is its launch acknowledgement, not the
+  // command's end: it has no exit code to read.
+  const exit =
+    result &&
+    (input.run_in_background === true
+      ? { code: undefined, output: stripAnsi(result.content) }
+      : readExit(result));
   return (
-    <ContentScope>
-      <Clip className="rounded-md border border-border/40 bg-muted font-mono">
-        <Text as="div" variant="caption">
-          <Stack direction="row" gap="sm" align="start" className="px-md py-sm">
-            <span className="select-none text-muted-foreground/40">$</span>
-            <Fill
-              as="span"
-              className="whitespace-pre-wrap break-words text-foreground"
-            >
-              {input.command}
-            </Fill>
-          </Stack>
-          {result && (
-            <>
-              <div className="border-t border-border/30" />
-              <Scroll
-                as="pre"
-                className={`max-h-72 whitespace-pre-wrap break-words px-md py-sm ${
-                  result.isError && !result.outcomeUnknown
-                    ? "text-destructive"
-                    : "text-muted-foreground"
-                }`}
-              >
-                {output ?? (
-                  <span className="italic opacity-50">(no output)</span>
-                )}
-              </Scroll>
-            </>
-          )}
-        </Text>
-      </Clip>
-    </ContentScope>
+    <>
+      <ToolSection label="Input" copyText={input.command}>
+        <ToolCode>
+          <Text tone="faint" className="select-none">
+            ${" "}
+          </Text>
+          {input.command}
+        </ToolCode>
+      </ToolSection>
+      {exit && (
+        <ToolOutput
+          event={event}
+          text={exit.output}
+          detail={exit.code !== undefined ? `exit ${exit.code}` : undefined}
+          empty="(no output)"
+        />
+      )}
+    </>
   );
 }

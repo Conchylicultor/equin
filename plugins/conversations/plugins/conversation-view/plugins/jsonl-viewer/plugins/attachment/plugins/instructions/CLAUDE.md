@@ -43,6 +43,7 @@ row's actual news, so it keeps the header for the count instead.
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `ui/icons.Icon`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --destructive`

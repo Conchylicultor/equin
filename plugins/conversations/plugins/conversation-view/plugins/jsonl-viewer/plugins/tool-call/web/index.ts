@@ -13,6 +13,14 @@ export type {
 } from "./slots";
 export { ToolCallCard, ToolCallFrame } from "./components/tool-call-card";
 export { ToolNameLabel } from "./components/tool-name-label";
+export {
+  ToolCode,
+  ToolCodeEmpty,
+  ToolOutput,
+  ToolSection,
+  toolResultStatus,
+  type ToolSectionStatus,
+} from "./components/tool-section";
 
 export default {
   collapsed: true,

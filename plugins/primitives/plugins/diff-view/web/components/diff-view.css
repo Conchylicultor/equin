@@ -4,6 +4,9 @@
   --diff-background-color: transparent;
   --diff-selection-background-color: var(--accent);
   --diff-selection-text-color: var(--accent-foreground);
+  /* react-diff-view marks the empty side of a split row with a red bar down
+     its gutter; the empty cell already says it. */
+  --diff-omit-gutter-line-color: transparent;
 
   /* light-dark(): resolved where the colour is used, against the nearest
      scheme carrier's `color-scheme` — so a diff in a light app is light even

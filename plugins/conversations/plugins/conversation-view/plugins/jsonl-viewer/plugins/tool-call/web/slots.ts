@@ -4,6 +4,7 @@ import {
   defineRenderSlot,
   type DispatchContribution,
 } from "@plugins/primitives/plugins/slot-render/web";
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type { ToolCallEvent, ToolRendererProps } from "../core";
 import { GenericToolView } from "./components/generic-tool-view";
 
@@ -15,6 +16,13 @@ import { GenericToolView } from "./components/generic-tool-view";
  */
 export interface ToolRendererMeta {
   partialInput?: true;
+  /**
+   * The glyph on the call's timeline node, left of its name: what the tool
+   * does at a glance (a terminal for Bash, a globe for a navigation). A
+   * renderer covering several tools (a pattern match) passes a function of the
+   * call. Absent: the generic tool glyph.
+   */
+  icon?: IconRef | ((event: ToolCallEvent) => IconRef);
 }
 
 export type ToolRendererContribution = DispatchContribution<

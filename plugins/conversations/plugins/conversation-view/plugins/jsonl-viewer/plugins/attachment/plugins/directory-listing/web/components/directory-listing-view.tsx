@@ -4,6 +4,10 @@ import type { AttachmentRendererProps } from "@plugins/conversations/plugins/con
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const folderIcon = symbol("folder");
 
 interface DirectoryPayload {
   type: "directory";
@@ -42,6 +46,7 @@ export function DirectoryListingView({ event }: AttachmentRendererProps) {
 
   return (
     <CollapsibleCard
+      icon={<Icon icon={folderIcon} className="size-3.5" />}
       label="Directory"
       note={
         entries.length === 0

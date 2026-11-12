@@ -180,24 +180,20 @@ back.
   - Contributes:
     - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
     - `JsonlRowActions.Item` "raw-json" → `RawJsonAction`
-  - Uses: 60 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 52 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live/live-state` ×9
     - `conversations/conversation-view/pending-turn` ×6
     - `primitives/dom/auto-scroll` ×5
-    - `primitives/collapsible` ×4
-    - `conversations/conversation-view/jsonl-viewer/row-actions` ×3
-    - `primitives/css/ui-kit` ×2
+    - `conversations/conversation-view/jsonl-viewer/collapsible-card` ×2
+    - `conversations/conversation-view/jsonl-viewer/row-actions` ×2
     - `primitives/css/working-dots` ×2
     - `primitives/relative-time` ×2
     - `primitives/slot-render` ×2
-    - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
     - `network/live.useLive`
     - `primitives/css/center.Center`
-    - `primitives/css/fill.Fill`
     - `primitives/css/grow.growClass`
     - `primitives/css/line.Line`
     - `primitives/css/motion.Arrival`
-    - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/sticky.Sticky`
@@ -308,12 +304,23 @@ back.
     - `transcriptPrompts`
     - `transcriptToolCall`
 - Cross-plugin:
-  - Uses tokens: 22 vars — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ui/tokens/type-scale` ×8
-    - `ui/tokens/color-palette` ×6
-    - `ui/tokens/density` ×5
-    - `ui/tokens/shape` ×2
+  - Uses tokens:
+    - `ui/tokens/color-palette --background`
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --warning`
+    - `ui/tokens/density --space-2xl`
+    - `ui/tokens/density --space-2xs`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xs`
     - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-2xs`
+    - `ui/tokens/type-scale --line-height-2xs`
+    - `ui/tokens/type-scale --measure-reading`
   - Imported by: 52 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×49
     - `apps/places/places-map`

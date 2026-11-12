@@ -6,8 +6,15 @@ import { useSteadyReveal } from "@plugins/conversations/plugins/conversation-vie
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
-type AssistantThinkingEvent = Extract<JsonlEvent, { kind: "assistant-thinking" }>;
+const thinkingIcon = symbol("lightbulb");
+
+type AssistantThinkingEvent = Extract<
+  JsonlEvent,
+  { kind: "assistant-thinking" }
+>;
 
 const THOUGHT_CLASS =
   "whitespace-pre-wrap break-words font-mono text-muted-foreground";
@@ -31,8 +38,9 @@ export function AssistantThinkingRow({ event }: { event: JsonlEvent }) {
 
   return (
     <CollapsibleCard
+      icon={<Icon icon={thinkingIcon} className="size-3.5" />}
       label="Thinking"
-      summary={lead === "" ? undefined : lead}
+      summary={lead === "" ? undefined : <span className="italic">{lead}</span>}
       open={open}
       onOpenChange={setChosen}
     >

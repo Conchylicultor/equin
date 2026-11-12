@@ -21,6 +21,7 @@
     - `parseDuration`
 - Cross-plugin:
   - Imported by:
+    - `conversations/conversation-view/jsonl-viewer/tool-call`
     - `debug/backend-crash`
     - `debug/claude-cli-calls`
     - `debug/profiling/runtime`

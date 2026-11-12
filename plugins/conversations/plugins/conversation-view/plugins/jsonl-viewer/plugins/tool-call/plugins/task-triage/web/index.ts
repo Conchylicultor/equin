@@ -1,4 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 import { JsonlViewerTool } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { TaskSubmitTriageToolView } from "./components/task-submit-triage-tool-view";
 
@@ -9,6 +10,7 @@ export default {
     // Every field is optional while the input streams in.
     JsonlViewerTool.Renderer({
       match: /task_submit_triage$/,
+      icon: symbol("article"),
       component: TaskSubmitTriageToolView,
       partialInput: true,
     }),

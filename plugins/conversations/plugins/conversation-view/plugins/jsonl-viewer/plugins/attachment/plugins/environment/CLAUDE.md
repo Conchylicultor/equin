@@ -35,6 +35,7 @@ failed to arrive.
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/yield.yieldClass`
+    - `ui/icons.Icon`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --foreground`

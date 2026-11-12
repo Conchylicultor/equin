@@ -4,6 +4,10 @@ import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugi
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const menuBookIcon = symbol("menu-book");
 
 interface InstructionFile {
   path?: string;
@@ -82,6 +86,7 @@ export function InstructionsView({ event }: AttachmentRendererProps) {
 
   return (
     <CollapsibleCard
+      icon={<Icon icon={menuBookIcon} className="size-3.5" />}
       label="Project instructions"
       note={`· ${counts || "no changes"}`}
       aside={asidePath ? <FilePath filePath={asidePath} /> : undefined}

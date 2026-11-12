@@ -1,5 +1,8 @@
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
-import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
+import {
+  ToolCallCard,
+  ToolOutput,
+} from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
@@ -204,14 +207,7 @@ export function WorkflowToolView({ event }: ToolRendererProps) {
             </Stack>
           )}
 
-          {result?.isError && (
-            <Scroll
-              as="pre"
-              className="max-h-96 whitespace-pre-wrap break-words rounded-md bg-destructive/10 p-sm text-destructive"
-            >
-              {result.content || "(empty)"}
-            </Scroll>
-          )}
+          {result?.isError && <ToolOutput event={event} />}
         </Stack>
       </Text>
     </ToolCallCard>

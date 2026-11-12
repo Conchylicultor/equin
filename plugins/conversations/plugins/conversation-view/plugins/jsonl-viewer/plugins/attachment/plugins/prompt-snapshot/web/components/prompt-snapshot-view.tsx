@@ -5,6 +5,10 @@ import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const articleIcon = symbol("article");
 
 /** Not prompt text: the marker separating the static system prompt from the
  *  part assembled per session. It sits at index 1 in every payload seen. */
@@ -78,7 +82,11 @@ export function PromptSnapshotView({ event }: AttachmentRendererProps) {
     .join(" · ");
 
   return (
-    <CollapsibleCard label="System prompt" note={`· ${note}`}>
+    <CollapsibleCard
+      icon={<Icon icon={articleIcon} className="size-3.5" />}
+      label="System prompt"
+      note={`· ${note}`}
+    >
       <Scroll className="max-h-96">
         <Stack gap="sm">
           {segments.map((segment, i) =>

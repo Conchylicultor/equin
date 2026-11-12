@@ -1,13 +1,15 @@
 import { rowOrStale } from "@plugins/network/plugins/live/web";
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
-import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
+import {
+  ToolCallCard,
+  ToolCode,
+  ToolSection,
+} from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { filePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -57,24 +59,16 @@ export function SkillToolView({ event }: ToolRendererProps) {
 
   return (
     <ToolCallCard event={event} summary={summary} leading={skillChip}>
-      {(args || injected.length > 0) && (
-        <Stack gap="sm">
-          {args && (
-            <pre className="text-caption whitespace-pre-wrap break-words rounded-md bg-muted/60 p-sm">
-              {args}
-            </pre>
-          )}
-          {injected.map((ctx, i) => (
-            <Scroll
-              as="pre"
-              key={i}
-              className="text-caption max-h-96 whitespace-pre-wrap break-words rounded-md border border-border/40 px-sm py-sm text-muted-foreground"
-            >
-              {ctx}
-            </Scroll>
-          ))}
-        </Stack>
+      {args && (
+        <ToolSection label="Arguments" copyText={args}>
+          <ToolCode>{args}</ToolCode>
+        </ToolSection>
       )}
+      {injected.map((ctx, i) => (
+        <ToolSection key={i} label="Skill content" copyText={ctx}>
+          <ToolCode>{ctx}</ToolCode>
+        </ToolSection>
+      ))}
     </ToolCallCard>
   );
 }

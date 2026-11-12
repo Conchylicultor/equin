@@ -2,6 +2,10 @@ import { CollapsibleCard } from "@plugins/conversations/plugins/conversation-vie
 import type { AttachmentRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/core";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const webhookIcon = symbol("webhook");
 
 interface HookErrorPayload {
   type: string;
@@ -54,6 +58,7 @@ export function HookErrorView({ event }: AttachmentRendererProps) {
 
   return (
     <CollapsibleCard
+      icon={<Icon icon={webhookIcon} className="size-3.5" />}
       error
       defaultOpen
       label={label}

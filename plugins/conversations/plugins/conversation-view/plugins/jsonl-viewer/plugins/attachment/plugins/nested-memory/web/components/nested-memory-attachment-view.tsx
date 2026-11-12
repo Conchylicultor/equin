@@ -3,6 +3,10 @@ import type { AttachmentRendererProps } from "@plugins/conversations/plugins/con
 import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const memoryIcon = symbol("memory");
 
 interface NestedMemoryPayload {
   type: "nested_memory";
@@ -19,7 +23,11 @@ export function NestedMemoryAttachmentView({ event }: AttachmentRendererProps) {
   const att = event.attachment as NestedMemoryPayload;
 
   return (
-    <CollapsibleCard label="Memory" aside={<FilePath filePath={att.path} />}>
+    <CollapsibleCard
+      icon={<Icon icon={memoryIcon} className="size-3.5" />}
+      label="Memory"
+      aside={<FilePath filePath={att.path} />}
+    >
       <Scroll className="max-h-64">
         <Text
           as="pre"

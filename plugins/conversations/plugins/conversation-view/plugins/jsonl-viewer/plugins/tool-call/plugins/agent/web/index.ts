@@ -1,4 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { JsonlViewerTool } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { TaskNotification } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/task-notification/web";
@@ -15,6 +16,7 @@ export default {
   contributions: [
     JsonlViewerTool.Renderer({
       match: AGENT_TOOL_NAME,
+      icon: symbol("auto-awesome"),
       component: AgentToolView,
     }),
     Pane.Register({ pane: agentReportPane }),

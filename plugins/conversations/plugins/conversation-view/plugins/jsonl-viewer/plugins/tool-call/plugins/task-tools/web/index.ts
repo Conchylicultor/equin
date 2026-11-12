@@ -1,4 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 import { JsonlViewerTool } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { JsonlViewer } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { TaskCreateToolView } from "./components/task-create-tool-view";
@@ -13,12 +14,39 @@ export default {
   description:
     "Renders TaskCreate/Update/Get/List/Output/Stop tool calls with a sticky progress overlay.",
   contributions: [
-    JsonlViewerTool.Renderer({ match: "TaskCreate", component: TaskCreateToolView }),
-    JsonlViewerTool.Renderer({ match: "TaskUpdate", component: TaskUpdateToolView }),
-    JsonlViewerTool.Renderer({ match: "TaskGet", component: TaskGetToolView }),
-    JsonlViewerTool.Renderer({ match: "TaskList", component: TaskListToolView }),
-    JsonlViewerTool.Renderer({ match: "TaskOutput", component: TaskOutputToolView }),
-    JsonlViewerTool.Renderer({ match: "TaskStop", component: TaskStopToolView }),
-    JsonlViewer.Overlay({ id: "task-progress", component: TaskProgressOverlay }),
+    JsonlViewerTool.Renderer({
+      match: "TaskCreate",
+      icon: symbol("check-box"),
+      component: TaskCreateToolView,
+    }),
+    JsonlViewerTool.Renderer({
+      match: "TaskUpdate",
+      icon: symbol("checklist"),
+      component: TaskUpdateToolView,
+    }),
+    JsonlViewerTool.Renderer({
+      match: "TaskGet",
+      icon: symbol("checklist"),
+      component: TaskGetToolView,
+    }),
+    JsonlViewerTool.Renderer({
+      match: "TaskList",
+      icon: symbol("checklist"),
+      component: TaskListToolView,
+    }),
+    JsonlViewerTool.Renderer({
+      match: "TaskOutput",
+      icon: symbol("checklist"),
+      component: TaskOutputToolView,
+    }),
+    JsonlViewerTool.Renderer({
+      match: "TaskStop",
+      icon: symbol("stop"),
+      component: TaskStopToolView,
+    }),
+    JsonlViewer.Overlay({
+      id: "task-progress",
+      component: TaskProgressOverlay,
+    }),
   ],
 } satisfies PluginDefinition;

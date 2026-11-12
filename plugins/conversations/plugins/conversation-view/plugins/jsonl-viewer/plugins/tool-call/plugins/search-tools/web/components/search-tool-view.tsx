@@ -1,9 +1,13 @@
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
-import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
+import {
+  ToolCallCard,
+  ToolCode,
+  ToolCodeEmpty,
+  ToolSection,
+  toolResultStatus,
+} from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
-import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
@@ -21,7 +25,7 @@ function FileList({ lines }: { lines: string[] }) {
   const rest = lines.slice(MAX_PATH_CHIPS);
   return (
     <Scroll className="max-h-72">
-      <Stack gap="2xs">
+      <Stack gap="2xs" className="px-smd pb-sm">
         {chips.map((path, i) => (
           <FilePath key={`${i}-${path}`} filePath={path} />
         ))}
@@ -40,18 +44,7 @@ function FileList({ lines }: { lines: string[] }) {
 }
 
 function RawLines({ lines }: { lines: string[] }) {
-  return (
-    <Clip className="rounded-md border border-border/40 bg-muted font-mono">
-      <Text as="div" variant="caption">
-        <Scroll
-          as="pre"
-          className="max-h-72 whitespace-pre-wrap break-words px-md py-sm text-muted-foreground"
-        >
-          {lines.join("\n")}
-        </Scroll>
-      </Text>
-    </Clip>
-  );
+  return <ToolCode>{lines.join("\n")}</ToolCode>;
 }
 
 function Results({
@@ -63,9 +56,9 @@ function Results({
 }) {
   if (outcome.lines.length === 0) {
     return (
-      <Text as="p" variant="caption" className="italic text-muted-foreground">
-        No matches
-      </Text>
+      <ToolCode>
+        <ToolCodeEmpty>No matches</ToolCodeEmpty>
+      </ToolCode>
     );
   }
   return files ? (
@@ -104,16 +97,22 @@ export function SearchToolView({ event }: ToolRendererProps) {
       }
       note={outcome && `· ${plural(outcome.count, outcome.unit)}`}
     >
-      {result?.isError ? (
-        <Text as="p" variant="caption" className="text-destructive">
-          {result.content}
-        </Text>
-      ) : (
-        outcome && (
-          <ContentScope>
-            <Results outcome={outcome} files={call.shape === "files"} />
-          </ContentScope>
-        )
+      {result && (
+        <ToolSection
+          label="Output"
+          copyText={result.content}
+          status={toolResultStatus(event)}
+        >
+          {result.isError ? (
+            <ToolCode tone={result.outcomeUnknown ? "default" : "error"}>
+              {result.content}
+            </ToolCode>
+          ) : (
+            outcome && (
+              <Results outcome={outcome} files={call.shape === "files"} />
+            )
+          )}
+        </ToolSection>
       )}
     </ToolCallCard>
   );

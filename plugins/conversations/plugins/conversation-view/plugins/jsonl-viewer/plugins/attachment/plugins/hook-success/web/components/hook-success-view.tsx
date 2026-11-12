@@ -6,6 +6,10 @@ import type {
 import type { AttachmentRole } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const webhookIcon = symbol("webhook");
 
 interface HookSuccessPayload {
   type: "hook_success";
@@ -48,6 +52,7 @@ export function HookSuccessView({ event }: AttachmentRendererProps) {
 
   return (
     <CollapsibleCard
+      icon={<Icon icon={webhookIcon} className="size-3.5" />}
       error={failed}
       label={`Hook ${att.hookName ?? att.hookEvent ?? "ran"}`}
       note={

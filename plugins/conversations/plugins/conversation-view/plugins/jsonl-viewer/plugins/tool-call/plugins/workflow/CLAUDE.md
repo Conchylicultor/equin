@@ -11,10 +11,10 @@
   - Contributes:
     - `JsonlViewerTool.Renderer` "Workflow" → `WorkflowToolView`
     - `Pane.Register` "workflow-node"
-  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/spacing` ×4
     - `primitives/pane` ×4
-    - `conversations/conversation-view/jsonl-viewer/tool-call` ×2
+    - `conversations/conversation-view/jsonl-viewer/tool-call` ×3
     - `primitives/collapsible` ×2
     - `primitives/css/badge` ×2
     - `conversations/conversation-view.conversationPane`
@@ -39,9 +39,9 @@
     - `primitives/syntax-highlight.HighlightedCode`
     - `ui/icons.Icon`
 - Cross-plugin:
-  - Uses tokens: 26 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 25 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/type-scale` ×9
-    - `ui/tokens/color-palette` ×7
+    - `ui/tokens/color-palette` ×6
     - `ui/tokens/density` ×4
     - `ui/tokens/categorical` ×3
     - `ui/tokens/shape` ×2

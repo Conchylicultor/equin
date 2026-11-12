@@ -10,9 +10,7 @@
     - `conversations/conversation-view/jsonl-viewer/assistant-text`
     - `conversations/conversation-view/jsonl-viewer/compaction`
     - `conversations/conversation-view/jsonl-viewer/request-shape`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/browser-tools`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/search-tools`
+    - `conversations/conversation-view/jsonl-viewer/tool-call`
     - `conversations/conversation-view/user-message`
     - `page/editor`
     - `primitives/css/surface`

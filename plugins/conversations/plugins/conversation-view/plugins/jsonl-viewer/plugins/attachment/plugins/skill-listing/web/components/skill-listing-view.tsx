@@ -2,6 +2,10 @@ import { CollapsibleCard } from "@plugins/conversations/plugins/conversation-vie
 import type { AttachmentRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/core";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const autoAwesomeIcon = symbol("auto-awesome");
 
 interface SkillListingPayload {
   type: "skill_listing";
@@ -38,6 +42,7 @@ export function SkillListingView({ event }: AttachmentRendererProps) {
 
   return (
     <CollapsibleCard
+      icon={<Icon icon={autoAwesomeIcon} className="size-3.5" />}
       label="Skills available"
       note={`· ${count} skill${count === 1 ? "" : "s"}`}
     >

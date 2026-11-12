@@ -8,6 +8,8 @@
 - Web:
   - Uses:
     - `apps/pages/page-tree.pageDetailPane`
+    - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCode`
+    - `conversations/conversation-view/jsonl-viewer/tool-call.ToolSection`
     - `network/live.rowOrStale`
     - `network/live.useLive`
     - `page/editor.PageIcon`
@@ -16,8 +18,6 @@
     - `primitives/css/cluster.Cluster`
     - `primitives/css/link-chip.LinkChip`
     - `primitives/css/scroll.Scroll`
-    - `primitives/css/spacing.Inset`
-    - `primitives/css/text.Text`
     - `primitives/pane.useOpenPane`
     - `primitives/syntax-highlight.HighlightedCode`
   - Exports (values):
@@ -26,10 +26,7 @@
     - `PageToolError`
     - `PageWriteReport`
 - Cross-plugin:
-  - Uses tokens:
-    - `ui/tokens/color-palette --destructive`
-    - `ui/tokens/shape --radius`
-    - `ui/tokens/shape --spacing`
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `conversations/conversation-view/artifacts/page`
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/edit-page`

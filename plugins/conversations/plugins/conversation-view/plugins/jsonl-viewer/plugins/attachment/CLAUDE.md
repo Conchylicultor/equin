@@ -17,6 +17,7 @@
     - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
     - `primitives/css/text.Text`
     - `primitives/slot-render.defineDispatchSlot`
+    - `ui/icons.Icon`
   - Exports (types): `AttachmentRole`
   - Exports (values):
     - `attachmentRenderer`
@@ -25,6 +26,7 @@
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shape --spacing`
   - Imported by: 27 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×27
 - Core:

@@ -15,6 +15,7 @@
     - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/text.Text`
+    - `ui/icons.Icon`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`

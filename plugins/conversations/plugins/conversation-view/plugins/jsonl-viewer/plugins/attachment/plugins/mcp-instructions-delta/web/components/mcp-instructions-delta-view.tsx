@@ -3,6 +3,10 @@ import type { AttachmentRendererProps } from "@plugins/conversations/plugins/con
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const extensionIcon = symbol("extension");
 
 interface McpInstructionsDeltaPayload {
   type: "mcp_instructions_delta";
@@ -44,6 +48,7 @@ export function McpInstructionsDeltaView({ event }: AttachmentRendererProps) {
 
   return (
     <CollapsibleCard
+      icon={<Icon icon={extensionIcon} className="size-3.5" />}
       label="MCP instructions"
       note={counts ? `· ${counts}` : "· no changes"}
     >

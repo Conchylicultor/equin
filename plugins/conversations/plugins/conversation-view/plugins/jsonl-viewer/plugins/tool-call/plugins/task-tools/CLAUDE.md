@@ -21,6 +21,7 @@ Renders Claude Code's native task tools (TaskCreate, TaskUpdate, TaskGet, TaskLi
     - `conversations/conversation-view/jsonl-viewer.useWholeTranscript`
     - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
+    - `conversations/conversation-view/jsonl-viewer/tool-call.ToolOutput`
     - `network/live/live-state.matchResource`
     - `primitives/collapsible.FoldMotion`
     - `primitives/collapsible.useCollapsible`

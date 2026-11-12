@@ -1,10 +1,5 @@
 import type { ReactNode } from "react";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { EventRowActions } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
+import { TimelineLine } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/web";
 
 /**
  * The shared one-line grammar for ambient / lifecycle rows in the transcript —
@@ -23,34 +18,13 @@ export function EventLine({
   label,
   children,
 }: {
-  icon?: ReactNode;
+  icon: ReactNode;
   label: ReactNode;
   children?: ReactNode;
 }) {
   return (
-    <Text
-      as="div"
-      variant="caption"
-      className="px-xs py-xs text-muted-foreground"
-    >
-      <Stack direction="row" gap="sm" align="center">
-        <Stack
-          as="span"
-          direction="row"
-          gap="xs"
-          align="center"
-          className={cn(rigidClass(), "font-medium tracking-wide text-2xs")}
-        >
-          {icon}
-          {label}
-        </Stack>
-        {children != null && (
-          <Stack as={Fill} direction="row" gap="xs" align="center">
-            {children}
-          </Stack>
-        )}
-        <EventRowActions className="ml-auto" />
-      </Stack>
-    </Text>
+    <TimelineLine icon={icon} label={label}>
+      {children}
+    </TimelineLine>
   );
 }

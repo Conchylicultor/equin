@@ -1,4 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 import { JsonlViewerTool } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { SEND_MESSAGE_TOOL_NAME } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/core";
 import { SendMessageView } from "./components/send-message-view";
@@ -9,6 +10,7 @@ export default {
   contributions: [
     JsonlViewerTool.Renderer({
       match: SEND_MESSAGE_TOOL_NAME,
+      icon: symbol("send"),
       component: SendMessageView,
     }),
   ],

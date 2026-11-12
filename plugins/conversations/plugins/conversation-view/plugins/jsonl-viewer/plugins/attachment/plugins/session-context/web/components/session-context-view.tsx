@@ -3,6 +3,10 @@ import type { AttachmentRendererProps } from "@plugins/conversations/plugins/con
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const layersIcon = symbol("layers");
 
 interface SessionContextPayload {
   type: "session_context";
@@ -48,6 +52,7 @@ export function SessionContextView({ event }: AttachmentRendererProps) {
 
   return (
     <CollapsibleCard
+      icon={<Icon icon={layersIcon} className="size-3.5" />}
       label="Session context"
       note={`· ${entries.length} block${entries.length === 1 ? "" : "s"}`}
     >

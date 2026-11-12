@@ -16,11 +16,18 @@
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { CollapsibleCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const helpIcon = symbol("help");
 
 export function UnknownEventRow({ event }: { event: JsonlEvent }) {
   const isUnknownKind = event.kind === "unknown";
   return (
-    <CollapsibleCard label={isUnknownKind ? event.type : event.kind}>
+    <CollapsibleCard
+      icon={<Icon icon={helpIcon} className="size-3.5" />}
+      label={isUnknownKind ? event.type : event.kind}
+    >
       <Text
         as="pre"
         variant="caption"

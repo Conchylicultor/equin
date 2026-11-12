@@ -1,28 +1,16 @@
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
-import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import {
+  ToolCallCard,
+  ToolCode,
+  ToolOutput,
+  ToolSection,
+} from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import {
   formatDuration,
   readMonitor,
   readWakeup,
   wakeupSummary,
 } from "../internal/scheduling";
-
-function ResultText({ event }: ToolRendererProps) {
-  const result = event.result;
-  if (!result?.content) return null;
-  return (
-    <Text
-      as="pre"
-      variant="caption"
-      tone={result.isError ? "destructive" : "muted"}
-      className="font-mono whitespace-pre-wrap break-words"
-    >
-      {result.content}
-    </Text>
-  );
-}
 
 /** ScheduleWakeup: when the loop wakes next, why, and the prompt it wakes with. */
 export function ScheduleWakeupToolView({ event }: ToolRendererProps) {
@@ -33,14 +21,12 @@ export function ScheduleWakeupToolView({ event }: ToolRendererProps) {
       summary={wakeupSummary(w)}
       note={w.noop ? "· no-op" : undefined}
     >
-      <Stack gap="sm">
-        {w.prompt && (
-          <Text as="p" variant="caption" className="whitespace-pre-wrap">
-            {w.prompt}
-          </Text>
-        )}
-        <ResultText event={event} />
-      </Stack>
+      {w.prompt && (
+        <ToolSection label="Prompt" copyText={w.prompt}>
+          <ToolCode>{w.prompt}</ToolCode>
+        </ToolSection>
+      )}
+      {event.result?.content && <ToolOutput event={event} />}
     </ToolCallCard>
   );
 }
@@ -59,18 +45,12 @@ export function MonitorToolView({ event }: ToolRendererProps) {
           : undefined
       }
     >
-      <Stack gap="sm">
-        {source && (
-          <Text
-            as="pre"
-            variant="caption"
-            className="font-mono whitespace-pre-wrap break-words"
-          >
-            {source}
-          </Text>
-        )}
-        <ResultText event={event} />
-      </Stack>
+      {source && (
+        <ToolSection label="Input" copyText={source}>
+          <ToolCode>{source}</ToolCode>
+        </ToolSection>
+      )}
+      {event.result?.content && <ToolOutput event={event} />}
     </ToolCallCard>
   );
 }

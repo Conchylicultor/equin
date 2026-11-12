@@ -2,6 +2,10 @@ import { CollapsibleCard } from "@plugins/conversations/plugins/conversation-vie
 import type { AttachmentRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/core";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const buildIcon = symbol("build");
 
 interface DeferredToolsDeltaPayload {
   type: "deferred_tools_delta";
@@ -24,6 +28,7 @@ export function DeferredToolsDeltaView({ event }: AttachmentRendererProps) {
 
   return (
     <CollapsibleCard
+      icon={<Icon icon={buildIcon} className="size-3.5" />}
       label="Deferred tools"
       note={counts ? `· ${counts}` : "· no changes"}
     >

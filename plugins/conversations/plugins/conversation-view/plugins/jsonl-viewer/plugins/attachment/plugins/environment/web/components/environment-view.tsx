@@ -6,6 +6,10 @@ import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const computerIcon = symbol("computer");
 
 /** One field of the snapshot that moved. The NEW value is not carried here —
  *  it is the snapshot's own value for `field`. */
@@ -129,6 +133,7 @@ export function EnvironmentView({ event }: AttachmentRendererProps) {
 
   return (
     <CollapsibleCard
+      icon={<Icon icon={computerIcon} className="size-3.5" />}
       label={label}
       aside={
         typeof workingDirectory === "string" && workingDirectory ? (

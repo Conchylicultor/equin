@@ -10,6 +10,11 @@ import { isAttachmentDiskPath } from "@plugins/conversations/core";
 import { AssetThumbnail } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
 import type { TranscriptImage } from "@plugins/conversations/plugins/transcript-source/core";
 import { transcriptImage } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+const imageIcon = symbol("image");
+const descriptionIcon = symbol("description");
 
 interface ImageContent {
   type: "image";
@@ -117,6 +122,7 @@ export function AttachedFileView({ event }: AttachmentRendererProps) {
     const path = payload.filename ?? payload.displayPath;
     return (
       <CollapsibleCard
+        icon={<Icon icon={imageIcon} className="size-3.5" />}
         label="Attached image"
         note={noteOf([
           width && height ? `${width}×${height}` : null,
@@ -156,6 +162,7 @@ export function AttachedFileView({ event }: AttachmentRendererProps) {
   const path = payload.filename ?? filePath;
   return (
     <CollapsibleCard
+      icon={<Icon icon={descriptionIcon} className="size-3.5" />}
       label="Attached file"
       note={noteOf([
         shown < total

@@ -1,4 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 import { JsonlViewerTool } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { SubmitOutcomeReportToolView } from "./components/submit-outcome-report-tool-view";
 
@@ -9,6 +10,7 @@ export default {
     // Every field is optional while the input streams in.
     JsonlViewerTool.Renderer({
       match: /submit_outcome_report$/,
+      icon: symbol("article"),
       component: SubmitOutcomeReportToolView,
       partialInput: true,
     }),

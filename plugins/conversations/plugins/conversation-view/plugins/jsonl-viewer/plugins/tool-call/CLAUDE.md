@@ -15,30 +15,39 @@
   - Contributes:
     - `JsonlViewer.EventRenderer` "tool-call" → `ToolCallRow`
     - `JsonlRowActions.Item` "copy-tool-result" → `CopyToolResultAction`
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/collapsible` ×4
     - `conversations/conversation-view/jsonl-viewer` ×3
     - `primitives/slot-render` ×3
     - `conversations/conversation-view/jsonl-viewer/collapsible-card` ×2
     - `conversations/conversation-view/jsonl-viewer/row-actions` ×2
+    - `primitives/css/status-dot` ×2
     - `primitives/css/ui-kit` ×2
-    - `primitives/css/badge.Badge`
     - `primitives/css/bouncing-dots.BouncingDots`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/relative-time.ElapsedTime`
+    - `primitives/select-scope.ContentScope`
     - `ui/icons.Icon`
   - Exports (types):
     - `ToolFooterContribution`
     - `ToolFooterProps`
     - `ToolRendererContribution`
+    - `ToolSectionStatus`
   - Exports (values):
     - `JsonlViewerTool`
     - `ToolCallCard`
     - `ToolCallFrame`
+    - `ToolCode`
+    - `ToolCodeEmpty`
     - `ToolNameLabel`
+    - `ToolOutput`
+    - `toolResultStatus`
+    - `ToolSection`
 - Core:
   - Uses: `framework/tooling/guards/refusal-format.refusalReason`
   - Exports (types):
@@ -52,14 +61,27 @@
     - `isLoudHook`
     - `toolName`
 - Cross-plugin:
-  - Uses tokens: 26 vars — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ui/tokens/type-scale` ×9
-    - `ui/tokens/color-palette` ×8
-    - `ui/tokens/density` ×4
-    - `ui/tokens/shape` ×4
+  - Uses tokens:
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --info`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --success`
+    - `ui/tokens/color-palette --warning`
+    - `ui/tokens/density --control-height-xs`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-smd`
+    - `ui/tokens/density --space-xs`
     - `ui/tokens/font-family --font-mono`
-  - Imported by: 31 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×29
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-caption`
+    - `ui/tokens/type-scale --font-weight-medium`
+    - `ui/tokens/type-scale --font-weight-normal`
+    - `ui/tokens/type-scale --line-height-caption`
+  - Imported by: 32 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×30
     - `apps/places/places-map`
     - `debug/browser-recordings`
 - Sub-plugins:

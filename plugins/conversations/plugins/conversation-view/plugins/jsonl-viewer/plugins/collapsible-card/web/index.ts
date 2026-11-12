@@ -3,6 +3,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 export {
   CollapsibleCard,
   CardHeaderAction,
+  TimelineLine,
   type CollapsibleCardProps,
 } from "./components/collapsible-card";
 

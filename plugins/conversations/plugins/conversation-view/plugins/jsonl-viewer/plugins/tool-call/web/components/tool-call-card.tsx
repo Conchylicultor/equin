@@ -6,23 +6,30 @@ import {
   toolName,
   type ToolCallEvent,
 } from "../../core";
-import { ToolNameLabel } from "./tool-name-label";
+import { ToolNameTitle } from "./tool-name-label";
+import { JsonlViewerTool } from "../slots";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
 import { HookBand, HookIndicator } from "./hook-band";
 import type { HookRecord } from "@plugins/conversations/plugins/transcript-source/core";
-import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { BouncingDots } from "@plugins/primitives/plugins/css/plugins/bouncing-dots/web";
 import { ElapsedTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useBlockWriting } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   CollapsibleCard,
   CardHeaderAction,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/web";
 
+/** The node glyph of a call whose renderer names none. */
+const DEFAULT_TOOL_ICON = symbol("build");
+
 interface ToolCallFrameProps {
+  /** The glyph on the row's timeline node. `ToolCallCard` reads it from the
+   *  renderer's contribution (`icon`); absent, the generic tool glyph. */
+  icon?: IconRef;
   /** The tool's name as the model calls it, drawn as the card's identity
    *  badge. An MCP tool (`mcp__<server>__<tool>`) reads `<server>:<tool>`, its
    *  server dimmed; the raw name stays on hover. */
@@ -80,6 +87,7 @@ interface ToolCallFrameProps {
  * of a transcript event use `ToolCallCard`, which derives the rest from it.
  */
 export function ToolCallFrame({
+  icon = DEFAULT_TOOL_ICON,
   name,
   summary,
   note,
@@ -104,6 +112,8 @@ export function ToolCallFrame({
   );
   return (
     <CollapsibleCard
+      variant="ghost"
+      icon={<Icon icon={icon} className="size-3.5" />}
       error={isError}
       defaultOpen={defaultOpen}
       summary={summary}
@@ -124,30 +134,12 @@ export function ToolCallFrame({
       }
       footer={footer}
       label={
-        // Rigid identity only: the tool-name badge + an optional leading chip.
+        // Rigid identity only: the tool's name + an optional leading chip.
         // The flexible `summary` rides the card's own flexible cell (passed as a
         // prop), not bundled here — so identity stays shrink-0 and never strands
         // the grow slot.
         <>
-          <Badge
-            colorClass={
-              isError
-                ? "bg-destructive/15 text-destructive"
-                : "bg-primary/10 text-primary-text"
-            }
-            tooltip={tool.server ? tool.id : undefined}
-            // The badge's shape is the tool-badge tokens (density
-            // `padToolBadge*`, shape `radiusToolBadge` / `borderToolBadge`);
-            // its words are the `tag` role at its strong weight, pinned so the
-            // `xs` card does not step it to the compact rung. Its hairline,
-            // when a theme draws one, is its own text colour at 28%.
-            className={cn(
-              rigidClass(),
-              "font-mono p-tool-badge text-tag font-tag-strong rounded-tool-badge hairline-tool-badge border-current/28",
-            )}
-          >
-            <ToolNameLabel tool={tool} />
-          </Badge>
+          <ToolNameTitle tool={tool} error={isError} />
           {/* The hook shield keeps its own hover (the list of hooks), so it
               opts back into pointer events like the leading chip. */}
           {hooks?.length ? (
@@ -195,12 +187,17 @@ export function ToolCallCard({
 }: ToolCallCardProps) {
   const unknown = outcomeUnknown ?? event.result?.outcomeUnknown === true;
   const footer = use(ToolFooterContext);
+  const match = JsonlViewerTool.Renderer.useMatch();
+  const declared = match({ event })?.icon;
+  const icon =
+    frame.icon ?? (typeof declared === "function" ? declared(event) : declared);
   const blocked = blockingHook(event) !== undefined;
   // A stand-in the model is still writing has not been sent yet.
   const writing = useBlockWriting();
   return (
     <ToolCallFrame
       {...frame}
+      icon={icon}
       name={event.name || "tool_call"}
       isError={isError ?? (event.result?.isError === true && !unknown)}
       note={
