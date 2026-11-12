@@ -92,6 +92,12 @@ yields no latency sample by construction.
   version or epoch.
 - `BUILD_GRAPH_HEADER` — the header an HTTP read names the client's build in; a
   `sub` / `sub-batch` frame carries the same value as `build`.
+- The other direction: every ack frame (`sub-ack`, `up-to-date`,
+  `up-to-date-batch`) and every read envelope (JSON body, bytes headers) carries
+  `graph` beside `epoch` — the build the server's code was built from (absent
+  when it cannot say). A tab whose schema rejects a value judges it against
+  that (`contractVerdict`): `skew` → out of date, otherwise a real bug
+  (`live-state`'s `ResourceDecodeError`).
 - `ResourceContractError` — thrown by a params DECODE (a subscription's wire
   params do not match the declaration). Declaration-time and encode failures stay
   plain `Error`s: those are programmer errors and must crash loudly. The runtime

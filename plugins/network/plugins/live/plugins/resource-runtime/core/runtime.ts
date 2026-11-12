@@ -3057,6 +3057,18 @@ export function createResourceRuntime(
   // client's value was produced — the per-pk version counter is its complete
   // change signal. See the version short-circuit in `handleSub`.
   const bootEpoch = globalThis.crypto.randomUUID();
+  // The boot identity every ack frame and HTTP read envelope carries: the
+  // epoch, and the build graph this server's code was built from — what shapes
+  // every value it sends. A tab whose own schema rejects a value judges the
+  // failure against `graph` (`contractVerdict`): another build is skew (the tab
+  // is out of date — a reload fixes it), the same build a real bug. Read per
+  // frame, not captured here: the graph is boot-injected after the runtime is
+  // built (`serverBuildGraph` returns the value memoized at boot). Absent when
+  // the server cannot say, which the tab judges `unknown` — loud.
+  function bootIdentity(): { epoch: string; graph?: string } {
+    const graph = opts.serverBuildGraph?.() ?? null;
+    return graph === null ? { epoch: bootEpoch } : { epoch: bootEpoch, graph };
+  }
   // Per-key count of version short-circuits (a sub answered `up-to-date` from
   // memory: zero loader runs, zero read-admission slots). Monotonic; surfaced in
   // the `_debug` payload next to notifyStats for live re-validation.
@@ -9371,7 +9383,7 @@ export function createResourceRuntime(
           key,
           params,
           version: versionOf(entry, pk),
-          epoch: bootEpoch,
+          ...bootIdentity(),
           derived: outcome,
         });
       }
@@ -9427,7 +9439,7 @@ export function createResourceRuntime(
         key,
         params,
         version: m.version,
-        epoch: bootEpoch,
+        ...bootIdentity(),
       });
       recordSubShortCircuit(key);
       return;
@@ -9450,7 +9462,7 @@ export function createResourceRuntime(
           key,
           params,
           version: claim.version,
-          epoch: bootEpoch,
+          ...bootIdentity(),
         });
         recordResumed(key);
         return;
@@ -9498,7 +9510,7 @@ export function createResourceRuntime(
       key,
       params,
       version: shipped.version,
-      epoch: bootEpoch,
+      ...bootIdentity(),
     });
     subAcksShared.set(key, (subAcksShared.get(key) ?? 0) + 1);
     subAckCharsSaved.set(key, (subAckCharsSaved.get(key) ?? 0) + shipped.chars);
@@ -9593,7 +9605,7 @@ export function createResourceRuntime(
         key,
         params,
         version,
-        epoch: bootEpoch,
+        ...bootIdentity(),
       });
       return;
     }
@@ -9610,7 +9622,7 @@ export function createResourceRuntime(
         key,
         params,
         version,
-        epoch: bootEpoch,
+        ...bootIdentity(),
       });
       return;
     }
@@ -9633,7 +9645,7 @@ export function createResourceRuntime(
           params,
           value: patchBase.value,
           version: patchBase.version,
-          epoch: bootEpoch,
+          ...bootIdentity(),
         }),
       );
       return;
@@ -9764,7 +9776,7 @@ export function createResourceRuntime(
         ...(etag !== undefined ? { etag } : {}),
         ...(watermark !== undefined ? { watermark } : {}),
         ...(joinedMs >= 1 ? { joinedMs: Math.round(joinedMs) } : {}),
-        epoch: bootEpoch,
+        ...bootIdentity(),
       }),
     );
   }
@@ -9934,7 +9946,7 @@ export function createResourceRuntime(
     if (upToDate.length > 0) {
       sendJson(state.ws, {
         kind: "up-to-date-batch",
-        epoch: bootEpoch,
+        ...bootIdentity(),
         tabId,
         entries: upToDate,
       });
@@ -9981,7 +9993,7 @@ export function createResourceRuntime(
         if (answered.length > 0) {
           sendJson(state.ws, {
             kind: "up-to-date-batch",
-            epoch: bootEpoch,
+            ...bootIdentity(),
             tabId,
             entries: answered,
           });
@@ -10370,7 +10382,7 @@ export function createResourceRuntime(
           ...headers,
           ...resourceBytesHeaders({
             version,
-            epoch: bootEpoch,
+            ...bootIdentity(),
             ...(watermark !== undefined ? { watermark } : {}),
           }),
         },
@@ -10386,7 +10398,7 @@ export function createResourceRuntime(
       JSON.stringify({
         value,
         version,
-        epoch: bootEpoch,
+        ...bootIdentity(),
         ...(watermark !== undefined ? { watermark } : {}),
       }),
       { headers },

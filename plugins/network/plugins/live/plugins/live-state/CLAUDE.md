@@ -240,8 +240,22 @@ frames, which still reach **all** tabs — hence the gates below.
     backend that was behind and restarted answers the replayed subs.
   - Every `sub`/`sub-batch` carries `build` (per frame — the socket is shared
     across bundles); HTTP reads `BUILD_GRAPH_HEADER`.
-  - `isTerminalResourceError` — `contract-mismatch`, `unknown-key`, `unserved` —
-    is never retried.
+  - `isTerminalResourceError` — `contract-mismatch`, `unknown-key`, `unserved`,
+    a `ResourceDecodeError` — is never retried.
+- **A value this bundle cannot decode is judged by build, never per resource.**
+  - Every value the server sends (WS sub-ack / update / patch / delta row, HTTP
+    read body) is parsed by ONE `decodeValue`; a throw becomes a
+    `ResourceDecodeError` whose `verdict` is `contractVerdict(this bundle's
+    build, the server's graph)` — the ack frames' and read envelopes' `graph`
+    (`resource-protocol`), learned per channel with `epoch`.
+  - `skew` (a deploy grew an enum, added a field, …): `enterOutdated` — the
+    tuple goes to the contract store (Reload advice) and its query to the
+    `client-outdated` error state (last value kept as `stale`). Cleared by the
+    next value the bundle CAN read; an `up-to-date` does not clear it.
+  - `same-build` / `unknown` (no graph: central, a dev bundle): a real bug —
+    re-thrown off the socket loop as a crash (HTTP: `loader-failed`, reported).
+  - No resource patches its own stale-tab case: an enum addition anywhere is
+    covered.
   - `unserved` (a closed-key-set host doesn't serve the key) is never skew:
     reads as `loader-failed` naming the key.
 
@@ -507,7 +521,7 @@ in `web/resource-error.ts` (`toResourceError`):
 
 | kind              | from                                                                                                                                                                                                       | remedy                                                                         |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| `client-outdated` | `contract-mismatch` / `unknown-key` unless verdict `same-build`; a client zod rejection                                                                                                                    | reload                                                                         |
+| `client-outdated` | `contract-mismatch` / `unknown-key` unless verdict `same-build`; a `ResourceDecodeError` judged `skew`                                                                                                                   | reload                                                                         |
 | `not-found`       | 404 (or `unknown-key` on the same build)                                                                                                                                                                   | a bug                                                                          |
 | `loader-failed`   | other HTTP failure, `same-build` mismatch, `unserved` key (terminal, not retried), anything else thrown                                                                                                    | retry, else a bug                                                              |
 | `transport`       | `fetch` `TypeError`, `ResourceStaleReadError`                                                                                                                                                              | retry                                                                          |

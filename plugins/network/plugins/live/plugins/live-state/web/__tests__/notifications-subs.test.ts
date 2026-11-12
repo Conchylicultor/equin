@@ -46,7 +46,12 @@ import {
   createTransportHub,
   type FakeWebSocket,
 } from "@plugins/primitives/plugins/networking/web/testing";
-import { NotificationsClient, queryKeyFor } from "../notifications-client";
+import {
+  NotificationsClient,
+  ResourceDecodeError,
+  queryKeyFor,
+} from "../notifications-client";
+import { toResourceError } from "../resource-error";
 import { getResourceWatermark } from "../watermark-registry";
 import { hasResourceTxAck } from "../tx-ack-registry";
 import {
@@ -693,6 +698,270 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
       } finally {
         vi.unstubAllEnvs();
       }
+    });
+  });
+
+  // A pushed value this bundle's schema rejects is judged by build: against a
+  // server on another build (the ack's `graph`) the tab is out of date — the
+  // read enters the client-outdated state and the Reload advice counts it;
+  // against the same build (or one side unable to say) it is a real bug and
+  // stays a loud crash (re-thrown off the socket loop).
+  describe("a value this bundle cannot decode", () => {
+    // An enum the server's newer build grew a member of.
+    const ruleSchema = z.object({
+      rule: z.enum(["daemon-cpu", "root-daemon"]),
+    });
+
+    afterEach(() => {
+      resetResourceContractMismatches();
+      vi.unstubAllEnvs();
+    });
+
+    /** Send a frame and collect what the socket loop re-throws asynchronously. */
+    function sendCapturingCrashes(
+      socket: FakeWebSocket,
+      frame: Record<string, unknown>,
+    ): unknown[] {
+      const crashes: unknown[] = [];
+      const spy = vi
+        .spyOn(globalThis, "queueMicrotask")
+        .mockImplementation((cb) => {
+          try {
+            cb();
+          } catch (err) {
+            crashes.push(err);
+          }
+        });
+      try {
+        socket.serverSend(frame);
+      } finally {
+        spy.mockRestore();
+      }
+      return crashes;
+    }
+
+    test("skew: a push the old tab cannot read puts the read in the outdated state, not a crash", async () => {
+      vi.stubEnv("VITE_BUILD_GRAPH", "graph-old");
+      const { client, socket, qc } = await setup();
+      const store = renderHook(() => useResourceContractMismatches());
+      client.observe("io", {}, undefined, { schema: ruleSchema });
+      await flush();
+      // The sub-ack teaches the server's build and carries a value it can read.
+      expect(
+        sendCapturingCrashes(socket, {
+          kind: "sub-ack",
+          key: "io",
+          params: {},
+          value: { rule: "daemon-cpu" },
+          version: 1,
+          epoch: "e1",
+          graph: "graph-new",
+        }),
+      ).toEqual([]);
+      // The newer build pushes a member this bundle's enum does not know.
+      expect(
+        sendCapturingCrashes(socket, {
+          kind: "update",
+          key: "io",
+          params: {},
+          value: { rule: "memory-pressure" },
+          version: 2,
+        }),
+      ).toEqual([]);
+      await flush();
+      const state = qc
+        .getQueryCache()
+        .find({ queryKey: queryKeyFor("io", {}) })!.state;
+      expect(state.status).toBe("error");
+      expect(state.error).toBeInstanceOf(ResourceDecodeError);
+      expect((state.error as ResourceDecodeError).verdict).toBe("skew");
+      expect(toResourceError(state.error).kind).toBe("client-outdated");
+      // The last value it could read is kept (an error arm's `stale`).
+      expect(state.data).toEqual({ rule: "daemon-cpu" });
+      store.rerender();
+      expect(store.result.current).toEqual([
+        { key: "io", reason: "contract-mismatch", verdict: "skew" },
+      ]);
+      // A later value this bundle can read answers the tuple again.
+      sendCapturingCrashes(socket, {
+        kind: "update",
+        key: "io",
+        params: {},
+        value: { rule: "root-daemon" },
+        version: 3,
+      });
+      await flush();
+      const healed = qc.getQueryCache().find({
+        queryKey: queryKeyFor("io", {}),
+      })!.state;
+      expect(healed.status).toBe("success");
+      expect(healed.error).toBeNull();
+      expect(healed.data).toEqual({ rule: "root-daemon" });
+      store.rerender();
+      expect(store.result.current).toEqual([]);
+    });
+
+    test("skew: an up-to-date reply does not clear the outdated state", async () => {
+      vi.stubEnv("VITE_BUILD_GRAPH", "graph-old");
+      const { client, socket, qc } = await setup();
+      client.observe("io3", {}, undefined, { schema: ruleSchema });
+      await flush();
+      sendCapturingCrashes(socket, {
+        kind: "sub-ack",
+        key: "io3",
+        params: {},
+        value: { rule: "daemon-cpu" },
+        version: 1,
+        epoch: "e1",
+        graph: "graph-new",
+      });
+      sendCapturingCrashes(socket, {
+        kind: "update",
+        key: "io3",
+        params: {},
+        value: { rule: "memory-pressure" },
+        version: 2,
+      });
+      sendCapturingCrashes(socket, {
+        kind: "up-to-date",
+        key: "io3",
+        params: {},
+        version: 3,
+        epoch: "e1",
+        graph: "graph-new",
+      });
+      await flush();
+      const state = qc.getQueryCache().find({
+        queryKey: queryKeyFor("io3", {}),
+      })!.state;
+      expect(state.error).toBeInstanceOf(ResourceDecodeError);
+    });
+
+    test("same build: the rejection is a real bug and stays a loud crash", async () => {
+      vi.stubEnv("VITE_BUILD_GRAPH", "graph-same");
+      const { client, socket } = await setup();
+      const store = renderHook(() => useResourceContractMismatches());
+      client.observe("io2", {}, undefined, { schema: ruleSchema });
+      await flush();
+      const crashes = sendCapturingCrashes(socket, {
+        kind: "sub-ack",
+        key: "io2",
+        params: {},
+        value: { rule: "memory-pressure" },
+        version: 1,
+        epoch: "e1",
+        graph: "graph-same",
+      });
+      expect(crashes).toHaveLength(1);
+      expect(crashes[0]).toBeInstanceOf(ResourceDecodeError);
+      expect((crashes[0] as ResourceDecodeError).verdict).toBe("same-build");
+      store.rerender();
+      expect(store.result.current).toEqual([]);
+    });
+
+    test("a server that names no build cannot prove skew: loud", async () => {
+      vi.stubEnv("VITE_BUILD_GRAPH", "graph-old");
+      const { client, socket } = await setup();
+      client.observe("io4", {}, undefined, { schema: ruleSchema });
+      await flush();
+      const crashes = sendCapturingCrashes(socket, {
+        kind: "sub-ack",
+        key: "io4",
+        params: {},
+        value: { rule: "memory-pressure" },
+        version: 1,
+        epoch: "e1",
+      });
+      expect(crashes).toHaveLength(1);
+      expect((crashes[0] as ResourceDecodeError).verdict).toBe("unknown");
+    });
+
+    test("skew: a keyed delta row the old tab cannot read is outdated too", async () => {
+      vi.stubEnv("VITE_BUILD_GRAPH", "graph-old");
+      const { client, socket, qc } = await setup();
+      const rows = z.array(
+        z.object({ id: z.string(), rule: ruleSchema.shape.rule }),
+      );
+      client.observe("io5", {}, undefined, { schema: rows }, keyOf);
+      await flush();
+      sendCapturingCrashes(socket, {
+        kind: "sub-ack",
+        key: "io5",
+        params: {},
+        value: [{ id: "a", rule: "daemon-cpu" }],
+        version: 1,
+        epoch: "e1",
+        graph: "graph-new",
+      });
+      const crashes = sendCapturingCrashes(socket, {
+        kind: "delta",
+        key: "io5",
+        params: {},
+        upserts: [["b", { id: "b", rule: "memory-pressure" }]],
+        deletes: [],
+        version: 2,
+      });
+      expect(crashes).toEqual([]);
+      await flush();
+      const state = qc.getQueryCache().find({
+        queryKey: queryKeyFor("io5", {}),
+      })!.state;
+      expect((state.error as ResourceDecodeError).verdict).toBe("skew");
+      // A later delta this tab COULD read was made against a base the cache
+      // does not hold (row b's change never landed): it is dropped, never
+      // merged into a "healed" read that shows old rows as current.
+      sendCapturingCrashes(socket, {
+        kind: "delta",
+        key: "io5",
+        params: {},
+        upserts: [["a", { id: "a", rule: "root-daemon" }]],
+        deletes: [],
+        version: 3,
+      });
+      await flush();
+      const after = qc.getQueryCache().find({
+        queryKey: queryKeyFor("io5", {}),
+      })!.state;
+      expect(after.error).toBeInstanceOf(ResourceDecodeError);
+      expect(after.data).toEqual([{ id: "a", rule: "daemon-cpu" }]);
+    });
+
+    test("skew: nothing vouches for the old value — the etag is dropped and a replay echoes no version", async () => {
+      vi.stubEnv("VITE_BUILD_GRAPH", "graph-old");
+      const { client, socket, hub } = await setup();
+      client.observe("io6", {}, undefined, { schema: ruleSchema });
+      await flush();
+      sendCapturingCrashes(socket, {
+        kind: "sub-ack",
+        key: "io6",
+        params: {},
+        value: { rule: "daemon-cpu" },
+        version: 1,
+        etag: "etag-1",
+        epoch: "e1",
+        graph: "graph-new",
+      });
+      sendCapturingCrashes(socket, {
+        kind: "update",
+        key: "io6",
+        params: {},
+        value: { rule: "memory-pressure" },
+        version: 2,
+        etag: "etag-2",
+      });
+      await flush();
+      expect(client.etagFor("io6", {})).toBeUndefined();
+      socket.serverClose();
+      await vi.advanceTimersByTimeAsync(500);
+      const socket2 = hub.server.all().find((x) => x.readyState === 0)!;
+      socket2.open();
+      await flush();
+      const batch = socket2.sentJson().find((m) => m.op === "sub-batch")!;
+      const entry = (batch.entries as Record<string, unknown>[]).find(
+        (e) => e.key === "io6",
+      )!;
+      expect(entry.version).toBeUndefined();
+      expect(entry.etag).toBeUndefined();
     });
   });
 

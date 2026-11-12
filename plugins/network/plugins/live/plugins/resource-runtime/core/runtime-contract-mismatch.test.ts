@@ -131,6 +131,20 @@ describe("contract mismatch — the params gate", () => {
     expect(loader).toHaveBeenCalledTimes(1);
   });
 
+  test("an ack names the build graph the server's code was built from — beside its epoch", async () => {
+    // A tab judges a value its schema rejects against this graph: another
+    // build is skew (reload), the same build a real bug.
+    const { h } = setup();
+    await h.subscribe("hist", { limit: "5" }, { build: "g0" });
+    expect(h.frames[0]).toMatchObject({ kind: "sub-ack", graph: "g1" });
+    expect(typeof (h.frames[0] as { epoch?: unknown }).epoch).toBe("string");
+    // A server that cannot say names none: the tab judges `unknown` (loud).
+    const unknown = setup({ serverBuildGraph: () => null });
+    await unknown.h.subscribe("hist", { limit: "5" }, { build: "g0" });
+    expect(unknown.h.frames[0]).toMatchObject({ kind: "sub-ack" });
+    expect("graph" in unknown.h.frames[0]!).toBe(false);
+  });
+
   test("an unknown key carries a verdict and is not reported", async () => {
     const { h, reported } = setup();
     await h.subscribe("gone", {}, { build: "g0" });

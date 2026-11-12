@@ -33,6 +33,7 @@ import {
 } from "@plugins/primitives/plugins/perfs/plugins/latency-signal/core";
 import {
   BUILD_GRAPH_HEADER,
+  contractVerdict,
   DERIVE_MAX_SOURCES,
   DEV_BUILD,
   parseResourceBytesHeaders,
@@ -57,6 +58,7 @@ import {
   type FailingResource,
 } from "./resource-error-reporter";
 import {
+  ResourceDecodeError,
   ResourceHttpError,
   ResourceStaleReadError,
 } from "./resource-http-errors";
@@ -64,7 +66,7 @@ import {
 // Re-exported for the transport's own importers (tests, the barrel): the classes
 // live in a dependency-free module so `resource-error.ts` can classify them
 // without importing this whole client.
-export { ResourceHttpError, ResourceStaleReadError };
+export { ResourceDecodeError, ResourceHttpError, ResourceStaleReadError };
 
 /**
  * How the client reads one resource's answers: the payload `schema` every
@@ -100,6 +102,36 @@ function clientBuild(): string {
 }
 
 /**
+ * THE one decode of a value the server sent (a WS frame's value or row, an HTTP
+ * read's body): parse it through this bundle's schema, and when that fails,
+ * throw a `ResourceDecodeError` judged by build — this bundle's against
+ * `serverGraph`, the build the server's code was built from (the ack frames'
+ * and read envelopes' `graph`; undefined when the server never said, judged
+ * `unknown`). The caller decides nothing: a `skew` failure is the tab being out
+ * of date (the transport enters the read's `client-outdated` state), every
+ * other verdict a real bug that stays loud. Any throw from the schema counts —
+ * a zod rejection or a schema that fails to build while parsing.
+ */
+function decodeValue<T>(
+  schema: z.ZodType<T>,
+  value: unknown,
+  key: string,
+  params: ResourceParams,
+  serverGraph: string | undefined,
+): T {
+  try {
+    return schema.parse(value);
+  } catch (err) {
+    throw new ResourceDecodeError(
+      key,
+      params,
+      contractVerdict(clientBuild(), serverGraph ?? null),
+      err,
+    );
+  }
+}
+
+/**
  * Record a server refusal that means "this bundle does not speak the
  * resource's contract" into the page-global store the Reload advice reads.
  * `loader-failed` / `unauthorized` are the server's own failures, not skew.
@@ -125,6 +157,9 @@ function noteContractRefusal(
  * nothing. `useResource`'s retry policy reads it.
  */
 export function isTerminalResourceError(err: unknown): boolean {
+  // A value this bundle cannot decode decodes the same way on a retry: the
+  // tab is out of date (reload) or the schema has a bug (fix it).
+  if (err instanceof ResourceDecodeError) return true;
   return (
     err instanceof ResourceHttpError &&
     (err.reason === "contract-mismatch" ||
@@ -423,6 +458,17 @@ interface ActiveSub {
   key: string;
   params: ResourceParams;
   /**
+   * The server's value at `version` reached this tab and its schema rejected
+   * it against a server on another build (`ResourceDecodeError`, `skew`): the
+   * cache holds an older value this tab COULD read, never the tuple's current
+   * one. So nothing may vouch for it — no etag is kept or sent (a 304 would
+   * settle the old value as current), a replay echoes no version, and a keyed
+   * delta is dropped (it would merge onto rows that are not the server's
+   * base). Patches still follow `wire` (the server's value, decoded or not).
+   * Set by `noteUndecodable`, cleared by the next applied value (`markApplied`).
+   */
+  undecodable?: true;
+  /**
    * The request this sub's last `sub` / replay entry made on an OPEN socket —
    * its frame `id`, and `since` (`Date.now()` when it went out) — while no
    * answer to THAT request has landed; undefined otherwise. Read by the
@@ -589,6 +635,13 @@ interface SocketChannel {
    * takes the full path and re-learns. Undefined until the first ack.
    */
   serverEpoch?: string;
+  /**
+   * The build graph the server's code was built from, learned with
+   * `serverEpoch` from the same ack frames (`graph`) — and forgotten with it:
+   * an ack naming an epoch but no graph leaves it unknown. Every value decoded
+   * off this socket is judged against it (`decodeValue`).
+   */
+  serverGraph?: string;
   /**
    * How many times this channel's socket has opened. A replay on a NEW socket
    * re-baselines by design: the server released the old socket's tuples, so
@@ -1306,13 +1359,16 @@ export class NotificationsClient {
    * while the socket was down) no longer describes it. Clear exactly that
    * query's error, and nothing else: no data write, so no cache event a value
    * listener could mistake for a fresh push. `Query.setState` is React Query's
-   * public state seam; this is its one use in live-state.
+   * public state seam; its other use is `enterOutdated`.
    */
   private clearStaleError(key: string, params: ResourceParams): void {
     const query: Query | undefined = this.queryClient
       .getQueryCache()
       .find({ queryKey: queryKeyFor(key, params), exact: true });
     if (query === undefined || query.state.error === null) return;
+    // "Still current" vouches for the value at the tuple's version — which this
+    // tab could not read: the decode failure still describes it.
+    if (query.state.error instanceof ResourceDecodeError) return;
     query.setState({
       error: null,
       status: "success",
@@ -1320,6 +1376,71 @@ export class NotificationsClient {
       fetchFailureReason: null,
     });
     trace(`up-to-date cleared error key=${key} params=${paramsKey(params)}`);
+  }
+
+  /**
+   * A value the server pushed failed this tab's schema, and the server runs
+   * another build (`ResourceDecodeError`, verdict `skew`): this tab is out of
+   * date. Not a crash and not dropped — the read enters the `client-outdated`
+   * state its surfaces render ("App updated — reload"), and the tuple counts
+   * in the contract store the app-wide Reload advice reads, exactly like a
+   * server-side contract refusal judged `skew`. One state for every resource,
+   * whatever moved in its schema.
+   *
+   * Both clear on the tuple's next applied value (`markApplied`, React Query's
+   * success write): a value this bundle CAN read answers the tuple again. The
+   * up-to-date path leaves the error standing (`clearStaleError`): "still
+   * current" vouches for the value this tab could not read.
+   *
+   * A same-build (or unknown) decode failure never comes here: it is a real
+   * bug and stays a loud crash.
+   */
+  private enterOutdated(
+    channel: SocketChannel | undefined,
+    err: ResourceDecodeError,
+  ): void {
+    console.warn(`[notifications] ${err.message}`);
+    trace(
+      `decode-skew key=${err.key} params=${paramsKey(err.params)} error=${err.message}`,
+    );
+    this.noteUndecodable(channel, err);
+    const query: Query | undefined = this.queryClient
+      .getQueryCache()
+      .find({ queryKey: queryKeyFor(err.key, err.params), exact: true });
+    // Already outdated (an earlier push failed the same way): the state stands
+    // — no new error object per push, so no re-render or failing-set churn.
+    if (
+      query === undefined ||
+      (query.state.error instanceof ResourceDecodeError &&
+        query.state.error.verdict === "skew")
+    )
+      return;
+    query.setState({
+      error: err,
+      errorUpdatedAt: Date.now(),
+      status: "error",
+      fetchFailureCount: query.state.fetchFailureCount + 1,
+      fetchFailureReason: err,
+    });
+  }
+
+  /**
+   * The tuple's current server value is one this out-of-date tab cannot read
+   * (`ResourceDecodeError`, `skew` — the WS paths through `enterOutdated`, an
+   * HTTP read at its decode): count it in the contract store the Reload advice
+   * reads, and stop anything vouching for the older value the cache still holds
+   * (`ActiveSub.undecodable`). Every pass, not once: a later frame may have
+   * re-adopted an etag before its own decode failed.
+   */
+  private noteUndecodable(
+    channel: SocketChannel | undefined,
+    err: ResourceDecodeError,
+  ): void {
+    noteContractRefusal(err.key, err.params, "contract-mismatch", "skew");
+    const entry = channel?.subs.get(`${err.key}\0${paramsKey(err.params)}`);
+    if (entry === undefined) return;
+    entry.undecodable = true;
+    entry.etag = undefined;
   }
 
   /**
@@ -1771,7 +1892,17 @@ export class NotificationsClient {
       throw new ResourceStaleReadError(key, body.version, entry!.version, drop);
     }
 
-    const parsed = schema.parse(body.value); // schema violation throws — surfaced by the caller
+    // A schema rejection throws a build-judged ResourceDecodeError into the
+    // query's error state (`toResourceError` reads its verdict); a `skew` one
+    // first stops the etag just adopted from vouching for the older cache.
+    let parsed: T;
+    try {
+      parsed = decodeValue(schema, body.value, key, params, body.graph);
+    } catch (err) {
+      if (err instanceof ResourceDecodeError && err.verdict === "skew")
+        this.noteUndecodable(channel, err);
+      throw err;
+    }
     // Adopt the body's commit watermark AFTER the guard (a stale-dropped response
     // never advances the causal floor) and IMMEDIATELY BEFORE the cache write it
     // describes — same load-bearing order as the WS paths.
@@ -1943,7 +2074,14 @@ export class NotificationsClient {
     });
     if (!res.ok) await throwReadFailure(key, params, res, read);
     const body = await readEnvelope(key, res, read);
-    const value = read.schema.parse(body.value);
+    let value: T;
+    try {
+      value = decodeValue(read.schema, body.value, key, params, body.graph);
+    } catch (err) {
+      if (err instanceof ResourceDecodeError && err.verdict === "skew")
+        this.noteUndecodable(undefined, err);
+      throw err;
+    }
     clearResourceContractMismatch(key, params);
     return value;
   }
@@ -2023,6 +2161,12 @@ export class NotificationsClient {
         );
         return;
       }
+      // A value this out-of-date tab cannot read: the read's outdated state,
+      // exactly as on the WS path.
+      if (err instanceof ResourceDecodeError && err.verdict === "skew") {
+        this.enterOutdated(this.channels[socketKindFor(origin)], err);
+        return;
+      }
       // Schema violation / malformed body is a real bug — surface loudly like the
       // WS onmessage path, without rejecting this promise.
       trace(
@@ -2099,6 +2243,12 @@ export class NotificationsClient {
           try {
             this.handleServerMessage(channel, parsed, receipt);
           } catch (err) {
+            // A value this tab cannot read because the server runs another
+            // build: the tab is out of date — a state of the read, not a crash.
+            if (err instanceof ResourceDecodeError && err.verdict === "skew") {
+              this.enterOutdated(channel, err);
+              return;
+            }
             // A schema.parse failure would otherwise silently leave the cache at
             // its empty default. Re-throw asynchronously so the global browser
             // crash reporter observes it as an uncaught error — without importing
@@ -2183,7 +2333,8 @@ export class NotificationsClient {
       // gc'd cache entry (or one that never applied) makes both the version and
       // the etag lies that the server would answer `up-to-date` to — see the
       // doc comment above.
-      const backed = this.hasAppliedValue(sub.key, sub.params);
+      const backed =
+        sub.undecodable !== true && this.hasAppliedValue(sub.key, sub.params);
       // Capture the version BEFORE the baseline reset — it names the state the
       // cached value was produced under, which is exactly what the server's
       // short-circuit compares. The reset itself keeps the apply-lower-version
@@ -2506,6 +2657,7 @@ export class NotificationsClient {
       msg.epoch !== undefined
     ) {
       channel.serverEpoch = msg.epoch;
+      channel.serverGraph = msg.graph;
     }
     if (msg.kind === "up-to-date-batch") {
       // The batched replay answer: run each entry through the exact per-entry
@@ -2519,6 +2671,7 @@ export class NotificationsClient {
           params: e.params,
           version: e.version,
           epoch: msg.epoch,
+          ...(msg.graph !== undefined ? { graph: msg.graph } : {}),
         });
       }
       return;
@@ -2683,6 +2836,7 @@ export class NotificationsClient {
       // A value-carrying sub-ack answers a derivation too: the server loaded.
       if (msg.kind === "sub-ack") entry.derivation = undefined;
       this.applyUpdate(
+        channel,
         entry,
         msg.key,
         msg.params,
@@ -2706,6 +2860,7 @@ export class NotificationsClient {
       // The base check above passed: `patchBase` is the value at `msg.base`.
       const next = applyValuePatch(patchBase.value, msg.ops);
       this.applyUpdate(
+        channel,
         entry,
         msg.key,
         msg.params,
@@ -2714,6 +2869,16 @@ export class NotificationsClient {
         msg.ackTx,
       );
       this.reportUpdateLatency(msg.key, msg.params, msg.timing, receipt);
+      return;
+    }
+    if (msg.kind === "delta" && entry.undecodable === true) {
+      // The cache holds rows older than the base this delta was made against
+      // (a value this tab could not read came between): merging would show
+      // them as current. The read stays outdated until a full value it can
+      // read lands (a reload, or a backend restart's replay).
+      trace(
+        `drop key=${msg.key} params=${pk} version=${msg.version} reason=undecodable-base`,
+      );
       return;
     }
     if (msg.kind === "delta") {
@@ -2784,6 +2949,7 @@ export class NotificationsClient {
   }
 
   private applyUpdate(
+    channel: SocketChannel,
     entry: ActiveSub,
     key: string,
     params: ResourceParams,
@@ -2802,9 +2968,13 @@ export class NotificationsClient {
           `before any update can be applied.`,
       );
     }
-    const parsed = schema.parse(value);
-    // A patched read keeps the wire value: the next patch applies to it.
+    // A patched read keeps the wire value: the next patch applies to it. Kept
+    // BEFORE the decode: it is the server's value at `entry.version` whether or
+    // not this bundle can read it, so a later patch still builds on the right
+    // base (a tab out of date keeps following the stream, never resubscribing
+    // per patch).
     entry.wire = this.reads.get(key)?.patches === true ? { value } : undefined;
+    const parsed = decodeValue(schema, value, key, params, channel.serverGraph);
     // Adopt the frame's commit watermark — and note its mutation acks —
     // IMMEDIATELY BEFORE the cache write they describe (load-bearing order:
     // QueryCache listeners — the optimistic hook's confirm pass — read the
@@ -2847,6 +3017,7 @@ export class NotificationsClient {
    *  is reset on a successful apply. */
   private markApplied(entry: ActiveSub, key: string): void {
     entry.lastAppliedAt = Date.now();
+    entry.undecodable = undefined;
     // The server answered this tuple, so it no longer refuses it — a refusal
     // from a backend that has since caught up must not keep the advice up.
     clearResourceContractMismatch(key, entry.params);
@@ -2917,7 +3088,10 @@ export class NotificationsClient {
     const element = (schema as any).element as z.ZodType<unknown>;
     const upsertMap = new Map<string, unknown>();
     for (const [rowId, row] of upserts)
-      upsertMap.set(rowId, element.parse(row));
+      upsertMap.set(
+        rowId,
+        decodeValue(element, row, key, params, channel.serverGraph),
+      );
 
     // The base-presence guard above already ensured a non-undefined base.
     const prevRows =
@@ -3081,6 +3255,8 @@ interface ReadEnvelope {
   value: unknown;
   version: number;
   epoch?: string;
+  /** The build graph the server's code was built from (`ResourceReadEnvelope.graph`). */
+  graph?: string;
   watermark?: string;
 }
 

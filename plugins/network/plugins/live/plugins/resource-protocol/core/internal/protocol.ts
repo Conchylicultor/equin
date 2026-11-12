@@ -168,6 +168,7 @@ export const RESOURCE_BYTES_CONTENT_TYPE = "application/octet-stream";
 export const RESOURCE_BYTES_HEADERS = {
   version: "x-resource-version",
   epoch: "x-resource-epoch",
+  graph: "x-resource-graph",
   watermark: "x-resource-watermark",
 } as const;
 
@@ -177,6 +178,11 @@ export interface ResourceReadEnvelope {
   version: number;
   /** The server boot the version belongs to. */
   epoch: string;
+  /**
+   * The build graph the server's code was built from — what shaped the value;
+   * the ack frames' `graph` twin. Absent when the server cannot say.
+   */
+  graph?: string;
   /** The commit watermark the value reflects, when the read captured one. */
   watermark?: string;
 }
@@ -189,6 +195,9 @@ export function resourceBytesHeaders(
     "content-type": RESOURCE_BYTES_CONTENT_TYPE,
     [RESOURCE_BYTES_HEADERS.version]: String(envelope.version),
     [RESOURCE_BYTES_HEADERS.epoch]: envelope.epoch,
+    ...(envelope.graph !== undefined
+      ? { [RESOURCE_BYTES_HEADERS.graph]: envelope.graph }
+      : {}),
     ...(envelope.watermark !== undefined
       ? { [RESOURCE_BYTES_HEADERS.watermark]: envelope.watermark }
       : {}),
@@ -224,5 +233,11 @@ export function parseResourceBytesHeaders(
     );
   }
   const watermark = headers.get(RESOURCE_BYTES_HEADERS.watermark);
-  return { version, epoch, ...(watermark !== null ? { watermark } : {}) };
+  const graph = headers.get(RESOURCE_BYTES_HEADERS.graph);
+  return {
+    version,
+    epoch,
+    ...(graph !== null ? { graph } : {}),
+    ...(watermark !== null ? { watermark } : {}),
+  };
 }

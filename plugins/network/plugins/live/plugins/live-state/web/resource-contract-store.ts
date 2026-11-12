@@ -7,7 +7,10 @@ import type {
 
 // Which resources the server currently refuses for this tab as not speaking
 // their contract — a subscription (or its HTTP read) refused as
-// `contract-mismatch` or `unknown-key`. With a `skew` verdict the tab's bundle
+// `contract-mismatch` or `unknown-key` — or whose pushed value this tab's
+// schema rejects against a server on another build (a `ResourceDecodeError`
+// judged `skew`, recorded as `contract-mismatch`: the same fact, seen from the
+// tab's side). With a `skew` verdict the tab's bundle
 // and the server's code come from different builds, so the app-wide advice
 // reads it (build's `useReloadAdvice`): one surface for every resource, instead
 // of each read rendering its own permanent failure. WHICH side is behind is

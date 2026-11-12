@@ -7,8 +7,8 @@ import type {
  * A resource HTTP GET returned a non-2xx status. Typed so callers can classify
  * it: `useResource`'s `queryFn` lets it propagate to `q.error`, while the
  * cold-start prime swallows it (the WS sub-ack is the source of truth) — both
- * distinct from a schema/parse failure, which is always a real bug surfaced
- * loudly.
+ * distinct from a schema/parse failure (`ResourceDecodeError`, judged by
+ * build: an out-of-date tab, or a real bug surfaced loudly).
  */
 export class ResourceHttpError extends Error {
   constructor(
@@ -51,5 +51,39 @@ export class ResourceStaleReadError extends Error {
       `Resource ${key} stale read: body v${bodyVersion} vs have v${haveVersion} (${reason})`,
     );
     this.name = "ResourceStaleReadError";
+  }
+}
+
+/**
+ * A value the server sent failed this tab's schema for the resource (a zod
+ * rejection, or a schema that throws while parsing). `verdict` says whose fault
+ * it is, judged from this bundle's build against the build graph the server's
+ * code was built from (`contractVerdict`, the same judgment a server-side
+ * contract refusal carries):
+ *
+ * - `skew` — the tab runs another build than the server: the resource's shape
+ *   moved under an open tab (an enum gained a member, a field was added). The
+ *   tab is out of date; a reload fixes it. The read enters the
+ *   `client-outdated` state and the app-wide Reload advice counts it.
+ * - `same-build` / `unknown` — the server and this tab run the same code (or
+ *   one side cannot say): the schema and the loader disagree. A real bug — it
+ *   stays a loud crash.
+ *
+ * The cause rides `cause`; never caught to be dropped.
+ */
+export class ResourceDecodeError extends Error {
+  constructor(
+    public readonly key: string,
+    public readonly params: Readonly<Record<string, string>>,
+    public readonly verdict: ContractVerdict,
+    cause: unknown,
+  ) {
+    super(
+      `Resource ${key}: the server's value does not match this tab's schema (${verdict}): ${
+        cause instanceof Error ? cause.message : String(cause)
+      }`,
+      { cause },
+    );
+    this.name = "ResourceDecodeError";
   }
 }

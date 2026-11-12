@@ -9,6 +9,7 @@ import { z } from "zod";
 import { ResourceError } from "../core";
 import { toResourceError } from "./resource-error";
 import {
+  ResourceDecodeError,
   ResourceHttpError,
   ResourceStaleReadError,
 } from "./resource-http-errors";
@@ -86,10 +87,17 @@ describe("toResourceError", () => {
     );
   });
 
-  test("a client-side schema rejection is client-outdated", () => {
+  test("a client-side schema rejection is client-outdated only against another build", () => {
     const parsed = z.object({ n: z.number() }).safeParse({ n: "x" });
     if (parsed.success) throw new Error("unreachable");
-    expect(kindOf(parsed.error)).toBe("client-outdated");
+    const decode = (verdict: "skew" | "same-build" | "unknown") =>
+      new ResourceDecodeError("k", {}, verdict, parsed.error);
+    expect(kindOf(decode("skew"))).toBe("client-outdated");
+    // The same build (or one side unable to say): a real bug, never "reload".
+    expect(kindOf(decode("same-build"))).toBe("loader-failed");
+    expect(kindOf(decode("unknown"))).toBe("loader-failed");
+    // A raw zod error is no judgment: it is not read as the tab being outdated.
+    expect(kindOf(parsed.error)).toBe("loader-failed");
   });
 
   test("no answer (fetch's TypeError) and a lost version race are transport", () => {

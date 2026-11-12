@@ -1,6 +1,6 @@
-import { ZodError } from "zod";
 import { ResourceError, type ResourceErrorKind } from "../core";
 import {
+  ResourceDecodeError,
   ResourceHttpError,
   ResourceStaleReadError,
 } from "./resource-http-errors";
@@ -80,9 +80,15 @@ function kindOf(raw: unknown): {
     if (raw.status === 404) return { kind: "not-found", message: raw.message };
     return { kind: "loader-failed", message: raw.message };
   }
-  // A value this bundle's schema rejects: the server's shape moved under an
-  // open tab (or a real schema bug — the cause says which). Reload is the fix.
-  if (raw instanceof ZodError) return OUTDATED;
+  // A value this bundle's schema rejects, judged by build: another build than
+  // the server's is the shape moving under an open tab (reload fixes it); the
+  // same build — or one side unable to say — is a real bug in the schema or
+  // the loader, which a reload would only repeat.
+  if (raw instanceof ResourceDecodeError) {
+    return raw.verdict === "skew"
+      ? OUTDATED
+      : { kind: "loader-failed", message: raw.message };
+  }
   // `fetch` rejects with a `TypeError` when the request never got an answer.
   if (raw instanceof TypeError) {
     return { kind: "transport", message: `Network error: ${raw.message}` };

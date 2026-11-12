@@ -17,6 +17,7 @@ import {
   ResourceError,
   useQueryResource,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
+import { ResourceDecodeError } from "../resource-http-errors";
 
 function wrapper(): (props: { children: ReactNode }) => ReactNode {
   const client = new QueryClient({
@@ -55,9 +56,22 @@ describe("useQueryResource", () => {
   it.each([
     ["a thrown error", () => new Error("boom"), "loader-failed"],
     ["no answer", () => new TypeError("Failed to fetch"), "transport"],
+    // A raw schema rejection is a local bug: only a server value judged
+    // against another build (`ResourceDecodeError`, `skew`) means "reload".
     [
       "a schema rejection",
       () => z.number().safeParse("x").error!,
+      "loader-failed",
+    ],
+    [
+      "a server value rejected against another build",
+      () =>
+        new ResourceDecodeError(
+          "k",
+          {},
+          "skew",
+          z.number().safeParse("x").error,
+        ),
       "client-outdated",
     ],
   ] as const)("classifies %s", async (_name, make, kind) => {
