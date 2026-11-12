@@ -202,14 +202,12 @@ export const AnalyticsReportSchema = z
 export type AnalyticsReport = z.infer<typeof AnalyticsReportSchema>;
 
 /**
- * The query endpoint's answer. `refused` is not an error to paper over: the
- * query asked for stacked filters on a range only the daily totals can answer,
- * and those hold single filters only.
+ * Why a query was refused, one arm per `reason`. Its own union: zod 4 refuses
+ * two arms with the same `kind` in one discriminated union (lazily — on the
+ * first parse, not at declaration), so the refusals nest under `kind:
+ * "refused"` and are told apart by `reason`.
  */
-export const AnalyticsQueryResultSchema = z.discriminatedUnion("kind", [
-  z
-    .object({ kind: z.literal("report"), report: AnalyticsReportSchema })
-    .strict(),
+const AnalyticsRefusalSchema = z.discriminatedUnion("reason", [
   z
     .object({
       kind: z.literal("refused"),
@@ -225,6 +223,19 @@ export const AnalyticsQueryResultSchema = z.discriminatedUnion("kind", [
       rawWindowDays: z.literal(RAW_RETENTION_DAYS),
     })
     .strict(),
+]);
+
+/**
+ * The query endpoint's answer. `refused` is not an error to paper over: the
+ * query asked for stacked filters on a range only the daily totals can answer
+ * (those hold single filters only), or for an audience only the raw visits
+ * know, beyond their window.
+ */
+export const AnalyticsQueryResultSchema = z.discriminatedUnion("kind", [
+  z
+    .object({ kind: z.literal("report"), report: AnalyticsReportSchema })
+    .strict(),
+  AnalyticsRefusalSchema,
 ]);
 export type AnalyticsQueryResult = z.infer<typeof AnalyticsQueryResultSchema>;
 
