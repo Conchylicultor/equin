@@ -1950,9 +1950,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Exports (values): `DEPLOY_CATEGORY_ID`
       - Plugins:
-        - **`analytics`** — Umbrella for cookieless site analytics on deployed compositions: the host-only route guard, the collect half that ships inside the deployed site (ingest, tables, nightly rollup, retention, host-only report query), and the dashboard half in the local deploy app.
+        - **`analytics`** — Umbrella for cookieless site analytics on deployed compositions: the host-only route guard, the collect half that ships inside the deployed site (ingest, tables, nightly rollup, retention, the report and its mirror set), and the dashboard half in the local deploy app, which runs that report on its copy of the site's tables.
           - Plugins:
-            - **`collect`** — The cookieless visit tracker a deployed site mounts: <AnalyticsTracker app={…} /> records one pageview per path change under that app (landing referrer and utm tags on the first only) and the visible time on each; track(name, props?) records a custom event on the current page; useSectionReach(section) / observeSectionReach(el, section) record section_reach once when a section reaches the upper half of the screen, its section prop (<page>/<key>) giving a per-section reach funnel. Owns the analytics tables (daily salts kept 30 days with the hash → visitor links that let a returning visitor keep one id, 90-day visits and hits, forever daily totals at every single-filter level and forever per-visit memberships for exact unique visitors over any range), the public collect endpoint, the host-only report, the visit-list reads (a window of individual visits with their hits, filtered in the filter language — run by the deploy app on its local copy of the tables), the nightly analytics.rollup job and the visits retention sweep that refuses to delete a day not yet rolled up.
+            - **`collect`** — The cookieless visit tracker a deployed site mounts: <AnalyticsTracker app={…} /> records one pageview per path change under that app (landing referrer and utm tags on the first only) and the visible time on each; track(name, props?) records a custom event on the current page; useSectionReach(section) / observeSectionReach(el, section) record section_reach once when a section reaches the upper half of the screen, its section prop (<page>/<key>) giving a per-section reach funnel. Owns the analytics tables (daily salts kept 30 days with the hash → visitor links that let a returning visitor keep one id, 90-day visits and hits, forever daily totals at every single-filter level and forever per-visit memberships for exact unique visitors over any range), the public collect endpoint, the analytics mirror set, the report (runAnalyticsQuery) and the visit-list reads (a window of individual visits with their hits, filtered in the filter language) — both run by the deploy app on its local copy of the tables — the nightly analytics.rollup job and the visits retention sweep that refuses to delete a day not yet rolled up.
               - Server:
                 - Contributes:
                   - `table-mirror-set` "analytics"
@@ -1963,7 +1963,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `change-feed-exclusion` "analytics_visits"
                 - Uses:
                   - `apps/deploy/analytics/host-only.capBodySize`
-                  - `apps/deploy/analytics/host-only.hostOnly`
                   - `apps/deploy/analytics/host-only.isBotUserAgent`
                   - `apps/deploy/analytics/host-only.requestClientIp`
                   - `apps/deploy/analytics/ip-country.lookupCountry`
@@ -1982,6 +1981,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `network/live/filter.filterSql`
                 - DB schema: `plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/server/internal/tables.ts`
                 - Exports (types):
+                  - `AnalyticsReadDb`
                   - `CollectContext`
                   - `CountryLookup`
                   - `VisitFilterable`
@@ -1994,12 +1994,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `readVisitsById`
                   - `readVisitWindow`
                   - `recordCollect`
+                  - `runAnalyticsQuery`
                 - Register:
                   - `defineJob('analytics.rollup')`
                   - `defineJob('retention.analytics_visits')`
-                - Routes:
-                  - `POST /api/analytics/collect`
-                  - `GET /api/host-only/analytics/query`
+                - Routes: `POST /api/analytics/collect`
               - Web:
                 - Uses:
                   - `infra/endpoints.fetchEndpointOver`
@@ -2017,9 +2016,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `useSectionReach`
               - Core:
                 - Uses:
-                  - `apps/deploy/analytics/host-only.base64UrlJsonParamSchema`
-                  - `apps/deploy/analytics/host-only.encodeBase64UrlJson`
-                  - `apps/deploy/analytics/host-only.HOST_ONLY_PREFIX`
                   - `framework/plugin-id.asPluginId`
                   - `infra/endpoints.defineEndpoint`
                   - `packages/list-bound.cappedList`
@@ -2073,8 +2069,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ANALYTICS_MIRROR_SET_ID`
                   - `ANALYTICS_RANGES`
                   - `AnalyticsFilterSchema`
-                  - `analyticsQueryEndpoint`
-                  - `AnalyticsQueryParamSchema`
                   - `AnalyticsQueryResultSchema`
                   - `AnalyticsQuerySchema`
                   - `AnalyticsRangeSchema`
@@ -2105,7 +2099,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `DEVICE_FAMILIES`
                   - `DeviceFamilySchema`
                   - `DIMENSIONS`
-                  - `encodeAnalyticsQuery`
                   - `EngagementBodySchema`
                   - `EVENT_NAME_PATTERN`
                   - `EVENT_PROP_KEY_PATTERN`
@@ -2194,9 +2187,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/website/pages/foundations`
                   - `apps/website/pages/vision`
                   - `apps/website/shell`
-                - Endpoint callers:
-                  - `deploy-secrets`
-                  - `host-only`
               - Exemptions:
                 - Exempts itself from:
                   - `ids:pk-declared` — `server/internal/tables.ts` (debt)
@@ -2206,16 +2196,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Test helpers:
                 - Core: `@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core/testing`
                   - `ZERO_METRICS`
-            - **`dashboard`** — Analytics tab of a site's page, shown only when the deployment's composition ships the collect plugin: range and comparison controls, KPI tiles choosing a trend line with a dashed previous period, ranked Pages / Sources / Locations / Devices / Events panels whose rows filter the whole dashboard (one filter on ranges past the raw window), and what one visit records. Reads the report over SSH on demand, with explicit states for every failure. Reads a deployment's analytics report over SSH through host-query's hostOnlyQueryOverSsh (the install's host-only report, curled through its own gateway on the loopback port) and answers a discriminated result (report, refused, or which of SSH, the request or the answer failed).
+            - **`dashboard`** — Analytics tab of a site's page, shown only when the deployment's composition ships the collect plugin: range and comparison controls, KPI tiles choosing a trend line with a dashed previous period, ranked Pages / Sources / Locations / Devices / Events panels whose rows filter the whole dashboard (one filter on ranges past the raw window), and what one visit records. Reads the report computed from this computer's copy of the site's tables (pushed as the copy syncs), under the copy's freshness line; loading until a first copy is in place, an explicit state for a refusal or a failed read. Serves a deployment's analytics report: collect's own runAnalyticsQuery run on this computer's copy of the site's analytics tables (site-mirror's readSiteMirror, as of the box's clock at the last page synced), pushed on each page the copy applies — report, refused, or not-copied while no whole first copy is in place (rendered as loading).
               - Web:
                 - Contributes:
                   - `SiteTabs.View` "Analytics" → `AnalyticsSection`
                   - `SiteOverview.Card` "traffic" → `TrafficCard`
                   - `SiteOverview.Card` "top" → `TopCards`
                   - `SiteOverview.Card` "owner-devices" → `OwnerDevicesCard`
-                - Uses: 43 symbols — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md)
+                - Uses: 40 symbols — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md)
                   - `apps/deploy/deployments` ×6
-                  - `apps/deploy/host-query` ×6
+                  - `apps/deploy/host-query` ×4
                   - `primitives/css/coords` ×2
                   - `primitives/css/text` ×2
                   - `primitives/css/ui-kit` ×2
@@ -2241,21 +2231,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/icon-button.IconButton`
                   - `primitives/link-gesture/new-tab.NewTabLink`
                   - `primitives/loading.Loading`
-                  - `primitives/relative-time.RelativeTime`
                   - `ui/icons.Icon`
               - Server:
                 - Contributes: `resource.declare` "deploy-analytics.report"
                 - Uses:
-                  - `apps/deploy/host-query.hostOnlyQueryOverSsh`
-                  - `infra/endpoints.endpointPath`
+                  - `apps/deploy/analytics/collect.analyticsMirrorTables`
+                  - `apps/deploy/analytics/collect.runAnalyticsQuery`
+                  - `apps/deploy/deployments._deployDeployments`
+                  - `apps/deploy/site-mirror/pull.onSiteMirrorApplied`
+                  - `apps/deploy/site-mirror/pull.readSiteMirror`
+                  - `database.db`
+                  - `database/table-mirror/replica.tableMirrorReplicas`
                   - `network/live.serveValue`
-                - Resources: `deploy-analytics.report` (invalidate, snapshot)
+                - Resources: `deploy-analytics.report` (push, notified)
               - Core:
                 - Uses:
                   - `apps/deploy/analytics/collect.AnalyticsFilter`
                   - `apps/deploy/analytics/collect.AnalyticsQueryResultSchema`
                   - `apps/deploy/analytics/collect.AnalyticsQuerySchema`
-                  - `apps/deploy/host-query.HOST_QUERY_FAILURE_ARMS`
                   - `network/live.liveValue`
                   - `network/live/canonical-params.canonicalJson`
                 - Exports (types): `DeploymentAnalyticsResult`
@@ -2278,8 +2271,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/density --space-sm`
                   - `ui/tokens/shape --radius`
                   - `ui/tokens/shape --spacing`
-              - Exemptions:
-                - Exempts itself from: `no-db-backed-notify` — `server/internal/served.ts` (sanctioned)
               - Test helpers:
                 - Web: `@plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/web/testing`
                   - `metrics`
@@ -2529,6 +2520,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/deploy`
               - `integrations/google-maps/browser-config`
               - `integrations/google-maps/browser-config/deployed-key`
+            - Endpoint callers: `host-only`
           - Exemptions:
             - Exempts itself from: `user-path/no-unproven-claim` — `machine/internal/read-credential.ts` (sanctioned)
           - Plugins:
@@ -3596,8 +3588,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Contributes:
                   - `resource.declare` "site-mirror.status"
                   - `fork-data-exclusion` "site_mirror_replicas"
-                - Uses: 24 symbols — full list in [`plugins/apps/plugins/deploy/plugins/site-mirror/plugins/pull/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/site-mirror/plugins/pull/REFERENCE.md)
-                  - `database/table-mirror/replica` ×11
+                - Uses: 25 symbols — full list in [`plugins/apps/plugins/deploy/plugins/site-mirror/plugins/pull/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/site-mirror/plugins/pull/REFERENCE.md)
+                  - `database/table-mirror/replica` ×12
                   - `infra/endpoints` ×3
                   - `database/table-mirror/source` ×2
                   - `ids` ×2
@@ -22505,8 +22497,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadedDatabaseConfig`
       - `readDatabaseConfigSync`
   - Cross-plugin:
-    - Imported by: 165 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
-      - `apps` ×46
+    - Imported by: 166 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+      - `apps` ×47
       - `conversations` ×20
       - `infra` ×16
       - `page` ×14
@@ -23536,6 +23528,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PullResult`
               - `ReconcileReason`
               - `ReplicaAppliedHandler`
+              - `ReplicaAsOf`
               - `ReplicaOutcome`
               - `ReplicaPhase`
               - `ReplicaProgress`
@@ -23553,6 +23546,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `withReplicaSchema`
           - Cross-plugin:
             - Imported by:
+              - `apps/deploy/analytics/dashboard`
               - `apps/deploy/analytics/sessions`
               - `apps/deploy/site-mirror/pull`
           - Exemptions:
@@ -34209,8 +34203,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 256 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
-          - `apps` ×77
+        - Imported by: 255 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+          - `apps` ×76
           - `conversations` ×35
           - `infra` ×23
           - `debug` ×20
@@ -52976,8 +52970,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago — or the short now / Nm / Nh / Nd), and a running duration as a clock (m:ss). Exposes formatRelativeTime(), <RelativeTime date={…} />, formatElapsed(), useNow() and <ElapsedTime since={…} />.
       - Cross-plugin:
-        - Imported by: 70 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
-          - `apps` ×25
+        - Imported by: 69 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
+          - `apps` ×24
           - `debug` ×15
           - `conversations` ×10
           - `infra` ×4

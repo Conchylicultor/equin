@@ -77,8 +77,8 @@ list cut); the engine's own round trips are `table-mirror/replica`'s suite.
   - Contributes:
     - `resource.declare` "site-mirror.status"
     - `fork-data-exclusion` "site_mirror_replicas"
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `database/table-mirror/replica` ×11
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `database/table-mirror/replica` ×12
     - `infra/endpoints` ×3
     - `database/table-mirror/source` ×2
     - `ids` ×2

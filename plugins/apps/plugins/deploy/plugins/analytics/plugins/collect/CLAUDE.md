@@ -252,7 +252,7 @@ after new visits, a rollup and a retention sweep arrive as deltas.
 
 ## Plugin reference
 
-- Description: The cookieless visit tracker a deployed site mounts: <AnalyticsTracker app={…} /> records one pageview per path change under that app (landing referrer and utm tags on the first only) and the visible time on each; track(name, props?) records a custom event on the current page; useSectionReach(section) / observeSectionReach(el, section) record section_reach once when a section reaches the upper half of the screen, its section prop (<page>/<key>) giving a per-section reach funnel. Owns the analytics tables (daily salts kept 30 days with the hash → visitor links that let a returning visitor keep one id, 90-day visits and hits, forever daily totals at every single-filter level and forever per-visit memberships for exact unique visitors over any range), the public collect endpoint, the host-only report, the visit-list reads (a window of individual visits with their hits, filtered in the filter language — run by the deploy app on its local copy of the tables), the nightly analytics.rollup job and the visits retention sweep that refuses to delete a day not yet rolled up.
+- Description: The cookieless visit tracker a deployed site mounts: <AnalyticsTracker app={…} /> records one pageview per path change under that app (landing referrer and utm tags on the first only) and the visible time on each; track(name, props?) records a custom event on the current page; useSectionReach(section) / observeSectionReach(el, section) record section_reach once when a section reaches the upper half of the screen, its section prop (<page>/<key>) giving a per-section reach funnel. Owns the analytics tables (daily salts kept 30 days with the hash → visitor links that let a returning visitor keep one id, 90-day visits and hits, forever daily totals at every single-filter level and forever per-visit memberships for exact unique visitors over any range), the public collect endpoint, the analytics mirror set, the report (runAnalyticsQuery) and the visit-list reads (a window of individual visits with their hits, filtered in the filter language) — both run by the deploy app on its local copy of the tables — the nightly analytics.rollup job and the visits retention sweep that refuses to delete a day not yet rolled up.
 - Server:
   - Contributes:
     - `table-mirror-set` "analytics"
@@ -263,7 +263,6 @@ after new visits, a rollup and a retention sweep arrive as deltas.
     - `change-feed-exclusion` "analytics_visits"
   - Uses:
     - `apps/deploy/analytics/host-only.capBodySize`
-    - `apps/deploy/analytics/host-only.hostOnly`
     - `apps/deploy/analytics/host-only.isBotUserAgent`
     - `apps/deploy/analytics/host-only.requestClientIp`
     - `apps/deploy/analytics/ip-country.lookupCountry`
@@ -282,6 +281,7 @@ after new visits, a rollup and a retention sweep arrive as deltas.
     - `network/live/filter.filterSql`
   - DB schema: `plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/server/internal/tables.ts`
   - Exports (types):
+    - `AnalyticsReadDb`
     - `CollectContext`
     - `CountryLookup`
     - `VisitFilterable`
@@ -294,12 +294,11 @@ after new visits, a rollup and a retention sweep arrive as deltas.
     - `readVisitsById`
     - `readVisitWindow`
     - `recordCollect`
+    - `runAnalyticsQuery`
   - Register:
     - `defineJob('analytics.rollup')`
     - `defineJob('retention.analytics_visits')`
-  - Routes:
-    - `POST /api/analytics/collect`
-    - `GET /api/host-only/analytics/query`
+  - Routes: `POST /api/analytics/collect`
 - Web:
   - Uses:
     - `infra/endpoints.fetchEndpointOver`
@@ -317,9 +316,6 @@ after new visits, a rollup and a retention sweep arrive as deltas.
     - `useSectionReach`
 - Core:
   - Uses:
-    - `apps/deploy/analytics/host-only.base64UrlJsonParamSchema`
-    - `apps/deploy/analytics/host-only.encodeBase64UrlJson`
-    - `apps/deploy/analytics/host-only.HOST_ONLY_PREFIX`
     - `framework/plugin-id.asPluginId`
     - `infra/endpoints.defineEndpoint`
     - `packages/list-bound.cappedList`
@@ -373,8 +369,6 @@ after new visits, a rollup and a retention sweep arrive as deltas.
     - `ANALYTICS_MIRROR_SET_ID`
     - `ANALYTICS_RANGES`
     - `AnalyticsFilterSchema`
-    - `analyticsQueryEndpoint`
-    - `AnalyticsQueryParamSchema`
     - `AnalyticsQueryResultSchema`
     - `AnalyticsQuerySchema`
     - `AnalyticsRangeSchema`
@@ -405,7 +399,6 @@ after new visits, a rollup and a retention sweep arrive as deltas.
     - `DEVICE_FAMILIES`
     - `DeviceFamilySchema`
     - `DIMENSIONS`
-    - `encodeAnalyticsQuery`
     - `EngagementBodySchema`
     - `EVENT_NAME_PATTERN`
     - `EVENT_PROP_KEY_PATTERN`
@@ -494,9 +487,6 @@ after new visits, a rollup and a retention sweep arrive as deltas.
     - `apps/website/pages/foundations`
     - `apps/website/pages/vision`
     - `apps/website/shell`
-  - Endpoint callers:
-    - `deploy-secrets`
-    - `host-only`
 - Exemptions:
   - Exempts itself from:
     - `ids:pk-declared` — `server/internal/tables.ts` (debt)

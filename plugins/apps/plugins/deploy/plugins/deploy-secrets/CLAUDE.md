@@ -203,6 +203,7 @@ failure notice.
     - `framework/cli/deploy`
     - `integrations/google-maps/browser-config`
     - `integrations/google-maps/browser-config/deployed-key`
+  - Endpoint callers: `host-only`
 - Exemptions:
   - Exempts itself from: `user-path/no-unproven-claim` — `machine/internal/read-credential.ts` (sanctioned)
 - Sub-plugins:

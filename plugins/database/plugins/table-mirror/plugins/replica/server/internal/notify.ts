@@ -39,7 +39,8 @@ function open(): Promise<ListenSession> {
       // neither. A failed reopen is loud through `open` itself.
       const reopened = open();
       session = reopened;
-      void reopened.then(() => {
+      void runTracked("table-mirror: re-read after replica LISTEN reopened", async () => {
+        await reopened;
         for (const fn of handlers.keys()) fn(null);
       });
     },

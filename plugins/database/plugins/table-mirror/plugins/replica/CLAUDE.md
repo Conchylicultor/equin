@@ -159,6 +159,7 @@ drop and sweep.
     - `PullResult`
     - `ReconcileReason`
     - `ReplicaAppliedHandler`
+    - `ReplicaAsOf`
     - `ReplicaOutcome`
     - `ReplicaPhase`
     - `ReplicaProgress`
@@ -176,6 +177,7 @@ drop and sweep.
     - `withReplicaSchema`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/analytics/dashboard`
     - `apps/deploy/analytics/sessions`
     - `apps/deploy/site-mirror/pull`
 - Exemptions:
