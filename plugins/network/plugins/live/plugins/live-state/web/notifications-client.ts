@@ -485,6 +485,25 @@ export function queryKeyFor(
   return p ? [key, p] : [key];
 }
 
+/**
+ * The cached query of one live tuple, looked up by its hash — O(1), the way
+ * `getQueryState` / `getQueryData` read. Never `QueryCache.find`: it scans
+ * every cached query and re-hashes the asked key once per query, so a loop over
+ * a tab's subs (a replay's `up-to-date-batch`, ~1k entries) became O(subs ×
+ * cache) — 360–455 ms of main thread for 520 subs (2026-11-12). The hash comes
+ * from `defaultQueryOptions`, so a client-wide `queryKeyHashFn` still holds.
+ */
+export function cachedQuery(
+  queryClient: QueryClient,
+  key: string,
+  params: ResourceParams | undefined,
+): Query | undefined {
+  const { queryHash } = queryClient.defaultQueryOptions({
+    queryKey: queryKeyFor(key, params),
+  });
+  return queryClient.getQueryCache().get(queryHash);
+}
+
 interface ActiveSub {
   refcount: number;
   key: string;
@@ -1410,9 +1429,7 @@ export class NotificationsClient {
    */
   private retryFailing(trigger: "online" | "visible"): void {
     for (const { key, params } of this.failing.values()) {
-      const query = this.queryClient
-        .getQueryCache()
-        .find({ queryKey: queryKeyFor(key, params), exact: true });
+      const query = cachedQuery(this.queryClient, key, params);
       if (query === undefined || query.getObserversCount() === 0) continue;
       trace(`retry key=${key} params=${paramsKey(params)} trigger=${trigger}`);
       void query.fetch().then(
@@ -1435,9 +1452,7 @@ export class NotificationsClient {
    * public state seam; its other use is `enterOutdated`.
    */
   private clearStaleError(key: string, params: ResourceParams): void {
-    const query: Query | undefined = this.queryClient
-      .getQueryCache()
-      .find({ queryKey: queryKeyFor(key, params), exact: true });
+    const query: Query | undefined = cachedQuery(this.queryClient, key, params);
     if (query === undefined || query.state.error === null) return;
     // "Still current" vouches for the value at the tuple's version — which this
     // tab could not read: the decode failure still describes it.
@@ -1504,9 +1519,11 @@ export class NotificationsClient {
       `decode-skew key=${err.key} params=${paramsKey(err.params)} error=${err.message}`,
     );
     this.noteUndecodable(channel, err);
-    const query: Query | undefined = this.queryClient
-      .getQueryCache()
-      .find({ queryKey: queryKeyFor(err.key, err.params), exact: true });
+    const query: Query | undefined = cachedQuery(
+      this.queryClient,
+      err.key,
+      err.params,
+    );
     // Already outdated (an earlier push failed the same way): the state stands
     // — no new error object per push, so no re-render or failing-set churn.
     if (

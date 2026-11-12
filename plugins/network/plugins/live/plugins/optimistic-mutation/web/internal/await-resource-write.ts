@@ -4,9 +4,9 @@
 // channel, and the snapshot-watermark floor), as a promise.
 
 import { useMemo } from "react";
-import type { QueryCache } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 import {
-  queryKeyFor,
+  cachedQuery,
   ResourceError,
   useNotificationsClient,
   type LiveRegistries,
@@ -18,7 +18,7 @@ import { resolveOptimisticSource } from "./source";
 /** The pipeline a wait listens on — the subtree's own, or a test's. */
 export interface AwaitWritePipeline {
   registries: LiveRegistries;
-  queryCache: QueryCache;
+  queryClient: QueryClient;
 }
 
 /**
@@ -66,7 +66,7 @@ function awaitResourceWriteOn(
 ): AwaitResourceWrite {
   const pipeline: AwaitWritePipeline = {
     registries: client.registries,
-    queryCache: client.queryClient.getQueryCache(),
+    queryClient: client.queryClient,
   };
   return ((
     value: object,
@@ -94,15 +94,13 @@ export function awaitWriteOn(
   watermark: string,
 ): Promise<void> {
   const { txAcks, watermarks } = pipeline.registries;
-  const queryKey = queryKeyFor(key, params);
   const reflected = (): boolean => {
     if (txAcks.has(key, params, watermark)) return true;
     const floor = watermarks.get(key, params ?? {});
     return floor !== undefined && compareTxWatermark(floor, watermark) > 0;
   };
   const failure = (): Error | null => {
-    const error = pipeline.queryCache.find({ queryKey, exact: true })?.state
-      .error;
+    const error = cachedQuery(pipeline.queryClient, key, params)?.state.error;
     if (error === null || error === undefined) return null;
     return error instanceof ResourceError || error instanceof Error
       ? error
@@ -134,8 +132,10 @@ export function awaitWriteOn(
     const stopAcks = txAcks.subscribe((ackKey) => {
       if (ackKey === key) check();
     });
-    const stopCache = pipeline.queryCache.subscribe((event) => {
-      if (event.query.queryKey[0] === key) check();
-    });
+    const stopCache = pipeline.queryClient
+      .getQueryCache()
+      .subscribe((event) => {
+        if (event.query.queryKey[0] === key) check();
+      });
   });
 }

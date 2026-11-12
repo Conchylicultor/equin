@@ -56,6 +56,7 @@ export type {
   ResourceViewProps,
 } from "./components/resource-view";
 export {
+  cachedQuery,
   queryKeyFor,
   liveStateSocketKind,
   liveStateSocketUrl,

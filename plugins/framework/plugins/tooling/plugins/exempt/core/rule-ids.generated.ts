@@ -94,6 +94,7 @@ export type ExemptableRuleId =
   | "layout/no-adhoc-layout"
   | "layout/no-unanchored-has"
   | "live-state/no-handrolled-result"
+  | "live-state/no-linear-query-find"
   | "live-state/no-ready-negation"
   | "live/no-clock-in-served"
   | "live/no-endpoint-read"

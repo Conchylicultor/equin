@@ -49,7 +49,7 @@ function setup() {
   const key = `await-write.test-${n++}`;
   const pipeline = {
     registries: h.notifications.registries,
-    queryCache: h.queryClient.getQueryCache(),
+    queryClient: h.queryClient,
   };
   return { h, key, pipeline };
 }

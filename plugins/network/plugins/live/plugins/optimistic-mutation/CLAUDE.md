@@ -622,9 +622,9 @@ that drops it from the overlay — is emitted on `clientLatencySink`
 
 - Description: Optimistic-mutation primitive over live-state: useOptimisticResource replays pending ops on server truth (overlay/replay) under the never-revert policy — causal (ack-watermark) and content-based confirmation, denial only under causal proof, keep-rendered transient failures with reconnect auto-retry, and permanent (4xx) rejections dropped and reported.
 - Web:
-  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `network/live/live-state` ×9
     - `network/live` ×9
-    - `network/live/live-state` ×8
     - `infra/endpoints` ×6
     - `primitives/networking` ×2
     - `primitives/latest-ref.useLatestRef`

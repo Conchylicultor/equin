@@ -23,6 +23,7 @@ import {
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   NotificationsClient,
+  cachedQuery,
   isTerminalResourceError,
   queryKeyFor,
   rootLiveRegistries,
@@ -1144,17 +1145,15 @@ export function useResources<T, P extends ResourceParams = ResourceParams>(
       const cached = byState.get(st);
       if (cached !== undefined && cached.appliedSeq === appliedSeq)
         return cached.result;
-      const queryKey = queryKeyFor(key, list[i]!);
       // A manual refetch ignores `enabled` and starts a NEW read even while
       // one is in flight (`cancelRefetch`), as `useResource`'s `q.refetch()`
       // does — a snapshot's `refresh()` must re-measure now, not hand back a
       // measurement started before the click.
       const refetch = () =>
         (
-          queryClient
-            .getQueryCache()
-            .find({ queryKey, exact: true })
-            ?.fetch(undefined, { cancelRefetch: true }) ?? Promise.resolve()
+          cachedQuery(queryClient, key, list[i]!)?.fetch(undefined, {
+            cancelRefetch: true,
+          }) ?? Promise.resolve()
         ).then(() => {});
       // The same three states, in the same precedence, as `useResource`.
       let result: ResourceTupleResult<T>;

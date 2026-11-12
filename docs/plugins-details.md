@@ -39928,6 +39928,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `WindowResourceDescriptor`
               - `WindowSelector`
             - Exports (values):
+              - `cachedQuery`
               - `combineResources`
               - `ensureNotificationsClient`
               - `foldResource`
@@ -40090,9 +40091,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `pruneChangelog` — Prune the durable changelog, and record what it deleted in the SAME statement: the prune horizon (`max_pruned_xid`) moves to the highest xid this run deleted, never down.
         - **`optimistic-mutation`** — Optimistic-mutation primitive over live-state: useOptimisticResource replays pending ops on server truth (overlay/replay) under the never-revert policy — causal (ack-watermark) and content-based confirmation, denial only under causal proof, keep-rendered transient failures with reconnect auto-retry, and permanent (4xx) rejections dropped and reported.
           - Web:
-            - Uses: 27 symbols — full list in [`plugins/network/plugins/live/plugins/optimistic-mutation/REFERENCE.md`](../plugins/network/plugins/live/plugins/optimistic-mutation/REFERENCE.md)
+            - Uses: 28 symbols — full list in [`plugins/network/plugins/live/plugins/optimistic-mutation/REFERENCE.md`](../plugins/network/plugins/live/plugins/optimistic-mutation/REFERENCE.md)
+              - `network/live/live-state` ×9
               - `network/live` ×9
-              - `network/live/live-state` ×8
               - `infra/endpoints` ×6
               - `primitives/networking` ×2
               - `primitives/latest-ref.useLatestRef`

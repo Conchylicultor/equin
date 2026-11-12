@@ -812,6 +812,7 @@ Details:
     - `WindowResourceDescriptor`
     - `WindowSelector`
   - Exports (values):
+    - `cachedQuery`
     - `combineResources`
     - `ensureNotificationsClient`
     - `foldResource`
