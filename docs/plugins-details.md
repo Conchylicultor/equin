@@ -33371,6 +33371,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Deps:
             - Exports (types):
               - `ChromiumLaunchOptions`
+              - `ChromiumSignalOwner`
               - `PersistentChromiumLaunchOptions`
               - `PlaywrightBrowserName`
               - `PlaywrightBrowserSource`

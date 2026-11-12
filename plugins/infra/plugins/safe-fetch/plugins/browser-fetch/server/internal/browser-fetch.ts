@@ -262,6 +262,8 @@ async function renderOnce(
   let browser: Browser;
   try {
     browser = await launchChromium(installed, {
+      // The backend's graceful shutdown lets an in-flight fetch finish.
+      signals: "process",
       args: buildLaunchArgs(pinnedHost, ip),
       timeout: stepTimeout(deadline, opts, opts.launchTimeoutMs, href),
     });

@@ -188,12 +188,53 @@ export interface ConversationRuntime {
 
 const registry = new Map<string, ConversationRuntime>();
 
+// One agent-process lifecycle at a time per conversation. Every runtime method
+// that may start, stop or restart the agent's process runs here, so no two of
+// them interleave on one conversation — whoever calls them, and whatever
+// terminal they hold or do not hold.
+//
+// The terminal (below) does not cover this: it orders what is TYPED into an
+// agent, and the closes (`deleteConversation` — Exit, Drop & exit, hibernate,
+// the close teardown) and a resume's own stop-then-create take no terminal
+// (a resume runs both inside one, via `deliverLocked`, and outside one, so it
+// cannot take it). On 2026-11-12 a Drop & exit's `delete` sent `shutdown` to an
+// agent the spawn job's `create` was still bringing up: the launch failed
+// ("exited during startup: shutdown command"), was reported as a failed spawn
+// attempt, and its retry saw the row `done` (conv-1794447287-5wdi2e).
+//
+// Applied here, at registration, so a runtime cannot forget it. The runtime's
+// own methods never call each other through the registry, so a lifecycle op is
+// never entered from inside another (the mutex is not reentrant); and nothing
+// under it takes the terminal, so the order is always terminal → lifecycle.
+const agentLifecycles = createKeyedMutex();
+
+export function serializeLifecycle(
+  runtime: ConversationRuntime,
+): ConversationRuntime {
+  return {
+    ...runtime,
+    create: (id, ...rest) =>
+      agentLifecycles.run(id, () => runtime.create(id, ...rest)),
+    delete: (id) => agentLifecycles.run(id, () => runtime.delete(id)),
+    stop: (id) => agentLifecycles.run(id, () => runtime.stop(id)),
+    // A send may restart the agent on another account (the sdk runtime's
+    // `moveToLaunchAccount`), and either way must not reach a process that is
+    // mid-start or mid-stop.
+    send: (id, turn) => agentLifecycles.run(id, () => runtime.send(id, turn)),
+    answerPrompt: (id, turn) =>
+      agentLifecycles.run(id, () => runtime.answerPrompt(id, turn)),
+  };
+}
+
 export const Runtime = {
   /**
    * Returns a {@link Registration} token. The actual `registry.set` (and the
    * duplicate-id guard) fire when the framework invokes `.register()` during
    * the plugin register phase. Plugins list the result in their `register`
    * array on `ServerPluginDefinition`.
+   *
+   * The registered runtime's lifecycle methods are serialized per
+   * conversation (`serializeLifecycle`).
    */
   define(runtime: ConversationRuntime): Registration {
     return {
@@ -201,7 +242,7 @@ export const Runtime = {
         if (registry.has(runtime.id)) {
           throw new Error(`Runtime "${runtime.id}" already registered`);
         }
-        registry.set(runtime.id, runtime);
+        registry.set(runtime.id, serializeLifecycle(runtime));
       },
     };
   },

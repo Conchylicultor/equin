@@ -222,6 +222,9 @@ async function launch(): Promise<BrowserContext> {
     // The client's canvas decides the viewport (`Emulation.setDeviceMetricsOverride`
     // per attach), so Playwright must not emulate one of its own.
     viewport: null,
+    // host.ts's own signal handler closes the browser (flushing the profile),
+    // then exits.
+    signals: "process" as const,
     acceptDownloads: true,
     headless: !HEADED,
     args: HEADED ? [...LAUNCH_ARGS, ...HEADED_ARGS] : LAUNCH_ARGS,

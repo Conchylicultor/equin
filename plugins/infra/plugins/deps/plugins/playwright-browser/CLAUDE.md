@@ -88,6 +88,7 @@ const headed = await launchChromium(ready, { headless: false });  // headed bina
 - Deps:
   - Exports (types):
     - `ChromiumLaunchOptions`
+    - `ChromiumSignalOwner`
     - `PersistentChromiumLaunchOptions`
     - `PlaywrightBrowserName`
     - `PlaywrightBrowserSource`

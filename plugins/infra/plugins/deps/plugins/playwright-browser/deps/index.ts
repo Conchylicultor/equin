@@ -11,6 +11,7 @@ export {
 } from "./internal/playwright-browser";
 export type {
   ChromiumLaunchOptions,
+  ChromiumSignalOwner,
   PersistentChromiumLaunchOptions,
   PlaywrightBrowserName,
   PlaywrightBrowserSource,

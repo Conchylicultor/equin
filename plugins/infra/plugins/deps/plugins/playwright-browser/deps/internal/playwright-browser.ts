@@ -240,11 +240,50 @@ async function assertSystemLibraries(
   }
 }
 
+/**
+ * Who closes the browser when this process is told to stop (SIGTERM, SIGINT,
+ * SIGHUP) — required on every launch, because the two answers are both right
+ * for someone and the wrong one breaks a real case:
+ *
+ * - `"process"` — the process has its own shutdown (a backend's graceful
+ *   drain, a host bin's signal handler) and closes the browser in it.
+ *   Playwright installs NO signal handler; its `exit` handler still kills the
+ *   browser when the process exits, so nothing outlives it. Playwright's
+ *   default would be a second shutdown path racing the first: on SIGTERM it
+ *   closes every browser it launched at once, while the backend is still
+ *   draining the jobs using them — a thumbnail render cut short by its own
+ *   backend's planned restart, recorded as a failed attempt
+ *   (prototypes.render-thumbnail, 2026-11-10..12, each within seconds of a
+ *   main deploy). Its SIGINT handler even exits the process (code 130),
+ *   skipping the drain whole.
+ * - `"playwright"` — the process has no shutdown of its own (a CLI script):
+ *   Playwright's default handlers close the browser on those signals. Without
+ *   them a Ctrl-C would kill the script and leave the browser running, since a
+ *   signal death never runs `exit` handlers.
+ */
+export type ChromiumSignalOwner = "process" | "playwright";
+
+/** The three Playwright switches {@link ChromiumSignalOwner} decides — never passed directly. */
+type SignalHandlingOptions = "handleSIGINT" | "handleSIGTERM" | "handleSIGHUP";
+
+function signalHandling(
+  owner: ChromiumSignalOwner,
+): Pick<LaunchOptions, SignalHandlingOptions> {
+  const playwrightHandles = owner === "playwright";
+  return {
+    handleSIGINT: playwrightHandles,
+    handleSIGTERM: playwrightHandles,
+    handleSIGHUP: playwrightHandles,
+  };
+}
+
 /** `chromium.launch` options, minus the two that pick the binary: the install does. */
 export type ChromiumLaunchOptions = Omit<
   LaunchOptions,
-  "executablePath" | "channel"
+  "executablePath" | "channel" | SignalHandlingOptions
 > & {
+  /** Who closes the browser on a stop signal — see {@link ChromiumSignalOwner}. */
+  signals: ChromiumSignalOwner;
   /**
    * Render with the machine's GPU instead of the software rasterizer headless
    * Chromium falls back to (SwiftShader). Some pages refuse to draw without
@@ -272,7 +311,7 @@ const GPU_ARGS = ["--enable-gpu"] as const;
  */
 export async function launchChromium(
   ready: Ready<PlaywrightBrowserSource>,
-  opts: ChromiumLaunchOptions = {},
+  opts: ChromiumLaunchOptions,
 ): Promise<Browser> {
   const read = await readBrowserExecutables(ready.dir);
   if (!read.ok) {
@@ -280,11 +319,12 @@ export async function launchChromium(
       `${ready.dep.id} is no longer intact (${read.reason}) — reinstall it: ./equin deps install ${ready.dep.id}`,
     );
   }
-  const { gpu = false, ...launch } = opts;
+  const { gpu = false, signals, ...launch } = opts;
   const headless = launch.headless ?? true;
   const { chromium } = await import("playwright");
   return chromium.launch({
     ...launch,
+    ...signalHandling(signals),
     args: [...(launch.args ?? []), ...(gpu ? GPU_ARGS : [])],
     headless,
     executablePath: headless
@@ -296,8 +336,10 @@ export async function launchChromium(
 /** `chromium.launchPersistentContext` options, minus the two that pick the binary. */
 export type PersistentChromiumLaunchOptions = Omit<
   NonNullable<Parameters<BrowserType["launchPersistentContext"]>[1]>,
-  "executablePath" | "channel"
+  "executablePath" | "channel" | SignalHandlingOptions
 > & {
+  /** Who closes the browser on a stop signal — see {@link ChromiumSignalOwner}. */
+  signals: ChromiumSignalOwner;
   /**
    * Launch a binary DERIVED from the installed one rather than the installed
    * one itself — e.g. a copy of the headed app bundle re-flagged for the OS.
@@ -317,7 +359,7 @@ export type PersistentChromiumLaunchOptions = Omit<
 export async function launchPersistentChromium(
   ready: Ready<PlaywrightBrowserSource>,
   userDataDir: string,
-  opts: PersistentChromiumLaunchOptions = {},
+  opts: PersistentChromiumLaunchOptions,
 ): Promise<BrowserContext> {
   const read = await readBrowserExecutables(ready.dir);
   if (!read.ok) {
@@ -325,7 +367,7 @@ export async function launchPersistentChromium(
       `${ready.dep.id} is no longer intact (${read.reason}) — reinstall it: ./equin deps install ${ready.dep.id}`,
     );
   }
-  const { derive, ...launchOpts } = opts;
+  const { derive, signals, ...launchOpts } = opts;
   const headless = launchOpts.headless ?? true;
   const installed = headless
     ? read.executables.headlessShell
@@ -334,6 +376,7 @@ export async function launchPersistentChromium(
   const { chromium } = await import("playwright");
   return chromium.launchPersistentContext(userDataDir, {
     ...launchOpts,
+    ...signalHandling(signals),
     headless,
     executablePath,
   });

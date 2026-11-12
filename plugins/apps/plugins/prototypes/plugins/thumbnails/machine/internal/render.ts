@@ -186,6 +186,9 @@ export async function renderThumbnail(
   let browser: Browser | undefined;
   try {
     browser = await launchChromium(installed, {
+      // The backend's graceful shutdown drains this job before the process
+      // exits; Playwright must not close the browser under it on SIGTERM.
+      signals: "process",
       // The non-SSRF subset of browser-fetch's argv: no telemetry, no
       // variations, no component updates — none of which a local file needs,
       // and each of which is startup latency. The sandbox stays ON: a

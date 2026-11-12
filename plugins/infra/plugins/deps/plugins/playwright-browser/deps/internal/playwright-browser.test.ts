@@ -147,10 +147,25 @@ describe("playwrightBrowser", () => {
   });
 
   test("launchChromium takes a Ready, never a bare dependency", () => {
-    const launch = (r: Ready<typeof chromium.source>) => launchChromium(r);
+    const launch = (r: Ready<typeof chromium.source>) =>
+      launchChromium(r, { signals: "process" });
     // @ts-expect-error — launching without ensuring does not compile.
-    const unensured = () => launchChromium(chromium);
+    const unensured = () => launchChromium(chromium, { signals: "process" });
     expect(typeof launch).toBe("function");
     expect(typeof unensured).toBe("function");
+  });
+
+  test("every launch names who closes the browser on a stop signal", () => {
+    const ready = null as unknown as Ready<typeof chromium.source>;
+    // @ts-expect-error — no signal owner does not compile.
+    const unowned = () => launchChromium(ready, {});
+    const raw = () =>
+      launchChromium(ready, {
+        signals: "process",
+        // @ts-expect-error — Playwright's own switches are not a second spelling.
+        handleSIGTERM: true,
+      });
+    expect(typeof unowned).toBe("function");
+    expect(typeof raw).toBe("function");
   });
 });

@@ -248,6 +248,8 @@ async function launch(): Promise<Browser> {
     );
   }
   const launched = await launchChromium(installed.ready, {
+    // host.ts's own signal handler closes every session, then exits.
+    signals: "process",
     timeout: BOUND_MS,
     args: [
       "--disable-background-networking",

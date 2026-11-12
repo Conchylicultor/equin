@@ -359,6 +359,9 @@ async function runBrowser<T>(
     // Headless runs the recorded chrome-headless-shell, `--headed` the headed
     // binary of the same revision.
     browser = await launchChromium(installed, {
+      // A script with no shutdown of its own: a Ctrl-C closes the browser
+      // through Playwright's handlers.
+      signals: "playwright",
       headless: !flag("headed"),
       gpu: opts.gpu ?? false,
     });
