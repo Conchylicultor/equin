@@ -6,7 +6,11 @@ import { defineSourceSet } from "@plugins/packages/plugins/source-digest/core";
 import { sourceDigest } from "@plugins/packages/plugins/source-digest/server";
 import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
 import { _reports, ReportNoiseRule } from "@plugins/reports/server";
-import { reportIdKind } from "@plugins/reports/core";
+import {
+  reportIdKind,
+  versionSkewCode,
+  versionSkewMayExplain,
+} from "@plugins/reports/core";
 import { isNoiseReport } from "./noise";
 import { noiseInputCode, noiseInputOf } from "./noise-input";
 import { reportsProducer } from "./producer";
@@ -30,14 +34,17 @@ import { _reportsReconciled } from "./tables";
 // times a year.
 //
 // Every input is the row's own: `staleOrigin` is the fact recorded with the
-// occurrence. Re-deriving it here against the graph the server serves NOW
-// marked every client report filed before the last deploy as stale — muting
-// real crashes on the first boot after any push.
+// occurrences (every one came from an outdated tab). Re-deriving it here
+// against the graph the server serves NOW marked every client report filed
+// before the last deploy as stale — muting real crashes on the first boot
+// after any push. What that fact EXPLAINS (reports/core's
+// versionSkewMayExplain) is code, and digested like a rule.
 
 /**
  * The classifier's code: every contributed rule's module
- * (`ReportNoiseRuleSpec.code`) and `noise-input.ts` (the row → rule-input
- * mapping and how the rules' answers combine). Not this
+ * (`ReportNoiseRuleSpec.code`), `noise-input.ts` (the row → rule-input
+ * mapping and how the rules' answers combine) and reports/core's
+ * `version-skew.ts` (when a stale tab's report is version skew). Not this
  * module's: it loads the database and both reports barrels, so its digest
  * would move with nearly every push and re-run the pass for nothing.
  */
@@ -45,6 +52,7 @@ const noiseRulesCode = defineSourceSet(
   "the report noise classifier's code (the stored `reports.noise` flags)",
 );
 noiseRulesCode.include(noiseInputCode);
+noiseRulesCode.include(versionSkewCode);
 
 const RECONCILE_NAME = "noise";
 
@@ -89,7 +97,9 @@ async function reconcileNoise(): Promise<void> {
   const noiseIds: string[] = [];
   const signalIds: string[] = [];
   for (const row of rows) {
-    const noise = isNoiseReport(noiseInputOf(row));
+    const noise = isNoiseReport(
+      noiseInputOf({ ...row, versionSkew: versionSkewMayExplain(row) }),
+    );
     if (noise !== row.noise) {
       await setReportNoise(db, row.id, noise);
     }

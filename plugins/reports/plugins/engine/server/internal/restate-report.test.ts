@@ -45,7 +45,7 @@ const values = (over: Partial<ReportUpsertValues>): ReportUpsertValues => ({
   userAgent: null,
   data: {},
   limited: false,
-  noise: false,
+  noise: { ifStale: false, ifCurrent: false },
   staleOrigin: false,
   clientId: null,
   buildId: null,

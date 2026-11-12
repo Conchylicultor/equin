@@ -108,12 +108,14 @@ export const reportFields = {
   rateLimited: boolField({ label: "Rate-limited" }),
   noise: boolField({ label: "Noise" }),
   /**
-   * The newest occurrence came from an outdated tab and is about that tab's
-   * own code (`isStaleOrigin`, judged against the graph the server
-   * served AT THAT MOMENT). A fact of the occurrence, stored because nothing
-   * can re-derive it later: the server's graph has moved on by then, and
-   * judging an old row against the current one calls every report filed
-   * before the last deploy stale.
+   * Every occurrence so far came from an outdated tab (`fromOutdatedBundle`,
+   * judged against the graph the server served AT THAT MOMENT) — sticky: one
+   * occurrence from a tab on the served graph clears it for good. A fact,
+   * stored because nothing can re-derive it later: the server's graph has
+   * moved on by then, and judging an old row against the current one calls
+   * every report filed before the last deploy stale. What it EXPLAINS is
+   * `versionSkewMayExplain` (only a report about loading what the server
+   * serves now — never a bug in the tab's own code).
    */
   staleOrigin: boolField({ label: "Stale tab" }),
   /**

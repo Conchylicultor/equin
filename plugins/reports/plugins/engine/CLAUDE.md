@@ -154,16 +154,21 @@ installs no listener itself: `server-core/no-process-crash-listener` forbids it.
 
 `noise` (and the bell's `muted`) is computed by `recordReport` from the
 `ReportNoiseRule` contributions and the row's own fields — `staleOrigin`
-included, which is a fact of the occurrence: the reporting tab's bundle
-against the graph the server served AT THAT MOMENT, stored on the row and
+included, which is a fact of the occurrences: every reporting tab's bundle
+differed from the graph the server served AT THAT MOMENT, stored on the row and
 never re-derived (judging an old row against today's graph calls every report
 filed before the last deploy stale; it did, 2026-06 → 2026-11, muting real
-crashes on the first boot after each push).
+crashes on the first boot after each push). It is sticky: one occurrence from
+a tab on the served graph clears it for good, so the upsert takes each
+occurrence's noise verdict for the fact the row ends with (`NoiseVerdicts`).
+What the fact explains is reports/core's `versionSkewMayExplain` — only a
+report about loading what the server serves now (`load` sources), never a bug
+in the tab's own code nor what it saw the server do.
 
 So the stored flags only go stale when the rules' code changes. The
 `reports.backfill-noise` warm-up stamps them with the source digest of that
 code (every rule's `code` module plus `noise-input.ts`, the row → rule input
-mapping) in `reports_reconciled`; a boot whose digest matches reads one row
+mapping, and reports/core's `version-skew.ts`) in `reports_reconciled`; a boot whose digest matches reads one row
 and stops. Only a changed digest re-runs the O(reports) pass (every row
 re-judged, every linked notification's `muted` synced). Keep a rule's module
 and `noise-input.ts` importing nothing but types — whatever they load counts.

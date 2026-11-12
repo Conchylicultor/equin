@@ -59,7 +59,7 @@ const values = (
   userAgent: null,
   data: {},
   limited: false,
-  noise: false,
+  noise: { ifStale: false, ifCurrent: false },
   staleOrigin: false,
   clientId: null,
   buildId: null,
@@ -123,24 +123,44 @@ describe("writeReport (real DB)", () => {
     expect(row?.lastClientId).toBeNull();
   });
 
-  test("staleOrigin is the newest occurrence's, stored as recorded", async () => {
+  // A verdict that differs by the row's fact: noise only while every
+  // occurrence came from an outdated tab (the stale-frontend rule's shape).
+  const skewNoise = { ifStale: true, ifCurrent: false };
+
+  test("staleOrigin holds while every occurrence came from an outdated tab, and noise follows it", async () => {
     const [stale] = await writeReport(
-      values({ occurredAt: T1, staleOrigin: true, noise: true }),
+      values({ occurredAt: T1, staleOrigin: true, noise: skewNoise }),
       t.db,
     );
     expect(stale?.staleOrigin).toBe(true);
-    // A replayed older occurrence from a current tab does not overwrite it…
+    expect(stale?.noise).toBe(true);
+    // Another outdated tab, newer: still only ever seen from outdated tabs.
+    const [again] = await writeReport(
+      values({ occurredAt: T2, staleOrigin: true, noise: skewNoise }),
+      t.db,
+    );
+    expect(again?.staleOrigin).toBe(true);
+    expect(again?.noise).toBe(true);
+  });
+
+  test("one occurrence from a tab on the served graph clears staleOrigin for good — even a replayed older one", async () => {
+    await writeReport(
+      values({ occurredAt: T1, staleOrigin: true, noise: skewNoise }),
+      t.db,
+    );
     const [replayed] = await writeReport(
-      values({ occurredAt: T0, staleOrigin: false }),
+      values({ occurredAt: T0, staleOrigin: false, noise: skewNoise }),
       t.db,
     );
-    expect(replayed?.staleOrigin).toBe(true);
-    // …a newer one does.
-    const [fresh] = await writeReport(
-      values({ occurredAt: T2, staleOrigin: false }),
+    expect(replayed?.staleOrigin).toBe(false);
+    expect(replayed?.noise).toBe(false);
+    // A later outdated tab cannot make it stale (or noise) again.
+    const [later] = await writeReport(
+      values({ occurredAt: T2, staleOrigin: true, noise: skewNoise }),
       t.db,
     );
-    expect(fresh?.staleOrigin).toBe(false);
+    expect(later?.staleOrigin).toBe(false);
+    expect(later?.noise).toBe(false);
   });
 
   test("a genuinely newer repeat advances last_seen_at and takes over attribution", async () => {

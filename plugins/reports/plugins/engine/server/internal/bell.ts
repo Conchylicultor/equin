@@ -15,6 +15,7 @@ import {
   formatReportActivity,
   reportActivity,
   reportDetailRoute,
+  versionSkewMayExplain,
 } from "@plugins/reports/core";
 import { bellKeyOf, fixNoticeOf } from "./fix-notice";
 
@@ -39,7 +40,6 @@ export interface Bell {
   spec: ReportKindSpec;
   row: typeof _reports.$inferSelect;
   fingerprint: string;
-  staleOrigin: boolean;
   clientId: string | null;
   url: string | null;
   buildId: string | null;
@@ -69,11 +69,13 @@ function writeBell(
   incident: IncidentBell | null,
   conn?: NodePgDatabase,
 ): Promise<string> {
-  const { spec, row, staleOrigin, clientId, url, buildId } = bell;
+  const { spec, row, clientId, url, buildId } = bell;
   const fp = bell.fingerprint;
   // Mirror a "[Stale tab]" marker into the bell so the notification itself reads
-  // as benign version-skew at a glance.
-  const stalePrefix = staleOrigin ? "[Stale tab] " : "";
+  // as benign version-skew at a glance — only when skew may explain it (the
+  // row's, never this occurrence's alone: reports/core's versionSkewMayExplain).
+  const skew = versionSkewMayExplain(row);
+  const stalePrefix = skew ? "[Stale tab] " : "";
   // An incident's count leads, so the 140-char clamp below never cuts it.
   const incidentPrefix =
     incident && incident.related > 0
@@ -123,7 +125,7 @@ function writeBell(
       type: "report",
       category: "reports",
       icon: spec.meta.variant === "info" ? infoReportIcon : null,
-      title: staleOrigin ? `${spec.meta.notif} (stale tab)` : spec.meta.notif,
+      title: skew ? `${spec.meta.notif} (stale tab)` : spec.meta.notif,
       description: bellDescription(desc),
       variant: spec.meta.variant,
       state: fixNoticeOf(row),
@@ -180,7 +182,6 @@ export function ringRowBell(
         spec,
         row,
         fingerprint: row.fingerprint,
-        staleOrigin: row.staleOrigin,
         clientId: row.lastClientId,
         url: row.url,
         buildId: row.lastBuildId,

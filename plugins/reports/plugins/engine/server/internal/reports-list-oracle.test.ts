@@ -342,7 +342,7 @@ describe("reports.list fed by the reports producer — differential oracle", () 
         userAgent: null,
         data: { n: clock },
         limited: rand() < 0.3,
-        noise: rand() < 0.3,
+        noise: ((n) => ({ ifStale: n, ifCurrent: n }))(rand() < 0.3),
         staleOrigin: false,
         clientId: null,
         buildId: null,

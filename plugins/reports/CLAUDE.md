@@ -181,8 +181,8 @@ before it) beside the total, worded by `formatReportActivity`
     - `fixStandingOf`
     - `formatRecentCount`
     - `formatReportActivity`
+    - `fromOutdatedBundle`
     - `investigateReport`
-    - `isStaleOrigin`
     - `isUntrustedReportSource`
     - `normalizeMessage`
     - `regresses`
@@ -204,6 +204,8 @@ before it) beside the total, worded by `formatReportActivity`
     - `SERVER_REPORT_SOURCES`
     - `submitReport`
     - `UNTRUSTED_REPORT_SOURCES`
+    - `versionSkewCode`
+    - `versionSkewMayExplain`
 - Cross-plugin:
   - Imported by: 79 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `reports` ×31

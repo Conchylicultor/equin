@@ -36,7 +36,8 @@ import {
   REPORT_HOURLY_MAX,
   REPORT_RECENT_MAX,
   reportHourOf,
-  isStaleOrigin,
+  fromOutdatedBundle,
+  versionSkewMayExplain,
   reportIdKind,
   type ReportId,
   type ReportInput,
@@ -347,21 +348,31 @@ async function fileReport(input: ReportInput): Promise<FiledReport> {
   }
 
   const limited = bumpWindowAndCheck(fp);
-  // A report whose originating bundle's graph hash differs from the graph this
-  // server is serving came from an outdated frontend tab — benign version-skew,
-  // when the report is about the page's own code; one about what the tab saw
-  // the server do (a sub left unanswered) is not explained by the bundle's age
-  // (reports/core's isStaleOrigin). Both sides are the artifact's content
-  // identity, so a rebuild that composed the same graph does not make every
-  // open tab's reports look stale.
-  const staleOrigin = isStaleOrigin({
-    source,
+  // Whether this occurrence's bundle's graph hash differs from the graph this
+  // server is serving — a FACT about the occurrence (reports/core's
+  // fromOutdatedBundle). Both sides are the artifact's content identity, so a
+  // rebuild that composed the same graph does not make every open tab look
+  // outdated. What it explains is judged on the ROW (versionSkewMayExplain):
+  // the row's fact is sticky — one occurrence from a tab on the served graph
+  // clears it for good — so noise is judged both ways here and the upsert
+  // takes the verdict for the fact it ends with.
+  const staleOrigin = fromOutdatedBundle({
     buildId,
     serverGraph: await getServerGraphHash(),
   });
-  const noise = isNoiseReport(
-    noiseInputOf({ source, message: rawMessage ?? "", data, staleOrigin }),
-  );
+  const judge = (rowStale: boolean) =>
+    isNoiseReport(
+      noiseInputOf({
+        source,
+        message: rawMessage ?? "",
+        data,
+        versionSkew: versionSkewMayExplain({ source, staleOrigin: rowStale }),
+      }),
+    );
+  const noise: NoiseVerdicts = {
+    ifStale: judge(true),
+    ifCurrent: judge(false),
+  };
 
   const id = reportIdKind.mint();
   // Wrapped in runWithoutProfiling: the reports insert/upsert is itself a `db`
@@ -466,12 +477,22 @@ async function fileReport(input: ReportInput): Promise<FiledReport> {
       spec,
       row,
       fingerprint: fp,
-      staleOrigin,
       clientId: clientId ?? null,
       url: url ?? null,
       buildId: buildId ?? null,
     },
   };
+}
+
+/**
+ * An occurrence's noise, judged against each value of the row's `staleOrigin`
+ * after this write: `ifStale` when every occurrence so far (this one included)
+ * came from an outdated tab, `ifCurrent` otherwise. They differ only for a
+ * report version skew may explain (the stale-frontend rule).
+ */
+export interface NoiseVerdicts {
+  ifStale: boolean;
+  ifCurrent: boolean;
 }
 
 // The validated, clamped, fingerprinted values recordReport computes before
@@ -487,8 +508,12 @@ export interface ReportUpsertValues {
   userAgent: string | null;
   data: Record<string, unknown>;
   limited: boolean;
-  noise: boolean;
-  /** This occurrence's {@link isStaleOrigin}, judged now — stored, never re-derived. */
+  /** This occurrence's noise verdict, for each fact the row may end with. */
+  noise: NoiseVerdicts;
+  /**
+   * This occurrence came from an outdated bundle (`fromOutdatedBundle`, judged
+   * now — never re-derived). The row keeps it only while EVERY occurrence did.
+   */
   staleOrigin: boolean;
   clientId: string | null;
   buildId: string | null;
@@ -528,8 +553,7 @@ function buildUpsert(
   const { occurredAt } = v;
   // Timestamps take greatest/least so an out-of-order replay can never move
   // last_seen_at backwards (or first_seen_at forwards); the last-writer-wins
-  // attribution columns (message / data / noise / staleOrigin / lastClientId /
-  // lastBuildId)
+  // attribution columns (message / data / noise / lastClientId / lastBuildId)
   // only apply when this occurrence is at least as new as the row's
   // last_seen_at, so a replayed older report never clobbers fresher
   // attribution. ON CONFLICT SET expressions all read the PRE-update row, so
@@ -602,7 +626,7 @@ function buildUpsert(
       recent: [occurrence],
       hourly: { hours: [{ h: hour, n: 1 }], untrackedBefore: null },
       rateLimited: v.limited,
-      noise: v.noise,
+      noise: v.staleOrigin ? v.noise.ifStale : v.noise.ifCurrent,
       staleOrigin: v.staleOrigin,
       lastClientId: v.clientId,
       lastBuildId: v.buildId,
@@ -626,8 +650,17 @@ function buildUpsert(
         firstSeenAt: sql`least(${t.firstSeenAt}, ${occurredAt})`,
         lastSeenAt: sql`greatest(${t.lastSeenAt}, ${occurredAt})`,
         rateLimited: sql`${t.rateLimited} OR ${v.limited}`,
-        noise: sql`case when ${isNewest} then ${v.noise} else ${t.noise} end`,
-        staleOrigin: sql`case when ${isNewest} then ${v.staleOrigin} else ${t.staleOrigin} end`,
+        // Sticky: the row stays "only ever seen from outdated tabs" while every
+        // occurrence was — whatever their order — and one occurrence from a tab
+        // on the served graph clears it for good (that code path is live in
+        // the current build, so no reload explains it). The noise follows the
+        // fact the row ends with: the newest occurrence's verdict for it, or —
+        // for an older replay — the row's own, re-judged on this occurrence
+        // when the replay is what clears the fact.
+        noise: v.staleOrigin
+          ? sql`case when ${isNewest} then (case when ${t.staleOrigin} then ${v.noise.ifStale}::boolean else ${v.noise.ifCurrent}::boolean end) else ${t.noise} end`
+          : sql`case when ${isNewest} or ${t.staleOrigin} then ${v.noise.ifCurrent}::boolean else ${t.noise} end`,
+        staleOrigin: sql`${t.staleOrigin} and ${v.staleOrigin}::boolean`,
         lastClientId: sql`case when ${isNewest} then ${v.clientId} else ${t.lastClientId} end`,
         lastBuildId: sql`case when ${isNewest} then ${v.buildId} else ${t.lastBuildId} end`,
         lastCommit: sql`case when ${isNewest} then ${v.commit} else ${t.lastCommit} end`,

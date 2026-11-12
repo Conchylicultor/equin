@@ -25,13 +25,15 @@ export const claudeCliSignalKillRule: ReportNoiseRuleSpec = {
   code: import.meta,
 };
 
-// A crash whose originating frontend tab was running an obsolete bundle when
-// it reported (build id mismatch, judged at record time and stored on the row
-// as `staleOrigin`). Benign version-skew during a rollout, not a live bug —
-// record + file the (attributed) task, but mute its notification.
+// A report version skew may explain: only ever seen from tabs on an obsolete
+// bundle, and about such a tab loading what the server serves now (a chunk,
+// the boot snapshot, an entry another build stored) — reloading is the whole
+// fix. Never a bug in the tab's own code nor what it saw the server do
+// (reports/core's versionSkewMayExplain). Record + file the task, mute the
+// notification.
 export const staleFrontendRule: ReportNoiseRuleSpec = {
   id: "stale-frontend",
-  matches: (i) => i.staleOrigin === true,
+  matches: (i) => i.versionSkew,
   code: import.meta,
 };
 

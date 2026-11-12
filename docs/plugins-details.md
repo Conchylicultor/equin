@@ -54329,8 +54329,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `fixStandingOf`
       - `formatRecentCount`
       - `formatReportActivity`
+      - `fromOutdatedBundle`
       - `investigateReport`
-      - `isStaleOrigin`
       - `isUntrustedReportSource`
       - `normalizeMessage`
       - `regresses`
@@ -54352,6 +54352,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `SERVER_REPORT_SOURCES`
       - `submitReport`
       - `UNTRUSTED_REPORT_SOURCES`
+      - `versionSkewCode`
+      - `versionSkewMayExplain`
   - Cross-plugin:
     - Imported by: 79 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
       - `reports` ×31

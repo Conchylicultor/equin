@@ -20,7 +20,8 @@ export function noiseInputOf(report: {
   source: string;
   message: string;
   data: Record<string, unknown>;
-  staleOrigin: boolean;
+  /** reports/core's `versionSkewMayExplain` of the report — judged by the caller, so this leaf stays type-only. */
+  versionSkew: boolean;
 }): ReportNoiseInput {
   const { data } = report;
   return {
@@ -28,7 +29,7 @@ export function noiseInputOf(report: {
     errorType: typeof data.errorType === "string" ? data.errorType : null,
     message: report.message,
     stack: typeof data.stack === "string" ? data.stack : null,
-    staleOrigin: report.staleOrigin,
+    versionSkew: report.versionSkew,
   };
 }
 

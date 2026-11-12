@@ -1,5 +1,6 @@
 import { serializeUiContext } from "@plugins/primitives/plugins/ui-context/core";
 import type { ReportRow } from "@plugins/reports/server";
+import { versionSkewMayExplain } from "@plugins/reports/core";
 import { CrashPayloadSchema, formatResizeLoopTrace } from "../../core";
 import type { CrashPayload } from "../../core";
 
@@ -34,7 +35,7 @@ export function renderCrashTask(row: ReportRow): {
 function renderTitle(row: ReportRow): string {
   const data = crashOf(row);
   const prefix = data.errorType ? `${data.errorType}: ` : "";
-  const stalePrefix = row.staleOrigin ? "[Stale tab] " : "";
+  const stalePrefix = versionSkewMayExplain(row) ? "[Stale tab] " : "";
   // Tag known-benign noise so the title itself reads as "expected", matching the
   // muted notification — not just a dimmed row with no explanation.
   const noisePrefix = row.noise ? "[noise] " : "";
@@ -53,10 +54,16 @@ function renderDescription(row: ReportRow): string {
 
   const lines: string[] = [];
   // Stored at record time (`staleOrigin`): judged against the graph the server
-  // served then, never against today's, which has moved on since.
-  if (row.staleOrigin) {
+  // served then, never against today's, which has moved on since. Only a
+  // report about loading what the server serves now is explained by it.
+  if (versionSkewMayExplain(row)) {
     lines.push(
-      `**Origin:** stale frontend tab (bundle ${row.lastBuildId}, older than the one the server was serving) — likely benign version-skew, not a live bug.`,
+      `**Origin:** stale frontend tab (bundle ${row.lastBuildId}, older than the one the server was serving) — likely benign version-skew: it failed loading what the server serves now.`,
+    );
+    lines.push("");
+  } else if (row.staleOrigin) {
+    lines.push(
+      `**Origin:** only seen from outdated tabs so far (bundle ${row.lastBuildId}). That does not explain it: the bug is in that bundle's own code (or the server's), and is live until a build that fixes it.`,
     );
     lines.push("");
   }

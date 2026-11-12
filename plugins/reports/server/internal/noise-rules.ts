@@ -5,10 +5,11 @@ export interface ReportNoiseInput {
   errorType: string | null;
   message: string;
   stack: string | null;
-  // True when the report came from an outdated frontend tab and is about that
-  // tab's own code — benign version-skew (reports/core's isStaleOrigin; a
-  // report about what the tab saw the server do is never stale-origin).
-  staleOrigin?: boolean;
+  // True when version skew may explain the report: every occurrence came from
+  // an outdated tab, and it is about that tab loading what the server serves
+  // now (reports/core's versionSkewMayExplain). Never for a bug in the tab's
+  // own code, nor for what it saw the server do.
+  versionSkew: boolean;
 }
 export interface ReportNoiseRuleSpec {
   id: string;

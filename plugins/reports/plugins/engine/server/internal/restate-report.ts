@@ -7,7 +7,7 @@ import {
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import { restateNotification } from "@plugins/shell/plugins/notifications/server";
 import { _reports, ReportKind } from "@plugins/reports/server";
-import { reportIdKind } from "@plugins/reports/core";
+import { reportIdKind, versionSkewMayExplain } from "@plugins/reports/core";
 import { reportsProducer } from "./producer";
 import { clamp, MESSAGE_MAX } from "./record-report";
 import { bellDescription } from "./bell";
@@ -84,7 +84,7 @@ export async function restateReportOccurrence(
     // The bell holding this report's key (its regression's, once regressed:
     // `bellKeyOf`) says what the row says now; the same stale-tab marker
     // `recordReport` gives it.
-    const stalePrefix = row.staleOrigin ? "[Stale tab] " : "";
+    const stalePrefix = versionSkewMayExplain(row) ? "[Stale tab] " : "";
     await runInBackgroundLane(() =>
       runWithoutProfiling(() =>
         restateNotification(bellKeyOf(row), {

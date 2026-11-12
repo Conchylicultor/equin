@@ -22,14 +22,21 @@ Add a spec to `server/internal/rules.ts` and contribute it in
 ```ts
 export const myRule: ReportNoiseRuleSpec = {
   id: "my-benign-pattern",
-  matches: ({ message, errorType, source, stack, staleOrigin }) =>
+  matches: ({ message, errorType, source, stack, versionSkew }) =>
     message.includes("…"),
   code: import.meta,
 };
 ```
 
 `matches` receives the report's `source`, `errorType`, `message`, `stack` and
-`staleOrigin` (stored on the row at record time). Return `true` to mark the
+`versionSkew` — reports/core's `versionSkewMayExplain`: every occurrence came
+from an outdated tab (the row's sticky `staleOrigin` fact) AND the report is
+about that tab loading what the server serves now (a chunk, the boot snapshot,
+a stored entry). A bug in an outdated tab's own code (an exception, a render
+loop, a stall) or what it saw the server do (a failed loader, a 5xx) is never
+version skew: main deploys on every push, so nearly every long-lived tab is
+outdated, and muting those reports muted real bugs (2026-11-12 audit: all 7
+stale-muted reports of a day were real). Return `true` to mark the
 report as noise. A thrown error in `matches` is caught and treated as "no
 match", so a buggy rule never breaks the report pipeline.
 
