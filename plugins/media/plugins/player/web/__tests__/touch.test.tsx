@@ -74,8 +74,13 @@ describe("touch controls", () => {
     expect(media.pause).not.toHaveBeenCalled();
   });
 
-  it("paused, the controls stay up", () => {
+  it("paused, no timer hides the controls but a tap does", () => {
     const { chrome, tap, wait } = setup();
+    wait(5000);
+    expect(chrome.hasAttribute("data-shown")).toBe(true);
+    tap(200);
+    wait(0);
+    expect(chrome.hasAttribute("data-shown")).toBe(false);
     tap(200);
     wait(5000);
     expect(chrome.hasAttribute("data-shown")).toBe(true);
