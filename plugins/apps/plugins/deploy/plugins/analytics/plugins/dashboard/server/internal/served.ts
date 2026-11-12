@@ -19,11 +19,10 @@ import { deploymentAnalytics } from "../../core";
 // report, so it is never staler than the report the snapshot already says is
 // re-measured only on ask.
 //
-// That Postgres read is UNDECLARED: it happens inside another plugin's
-// function, which `no-db-backed-notify`'s lexical scan does not follow, and
-// the runtime's D5 guard skips snapshot externals. Only `snapshot` keeps it
-// honest — never copy this loader into a `fixed` value. The check gap:
-// task-1792607417-zpzsb4.
+// That Postgres read is UNDECLARED: `no-db-backed-notify` reaches it (this
+// plugin's `exempt/index.ts` sanctions it), but the runtime's D5 guard skips
+// snapshot externals. Only `snapshot` keeps it honest — never copy this loader
+// into a `fixed` value.
 export const deploymentAnalyticsServed = serveValue(deploymentAnalytics, {
   source: "external",
   changes: {

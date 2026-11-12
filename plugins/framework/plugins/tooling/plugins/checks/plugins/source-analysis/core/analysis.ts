@@ -43,8 +43,14 @@ export type Binding =
   | { kind: "declaration"; declaration: Declaration }
   /** A whole module (`import * as ns`, `export * as ns`). */
   | { kind: "namespace"; rel: string }
-  /** Something from outside the repo (an npm package). */
-  | { kind: "external"; specifier: string };
+  /** Something that is not the repo's code: an npm package, or a JSON data module. */
+  | { kind: "external"; specifier: string }
+  /**
+   * Declared nowhere in its file, imported from nowhere: a global of the
+   * runtime (`Date`, `console`) — or a name tsc would refuse. Only
+   * {@link SourceAnalysis.bindingOf} answers it; a module export never is one.
+   */
+  | { kind: "global"; name: string };
 
 export type ModuleResolution =
   { kind: "repo"; rel: string } | { kind: "external" } | { kind: "missing" };
@@ -79,7 +85,11 @@ export interface SourceAnalysis {
   file(rel: string): Promise<ParsedFile | null>;
   /** What `rel`'s export `name` is bound to, through re-exports, `export *` and import-then-export. */
   exportedBinding(rel: string, name: string): Promise<Readout<Binding>>;
-  /** What `id` refers to, in its innermost scope, then the file's imports followed to their declaration. */
+  /**
+   * What `id` refers to, in its innermost scope, then the file's imports
+   * followed to their declaration; `global` when the file neither declares
+   * nor imports it.
+   */
   bindingOf(file: ParsedFile, id: TS.Identifier): Promise<Readout<Binding>>;
   /** A `const`'s initializer; any other declaration (let, var, parameter, destructured, function) is Unreadable. */
   initializerOf(declaration: Declaration): Readout<TS.Expression>;
@@ -266,6 +276,8 @@ export function createSourceAnalysis(host: SourceAnalysisHost): SourceAnalysis {
         at,
         `"${specifier}" resolves to no file of the repo.`,
       );
+    // A JSON module is data, not code: nothing it binds can be followed.
+    if (m.rel.endsWith(".json")) return read({ kind: "external", specifier });
     if (name === "*") return read({ kind: "namespace", rel: m.rel });
     const found = await exportIn(m.rel, name, stack);
     return (
@@ -390,16 +402,11 @@ export function createSourceAnalysis(host: SourceAnalysisHost): SourceAnalysis {
           continue;
         }
         if (hasModifier(ts, stmt, ts.SyntaxKind.DefaultKeyword)) continue;
+        // A destructured export (`export const { a } = obj`) is a declaration
+        // too: its node is the BindingElement, whose value `initializerOf`
+        // refuses to read.
         const found = declaredIn(ts, [stmt], name, false);
-        if (found !== null) {
-          if (ts.isBindingElement(found))
-            return cannotRead(
-              f,
-              found,
-              `\`${name}\` is exported through a destructuring; declare it on its own.`,
-            );
-          return declaration(f, name, found);
-        }
+        if (found !== null) return declaration(f, name, found);
       }
       if (name === "default") return null;
       for (const star of stars) {
@@ -446,14 +453,25 @@ export function createSourceAnalysis(host: SourceAnalysisHost): SourceAnalysis {
       const found = declaredInScope(ts, node, name);
       if (found !== null) return declaration(f, name, found);
     }
-    return (
-      (await topLevel(f, name, new Set())) ??
-      cannotRead(
-        f,
-        id,
-        `\`${name}\` is declared nowhere in this file (a global?).`,
+    const top = await topLevel(f, name, new Set());
+    if (top !== null) return top;
+    // A `var` hoisted out of a top-level block is the file's own.
+    const hoisted = declaredIn(ts, f.sf.statements, name, true);
+    if (hoisted !== null) return declaration(f, name, hoisted);
+    // `global` only for a name the file truly does not declare: one it
+    // declares in a form not followed here is unreadable, never a global.
+    for (const stmt of f.sf.statements)
+      if (
+        (ts.isImportEqualsDeclaration(stmt) || ts.isModuleDeclaration(stmt)) &&
+        ts.isIdentifier(stmt.name) &&
+        stmt.name.text === name
       )
-    );
+        return cannotRead(
+          f,
+          id,
+          `\`${name}\` is declared by \`import = require\` or a \`namespace\`, which this analysis does not follow — import it by name.`,
+        );
+    return read({ kind: "global", name });
   };
 
   const initializerOf = (d: Declaration): Readout<TS.Expression> => {
@@ -471,8 +489,6 @@ export function createSourceAnalysis(host: SourceAnalysisHost): SourceAnalysis {
       `\`${d.name}\` is not a \`const\` with an initializer, so its value cannot be read from its declaration.`,
     );
   };
-
-  const declarationId = (d: Declaration) => `${d.file.rel}:${d.node.pos}`;
 
   const usesOf = async <K extends string>(
     targets: Readonly<Record<K, ExportRef>>,
@@ -499,7 +515,7 @@ export function createSourceAnalysis(host: SourceAnalysisHost): SourceAnalysis {
           `usesOf: ${ref.rel} export \`${ref.name}\` is not a declaration in the repo`,
         );
       const d = b.value.declaration;
-      keyOf.set(declarationId(d), key);
+      keyOf.set(declarationKey(d), key);
       spellings.add(ref.name);
       let names = declaring.get(d.file.rel);
       if (names === undefined) declaring.set(d.file.rel, (names = new Map()));
@@ -507,7 +523,7 @@ export function createSourceAnalysis(host: SourceAnalysisHost): SourceAnalysis {
     }
     const targetOf = (b: Readout<Binding> | null): K | undefined =>
       b?.kind === "read" && b.value.kind === "declaration"
-        ? keyOf.get(declarationId(b.value.declaration))
+        ? keyOf.get(declarationKey(b.value.declaration))
         : undefined;
 
     // Every name a target is exported under: a re-export spells the name it
@@ -634,6 +650,46 @@ export function createSourceAnalysis(host: SourceAnalysisHost): SourceAnalysis {
     initializerOf,
     usesOf,
   };
+}
+
+/** One declaration's identity across a run: its file and position. */
+export function declarationKey(d: { file: ParsedFile; node: TS.Node }): string {
+  return `${d.file.rel}:${d.node.pos}`;
+}
+
+/**
+ * The `const` an expression initializes — through parentheses, `as`,
+ * `satisfies`, `!` and either arm of a conditional (`const x = c ? f() : g()`
+ * binds both calls to `x`) — or null when no `const` binds it.
+ */
+export function boundConst(
+  ts: typeof TS,
+  file: ParsedFile,
+  expr: TS.Expression,
+): Declaration | null {
+  let n: TS.Node = expr;
+  for (;;) {
+    const p = n.parent;
+    if (
+      ts.isParenthesizedExpression(p) ||
+      ts.isAsExpression(p) ||
+      ts.isSatisfiesExpression(p) ||
+      ts.isNonNullExpression(p) ||
+      (ts.isConditionalExpression(p) && p.condition !== n)
+    )
+      n = p;
+    else break;
+  }
+  const p = n.parent;
+  if (
+    ts.isVariableDeclaration(p) &&
+    p.initializer === n &&
+    ts.isIdentifier(p.name) &&
+    ts.isVariableDeclarationList(p.parent) &&
+    (p.parent.flags & ts.NodeFlags.Const) !== 0
+  )
+    return { file, name: p.name.text, node: p, site: siteOf(file, p) };
+  return null;
 }
 
 /** `a|b|\* as `: a file naming any spelling, or importing some namespace. */

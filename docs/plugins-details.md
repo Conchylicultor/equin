@@ -2270,6 +2270,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/density --space-sm`
                   - `ui/tokens/shape --radius`
                   - `ui/tokens/shape --spacing`
+              - Exemptions:
+                - Exempts itself from: `no-db-backed-notify` — `server/internal/served.ts` (sanctioned)
               - Test helpers:
                 - Web: `@plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/web/testing`
                   - `metrics`
@@ -2378,6 +2380,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/density` ×9
                   - `ui/tokens/type-scale` ×3
                   - `ui/tokens/shape` ×2
+              - Exemptions:
+                - Exempts itself from: `no-db-backed-notify` — `server/internal/served.ts` (sanctioned)
         - **`composition`** — Composition section of the site page's Settings tab: which composition this deployment builds and ships, the shape of it (category, entry points, what it extends, how many contributors are opted in), and a cross-app link into that composition's Studio detail pane where its membership is actually edited.
           - Web:
             - Contributes: `DeploymentDetail.Section` "Composition" → `CompositionSection`
@@ -3388,6 +3392,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values): `deploymentSiteMessages`
               - Cross-plugin:
                 - Uses tokens: `ui/tokens/color-palette --border`
+              - Exemptions:
+                - Exempts itself from: `no-db-backed-notify` — `server/internal/served.ts` (sanctioned)
             - **`intake`** — useSendSiteMessage() — the contact form's send (sent or rate-limited); a site takes messages by importing this barrel, which pulls the intake's server half into its composition. Registers the site-message id kind (smsg) with the web id registry — the server barrel registers the same kind. Owns site_messages: the public POST /api/site-messages endpoint (body capped at 8 KB; honeypot, a send under three seconds or a bot user agent stored as spam and still answered sent; 3 per 10 minutes and 10 per day per salted IP hash, the IP never stored), the site-messages.notify job emailing each accepted message through Resend from the approved RESEND_API_KEY deploy secret (not-configured without one, at most 30 emails a day, the rest held and counted in the next), the site-messages.confirm job emailing the visitor a copy so they know it arrived (at most 30 a day and 3 a day per address), the 30-day spam sweep, and the host-only list the deploy app reads over SSH.
               - Web:
                 - Contributes: `IdKinds.Kind` "smsg"
@@ -30536,23 +30542,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`migrations-in-sync`**
             - **`negated-complex-selector`**
             - **`no-db-backed-notify`**
-              - Exemptions:
-                - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/resolve.ts` (debt)
-                - Exempted by:
-                  - `apps/chord/curriculum` (0 debt)
-                  - `apps/chord/song-index` (0 debt)
-                  - `apps/mail/sync` (0 debt)
-                  - `apps/studio/contributions/tables/columns` (0 debt)
-                  - `apps/studio/contributions/tables/foreign-keys` (0 debt)
-                  - `apps/studio/contributions/tables/indexes` (0 debt)
-                  - `apps/studio/contributions/tables/row-count` (0 debt)
-                  - `apps/studio/contributions/tables/sample-rows` (0 debt)
-                  - `conversations/conversation-view/rewind` (0 debt)
-                  - `debug/slow-ops/cluster` (0 debt)
-                  - `debug/timeline` (0 debt)
-                  - `debug/worktree-cleanup` (0 debt)
-                  - `infra/attachments` (0 debt)
-                  - `network/live` (0 debt)
             - **`no-disabled-flag`**
             - **`no-gitlinks`**
               - Exemptions:
@@ -30621,7 +30610,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `TargetUse`
                   - `Unreadable`
                 - Exports (values):
+                  - `boundConst`
                   - `createSourceAnalysis`
+                  - `declarationKey`
                   - `failClosed`
                   - `fileTargetUses`
                   - `formatUnreadable`
@@ -30629,6 +30620,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `readRepoCompilerOptions`
                   - `siteOf`
                   - `unreadableAt`
+                  - `valueReferences`
             - **`space-ramp-in-sync`**
             - **`table-defs-in-schema-glob`**
               - Exemptions:
@@ -31344,7 +31336,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `framework/tooling/checks/data-migration-dml-only` (1 debt)
                   - `framework/tooling/checks/inherited-theme-defaults-scoped` (1 debt)
                   - `framework/tooling/checks/migration-hashes-unique` (1 debt)
-                  - `framework/tooling/checks/no-db-backed-notify` (1 debt)
                   - `framework/tooling/checks/no-reexport-default` (1 debt)
                   - `framework/tooling/checks/plugin-boundaries` (2 debt)
                   - `framework/tooling/checks/plugins-have-claudemd` (1 debt)
@@ -31353,7 +31344,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `framework/tooling/test-layout` (1 debt)
                   - `infra/launcher` (1 debt)
                   - `infra/paths/data-files` (1 debt)
-                  - `network/live` (1 debt)
                   - `page/annotations` (1 debt)
                   - `page/editor` (2 debt)
                   - `plugin-meta/facets` (1 debt)
@@ -34745,6 +34735,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `parseTickLine`
               - `ROOT_DAEMON_PROBLEMS`
               - `RootDaemonStatusSchema`
+          - Exemptions:
+            - Exempts itself from: `no-db-backed-notify` — `machine/internal/served.ts` (sanctioned)
           - Plugins:
             - **`monitor`** — The fs-latency monitor, provisioned by equin: a standalone binary (bun build --compile of bin/) that a user LaunchAgent runs every 30 s, appending one tick per run to the monitors' log io-health reads — typed against io-health's tick schema, its log rotated into kept gzip archives; a root LaunchDaemon of the same binary is an opt-in for attribution.
               - Deps:
@@ -38936,8 +38928,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `live/no-row-absence-collapse` — `web/internal/row-or-stale.ts` (sanctioned)
           - `live/no-endpoint-read` — `web` (sanctioned)
           - `no-db-backed-notify` — `server/internal/serve-off-feed.ts` (sanctioned)
+          - `no-db-backed-notify` — `central/internal/serve-value.ts`, `server/internal/serve-collection.ts`, `server/internal/serve-value.ts` (sanctioned)
           - `no-raw-websocket` — `e2e/narrowing.ts` (sanctioned)
-          - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
         - Exempted by:
           - `framework/central-core` (0 debt)
           - `framework/server-core` (0 debt)

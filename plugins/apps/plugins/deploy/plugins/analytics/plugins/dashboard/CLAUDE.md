@@ -169,6 +169,8 @@ Run with `./equin test plugins/apps/plugins/deploy/plugins/analytics/plugins/das
     - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
+- Exemptions:
+  - Exempts itself from: `no-db-backed-notify` — `server/internal/served.ts` (sanctioned)
 - Test helpers:
   - Web: `@plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/web/testing`
     - `metrics`

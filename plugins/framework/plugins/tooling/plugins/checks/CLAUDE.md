@@ -45,6 +45,11 @@ the case it exists for.
 - **`bindingOf(file, id)` → `initializerOf(decl)`** — follow a name to its
   declaration (scope-aware, across files) and read its value.
 - **`literalString(ts, file, expr)`** — a literal argument.
+- **`valueReferences(ts, node)` → `bindingOf`** — which declarations a piece
+  of code names (a loader's reach, a registration's owner), by resolution,
+  never by spelling.
+- **`boundConst(ts, file, call)`** — the `const` a declaring call initializes
+  (through casts and ternaries).
 
 It is **fail-closed**: every answer carries what it could NOT read
 (`Readout`'s `unreadable` arm, `Collected.unreadable`, each with file:line and
@@ -626,7 +631,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
   - **`migration-metadata-consistent`**
   - **`migrations-in-sync`**
   - **`negated-complex-selector`**
-  - **`no-db-backed-notify`** [exempt]
+  - **`no-db-backed-notify`**
   - **`no-disabled-flag`**
   - **`no-gitlinks`** [exempt]
   - **`no-hand-built-link-to`**

@@ -35,7 +35,8 @@ answer's in its result schema.
   call — the private key may only be read at SSH time. A live value serving it
   is therefore `source: "external"` with `changes: { snapshot }`: the remote
   answer has no change signal here, and a `db` arm would label it fresh. The
-  read is invisible to `no-db-backed-notify` (task-1792607417-zpzsb4).
+  read is undeclared: `no-db-backed-notify` follows the loader into it, so each
+  serving plugin sanctions it in its own `exempt/index.ts`.
 
 `server/internal/query-over-ssh.ts` holds the argv, the mapping and the query
 with its two effects injected, tested without a box.

@@ -6,9 +6,14 @@ export type {
   SourceSite,
   Unreadable,
 } from "./result";
-export { fileTargetUses, literalString } from "./file-uses";
+export { fileTargetUses, literalString, valueReferences } from "./file-uses";
 export type { TargetResolver, TargetUse } from "./file-uses";
-export { createSourceAnalysis, readRepoCompilerOptions } from "./analysis";
+export {
+  boundConst,
+  createSourceAnalysis,
+  declarationKey,
+  readRepoCompilerOptions,
+} from "./analysis";
 export type {
   Binding,
   CandidatesFor,

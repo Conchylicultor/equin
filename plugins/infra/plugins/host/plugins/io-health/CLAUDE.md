@@ -143,6 +143,8 @@ enough ticks.
     - `parseTickLine`
     - `ROOT_DAEMON_PROBLEMS`
     - `RootDaemonStatusSchema`
+- Exemptions:
+  - Exempts itself from: `no-db-backed-notify` — `machine/internal/served.ts` (sanctioned)
 - Sub-plugins:
   - **`monitor`** — The fs-latency monitor, provisioned by equin: a standalone binary (bun build --compile of bin/) that a user LaunchAgent runs every 30 s, appending one tick per run to the monitors' log io-health…
 

@@ -12,6 +12,7 @@ import type {
   Unreadable,
 } from "@plugins/framework/plugins/tooling/plugins/checks/plugins/source-analysis/core";
 import {
+  boundConst,
   siteOf,
   unreadableAt,
 } from "@plugins/framework/plugins/tooling/plugins/checks/plugins/source-analysis/core";
@@ -141,10 +142,18 @@ export function createFailureReader(ts: typeof TS, analysis: SourceAnalysis) {
     | { kind: "unreadable"; unreadable: Unreadable }
   > {
     const b = await analysis.bindingOf(file, id);
-    if (b.kind === "unreadable") {
-      if (isGlobal(id.text)) return { kind: "none" };
-      return b;
-    }
+    if (b.kind === "unreadable") return b;
+    if (b.value.kind === "global")
+      return isGlobal(id.text)
+        ? { kind: "none" }
+        : {
+            kind: "unreadable",
+            unreadable: unreadableAt(
+              file,
+              id,
+              `\`${id.text}\` is declared nowhere in this file (a global?).`,
+            ),
+          };
     return declarationValue(b.value);
   }
 
@@ -155,7 +164,7 @@ export function createFailureReader(ts: typeof TS, analysis: SourceAnalysis) {
     | { kind: "namespace"; rel: string }
     | { kind: "none" }
     | { kind: "unreadable"; unreadable: Unreadable } {
-    if (b.kind === "external") return { kind: "none" };
+    if (b.kind === "external" || b.kind === "global") return { kind: "none" };
     if (b.kind === "namespace") return { kind: "namespace", rel: b.rel };
     const d = b.declaration;
     // Code, not data: a function, class or enum declaration holds no field option.
@@ -434,30 +443,6 @@ export function createFailureReader(ts: typeof TS, analysis: SourceAnalysis) {
   return { tintOf, specKeys, declarationOf };
 }
 
-/** The `const` a declaration call initializes (through `as` / `satisfies` / parens), or null. */
-function boundConst(
-  ts: typeof TS,
-  file: ParsedFile,
-  call: TS.CallExpression,
-): { name: string; key: string } | null {
-  let n: TS.Node = call;
-  while (
-    ts.isParenthesizedExpression(n.parent) ||
-    ts.isAsExpression(n.parent) ||
-    ts.isSatisfiesExpression(n.parent)
-  )
-    n = n.parent;
-  const p = n.parent;
-  if (
-    ts.isVariableDeclaration(p) &&
-    p.initializer === n &&
-    ts.isIdentifier(p.name) &&
-    (p.parent.flags & ts.NodeFlags.Const) !== 0
-  )
-    return { name: p.name.text, key: keyOf({ file, node: p }) };
-  return null;
-}
-
 /**
  * Every failure-bearing collection / arm no `Investigate.Register` names.
  * `skips(rel)` drops an exempted declaring file (and what was unreadable for
@@ -621,7 +606,7 @@ export async function unregisteredFailures(
       kind: use.key,
       file: use.file,
       call: use.call,
-      bound: boundConst(ts, use.file, use.call),
+      bound: boundOf(ts, use.file, use.call),
       tint,
     });
   }
@@ -702,4 +687,14 @@ function dedupe(us: Unreadable[]): Unreadable[] {
     seen.add(k);
     return true;
   });
+}
+
+/** The `const` a declaration call initializes, keyed as declarations are — or null. */
+function boundOf(
+  ts: typeof TS,
+  file: ParsedFile,
+  call: TS.CallExpression,
+): { name: string; key: string } | null {
+  const d = boundConst(ts, file, call);
+  return d === null ? null : { name: d.name, key: keyOf(d) };
 }

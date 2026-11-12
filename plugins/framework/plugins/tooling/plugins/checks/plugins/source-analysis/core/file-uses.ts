@@ -310,23 +310,48 @@ function isReference(
   ownDeclarations: ReadonlySet<TS.Node>,
   unreadable: Unreadable[],
 ): boolean {
-  const parent = id.parent;
   if (ownDeclarations.has(id)) return false;
+  const role = identifierRole(ts, id);
+  if (role === "declaration") {
+    unreadable.push(
+      unreadableAt(
+        file,
+        id,
+        `\`${id.text}\` is declared again, shadowing the imported binding — which one each later use means cannot be read; rename it.`,
+      ),
+    );
+    return false;
+  }
+  return role === "reference";
+}
+
+/**
+ * What an identifier is where it stands: a `reference` to a binding (read,
+ * called, assigned, a shorthand property's value), the name a `declaration`
+ * introduces, or `other` — a member or key name, a label, an import or export
+ * specifier's own name, a `typeof` in a type.
+ */
+export function identifierRole(
+  ts: typeof TS,
+  id: TS.Identifier,
+): "reference" | "declaration" | "other" {
+  const parent = id.parent;
   if (
     ts.isImportSpecifier(parent) ||
     ts.isImportClause(parent) ||
     ts.isNamespaceImport(parent) ||
     ts.isNamespaceExport(parent)
   )
-    return false;
+    return "other";
   if (ts.isExportSpecifier(parent)) {
     // `export { a as b } from "…"` names the other module's exports; in a
     // local `export { a as b }`, only `a` is the reference.
-    if (parent.parent.parent.moduleSpecifier !== undefined) return false;
-    return (parent.propertyName ?? parent.name) === id;
+    if (parent.parent.parent.moduleSpecifier !== undefined) return "other";
+    return (parent.propertyName ?? parent.name) === id ? "reference" : "other";
   }
-  if (ts.isPropertyAccessExpression(parent) && parent.name === id) return false;
-  if (ts.isQualifiedName(parent) && parent.right === id) return false;
+  if (ts.isPropertyAccessExpression(parent) && parent.name === id)
+    return "other";
+  if (ts.isQualifiedName(parent) && parent.right === id) return "other";
   if (
     (ts.isPropertyAssignment(parent) ||
       ts.isPropertySignature(parent) ||
@@ -340,19 +365,19 @@ function isReference(
       ts.isPropertyAccessChain(parent)) &&
     parent.name === id
   )
-    return false;
-  if (ts.isBindingElement(parent) && parent.propertyName === id) return false;
+    return "other";
+  if (ts.isBindingElement(parent) && parent.propertyName === id) return "other";
   if (
     (ts.isLabeledStatement(parent) ||
       ts.isBreakStatement(parent) ||
       ts.isContinueStatement(parent)) &&
     parent.label === id
   )
-    return false;
+    return "other";
   // `typeof f` / `typeof ns.f` in a type: a type-level mention, not a use.
   let typeLevel: TS.Node = id;
   while (ts.isQualifiedName(typeLevel.parent)) typeLevel = typeLevel.parent;
-  if (ts.isTypeQueryNode(typeLevel.parent)) return false;
+  if (ts.isTypeQueryNode(typeLevel.parent)) return "other";
   if (
     (ts.isVariableDeclaration(parent) ||
       ts.isParameter(parent) ||
@@ -364,17 +389,34 @@ function isReference(
       ts.isEnumDeclaration(parent) ||
       ts.isImportEqualsDeclaration(parent)) &&
     parent.name === id
-  ) {
-    unreadable.push(
-      unreadableAt(
-        file,
-        id,
-        `\`${id.text}\` is declared again, shadowing the imported binding — which one each later use means cannot be read; rename it.`,
-      ),
-    );
-    return false;
-  }
-  return true;
+  )
+    return "declaration";
+  return "reference";
+}
+
+/**
+ * Every identifier under `root` that reads a VALUE binding — what a reader
+ * takes to its declaration with `bindingOf` (code it calls, passes, spreads,
+ * returns). Type positions (annotations, type aliases, interfaces, type
+ * arguments) are skipped whole: they name no runtime value.
+ */
+export function valueReferences(ts: typeof TS, root: TS.Node): TS.Identifier[] {
+  const out: TS.Identifier[] = [];
+  const visit = (node: TS.Node): void => {
+    if (
+      ts.isInterfaceDeclaration(node) ||
+      ts.isTypeAliasDeclaration(node) ||
+      (ts.isTypeNode(node) && !ts.isExpressionWithTypeArguments(node))
+    )
+      return;
+    if (ts.isIdentifier(node)) {
+      if (identifierRole(ts, node) === "reference") out.push(node);
+      return;
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(root);
+  return out;
 }
 
 /** The names a top-level statement declares as values (functions, classes, enums, plain `const`/`let`/`var`). */

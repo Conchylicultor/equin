@@ -11,7 +11,8 @@ import { deploymentSiteMessages } from "../../core";
 // A snapshot external, for the reasons host-query's CLAUDE.md gives: the answer
 // is the deployed site's own data with no change signal here, and the SSH
 // target is resolved from Postgres inside `hostOnlyQueryOverSsh` (an
-// undeclared read only `snapshot` keeps honest — task-1792607417-zpzsb4).
+// undeclared read only `snapshot` keeps honest — sanctioned in this plugin's
+// `exempt/index.ts`).
 export const deploymentSiteMessagesServed = serveValue(deploymentSiteMessages, {
   source: "external",
   changes: {

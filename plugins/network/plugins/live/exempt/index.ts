@@ -42,18 +42,21 @@ export default [
       "The SQL arm of serveCollection served OFF the change feed (`changes`): it registers the compiled collection SQL as external resources by design. Its reads are not hand-written — every table the compiled SQL reads is declared `unfed` on the registration, the drift guard holds the loader to them, and change-feed's boot check refuses one the owner did not opt out of the feed (ExcludeFromChangeFeed).",
   },
   {
+    rule: "no-db-backed-notify",
+    paths: [
+      "central/internal/serve-value.ts",
+      "server/internal/serve-collection.ts",
+      "server/internal/serve-value.ts",
+    ],
+    kind: "sanctioned",
+    reason:
+      "The substrate: serveValue / serveCollection compile onto defineExternalResource here, forwarding their callers' options (destructured from the runtime host, passed on as values). The check reads each serve call where a plugin makes it — these forwards are the serve functions themselves.",
+  },
+  {
     rule: "no-raw-websocket",
     paths: ["e2e/narrowing.ts"],
     kind: "sanctioned",
     reason:
       "A measurement script run under bun, not a browser tab: it counts every frame the server sends each live tuple, so it speaks the wire protocol on its own raw socket (SharedWebSocket is a browser SharedWorker primitive).",
-  },
-  {
-    rule: "check-thread-safety/no-blocking-check-work",
-    paths: ["check/index.ts"],
-    kind: "debt",
-    task: "task-1793375830-dv7cez",
-    reason:
-      "Per-file synchronous work on the shared check thread (a blocking fs/process call made per item, or a direct maskSource / createSourceFile) that predates the rule; move it onto ctx.repo() / fs/promises and checks/core's maskedSource / parsedTsSource.",
   },
 ] satisfies Exemptions;

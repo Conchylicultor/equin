@@ -79,7 +79,8 @@ function askBoxCounts(
 // arriving with every visitor, with no change signal on this side. Like the
 // report (`dashboard/server/internal/served.ts`), `hostOnlyQueryOverSsh` reads
 // the deployment's SSH target from Postgres inside the loader — UNDECLARED,
-// and only `snapshot` keeps that honest (task-1792607417-zpzsb4).
+// and only `snapshot` keeps that honest (sanctioned in this plugin's
+// `exempt/index.ts`).
 export const deploymentSessionsServed = serveValue(deploymentSessions, {
   source: "external",
   changes: {

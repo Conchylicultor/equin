@@ -1,11 +1,12 @@
 import { describe, expect, it } from "bun:test";
 import ts from "typescript";
 import {
+  boundConst,
   createSourceAnalysis,
   readRepoCompilerOptions,
   type SourceAnalysis,
 } from "./analysis";
-import type { TargetUse } from "./file-uses";
+import { valueReferences, type TargetUse } from "./file-uses";
 import { formatUnreadable } from "./result";
 
 const TSCONFIG = {
@@ -145,7 +146,10 @@ describe("createSourceAnalysis", () => {
         analysis.initializerOf(letB.value.declaration).kind,
     ).toBe("unreadable");
     const global = await analysis.bindingOf(file, at("use", 5));
-    expect(global.kind).toBe("unreadable");
+    expect(global.kind === "read" && global.value).toEqual({
+      kind: "global",
+      name: "use",
+    });
   });
 
   it("collects every use of a target through barrels and aliases, fail-closed", async () => {
@@ -192,6 +196,99 @@ describe("createSourceAnalysis", () => {
       expect.stringMatching(
         /^fx\/a\/web\/passed\.ts:2: `mark` is used other than called/,
       ),
+    ]);
+  });
+
+  it("reads a destructured export as a declaration, and a JSON module as data", async () => {
+    const { analysis, candidatesFor } = await analysisOver({
+      [DEF]: "export const { mark, other } = makeRuntime();",
+      [BARREL]: 'export { mark } from "./def";',
+      "fx/lib/core/names.json": '["a"]',
+      "fx/a/web/x.ts":
+        'import { mark } from "@fx/lib/core";\nimport names from "@fx/lib/core/names.json";\nmark(names);',
+    });
+    const b = await analysis.exportedBinding(BARREL, "mark");
+    expect(
+      b.kind === "read" &&
+        b.value.kind === "declaration" &&
+        ts.isBindingElement(b.value.declaration.node),
+    ).toBe(true);
+    if (b.kind === "read" && b.value.kind === "declaration")
+      expect(analysis.initializerOf(b.value.declaration).kind).toBe(
+        "unreadable",
+      );
+    const uses = await analysis.usesOf(
+      { mark: { rel: BARREL, name: "mark" } },
+      candidatesFor,
+    );
+    expect(uses.found.map(summary)).toEqual([
+      "reexport mark fx/lib/core/index.ts:1",
+      "call mark fx/a/web/x.ts:3",
+    ]);
+    expect(uses.unreadable).toEqual([]);
+    const file = (await analysis.file("fx/a/web/x.ts"))!;
+    const names = valueReferences(ts, file.sf).find((i) => i.text === "names")!;
+    const json = await analysis.bindingOf(file, names);
+    expect(json.kind === "read" && json.value.kind).toBe("external");
+  });
+
+  it("a global is only a name the file does not declare: hoisted vars and unfollowed forms are not", async () => {
+    const { analysis } = await analysisOver({
+      "fx/a/core/x.ts":
+        'if (c) { var h = 1; }\nimport q = require("./q");\nuse(h, q, Date);',
+    });
+    const file = (await analysis.file("fx/a/core/x.ts"))!;
+    const refs = valueReferences(ts, file.sf);
+    const of = async (name: string) => {
+      const b = await analysis.bindingOf(
+        file,
+        refs.find((i) => i.text === name)!,
+      );
+      return b.kind === "read" ? b.value.kind : b.kind;
+    };
+    expect(await of("h")).toBe("declaration");
+    expect(await of("q")).toBe("unreadable");
+    expect(await of("Date")).toBe("global");
+  });
+
+  it("boundConst binds through parens, casts and either arm of a ternary — never the condition", async () => {
+    const { analysis } = await analysisOver({
+      "fx/a/core/x.ts":
+        "const a = (f() as T);\nconst b = flag ? f() : g();\nconst c = f() ? 1 : 2;\nlet d = f();\nuse(f());",
+    });
+    const file = (await analysis.file("fx/a/core/x.ts"))!;
+    const calls: ts.CallExpression[] = [];
+    const visit = (n: ts.Node): void => {
+      if (
+        ts.isCallExpression(n) &&
+        ts.isIdentifier(n.expression) &&
+        n.expression.text === "f"
+      )
+        calls.push(n);
+      ts.forEachChild(n, visit);
+    };
+    visit(file.sf);
+    expect(calls.map((c) => boundConst(ts, file, c)?.name ?? null)).toEqual([
+      "a",
+      "b",
+      null,
+      null,
+      null,
+    ]);
+  });
+
+  it("valueReferences skips member names, keys, declarations and type positions", async () => {
+    const { analysis } = await analysisOver({
+      "fx/a/core/x.ts":
+        "const k: Foo<Bar> = a.b({ c: d, e }, f as G);\ntype H = typeof i;\nfunction j(l) { return l; }",
+    });
+    const file = (await analysis.file("fx/a/core/x.ts"))!;
+    expect(valueReferences(ts, file.sf).map((i) => i.text)).toEqual([
+      "a",
+      "d",
+      "e",
+      "f",
+      "l",
     ]);
   });
 });
