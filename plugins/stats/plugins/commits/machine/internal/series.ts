@@ -1,5 +1,5 @@
 import type { CommitBucket, CommitSeries } from "../../shared/values";
-import type { CommitInfo } from "./commit-log";
+import type { CommitHeader, CommitInfo } from "./commit-log";
 
 // The pure half of every commits value: commits in, series points out. A
 // cumulative series is one point per day holding a commit (the committer's own
@@ -36,7 +36,7 @@ function bucketKey(iso: string, bucket: CommitBucket): string {
   }
 }
 
-function keyFor(series: CommitSeries): (c: CommitInfo) => string {
+function keyFor(series: CommitSeries): (c: CommitHeader) => string {
   switch (series.kind) {
     case "cumulative":
       return (c) => c.iso.slice(0, 10);
@@ -50,12 +50,12 @@ function keyFor(series: CommitSeries): (c: CommitInfo) => string {
  * order — for a cumulative series, after folding every earlier point's
  * accumulator into a running one (`accumulate`).
  */
-function seriesPoints<A, P>(
-  commits: readonly CommitInfo[],
+function seriesPoints<C extends CommitHeader, A, P>(
+  commits: readonly C[],
   series: CommitSeries,
   fold: {
     empty: () => A;
-    add: (acc: A, c: CommitInfo) => void;
+    add: (acc: A, c: C) => void;
     merge: (into: A, from: A) => void;
     point: (x: string, acc: A) => P;
   },
@@ -93,7 +93,7 @@ function addDelta(
 }
 
 export function countPoints(
-  commits: readonly CommitInfo[],
+  commits: readonly CommitHeader[],
   series: CommitSeries,
 ): { x: string; count: number }[] {
   return seriesPoints(commits, series, {
@@ -109,11 +109,12 @@ export function countPoints(
 }
 
 export function countByItemPoints(
-  commits: readonly CommitInfo[],
+  commits: readonly CommitHeader[],
   series: CommitSeries,
-  itemOf: (c: CommitInfo) => string,
+  itemOf: (c: CommitHeader) => string,
 ): { x: string; byItem: Record<string, number> }[] {
   return seriesPoints<
+    CommitHeader,
     Record<string, number>,
     { x: string; byItem: Record<string, number> }
   >(commits, series, {
@@ -135,6 +136,7 @@ export function linesPoints(
   series: CommitSeries,
 ): { x: string; added: number; removed: number }[] {
   return seriesPoints<
+    CommitInfo,
     LinesDelta,
     { x: string; added: number; removed: number }
   >(commits, series, {
@@ -156,6 +158,7 @@ export function linesByExtPoints(
   series: CommitSeries,
 ): { x: string; byExt: Record<string, LinesDelta> }[] {
   return seriesPoints<
+    CommitInfo,
     Record<string, LinesDelta>,
     { x: string; byExt: Record<string, LinesDelta> }
   >(commits, series, {

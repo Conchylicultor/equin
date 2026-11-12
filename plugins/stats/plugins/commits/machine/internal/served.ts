@@ -15,7 +15,14 @@ import {
   commitsLines,
   commitsLinesByExt,
 } from "../../shared/values";
-import { deduplicateByPushId, getCommits, type CommitInfo } from "./commit-log";
+import {
+  deduplicateByPushId,
+  deduplicateHeadersByPushId,
+  getCommitHeaders,
+  getCommits,
+  type CommitHeader,
+  type CommitInfo,
+} from "./commit-log";
 import { buildItemMap, getConfigItemOrder, itemFor } from "./category-map";
 import {
   countByItemPoints,
@@ -66,9 +73,10 @@ function newestPoints<P>(points: P[]): { points: P[]; truncated: boolean } {
     : { points, truncated: false };
 }
 
-async function countCommits(dedup: boolean): Promise<CommitInfo[]> {
-  const commits = await getCommits();
-  return dedup ? deduplicateByPushId(commits) : commits;
+/** The commits the counts count: no line stats read (no diffs). */
+async function countCommits(dedup: boolean): Promise<CommitHeader[]> {
+  const commits = await getCommitHeaders();
+  return dedup ? deduplicateHeadersByPushId(commits) : commits;
 }
 
 export const commitsCountsServed = serveValue(commitsCounts, {

@@ -98,6 +98,7 @@ import.meta`, carried by `Resource.Declare`) — the L2 stamps judged by
     - `network/live/live-state-snapshot`
     - `network/live/query-resource`
     - `reports/engine`
+    - `stats/commits`
     - `ui/icons/saved-sources`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `shared/digest.ts`, `shared/resolve.ts` (sanctioned)
