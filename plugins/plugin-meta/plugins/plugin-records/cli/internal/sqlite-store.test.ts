@@ -4,7 +4,12 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { recordKey } from "../../core";
-import { openRecordStore, reclaimRecordStore } from "./sqlite-store";
+import {
+  HOLD_MS,
+  openRecordStore,
+  reclaimRecordStore,
+  writeBounded,
+} from "./sqlite-store";
 import { describeVerification, verifyRecordsAgainst } from "./verifying-store";
 
 const dir = mkdtempSync(join(tmpdir(), "plugin-records-"));
@@ -168,7 +173,7 @@ test("a reclaim of a file without incremental auto_vacuum ends, keeping its page
   });
 });
 
-test("a flush of several write chunks lands whole", () => {
+test("a flush of several probe batches lands whole", () => {
   const path = join(dir, "chunks.sqlite");
   const s = openRecordStore({ path });
   const entries = Array.from(
@@ -237,4 +242,78 @@ test("the verifier recomputes everything and names a record whose value moved un
   expect(describeVerification(v)[0]).toContain("1 disagree");
   // The shared store is never written.
   expect(shared.getMany("facet", [k("new")]).size).toBe(0);
+});
+
+test("a bounded write commits once it has held the lock its budget, and every item lands", () => {
+  const path = join(dir, "bounded.sqlite");
+  // The store's own schema, written directly.
+  openRecordStore({ path });
+  const db = new Database(path);
+  // Another process's view: it sees an item once its transaction committed.
+  const other = new Database(path, { readonly: true });
+  const visible = (): number =>
+    (other.query("SELECT count(*) AS n FROM keys").get() as { n: number }).n;
+  const insert = db.query(
+    "INSERT INTO keys (tbl, key, vid, used) VALUES ('file', ?, x'00', 0)",
+  );
+  const ITEM_MS = 30;
+  const committedBefore: number[] = [];
+  const probed: number[][] = [];
+  writeBounded(
+    db,
+    Array.from({ length: 40 }, (_, i) => i),
+    (batch) => {
+      probed.push([...batch]);
+      // Probed with no write lock held: another writer could take it.
+      expect(db.inTransaction).toBe(false);
+      return batch;
+    },
+    (i) => {
+      committedBefore.push(visible());
+      insert.run(Buffer.from(k(`b${i}`), "hex"));
+      Bun.sleepSync(ITEM_MS);
+    },
+  );
+  expect(visible()).toBe(40);
+  // Items in one transaction all saw the same committed count.
+  const sizes = new Map<number, number>();
+  for (const n of committedBefore) sizes.set(n, (sizes.get(n) ?? 0) + 1);
+  const perTransaction = [...sizes.values()];
+  expect(perTransaction.length).toBeGreaterThan(1);
+  expect(Math.max(...perTransaction)).toBeLessThanOrEqual(
+    Math.ceil(HOLD_MS / ITEM_MS) + 1,
+  );
+  // What one transaction left is probed again before the next.
+  expect(probed[1]![0]).toBe(perTransaction[0]);
+  other.close();
+  db.close();
+});
+
+test("a flush writes nothing for a record another process stored meanwhile", () => {
+  const path = join(dir, "raced.sqlite");
+  const a = openRecordStore({ path });
+  const b = openRecordStore({ path });
+  a.putMany("facet", [
+    [k("both"), "same"],
+    [k("only-a"), "a"],
+  ]);
+  b.putMany("facet", [[k("both"), "same"]]);
+  b.flush();
+  const db = new Database(path);
+  db.query("UPDATE keys SET used = 1 WHERE key = ?").run(
+    Buffer.from(k("both"), "hex"),
+  );
+  db.close();
+  a.flush();
+  const check = new Database(path, { readonly: true });
+  // a's flush did not rewrite the row b stored (its day stays as set).
+  expect(
+    check
+      .query("SELECT used FROM keys WHERE key = ?")
+      .get(Buffer.from(k("both"), "hex")),
+  ).toEqual({ used: 1 });
+  check.close();
+  expect(
+    openRecordStore({ path }).getMany("facet", [k("both"), k("only-a")]).size,
+  ).toBe(2);
 });

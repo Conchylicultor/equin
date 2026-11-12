@@ -25,10 +25,12 @@ import { pluginRecordsDir } from "../../data-dirs";
  * NO WRITE HOLDS THE STORE LONG. Every build, push and check pass on the host
  * shares this one file, and SQLite has one writer at a time: a write
  * transaction that runs long queues every other writer behind it, and one that
- * outlasts the busy timeout makes theirs throw SQLITE_BUSY (2026-11-08: a
- * day of aborted builds and pushes). So an open takes no write lock at all, a
- * write commits at most {@link WRITE_CHUNK} records per transaction, and the
- * reclaim runs off every build's path, a page at a time.
+ * outlasts the busy timeout makes theirs throw SQLITE_BUSY (2026-11-08 and
+ * 2026-11-12: aborted builds and pushes). So an open takes no write lock at
+ * all, and every write goes through {@link writeBounded}: the B-tree pages a
+ * write will touch are read BEFORE the lock is taken, and a transaction
+ * commits once it has held the lock {@link HOLD_MS}, however many records are
+ * left. The reclaim runs off every build's path, the same way.
  */
 
 const KEEP_DAYS = 7;
@@ -40,17 +42,20 @@ const FLUSH_BYTES = 64 * 1024 * 1024;
 // SQLite's default bound on host parameters per statement is 32766; a batch
 // stays well under it.
 const BATCH = 500;
-// The most records one write transaction holds the store for. A flush was ONE
-// transaction of up to 64 MB, and every other writer on the host waited it
-// out. Measured 2026-11-08 (a 600k-row store, 30k records / 59 MB flushed,
-// loaded host): one transaction held the lock 10.0 s; chunks of 2,000 held it
-// at most 1.6 s for the same total time (6.4 s). The price is WAL volume —
-// 371 MB written against 133 MB, as each commit rewrites leaves the last one
-// touched — which checkpoints reclaim between commits, where a single
-// transaction's frames all stay in the WAL until it ends. 500 held no less
-// (1.6 s, 418 MB); 5,000 held 4.3 s.
-const WRITE_CHUNK = 2_000;
-// How many key rows (or freed pages) one reclaim step reads (or returns).
+// The longest one write transaction holds the store's lock. Bounded by TIME,
+// not by a record count: what one record costs under the lock is not a
+// constant. The count bound before it (2,000 records, measured 2026-11-08 at
+// 1.6 s on a 600k-row store) held the lock 44–58 s on 2026-11-12 — a 23M-row,
+// 8.5 GB store on a host at load ~50, where a random point lookup took 2–60 ms
+// (its pages no longer in the page cache) and each insert descends three
+// B-trees — so every other writer's 30 s busy wait ran out behind it.
+export const HOLD_MS = 200;
+// How many records one read before the lock covers (see writeBounded). Each
+// such read leaves the lock free while it runs: the gap in which a writer
+// waiting in SQLite's busy handler (which polls, at most 100 ms apart) takes
+// it, rather than this one re-taking it at once, commit after commit.
+const PROBE_BATCH = 200;
+// How many key rows one reclaim step reads; the most freed pages one returns.
 const RECLAIM_PAGE = 5_000;
 // The first store's file (text keys, a value per row): unlinked on the daily
 // reclaim, so its gigabytes go once every checkout reads this one.
@@ -139,6 +144,59 @@ function write(db: Database, fn: () => void): void {
   db.transaction(fn).immediate();
 }
 
+/**
+ * Applies `items` in write transactions that each hold the lock at most
+ * ~{@link HOLD_MS}, plus the item that crossed it — an item is one row's
+ * statements, so a transaction is never left half an item. What one item
+ * costs is not bounded here: a row's statements must stay small (a reclaimed
+ * value's overflow pages, freed under the lock, are the largest today).
+ *
+ * Before each transaction, `probe` reads — with no lock, from the reader's own
+ * WAL snapshot — a batch of up to {@link PROBE_BATCH} items: the very pages the
+ * item's statements will descend (a point lookup of a missing key ends on the
+ * leaf its insert goes into), so the locked statements find them in the page
+ * cache (the OS's file cache: SQLite drops its own whenever another
+ * connection commits) instead of each waiting on the disk with every other writer queued
+ * behind. It returns the items still to write (a record another process stored
+ * meanwhile needs no write at all). What one transaction leaves is probed
+ * again with the next batch: whatever the store's size or the host's load, the
+ * slow part — the reads — runs outside the lock, and the lock is free while it
+ * does.
+ */
+export function writeBounded<T>(
+  db: Database,
+  items: readonly T[],
+  probe: (batch: readonly T[]) => readonly T[],
+  apply: (item: T) => void,
+  opts?: { pace?: boolean },
+): void {
+  let next = 0;
+  let carry: readonly T[] = [];
+  while (next < items.length || carry.length > 0) {
+    const take = items.slice(next, next + PROBE_BATCH - carry.length);
+    next += take.length;
+    const batch = probe([...carry, ...take]);
+    let done = 0;
+    let held = 0;
+    if (batch.length > 0)
+      write(db, () => {
+        const start = performance.now();
+        do apply(batch[done++]!);
+        while (
+          done < batch.length &&
+          (held = performance.now() - start) < HOLD_MS
+        );
+        held = performance.now() - start;
+      });
+    carry = batch.slice(done);
+    // A background writer (the reclaim) leaves the lock free as long as it
+    // held it before taking it again, so a build's writer waiting in the busy
+    // handler gets it even when the next probe finds its pages warm (no gap).
+    if (opts?.pace && (next < items.length || carry.length > 0))
+      Bun.sleepSync(held);
+  }
+}
+
 function storePath(opts?: { path?: string }): string {
   return (
     opts?.path ?? (pluginRecordsDir.ensureSync(), pluginRecordsDir.file(FILE))
@@ -156,11 +214,11 @@ export interface ReclaimResult {
 
 /**
  * Deletes the key rows unread for {@link KEEP_DAYS}, every value only they
- * named, then returns the freed pages to the filesystem — a page at a time,
- * so the store is never held for more than one page's deletes: the key rows
- * are read in primary-key order with no lock, and each page's stale rows and
- * the values they alone named go in one short write transaction (so an
- * interrupted reclaim leaves no value no row names). O(key rows) to read,
+ * named, then returns the freed pages to the filesystem — never holding the
+ * store long: the key rows are read a page at a time in primary-key order
+ * with no lock, and each stale row and the value it alone named go in the
+ * same {@link writeBounded} transaction (so an interrupted reclaim leaves no
+ * value no row names). O(key rows) to read,
  * O(what it deletes) to write: a value can only lose its last name when a row
  * naming it is deleted, so no scan of the values is needed.
  */
@@ -178,6 +236,8 @@ export function reclaimRecordStore(opts?: { path?: string }): ReclaimResult {
   const deleteOrphan = db.query(
     "DELETE FROM vals WHERE vid = ? AND NOT EXISTS (SELECT 1 FROM keys WHERE keys.vid = ?)",
   );
+  const valueAt = db.query("SELECT 1 FROM vals WHERE vid = ?");
+  const keyNaming = db.query("SELECT 1 FROM keys WHERE vid = ? LIMIT 1");
   const result: ReclaimResult = {
     keysRead: 0,
     keysDeleted: 0,
@@ -204,20 +264,27 @@ export function reclaimRecordStore(opts?: { path?: string }): ReclaimResult {
       if (last === undefined) break;
       result.keysRead += rows.length;
       after = last.key;
-      const stale = rows.filter((r) => r.used < cutoff);
-      for (let i = 0; i < stale.length; i += WRITE_CHUNK) {
-        const chunk = stale.slice(i, i + WRITE_CHUNK);
-        write(db, () => {
-          const vids = new Map<string, Uint8Array>();
-          for (const r of chunk) {
-            if (deleteKey.run(tbl, r.key, cutoff).changes === 0) continue;
-            result.keysDeleted++;
-            vids.set(Buffer.from(r.vid).toString("hex"), r.vid);
+      // Each stale row and its value, if it named it alone, in the same
+      // transaction (a row sharing the value deleted later deletes it then);
+      // the value's pages read first, with no lock (its keys row was just
+      // read with the page).
+      writeBounded(
+        db,
+        rows.filter((r) => r.used < cutoff),
+        (batch) => {
+          for (const r of batch) {
+            valueAt.get(r.vid);
+            keyNaming.get(r.vid);
           }
-          for (const vid of vids.values())
-            result.valuesDeleted += deleteOrphan.run(vid, vid).changes;
-        });
-      }
+          return batch;
+        },
+        (r) => {
+          if (deleteKey.run(tbl, r.key, cutoff).changes === 0) return;
+          result.keysDeleted++;
+          result.valuesDeleted += deleteOrphan.run(r.vid, r.vid).changes;
+        },
+        { pace: true },
+      );
     }
   }
   // Only a file created with auto_vacuum = INCREMENTAL can return its pages
@@ -232,14 +299,37 @@ export function reclaimRecordStore(opts?: { path?: string }): ReclaimResult {
     .parse(db.query("PRAGMA auto_vacuum").get()).auto_vacuum;
   result.returnsPages = mode === 2;
   if (result.returnsPages) {
+    // Each step is one write transaction moving pages from the file's end
+    // into the free ones — reads and writes all under the lock, so no read
+    // ahead of it can help. A step is sized from the last one's measured rate
+    // (timed from the lock taken, not from the wait for it) to hold the lock
+    // ~HOLD_MS, growing at most twofold a step: a page's cost is not a
+    // constant, and a step sized from a warm one could find its pages cold.
+    // After each, the reclaim leaves the lock free as long as it held it.
+    let step = 16;
     for (let free = freelist(); free > 0;) {
-      db.exec(`PRAGMA incremental_vacuum(${Math.min(free, RECLAIM_PAGE)})`);
+      let held = 0;
+      write(db, () => {
+        const start = performance.now();
+        db.exec(`PRAGMA incremental_vacuum(${Math.min(free, step)})`);
+        held = performance.now() - start;
+      });
       const left = freelist();
       // A writer can take freed pages meanwhile; a step that returned
       // nothing ends it rather than looping.
       if (left >= free) break;
-      result.pagesFreed += free - left;
+      const moved = free - left;
+      result.pagesFreed += moved;
+      step = Math.max(
+        1,
+        Math.min(
+          RECLAIM_PAGE,
+          2 * step,
+          Math.floor((moved * HOLD_MS) / Math.max(held, 1)),
+        ),
+      );
       free = left;
+      if (free > 0) Bun.sleepSync(held);
     }
   }
   // A checkout still on the code that reclaimed inside its first open of the
@@ -277,10 +367,12 @@ export function openRecordStore(opts?: { path?: string }): RecordStore {
     db.query(
       `SELECT k.key AS key, v.value AS value, k.used AS used FROM keys k JOIN vals v ON v.vid = k.vid WHERE k.tbl = ? AND k.key IN (${Array(n).fill("?").join(",")})`,
     );
-  const touch = (n: number) =>
-    db.query(
-      `UPDATE keys SET used = ? WHERE tbl = ? AND key IN (${Array(n).fill("?").join(",")})`,
-    );
+  const touch = db.query("UPDATE keys SET used = ? WHERE tbl = ? AND key = ?");
+  // The reads before the lock (writeBounded's probe): each ends on the page
+  // its write goes into.
+  const keyAt = db.query("SELECT 1 FROM keys WHERE tbl = ? AND key = ?");
+  const valueAt = db.query("SELECT 1 FROM vals WHERE vid = ?");
+  const keyNaming = db.query("SELECT 1 FROM keys WHERE vid = ? LIMIT 1");
   const insertValue = db.query(
     "INSERT INTO vals (vid, value) VALUES (?, ?) ON CONFLICT (vid) DO NOTHING",
   );
@@ -308,25 +400,39 @@ export function openRecordStore(opts?: { path?: string }): RecordStore {
   };
   const flush = (): void => {
     if (pending.size === 0) return;
-    let chunk: [RecordTable, string, string][] = [];
-    const commit = (): void => {
-      const rows = chunk;
-      chunk = [];
-      write(db, () => {
-        for (const [tbl, k, v] of rows) {
-          const vid = new Bun.CryptoHasher("sha256").update(v).digest();
-          insertValue.run(vid, v);
-          insertKey.run(tbl, keyBytes(k), vid, day);
-        }
-      });
-    };
-    for (const [tbl, held] of pending) {
-      for (const [k, v] of held) {
-        chunk.push([tbl, k, v]);
-        if (chunk.length === WRITE_CHUNK) commit();
-      }
-    }
-    if (chunk.length > 0) commit();
+    const rows: {
+      tbl: RecordTable;
+      key: Buffer;
+      vid: Buffer;
+      value: string;
+    }[] = [];
+    for (const [tbl, held] of pending)
+      for (const [k, value] of held)
+        rows.push({
+          tbl,
+          key: keyBytes(k),
+          vid: new Bun.CryptoHasher("sha256").update(value).digest(),
+          value,
+        });
+    writeBounded(
+      db,
+      rows,
+      // A key already stored (by another build that computed the same
+      // record) is dropped: its value is the same. The value is still
+      // inserted with each new key, never skipped on a read: the reclaim may
+      // delete an unnamed value between this read and the write.
+      (batch) =>
+        batch.filter((r) => {
+          if (keyAt.get(r.tbl, r.key) !== null) return false;
+          valueAt.get(r.vid);
+          keyNaming.get(r.vid);
+          return true;
+        }),
+      (r) => {
+        insertValue.run(r.vid, r.value);
+        insertKey.run(r.tbl, r.key, r.vid, day);
+      },
+    );
     pending.clear();
     pendingBytes = 0;
   };
@@ -347,26 +453,25 @@ export function openRecordStore(opts?: { path?: string }): RecordStore {
         if (v === undefined) unheld.push(k);
         else out.set(k, v);
       }
-      const stale: Buffer[] = [];
       for (let i = 0; i < unheld.length; i += BATCH) {
         const chunk = unheld.slice(i, i + BATCH).map(keyBytes);
+        const stale: Uint8Array[] = [];
         for (const row of RecordRows.parse(
           select(chunk.length).all(tbl, ...chunk),
         )) {
           const key = Buffer.from(row.key).toString("hex");
           out.set(key, row.value);
           seen.set(key, row.value);
-          if (row.used < day) stale.push(Buffer.from(row.key));
+          if (row.used < day) stale.push(row.key);
         }
-      }
-      for (let i = 0; i < stale.length; i += WRITE_CHUNK) {
-        const chunk = stale.slice(i, i + WRITE_CHUNK);
-        write(db, () => {
-          for (let j = 0; j < chunk.length; j += BATCH) {
-            const part = chunk.slice(j, j + BATCH);
-            touch(part.length).run(day, tbl, ...part);
-          }
-        });
+        // Refreshed right after their read, so the pages the updates touch
+        // are the ones it just brought in: no read before the lock is needed.
+        writeBounded(
+          db,
+          stale,
+          (batch) => batch,
+          (key) => touch.run(day, tbl, key),
+        );
       }
       return out;
     },

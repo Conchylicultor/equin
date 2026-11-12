@@ -108,25 +108,39 @@ a pass computes only the records no checkout has made yet.
 - **No write holds the store long.** Every build, push and check pass on the
   host shares the file, and SQLite has one writer: a long write transaction
   queues every other writer, and one past the 30 s busy timeout makes theirs
-  throw `SQLITE_BUSY` (2026-11-08: a day of aborted builds and pushes). So:
+  throw `SQLITE_BUSY` (2026-11-08, and again 2026-11-12). So:
   - **an open takes no write lock** — `auto_vacuum` is set only on a fresh
     file (setting it runs a write transaction even when already set), and
     everything else an open runs is a read on an existing store;
-  - **writes are held back, then committed in chunks.** `putMany` holds its
-    records (its own `getMany` answers them at once) and `flush()` commits
-    them `WRITE_CHUNK` (2,000) per `BEGIN IMMEDIATE` transaction: one commit
-    per call made a cold codegen's ~3,700 calls cost 4 s on a loaded host,
-    and one transaction per flush (up to 64 MB) held the lock 10 s where
-    2,000-record chunks held it 1.6 s (measured: 30k records on a 600k-row
-    store). The build flushes at the end of codegen, before its check pass
-    (another process) reads; every process flushes at exit, and past 64 MB
-    held a put flushes on its own. A killed process loses its held records,
-    which only means they are computed again.
+  - **writes are held back, then flushed.** `putMany` holds its records (its
+    own `getMany` answers them at once) until `flush()`: one commit per call
+    made a cold codegen's ~3,700 calls cost 4 s on a loaded host. The build
+    flushes at the end of codegen, before its check pass (another process)
+    reads; every process flushes at exit, and past 64 MB held a put flushes
+    on its own. A killed process loses its held records, which only means
+    they are computed again;
+  - **a write reads nothing under the lock, and holds it a bounded TIME**
+    (`writeBounded`). Before each transaction a batch of records is probed
+    with no lock — a point lookup of a missing key ends on the very leaf its
+    insert goes into, so the probe brings in every page the insert will touch
+    (and drops a record another build already stored) — then the transaction
+    commits once it has held the lock `HOLD_MS` (200 ms), whatever is left.
+    The bound used to be a record count (2,000, measured 1.6 s on a 600k-row
+    store); on 2026-11-12 the store was 23M rows / 8.5 GB, a random lookup on
+    a host at load ~50 took 2–60 ms (its pages no longer cached), and one
+    2,000-record chunk held the lock 44–58 s. A cost per record is not a
+    constant; a time is. The next batch's probe is also the gap in which a
+    writer waiting in SQLite's busy handler (which polls) gets the lock,
+    rather than this one re-taking it commit after commit. The read path's
+    once-a-day `used` refresh is written right after its read, on the pages
+    it brought in.
 - **Reclaim** is main's daily `plugin-records.reclaim` job (the `reclaim`
   sub-plugin, a supervised `./equin plugin-records-reclaim`), never an open:
   key rows unread for 7 days are deleted a page at a time (read in key order
-  with no lock; each chunk's rows and the values only they named in one short
-  transaction; a row read since is kept), then the freed pages are returned
+  with no lock; each row and the value only it named in the same transaction,
+  through `writeBounded`; a row read since is kept), then the freed pages are
+  returned in steps sized to hold the lock ~`HOLD_MS`, the lock left free as
+  long after each
   — on a file created with `auto_vacuum = INCREMENTAL`; any other keeps them
   for reuse, and the run says so. The first store's file (`records.sqlite`)
   is unlinked by the same pass.
