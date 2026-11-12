@@ -21,7 +21,10 @@ export function ShellStateChip({
   shell,
   className,
 }: {
-  shell: Pick<BackgroundShell, "state" | "startedAt" | "endedAt">;
+  /** `startedAt: null` — not on record (a sub-agent's shell): no clock is drawn. */
+  shell: Pick<BackgroundShell, "state" | "endedAt"> & {
+    startedAt: Date | null;
+  };
   className?: string;
 }) {
   const display = shellStateDisplay(shell.state);
@@ -30,13 +33,15 @@ export function ShellStateChip({
       <StatusDot {...display.dot} />
       <Text variant="caption">
         {display.label}
-        {display.clock === "live" && (
+        {display.clock === "live" && shell.startedAt !== null && (
           <>
             {" "}
             <ElapsedTime since={shell.startedAt} className={CLOCK} />
           </>
         )}
-        {display.clock === "total" && shell.endedAt !== null && (
+        {display.clock === "total" &&
+          shell.startedAt !== null &&
+          shell.endedAt !== null && (
           <>
             {" · "}
             <span className={CLOCK}>

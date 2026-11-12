@@ -1,6 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
-import { backgroundShellsOf, exitCodeOfSummary, parseShellAck } from "./shells";
+import {
+  backgroundShellsOf,
+  exitCodeOfSummary,
+  parseShellAck,
+  shellFactsOf,
+  shellNotificationLabel,
+  shellOutputFileIn,
+} from "./shells";
 
 type ToolCallEvent = Extract<JsonlEvent, { kind: "tool-call" }>;
 type TaskNotificationEvent = Extract<JsonlEvent, { kind: "task-notification" }>;
@@ -91,6 +98,16 @@ describe("exitCodeOfSummary", () => {
     expect(
       exitCodeOfSummary('Background command "x" failed (exit code 1)'),
     ).toBe(1);
+  });
+  test("reads Claude Code's failure wording, which has no parentheses", () => {
+    expect(
+      exitCodeOfSummary('Background command "x" failed with exit code 144'),
+    ).toBe(144);
+  });
+  test("an exit code inside the label does not answer", () => {
+    expect(
+      exitCodeOfSummary('Background command "echo exit code 3" was stopped'),
+    ).toBeNull();
   });
   test("null when the summary states none", () => {
     expect(exitCodeOfSummary('Background command "x" was stopped')).toBeNull();
@@ -274,5 +291,105 @@ describe("backgroundShellsOf", () => {
       conversationStatus: "working",
     });
     expect(shells.map((s) => s.shellId)).toEqual([SHELL_ID, "b2"]);
+  });
+});
+
+describe("shellNotificationLabel", () => {
+  test("reads the label of a shell's notification, whatever its verb", () => {
+    expect(
+      shellNotificationLabel(
+        'Background command "./equin build" completed (exit code 0)',
+      ),
+    ).toBe("./equin build");
+    expect(
+      shellNotificationLabel(
+        'Background command "Push branch to main" failed with exit code 1',
+      ),
+    ).toBe("Push branch to main");
+    expect(
+      shellNotificationLabel(
+        'Background command "Watch" was stopped after reaching its background time limit',
+      ),
+    ).toBe("Watch");
+  });
+
+  test("a raw command holding quotes runs to the last quote before the verb", () => {
+    expect(
+      shellNotificationLabel(
+        'Background command "until grep -q "^EXIT" x.log; do sleep 20; done" completed (exit code 0)',
+      ),
+    ).toBe('until grep -q "^EXIT" x.log; do sleep 20; done');
+  });
+
+  test("a sub-agent's or a monitor's notification is not a shell's", () => {
+    expect(
+      shellNotificationLabel('Agent "Find the track" finished'),
+    ).toBeNull();
+    expect(shellNotificationLabel('Monitor event: "x"')).toBeNull();
+  });
+});
+
+describe("shellFactsOf — shells delivered from a sub-agent", () => {
+  // A sub-agent's background `Bash`: its call and acknowledgement are in the
+  // sub-agent's transcript; only the notification reaches this one.
+  const SUB_ID = "bxy727bux";
+  const SUB_OUTPUT = `/private/tmp/claude-501/-Users-me-repo/9f171ddd-8ac5-4829-b57f-7b5269196555/tasks/${SUB_ID}.output`;
+  const subNotification = (status = "failed"): TaskNotificationEvent => ({
+    ...notification(
+      status,
+      'Background command "Build promo-film composition" failed with exit code 1',
+      { taskId: SUB_ID, toolUseId: "toolu_sub" },
+    ),
+    outputFile: SUB_OUTPUT,
+  });
+
+  test("a shell's notification with no launch here is a delivered shell", () => {
+    const facts = shellFactsOf([subNotification()]);
+    expect(facts.launched).toEqual([]);
+    expect(facts.delivered).toEqual([
+      {
+        shellId: SUB_ID,
+        toolUseId: "toolu_sub",
+        label: "Build promo-film composition",
+        outputFile: SUB_OUTPUT,
+        end: {
+          state: { kind: "failed", exitCode: 1 },
+          endedAt: "2026-09-30T10:01:00.000Z",
+        },
+      },
+    ]);
+  });
+
+  test("a notification that ends a launch here is that launch's end, never also delivered", () => {
+    const facts = shellFactsOf([
+      bashCall(),
+      notification(
+        "completed",
+        'Background command "Tick for a minute" completed (exit code 0)',
+      ),
+    ]);
+    expect(facts.launched).toHaveLength(1);
+    expect(facts.delivered).toEqual([]);
+  });
+
+  test("a queued delivery written twice is one shell", () => {
+    expect(
+      shellFactsOf([subNotification(), subNotification()]).delivered,
+    ).toHaveLength(1);
+  });
+
+  test("a sub-agent's own notification is not a shell", () => {
+    const agent: TaskNotificationEvent = {
+      ...notification("completed", 'Agent "Find the track" finished', {
+        taskId: "a81312485e74b4869",
+      }),
+    };
+    expect(shellFactsOf([agent]).delivered).toEqual([]);
+  });
+
+  test("the server resolves a delivered shell's output file from its notification", () => {
+    expect(shellOutputFileIn([subNotification()], SUB_ID)).toBe(SUB_OUTPUT);
+    expect(shellOutputFileIn([bashCall()], SHELL_ID)).toBe(OUTPUT);
+    expect(shellOutputFileIn([bashCall()], "bnope")).toBeNull();
   });
 });

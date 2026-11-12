@@ -1,6 +1,7 @@
 export type { ShellOutput } from "./protocol";
 export {
   SHELL_OUTPUT_TAIL_BYTES,
+  DeliveredShellFactSchema,
   ShellFactSchema,
   ShellOutputSchema,
   conversationShellFacts,
@@ -10,7 +11,11 @@ export type {
   BackgroundShell,
   BackgroundShellState,
   BackgroundShellsInput,
+  ConversationShellSet,
+  DeliveredShell,
+  DeliveredShellFact,
   ShellFact,
+  ShellFacts,
   ShellLaunch,
 } from "./shells";
 export {
@@ -20,6 +25,9 @@ export {
   exitCodeOfSummary,
   parseShellAck,
   shellFactsOf,
+  shellNotificationLabel,
+  shellOutputFileIn,
+  shellSetFromFacts,
   shellsFromFacts,
   shellLaunchOf,
   shellLaunchesIn,

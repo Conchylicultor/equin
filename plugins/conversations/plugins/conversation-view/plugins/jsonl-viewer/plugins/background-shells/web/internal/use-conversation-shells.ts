@@ -16,8 +16,9 @@ import type { ConversationEntry } from "@plugins/conversations/core";
 import {
   conversationShellFacts,
   shellOutput,
-  shellsFromFacts,
+  shellSetFromFacts,
   type BackgroundShell,
+  type DeliveredShell,
   type ShellOutput,
 } from "../../core";
 
@@ -36,8 +37,14 @@ export type ConversationShells =
   | { kind: "failed"; error: ResourceError; refetch: () => Promise<void> }
   | {
       kind: "known";
-      /** Every background shell, in start order (`backgroundShellsOf`). */
+      /** Every background shell this conversation launched, in start order (`backgroundShellsOf`). */
       shells: BackgroundShell[];
+      /**
+       * Every sub-agent's shell whose end was delivered here: its launch is in
+       * the sub-agent's transcript, its notification and output in this
+       * conversation's (`DeliveredShellFact`). Always ended.
+       */
+      delivered: DeliveredShell[];
     };
 
 /**
@@ -63,7 +70,7 @@ export function useConversationShells(
   }
   return {
     kind: "known",
-    shells: shellsFromFacts(reads.data.events, reads.data.status),
+    ...shellSetFromFacts(reads.data.events, reads.data.status),
   };
 }
 

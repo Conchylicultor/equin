@@ -15,7 +15,7 @@ export const BASH_TOOL_NAME = "Bash";
  * Where a background shell stands, as far as the transcript can honestly say.
  *
  * - `completed` / `failed` / `killed` — Claude Code's own `<task-notification>`
- *   said so. `exitCode` is read from its summary's `(exit code N)` and is
+ *   said so. `exitCode` is read from the exit code its summary ends with and is
  *   `null` when the summary does not state one.
  * - `killed` is also what a successful `TaskStop` of the shell says: Claude
  *   Code writes NO notification for a shell the agent stopped itself, so
@@ -97,9 +97,13 @@ export function parseShellAck(
   return { shellId: match[1]!, outputFile: match[2]! };
 }
 
-/** The `(exit code N)` a completion notification's summary states, else `null`. */
+/**
+ * The exit code a completion notification's summary ENDS with, else `null`:
+ * `… completed (exit code 0)` / `… failed with exit code 1`. Anchored at the
+ * end, so a label that is a raw command mentioning an exit code cannot answer.
+ */
 export function exitCodeOfSummary(summary: string): number | null {
-  const match = /\(exit code (-?\d+)\)/.exec(summary);
+  const match = /exit code (-?\d+)\)?\s*$/.exec(summary);
   return match ? Number(match[1]) : null;
 }
 
@@ -194,12 +198,106 @@ export interface ShellFact {
   end: { state: BackgroundShellState; endedAt: string } | null;
 }
 
-/** The transcript half of {@link backgroundShellsOf}: every shell's launch and recorded end. */
-export function shellFactsOf(events: readonly JsonlEvent[]): ShellFact[] {
+/**
+ * A background shell this conversation did NOT launch, but whose end was
+ * delivered to it: a sub-agent's. Claude Code writes the sub-agent's `Bash`
+ * call and its launch acknowledgement into the SUB-AGENT's transcript
+ * (`<session>/subagents/agent-<id>.jsonl`), yet files the shell's
+ * `<task-notification>` under the parent session's queue — so the parent's
+ * transcript holds the shell's end, its id and its output file (in the
+ * parent session's own `tasks/` directory), and nothing else.
+ *
+ * What only the launch knows — the command, when it started — is not here, and
+ * is not guessed: `label` is what the notification calls the shell (the call's
+ * description, else its command). It is always ended: it is known only by
+ * the notification that ended it.
+ */
+export interface DeliveredShellFact {
+  shellId: string;
+  /** The sub-agent's launching call's tool-use id, when the notification names it. */
+  toolUseId?: string;
+  /** What the notification calls the shell: `Background command "<label>" …`. */
+  label: string;
+  outputFile: string;
+  end: { state: BackgroundShellState; endedAt: string };
+}
+
+/** {@link DeliveredShellFact} with its end time as a `Date`. */
+export interface DeliveredShell extends Omit<DeliveredShellFact, "end"> {
+  state: BackgroundShellState;
+  endedAt: Date;
+}
+
+/** What a transcript records about its background shells — the served `background-shells.facts`. */
+export interface ShellFacts {
+  /** Every shell this conversation launched, in start order. */
+  launched: ShellFact[];
+  /** Every sub-agent's shell whose end was delivered here, in arrival order. */
+  delivered: DeliveredShellFact[];
+}
+
+/**
+ * The label a background SHELL's notification names it by, or `null` when the
+ * notification is not a shell's (a sub-agent's, a monitor's, a workflow's).
+ *
+ * Claude Code's wording: `Background command "<label>" completed (exit code 0)`
+ * / `… failed with exit code 1` / `… was stopped`. The label is the call's
+ * description, else its raw command — which may itself hold `"`, so the label
+ * runs to the LAST `" ` (greedy), the one before the verb.
+ */
+export function shellNotificationLabel(summary: string): string | null {
+  const match = /^Background command "(.*)" \S/s.exec(summary);
+  return match ? match[1]! : null;
+}
+
+/**
+ * The shells a sub-agent launched whose end was delivered to this transcript:
+ * a shell's notification (by its summary's wording, with an output file and a
+ * well-formed id) that ends none of `launches`.
+ */
+function deliveredShellsIn(
+  notifications: readonly TaskNotificationEvent[],
+  launches: readonly ShellLaunch[],
+): DeliveredShellFact[] {
+  const launchedIds = new Set(launches.map((l) => l.shellId));
+  const launchedCalls = new Set(launches.map((l) => l.toolUseId));
+  const seen = new Set<string>();
+  const delivered: DeliveredShellFact[] = [];
+  for (const n of notifications) {
+    if (n.outputFile === undefined) continue;
+    if (!SHELL_ID_PATTERN.test(n.taskId)) continue;
+    const label = shellNotificationLabel(n.summary);
+    if (label === null) continue;
+    if (launchedIds.has(n.taskId)) continue;
+    if (n.toolUseId !== undefined && launchedCalls.has(n.toolUseId)) continue;
+    // First wins: a shell ends once (a queued delivery is written twice).
+    if (seen.has(n.taskId)) continue;
+    seen.add(n.taskId);
+    delivered.push({
+      shellId: n.taskId,
+      ...(n.toolUseId === undefined ? {} : { toolUseId: n.toolUseId }),
+      label,
+      outputFile: n.outputFile,
+      end: {
+        state: stateOfNotification(n),
+        endedAt: new Date(n.at).toISOString(),
+      },
+    });
+  }
+  return delivered;
+}
+
+/**
+ * The transcript half of {@link backgroundShellsOf}: every shell's launch and
+ * recorded end, plus the sub-agents' shells whose end was delivered here.
+ */
+export function shellFactsOf(events: readonly JsonlEvent[]): ShellFacts {
+  const notifications: TaskNotificationEvent[] = [];
   const byTaskId = new Map<string, TaskNotificationEvent>();
   const byToolUseId = new Map<string, TaskNotificationEvent>();
   for (const event of events) {
     if (event.kind !== "task-notification") continue;
+    notifications.push(event);
     // First wins: a shell ends once.
     if (!byTaskId.has(event.taskId)) byTaskId.set(event.taskId, event);
     if (event.toolUseId !== undefined && !byToolUseId.has(event.toolUseId)) {
@@ -207,8 +305,9 @@ export function shellFactsOf(events: readonly JsonlEvent[]): ShellFact[] {
     }
   }
   const stops = taskStopTimes(events);
+  const launches = shellLaunchesIn(events);
 
-  return shellLaunchesIn(events).map((launch): ShellFact => {
+  const launched = launches.map((launch): ShellFact => {
     const base = { ...launch, startedAt: launch.startedAt.toISOString() };
     const notification =
       byTaskId.get(launch.shellId) ?? byToolUseId.get(launch.toolUseId);
@@ -230,6 +329,47 @@ export function shellFactsOf(events: readonly JsonlEvent[]): ShellFact[] {
     }
     return { ...base, end: null };
   });
+  return { launched, delivered: deliveredShellsIn(notifications, launches) };
+}
+
+/**
+ * The output file of shell `shellId` as the transcript records it — its launch
+ * acknowledgement's, else a delivered notification's — or `null` when it
+ * records no such shell. The server's one resolution; it checks the path's
+ * shape before opening anything.
+ */
+export function shellOutputFileIn(
+  events: readonly JsonlEvent[],
+  shellId: string,
+): string | null {
+  const facts = shellFactsOf(events);
+  const shell =
+    facts.launched.find((s) => s.shellId === shellId) ??
+    facts.delivered.find((s) => s.shellId === shellId);
+  return shell?.outputFile ?? null;
+}
+
+/** Every shell a conversation knows of: those it launched (with liveness applied), and those delivered to it. */
+export interface ConversationShellSet {
+  /** Every background shell this conversation launched, in start order. */
+  shells: BackgroundShell[];
+  /** Every sub-agent's shell whose end was delivered here (always ended). */
+  delivered: DeliveredShell[];
+}
+
+/** {@link shellsFromFacts} over both halves of {@link ShellFacts}. */
+export function shellSetFromFacts(
+  facts: ShellFacts,
+  conversationStatus: ConversationStatus,
+): ConversationShellSet {
+  return {
+    shells: shellsFromFacts(facts.launched, conversationStatus),
+    delivered: facts.delivered.map(({ end, ...rest }) => ({
+      ...rest,
+      state: end.state,
+      endedAt: new Date(end.endedAt),
+    })),
+  };
 }
 
 /** The conversation half: decide a shell with no recorded end from the conversation's liveness. */
@@ -268,5 +408,5 @@ export function backgroundShellsOf({
   events,
   conversationStatus,
 }: BackgroundShellsInput): BackgroundShell[] {
-  return shellsFromFacts(shellFactsOf(events), conversationStatus);
+  return shellsFromFacts(shellFactsOf(events).launched, conversationStatus);
 }

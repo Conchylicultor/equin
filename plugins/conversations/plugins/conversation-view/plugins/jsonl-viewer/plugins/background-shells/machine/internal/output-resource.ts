@@ -14,7 +14,7 @@ import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-sourc
 import { defineFileWatcher } from "@plugins/infra/plugins/file-watcher/server";
 import { createSignedMemo } from "@plugins/infra/plugins/git/plugins/git-read-cache/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
-import { shellLaunchesIn, shellOutput, type ShellOutput } from "../../core";
+import { shellOutputFileIn, shellOutput, type ShellOutput } from "../../core";
 import { assertShellOutputPath, shellOutputPathContext } from "./output-path";
 import { readShellTail } from "./tail-read";
 
@@ -33,7 +33,8 @@ export const shellOutputWatcher = defineFileWatcher({
 
 /**
  * The output file of shell `shellId` in conversation `id`, or `null` when the
- * conversation's transcript records no such background launch.
+ * conversation's transcript records no such shell — neither its launch nor,
+ * for a sub-agent's shell, the notification delivered here.
  *
  * The browser names the shell; the SERVER finds its file — from the same
  * transcript chain and the same fold the browser reads — and checks the path's
@@ -43,14 +44,10 @@ async function outputFileIn(
   events: readonly JsonlEvent[],
   shellId: string,
 ): Promise<string | null> {
-  const launch = shellLaunchesIn(events).find((l) => l.shellId === shellId);
-  if (launch === undefined) return null;
-  assertShellOutputPath(
-    launch.outputFile,
-    shellId,
-    await shellOutputPathContext(),
-  );
-  return launch.outputFile;
+  const outputFile = shellOutputFileIn(events, shellId);
+  if (outputFile === null) return null;
+  assertShellOutputPath(outputFile, shellId, await shellOutputPathContext());
+  return outputFile;
 }
 
 // A signed memo is keyed by ONE string, and this value by a conversation plus a

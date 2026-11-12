@@ -21,7 +21,8 @@ latest window) and `shellsFromFacts(facts, conversationStatus)` applies liveness
 on the page. A launch is a background `Bash` call whose result parses as the
 acknowledgement; a result that does not is a failed launch, never a shell. The
 end joins the `task-notification` by `taskId === shellId` (fallback: the
-notification's `toolUseId`). A shell the agent stopped itself with a
+notification's `toolUseId`); its exit code is the one the summary ends with
+(`(exit code 0)`, `failed with exit code 1`). A shell the agent stopped itself with a
 successful `TaskStop` (`{ task_id }`, read by `taskStopTimes` from
 `transcript-source/core`, which workflow runs share) is `killed` at that call's result time —
 Claude Code writes no notification for it, so without this it would read
@@ -31,6 +32,31 @@ liveness (`hasLiveProcess`, the same evidence `subagentRunState` uses) decides
 There is deliberately no staleness timeout. A notification with a status this
 build does not know is `ended-unrecognized` (it ended; nothing says how), never
 folded into `failed`.
+
+### A sub-agent's shells: delivered, not launched
+
+A sub-agent's background `Bash` splits across two transcripts. Its call and
+launch acknowledgement are written to the SUB-AGENT's transcript
+(`<session>/subagents/agent-<id>.jsonl`); its `<task-notification>` is filed
+under the PARENT session's queue (a `queue-operation` in the parent
+transcript), and its output file sits in the parent session's `tasks/`
+directory. So the parent's notification row has no launch to join — before
+this, most notification rows of a sub-agent-heavy conversation were declined.
+
+The facts are therefore two lists (`ShellFacts`): `launched` (above) and
+`delivered` — every shell's notification (`shellNotificationLabel`: Claude
+Code's `Background command "<label>" …` wording; an output file; a
+well-formed id) that ends none of the launches. A delivered shell carries only
+what the notification says (id, tool-use id, label, output file, end) — the
+command and start are the sub-agent's, never guessed — and is always ended.
+The notification claim and the output pane read both lists; the band and the
+`Bash` card read `launched` only (the sub-agent's own row covers its work).
+The server resolves a delivered shell's output file from that notification
+(`shellOutputFileIn`), through the same `assertShellOutputPath`.
+
+Folding the sub-agent transcripts instead was rejected: it makes the facts
+machine-only and re-reads every sub-agent transcript (often 100+, megabytes
+each) on every change, for a launch whose end the parent already holds.
 
 `useConversationShells(conversationId)` gates the fold exactly as
 `useConversationSubagents` does: `pending` until both the transcript and the
@@ -148,13 +174,18 @@ v1 is view-only: there is no Stop (only the agent can call `TaskStop`, which the
     - `BackgroundShell`
     - `BackgroundShellsInput`
     - `BackgroundShellState`
+    - `ConversationShellSet`
+    - `DeliveredShell`
+    - `DeliveredShellFact`
     - `ShellFact`
+    - `ShellFacts`
     - `ShellLaunch`
     - `ShellOutput`
   - Exports (values):
     - `backgroundShellsOf`
     - `BASH_TOOL_NAME`
     - `conversationShellFacts`
+    - `DeliveredShellFactSchema`
     - `exitCodeOfSummary`
     - `lastOutputLine`
     - `parseShellAck`
@@ -164,8 +195,11 @@ v1 is view-only: there is no Stop (only the agent can call `TaskStop`, which the
     - `shellFactsOf`
     - `shellLaunchesIn`
     - `shellLaunchOf`
+    - `shellNotificationLabel`
     - `shellOutput`
+    - `shellOutputFileIn`
     - `ShellOutputSchema`
+    - `shellSetFromFacts`
     - `shellsFromFacts`
     - `stripAnsi`
     - `terminalText`

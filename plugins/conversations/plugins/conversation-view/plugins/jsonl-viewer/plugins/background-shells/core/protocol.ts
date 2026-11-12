@@ -85,15 +85,30 @@ export const ShellFactSchema = z.object({
   end: z.object({ state: ShellStateSchema, endedAt: z.string() }).nullable(),
 });
 
+/** A sub-agent's shell whose end was delivered here — see `DeliveredShellFact` (shells.ts). */
+export const DeliveredShellFactSchema = z.object({
+  shellId: z.string(),
+  toolUseId: z.string().optional(),
+  label: z.string(),
+  outputFile: z.string(),
+  end: z.object({ state: ShellStateSchema, endedAt: z.string() }),
+});
+
 /**
  * A conversation's background shells as its WHOLE transcript records them
  * (`shellFactsOf`), served by the server so a pane holding only the latest
  * events still sees a shell launched long ago. Small: one entry per shell.
  */
 export const conversationShellFacts = liveValue("background-shells.facts", {
-  schema: wholeList(ShellFactSchema, {
-    reason:
-      "one conversation's background shells — one per background Bash launch, dozens at most",
+  schema: z.object({
+    launched: wholeList(ShellFactSchema, {
+      reason:
+        "one conversation's background shells — one per background Bash launch, dozens at most",
+    }),
+    delivered: wholeList(DeliveredShellFactSchema, {
+      reason:
+        "the sub-agents' background shells whose end reached one conversation — one per notification, dozens at most",
+    }),
   }),
   params: ["id"],
 });

@@ -48,7 +48,7 @@ vi.mock(
 type ConversationShells = ReturnType<typeof useConversationShells>;
 
 /** What the stubbed shell read answers on the next render. */
-let shells: ConversationShells = { kind: "known", shells: [] };
+let shells: ConversationShells = { kind: "known", shells: [], delivered: [] };
 /** The stubbed output tail, per shell id. */
 let outputs: Record<string, ReturnType<typeof useShellOutput>> = {};
 
@@ -252,7 +252,7 @@ beforeEach(() => {
   // The card's view (open, show all) is a per-conversation localStorage value;
   // one test folding the card must not fold it for the next.
   localStorage.clear();
-  shells = { kind: "known", shells: [] };
+  shells = { kind: "known", shells: [], delivered: [] };
   outputs = {};
   // Date only: the band's linger timer and the clocks' own ticks stay real, so
   // nothing here depends on advancing them.
@@ -442,6 +442,7 @@ describe("the running-agents band", () => {
       shells = {
         kind: "known",
         shells: [shell("s1", { startedAt: ago(130) }), shell("s2")],
+        delivered: [],
       };
       renderBand();
       expect(summaryLine().textContent).toContain("2 shells running");
@@ -454,6 +455,7 @@ describe("the running-agents band", () => {
       shells = {
         kind: "known",
         shells: [shell("s1", { startedAt: ago(300) })],
+        delivered: [],
       };
       renderBand();
       expect(summaryLine().textContent).toContain("2 agents · 1 shell running");
@@ -469,6 +471,7 @@ describe("the running-agents band", () => {
           shell("s2"),
           shell("s3"),
         ],
+        delivered: [],
       };
       outputs = {
         s1: present("compiling\r 40%\r 80%\n"),
@@ -505,6 +508,7 @@ describe("the running-agents band", () => {
             endedAt: ago(1),
           }),
         ],
+        delivered: [],
       };
       renderBand();
       expect(screen.getByTestId("cell:shell:s1:started").textContent).toBe(

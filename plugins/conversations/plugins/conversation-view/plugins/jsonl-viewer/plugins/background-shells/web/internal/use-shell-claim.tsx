@@ -13,9 +13,9 @@ const terminalIcon = symbol("terminal");
 /**
  * Claims a `<task-notification>` that ended one of this conversation's
  * background shells — joined the way `backgroundShellsOf` joins it (task id =
- * shell id, else the launching call's tool-use id) — and opens its output
- * pane; opened, the row shows the output inline (read only once opened).
- * Anything else is declined.
+ * shell id, else the launching call's tool-use id), or a sub-agent's shell
+ * whose end was delivered here — and opens its output pane; opened, the row
+ * shows the output inline (read only once opened). Anything else is declined.
  */
 export function useShellNotificationClaim(
   event: TaskNotificationEvent,
@@ -26,11 +26,10 @@ export function useShellNotificationClaim(
   if (shells.kind === "pending") return { kind: "pending" };
   // Unreadable: whether it is a shell's is unknown — decline, never guess.
   if (shells.kind === "failed") return { kind: "declined" };
-  const shell = shells.shells.find(
-    (s) =>
-      s.shellId === event.taskId ||
-      (event.toolUseId !== undefined && s.toolUseId === event.toolUseId),
-  );
+  const ends = (s: { shellId: string; toolUseId?: string }): boolean =>
+    s.shellId === event.taskId ||
+    (event.toolUseId !== undefined && s.toolUseId === event.toolUseId);
+  const shell = shells.shells.find(ends) ?? shells.delivered.find(ends);
   if (shell === undefined) return { kind: "declined" };
   return {
     kind: "claimed",

@@ -18148,13 +18148,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `BackgroundShell`
                   - `BackgroundShellsInput`
                   - `BackgroundShellState`
+                  - `ConversationShellSet`
+                  - `DeliveredShell`
+                  - `DeliveredShellFact`
                   - `ShellFact`
+                  - `ShellFacts`
                   - `ShellLaunch`
                   - `ShellOutput`
                 - Exports (values):
                   - `backgroundShellsOf`
                   - `BASH_TOOL_NAME`
                   - `conversationShellFacts`
+                  - `DeliveredShellFactSchema`
                   - `exitCodeOfSummary`
                   - `lastOutputLine`
                   - `parseShellAck`
@@ -18164,8 +18169,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `shellFactsOf`
                   - `shellLaunchesIn`
                   - `shellLaunchOf`
+                  - `shellNotificationLabel`
                   - `shellOutput`
+                  - `shellOutputFileIn`
                   - `ShellOutputSchema`
+                  - `shellSetFromFacts`
                   - `shellsFromFacts`
                   - `stripAnsi`
                   - `terminalText`

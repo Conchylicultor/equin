@@ -23,6 +23,7 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   terminalText,
   type BackgroundShell,
+  type DeliveredShell,
   type ShellOutput,
 } from "../../core";
 import {
@@ -105,7 +106,17 @@ function ShellOutputView({
       </BodyMessage>
     );
   }
-  const shell = shells.shells.find((s) => s.shellId === shellId);
+  const launched = shells.shells.find((s) => s.shellId === shellId);
+  const delivered =
+    launched === undefined
+      ? shells.delivered.find((s) => s.shellId === shellId)
+      : undefined;
+  const shell: ShellSubject | undefined =
+    launched !== undefined
+      ? { kind: "launched", shell: launched }
+      : delivered !== undefined
+        ? { kind: "delivered", shell: delivered }
+        : undefined;
   if (shell === undefined) {
     return (
       <BodyMessage>
@@ -116,7 +127,7 @@ function ShellOutputView({
 
   return (
     <Stack gap="none" className="h-full min-h-0">
-      <ShellHeader shell={shell} />
+      <ShellHeader subject={shell} />
       {output.status === "loading" ? (
         <BodyMessage>
           <Loading />
@@ -137,14 +148,24 @@ function ShellOutputView({
       ) : (
         <ShellOutputBody
           output={output.data}
-          running={shell.state.kind === "running"}
+          running={shell.shell.state.kind === "running"}
         />
       )}
     </Stack>
   );
 }
 
-function ShellHeader({ shell }: { shell: BackgroundShell }) {
+/**
+ * The shell the pane shows: one this conversation launched (its command and
+ * start on record), or a sub-agent's whose end was delivered here (only the
+ * notification's label — the launch is in the sub-agent's transcript).
+ */
+type ShellSubject =
+  | { kind: "launched"; shell: BackgroundShell }
+  | { kind: "delivered"; shell: DeliveredShell };
+
+function ShellHeader({ subject }: { subject: ShellSubject }) {
+  const { shell } = subject;
   return (
     <Stack
       gap="2xs"
@@ -153,13 +174,38 @@ function ShellHeader({ shell }: { shell: BackgroundShell }) {
     >
       <Line className="gap-sm">
         <Fill>
-          <Text className={cn(MONO, "line-clamp-3")} title={shell.command}>
-            $ {shell.command}
-          </Text>
+          {subject.kind === "launched" ? (
+            <Text
+              className={cn(MONO, "line-clamp-3")}
+              title={subject.shell.command}
+            >
+              $ {subject.shell.command}
+            </Text>
+          ) : (
+            <Text className="line-clamp-3" title={subject.shell.label}>
+              {subject.shell.label}
+            </Text>
+          )}
         </Fill>
-        <ShellStateChip shell={shell} className={rigidClass()} />
+        <ShellStateChip
+          shell={
+            subject.kind === "launched"
+              ? subject.shell
+              : { ...subject.shell, startedAt: null }
+          }
+          className={rigidClass()}
+        />
       </Line>
-      {shell.description !== undefined && <Muted>{shell.description}</Muted>}
+      {subject.kind === "launched" ? (
+        subject.shell.description !== undefined && (
+          <Muted>{subject.shell.description}</Muted>
+        )
+      ) : (
+        <Muted>
+          Launched by a sub-agent — its command is in the sub-agent&apos;s
+          transcript.
+        </Muted>
+      )}
       <Line className="gap-xs">
         <Fill>
           <Text
@@ -188,7 +234,7 @@ function ShellOutputBody({
       return (
         <BodyMessage>
           <Muted>
-            The server found no background launch with this id in the
+            The server found no background shell with this id in the
             conversation&apos;s transcript.
           </Muted>
         </BodyMessage>
