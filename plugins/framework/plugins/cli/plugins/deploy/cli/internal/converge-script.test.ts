@@ -31,6 +31,7 @@ import {
   RESTART_GATE_SH,
   SECRET_CREDENTIALS_SH,
   caddySite,
+  EDGE_RESTART_HOLD_SEC,
   convergeScript,
 } from "./converge-script";
 
@@ -72,7 +73,10 @@ describe("caddySite", () => {
 \tencode zstd gzip
 \trespond /api/host-only/* 404
 \theader /assets/* Cache-Control "public, max-age=31536000, immutable"
-\treverse_proxy 127.0.0.1:9100
+\treverse_proxy 127.0.0.1:9100 {
+\t\tlb_try_duration ${EDGE_RESTART_HOLD_SEC}s
+\t\tlb_try_interval 250ms
+\t}
 }
 `,
     );
@@ -121,7 +125,9 @@ describe("convergeScript (idempotence contract)", () => {
 
   test("the env file names the deployment's public hostnames, none when it has none", () => {
     const envBlock = (hosts: string[]) =>
-      /\(\n {2}umask 077[\s\S]*?"\$ENV_FILE\.new"\n\)/.exec(script(hosts))?.[0];
+      /\(\n {2}umask 077[\s\S]*?"\$\(staged "\$ENV_FILE"\)"\n\)/.exec(
+        script(hosts),
+      )?.[0];
     expect(envBlock(["equin.ai", "www.equin.ai"])).toContain(
       `echo "${envName("PUBLIC_HOSTS")}=equin.ai,www.equin.ai"`,
     );
@@ -129,9 +135,10 @@ describe("convergeScript (idempotence contract)", () => {
   });
 
   test("no secret is written into the env file", () => {
-    const envBlock = /\(\n {2}umask 077[\s\S]*?"\$ENV_FILE\.new"\n\)/.exec(
-      script(["equin.ai"]),
-    );
+    const envBlock =
+      /\(\n {2}umask 077[\s\S]*?"\$\(staged "\$ENV_FILE"\)"\n\)/.exec(
+        script(["equin.ai"]),
+      );
     expect(envBlock).not.toBeNull();
     expect(envBlock?.[0]).not.toContain("SECRET");
   });
@@ -416,12 +423,13 @@ ${RESTART_GATE_SH}`,
 });
 
 describe("put", () => {
-  /** `put <target> <mode> -` after staging `content` at `<target>.new`. */
+  /** `put <target> <mode> -` after staging `content` where `staged` says. */
   async function put(name: string, content: string, mode = "644") {
     const target = join(tmp, name);
-    writeFileSync(`${target}.new`, content);
+    const contentFile = join(tmp, `${name}.content`);
+    writeFileSync(contentFile, content);
     return await bash(
-      `set -euo pipefail\n${PUT_HELPER_SH}\nif put ${JSON.stringify(target)} ${mode} -; then echo CHANGED; else echo SAME; fi`,
+      `set -euo pipefail\n${PUT_HELPER_SH}\ncat ${JSON.stringify(contentFile)} > "$(staged ${JSON.stringify(target)})"\nif put ${JSON.stringify(target)} ${mode} -; then echo CHANGED; else echo SAME; fi`,
     );
   }
 
@@ -444,6 +452,21 @@ describe("put", () => {
     expect(statSync(join(tmp, "stable")).mtimeMs).toBe(before);
     // The staging file is not left behind for the next run to trip over.
     expect(() => statSync(join(tmp, "stable.new"))).toThrow();
+  });
+
+  test("an identical rewrite leaves the target's DIRECTORY mtime untouched too", async () => {
+    // The restart gate reads directory mtimes (credentials, drop-in): a staging
+    // file created and removed beside the target used to move its dir on every
+    // converge, restarting the site each time.
+    const dir = join(tmp, "watched");
+    mkdirSync(dir);
+    await put("watched/unit.conf", "same bytes\n");
+    const before = statSync(dir).mtimeMs;
+    await Bun.sleep(1100);
+    const result = await put("watched/unit.conf", "same bytes\n");
+
+    expect(result.stdout.trim()).toBe("SAME");
+    expect(statSync(dir).mtimeMs).toBe(before);
   });
 
   test("differing content reports CHANGED and replaces the target", async () => {

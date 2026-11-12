@@ -48,6 +48,18 @@ uploaded script or the transcript. Ship's health gate then asks the running app
 whether it can read every installed credential, and fails the ship if not
 (`apps/deploy/deploy-secrets` CLAUDE.md, *On the box*).
 
+**A restart never answers a visitor with a 502.** The install is one systemd
+unit, so every restart (ship's activation, converge's restart gate, a crash)
+closes the loopback port until the new gateway binds. Caddy holds a request
+whose dial is refused for `EDGE_RESTART_HOLD_SEC` (`caddySite`) instead of
+answering an empty 502 — a refused dial never reached the install, so it is
+sent once, not retried; a request cut mid-flight is re-sent only for GET.
+Past the bound the install is down and the 502 is the true answer. And
+converge restarts only when the configuration really changed: `put` stages
+in the script's private `$STAGE`, never beside its target, so a no-op converge
+moves no directory mtime the restart gate reads (it used to restart the site
+on every deploy, through the drop-in's `.new`).
+
 Both generated scripts send their progress to **stderr** (`exec 1>&2`): a FAILED
 `sshRun` returns stderr only, and the failing run is the one whose log matters.
 
