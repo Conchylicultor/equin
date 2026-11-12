@@ -13,7 +13,7 @@ import {
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import type * as parcel from "@parcel/watcher";
 import { createWrapper } from "@parcel/watcher/wrapper";
 import { ensureDep } from "@plugins/infra/plugins/deps/deps";
@@ -212,6 +212,70 @@ describe.skipIf(process.platform !== "darwin")(
       expect(watchErrors).toEqual([]);
     });
 
+    test("an entry kqueue cannot watch (socket, FIFO, dangling symlink) is listed with no descriptor, at open and when created", async () => {
+      const dir = tempDir("kinds");
+      // A socket file left by another process (bound, never unlinked), so no
+      // listening descriptor of this one is counted.
+      const bindSocket = (path: string): void => {
+        execFileSync(process.execPath, [
+          "-e",
+          `require("node:net").createServer().listen(${JSON.stringify(path)}, () => process.exit(0))`,
+        ]);
+      };
+      bindSocket(join(dir, "a.sock"));
+      execFileSync("mkfifo", [join(dir, "a.fifo")]);
+      symlinkSync(join(dir, "nowhere"), join(dir, "a.dangling"));
+      writeFileSync(join(dir, "f"), "x");
+
+      const base = openFds();
+      // Upstream (and the patch before it) opened every entry: the socket
+      // failed the whole subscribe ("Operation not supported on socket").
+      const { sub, events } = await subscribe(dir);
+      const seen = (type: string, rel: string): boolean =>
+        events.some((e) => e.type === type && e.path === join(dir, rel));
+      await expectHeld(base, 2); // the dir and `f`
+
+      // Created while watched, in one diff with a file: the file after them is
+      // still created and watched (a failed entry used to end the diff).
+      bindSocket(join(dir, "b.sock"));
+      execFileSync("mkfifo", [join(dir, "b.fifo")]);
+      writeFileSync(join(dir, "g"), "y");
+      await until(
+        () => ["b.sock", "b.fifo", "g"].every((rel) => seen("create", rel)),
+        5_000,
+        "the socket, the FIFO and the file created",
+      );
+      appendFileSync(join(dir, "g"), "z");
+      await until(
+        () => seen("update", "g"),
+        5_000,
+        "a write to the file heard",
+      );
+      await expectHeld(base, 3);
+
+      for (const name of [
+        "a.sock",
+        "b.sock",
+        "a.fifo",
+        "b.fifo",
+        "a.dangling",
+      ]) {
+        rmSync(join(dir, name), { force: true });
+      }
+      await until(
+        () =>
+          ["a.sock", "b.sock", "a.fifo", "b.fifo", "a.dangling"].every((rel) =>
+            seen("delete", rel),
+          ),
+        5_000,
+        "each of them reported deleted",
+      );
+
+      await sub.unsubscribe();
+      await expectHeld(base, 0);
+      expect(watchErrors).toEqual([]);
+    }, 30_000);
+
     test("a path two nested watches both hold closes both descriptors", async () => {
       const dir = tempDir("nested");
       const inner = join(dir, "inner");
@@ -234,40 +298,87 @@ describe.skipIf(process.platform !== "darwin")(
       expect(watchErrors).toEqual([]);
     });
     test("a subscribe that fails holds nothing, and the next one of the directory opens", async () => {
-      const dir = tempDir("rollback");
-      // Many names, so the failing one is rarely the first the open reaches.
-      const names = Array.from({ length: 200 }, (_, i) => `f${i}.log`);
-      for (const n of names) writeFileSync(join(dir, n), "x\n");
-      // A followed name no descriptor can be opened on: a symlink to itself.
-      symlinkSync("loop", join(dir, "loop"));
-
-      const base = openFds();
       // Upstream left the subscriptions it had made before the failure in the
       // backend — their descriptors, and the directory's cached listing, held
       // for the life of the process; every later subscription of the directory
       // reused that listing, met an entry its own ignore excludes and failed
-      // with whatever errno the thread last held.
-      expect(
-        subscribe(dir, { ignore: [onlyNames([...names, "loop"])] }),
-      ).rejects.toThrow(/Too many levels of symbolic links/);
-      await expectHeld(base, 0);
-
+      // with whatever errno the thread last held. The failure here is the
+      // process's descriptor limit (EMFILE) partway through 200 files — in a
+      // child, whose limit is lowered alone; every kind of entry kqueue cannot
+      // watch is listed instead of failing the subscribe (test above).
+      const ready = await ensureDep(parcelWatcherAddon, execContextForTests());
+      const warmDir = tempDir("rollback-warm");
+      const dir = tempDir("rollback");
+      const names = Array.from({ length: 200 }, (_, i) => `f${i}.log`);
+      for (const n of names) writeFileSync(join(dir, n), "x\n");
       const other = Array.from({ length: 5 }, (_, i) => `g${i}.log`);
       for (const n of other) writeFileSync(join(dir, n), "x\n");
-      const { sub, events } = await subscribe(dir, {
-        ignore: [onlyNames(other)],
-      });
-      await expectHeld(base, other.length + 1);
-      appendFileSync(join(dir, other[0]!), "y\n");
-      await until(
-        () => events.some((e) => e.path === join(dir, other[0]!)),
-        5_000,
-        "a write to a followed file",
+      const script = `
+        const [wrapperPath, addonPath, warmDir, dir, followed, ignore] = process.argv.slice(-6);
+        const { appendFileSync, readdirSync } = require("node:fs");
+        const { join } = require("node:path");
+        const addon = require(wrapperPath).createWrapper(require(addonPath));
+        const fds = () => readdirSync("/dev/fd").length;
+        // The backend's own kqueue and pipe, in the baseline.
+        const warm = await addon.subscribe(warmDir, () => {}, { backend: "kqueue" });
+        const base = fds();
+        const failed = await addon.subscribe(dir, () => {}, { backend: "kqueue" }).then(
+          () => "resolved",
+          (err) => err.message,
+        );
+        const heldAfterFailure = fds() - base;
+        const events = [];
+        const sub = await addon.subscribe(dir, (err, batch) => {
+          if (err) throw err;
+          events.push(...batch);
+        }, { backend: "kqueue", ignore: [new RegExp(ignore)] });
+        const heldByNext = fds() - base;
+        appendFileSync(join(dir, followed), "y");
+        const start = Date.now();
+        while (!events.some((e) => e.path === join(dir, followed)) && Date.now() - start < 5000) {
+          await new Promise((r) => setTimeout(r, 20));
+        }
+        const heard = events.some((e) => e.path === join(dir, followed));
+        await sub.unsubscribe();
+        const heldAtEnd = fds() - base;
+        await warm.unsubscribe();
+        console.log(JSON.stringify({ failed, heldAfterFailure, heldByNext, heard, heldAtEnd }));
+        process.exit(0);`;
+      const child = spawn(
+        "/bin/sh",
+        [
+          "-c",
+          // Room for bun and the 5 followed files, none for the 200: set
+          // above what the child inherits (a test runner holds many).
+          'ulimit -n $(( $(ls /dev/fd | wc -l) + 80 )) && exec "$0" -e "$1" "$2" "$3" "$4" "$5" "$6" "$7"',
+          process.execPath,
+          script,
+          createRequire(import.meta.url).resolve("@parcel/watcher/wrapper"),
+          builtFile(ready),
+          warmDir,
+          dir,
+          other[0]!,
+          onlyNames(other).source,
+        ],
+        { stdio: ["ignore", "pipe", "pipe"] },
       );
-      await sub.unsubscribe();
-      await expectHeld(base, 0);
-      expect(watchErrors).toEqual([]);
-    }, 30_000);
+      let out = "";
+      let err = "";
+      child.stdout.on("data", (chunk: Buffer) => (out += chunk.toString()));
+      child.stderr.on("data", (chunk: Buffer) => (err += chunk.toString()));
+      const code = await new Promise<number | null>((resolve) =>
+        child.on("exit", (c) => resolve(c)),
+      );
+      expect({ code, err }).toEqual({ code: 0, err: "" });
+      const result = JSON.parse(out) as Record<string, unknown>;
+      expect(result.failed).toMatch(/Too many open files/);
+      expect(result).toMatchObject({
+        heldAfterFailure: 0,
+        heldByNext: other.length + 1,
+        heard: true,
+        heldAtEnd: 0,
+      });
+    }, 60_000);
 
     test("subscriptions of one directory with different ignores each see exactly their own files", async () => {
       const dir = tempDir("shared");

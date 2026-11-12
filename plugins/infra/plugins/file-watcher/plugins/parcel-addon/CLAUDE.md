@@ -51,6 +51,17 @@ plugin ships the fixed build.
     diff: heard coming and going by its folder's diff, never written.
     Upstream failed the whole subscription, so no kqueue watch of `~` (the
     engine's `children` depth) could open;
+  - only an entry kqueue's vnode filter can watch is opened, decided by its
+    kind before any `open(2)` (`watchableKind`): a regular file or a folder,
+    a symlink followed to one. A socket (its open fails EOPNOTSUPP — "error
+    watching ~/.equin/sockets: Operation not supported on socket" failed the
+    whole subscription), a FIFO (its open waits for a writer), a device, and
+    a symlink resolving to nothing (dangling, looping) stay in the tree with
+    no descriptor, like an unopenable one. `watchDir` answers `Watched` /
+    `Unwatched` / `Failed` instead of a bool read with `errno`, so the
+    subscribe and the directory diff cannot tell them apart differently —
+    and a socket created in a watched folder no longer cuts that diff short
+    (its failure ended it, silently: `start()` ignores `compareDir`'s answer);
   - each batch is handled in two passes — every delete / rename first, then
     the writes and directory diffs. An atomic rewrite (write a sibling,
     rename it over the file) reports the folder's `NOTE_WRITE` and the old

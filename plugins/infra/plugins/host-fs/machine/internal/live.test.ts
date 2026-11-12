@@ -15,6 +15,7 @@ import {
   realpathSync,
   renameSync,
   rmSync,
+  statSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -177,6 +178,12 @@ function fakeDirs() {
       failNext--;
       throw new Error(`cannot watch ${req.dir}`);
     }
+    // As the real hub: a children watch of anything but a folder fails.
+    if (!statSync(req.dir).isDirectory()) {
+      throw Object.assign(new Error(`ENOTDIR: not a directory, ${req.dir}`), {
+        code: "ENOTDIR",
+      });
+    }
     live.add(req);
     return () => {
       live.delete(req);
@@ -224,6 +231,27 @@ describe("watchHostDir", () => {
     // Deeper changes are another folder's.
     dirs.emit(join(dir, "sub", "deep.txt"));
     expect(heard).toBe(1);
+    release();
+    expect(dirs.live.size).toBe(0);
+  });
+
+  test("a path that is a file is waited for beside it, never watched as a folder", async () => {
+    const file = join(root, "not-a-folder");
+    writeFileSync(file, "x");
+    const dirs = fakeDirs();
+    const heard: HostDirChange[] = [];
+    const release = await watchHostDirOver(
+      dirs.acquire,
+      asUserPath(file),
+      (c) => heard.push(c),
+    );
+    expect(dirs.watched()).toEqual([root]);
+    rmSync(file);
+    mkdirSync(file);
+    dirs.emit(file);
+    await settle();
+    expect(heard.at(-1)).toEqual({ kind: "all" });
+    expect(dirs.watched()).toEqual([file]);
     release();
     expect(dirs.live.size).toBe(0);
   });
@@ -454,6 +482,33 @@ describe("watchHostPath", () => {
     await settle();
     expect(folderHeard).toBe(2);
     stop();
+  });
+
+  test("a path below a file (a linked worktree's .git) waits beside that file, and moves in once a folder replaces it", async () => {
+    const checkout = join(root, "linked");
+    mkdirSync(checkout);
+    writeFileSync(join(checkout, ".git"), "gitdir: /elsewhere\n");
+    const head = join(checkout, ".git", "HEAD");
+    const dirs = fakeDirs();
+    let heard = 0;
+    const release = await watchHostPathOver(
+      dirs.acquire,
+      asUserPath(head),
+      () => heard++,
+    );
+    // Never a children watch of the `.git` file: the checkout, which holds it.
+    expect(dirs.watched()).toEqual([checkout]);
+    rmSync(join(checkout, ".git"));
+    mkdirSync(join(checkout, ".git"));
+    dirs.emit(join(checkout, ".git"));
+    await settle();
+    expect(dirs.watched()).toEqual([join(checkout, ".git")]);
+    writeFileSync(head, "ref: refs/heads/main\n");
+    dirs.emit(head);
+    await settle();
+    expect(heard).toBeGreaterThanOrEqual(2);
+    release();
+    expect(dirs.live.size).toBe(0);
   });
 
   test("a file whose folder is missing is heard once both are created", async () => {

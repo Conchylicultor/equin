@@ -298,9 +298,12 @@ right after `start` / `acquire` is heard, so "arm, then read" is correct.
   delivered, which the FSEvents stream (started "since now") never reports.
   A change around the move may be heard twice, never lost. The dir going is its own descriptor firing,
   checked against the inode, reported once. An entry this account may not
-  open (macOS privacy protection: `~/.Trash` without Full Disk Access) is
-  listed with no descriptor (the patched addon, `parcel-addon`): heard coming
-  and going, not written. An entry written by a process holding it open is
+  open (macOS privacy protection: `~/.Trash` without Full Disk Access), or
+  whose kind kqueue cannot watch (a socket, a FIFO, a device, a dangling
+  symlink), is listed with no descriptor (the patched addon, `parcel-addon`):
+  heard coming and going, not written. The dir itself must be a folder: a
+  file there fails the watch (`ENOTDIR`) — host-fs only ever hands it a
+  resolved folder. An entry written by a process holding it open is
   heard on every write, not only at close. A native error reaches `onLost`.
 - **Elsewhere: Bun's single-directory `fs.watch`** of the dir, plus a second
   one of its **parent** filtered to the dir's own name (Bun's watch of a dir

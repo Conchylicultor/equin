@@ -1,22 +1,18 @@
-import { realpath } from "@plugins/packages/plugins/timed-fs/core";
 import { basename, dirname } from "node:path";
 import {
   acquireDirWatch,
   type DirWatchRelease,
 } from "@plugins/infra/plugins/file-watcher/server";
 import { locateHostDir } from "../../server/internal/archive/locate";
-import { classifyFsError } from "../../server/internal/path";
 import { watchHostPathOver } from "./version";
 import {
   isGone,
   rearmable,
+  resolveOnDisk,
   watchEntryOver,
   type AcquireDirWatch,
 } from "./watch-entry";
-import {
-  asUserPath,
-  type UserPath,
-} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import type { UserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 export type { AcquireDirWatch } from "./watch-entry";
 
@@ -76,16 +72,15 @@ export async function watchHostDirOver(
     return watchHostPathOver(acquire, located.file, () => onChange(ALL));
   }
   return rearmable(async (rearm) => {
-    let dir: UserPath;
-    try {
-      // The hub takes the folder as the filesystem reports it (no symlinked
-      // prefix), and its events name paths so.
-      dir = asUserPath(await realpath(path));
-    } catch (err) {
-      // Missing or unreadable: wait for it to appear (or change) instead.
-      classifyFsError(err);
+    // The hub takes the folder as the filesystem reports it (no symlinked
+    // prefix), and its events name paths so.
+    const found = await resolveOnDisk(path);
+    if (found.kind !== "folder") {
+      // Missing, unreadable or no folder (a file, a socket): it holds no
+      // entries until a folder is there — wait for its entry to change.
       return watchEntryOver(acquire, path, () => rearm(() => onChange(ALL)));
     }
+    const dir = found.real;
     try {
       return await acquire({
         dir,

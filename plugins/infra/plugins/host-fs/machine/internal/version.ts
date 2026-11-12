@@ -16,6 +16,7 @@ import {
   watchEntryOver,
   type AcquireDirWatch,
   type Rearm,
+  type ResolvedFolder,
 } from "./watch-entry";
 import {
   asUserPath,
@@ -91,16 +92,18 @@ export function watchHostPathOver(
         await watchEntryOver(acquire, anchor, () => rearm(onChange)),
       );
       const target = await resolveOnDisk(anchor);
-      if (target.kind === "there") {
+      if (target.kind !== "gone") {
         const real = target.real;
         const folder = await resolveOnDisk(asUserPath(dirname(anchor)));
         const entry =
-          folder.kind === "there" ? join(folder.real, basename(anchor)) : null;
+          folder.kind === "folder" ? join(folder.real, basename(anchor)) : null;
         if (real !== entry) {
           releases.push(await watchEntryOver(acquire, real, () => onChange()));
         }
-        if ((await entryKind(real)) === "folder") {
-          releases.push(await watchEntriesOf(acquire, real, onChange, rearm));
+        if (target.kind === "folder") {
+          releases.push(
+            await watchEntriesOf(acquire, target.real, onChange, rearm),
+          );
         }
       }
     } catch (err) {
@@ -109,16 +112,6 @@ export function watchHostPathOver(
     }
     return releaseAll;
   }, path);
-}
-
-/** What `path` is now: a folder, something else, or not there. */
-async function entryKind(path: UserPath): Promise<"folder" | "other" | "gone"> {
-  try {
-    return (await stat(path)).isDirectory() ? "folder" : "other";
-  } catch (err) {
-    classifyFsError(err);
-    return "gone";
-  }
 }
 
 /**
@@ -130,7 +123,7 @@ async function entryKind(path: UserPath): Promise<"folder" | "other" | "gone"> {
  */
 async function watchEntriesOf(
   acquire: AcquireDirWatch,
-  dir: UserPath,
+  dir: ResolvedFolder,
   onChange: () => void,
   rearm: Rearm,
 ): Promise<DirWatchRelease> {

@@ -100,10 +100,10 @@ index a58ff3722d0d4a85dbef822f7cd4a078cb4278ff..7c9fbb9b662004c4d21499d94dad3041
    if (path.rfind(basePath, 0) != 0) {
      return false;
 diff --git a/src/kqueue/KqueueBackend.cc b/src/kqueue/KqueueBackend.cc
-index 2991c32fa320cd61d5b575a49ace19cb8a940d03..e6d3c0a3505ff0a61072d4783e2bfec31d31332e 100644
+index 2991c32fa320cd61d5b575a49ace19cb8a940d03..74b86bfefa6babd55febf7f5acf4ce07b79e7466 100644
 --- a/src/kqueue/KqueueBackend.cc
 +++ b/src/kqueue/KqueueBackend.cc
-@@ -58,13 +58,39 @@ void KqueueBackend::start() {
+@@ -58,13 +58,39 @@
  
      // Track all of the watchers that are touched so we can notify them at the end of the events.
      std::unordered_set<WatcherRef> watchers;
@@ -145,7 +145,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..e6d3c0a3505ff0a61072d4783e2bfec3
        }
  
        auto it = mFdToEntry.find(fd);
-@@ -75,21 +101,44 @@ void KqueueBackend::start() {
+@@ -75,21 +101,44 @@
  
        DirEntry *entry = it->second;
  
@@ -198,7 +198,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..e6d3c0a3505ff0a61072d4783e2bfec3
              struct stat st;
              lstat(sub->path.c_str(), &st);
              if (entry->mtime != CONVERT_TIME(st.st_mtim)) {
-@@ -100,6 +149,17 @@ void KqueueBackend::start() {
+@@ -100,6 +149,17 @@
          }
        }
      }
@@ -216,7 +216,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..e6d3c0a3505ff0a61072d4783e2bfec3
  
      for (auto it = watchers.begin(); it != watchers.end(); it++) {
        (*it)->notify();
-@@ -112,20 +172,82 @@ done:
+@@ -112,31 +172,119 @@
    mEndedSignal.notify();
  }
  
@@ -224,6 +224,30 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..e6d3c0a3505ff0a61072d4783e2bfec3
 +// privacy protection (EPERM) — listed, never watched.
 +static bool unopenable(int err) {
 +  return err == EACCES || err == EPERM;
++}
++
++// equin: whether kqueue's vnode filter can watch what `path` is, decided by
++// its kind before any open(2). Only a regular file or a folder (a symlink
++// followed to one) is opened. A socket refuses the open (EOPNOTSUPP: "error
++// watching ~/.equin/sockets: Operation not supported on socket", which failed
++// the whole subscription), a FIFO's open waits for a writer, a device's open
++// reaches its driver; a dangling symlink has nothing to open. Each stays in
++// the tree with no descriptor: its coming and going is heard by its folder's
++// diff — all there is to hear of it.
++enum class EntryKind { Watchable, Unwatchable, Failed };
++static EntryKind watchableKind(const std::string &path) {
++  struct stat st;
++  if (lstat(path.c_str(), &st) != 0) {
++    return EntryKind::Failed; // errno says why (ENOENT: gone since the listing)
++  }
++  if (S_ISLNK(st.st_mode) && stat(path.c_str(), &st) != 0) {
++    int err = errno;
++    if (err == ENOENT || err == ELOOP || unopenable(err)) {
++      return EntryKind::Unwatchable;
++    }
++    return EntryKind::Failed;
++  }
++  return S_ISREG(st.st_mode) || S_ISDIR(st.st_mode) ? EntryKind::Watchable : EntryKind::Unwatchable;
 +}
 +
  KqueueBackend::~KqueueBackend() {
@@ -256,20 +280,22 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..e6d3c0a3505ff0a61072d4783e2bfec3
 +      continue;
 +    }
 +    errno = 0;
-+    if (watchDir(watcher, it->second.path, tree)) {
++    WatchResult result = watchDir(watcher, it->second.path, tree);
++    int err = errno;
++    if (result == WatchResult::Watched) {
 +      continue;
      }
-+    int err = errno;
++    if (result == WatchResult::Unwatched && it->second.path != watcher->mDir) {
++      // equin: an entry kqueue cannot watch (`watchableKind`), or this account
++      // may not open (macOS privacy protection: ~/.Trash without Full Disk
++      // Access), stays in the tree with no descriptor: its coming and going is
++      // still heard by its folder's diff, its own writes are not. Upstream
++      // failed the whole subscription.
++      continue;
++    }
 +    if (err == ENOENT && it->second.path != watcher->mDir) {
 +      // Gone since the listing: not in the tree, so a re-creation is a create.
 +      gone.push_back(it->second.path);
-+      continue;
-+    }
-+    if (unopenable(err) && it->second.path != watcher->mDir) {
-+      // equin: an entry this account may not open (macOS privacy protection:
-+      // ~/.Trash without Full Disk Access) stays in the tree with no
-+      // descriptor: its coming and going is still heard by its folder's diff,
-+      // its own writes are not. Upstream failed the whole subscription.
 +      continue;
 +    }
 +    // Nothing of a failed subscription stays behind. Upstream left the
@@ -305,7 +331,60 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..e6d3c0a3505ff0a61072d4783e2bfec3
    }
  }
  
-@@ -188,7 +310,7 @@ std::vector<KqueueSubscription *> KqueueBackend::findSubscriptions(std::string &
+-bool KqueueBackend::watchDir(WatcherRef watcher, std::string path, std::shared_ptr<DirTree> tree) {
++KqueueBackend::WatchResult KqueueBackend::watchDir(WatcherRef watcher, std::string path, std::shared_ptr<DirTree> tree) {
+   if (watcher->isIgnored(path)) {
+-    return false;
++    return WatchResult::Failed;
+   }
+ 
+   DirEntry *entry = tree->find(path);
+   if (!entry) {
+-    return false;
++    return WatchResult::Failed;
+   }
+ 
+   KqueueSubscription sub = {
+@@ -146,9 +294,16 @@
+   };
+ 
+   if (!entry->state) {
++    EntryKind kind = watchableKind(path);
++    if (kind == EntryKind::Failed) {
++      return WatchResult::Failed;
++    }
++    if (kind == EntryKind::Unwatchable) {
++      return WatchResult::Unwatched;
++    }
+     int fd = open(path.c_str(), O_EVTONLY);
+     if (fd <= 0) {
+-      return false;
++      return unopenable(errno) ? WatchResult::Unwatched : WatchResult::Failed;
+     }
+ 
+     struct kevent event;
+@@ -163,8 +318,10 @@
+     );
+ 
+     if (kevent(mKqueue, &event, 1, NULL, 0, 0)) {
++      int err = errno;
+       close(fd);
+-      return false;
++      errno = err;
++      return WatchResult::Failed;
+     }
+ 
+     entry->state = (void *)(size_t)fd;
+@@ -173,7 +330,7 @@
+ 
+   sub.fd = (int)(size_t)entry->state;
+   mSubscriptions.emplace(path, sub);
+-  return true;
++  return WatchResult::Watched;
+ }
+ 
+ std::vector<KqueueSubscription *> KqueueBackend::findSubscriptions(std::string &path) {
+@@ -188,7 +345,7 @@
    return subs;
  }
  
@@ -314,7 +393,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..e6d3c0a3505ff0a61072d4783e2bfec3
    // macOS doesn't support fdclosedir, so we have to duplicate the file descriptor
    // to ensure the closedir doesn't also stop watching.
    #if __APPLE__
-@@ -197,6 +319,9 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
+@@ -197,6 +354,9 @@
  
    DIR *dir = fdopendir(fd);
    if (dir == NULL) {
@@ -324,7 +403,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..e6d3c0a3505ff0a61072d4783e2bfec3
      return false;
    }
  
-@@ -204,7 +329,7 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
+@@ -204,7 +364,7 @@
    rewinddir(dir);
  
    std::vector<KqueueSubscription *> subs = findSubscriptions(path);
@@ -333,17 +412,19 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..e6d3c0a3505ff0a61072d4783e2bfec3
  
    std::unordered_set<std::shared_ptr<DirTree>> trees;
    for (auto it = subs.begin(); it != subs.end(); it++) {
-@@ -239,9 +364,19 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
+@@ -239,9 +399,19 @@
              sub->watcher->mEvents.create(fullpath);
              watchers.emplace(sub->watcher);
  
+-            bool success = watchDir(sub->watcher, fullpath, sub->tree);
+-            if (!success) {
 +            errno = 0;
-             bool success = watchDir(sub->watcher, fullpath, sub->tree);
-+            if (!success && unopenable(errno)) {
++            WatchResult result = watchDir(sub->watcher, fullpath, sub->tree);
++            if (result == WatchResult::Unwatched) {
 +              // equin: listed, not watched — see `subscribe`.
 +              continue;
 +            }
-             if (!success) {
++            if (result == WatchResult::Failed) {
                sub->tree->remove(fullpath);
 +              #if __APPLE__
 +                closedir(dir);
@@ -353,7 +434,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..e6d3c0a3505ff0a61072d4783e2bfec3
                return false;
              }
            }
-@@ -270,7 +405,16 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
+@@ -270,7 +440,16 @@
            }
          }
  
@@ -371,7 +452,7 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..e6d3c0a3505ff0a61072d4783e2bfec3
          mSubscriptions.erase(entry->first);
          entry = tree->entries.erase(entry);
        } else {
-@@ -288,13 +432,59 @@ bool KqueueBackend::compareDir(int fd, std::string &path, std::unordered_set<Wat
+@@ -288,13 +467,59 @@
    return true;
  }
  
@@ -433,14 +514,20 @@ index 2991c32fa320cd61d5b575a49ace19cb8a940d03..e6d3c0a3505ff0a61072d4783e2bfec3
        }
  
 diff --git a/src/kqueue/KqueueBackend.hh b/src/kqueue/KqueueBackend.hh
-index 3c6a9cdd5c1de26b0eb5c5f2835409098fb601ae..c57769fc94a8a37f20fdcc30254220de73e3f56d 100644
+index 3c6a9cdd5c1de26b0eb5c5f2835409098fb601ae..4e115fa0cfe6a4b16f881e65a31660826d1464eb 100644
 --- a/src/kqueue/KqueueBackend.hh
 +++ b/src/kqueue/KqueueBackend.hh
-@@ -28,8 +28,9 @@ private:
+@@ -27,9 +27,14 @@
+   std::unordered_map<int, DirEntry *> mFdToEntry;
    Signal mEndedSignal;
  
-   bool watchDir(WatcherRef watcher, std::string path, std::shared_ptr<DirTree> tree);
+-  bool watchDir(WatcherRef watcher, std::string path, std::shared_ptr<DirTree> tree);
 -  bool compareDir(int fd, std::string &dir, std::unordered_set<WatcherRef> &watchers);
++  // equin: what watching one entry came to — a descriptor on it, the entry
++  // kept with none (a kind or a permission kqueue cannot watch: listed, its
++  // coming and going heard by its folder's diff), or a failure (errno says why).
++  enum class WatchResult { Watched, Unwatched, Failed };
++  WatchResult watchDir(WatcherRef watcher, std::string path, std::shared_ptr<DirTree> tree);
 +  bool compareDir(int fd, std::string &dir, std::unordered_set<WatcherRef> &watchers, std::unordered_set<int> &closing);
    std::vector<KqueueSubscription *> findSubscriptions(std::string &path);
 +  void forgetDescendants(std::shared_ptr<DirTree> tree, const std::string &path, std::vector<KqueueSubscription *> &subs, std::unordered_set<WatcherRef> &watchers, std::unordered_set<int> &closing);

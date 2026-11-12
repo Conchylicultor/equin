@@ -54,15 +54,19 @@ so no change after the read is missed.
 | file-systems' `computerVolume` (`files.computer.volume`) | `{ path? }` → `{ path, name, total, free }` | snapshot (`refresh()`): free space has no change signal |
 
 `watchHostPath(path, onChange)` (machine barrel) watches one path: its entry
-in its folder (while the folder is not there, the nearest ancestor that is,
-moving down as the path is created), a symlink's target too, and a folder's
+in its folder (while the folder is not there, the nearest ancestor that is a
+folder — an ancestor that is a file, like a linked worktree's `.git`, holds
+nothing and is climbed past — moving down as the path is created), a symlink's target too, and a folder's
 own entries (a folder's stat follows them). `watchHostDir(path, onChange)` is
 the folder twin: a children-scope watch of the folder, or — while it is not
 there — of its entry, re-armed when it appears or goes; a folder inside an
 archive watches the archive file. Its `onChange` is told which entries
 changed (`HostDirChange`: `entries {names}`), or `all` when the folder
 appeared, went or was replaced, an archive changed, or the native watch lost
-events. Both re-arm from a settled base: a re-arm
+events. A children watch is opened only on a `ResolvedFolder` — minted by
+`resolveOnDisk` alone, whose answer carries the entry's kind (`folder` /
+`entry` / `gone`) — so one on a file or a socket does not type-check. Both
+re-arm from a settled base: a re-arm
 that fails is reported (`reportServerError`) and retried on the next event.
 Not live: a change one level below a listed folder (a child folder's own
 modified time and size, which only a watch of every child folder would hear)

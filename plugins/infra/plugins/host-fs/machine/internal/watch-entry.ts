@@ -1,4 +1,4 @@
-import { realpath } from "@plugins/packages/plugins/timed-fs/core";
+import { realpath, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import { basename, dirname, join } from "node:path";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
@@ -13,9 +13,22 @@ import {
   type UserPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
-/** Opens one directory watch — the shared hub's `acquireDirWatch`, or a test's. */
+declare const folderBrand: unique symbol;
+
+/**
+ * A host path that resolved to a folder: the filesystem's own spelling of it
+ * (no symlinked prefix), minted only by {@link resolveOnDisk}. A children
+ * watch takes nothing else, so one cannot be opened on a file (a linked
+ * worktree's `.git`, `.DS_Store`) or a socket.
+ */
+export type ResolvedFolder = UserPath & { readonly [folderBrand]: true };
+
+/**
+ * Opens one children watch of a resolved folder — the shared hub's
+ * `acquireDirWatch`, or a test's.
+ */
 export type AcquireDirWatch = (
-  request: DirWatchRequest,
+  request: Omit<DirWatchRequest, "dir"> & { dir: ResolvedFolder },
 ) => Promise<DirWatchRelease>;
 
 /** Whether `path` is not there (or not readable) any more. */
@@ -29,13 +42,24 @@ export async function isGone(path: UserPath): Promise<boolean> {
   }
 }
 
-/** Where `path` resolves on disk, or that it is not there (or not readable). */
-export type Resolved = { kind: "there"; real: UserPath } | { kind: "gone" };
+/**
+ * Where `path` resolves on disk and what it is there — a folder, or any other
+ * entry (a file, a socket, a device) — or that it is not there (or not
+ * readable). A path below an entry that is not a folder is `gone`: it cannot
+ * exist while that entry stands.
+ */
+export type Resolved =
+  | { kind: "folder"; real: ResolvedFolder }
+  | { kind: "entry"; real: UserPath }
+  | { kind: "gone" };
 
-/** `realpath(path)`, as a {@link Resolved}. */
+/** `realpath(path)` and what it names, as a {@link Resolved}. */
 export async function resolveOnDisk(path: UserPath): Promise<Resolved> {
   try {
-    return { kind: "there", real: asUserPath(await realpath(path)) };
+    const real = asUserPath(await realpath(path));
+    return (await stat(real)).isDirectory()
+      ? { kind: "folder", real: real as ResolvedFolder }
+      : { kind: "entry", real };
   } catch (err) {
     classifyFsError(err);
     return { kind: "gone" };
@@ -120,10 +144,13 @@ export function watchEntryOver(
   return rearmable(async (rearm) => {
     // The nearest folder of the path that is there, and the path's next
     // component below it (the entry itself once that folder is its parent).
+    // An ancestor that is there but is no folder (a linked worktree's `.git`
+    // file) holds nothing: the path cannot exist until it is replaced by a
+    // folder, which its own folder hears — so climb past it like a missing one.
     let next = path;
     let dir = asUserPath(dirname(path));
     let found = await resolveOnDisk(dir);
-    while (found.kind === "gone") {
+    while (found.kind !== "folder") {
       next = dir;
       dir = asUserPath(dirname(dir));
       found = await resolveOnDisk(dir);
