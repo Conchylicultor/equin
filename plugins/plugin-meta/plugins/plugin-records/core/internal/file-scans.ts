@@ -4,7 +4,7 @@ import type {
 } from "@plugins/framework/plugins/tooling/core";
 import { groupedByOwner, readGrouped } from "./grouped";
 import { recordKey } from "./keys";
-import { npmResolutionsKey } from "./npm-identity";
+import { npmCodeKey } from "./npm-identity";
 import { currentRecordStore } from "./store";
 import {
   buildModuleGraph,
@@ -103,16 +103,16 @@ export function scannerIdentity(
   let id = byModule.get(url);
   if (!id) {
     const module = repoModuleOf(input.snapshot, url);
-    id = Promise.all([
-      buildModuleGraph(input, [module]),
-      npmResolutionsKey(input.snapshot),
-    ]).then(([graph, npm]) =>
+    // The npm code is what the scan's closure imports, closed over the
+    // lockfile — never the whole lockfile, which moved every scan's records
+    // on any package bump though most scans load no package.
+    id = buildModuleGraph(input, [module]).then(async (graph) =>
       recordKey(
         "scan",
         module,
         graph.keyOf(module),
         input.store.environment,
-        npm,
+        await npmCodeKey(input.snapshot, graph.packages),
       ),
     );
     byModule.set(url, id);

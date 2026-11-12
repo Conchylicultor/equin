@@ -4,7 +4,7 @@ import type {
 } from "@plugins/framework/plugins/tooling/core";
 import { groupedByOwner, readGrouped } from "./grouped";
 import { gitBlobId, recordKey } from "./keys";
-import { npmResolutionsKey } from "./npm-identity";
+import { npmCodeKey } from "./npm-identity";
 import type { RecordStore } from "./store";
 import { relDirname, relJoin } from "./rel-path";
 import { scanModuleImports, type ImportSpec } from "./scan-imports";
@@ -48,6 +48,18 @@ const RESOLVED_EXTENSIONS = [
   ".json",
 ];
 
+/**
+ * The npm package a bare specifier loads: `@scope/name` or `name`, whatever
+ * subpath follows (`@typescript-eslint/parser/dist/x` → `@typescript-eslint/parser`).
+ */
+function packageOf(spec: string): string {
+  const path = spec.split("?")[0]!;
+  const parts = path.split("/");
+  return path.startsWith("@") && parts.length > 1
+    ? `${parts[0]}/${parts[1]}`
+    : parts[0]!;
+}
+
 function isInternal(spec: string): boolean {
   return (
     spec.startsWith("./") ||
@@ -69,12 +81,25 @@ export interface ModuleNode {
   dynamicDeps: string[];
   /** Internal specifiers that resolve to no file — part of its key, so a file appearing moves it. */
   unresolved: string[];
+  /**
+   * The npm packages (and runtime builtins: `node:fs`, `bun`) it imports by
+   * name — statically or not, used or not: every package its code can load.
+   * A function of its blob, so its Merkle key already covers the list.
+   */
+  packages: string[];
 }
 
 export interface ModuleGraph {
   readonly modules: ReadonlyMap<string, ModuleNode>;
   /** The Merkle key of a module of the graph. */
   keyOf(path: string): string;
+  /**
+   * Every bare specifier's package (npm or builtin) a module of the graph
+   * imports, sorted: the npm code the entries' closure can load (static and
+   * dynamic edges, the reach their keys cover), before the packages' own
+   * dependencies — `npmCodeKey` closes it over the lockfile.
+   */
+  readonly packages: readonly string[];
   /** Every module `path` loads with it (static imports, transitively), itself included. */
   staticClosure(path: string): Set<string>;
   /** The union of the static closures of `paths`, in one walk. */
@@ -167,17 +192,15 @@ function fileFactsIdentity(input: ModuleGraphInput): Promise<string> {
   let id = factsIdentities.get(input.snapshot);
   if (!id) {
     const own = newState();
-    id = Promise.all([
-      growGraph(own, input, [SCAN_MODULE], null),
-      npmResolutionsKey(input.snapshot),
-    ]).then(([, npm]) =>
-      recordKey(
+    id = growGraph(own, input, [SCAN_MODULE], null).then(async () => {
+      const view = viewOf(own, [SCAN_MODULE]);
+      return recordKey(
         "file-facts",
-        viewOf(own, [SCAN_MODULE]).keyOf(SCAN_MODULE),
+        view.keyOf(SCAN_MODULE),
         input.store.environment,
-        npm,
-      ),
-    );
+        await npmCodeKey(input.snapshot, view.packages),
+      );
+    });
     factsIdentities.set(input.snapshot, id);
   }
   return id;
@@ -375,9 +398,14 @@ async function growGraph(
             bundledDeps: [],
             dynamicDeps: [],
             unresolved: [],
+            packages: [],
           };
           for (const imp of facts.imports) {
-            if (!isInternal(imp.spec)) continue;
+            if (!isInternal(imp.spec)) {
+              const pkg = packageOf(imp.spec);
+              if (!node.packages.includes(pkg)) node.packages.push(pkg);
+              continue;
+            }
             const target = await resolveFrom(path, imp.spec);
             if (target === null) {
               node.unresolved.push(imp.spec);
@@ -434,6 +462,8 @@ function viewOf(state: GraphState, entries: readonly string[]): ModuleGraph {
   }
   const modules: ReadonlyMap<string, ModuleNode> = reach;
   const keys = state.keys;
+  const packages = new Set<string>();
+  for (const n of reach.values()) for (const p of n.packages) packages.add(p);
   const closures = new Map<string, Set<string>>();
   const walk = (from: string[]): Set<string> => {
     const c = new Set<string>();
@@ -451,6 +481,7 @@ function viewOf(state: GraphState, entries: readonly string[]): ModuleGraph {
   };
   return {
     modules,
+    packages: [...packages].sort(),
     keyOf(path) {
       const k = modules.has(path) ? keys.get(path) : undefined;
       if (k === undefined)

@@ -91,6 +91,7 @@ export const lintEntries: CollectedEntry[] = [
   { pluginPath: "packages/plugins/timed-fs", id: "packages.timed-fs", loader: () => import("@plugins/packages/plugins/timed-fs/lint"), dependsOn: [] },
   { pluginPath: "packages/plugins/zod-introspect", id: "packages.zod-introspect", loader: () => import("@plugins/packages/plugins/zod-introspect/lint"), dependsOn: [] },
   { pluginPath: "page/plugins/editor", id: "page.editor", loader: () => import("@plugins/page/plugins/editor/lint"), dependsOn: [] },
+  { pluginPath: "plugin-meta/plugins/plugin-records", id: "plugin-meta.plugin-records", loader: () => import("@plugins/plugin-meta/plugins/plugin-records/lint"), dependsOn: [] },
   { pluginPath: "plugin-meta/plugins/plugin-tree", id: "plugin-meta.plugin-tree", loader: () => import("@plugins/plugin-meta/plugins/plugin-tree/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/bar", id: "primitives.bar", loader: () => import("@plugins/primitives/plugins/bar/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/collapsible", id: "primitives.collapsible", loader: () => import("@plugins/primitives/plugins/collapsible/lint"), dependsOn: [] },

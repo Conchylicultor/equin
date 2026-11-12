@@ -50,10 +50,9 @@ import {
 import {
   factsOf,
   moduleNeeds,
-  portabilityFactsScan,
   SERVER_BARREL_RE,
   type ModulePortabilityFacts,
-} from "./portability-facts.scan";
+} from "./portability-facts";
 
 /** One closure module that needs the computer, with the chain to it. */
 export interface Offender {
@@ -450,13 +449,14 @@ export function serverPortabilityOf(
             `${m} imports ${unresolved.map((u) => JSON.stringify(u)).join(", ")}, which resolves to no file of the checkout: a server barrel's closure is measured over the file set.`,
           );
       }
-      const ts = await loadTypescript();
+      const { PORTABILITY_FACTS_SCAN } =
+        await import("./portability-facts.scan");
       return derivePortability({
         barrels,
         closure,
         read: (path) => repo.read(path),
         facts: (modules) =>
-          scanFilesCached(input, modules, portabilityFactsScan(ts)),
+          scanFilesCached(input, modules, PORTABILITY_FACTS_SCAN),
       });
     })();
     memo.set(repo, p);

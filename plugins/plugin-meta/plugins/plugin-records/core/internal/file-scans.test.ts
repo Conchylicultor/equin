@@ -123,3 +123,84 @@ describe("file record keys", () => {
     expect(await misses(store, base, ["x"])).toBe(0);
   });
 });
+
+describe("the npm code in a file record's key", () => {
+  // The shape bun writes, trimmed: `eslint` depends on `acorn`; `zod` is
+  // installed beside them; `acorn` is patched.
+  const LOCK = `{
+  "lockfileVersion": 1,
+  "workspaces": {
+    "": { "name": "repo" },
+  },
+  "patchedDependencies": {
+    "acorn@8.0.0": "patches/acorn@8.0.0.patch",
+  },
+  "packages": {
+    "acorn": ["acorn@8.0.0", "", {}, "sha512-a"],
+    "eslint": ["eslint@9.0.0", "", { "dependencies": { "acorn": "^8" } }, "sha512-e"],
+    "zod": ["zod@4.0.0", "", {}, "sha512-z"],
+  }
+}
+`;
+  const PATCH = "--- a/index.js\n+++ b/index.js\n";
+  const withLock = (
+    files: Record<string, string>,
+    lock = LOCK,
+    patch = PATCH,
+  ): Record<string, string> => ({
+    ...files,
+    "bun.lock": lock,
+    "patches/acorn@8.0.0.patch": patch,
+  });
+  // The scan's leaf loads eslint (and so acorn), and a builtin.
+  const loadsEslint = withLock({
+    ...base,
+    [`${P}/leaf/core/split.ts`]:
+      'import { Linter } from "eslint/universal";\nimport { readFile } from "node:fs";\nexport const split = (s: string) => s.split(" ");',
+  });
+
+  test("a scan that loads no package is moved by no lockfile change", async () => {
+    const store = createMemoryRecordStore();
+    await misses(store, withLock(base));
+    const bumped = withLock(base, LOCK.replace("eslint@9.0.0", "eslint@9.0.1"));
+    expect(await misses(store, bumped)).toBe(0);
+  });
+
+  test("a bump of a package the scan never loads rescans nothing", async () => {
+    const store = createMemoryRecordStore();
+    await misses(store, loadsEslint);
+    const bumped = {
+      ...loadsEslint,
+      "bun.lock": LOCK.replace("zod@4.0.0", "zod@4.0.1"),
+    };
+    expect(await misses(store, bumped)).toBe(0);
+  });
+
+  test("a bump of a package the scan loads, or of its dependency, rescans every file", async () => {
+    const store = createMemoryRecordStore();
+    await misses(store, loadsEslint);
+    expect(
+      await misses(store, {
+        ...loadsEslint,
+        "bun.lock": LOCK.replace("eslint@9.0.0", "eslint@9.0.1"),
+      }),
+    ).toBe(2);
+    expect(
+      await misses(store, {
+        ...loadsEslint,
+        "bun.lock": LOCK.replace('"sha512-a"', '"sha512-a2"'),
+      }),
+    ).toBe(2);
+  });
+
+  test("an edit to a patch the scan's packages carry rescans every file", async () => {
+    const store = createMemoryRecordStore();
+    await misses(store, loadsEslint);
+    expect(
+      await misses(store, {
+        ...loadsEslint,
+        "patches/acorn@8.0.0.patch": `${PATCH}@@ -1 +1 @@\n-a\n+b\n`,
+      }),
+    ).toBe(2);
+  });
+});

@@ -158,12 +158,56 @@ the one scan, and each answer is the all-kinds answer filtered.
 
 ## What is left
 
-- **npm** (~110k a day, now the largest main-side part): key each producer by
-  the npm closure it names (`lockfileNpmClosure` over the packages its
-  closure imports, type-only imports included — the `typescript` module
-  handed to icon-manifest and portability-facts is visible only as `import
-  type TS from "typescript"`), not the whole lockfile. Filed as a follow-up;
-  it needs `deps/npm`'s closure walk without widening plugin-records/core,
-  which the evaluator and facet harness key on.
+- **npm** (~110k a day): done — see § npm, fixed below.
 - **Two scans in one module** (plugin-registry's `default-export` /
   `import-specifiers`): two answers, not a filter — 2k keys, left.
+
+## npm, fixed
+
+**Before.** File facts and every scan identity folded in `npmResolutionsKey`
+(the whole lockfile's npm resolutions). Replaying main's `bun.lock` history
+from 2026-11-05 (`$EQUIN_SCRATCH/measure.ts`): 5 npm moves, each one a full
+refill — ~112k file keys, ~560k for the week.
+
+**What each scan really loads** (its closure's bare imports, static or
+dynamic, from the module graph's file facts):
+
+| scan | packages | re-keyed by the 5 moves |
+| --- | --- | ---: |
+| file facts (`scan-imports.ts`) | — | 0 |
+| plugin-registry ×2, data-views, eager-tier, browser-host-coverage, mentions | — | 0 |
+| boundary-rules, plugin-boundaries | `path` (a builtin, keyed by name) | 0 |
+| icon-manifest, portability-facts, mask-sync, sql-writes sites | `typescript` | 0 |
+| refs | `jsonc-parser` | 0 |
+| icon-uses | `@typescript-eslint/parser` | 1 (12.9k keys) |
+
+**After: ~12.9k keys re-keyed for the week instead of ~560k.**
+
+How:
+
+- The module graph keeps each module's bare-specifier packages
+  (`ModuleNode.packages`, read from the file facts it already stores — no
+  rescan); a graph view's `packages` is their union over the closure.
+- `npmCodeKey(set, packages)` (plugin-records `npm-identity.ts`): the lock
+  entries those packages reach through their dependencies and peers
+  (`npmClosureOf`), the bytes of every patch applied to one of them (the
+  whole-lockfile key never saw a patch's bytes), and each name the lock does
+  not hold. "" for none. File facts and `scannerIdentity` (so every
+  `scanFilesCached` and `foldFilesCached`) key on it.
+- The closure walk moved out of the `deps/npm` barrel into a leaf,
+  `infra/deps/npm/lock-closure` (jsonc-parser and zod only), parsed once per
+  file set (`parseBunLock`). plugin-records/core's closure gains that one
+  module; the evaluator and facet keys still fold the whole resolutions.
+- **A package handed in by a caller is unspellable.** icon-manifest and
+  portability-facts were factories taking `typescript` from their caller, so
+  their closure imported only its types (erased — no key could see it). They
+  are now module constants that import `typescript` themselves; their
+  consumers `await import()` the scan module so `typescript`'s eval stays
+  lazy. The lint rule `plugin-records/scan-module-constant` keeps it so: in a
+  `*.scan.ts`, `import.meta.url` is only the `url` of a top-level exported
+  const — a scan built by a function (which could close over what it is
+  handed) has no spelling.
+
+Not narrowed: the evaluator (imports barrels: whatever npm code a barrel
+loads, which its closure names too, but its key also covers the load-time
+environment) and the facet harness keep `npmResolutionsKey`.

@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-infra-deps-npm-lock-closure",
+  "version": "0.0.1",
+  "private": true,
+  "description": "lockfileNpmClosure(text, packages): the part of bun.lock a set of npm packages can load — each one's entry, every package its dependencies and peers resolve to, transitively, and the patches applied to any of them — so a cache keyed on the npm code it loads (type-check's lint engine, every plugin record's scan) is not moved by a package it never loads. Parse once with parseBunLock, close many sets with npmClosureOf. A leaf (jsonc-parser and zod only), so a record producer's key gains one module, not the npm barrel's closure."
+}

@@ -28,7 +28,7 @@
 //
 // NPM CODE counts by what a closure LOADS: the packages its files import by
 // name, closed over their dependencies in `bun.lock`, with the patch files
-// `bun.lock` applies to any of them (`lockfileNpmClosure`). The whole
+// `bun.lock` applies to any of them (`lockfileNpmClosure`, `infra/deps/npm/lock-closure`). The whole
 // lockfile and every `patches/` file used to be engine: a patch of
 // graphile-worker or @parcel/watcher — which no rule loads — or a dependency
 // added for a server feature re-linted every group of every file (8 of 20
@@ -86,7 +86,7 @@ import {
   lintDataKey,
 } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 import { LINT_GROUP_ALL, LINT_GROUP_BASE } from "../core";
-import { lockfileNpmClosure } from "@plugins/infra/plugins/deps/plugins/npm/core";
+import { lockfileNpmClosure } from "@plugins/infra/plugins/deps/plugins/npm/plugins/lock-closure/core";
 import type { TypeAwareGroups } from "../shared/lint-results";
 import type { RepoView } from "../shared/repo-view";
 import { producerSources } from "../shared/tsc-engine";

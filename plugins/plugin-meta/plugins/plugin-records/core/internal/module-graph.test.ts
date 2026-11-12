@@ -280,12 +280,12 @@ describe("the lockfile in the file-facts key", () => {
     expect(written()).toBe(first);
   });
 
-  test("an npm resolution change re-keys every file record", async () => {
+  test("an npm resolution change re-keys no file record: the facts scan loads no package", async () => {
     const { store, written } = writes();
     const entries = [`${P}/a/web/index.ts`];
     await graphOf({ ...base, "bun.lock": LOCK }, entries, { store });
     const first = written();
     await graphOf({ ...base, "bun.lock": NPM_BUMPED }, entries, { store });
-    expect(written()).toBe(2 * first);
+    expect(written()).toBe(first);
   });
 });

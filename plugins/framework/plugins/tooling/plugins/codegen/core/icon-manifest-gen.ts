@@ -6,8 +6,7 @@ import { relative } from "path";
 import { sourceFilesIn } from "@plugins/plugin-meta/plugins/parse-utils/plugins/source-files/core";
 import { buildBarrelFreeTree } from "./barrel-free-tree";
 import { scanFiles } from "./file-scans";
-import { loadTypescript } from "@plugins/framework/plugins/tooling/plugins/import-closure/core";
-import { iconManifestScan, type IconManifest } from "./icon-manifest.scan";
+import type { IconManifest } from "./icon-manifest.scan";
 import type { CodegenPass } from "./codegen-pass";
 
 /**
@@ -66,8 +65,10 @@ export async function collectIconManifest(
       files.push(relative(root, file));
     }
   }
-  const scan = iconManifestScan(await loadTypescript());
-  for (const found of await scanFiles(tree.repo, files, scan)) {
+  // Loaded here, not at the top: the scan imports `typescript`, whose eval
+  // only a pass that regenerates the manifest should pay.
+  const { ICON_MANIFEST_SCAN } = await import("./icon-manifest.scan");
+  for (const found of await scanFiles(tree.repo, files, ICON_MANIFEST_SCAN)) {
     for (const n of found.symbols) symbols.add(n);
     for (const n of found.brands) brands.add(n);
     for (const n of found.seti) seti.add(n);

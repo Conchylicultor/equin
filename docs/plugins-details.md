@@ -31281,7 +31281,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Uses: `framework/tooling/checks/type-check.readTypeCheckTree`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 150 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+            - Uses: 149 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
               - `plugin-meta/parse-utils` ×17
               - `config_v2` ×16
               - `framework/plugin-id` ×13
@@ -31309,7 +31309,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/plugin-tree` ×2
               - `fields/reorder-tree.REORDER_NODE_LEGEND`
               - `framework/tooling/guards/agent-policy.agentPolicySettings`
-              - `framework/tooling/import-closure.loadTypescript`
               - `framework/tooling.noteRepoWrites`
               - `infra/namespace.MAIN_COMPOSITION_ID`
               - `packages/macrotask-yield.yieldMacrotask`
@@ -31818,9 +31817,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `importClosures`
               - `loadTypescript`
           - Cross-plugin:
-            - Imported by:
-              - `framework/tooling/boundaries`
-              - `framework/tooling/codegen`
+            - Imported by: `framework/tooling/boundaries`
           - Exemptions:
             - Exempts itself from:
               - `boundaries/no-platform-api` — `core/import-closure.ts` (debt)
@@ -33899,14 +33896,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/deps/updates.utcDay`
             - Exports (types):
               - `Group`
-              - `NpmClosure`
               - `Packument`
               - `Plan`
               - `Workspace`
             - Exports (values):
               - `groupProblems`
               - `installedVersions`
-              - `lockfileNpmClosure`
               - `newestTag`
               - `patchTouchedFiles`
               - `planNpm`
@@ -33924,6 +33919,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boundaries/no-platform-api` — `server/internal/npm-updater.ts` (debt)
               - `repo-walk-safety/no-adhoc-repo-listing` — `server/internal/npm-updater.ts` (sanctioned)
           - Plugins:
+            - **`lock-closure`** — lockfileNpmClosure(text, packages): the part of bun.lock a set of npm packages can load — each one's entry, every package its dependencies and peers resolve to, transitively, and the patches applied to any of them — so a cache keyed on the npm code it loads (type-check's lint engine, every plugin record's scan) is not moved by a package it never loads. Parse once with parseBunLock, close many sets with npmClosureOf. A leaf (jsonc-parser and zod only), so a record producer's key gains one module, not the npm barrel's closure.
+              - Cross-plugin:
+                - Imported by: `plugin-meta/plugin-records`
+              - Core:
+                - Exports (types):
+                  - `BunLock`
+                  - `NpmClosure`
+                - Exports (values):
+                  - `lockfileNpmClosure`
+                  - `npmClosureOf`
+                  - `parseBunLock`
             - **`lock-resolutions`** — lockfileNpmResolutions(text): bun.lock as far as installed npm code can tell — minus the workspaces section and every @workspace: line — the text every cache keyed on npm code hashes, so adding a plugin moves none of them. A leaf with no imports, so a record producer's key (plugin-records) gains one module, not the npm barrel's closure.
               - Cross-plugin:
                 - Imported by:
@@ -45480,6 +45486,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Uses:
           - `framework/plugin-id.pluginDirOfRepoPath`
+          - `infra/deps/npm/lock-closure.BunLock`
+          - `infra/deps/npm/lock-closure.npmClosureOf`
+          - `infra/deps/npm/lock-closure.parseBunLock`
           - `infra/deps/npm/lock-resolutions.lockfileNpmResolutions`
           - `infra/host-fs/user-path.AppPath`
           - `infra/host-fs/user-path.joinAppPath`
@@ -45516,6 +45525,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `installRecordStore`
           - `installRecordWorkers`
           - `NO_OUTSIDE_FILES`
+          - `npmCodeKey`
           - `npmResolutionsKey`
           - `outsideFilesAt`
           - `readGrouped`

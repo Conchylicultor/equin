@@ -12,7 +12,7 @@ import {
   type Offender,
   type PlatformTaint,
 } from "../core/portability";
-import { loadsAtRuntime } from "../core/portability-facts.scan";
+import { loadsAtRuntime } from "../core/portability-facts";
 
 const WEB_LOADS_PORTABLE = "boundaries:web-loads-portable";
 

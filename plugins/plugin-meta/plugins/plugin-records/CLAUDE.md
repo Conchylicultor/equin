@@ -285,8 +285,22 @@ lockfile edits were workspace-only, against 0–18 edits of any producer's own
 closure (the file-facts scan: 0), and the store reached 19M key rows (6.7 GB)
 for ~480k distinct values
 (`research/2026-11-10-global-plugin-records-store-growth.md`). An npm change
-still re-keys every record — the next rung would be each producer's own
-`lockfileNpmClosure`.
+still re-keys every evaluated and facet record.
+
+**A file record's npm code is the packages its scan loads** (`npmCodeKey`):
+file facts and every scan / fold identity key on the lock closure of the
+packages their module closure imports by name (`ModuleGraph.packages`, closed
+over dependencies and peers by `infra/deps/npm/lock-closure`, plus the bytes
+of the patches applied to them) — "" for a closure that imports none. A
+package bump moves only the scans that can load it (2026-11-05 → 11-12: one
+scan once, ~12.9k keys, against ~560k under the whole-lockfile key —
+`research/2026-11-12-global-plugin-records-file-record-churn.md` § npm,
+fixed). That is sound only while a scan runs no npm code its closure does not
+import, so **a scan or fold is a top-level exported constant of its
+`*.scan.ts`, importing every package it uses** — never a factory handed one
+(`typescript`) by its caller. Lint: `plugin-records/scan-module-constant`. A
+consumer that must not pay a package's load cost `await import()`s the scan
+module.
 
 **A barrel load reads only what its key names.** Every barrel import runs
 under barrel-import's load guard: while its modules' top level runs, a file
@@ -351,6 +365,9 @@ its docblock records — and then lowered as readily as raised.
 - Core:
   - Uses:
     - `framework/plugin-id.pluginDirOfRepoPath`
+    - `infra/deps/npm/lock-closure.BunLock`
+    - `infra/deps/npm/lock-closure.npmClosureOf`
+    - `infra/deps/npm/lock-closure.parseBunLock`
     - `infra/deps/npm/lock-resolutions.lockfileNpmResolutions`
     - `infra/host-fs/user-path.AppPath`
     - `infra/host-fs/user-path.joinAppPath`
@@ -387,6 +404,7 @@ its docblock records — and then lowered as readily as raised.
     - `installRecordStore`
     - `installRecordWorkers`
     - `NO_OUTSIDE_FILES`
+    - `npmCodeKey`
     - `npmResolutionsKey`
     - `outsideFilesAt`
     - `readGrouped`

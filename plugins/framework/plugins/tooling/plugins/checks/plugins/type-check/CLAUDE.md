@@ -170,7 +170,7 @@ Results are stored per **(file, blob version)** (`shared/lint-results.ts`, `type
 
 - **Rules half** (`check/lint-groups.ts`): one fp per group, each folding in the **engine**:
   - the config builder's RUNTIME import closure (`LINT_CONFIG_SOURCE`; `import type` edges are erased, so not followed), `shared/worker.ts` and `shared/lint-engine.ts`, root tsconfigs. Keep the builder's imports to what can change a message — it takes the manifests' file set (`lint/core/ide-lint-config.ts` lists it) and the stylesheet's `@utility` set (`readDeclaredUtilities`) as data, so the repo-file enumeration, the file reads and the process plumbing under them stay out (a test holds it there: the engine reaches `lint/core` and `exempt/core` only);
-  - the npm code they LOAD: the packages the closure imports by name (held by `ENGINE_PACKAGES` in `lint-groups.test.ts`), closed over their dependencies in the code checkout's `bun.lock`, with the patches applied to any of them (`lockfileNpmClosure`, `infra/deps/npm`). Not the whole lockfile, not every `patches/` file, not `package.json`: a dependency or patch no rule loads (graphile-worker, @parcel/watcher, a server feature's new package) re-lints nothing;
+  - the npm code they LOAD: the packages the closure imports by name (held by `ENGINE_PACKAGES` in `lint-groups.test.ts`), closed over their dependencies in the code checkout's `bun.lock`, with the patches applied to any of them (`lockfileNpmClosure`, `infra/deps/npm/lock-closure`). Not the whole lockfile, not every `patches/` file, not `package.json`: a dependency or patch no rule loads (graphile-worker, @parcel/watcher, a server feature's new package) re-lints nothing;
   - the `@utility` set (`lintDataKey`).
 
   Groups:

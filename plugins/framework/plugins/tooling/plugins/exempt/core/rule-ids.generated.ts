@@ -142,6 +142,7 @@ export type ExemptableRuleId =
   | "paths:no-hardcoded-paths"
   | "paths:no-inlined-worktree-artifacts"
   | "plugin-boundaries"
+  | "plugin-records/scan-module-constant"
   | "plugin-tree/no-uncached-tree-in-checks"
   | "polling-safety/no-refetch-interval"
   | "principal/no-origin-header-read"

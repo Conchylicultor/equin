@@ -63,16 +63,18 @@ function keySegments(key: string): string[] {
   return out;
 }
 
+/** `bun.lock` parsed once, to close any number of package sets over. */
+export interface BunLock {
+  packages: Record<string, unknown[]>;
+  patched: Record<string, string>;
+  workspaceNames: string[];
+}
+
 /**
- * The closure, in `bun.lock`'s text, of the npm packages named `roots` (bare
- * package names, `@scope/name` or `name`). Throws when the lockfile does not
- * parse as bun writes it: a key that silently covered nothing would keep a
- * stale result.
+ * `bun.lock`'s text parsed as bun writes it. Throws when it does not parse: a
+ * key that silently covered nothing would keep a stale result.
  */
-export function lockfileNpmClosure(
-  text: string,
-  roots: Iterable<string>,
-): NpmClosure {
+export function parseBunLock(text: string): BunLock {
   const errors: ParseError[] = [];
   const raw: unknown = parse(text, errors, { allowTrailingComma: true });
   if (errors.length > 0) {
@@ -81,10 +83,34 @@ export function lockfileNpmClosure(
     );
   }
   const lock = LockSchema.parse(raw);
-  const workspaceNames = Object.values(lock.workspaces)
-    .map((w) => w.name)
-    .filter((n): n is string => n !== undefined);
-  const patched = lock.patchedDependencies ?? {};
+  return {
+    packages: lock.packages,
+    patched: lock.patchedDependencies ?? {},
+    workspaceNames: Object.values(lock.workspaces)
+      .map((w) => w.name)
+      .filter((n): n is string => n !== undefined),
+  };
+}
+
+/**
+ * The closure, in `bun.lock`'s text, of the npm packages named `roots` (bare
+ * package names, `@scope/name` or `name`). Throws when the lockfile does not
+ * parse as bun writes it.
+ */
+export function lockfileNpmClosure(
+  text: string,
+  roots: Iterable<string>,
+): NpmClosure {
+  return npmClosureOf(parseBunLock(text), roots);
+}
+
+/** The closure, in a parsed lockfile, of the npm packages named `roots`. */
+export function npmClosureOf(
+  parsed: BunLock,
+  roots: Iterable<string>,
+): NpmClosure {
+  const lock = { packages: parsed.packages };
+  const { workspaceNames, patched } = parsed;
 
   const reached = new Set<string>();
   const stack: string[] = [];

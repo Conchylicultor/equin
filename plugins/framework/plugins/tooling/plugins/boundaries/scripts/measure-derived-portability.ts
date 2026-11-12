@@ -14,7 +14,7 @@ import { loadRepoFiles } from "@plugins/framework/plugins/tooling/core";
 import { importClosures } from "@plugins/framework/plugins/tooling/plugins/import-closure/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { derivePortability } from "../core/portability";
-import { SERVER_BARREL_RE } from "../core/portability-facts.scan";
+import { SERVER_BARREL_RE } from "../core/portability-facts";
 
 const root = await getWorktreeRoot();
 const repo = await loadRepoFiles(root);

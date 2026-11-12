@@ -59,9 +59,7 @@ never import this plugin back.
     - `importClosures`
     - `loadTypescript`
 - Cross-plugin:
-  - Imported by:
-    - `framework/tooling/boundaries`
-    - `framework/tooling/codegen`
+  - Imported by: `framework/tooling/boundaries`
 - Exemptions:
   - Exempts itself from:
     - `boundaries/no-platform-api` — `core/import-closure.ts` (debt)

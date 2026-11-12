@@ -7,6 +7,7 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/checks/plugins/source-analysis/core";
 import { isIconRefModule } from "@plugins/ui/plugins/icons/plugins/icon-uses/core";
 import type { FileScan } from "@plugins/plugin-meta/plugins/plugin-records/core";
+import ts from "typescript";
 import type TS from "typescript";
 
 // The icon manifest's per-file scan (`icon-manifest-gen.ts`). A scan's records
@@ -115,10 +116,13 @@ export function scanIconNames(
   return out;
 }
 
-/** The icon manifest's per-file scan, parsing with `ts`. */
-export function iconManifestScan(ts: typeof TS): FileScan<IconManifest> {
-  return {
-    url: import.meta.url,
-    scan: (src, rel) => scanIconNames(ts, src, rel),
-  };
-}
+/**
+ * The icon manifest's per-file scan. It imports `typescript` itself, never
+ * takes it from its caller: the records are keyed by the npm code this
+ * module's closure imports, so a parser handed in would run unkeyed. Load this
+ * module lazily (`await import`) where `typescript`'s eval cost matters.
+ */
+export const ICON_MANIFEST_SCAN: FileScan<IconManifest> = {
+  url: import.meta.url,
+  scan: (src, rel) => scanIconNames(ts, src, rel),
+};
