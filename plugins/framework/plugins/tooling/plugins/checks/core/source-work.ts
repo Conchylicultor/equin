@@ -7,8 +7,9 @@
 // investigate's re-mask of every candidate on each of its passes (~2 s) were
 // exactly that. Here each call first awaits the thread's shared time slice, so
 // a loop of them yields about every 10 ms by construction; and each result is
-// kept for the process (one check process is one run), so a file masked by
-// `grepCode` for one check, or parsed by one pass, is free for the next.
+// shared, so a file masked by `grepCode` for one check, or parsed by one pass,
+// is free for the next. A mask is kept for the run (one check process is one
+// run); a parse tree only while someone holds it (see `parsedTsSource`).
 //
 // Check code must use these, never `maskSource` / `createSourceFile` directly —
 // the `check-thread-safety/no-blocking-check-work` lint rule holds it.
@@ -80,20 +81,42 @@ export async function maskedSource(
   return out;
 }
 
-const parsed = textMemo<TS.SourceFile>();
+/**
+ * The parse memo holds each tree WEAKLY: a tree is shared for as long as any
+ * holder keeps it (a check mid-loop, a source analysis's module map), and is
+ * the collector's once nobody does. A strong memo kept every tree any check
+ * ever asked for until the process exited, and `parse-utils:mask-sync` asks
+ * for every `.ts` / `.tsx` file in the repo, one at a time: 16.5k trees,
+ * ~1.4 GB of heap (18.8M objects) pinned in every check process for its whole
+ * run, measured 2026-11-12 — the largest part of a check's ~3.5 GB resident,
+ * and several checks run at once on one host. A check that needs a tree
+ * beyond one call holds it itself; the memo never decides that for it.
+ *
+ * Validity is the tree's own `text` (the bytes it was parsed from): a file
+ * read off another tree, or edited, parses again.
+ */
+const parsed = new Map<string, WeakRef<TS.SourceFile>>();
+const reclaimed = new FinalizationRegistry<{
+  rel: string;
+  ref: WeakRef<TS.SourceFile>;
+}>(({ rel, ref }) => {
+  // Only this tree's own entry: a newer parse of the same path replaced it.
+  if (parsed.get(rel) === ref) parsed.delete(rel);
+});
 
 /**
  * `source` parsed as TypeScript (parent pointers set, `ScriptTarget.Latest`),
- * after yielding the check thread's slice, and kept for the run: every pass of
- * every check that parses the same file shares one tree. `ts` is the caller's
- * own lazily-loaded `typescript`, so loading this module costs no parser.
+ * after yielding the check thread's slice, and shared while held: every pass
+ * of every check that parses the same file while another holds its tree gets
+ * that one tree. `ts` is the caller's own lazily-loaded `typescript`, so
+ * loading this module costs no parser.
  */
 export async function parsedTsSource(
   ts: typeof TS,
   source: SourceText,
 ): Promise<TS.SourceFile> {
-  const hit = parsed.get(source);
-  if (hit !== undefined) return hit;
+  const hit = parsed.get(source.rel)?.deref();
+  if (hit !== undefined && hit.text === source.src) return hit;
   await sliceCheckThread();
   const out = ts.createSourceFile(
     source.rel,
@@ -101,6 +124,8 @@ export async function parsedTsSource(
     ts.ScriptTarget.Latest,
     true,
   );
-  parsed.set(source, out);
+  const ref = new WeakRef(out);
+  parsed.set(source.rel, ref);
+  reclaimed.register(out, { rel: source.rel, ref });
   return out;
 }

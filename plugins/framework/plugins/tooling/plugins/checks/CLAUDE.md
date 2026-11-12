@@ -462,9 +462,12 @@ So check code:
 - **Masks and parses through `checks/core`**: `await maskedSource(source)` and
   `await parsedTsSource(ts, source)`, never `maskSource` / `ts.createSourceFile`
   directly. Each yields the check thread's one shared time slice
-  (`sliceCheckThread`, ~10 ms) before working and keeps its result for the run,
-  so a loop over thousands of candidates yields by construction, and a file
-  `grepCode` masked for one check — or a pass parsed — is free for the next.
+  (`sliceCheckThread`, ~10 ms) before working and shares its result, so a loop
+  over thousands of candidates yields by construction, and a file `grepCode`
+  masked for one check — or a tree another check still holds — is free for the
+  next. A mask is kept for the run; a parse tree only while a holder keeps it
+  (weak memo — `mask-sync` parses the whole repo, ~1.4 GB of trees). A check
+  that needs a tree across calls holds it itself.
 - **Yields in its own CPU loops** over thousands of items: `await
   sliceCheckThread()` between items. Not `await Promise.resolve()` — a
   microtask never lets a timer run.
