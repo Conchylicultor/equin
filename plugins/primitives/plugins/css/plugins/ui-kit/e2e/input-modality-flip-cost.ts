@@ -1,23 +1,16 @@
 // Measures what flipping the page's input modality costs: the element count
-// of the style recalc Chrome runs after `data-input-modality` changes on
-// <html> (pointer ⇄ keyboard — what `InputModalityTracker` writes on every
-// pointer press after keyboard use, and on every navigation key after pointer
-// use). Elements restyled, not ms: the count does not drift with host load.
-//
-// With --counterfactual it then rewrites, in the page's own sheets, every rule
-// reading the attribute into the given replacement form and measures again —
-// a before/after on the same DOM without a rebuild.
+// of the style recalc Chrome runs after a pointer press following keyboard
+// use, and a navigation key following pointer use — the events
+// `InputModalityTracker` answers by moving its `data-pointer-focus` mark.
+// Elements restyled, not ms: the count does not drift with host load.
 //
 // It first checks the rings still follow the modality: a control reached by
 // Tab is ringed, not in pointer modality, and ringed again after.
 //
 // Usage:
 //   ./equin run plugins/primitives/plugins/css/plugins/ui-kit/e2e/input-modality-flip-cost.ts \
-//     [--path /agents] [--rounds 3] [--counterfactual] [--only <selector part>]
-//     [--invalidations] [--url http://<namespace>.localhost:9000]
+//     [--path /agents] [--rounds 3] [--invalidations] [--url http://<namespace>.localhost:9000]
 //
-// --only: with --counterfactual, rewrite only the rules whose selector holds
-//   this text and drop the others — the cost of each rule on its own.
 // --invalidations: also trace Chrome's invalidation tracking and list what
 //   was invalidated, and why (a whole subtree, or the rule's subjects).
 
@@ -31,7 +24,6 @@ import {
 
 const path = arg("path", "/agents");
 const rounds = numArg("rounds", 3);
-const counterfactual = flag("counterfactual");
 const invalidations = flag("invalidations");
 
 interface TraceEvent {
@@ -64,7 +56,8 @@ await withBrowser(async (h) => {
         for (const r of [...l]) {
           if (
             r instanceof CSSStyleRule &&
-            r.selectorText.includes("data-input-modality")
+            (r.selectorText.includes("data-input-modality") ||
+              r.selectorText.includes("data-pointer-focus"))
           )
             rules.push(r.selectorText);
           if ("cssRules" in r && r.cssRules instanceof CSSRuleList)
@@ -84,7 +77,7 @@ await withBrowser(async (h) => {
   console.log(`elements: ${info.elements}, focus-ring hosts: ${info.ringed}`);
   for (const r of info.rules) console.log(`  rule: ${r}`);
 
-  /** Elements restyled by the recalcs that follow one write to <html>. */
+  /** Elements restyled by the recalcs that follow one modality event. */
   const flip = async (
     to: "pointer" | "keyboard" | "baseline",
   ): Promise<number[]> => {
@@ -98,11 +91,14 @@ await withBrowser(async (h) => {
       ],
     });
     await page.evaluate((mode) => {
-      const root = document.documentElement;
-      // The floor: an attribute no rule reads, written the same way.
-      if (mode === "baseline") root.toggleAttribute("data-unread-probe");
-      else if (mode === "pointer") root.dataset.inputModality = "pointer";
-      else delete root.dataset.inputModality;
+      // The floor: an attribute no rule reads, written on <html>.
+      if (mode === "baseline")
+        document.documentElement.toggleAttribute("data-unread-probe");
+      // The events the tracker hears (capture listeners on the document); a
+      // synthetic Tab moves no focus, so only the modality changes.
+      else if (mode === "pointer")
+        document.dispatchEvent(new PointerEvent("pointerdown"));
+      else document.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab" }));
       void document.body.offsetHeight;
     }, to);
     const trace = await browser.stopTracing();
@@ -159,12 +155,12 @@ await withBrowser(async (h) => {
       return getComputedStyle(el).outlineStyle;
     });
   const keyboardRing = await outline();
-  await page.evaluate(
-    () => (document.documentElement.dataset.inputModality = "pointer"),
+  await page.evaluate(() =>
+    document.dispatchEvent(new PointerEvent("pointerdown")),
   );
   const pointerRing = await outline();
-  await page.evaluate(
-    () => delete document.documentElement.dataset.inputModality,
+  await page.evaluate(() =>
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab" })),
   );
   const backRing = await outline();
   console.log(
@@ -181,44 +177,4 @@ await withBrowser(async (h) => {
     `floor (an attribute no rule reads): restyled [${(await flip("baseline")).join(", ")}]`,
   );
   await run("as deployed");
-
-  if (!counterfactual) return;
-  // Rewrite each `X:not(:where([data-input-modality="pointer"] *))` rule
-  // into the positive ancestor form `:where(:root:not([…])) X` in place.
-  const rewritten = await page.evaluate((only) => {
-    const out: string[] = [];
-    const negated = /:not\(:where\(\[data-input-modality="pointer"\] \*\)\)/g;
-    const walk = (l: CSSRuleList) => {
-      for (const r of [...l]) {
-        if (r instanceof CSSStyleRule && negated.test(r.selectorText)) {
-          negated.lastIndex = 0;
-          if (only !== undefined && !r.selectorText.includes(only)) {
-            r.selectorText = ".never-matches-probe";
-            out.push(`dropped`);
-            continue;
-          }
-          // Prefix once: the deployed rules hold no top-level comma (a
-          // grouped rule is one `:is(…)`).
-          r.selectorText = `:where(:root:not([data-input-modality="pointer"])) ${r.selectorText.replace(negated, "")}`;
-          out.push(r.selectorText);
-        }
-        if ("cssRules" in r && r.cssRules instanceof CSSRuleList)
-          walk(r.cssRules);
-      }
-    };
-    for (const sheet of [...document.styleSheets]) {
-      try {
-        walk(sheet.cssRules);
-      } catch (err) {
-        if (!(err instanceof DOMException)) throw err;
-      }
-    }
-    return out;
-  }, arg("only"));
-  for (const r of rewritten) console.log(`  rewritten: ${r}`);
-  if (rewritten.length === 0)
-    throw new Error(
-      "--counterfactual: no rule holds the negated form to rewrite (already the positive form?) — nothing to compare",
-    );
-  await run("rewritten");
 });

@@ -595,6 +595,7 @@ yes/no guard: `useConfirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `TooltipContent`
     - `TooltipProvider`
     - `TooltipTrigger`
+    - `trackInputModality`
     - `useControlSize`
     - `useHoldPopoverOpen`
     - `useMenuSurface`

@@ -4,6 +4,7 @@ import {
   Button,
   ControlSizeProvider,
   cn,
+  trackInputModality,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -148,6 +149,9 @@ function LiveMediaPlayer({
   const openOwnWindow = (w: Window, root: HTMLElement) => {
     const r = root.getBoundingClientRect();
     const dispose = mirrorPageInto(document, w.document);
+    // The window's focus and input never reach the page's tracker: it keeps
+    // its own, so a click there hides the rings there too.
+    const untrack = trackInputModality(w.document);
     setHolder({ width: r.width, height: r.height });
     // Moved, not copied: the same <video> keeps playing.
     placeHost(w.document.body, host);
@@ -156,6 +160,7 @@ function LiveMediaPlayer({
     w.addEventListener(
       "pagehide",
       () => {
+        untrack();
         dispose();
         placeHost(slotRef.current, host);
         setWin(null);

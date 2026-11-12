@@ -351,13 +351,15 @@
  * (`theme/input-modality.tsx`): focus a closing popup hands back to its
  * clicked trigger after Escape is `:focus-visible` to Chrome, not to the user.
  *
- * The modality is read as an ANCESTOR (`:where(:root:not([…])) &`), never as
- * a negated complex selector on the control (`&:not([…] *)`). Chrome cannot
- * narrow an attribute inside a complex `:not()` to the rule's subject, so every
- * flip of `data-input-modality` on <html> (each pointer press after a Tab, each
- * Tab after a click) restyled the whole document — 8,091 elements on /agents.
- * As an ancestor compound it invalidates the ring hosts alone (648). Measured
- * by `ui-kit/e2e/input-modality-flip-cost.ts`.
+ * The modality is read off the FOCUSED ELEMENT (`data-pointer-focus`, which
+ * the tracker keeps on the one focused element while the page is in pointer
+ * modality), never off <html>. Any rule reading a root attribute makes Chrome
+ * restyle every element the rule could match whenever that attribute changes:
+ * every ring host in the document (~7,000 with four Sonata windows) on the
+ * page's first pointer press and on each Tab ⇄ click after it. Only the
+ * focused element can be `:focus-visible`, so marking it costs that element
+ * and the `:has()` hosts above it. `:where()` keeps the mark out of the
+ * specificity. Measured by `ui-kit/e2e/input-modality-flip-cost.ts`.
  *
  * The ring is drawn INSIDE the control's box — a 2px outline inset by its own
  * width, over the resting border, following the control's corners. An outside
@@ -368,7 +370,7 @@
 @utility focus-ring {
   /* twmerge: standalone -- Additive box-shadow/outline; no single-value built-in group to conflict with. */
   @apply outline-none;
-  :where(:root:not([data-input-modality="pointer"])) &:focus-visible {
+  &:focus-visible:where(:not([data-pointer-focus])) {
     outline: 2px solid var(--ring);
     outline-offset: -2px;
   }
@@ -376,7 +378,7 @@
 
 @utility focus-ring-within {
   /* twmerge: standalone -- Additive box-shadow/outline; no single-value built-in group to conflict with. */
-  :where(:root:not([data-input-modality="pointer"])) &:has(:focus-visible) {
+  &:has(:focus-visible:where(:not([data-pointer-focus]))) {
     outline: 2px solid var(--ring);
     outline-offset: -2px;
   }
@@ -421,7 +423,7 @@
  * the indicator, so the UA outline would be the second one. */
 @utility focus-ring-from {
   /* twmerge: standalone -- Additive box-shadow/outline; no single-value built-in group to conflict with. */
-  :where(:root:not([data-input-modality="pointer"])) &:has(> [data-focus-ring]:focus-visible) {
+  &:has(> [data-focus-ring]:focus-visible:where(:not([data-pointer-focus]))) {
     outline: 2px solid var(--ring);
     outline-offset: -2px;
   }
