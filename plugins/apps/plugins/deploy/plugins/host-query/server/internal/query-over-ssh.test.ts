@@ -32,8 +32,14 @@ const ThingsSchema = z.object({ things: z.array(z.string()) }).strict();
 
 type SshFailureResult = Extract<SshRunResult, { ok: false }>;
 
-function ok(stdout: string): SshRunResult {
-  return { ok: true, stdout, stderr: "", learnedHostKey: null };
+/** What curl prints on the box: the body, then `-w`'s status line. */
+function ok(body: string, status = 200): SshRunResult {
+  return {
+    ok: true,
+    stdout: `${body}\n${status}`,
+    stderr: "",
+    learnedHostKey: null,
+  };
 }
 
 function fail(
@@ -56,8 +62,15 @@ const noInstance = async (): Promise<ThisInstanceResponse> => {
 describe("hostQueryCurlArgv", () => {
   it("curls the install's gateway on loopback, the URL single-quoted", () => {
     const argv = hostQueryCurlArgv(9100, PATH);
-    expect(argv.slice(0, 4)).toEqual(["curl", "-fsS", "-m", "10"]);
-    const url = new URL(unquoted(argv[4]!));
+    expect(argv.slice(0, 6)).toEqual([
+      "curl",
+      "-sS",
+      "-w",
+      "'\\n%{http_code}'",
+      "-m",
+      "10",
+    ]);
+    const url = new URL(unquoted(argv.at(-1)!));
     expect(url.origin).toBe("http://127.0.0.1:9100");
     expect(url.pathname).toBe("/api/host-only/things");
     expect(url.searchParams.get("q")).toBe("abc_DEF-123");
@@ -88,13 +101,14 @@ describe("hostQueryCurlArgv", () => {
 describe("mapSshAnswer", () => {
   it("parses an answer with the caller's schema", () => {
     expect(
-      mapSshAnswer(ok(JSON.stringify({ things: ["a"] })), ThingsSchema),
+      mapSshAnswer(ok(JSON.stringify({ things: ["a"] })), PATH, ThingsSchema),
     ).toEqual({ kind: "answer", value: { things: ["a"] } });
   });
 
   it("names non-JSON stdout as unreadable, never as an empty answer", () => {
     const mapped = mapSshAnswer(
       ok("<html>502 Bad Gateway</html>"),
+      PATH,
       ThingsSchema,
     );
     expect(mapped.kind).toBe("unreadable-answer");
@@ -105,12 +119,39 @@ describe("mapSshAnswer", () => {
 
   it("names JSON the schema refuses as unreadable", () => {
     expect(
-      mapSshAnswer(ok(JSON.stringify({ things: 3 })), ThingsSchema).kind,
+      mapSshAnswer(ok(JSON.stringify({ things: 3 })), PATH, ThingsSchema).kind,
+    ).toBe("unreadable-answer");
+  });
+
+  it("maps a 404 to route-missing: the site's release does not serve it", () => {
+    expect(mapSshAnswer(ok("Not found", 404), PATH, ThingsSchema)).toEqual({
+      kind: "route-missing",
+      path: PATH,
+    });
+  });
+
+  it("maps any other HTTP error to request-failed with its status", () => {
+    expect(mapSshAnswer(ok("boom", 500), PATH, ThingsSchema)).toEqual({
+      kind: "request-failed",
+      exitCode: 22,
+      stderr: "HTTP 500: boom",
+    });
+  });
+
+  it("names an answer without a status line as unreadable", () => {
+    expect(
+      mapSshAnswer(
+        { ok: true, stdout: "", stderr: "", learnedHostKey: null },
+        PATH,
+        ThingsSchema,
+      ).kind,
     ).toBe("unreadable-answer");
   });
 
   it("maps a failed remote command to request-failed with curl's exit code", () => {
-    expect(mapSshAnswer(fail("command-failed", 22), ThingsSchema)).toEqual({
+    expect(
+      mapSshAnswer(fail("command-failed", 22), PATH, ThingsSchema),
+    ).toEqual({
       kind: "request-failed",
       exitCode: 22,
       stderr: "raw stderr",
@@ -126,7 +167,7 @@ describe("mapSshAnswer", () => {
       "host-key-mismatch",
       "unknown",
     ] as const) {
-      expect(mapSshAnswer(fail(kind, 255), ThingsSchema)).toEqual({
+      expect(mapSshAnswer(fail(kind, 255), PATH, ThingsSchema)).toEqual({
         kind: "ssh-failed",
         failure: kind,
         message: `${kind} happened`,
@@ -159,7 +200,9 @@ describe("queryOverSsh", () => {
     expect(result).toEqual({ kind: "answer", value: { things: [] } });
     expect(calls).toHaveLength(1);
     expect(calls[0]!.target).toBe(TARGET);
-    expect(unquoted(calls[0]!.argv[4]!)).toBe(`http://127.0.0.1:9123${PATH}`);
+    expect(unquoted(calls[0]!.argv.at(-1)!)).toBe(
+      `http://127.0.0.1:9123${PATH}`,
+    );
   });
 
   it("never opens a session when the deployment does not resolve", async () => {
@@ -214,13 +257,14 @@ describe("maxAnswerBytes", () => {
 
   it("refuses an oversized answer unread, even when it would parse", () => {
     const big = JSON.stringify({ things: ["x".repeat(2_000)] });
-    const result = mapSshAnswer(ok(big), ThingsSchema, {
+    const result = mapSshAnswer(ok(big), PATH, ThingsSchema, {
       maxAnswerBytes: 1_000,
     });
     expect(result.kind).toBe("unreadable-answer");
     // Within the cap it parses as before.
     expect(
-      mapSshAnswer(ok(big), ThingsSchema, { maxAnswerBytes: 10_000 }).kind,
+      mapSshAnswer(ok(big), PATH, ThingsSchema, { maxAnswerBytes: 10_000 })
+        .kind,
     ).toBe("answer");
   });
 
@@ -228,7 +272,8 @@ describe("maxAnswerBytes", () => {
     // 400 three-byte characters: 400 chars, ~1,200 bytes.
     const wide = JSON.stringify({ things: ["€".repeat(400)] });
     expect(
-      mapSshAnswer(ok(wide), ThingsSchema, { maxAnswerBytes: 1_000 }).kind,
+      mapSshAnswer(ok(wide), PATH, ThingsSchema, { maxAnswerBytes: 1_000 })
+        .kind,
     ).toBe("unreadable-answer");
   });
 });
@@ -270,16 +315,25 @@ describe("queryOverSsh on a this-instance box", () => {
     expect(ssh).toBe(0);
   });
 
-  it("maps an HTTP error to curl's 22", async () => {
+  it("maps a 404 to route-missing", async () => {
     const { result } = await ask({
       kind: "response",
       status: 404,
       body: "nope",
     });
+    expect(result).toEqual({ kind: "route-missing", path: PATH });
+  });
+
+  it("maps any other HTTP error to curl's 22", async () => {
+    const { result } = await ask({
+      kind: "response",
+      status: 502,
+      body: "nope",
+    });
     expect(result).toEqual({
       kind: "request-failed",
       exitCode: 22,
-      stderr: "HTTP 404: nope",
+      stderr: "HTTP 502: nope",
     });
   });
 

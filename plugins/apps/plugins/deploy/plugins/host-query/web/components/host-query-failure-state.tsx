@@ -25,15 +25,12 @@ export interface HostQuerySubject {
   answer: string;
 }
 
-function curlExplanation(
-  exitCode: number | null,
-  subject: HostQuerySubject,
-): string {
+function curlExplanation(exitCode: number | null): string {
   switch (exitCode) {
     case CURL_EXIT.couldNotConnect:
       return "Nothing answered on the install's loopback port — the site is not running.";
     case CURL_EXIT.httpError:
-      return `The site answered with an error. If it was deployed before its ${subject.reading} were added to its composition, deploy it again.`;
+      return "The site answered with an error.";
     case CURL_EXIT.timedOut:
       return "The site took too long to answer.";
     case null:
@@ -110,8 +107,15 @@ export function HostQueryFailureState({
     case "request-failed":
       return (
         <HostQueryErrorState
-          title={curlExplanation(failure.exitCode, subject)}
+          title={curlExplanation(failure.exitCode)}
           detail={failure.stderr || undefined}
+        />
+      );
+    case "route-missing":
+      return (
+        <HostQueryErrorState
+          title={`This site runs a release older than this app: it cannot answer for its ${subject.reading} yet. Deploy it again (Deploy, at the top of this page) to read them.`}
+          detail={`404 on ${failure.path}`}
         />
       );
     case "unreadable-answer":

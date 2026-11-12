@@ -12,6 +12,9 @@ export const CURL_MAX_SECONDS = 10;
 /** The whole SSH attempt: connect + curl's deadline + slack. */
 export const SSH_TIMEOUT_MS = 20_000;
 
+/** curl's `-w`: the HTTP status on its own last line, after the body. */
+const STATUS_LINE_FORMAT = "\\n%{http_code}";
+
 /** How much of an unparseable answer is echoed back to the UI. */
 const ANSWER_HEAD_CHARS = 300;
 
@@ -63,7 +66,12 @@ export function hostQueryCurlArgv(
   }
   return [
     "curl",
-    "-fsS",
+    // No `-f`: an HTTP error is read from the status line `-w` appends, so a
+    // 404 (the site's release does not serve the route) is told apart from
+    // every other error. `\n` is expanded by curl itself.
+    "-sS",
+    "-w",
+    `'${STATUS_LINE_FORMAT}'`,
     "-m",
     String(CURL_MAX_SECONDS),
     // curl stops past the cap (exit 63) when the box declares the size up
@@ -94,6 +102,7 @@ function utf8Length(text: string): number {
 /** What the SSH layer answered, parsed with `schema` or mapped onto a failure. */
 export function mapSshAnswer<T>(
   result: SshRunResult,
+  path: string,
   schema: z.ZodType<T>,
   opts: HostQueryOptions = {},
 ): { kind: "answer"; value: T } | HostQueryFailure {
@@ -116,7 +125,44 @@ export function mapSshAnswer<T>(
     };
   }
 
-  return parseAnswerBody(result.stdout, schema, opts);
+  // The status line `-w` appends is always the last line; the body is
+  // everything before it.
+  const cut = result.stdout.lastIndexOf("\n");
+  const status = Number(result.stdout.slice(cut + 1));
+  if (cut < 0 || !Number.isInteger(status) || status === 0) {
+    return {
+      kind: "unreadable-answer",
+      detail: `No HTTP status line after the answer: ${result.stdout.slice(-ANSWER_HEAD_CHARS)}`,
+    };
+  }
+  return mapHttpResponse(
+    { status, body: result.stdout.slice(0, cut) },
+    path,
+    schema,
+    opts,
+  );
+}
+
+/**
+ * One HTTP answer from the box, whichever way it was asked: 404 is the route
+ * the site's release does not serve, any other status >= 400 a failed request
+ * (curl's 22), else the body parsed.
+ */
+function mapHttpResponse<T>(
+  { status, body }: { status: number; body: string },
+  path: string,
+  schema: z.ZodType<T>,
+  opts: HostQueryOptions,
+): { kind: "answer"; value: T } | HostQueryFailure {
+  if (status === 404) return { kind: "route-missing", path };
+  if (status >= 400) {
+    return {
+      kind: "request-failed",
+      exitCode: CURL_EXIT.httpError,
+      stderr: `HTTP ${status}: ${body.slice(0, ANSWER_HEAD_CHARS)}`,
+    };
+  }
+  return parseAnswerBody(body, schema, opts);
 }
 
 /**
@@ -183,9 +229,10 @@ export interface QueryDeps {
   fetchThisInstance: (path: string) => Promise<ThisInstanceResponse>;
 }
 
-/** The `this-instance` arm: one gateway hop, mapped like the curl's exit codes. */
+/** The `this-instance` arm: one gateway hop, mapped like the curl's answer. */
 export function mapThisInstanceAnswer<T>(
   response: ThisInstanceResponse,
+  path: string,
   schema: z.ZodType<T>,
   opts: HostQueryOptions = {},
 ): { kind: "answer"; value: T } | HostQueryFailure {
@@ -196,14 +243,7 @@ export function mapThisInstanceAnswer<T>(
       stderr: response.message,
     };
   }
-  if (response.status >= 400) {
-    return {
-      kind: "request-failed",
-      exitCode: CURL_EXIT.httpError,
-      stderr: `HTTP ${response.status}: ${response.body.slice(0, ANSWER_HEAD_CHARS)}`,
-    };
-  }
-  return parseAnswerBody(response.body, schema, opts);
+  return mapHttpResponse(response, path, schema, opts);
 }
 
 /** Throws unless `path` is a host-only route the SSH arm would also accept. */
@@ -223,11 +263,17 @@ export async function queryOverSsh<T>(
     assertHostOnlyPath(path);
     return mapThisInstanceAnswer(
       await deps.fetchThisInstance(path),
+      path,
       schema,
       opts,
     );
   }
   if (resolved.kind !== "ready") return resolved;
   const argv = hostQueryCurlArgv(resolved.loopbackPort, path, opts);
-  return mapSshAnswer(await deps.sshRun(resolved.target, argv), schema, opts);
+  return mapSshAnswer(
+    await deps.sshRun(resolved.target, argv),
+    path,
+    schema,
+    opts,
+  );
 }

@@ -98,8 +98,16 @@ describe("AnalyticsDashboard states", () => {
     ],
     [
       "site error",
-      { kind: "request-failed", exitCode: 22, stderr: "404" },
-      /deploy it again/,
+      { kind: "request-failed", exitCode: 22, stderr: "HTTP 500: boom" },
+      /answered with an error/,
+    ],
+    [
+      "route missing",
+      {
+        kind: "route-missing",
+        path: "/api/host-only/analytics/report",
+      },
+      /older than this app[\s\S]*Deploy it again/,
     ],
     [
       "unreadable",

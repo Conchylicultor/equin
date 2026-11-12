@@ -108,6 +108,7 @@ export const deploymentSessionsServed = serveValue(deploymentSessions, {
       case "unverified":
       case "ssh-failed":
       case "request-failed":
+      case "route-missing":
       case "unreadable-answer":
         // Which of SSH, the request or the answer failed is the meta's to
         // render (typed, with what to do); a page only says it could not.

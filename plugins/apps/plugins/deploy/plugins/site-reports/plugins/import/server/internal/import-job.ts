@@ -53,7 +53,7 @@ export const IMPORT_LIMITS = {
  *
  * A failed pull files nothing — it learned nothing about the site's errors —
  * and is logged and kept as the deployment's `last_outcome`. A site whose
- * composition does not ship the intake answers 404 (`request-failed`).
+ * release does not serve the intake answers 404 (`route-missing`).
  */
 export const importSiteReportsJob = defineJob({
   name: "site-reports.import",
@@ -157,6 +157,7 @@ function outcomeOf(
     | "unverified"
     | "ssh-failed"
     | "request-failed"
+    | "route-missing"
     | "unreadable-answer",
 ): ImportOutcome {
   switch (kind) {
@@ -165,6 +166,7 @@ function outcomeOf(
       return "not-connected";
     case "ssh-failed":
     case "request-failed":
+    case "route-missing":
     case "unreadable-answer":
       return kind;
   }

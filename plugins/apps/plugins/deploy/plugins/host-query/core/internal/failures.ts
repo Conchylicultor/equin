@@ -6,8 +6,8 @@ export const CURL_EXIT = {
   /** Nothing listening on the loopback port: the install is down. */
   couldNotConnect: 7,
   /**
-   * HTTP status >= 400 (`-f`): typically 404, the deployed release does not
-   * ship the plugin that answers the route yet.
+   * The box answered an HTTP error other than 404 (curl's own code for it,
+   * kept so both arms speak one vocabulary; a 404 is `route-missing`).
    */
   httpError: 22,
   /** `-m` deadline passed: the box took too long to answer. */
@@ -24,7 +24,11 @@ export const CURL_EXIT = {
  *   check has not succeeded once, so the box's identity is unknown.
  * - `ssh-failed` — SSH itself failed (unreachable, auth, host key changed…).
  * - `request-failed` — SSH worked; the curl on the box failed (`exitCode` is
- *   curl's, see {@link CURL_EXIT}).
+ *   curl's, see {@link CURL_EXIT}), or the site answered an HTTP error.
+ * - `route-missing` — the site answered 404 to the route: the release it runs
+ *   does not serve it (deployed before the route existed, or its composition
+ *   does not ship the plugin). On the box's own hop nothing else 404s a
+ *   host-only route, so this is the site being older than this app's reader.
  * - `unreadable-answer` — the box answered something that is not the answer.
  */
 export const HOST_QUERY_FAILURE_ARMS = [
@@ -43,6 +47,13 @@ export const HOST_QUERY_FAILURE_ARMS = [
       kind: z.literal("request-failed"),
       exitCode: z.number().int().nullable(),
       stderr: z.string(),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal("route-missing"),
+      /** The host-only path the site did not serve. */
+      path: z.string(),
     })
     .strict(),
   z

@@ -12,16 +12,22 @@ free of SSH (that is why it is not part of `host-only`, which ships on the box).
    `resolveServerSshTarget(…, "require-pinned")` — the same address, key and
    host-key rules as the connection check; an unverified server is refused,
    never trusted.
-2. Runs `curl -fsS -m 10 'http://127.0.0.1:<loopbackPort><path>'` over SSH. It
-   goes through the install's **gateway**, never the backend socket: `hostOnly`
-   answers only a request with exactly the gateway's one proxy hop.
-3. Parses stdout with `schema`.
+2. Runs `curl -sS -w '\n%{http_code}' -m 10 'http://127.0.0.1:<loopbackPort><path>'`
+   over SSH. It goes through the install's **gateway**, never the backend
+   socket: `hostOnly` answers only a request with exactly the gateway's one
+   proxy hop. No `-f`: the status line `-w` appends tells a 404 from any other
+   HTTP error.
+3. Parses the body with `schema`.
 
 The answer is `{ kind: "answer", value } | HostQueryFailure | { kind: "not-found" }`,
 never an empty value. The failures (core, `HOST_QUERY_FAILURE_ARMS`):
 `no-ssh-key` · `unverified` · `ssh-failed` (with the SSH failure kind) ·
-`request-failed` (curl's exit code: `CURL_EXIT` 7 site down, 22 HTTP error, 28
-timeout) · `unreadable-answer`. A consumer spreads the arms beside its own
+`request-failed` (curl's exit code: `CURL_EXIT` 7 site down, 22 an HTTP error
+other than 404, 28 timeout) · `route-missing` (the site answered 404: on the
+box's own hop nothing else 404s a host-only route, so the release it runs does
+not serve this route — deployed before it existed, or its composition does not
+ship it; rendered as "deploy it again", never as a generic HTTP error) ·
+`unreadable-answer`. A consumer spreads the arms beside its own
 answer's in its result schema.
 
 - `path` must sit under `HOST_ONLY_PREFIX` — throws otherwise. `sshRun` joins
@@ -46,8 +52,8 @@ demo's server, whose host-only data (analytics, messages) the demo wrote into
 its own database. `hostOnlyQueryOverSsh` then fetches the route through this
 instance's own gateway (`namespaceUrl(runtimeNamespace(), path)`, owner
 principal, one hop, the same 10 s deadline) instead of SSH, and maps it onto
-the same failures: network error -> `request-failed` 7, HTTP >= 400 ->
-`request-failed` 22. No SSH key or pinned host key is needed. Used by
+the same failures: network error -> `request-failed` 7, 404 -> `route-missing`,
+any other HTTP >= 400 -> `request-failed` 22. No SSH key or pinned host key is needed. Used by
 `deploy/fixtures` (`box: "this-instance"`).
 
 `server/internal/query-over-ssh.ts` holds the argv, the mapping and the query
