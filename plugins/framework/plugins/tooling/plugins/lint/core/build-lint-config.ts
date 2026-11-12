@@ -387,13 +387,81 @@ function isRuleOfKind(rule: unknown, kind: LintRuleKind | "all"): boolean {
   return kind === "all" || isTypeAwareRule(rule) === (kind === "type-aware");
 }
 
+/** One problem a type-aware rule reported, as recorded: where, and what it said. */
+export interface ReplayedProblem {
+  line: number;
+  /** 1-based, as ESLint reports it. */
+  column: number;
+  message: string;
+}
+
 /**
  * How the parser resolves TypeScript type information for type-aware rules.
  * `{ none: true }` resolves none: only syntactic rules may run under it, and a
  * type-aware one fails loudly (see `isTypeAwareRule`).
+ *
+ * `{ replayed }` resolves none either, and stands each type-aware rule in by
+ * what it ALREADY answered with types: a rule of the same id and `meta` (so
+ * its options validate and a directive naming it resolves) that reports
+ * `answers(ruleId)` for the file being linted. The type-check lint store keeps
+ * a directive file's typed answers apart from its directives
+ * (`checks/type-check` `shared/lint-engine.ts`); replayed beside the real
+ * syntactic rules, ESLint applies the file's directives to the whole problem
+ * set exactly as one run with a program would — without one. `answers` is
+ * read at each `verify`, so one config serves every file.
  */
 export type ParserTypeSource =
-  { projectService: true } | { programs: Program[] } | { none: true };
+  | { projectService: true }
+  | { programs: Program[] }
+  | { none: true }
+  | { replayed: { answers(ruleId: string): readonly ReplayedProblem[] } };
+
+/**
+ * A type-aware rule's stand-in under `{ replayed }`: its id's recorded
+ * problems, reported where they were. Same `meta` as the real rule.
+ */
+function replayedRule(
+  ruleId: string,
+  rule: unknown,
+  answers: (ruleId: string) => readonly ReplayedProblem[],
+): unknown {
+  const meta = (rule as { meta?: unknown }).meta;
+  return {
+    meta,
+    create(context: {
+      report(d: {
+        loc: { line: number; column: number };
+        message: string;
+      }): void;
+    }) {
+      return {
+        Program() {
+          for (const p of answers(ruleId)) {
+            // ESLint reports a 0-based column 1-based.
+            context.report({
+              loc: { line: p.line, column: p.column - 1 },
+              message: p.message,
+            });
+          }
+        },
+      };
+    },
+  };
+}
+
+/** `rules` with every type-aware rule replaced by its replayed stand-in. */
+function withReplayedRules(
+  ns: string,
+  rules: Record<string, unknown>,
+  answers: (ruleId: string) => readonly ReplayedProblem[],
+): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(rules).map(([id, rule]) => [
+      id,
+      isTypeAwareRule(rule) ? replayedRule(`${ns}/${id}`, rule, answers) : rule,
+    ]),
+  );
+}
 
 /**
  * How `exempt/` manifests apply:
@@ -638,6 +706,43 @@ export async function buildLintConfig(
         );
   }
 
+  // Replayed type answers: every type-aware rule of every plugin registered
+  // below stands in by its recorded answer — the ones no config enables too,
+  // so a directive naming one resolves as it does against the real plugin.
+  let tsRules = tsPlugin as unknown as ESLint.Plugin;
+  let reactHooksRules = reactHooks as unknown as ESLint.Plugin;
+  if ("replayed" in typeSource) {
+    const { answers } = typeSource.replayed;
+    const answer = (ruleId: string) => answers(ruleId);
+    const builtin = await loadBuiltinRules();
+    const typedCore = Object.keys(baseRules).filter(
+      (id) => !id.includes("/") && isTypeAwareRule(builtin[id]),
+    );
+    if (typedCore.length > 0) {
+      // A core rule cannot be redefined by a plugin, so it cannot stand in.
+      throw new Error(
+        `[eslint] the eslint core rules ${typedCore.join(", ")} read types, and a replayed type source cannot stand a core rule in`,
+      );
+    }
+    const replayPlugin = (ns: string, plugin: unknown): ESLint.Plugin => {
+      const p = plugin as ESLint.Plugin;
+      return {
+        ...p,
+        rules: withReplayedRules(
+          ns,
+          (p.rules ?? {}) as Record<string, unknown>,
+          answer,
+        ) as ESLint.Plugin["rules"],
+      };
+    };
+    tsRules = replayPlugin("@typescript-eslint", tsPlugin);
+    reactHooksRules = replayPlugin("react-hooks", reactHooks);
+    contributions = contributions.map((c) => ({
+      ...c,
+      rules: withReplayedRules(c.name, c.rules, answer),
+    }));
+  }
+
   const parserOptions: Record<string, unknown> = {
     ecmaVersion: "latest",
     sourceType: "module",
@@ -651,7 +756,8 @@ export async function buildLintConfig(
       ? { projectService: true }
       : "programs" in typeSource
         ? { programs: typeSource.programs, project: null }
-        : { project: null }),
+        : // `none`, or `replayed`: no rule left here asks for types.
+          { project: null }),
   };
 
   const baseConfigs: Linter.Config[] = [
@@ -668,8 +774,8 @@ export async function buildLintConfig(
         parserOptions: parserOptions as Linter.ParserOptions,
       },
       plugins: {
-        "@typescript-eslint": tsPlugin as unknown as ESLint.Plugin,
-        "react-hooks": reactHooks as unknown as ESLint.Plugin,
+        "@typescript-eslint": tsRules,
+        "react-hooks": reactHooksRules,
       },
       settings: {
         "react-hooks": {

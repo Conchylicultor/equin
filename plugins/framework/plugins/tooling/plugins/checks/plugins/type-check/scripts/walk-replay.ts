@@ -39,7 +39,11 @@ import { cpSync, mkdirSync, rmSync, writeFileSync } from "fs";
 import { join, resolve } from "path";
 import { computeTreeHash } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
-import { TYPE_CHECK_BATCH_FILES, type TypeCheckWorkerOutput } from "../core";
+import {
+  NO_TYPED_PARTS,
+  TYPE_CHECK_BATCH_FILES,
+  type TypeCheckWorkerOutput,
+} from "../core";
 import {
   launchTypeCheckWorker,
   type TypeCheckWorkerRequest,
@@ -124,7 +128,7 @@ async function runChain(
     tscMode: "keyed",
     onMiss: "throw",
     lintFiles: [],
-    typedParts: { split: [], whole: [] },
+    typedParts: NO_TYPED_PARTS,
     lintBase: null,
     walkBase: chain === "full" ? { kind: "none" } : { kind: "hint" },
     tree: (await readCheckTree(scratch, tsconfigPath, treeHash)).tree,

@@ -98,6 +98,7 @@ import { lintableFiles } from "./import-graph";
 import {
   codeCheckoutRoot,
   computeLintGroups,
+  rawTypedFps,
   typeAwareKey,
   typedGroupFps,
 } from "./lint-groups";
@@ -252,8 +253,12 @@ type BaseChoice =
   ({ kind: "base" } & ChosenBase) | { kind: "none"; reason: string };
 
 /** A typed part's name in the transcript's stale breakdown. */
-const typedLabel = (group: string): string =>
-  group === LINT_GROUP_ALL ? group : `(types) ${group}`;
+const typedLabel = (group: string, directive: boolean): string =>
+  group === LINT_GROUP_ALL
+    ? group
+    : directive
+      ? `(raw) ${group}`
+      : `(types) ${group}`;
 
 const toRel = (root: string, abs: string): string =>
   relative(root, abs).split("\\").join("/");
@@ -400,14 +405,20 @@ async function chooseBase(
  */
 function baseEntry(f: FileBase, lint: RunBaseLint): LintEntry {
   if (f.d === 1) {
+    // Its raw typed parts, then its verdict.
+    const typed: string[] = [];
+    const messages: LintEntry["messages"] = {};
+    for (const [g, fp] of rawTypedFps(new Map(Object.entries(lint.typed)))) {
+      const k = typedResultKey(fp, f.r);
+      typed.push(k);
+      const m = f.w?.[g];
+      if (m !== undefined) messages[k] = m;
+    }
     const k = typedResultKey(lint.allFp, f.r);
+    typed.push(k);
     const m = f.t?.[LINT_GROUP_ALL];
-    return {
-      directive: true,
-      syntactic: [],
-      typed: [k],
-      messages: m === undefined ? {} : { [k]: m },
-    };
+    if (m !== undefined) messages[k] = m;
+    return { directive: true, syntactic: [], typed, messages };
   }
   const messages: LintEntry["messages"] = {};
   const syntactic: string[] = [];
@@ -527,9 +538,13 @@ export async function openPreparation({
     group,
     fp,
   }));
-  const wholeParts: TypedPartFp[] = [
-    { group: LINT_GROUP_ALL, fp: groups.allFp },
-  ];
+  // A directive file's typed parts: its raw ones, run in a program, then its
+  // verdict (`allPart`), run with none over them.
+  const rawParts: TypedPartFp[] = [...rawTypedFps(typedFps)].map(
+    ([group, fp]) => ({ group, fp }),
+  );
+  const allPart: TypedPartFp = { group: LINT_GROUP_ALL, fp: groups.allFp };
+  const wholeParts: TypedPartFp[] = [...rawParts, allPart];
   // The inputs this run's state is valid under: what the next run's base
   // compares.
   const lint: RunBaseLint = {
@@ -540,7 +555,7 @@ export async function openPreparation({
   // Keys kept per part: a few versions of each, so two worktrees on two
   // versions of one rule — or of one hub's API — do not evict each other.
   const keepSyntactic = 3 * groups.fps.size;
-  const keepTyped = 3 * typedParts.length;
+  const keepTyped = 3 * wholeParts.length;
 
   // ── The run base ──
   // The current tree by shard, each shard's listing hashed from the versions
@@ -658,11 +673,18 @@ export async function openPreparation({
     states.set(rel, state);
     const typed = { known: known?.typed ?? [] };
     if (directive) {
+      // What its verdict replays of a raw part reused under its key.
+      const knownMessages: Record<string, RawLintMessage[]> = {};
+      for (const k of typed.known) {
+        const m = known?.messages[k];
+        if (m !== undefined) knownMessages[k] = m;
+      }
       lintFiles.push({
         file: join(root, rel),
         unit: "whole",
         syntactic: [],
         typed,
+        knownMessages,
       });
       continue;
     }
@@ -699,7 +721,7 @@ export async function openPreparation({
     kind: "run",
     program,
     lintFiles,
-    typedParts: { split: typedParts, whole: wholeParts },
+    typedParts: { split: typedParts, whole: rawParts, all: allPart },
     lintBase: base !== undefined && same ? base.hash : null,
     walkBase:
       base?.root.walk !== undefined
@@ -819,7 +841,7 @@ export async function openPreparation({
         if (m !== undefined) {
           fresh.set(key, m);
           out[group] = m;
-          count(typedLabel(group));
+          count(typedLabel(group, directive));
           continue;
         }
         if (!known?.typed.includes(key)) {
@@ -831,15 +853,36 @@ export async function openPreparation({
       }
       return out;
     };
-    const tally = (directive: boolean, syn: number, typedRan: number) => {
+    /**
+     * A directive file's typed results split into its verdict (`t`) and its
+     * raw typed parts (`w`), as the base holds them.
+     */
+    const verdictAndRaw = (
+      t: Record<string, RawLintMessage[]>,
+    ): {
+      t: Record<string, RawLintMessage[]>;
+      w: Record<string, RawLintMessage[]>;
+    } => {
+      const { [LINT_GROUP_ALL]: verdict, ...w } = t;
+      if (verdict === undefined) {
+        throw new Error("type-check: a directive file has no verdict");
+      }
+      return { t: { [LINT_GROUP_ALL]: verdict }, w };
+    };
+    /** Count one file's lint: a directive file's verdict ran with no program. */
+    const tallyDirective = (r: string, fresh: ReadonlyMap<string, unknown>) => {
+      const verdict = fresh.has(typedResultKey(allPart.fp, r));
+      const raw = fresh.size - (verdict ? 1 : 0);
+      if (!verdict && raw === 0) return;
+      ran.files++;
+      if (verdict) ran.syntactic++;
+      if (raw > 0) ran.typed++;
+      if (verdict && raw === rawParts.length) ran.whole++;
+    };
+    /** Count one split file's lint. */
+    const tally = (syn: number, typedRan: number) => {
       if (syn === 0 && typedRan === 0) return;
       ran.files++;
-      if (directive) {
-        ran.whole++;
-        ran.syntactic++;
-        ran.typed++;
-        return;
-      }
       if (syn > 0) ran.syntactic++;
       if (typedRan > 0) ran.typed++;
       if (syn === groups.fps.size && typedRan === typedParts.length) {
@@ -899,8 +942,14 @@ export async function openPreparation({
       }
       const freshT = new Map<string, RawLintMessage[]>();
       const t = typedOf(rel, st.directive, r, res, st.known, freshT);
-      tally(st.directive, freshS.size, freshT.size);
-      next.set(rel, fileBase(st.version, st.directive, r, s, t));
+      if (st.directive) {
+        tallyDirective(r, freshT);
+        const split = verdictAndRaw(t);
+        next.set(rel, fileBase(st.version, true, r, s, split.t, split.w));
+      } else {
+        tally(freshS.size, freshT.size);
+        next.set(rel, fileBase(st.version, false, r, s, t));
+      }
       if (st.carriedText) {
         // A text the base held, re-run because the rules moved. Its results
         // under the new rules go into the next base — content-addressed, so a
@@ -913,12 +962,16 @@ export async function openPreparation({
         // rules did NOT move is recorded: it ran because the file's result
         // key moved, as it would have under unchanged rules.
         const baseLint = base!.root.lint;
+        // A raw part moves with its typed part's fingerprint.
+        const typedUnmoved = (g: string) =>
+          baseLint.typed[g] === typedFps.get(g);
         const unmoved = new Set(
           (st.directive
-            ? baseLint.allFp === lint.allFp
-              ? wholeParts
-              : []
-            : typedParts.filter((p) => baseLint.typed[p.group] === p.fp)
+            ? [
+                ...rawParts.filter((p) => typedUnmoved(p.group)),
+                ...(baseLint.allFp === lint.allFp ? [allPart] : []),
+              ]
+            : typedParts.filter((p) => typedUnmoved(p.group))
           ).map((p) => typedResultKey(p.fp, r)),
         );
         const keptT = new Map([...freshT].filter(([k]) => unmoved.has(k)));
@@ -991,7 +1044,6 @@ export async function openPreparation({
       const freshT = new Map<string, RawLintMessage[]>();
       const directive = b.d === 1;
       const t = typedOf(rel, directive, r, res, stored, freshT);
-      tally(directive, 0, freshT.size);
       record(rel, b.v, stored, {
         directive,
         syntactic: new Map(),
@@ -999,7 +1051,14 @@ export async function openPreparation({
         keepSyntactic,
         keepTyped,
       });
-      next.set(rel, fileBase(b.v, directive, r, b.s ?? {}, t));
+      if (directive) {
+        tallyDirective(r, freshT);
+        const split = verdictAndRaw(t);
+        next.set(rel, fileBase(b.v, true, r, b.s ?? {}, split.t, split.w));
+      } else {
+        tally(0, freshT.size);
+        next.set(rel, fileBase(b.v, false, r, b.s ?? {}, t));
+      }
     }
     if (results.size > 0) {
       throw new Error(

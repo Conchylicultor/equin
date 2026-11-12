@@ -16,9 +16,11 @@ import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/c
 export const LINT_GROUP_BASE = "(base)";
 
 /**
- * Every group at once, as ONE result: what a file carrying an eslint directive
- * is linted and stored as, since whether a disable directive is unused depends
- * on every rule.
+ * A directive file's verdict, as ONE result: every rule's problems with the
+ * file's eslint directives applied (suppressions, unused-directive reports).
+ * Computed with no program (`../shared/lint-engine.ts` `combined`): the real
+ * syntactic rules beside the file's typed parts replayed — so a rule edit
+ * re-runs it without types, and only a typed part that moved needs a program.
  */
 export const LINT_GROUP_ALL = "(all)";
 
@@ -30,7 +32,7 @@ export interface TypedPartFp {
 
 /**
  * Which of a file's typed parts must run — the job's `typedParts.split` for a
- * split file, `typedParts.whole` (one part under `LINT_GROUP_ALL`) for a
+ * split file, `typedParts.whole` (its RAW typed parts, then its `all`) for a
  * directive file. Decided in the worker, which alone knows each file's result
  * key: for each part it computes `typedResultKey(fp, resultKey)` and runs it
  * iff that key is not among `known` (the file's stored typed keys, newest
@@ -40,31 +42,59 @@ export interface TypedDecision {
   known: string[];
 }
 
-/** The typed parts of every split file, and of every directive file. */
+/**
+ * The typed parts of every split file, and of every directive file.
+ *
+ * A directive file's typed parts are RAW (`whole`, one per type-aware group,
+ * run in a program like a split file's): every problem of the part's rules
+ * BEFORE the file's directives apply, warnings included — what its
+ * `LINT_GROUP_ALL` result (`all`, run with no program) replays. Their own
+ * fingerprints, so a raw result is never read as a split one.
+ */
 export interface TypedParts {
   split: TypedPartFp[];
   whole: TypedPartFp[];
+  /** Null only in a job that lints no file (`NO_TYPED_PARTS`). */
+  all: TypedPartFp | null;
 }
+
+/** The typed parts of a job that lints nothing. */
+export const NO_TYPED_PARTS: TypedParts = { split: [], whole: [], all: null };
 
 /**
  * One file to lint, and which of its parts to run.
  *
- * Two units, because a directive file cannot be split: whether a disable
- * directive is unused depends on every rule, so its whole result is one part
- * (`LINT_GROUP_ALL`), keyed on the types too. Every other file splits into its
- * syntactic groups — each a function of the file's text, run with no program —
- * and one typed part per type-aware group.
+ * Two units. A split file has its syntactic groups — each a function of the
+ * file's text, run with no program — and one typed part per type-aware group.
+ * A directive file's verdict depends on every rule at once (a directive
+ * suppresses another rule's problem; an unused one is reported), so its
+ * verdict is one result (`LINT_GROUP_ALL`) — computed with no program from its
+ * raw typed parts (`TypedParts`), which are linted in a program like a split
+ * file's typed parts and only when their own key moved.
  */
-export interface LintFileJob {
+export type LintFileJob = {
   /** Absolute path. */
   file: string;
-  unit: "split" | "whole";
   /** The syntactic groups whose stored result is stale (none for `whole`). */
   syntactic: string[];
   typed: TypedDecision;
-}
+} & (
+  | { unit: "split" }
+  | {
+      unit: "whole";
+      /**
+       * The stored messages of `typed.known`'s keys (the non-empty ones): a
+       * raw part reused under its key is replayed from here.
+       */
+      knownMessages: Record<string, RawLintMessage[]>;
+    }
+);
 
-/** One error-level (or fatal) lint message, before any exemption applies. */
+/**
+ * One error-level (or fatal) lint message, before any exemption applies — or,
+ * in a directive file's raw typed part, any problem of the part's rules, of
+ * any severity, before its directives apply.
+ */
 export interface RawLintMessage {
   /** null: the linter itself — a parse failure or an unused-disable report. */
   ruleId: string | null;

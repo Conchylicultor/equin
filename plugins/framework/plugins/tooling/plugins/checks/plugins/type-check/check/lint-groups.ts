@@ -49,9 +49,15 @@
 // messages are DROPPED, so the result store keeps messages unfiltered and the
 // current exemptions are applied when they are read (`./lint-verdict`).
 //
-// A file holding an eslint directive is one unit (`LINT_GROUP_ALL`): whether a
-// disable directive is "unused" depends on every rule, so its result is keyed
-// on every group at once (and its result key) and it is re-linted whole.
+// A file holding an eslint directive has one VERDICT (`LINT_GROUP_ALL`): a
+// directive suppresses any rule's problem and is reported when it suppressed
+// none, so the verdict is keyed on every group at once (and its result key).
+// It is computed with no program, over the file's RAW typed parts (`rawFps`:
+// its rules' problems before the directives), which are keyed per group like
+// a split file's typed parts. So a rule edit re-runs a directive file's
+// verdict without types, and only a typed part that moved needs a program —
+// before, every rule edit re-linted all ~470 directive files whole in one
+// program (+3.2 GB of worker peak, ~100 CPU-s; research/2026-11-12-global-type-check-worker-memory-split.md).
 //
 // A closure follows RUNTIME imports only (`runtimeImportSpecifiers`): an
 // `import type` is erased before a rule runs, so what sits behind it cannot
@@ -176,11 +182,13 @@ function ownSources(files: readonly string[]): string[] {
 }
 
 /**
- * This check's worker, whose lint loop is engine too. The file alone, not its
+ * This check's worker, whose lint loop is engine too, and the lint engine it
+ * lints with (the configs per part, the `--quiet` filter, a directive file's
+ * raw parts and the verdict combined from them). The files alone, not their
  * imports: those are the spawn protocol and process plumbing, which cannot
  * change a message — and the typed engine below.
  */
-const WORKER_SOURCES = ["../shared/worker.ts"];
+const WORKER_SOURCES = ["../shared/worker.ts", "../shared/lint-engine.ts"];
 
 /**
  * The typed engine: what decides the types a typed rule reads — the modules
@@ -206,9 +214,9 @@ export interface LintGroups {
   /** The typed engine's fingerprint: folded into every part that reads types. */
   typedEngineFp: string;
   /**
-   * The rules half of a directive file's single `LINT_GROUP_ALL` result key: a
-   * hash of every group's fingerprint and the typed engine, so a change to any
-   * rule re-lints it whole.
+   * The rules half of a directive file's verdict key (`LINT_GROUP_ALL`): a hash
+   * of every group's fingerprint and the typed engine, so a change to any rule
+   * re-runs it — with no program, over its raw typed parts.
    */
   allFp: string;
 }
@@ -243,6 +251,18 @@ export function typedGroupFps(
       return [g, groupHash(`(types)\n${g}\n${fp}\n${groups.typedEngineFp}`)];
     }),
   );
+}
+
+/**
+ * The rules half of each RAW typed part's key — a directive file's typed part
+ * (`TypedParts` in `../core`): the typed part's own fingerprint, salted, so a
+ * raw result (every problem before the directives, warnings included) is never
+ * read as a split file's filtered one.
+ */
+export function rawTypedFps(
+  typed: ReadonlyMap<string, string>,
+): Map<string, string> {
+  return new Map([...typed].map(([g, fp]) => [g, groupHash(`(raw)\n${fp}`)]));
 }
 
 /**
@@ -415,7 +435,7 @@ export async function computeLintGroups(
     `(typed engine)\n${body(ownSources(TYPED_ENGINE_SOURCES), code)}`,
   );
   const allFp = groupHash(
-    `${LINT_GROUP_ALL}\n${typedEngineFp}\n${[...fps].map(([g, fp]) => `${g}\0${fp}`).join("\n")}`,
+    `${LINT_GROUP_ALL} combined\n${typedEngineFp}\n${[...fps].map(([g, fp]) => `${g}\0${fp}`).join("\n")}`,
   );
   return {
     fps,

@@ -165,10 +165,11 @@ Results are stored per **(file, blob version)** (`shared/lint-results.ts`, `type
 | --- | --- | --- |
 | each syntactic group (base + one per contribution) | the group's fp | the file's text, or that group's rules/engine |
 | each typed part (`(types) <group>`) | `typedResultKey(typed group fp, result key)` | the text, a declaration it can name, or that group's type-aware rules |
-| a directive file, whole (`LINT_GROUP_ALL`) | `typedResultKey(all fp, result key)` | any of the above |
+| a directive file's raw typed parts (`(raw) <group>`) | `typedResultKey(raw group fp, result key)` | as its typed part |
+| a directive file's verdict (`LINT_GROUP_ALL`), run with **no program** | `typedResultKey(all fp, result key)` | any of the above |
 
 - **Rules half** (`check/lint-groups.ts`): one fp per group, each folding in the **engine**:
-  - the config builder's RUNTIME import closure (`LINT_CONFIG_SOURCE`; `import type` edges are erased, so not followed), `shared/worker.ts`, root tsconfigs. Keep the builder's imports to what can change a message — it takes the manifests' file set (`lint/core/ide-lint-config.ts` lists it) and the stylesheet's `@utility` set (`readDeclaredUtilities`) as data, so the repo-file enumeration, the file reads and the process plumbing under them stay out (a test holds it there: the engine reaches `lint/core` and `exempt/core` only);
+  - the config builder's RUNTIME import closure (`LINT_CONFIG_SOURCE`; `import type` edges are erased, so not followed), `shared/worker.ts` and `shared/lint-engine.ts`, root tsconfigs. Keep the builder's imports to what can change a message — it takes the manifests' file set (`lint/core/ide-lint-config.ts` lists it) and the stylesheet's `@utility` set (`readDeclaredUtilities`) as data, so the repo-file enumeration, the file reads and the process plumbing under them stay out (a test holds it there: the engine reaches `lint/core` and `exempt/core` only);
   - the npm code they LOAD: the packages the closure imports by name (held by `ENGINE_PACKAGES` in `lint-groups.test.ts`), closed over their dependencies in the code checkout's `bun.lock`, with the patches applied to any of them (`lockfileNpmClosure`, `infra/deps/npm`). Not the whole lockfile, not every `patches/` file, not `package.json`: a dependency or patch no rule loads (graphile-worker, @parcel/watcher, a server feature's new package) re-lints nothing;
   - the `@utility` set (`lintDataKey`).
 
@@ -190,7 +191,11 @@ Results are stored per **(file, blob version)** (`shared/lint-results.ts`, `type
   - A type-aware rule that forgot to declare itself throws in `getParserServices` (and `rule-kind-safety/type-aware-rule-declared` catches lazy ones).
   - Null-id messages (parse failures) belong to the syntactic base part.
 - `check/lint-verdict.ts` assembles messages under the CURRENT exemptions: an exemption edit re-lints nothing; an unused file-level exemption is reported.
-- **A file with an eslint directive is one unit** (~4 %): unused-directive detection depends on every rule, so it re-lints whole on any rule or key change.
+- **A file with an eslint directive (~4 %, ~470 files) has one verdict, combined with no program** (`shared/lint-engine.ts`). A directive suppresses any rule's problem and is reported when it suppressed none, so the verdict depends on every rule at once. It used to be linted whole in a program on any rule change, which put every directive file into program 2 as source for a one-line syntactic rule edit: 598 sources instead of 132, worker peak 5.2 GB instead of 2.0 GB (research/2026-11-12-global-type-check-worker-memory-split.md). Now it is linted in two steps:
+  - **raw typed parts**, one per typed group, in a program like a split file's typed parts (same configs, same decisions): every problem of the part's own rules **before** the directives apply — suppressed ones and warnings included (a warning a directive silences makes that directive used). Another rule's messages ("definition not found" for a rule the part does not register) and null-id ones are dropped;
+  - **the verdict**, in the worker's answer phase once R is known, with no program: every syntactic rule for real and every type-aware rule replayed from the raw parts (the config builder's `{ replayed }` type source: a stand-in with the rule's id and `meta` reporting what it answered). ESLint then applies the directives to the same problem set a whole-file run has, so suppression, `eslint-enable` pairing, blanket disables and an unused directive's one message naming its unused rules are ESLint's own code, not a reimplementation.
+  - So a syntactic rule edit re-runs ~470 verdicts without types (a few CPU-s), and a typed rule edit re-runs that raw part like any typed part. Parity: `shared/lint-engine.test.ts` (each coupled directive shape) and `scripts/directive-parity.ts` (every real directive file against a whole-file run; 472 files, 0 differ on 2026-11-12).
+  - The base keeps the raw parts apart (`w`), never in a verdict.
 - Each entry keeps a few keys per part, most recently RECORDED first, so worktrees on two versions of a hub keep each other's results. A reuse never reorders them: a run that only reuses results writes nothing (a most-recently-used order made two worktrees rewrite every entry for each other, run after run).
 - The flat config comes from `buildLintConfig` (`@plugins/framework/plugins/tooling/plugins/lint/core`), the same builder as root `eslint.config.ts`.
 
@@ -201,7 +206,7 @@ What a change costs:
 | body edit | the file |
 | exported-type change | the file, plus typed parts of users of the moved names |
 | workspace-only lockfile / exemption / app.css token | nothing |
-| one syntactic rule | that group everywhere |
+| one syntactic rule | that group everywhere, and every directive file's verdict (no program) |
 | one type-aware rule | that typed part everywhere (one program 2 over the tree) |
 | producer code | every typed part |
 | walk code | nothing |
@@ -350,6 +355,7 @@ Sizes: `research/2026-10-15-global-push-typecheck-lane-priority-and-cap.md`.
   - Exports (values):
     - `LINT_GROUP_ALL`
     - `LINT_GROUP_BASE`
+    - `NO_TYPED_PARTS`
     - `TYPE_CHECK_BATCH_FILES`
     - `TYPE_CHECK_DIVERGENCE_KIND`
     - `TYPE_CHECK_LIGHT_SOURCES`

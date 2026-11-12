@@ -11,7 +11,9 @@
 //   - the TYPED part also reads the checker's types, which are a function of
 //     the declarations the file can see — its key folds in the file's result
 //     key (`typedResultKey`, `../shared/keys`; `../shared/name-walk.ts`);
-//   - a directive file's WHOLE result is keyed the same way, on every rule.
+//   - a directive file's RAW typed parts are keyed like typed parts, and its
+//     VERDICT (`LINT_GROUP_ALL`, combined from them with no program) the
+//     same way, on every rule.
 //
 // The closure key this replaced re-linted every transitive importer of a file
 // whose BODY changed — a median of 470 files per main commit, p90 6,218 —
@@ -66,13 +68,14 @@ export const messageSchema = z.object({
 const entrySchema = z.object({
   /**
    * Whether the text can carry an eslint directive (`hasLintDirective`): such
-   * a file is linted and stored as one unit (`LINT_GROUP_ALL`).
+   * a file's typed parts are raw, and its verdict one result (`LINT_GROUP_ALL`).
    */
   directive: z.boolean(),
   /** Syntactic group fingerprints this text has a result for, newest first. */
   syntactic: z.array(z.string()),
   /**
-   * Typed result keys (the typed group's, or a directive file's whole one),
+   * Typed result keys (the typed groups', or a directive file's raw ones and
+   * its verdict's),
    * newest first. Apart from `syntactic` because a deferred typed part ships
    * these few to the worker, which must not receive ~100 group keys per file.
    */

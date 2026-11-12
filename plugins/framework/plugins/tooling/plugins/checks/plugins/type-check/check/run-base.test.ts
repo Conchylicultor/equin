@@ -5,8 +5,9 @@
  *   1. a base round-trips: the same tree re-run sends nothing, and the
  *      verdict is the recorded one;
  *   2. an edit sends only that file;
- *   3. a moved group fingerprint sends every file for that group only (and
- *      directive files whole);
+ *   3. a moved group fingerprint sends every file for that group only — and
+ *      a directive file's verdict, re-combined with no program over its raw
+ *      typed parts, which stand;
  *   4. a removed and an added file;
  *   5. an exemption edit changes the verdict with no re-lint, including the
  *      report of a file-level exemption that suppressed nothing;
@@ -148,7 +149,11 @@ async function prepare(): Promise<Session> {
   return p;
 }
 
-/** The fake linter: messages a function of the text, the group, and (typed) the key. */
+/**
+ * The fake linter: messages a function of the text, the group, and (typed) the
+ * key. A directive file's raw typed parts are its typed parts' messages; its
+ * verdict (`combined`) is the syntactic hit plus its raw messages.
+ */
 function lintMessages(
   text: string,
   part:
@@ -170,16 +175,12 @@ function lintMessages(
   if (part.kind === "syntactic" && syntacticHit) {
     out.push(m("x/syntactic", "syntactic"));
   }
-  if (part.kind === "typed") {
-    if (part.group === LINT_GROUP_ALL && text.includes("VIOLATION")) {
-      out.push(m("x/syntactic", "syntactic"));
-    }
-    if (
-      text.includes("TYPEDV") &&
-      (part.group === firstTyped || part.group === LINT_GROUP_ALL)
-    ) {
-      out.push(m("x/typed", `typed under ${part.r.slice(0, 8)}`));
-    }
+  if (
+    part.kind === "typed" &&
+    text.includes("TYPEDV") &&
+    part.group === firstTyped
+  ) {
+    out.push(m("x/typed", `typed under ${part.r.slice(0, 8)}`));
   }
   return out;
 }
@@ -187,9 +188,13 @@ function lintMessages(
 /** What one stand-in worker run did. */
 interface Worked {
   outcome: ProgramOutcome;
-  /** Files whose syntactic groups ran, and whose typed parts ran. */
+  /**
+   * Files whose syntactic groups ran, whose typed parts ran, and whose
+   * directive verdict was combined.
+   */
   syntactic: string[];
   typed: string[];
+  combined: string[];
 }
 
 /**
@@ -225,7 +230,10 @@ async function work(plan: Plan): Promise<Worked> {
       plan.lintBase === null
         ? undefined
         : loadRunBaseFiles(openRunBaseStore(), plan.lintBase),
-    knownTyped: (p, v) => lintStore.read(p, v)?.typed ?? [],
+    knownTyped: (p, v) => {
+      const e = lintStore.read(p, v);
+      return { keys: e?.typed ?? [], messages: e?.messages ?? {} };
+    },
     version: (p) => view.version(p),
     rel: (abs) => relative(root, abs),
     abs: (p) => join(root, p),
@@ -247,23 +255,42 @@ async function work(plan: Plan): Promise<Worked> {
     );
   }
   const syntactic: string[] = [];
-  const { results, lintKeys } = await decisions.answer(keys, ran, (f) => {
-    const rel = relative(root, f.file);
-    syntactic.push(rel);
-    const text = readRel(rel);
-    return Promise.resolve(
-      Object.fromEntries(
-        f.syntactic.map((g) => [
-          g,
-          lintMessages(text, { kind: "syntactic", group: g }, firstTyped),
-        ]),
-      ),
-    );
-  });
+  const combined: string[] = [];
+  const { results, lintKeys } = await decisions.answer(
+    keys,
+    ran,
+    (f) => {
+      const rel = relative(root, f.file);
+      syntactic.push(rel);
+      const text = readRel(rel);
+      return Promise.resolve(
+        Object.fromEntries(
+          f.syntactic.map((g) => [
+            g,
+            lintMessages(text, { kind: "syntactic", group: g }, firstTyped),
+          ]),
+        ),
+      );
+    },
+    (f, raw) => {
+      const rel = relative(root, f.file);
+      combined.push(rel);
+      const text = readRel(rel);
+      return Promise.resolve([
+        ...lintMessages(
+          text,
+          { kind: "syntactic", group: LINT_GROUP_ALL },
+          firstTyped,
+        ),
+        ...raw,
+      ]);
+    },
+  );
   return {
     outcome: { tscClean: true, lint: results, keys: lintKeys, walkRoot: null },
     syntactic: syntactic.sort(),
     typed: typed.sort(),
+    combined: combined.sort(),
   };
 }
 
@@ -396,16 +423,19 @@ test(
     for (const job of moved.plan.lintFiles) {
       const rel = relative(root, job.file);
       if (rel === D) {
-        // A directive file is one unit: whole, its old whole key not current.
+        // A directive file has one verdict, its old key not current.
         expect(job.unit).toBe("whole");
       } else {
         expect(job.unit).toBe("split");
         expect(job.syntactic).toEqual([group]);
       }
     }
-    // Every split file's typed parts stand: their keys are among the known.
+    // Every typed part stands — a directive file's raw ones too: their keys
+    // are among the known. So no program lints anything, and the directive
+    // file's verdict is re-combined without one.
     const worked = await work(moved.plan);
-    expect(worked.typed).toEqual([D]);
+    expect(worked.typed).toEqual([]);
+    expect(worked.combined).toEqual([D]);
     const done = await moved.finalize(worked.outcome);
     expect(done.lintViolations).toBe(before.done.lintViolations);
     // What the moved rules re-ran is in the next base only: no per-file

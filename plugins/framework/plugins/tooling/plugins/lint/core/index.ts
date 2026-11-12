@@ -29,6 +29,7 @@ export type {
   LintRuleSelection,
   LoadedLintContribution,
   ParserTypeSource,
+  ReplayedProblem,
 } from "./build-lint-config";
 export {
   collectTokens,

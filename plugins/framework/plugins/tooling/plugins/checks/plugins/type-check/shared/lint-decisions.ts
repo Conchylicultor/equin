@@ -19,13 +19,20 @@
 // The answer (`answer`) is per file where something happened, plus the result
 // key of every job and of every base file whose key moved: what the check
 // keys typed results by, and records in the next base.
+//
+// A directive file's typed parts are raw (`TypedParts`): decided like a split
+// file's, in a program. Its verdict (`TypedParts.all`, keyed on R too) is
+// decided in `answer`, once R is known, and runs with NO program when its key
+// is not known: from the raw parts that ran here and the ones reused under
+// their key (`knownMessages`).
 
-import type {
-  LintFileJob,
-  LintFileResult,
-  RawLintMessage,
-  TypedPartOutcome,
-  TypedParts,
+import {
+  LINT_GROUP_ALL,
+  type LintFileJob,
+  type LintFileResult,
+  type RawLintMessage,
+  type TypedPartOutcome,
+  type TypedParts,
 } from "../core";
 import { typedResultKey } from "./keys";
 
@@ -41,8 +48,14 @@ export interface LintDecisionsInput {
   typedParts: TypedParts;
   /** The base's files, by repo path — undefined when the job names every file. */
   base: { get(path: string): BaseFileKey | undefined } | undefined;
-  /** A base file's stored typed keys (the per-file lint store), newest first. */
-  knownTyped(path: string, version: string): readonly string[];
+  /**
+   * A base file's stored typed keys (the per-file lint store), newest first,
+   * and their non-empty messages.
+   */
+  knownTyped(
+    path: string,
+    version: string,
+  ): { keys: readonly string[]; messages: Record<string, RawLintMessage[]> };
   /** The version of a repo path in the checked tree. */
   version(path: string): string | undefined;
   /** Repo path of a job's absolute path, and back. */
@@ -71,12 +84,17 @@ export interface LintDecisions {
   /**
    * Every answer, once the type check has given each file its final key:
    * `ran` holds the typed parts that ran, by path; `syntactic` runs a job's
-   * stale syntactic groups.
+   * stale syntactic groups; `combined` a directive file's verdict from its
+   * raw typed messages, with no program.
    */
   answer(
     keys: ReadonlyMap<string, string>,
     ran: ReadonlyMap<string, readonly TypedPartOutcome[]>,
     syntactic: (job: LintFileJob) => Promise<Record<string, RawLintMessage[]>>,
+    combined: (
+      job: LintFileJob,
+      raw: readonly RawLintMessage[],
+    ) => Promise<RawLintMessage[]>,
   ): Promise<{ results: LintFileResult[]; lintKeys: Record<string, string> }>;
 }
 
@@ -98,12 +116,19 @@ export function createLintDecisions(input: LintDecisionsInput): LintDecisions {
           `type-check worker: ${path} is carried from the run base at version ${b.v}, and the tree has ${v ?? "no such file"}`,
         );
       }
-      d = {
-        file: input.abs(path),
-        unit: b.d === 1 ? "whole" : "split",
-        syntactic: [],
-        typed: { known: [...input.knownTyped(path, b.v)] },
-      };
+      const known = input.knownTyped(path, b.v);
+      const file = input.abs(path);
+      const typed = { known: [...known.keys] };
+      d =
+        b.d === 1
+          ? {
+              file,
+              unit: "whole",
+              syntactic: [],
+              typed,
+              knownMessages: known.messages,
+            }
+          : { file, unit: "split", syntactic: [], typed };
       derived.set(path, d);
     }
     return d;
@@ -122,21 +147,46 @@ export function createLintDecisions(input: LintDecisionsInput): LintDecisions {
       .map(({ group, fp }) => ({ group, key: typedResultKey(fp, r) }))
       .filter((p) => !f.typed.known.includes(p.key));
 
-  /** A file's typed outcomes under its final key, and whether to answer it. */
-  const outcome = (
+  /**
+   * A file's typed outcomes under its final key, and whether to answer it —
+   * for a directive file, its verdict too, combined here when its key is not
+   * known.
+   */
+  const outcome = async (
     path: string,
     f: LintFileJob,
     r: string,
     ran: readonly TypedPartOutcome[],
-  ): { typed: TypedPartOutcome[]; answer: boolean } => {
-    const ranKeys = new Set(ran.map((p) => p.key));
+    combined: (
+      job: LintFileJob,
+      raw: readonly RawLintMessage[],
+    ) => Promise<RawLintMessage[]>,
+  ): Promise<{ typed: TypedPartOutcome[]; answer: boolean }> => {
+    const ranMessages = new Map<string, RawLintMessage[]>();
+    for (const p of ran)
+      if (p.kind === "ran") ranMessages.set(p.key, p.messages);
     const typed: TypedPartOutcome[] = [...ran];
     const parts = partsOf(f);
-    const newest = new Set(f.typed.known.slice(0, parts.length));
+    const newest = new Set(
+      f.typed.known.slice(0, parts.length + (f.unit === "whole" ? 1 : 0)),
+    );
     let moved = ran.length > 0;
+    /** The messages of a part under `key`: what ran, else what was stored. */
+    const messagesOf = (key: string): readonly RawLintMessage[] => {
+      const m = ranMessages.get(key);
+      if (m !== undefined) return m;
+      if (f.unit !== "whole") {
+        throw new Error(
+          `type-check worker: ${path} is no directive file, and its stored typed messages were asked for`,
+        );
+      }
+      return f.knownMessages[key] ?? [];
+    };
+    const rawKeys: string[] = [];
     for (const { group, fp } of parts) {
       const key = typedResultKey(fp, r);
-      if (ranKeys.has(key)) continue;
+      rawKeys.push(key);
+      if (ranMessages.has(key)) continue;
       if (!f.typed.known.includes(key)) {
         throw new Error(
           `type-check worker: ${path}'s typed part ${group} is stale and no program linted it`,
@@ -144,6 +194,27 @@ export function createLintDecisions(input: LintDecisionsInput): LintDecisions {
       }
       if (!newest.has(key)) moved = true;
       typed.push({ group, kind: "cached", key });
+    }
+    if (f.unit === "whole") {
+      const { all } = input.typedParts;
+      if (all === null) {
+        throw new Error(
+          `type-check worker: directive file ${path} is linted by a job with no verdict part (NO_TYPED_PARTS)`,
+        );
+      }
+      const key = typedResultKey(all.fp, r);
+      if (f.typed.known.includes(key)) {
+        if (!newest.has(key)) moved = true;
+        typed.push({ group: LINT_GROUP_ALL, kind: "cached", key });
+      } else {
+        moved = true;
+        typed.push({
+          group: LINT_GROUP_ALL,
+          kind: "ran",
+          key,
+          messages: await combined(f, rawKeys.flatMap(messagesOf)),
+        });
+      }
     }
     return {
       typed,
@@ -170,7 +241,7 @@ export function createLintDecisions(input: LintDecisionsInput): LintDecisions {
       const f = jobOf(path, r);
       return f !== undefined && staleOf(f, r).length > 0;
     },
-    async answer(keys, ran, syntactic) {
+    async answer(keys, ran, syntactic, combined) {
       const results: LintFileResult[] = [];
       const lintKeys: Record<string, string> = {};
       const answerOne = async (
@@ -179,7 +250,7 @@ export function createLintDecisions(input: LintDecisionsInput): LintDecisions {
         r: string,
       ): Promise<void> => {
         lintKeys[path] = r;
-        const o = outcome(path, f, r, ran.get(path) ?? []);
+        const o = await outcome(path, f, r, ran.get(path) ?? [], combined);
         if (!o.answer) return;
         const syn =
           f.unit === "split" && f.syntactic.length > 0

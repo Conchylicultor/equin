@@ -214,6 +214,7 @@ its disable does not cover. Parameters and imports have no in-file value.
     - `LintToolkit`
     - `LoadedLintContribution`
     - `ParserTypeSource`
+    - `ReplayedProblem`
     - `TokenNode`
   - Exports (values):
     - `baseClass`

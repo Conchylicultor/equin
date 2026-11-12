@@ -145,8 +145,10 @@ async function lintRunner(job: Job, view: RepoView) {
     lintFiles: job.lintFiles,
     typedParts: job.typedParts,
     base,
-    knownTyped: (path, version) =>
-      (lintStore ??= openLintResultStore()).read(path, version)?.typed ?? [],
+    knownTyped: (path, version) => {
+      const e = (lintStore ??= openLintResultStore()).read(path, version);
+      return { keys: e?.typed ?? [], messages: e?.messages ?? {} };
+    },
     version: (path) => view.version(path),
     rel: (abs) => rel(job.root, abs),
     abs: (path) => join(job.root, path),
@@ -264,12 +266,21 @@ async function lintRunner(job: Job, view: RepoView) {
      * `./lint-decisions.ts`), and the keys the check records.
      */
     finish: (keys: ReadonlyMap<string, string>) =>
-      decisions.answer(keys, typedOut, async (f) => {
-        counts.syntactic++;
-        const ran = syntacticRan.get(rel(job.root, f.file));
-        if (ran !== undefined) return ran;
-        return engine.syntactic(f.file, read(f.file), f.syntactic);
-      }),
+      decisions.answer(
+        keys,
+        typedOut,
+        async (f) => {
+          counts.syntactic++;
+          const ran = syntacticRan.get(rel(job.root, f.file));
+          if (ran !== undefined) return ran;
+          return engine.syntactic(f.file, read(f.file), f.syntactic);
+        },
+        (f, raw) => {
+          // A directive file's verdict: syntactic lint with no program.
+          counts.syntactic++;
+          return engine.combined(f.file, read(f.file), raw);
+        },
+      ),
   };
 }
 

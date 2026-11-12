@@ -90,6 +90,28 @@ directive into one message, and multi-rule directives, `eslint-enable`
 pairing and blanket disables must all be handled. It also bumps the lint
 store format.
 
+**Fixed (2026-11-12, task-1794517407).** A directive file's typed parts are
+now RAW (its rules' problems before the directives, warnings and suppressed
+ones included), keyed and run like any typed part. Its verdict is combined
+with no program: the real syntactic rules beside every type-aware rule
+replayed from the raw parts (the config builder's `{ replayed }` type
+source), so ESLint applies the directives itself. Parity: every real
+directive file against one whole-file run (`scripts/directive-parity.ts`):
+472 files, 405 verdict messages, 0 differ. The same scenario (a `Check` type
+edit + a one-line edit of `no-global-declaration-in-source`, one run from a
+base):
+
+| | program 2 | worker peak | worker CPU |
+| --- | --- | --- | --- |
+| before | 598 sources (132 checked) + 4,187 `.d.ts` | 5.2 GB | 106–140 s |
+| after | 132 sources (132 checked) + 1,835 `.d.ts` | 3.6 GB | 46 s |
+| after, the rule edit alone | 131 sources (0 checked) | 3.2 GB | 39 s |
+
+What is left above the type edit's 2.0 GB is the rule edit's own cost:
+its group re-linted over all ~16.5k files with no program (35 CPU-s of
+lint). Its ~3 GB of RSS is not split yet (live heap vs. heap pacing's
+growth); filed as a follow-up.
+
 ## Tried and rejected: freeing programs and the walk earlier
 
 Two lifetime bugs exist, but neither moves the peak:

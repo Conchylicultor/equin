@@ -18,6 +18,7 @@ import type { ForegroundSlot } from "@plugins/infra/plugins/host/plugins/host-ad
 import {
   TYPE_CHECK_BATCH_FILES,
   TYPE_CHECK_LIGHT_SOURCES,
+  NO_TYPED_PARTS,
   TYPE_CHECK_WORKER_UNITS,
   type TypeCheckTree,
   type TypeCheckWorkerJob,
@@ -194,7 +195,7 @@ export async function spawnTypeCheckWorker(opts: {
 }): Promise<TypeCheckWorkerRun> {
   const { root, name, tsconfigPath, tscMode, onMiss, lintFiles, tree, grant } =
     opts;
-  const typedParts = opts.typedParts ?? { split: [], whole: [] };
+  const typedParts = opts.typedParts ?? NO_TYPED_PARTS;
   const lintBase = opts.lintBase ?? null;
   const walkBase = opts.walkBase ?? { kind: "hint" };
   const job = (batch: TypeCheckWorkerJob["batch"]): TypeCheckWorkerRequest => ({

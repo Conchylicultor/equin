@@ -18,14 +18,16 @@
 //     any message, and the day it was last marked used;
 //   - a SHARD is the files of one leaf plugin (`shardOf`), each with its
 //     version, directive flag, result key R (what keys its typed parts,
-//     `./name-walk.ts`) and its non-empty raw messages per part — keyed by its
+//     `./name-walk.ts`) and its non-empty raw messages per part (a directive
+//     file's raw typed parts apart, `w`: never part of a verdict) — keyed by its
 //     content hash, so nearby trees share every shard they agree on and a run
 //     writes only the shards whose state it changed.
 //
 // A file's state in a base is COMPLETE under the root's inputs: each syntactic
 // group's result under the root's fingerprint for it, each typed part's under
-// `typedResultKey(typed fp, R)`, a directive file's whole result under
-// `typedResultKey(all fp, R)`. So a later run whose inputs equal the root's
+// `typedResultKey(typed fp, R)`, a directive file's raw typed parts under
+// `typedResultKey(raw fp, R)` and its verdict under `typedResultKey(all fp, R)`.
+// So a later run whose inputs equal the root's
 // carries every file whose version did not move, and asks only the worker —
 // which alone knows R — whether a carried file's key moved.
 //
@@ -58,7 +60,9 @@ import { messageSchema } from "./lint-results";
 import { minLifetimeMs, openPassSet, type PassSetBounds } from "./pass-set";
 
 /** Bump when the meaning of a stored root or shard changes (its key would not). */
-export const RUN_BASE_FORMAT = 1;
+// 2 (2026-11-12): a directive file holds its raw typed parts (`w`) beside its
+// verdict, which a format-1 shard lacks.
+export const RUN_BASE_FORMAT = 2;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -103,7 +107,10 @@ assertShardsOutliveRoots("run base", ROOT_BOUNDS, SHARD_BOUNDS);
 export const fileBaseSchema = z.object({
   /** The file's version: its git blob sha. */
   v: z.string(),
-  /** Present (1) when the text carries an eslint directive: one unit, `LINT_GROUP_ALL`. */
+  /**
+   * Present (1) when the text carries an eslint directive: its verdict is one
+   * result (`LINT_GROUP_ALL`, in `t`), over its raw typed parts (`w`).
+   */
   d: z.literal(1).optional(),
   /** The file's result key R, which keys its typed parts. */
   r: z.string(),
@@ -111,6 +118,12 @@ export const fileBaseSchema = z.object({
   s: z.record(z.string(), z.array(messageSchema)).optional(),
   /** Non-empty typed results, by group (`LINT_GROUP_ALL` for a directive file). */
   t: z.record(z.string(), z.array(messageSchema)).optional(),
+  /**
+   * A directive file's non-empty RAW typed parts, by group: its rules'
+   * problems before the directives, which its verdict replays. Not messages
+   * of the verdict (`messagesOf`, `hasMessages` skip them).
+   */
+  w: z.record(z.string(), z.array(messageSchema)).optional(),
 });
 
 export type FileBase = z.infer<typeof fileBaseSchema>;
@@ -223,6 +236,7 @@ export function fileBase(
   r: string,
   s: Record<string, readonly RawLintMessage[]>,
   t: Record<string, readonly RawLintMessage[]>,
+  w: Record<string, readonly RawLintMessage[]> = {},
 ): FileBase {
   const nonEmpty = (x: Record<string, readonly RawLintMessage[]>) =>
     sortedRecord(
@@ -238,10 +252,19 @@ export function fileBase(
   if (ss !== undefined) out.s = ss;
   const tt = nonEmpty(t);
   if (tt !== undefined) out.t = tt;
+  const ww = nonEmpty(w);
+  if (ww !== undefined) {
+    if (!directive) {
+      throw new Error(
+        "type-check: raw typed parts recorded for a file with no eslint directive",
+      );
+    }
+    out.w = ww;
+  }
   return out;
 }
 
-/** Whether a file's state holds any message. */
+/** Whether a file's state holds any message of its verdict. */
 export const hasMessages = (f: FileBase): boolean =>
   f.s !== undefined || f.t !== undefined;
 

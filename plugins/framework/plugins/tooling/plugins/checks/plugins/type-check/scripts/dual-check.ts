@@ -31,7 +31,11 @@ import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core
 import { writeFileSync } from "fs";
 import { join, resolve } from "path";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
-import { TYPE_CHECK_BATCH_FILES, type TypeCheckWorkerOutput } from "../core";
+import {
+  NO_TYPED_PARTS,
+  TYPE_CHECK_BATCH_FILES,
+  type TypeCheckWorkerOutput,
+} from "../core";
 import {
   launchTypeCheckWorker,
   type TypeCheckWorkerRequest,
@@ -69,7 +73,7 @@ const job: TypeCheckWorkerRequest = {
   // A miss is what this script is run to find: it fails the run.
   onMiss: "throw",
   lintFiles: [],
-  typedParts: { split: [], whole: [] },
+  typedParts: NO_TYPED_PARTS,
   lintBase: null,
   walkBase: { kind: walkBase },
   // The checkout's working tree as it is now.

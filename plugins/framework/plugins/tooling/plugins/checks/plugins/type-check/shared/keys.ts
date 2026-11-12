@@ -10,7 +10,7 @@ export function sha256(s: string): string {
 
 /**
  * The result key of a part of a file's lint result that reads types: a typed
- * rule group's part, or a directive file's whole result (`LINT_GROUP_ALL`).
+ * rule group's part, a directive file's raw part, or its verdict (`LINT_GROUP_ALL`).
  * `partFp` is the rules' fingerprint, `typeKey` the file's result key
  * (`./name-walk.ts`) — what its check read.
  * Shortened like a group fingerprint: a store entry holds a handful of these,

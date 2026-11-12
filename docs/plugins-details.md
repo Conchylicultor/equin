@@ -31249,6 +31249,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values):
                   - `LINT_GROUP_ALL`
                   - `LINT_GROUP_BASE`
+                  - `NO_TYPED_PARTS`
                   - `TYPE_CHECK_BATCH_FILES`
                   - `TYPE_CHECK_DIVERGENCE_KIND`
                   - `TYPE_CHECK_LIGHT_SOURCES`
@@ -31856,6 +31857,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `LintToolkit`
               - `LoadedLintContribution`
               - `ParserTypeSource`
+              - `ReplayedProblem`
               - `TokenNode`
             - Exports (values):
               - `baseClass`

@@ -29,7 +29,7 @@ import {
   LINT_DATA_FILES,
   lintContributionPaths,
 } from "@plugins/framework/plugins/tooling/plugins/lint/core";
-import { LINT_GROUP_BASE } from "../core";
+import { LINT_GROUP_ALL, LINT_GROUP_BASE } from "../core";
 import { computeTreeHash } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { openPreparation, type Plan, type PrepareInput } from "./prepare";
 import { openPrepareThread } from "./prepare-thread";
@@ -143,6 +143,7 @@ test(
         typedParts: {
           split: expect.any(Array) as { group: string; fp: string }[],
           whole: expect.any(Array) as { group: string; fp: string }[],
+          all: { group: LINT_GROUP_ALL, fp: expect.any(String) as string },
         },
         // No run was recorded yet, so no base: every file is sent.
         lintBase: null,
