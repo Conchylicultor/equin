@@ -1,5 +1,6 @@
 import { ResourceError, type ResourceErrorKind } from "../core";
 import {
+  DEPLOY_SKEW_NOTE,
   ResourceDecodeError,
   ResourceHttpError,
   ResourceStaleReadError,
@@ -64,6 +65,13 @@ function kindOf(raw: unknown): {
     // tab is out of date: a dev bundle's `unknown` verdict is fixed by a
     // reload too.
     if (raw.reason === "contract-mismatch" || raw.reason === "unknown-key") {
+      // The page's deploy, not the tab, disagrees with the host: no reload
+      // fixes it, so it is no reload state — a failure, named.
+      if (raw.verdict === "deploy-skew")
+        return {
+          kind: "loader-failed",
+          message: raw.message + DEPLOY_SKEW_NOTE,
+        };
       if (raw.verdict !== "same-build") return OUTDATED;
       return raw.reason === "unknown-key"
         ? { kind: "not-found", message: raw.message }
@@ -83,7 +91,9 @@ function kindOf(raw: unknown): {
   // A value this bundle's schema rejects, judged by build: another build than
   // the server's is the shape moving under an open tab (reload fixes it); the
   // same build — or one side unable to say — is a real bug in the schema or
-  // the loader, which a reload would only repeat.
+  // the loader, which a reload would only repeat; and a `deploy-skew` (the
+  // page's deploy disagrees with central) a failure no reload fixes either —
+  // its message names it.
   if (raw instanceof ResourceDecodeError) {
     return raw.verdict === "skew"
       ? OUTDATED

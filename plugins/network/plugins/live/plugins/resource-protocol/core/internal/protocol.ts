@@ -136,6 +136,62 @@ export function contractVerdict(
   return clientBuild === serverGraph ? "same-build" : "skew";
 }
 
+/**
+ * A tab's own verdict on a mismatch with a host whose page it does not load
+ * from (central): the host's {@link ContractVerdict}, with `skew` split by
+ * whether a reload fixes it.
+ *
+ * - `skew` — a reload brings the build that host runs: the tab is out of date.
+ * - `deploy-skew` — a reload brings the build the tab already runs, or another
+ *   one the host does not run either: the code the tab's page is DEPLOYED from
+ *   disagrees with the host's (a worktree whose central code differs from the
+ *   central main runs). No reload fixes it, so it is never the reload state —
+ *   it is a mismatch between two deploys, reported as such.
+ *
+ * Only the tab can say: it alone knows what a reload brings (the `central` its
+ * page's server names, `reloadVerdict`). When it does not know, it never
+ * claims `deploy-skew`.
+ */
+export type ReadVerdict = ContractVerdict | "deploy-skew";
+
+/**
+ * Whether a reload fixes a `skew` with a host the page is not loaded from:
+ * `clientBuild` is the build the tab's bundle names to that host, `reloadBuild`
+ * the one a reload would bring (the page's server's `central`; `null` when it
+ * names none — main's backend, whose checkout central itself follows, a dist
+ * older than the name, no ack heard yet), `serverGraph` the host's own build
+ * (`null` when the tab has not heard it).
+ *
+ * | verdict    | reload brings                         | answer        |
+ * |------------|---------------------------------------|---------------|
+ * | not `skew` | —                                     | unchanged     |
+ * | `skew`     | not named                             | `skew`        |
+ * | `skew`     | the tab's own build                   | `deploy-skew` |
+ * | `skew`     | the host's build                      | `skew`        |
+ * | `skew`     | another build, the host's known       | `deploy-skew` |
+ * | `skew`     | another build, the host's not heard   | `skew`        |
+ *
+ * `deploy-skew` is claimed only on a named build: a tab that cannot say what a
+ * reload brings keeps the host's reading. The last row is the other one the
+ * tab cannot settle: the reload changes its build, and the reloaded tab is
+ * judged again, against a known host build.
+ */
+export function reloadVerdict(
+  verdict: ContractVerdict,
+  builds: {
+    clientBuild: string;
+    reloadBuild: string | null;
+    serverGraph: string | null;
+  },
+): ReadVerdict {
+  if (verdict !== "skew") return verdict;
+  const { clientBuild, reloadBuild, serverGraph } = builds;
+  if (reloadBuild === null) return "skew";
+  if (reloadBuild === clientBuild) return "deploy-skew";
+  if (serverGraph === null) return "skew";
+  return reloadBuild === serverGraph ? "skew" : "deploy-skew";
+}
+
 const REASONS: ReadonlySet<string> = new Set<SubErrorReason>(SUB_ERROR_REASONS);
 const VERDICTS: ReadonlySet<string> = new Set<ContractVerdict>(
   CONTRACT_VERDICTS,

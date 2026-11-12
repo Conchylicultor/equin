@@ -258,6 +258,20 @@ frames, which still reach **all** tabs — hence the gates below.
     tuple goes to the contract store (Reload advice) and its query to the
     `client-outdated` error state (last value kept as `stale`). Cleared by the
     next value the bundle CAN read; an `up-to-date` does not clear it.
+  - **Central's `skew` is split by what a reload brings** (`judgeFor` →
+    resource-protocol's `reloadVerdict`). The worktree server serves this
+    tab's page, so its `skew` is exactly "reload fixes it". Central does not:
+    a reload brings the central build the PAGE's server names on its acks
+    (`central` → `SocketChannel.servedCentral`). Central's build named there
+    — or none named (main's backend: central follows its checkout, so a
+    mid-deploy gap closes by itself; an older dist; no ack yet) → `skew`
+    (reload / the Build tray's server-behind). Another build →
+    `deploy-skew`: the code the page is deployed
+    from disagrees with the central that runs (a worktree whose central code
+    differs from main's) — no reload fixes it, so it is never the reload
+    state: a loud crash / `loader-failed` whose message names it
+    (`DEPLOY_SKEW_NOTE`), reported, and not counted by the Reload advice.
+    Sub-error and HTTP refusals from central are split the same way.
   - `same-build` / `unknown` (no graph: central before its digest lands, a
     dev bundle, a release's page naming no central build): a real bug —
     re-thrown off the socket loop as a crash (HTTP: `loader-failed`, reported).

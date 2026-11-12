@@ -6,12 +6,14 @@ export {
   ResourceContractError,
   ResourceRefusal,
   contractVerdict,
+  reloadVerdict,
   parseResourceBytesHeaders,
   parseResourceHttpErrorBody,
   resourceBytesHeaders,
 } from "./internal/protocol";
 export type {
   ContractVerdict,
+  ReadVerdict,
   ResourceHttpErrorBody,
   ResourceReadEnvelope,
   SubErrorReason,

@@ -14,10 +14,10 @@ import {
 import { RestartSkip } from "@plugins/build/plugins/restart-skip/plugins/hooks/server";
 export default {
   description:
-    "Served-bundle and server pin leaf: the commit this backend process was materialized from (serverPin — HEAD sampled at module eval, sealed by build/deployment at onAllReady, unresolved on a mixed boot), and reads the .build-commit (the tree the bundle was built from) and .build-graph (content identity of the served web graph) trailers out of the served dist, fresh on every call; also registers the boot-memoized graph as the live-resource runtime's build identity (contract-mismatch verdicts), re-read when the backend adopts a deploy instead of restarting (restart-skip). A leaf so the deployment description and stale-tab detection read them without importing the heavy build barrel (which pulls git-watcher/worktree).",
+    "Served-bundle and server pin leaf: the commit this backend process was materialized from (serverPin — HEAD sampled at module eval, sealed by build/deployment at onAllReady, unresolved on a mixed boot), and reads the .build-commit (the tree the bundle was built from) and .build-graph (content identity of the served web graph) trailers out of the served dist, fresh on every call; also registers the boot-memoized graph as the live-resource runtime's build identity (contract-mismatch verdicts), and the served page's central build (.central-build) as what its ack frames name a reload brings for central's values (deploy-skew vs skew), re-read when the backend adopts a deploy instead of restarting (restart-skip). A leaf so the deployment description and stale-tab detection read them without importing the heavy build barrel (which pulls git-watcher/worktree).",
   contributions: [
     RestartSkip.Adopted({
-      what: "the web graph live-resource contract verdicts are judged against",
+      what: "the web graph live-resource contract verdicts are judged against, and the served page's central build",
       adopt: pinClientBuildIdentity,
     }),
   ],

@@ -807,6 +807,10 @@ mismatched tuple — typically a tab on the previous bundle.
 - **Verdict** (`rejectContract`) compares the client `build` with
   `serverBuildGraph()`: `skew` is only `console.warn`ed; `same-build` / `unknown`
   are reported.
+- **`servedCentralBuild()`** (server only): the central build the page this
+  host serves was built against, named on every ack frame as `central` beside
+  `graph` — so a tab can tell a central skew a reload fixes from one it cannot
+  (`deploy-skew`, judged client-side: resource-protocol's `reloadVerdict`).
 - **Backstop**: a `ResourceContractError` from a registered tuple's loader evicts
   it everywhere (`evictOnContractError`) and always reports.
 - Declaration-time and encode failures stay plain `Error`s (programmer errors).

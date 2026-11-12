@@ -3,6 +3,7 @@ import {
   ResourceContractError,
   ResourceRefusal,
   contractVerdict,
+  reloadVerdict,
   parseResourceBytesHeaders,
   parseResourceHttpErrorBody,
   resourceBytesHeaders,
@@ -111,5 +112,34 @@ describe("bytes read envelope headers", () => {
     );
     noEpoch.delete("x-resource-epoch");
     expect(() => parseResourceBytesHeaders("k", noEpoch)).toThrow(/envelope/);
+  });
+});
+
+describe("reloadVerdict", () => {
+  const b = (reloadBuild: string | null, serverGraph: string | null) => ({
+    clientBuild: "c-tab",
+    reloadBuild,
+    serverGraph,
+  });
+  test("leaves every verdict but skew as it is", () => {
+    expect(reloadVerdict("same-build", b("c-tab", "c-tab"))).toBe("same-build");
+    expect(reloadVerdict("unknown", b("c-other", null))).toBe("unknown");
+  });
+  test("a page server naming no reload build: the host's skew stands (never a deploy-skew claim on nothing)", () => {
+    expect(reloadVerdict("skew", b(null, "c-central"))).toBe("skew");
+    expect(reloadVerdict("skew", b(null, null))).toBe("skew");
+  });
+  test("a reload that brings the tab's own build back fixes nothing: deploy-skew", () => {
+    expect(reloadVerdict("skew", b("c-tab", "c-central"))).toBe("deploy-skew");
+    expect(reloadVerdict("skew", b("c-tab", null))).toBe("deploy-skew");
+  });
+  test("a reload that brings the host's build: skew (reload fixes it)", () => {
+    expect(reloadVerdict("skew", b("c-central", "c-central"))).toBe("skew");
+  });
+  test("a reload that brings a third build the host does not run: deploy-skew", () => {
+    expect(reloadVerdict("skew", b("c-new", "c-central"))).toBe("deploy-skew");
+  });
+  test("a reload that changes the build, the host's unheard: skew (judged again after it)", () => {
+    expect(reloadVerdict("skew", b("c-new", null))).toBe("skew");
   });
 });

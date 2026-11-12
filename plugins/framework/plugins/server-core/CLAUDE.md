@@ -666,6 +666,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `setLiveStateSnapshotHooks`
     - `setProfilerHooks`
     - `setRelationBases`
+    - `setServedCentralBuild`
     - `setWatermarkSource`
     - `sinkHandler`
     - `triggerResourcePush`

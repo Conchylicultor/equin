@@ -376,6 +376,21 @@ export function setClientBuildIdentity(fn: () => string | null): void {
   clientBuildIdentity = fn;
 }
 
+// The central build the page this backend serves was built against
+// (`ResourceRuntimeOptions.servedCentralBuild`, named on every ack frame as
+// `central`): what a reload brings a tab for central's values, so the tab can
+// tell a central value it cannot decode that a reload fixes from one no reload
+// can (this checkout's central code differs from the central that runs).
+// Boot-injected by `build/server-build-id` beside the graph, from the served
+// dist's `.central-build`; memoized at boot like it. Unnamed (`null`) before
+// injection, on main (central follows its checkout), on central and in a
+// browser host — the tab then keeps the host's `skew` reading, never claiming
+// a `deploy-skew` it cannot see.
+let servedCentralBuild: () => string | null = () => null;
+export function setServedCentralBuild(fn: () => string | null): void {
+  servedCentralBuild = fn;
+}
+
 // Told every build graph a tab names (`ResourceRuntimeOptions.onClientBuild`):
 // boot-injected by `build/server-build-id`, which marks the graph as still
 // needed so the next build keeps serving that bundle's addresses. No-op before
@@ -684,6 +699,8 @@ const runtime = createResourceRuntime({
       : epochHandoffHooks.load(epoch),
   // Reads the boot-injected holder at call time (see `setClientBuildIdentity`).
   serverBuildGraph: () => clientBuildIdentity(),
+  // Reads the boot-injected holder at call time (see `setServedCentralBuild`).
+  servedCentralBuild: () => servedCentralBuild(),
   // Reads the boot-injected holder at call time (see `setClientBuildObserver`).
   onClientBuild: (build) => clientBuildObserver(build),
   keySet: () => keySet,

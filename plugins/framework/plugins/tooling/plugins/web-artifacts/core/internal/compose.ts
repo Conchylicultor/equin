@@ -313,6 +313,16 @@ export function composeDist(opts: ComposeOptions): {
       `<script type="module" src="${opts.entryUrl}"></script>`,
     );
   writeFileSync(joinAppPath(stagingDir, "index.html"), html);
+  // The page's central build, beside the page that bakes it: the served dist's
+  // `.central-build`, which the backend serving this page names to its tabs
+  // (`build/server-build-id` → the ack frames' `central`) — what a reload
+  // brings a tab, so it can tell a central value a reload fixes from one no
+  // reload can. None when the page names none (a release): unknown.
+  if (opts.centralBuild !== null && opts.centralBuild !== "")
+    writeFileSync(
+      joinAppPath(stagingDir, ".central-build"),
+      opts.centralBuild + "\n",
+    );
 
   // 6. HARD verification: every URL the page will request must resolve to a
   // real file through the staged tree (following the store symlinks).

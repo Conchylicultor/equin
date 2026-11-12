@@ -14892,9 +14892,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/website/promo-film`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/reset.ts` (debt)
-    - **`server-build-id`** — Served-bundle and server pin leaf: the commit this backend process was materialized from (serverPin — HEAD sampled at module eval, sealed by build/deployment at onAllReady, unresolved on a mixed boot), and reads the .build-commit (the tree the bundle was built from) and .build-graph (content identity of the served web graph) trailers out of the served dist, fresh on every call; also registers the boot-memoized graph as the live-resource runtime's build identity (contract-mismatch verdicts), re-read when the backend adopts a deploy instead of restarting (restart-skip). A leaf so the deployment description and stale-tab detection read them without importing the heavy build barrel (which pulls git-watcher/worktree).
+    - **`server-build-id`** — Served-bundle and server pin leaf: the commit this backend process was materialized from (serverPin — HEAD sampled at module eval, sealed by build/deployment at onAllReady, unresolved on a mixed boot), and reads the .build-commit (the tree the bundle was built from) and .build-graph (content identity of the served web graph) trailers out of the served dist, fresh on every call; also registers the boot-memoized graph as the live-resource runtime's build identity (contract-mismatch verdicts), and the served page's central build (.central-build) as what its ack frames name a reload brings for central's values (deploy-skew vs skew), re-read when the backend adopts a deploy instead of restarting (restart-skip). A leaf so the deployment description and stale-tab detection read them without importing the heavy build barrel (which pulls git-watcher/worktree).
       - Server:
-        - Contributes: `restart-skip.adopted` "the web graph live-resource contract verdicts are judged against"
+        - Contributes: `restart-skip.adopted` "the web graph live-resource contract verdicts are judged against, and the served page's central build"
         - Uses:
           - `build/restart-skip/hooks.RestartSkip`
           - `infra/paths.GIT`
@@ -30573,6 +30573,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `setLiveStateSnapshotHooks`
           - `setProfilerHooks`
           - `setRelationBases`
+          - `setServedCentralBuild`
           - `setWatermarkSource`
           - `sinkHandler`
           - `triggerResourcePush`
@@ -37288,11 +37289,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runtimeNamespace`
           - `servingSocketPath`
       - Cross-plugin:
-        - Imported by: 71 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
+        - Imported by: 72 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
           - `infra` ×16
           - `debug` ×14
           - `conversations` ×9
-          - `build` ×7
+          - `build` ×8
           - `apps` ×5
           - `database` ×4
           - `tasks` ×4
@@ -40284,6 +40285,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DeriveSource`
               - `ExactClientFrame`
               - `ExactServerFrame`
+              - `ReadVerdict`
               - `ReceivedFrame`
               - `ResourceHttpErrorBody`
               - `ResourceReadEnvelope`
@@ -40300,6 +40302,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `parseResourceBytesHeaders`
               - `parseResourceHttpErrorBody`
               - `PROTOCOL`
+              - `reloadVerdict`
               - `RESOURCE_BYTES_CONTENT_TYPE`
               - `RESOURCE_BYTES_HEADERS`
               - `RESOURCE_HTTP_ROUTE`

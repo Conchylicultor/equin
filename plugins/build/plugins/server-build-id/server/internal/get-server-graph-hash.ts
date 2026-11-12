@@ -23,3 +23,19 @@ export async function getServerGraphHash(): Promise<string | null> {
     return null;
   }
 }
+
+// The central build the served page was built against, read from the served
+// dist's `.central-build` (written by compose beside the page that bakes it as
+// VITE_CENTRAL_BUILD). What a reload brings a tab for central's values: the
+// backend names it on its ack frames (`setServedCentralBuild`), so a tab can
+// tell a central value a reload fixes from one no reload can.
+export async function getServedCentralBuild(): Promise<string | null> {
+  try {
+    return (
+      (await readFile(`${webDistDir()}/.central-build`, "utf8")).trim() || null
+    );
+    // eslint-disable-next-line promise-safety/no-bare-catch, promise-safety/no-absorbed-failure -- best-effort optional dotfile read, the `.build-graph` sibling's rule: a dist composed before the trailer existed, or a page naming no central build (a release), legitimately means "unnamed" — the tab then keeps central's `skew` reading as before, never claiming a `deploy-skew` it cannot see
+  } catch {
+    return null;
+  }
+}

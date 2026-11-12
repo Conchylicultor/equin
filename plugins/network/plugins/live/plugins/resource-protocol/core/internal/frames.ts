@@ -205,6 +205,13 @@ const c = <const K extends string, const F extends WireFields>(
  *   (`contractVerdict`): another build is skew (the tab is out of date, a
  *   reload fixes it), the same build a real bug. Absent when the server cannot
  *   say (no served graph, central before its digest lands).
+ * - `central` (beside `graph`, from a host serving a page): the central build
+ *   that page was built against — what a reload brings a tab for central's
+ *   values. A tab whose schema rejects a central value its own bundle's
+ *   central build calls skew asks it whether a reload fixes that: central's
+ *   build named here, yes (`skew`); another, no (`deploy-skew` — the code
+ *   this host's page was built from disagrees with the central that runs,
+ *   reported). Absent from central itself and from a host that cannot say.
  * - `watermark` (Rule B′): the xid8 snapshot floor a FULLY reconciling value
  *   was read under — sub-ack, update, full keyed delta; never a scoped delta.
  * - `ackTx`: the source-transaction ids a feed-driven recompute folded in.
@@ -264,6 +271,7 @@ const SERVER_FRAMES = {
     joinedMs: w.optional(w.number),
     epoch: w.string,
     graph: w.optional(w.string),
+    central: w.optional(w.string),
   }),
   /**
    * A DERIVED sub-ack: the tuple's value is the slice the asking tab's
@@ -280,6 +288,7 @@ const SERVER_FRAMES = {
     version: w.number,
     epoch: w.string,
     graph: w.optional(w.string),
+    central: w.optional(w.string),
     derived: w.object({ id: w.string }),
   }),
   /**
@@ -295,6 +304,7 @@ const SERVER_FRAMES = {
     version: w.number,
     epoch: w.string,
     graph: w.optional(w.string),
+    central: w.optional(w.string),
   }),
   /** "Your cached value is still current" — the WS twin of HTTP 304. */
   "up-to-date": s("up-to-date", {
@@ -305,11 +315,13 @@ const SERVER_FRAMES = {
     version: w.number,
     epoch: w.string,
     graph: w.optional(w.string),
+    central: w.optional(w.string),
   }),
   /** One frame answering every already-current entry of a `sub-batch`. */
   "up-to-date-batch": s("up-to-date-batch", {
     epoch: w.string,
     graph: w.optional(w.string),
+    central: w.optional(w.string),
     /** The tab whose `sub-batch` this answers; each entry echoes its `id`. */
     tabId: w.optional(w.string),
     entries: w.array(

@@ -35,6 +35,7 @@ import {
 import {
   BUILD_GRAPH_HEADER,
   contractVerdict,
+  reloadVerdict,
   DERIVE_MAX_SOURCES,
   DEV_BUILD,
   parseResourceBytesHeaders,
@@ -42,6 +43,7 @@ import {
   parseResourceHttpErrorBody,
   type ClientFrame,
   type ContractVerdict,
+  type ReadVerdict,
   type Derivation,
   type DeriveSource,
   type ExactClientFrame,
@@ -137,6 +139,7 @@ function decodeValue<T>(
   params: ResourceParams,
   kind: SocketKind,
   serverGraph: string | undefined,
+  judge: ReadJudge,
 ): T {
   try {
     return schema.parse(value);
@@ -144,11 +147,17 @@ function decodeValue<T>(
     throw new ResourceDecodeError(
       key,
       params,
-      contractVerdict(clientBuild(kind), serverGraph ?? null),
+      judge(contractVerdict(clientBuild(kind), serverGraph ?? null)),
       err,
     );
   }
 }
+
+/**
+ * The tab's own verdict on a host's: identity for the worktree (its page IS
+ * that server's), the reload split for central (`NotificationsClient.judgeFor`).
+ */
+type ReadJudge = (verdict: ContractVerdict) => ReadVerdict;
 
 /**
  * Record a server refusal that means "this bundle does not speak the
@@ -159,7 +168,7 @@ function noteContractRefusal(
   key: string,
   params: ResourceParams,
   reason: SubErrorReason | undefined,
-  verdict: ContractVerdict | undefined,
+  verdict: ReadVerdict | undefined,
 ): void {
   if (reason !== "contract-mismatch" && reason !== "unknown-key") return;
   markResourceContractMismatch({
@@ -663,6 +672,13 @@ interface SocketChannel {
    * off this socket is judged against it (`decodeValue`).
    */
   serverGraph?: string;
+  /**
+   * The central build the page this server serves was built against — what a
+   * reload brings this tab for central's values — learned from the same ack
+   * frames (`central`) and forgotten with them. Only a page's own server names
+   * one (the worktree socket); read by `judgeFor`.
+   */
+  servedCentral?: string;
   /**
    * How many times this channel's socket has opened. A replay on a NEW socket
    * re-baselines by design: the server released the old socket's tuples, so
@@ -1423,6 +1439,33 @@ export class NotificationsClient {
   }
 
   /**
+   * How this tab judges a mismatch with `kind`'s server, given the host's
+   * verdict. The worktree server serves this tab's page, so its `skew` is
+   * exactly "a reload fixes it" — kept as is. Central serves every page and
+   * this tab's is not loaded from it: its `skew` only says the tab's central
+   * build is not central's, and a reload brings the central build the PAGE's
+   * server names (`servedCentral`). `reloadVerdict` splits it: `skew` when
+   * that is central's build — or when the server names none (main, whose
+   * checkout central follows; an older dist; no ack yet): the tab cannot say
+   * a reload won't fix it — and `deploy-skew` when no reload can (a worktree
+   * whose central code differs from main's): never the reload state, reported
+   * loudly. `serverGraph` is the build the judged value or refusal
+   * came with, else the one this tab last heard from central.
+   */
+  private judgeFor(
+    kind: SocketKind,
+    serverGraph: string | undefined,
+  ): ReadJudge {
+    if (kind !== "central") return (verdict) => verdict;
+    return (verdict) =>
+      reloadVerdict(verdict, {
+        clientBuild: clientBuild("central"),
+        reloadBuild: this.channels.worktree?.servedCentral ?? null,
+        serverGraph: serverGraph ?? this.channels.central?.serverGraph ?? null,
+      });
+  }
+
+  /**
    * A value the server pushed failed this tab's schema, and the server runs
    * another build (`ResourceDecodeError`, verdict `skew`): this tab is out of
    * date. Not a crash and not dropped — the read enters the `client-outdated`
@@ -1881,7 +1924,14 @@ export class NotificationsClient {
       // needless 304 never leaves the cache empty/stale, then take the write path.
       res = await this.fetchImpl(url, { cache: "no-store", headers: build });
     }
-    if (!res.ok) await throwReadFailure(key, params, res, read);
+    if (!res.ok)
+      await throwReadFailure(
+        key,
+        params,
+        res,
+        read,
+        this.judgeFor(socketKindFor(origin), undefined),
+      );
     const body = await readEnvelope(key, res, read);
     this.noteHttpEtag(key, params, origin, res.headers.get("ETag"));
 
@@ -1948,6 +1998,7 @@ export class NotificationsClient {
         params,
         socketKindFor(origin),
         body.graph,
+        this.judgeFor(socketKindFor(origin), body.graph),
       );
     } catch (err) {
       if (err instanceof ResourceDecodeError && err.verdict === "skew")
@@ -2123,7 +2174,14 @@ export class NotificationsClient {
       cache: "no-store",
       headers: buildHeader(socketKindFor(origin)),
     });
-    if (!res.ok) await throwReadFailure(key, params, res, read);
+    if (!res.ok)
+      await throwReadFailure(
+        key,
+        params,
+        res,
+        read,
+        this.judgeFor(socketKindFor(origin), undefined),
+      );
     const body = await readEnvelope(key, res, read);
     let value: T;
     try {
@@ -2134,6 +2192,7 @@ export class NotificationsClient {
         params,
         socketKindFor(origin),
         body.graph,
+        this.judgeFor(socketKindFor(origin), body.graph),
       );
     } catch (err) {
       if (err instanceof ResourceDecodeError && err.verdict === "skew")
@@ -2660,8 +2719,12 @@ export class NotificationsClient {
     }
     if (msg.kind === "sub-error") {
       const pk = paramsKey(msg.params);
-      const verdictTag =
-        msg.verdict !== undefined ? ` verdict=${msg.verdict}` : "";
+      // The host's verdict, split for central by whether a reload fixes it.
+      const verdict =
+        msg.verdict === undefined
+          ? undefined
+          : this.judgeFor(channel.kind, channel.serverGraph)(msg.verdict);
+      const verdictTag = verdict !== undefined ? ` verdict=${verdict}` : "";
       // A skewed contract is the expected face of a deploy under an open tab —
       // the Reload advice says so; it is not a console error. Nor is a refusal:
       // the server answered the question, with "cannot be asked like that".
@@ -2669,7 +2732,7 @@ export class NotificationsClient {
         console.info(
           `[notifications] sub-error key=${msg.key} reason=refused code=${msg.code ?? ""}: ${msg.message ?? ""}`,
         );
-      } else if (msg.verdict === "skew") {
+      } else if (verdict === "skew") {
         console.warn(
           `[notifications] sub-error key=${msg.key} reason=${msg.reason}${verdictTag}`,
         );
@@ -2702,7 +2765,7 @@ export class NotificationsClient {
       // Mark the store first (a contract refusal means this bundle is out of
       // date), then heal through the one error channel: the HTTP read now gets
       // the typed 409/404 body, so `q.error` names the reason.
-      noteContractRefusal(msg.key, msg.params, msg.reason, msg.verdict);
+      noteContractRefusal(msg.key, msg.params, msg.reason, verdict);
       entry.derivation = undefined;
       this.fetchAfterSubError(channel, msg.key, msg.params);
       return;
@@ -2736,6 +2799,7 @@ export class NotificationsClient {
     ) {
       channel.serverEpoch = msg.epoch;
       channel.serverGraph = msg.graph;
+      channel.servedCentral = msg.central;
     }
     if (msg.kind === "up-to-date-batch") {
       // The batched replay answer: run each entry through the exact per-entry
@@ -2750,6 +2814,7 @@ export class NotificationsClient {
           version: e.version,
           epoch: msg.epoch,
           ...(msg.graph !== undefined ? { graph: msg.graph } : {}),
+          ...(msg.central !== undefined ? { central: msg.central } : {}),
         });
       }
       return;
@@ -3064,6 +3129,7 @@ export class NotificationsClient {
       params,
       channel.kind,
       channel.serverGraph,
+      this.judgeFor(channel.kind, channel.serverGraph),
     );
     // Adopt the frame's commit watermark — and note its mutation acks —
     // IMMEDIATELY BEFORE the cache write they describe (load-bearing order:
@@ -3187,6 +3253,7 @@ export class NotificationsClient {
           params,
           channel.kind,
           channel.serverGraph,
+          this.judgeFor(channel.kind, channel.serverGraph),
         ),
       );
 
@@ -3313,6 +3380,7 @@ async function throwReadFailure(
   params: ResourceParams,
   res: Response,
   read: ResourceRead<unknown>,
+  judge: ReadJudge,
 ): Promise<never> {
   const errBody = parseResourceHttpErrorBody(await readJsonBody(res));
   // A refusal must carry a code this read declares. The server only sends
@@ -3325,23 +3393,26 @@ async function throwReadFailure(
     (errBody.code === undefined ||
       !(read.refusals ?? []).includes(errBody.code))
   ) {
-    noteContractRefusal(key, params, "contract-mismatch", "skew");
+    const verdict = judge("skew");
+    noteContractRefusal(key, params, "contract-mismatch", verdict);
     throw new ResourceHttpError(
       key,
       res.status,
       "contract-mismatch",
-      "skew",
+      verdict,
       `refused with ${errBody.code === undefined ? "no code" : `code "${errBody.code}"`}, ` +
         `which this tab's declaration does not list ` +
         `(${JSON.stringify(read.refusals ?? [])}): ${errBody.detail ?? ""}`,
     );
   }
-  noteContractRefusal(key, params, errBody?.reason, errBody?.verdict);
+  const verdict =
+    errBody?.verdict === undefined ? undefined : judge(errBody.verdict);
+  noteContractRefusal(key, params, errBody?.reason, verdict);
   throw new ResourceHttpError(
     key,
     res.status,
     errBody?.reason,
-    errBody?.verdict,
+    verdict,
     errBody?.detail,
     errBody?.code,
   );

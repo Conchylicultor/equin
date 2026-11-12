@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  existsSync,
   lstatSync,
   mkdirSync,
   mkdtempSync,
@@ -212,6 +213,17 @@ describe("composeDist with an address dir", () => {
     expect(html("web.staging.2")).toContain(
       `var ${CENTRAL_BUILD_GLOBAL} = "";`,
     );
+    // The served dist names it beside the page (what the backend tells its
+    // tabs a reload brings), and names none when the page bakes none.
+    expect(
+      readFileSync(
+        joinAppPath(f.base, "web.staging.1", ".central-build"),
+        "utf8",
+      ),
+    ).toBe("central-digest-1\n");
+    expect(
+      existsSync(joinAppPath(f.base, "web.staging.2", ".central-build")),
+    ).toBe(false);
   });
 
   test("an existing name linking another store path throws", () => {

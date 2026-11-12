@@ -80,6 +80,12 @@ yields no latency sample by construction.
   mismatch is: `skew` (the tab runs another bundle; a reload fixes it — absent a
   build, the bundle predates this protocol, which is skew too), `same-build` (a
   real bug), `unknown` (a dev bundle, no served graph, central).
+- `ReadVerdict` + `reloadVerdict(verdict, { clientBuild, reloadBuild,
+  serverGraph })` — the TAB's verdict on a host its page is not loaded from
+  (central): `skew` split into `skew` (a reload brings the host's build) and
+  `deploy-skew` (a reload brings the tab's own build back, or a third one the
+  host does not run: the page's deploy disagrees with the host — no reload
+  fixes it). Never on the wire: only the tab knows what a reload brings.
 - `ResourceHttpErrorBody` (+ `parseResourceHttpErrorBody`) — the JSON body of
   a failed HTTP read (404 / 409 / 422 / 500); its WS twin is the vocabulary's
   `sub-error` frame (`SubErrorFrame`).
@@ -97,7 +103,9 @@ yields no latency sample by construction.
   `graph` beside `epoch` — the build the server's code was built from (absent
   when it cannot say). A tab whose schema rejects a value judges it against
   that (`contractVerdict`): `skew` → out of date, otherwise a real bug
-  (`live-state`'s `ResourceDecodeError`).
+  (`live-state`'s `ResourceDecodeError`). A host serving a page also names
+  `central` on its ack frames — the central build that page was built
+  against, what a reload brings for central's values (`reloadVerdict`).
 - `ResourceContractError` — thrown by a params DECODE (a subscription's wire
   params do not match the declaration). Declaration-time and encode failures stay
   plain `Error`s: those are programmer errors and must crash loudly. The runtime
@@ -131,6 +139,7 @@ yields no latency sample by construction.
     - `DeriveSource`
     - `ExactClientFrame`
     - `ExactServerFrame`
+    - `ReadVerdict`
     - `ReceivedFrame`
     - `ResourceHttpErrorBody`
     - `ResourceReadEnvelope`
@@ -147,6 +156,7 @@ yields no latency sample by construction.
     - `parseResourceBytesHeaders`
     - `parseResourceHttpErrorBody`
     - `PROTOCOL`
+    - `reloadVerdict`
     - `RESOURCE_BYTES_CONTENT_TYPE`
     - `RESOURCE_BYTES_HEADERS`
     - `RESOURCE_HTTP_ROUTE`

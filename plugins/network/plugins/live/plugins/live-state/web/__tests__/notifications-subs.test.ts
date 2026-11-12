@@ -1000,13 +1000,53 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
         expect(subFrames(socket, "w0")[0]!.build).toBe("graph-x");
       });
 
+      /**
+       * The page's own server names the central build of the page it serves
+       * (`central` on its acks): what a reload would bring this tab.
+       */
+      async function servedPageNamesCentral(
+        client: NotificationsClient,
+        socket: FakeWebSocket,
+        central: string,
+      ): Promise<void> {
+        client.observe("served", {}, undefined, { schema: pushSchema });
+        await flush();
+        sendCapturingCrashes(socket, {
+          kind: "sub-ack",
+          key: "served",
+          params: {},
+          value: { status: "ok" },
+          version: 1,
+          epoch: "we1",
+          graph: "graph-x",
+          central,
+        });
+        await flush();
+      }
+
+      /** A central sub-ack carrying a member this bundle's enum lacks. */
+      function pushUndecodable(central: FakeWebSocket, key: string) {
+        return sendCapturingCrashes(central, {
+          kind: "sub-ack",
+          key,
+          params: {},
+          value: { rule: "memory-pressure" },
+          version: 1,
+          epoch: "ce1",
+          graph: "central-main",
+        });
+      }
+
       test("skew: a central build other than the one this bundle was built against is the tab being out of date", async () => {
         // The web graph EQUAL to central's build string must not matter: a
         // central value is never judged against the web graph.
         vi.stubEnv("VITE_BUILD_GRAPH", "central-new");
         vi.stubEnv("VITE_CENTRAL_BUILD", "central-old");
-        const { client, hub, qc } = await setup();
+        const { client, socket, hub, qc } = await setup();
         const store = renderHook(() => useResourceContractMismatches());
+        // The page's server now serves a page built against central's build:
+        // a reload fixes this tab.
+        await servedPageNamesCentral(client, socket, "central-new");
         const central = await observeCentral(client, hub, "c1");
         sendCapturingCrashes(central, {
           kind: "sub-ack",
@@ -1037,6 +1077,106 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
         expect(store.result.current).toEqual([
           { key: "c1", reason: "contract-mismatch", verdict: "skew" },
         ]);
+      });
+
+      // A worktree whose central code differs from main's: central runs
+      // main's code, and the page a reload brings is built against this
+      // checkout's — no reload fixes it, so it is never the reload state.
+      describe("deploy-skew: no reload brings central's build", () => {
+        test("the served page names the tab's own central build: a loud crash naming it, never the reload advice", async () => {
+          vi.stubEnv("VITE_BUILD_GRAPH", "graph-x");
+          vi.stubEnv("VITE_CENTRAL_BUILD", "central-wt");
+          const { client, socket, hub } = await setup();
+          const store = renderHook(() => useResourceContractMismatches());
+          await servedPageNamesCentral(client, socket, "central-wt");
+          const central = await observeCentral(client, hub, "c4");
+          const crashes = pushUndecodable(central, "c4");
+          expect(crashes).toHaveLength(1);
+          const err = crashes[0] as ResourceDecodeError;
+          expect(err.verdict).toBe("deploy-skew");
+          expect(err.message).toContain("reloading does not fix it");
+          expect(toResourceError(err).kind).toBe("loader-failed");
+          await flush();
+          store.rerender();
+          expect(store.result.current).toEqual([]);
+        });
+
+        test("a page server naming none (main, an older dist, no ack yet): never claimed — the skew stands", async () => {
+          vi.stubEnv("VITE_BUILD_GRAPH", "graph-x");
+          vi.stubEnv("VITE_CENTRAL_BUILD", "central-wt");
+          const { client, hub, qc } = await setup();
+          const central = await observeCentral(client, hub, "c5");
+          sendCapturingCrashes(central, {
+            kind: "sub-ack",
+            key: "c5",
+            params: {},
+            value: { rule: "daemon-cpu" },
+            version: 1,
+            epoch: "ce1",
+            graph: "central-main",
+          });
+          expect(
+            sendCapturingCrashes(central, {
+              kind: "update",
+              key: "c5",
+              params: {},
+              value: { rule: "memory-pressure" },
+              version: 2,
+            }),
+          ).toEqual([]);
+          await flush();
+          const state = qc.getQueryCache().find({
+            queryKey: queryKeyFor("c5", {}),
+          })!.state;
+          expect((state.error as ResourceDecodeError).verdict).toBe("skew");
+        });
+
+        test("the served page names a third central build central does not run either", async () => {
+          vi.stubEnv("VITE_BUILD_GRAPH", "graph-x");
+          vi.stubEnv("VITE_CENTRAL_BUILD", "central-wt-old");
+          const { client, socket, hub } = await setup();
+          await servedPageNamesCentral(client, socket, "central-wt-new");
+          const central = await observeCentral(client, hub, "c6");
+          const crashes = pushUndecodable(central, "c6");
+          expect(crashes).toHaveLength(1);
+          expect((crashes[0] as ResourceDecodeError).verdict).toBe(
+            "deploy-skew",
+          );
+        });
+
+        test("a worktree value is judged as before: its server serves the page", async () => {
+          vi.stubEnv("VITE_BUILD_GRAPH", "graph-old");
+          vi.stubEnv("VITE_CENTRAL_BUILD", "central-wt");
+          const { client, socket, qc } = await setup();
+          client.observe("w7", {}, undefined, { schema: ruleSchema });
+          await flush();
+          expect(
+            sendCapturingCrashes(socket, {
+              kind: "sub-ack",
+              key: "w7",
+              params: {},
+              value: { rule: "daemon-cpu" },
+              version: 1,
+              epoch: "we1",
+              graph: "graph-new",
+              central: "central-wt",
+            }),
+          ).toEqual([]);
+          expect(
+            sendCapturingCrashes(socket, {
+              kind: "update",
+              key: "w7",
+              params: {},
+              value: { rule: "memory-pressure" },
+              version: 2,
+            }),
+          ).toEqual([]);
+          await flush();
+          const state = qc.getQueryCache().find({
+            queryKey: queryKeyFor("w7", {}),
+          })!.state;
+          expect((state.error as ResourceDecodeError).verdict).toBe("skew");
+        });
       });
 
       test("same central build: the rejection is a real bug and stays a loud crash", async () => {

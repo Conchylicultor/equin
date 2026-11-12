@@ -2150,6 +2150,18 @@ export interface ResourceRuntimeOptions {
    */
   serverBuildGraph?: () => string | null;
   /**
+   * The central build the page this host SERVES was built against — what a
+   * reload brings a tab, for central's values — named on every ack frame
+   * (`central`), read at call time. A tab judges a central value it cannot
+   * decode against it: central's own build named here, a reload fixes it
+   * (`skew`); another, no reload can (`deploy-skew`: the code this host's page
+   * was built from disagrees with the central that runs — reported). Pinned
+   * at boot beside `serverBuildGraph`. server: the served dist's
+   * `.central-build`, boot-injected by `build/server-build-id` through
+   * `setServedCentralBuild`; central (it serves no page) / omitted: unnamed.
+   */
+  servedCentralBuild?: () => string | null;
+  /**
    * Told the build graph a client says it runs, on every subscription (single,
    * batch) and HTTP read that names one — `dev` and an absent build excluded.
    * Called synchronously and often: the observer dedupes. server:
@@ -3095,6 +3107,16 @@ export function createResourceRuntime(
   function bootIdentity(): { epoch: string; graph?: string } {
     const graph = opts.serverBuildGraph?.() ?? null;
     return graph === null ? { epoch: bootEpoch } : { epoch: bootEpoch, graph };
+  }
+  // An ack frame's identity: the boot identity, plus — from a host serving a
+  // page — the central build that page was built against (`central`,
+  // `servedCentralBuild`): what a reload brings a tab for central's values, so
+  // it can tell a central value it cannot decode that a reload fixes (the
+  // served page names central's build) from one no reload can (the code this
+  // host's page was built from disagrees with the central that runs).
+  function ackIdentity(): { epoch: string; graph?: string; central?: string } {
+    const central = opts.servedCentralBuild?.() ?? null;
+    return central === null ? bootIdentity() : { ...bootIdentity(), central };
   }
   // Per-key count of version short-circuits (a sub answered `up-to-date` from
   // memory: zero loader runs, zero read-admission slots). Monotonic; surfaced in
@@ -9438,7 +9460,7 @@ export function createResourceRuntime(
           key,
           params,
           version: versionOf(entry, pk),
-          ...bootIdentity(),
+          ...ackIdentity(),
           derived: outcome,
         });
       }
@@ -9494,7 +9516,7 @@ export function createResourceRuntime(
         key,
         params,
         version: m.version,
-        ...bootIdentity(),
+        ...ackIdentity(),
       });
       recordSubShortCircuit(key);
       return;
@@ -9517,7 +9539,7 @@ export function createResourceRuntime(
           key,
           params,
           version: claim.version,
-          ...bootIdentity(),
+          ...ackIdentity(),
         });
         recordResumed(key);
         return;
@@ -9565,7 +9587,7 @@ export function createResourceRuntime(
       key,
       params,
       version: shipped.version,
-      ...bootIdentity(),
+      ...ackIdentity(),
     });
     subAcksShared.set(key, (subAcksShared.get(key) ?? 0) + 1);
     subAckCharsSaved.set(key, (subAckCharsSaved.get(key) ?? 0) + shipped.chars);
@@ -9660,7 +9682,7 @@ export function createResourceRuntime(
         key,
         params,
         version,
-        ...bootIdentity(),
+        ...ackIdentity(),
       });
       return;
     }
@@ -9677,7 +9699,7 @@ export function createResourceRuntime(
         key,
         params,
         version,
-        ...bootIdentity(),
+        ...ackIdentity(),
       });
       return;
     }
@@ -9700,7 +9722,7 @@ export function createResourceRuntime(
           params,
           value: patchBase.value,
           version: patchBase.version,
-          ...bootIdentity(),
+          ...ackIdentity(),
         }),
       );
       return;
@@ -9831,7 +9853,7 @@ export function createResourceRuntime(
         ...(etag !== undefined ? { etag } : {}),
         ...(watermark !== undefined ? { watermark } : {}),
         ...(joinedMs >= 1 ? { joinedMs: Math.round(joinedMs) } : {}),
-        ...bootIdentity(),
+        ...ackIdentity(),
       }),
     );
   }
@@ -10001,7 +10023,7 @@ export function createResourceRuntime(
     if (upToDate.length > 0) {
       sendJson(state.ws, {
         kind: "up-to-date-batch",
-        ...bootIdentity(),
+        ...ackIdentity(),
         tabId,
         entries: upToDate,
       });
@@ -10048,7 +10070,7 @@ export function createResourceRuntime(
         if (answered.length > 0) {
           sendJson(state.ws, {
             kind: "up-to-date-batch",
-            ...bootIdentity(),
+            ...ackIdentity(),
             tabId,
             entries: answered,
           });

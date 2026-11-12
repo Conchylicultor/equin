@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { canonicalJson } from "@plugins/network/plugins/live/plugins/canonical-params/core";
 import type {
-  ContractVerdict,
+  ReadVerdict,
   SubErrorReason,
 } from "@plugins/network/plugins/live/plugins/resource-protocol/core";
 
@@ -29,8 +29,12 @@ import type {
 export interface ResourceContractMismatch {
   key: string;
   reason: Extract<SubErrorReason, "contract-mismatch" | "unknown-key">;
-  /** Absent from a server that predates verdicts — never read as `skew`. */
-  verdict?: ContractVerdict;
+  /**
+   * Absent from a server that predates verdicts — never read as `skew`.
+   * `deploy-skew`: the page's deploy, not the tab, disagrees with the host —
+   * no reload fixes it, so the Reload advice must not count it.
+   */
+  verdict?: ReadVerdict;
 }
 
 type Params = Readonly<Record<string, string>>;

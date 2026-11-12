@@ -1,8 +1,13 @@
 import {
   setClientBuildIdentity,
+  setServedCentralBuild,
   type Registration,
 } from "@plugins/framework/plugins/server-core/core";
-import { getServerGraphHash } from "./get-server-graph-hash";
+import {
+  getServedCentralBuild,
+  getServerGraphHash,
+} from "./get-server-graph-hash";
+import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 
 // The build graph the live-resource runtime judges a contract mismatch against
 // (`setClientBuildIdentity`): a tab whose bundle names another graph is out of
@@ -29,6 +34,17 @@ export const clientBuildIdentityRegistration: Registration = {
  * judged to run).
  */
 export async function pinClientBuildIdentity(): Promise<void> {
-  const graph = await getServerGraphHash();
+  const [graph, central] = await Promise.all([
+    getServerGraphHash(),
+    getServedCentralBuild(),
+  ]);
   setClientBuildIdentity(() => graph);
+  // Beside it, pinned the same way: the central build of the page published
+  // alongside this code — what a reload brings a tab for central's values.
+  // Not on main: central runs main's checkout and restarts onto it with each
+  // of main's deploys (after main's backend), so a central skew a main tab
+  // sees is never a deploy mismatch — the tab is behind (reload) or central
+  // is for a moment (the Build tray's server-behind). Naming it would read
+  // that moment as a `deploy-skew` no reload fixes, and report it.
+  setServedCentralBuild(() => (isMain() ? null : central));
 }
