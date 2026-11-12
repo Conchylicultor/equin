@@ -96,3 +96,84 @@ keys B-tree, at ~57 B a row, is now two thirds of the file).
 - **retention** (7 days) is the user's call: halving it halves the steady
   state, at the cost of a cold rebuild of the records for a worktree idle that
   long.
+
+## How often: a one-line edit asks ~32k lookups (task-1794469426)
+
+The sections above make one lookup cheaper. This one counts how many a pass
+asks, and why. Measured 2026-11-12 on a worktree check pass (v2 store, load
+~14), with `getMany` traced by caller (temporary instrumentation, since
+reverted).
+
+### Split
+
+After a **one-line edit** (a comment appended to
+`hints/help-menu/web/index.ts`), one `./equin check`:
+
+| caller | SQLite lookups | keys asked | calls | values read |
+| --- | ---: | ---: | ---: | ---: |
+| `scanFilesCached`: groups (`file-scans.ts` → `readGrouped`) | 13,563 | 15,202 | 1,579 | 26.7 MB |
+| `scanFilesCached`: one-file plugins, read on their own | 5,987 | 6,064 | 1,514 | 1.9 MB |
+| module graph `walkLevels`: one-file groups, read as files | 3,862 | 8,075 | 117 | 1.6 MB |
+| module graph `walkLevels`: groups | 2,950 | 4,686 | 132 | 5.3 MB |
+| `evaluateBarrels`: module groups | 1,965 | 2,796 | 2 | 0.8 MB |
+| `evaluateBarrels`: evaluated barrels | 1,928 | 3,114 | 2 | 11.5 MB |
+| `facetRecordTexts`: facet groups | 1,770 | 3,536 | 2 | 14.1 MB |
+| rest | ~230 | | | |
+| **total** | **~32.2k** | 43.8k | 3,364 | ~62 MB |
+
+- **Every lookup hits** (~100% in each row): the cost is the count, not misses.
+- A **fresh worktree's first pass** asked the same 32,181. A **second pass on
+  an unchanged tree asked 0**: every check answered `ok (cached)`.
+- After the one-line edit, **173 of 192 checks re-ran** (19 cached). Most
+  checks key their PASS on the whole working-tree hash (`checks/core/cache.ts`).
+  Only 9 are `inputKeyed` (`checks/core/read-set.ts`), so any edit re-runs the
+  rest, and each re-run rebuilds its readers' whole-tree results.
+- `walkLevels` is the latency chain: 117 level reads one after another across
+  the module graphs (17 s of summed await at load ~50, 2 s at load ~14). Its
+  groups are per plugin **per BFS level**, so one plugin's modules split over
+  several groups, and many groups have one member (the 3,862 file lookups).
+
+### Root cause
+
+Records are grouped per plugin and nothing aggregates above that, so a reader
+over the tree costs at least one lookup per plugin it covers: about 10 scans
+× ~1,500 plugins, plus facets, the module graph and the evaluator. That is
+O(plugins × readers) per pass. A pass happens on every edit because most check
+verdicts are keyed on the whole tree. The record cache below is
+O(changes) per record but O(plugins) per reader. The check cache above it is
+O(1) on an unchanged tree but all-or-nothing on any change (a global
+fingerprint).
+
+### Options analysed (none implemented)
+
+- **Each check keyed on what it reads (the structural fix).** Move checks onto
+  the input-keyed read-set path (`read-set.ts`), so a one-line edit re-runs
+  only the checks whose recorded reads it touches. Their readers then ask
+  records only for those. This targets "how often", the dominant factor
+  (173/192 re-runs for one comment). It is the follow-up this session takes
+  over.
+- **Merkle groups along the plugin tree:** each umbrella stores its subtree's
+  values. A pass touching one plugin would need ~1 lookup per untouched reader
+  and ~depth × fan-out (≈50–250) per touched one, instead of ~1,500. The cost
+  is write amplification: a reader whose output changes rewrites every
+  ancestor's value, up to the whole scan (~2.7 MB a scan; 26.7 MB over all
+  scans). Group values already held ~593 MB (122k distinct) for the last two
+  days of live rows in v2, so this needs the next point first.
+- **Group values in path order, not member-key order:** today a group value
+  lists its member values in sorted-key order, so a member whose key moved but
+  whose value did not (a comment edit; a scan's closure re-key) still writes a
+  new group value. In path order these would dedupe. This needs a one-time
+  re-key of groups and does not reduce key rows. On 11-12, group rows read
+  that day were 221k keys for 47k distinct values.
+- **Module graph grouped per plugin, not per (plugin, level):** ~6.8k →
+  ≤1.5k lookups. It stays O(plugins). The user ruled it out (D7) in favour of
+  the structural fix.
+- **Retention:** the user's call (above).
+
+### Reclaim is not what keeps the dead rows
+
+On 11-12 no v2 row was older than 7 days, `meta.pruned` was today's, and
+`auto_vacuum = INCREMENTAL`. File rows by last-read day −7…0: 1.28M, 1.88M,
+0.02M, 4.56M, 3.09M, 1.00M, 1.25M, 0.42M. The dead 95% is churn × 7-day
+retention (the section above). Random sha256 keys spread the live rows over
+nearly every page.
