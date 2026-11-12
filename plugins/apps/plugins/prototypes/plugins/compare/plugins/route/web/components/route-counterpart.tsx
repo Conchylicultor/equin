@@ -122,7 +122,7 @@ function resolve(
     };
   }
 
-  const parsed = parseUrl(resolved.routePath);
+  const parsed = parseUrl(resolved.routePath, resolved.app.app.basePath);
   if (parsed.status === "unresolved") {
     // The pane registry fills in as the deferred plugin tier loads, so an
     // unmatched path is not yet a missing one. "No pane at that path" would be

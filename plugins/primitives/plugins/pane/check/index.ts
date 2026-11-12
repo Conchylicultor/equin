@@ -1,6 +1,6 @@
 import type TS from "typescript";
 import { listCandidateSources } from "@plugins/framework/plugins/tooling/plugins/checks/core";
-import { segmentMatchPatterns } from "../core";
+import { segmentCollision } from "../core";
 import identityManifestCheck from "./identity-manifest";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
@@ -97,24 +97,21 @@ const check: Check = {
       ],
     });
 
-    const byPattern = new Map<string, SegmentSite[]>();
-    for (const { rel, src } of sources) {
-      for (const site of collectSegments(ts, rel, src)) {
-        // Index/empty-segment panes (`""`, or keyed-only `";page"`) resolve via
-        // appIndex, not URL matching, so they claim no pattern — multiple are
-        // legal (mirrors useSyncPaneRegistry). A segment ending in `:name?`
-        // claims two shapes of URL; each is checked.
-        for (const pattern of segmentMatchPatterns(site.raw)) {
-          const list = byPattern.get(pattern) ?? [];
-          list.push(site);
-          byPattern.set(pattern, list);
-        }
+    const sites = sources.flatMap(({ rel, src }) =>
+      collectSegments(ts, rel, src),
+    );
+    // Every pair, not a shape index: a wildcard (`at/:url*`) matches URLs of
+    // many shapes, so two segments collide without sharing one
+    // (`segmentCollision`). Index/empty-segment panes (`""`, or keyed-only
+    // `";page"`) match no URL, so they never collide — multiple are legal
+    // (mirrors useSyncPaneRegistry).
+    const collisions: Array<[string, SegmentSite[]]> = [];
+    for (let i = 0; i < sites.length; i++) {
+      for (let j = i + 1; j < sites.length; j++) {
+        const url = segmentCollision(sites[i]!.raw, sites[j]!.raw);
+        if (url !== null) collisions.push([url, [sites[i]!, sites[j]!]]);
       }
     }
-
-    const collisions = [...byPattern.entries()].filter(
-      ([, sites]) => sites.length > 1,
-    );
     if (collisions.length === 0) return { ok: true };
 
     const message =
@@ -133,7 +130,9 @@ const check: Check = {
       hint:
         "Pane segments (and route segments) must be globally unique — param " +
         "names don't disambiguate (`r/:runId` and `r/:reportId` both match " +
-        "`r/<x>`). Rename one segment's static prefix to a distinct value. " +
+        "`r/<x>`), and a wildcard `:rest*` swallows every longer URL under " +
+        "its prefix (`at/:url*` takes `at/<dir>`). Rename one segment's " +
+        "static prefix to a distinct value. " +
         "Left unfixed, this throws at runtime on navigation.",
     };
   },

@@ -468,7 +468,7 @@ export function bootTabs(
   // or a stale link — apps-layout redirects it) is treated as a bare-root match,
   // preserving the historical "empty route ⇒ index" behavior for the seed tab.
   const parsed: ParsedRoute = resolved
-    ? parseUrl(resolved.routePath)
+    ? parseUrl(resolved.routePath, resolved.app.app.basePath)
     : { status: "matched", slots: [], index: {} };
 
   // Rebuild every persisted tab as a background tab. Keep-alive must survive a
@@ -1159,7 +1159,7 @@ export function TabsProvider({
           `navigate(): no registered app owns path "${pathname}" — the link is unrooted or points to an unregistered app`,
         );
       }
-      const parsed = parseUrl(resolved.routePath);
+      const parsed = parseUrl(resolved.routePath, resolved.app.app.basePath);
       const focused = tabsRef.current.find(
         (t) => t.tabId === focusedRef.current,
       );
@@ -1817,7 +1817,8 @@ export function TabsProvider({
       // to hold — `navigate` would throw for the latter.
       if (
         resolved === undefined ||
-        (parseUrl(resolved.routePath).status === "unresolved" &&
+        (parseUrl(resolved.routePath, resolved.app.app.basePath).status ===
+          "unresolved" &&
           isDeadUnresolvedLink(loadScopePrefixFor(resolved.app._pluginId)))
       ) {
         leaveRef.current?.(url);

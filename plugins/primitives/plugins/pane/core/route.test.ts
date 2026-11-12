@@ -15,7 +15,7 @@ import {
   surfaceViewKey,
   surfaceViewsOf,
   withoutSurfaceViews,
-  segmentMatchPatterns,
+  segmentCollision,
   splitKeyedPart,
   joinUrlParts,
 } from "./route";
@@ -194,13 +194,16 @@ describe("an optional :param?", () => {
     ).toThrow(/must be the segment's last part/);
   });
 
-  test("claims both URL shapes for collisions", () => {
-    expect(segmentMatchPatterns("proto/:name/:stage?")).toEqual([
+  test("collides with anything matching either URL shape", () => {
+    expect(segmentCollision("proto/:name/:stage?", "proto/:id")).toBe(
       "proto/:",
+    );
+    expect(segmentCollision("proto/:name/:stage?", "proto/:a/:b")).toBe(
       "proto/:/:",
-    ]);
-    expect(segmentMatchPatterns("f/:path*")).toEqual(["f/:*"]);
-    expect(segmentMatchPatterns("t/:taskId")).toEqual(["t/:"]);
+    );
+    expect(segmentCollision("proto/:name/:stage?", "proto/:a/:b/:c")).toBe(
+      null,
+    );
   });
 });
 
@@ -240,10 +243,12 @@ describe("keyed params (`;name`)", () => {
   });
 
   test("do not change a segment's URL shape", () => {
-    expect(segmentMatchPatterns("song/:songId/:bar?;lens")).toEqual([
+    expect(segmentCollision("song/:songId/:bar?;lens", "song/:x")).toBe(
       "song/:",
+    );
+    expect(segmentCollision("song/:songId/:bar?;lens", "song/:x/:y")).toBe(
       "song/:/:",
-    ]);
+    );
   });
 
   test("reject a malformed declaration", () => {
@@ -301,9 +306,10 @@ describe("keyed params on an index route (no positional part)", () => {
     expect(joinUrlParts([])).toBe("/");
   });
 
-  test("claim no URL shape (two index panes never collide)", () => {
-    expect(segmentMatchPatterns(";page")).toEqual([]);
-    expect(segmentMatchPatterns("")).toEqual([]);
+  test("match no URL (two index panes never collide)", () => {
+    expect(segmentCollision(";page", ";other")).toBe(null);
+    expect(segmentCollision("", "")).toBe(null);
+    expect(segmentCollision(";page", "")).toBe(null);
   });
 
   test("an index route with keyed params cannot have children", () => {
@@ -496,4 +502,34 @@ describe("defineApp formerBasePaths", () => {
       expect(() => app([former])).toThrow(/former base path/);
     },
   );
+});
+
+describe("segmentCollision", () => {
+  test("param names don't disambiguate; a static part does", () => {
+    expect(segmentCollision("r/:runId", "r/:reportId")).toBe("r/:");
+    expect(segmentCollision("page/:pageId", "s/:serverId")).toBe(null);
+    expect(segmentCollision("t/:taskId", "t/new")).toBe("t/new");
+  });
+
+  test("different lengths never collide without a wildcard", () => {
+    expect(segmentCollision("t/:taskId", "t/:a/:b")).toBe(null);
+  });
+
+  test("a wildcard swallows every longer URL under its prefix", () => {
+    // The Demo's `at/:url*` took the Files folder `at/:dir` (`/files/at/~`).
+    // The URL named is the other shape's (the wildcard takes any run).
+    expect(segmentCollision("at/:url*;full", "at/:dir;fs")).toBe("at/:");
+    expect(segmentCollision("at/:dir", "at/:url*")).toBe("at/:");
+    expect(segmentCollision("at/:url*", "at/x/y/z")).toBe("at/x/y/z");
+    expect(segmentCollision("f/:path*", "f/:other*")).toBe("f/:…");
+    expect(segmentCollision("file/:wt/:path*", "file/:wt/x/:y")).toBe(
+      "file/:/x/:",
+    );
+  });
+
+  test("a wildcard needs at least one part of its own", () => {
+    expect(segmentCollision("at/:url*", "at")).toBe(null);
+    expect(segmentCollision("exhibit/:id*", "exhibit-stage/:id*")).toBe(null);
+    expect(segmentCollision("at/:url*", "browse/:dir")).toBe(null);
+  });
 });

@@ -30,7 +30,7 @@ import {
   readKeyedParams,
   onlySurfaceViews,
   segmentKeyedParamNames,
-  segmentMatchPatterns,
+  segmentCollision,
   segmentParamNames,
   segmentRequiredParamNames,
   splitEmbedMaximized,
@@ -635,7 +635,18 @@ export type ParsedRoute =
   | { status: "matched"; slots: PaneSlot[]; index: Record<string, string> }
   | { status: "unresolved"; rawPath: string }; // a segment matched no registered pane
 
-export function parseUrl(pathname: string): ParsedRoute {
+/**
+ * Parse an app-relative `pathname` — the address bar with `basePath` stripped
+ * off — into a route. `basePath` is required because the base path NAMES the
+ * app the URL is in: when a chain headed by that app's own pane matches, it
+ * wins over one headed by another app's pane, however long — so another app's
+ * wildcard (`at/:url*`) cannot swallow `/files/at/…` and carry the tab away
+ * (`routeHomeApp`). Another app's pane heads the route only when none of the
+ * app's own does: a stale or typed URL that `TabsProvider` then moves to the
+ * app it belongs to.
+ */
+export function parseUrl(pathname: string, basePath: string): ParsedRoute {
+  const home = normalizeAppPath(basePath);
   const normalized = pathname === "/" ? "" : pathname.replace(/^\/+|\/+$/g, "");
   // The URL's last part may end in an embed's maximized flag (`;full=1`,
   // `splitEmbedTail`): read it off first, for the route's last instance.
@@ -665,7 +676,7 @@ export function parseUrl(pathname: string): ParsedRoute {
     };
   };
 
-  const parsed = parseChain(urlSegments);
+  const parsed = parseChain(urlSegments, home);
   if (parsed) return matched(parsed, flag);
 
   // No chain matches the whole URL: it may end in an embed tail
@@ -677,7 +688,7 @@ export function parseUrl(pathname: string): ParsedRoute {
   for (const at of embedTailStarts(urlSegments)) {
     const tail = readEmbedTail(urlSegments, at);
     if (tail === null) continue;
-    const head = parseChain(urlSegments.slice(0, at));
+    const head = parseChain(urlSegments.slice(0, at), home);
     if (!head) continue;
     return matched(head, { ...tail, ...flag });
   }
@@ -708,9 +719,14 @@ export function parseUrl(pathname: string): ParsedRoute {
  * parses from a cursor does not depend on how we got there, so a cursor that
  * failed once is remembered and never searched again: linear in the URL, not
  * exponential in the alternatives.
+ *
+ * At the head, panes of the app at `home` (a normalized base path) are tried
+ * before any other app's (see {@link parseUrl}); further right, a guest pane is
+ * as good as a host's, so length alone orders them.
  */
 function parseChain(
   urlSegments: string[],
+  home: string,
 ): Array<{ paneId: string; params: Record<string, string> }> | null {
   const failed = new Set<number>();
   const parseFrom = (
@@ -730,6 +746,14 @@ function parseChain(
     }
     // Stable, so equal lengths keep registry order — the tie-break it always had.
     candidates.sort((a, b) => b.consumed - a.consumed);
+    if (cursor === 0) {
+      // The app the base path names heads its own URL whenever it can.
+      const isHome = (paneId: string) =>
+        normalizeAppPath(registry.get(paneId)!.app.basePath) === home;
+      candidates.sort(
+        (a, b) => Number(isHome(b.paneId)) - Number(isHome(a.paneId)),
+      );
+    }
     for (const c of candidates) {
       if (c.consumed === 0) continue;
       const rest = parseFrom(cursor + c.consumed);
@@ -1237,7 +1261,7 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
   }
 
   function syncRouteFromUrl(pathname: string): void {
-    const parsed = parseUrl(pathname);
+    const parsed = parseUrl(pathname, currentBasePath);
     if (parsed.status === "matched") {
       // A matched parse always wins (equality-guarded, as today) — the URL now
       // resolves to concrete panes.
@@ -3692,7 +3716,6 @@ export function useSyncPaneRegistry(): void {
     const seen = new Set<string>();
     // Maps a normalized segment pattern → the paneId that first claimed it, so a
     // second pane whose segment matches the same URLs is caught immediately.
-    const patternOwner = new Map<string, string>();
     // Maps an app id → the paneId that claimed its index, so a second index
     // pane for one app is caught here rather than silently losing to whichever
     // one this iteration happens to reach first.
@@ -3726,19 +3749,19 @@ export function useSyncPaneRegistry(): void {
         indexOwner.set(internal.app.id, internal.id);
       }
       // Index/empty-segment panes (`""`, keyed-only `";page"`) resolve via
-      // `appIndex`, not URL matching, so they claim no pattern and any number
-      // are legal (`segmentMatchPatterns` answers none). A segment ending in
-      // `:name?` claims two shapes of URL; each is checked.
-      for (const pattern of segmentMatchPatterns(internal.segment)) {
-        const owner = patternOwner.get(pattern);
-        if (owner) {
+      // `appIndex`, not URL matching, so they match no URL and any number are
+      // legal (`segmentCollision` answers null). Every pair is compared, not
+      // shapes: a wildcard `:rest*` matches URLs of many shapes.
+      for (const id of seen) {
+        const other = registry.get(id)!;
+        const url = segmentCollision(other.segment, internal.segment);
+        if (url !== null) {
           throw new Error(
-            `Pane segment collision: "${owner}" and "${internal.id}" both match the same URLs ` +
-              `("${registry.get(owner)!.segment}" vs "${internal.segment}"). Segments must be ` +
+            `Pane segment collision: "${other.id}" and "${internal.id}" both match the URL "${url}" ` +
+              `("${other.segment}" vs "${internal.segment}"). Segments must be ` +
               `globally unique across all registered panes — rename one to disambiguate.`,
           );
         }
-        patternOwner.set(pattern, internal.id);
       }
       seen.add(internal.id);
       // The only place the pane's owning plugin is knowable: the loader stamps

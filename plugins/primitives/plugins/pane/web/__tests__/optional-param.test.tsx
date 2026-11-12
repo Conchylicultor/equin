@@ -126,7 +126,7 @@ function RegistrySync() {
 
 /** The (paneId, params) chain a URL parses to, or "unresolved". */
 function parsed(path: string) {
-  const r = parseUrl(path);
+  const r = parseUrl(path, "/");
   if (r.status === "unresolved") return "unresolved";
   return r.slots.map((s) => [s.paneId, s.params]);
 }

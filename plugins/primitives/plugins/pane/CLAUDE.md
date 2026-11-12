@@ -53,7 +53,14 @@ export const taskDetailPane = Pane.define({
 - **`segment`**: own URL fragment, no leading slash.
   - `:param`, `:rest*`, optional `:param?`; `""` = no segment of its own.
   - A bare leading `:param` throws (add a static prefix).
-  - Uniqueness: `pane:segments-unique` check.
+  - Uniqueness: no two segments may match one URL (`segmentCollision`,
+    enforced by the `pane:segments-unique` check and at registration). Param
+    names don't disambiguate, and a wildcard `p/:rest*` collides with every
+    segment that fits under `p/` (`at/:url*` vs `at/:dir`).
+  - A URL is matched against every app's panes, but a chain headed by the
+    app its base path names wins over one headed by another app's pane
+    (`parseUrl(path, basePath)`) — so another app's pane only heads a URL its
+    own app cannot parse (a stale link, then moved to that app by the tabs).
 - **Optional `:param?`** must be the segment's last part (throws otherwise).
   - It addresses a VIEW of the entity (tab, stage): `proto/:name/:stage?`.
   - The parser takes the longer match, falls back to the shorter — but a next
@@ -1053,8 +1060,8 @@ with an empty route.
     - `readEmbedTail`
     - `readIndexKeyedParams`
     - `readKeyedParams`
+    - `segmentCollision`
     - `segmentKeyedParamNames`
-    - `segmentMatchPatterns`
     - `segmentParamNames`
     - `segmentRequiredParamNames`
     - `splitEmbedMaximized`

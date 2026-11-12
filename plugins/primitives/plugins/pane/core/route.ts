@@ -860,34 +860,82 @@ export function normalizeRoutePath(pathname: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// Segment match-pattern normalization — param *names* are erased, only their
-// structural shape survives. `s/:pageId` and `s/:serverId` both normalize to
-// `s/:`, so two panes that match the same URLs collide; `page/:pageId`
-// (`page/:`) does not collide with `s/:`. A segment ending in an optional
-// `:name?` matches TWO shapes of URL — with that part and without — so it has
-// two patterns, and collides with anything claiming either (`proto/:name/:stage?`
-// is both `proto/:` and `proto/:/:`). A segment with no positional part has
-// none. THE single definition: the runtime
-// registry (`useSyncPaneRegistry`) enforces the globally-unique-segment
-// invariant at registration, and the `pane:segments-unique` check enforces the
-// same invariant statically at build time — both call this, so they can't drift.
+// Segment collisions — two segments collide when some URL is matched whole by
+// both. Param *names* don't disambiguate (`s/:pageId` and `s/:serverId` both
+// match `s/<x>`); a static part does (`page/:pageId` vs `s/:serverId`). A
+// wildcard `:name*` matches ANY run of one or more parts, so `at/:url*`
+// collides with `at/:dir` — and with `at/:a/:b`, `at/x/y/z`, … — though they
+// are different shapes: the matcher takes the longer match, so the wildcard
+// silently swallows the other pane's URLs (and, across apps, carries the tab
+// off to the wildcard's app). A segment ending in an optional `:name?` matches
+// TWO shapes of URL — with that part and without — so it collides with
+// anything matching either. A segment with no positional part matches no URL.
+// THE single definition: the runtime registry (`useSyncPaneRegistry`) enforces
+// the no-collision invariant at registration, and the `pane:segments-unique`
+// check enforces the same invariant statically at build time — both call
+// this, so they can't drift.
 // ---------------------------------------------------------------------------
 
-export function segmentMatchPatterns(segment: string): string[] {
+type ShapePart =
+  { kind: "static"; text: string } | { kind: "param" | "wildcard" };
+
+/** The fixed-length shapes of URL a segment matches (two for a `:name?`). */
+function segmentShapes(segment: string): ShapePart[][] {
   const parts = parseSegmentParts(segment);
   // No positional part (`""`, `"/"`, an index pane's keyed-only `";page"`):
-  // the segment owns no URL part, so it matches no URL and claims no shape —
+  // the segment owns no URL part, so it matches no URL —
   // index panes are resolved by `appIndex`, never by URL matching.
   if (parts.length === 0) return [];
-  const shape = (ps: SegmentPart[]) =>
-    ps
-      .map((part) => {
-        if (part.kind === "static") return part.text;
-        return part.kind === "wildcard" ? ":*" : ":";
-      })
-      .join("/");
+  const shape = (ps: SegmentPart[]): ShapePart[] =>
+    ps.map((part): ShapePart =>
+      part.kind === "static"
+        ? part
+        : { kind: part.kind === "wildcard" ? "wildcard" : "param" },
+    );
   if (parts.at(-1)?.kind !== "optional") return [shape(parts)];
   return [shape(parts.slice(0, -1)), shape(parts)];
+}
+
+/** A URL (static parts kept, a param written `:`, a wildcard's run `:…`) both shapes match whole, or `null`. */
+function shapesOverlap(a: ShapePart[], b: ShapePart[]): string | null {
+  const url: string[] = [];
+  for (let i = 0; ; i++) {
+    const x = a[i];
+    const y = b[i];
+    if (x === undefined || y === undefined) {
+      return x === undefined && y === undefined ? url.join("/") : null;
+    }
+    // A wildcard is the shape's last part and takes every remaining part
+    // (at least one): the other shape still having a part here is enough.
+    if (x.kind === "wildcard" || y.kind === "wildcard") {
+      const rest = x.kind === "wildcard" ? b.slice(i) : a.slice(i);
+      return [...url, ...rest.map(spellPart)].join("/");
+    }
+    if (x.kind === "static" && y.kind === "static" && x.text !== y.text) {
+      return null;
+    }
+    url.push(spellPart(x.kind === "static" ? x : y));
+  }
+}
+
+function spellPart(part: ShapePart): string {
+  if (part.kind === "static") return part.text;
+  return part.kind === "wildcard" ? ":…" : ":";
+}
+
+/**
+ * Whether two pane segments match some URL in common — and if so one such URL
+ * (`at/:` for `at/:dir` vs `at/:url*`), for the error to name; `null` when no
+ * URL is matched by both.
+ */
+export function segmentCollision(a: string, b: string): string | null {
+  for (const sa of segmentShapes(a)) {
+    for (const sb of segmentShapes(b)) {
+      const url = shapesOverlap(sa, sb);
+      if (url !== null) return url;
+    }
+  }
+  return null;
 }
 
 // ---------------------------------------------------------------------------

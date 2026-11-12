@@ -21,7 +21,7 @@ export {
   readEmbedTail,
   readKeyedParams,
   segmentKeyedParamNames,
-  segmentMatchPatterns,
+  segmentCollision,
   segmentParamNames,
   segmentRequiredParamNames,
   splitEmbedMaximized,

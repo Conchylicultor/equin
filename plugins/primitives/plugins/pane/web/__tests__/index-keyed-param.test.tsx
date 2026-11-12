@@ -129,7 +129,7 @@ function mount() {
 
 describe("an index pane's keyed params", () => {
   it("parse off the base path", () => {
-    const r = parseUrl("/;page=x;view.lib=all");
+    const r = parseUrl("/;page=x;view.lib=all", "/lib");
     expect(r).toEqual({
       status: "matched",
       slots: [],

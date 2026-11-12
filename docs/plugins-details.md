@@ -51694,8 +51694,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readEmbedTail`
           - `readIndexKeyedParams`
           - `readKeyedParams`
+          - `segmentCollision`
           - `segmentKeyedParamNames`
-          - `segmentMatchPatterns`
           - `segmentParamNames`
           - `segmentRequiredParamNames`
           - `splitEmbedMaximized`

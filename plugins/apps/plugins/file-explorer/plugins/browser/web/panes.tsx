@@ -58,9 +58,10 @@ import { useHomeSystem } from "./internal/explorer-system";
 //   never remounted, so the listing keeps its scroll and expansion, and the
 //   preview slides in and out with the row's column motion.
 
-// Not `at/…`: a URL is matched against every app's panes, and the Demo's
-// `at/:url*` claims any `/files/at/…` loaded cold. The id is the one this
-// pane had at `/files/at/…`, so a saved route still restores.
+// Not `at/…`: `at` spells an embed's place on the page URL (the embed tail,
+// `pane` CLAUDE.md), and the Demo's former `at/:url*` pane carried any
+// `/files/at/…` loaded cold off to the Demo. The id is the one this pane had
+// at `/files/at/…`, so a saved route still restores.
 const folderRoute = defineRoute({ id: "files-at", segment: "browse/:dir;fs" });
 
 /** `/files/browse/<folder>[;fs=<system>]` — any folder of a browsable file system. */

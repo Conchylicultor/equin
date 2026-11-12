@@ -112,7 +112,7 @@ afterEach(() => {
 });
 
 function parsed(path: string) {
-  const r = parseUrl(path);
+  const r = parseUrl(path, "/");
   if (r.status === "unresolved") return "unresolved";
   return { slots: r.slots.map((s) => [s.paneId, s.params]), index: r.index };
 }
