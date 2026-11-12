@@ -36,12 +36,17 @@ const MARKUP = /[`<>[\]]/g;
  * removed, markup characters replaced, whitespace collapsed, clamped.
  */
 export function sanitizeMessage(raw: string): string {
+  return sanitizeLine(raw, L.maxMessage);
+}
+
+/** Visitor text as one plain line of at most `max` code points (see sanitizeMessage). */
+function sanitizeLine(raw: string, max: number): string {
   // Cut and clamped by CODE POINT, and made well-formed first: a slice through
   // an emoji leaves a lone surrogate, which Postgres refuses in jsonb — one
   // visitor's message would then fail every import after it.
   const line = clampCodePoints(
     raw.replace(new RegExp(LONE_SURROGATE.source, "gu"), "\uFFFD"),
-    4 * L.maxMessage,
+    4 * max,
   )
     .replace(INVISIBLE, " ")
     .replace(URL_LIKE, "(url removed)")
@@ -49,9 +54,7 @@ export function sanitizeMessage(raw: string): string {
     .replace(/\s+/g, " ")
     .trim();
   const points = Array.from(line);
-  return points.length <= L.maxMessage
-    ? line
-    : `${points.slice(0, L.maxMessage - 1).join("")}…`;
+  return points.length <= max ? line : `${points.slice(0, max - 1).join("")}…`;
 }
 
 function clampCodePoints(text: string, max: number): string {
@@ -164,7 +167,13 @@ export function reduceSiteReport(
     siteFingerprint: hashHex(record.fingerprint),
     siteKind: matchOrNull(record.kind, SAFE_IDENTIFIER),
     visitorSource,
-    errorType: matchOrNull(record.data.errorType, SAFE_IDENTIFIER),
+    // Sanitised like the message, not matched against an identifier: a
+    // collector's type names what failed (`EndpointError 500 GET /api/x`),
+    // and dropping it left a report with an empty message nothing to say.
+    errorType:
+      typeof record.data.errorType === "string"
+        ? sanitizeLine(record.data.errorType, L.maxErrorType) || null
+        : null,
     message: sanitizeMessage(record.message),
     frames,
     framesOmitted: omitted,

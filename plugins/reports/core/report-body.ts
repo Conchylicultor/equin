@@ -9,7 +9,7 @@ import { CLIENT_REPORT_SOURCES, type ReportSource } from "./sources";
 // `kind` discriminates the type of event recorded; each kind owns the shape of
 // its `data` payload (validated server-side by its ReportKindSpec.schema). The
 // engine treats `data` as opaque jsonb. `message` is the generic one-line
-// summary shown in lists / notifications.
+// summary shown in lists / notifications — required, never blank.
 //
 // Every other boundary (the endpoint contract, the recordReport input type) is
 // derived from this schema, so adding a field here can't silently drop it
@@ -21,7 +21,16 @@ export const ReportBodySchema = z.object({
   // Every caller sends it (often `{}` for payload-less kinds); the engine never
   // inspects it before handing it to the matching spec.
   data: z.record(z.string(), z.unknown()),
-  message: z.string().optional(),
+  // Required and never blank: the one line a report is read — and a stackless
+  // crash identified — by. A report with nothing in it cannot be diagnosed, so
+  // it cannot be filed: a collector whose catch carries no message says what it
+  // did see (the event's type and target, the status and route) instead.
+  message: z
+    .string()
+    .refine(
+      (m) => m.trim() !== "",
+      "a report needs a message saying what happened",
+    ),
   url: z.string().nullable().optional(),
   userAgent: z.string().nullable().optional(),
   // Tab that produced the report (sessionStorage-backed) and the build id of the

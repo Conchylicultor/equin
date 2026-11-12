@@ -2,7 +2,13 @@ import { fetchEndpointOver } from "@plugins/infra/plugins/endpoints/web";
 import { pageTransport } from "@plugins/primitives/plugins/networking/plugins/page-transport/web";
 import { getTabId } from "@plugins/primitives/plugins/scope/plugins/tab-id/web";
 import { defineRequestSink } from "@plugins/primitives/plugins/report-sink/core";
-import { submitReport, type ReportBody, type ReportResult } from "../core";
+import {
+  ReportBodySchema,
+  reportMessageOrDerived,
+  submitReport,
+  type ReportBody,
+  type ReportResult,
+} from "../core";
 
 export type { ReportResult };
 
@@ -94,6 +100,9 @@ export async function report(
   try {
     const stamped = {
       ...body,
+      // A blank message is a collector bug: filed anyway, saying so, so the bug
+      // reaches Reports instead of vanishing with the report.
+      message: reportMessageOrDerived(body),
       url: body.url ?? window.location.href,
       clientId: body.clientId ?? getTabId(),
       // The ARTIFACT this tab is running — the graph hash baked into the bundle,
@@ -108,12 +117,15 @@ export async function report(
       // undefined both mean "cannot name it".
       commit: import.meta.env.VITE_BUILD_COMMIT || null,
     };
-    return await (reportChannel.emit(stamped) ?? sendToEngine(stamped));
+    // Checked before any channel: a body the engine or a site's intake would
+    // refuse must not take a site's batch of good ones with it.
+    const parsed = ReportBodySchema.parse(stamped);
+    return await (reportChannel.emit(parsed) ?? sendToEngine(parsed));
     // eslint-disable-next-line promise-safety/no-absorbed-failure -- this is called during crash/error handling (keepalive fetch at page unload); propagating here would hide the original error and crash the error handler itself. The failure is not silent: it is warned below, after the retries above ran out
   } catch (err) {
     const cause = err instanceof Error ? err.message : String(err);
     console.warn(
-      `[reports] report not delivered (${body.kind}/${body.source}): ${body.message ?? "(no message)"} — ${cause}`,
+      `[reports] report not delivered (${body.kind}/${body.source}): ${body.message} — ${cause}`,
     );
     return null;
   }

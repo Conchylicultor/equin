@@ -12,7 +12,12 @@ export const SiteReportEntrySchema = z
   .object({
     kind: z.string().min(1).max(64),
     source: z.enum(CLIENT_REPORT_SOURCES),
-    message: z.string().max(L.maxMessage),
+    // Never blank, like every report (reports/core's ReportBodySchema): a
+    // report with nothing in it cannot be diagnosed, so it cannot be filed.
+    message: z
+      .string()
+      .max(L.maxMessage)
+      .refine((m) => m.trim() !== "", "a report needs a message"),
     data: z
       .record(z.string(), z.unknown())
       .refine((d) => JSON.stringify(d).length <= L.maxDataBytes, {

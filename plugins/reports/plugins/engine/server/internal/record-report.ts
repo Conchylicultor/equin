@@ -39,6 +39,7 @@ import {
   fromOutdatedBundle,
   versionSkewMayExplain,
   reportIdKind,
+  reportMessageOrDerived,
   type ReportId,
   type ReportInput,
   type ReportOccurrence,
@@ -280,16 +281,10 @@ interface FiledReport {
 }
 
 async function fileReport(input: ReportInput): Promise<FiledReport> {
-  const {
-    kind,
-    source,
-    message: rawMessage,
-    url,
-    userAgent,
-    clientId,
-    buildId,
-    commit,
-  } = input;
+  const { kind, source, url, userAgent, clientId, buildId, commit } = input;
+  // A blank message is a collector bug: filed anyway, its message derived
+  // from what the report carries (error type, top frame) and naming the bug.
+  const rawMessage = reportMessageOrDerived(input);
 
   // Stamp the true event instant BEFORE the shed gate below: a report buffered
   // during a duress episode must carry its time through the buffer so replay
@@ -323,7 +318,7 @@ async function fileReport(input: ReportInput): Promise<FiledReport> {
   // and letting it move would make a report's identity depend on how long its
   // message happened to be.
   const fp = await spec.fingerprint(parsed, {
-    message: rawMessage ?? "",
+    message: rawMessage,
     source,
   });
 
@@ -338,7 +333,7 @@ async function fileReport(input: ReportInput): Promise<FiledReport> {
   }
 
   const worktree = runtimeNamespace();
-  const message = clamp(rawMessage ?? "", MESSAGE_MAX);
+  const message = clamp(rawMessage, MESSAGE_MAX);
 
   // Fan-out gate — after the duress gate (a replayed storm is still a storm,
   // and the duress-shed summary accounts for the replay separately) and before

@@ -103,6 +103,7 @@ export const googlePlaceProvider = definePlaceProvider({
       await recordReport({
         kind: PLACE_GOOGLE_UNKNOWN_TYPE,
         source: "server-place-google",
+        message: `Google place type "${unknownPrimary}" is missing from the Table A copy (on "${place.name}")`,
         data: { primaryType: unknownPrimary, placeName: place.name },
       });
     }

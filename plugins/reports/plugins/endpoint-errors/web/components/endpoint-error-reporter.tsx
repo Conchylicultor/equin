@@ -43,8 +43,18 @@ function buildReport(info: EndpointErrorInfo) {
       .join("; ");
   } else {
     errorType = `EndpointError ${status} ${route}`;
-    message =
-      typeof body === "string" ? body : body == null ? `HTTP ${status}` : JSON.stringify(body);
+    // The status and route lead, so the message alone says what failed — a
+    // 5xx with an empty body (a proxy's bare 502, a crashed handler) included.
+    // (The errorType carries them too, as the report's identity.)
+    const detail =
+      typeof body === "string"
+        ? body.trim() === ""
+          ? "empty response body"
+          : body
+        : body == null
+          ? "no response body"
+          : JSON.stringify(body);
+    message = `HTTP ${status} from ${route}: ${detail}`;
   }
 
   return {

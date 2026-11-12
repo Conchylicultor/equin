@@ -38,6 +38,8 @@ export {
 // routes. Declared here, not in a plugin-private shared/, because the engine
 // that serves them is a child plugin (`reports/plugins/engine`).
 export type { ReportBody, ReportInput } from "./report-body";
+export { ReportBodySchema } from "./report-body";
+export { reportMessageOrDerived } from "./blank-message";
 export {
   FIXES_REPORT_TRAILER,
   REPORT_FIXED_BY_TRAILER,

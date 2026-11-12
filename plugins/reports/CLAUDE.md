@@ -192,10 +192,12 @@ before it) beside the total, worded by `formatReportActivity`
     - `REPORT_HOURLY_MAX`
     - `REPORT_RECENT_MAX`
     - `reportActivity`
+    - `ReportBodySchema`
     - `reportDetailRoute`
     - `reportFields`
     - `reportHourOf`
     - `reportIdKind`
+    - `reportMessageOrDerived`
     - `REPORTS_SEARCHABLE`
     - `reportsConfig`
     - `reportsEntityRef`

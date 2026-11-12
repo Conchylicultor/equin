@@ -13,6 +13,11 @@ import {
   requestGuardReportSink,
 } from "@plugins/primitives/plugins/networking/plugins/request-guard/web";
 import { describeResizeLoop } from "../internal/describe-resize-loop";
+import {
+  describeError,
+  describeErrorEvent,
+  describeRejection,
+} from "../internal/describe-caught";
 
 // A Core.Root side-effect component (the old reports ReportCollector, now owned
 // by the crash kind). It owns the three browser crash signals — window errors,
@@ -34,7 +39,7 @@ export function CrashCollector() {
       void report({
         kind: "crash",
         source: "browser-error",
-        message: err?.message ?? e.message,
+        message: describeErrorEvent(e),
         url: window.location.href,
         userAgent: navigator.userAgent,
         // No Error object: no type either, so the message is the identity.
@@ -55,7 +60,7 @@ export function CrashCollector() {
       void report({
         kind: "crash",
         source: "browser-rejection",
-        message: err?.message ?? String(e.reason ?? "Unhandled rejection"),
+        message: describeRejection(e),
         url: window.location.href,
         userAgent: navigator.userAgent,
         // No Error object: no type either, so the message is the identity.
@@ -71,7 +76,7 @@ export function CrashCollector() {
       const promise = report({
         kind: "crash",
         source: "react-boundary",
-        message: r.error.message,
+        message: describeError(r.error),
         url: window.location.href,
         userAgent: navigator.userAgent,
         data: {
@@ -116,7 +121,7 @@ export function CrashCollector() {
       void report({
         kind: "crash",
         source: "browser-error",
-        message: err.message,
+        message: describeError(err),
         url: window.location.href,
         userAgent: navigator.userAgent,
         data: crashFieldsOf(err),

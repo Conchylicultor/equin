@@ -39,7 +39,7 @@ export function toSiteReport(
   return {
     kind: body.kind,
     source: body.source,
-    message: clampString(body.message ?? "", L.maxMessage),
+    message: clampString(body.message, L.maxMessage),
     data,
     path: clampString(new URL(body.url ?? pageUrl, pageUrl).pathname, 512),
     buildId: body.buildId ? clampString(body.buildId, 128) : null,

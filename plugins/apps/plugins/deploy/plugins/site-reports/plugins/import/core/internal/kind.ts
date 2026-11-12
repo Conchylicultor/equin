@@ -13,6 +13,12 @@ export const WEBSITE_VISITOR_ERROR_KIND = "website-visitor-error";
 export const VISITOR_ERROR_LIMITS = {
   /** The visitor's error message, one plain line. */
   maxMessage: 300,
+  /**
+   * The visitor's error type, one plain line: a class name (`TypeError`) or a
+   * collector's family (`EndpointError 500 POST /api/x (field)`), which names
+   * what failed when the message cannot.
+   */
+  maxErrorType: 120,
   /** Stack frames kept, each reduced to file / line / column. */
   maxFrames: 15,
   /** A frame's file or the page's path, as a pathname. */
@@ -24,7 +30,7 @@ export const VISITOR_ERROR_LIMITS = {
  * browser would read as one), no query, no markup.
  */
 export const SAFE_PATHNAME = /^\/(?!.*\/\/)[A-Za-z0-9/._~@-]{0,200}$/;
-/** An identifier-shaped value (an error's type, a kind name). */
+/** An identifier-shaped value (a kind name). */
 export const SAFE_IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$.-]{0,63}$/;
 /** A build id. */
 export const SAFE_BUILD_ID = /^[A-Za-z0-9._-]{1,128}$/;
@@ -44,6 +50,24 @@ export const SAFE_HOSTNAME = /^(?=.{1,253}$)[a-z0-9-]+(\.[a-z0-9-]+)*$/;
 
 /** The visitor page's report source, or `other` for anything unknown. */
 export const VISITOR_SOURCES = [...CLIENT_REPORT_SOURCES, "other"] as const;
+
+/**
+ * A sanitised plain line as stored: at most `max` code points (not UTF-16
+ * units), well-formed (no lone surrogate), no markup character, no line break.
+ */
+function plainLine(field: string, max: number) {
+  return z
+    .string()
+    .refine((m) => !LONE_SURROGATE.test(m), `${field} holds a lone surrogate`)
+    .refine(
+      (m) => !/[`<>[\]\n\r]/.test(m),
+      `${field} holds markup or a line break`,
+    )
+    .refine(
+      (m) => Array.from(m).length <= max,
+      `${field} is over ${max} characters`,
+    );
+}
 
 const StackFrameSchema = z
   .object({
@@ -70,15 +94,11 @@ export const WebsiteVisitorErrorSchema = z
     /** The report kind the visitor's page filed on the site (`crash`, …). */
     siteKind: z.string().regex(SAFE_IDENTIFIER).nullable(),
     visitorSource: z.enum(VISITOR_SOURCES),
-    errorType: z.string().regex(SAFE_IDENTIFIER).nullable(),
-    // Code points, not UTF-16 units; and well-formed (no lone surrogate).
-    message: z
-      .string()
-      .refine((m) => !LONE_SURROGATE.test(m), "message holds a lone surrogate")
-      .refine(
-        (m) => Array.from(m).length <= VISITOR_ERROR_LIMITS.maxMessage,
-        `message is over ${VISITOR_ERROR_LIMITS.maxMessage} characters`,
-      ),
+    /** One sanitised plain line, like the message; null when it held none. */
+    errorType: plainLine("errorType", VISITOR_ERROR_LIMITS.maxErrorType)
+      .refine((t) => t !== "", "errorType is empty (null when there is none)")
+      .nullable(),
+    message: plainLine("message", VISITOR_ERROR_LIMITS.maxMessage),
     frames: cappedList(StackFrameSchema, {
       max: VISITOR_ERROR_LIMITS.maxFrames,
     }),

@@ -130,7 +130,7 @@ describe("reduceSiteReport", () => {
         path: "/x?q=<script>",
         buildId: "b 1; rm -rf /",
         commit: "not-a-sha",
-        data: { errorType: "Type Error<script>" },
+        data: { errorType: 42 },
       }),
       SITE,
     );
@@ -140,6 +140,27 @@ describe("reduceSiteReport", () => {
     expect(r.buildId).toBeNull();
     expect(r.commit).toBeNull();
     expect(r.errorType).toBeNull();
+  });
+
+  test("an error type is kept as one sanitised plain line, not dropped for not being an identifier", () => {
+    const r = reduceSiteReport(
+      record({
+        message: "",
+        data: { errorType: "EndpointError 503 POST /api/site-reports <b>\n x" },
+      }),
+      SITE,
+    );
+    expect(r.errorType).toBe("EndpointError 503 POST /api/site-reports 'b' x");
+    expect(
+      reduceSiteReport(record({ data: { errorType: " \u200b " } }), SITE)
+        .errorType,
+    ).toBeNull();
+    expect(
+      Array.from(
+        reduceSiteReport(record({ data: { errorType: "E".repeat(500) } }), SITE)
+          .errorType!,
+      ).length,
+    ).toBe(VISITOR_ERROR_LIMITS.maxErrorType);
   });
 
   test("absurd counts are clamped", () => {

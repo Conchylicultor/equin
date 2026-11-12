@@ -50,7 +50,9 @@ kind payload is never copied. What is kept:
 
 - the message as one plain line: control and bidi characters gone, URLs
   removed, `` ` < > [ ] `` replaced, at most 300 characters;
-- an identifier-shaped error type;
+- the error type as one plain line, sanitised like the message, at most 120
+  characters (a collector's family such as `EndpointError 500 POST /api/x`
+  names what failed when the message cannot);
 - the stack, reduced to `{ file, line, column }` frames on the site's own
   origin (or relative), each file a safe pathname, at most 15;
 - the visitor page's source (`CLIENT_REPORT_SOURCES`, else `other`);
